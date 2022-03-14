@@ -1,0 +1,56 @@
+<div id="basic" elb="entity" elb-entity="k:v" elb-action="load:action"></div>
+
+<div id="nestedx" elb="entity" elb-entity="ke:ve" elb-action="load:view">
+  <div id="b" elb="b" elb-b="kb:vb" elb-action="load:nested_view"></div>
+  <div id="c" elb="c" elb-c="kc:vc" elb-action="load:ac(c)">
+    <div id="d" elb="d" elb-d="kd:vd" elb-action="load:ad(d,entity)"></div>
+  </div>
+</div>
+
+<div id="nested" elb="mother" elb-mother="label:grandmother" elb-action="load:like">
+  <div id="son" elb="son" elb-son="interested_in:pizza" elb-action="load:speak"></div>
+  <div id="daughter" elb="daughter" elb-daughter="status:hungry" elb-action="load:care(daughter)">
+    <div id="baby" elb="baby" elb-baby="status:infant" elb-action="load:play(baby,mother)"></div>
+  </div>
+</div>
+
+<div
+  id="attributes"
+  elb="attributes"
+  elb-attributes="foo:'ba;r';key:'value'"
+  elb-action="load:'act;ion';click:'action;'"
+></div>
+
+<div elb="click" elb-action="click:test">
+  <div id="click_test"></div>
+</div>
+
+<div id="click_bubble" elb="click" elb-click="foo:bar" elb-action="click:test">
+  <div id="click_bubble" elb-click="key:value"></div>
+  <div id="click_bubble_action" elb-action=""></div>
+</div>
+
+
+<div elb="click" elb-click="foo:bar">
+  <div id="click_invalid" elb-action=""></div>
+</div>
+
+<div id="just_entity" elb="entity"></div>
+
+<div elb-property="not_in:scope"></div>
+<div elb-property="parent:property">
+  <div id="propert_priority" elb="property" elb-property="prefere:higher" elb-action="click:priority">
+    <div elb-property="prefere:deeper"></div>
+  </div>
+</div>
+
+<div id="dynamic_values" elb="dynamic" elb-action="click">
+  <input type="text" value="text" elb-dynamic="value_value:#value"></input>
+  <div elb-dynamic="html:#innerHTML">inner</div>
+  <div elb-dynamic="id:#id;static:value" id='id_value'>inner</div>
+  <select elb-dynamic="option:#selected">
+    <option value="a">foo</option>
+    <option value="b" selected="selected">choosen</option>
+    <option value="c">bar</option>
+  </select>
+</div>
