@@ -84,9 +84,5 @@ typings/
 # DynamoDB Local files
 .dynamodb/
 
-# TypeScript build directory
-build/*
-dist
-
 # JetBrains IDEs
 .idea

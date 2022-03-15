@@ -7,8 +7,7 @@
   "scripts": {
     "test": "jest --colors --coverage",
     "dev": "jest --watchAll --colors --coverage",
-    "clean": "rm -rf dist",
-    "build": "npm run clean && webpack"
+    "build": "webpack"
   },
   "author": "elbwalker GmbH",
   "license": "MIT",
