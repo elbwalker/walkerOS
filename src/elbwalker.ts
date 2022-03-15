@@ -1,19 +1,17 @@
-import {
-  Elbwalker,
-  AnyObject,
-  Destination,
-  DestinationMapping,
-} from './types/elbwalker';
+import { Elbwalker } from './types/elbwalker';
 import { initHandler, loadHandler } from './lib/handler';
-import { Entities } from './types/walker';
+import { Walker } from './types/walker';
 import { destination } from './lib/destination';
 import { loadProject } from './lib/project';
+import { randomString } from './lib/utils';
+import { AnyObject } from './types/globals';
+import { Destination } from './types/destination';
 
 const w = window;
 const d = document;
-const elbwalker = {} as Elbwalker;
+const elbwalker = {} as Elbwalker.Function;
 
-w.elbwalker = elbwalker;
+let group = randomString(); // random id to group events of a run
 
 elbwalker.destinations = [];
 
@@ -28,11 +26,10 @@ elbwalker.go = function (projectId?: string) {
   }
 };
 
-elbwalker.load = function () {
-  loadHandler();
-};
-
 elbwalker.run = function () {
+  // Generate a new group id for each run
+  group = randomString();
+
   // Pushes for elbwalker
   elbLayerInit();
 
@@ -40,11 +37,15 @@ elbwalker.run = function () {
   initHandler();
 };
 
+elbwalker.load = function () {
+  loadHandler();
+};
+
 elbwalker.push = function (
   event: string,
   data?: AnyObject,
   trigger?: string,
-  nested?: Entities,
+  nested?: Walker.Entities,
 ): void {
   if (!event) return;
 
@@ -58,23 +59,9 @@ elbwalker.push = function (
       data: Object.assign({}, data), // Create a new object for each destination
       trigger,
       nested: nested || [],
+      group,
     });
   });
-};
-
-// @TODO rename to addDestination or use elb command push
-// Is that possible? What if there are events before the init
-// maybe loop for elb entitiy first
-elbwalker.destination = function (
-  destination: Destination,
-  config: AnyObject = {}, // @TODO better type
-) {
-  if (config) {
-    destination.init(config);
-    destination.mapping = (config.mapping as DestinationMapping) || false;
-  }
-
-  this.destinations.push(destination);
 };
 
 function elbLayerInit() {
@@ -93,5 +80,22 @@ function elbLayerInit() {
 
   w.elbLayer = elbLayer;
 }
+
+// @TODO rename to addDestination or use elb command push
+// Is that possible? What if there are events before the init
+// maybe loop for elb entitiy first
+elbwalker.destination = function (
+  destination: Destination.Function,
+  config: AnyObject = {}, // @TODO better type
+) {
+  if (config) {
+    destination.init(config);
+    destination.mapping = (config.mapping as Destination.Mapping) || false;
+  }
+
+  this.destinations.push(destination);
+};
+
+w.elbwalker = elbwalker;
 
 export default elbwalker;

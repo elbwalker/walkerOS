@@ -1,22 +1,24 @@
-export type PushEvent = Array<[Attribute, unknown]>;
+export declare namespace Walker {
+  type PushEvent = Array<[Attribute, unknown]>;
 
-export type Entities = Entity[];
-export interface Entity {
-  type: EntityType;
-  data: EntityData;
-  nested: Entities;
-}
+  type Entities = Entity[];
+  interface Entity {
+    type: EntityType;
+    data: EntityData;
+    nested: Entities;
+  }
 
-export type EntityType = string;
-export type EntityData = {
-  [name: string]: string;
-};
+  type EntityType = string;
+  type EntityData = {
+    [name: string]: string;
+  };
 
-export type KeyVal = [string, string];
-export type Attribute = string | undefined;
-export type Trigger = 'load' | 'click' | 'visible' | 'submit' | 'wait';
-export type Filter = ElbValues | undefined;
+  type KeyVal = [string, string];
+  type Attribute = string | undefined;
+  type Trigger = 'load' | 'click' | 'visible' | 'submit' | 'wait';
+  type Filter = Values | undefined;
 
-export interface ElbValues {
-  [name: string]: string;
+  interface Values {
+    [name: string]: string;
+  }
 }

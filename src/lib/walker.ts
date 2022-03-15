@@ -1,18 +1,13 @@
-import { AnyObject, Events } from '../types/elbwalker';
-import {
-  Attribute,
-  ElbValues,
-  Entities,
-  Entity,
-  EntityData,
-  Filter,
-  KeyVal,
-  Trigger,
-} from '../types/walker';
+import { Elbwalker } from '../types/elbwalker';
+import { AnyObject } from '../types/globals';
+import { Walker } from '../types/walker';
 
 const _prefix = 'elb';
 
-export function walker(target: Element, trigger: Trigger): Events {
+export function walker(
+  target: Element,
+  trigger: Walker.Trigger,
+): Elbwalker.Events {
   const [action, filter] = getActionAndFilter(target, trigger);
   if (!action) return [];
 
@@ -30,8 +25,8 @@ export function walker(target: Element, trigger: Trigger): Events {
 
 function getActionAndFilter(
   target: Element,
-  triggerType: Trigger,
-): [Attribute?, Filter?] {
+  triggerType: Walker.Trigger,
+): [Walker.Attribute?, Walker.Filter?] {
   let element = target as Node['parentElement'];
 
   while (element) {
@@ -54,8 +49,8 @@ function getActionAndFilter(
   return [];
 }
 
-function getEntities(target: Element, filter: Filter): Entities {
-  const entities: Entities = [];
+function getEntities(target: Element, filter: Walker.Filter): Walker.Entities {
+  const entities: Walker.Entities = [];
   let element = target as Node['parentElement'];
   while (element) {
     const entity = getEntity(element);
@@ -68,7 +63,7 @@ function getEntities(target: Element, filter: Filter): Entities {
   return entities;
 }
 
-function getEntity(element: Element): Entity | null {
+function getEntity(element: Element): Walker.Entity | null {
   const type = getElbAttribute(element);
 
   if (!type) return null; // It's not a (valid) entity element
@@ -106,7 +101,7 @@ function getEntity(element: Element): Entity | null {
   });
 
   // Get nested entities
-  const nested: Entities = [];
+  const nested: Walker.Entities = [];
   element
     .querySelectorAll(`[${getElbAttributeName()}]`)
     .forEach((nestedEntityElement) => {
@@ -114,24 +109,24 @@ function getEntity(element: Element): Entity | null {
       if (nestedEntity) nested.push(nestedEntity);
     });
 
-  return { type, data: data as EntityData, nested };
+  return { type, data: data as Walker.EntityData, nested };
 }
 
-export function getElbAttributeName(name?: Attribute): string {
+export function getElbAttributeName(name?: Walker.Attribute): string {
   name = name ? '-' + name : '';
   return _prefix + name;
 }
 
-function getElbAttribute(element: Element, name?: string): Attribute {
+function getElbAttribute(element: Element, name?: string): Walker.Attribute {
   return element.getAttribute(getElbAttributeName(name)) || undefined;
 }
 
-function getElbValues(element: Element, name: string): ElbValues {
+function getElbValues(element: Element, name: string): Walker.Values {
   return splitAttribute(getElbAttribute(element, name) || '');
 }
 
-function splitAttribute(str: Attribute, separator = ';'): ElbValues {
-  const values: ElbValues = {};
+function splitAttribute(str: Walker.Attribute, separator = ';'): Walker.Values {
+  const values: Walker.Values = {};
 
   if (!str) return values;
 
@@ -148,12 +143,12 @@ function splitAttribute(str: Attribute, separator = ';'): ElbValues {
   return values;
 }
 
-function splitKeyVal(str: string): KeyVal {
+function splitKeyVal(str: string): Walker.KeyVal {
   const [key, value] = str.split(/:(.+)/, 2);
   return [trim(key), trim(value)];
 }
 
-function parseAttribute(str: string): Attribute[] {
+function parseAttribute(str: string): Walker.Attribute[] {
   // action(a, b, c)
   const [key, value] = str.split('(', 2);
   const param = value ? value.slice(0, -1) : ''; // Remove the )

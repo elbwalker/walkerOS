@@ -5,9 +5,12 @@ export function trycatch<P extends unknown[], R>(
     try {
       return fn(...args);
     } catch (err) {
-      throw err;
       console.error(err);
       return;
     }
   };
+}
+
+export function randomString(): string {
+  return Math.random().toString(36).slice(2, 8);
 }

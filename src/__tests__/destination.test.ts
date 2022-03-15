@@ -1,11 +1,12 @@
-import { Destination, Elbwalker } from '../types/elbwalker';
+import { Destination } from '../types/destination';
+import { Elbwalker } from '../types/elbwalker';
 
-let elbwalker: Elbwalker;
+let elbwalker: Elbwalker.Function;
 
 const mockPush = jest.fn(); //.mockImplementation(console.log);
 const mockInit = jest.fn(); //.mockImplementation(console.log);
 
-const destination: Destination = {
+const destination: Destination.Function = {
   init: mockInit,
   push: mockPush,
   mapping: false,
@@ -31,7 +32,21 @@ describe('destination', () => {
       data: {},
       trigger: undefined,
       nested: [],
+      group: expect.any(String),
     });
+  });
+
+  test('group ids', () => {
+    elbwalker.destination(destination, {});
+    elbwalker.push('entity action');
+    elbwalker.push('entity action');
+    const groupId = mockPush.mock.calls[0][0].group;
+    expect(mockPush.mock.calls[1][0].group).toEqual(groupId);
+
+    // Start a new initialization with a new group ip
+    elbwalker.run();
+    elbwalker.push('entity action');
+    expect(mockPush.mock.calls[2][0].group).not.toEqual(groupId);
   });
 
   test('multiple destinations', () => {
@@ -50,6 +65,7 @@ describe('destination', () => {
       data: {},
       trigger: undefined,
       nested: [],
+      group: expect.any(String),
     });
   });
 
@@ -59,7 +75,7 @@ describe('destination', () => {
       event.data.foo = 'bar';
     });
 
-    const destinationUpdate: Destination = {
+    const destinationUpdate: Destination.Function = {
       init: mockInit,
       push: mockPushUpdate,
       mapping: false,
@@ -76,6 +92,7 @@ describe('destination', () => {
       data,
       trigger: undefined,
       nested: [],
+      group: expect.any(String),
     });
   });
 
@@ -107,12 +124,14 @@ describe('destination', () => {
       data: {},
       trigger: undefined,
       nested: [],
+      group: expect.any(String),
     });
     expect(mockPushB).toHaveBeenCalledWith({
       entity: 'entity',
       action: 'action',
       data: {},
       nested: [],
+      group: expect.any(String),
     });
 
     jest.clearAllMocks();
@@ -126,6 +145,7 @@ describe('destination', () => {
       data: {},
       trigger: undefined,
       nested: [],
+      group: expect.any(String),
     });
 
     jest.clearAllMocks();
@@ -139,6 +159,7 @@ describe('destination', () => {
       data: {},
       trigger: undefined,
       nested: [],
+      group: expect.any(String),
     });
   });
 });

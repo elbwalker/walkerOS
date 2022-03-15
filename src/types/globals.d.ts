@@ -1,9 +1,11 @@
-import { Elbwalker, ElbLayer } from './elbwalker';
+import { Elbwalker } from './elbwalker';
 
 declare global {
   interface Window {
-    elbwalker: Elbwalker;
-    elbLayer: ElbLayer;
+    elbwalker: Elbwalker.Function;
+    elbLayer: Elbwalker.ElbLayer;
     dataLayer?: unknown[];
   }
 }
+
+type AnyObject = Record<string, unknown>;
