@@ -13,8 +13,6 @@ const w = window;
 const d = document;
 const elbwalker = {} as Elbwalker;
 
-w.elbwalker = elbwalker;
-
 elbwalker.destinations = [];
 
 elbwalker.go = function (projectId?: string) {
@@ -28,16 +26,16 @@ elbwalker.go = function (projectId?: string) {
   }
 };
 
-elbwalker.load = function () {
-  loadHandler();
-};
-
 elbwalker.run = function () {
   // Pushes for elbwalker
   elbLayerInit();
 
   // Register all handlers
   initHandler();
+};
+
+elbwalker.load = function () {
+  loadHandler();
 };
 
 elbwalker.push = function (
@@ -62,21 +60,6 @@ elbwalker.push = function (
   });
 };
 
-// @TODO rename to addDestination or use elb command push
-// Is that possible? What if there are events before the init
-// maybe loop for elb entitiy first
-elbwalker.destination = function (
-  destination: Destination,
-  config: AnyObject = {}, // @TODO better type
-) {
-  if (config) {
-    destination.init(config);
-    destination.mapping = (config.mapping as DestinationMapping) || false;
-  }
-
-  this.destinations.push(destination);
-};
-
 function elbLayerInit() {
   // @TODO support to push predefined stack
 
@@ -93,5 +76,22 @@ function elbLayerInit() {
 
   w.elbLayer = elbLayer;
 }
+
+// @TODO rename to addDestination or use elb command push
+// Is that possible? What if there are events before the init
+// maybe loop for elb entitiy first
+elbwalker.destination = function (
+  destination: Destination,
+  config: AnyObject = {}, // @TODO better type
+) {
+  if (config) {
+    destination.init(config);
+    destination.mapping = (config.mapping as DestinationMapping) || false;
+  }
+
+  this.destinations.push(destination);
+};
+
+w.elbwalker = elbwalker;
 
 export default elbwalker;
