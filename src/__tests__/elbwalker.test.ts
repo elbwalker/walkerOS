@@ -2,18 +2,18 @@ require('intersection-observer');
 import _ from 'lodash';
 
 import elbwalkerOrg from '../elbwalker';
-import { ElbLayer, Elbwalker } from '../types/elbwalker';
+import { Elbwalker } from '../types/elbwalker';
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const w = window;
-let elbwalker: Elbwalker;
+let elbwalker: Elbwalker.Function;
 w.dataLayer = [];
 
 beforeEach(() => {
   mockFn.mockClear();
   // reset DOM with event listeners etc.
   document.body = document.body.cloneNode() as HTMLElement;
-  w.elbLayer = undefined as unknown as ElbLayer;
+  w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
   w.dataLayer!.push = mockFn;
 
   elbwalker = _.cloneDeepWith(elbwalkerOrg, (value: unknown) => {
@@ -49,6 +49,7 @@ describe('elbwalker', () => {
       action: 'action',
       data: {},
       nested: [],
+      group: expect.any(String),
       elbwalker: true,
     });
     expect(mockFn).toHaveBeenNthCalledWith(2, {
@@ -57,6 +58,7 @@ describe('elbwalker', () => {
       action: 'action',
       data: { foo: 'bar' },
       nested: [],
+      group: expect.any(String),
       elbwalker: true,
     });
   });

@@ -17,6 +17,7 @@ describe('datalayer', () => {
         data: { domain: 'localhost', id: '/', title: '' },
         trigger: 'load',
         nested: [],
+        group: expect.any(String),
         elbwalker: true,
       },
       {
@@ -26,6 +27,7 @@ describe('datalayer', () => {
         data: { a: 1 },
         trigger: 'manual',
         nested: [],
+        group: expect.any(String),
         elbwalker: true,
       },
     ]);
