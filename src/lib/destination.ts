@@ -11,6 +11,7 @@ export const destination: Destination.Function = {
       entity: event.entity,
       action: event.action,
       data: event.data,
+      globals: event.globals,
       trigger: event.trigger,
       nested: event.nested,
       group: event.group,

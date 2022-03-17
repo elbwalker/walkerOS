@@ -1,4 +1,5 @@
 require('intersection-observer');
+import fs from 'fs';
 import _ from 'lodash';
 
 import elbwalkerOrg from '../elbwalker';
@@ -57,6 +58,38 @@ describe('elbwalker', () => {
       entity: 'entity',
       action: 'action',
       data: { foo: 'bar' },
+      nested: [],
+      group: expect.any(String),
+      elbwalker: true,
+    });
+  });
+
+  test.only('Global properties', () => {
+    const html: string = fs
+      .readFileSync(__dirname + '/html/globals.html')
+      .toString();
+    document.body.innerHTML = html;
+    w.elbwalker.go();
+
+    expect(mockFn).toHaveBeenNthCalledWith(1, {
+      event: 'page view',
+      entity: 'page',
+      action: 'view',
+      data: expect.any(Object),
+      globals: { outof: 'scope' },
+      trigger: 'load',
+      nested: [],
+      group: expect.any(String),
+      elbwalker: true,
+    });
+
+    expect(mockFn).toHaveBeenNthCalledWith(2, {
+      event: 'entity action',
+      entity: 'entity',
+      action: 'action',
+      data: { foo: 'bar' },
+      globals: { outof: 'scope' },
+      trigger: 'load',
       nested: [],
       group: expect.any(String),
       elbwalker: true,
