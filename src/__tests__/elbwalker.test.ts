@@ -49,6 +49,7 @@ describe('elbwalker', () => {
       entity: 'entity',
       action: 'action',
       data: {},
+      globals: {},
       nested: [],
       group: expect.any(String),
       elbwalker: true,
@@ -58,13 +59,14 @@ describe('elbwalker', () => {
       entity: 'entity',
       action: 'action',
       data: { foo: 'bar' },
+      globals: {},
       nested: [],
       group: expect.any(String),
       elbwalker: true,
     });
   });
 
-  test.only('Global properties', () => {
+  test('Global properties', () => {
     const html: string = fs
       .readFileSync(__dirname + '/html/globals.html')
       .toString();
