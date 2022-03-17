@@ -31,7 +31,7 @@ function getActionAndFilter(
   let element = target as Node['parentElement'];
 
   while (element) {
-    const attr = getElbAttribute(element, 'action');
+    const attr = getAttribute(element, getElbAttributeName('action'));
     const [action, filterAttr] = parseAttribute(
       splitAttribute(attr)[triggerType] || '',
     );
@@ -65,7 +65,7 @@ function getEntities(target: Element, filter: Walker.Filter): Walker.Entities {
 }
 
 function getEntity(element: Element): Walker.Entity | null {
-  const type = getElbAttribute(element);
+  const type = getAttribute(element, getElbAttributeName());
 
   if (!type) return null; // It's not a (valid) entity element
 
@@ -118,10 +118,6 @@ export function getElbAttributeName(name?: string): string {
   return _prefix + name;
 }
 
-function getElbAttribute(element: Element, name?: string): string {
-  return getAttribute(element, getElbAttributeName(name));
-}
-
 function getElbValues(element: Element, name: string): Walker.Values {
-  return splitAttribute(getElbAttribute(element, name) || '');
+  return splitAttribute(getAttribute(element, getElbAttributeName(name)) || '');
 }
