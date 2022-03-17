@@ -24,19 +24,13 @@ export function getGlobalProperties(): AnyObject {
   let values = {};
 
   document.querySelectorAll(globalSelector).forEach((element) => {
-    values = assign(
-      values,
-      splitAttribute(element.getAttribute(globalsName) || ''),
-    );
+    values = assign(values, splitAttribute(getAttribute(element, globalsName)));
   });
 
   return values;
 }
 
-export function splitAttribute(
-  str: Walker.Attribute,
-  separator = ';',
-): Walker.Values {
+export function splitAttribute(str: string, separator = ';'): Walker.Values {
   const values: Walker.Values = {};
 
   if (!str) return values;
@@ -59,7 +53,7 @@ function splitKeyVal(str: string): Walker.KeyVal {
   return [trim(key), trim(value)];
 }
 
-export function parseAttribute(str: string): Walker.Attribute[] {
+export function parseAttribute(str: string): string[] {
   // action(a, b, c)
   const [key, value] = str.split('(', 2);
   const param = value ? value.slice(0, -1) : ''; // Remove the )
@@ -71,6 +65,10 @@ export function parseAttribute(str: string): Walker.Attribute[] {
 function trim(str: string): string {
   // Remove quotes and whitespaces
   return str ? str.trim().replace(/^'|'$/g, '').trim() : '';
+}
+
+export function getAttribute(element: Element, name: string): string {
+  return element.getAttribute(name) || '';
 }
 
 export function assign(base: AnyObject, props: AnyObject = {}): AnyObject {

@@ -1,7 +1,7 @@
 import { Elbwalker } from '../types/elbwalker';
 import { AnyObject } from '../types/globals';
 import { Walker } from '../types/walker';
-import { assign, parseAttribute, splitAttribute } from './utils';
+import { assign, getAttribute, parseAttribute, splitAttribute } from './utils';
 
 const _prefix = 'elb';
 
@@ -27,11 +27,11 @@ export function walker(
 function getActionAndFilter(
   target: Element,
   triggerType: Walker.Trigger,
-): [Walker.Attribute?, Walker.Filter?] {
+): [string?, Walker.Filter?] {
   let element = target as Node['parentElement'];
 
   while (element) {
-    const attr = getElbAttribute(element, 'action') || '';
+    const attr = getElbAttribute(element, 'action');
     const [action, filterAttr] = parseAttribute(
       splitAttribute(attr)[triggerType] || '',
     );
@@ -113,13 +113,13 @@ function getEntity(element: Element): Walker.Entity | null {
   return { type, data: data as Walker.EntityData, nested };
 }
 
-export function getElbAttributeName(name?: Walker.Attribute): string {
+export function getElbAttributeName(name?: string): string {
   name = name ? '-' + name : '';
   return _prefix + name;
 }
 
-function getElbAttribute(element: Element, name?: string): Walker.Attribute {
-  return element.getAttribute(getElbAttributeName(name)) || undefined;
+function getElbAttribute(element: Element, name?: string): string {
+  return getAttribute(element, getElbAttributeName(name));
 }
 
 function getElbValues(element: Element, name: string): Walker.Values {

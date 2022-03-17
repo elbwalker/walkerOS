@@ -1,5 +1,5 @@
 export declare namespace Walker {
-  type PushEvent = Array<[Attribute, unknown]>;
+  type PushEvent = Array<[string, unknown]>;
 
   type Entities = Entity[];
   interface Entity {
@@ -14,7 +14,6 @@ export declare namespace Walker {
   };
 
   type KeyVal = [string, string];
-  type Attribute = string | undefined;
   type Trigger = 'load' | 'click' | 'visible' | 'submit' | 'wait';
   type Filter = Values | undefined;
 
