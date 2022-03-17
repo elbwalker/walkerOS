@@ -6,7 +6,7 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "jest --colors --coverage",
-    "dev": "jest --watchAll --colors --coverage",
+    "dev": "jest --watchAll --colors",
     "build": "webpack"
   },
   "author": "elbwalker GmbH",

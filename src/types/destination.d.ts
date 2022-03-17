@@ -13,6 +13,7 @@ export declare namespace Destination {
     entity: string;
     action: string;
     data?: AnyObject;
+    globals: AnyObject;
     trigger?: string;
     nested: Walker.Entities;
     group: string;

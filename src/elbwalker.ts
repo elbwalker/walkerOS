@@ -3,7 +3,7 @@ import { initHandler, loadHandler } from './lib/handler';
 import { Walker } from './types/walker';
 import { destination } from './lib/destination';
 import { loadProject } from './lib/project';
-import { randomString } from './lib/utils';
+import { assign, getGlobalProperties, randomString } from './lib/utils';
 import { AnyObject } from './types/globals';
 import { Destination } from './types/destination';
 
@@ -12,6 +12,7 @@ const d = document;
 const elbwalker = {} as Elbwalker.Function;
 
 let group = randomString(); // random id to group events of a run
+let globals: AnyObject = {}; // init globals as some random var
 
 elbwalker.destinations = [];
 
@@ -29,6 +30,10 @@ elbwalker.go = function (projectId?: string) {
 elbwalker.run = function () {
   // Generate a new group id for each run
   group = randomString();
+
+  // Load globals properties
+  // Due to site performance only once every run
+  globals = getGlobalProperties();
 
   // Pushes for elbwalker
   elbLayerInit();
@@ -56,7 +61,10 @@ elbwalker.push = function (
     destination.push({
       entity,
       action,
-      data: Object.assign({}, data), // Create a new object for each destination
+      // Create a new objects for each destination
+      // to prevent data manipulation
+      data: assign({}, data),
+      globals: assign({}, globals),
       trigger,
       nested: nested || [],
       group,
@@ -66,6 +74,7 @@ elbwalker.push = function (
 
 function elbLayerInit() {
   // @TODO support to push predefined stack
+  // @TODO pass elbwalker object as paramter to detach from window workaround
 
   const elbLayer = w.elbLayer || [];
 
