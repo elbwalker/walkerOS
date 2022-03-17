@@ -21,12 +21,16 @@ export function randomString(): string {
 export function getGlobalProperties(): AnyObject {
   const globalsName = 'elbglobals'; // @TODO use const enum here
   const globalSelector = `[${globalsName}]`; // @TODO use function with prefix concat
+  let values = {};
 
   document.querySelectorAll(globalSelector).forEach((element) => {
-    // @TODO extract values
+    values = assign(
+      values,
+      splitAttribute(element.getAttribute(globalsName) || ''),
+    );
   });
 
-  return {};
+  return values;
 }
 
 export function splitAttribute(
