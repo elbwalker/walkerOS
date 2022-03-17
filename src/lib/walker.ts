@@ -1,6 +1,7 @@
 import { Elbwalker } from '../types/elbwalker';
 import { AnyObject } from '../types/globals';
 import { Walker } from '../types/walker';
+import { assign, parseAttribute, splitAttribute } from './utils';
 
 const _prefix = 'elb';
 
@@ -123,45 +124,4 @@ function getElbAttribute(element: Element, name?: string): Walker.Attribute {
 
 function getElbValues(element: Element, name: string): Walker.Values {
   return splitAttribute(getElbAttribute(element, name) || '');
-}
-
-function splitAttribute(str: Walker.Attribute, separator = ';'): Walker.Values {
-  const values: Walker.Values = {};
-
-  if (!str) return values;
-
-  const reg = new RegExp(`(?:[^${separator}']+|'[^']*')+`, 'ig');
-  const arr = str.match(reg) || [];
-
-  arr.forEach((str) => {
-    let [keyAttr, valueAttr] = splitKeyVal(str);
-    const [key] = parseAttribute(keyAttr);
-
-    if (key) values[key] = valueAttr || key;
-  });
-
-  return values;
-}
-
-function splitKeyVal(str: string): Walker.KeyVal {
-  const [key, value] = str.split(/:(.+)/, 2);
-  return [trim(key), trim(value)];
-}
-
-function parseAttribute(str: string): Walker.Attribute[] {
-  // action(a, b, c)
-  const [key, value] = str.split('(', 2);
-  const param = value ? value.slice(0, -1) : ''; // Remove the )
-  // key = 'action'
-  // param = 'a, b, c'
-  return [key, param];
-}
-
-function assign(base: AnyObject, props: AnyObject): AnyObject {
-  return { ...base, ...props };
-}
-
-function trim(str: string): string {
-  // Remove quotes and whitespaces
-  return str ? str.trim().replace(/^'|'$/g, '').trim() : '';
 }

@@ -3,7 +3,7 @@ import { initHandler, loadHandler } from './lib/handler';
 import { Walker } from './types/walker';
 import { destination } from './lib/destination';
 import { loadProject } from './lib/project';
-import { getGlobalProperties, randomString } from './lib/utils';
+import { assign, getGlobalProperties, randomString } from './lib/utils';
 import { AnyObject } from './types/globals';
 import { Destination } from './types/destination';
 
@@ -63,8 +63,8 @@ elbwalker.push = function (
       action,
       // Create a new objects for each destination
       // to prevent data manipulation
-      data: Object.assign({}, data),
-      globals: Object.assign({}, globals),
+      data: assign({}, data),
+      globals: assign({}, globals),
       trigger,
       nested: nested || [],
       group,
