@@ -27,27 +27,19 @@ describe('destination', () => {
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith({
+      event: 'entity action',
+      id: expect.any(String),
+      count: 1,
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
       entity: 'entity',
       action: 'action',
       data: {},
       globals: {},
-      trigger: undefined,
+      trigger: '',
       nested: [],
       group: expect.any(String),
     });
-  });
-
-  test('group ids', () => {
-    elbwalker.destination(destination, {});
-    elbwalker.push('entity action');
-    elbwalker.push('entity action');
-    const groupId = mockPush.mock.calls[0][0].group;
-    expect(mockPush.mock.calls[1][0].group).toEqual(groupId);
-
-    // Start a new initialization with a new group ip
-    elbwalker.run();
-    elbwalker.push('entity action');
-    expect(mockPush.mock.calls[2][0].group).not.toEqual(groupId);
   });
 
   test('multiple destinations', () => {
@@ -61,11 +53,16 @@ describe('destination', () => {
     expect(mockInit).toHaveBeenNthCalledWith(2, configB);
     expect(mockPush).toHaveBeenCalledTimes(2);
     expect(mockPush).toHaveBeenCalledWith({
+      event: 'entity action',
+      id: expect.any(String),
+      count: 1,
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
       entity: 'entity',
       action: 'action',
       data: {},
       globals: {},
-      trigger: undefined,
+      trigger: '',
       nested: [],
       group: expect.any(String),
     });
@@ -89,13 +86,18 @@ describe('destination', () => {
     expect(mockPushUpdate).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith({
-      entity: 'entity',
-      action: 'action',
+      event: 'entity action',
       data,
       globals: {},
-      trigger: undefined,
       nested: [],
+      id: expect.any(String),
+      trigger: '',
+      entity: 'entity',
+      action: 'action',
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
       group: expect.any(String),
+      count: 1,
     });
   });
 
@@ -122,21 +124,32 @@ describe('destination', () => {
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
     expect(mockPushA).toHaveBeenCalledWith({
-      entity: 'entity',
-      action: 'action',
+      event: 'entity action',
       data: {},
       globals: {},
-      trigger: undefined,
       nested: [],
+      id: expect.any(String),
+      trigger: '',
+      entity: 'entity',
+      action: 'action',
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
       group: expect.any(String),
+      count: 1,
     });
     expect(mockPushB).toHaveBeenCalledWith({
-      entity: 'entity',
-      action: 'action',
+      event: 'entity action',
       data: {},
       globals: {},
       nested: [],
+      id: expect.any(String),
+      trigger: '',
+      entity: 'entity',
+      action: 'action',
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
       group: expect.any(String),
+      count: 1,
     });
 
     jest.clearAllMocks();
@@ -145,13 +158,18 @@ describe('destination', () => {
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
     expect(mockPushA).toHaveBeenCalledWith({
-      entity: 'foo',
-      action: 'bar',
+      event: 'foo bar',
       data: {},
       globals: {},
-      trigger: undefined,
       nested: [],
+      id: expect.any(String),
+      trigger: '',
+      entity: 'foo',
+      action: 'bar',
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
       group: expect.any(String),
+      count: 2,
     });
 
     jest.clearAllMocks();
@@ -160,13 +178,62 @@ describe('destination', () => {
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledWith({
-      entity: 'food',
-      action: 'like',
+      event: 'food like',
       data: {},
       globals: {},
-      trigger: undefined,
       nested: [],
+      id: expect.any(String),
+      trigger: '',
+      entity: 'food',
+      action: 'like',
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
       group: expect.any(String),
+      count: 3,
     });
+  });
+});
+
+describe('dataLayer', () => {
+  const w = window;
+
+  test('init', () => {
+    expect(w.dataLayer).toBeUndefined();
+    elbwalker.go();
+    expect(w.dataLayer).toBeDefined();
+    elbwalker.push('entity action', { a: 1 }, 'manual');
+    expect(w.dataLayer).toBeDefined();
+    expect(w.dataLayer).toStrictEqual([
+      {
+        event: 'page view',
+        data: { domain: 'localhost', id: '/', title: '' },
+        globals: {},
+        nested: [],
+        id: expect.any(String),
+        trigger: 'load',
+        entity: 'page',
+        action: 'view',
+        timestamp: expect.any(Number),
+        timing: expect.any(Number),
+        group: expect.any(String),
+        count: 1,
+        walker: true,
+      },
+      {
+        event: 'entity action',
+        data: { a: 1 },
+        globals: {},
+        nested: [],
+        id: expect.any(String),
+        trigger: 'manual',
+        entity: 'entity',
+        action: 'action',
+        timestamp: expect.any(Number),
+        timing: expect.any(Number),
+        group: expect.any(String),
+        count: 2,
+        walker: true,
+      },
+    ]);
   });
 });

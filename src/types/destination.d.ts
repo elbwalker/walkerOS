@@ -1,22 +1,12 @@
+import { Elbwalker } from './elbwalker';
 import { AnyObject } from './globals';
-import { Walker } from './walker';
 
 export declare namespace Destination {
+  type Functions = Function[];
   interface Function {
     init: (config: AnyObject) => void;
-    push: (event: Event) => void;
+    push: (event: Elbwalker.Event) => void;
     mapping: Mapping | false;
-  }
-  type Functions = Function[];
-
-  interface Event {
-    entity: string;
-    action: string;
-    data?: AnyObject;
-    globals: AnyObject;
-    trigger?: string;
-    nested: Walker.Entities;
-    group: string;
   }
 
   interface Mapping {

@@ -8,9 +8,9 @@ import { AnyObject } from './types/globals';
 import { Destination } from './types/destination';
 
 const w = window;
-const d = document;
 const elbwalker = {} as Elbwalker.Function;
 
+let count = 0; // Event counter for each run
 let group = randomString(); // random id to group events of a run
 let globals: AnyObject = {}; // init globals as some random var
 
@@ -28,6 +28,9 @@ elbwalker.go = function (projectId?: string) {
 };
 
 elbwalker.run = function () {
+  // Reset the run counter
+  count = 0;
+
   // Generate a new group id for each run
   group = randomString();
 
@@ -57,17 +60,27 @@ elbwalker.push = function (
   const [entity, action] = event.split(' ');
   if (!entity || !action) return;
 
+  ++count;
+  const timestamp = Date.now();
+  const timing = Math.round(performance.now() / 10) / 100;
+  const id = `${timestamp}-${group}-${count}`;
+
   this.destinations.map((destination) => {
     destination.push({
-      entity,
-      action,
+      event,
       // Create a new objects for each destination
       // to prevent data manipulation
       data: assign({}, data),
       globals: assign({}, globals),
-      trigger,
       nested: nested || [],
+      id,
+      trigger: trigger || '',
+      entity,
+      action,
+      timestamp,
+      timing,
       group,
+      count,
     });
   });
 };

@@ -22,11 +22,18 @@ export declare namespace Elbwalker {
 
   type Events = Event[];
   interface Event {
+    event: string;
+    data: AnyObject;
+    globals: AnyObject;
+    nested: Walker.Entities;
+    id: string;
+    trigger: string;
     entity: string;
     action: string;
-    data?: AnyObject;
-    trigger?: string;
-    nested: Walker.Entities;
+    timestamp: number;
+    timing: number;
+    group: string;
+    count: number;
   }
 
   interface ElbLayer {

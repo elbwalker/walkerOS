@@ -46,23 +46,33 @@ describe('elbwalker', () => {
 
     expect(mockFn).toHaveBeenNthCalledWith(1, {
       event: 'entity action',
-      entity: 'entity',
-      action: 'action',
-      data: {},
+      data: expect.any(Object),
       globals: {},
       nested: [],
+      id: expect.any(String),
+      trigger: '',
+      entity: 'entity',
+      action: 'action',
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
       group: expect.any(String),
-      elbwalker: true,
+      count: 2,
+      walker: true,
     });
     expect(mockFn).toHaveBeenNthCalledWith(2, {
       event: 'entity action',
-      entity: 'entity',
-      action: 'action',
       data: { foo: 'bar' },
       globals: {},
       nested: [],
+      id: expect.any(String),
+      trigger: '',
+      entity: 'entity',
+      action: 'action',
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
       group: expect.any(String),
-      elbwalker: true,
+      count: 3,
+      walker: true,
     });
   });
 
@@ -75,26 +85,47 @@ describe('elbwalker', () => {
 
     expect(mockFn).toHaveBeenNthCalledWith(1, {
       event: 'page view',
-      entity: 'page',
-      action: 'view',
       data: expect.any(Object),
       globals: { outof: 'scope' },
-      trigger: 'load',
       nested: [],
+      id: expect.any(String),
+      trigger: 'load',
+      entity: 'page',
+      action: 'view',
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
       group: expect.any(String),
-      elbwalker: true,
+      count: 1,
+      walker: true,
     });
 
     expect(mockFn).toHaveBeenNthCalledWith(2, {
       event: 'entity action',
-      entity: 'entity',
-      action: 'action',
       data: { foo: 'bar' },
       globals: { outof: 'scope' },
-      trigger: 'load',
       nested: [],
+      id: expect.any(String),
+      trigger: 'load',
+      entity: 'entity',
+      action: 'action',
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
       group: expect.any(String),
-      elbwalker: true,
+      count: 2,
+      walker: true,
     });
+  });
+
+  test('group ids', () => {
+    elbwalker.go();
+    elbwalker.push('entity action');
+    elbwalker.push('entity action');
+    const groupId = mockFn.mock.calls[1][0].group;
+    expect(mockFn.mock.calls[2][0].group).toEqual(groupId);
+
+    // Start a new initialization with a new group ip
+    elbwalker.run();
+    elbwalker.push('entity action');
+    expect(mockFn.mock.calls[3][0].group).not.toEqual(groupId);
   });
 });
