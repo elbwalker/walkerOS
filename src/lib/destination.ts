@@ -8,15 +8,8 @@ export const destination: Destination.Function = {
 
   push(event: Elbwalker.Event): void {
     window.dataLayer!.push({
-      event: `${event.entity} ${event.action}`,
-      entity: event.entity,
-      action: event.action,
-      data: event.data,
-      globals: event.globals,
-      trigger: event.trigger,
-      nested: event.nested,
-      group: event.group,
-      elbwalker: true,
+      ...event,
+      walker: true,
     });
   },
   mapping: false,
