@@ -1,5 +1,16 @@
+import { AnyObject } from './globals';
+
 export declare namespace Walker {
   type PushEvent = Array<[string, unknown]>;
+
+  type Events = Event[];
+  interface Event {
+    entity: string;
+    action: string;
+    data?: AnyObject;
+    trigger?: string;
+    nested: Walker.Entities;
+  }
 
   type Entities = Entity[];
   interface Entity {

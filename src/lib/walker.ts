@@ -8,7 +8,7 @@ const _prefix = 'elb';
 export function walker(
   target: Element,
   trigger: Walker.Trigger,
-): Elbwalker.Events {
+): Walker.Events {
   const [action, filter] = getActionAndFilter(target, trigger);
   if (!action) return [];
 
