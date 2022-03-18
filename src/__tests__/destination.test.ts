@@ -42,19 +42,6 @@ describe('destination', () => {
     });
   });
 
-  test('group ids', () => {
-    elbwalker.destination(destination, {});
-    elbwalker.push('entity action');
-    elbwalker.push('entity action');
-    const groupId = mockPush.mock.calls[0][0].group;
-    expect(mockPush.mock.calls[1][0].group).toEqual(groupId);
-
-    // Start a new initialization with a new group ip
-    elbwalker.run();
-    elbwalker.push('entity action');
-    expect(mockPush.mock.calls[2][0].group).not.toEqual(groupId);
-  });
-
   test('multiple destinations', () => {
     const configA = { a: 1 };
     const configB = { b: 2 };

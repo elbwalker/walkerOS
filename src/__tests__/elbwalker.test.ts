@@ -115,4 +115,17 @@ describe('elbwalker', () => {
       walker: true,
     });
   });
+
+  test('group ids', () => {
+    elbwalker.go();
+    elbwalker.push('entity action');
+    elbwalker.push('entity action');
+    const groupId = mockFn.mock.calls[1][0].group;
+    expect(mockFn.mock.calls[2][0].group).toEqual(groupId);
+
+    // Start a new initialization with a new group ip
+    elbwalker.run();
+    elbwalker.push('entity action');
+    expect(mockFn.mock.calls[3][0].group).not.toEqual(groupId);
+  });
 });
