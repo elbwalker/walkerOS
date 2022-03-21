@@ -25,6 +25,7 @@ export declare namespace Elbwalker {
     event: string;
     data: AnyObject;
     globals: AnyObject;
+    user: User;
     nested: Walker.Entities;
     id: string;
     trigger: string;
@@ -43,5 +44,15 @@ export declare namespace Elbwalker {
       trigger?: string,
       nested?: Walker.Entities,
     ) => void;
+  }
+
+  interface User {
+    id?: string;
+    device?: string;
+    hash?: string;
+  }
+
+  const enum Commands {
+    Walker = 'walker',
   }
 }
