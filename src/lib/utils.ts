@@ -1,5 +1,6 @@
 import { AnyObject } from '../types/globals';
 import { Walker } from '../types/walker';
+import { getElbAttributeName } from './walker';
 
 export function trycatch<P extends unknown[], R>(
   fn: (...args: P) => R | undefined,
@@ -19,8 +20,8 @@ export function randomString(): string {
 }
 
 export function getGlobalProperties(): AnyObject {
-  const globalsName = 'elbglobals'; // @TODO use const enum here
-  const globalSelector = `[${globalsName}]`; // @TODO use function with prefix concat
+  const globalsName = getElbAttributeName('globals', false);
+  const globalSelector = `[${globalsName}]`;
   let values = {};
 
   document.querySelectorAll(globalSelector).forEach((element) => {
