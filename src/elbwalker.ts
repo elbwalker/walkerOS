@@ -113,7 +113,7 @@ function elbLayerInit() {
 
 function handleCommand(action: string, data: AnyObject = {}) {
   switch (action) {
-    case 'user':
+    case Elbwalker.Commands.User:
       setUserIds(data);
       break;
     default:
@@ -123,9 +123,9 @@ function handleCommand(action: string, data: AnyObject = {}) {
 
 function setUserIds(data: Elbwalker.User) {
   // user ids can't be set to undefined
-  user.id = data.id || user.id;
-  user.device = data.device || user.device;
-  user.hash = data.hash || user.hash;
+  if (data.id) user.id = data.id;
+  if (data.device) user.device = data.device;
+  if (data.hash) user.hash = data.hash;
 }
 
 // @TODO rename to addDestination or use elb command push

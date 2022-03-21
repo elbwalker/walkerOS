@@ -53,6 +53,7 @@ export declare namespace Elbwalker {
   }
 
   const enum Commands {
+    User = 'user',
     Walker = 'walker',
   }
 }

@@ -141,4 +141,44 @@ describe('elbwalker', () => {
     // don't push walker commands to destinations
     expect(mockFn).not.toHaveBeenCalled();
   });
+
+  test('walker user', () => {
+    elbwalker.go();
+
+    elbwalker.push('walker user');
+    elbwalker.push('entity action');
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: {},
+      }),
+    );
+
+    elbwalker.push('walker user', { id: 'userid' });
+    elbwalker.push('entity action');
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: { id: 'userid' },
+      }),
+    );
+
+    elbwalker.push('walker user', { device: 'userid' });
+    elbwalker.push('entity action');
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: { id: 'userid', device: 'userid' },
+      }),
+    );
+
+    elbwalker.push('walker user', { hash: 'hashid' });
+    elbwalker.push('entity action');
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: { id: 'userid', device: 'userid', hash: 'hashid' },
+      }),
+    );
+  });
 });
