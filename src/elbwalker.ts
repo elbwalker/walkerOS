@@ -13,6 +13,7 @@ const elbwalker = {} as Elbwalker.Function;
 let count = 0; // Event counter for each run
 let group = randomString(); // random id to group events of a run
 let globals: AnyObject = {}; // init globals as some random var
+let user: Elbwalker.User = {}; // handles the user ids
 
 elbwalker.destinations = [];
 
@@ -60,6 +61,12 @@ elbwalker.push = function (
   const [entity, action] = event.split(' ');
   if (!entity || !action) return;
 
+  if (entity === Elbwalker.Commands.Walker) {
+    handleCommand(action, data);
+
+    return;
+  }
+
   ++count;
   const timestamp = Date.now();
   const timing = Math.round(performance.now() / 10) / 100;
@@ -72,6 +79,7 @@ elbwalker.push = function (
       // to prevent data manipulation
       data: assign({}, data),
       globals: assign({}, globals),
+      user: assign({}, user as AnyObject),
       nested: nested || [],
       id,
       trigger: trigger || '',
@@ -101,6 +109,23 @@ function elbLayerInit() {
   };
 
   w.elbLayer = elbLayer;
+}
+
+function handleCommand(action: string, data: AnyObject = {}) {
+  switch (action) {
+    case Elbwalker.Commands.User:
+      setUserIds(data);
+      break;
+    default:
+      break;
+  }
+}
+
+function setUserIds(data: Elbwalker.User) {
+  // user ids can't be set to undefined
+  if (data.id) user.id = data.id;
+  if (data.device) user.device = data.device;
+  if (data.hash) user.hash = data.hash;
 }
 
 // @TODO rename to addDestination or use elb command push

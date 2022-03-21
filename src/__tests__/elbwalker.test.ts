@@ -48,6 +48,7 @@ describe('elbwalker', () => {
       event: 'entity action',
       data: expect.any(Object),
       globals: {},
+      user: {},
       nested: [],
       id: expect.any(String),
       trigger: '',
@@ -63,6 +64,7 @@ describe('elbwalker', () => {
       event: 'entity action',
       data: { foo: 'bar' },
       globals: {},
+      user: {},
       nested: [],
       id: expect.any(String),
       trigger: '',
@@ -87,6 +89,7 @@ describe('elbwalker', () => {
       event: 'page view',
       data: expect.any(Object),
       globals: { outof: 'scope' },
+      user: {},
       nested: [],
       id: expect.any(String),
       trigger: 'load',
@@ -103,6 +106,7 @@ describe('elbwalker', () => {
       event: 'entity action',
       data: { foo: 'bar' },
       globals: { outof: 'scope' },
+      user: {},
       nested: [],
       id: expect.any(String),
       trigger: 'load',
@@ -127,5 +131,54 @@ describe('elbwalker', () => {
     elbwalker.run();
     elbwalker.push('entity action');
     expect(mockFn.mock.calls[3][0].group).not.toEqual(groupId);
+  });
+
+  test('walker commands', () => {
+    elbwalker.go();
+    mockFn.mockClear();
+    elbwalker.push('walker action');
+
+    // don't push walker commands to destinations
+    expect(mockFn).not.toHaveBeenCalled();
+  });
+
+  test('walker user', () => {
+    elbwalker.go();
+
+    elbwalker.push('walker user');
+    elbwalker.push('entity action');
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: {},
+      }),
+    );
+
+    elbwalker.push('walker user', { id: 'userid' });
+    elbwalker.push('entity action');
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: { id: 'userid' },
+      }),
+    );
+
+    elbwalker.push('walker user', { device: 'userid' });
+    elbwalker.push('entity action');
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: { id: 'userid', device: 'userid' },
+      }),
+    );
+
+    elbwalker.push('walker user', { hash: 'hashid' });
+    elbwalker.push('entity action');
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: { id: 'userid', device: 'userid', hash: 'hashid' },
+      }),
+    );
   });
 });
