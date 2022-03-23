@@ -1,12 +1,16 @@
 import { Elbwalker } from './elbwalker';
-import { AnyObject } from './globals';
 
 export declare namespace Destination {
   type Functions = Function[];
   interface Function {
-    init: (config: AnyObject) => void;
+    init?: () => boolean;
     push: (event: Elbwalker.Event) => void;
-    mapping: Mapping | false;
+    config: Config;
+  }
+
+  interface Config {
+    init?: boolean; // if the destination has been initialized by calling the init method
+    mapping?: Mapping; // a map to handle events individually
   }
 
   interface Mapping {

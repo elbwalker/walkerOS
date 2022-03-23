@@ -1,4 +1,3 @@
-import { Elbwalker } from '../types/elbwalker';
 import { AnyObject } from '../types/globals';
 import { Walker } from '../types/walker';
 import { assign, getAttribute, parseAttribute, splitAttribute } from './utils';

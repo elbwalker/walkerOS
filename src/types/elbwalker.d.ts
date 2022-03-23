@@ -13,11 +13,6 @@ export declare namespace Elbwalker {
       trigger?: string,
       nested?: Walker.Entities,
     ) => void;
-    destination: (
-      destination: Destination.Function,
-      config?: AnyObject,
-    ) => void;
-    destinations: Destination.Functions;
   }
 
   type Events = Event[];
@@ -53,6 +48,7 @@ export declare namespace Elbwalker {
   }
 
   const enum Commands {
+    Destination = 'destination',
     User = 'user',
     Walker = 'walker',
   }

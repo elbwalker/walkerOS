@@ -1,28 +1,32 @@
 import { Destination } from '../types/destination';
 import { Elbwalker } from '../types/elbwalker';
+import { AnyObject } from '../types/globals';
 
 let elbwalker: Elbwalker.Function;
 
 const mockPush = jest.fn(); //.mockImplementation(console.log);
 const mockInit = jest.fn(); //.mockImplementation(console.log);
 
-const destination: Destination.Function = {
-  init: mockInit,
-  push: mockPush,
-  mapping: false,
-};
+let destination: AnyObject;
 
 describe('destination', () => {
   beforeEach(() => {
     elbwalker = require('../elbwalker').default;
     jest.clearAllMocks();
     jest.resetModules();
+
+    destination = {
+      init: mockInit,
+      push: mockPush,
+      config: { init: false },
+      // Typecast it once to it's original just to be (kind of) sure
+    } as Destination.Function as unknown as AnyObject;
   });
 
   test('basic usage', () => {
     expect(mockInit).toHaveBeenCalledTimes(0);
     expect(mockPush).toHaveBeenCalledTimes(0);
-    elbwalker.destination(destination, {});
+    elbwalker.push('walker destination', destination);
     elbwalker.push('entity action');
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
@@ -43,15 +47,49 @@ describe('destination', () => {
     });
   });
 
+  test('init call', () => {
+    // No init function
+    elbwalker.push('walker destination', {
+      push: mockPush,
+    });
+    elbwalker.push('entity action');
+    expect(mockInit).toHaveBeenCalledTimes(0);
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    // Init set to true and should not be called
+    elbwalker.push('walker destination', {
+      init: mockInit,
+      push: mockPush,
+      config: { init: true },
+    });
+    elbwalker.push('entity action');
+    expect(mockInit).toHaveBeenCalledTimes(0);
+
+    // Always trigger init since it returns false
+    const mockInitFalse = jest.fn().mockImplementation(() => {
+      return false;
+    });
+    elbwalker.push('walker destination', {
+      init: mockInitFalse,
+      push: mockPush,
+    });
+    elbwalker.push('entity action');
+    expect(mockInitFalse).toHaveBeenCalledTimes(1);
+    elbwalker.push('entity action');
+    expect(mockInitFalse).toHaveBeenCalledTimes(2);
+  });
+
   test('multiple destinations', () => {
     const configA = { a: 1 };
     const configB = { b: 2 };
-    elbwalker.destination(destination, configA);
-    elbwalker.destination(destination, configB);
+
+    destination.config = configA;
+    elbwalker.push('walker destination', destination);
+    destination.config = configB;
+    elbwalker.push('walker destination', destination);
+
     elbwalker.push('entity action');
     expect(mockInit).toHaveBeenCalledTimes(2);
-    expect(mockInit).toHaveBeenNthCalledWith(1, configA);
-    expect(mockInit).toHaveBeenNthCalledWith(2, configB);
     expect(mockPush).toHaveBeenCalledTimes(2);
     expect(mockPush).toHaveBeenCalledWith({
       event: 'entity action',
@@ -76,14 +114,14 @@ describe('destination', () => {
       event.data.foo = 'bar';
     });
 
-    const destinationUpdate: Destination.Function = {
+    const destinationUpdate = {
       init: mockInit,
       push: mockPushUpdate,
-      mapping: false,
+      config: {},
     };
 
-    elbwalker.destination(destinationUpdate);
-    elbwalker.destination(destination);
+    elbwalker.push('walker destination', destinationUpdate);
+    elbwalker.push('walker destination', destination);
     elbwalker.push('entity action', data);
     expect(mockPushUpdate).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
@@ -104,21 +142,25 @@ describe('destination', () => {
     });
   });
 
-  test('mapping', () => {
+  // @TODO Mapping not active yet
+  test.skip('mapping', () => {
     const mockPushA = jest.fn();
     const mockPushB = jest.fn();
     const mockPushC = jest.fn();
-    const destA = Object.assign({}, destination, { push: mockPushA });
-    const destB = Object.assign({}, destination, { push: mockPushB });
-    const destC = Object.assign({}, destination, { push: mockPushC });
 
-    // Note: mapping is disabled right now. All events gets pushed
-    elbwalker.destination(destA);
-    elbwalker.destination(destB, {
-      mapping: { entity: { action: true } },
+    elbwalker.push('walker destination', {
+      init: mockInit,
+      push: mockPushA,
     });
-    elbwalker.destination(destC, {
-      mapping: { food: { like: true } },
+    elbwalker.push('walker destination', {
+      init: mockInit,
+      push: mockPushB,
+      config: { mapping: { entity: { action: true } } },
+    });
+    elbwalker.push('walker destination', {
+      init: mockInit,
+      push: mockPushC,
+      config: { mapping: { food: { like: true } } },
     });
 
     elbwalker.push('entity action');
