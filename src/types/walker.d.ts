@@ -1,22 +1,34 @@
-export type PushEvent = Array<[Attribute, unknown]>;
+import { AnyObject } from './globals';
 
-export type Entities = Entity[];
-export interface Entity {
-  type: EntityType;
-  data: EntityData;
-  nested: Entities;
-}
+export declare namespace Walker {
+  type PushEvent = Array<[string, unknown]>;
 
-export type EntityType = string;
-export type EntityData = {
-  [name: string]: string;
-};
+  type Events = Event[];
+  interface Event {
+    entity: string;
+    action: string;
+    data?: AnyObject;
+    trigger?: string;
+    nested: Walker.Entities;
+  }
 
-export type KeyVal = [string, string];
-export type Attribute = string | undefined;
-export type Trigger = 'load' | 'click' | 'visible' | 'submit' | 'wait';
-export type Filter = ElbValues | undefined;
+  type Entities = Entity[];
+  interface Entity {
+    type: EntityType;
+    data: EntityData;
+    nested: Entities;
+  }
 
-export interface ElbValues {
-  [name: string]: string;
+  type EntityType = string;
+  type EntityData = {
+    [name: string]: string;
+  };
+
+  type KeyVal = [string, string];
+  type Trigger = 'load' | 'click' | 'visible' | 'submit' | 'wait';
+  type Filter = Values | undefined;
+
+  interface Values {
+    [name: string]: string;
+  }
 }

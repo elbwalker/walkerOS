@@ -1,46 +1,59 @@
-import { Entities } from './walker';
+import { Destination } from './destination';
+import { AnyObject } from './globals';
+import { Walker } from './walker';
 
-export interface Elbwalker {
-  go: (projectId?: string) => void;
-  load: () => void;
-  run: () => void;
-  push: (
-    event: string,
-    data?: AnyObject,
-    trigger?: string,
-    nested?: Entities,
-  ) => void;
-  destination: (destination: Destination, config?: AnyObject) => void;
-  destinations: Destinations;
+export declare namespace Elbwalker {
+  interface Function {
+    go: (projectId?: string) => void;
+    load: () => void;
+    run: () => void;
+    push: (
+      event: string,
+      data?: AnyObject,
+      trigger?: string,
+      nested?: Walker.Entities,
+    ) => void;
+    destination: (
+      destination: Destination.Function,
+      config?: AnyObject,
+    ) => void;
+    destinations: Destination.Functions;
+  }
+
+  type Events = Event[];
+  interface Event {
+    event: string;
+    data: AnyObject;
+    globals: AnyObject;
+    user: User;
+    nested: Walker.Entities;
+    id: string;
+    trigger: string;
+    entity: string;
+    action: string;
+    timestamp: number;
+    timing: number;
+    group: string;
+    count: number;
+  }
+
+  interface ElbLayer {
+    push: (
+      event?: string,
+      data?: unknown,
+      trigger?: string,
+      nested?: Walker.Entities,
+    ) => void;
+  }
+
+  interface User {
+    id?: string;
+    device?: string;
+    hash?: string;
+  }
+
+  const enum Commands {
+    User = 'user',
+    Walker = 'walker',
+  }
 }
-
-type Events = Event[];
-export interface Event {
-  entity: string;
-  action: string;
-  data?: AnyObject;
-  trigger?: string;
-  nested: Entities;
-}
-
-export interface ElbLayer {
-  push: (
-    event?: string,
-    data?: unknown,
-    trigger?: string,
-    nested?: Entities,
-  ) => void;
-}
-
-type Destinations = Destination[];
-export interface Destination {
-  init: (config: AnyObject) => void;
-  push: (event: Event) => void;
-  mapping: DestinationMapping | false;
-}
-
-export interface DestinationMapping {
-  [entity: string]: { [action: string]: boolean };
-}
-
-export type AnyObject = Record<string, unknown>;

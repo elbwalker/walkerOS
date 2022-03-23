@@ -1,11 +1,12 @@
-import { Destination, Elbwalker } from '../types/elbwalker';
+import { Destination } from '../types/destination';
+import { Elbwalker } from '../types/elbwalker';
 
-let elbwalker: Elbwalker;
+let elbwalker: Elbwalker.Function;
 
 const mockPush = jest.fn(); //.mockImplementation(console.log);
 const mockInit = jest.fn(); //.mockImplementation(console.log);
 
-const destination: Destination = {
+const destination: Destination.Function = {
   init: mockInit,
   push: mockPush,
   mapping: false,
@@ -26,11 +27,19 @@ describe('destination', () => {
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith({
+      event: 'entity action',
+      data: {},
+      globals: {},
+      user: {},
+      nested: [],
+      id: expect.any(String),
+      trigger: '',
       entity: 'entity',
       action: 'action',
-      data: {},
-      trigger: undefined,
-      nested: [],
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
+      group: expect.any(String),
+      count: 1,
     });
   });
 
@@ -45,11 +54,19 @@ describe('destination', () => {
     expect(mockInit).toHaveBeenNthCalledWith(2, configB);
     expect(mockPush).toHaveBeenCalledTimes(2);
     expect(mockPush).toHaveBeenCalledWith({
+      event: 'entity action',
+      data: {},
+      globals: {},
+      user: {},
+      nested: [],
+      id: expect.any(String),
+      trigger: '',
       entity: 'entity',
       action: 'action',
-      data: {},
-      trigger: undefined,
-      nested: [],
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
+      group: expect.any(String),
+      count: 1,
     });
   });
 
@@ -59,7 +76,7 @@ describe('destination', () => {
       event.data.foo = 'bar';
     });
 
-    const destinationUpdate: Destination = {
+    const destinationUpdate: Destination.Function = {
       init: mockInit,
       push: mockPushUpdate,
       mapping: false,
@@ -71,11 +88,19 @@ describe('destination', () => {
     expect(mockPushUpdate).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith({
+      event: 'entity action',
+      data,
+      globals: {},
+      user: {},
+      nested: [],
+      id: expect.any(String),
+      trigger: '',
       entity: 'entity',
       action: 'action',
-      data,
-      trigger: undefined,
-      nested: [],
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
+      group: expect.any(String),
+      count: 1,
     });
   });
 
@@ -102,17 +127,34 @@ describe('destination', () => {
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
     expect(mockPushA).toHaveBeenCalledWith({
+      event: 'entity action',
+      data: {},
+      globals: {},
+      user: {},
+      nested: [],
+      id: expect.any(String),
+      trigger: '',
       entity: 'entity',
       action: 'action',
-      data: {},
-      trigger: undefined,
-      nested: [],
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
+      group: expect.any(String),
+      count: 1,
     });
     expect(mockPushB).toHaveBeenCalledWith({
+      event: 'entity action',
+      data: {},
+      globals: {},
+      user: {},
+      nested: [],
+      id: expect.any(String),
+      trigger: '',
       entity: 'entity',
       action: 'action',
-      data: {},
-      nested: [],
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
+      group: expect.any(String),
+      count: 1,
     });
 
     jest.clearAllMocks();
@@ -121,11 +163,19 @@ describe('destination', () => {
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
     expect(mockPushA).toHaveBeenCalledWith({
+      event: 'foo bar',
+      data: {},
+      globals: {},
+      user: {},
+      nested: [],
+      id: expect.any(String),
+      trigger: '',
       entity: 'foo',
       action: 'bar',
-      data: {},
-      trigger: undefined,
-      nested: [],
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
+      group: expect.any(String),
+      count: 2,
     });
 
     jest.clearAllMocks();
@@ -134,11 +184,65 @@ describe('destination', () => {
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledWith({
+      event: 'food like',
+      data: {},
+      globals: {},
+      user: {},
+      nested: [],
+      id: expect.any(String),
+      trigger: '',
       entity: 'food',
       action: 'like',
-      data: {},
-      trigger: undefined,
-      nested: [],
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
+      group: expect.any(String),
+      count: 3,
     });
+  });
+});
+
+describe('dataLayer', () => {
+  const w = window;
+
+  test('init', () => {
+    expect(w.dataLayer).toBeUndefined();
+    elbwalker.go();
+    expect(w.dataLayer).toBeDefined();
+    elbwalker.push('entity action', { a: 1 }, 'manual');
+    expect(w.dataLayer).toBeDefined();
+    expect(w.dataLayer).toStrictEqual([
+      {
+        event: 'page view',
+        data: { domain: 'localhost', id: '/', title: '' },
+        globals: {},
+        user: {},
+        nested: [],
+        id: expect.any(String),
+        trigger: 'load',
+        entity: 'page',
+        action: 'view',
+        timestamp: expect.any(Number),
+        timing: expect.any(Number),
+        group: expect.any(String),
+        count: 1,
+        walker: true,
+      },
+      {
+        event: 'entity action',
+        data: { a: 1 },
+        globals: {},
+        user: {},
+        nested: [],
+        id: expect.any(String),
+        trigger: 'manual',
+        entity: 'entity',
+        action: 'action',
+        timestamp: expect.any(Number),
+        timing: expect.any(Number),
+        group: expect.any(String),
+        count: 2,
+        walker: true,
+      },
+    ]);
   });
 });

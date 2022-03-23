@@ -1,18 +1,13 @@
-import { AnyObject, Events } from '../types/elbwalker';
-import {
-  Attribute,
-  ElbValues,
-  Entities,
-  Entity,
-  EntityData,
-  Filter,
-  KeyVal,
-  Trigger,
-} from '../types/walker';
+import { AnyObject } from '../types/globals';
+import { Walker } from '../types/walker';
+import { assign, getAttribute, parseAttribute, splitAttribute } from './utils';
 
 const _prefix = 'elb';
 
-export function walker(target: Element, trigger: Trigger): Events {
+export function walker(
+  target: Element,
+  trigger: Walker.Trigger,
+): Walker.Events {
   const [action, filter] = getActionAndFilter(target, trigger);
   if (!action) return [];
 
@@ -30,12 +25,15 @@ export function walker(target: Element, trigger: Trigger): Events {
 
 function getActionAndFilter(
   target: Element,
-  triggerType: Trigger,
-): [Attribute?, Filter?] {
+  triggerType: Walker.Trigger,
+): [string?, Walker.Filter?] {
   let element = target as Node['parentElement'];
 
   while (element) {
-    const attr = getElbAttribute(element, 'action') || '';
+    const attr =
+      getAttribute(element, getElbAttributeName('action', false)) ||
+      getAttribute(element, getElbAttributeName('action')); // legacy elb-action
+
     const [action, filterAttr] = parseAttribute(
       splitAttribute(attr)[triggerType] || '',
     );
@@ -54,8 +52,8 @@ function getActionAndFilter(
   return [];
 }
 
-function getEntities(target: Element, filter: Filter): Entities {
-  const entities: Entities = [];
+function getEntities(target: Element, filter: Walker.Filter): Walker.Entities {
+  const entities: Walker.Entities = [];
   let element = target as Node['parentElement'];
   while (element) {
     const entity = getEntity(element);
@@ -68,8 +66,8 @@ function getEntities(target: Element, filter: Filter): Entities {
   return entities;
 }
 
-function getEntity(element: Element): Entity | null {
-  const type = getElbAttribute(element);
+function getEntity(element: Element): Walker.Entity | null {
+  const type = getAttribute(element, getElbAttributeName());
 
   if (!type) return null; // It's not a (valid) entity element
 
@@ -106,7 +104,7 @@ function getEntity(element: Element): Entity | null {
   });
 
   // Get nested entities
-  const nested: Entities = [];
+  const nested: Walker.Entities = [];
   element
     .querySelectorAll(`[${getElbAttributeName()}]`)
     .forEach((nestedEntityElement) => {
@@ -114,59 +112,16 @@ function getEntity(element: Element): Entity | null {
       if (nestedEntity) nested.push(nestedEntity);
     });
 
-  return { type, data: data as EntityData, nested };
+  return { type, data: data as Walker.EntityData, nested };
 }
 
-export function getElbAttributeName(name?: Attribute): string {
-  name = name ? '-' + name : '';
+export function getElbAttributeName(name?: string, isProperty = true): string {
+  // separate dynamic properties from walker commands
+  const separator = isProperty ? '-' : '';
+  name = name ? separator + name : '';
   return _prefix + name;
 }
 
-function getElbAttribute(element: Element, name?: string): Attribute {
-  return element.getAttribute(getElbAttributeName(name)) || undefined;
-}
-
-function getElbValues(element: Element, name: string): ElbValues {
-  return splitAttribute(getElbAttribute(element, name) || '');
-}
-
-function splitAttribute(str: Attribute, separator = ';'): ElbValues {
-  const values: ElbValues = {};
-
-  if (!str) return values;
-
-  const reg = new RegExp(`(?:[^${separator}']+|'[^']*')+`, 'ig');
-  const arr = str.match(reg) || [];
-
-  arr.forEach((str) => {
-    let [keyAttr, valueAttr] = splitKeyVal(str);
-    const [key] = parseAttribute(keyAttr);
-
-    if (key) values[key] = valueAttr || key;
-  });
-
-  return values;
-}
-
-function splitKeyVal(str: string): KeyVal {
-  const [key, value] = str.split(/:(.+)/, 2);
-  return [trim(key), trim(value)];
-}
-
-function parseAttribute(str: string): Attribute[] {
-  // action(a, b, c)
-  const [key, value] = str.split('(', 2);
-  const param = value ? value.slice(0, -1) : ''; // Remove the )
-  // key = 'action'
-  // param = 'a, b, c'
-  return [key, param];
-}
-
-function assign(base: AnyObject, props: AnyObject): AnyObject {
-  return { ...base, ...props };
-}
-
-function trim(str: string): string {
-  // Remove quotes and whitespaces
-  return str ? str.trim().replace(/^'|'$/g, '').trim() : '';
+function getElbValues(element: Element, name: string): Walker.Values {
+  return splitAttribute(getAttribute(element, getElbAttributeName(name)) || '');
 }

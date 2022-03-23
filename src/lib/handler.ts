@@ -1,5 +1,5 @@
 import { getElbAttributeName, walker } from './walker';
-import { EntityData, Trigger } from '../types/walker';
+import { Walker } from '../types/walker';
 import { trycatch } from './utils';
 
 // @TODO new language elbaction without the -
@@ -29,20 +29,16 @@ function load() {
   view();
 
   // Trigger load
-  d.querySelectorAll(`[${getElbAttributeName('action')}*=load]`).forEach(
-    (element) => {
-      // @TODO dealing with wildcart edge-case
-      // when the 'load' term is in selector but not as a trigger
-      handleTrigger(element, 'load');
-    },
-  );
+  d.querySelectorAll(getActionselector('load')).forEach((element) => {
+    // @TODO dealing with wildcart edge-case
+    // when the 'load' term is in selector but not as a trigger
+    handleTrigger(element, 'load');
+  });
 
   // Trigger wait
-  d.querySelectorAll(`[${getElbAttributeName('action')}*=wait\\(]`).forEach(
-    (element) => {
-      setTimeout(() => handleTrigger(element, 'wait'), 4000);
-    },
-  );
+  d.querySelectorAll(getActionselector('wait')).forEach((element) => {
+    setTimeout(() => handleTrigger(element, 'wait'), 4000); // @TODO use dynamic value
+  });
 
   // Trigger visible
   visible(d, true);
@@ -64,11 +60,12 @@ export function visible(
     // Disconnect previous
     if (disconnect) observer.disconnect();
 
-    scope
-      .querySelectorAll(`[${getElbAttributeName('action')}*=visible]`)
-      .forEach((element) => {
-        observer.observe(element);
-      });
+    // support both elbaction and legacy selector elb-action
+    const visibleSelector = getActionselector('visible');
+
+    scope.querySelectorAll(visibleSelector).forEach((element) => {
+      observer.observe(element);
+    });
   }
 
   return observer;
@@ -81,7 +78,7 @@ function view() {
     domain: l.hostname,
     id: l.pathname,
     title: d.title,
-  } as EntityData;
+  } as Walker.EntityData;
   if (l.search) data.search = l.search;
   if (l.hash) data.hash = l.hash;
 
@@ -160,7 +157,7 @@ function isVisible(elem: HTMLElement): boolean {
   return false;
 }
 
-function handleTrigger(element: Element, trigger: Trigger) {
+function handleTrigger(element: Element, trigger: Walker.Trigger) {
   const events = walker(element, trigger);
   events.forEach((event) => {
     w.elbLayer.push(
@@ -170,4 +167,12 @@ function handleTrigger(element: Element, trigger: Trigger) {
       event.nested,
     );
   });
+}
+
+function getActionselector(trigger: string) {
+  // support both elbaction and legacy selector elb-action
+  return `[${getElbAttributeName(
+    'action',
+    false,
+  )}*=${trigger}],[${getElbAttributeName('action')}*=${trigger}]`;
 }

@@ -1,7 +1,7 @@
 require('intersection-observer');
 
 import { initHandler } from '../lib/handler';
-import { AnyObject } from '../types/elbwalker';
+import { AnyObject } from '../types/globals';
 
 jest.useFakeTimers();
 jest.spyOn(global, 'setTimeout');

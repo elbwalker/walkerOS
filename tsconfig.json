@@ -4,6 +4,7 @@
     "module": "ES2015",
     "lib": ["dom", "es6"],
     "outDir": "dist",
+    "preserveConstEnums": true,
     "rootDir": ".",
     "strict": true,
     "noImplicitReturns": true,

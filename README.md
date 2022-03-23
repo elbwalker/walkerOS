@@ -23,31 +23,46 @@
 
 You can implement all sorts of front-end user events from e-commerce actions like product add to carts, product usage events, and UX events like visible elements, scrolling, etc. using the walker.
 
-By setting just a few HTML attributes, you'll for example get something like this:
-
-```js
-dataLayer.push({
-  event: 'product add',
-  entity: 'product',
-  action: 'add',
-  data: {
-    name: 'Everyday Ruck Snack',
-    price: 220,
-  },
-  trigger: 'click',
-  nested: [],
-  elbwalker: true,
-});
-```
-
-All you need to get started are the entity, action & trigger attributes.
+Just set a few HTML attributes
 
 ```html
 <!-- General usage -->
 <div elb="ENTITY" elb-ENTITY="KEY:VALUE" elb-action="TRIGGER:ACTION" />
 ```
 
-You define the entity scope by setting the `elb` attribute with the name of an entity to an element, e.g. `elb="product"`.
+The goal is to get for example get something like this:
+
+```js
+dataLayer.push({
+  event: 'product add', // combination of entity and action
+  data: {
+    // all set properties with the elb-product attribute
+    name: 'Everyday Ruck Snack',
+    price: 220,
+  },
+  globals: {
+    // all set properties with the elbglobals attribute
+    language: 'en',
+    test: 'darkmode',
+  },
+  user: {
+    // a stored random id in the cookie (manually added once)
+    device: 'cookieid',
+  },
+  nested: [], // all nested entities within the product
+  id: '1647968113641-b4b9h9-5', // timestamp, group & count of the event
+  trigger: 'click', // name of the trigger that fired
+  entity: 'product', // entity name
+  action: 'add', // entity action
+  timestamp: 1647968113641, // time when the event fired
+  timing: 13.37, // how long it took from the page load to trigger the event
+  group: 'b4b9h9', // random group id for all events on a page
+  count: 2, // incremental counter of the events on a page
+  walker: true, // just a flag to filter for the events
+});
+```
+
+All you need to get started are the entity, action & trigger attributes. You define the entity scope by setting the `elb` attribute with the name of an entity to an element, e.g. `elb="product"`.
 An action can be added by setting the `elb-action` attribute on the same level or all child elements in combination with a matching trigger, e.g. `elb-action="click:add"` to fire a <strong> product add </strong> event when a user clicks on the tagged element.
 To define the entities' properties, set the composited attribute `elb-ENTITY` with the name and value, e.g. `elb-product="name:Everyday Ruck Snack;price:220"`.
 

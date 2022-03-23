@@ -1,8 +1,8 @@
-import { ElbLayer, Elbwalker } from '../types/elbwalker';
+import { Elbwalker } from '../types/elbwalker';
 import fs from 'fs';
 
 let spyGo, spyRun: jest.SpyInstance;
-let elbwalker: Elbwalker;
+let elbwalker: Elbwalker.Function;
 
 const projectFileUrl = 'https://project-file.s.elbwalkerapis.com/';
 const projectId = 'W3BP4G3';
@@ -21,7 +21,7 @@ describe('project', () => {
 
     document.body.innerHTML = html;
 
-    window.elbLayer = undefined as unknown as ElbLayer;
+    window.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
   });
 
   test('no script tag', () => {
