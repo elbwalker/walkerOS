@@ -161,6 +161,16 @@ describe('Walker', () => {
       },
     ]);
   });
+
+  test('Legacy action syntax', () => {
+    expect(walker(getElem('elb-action'), 'load')).toMatchObject([
+      {
+        entity: 'legacy',
+        action: 'support',
+        data: { k: 'v' },
+      },
+    ]);
+  });
 });
 
 function getElem(selector: string) {

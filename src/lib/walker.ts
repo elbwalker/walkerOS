@@ -30,7 +30,10 @@ function getActionAndFilter(
   let element = target as Node['parentElement'];
 
   while (element) {
-    const attr = getAttribute(element, getElbAttributeName('action'));
+    const attr =
+      getAttribute(element, getElbAttributeName('action', false)) ||
+      getAttribute(element, getElbAttributeName('action')); // legacy elb-action
+
     const [action, filterAttr] = parseAttribute(
       splitAttribute(attr)[triggerType] || '',
     );
@@ -112,8 +115,10 @@ function getEntity(element: Element): Walker.Entity | null {
   return { type, data: data as Walker.EntityData, nested };
 }
 
-export function getElbAttributeName(name?: string): string {
-  name = name ? '-' + name : '';
+export function getElbAttributeName(name?: string, isProperty = true): string {
+  // separate dynamic properties from walker commands
+  const separator = isProperty ? '-' : '';
+  name = name ? separator + name : '';
   return _prefix + name;
 }
 
