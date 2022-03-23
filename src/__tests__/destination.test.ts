@@ -2,10 +2,14 @@ import { Destination } from '../types/destination';
 import { Elbwalker } from '../types/elbwalker';
 import { AnyObject } from '../types/globals';
 
-let elbwalker: Elbwalker.Function;
+const w = window;
+let elbwalker: Elbwalker.Function = require('../elbwalker').default;
 
 const mockPush = jest.fn(); //.mockImplementation(console.log);
 const mockInit = jest.fn(); //.mockImplementation(console.log);
+
+const mockError = jest.fn();
+console.error = mockError;
 
 let destination: AnyObject;
 
@@ -142,6 +146,22 @@ describe('destination', () => {
     });
   });
 
+  test('broken destination', () => {
+    // create invalid breaking destinations
+    elbwalker.push('walker destination');
+    elbwalker.push('walker destination', {
+      init: () => {
+        throw new Error();
+      },
+      push: mockPush,
+    });
+    elbwalker.push('walker destination', destination);
+    elbwalker.push('entity action');
+
+    expect(mockError).toHaveBeenCalled(); // error catcher
+    expect(mockInit).toHaveBeenCalled(); // 2nd destination
+  });
+
   // @TODO Mapping not active yet
   test.skip('mapping', () => {
     const mockPushA = jest.fn();
@@ -244,8 +264,6 @@ describe('destination', () => {
 });
 
 describe('dataLayer', () => {
-  const w = window;
-
   test('init', () => {
     expect(w.dataLayer).toBeUndefined();
     elbwalker.go();

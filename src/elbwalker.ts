@@ -3,7 +3,12 @@ import { initHandler, loadHandler } from './lib/handler';
 import { Walker } from './types/walker';
 import { destination } from './lib/destination';
 import { loadProject } from './lib/project';
-import { assign, getGlobalProperties, randomString } from './lib/utils';
+import {
+  assign,
+  getGlobalProperties,
+  randomString,
+  trycatch,
+} from './lib/utils';
 import { AnyObject } from './types/globals';
 import { Destination } from './types/destination';
 
@@ -73,30 +78,30 @@ elbwalker.push = function (
   const id = `${timestamp}-${group}-${count}`;
 
   destinations.map((destination) => {
-    // @TODO trycatch the calls
+    trycatch(() => {
+      // Destination initialization
+      // Check if the destination was initialized properly or try to do so
+      if (destination.init && !destination.config.init)
+        destination.config.init = destination.init();
 
-    // Destination initialization
-    // Check if the destination was initialized properly or try to do so
-    if (destination.init && !destination.config.init)
-      destination.config.init = destination.init();
-
-    destination.push({
-      event,
-      // Create a new objects for each destination
-      // to prevent data manipulation
-      data: assign({}, data),
-      globals: assign({}, globals),
-      user: assign({}, user as AnyObject),
-      nested: nested || [],
-      id,
-      trigger: trigger || '',
-      entity,
-      action,
-      timestamp,
-      timing,
-      group,
-      count,
-    });
+      destination.push({
+        event,
+        // Create a new objects for each destination
+        // to prevent data manipulation
+        data: assign({}, data),
+        globals: assign({}, globals),
+        user: assign({}, user as AnyObject),
+        nested: nested || [],
+        id,
+        trigger: trigger || '',
+        entity,
+        action,
+        timestamp,
+        timing,
+        group,
+        count,
+      });
+    })();
   });
 };
 
