@@ -1,7 +1,6 @@
-import { Destination } from '../types/destination';
-import { Elbwalker } from '../types/elbwalker';
+import { Elbwalker, WebDestination } from '@elbwalker/types';
 
-export const destination: Destination.Function = {
+export const destination: WebDestination.Function = {
   init() {
     window.dataLayer = window.dataLayer || [];
 

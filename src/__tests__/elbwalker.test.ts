@@ -1,8 +1,7 @@
 require('intersection-observer');
+import { Elbwalker } from '@elbwalker/types';
 import fs from 'fs';
 import _ from 'lodash';
-
-import { Elbwalker } from '../types/elbwalker';
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const w = window;

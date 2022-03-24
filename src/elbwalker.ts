@@ -1,6 +1,4 @@
-import { Elbwalker } from './types/elbwalker';
 import { initHandler, loadHandler } from './lib/handler';
-import { Walker } from './types/walker';
 import { destination } from './lib/destination';
 import { loadProject } from './lib/project';
 import {
@@ -9,12 +7,11 @@ import {
   randomString,
   trycatch,
 } from './lib/utils';
-import { AnyObject } from './types/globals';
-import { Destination } from './types/destination';
+import { AnyObject, Elbwalker, Walker, WebDestination } from '@elbwalker/types';
 
 const w = window;
 const elbwalker = {} as Elbwalker.Function;
-const destinations: Destination.Functions = [];
+const destinations: WebDestination.Functions = [];
 
 let count = 0; // Event counter for each run
 let group = randomString(); // random id to group events of a run
@@ -143,13 +140,13 @@ function setUserIds(data: Elbwalker.User) {
   if (data.hash) user.hash = data.hash;
 }
 
-function addDestination(data: AnyObject | Destination.Function) {
+function addDestination(data: AnyObject | WebDestination.Function) {
   // Skip validation due to trycatch calls on push
   const destination = {
     init: data.init,
     push: data.push,
     config: data.config || { init: false },
-  } as Destination.Function;
+  } as WebDestination.Function;
 
   destinations.push(destination);
 }

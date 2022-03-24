@@ -1,6 +1,4 @@
-import { Destination } from '../types/destination';
-import { Elbwalker } from '../types/elbwalker';
-import { AnyObject } from '../types/globals';
+import { AnyObject, Elbwalker, WebDestination } from '@elbwalker/types';
 
 const w = window;
 let elbwalker: Elbwalker.Function = require('../elbwalker').default;
@@ -24,7 +22,7 @@ describe('destination', () => {
       push: mockPush,
       config: { init: false },
       // Typecast it once to it's original just to be (kind of) sure
-    } as Destination.Function as unknown as AnyObject;
+    } as WebDestination.Function as unknown as AnyObject;
   });
 
   test('basic usage', () => {
