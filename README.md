@@ -30,7 +30,7 @@ Just set a few HTML attributes
 <div elb="ENTITY" elb-ENTITY="KEY:VALUE" elb-action="TRIGGER:ACTION" />
 ```
 
-The goal is to get for example get something like this:
+The result is for example something like this:
 
 ```js
 dataLayer.push({
@@ -58,7 +58,7 @@ dataLayer.push({
   timing: 13.37, // how long it took from the page load to trigger the event
   group: 'b4b9h9', // random group id for all events on a page
   count: 2, // incremental counter of the events on a page
-  walker: true, // just a flag to filter for the events
+  walker: true, // flag to filter events
 });
 ```
 
