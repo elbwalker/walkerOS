@@ -68,7 +68,7 @@ To define the entities' properties, set the composited attribute `elb-ENTITY` wi
 
 ```html
 <div elb="product" elb-product="name:Everyday Ruck Snack;price:220">
-  <button elb-action="click:add">Add to cart</button>
+  <button elbaction="click:add">Add to cart</button>
 </div>
 ```
 
