@@ -1,6 +1,6 @@
 import { getElbAttributeName, walker } from './walker';
-import { Walker } from '../types/walker';
 import { trycatch } from './utils';
+import { Walker } from '@elbwalker/types';
 
 // @TODO new language elbaction without the -
 

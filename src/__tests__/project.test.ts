@@ -1,4 +1,4 @@
-import { Elbwalker } from '../types/elbwalker';
+import { Elbwalker } from '@elbwalker/types';
 import fs from 'fs';
 
 let spyGo, spyRun: jest.SpyInstance;

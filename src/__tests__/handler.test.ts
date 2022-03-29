@@ -1,13 +1,13 @@
 require('intersection-observer');
 
 import { initHandler } from '../lib/handler';
-import { AnyObject } from '../types/globals';
 
 jest.useFakeTimers();
 jest.spyOn(global, 'setTimeout');
 jest.mock('../elbwalker');
 
 import fs from 'fs';
+import { AnyObject } from '@elbwalker/types';
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
 window.elbLayer = window.elbLayer || [];

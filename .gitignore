@@ -86,3 +86,5 @@ typings/
 
 # JetBrains IDEs
 .idea
+
+dist

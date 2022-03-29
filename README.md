@@ -6,7 +6,7 @@
 
 <h2 align="left">walker.js</h2>
 
-  <p align="left">The walker.js is an open-source data collection service. It makes it easy to capture user events in the browser for Google Tag Manager by setting HTML attributes only.
+  <p align="left">The walker.js is an open-source event tracker for all tools. Easy, standardized & flexible. Capture user events in the browser by setting HTML attributes only.
     <br />
     <a href="https://docs.elbwalker.com"><strong> Explore the docs</strong></a>
     <br />
@@ -27,7 +27,7 @@ Just set a few HTML attributes
 
 ```html
 <!-- General usage -->
-<div elb="ENTITY" elb-ENTITY="KEY:VALUE" elb-action="TRIGGER:ACTION" />
+<div elb="ENTITY" elb-ENTITY="KEY:VALUE" elbaction="TRIGGER:ACTION" />
 ```
 
 The result is for example something like this:
@@ -63,12 +63,12 @@ dataLayer.push({
 ```
 
 All you need to get started are the entity, action & trigger attributes. You define the entity scope by setting the `elb` attribute with the name of an entity to an element, e.g. `elb="product"`.
-An action can be added by setting the `elb-action` attribute on the same level or all child elements in combination with a matching trigger, e.g. `elb-action="click:add"` to fire a <strong> product add </strong> event when a user clicks on the tagged element.
+An action can be added by setting the `elbaction` attribute on the same level or all child elements in combination with a matching trigger, e.g. `elbaction="click:add"` to fire a <strong> product add </strong> event when a user clicks on the tagged element.
 To define the entities' properties, set the composited attribute `elb-ENTITY` with the name and value, e.g. `elb-product="name:Everyday Ruck Snack;price:220"`.
 
 ```html
 <div elb="product" elb-product="name:Everyday Ruck Snack;price:220">
-  <button elb-action="click:add">Add to cart</button>
+  <button elbaction="click:add">Add to cart</button>
 </div>
 ```
 

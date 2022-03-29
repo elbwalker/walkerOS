@@ -1,21 +1,22 @@
-import { Elbwalker } from './types/elbwalker';
+import { AnyObject, Elbwalker, Walker, WebDestination } from '@elbwalker/types';
 import { initHandler, loadHandler } from './lib/handler';
-import { Walker } from './types/walker';
-import { destination } from './lib/destination';
+import { destination } from './destinations/google-tag-manager';
 import { loadProject } from './lib/project';
-import { assign, getGlobalProperties, randomString } from './lib/utils';
-import { AnyObject } from './types/globals';
-import { Destination } from './types/destination';
+import {
+  assign,
+  getGlobalProperties,
+  randomString,
+  trycatch,
+} from './lib/utils';
 
 const w = window;
 const elbwalker = {} as Elbwalker.Function;
+const destinations: WebDestination.Functions = [];
 
 let count = 0; // Event counter for each run
 let group = randomString(); // random id to group events of a run
 let globals: AnyObject = {}; // init globals as some random var
 let user: Elbwalker.User = {}; // handles the user ids
-
-elbwalker.destinations = [];
 
 elbwalker.go = function (projectId?: string) {
   if (projectId) {
@@ -23,7 +24,7 @@ elbwalker.go = function (projectId?: string) {
     loadProject(projectId);
   } else {
     // load custom destination and auto run
-    this.destination(destination);
+    addDestination(destination);
     this.run();
   }
 };
@@ -58,12 +59,13 @@ elbwalker.push = function (
 ): void {
   if (!event) return;
 
+  // Check for valid entity and action event format
   const [entity, action] = event.split(' ');
   if (!entity || !action) return;
 
+  // Handle internal walker command events
   if (entity === Elbwalker.Commands.Walker) {
     handleCommand(action, data);
-
     return;
   }
 
@@ -72,24 +74,31 @@ elbwalker.push = function (
   const timing = Math.round(performance.now() / 10) / 100;
   const id = `${timestamp}-${group}-${count}`;
 
-  this.destinations.map((destination) => {
-    destination.push({
-      event,
-      // Create a new objects for each destination
-      // to prevent data manipulation
-      data: assign({}, data),
-      globals: assign({}, globals),
-      user: assign({}, user as AnyObject),
-      nested: nested || [],
-      id,
-      trigger: trigger || '',
-      entity,
-      action,
-      timestamp,
-      timing,
-      group,
-      count,
-    });
+  destinations.map((destination) => {
+    trycatch(() => {
+      // Destination initialization
+      // Check if the destination was initialized properly or try to do so
+      if (destination.init && !destination.config.init)
+        destination.config.init = destination.init();
+
+      destination.push({
+        event,
+        // Create a new objects for each destination
+        // to prevent data manipulation
+        data: assign({}, data),
+        globals: assign({}, globals),
+        user: assign({}, user as AnyObject),
+        nested: nested || [],
+        id,
+        trigger: trigger || '',
+        entity,
+        action,
+        timestamp,
+        timing,
+        group,
+        count,
+      });
+    })();
   });
 };
 
@@ -113,6 +122,9 @@ function elbLayerInit() {
 
 function handleCommand(action: string, data: AnyObject = {}) {
   switch (action) {
+    case Elbwalker.Commands.Destination:
+      addDestination(data);
+      break;
     case Elbwalker.Commands.User:
       setUserIds(data);
       break;
@@ -128,20 +140,16 @@ function setUserIds(data: Elbwalker.User) {
   if (data.hash) user.hash = data.hash;
 }
 
-// @TODO rename to addDestination or use elb command push
-// Is that possible? What if there are events before the init
-// maybe loop for elb entitiy first
-elbwalker.destination = function (
-  destination: Destination.Function,
-  config: AnyObject = {}, // @TODO better type
-) {
-  if (config) {
-    destination.init(config);
-    destination.mapping = (config.mapping as Destination.Mapping) || false;
-  }
+function addDestination(data: AnyObject | WebDestination.Function) {
+  // Skip validation due to trycatch calls on push
+  const destination = {
+    init: data.init,
+    push: data.push,
+    config: data.config || { init: false },
+  } as WebDestination.Function;
 
-  this.destinations.push(destination);
-};
+  destinations.push(destination);
+}
 
 w.elbwalker = elbwalker;
 

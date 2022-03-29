@@ -1,9 +1,7 @@
 require('intersection-observer');
+import { Elbwalker } from '@elbwalker/types';
 import fs from 'fs';
 import _ from 'lodash';
-
-import elbwalkerOrg from '../elbwalker';
-import { Elbwalker } from '../types/elbwalker';
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const w = window;
@@ -11,18 +9,14 @@ let elbwalker: Elbwalker.Function;
 w.dataLayer = [];
 
 beforeEach(() => {
-  mockFn.mockClear();
+  elbwalker = require('../elbwalker').default;
+  jest.clearAllMocks();
+  jest.resetModules();
+
   // reset DOM with event listeners etc.
   document.body = document.body.cloneNode() as HTMLElement;
   w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
   w.dataLayer!.push = mockFn;
-
-  elbwalker = _.cloneDeepWith(elbwalkerOrg, (value: unknown) => {
-    if (_.isArray(value)) {
-      value = [];
-      return value;
-    }
-  });
 });
 
 describe('elbwalker', () => {
@@ -41,6 +35,8 @@ describe('elbwalker', () => {
 
   test('regular push', () => {
     elbwalker.go();
+    jest.clearAllMocks(); // skip auto page view event
+
     elbwalker.push('entity action');
     elbwalker.push('entity action', { foo: 'bar' });
 
@@ -130,7 +126,7 @@ describe('elbwalker', () => {
     // Start a new initialization with a new group ip
     elbwalker.run();
     elbwalker.push('entity action');
-    expect(mockFn.mock.calls[3][0].group).not.toEqual(groupId);
+    expect(mockFn.mock.calls[4][0].group).not.toEqual(groupId);
   });
 
   test('walker commands', () => {
