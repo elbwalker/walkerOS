@@ -1,6 +1,14 @@
 import { Elbwalker, WebDestination } from '@elbwalker/types';
 
+declare global {
+  interface Window {
+    dataLayer?: unknown[];
+  }
+}
+
 export const destination: WebDestination.Function = {
+  config: {},
+
   init() {
     window.dataLayer = window.dataLayer || [];
 
@@ -13,6 +21,4 @@ export const destination: WebDestination.Function = {
       walker: true,
     });
   },
-
-  config: {},
 };

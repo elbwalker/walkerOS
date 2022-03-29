@@ -1,7 +1,6 @@
 import { AnyObject, Elbwalker, WebDestination } from '@elbwalker/types';
 
-const w = window;
-let elbwalker: Elbwalker.Function = require('../elbwalker').default;
+let elbwalker: Elbwalker.Function;
 
 const mockPush = jest.fn(); //.mockImplementation(console.log);
 const mockInit = jest.fn(); //.mockImplementation(console.log);
@@ -258,49 +257,5 @@ describe('destination', () => {
       group: expect.any(String),
       count: 3,
     });
-  });
-});
-
-describe('dataLayer', () => {
-  test('init', () => {
-    expect(w.dataLayer).toBeUndefined();
-    elbwalker.go();
-    expect(w.dataLayer).toBeDefined();
-    elbwalker.push('entity action', { a: 1 }, 'manual');
-    expect(w.dataLayer).toBeDefined();
-    expect(w.dataLayer).toStrictEqual([
-      {
-        event: 'page view',
-        data: { domain: 'localhost', id: '/', title: '' },
-        globals: {},
-        user: {},
-        nested: [],
-        id: expect.any(String),
-        trigger: 'load',
-        entity: 'page',
-        action: 'view',
-        timestamp: expect.any(Number),
-        timing: expect.any(Number),
-        group: expect.any(String),
-        count: 1,
-        walker: true,
-      },
-      {
-        event: 'entity action',
-        data: { a: 1 },
-        globals: {},
-        user: {},
-        nested: [],
-        id: expect.any(String),
-        trigger: 'manual',
-        entity: 'entity',
-        action: 'action',
-        timestamp: expect.any(Number),
-        timing: expect.any(Number),
-        group: expect.any(String),
-        count: 2,
-        walker: true,
-      },
-    ]);
   });
 });

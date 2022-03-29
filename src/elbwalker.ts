@@ -1,5 +1,6 @@
+import { AnyObject, Elbwalker, Walker, WebDestination } from '@elbwalker/types';
 import { initHandler, loadHandler } from './lib/handler';
-import { destination } from './lib/destination';
+import { destination } from './destinations/google-tag-manager';
 import { loadProject } from './lib/project';
 import {
   assign,
@@ -7,7 +8,6 @@ import {
   randomString,
   trycatch,
 } from './lib/utils';
-import { AnyObject, Elbwalker, Walker, WebDestination } from '@elbwalker/types';
 
 const w = window;
 const elbwalker = {} as Elbwalker.Function;
