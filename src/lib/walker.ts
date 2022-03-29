@@ -1,5 +1,4 @@
-import { AnyObject } from '../types/globals';
-import { Walker } from '../types/walker';
+import { AnyObject, Walker } from '@elbwalker/types';
 import { assign, getAttribute, parseAttribute, splitAttribute } from './utils';
 
 const _prefix = 'elb';
