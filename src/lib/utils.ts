@@ -1,4 +1,4 @@
-import { AnyObject, Walker } from '@elbwalker/types';
+import { AnyObject, Elbwalker, Walker } from '@elbwalker/types';
 import { getElbAttributeName } from './walker';
 
 export function trycatch<P extends unknown[], R>(
@@ -8,7 +8,7 @@ export function trycatch<P extends unknown[], R>(
     try {
       return fn(...args);
     } catch (err) {
-      console.error(err);
+      console.error(Elbwalker.Commands.Walker, err);
       return;
     }
   };
@@ -19,7 +19,7 @@ export function randomString(): string {
 }
 
 export function getGlobalProperties(): AnyObject {
-  const globalsName = getElbAttributeName('globals', false);
+  const globalsName = getElbAttributeName(Elbwalker.Commands.Globals, false);
   const globalSelector = `[${globalsName}]`;
   let values = {};
 

@@ -2,8 +2,6 @@ import { getElbAttributeName, walker } from './walker';
 import { trycatch } from './utils';
 import { Walker } from '@elbwalker/types';
 
-// @TODO new language elbaction without the -
-
 const d = document;
 const w = window;
 const observer = trycatch(observerVisible)(1000);
