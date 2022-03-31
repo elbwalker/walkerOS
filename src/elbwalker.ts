@@ -25,30 +25,8 @@ elbwalker.go = function (projectId?: string) {
   } else {
     // load custom destination and auto run
     addDestination(destination);
-    this.run();
+    run();
   }
-};
-
-elbwalker.run = function () {
-  // Reset the run counter
-  count = 0;
-
-  // Generate a new group id for each run
-  group = randomString();
-
-  // Load globals properties
-  // Due to site performance only once every run
-  globals = getGlobalProperties();
-
-  // Pushes for elbwalker
-  elbLayerInit();
-
-  // Register all handlers
-  initHandler();
-};
-
-elbwalker.load = function () {
-  loadHandler();
 };
 
 elbwalker.push = function (
@@ -125,12 +103,33 @@ function handleCommand(action: string, data: AnyObject = {}) {
     case Elbwalker.Commands.Destination:
       addDestination(data);
       break;
+    case Elbwalker.Commands.Run:
+      run();
+      break;
     case Elbwalker.Commands.User:
       setUserIds(data);
       break;
     default:
       break;
   }
+}
+
+function run() {
+  // Reset the run counter
+  count = 0;
+
+  // Generate a new group id for each run
+  group = randomString();
+
+  // Load globals properties
+  // Due to site performance only once every run
+  globals = getGlobalProperties();
+
+  // Pushes for elbwalker
+  elbLayerInit();
+
+  // Register all handlers
+  initHandler();
 }
 
 function setUserIds(data: Elbwalker.User) {
