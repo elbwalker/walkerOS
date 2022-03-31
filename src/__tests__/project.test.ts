@@ -1,7 +1,7 @@
 import { Elbwalker } from '@elbwalker/types';
 import fs from 'fs';
 
-let spyGo, spyRun: jest.SpyInstance;
+let spyGo: jest.SpyInstance;
 let elbwalker: Elbwalker.Function;
 
 const projectFileUrl = 'https://project-file.s.elbwalkerapis.com/';
@@ -17,7 +17,6 @@ describe('project', () => {
 
     elbwalker = require('../elbwalker').default;
     spyGo = jest.spyOn(elbwalker, 'go');
-    spyRun = jest.spyOn(elbwalker, 'run');
 
     document.body.innerHTML = html;
 
@@ -29,8 +28,7 @@ describe('project', () => {
 
     jest.requireActual('../index');
     expect(elbwalker.go).toHaveBeenCalledTimes(1);
-    expect(elbwalker.go).toHaveBeenCalledWith('');
-    expect(spyRun).toHaveBeenCalled();
+    expect(elbwalker.go).toHaveBeenCalledWith({ projectId: '' });
   });
 
   test('no custom project', () => {
@@ -39,8 +37,7 @@ describe('project', () => {
 
     jest.requireActual('../index');
     expect(elbwalker.go).toHaveBeenCalledTimes(1);
-    expect(elbwalker.go).toHaveBeenCalledWith('');
-    expect(spyRun).toHaveBeenCalled();
+    expect(elbwalker.go).toHaveBeenCalledWith({ projectId: '' });
     expect(window.document.scripts.length).toBe(1);
   });
 
@@ -48,8 +45,7 @@ describe('project', () => {
     expect(window.document.scripts.length).toBe(1);
 
     jest.requireActual('../index');
-    expect(elbwalker.go).toHaveBeenCalledWith(projectId);
-    expect(spyRun).not.toHaveBeenCalled();
+    expect(elbwalker.go).toHaveBeenCalledWith({ projectId: 'W3BP4G3' });
 
     expect(window.document.scripts.length).toBe(2);
     expect(
