@@ -1,5 +1,5 @@
 import { AnyObject, Elbwalker, Walker, WebDestination } from '@elbwalker/types';
-import { initHandler, loadHandler } from './lib/handler';
+import { initHandler } from './lib/handler';
 import { destination } from './destinations/google-tag-manager';
 import { loadProject } from './lib/project';
 import {
@@ -18,10 +18,10 @@ let group = randomString(); // random id to group events of a run
 let globals: AnyObject = {}; // init globals as some random var
 let user: Elbwalker.User = {}; // handles the user ids
 
-elbwalker.go = function (projectId?: string) {
-  if (projectId) {
+elbwalker.go = function (config: Elbwalker.Config = {}) {
+  if (config.projectId) {
     // load individual project configuration
-    loadProject(projectId);
+    loadProject(config.projectId);
   } else {
     // load custom destination and auto run
     addDestination(destination);

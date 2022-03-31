@@ -6,10 +6,6 @@ const d = document;
 const w = window;
 const observer = trycatch(observerVisible)(1000);
 
-export function loadHandler(): void {
-  trycatch(load)();
-}
-
 export function initHandler(): void {
   if (d.readyState !== 'loading') {
     trycatch(load)();
@@ -80,6 +76,7 @@ function view() {
   if (l.search) data.search = l.search;
   if (l.hash) data.hash = l.hash;
 
+  // @TODO get all nested entities
   w.elbLayer.push('page view', data, 'load');
 }
 

@@ -4,4 +4,4 @@ import elbwalker from './elbwalker';
 const elem = document.querySelector('script.elbwalker');
 const projectId = (elem && elem.getAttribute('data-project')) || '';
 
-elbwalker.go(projectId);
+elbwalker.go({ projectId });
