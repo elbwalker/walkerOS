@@ -1,7 +1,6 @@
 import { AnyObject, Elbwalker, Walker, WebDestination } from '@elbwalker/types';
 import { initHandler } from './lib/handler';
 import { destination } from './destinations/google-tag-manager';
-import { loadProject } from './lib/project';
 import {
   assign,
   getGlobalProperties,
@@ -19,13 +18,16 @@ let globals: AnyObject = {}; // init globals as some random var
 let user: Elbwalker.User = {}; // handles the user ids
 
 elbwalker.go = function (config: Elbwalker.Config = {}) {
+  // Switch between init modes
   if (config.projectId) {
-    // load individual project configuration
+    // managed: use project configuration service
     loadProject(config.projectId);
-  } else {
-    // load custom destination and auto run
+  } else if (!config.custom) {
+    // default: add GTM destination and auto run
     addDestination(destination);
     run();
+  } else {
+    // custom: use the elbLayer
   }
 };
 
@@ -148,6 +150,12 @@ function addDestination(data: AnyObject | WebDestination.Function) {
   } as WebDestination.Function;
 
   destinations.push(destination);
+}
+
+function loadProject(projectId: string) {
+  const script = document.createElement('script');
+  script.src = `${process.env.PROJECT_FILE}${projectId}.js`;
+  document.head.appendChild(script);
 }
 
 w.elbwalker = elbwalker;
