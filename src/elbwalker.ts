@@ -20,7 +20,7 @@ let calledPredefined = false; // Status of basic initialisation
 
 elbwalker.go = function (config: Elbwalker.Config = {}) {
   // Setup pushes for elbwalker via elbLayer
-  elbLayerInit();
+  elbLayerInit(this);
 
   // Switch between init modes
   if (config.projectId) {
@@ -102,26 +102,22 @@ function handleCommand(action: string, data: Elbwalker.PushData = {}) {
   }
 }
 
-function elbLayerInit() {
-  // @TODO pass elbwalker object as paramter to detach from window workaround
+function elbLayerInit(elbwalker: Elbwalker.Function) {
+  w.elbLayer = w.elbLayer || [];
 
-  const elbLayer = w.elbLayer || [];
-
-  elbLayer.push = function (
+  w.elbLayer.push = function (
     event?: string,
     data?: Elbwalker.PushData,
     trigger?: string,
     nested?: Walker.Entities,
   ) {
-    w.elbwalker.push(event, data, trigger, nested);
+    elbwalker.push(event, data, trigger, nested);
     return Array.prototype.push.apply(this, [arguments]);
   };
 
-  w.elbLayer = elbLayer;
-
   // Look if the run command is stacked
   const runCommand = `${Elbwalker.Commands.Walker} ${Elbwalker.Commands.Run}`;
-  const containsRun = (elbLayer as Array<unknown>).find(
+  const containsRun = (w.elbLayer as Array<unknown>).find(
     (element) => element == runCommand,
   );
 
@@ -154,7 +150,10 @@ function callPredefined() {
   // there is a special execution order for all predefined events
   // prioritize all walker commands before others
   // this gurantees a fully configuration before the first run
-  // @TODO
+  // w.elbLayer.map((event) => {
+  //   // @TODO check for walker event
+  //   // elbLayerPush(event);
+  // });
 }
 
 function setUserIds(data: Elbwalker.User) {
