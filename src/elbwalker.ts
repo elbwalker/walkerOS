@@ -1,7 +1,6 @@
 import { AnyObject, Elbwalker, Walker, WebDestination } from '@elbwalker/types';
-import { initHandler, loadHandler } from './lib/handler';
+import { initHandler } from './lib/handler';
 import { destination } from './destinations/google-tag-manager';
-import { loadProject } from './lib/project';
 import {
   assign,
   getGlobalProperties,
@@ -18,37 +17,18 @@ let group = randomString(); // random id to group events of a run
 let globals: AnyObject = {}; // init globals as some random var
 let user: Elbwalker.User = {}; // handles the user ids
 
-elbwalker.go = function (projectId?: string) {
-  if (projectId) {
-    // load individual project configuration
-    loadProject(projectId);
-  } else {
-    // load custom destination and auto run
+elbwalker.go = function (config: Elbwalker.Config = {}) {
+  // Switch between init modes
+  if (config.projectId) {
+    // managed: use project configuration service
+    loadProject(config.projectId);
+  } else if (!config.custom) {
+    // default: add GTM destination and auto run
     addDestination(destination);
-    this.run();
+    run();
+  } else {
+    // custom: use the elbLayer
   }
-};
-
-elbwalker.run = function () {
-  // Reset the run counter
-  count = 0;
-
-  // Generate a new group id for each run
-  group = randomString();
-
-  // Load globals properties
-  // Due to site performance only once every run
-  globals = getGlobalProperties();
-
-  // Pushes for elbwalker
-  elbLayerInit();
-
-  // Register all handlers
-  initHandler();
-};
-
-elbwalker.load = function () {
-  loadHandler();
 };
 
 elbwalker.push = function (
@@ -125,12 +105,33 @@ function handleCommand(action: string, data: AnyObject = {}) {
     case Elbwalker.Commands.Destination:
       addDestination(data);
       break;
+    case Elbwalker.Commands.Run:
+      run();
+      break;
     case Elbwalker.Commands.User:
       setUserIds(data);
       break;
     default:
       break;
   }
+}
+
+function run() {
+  // Reset the run counter
+  count = 0;
+
+  // Generate a new group id for each run
+  group = randomString();
+
+  // Load globals properties
+  // Due to site performance only once every run
+  globals = getGlobalProperties();
+
+  // Pushes for elbwalker
+  elbLayerInit();
+
+  // Register all handlers
+  initHandler();
 }
 
 function setUserIds(data: Elbwalker.User) {
@@ -149,6 +150,12 @@ function addDestination(data: AnyObject | WebDestination.Function) {
   } as WebDestination.Function;
 
   destinations.push(destination);
+}
+
+function loadProject(projectId: string) {
+  const script = document.createElement('script');
+  script.src = `${process.env.PROJECT_FILE}${projectId}.js`;
+  document.head.appendChild(script);
 }
 
 w.elbwalker = elbwalker;

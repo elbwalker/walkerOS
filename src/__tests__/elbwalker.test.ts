@@ -124,7 +124,7 @@ describe('elbwalker', () => {
     expect(mockFn.mock.calls[2][0].group).toEqual(groupId);
 
     // Start a new initialization with a new group ip
-    elbwalker.run();
+    elbwalker.push('walker run');
     elbwalker.push('entity action');
     expect(mockFn.mock.calls[4][0].group).not.toEqual(groupId);
   });

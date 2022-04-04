@@ -2,15 +2,9 @@ import { getElbAttributeName, walker } from './walker';
 import { trycatch } from './utils';
 import { Walker } from '@elbwalker/types';
 
-// @TODO new language elbaction without the -
-
 const d = document;
 const w = window;
 const observer = trycatch(observerVisible)(1000);
-
-export function loadHandler(): void {
-  trycatch(load)();
-}
 
 export function initHandler(): void {
   if (d.readyState !== 'loading') {
@@ -82,6 +76,7 @@ function view() {
   if (l.search) data.search = l.search;
   if (l.hash) data.hash = l.hash;
 
+  // @TODO get all nested entities
   w.elbLayer.push('page view', data, 'load');
 }
 

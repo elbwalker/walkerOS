@@ -1,7 +1,8 @@
 import elbwalker from './elbwalker';
 
-// Get custom projectId
+// walker script
 const elem = document.querySelector('script.elbwalker');
-const projectId = (elem && elem.getAttribute('data-project')) || '';
+const projectId = (elem && elem.getAttribute('data-project')) || ''; // managed mode
+const custom = (elem && !!elem.getAttribute('data-custom')) || false; // custom mode
 
-elbwalker.go(projectId);
+elbwalker.go({ projectId, custom });
