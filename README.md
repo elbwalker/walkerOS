@@ -107,6 +107,34 @@ _For further inspiration, please refer to the industry examples in our [docs](ht
 
 _Learn more about the elbwalker [event model](https://www.elbwalker.com/blog/elbwalker-event-concept) and background in our [blog](https://www.elbwalker.com/blog/)._
 
+## Modes
+
+There are three modes: default, custom, and managed. Modes describe different ways in which the walker.js can be used.
+
+### Default
+
+By using the default mode, elbwalker automatically pushes events without furter configuration into the dataLayer so that you can use it in Google Tag Manager (GTM).
+
+```js
+<script src="walker.js"></script>
+```
+
+### Custom
+
+By using the custom mode, you can e.g. customize destinations flexibly through code yourself. You can use the elbLayer to do the configuration manually.
+
+```js
+<script src="walker.js" data-custom="true"></script>
+```
+
+### Managed
+
+When using our managed mode, a project ID will be added to the script. You can generate your custom project ID and configure the walker.js through our web app (UI).
+
+```js
+<script src="walker.js" data-project="W3BSHOP"></script>
+```
+
 ## 🚀 Getting Started
 
 To get a local copy up and running follow these simple steps.
