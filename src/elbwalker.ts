@@ -16,8 +16,12 @@ let count = 0; // Event counter for each run
 let group = randomString(); // random id to group events of a run
 let globals: AnyObject = {}; // init globals as some random var
 let user: Elbwalker.User = {}; // handles the user ids
+let calledPredefined = false; // Status of basic initialisation
 
 elbwalker.go = function (config: Elbwalker.Config = {}) {
+  // Setup pushes for elbwalker via elbLayer
+  elbLayerInit();
+
   // Switch between init modes
   if (config.projectId) {
     // managed: use project configuration service
@@ -32,8 +36,8 @@ elbwalker.go = function (config: Elbwalker.Config = {}) {
 };
 
 elbwalker.push = function (
-  event: string,
-  data?: AnyObject,
+  event?: string,
+  data?: Elbwalker.PushData,
   trigger?: string,
   nested?: Walker.Entities,
 ): void {
@@ -65,7 +69,7 @@ elbwalker.push = function (
         event,
         // Create a new objects for each destination
         // to prevent data manipulation
-        data: assign({}, data),
+        data: assign({}, data as AnyObject),
         globals: assign({}, globals),
         user: assign({}, user as AnyObject),
         nested: nested || [],
@@ -82,25 +86,7 @@ elbwalker.push = function (
   });
 };
 
-function elbLayerInit() {
-  // @TODO support to push predefined stack
-  // @TODO pass elbwalker object as paramter to detach from window workaround
-
-  const elbLayer = w.elbLayer || [];
-
-  elbLayer.push = function (...args: unknown[]) {
-    const [event, data, trigger] = args;
-
-    // @TODO push nested
-    w.elbwalker.push(event as string, data as AnyObject, trigger as string);
-
-    return Array.prototype.push.apply(this, [args]);
-  };
-
-  w.elbLayer = elbLayer;
-}
-
-function handleCommand(action: string, data: AnyObject = {}) {
+function handleCommand(action: string, data: Elbwalker.PushData = {}) {
   switch (action) {
     case Elbwalker.Commands.Destination:
       addDestination(data);
@@ -109,11 +95,37 @@ function handleCommand(action: string, data: AnyObject = {}) {
       run();
       break;
     case Elbwalker.Commands.User:
-      setUserIds(data);
+      setUserIds(data as AnyObject);
       break;
     default:
       break;
   }
+}
+
+function elbLayerInit() {
+  // @TODO pass elbwalker object as paramter to detach from window workaround
+
+  const elbLayer = w.elbLayer || [];
+
+  elbLayer.push = function (
+    event?: string,
+    data?: Elbwalker.PushData,
+    trigger?: string,
+    nested?: Walker.Entities,
+  ) {
+    w.elbwalker.push(event, data, trigger, nested);
+    return Array.prototype.push.apply(this, [arguments]);
+  };
+
+  w.elbLayer = elbLayer;
+
+  // Look if the run command is stacked
+  const runCommand = `${Elbwalker.Commands.Walker} ${Elbwalker.Commands.Run}`;
+  const containsRun = (elbLayer as Array<unknown>).find(
+    (element) => element == runCommand,
+  );
+
+  if (containsRun) run(); // Run walker run
 }
 
 function run() {
@@ -127,11 +139,22 @@ function run() {
   // Due to site performance only once every run
   globals = getGlobalProperties();
 
-  // Pushes for elbwalker
-  elbLayerInit();
+  // Run predefined elbLayer stack once
+  if (!calledPredefined) {
+    calledPredefined = true;
+    callPredefined();
+  }
 
   // Register all handlers
   initHandler();
+}
+
+// Trigger events in the elbLayer
+function callPredefined() {
+  // there is a special execution order for all predefined events
+  // prioritize all walker commands before others
+  // this gurantees a fully configuration before the first run
+  // @TODO
 }
 
 function setUserIds(data: Elbwalker.User) {
@@ -141,7 +164,7 @@ function setUserIds(data: Elbwalker.User) {
   if (data.hash) user.hash = data.hash;
 }
 
-function addDestination(data: AnyObject | WebDestination.Function) {
+function addDestination(data: Elbwalker.PushData) {
   // Skip validation due to trycatch calls on push
   const destination = {
     init: data.init,
