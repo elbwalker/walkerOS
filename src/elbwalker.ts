@@ -11,11 +11,13 @@ import {
 const w = window;
 const elbwalker = {} as Elbwalker.Function;
 const destinations: WebDestination.Functions = [];
+const runCommand = `${Elbwalker.Commands.Walker} ${Elbwalker.Commands.Run}`;
 
 let count = 0; // Event counter for each run
 let group = randomString(); // random id to group events of a run
 let globals: AnyObject = {}; // init globals as some random var
 let user: Elbwalker.User = {}; // handles the user ids
+let allowRunning = false; // Wait for explicit run command to start
 let calledPredefined = false; // Status of basic initialisation
 
 elbwalker.go = function (config: Elbwalker.Config = {}) {
@@ -42,6 +44,17 @@ elbwalker.push = function (
   nested?: Walker.Entities,
 ): void {
   if (!event) return;
+
+  // Check if walker is allowed to run
+  if (!allowRunning) {
+    // If not yet allowed check if this is the time
+    if (event == runCommand) {
+      allowRunning = true;
+    } else {
+      // Do not process events yet
+      return;
+    }
+  }
 
   // Check for valid entity and action event format
   const [entity, action] = event.split(' ');
@@ -116,7 +129,6 @@ function elbLayerInit(elbwalker: Elbwalker.Function) {
   };
 
   // Look if the run command is stacked
-  const runCommand = `${Elbwalker.Commands.Walker} ${Elbwalker.Commands.Run}`;
   const containsRun = (w.elbLayer as Array<unknown>).find(
     (element) => element == runCommand,
   );
