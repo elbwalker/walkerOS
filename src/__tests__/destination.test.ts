@@ -12,9 +12,10 @@ let destination: AnyObject;
 
 describe('destination', () => {
   beforeEach(() => {
-    elbwalker = require('../elbwalker').default;
     jest.clearAllMocks();
     jest.resetModules();
+    elbwalker = require('../elbwalker').default;
+    elbwalker.go();
 
     destination = {
       init: mockInit,
@@ -25,30 +26,24 @@ describe('destination', () => {
   });
 
   test('basic usage', () => {
+    elbwalker.push('walker run');
+
     expect(mockInit).toHaveBeenCalledTimes(0);
     expect(mockPush).toHaveBeenCalledTimes(0);
     elbwalker.push('walker destination', destination);
     elbwalker.push('entity action');
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith({
-      event: 'entity action',
-      data: {},
-      globals: {},
-      user: {},
-      nested: [],
-      id: expect.any(String),
-      trigger: '',
-      entity: 'entity',
-      action: 'action',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: 1,
-    });
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+      }),
+    );
   });
 
   test('init call', () => {
+    elbwalker.push('walker run');
+
     // No init function
     elbwalker.push('walker destination', {
       push: mockPush,
@@ -81,6 +76,8 @@ describe('destination', () => {
   });
 
   test('multiple destinations', () => {
+    elbwalker.push('walker run');
+
     const configA = { a: 1 };
     const configB = { b: 2 };
 
@@ -92,21 +89,11 @@ describe('destination', () => {
     elbwalker.push('entity action');
     expect(mockInit).toHaveBeenCalledTimes(2);
     expect(mockPush).toHaveBeenCalledTimes(2);
-    expect(mockPush).toHaveBeenCalledWith({
-      event: 'entity action',
-      data: {},
-      globals: {},
-      user: {},
-      nested: [],
-      id: expect.any(String),
-      trigger: '',
-      entity: 'entity',
-      action: 'action',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: 1,
-    });
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+      }),
+    );
   });
 
   test('preventing data manipulation', () => {
@@ -121,29 +108,23 @@ describe('destination', () => {
       config: {},
     };
 
+    elbwalker.push('walker run');
     elbwalker.push('walker destination', destinationUpdate);
     elbwalker.push('walker destination', destination);
     elbwalker.push('entity action', data);
     expect(mockPushUpdate).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith({
-      event: 'entity action',
-      data,
-      globals: {},
-      user: {},
-      nested: [],
-      id: expect.any(String),
-      trigger: '',
-      entity: 'entity',
-      action: 'action',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: 1,
-    });
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        data,
+      }),
+    );
   });
 
   test('broken destination', () => {
+    elbwalker.push('walker run');
+
     // create invalid breaking destinations
     elbwalker.push('walker destination');
     elbwalker.push('walker destination', {

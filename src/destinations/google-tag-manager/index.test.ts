@@ -1,15 +1,27 @@
-import elbwalker from '../../elbwalker';
+import { Elbwalker } from '@elbwalker/types';
 
 const w = window;
 
+let elbwalker: Elbwalker.Function;
+
 describe('destination google-tag-manager', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.resetModules();
+    elbwalker = require('../../elbwalker').default;
+    elbwalker.go();
+
+    w.dataLayer = undefined;
+  });
+
   test('init', () => {
     expect(w.dataLayer).toBeUndefined();
-    elbwalker.go();
+    elbwalker.push('walker run');
     expect(w.dataLayer).toBeDefined();
   });
 
   test('push', () => {
+    elbwalker.push('walker run');
     elbwalker.push('entity action', { a: 1 }, 'manual');
     expect(w.dataLayer).toBeDefined();
     expect(w.dataLayer).toStrictEqual([
