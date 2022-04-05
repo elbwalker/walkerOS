@@ -3,22 +3,21 @@ import { Elbwalker } from '@elbwalker/types';
 import fs from 'fs';
 import _ from 'lodash';
 
-const mockFn = jest.fn(); //.mockImplementation(console.log);
 const w = window;
 let elbwalker: Elbwalker.Function;
-w.dataLayer = [];
+
+const mockFn = jest.fn(); //.mockImplementation(console.log);
 
 beforeEach(() => {
   // reset DOM with event listeners etc.
   document.body = document.body.cloneNode() as HTMLElement;
-  w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
-
-  elbwalker = require('../elbwalker').default;
   jest.clearAllMocks();
   jest.resetModules();
-  elbwalker.go();
-
+  w.dataLayer = [];
   w.dataLayer!.push = mockFn;
+  w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
+  elbwalker = require('../elbwalker').default;
+  elbwalker.go();
 });
 
 describe('elbwalker', () => {

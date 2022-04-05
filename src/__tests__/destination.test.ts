@@ -1,5 +1,6 @@
 import { AnyObject, Elbwalker, WebDestination } from '@elbwalker/types';
 
+const w = window;
 let elbwalker: Elbwalker.Function;
 
 const mockPush = jest.fn(); //.mockImplementation(console.log);
@@ -14,6 +15,7 @@ describe('destination', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
+    w.elbLayer = [];
     elbwalker = require('../elbwalker').default;
     elbwalker.go();
 
