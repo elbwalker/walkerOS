@@ -1,24 +1,27 @@
 import { Elbwalker } from '@elbwalker/types';
 import fs from 'fs';
 
-let spyGo: jest.SpyInstance;
-let elbwalker: Elbwalker.Function;
-
 const w = window;
+let elbwalker: Elbwalker.Function;
+let spyGo: jest.SpyInstance;
+
 const projectFileUrl = 'https://project-file.s.elbwalkerapis.com/';
 const projectId = 'W3BP4G3';
 const html: string = fs.readFileSync(__dirname + '/html/index.html').toString();
 
 describe('index', () => {
   beforeEach(() => {
+    // reset DOM with event listeners etc.
+    document.body = document.body.cloneNode() as HTMLElement;
+    document.body.innerHTML = html;
+
     jest.resetModules();
     jest.clearAllMocks();
 
-    elbwalker = require('../elbwalker').default;
-    spyGo = jest.spyOn(elbwalker, 'go');
-
-    document.body.innerHTML = html;
     w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
+    elbwalker = require('../elbwalker').default;
+
+    spyGo = jest.spyOn(elbwalker, 'go');
   });
 
   afterEach(() => {

@@ -8,8 +8,10 @@ const html: string = fs
   .toString();
 
 beforeEach(() => {
-  mockFn.mockClear();
+  // reset DOM with event listeners etc.
+  document.body = document.body.cloneNode() as HTMLElement;
   document.body.innerHTML = html;
+  jest.clearAllMocks();
 });
 
 describe('Walker', () => {
