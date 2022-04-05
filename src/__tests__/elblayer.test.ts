@@ -1,7 +1,7 @@
 import { Elbwalker, WebDestination } from '@elbwalker/types';
 
 const w = window;
-const mockPush = jest.fn().mockImplementation(console.log);
+const mockPush = jest.fn(); //.mockImplementation(console.log);
 const mockInit = jest.fn(); //.mockImplementation(console.log);
 const destination: WebDestination.Function = {
   init: mockInit,

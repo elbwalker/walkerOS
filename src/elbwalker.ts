@@ -31,7 +31,7 @@ elbwalker.go = function (config: Elbwalker.Config = {}) {
   } else if (!config.custom) {
     // default: add GTM destination and auto run
     addDestination(destination);
-    run();
+    run(this);
   } else {
     // custom: use the elbLayer
   }
@@ -62,7 +62,7 @@ elbwalker.push = function (
 
   // Handle internal walker command events
   if (entity === Elbwalker.Commands.Walker) {
-    handleCommand(action, data);
+    handleCommand(action, data, this);
     return;
   }
 
@@ -99,13 +99,17 @@ elbwalker.push = function (
   });
 };
 
-function handleCommand(action: string, data: Elbwalker.PushData = {}) {
+function handleCommand(
+  action: string,
+  data: Elbwalker.PushData = {},
+  elbwalker: Elbwalker.Function,
+) {
   switch (action) {
     case Elbwalker.Commands.Destination:
       addDestination(data);
       break;
     case Elbwalker.Commands.Run:
-      run();
+      run(elbwalker);
       break;
     case Elbwalker.Commands.User:
       setUserIds(data as AnyObject);
@@ -133,10 +137,10 @@ function elbLayerInit(elbwalker: Elbwalker.Function) {
     (element) => element == runCommand,
   );
 
-  if (containsRun) run(); // Run walker run
+  if (containsRun) run(elbwalker); // Run walker run
 }
 
-function run() {
+function run(elbwalker: Elbwalker.Function) {
   // Reset the run counter
   count = 0;
 
@@ -150,7 +154,7 @@ function run() {
   // Run predefined elbLayer stack once
   if (!calledPredefined) {
     calledPredefined = true;
-    callPredefined();
+    callPredefined(elbwalker);
   }
 
   // Register all handlers
@@ -158,14 +162,15 @@ function run() {
 }
 
 // Trigger events in the elbLayer
-function callPredefined() {
+function callPredefined(elbwalker: Elbwalker.Function) {
   // there is a special execution order for all predefined events
   // prioritize all walker commands before others
   // this gurantees a fully configuration before the first run
-  // w.elbLayer.map((event) => {
-  //   // @TODO check for walker event
-  //   // elbLayerPush(event);
-  // });
+  w.elbLayer.map((event) => {
+    elbwalker.push(...event);
+    // @TODO check for walker event
+    // elbLayerPush(event);
+  });
 }
 
 function setUserIds(data: Elbwalker.User) {
