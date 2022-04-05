@@ -11,16 +11,15 @@ const destination: WebDestination.Function = {
 let elbwalker: Elbwalker.Function;
 
 beforeEach(() => {
+  w.elbLayer = [] as unknown as Elbwalker.ElbLayer;
   elbwalker = require('../elbwalker').default;
   jest.clearAllMocks();
   jest.resetModules();
-
-  w.elbLayer = [] as unknown as Elbwalker.ElbLayer;
+  elbwalker.go({ custom: true });
 });
 
 describe('elbLayer', () => {
   test('predefined stack without run', () => {
-    elbwalker.go({ custom: true });
     w.elbLayer.push('walker destination', destination);
     w.elbLayer.push('entity action');
 
@@ -28,7 +27,6 @@ describe('elbLayer', () => {
   });
 
   test('predefined stack with run', () => {
-    elbwalker.go({ custom: true });
     w.elbLayer.push('walker destination', destination);
     w.elbLayer.push('entity action');
     w.elbLayer.push('walker run');
@@ -47,16 +45,33 @@ describe('elbLayer', () => {
     );
   });
 
-  test.skip('prioritize walker commands before run', () => {
-    w.elbLayer.push('entity action');
-    w.elbLayer.push('walker destinattion', destination);
+  test('prioritize walker commands before run', () => {
+    w.elbLayer.push();
+    w.elbLayer.push('event postponed');
+    w.elbLayer.push('walker destination', destination);
     w.elbLayer.push('walker user', { id: 'userid' });
     w.elbLayer.push('walker run');
+    w.elbLayer.push('event later');
 
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockPush).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
-        event: 'entity action',
-        user: { id: 'userid', device: 'userid' },
+        event: 'event postponed',
+        user: { id: 'userid' },
+      }),
+    );
+    expect(mockPush).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        event: 'page view',
+        user: { id: 'userid' },
+      }),
+    );
+    expect(mockPush).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        event: 'event later',
+        user: { id: 'userid' },
       }),
     );
   });

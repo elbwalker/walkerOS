@@ -161,16 +161,26 @@ function run(elbwalker: Elbwalker.Function) {
   initHandler();
 }
 
-// Trigger events in the elbLayer
+// Handle existing events in the elbLayer on first run
 function callPredefined(elbwalker: Elbwalker.Function) {
   // there is a special execution order for all predefined events
-  // prioritize all walker commands before others
-  // this gurantees a fully configuration before the first run
-  w.elbLayer.map((event) => {
-    elbwalker.push(...event);
-    // @TODO check for walker event
-    // elbLayerPush(event);
+  // walker events gets prioritized before others
+  // this garantees a fully configuration before the first run
+  const walkerCommand = `${Elbwalker.Commands.Walker} `; // Space on purpose
+  const walkerEvents: Array<Elbwalker.ElbLayer> = [];
+  const customEvents: Array<Elbwalker.ElbLayer> = [];
+
+  w.elbLayer.map((item) => {
+    // Each elbLayer push gets bundled when added to the stack
+    let pushedEvent = item as unknown as Elbwalker.ElbLayer;
+    const [event, data, trigger, nested] = pushedEvent;
+
+    event?.startsWith(walkerCommand)
+      ? walkerEvents.push([event, data, trigger, nested])
+      : customEvents.push([event, data, trigger, nested]);
   });
+
+  walkerEvents.concat(customEvents).map((item) => elbwalker.push(...item));
 }
 
 function setUserIds(data: Elbwalker.User) {
