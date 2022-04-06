@@ -4,12 +4,14 @@ const w = window;
 let elbwalker: Elbwalker.Function;
 
 const mockPush = jest.fn(); //.mockImplementation(console.log);
-const mockInit = jest.fn(); //.mockImplementation(console.log);
+const mockInit = jest.fn().mockImplementation(() => {
+  return true;
+});
 
 const mockError = jest.fn();
 console.error = mockError;
 
-let destination: AnyObject;
+let destination: WebDestination.Function;
 
 describe('destination', () => {
   beforeEach(() => {
@@ -23,8 +25,7 @@ describe('destination', () => {
       init: mockInit,
       push: mockPush,
       config: { init: false },
-      // Typecast it once to it's original just to be (kind of) sure
-    } as WebDestination.Function as unknown as AnyObject;
+    };
   });
 
   test('basic usage', () => {
@@ -80,8 +81,8 @@ describe('destination', () => {
   test('multiple destinations', () => {
     elbwalker.push('walker run');
 
-    const configA = { a: 1 };
-    const configB = { b: 2 };
+    const configA = { init: false };
+    const configB = { init: false };
 
     destination.config = configA;
     elbwalker.push('walker destination', destination);

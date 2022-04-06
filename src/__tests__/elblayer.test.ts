@@ -8,7 +8,7 @@ const mockInit = jest.fn(); //.mockImplementation(console.log);
 const destination: WebDestination.Function = {
   init: mockInit,
   push: mockPush,
-  config: {},
+  config: { init: true },
 };
 
 beforeEach(() => {
