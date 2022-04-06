@@ -75,8 +75,13 @@ elbwalker.push = function (
     trycatch(() => {
       // Destination initialization
       // Check if the destination was initialized properly or try to do so
-      if (destination.init && !destination.config.init)
-        destination.config.init = destination.init();
+      if (destination.init && !destination.config.init) {
+        const init = destination.init();
+        destination.config.init = init;
+
+        // don't push if init is false
+        if (!init) return;
+      }
 
       destination.push({
         event,
