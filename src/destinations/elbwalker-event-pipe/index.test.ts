@@ -4,11 +4,13 @@ import { DestinationElbwalkerEventPipe } from './index';
 const w = window;
 let elbwalker: Elbwalker.Function;
 let destination: DestinationElbwalkerEventPipe;
-const mockFn = jest.fn();
+const mockXHROpen = jest.fn();
+const mockXHRSend = jest.fn();
+const mockXHRHeader = jest.fn();
 const mockXHR = {
-  open: mockFn,
-  send: mockFn,
-  setRequestHeader: mockFn,
+  open: mockXHROpen,
+  send: mockXHRSend,
+  setRequestHeader: mockXHRHeader,
   readyState: 4,
   responseText: JSON.stringify('demo'),
 };
@@ -20,6 +22,11 @@ const version = '3';
 const url = 'https://www.elbwalker.com/path?q=Analytics#hash';
 const referrer = 'https://www.previous.com/a?b=2&c=3#d';
 const event = 'entity action';
+const data = { foo: 'bar' };
+const api = '//moin.p.elbwalkerapis.com/lama';
+const referrerExcluded = 'https://www.previous.com/a?b=xxx&c=3#d';
+const urlExcluded = 'https://www.elbwalker.com/path?q=xxx#hash';
+const dataExcluded = { id: 'path', search: '?q=xxx' };
 
 describe('Destination Elbwalker EventPipe', () => {
   beforeEach(() => {
@@ -38,10 +45,10 @@ describe('Destination Elbwalker EventPipe', () => {
 
     elbwalker = require('../../elbwalker').default;
     destination = require('./index').destination;
+    destination.config.projectId = projectId;
 
     elbwalker.go({ custom: true });
     elbwalker.push('walker run');
-    w.gtag = mockFn;
   });
 
   afterEach(() => {
@@ -50,6 +57,7 @@ describe('Destination Elbwalker EventPipe', () => {
   });
 
   test('Init', () => {
+    destination.config.projectId = undefined;
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
 
@@ -62,23 +70,70 @@ describe('Destination Elbwalker EventPipe', () => {
   });
 
   test('Push', () => {
-    destination.config.projectId = projectId;
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
 
-    expect(mockFn).toHaveBeenNthCalledWith(1, 'POST', expect.any(String), true);
-    expect(mockFn).toHaveBeenNthCalledWith(
-      2,
+    expect(mockXHROpen).toHaveBeenCalledWith('POST', expect.any(String), true);
+    expect(mockXHRHeader).toHaveBeenCalledWith(
       'Content-type',
       'text/plain; charset=utf-8',
     );
 
-    let sentPayload = JSON.parse(mockFn.mock.calls[2][0]);
+    const sentPayload = JSON.parse(mockXHRSend.mock.calls[0][0]);
     expect(sentPayload).toEqual(
       expect.objectContaining({
         projectId,
         timestamp: expect.any(Number),
         source: { type: 'web', id: url, referrer: '', version },
+      }),
+    );
+  });
+
+  test('Exclusion parameter referrer', () => {
+    Object.defineProperty(document, 'referrer', {
+      value: referrer,
+      writable: true,
+    });
+
+    destination.config.exclusionParameters = ['b'];
+    elbwalker.push('walker destination', destination);
+    elbwalker.push(event);
+
+    const sentPayload = JSON.parse(mockXHRSend.mock.calls[0][0]);
+    expect(sentPayload).toEqual(
+      expect.objectContaining({
+        source: { type: 'web', id: url, referrer: referrerExcluded, version },
+      }),
+    );
+  });
+
+  test('Exclusion parameter Location', () => {
+    destination.config.exclusionParameters = ['q'];
+    elbwalker.push('walker destination', destination);
+    elbwalker.push(event);
+
+    const sentPayload = JSON.parse(mockXHRSend.mock.calls[0][0]);
+    expect(sentPayload).toEqual(
+      expect.objectContaining({
+        source: { type: 'web', id: urlExcluded, referrer, version },
+      }),
+    );
+  });
+
+  test('Multiple exclusion parameters', () => {
+    destination.config.exclusionParameters = ['b', 'q'];
+    elbwalker.push('walker destination', destination);
+    elbwalker.push(event);
+
+    const sentPayload = JSON.parse(mockXHRSend.mock.calls[0][0]);
+    expect(sentPayload).toEqual(
+      expect.objectContaining({
+        source: {
+          type: 'web',
+          id: urlExcluded,
+          referrer: referrerExcluded,
+          version,
+        },
       }),
     );
   });
