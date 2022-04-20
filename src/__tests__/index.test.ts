@@ -32,7 +32,7 @@ describe('index', () => {
     w.elbwalker = undefined as unknown as Elbwalker.Function;
     expect(w.elbwalker).toBeUndefined();
     jest.resetModules();
-    jest.requireActual('../elbwalker');
+    jest.requireActual('../index');
     const elbwalker = require('../elbwalker').default;
     expect(w.elbwalker).toEqual(elbwalker);
   });

@@ -6,3 +6,6 @@ const projectId = (elem && elem.getAttribute('data-project')) || ''; // managed 
 const custom = (elem && !!elem.getAttribute('data-custom')) || false; // custom mode
 
 elbwalker.go({ projectId, custom });
+
+// Global object
+window.elbwalker = elbwalker;

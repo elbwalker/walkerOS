@@ -212,6 +212,4 @@ function loadProject(projectId: string) {
   document.head.appendChild(script);
 }
 
-w.elbwalker = elbwalker;
-
 export default elbwalker;
