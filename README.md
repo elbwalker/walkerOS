@@ -1,76 +1,79 @@
 <p align="left">
   <a href="https://elbwalker.com">
-  <img title="elbwalker" src='http://www.elbwalker.com/elbwalker.png' width="400px"/>
+    <img title="elbwalker" src='https://www.elbwalker.com/elbwalker.png' width="300px"/>
   </a>
 </p>
 
-<h2 align="left">walker.js</h2>
+# walker.js
 
-  <p align="left">The walker.js is an open-source event tracker for all tools. Easy, standardized & flexible. Capture user events in the browser by setting HTML attributes only.
-    <br />
-    <a href="https://docs.elbwalker.com"><strong> Explore the docs</strong></a>
-    <br />
-    <br />
-    <a href="https://calendly.com/elbwalker-demo/30min">Get a Demo</a>
-    ·
-    <a href="https://github.com/elbwalker/walker.js/issues/new">Report Bug</a>
-    ·
-    <a href="https://github.com/elbwalker/walker.js/issues/new">Request Feature</a>
-  </p>
-</div>
+The walker.js is an open-source event tracker for all tools. Easy, standardized & flexible. Capture user events in the browser and send them to any destination - just by setting HTML attributes.
+
+[**Explore the docs**](https://docs.elbwalker.com) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elbwalker-demo/30min)
 
 ## 🤓 Usage
 
-You can implement all sorts of front-end user events from e-commerce actions like product add to carts, product usage events, and UX events like visible elements, scrolling, etc. using the walker.
+You can implement all sorts of front-end user events. From e-commerce actions like product add to cart or order complete events as well as measuring product usage events, and UX events like navigation or filter usage etc.
 
 Just set a few HTML attributes
 
 ```html
 <!-- General usage -->
 <div elb="ENTITY" elb-ENTITY="KEY:VALUE" elbaction="TRIGGER:ACTION" />
+
+<!-- Example usage -->
+<div
+  elb="product"
+  elb-product="name:Everyday Ruck Snack;price:220"
+  elbaction="click:add"
+/>
 ```
 
 The result is for example something like this:
 
-```js
-dataLayer.push({
-  event: 'product add', // combination of entity and action
-  data: {
+```json
+{
+  "event": "product add", // combination of entity and action
+  "data": {
     // all set properties with the elb-product attribute
-    name: 'Everyday Ruck Snack',
-    price: 220,
+    "name": "Everyday Ruck Snack",
+    "price": 220
   },
-  globals: {
+  "globals": {
     // all set properties with the elbglobals attribute
-    language: 'en',
-    test: 'darkmode',
+    "language": "en",
+    "test": "darkmode"
   },
-  user: {
+  "user": {
     // a stored random id in the cookie (manually added once)
-    device: 'cookieid',
+    "device": "cookieid"
   },
-  nested: [], // all nested entities within the product
-  id: '1647968113641-b4b9h9-5', // timestamp, group & count of the event
-  trigger: 'click', // name of the trigger that fired
-  entity: 'product', // entity name
-  action: 'add', // entity action
-  timestamp: 1647968113641, // time when the event fired
-  timing: 13.37, // how long it took from the page load to trigger the event
-  group: 'b4b9h9', // random group id for all events on a page
-  count: 2, // incremental counter of the events on a page
-  walker: true, // flag to filter events
-});
+  "nested": [], // all nested entities within the product
+  "id": "1647968113641-b4b9h9-5", // timestamp, group & count of the event
+  "trigger": "click", // name of the trigger that fired
+  "entity": "product", // entity name
+  "action": "add", // entity action
+  "timestamp": 1647968113641, // time when the event fired
+  "timing": 13.37, // how long it took from the page load to trigger the event
+  "group": "01b5e2", // random group id for all events on a page
+  "count": 2, // incremental counter of the events on a page
+  "walker": true // flag to filter events
+}
 ```
 
-All you need to get started are the entity, action & trigger attributes. You define the entity scope by setting the `elb` attribute with the name of an entity to an element, e.g. `elb="product"`.
-An action can be added by setting the `elbaction` attribute on the same level or all child elements in combination with a matching trigger, e.g. `elbaction="click:add"` to fire a <strong> product add </strong> event when a user clicks on the tagged element.
-To define the entities' properties, set the composited attribute `elb-ENTITY` with the name and value, e.g. `elb-product="name:Everyday Ruck Snack;price:220"`.
+You are completely free to define naming conventions. All you need to get started are the **entity, action & trigger attributes**.
+
+1. You define the entity scope by setting the `elb` attribute with the name of an entity to an element, e.g. `elb="product"`.
+2. An action can be added by setting the `elbaction` attribute on the same level or all child elements in combination with a matching trigger, e.g. `elbaction="click:add"` to fire a _product add_ event when a user clicks on the tagged element.
+3. (Optional) To define the entities' properties, set the composited attribute `elb-ENTITY` with the name and value, e.g. `elb-product="name:Everyday Ruck Snack;price:220"`.
 
 ```html
 <div elb="product" elb-product="name:Everyday Ruck Snack;price:220">
   <button elbaction="click:add">Add to cart</button>
 </div>
 ```
+
+> `elb` and `elbaction` are reserved attributes whereas `elb-` attributes may be arbitrary combinations based on the related entity name.
+> Actions and properties can be set anywhere inside an `elb` attribute.
 
 ### Triggers
 
@@ -111,13 +114,6 @@ _Learn more about the elbwalker [event model](https://www.elbwalker.com/blog/elb
 
 To get a local copy up and running follow these simple steps.
 
-### Prerequisites
-
-- npm
-  ```sh
-  npm install npm@latest -g
-  ```
-
 ### Installation
 
 1. Clone the repo
@@ -132,6 +128,22 @@ To get a local copy up and running follow these simple steps.
    ```sh
    npm run dev
    ```
+
+### Destinations
+
+By default all events gets pushed to the `dataLayer`. But you can customize the destinations you want to use. The walker.js comes with optional build-in destinations.
+
+Example of adding a GA4 destination:
+
+```js
+import GA4 from './destinations/google-ga4'; // Load the destination
+GA4.config.measurementId = 'G-XXXXXXX'; // Set all required properties
+elbwalker.push('walker destination', GA4); // Add the destination
+```
+
+A destination has a `config` object and an optional `init` as well as the `push` function.
+As soon as an event triggers the destinations init function gets called once.
+And all events will get sent to the additional destination now.
 
 ## 🛠 Contributing
 
