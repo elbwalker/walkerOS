@@ -94,3 +94,5 @@ function excludeParameters(
     return '';
   }
 }
+
+export default destination;

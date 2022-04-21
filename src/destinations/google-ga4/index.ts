@@ -54,3 +54,5 @@ export const destination: DestinationGA4 = {
     w.gtag('event', `${event.entity} ${event.action}`, data);
   },
 };
+
+export default destination;
