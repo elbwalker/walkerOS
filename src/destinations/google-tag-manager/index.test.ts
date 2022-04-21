@@ -1,6 +1,7 @@
 import { Elbwalker } from '@elbwalker/types';
 
 const w = window;
+const version = { config: 0, walker: 1.1 };
 
 let elbwalker: Elbwalker.Function;
 
@@ -39,6 +40,7 @@ describe('destination google-tag-manager', () => {
         timing: expect.any(Number),
         group: expect.any(String),
         count: 1,
+        version,
         walker: true,
       },
       {
@@ -55,6 +57,7 @@ describe('destination google-tag-manager', () => {
         timing: expect.any(Number),
         group: expect.any(String),
         count: 2,
+        version,
         walker: true,
       },
     ]);

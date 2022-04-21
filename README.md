@@ -40,6 +40,7 @@ dataLayer.push({
   },
   globals: {
     // all set properties with the elbglobals attribute
+    // Not shown in example usage snippet (elbglobals="language:en;test:darkmode")
     language: 'en',
     test: 'darkmode',
   },
@@ -56,6 +57,11 @@ dataLayer.push({
   timing: 13.37, // how long it took from the page load to trigger the event
   group: '01b5e2', // random group id for all events on a page
   count: 2, // incremental counter of the events on a page
+  version: {
+    // Helpful when working with raw data
+    walker: 1.1, // used walker.js version
+    config: 42, // a custom configuration version number
+  },
   walker: true, // flag to filter events
 });
 ```
@@ -67,12 +73,16 @@ You are completely free to define naming conventions. All you need to get starte
 3. (Optional) To define the entities' properties, set the composited attribute `elb-ENTITY` with the name and value, e.g. `elb-product="name:Everyday Ruck Snack;price:220"`.
 
 ```html
-<div elb="product" elb-product="name:Everyday Ruck Snack;price:220">
-  <button elbaction="click:add">Add to cart</button>
-</div>
+<body elbglobals="language:en;test:darkmode">
+  <div elb="product">
+    <h1 elb-product="name:Everyday Ruck Snack">Everyday Ruck Snack</h1>
+    <p elb-product="price:220">Price: 220 Euro</p>
+    <button elbaction="click:add">Add to cart</button>
+  </div>
+</body>
 ```
 
-> `elb` and `elbaction` are reserved attributes whereas `elb-` attributes may be arbitrary combinations based on the related entity name.
+> `elb`, `elbaction` and `elbglobals` are reserved attributes whereas `elb-` attributes may be arbitrary combinations based on the related entity name.
 > Actions and properties can be set anywhere inside an `elb` attribute.
 
 ### Triggers
