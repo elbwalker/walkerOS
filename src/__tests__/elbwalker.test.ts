@@ -3,38 +3,39 @@ import { Elbwalker } from '@elbwalker/types';
 import fs from 'fs';
 import _ from 'lodash';
 
-const mockFn = jest.fn(); //.mockImplementation(console.log);
 const w = window;
 let elbwalker: Elbwalker.Function;
-w.dataLayer = [];
+
+const mockFn = jest.fn(); //.mockImplementation(console.log);
 
 beforeEach(() => {
-  elbwalker = require('../elbwalker').default;
-  jest.clearAllMocks();
-  jest.resetModules();
-
   // reset DOM with event listeners etc.
   document.body = document.body.cloneNode() as HTMLElement;
-  w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
+  jest.clearAllMocks();
+  jest.resetModules();
+  w.dataLayer = [];
   w.dataLayer!.push = mockFn;
+  w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
+  elbwalker = require('../elbwalker').default;
+  elbwalker.go();
 });
 
 describe('elbwalker', () => {
   test('go', () => {
+    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
     expect(window.elbLayer).toBeUndefined();
     elbwalker.go();
     expect(window.elbLayer).toBeDefined();
   });
 
   test('empty push', () => {
-    elbwalker.go();
     (elbwalker as any).push();
     elbwalker.push('');
     elbwalker.push('entity');
   });
 
   test('regular push', () => {
-    elbwalker.go();
+    elbwalker.push('walker run');
     jest.clearAllMocks(); // skip auto page view event
 
     elbwalker.push('entity action');
@@ -79,7 +80,7 @@ describe('elbwalker', () => {
       .readFileSync(__dirname + '/html/globals.html')
       .toString();
     document.body.innerHTML = html;
-    w.elbwalker.go();
+    elbwalker.push('walker run');
 
     expect(mockFn).toHaveBeenNthCalledWith(1, {
       event: 'page view',
@@ -117,20 +118,18 @@ describe('elbwalker', () => {
   });
 
   test('group ids', () => {
-    elbwalker.go();
+    elbwalker.push('walker run');
     elbwalker.push('entity action');
     elbwalker.push('entity action');
-    const groupId = mockFn.mock.calls[1][0].group;
-    expect(mockFn.mock.calls[2][0].group).toEqual(groupId);
+    const groupId = mockFn.mock.calls[0][0].group;
+    expect(mockFn.mock.calls[1][0].group).toEqual(groupId);
 
     // Start a new initialization with a new group ip
-    elbwalker.run();
-    elbwalker.push('entity action');
-    expect(mockFn.mock.calls[4][0].group).not.toEqual(groupId);
+    elbwalker.push('walker run');
+    expect(mockFn.mock.calls[3][0].group).not.toEqual(groupId); // page view
   });
 
   test('walker commands', () => {
-    elbwalker.go();
     mockFn.mockClear();
     elbwalker.push('walker action');
 
@@ -139,7 +138,7 @@ describe('elbwalker', () => {
   });
 
   test('walker user', () => {
-    elbwalker.go();
+    elbwalker.push('walker run');
 
     elbwalker.push('walker user');
     elbwalker.push('entity action');

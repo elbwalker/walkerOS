@@ -1,54 +1,52 @@
 import { AnyObject, Elbwalker, WebDestination } from '@elbwalker/types';
 
+const w = window;
 let elbwalker: Elbwalker.Function;
 
 const mockPush = jest.fn(); //.mockImplementation(console.log);
-const mockInit = jest.fn(); //.mockImplementation(console.log);
+const mockInit = jest.fn().mockImplementation(() => {
+  return true;
+});
 
 const mockError = jest.fn();
 console.error = mockError;
 
-let destination: AnyObject;
+let destination: WebDestination.Function;
 
 describe('destination', () => {
   beforeEach(() => {
-    elbwalker = require('../elbwalker').default;
     jest.clearAllMocks();
     jest.resetModules();
+    w.elbLayer = [];
+    elbwalker = require('../elbwalker').default;
+    elbwalker.go();
 
     destination = {
       init: mockInit,
       push: mockPush,
       config: { init: false },
-      // Typecast it once to it's original just to be (kind of) sure
-    } as WebDestination.Function as unknown as AnyObject;
+    };
   });
 
   test('basic usage', () => {
+    elbwalker.push('walker run');
+
     expect(mockInit).toHaveBeenCalledTimes(0);
     expect(mockPush).toHaveBeenCalledTimes(0);
     elbwalker.push('walker destination', destination);
     elbwalker.push('entity action');
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith({
-      event: 'entity action',
-      data: {},
-      globals: {},
-      user: {},
-      nested: [],
-      id: expect.any(String),
-      trigger: '',
-      entity: 'entity',
-      action: 'action',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: 1,
-    });
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+      }),
+    );
   });
 
   test('init call', () => {
+    elbwalker.push('walker run');
+
     // No init function
     elbwalker.push('walker destination', {
       push: mockPush,
@@ -81,8 +79,10 @@ describe('destination', () => {
   });
 
   test('multiple destinations', () => {
-    const configA = { a: 1 };
-    const configB = { b: 2 };
+    elbwalker.push('walker run');
+
+    const configA = { init: false };
+    const configB = { init: false };
 
     destination.config = configA;
     elbwalker.push('walker destination', destination);
@@ -92,21 +92,11 @@ describe('destination', () => {
     elbwalker.push('entity action');
     expect(mockInit).toHaveBeenCalledTimes(2);
     expect(mockPush).toHaveBeenCalledTimes(2);
-    expect(mockPush).toHaveBeenCalledWith({
-      event: 'entity action',
-      data: {},
-      globals: {},
-      user: {},
-      nested: [],
-      id: expect.any(String),
-      trigger: '',
-      entity: 'entity',
-      action: 'action',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: 1,
-    });
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+      }),
+    );
   });
 
   test('preventing data manipulation', () => {
@@ -121,29 +111,23 @@ describe('destination', () => {
       config: {},
     };
 
+    elbwalker.push('walker run');
     elbwalker.push('walker destination', destinationUpdate);
     elbwalker.push('walker destination', destination);
     elbwalker.push('entity action', data);
     expect(mockPushUpdate).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith({
-      event: 'entity action',
-      data,
-      globals: {},
-      user: {},
-      nested: [],
-      id: expect.any(String),
-      trigger: '',
-      entity: 'entity',
-      action: 'action',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: 1,
-    });
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        data,
+      }),
+    );
   });
 
   test('broken destination', () => {
+    elbwalker.push('walker run');
+
     // create invalid breaking destinations
     elbwalker.push('walker destination');
     elbwalker.push('walker destination', {

@@ -1,23 +1,24 @@
 require('intersection-observer');
 
+import fs from 'fs';
 import { initHandler } from '../lib/handler';
+import { AnyObject } from '@elbwalker/types';
+const w = window;
 
 jest.useFakeTimers();
 jest.spyOn(global, 'setTimeout');
 jest.mock('../elbwalker');
 
-import fs from 'fs';
-import { AnyObject } from '@elbwalker/types';
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
+
 window.elbLayer = window.elbLayer || [];
 window.elbLayer.push = mockFn;
 
+let events: AnyObject = {};
 const html: string = fs
   .readFileSync(__dirname + '/html/handler.html')
   .toString();
-
-let events: AnyObject = {};
 
 beforeEach(() => {
   document.body = document.body.cloneNode() as HTMLElement;

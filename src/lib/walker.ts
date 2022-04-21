@@ -1,4 +1,4 @@
-import { AnyObject, Walker } from '@elbwalker/types';
+import { AnyObject, Elbwalker, Walker } from '@elbwalker/types';
 import { assign, getAttribute, parseAttribute, splitAttribute } from './utils';
 
 const _prefix = 'elb';
@@ -30,8 +30,11 @@ function getActionAndFilter(
 
   while (element) {
     const attr =
-      getAttribute(element, getElbAttributeName('action', false)) ||
-      getAttribute(element, getElbAttributeName('action')); // legacy elb-action
+      getAttribute(
+        element,
+        getElbAttributeName(Elbwalker.Commands.Action, false),
+      ) ||
+      getAttribute(element, getElbAttributeName(Elbwalker.Commands.Action)); // legacy elb-action
 
     const [action, filterAttr] = parseAttribute(
       splitAttribute(attr)[triggerType] || '',

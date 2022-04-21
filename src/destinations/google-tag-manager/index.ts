@@ -22,3 +22,5 @@ export const destination: WebDestination.Function = {
     });
   },
 };
+
+export default destination;
