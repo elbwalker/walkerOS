@@ -12,6 +12,10 @@ const w = window;
 const elbwalker = {} as Elbwalker.Function;
 const destinations: WebDestination.Functions = [];
 const runCommand = `${Elbwalker.Commands.Walker} ${Elbwalker.Commands.Run}`;
+const version: Elbwalker.Version = {
+  walker: 1.1,
+  config: 0,
+};
 
 let count = 0; // Event counter for each run
 let group = randomString(); // random id to group events of a run
@@ -21,6 +25,9 @@ let allowRunning = false; // Wait for explicit run command to start
 let calledPredefined = false; // Status of basic initialisation
 
 elbwalker.go = function (config: Elbwalker.Config = {}) {
+  // Set config version to differentiate between setups
+  if (config.version) version.config = config.version;
+
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(this);
 
@@ -99,6 +106,7 @@ elbwalker.push = function (
         timing,
         group,
         count,
+        version,
       });
     })();
   });
