@@ -30,34 +30,34 @@ Just set a few HTML attributes
 
 The result is for example something like this:
 
-```json
-{
-  "event": "product add", // combination of entity and action
-  "data": {
+```js
+dataLayer.push({
+  event: 'product add', // combination of entity and action
+  data: {
     // all set properties with the elb-product attribute
-    "name": "Everyday Ruck Snack",
-    "price": 220
+    name: 'Everyday Ruck Snack',
+    price: 220,
   },
-  "globals": {
+  globals: {
     // all set properties with the elbglobals attribute
-    "language": "en",
-    "test": "darkmode"
+    language: 'en',
+    test: 'darkmode',
   },
-  "user": {
+  user: {
     // a stored random id in the cookie (manually added once)
-    "device": "cookieid"
+    device: 'cookieid',
   },
-  "nested": [], // all nested entities within the product
-  "id": "1647968113641-b4b9h9-5", // timestamp, group & count of the event
-  "trigger": "click", // name of the trigger that fired
-  "entity": "product", // entity name
-  "action": "add", // entity action
-  "timestamp": 1647968113641, // time when the event fired
-  "timing": 13.37, // how long it took from the page load to trigger the event
-  "group": "01b5e2", // random group id for all events on a page
-  "count": 2, // incremental counter of the events on a page
-  "walker": true // flag to filter events
-}
+  nested: [], // all nested entities within the product
+  id: '1647968113641-b4b9h9-5', // timestamp, group & count of the event
+  trigger: 'click', // name of the trigger that fired
+  entity: 'product', // entity name
+  action: 'add', // entity action
+  timestamp: 1647968113641, // time when the event fired
+  timing: 13.37, // how long it took from the page load to trigger the event
+  group: '01b5e2', // random group id for all events on a page
+  count: 2, // incremental counter of the events on a page
+  walker: true, // flag to filter events
+});
 ```
 
 You are completely free to define naming conventions. All you need to get started are the **entity, action & trigger attributes**.
