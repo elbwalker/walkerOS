@@ -82,4 +82,22 @@ describe('index', () => {
       custom: true,
     });
   });
+
+  test('config version', () => {
+    const mockFn = jest.fn(); //.mockImplementation(console.log);
+    w.dataLayer = [];
+    w.dataLayer.push = mockFn;
+
+    elbwalker.go({ version: 42 });
+    elbwalker.push('walker run');
+
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        version: {
+          walker: 1.1,
+          config: 42,
+        },
+      }),
+    );
+  });
 });

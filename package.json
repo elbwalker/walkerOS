@@ -1,7 +1,7 @@
 {
   "name": "walker.js",
   "description": "An event tracker for all tools. Easy, standardized & flexible",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "repository": "elbwalker/walker.js",
   "main": "src/index.ts",
   "scripts": {

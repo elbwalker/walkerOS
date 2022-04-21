@@ -4,6 +4,7 @@ import fs from 'fs';
 import _ from 'lodash';
 
 const w = window;
+const version = { config: 0, walker: 1.1 };
 let elbwalker: Elbwalker.Function;
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
@@ -55,8 +56,10 @@ describe('elbwalker', () => {
       timing: expect.any(Number),
       group: expect.any(String),
       count: 2,
+      version,
       walker: true,
     });
+
     expect(mockFn).toHaveBeenNthCalledWith(2, {
       event: 'entity action',
       data: { foo: 'bar' },
@@ -71,6 +74,7 @@ describe('elbwalker', () => {
       timing: expect.any(Number),
       group: expect.any(String),
       count: 3,
+      version,
       walker: true,
     });
   });
@@ -96,6 +100,7 @@ describe('elbwalker', () => {
       timing: expect.any(Number),
       group: expect.any(String),
       count: 1,
+      version,
       walker: true,
     });
 
@@ -113,6 +118,7 @@ describe('elbwalker', () => {
       timing: expect.any(Number),
       group: expect.any(String),
       count: 2,
+      version,
       walker: true,
     });
   });
