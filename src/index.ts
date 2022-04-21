@@ -1,11 +1,17 @@
 import elbwalker from './elbwalker';
 
+let projectId, custom, version;
+
 // walker script
 const elem = document.querySelector('script.elbwalker');
-const projectId = (elem && elem.getAttribute('data-project')) || ''; // managed mode
-const custom = (elem && !!elem.getAttribute('data-custom')) || false; // custom mode
 
-elbwalker.go({ projectId, custom });
+if (elem) {
+  projectId = elem.getAttribute('data-project') || undefined; // managed mode
+  custom = !!elem.getAttribute('data-custom'); // custom mode
+  version = parseInt(elem.getAttribute('data-version') || '1'); // config version
+}
+
+elbwalker.go({ projectId, custom, version });
 
 // Global object
 window.elbwalker = elbwalker;

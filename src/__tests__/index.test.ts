@@ -42,7 +42,7 @@ describe('index', () => {
 
     jest.requireActual('../index');
     expect(elbwalker.go).toHaveBeenCalledTimes(1);
-    expect(elbwalker.go).toHaveBeenCalledWith({ projectId: '', custom: false });
+    expect(elbwalker.go).toHaveBeenCalledWith({});
   });
 
   test('default init mode', () => {
@@ -51,7 +51,10 @@ describe('index', () => {
 
     jest.requireActual('../index');
     expect(elbwalker.go).toHaveBeenCalledTimes(1);
-    expect(elbwalker.go).toHaveBeenCalledWith({ projectId: '', custom: false });
+    expect(elbwalker.go).toHaveBeenCalledWith({
+      custom: false,
+      version: 1,
+    });
     expect(window.document.scripts.length).toBe(1);
   });
 
@@ -64,6 +67,7 @@ describe('index', () => {
     expect(elbwalker.go).toHaveBeenCalledWith({
       projectId,
       custom: false,
+      version: 1,
     });
 
     expect(window.document.scripts.length).toBe(2);
@@ -78,8 +82,8 @@ describe('index', () => {
 
     jest.requireActual('../index');
     expect(elbwalker.go).toHaveBeenCalledWith({
-      projectId: '',
       custom: true,
+      version: 1,
     });
   });
 
@@ -88,7 +92,10 @@ describe('index', () => {
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
 
-    elbwalker.go({ version: 42 });
+    const elem = document.getElementsByTagName('script')[0];
+    elem.setAttribute('data-version', '42');
+
+    jest.requireActual('../index');
     elbwalker.push('walker run');
 
     expect(mockFn).toHaveBeenCalledWith(
