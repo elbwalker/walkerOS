@@ -57,7 +57,6 @@ export const destination: DestinationElbwalkerEventPipe = {
     const payload = {
       ...event,
       projectId,
-      timestamp: new Date().getTime(),
       source: {
         type: 'web',
         id: href,
