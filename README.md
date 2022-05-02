@@ -6,14 +6,14 @@
 
 # walker.js
 
-The walker.js is an open-source event tracker for all tools. Easy, standardized & flexible. Capture user events in the browser and send them to any destination - just by setting HTML attributes.
-Become independently and prevent being locked-in to one system. Setup reliable tracking the moment you design it.
+Walker.js is an open-source event tracker. Easy, standardized & flexible. With walker.js you can capture user events in the browser and send them to any destination - just by setting HTML attributes.
+Become independent from locked-in analytics systems and set up reliable tracking the moment you design your front-end.
 
 [**Explore the docs**](https://docs.elbwalker.com) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elbwalker-demo/30min)
 
 ## 🤓 Usage
 
-You can implement all sorts of front-end user events. From e-commerce actions like product add to cart or order complete events as well as measuring product usage events, and UX events like navigation or filter usage etc.
+You can implement all sorts of front-end user events easily with walker.js. From e-commerce actions like product add to carts or order complete events to product and UX events like navigation, or filter usage, etc.
 
 Just set a few HTML attributes
 
@@ -90,11 +90,11 @@ Actions and properties can be set anywhere inside an `elb` attribute.
 
 ## 🚀 Getting Started
 
-Add the walker.js to your website and start tagging. Optionally specify your destinations.
+Add the walker.js to your website and start tagging. Optionally you can specify destinations.
 
 ### Installation
 
-Either use the walker.js via [npm](XXXXXXXXXXX) as a project depency
+Either use the walker.js via [npm](XXXXXXXXXXX) as a project dependency
 
 ```sh
 npm i @elbwalker/walker.js --save
@@ -146,7 +146,7 @@ _For further inspiration, please refer to the industry examples in our [docs](ht
 
 ### 🎯 Destinations
 
-By default all events gets pushed to the `dataLayer`. But you can customize the destinations you want to use. The walker.js comes with optional build-in destinations.
+By default all events get pushed into the `dataLayer`, but you can customize the destinations. Walker.js comes with optional build-in destinations.
 
 Example of adding a GA4 destination:
 
@@ -157,16 +157,15 @@ elbwalker.push('walker destination', GA4); // Add the destination
 ```
 
 A destination has a `config` object and an optional `init` as well as the `push` function.
-As soon as an event triggers the destinations init function gets called once.
-And all events will get sent to the additional destination now.
+As soon as an event triggers the destinations init function gets called once so that all events will get sent to the additional destination now.
 
-_See more examples, learn how to customize or write your own in the [destinations deep dive](https://github.com/elbwalker/walker.js/XXXXXXXXXXXXXXXXXXXXXX)_.
+_See more examples, learn how to customize, or write your own in the [destinations deep dive](https://github.com/elbwalker/walker.js/XXXXXXXXXXXXXXXXXXXXXX)_.
 
 ## 🛠 Contributing
 
 Any contributions you make are **greatly appreciated**.
 
-If you have a suggestion that would make the walker better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+If you have a suggestion that would make walker.js better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
