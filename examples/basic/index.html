@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>walker.js basic tagging example</title>
+    <script
+      class="elbwalker"
+      src="https://walker.p.elbwalkerapis.com/walker.js"
+      data-custom="true"
+    ></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div class="bg-white relative overflow-hidden">
+      <section
+        elb="entity"
+        elbaction="load:view"
+        class="relative max-w-7xl mx-auto pt-32 px-4 flex flex-col items-center text-center sm:px-6 lg:px-8"
+      >
+        <div class="max-w-2xl mx-auto lg:max-w-none">
+          <h2
+            elb-entity="name:Basic demo"
+            class="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl"
+          >
+            An entity scope
+          </h2>
+          <p class="mt-4 max-w-xl mx-auto text-xl text-elbwalker-600">
+            This entity shows you how to use the walker.js basic tagging. Learn
+            how to use elb<sup>*</sup> attributes and take a look to the console
+            to see the events.
+          </p>
+          <a
+            href="#"
+            elbaction="click"
+            class="mt-6 inline-block w-full bg-elbwalker border border-transparent rounded-md py-3 px-8 font-medium text-white sm:w-auto"
+            >Try the click trigger</a
+          >
+        </div>
+      </section>
+    </div>
+    <script>
+      // For demo purposes only. Watch the console.
+      window.dataLayer = [];
+      window.dataLayer.push = console.log;
+
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              elbwalker: '#01b5e2',
+            },
+          },
+        },
+      };
+    </script>
+  </body>
+</html>

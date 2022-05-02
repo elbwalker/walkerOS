@@ -7,6 +7,7 @@
 # walker.js
 
 The walker.js is an open-source event tracker for all tools. Easy, standardized & flexible. Capture user events in the browser and send them to any destination - just by setting HTML attributes.
+Become independently and prevent being locked-in to one system. Setup reliable tracking the moment you design it.
 
 [**Explore the docs**](https://docs.elbwalker.com) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elbwalker-demo/30min)
 
@@ -49,7 +50,7 @@ dataLayer.push({
     device: 'cookieid',
   },
   nested: [], // all nested entities within the product
-  id: '1647968113641-b4b9h9-5', // timestamp, group & count of the event
+  id: '1647968113641-01b5e2-5', // timestamp, group & count of the event
   trigger: 'click', // name of the trigger that fired
   entity: 'product', // entity name
   action: 'add', // entity action
@@ -66,7 +67,7 @@ dataLayer.push({
 });
 ```
 
-You are completely free to define naming conventions. All you need to get started are the **entity, action & trigger attributes**.
+You are completely free to define naming conventions. All you need to get started are the **entity, action & trigger attributes**. Learn more about the elbwalker [event model](https://www.elbwalker.com/blog/elbwalker-event-concept) and background in our [blog](https://www.elbwalker.com/blog/).
 
 1. You define the entity scope by setting the `elb` attribute with the name of an entity to an element, e.g. `elb="product"`.
 2. An action can be added by setting the `elbaction` attribute on the same level or all child elements in combination with a matching trigger, e.g. `elbaction="click:add"` to fire a _product add_ event when a user clicks on the tagged element.
@@ -82,12 +83,37 @@ You are completely free to define naming conventions. All you need to get starte
 </body>
 ```
 
-> `elb`, `elbaction` and `elbglobals` are reserved attributes whereas `elb-` attributes may be arbitrary combinations based on the related entity name.
-> Actions and properties can be set anywhere inside an `elb` attribute.
+`elb`, `elbaction` and `elbglobals` are reserved attributes whereas `elb-` attributes may be arbitrary combinations based on the related entity name.
+Actions and properties can be set anywhere inside an `elb` attribute.
 
-### Triggers
+> _See more 🧑‍🎓 [tagging examples](https://github.com/elbwalker/walker.js/XXXXXXXXXXXXXXXXXXXXXX) and learn how to tag your website._
+
+## 🚀 Getting Started
+
+Add the walker.js to your website and start tagging. Optionally specify your destinations.
+
+### Installation
+
+Either use the walker.js via [npm](XXXXXXXXXXX) as a project depency
+
+```sh
+npm i @elbwalker/walker.js --save
+```
+
+Or as a script
+
+```html
+<script class="elbwalker" src="XXXXXXXXXXX/walker.js"></script>
+```
+
+### 🎬 Triggers
 
 By using the walker.js you don't have to deal with event listener or mutation observer initialization anymore. The walker comes with a bunch of integrated triggers that will fire your event at the right moment.
+
+```html
+<!-- The trigger will fire the "product action" event -->
+<b elb="product" elbaction="TRIGGER:action">...</b>
+```
 
 <table>
   <tr>
@@ -118,56 +144,7 @@ By using the walker.js you don't have to deal with event listener or mutation ob
 
 _For further inspiration, please refer to the industry examples in our [docs](https://docs.elbwalker.com/sources/web/industry-examples)._
 
-_Learn more about the elbwalker [event model](https://www.elbwalker.com/blog/elbwalker-event-concept) and background in our [blog](https://www.elbwalker.com/blog/)._
-
-## Modes
-
-There are three modes: `default`, `custom`, and `managed`. Modes describe different ways in which the walker.js can be used.
-
-### Default
-
-By using the default mode, elbwalker automatically starts and pushes events without further configuration into the dataLayer so that you can use it in Google Tag Manager (GTM).
-
-```html
-<script class="elbwalker" src="walker.js"></script>
-```
-
-### Custom
-
-By using the custom mode, you can e.g. customize destinations flexibly through code yourself. You can use the elbLayer to do the configuration manually.
-
-```html
-<script class="elbwalker" src="walker.js" data-custom="true"></script>
-```
-
-### Managed
-
-When using our managed mode, a project ID will be added to the script. You can generate your custom project ID and configure the walker.js through our web app (UI).
-
-```html
-<script class="elbwalker" src="walker.js" data-project="W3BSHOP"></script>
-```
-
-## 🚀 Getting Started
-
-To get a local copy up and running follow these simple steps.
-
-### Installation
-
-1. Clone the repo
-   ```sh
-   git clone https://github.com/elbwalker/walker.js.git
-   ```
-2. Install NPM packages
-   ```sh
-   npm install
-   ```
-3. Start developing
-   ```sh
-   npm run dev
-   ```
-
-### Destinations
+### 🎯 Destinations
 
 By default all events gets pushed to the `dataLayer`. But you can customize the destinations you want to use. The walker.js comes with optional build-in destinations.
 
@@ -183,6 +160,8 @@ A destination has a `config` object and an optional `init` as well as the `push`
 As soon as an event triggers the destinations init function gets called once.
 And all events will get sent to the additional destination now.
 
+_See more examples, learn how to customize or write your own in the [destinations deep dive](https://github.com/elbwalker/walker.js/XXXXXXXXXXXXXXXXXXXXXX)_.
+
 ## 🛠 Contributing
 
 Any contributions you make are **greatly appreciated**.
@@ -194,6 +173,24 @@ If you have a suggestion that would make the walker better, please fork the repo
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+### Start developing
+
+We highly recommend to follow the test driven development approach. Write your tests by specifying the expected input and output.
+
+1. Install NPM packages
+   ```sh
+   npm install
+   ```
+2. Start developing
+   ```sh
+   npm run dev
+   ```
+3. Start developing
+   ```sh
+   npm run build
+   ```
+4. Be happy
 
 ## 👩‍⚖️ License
 
