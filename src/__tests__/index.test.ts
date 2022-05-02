@@ -101,7 +101,7 @@ describe('index', () => {
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         version: {
-          walker: 1.1,
+          walker: 1.2,
           config: 42,
         },
       }),

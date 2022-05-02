@@ -59,7 +59,7 @@ dataLayer.push({
   count: 2, // incremental counter of the events on a page
   version: {
     // Helpful when working with raw data
-    walker: 1.1, // used walker.js version
+    walker: 1.2, // used walker.js version
     config: 42, // a custom configuration version number
   },
   walker: true, // flag to filter events

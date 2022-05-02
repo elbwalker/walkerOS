@@ -4,7 +4,7 @@ import fs from 'fs';
 import _ from 'lodash';
 
 const w = window;
-const version = { config: 0, walker: 1.1 };
+const version = { config: 0, walker: 1.2 };
 let elbwalker: Elbwalker.Function;
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
