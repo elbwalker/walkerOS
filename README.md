@@ -86,7 +86,7 @@ You are completely free to define naming conventions. All you need to get starte
 `elb`, `elbaction` and `elbglobals` are reserved attributes whereas `elb-` attributes may be arbitrary combinations based on the related entity name.
 Actions and properties can be set anywhere inside an `elb` attribute.
 
-> _See more 🧑‍🎓 [tagging examples](https://github.com/elbwalker/walker.js/XXXXXXXXXXXXXXXXXXXXXX) and learn how to tag your website._
+> _See more 🧑‍🎓 [tagging examples](./examples) and learn how to tag your website._
 
 ## 🚀 Getting Started
 
@@ -94,7 +94,7 @@ Add the walker.js to your website and start tagging. Optionally you can specify 
 
 ### Installation
 
-Either use the walker.js via [npm](XXXXXXXXXXX) as a project dependency
+Either use the walker.js via [npm](https://www.npmjs.com/package/@elbwalker/walker.js) as a project dependency
 
 ```sh
 npm i @elbwalker/walker.js --save
@@ -103,7 +103,10 @@ npm i @elbwalker/walker.js --save
 Or as a script
 
 ```html
-<script class="elbwalker" src="XXXXXXXXXXX/walker.js"></script>
+<script
+  class="elbwalker"
+  src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.2/dist/walker.js"
+></script>
 ```
 
 ### 🎬 Triggers
@@ -159,7 +162,7 @@ elbwalker.push('walker destination', GA4); // Add the destination
 A destination has a `config` object and an optional `init` as well as the `push` function.
 As soon as an event triggers the destinations init function gets called once so that all events will get sent to the additional destination now.
 
-_See more examples, learn how to customize, or write your own in the [destinations deep dive](https://github.com/elbwalker/walker.js/XXXXXXXXXXXXXXXXXXXXXX)_.
+_See more examples, learn how to customize, or write your own in the [destinations deep dive](./src/destinations/)_.
 
 ## 🛠 Contributing
 
