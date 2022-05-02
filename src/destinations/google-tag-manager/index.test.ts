@@ -1,7 +1,7 @@
 import { Elbwalker } from '@elbwalker/types';
 
 const w = window;
-const version = { config: 0, walker: 1.1 };
+const version = { config: 0, walker: 1.2 };
 
 let elbwalker: Elbwalker.Function;
 
