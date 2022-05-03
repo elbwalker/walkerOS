@@ -1,4 +1,4 @@
-# General basic example
+# Basic walker.js example
 
 This example shows you a basic implementation of the _Basic demo entity_. With three events:
 

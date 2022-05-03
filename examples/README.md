@@ -1,3 +1,8 @@
 # walker.js tagging examples
 
-- [General basic example](./basic)
+- [Basic](./basic)
+- [Advanced](./advanced)
+
+## Industry examples
+
+- [Ecommerce](./ecommerce)
