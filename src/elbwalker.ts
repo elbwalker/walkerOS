@@ -38,6 +38,7 @@ elbwalker.go = function (config: Elbwalker.Config = {}) {
   } else if (!config.custom) {
     // default: add GTM destination and auto run
     addDestination(destination);
+    allowRunning = true;
     run(this);
   } else {
     // custom: use the elbLayer

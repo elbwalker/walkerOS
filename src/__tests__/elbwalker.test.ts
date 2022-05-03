@@ -84,6 +84,8 @@ describe('elbwalker', () => {
       .readFileSync(__dirname + '/html/globals.html')
       .toString();
     document.body.innerHTML = html;
+
+    jest.clearAllMocks(); // skip auto page view event
     elbwalker.push('walker run');
 
     expect(mockFn).toHaveBeenNthCalledWith(1, {
@@ -124,7 +126,6 @@ describe('elbwalker', () => {
   });
 
   test('group ids', () => {
-    elbwalker.push('walker run');
     elbwalker.push('entity action');
     elbwalker.push('entity action');
     const groupId = mockFn.mock.calls[0][0].group;

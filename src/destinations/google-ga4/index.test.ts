@@ -1,5 +1,5 @@
 import { Elbwalker } from '@elbwalker/types';
-import { DestinationGA4 } from './index';
+import { DestinationGA4 } from '.';
 
 const w = window;
 let elbwalker: Elbwalker.Function;

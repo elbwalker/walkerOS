@@ -6,6 +6,10 @@ declare global {
   }
 }
 
+export interface DestinationGTM extends WebDestination.Function {
+  config: WebDestination.Config;
+}
+
 export const destination: WebDestination.Function = {
   config: {},
 
