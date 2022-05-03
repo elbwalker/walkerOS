@@ -6,13 +6,14 @@
 
 # walker.js
 
-The walker.js is an open-source event tracker for all tools. Easy, standardized & flexible. Capture user events in the browser and send them to any destination - just by setting HTML attributes.
+Walker.js is an open-source event tracker. Easy, standardized & flexible. With walker.js you can capture user events in the browser and send them to any destination - just by setting HTML attributes.
+Become independent from locked-in analytics systems and set up reliable tracking the moment you design your front-end.
 
 [**Explore the docs**](https://docs.elbwalker.com) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elbwalker-demo/30min)
 
 ## 🤓 Usage
 
-You can implement all sorts of front-end user events. From e-commerce actions like product add to cart or order complete events as well as measuring product usage events, and UX events like navigation or filter usage etc.
+You can implement all sorts of front-end user events easily with walker.js. From e-commerce actions like product add to carts or order complete events to product and UX events like navigation, or filter usage, etc.
 
 Just set a few HTML attributes
 
@@ -49,7 +50,7 @@ dataLayer.push({
     device: 'cookieid',
   },
   nested: [], // all nested entities within the product
-  id: '1647968113641-b4b9h9-5', // timestamp, group & count of the event
+  id: '1647968113641-01b5e2-5', // timestamp, group & count of the event
   trigger: 'click', // name of the trigger that fired
   entity: 'product', // entity name
   action: 'add', // entity action
@@ -66,7 +67,7 @@ dataLayer.push({
 });
 ```
 
-You are completely free to define naming conventions. All you need to get started are the **entity, action & trigger attributes**.
+You are completely free to define naming conventions. All you need to get started are the **entity, action & trigger attributes**. Learn more about the elbwalker [event model](https://www.elbwalker.com/blog/elbwalker-event-concept) and background in our [blog](https://www.elbwalker.com/blog/).
 
 1. You define the entity scope by setting the `elb` attribute with the name of an entity to an element, e.g. `elb="product"`.
 2. An action can be added by setting the `elbaction` attribute on the same level or all child elements in combination with a matching trigger, e.g. `elbaction="click:add"` to fire a _product add_ event when a user clicks on the tagged element.
@@ -82,17 +83,45 @@ You are completely free to define naming conventions. All you need to get starte
 </body>
 ```
 
-> `elb`, `elbaction` and `elbglobals` are reserved attributes whereas `elb-` attributes may be arbitrary combinations based on the related entity name.
-> Actions and properties can be set anywhere inside an `elb` attribute.
+`elb`, `elbaction` and `elbglobals` are reserved attributes whereas `elb-` attributes may be arbitrary combinations based on the related entity name.
+Actions and properties can be set anywhere inside an `elb` attribute.
 
-### Triggers
+> _See more 🧑‍🎓 [tagging examples](./examples) and learn how to tag your website._
+
+## 🚀 Getting Started
+
+Add the walker.js to your website and start tagging. Optionally you can specify destinations.
+
+### Installation
+
+Either use the walker.js via [npm](https://www.npmjs.com/package/@elbwalker/walker.js) as a project dependency
+
+```sh
+npm i @elbwalker/walker.js --save
+```
+
+Or as a script
+
+```html
+<script
+  class="elbwalker"
+  src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.2/dist/walker.js"
+></script>
+```
+
+### 🎬 Triggers
 
 By using the walker.js you don't have to deal with event listener or mutation observer initialization anymore. The walker comes with a bunch of integrated triggers that will fire your event at the right moment.
+
+```html
+<!-- The trigger will fire the "product action" event -->
+<b elb="product" elbaction="TRIGGER:action">...</b>
+```
 
 <table>
   <tr>
     <th>Trigger</th>
-    <th>Definiton</th>
+    <th>Definition</th>
   </tr>
   <tr>
     <td>load</td>
@@ -118,30 +147,9 @@ By using the walker.js you don't have to deal with event listener or mutation ob
 
 _For further inspiration, please refer to the industry examples in our [docs](https://docs.elbwalker.com/sources/web/industry-examples)._
 
-_Learn more about the elbwalker [event model](https://www.elbwalker.com/blog/elbwalker-event-concept) and background in our [blog](https://www.elbwalker.com/blog/)._
+### 🎯 Destinations
 
-## 🚀 Getting Started
-
-To get a local copy up and running follow these simple steps.
-
-### Installation
-
-1. Clone the repo
-   ```sh
-   git clone https://github.com/elbwalker/walker.js.git
-   ```
-2. Install NPM packages
-   ```sh
-   npm install
-   ```
-3. Start developing
-   ```sh
-   npm run dev
-   ```
-
-### Destinations
-
-By default all events gets pushed to the `dataLayer`. But you can customize the destinations you want to use. The walker.js comes with optional build-in destinations.
+By default all events get pushed into the `dataLayer`, but you can customize the destinations. Walker.js comes with optional build-in destinations.
 
 Example of adding a GA4 destination:
 
@@ -152,20 +160,39 @@ elbwalker.push('walker destination', GA4); // Add the destination
 ```
 
 A destination has a `config` object and an optional `init` as well as the `push` function.
-As soon as an event triggers the destinations init function gets called once.
-And all events will get sent to the additional destination now.
+As soon as an event triggers the destinations init function gets called once so that all events will get sent to the additional destination now.
+
+_See more examples, learn how to customize, or write your own in the [destinations deep dive](./src/destinations/)_.
 
 ## 🛠 Contributing
 
 Any contributions you make are **greatly appreciated**.
 
-If you have a suggestion that would make the walker better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+If you have a suggestion that would make walker.js better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+### Start developing
+
+We highly recommend to follow the test driven development approach. Write your tests by specifying the expected input and output.
+
+1. Install NPM packages
+   ```sh
+   npm install
+   ```
+2. Start developing
+   ```sh
+   npm run dev
+   ```
+3. Start developing
+   ```sh
+   npm run build
+   ```
+4. Be happy
 
 ## 👩‍⚖️ License
 
