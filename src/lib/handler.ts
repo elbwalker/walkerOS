@@ -1,18 +1,24 @@
 import { getElbAttributeName, walker } from './walker';
 import { trycatch } from './utils';
-import { Walker } from '@elbwalker/types';
+import { Elbwalker, Walker } from '@elbwalker/types';
 
 const d = document;
 const w = window;
 const observer = trycatch(observerVisible)(1000);
 
-export function initHandler(): void {
-  if (d.readyState !== 'loading') {
-    trycatch(load)();
+export function ready(run: Function, elbwalker: Elbwalker.Function) {
+  const fn = () => {
+    run(elbwalker);
+  };
+  if (document.readyState !== 'loading') {
+    fn();
   } else {
-    d.addEventListener('DOMContentLoaded', trycatch(load));
+    document.addEventListener('DOMContentLoaded', fn);
   }
+}
 
+export function initHandler(): void {
+  trycatch(load)();
   d.addEventListener('click', trycatch(click));
   d.addEventListener('submit', trycatch(submit));
 }
@@ -24,8 +30,6 @@ function load() {
 
   // Trigger load
   d.querySelectorAll(getActionselector('load')).forEach((element) => {
-    // @TODO dealing with wildcart edge-case
-    // when the 'load' term is in selector but not as a trigger
     handleTrigger(element, 'load');
   });
 
@@ -165,6 +169,9 @@ function handleTrigger(element: Element, trigger: Walker.Trigger) {
 }
 
 function getActionselector(trigger: string) {
+  // @TODO dealing with wildcart edge-case
+  // when the 'load' term is in selector but not as a trigger
+
   // support both elbaction and legacy selector elb-action
   return `[${getElbAttributeName(
     'action',

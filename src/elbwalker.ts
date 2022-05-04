@@ -1,5 +1,5 @@
 import { AnyObject, Elbwalker, Walker, WebDestination } from '@elbwalker/types';
-import { initHandler } from './lib/handler';
+import { initHandler, ready } from './lib/handler';
 import { destination } from './destinations/google-tag-manager';
 import {
   assign,
@@ -39,7 +39,7 @@ elbwalker.go = function (config: Elbwalker.Config = {}) {
     // default: add GTM destination and auto run
     addDestination(destination);
     allowRunning = true;
-    run(this);
+    ready(run, elbwalker);
   } else {
     // custom: use the elbLayer
   }
@@ -123,7 +123,7 @@ function handleCommand(
       addDestination(data);
       break;
     case Elbwalker.Commands.Run:
-      run(elbwalker);
+      ready(run, elbwalker);
       break;
     case Elbwalker.Commands.User:
       setUserIds(data as AnyObject);
@@ -151,7 +151,7 @@ function elbLayerInit(elbwalker: Elbwalker.Function) {
     (element) => element == runCommand,
   );
 
-  if (containsRun) run(elbwalker); // Run walker run
+  if (containsRun) ready(run, elbwalker); // Run walker run
 }
 
 function run(elbwalker: Elbwalker.Function) {

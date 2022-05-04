@@ -3,17 +3,14 @@ require('intersection-observer');
 import fs from 'fs';
 import { initHandler } from '../lib/handler';
 import { AnyObject } from '@elbwalker/types';
+import elbwalker from '../elbwalker';
 const w = window;
 
 jest.useFakeTimers();
 jest.spyOn(global, 'setTimeout');
-jest.mock('../elbwalker');
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
-
-window.elbLayer = window.elbLayer || [];
-window.elbLayer.push = mockFn;
 
 let events: AnyObject = {};
 const html: string = fs
@@ -23,6 +20,9 @@ const html: string = fs
 beforeEach(() => {
   document.body = document.body.cloneNode() as HTMLElement;
   document.body.innerHTML = html;
+  w.elbLayer = w.elbLayer || [];
+  w.elbLayer.push = mockFn;
+  jest.clearAllMocks();
 
   events = {};
   document.addEventListener = mockAddEventListener.mockImplementation(
@@ -30,8 +30,6 @@ beforeEach(() => {
       events[event] = callback;
     },
   );
-
-  mockFn.mockClear();
 });
 
 describe('handler', () => {
@@ -92,7 +90,7 @@ describe('handler', () => {
       writable: true,
     });
 
-    initHandler();
+    elbwalker.push('walker run');
 
     expect(mockFn).toHaveBeenCalledTimes(0);
 
