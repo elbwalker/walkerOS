@@ -1,5 +1,5 @@
 import { AnyObject, Elbwalker, Walker, WebDestination } from '@elbwalker/types';
-import { initHandler, ready } from './lib/handler';
+import { initHandler, ready, triggerLoad } from './lib/handler';
 import { destination } from './destinations/google-tag-manager';
 import {
   assign,
@@ -30,6 +30,9 @@ elbwalker.go = function (config: Elbwalker.Config = {}) {
 
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(this);
+
+  // Register all handlers
+  initHandler();
 
   // Switch between init modes
   if (config.projectId) {
@@ -171,8 +174,7 @@ function run(elbwalker: Elbwalker.Function) {
     callPredefined(elbwalker);
   }
 
-  // Register all handlers
-  initHandler();
+  trycatch(triggerLoad)();
 }
 
 // Handle existing events in the elbLayer on first run

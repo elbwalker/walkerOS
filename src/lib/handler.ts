@@ -18,13 +18,12 @@ export function ready(run: Function, elbwalker: Elbwalker.Function) {
 }
 
 export function initHandler(): void {
-  trycatch(load)();
-  d.addEventListener('click', trycatch(click));
-  d.addEventListener('submit', trycatch(submit));
+  d.addEventListener('click', trycatch(triggerClick));
+  d.addEventListener('submit', trycatch(triggerSubmit));
 }
 
-// Called when DOM is ready
-function load() {
+// Called for each new run to setup triggers
+export function triggerLoad() {
   // Trigger static page view
   view();
 
@@ -39,18 +38,18 @@ function load() {
   });
 
   // Trigger visible
-  visible(d, true);
+  triggerVisible(d, true);
 }
 
-function click(this: Document, ev: MouseEvent) {
+function triggerClick(this: Document, ev: MouseEvent) {
   handleTrigger(ev.target as Element, 'click');
 }
 
-function submit(ev: Event) {
+function triggerSubmit(ev: Event) {
   handleTrigger(ev.target as Element, 'submit');
 }
 
-export function visible(
+export function triggerVisible(
   scope: Document | Element,
   disconnect = false,
 ): IntersectionObserver | undefined {
