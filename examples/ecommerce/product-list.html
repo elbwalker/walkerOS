@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>walker.js example: ecommerce product list</title>
+    <script
+      async
+      class="elbwalker"
+      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.2/dist/walker.js"
+    ></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div class="bg-white">
+      <div
+        class="max-w-2xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:max-w-7xl lg:px-8"
+      >
+        <h2 class="text-2xl font-extrabold tracking-tight text-gray-900">
+          Customers also purchased
+        </h2>
+
+        <div
+          elb="suggestions"
+          elbaction="load:view"
+          class="mt-6 grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8"
+        >
+          <div elb="product" elbaction="click:click" class="group relative">
+            <div
+              class="w-full min-h-80 bg-gray-200 aspect-w-1 aspect-h-1 rounded-md overflow-hidden group-hover:opacity-75 lg:h-80 lg:aspect-none"
+            >
+              <img
+                src="https://dummyimage.com/640x360/fff/aaa.png?text=product+image"
+                alt="Front of men&#039;s Everyday Ruck Snack in black."
+                class="w-full h-full object-center object-cover lg:w-full lg:h-full"
+              />
+            </div>
+            <div class="mt-4 flex justify-between">
+              <div>
+                <h3 class="text-sm text-gray-700">
+                  <a elb-product="name:Everyday Ruck Snack" href="#">
+                    <span aria-hidden="true" class="absolute inset-0"></span>
+                    Everyday Ruck Snack
+                  </a>
+                </h3>
+                <p elb-product="color:black" class="mt-1 text-sm text-gray-500">
+                  Black
+                </p>
+              </div>
+              <p
+                elb-product="price:220;currency:USD"
+                class="text-sm font-medium text-gray-900"
+              >
+                $220
+              </p>
+            </div>
+          </div>
+          <div elb="product" elbaction="click:click" class="group relative">
+            <div
+              class="w-full min-h-80 bg-gray-200 aspect-w-1 aspect-h-1 rounded-md overflow-hidden group-hover:opacity-75 lg:h-80 lg:aspect-none"
+            >
+              <img
+                src="https://dummyimage.com/640x360/fff/aaa.png?text=product+image"
+                alt="Front of men&#039;s Cool Cap in green."
+                class="w-full h-full object-center object-cover lg:w-full lg:h-full"
+              />
+            </div>
+            <div class="mt-4 flex justify-between">
+              <div>
+                <h3 class="text-sm text-gray-700">
+                  <a elb-product="name:Cool Cap" href="#">
+                    <span aria-hidden="true" class="absolute inset-0"></span>
+                    Cool Cap
+                  </a>
+                </h3>
+                <p elb-product="color:green" class="mt-1 text-sm text-gray-500">
+                  Green
+                </p>
+              </div>
+              <p
+                elb-product="price:39;currency:USD"
+                class="text-sm font-medium text-gray-900"
+              >
+                $39
+              </p>
+            </div>
+          </div>
+
+          <!-- More products... -->
+        </div>
+      </div>
+    </div>
+    <script>
+      // For demo purposes only. Watch the console.
+      window.dataLayer = [];
+      window.dataLayer.push = console.log;
+
+      // For beauty purposes only
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              elbwalker: {
+                DEFAULT: '#01B5E2',
+                500: '#01B5E2',
+                600: '#01B5E2',
+                700: '#015372',
+              },
+            },
+          },
+        },
+      };
+    </script>
+  </body>
+</html>

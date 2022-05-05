@@ -1,0 +1,158 @@
+<!-- This example requires Tailwind CSS v2.0+ -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>walker.js example: ecommerce product overview</title>
+    <script
+      async
+      class="elbwalker"
+      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.2/dist/walker.js"
+    ></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div class="bg-gray-50">
+      <div
+        elb="faq"
+        elbaction="load:view"
+        class="max-w-2xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:max-w-7xl lg:px-8 lg:grid lg:grid-cols-2 lg:gap-x-8"
+      >
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:py-16 sm:px-6 lg:px-8">
+          <div class="max-w-3xl mx-auto divide-y-2 divide-gray-200">
+            <h2
+              class="text-center text-3xl font-extrabold text-gray-900 sm:text-4xl"
+            >
+              Frequently asked questions
+            </h2>
+            <dl class="mt-6 space-y-6 divide-y divide-gray-200">
+              <div class="pt-6">
+                <dt class="text-lg">
+                  <!-- Expand/collapse question button -->
+                  <button
+                    elbaction="click:click"
+                    type="button"
+                    class="text-left w-full flex justify-between items-start text-gray-400"
+                    aria-controls="faq-0"
+                    aria-expanded="false"
+                  >
+                    <span
+                      elb-faq="question: Whats the best thing about Switzerland?"
+                      class="font-medium text-gray-900"
+                    >
+                      What&#039;s the best thing about Switzerland?
+                    </span>
+                    <span class="ml-6 h-7 flex items-center">
+                      <!--
+                    Expand/collapse icon, toggle classes based on question open state.
+  
+                    Heroicon name: outline/chevron-down
+  
+                    Open: "-rotate-180", Closed: "rotate-0"
+                        -->
+                      <svg
+                        class="rotate-0 h-6 w-6 transform"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2"
+                        stroke="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                </dt>
+                <dd class="mt-2 pr-12" id="faq-0">
+                  <p
+                    elb-faq="answer: The flag is cool. "
+                    class="text-base text-gray-500"
+                  >
+                    The flag is cool.
+                  </p>
+                </dd>
+              </div>
+              <div class="pt-6">
+                <dt class="text-lg">
+                  <!-- Expand/collapse question button -->
+                  <button
+                    elbaction="click:click"
+                    type="button"
+                    class="text-left w-full flex justify-between items-start text-gray-400"
+                    aria-controls="faq-0"
+                    aria-expanded="false"
+                  >
+                    <span
+                      elb-faq="question: How are you?"
+                      class="font-medium text-gray-900"
+                    >
+                      How are you?
+                    </span>
+                    <span class="ml-6 h-7 flex items-center">
+                      <!--
+                    Expand/collapse icon, toggle classes based on question open state.
+  
+                    Heroicon name: outline/chevron-down
+  
+                    Open: "-rotate-180", Closed: "rotate-0"
+                        -->
+                      <svg
+                        class="rotate-0 h-6 w-6 transform"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2"
+                        stroke="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                </dt>
+                <dd class="mt-2 pr-12" id="faq-0">
+                  <p
+                    elb-faq="answer: I dont know."
+                    class="text-base text-gray-500"
+                  >
+                    I dont know.
+                  </p>
+                </dd>
+              </div>
+              <!-- More questions... -->
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      // For demo purposes only. Watch the console.
+      window.dataLayer = [];
+      window.dataLayer.push = console.log;
+
+      // For beauty purposes only
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              elbwalker: {
+                DEFAULT: '#01B5E2',
+                500: '#01B5E2',
+                600: '#01B5E2',
+                700: '#015372',
+              },
+            },
+          },
+        },
+      };
+    </script>
+  </body>
+</html>
