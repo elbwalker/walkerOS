@@ -80,7 +80,7 @@ function view() {
   if (l.hash) data.hash = l.hash;
 
   // @TODO get all nested entities
-  w.elbLayer.push('page view', data, 'load');
+  w.elbLayer.push({ event: 'page view', data, trigger: 'load' });
 }
 
 function observerVisible(duration = 1000): IntersectionObserver | undefined {
@@ -158,12 +158,12 @@ function isVisible(elem: HTMLElement): boolean {
 function handleTrigger(element: Element, trigger: Walker.Trigger) {
   const events = walker(element, trigger);
   events.forEach((event) => {
-    w.elbLayer.push(
-      `${event.entity} ${event.action}`,
-      event.data,
+    w.elbLayer.push({
+      event: `${event.entity} ${event.action}`,
+      data: event.data,
       trigger,
-      event.nested,
-    );
+      nested: event.nested,
+    });
   });
 }
 

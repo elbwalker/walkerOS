@@ -3,6 +3,10 @@ import { Elbwalker, WebDestination } from '@elbwalker/types';
 const w = window;
 let elbwalker: Elbwalker.Function;
 
+function walker(...args: unknown[]) {
+  (window.elbLayer = window.elbLayer || []).push(arguments);
+}
+
 const mockPush = jest.fn(); //.mockImplementation(console.log);
 const mockInit = jest.fn(); //.mockImplementation(console.log);
 const destination: WebDestination.Function = {
@@ -20,17 +24,67 @@ beforeEach(() => {
 });
 
 describe('elbLayer', () => {
+  test('arguments and event pushes', () => {
+    w.dataLayer = [];
+    w.dataLayer.push = mockPush;
+    elbwalker.go();
+
+    walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
+    w.elbLayer.push({
+      event: 'ingest event',
+      data: { b: 2 },
+      trigger: 'e',
+      nested: [],
+    }); // Push as event
+
+    // Multiple events per push
+    w.elbLayer.push({ event: 'i e1' }, { event: 'i e2' });
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'ingest argument',
+        data: { a: 1 },
+        trigger: 'a',
+        nested: [],
+      }),
+    );
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'ingest event',
+        data: { b: 2 },
+        trigger: 'e',
+        nested: [],
+      }),
+    );
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'i e1',
+      }),
+    );
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'i e2',
+      }),
+    );
+  });
   test('predefined stack without run', () => {
-    w.elbLayer.push('walker destination', destination);
-    w.elbLayer.push('entity action');
+    walker('walker destination', destination);
+    walker('entity action');
 
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  test('predefined stack with run', () => {
-    w.elbLayer.push('walker destination', destination);
-    w.elbLayer.push('entity action');
-    w.elbLayer.push('walker run');
+  test.skip('walker push pre and post go', () => {
+    // @TODO
+    walker('entity action');
+    elbwalker.go();
+    walker('entity action');
+  });
+
+  test.only('predefined stack with run', () => {
+    walker('walker destination', destination);
+    walker('entity action');
+    walker('walker run');
 
     expect(mockPush).toHaveBeenNthCalledWith(
       1,
@@ -47,12 +101,12 @@ describe('elbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    w.elbLayer.push();
-    w.elbLayer.push('event postponed');
-    w.elbLayer.push('walker destination', destination);
-    w.elbLayer.push('walker user', { id: 'userid' });
-    w.elbLayer.push('walker run');
-    w.elbLayer.push('event later');
+    walker();
+    walker('event postponed');
+    walker('walker destination', destination);
+    walker('walker user', { id: 'userid' });
+    walker('walker run');
+    walker('event later');
 
     expect(mockPush).toHaveBeenNthCalledWith(
       1,
