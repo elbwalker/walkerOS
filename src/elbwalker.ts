@@ -25,11 +25,11 @@ let firstRun = true; // The first run is a special one due to state changes
 let allowRunning = false; // Wait for explicit run command to start
 
 elbwalker.go = function (config: Elbwalker.Config = {}) {
-  // Setup pushes for elbwalker via elbLayer
-  elbLayerInit(elbwalker);
-
   // Set config version to differentiate between setups
   if (config.version) version.config = config.version;
+
+  // Setup pushes for elbwalker via elbLayer
+  elbLayerInit(elbwalker);
 
   // Switch between init modes
   if (config.projectId) {
@@ -136,10 +136,18 @@ function handleCommand(
 function elbLayerInit(elbwalker: Elbwalker.Function) {
   w.elbLayer = w.elbLayer || [];
 
-  w.elbLayer.push = function () {
-    Array.from(arguments).map((pushEvent) => {
-      elbwalker.push(...transformElbLayerEvent(pushEvent));
-    });
+  w.elbLayer.push = function (
+    event?: IArguments | string,
+    data?: Elbwalker.PushData,
+    trigger?: string,
+    nested?: Walker.Entities,
+  ) {
+    // Pushed as Arguments
+    if ({}.hasOwnProperty.call(event, 'callee')) {
+      [event, data, trigger, nested] = [...Array.from(event as IArguments)];
+    }
+
+    elbwalker.push(event, data, trigger, nested);
 
     return Array.prototype.push.apply(this, [arguments]);
   };
@@ -163,7 +171,8 @@ function run(elbwalker: Elbwalker.Function) {
     callPredefined(elbwalker);
 
     // Stop for now since run gets handled being treated as predefined
-    return;
+    // @TODO check how it works with run in predefined
+    // return;
   }
 
   // Reset the run counter
@@ -185,35 +194,33 @@ function callPredefined(elbwalker: Elbwalker.Function) {
   // walker events gets prioritized before others
   // this garantees a fully configuration before the first run
   const walkerCommand = `${Elbwalker.Commands.Walker} `; // Space on purpose
-  const walkerEvents: Array<Elbwalker.PushEvent> = [];
-  const customEvents: Array<Elbwalker.PushEvent> = [];
+  const walkerEvents: Array<Elbwalker.ElbLayer> = [];
+  const customEvents: Array<Elbwalker.ElbLayer> = [];
 
   // At that time the dataLayer was not yet initialized
-  // @TODO MIXED ELBLAYER TYPE COULD BE PRE OR POST INIT
-  w.elbLayer.map((item) => {
-    transformElbLayerEvent(item);
-    // let pushedEvent = { event, data, trigger, nested };
-    // Each elbLayer push gets bundled when added to the stack
-    // let pushedEvent = Array.from(item);
-    // console.log(
-    //   '🚀 ~ file: elbwalker.ts ~ line 218 ~ w.elbLayer.map ~ pushedEvent',
-    //   pushedEvent,
-    // );
-    // const [event] = pushedEvent;
-    // // console.log('🚀 ~ file: elbwalker.ts ~ line 199 ~ event', event);
-    // if (!event && typeof event !== 'string') return;
+  w.elbLayer.map((pushedEvent) => {
+    let [event, data, trigger, nested] = [
+      ...Array.from(pushedEvent as IArguments),
+    ];
+
+    // Pushed as Arguments
+    if ({}.hasOwnProperty.call(event, 'callee')) {
+      [event, data, trigger, nested] = [...Array.from(event)];
+    }
+
+    if (!event && typeof event !== 'string') return;
     // @TODO this is bit more complex
     // loop until run command
     // prevent double run
     // check if event is a walker commend
-    // event.startsWith(walkerCommand)
-    //   ? walkerEvents.push(pushedEvent) // stack it to the walker commands
-    //   : customEvents.push(pushedEvent); // stack it to the custom events
+    event.startsWith(walkerCommand)
+      ? walkerEvents.push([event, data, trigger, nested]) // stack it to the walker commands
+      : customEvents.push([event, data, trigger, nested]); // stack it to the custom events
   });
 
   // Prefere all walker commands before events during processing the predefined ones
   walkerEvents.concat(customEvents).map((item) => {
-    const { event, data, trigger, nested } = item;
+    const [event, data, trigger, nested] = item;
     elbwalker.push(event, data, trigger, nested);
   });
 }
@@ -240,18 +247,6 @@ function loadProject(projectId: string) {
   const script = document.createElement('script');
   script.src = `${process.env.PROJECT_FILE}${projectId}.js`;
   document.head.appendChild(script);
-}
-
-function transformElbLayerEvent(item: Elbwalker.PushEvent | IArguments) {
-  // Separate between direct elbLayer event pushes and walker() arguments pushes
-  if ({}.hasOwnProperty.call(item, 'callee')) {
-    // Pushed as Arguments
-    return [...Array.from(item as IArguments)];
-  } else {
-    // Pushed as PushEvent
-    const { event, data, trigger, nested } = item as Elbwalker.PushEvent;
-    return [event, data, trigger, nested];
-  }
 }
 
 export default elbwalker;

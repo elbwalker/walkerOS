@@ -20,7 +20,6 @@ beforeEach(() => {
   jest.resetModules();
   w.elbLayer = [];
   elbwalker = require('../elbwalker').default;
-  elbwalker.go({ custom: true });
 });
 
 describe('elbLayer', () => {
@@ -30,15 +29,7 @@ describe('elbLayer', () => {
     elbwalker.go();
 
     walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
-    w.elbLayer.push({
-      event: 'ingest event',
-      data: { b: 2 },
-      trigger: 'e',
-      nested: [],
-    }); // Push as event
-
-    // Multiple events per push
-    w.elbLayer.push({ event: 'i e1' }, { event: 'i e2' });
+    w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -56,18 +47,10 @@ describe('elbLayer', () => {
         nested: [],
       }),
     );
-    expect(mockPush).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: 'i e1',
-      }),
-    );
-    expect(mockPush).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: 'i e2',
-      }),
-    );
   });
+
   test('predefined stack without run', () => {
+    elbwalker.go({ custom: true });
     walker('walker destination', destination);
     walker('entity action');
 
@@ -81,26 +64,29 @@ describe('elbLayer', () => {
     walker('entity action');
   });
 
-  test.only('predefined stack with run', () => {
+  test('predefined stack with run', () => {
+    elbwalker.go({ custom: true });
+
     walker('walker destination', destination);
-    walker('entity action');
+    walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
+    w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
     walker('walker run');
 
-    expect(mockPush).toHaveBeenNthCalledWith(
-      1,
+    expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'entity action',
+        event: 'ingest argument',
       }),
     );
-    expect(mockPush).toHaveBeenNthCalledWith(
-      2,
+    expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'page view',
+        event: 'ingest event',
       }),
     );
   });
 
   test('prioritize walker commands before run', () => {
+    elbwalker.go({ custom: true });
+
     walker();
     walker('event postponed');
     walker('walker destination', destination);

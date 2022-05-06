@@ -6,7 +6,7 @@ const version = { config: 0, walker: 1.2 };
 
 let elbwalker: Elbwalker.Function;
 let destination: DestinationGTM;
-const mockFn = jest.fn();
+const mockFn = jest.fn(); //.mockImplementation(console.log);
 
 const event = 'entity action';
 
@@ -17,11 +17,12 @@ describe('destination google-tag-manager', () => {
     elbwalker = require('../../elbwalker').default;
     destination = require('./index').destination;
 
+    w.dataLayer = [];
+    w.dataLayer.push = mockFn;
+
     elbwalker.go({ custom: true });
     elbwalker.push('walker run');
     elbwalker.push('walker destination', destination);
-    w.dataLayer = [];
-    w.dataLayer.push = mockFn;
   });
 
   test('init', () => {
@@ -29,7 +30,6 @@ describe('destination google-tag-manager', () => {
     expect(w.dataLayer).toBeUndefined();
 
     elbwalker.push(event);
-
     expect(w.dataLayer).toBeDefined();
   });
 
@@ -49,7 +49,7 @@ describe('destination google-tag-manager', () => {
       timestamp: expect.any(Number),
       timing: expect.any(Number),
       group: expect.any(String),
-      count: 3,
+      count: 2,
       version,
       walker: true,
     });
