@@ -137,7 +137,7 @@ function elbLayerInit(elbwalker: Elbwalker.Function) {
   w.elbLayer = w.elbLayer || [];
 
   w.elbLayer.push = function (
-    event?: IArguments | string,
+    event?: IArguments | unknown,
     data?: Elbwalker.PushData,
     trigger?: string,
     nested?: Walker.Entities,
