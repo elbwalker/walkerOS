@@ -17,6 +17,7 @@ describe('destination google-tag-manager', () => {
     elbwalker = require('../../elbwalker').default;
     destination = require('./index').destination;
 
+    w.elbLayer = [];
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
 

@@ -18,7 +18,7 @@ const version: Elbwalker.Version = {
 };
 
 let count = 0; // Event counter for each run
-let group = randomString(); // random id to group events of a run
+let group = ''; // random id to group events of a run
 let globals: AnyObject = {}; // init globals as some random var
 let user: Elbwalker.User = {}; // handles the user ids
 let firstRun = true; // The first run is a special one due to state changes
@@ -165,16 +165,6 @@ function run(elbwalker: Elbwalker.Function) {
   // When run is called, the walker may start running
   allowRunning = true;
 
-  // Run predefined elbLayer stack once
-  if (firstRun) {
-    firstRun = false;
-    callPredefined(elbwalker);
-
-    // Stop for now since run gets handled being treated as predefined
-    // @TODO check how it works with run in predefined
-    // return;
-  }
-
   // Reset the run counter
   count = 0;
 
@@ -184,6 +174,12 @@ function run(elbwalker: Elbwalker.Function) {
   // Load globals properties
   // Due to site performance only once every run
   globals = getGlobalProperties();
+
+  // Run predefined elbLayer stack once
+  if (firstRun) {
+    firstRun = false;
+    callPredefined(elbwalker);
+  }
 
   trycatch(triggerLoad)();
 }
@@ -201,17 +197,15 @@ function callPredefined(elbwalker: Elbwalker.Function) {
   w.elbLayer.map((pushedEvent) => {
     let [event, data, trigger, nested] = [
       ...Array.from(pushedEvent as IArguments),
-    ];
+    ] as Elbwalker.ElbLayer;
 
     // Pushed as Arguments
     if ({}.hasOwnProperty.call(event, 'callee')) {
-      [event, data, trigger, nested] = [...Array.from(event)];
+      [event, data, trigger, nested] = [...Array.from(event as IArguments)];
     }
 
-    if (!event && typeof event !== 'string') return;
-    // @TODO this is bit more complex
-    // loop until run command
-    // prevent double run
+    if (typeof event !== 'string') return;
+
     // check if event is a walker commend
     event.startsWith(walkerCommand)
       ? walkerEvents.push([event, data, trigger, nested]) // stack it to the walker commands

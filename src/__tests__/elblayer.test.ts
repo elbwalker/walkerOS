@@ -19,13 +19,13 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.resetModules();
   w.elbLayer = [];
+  w.dataLayer = [];
+  w.dataLayer.push = mockPush;
   elbwalker = require('../elbwalker').default;
 });
 
 describe('elbLayer', () => {
   test('arguments and event pushes', () => {
-    w.dataLayer = [];
-    w.dataLayer.push = mockPush;
     elbwalker.go();
 
     walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
@@ -57,11 +57,43 @@ describe('elbLayer', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  test.skip('walker push pre and post go', () => {
-    // @TODO
-    walker('entity action');
-    elbwalker.go();
-    walker('entity action');
+  test('walker push pre and post go', () => {
+    walker('e 1');
+    walker('walker destination', destination);
+
+    elbwalker.go({ custom: true });
+    walker('e 2');
+    walker('walker run');
+    // auto call: walker('page view');
+    walker('e 4');
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e 1',
+        count: 1,
+      }),
+    );
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e 2',
+        count: 2,
+      }),
+    );
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'page view',
+        count: 3,
+      }),
+    );
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e 4',
+        count: 4,
+      }),
+    );
   });
 
   test('predefined stack with run', () => {
