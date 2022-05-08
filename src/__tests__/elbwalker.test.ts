@@ -33,6 +33,7 @@ describe('elbwalker', () => {
     (elbwalker as any).push();
     elbwalker.push('');
     elbwalker.push('entity');
+    expect(mockFn).toHaveBeenCalledTimes(1); // only page view
   });
 
   test('regular push', () => {

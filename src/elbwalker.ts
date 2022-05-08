@@ -4,6 +4,7 @@ import { destination } from './destinations/google-tag-manager';
 import {
   assign,
   getGlobalProperties,
+  isArgument,
   randomString,
   trycatch,
 } from './lib/utils';
@@ -18,21 +19,18 @@ const version: Elbwalker.Version = {
 };
 
 let count = 0; // Event counter for each run
-let group = randomString(); // random id to group events of a run
+let group = ''; // random id to group events of a run
 let globals: AnyObject = {}; // init globals as some random var
 let user: Elbwalker.User = {}; // handles the user ids
+let firstRun = true; // The first run is a special one due to state changes
 let allowRunning = false; // Wait for explicit run command to start
-let calledPredefined = false; // Status of basic initialisation
 
 elbwalker.go = function (config: Elbwalker.Config = {}) {
   // Set config version to differentiate between setups
   if (config.version) version.config = config.version;
 
   // Setup pushes for elbwalker via elbLayer
-  elbLayerInit(this);
-
-  // Register all handlers
-  initHandler();
+  elbLayerInit(elbwalker);
 
   // Switch between init modes
   if (config.projectId) {
@@ -41,30 +39,30 @@ elbwalker.go = function (config: Elbwalker.Config = {}) {
   } else if (!config.custom) {
     // default: add GTM destination and auto run
     addDestination(destination);
-    allowRunning = true;
     ready(run, elbwalker);
+
+    // @TODO TEST WALKER COMMANDS ON DEFAULT MODE TOO
   } else {
     // custom: use the elbLayer
   }
+
+  // Register all handlers
+  initHandler();
 };
 
 elbwalker.push = function (
-  event?: string,
+  event?: unknown,
   data?: Elbwalker.PushData,
   trigger?: string,
   nested?: Walker.Entities,
 ): void {
-  if (!event) return;
+  if (!event || typeof event !== 'string') return;
 
   // Check if walker is allowed to run
   if (!allowRunning) {
     // If not yet allowed check if this is the time
-    if (event == runCommand) {
-      allowRunning = true;
-    } else {
-      // Do not process events yet
-      return;
-    }
+    // If it's not that time do not process events yet
+    if (event != runCommand) return;
   }
 
   // Check for valid entity and action event format
@@ -140,24 +138,35 @@ function elbLayerInit(elbwalker: Elbwalker.Function) {
   w.elbLayer = w.elbLayer || [];
 
   w.elbLayer.push = function (
-    event?: string,
+    event?: IArguments | unknown,
     data?: Elbwalker.PushData,
     trigger?: string,
     nested?: Walker.Entities,
   ) {
+    // Pushed as Arguments
+    if (isArgument(event)) {
+      [event, data, trigger, nested] = [...Array.from(event as IArguments)];
+    }
+
     elbwalker.push(event, data, trigger, nested);
+
     return Array.prototype.push.apply(this, [arguments]);
   };
 
   // Look if the run command is stacked
-  const containsRun = (w.elbLayer as Array<unknown>).find(
-    (element) => element == runCommand,
-  );
+  const containsRun = w.elbLayer.find((element) => {
+    // Differentiate between the two types of possible event pushes
+    element = isArgument(element) ? (element as IArguments)[0] : element;
+    return element == runCommand;
+  });
 
   if (containsRun) ready(run, elbwalker); // Run walker run
 }
 
 function run(elbwalker: Elbwalker.Function) {
+  // When run is called, the walker may start running
+  allowRunning = true;
+
   // Reset the run counter
   count = 0;
 
@@ -169,8 +178,8 @@ function run(elbwalker: Elbwalker.Function) {
   globals = getGlobalProperties();
 
   // Run predefined elbLayer stack once
-  if (!calledPredefined) {
-    calledPredefined = true;
+  if (firstRun) {
+    firstRun = false;
     callPredefined(elbwalker);
   }
 
@@ -185,18 +194,39 @@ function callPredefined(elbwalker: Elbwalker.Function) {
   const walkerCommand = `${Elbwalker.Commands.Walker} `; // Space on purpose
   const walkerEvents: Array<Elbwalker.ElbLayer> = [];
   const customEvents: Array<Elbwalker.ElbLayer> = [];
+  let isFirstRunEvent = true;
 
-  w.elbLayer.map((item) => {
-    // Each elbLayer push gets bundled when added to the stack
-    let pushedEvent = item as unknown as Elbwalker.ElbLayer;
-    const [event, data, trigger, nested] = pushedEvent;
+  // At that time the dataLayer was not yet initialized
+  w.elbLayer.map((pushedEvent) => {
+    let [event, data, trigger, nested] = [
+      ...Array.from(pushedEvent as IArguments),
+    ] as Elbwalker.ElbLayer;
 
-    event?.startsWith(walkerCommand)
-      ? walkerEvents.push([event, data, trigger, nested])
-      : customEvents.push([event, data, trigger, nested]);
+    // Pushed as Arguments
+    if ({}.hasOwnProperty.call(event, 'callee')) {
+      [event, data, trigger, nested] = [...Array.from(event as IArguments)];
+    }
+
+    if (typeof event !== 'string') return;
+
+    // Skip the first stacked run event since it's the reason we're here
+    // and to prevent duplicate execution which we don't want
+    if (isFirstRunEvent && event == runCommand) {
+      isFirstRunEvent = false; // Next time it's on
+      return;
+    }
+
+    // check if event is a walker commend
+    event.startsWith(walkerCommand)
+      ? walkerEvents.push([event, data, trigger, nested]) // stack it to the walker commands
+      : customEvents.push([event, data, trigger, nested]); // stack it to the custom events
   });
 
-  walkerEvents.concat(customEvents).map((item) => elbwalker.push(...item));
+  // Prefere all walker commands before events during processing the predefined ones
+  walkerEvents.concat(customEvents).map((item) => {
+    const [event, data, trigger, nested] = item;
+    elbwalker.push(event, data, trigger, nested);
+  });
 }
 
 function setUserIds(data: Elbwalker.User) {
