@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/walker.js",
   "description": "An event tracker for all tools. Easy, standardized & flexible",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/elbwalker/walker.js.git"
