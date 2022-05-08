@@ -1,19 +1,15 @@
 require('intersection-observer');
 
 import fs from 'fs';
-import { initHandler } from '../lib/handler';
 import { AnyObject } from '@elbwalker/types';
+import elbwalker from '../elbwalker';
 const w = window;
 
 jest.useFakeTimers();
 jest.spyOn(global, 'setTimeout');
-jest.mock('../elbwalker');
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
-
-window.elbLayer = window.elbLayer || [];
-window.elbLayer.push = mockFn;
 
 let events: AnyObject = {};
 const html: string = fs
@@ -23,6 +19,9 @@ const html: string = fs
 beforeEach(() => {
   document.body = document.body.cloneNode() as HTMLElement;
   document.body.innerHTML = html;
+  w.dataLayer = w.dataLayer || [];
+  w.dataLayer.push = mockFn;
+  jest.clearAllMocks();
 
   events = {};
   document.addEventListener = mockAddEventListener.mockImplementation(
@@ -31,18 +30,28 @@ beforeEach(() => {
     },
   );
 
-  mockFn.mockClear();
+  elbwalker.go();
 });
 
 describe('handler', () => {
-  test('load view', () => {
-    initHandler();
+  test('init', () => {
+    expect(mockAddEventListener).toHaveBeenCalledWith(
+      'click',
+      expect.any(Function),
+    );
+    expect(mockAddEventListener).toHaveBeenCalledWith(
+      'submit',
+      expect.any(Function),
+    );
+  });
 
-    expect(mockFn).toHaveBeenNthCalledWith(
-      1,
-      'page view',
-      { domain: 'localhost', id: '/', title: '' },
-      'load',
+  test('load view', () => {
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'page view',
+        data: { domain: 'localhost', id: '/', title: '' },
+        trigger: 'load',
+      }),
     );
   });
 
@@ -56,29 +65,32 @@ describe('handler', () => {
       writable: true,
     });
 
-    initHandler();
+    // New page run on new page
+    jest.clearAllMocks();
+    elbwalker.push('walker run');
 
-    expect(mockFn).toHaveBeenNthCalledWith(
-      1,
-      'page view',
-      {
-        domain: 'www.elbwalker.com',
-        id: '/p',
-        search: '?q=Analytics',
-        hash: '#hash',
-        title: 'Title',
-      },
-      'load',
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'page view',
+        data: {
+          domain: 'www.elbwalker.com',
+          id: '/p',
+          search: '?q=Analytics',
+          hash: '#hash',
+          title: 'Title',
+        },
+        trigger: 'load',
+      }),
     );
 
-    expect(mockFn).toHaveBeenNthCalledWith(
-      2,
-      'e a',
-      {
-        k: 'v',
-      },
-      'load',
-      [],
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e a',
+        data: {
+          k: 'v',
+        },
+        trigger: 'load',
+      }),
     );
 
     window.location = location;
@@ -92,7 +104,9 @@ describe('handler', () => {
       writable: true,
     });
 
-    initHandler();
+    // New page run in loading state
+    jest.clearAllMocks();
+    elbwalker.push('walker run');
 
     expect(mockFn).toHaveBeenCalledTimes(0);
 
@@ -100,9 +114,10 @@ describe('handler', () => {
 
     expect(mockFn).toHaveBeenNthCalledWith(
       1,
-      'page view',
-      { domain: 'localhost', id: '/', title: '' },
-      'load',
+      expect.objectContaining({
+        event: 'page view',
+        trigger: 'load',
+      }),
     );
 
     Object.defineProperty(document, 'readyState', {
@@ -111,26 +126,37 @@ describe('handler', () => {
     });
   });
 
+  test('click', () => {
+    const elem = document.getElementById('click');
+
+    // Simulate submit event
+    (events.click as Function)({ target: elem } as Event);
+
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'e click',
+        trigger: 'click',
+      }),
+    );
+  });
+
   test('submit', () => {
     // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/submit_event
     const form = document.getElementById('form');
 
-    initHandler();
-    expect(mockAddEventListener).toHaveBeenCalledWith(
-      'submit',
-      expect.any(Function),
-    );
-
     // Simulate submit event
     (events.submit as Function)({ target: form } as Event);
 
-    expect(mockFn).toHaveBeenLastCalledWith('form submit', {}, 'submit', []);
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'form submit',
+        trigger: 'submit',
+      }),
+    );
   });
 
   test.skip('wait', () => {
     // @TODO it's very stupid to write your own tests. Change the time 4000 ...
-
-    initHandler();
 
     expect(setTimeout).toHaveBeenLastCalledWith(expect.any(Function), 4000);
     expect(mockFn).not.toHaveBeenLastCalledWith(

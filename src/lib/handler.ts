@@ -1,31 +1,34 @@
 import { getElbAttributeName, walker } from './walker';
 import { trycatch } from './utils';
-import { Walker } from '@elbwalker/types';
+import { Elbwalker, Walker } from '@elbwalker/types';
 
 const d = document;
 const w = window;
 const observer = trycatch(observerVisible)(1000);
 
-export function initHandler(): void {
-  if (d.readyState !== 'loading') {
-    trycatch(load)();
+export function ready(run: Function, elbwalker: Elbwalker.Function) {
+  const fn = () => {
+    run(elbwalker);
+  };
+  if (document.readyState !== 'loading') {
+    fn();
   } else {
-    d.addEventListener('DOMContentLoaded', trycatch(load));
+    document.addEventListener('DOMContentLoaded', fn);
   }
-
-  d.addEventListener('click', trycatch(click));
-  d.addEventListener('submit', trycatch(submit));
 }
 
-// Called when DOM is ready
-function load() {
+export function initHandler(): void {
+  d.addEventListener('click', trycatch(triggerClick));
+  d.addEventListener('submit', trycatch(triggerSubmit));
+}
+
+// Called for each new run to setup triggers
+export function triggerLoad() {
   // Trigger static page view
   view();
 
   // Trigger load
   d.querySelectorAll(getActionselector('load')).forEach((element) => {
-    // @TODO dealing with wildcart edge-case
-    // when the 'load' term is in selector but not as a trigger
     handleTrigger(element, 'load');
   });
 
@@ -35,18 +38,18 @@ function load() {
   });
 
   // Trigger visible
-  visible(d, true);
+  triggerVisible(d, true);
 }
 
-function click(this: Document, ev: MouseEvent) {
+function triggerClick(this: Document, ev: MouseEvent) {
   handleTrigger(ev.target as Element, 'click');
 }
 
-function submit(ev: Event) {
+function triggerSubmit(ev: Event) {
   handleTrigger(ev.target as Element, 'submit');
 }
 
-export function visible(
+export function triggerVisible(
   scope: Document | Element,
   disconnect = false,
 ): IntersectionObserver | undefined {
@@ -165,6 +168,9 @@ function handleTrigger(element: Element, trigger: Walker.Trigger) {
 }
 
 function getActionselector(trigger: string) {
+  // @TODO dealing with wildcart edge-case
+  // when the 'load' term is in selector but not as a trigger
+
   // support both elbaction and legacy selector elb-action
   return `[${getElbAttributeName(
     'action',

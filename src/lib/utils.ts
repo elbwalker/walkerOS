@@ -74,3 +74,7 @@ export function getAttribute(element: Element, name: string): string {
 export function assign(base: AnyObject, props: AnyObject = {}): AnyObject {
   return { ...base, ...props };
 }
+
+export function isArgument(event: unknown) {
+  return {}.hasOwnProperty.call(event, 'callee');
+}
