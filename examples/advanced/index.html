@@ -1,13 +1,48 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="utf-8" />
     <title>walker.js example: advanded tagging</title>
+
+    <!-- Load walker in custom mode to disable auto run in favor to set some configuration -->
     <script
       async
       class="elbwalker"
       data-version="2"
-      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.2.2/dist/walker.js"
+      data-custom="true"
+      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@latest/dist/walker.js"
     ></script>
+    <script>
+      // Function to push events
+      function walker() {
+        (window.elbLayer = window.elbLayer || []).push(arguments);
+      }
+
+      // Static event that will be executed after all walker commands
+      walker('user status', {});
+
+      // Add destinations
+      walker('walker destination', { push: console.log }); // Debug destination
+      walker('walker destination', {
+        init: function () {
+          window.dataLayer = [];
+        },
+        push: function (e) {
+          window.dataLayer.push(e);
+        },
+      }); // GTM destination
+
+      // Set user ids (before the first run)
+      walker('walker user', { device: 'c00k131d', id: 'h4sh3dcrm1d' }); // Read from storage
+
+      // Simulate a consent granted event
+      setTimeout(() => {
+        walker('consent granted', { marketing: true });
+      }, 3000);
+
+      // Start everything, necessary in custom mode
+      walker('walker run');
+    </script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,aspect-ratio"></script>
   </head>
   <body>
@@ -664,10 +699,6 @@
     </div>
 
     <script>
-      // For demo purposes only. Watch the console.
-      window.dataLayer = [];
-      window.dataLayer.push = console.log;
-
       // For beauty purposes only
       tailwind.config = {
         theme: {
