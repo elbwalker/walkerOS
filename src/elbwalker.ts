@@ -28,7 +28,6 @@ let allowRunning = false; // Wait for explicit run command to start
 elbwalker.go = function (config: Elbwalker.Config = {}) {
   // Set config version to differentiate between setups
   if (config.version) version.config = config.version;
-  console.log('🚀 ~ file: elbwalker.ts ~ line 30 ~ config', config);
 
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(elbwalker);
