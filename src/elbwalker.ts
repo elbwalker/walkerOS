@@ -4,6 +4,7 @@ import { destination } from './destinations/google-tag-manager';
 import {
   assign,
   getGlobalProperties,
+  isArgument,
   randomString,
   trycatch,
 } from './lib/utils';
@@ -27,6 +28,7 @@ let allowRunning = false; // Wait for explicit run command to start
 elbwalker.go = function (config: Elbwalker.Config = {}) {
   // Set config version to differentiate between setups
   if (config.version) version.config = config.version;
+  console.log('🚀 ~ file: elbwalker.ts ~ line 30 ~ config', config);
 
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(elbwalker);
@@ -143,7 +145,7 @@ function elbLayerInit(elbwalker: Elbwalker.Function) {
     nested?: Walker.Entities,
   ) {
     // Pushed as Arguments
-    if ({}.hasOwnProperty.call(event, 'callee')) {
+    if (isArgument(event)) {
       [event, data, trigger, nested] = [...Array.from(event as IArguments)];
     }
 
@@ -192,6 +194,7 @@ function callPredefined(elbwalker: Elbwalker.Function) {
   const walkerCommand = `${Elbwalker.Commands.Walker} `; // Space on purpose
   const walkerEvents: Array<Elbwalker.ElbLayer> = [];
   const customEvents: Array<Elbwalker.ElbLayer> = [];
+  let isFirstRunEvent = true;
 
   // At that time the dataLayer was not yet initialized
   w.elbLayer.map((pushedEvent) => {
@@ -205,6 +208,13 @@ function callPredefined(elbwalker: Elbwalker.Function) {
     }
 
     if (typeof event !== 'string') return;
+
+    // Skip the first stacked run event since it's the reason we're here
+    // and to prevent duplicate execution which we don't want
+    if (isFirstRunEvent && event == runCommand) {
+      isFirstRunEvent = false; // Next time it's on
+      return;
+    }
 
     // check if event is a walker commend
     event.startsWith(walkerCommand)
