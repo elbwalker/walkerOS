@@ -156,7 +156,8 @@ function elbLayerInit(elbwalker: Elbwalker.Function) {
 
   // Look if the run command is stacked
   const containsRun = w.elbLayer.find((element) => {
-    // event as first parameter
+    // Differentiate between the two types of possible event pushes
+    element = isArgument(element) ? (element as IArguments)[0] : element;
     return element == runCommand;
   });
 
