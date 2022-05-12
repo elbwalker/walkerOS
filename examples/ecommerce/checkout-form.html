@@ -3,13 +3,14 @@
   <head>
     <title>walker.js example: ecommerce checkout form</title>
     <script
+      async
       class="elbwalker"
       src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.2/dist/walker.js"
     ></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,aspect-ratio"></script>
   </head>
   <body>
-    <div elb="checkout" elbaction="load:start" class="bg-gray-50">
+    <div elb="checkout" elbaction="load:view" class="bg-gray-50">
       <div
         class="max-w-2xl mx-auto pt-16 pb-24 px-4 sm:px-6 lg:max-w-7xl lg:px-8"
       >
@@ -34,7 +35,7 @@
                     id="email-address"
                     name="email-address"
                     autocomplete="email"
-                    class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                   />
                 </div>
               </div>
@@ -60,7 +61,7 @@
                       id="first-name"
                       name="first-name"
                       autocomplete="given-name"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -77,7 +78,7 @@
                       id="last-name"
                       name="last-name"
                       autocomplete="family-name"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -93,7 +94,7 @@
                       type="text"
                       name="company"
                       id="company"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -110,7 +111,7 @@
                       name="address"
                       id="address"
                       autocomplete="street-address"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -126,7 +127,7 @@
                       type="text"
                       name="apartment"
                       id="apartment"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -143,7 +144,7 @@
                       name="city"
                       id="city"
                       autocomplete="address-level2"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -159,7 +160,7 @@
                       id="country"
                       name="country"
                       autocomplete="country-name"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                     >
                       <option>United States</option>
                       <option>Canada</option>
@@ -180,7 +181,7 @@
                       name="region"
                       id="region"
                       autocomplete="address-level1"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -197,7 +198,7 @@
                       name="postal-code"
                       id="postal-code"
                       autocomplete="postal-code"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -214,7 +215,7 @@
                       name="phone"
                       id="phone"
                       autocomplete="tel"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -229,16 +230,16 @@
 
                 <div
                   class="mt-4 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4"
-                  elb-checkout="deliverymethod: Standard"
                 >
                   <!--
                   Checked: "border-transparent", Not Checked: "border-gray-300"
-                  Active: "ring-2 ring-indigo-500"
+                  Active: "ring-2 ring-elbwalker-500"
                  -->
                   <label
                     class="relative bg-white border rounded-lg shadow-sm p-4 flex cursor-pointer focus:outline-none"
                   >
                     <input
+                      elb-checkout="deliverymethod: #value"
                       type="radio"
                       name="delivery-method"
                       value="Standard"
@@ -264,7 +265,7 @@
                           id="delivery-method-0-description-1"
                           class="mt-6 text-sm font-medium text-gray-900"
                         >
-                          $5.00
+                          &euro;5.00
                         </span>
                       </div>
                     </div>
@@ -274,7 +275,7 @@
                     Heroicon name: solid/check-circle
                   -->
                     <svg
-                      class="h-5 w-5 text-indigo-600"
+                      class="h-5 w-5 text-elbwalker-600"
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 20 20"
                       fill="currentColor"
@@ -288,7 +289,7 @@
                     </svg>
                     <!--
                     Active: "border", Not Active: "border-2"
-                    Checked: "border-indigo-500", Not Checked: "border-transparent"
+                    Checked: "border-elbwalker-500", Not Checked: "border-transparent"
                   -->
                     <div
                       class="absolute -inset-px rounded-lg border-2 pointer-events-none"
@@ -298,7 +299,7 @@
 
                   <!--
                   Checked: "border-transparent", Not Checked: "border-gray-300"
-                  Active: "ring-2 ring-indigo-500"
+                  Active: "ring-2 ring-elbwalker-500"
                     -->
                   <label
                     class="relative bg-white border rounded-lg shadow-sm p-4 flex cursor-pointer focus:outline-none"
@@ -329,7 +330,7 @@
                           id="delivery-method-1-description-1"
                           class="mt-6 text-sm font-medium text-gray-900"
                         >
-                          $16.00
+                          &euro;16.00
                         </span>
                       </div>
                     </div>
@@ -339,7 +340,7 @@
                     Heroicon name: solid/check-circle
                   -->
                     <svg
-                      class="h-5 w-5 text-indigo-600"
+                      class="h-5 w-5 text-elbwalker-600"
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 20 20"
                       fill="currentColor"
@@ -353,7 +354,7 @@
                     </svg>
                     <!--
                     Active: "border", Not Active: "border-2"
-                    Checked: "border-indigo-500", Not Checked: "border-transparent"
+                    Checked: "border-elbwalker-500", Not Checked: "border-transparent"
                   -->
                     <div
                       class="absolute -inset-px rounded-lg border-2 pointer-events-none"
@@ -366,17 +367,14 @@
 
             <!-- Payment -->
 
-            <!-- wie kann ich hier über dynamic value die ausgewählte Zahlungsmethode erhalten?-->
-            <div
-              elb-checkout="paymentoption: Credit Card"
-              class="mt-10 border-t border-gray-200 pt-10"
-            >
+            <div class="mt-10 border-t border-gray-200 pt-10">
               <h2 class="text-lg font-medium text-gray-900">Payment</h2>
 
               <fieldset class="mt-4">
                 <legend class="sr-only">Payment type</legend>
                 <div
                   class="space-y-4 sm:flex sm:items-center sm:space-y-0 sm:space-x-10"
+                  elb-checkout="paymentoption: #input"
                 >
                   <div class="flex items-center">
                     <input
@@ -384,7 +382,7 @@
                       name="payment-type"
                       type="radio"
                       checked
-                      class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"
+                      class="focus:ring-elbwalker-500 h-4 w-4 text-elbwalker-600 border-gray-300"
                     />
                     <label
                       for="credit-card"
@@ -399,7 +397,7 @@
                       id="paypal"
                       name="payment-type"
                       type="radio"
-                      class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"
+                      class="focus:ring-elbwalker-500 h-4 w-4 text-elbwalker-600 border-gray-300"
                     />
                     <label
                       for="paypal"
@@ -414,7 +412,7 @@
                       id="etransfer"
                       name="payment-type"
                       type="radio"
-                      class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"
+                      class="focus:ring-elbwalker-500 h-4 w-4 text-elbwalker-600 border-gray-300"
                     />
                     <label
                       for="etransfer"
@@ -425,76 +423,6 @@
                   </div>
                 </div>
               </fieldset>
-
-              <div class="mt-6 grid grid-cols-4 gap-y-6 gap-x-4">
-                <div class="col-span-4">
-                  <label
-                    for="card-number"
-                    class="block text-sm font-medium text-gray-700"
-                    >Card number</label
-                  >
-                  <div class="mt-1">
-                    <input
-                      type="text"
-                      id="card-number"
-                      name="card-number"
-                      autocomplete="cc-number"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div class="col-span-4">
-                  <label
-                    for="name-on-card"
-                    class="block text-sm font-medium text-gray-700"
-                    >Name on card</label
-                  >
-                  <div class="mt-1">
-                    <input
-                      type="text"
-                      id="name-on-card"
-                      name="name-on-card"
-                      autocomplete="cc-name"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div class="col-span-3">
-                  <label
-                    for="expiration-date"
-                    class="block text-sm font-medium text-gray-700"
-                    >Expiration date (MM/YY)</label
-                  >
-                  <div class="mt-1">
-                    <input
-                      type="text"
-                      name="expiration-date"
-                      id="expiration-date"
-                      autocomplete="cc-exp"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    for="cvc"
-                    class="block text-sm font-medium text-gray-700"
-                    >CVC</label
-                  >
-                  <div class="mt-1">
-                    <input
-                      type="text"
-                      name="cvc"
-                      id="cvc"
-                      autocomplete="csc"
-                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -568,10 +496,10 @@
 
                     <div class="flex-1 pt-2 flex items-end justify-between">
                       <p
-                        elb-product="price:220;currency:USD"
+                        elb-product="price:220;currency:EUR"
                         class="mt-1 text-sm font-medium text-gray-900"
                       >
-                        $220.00
+                        &euro;220.00
                       </p>
 
                       <div class="ml-4">
@@ -580,7 +508,7 @@
                           id="quantity"
                           name="quantity"
                           elb-product="quantity:#value"
-                          class="rounded-md border border-gray-300 text-base font-medium text-gray-700 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          class="rounded-md border border-gray-300 text-base font-medium text-gray-700 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                         >
                           <option value="1">1</option>
                           <option value="2">2</option>
@@ -657,10 +585,10 @@
 
                     <div class="flex-1 pt-2 flex items-end justify-between">
                       <p
-                        elb-product="price:39;currency:USD"
+                        elb-product="price:39;currency:EUR"
                         class="mt-1 text-sm font-medium text-gray-900"
                       >
-                        $39.00
+                        &euro;39.00
                       </p>
 
                       <div class="ml-4">
@@ -669,7 +597,7 @@
                           id="quantity"
                           name="quantity"
                           elb-product="quantity:#value"
-                          class="rounded-md border border-gray-300 text-base font-medium text-gray-700 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          class="rounded-md border border-gray-300 text-base font-medium text-gray-700 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                         >
                           <option value="1">1</option>
                           <option value="2">2</option>
@@ -691,28 +619,28 @@
                 <div class="flex items-center justify-between">
                   <dt class="text-sm">Subtotal</dt>
                   <dd
-                    elb-checkout="subtotal:259;currency:USD"
+                    elb-checkout="subtotal:259;currency:EUR"
                     class="text-sm font-medium text-gray-900"
                   >
-                    $259.00
+                    &euro;259.00
                   </dd>
                 </div>
                 <div class="flex items-center justify-between">
                   <dt class="text-sm">Shipping</dt>
                   <dd
-                    elb-checkout="shipping:5;currency:USD"
+                    elb-checkout="shipping:5;currency:EUR"
                     class="text-sm font-medium text-gray-900"
                   >
-                    $5.00
+                    &euro;5.00
                   </dd>
                 </div>
                 <div class="flex items-center justify-between">
                   <dt class="text-sm">Taxes</dt>
                   <dd
-                    elb-checkout="taxes:5.52;currency:USD"
+                    elb-checkout="taxes:5.52;currency:EUR"
                     class="text-sm font-medium text-gray-900"
                   >
-                    $5.52
+                    &euro;5.52
                   </dd>
                 </div>
                 <div
@@ -720,10 +648,10 @@
                 >
                   <dt class="text-base font-medium">Total</dt>
                   <dd
-                    elb-checkout="total:269.52;currency:USD"
+                    elb-checkout="total:269.52;currency:EUR"
                     class="text-base font-medium text-gray-900"
                   >
-                    $269.52
+                    &euro;269.52
                   </dd>
                 </div>
               </dl>
@@ -732,7 +660,7 @@
                 <button
                   type="confirm"
                   elbaction="click:confirm"
-                  class="w-full bg-elbwalker border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 focus:ring-indigo-500"
+                  class="w-full bg-elbwalker border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 focus:ring-elbwalker-500"
                 >
                   Confirm order
                 </button>

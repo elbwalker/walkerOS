@@ -1,26 +1,16 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>walker.js example: ecommerce order summary</title>
+    <title>walker.js example: ecommerce order summery</title>
     <script
       async
       class="elbwalker"
       src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.2/dist/walker.js"
     ></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,aspect-ratio"></script>
   </head>
   <body>
     <main class="relative lg:min-h-full">
-      <div
-        class="h-80 overflow-hidden lg:absolute lg:w-1/2 lg:h-full lg:pr-4 xl:pr-12"
-      >
-        <img
-          src="https://tailwindui.com/img/ecommerce-images/confirmation-page-06-hero.jpg"
-          alt="TODO"
-          class="h-full w-full object-center object-cover"
-        />
-      </div>
-
       <div>
         <div
           class="max-w-2xl mx-auto py-16 px-4 sm:px-6 sm:py-24 lg:max-w-7xl lg:px-8 lg:py-32 lg:grid lg:grid-cols-2 lg:gap-x-8 xl:gap-x-24"
@@ -29,7 +19,7 @@
             class="lg:col-start-2"
             elb="order"
             elbaction="load:complete"
-            elb-order="id:1"
+            elb-order="id:0rd3r1d"
             class="max-w-2xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:max-w-7xl lg:px-8 lg:grid lg:grid-cols-2 lg:gap-x-8"
           >
             <h1 class="text-sm font-medium text-elbwalker-600">
@@ -72,10 +62,10 @@
                   <p elb-product="size: l">L</p>
                 </div>
                 <p
-                  elb-product="prize: 220;currency:USD"
+                  elb-product="prize: 220;currency:EUR"
                   class="flex-none font-medium text-gray-900"
                 >
-                  $220.00
+                  &euro;220.00
                 </p>
               </li>
               <li
@@ -96,10 +86,10 @@
                   <p elb-product="size: one size">One Size</p>
                 </div>
                 <p
-                  elb-product="prize: 39;currency:USD"
+                  elb-product="prize: 39;currency:EUR"
                   class="flex-none font-medium text-gray-900"
                 >
-                  $39.00
+                  &euro;39.00
                 </p>
               </li>
 
@@ -111,26 +101,30 @@
             >
               <div class="flex justify-between">
                 <dt>Subtotal</dt>
-                <dd elb-order="subtotal: 72" class="text-gray-900">$72.00</dd>
+                <dd elb-order="subtotal: 72;currency:EUR" class="text-gray-900">
+                  &euro;72.00
+                </dd>
               </div>
 
               <div class="flex justify-between">
                 <dt>Shipping</dt>
-                <dd elb-order="shipping: 8" class="text-gray-900">$8.00</dd>
+                <dd elb-order="shipping: 8" class="text-gray-900">
+                  &euro;8.00
+                </dd>
               </div>
 
               <div class="flex justify-between">
                 <dt>Taxes</dt>
-                <dd elb-order="taxes: 6.40" class="text-gray-900">$6.40</dd>
+                <dd elb-order="taxes: 6.40" class="text-gray-900">
+                  &euro;6.40
+                </dd>
               </div>
 
               <div
                 class="flex items-center justify-between border-t border-gray-200 text-gray-900 pt-6"
               >
                 <dt class="text-base">Total</dt>
-                <dd elb-order="total: 86.40;currency:USD" class="text-base">
-                  $86.40
-                </dd>
+                <dd elb-order="total: 86.40" class="text-base">&euro;86.40</dd>
               </div>
             </dl>
 
@@ -139,9 +133,14 @@
                 <dt class="font-medium text-gray-900">Shipping Address</dt>
                 <dd class="mt-2">
                   <address class="not-italic">
-                    <span class="block">Kristin Watson</span>
-                    <span class="block">7363 Cynthia Pass</span>
-                    <span class="block">Toronto, ON N3Y 4H8</span>
+                    <span class="block">elbwalker GmbH</span>
+                    <span class="block">Bernstorffstraße 118</span>
+                    <span elb-order="shipping-city: 22767 Hamburg" class="block"
+                      >22767 Hamburg</span
+                    >
+                    <span elb-order="shipping-country: Germany" class="block"
+                      >Germany</span
+                    >
                   </address>
                 </dd>
               </div>
