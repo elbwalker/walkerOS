@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>walker.js example: ecommerce order summery sections</title>
+    <title>walker.js example: ecommerce order summary</title>
     <script
       async
       class="elbwalker"
@@ -72,7 +72,7 @@
                   <p elb-product="size: l">L</p>
                 </div>
                 <p
-                  elb-product="prize: 220$"
+                  elb-product="prize: 220;currency:USD"
                   class="flex-none font-medium text-gray-900"
                 >
                   $220.00
@@ -96,7 +96,7 @@
                   <p elb-product="size: one size">One Size</p>
                 </div>
                 <p
-                  elb-product="prize: 39$"
+                  elb-product="prize: 39;currency:USD"
                   class="flex-none font-medium text-gray-900"
                 >
                   $39.00
@@ -111,24 +111,26 @@
             >
               <div class="flex justify-between">
                 <dt>Subtotal</dt>
-                <dd elb-order="subtotal: 72$" class="text-gray-900">$72.00</dd>
+                <dd elb-order="subtotal: 72" class="text-gray-900">$72.00</dd>
               </div>
 
               <div class="flex justify-between">
                 <dt>Shipping</dt>
-                <dd elb-order="shipping: 8$" class="text-gray-900">$8.00</dd>
+                <dd elb-order="shipping: 8" class="text-gray-900">$8.00</dd>
               </div>
 
               <div class="flex justify-between">
                 <dt>Taxes</dt>
-                <dd elb-order="taxes: 6.40$$" class="text-gray-900">$6.40</dd>
+                <dd elb-order="taxes: 6.40" class="text-gray-900">$6.40</dd>
               </div>
 
               <div
                 class="flex items-center justify-between border-t border-gray-200 text-gray-900 pt-6"
               >
                 <dt class="text-base">Total</dt>
-                <dd elb-order="total: 86.40$" class="text-base">$86.40</dd>
+                <dd elb-order="total: 86.40;currency:USD" class="text-base">
+                  $86.40
+                </dd>
               </div>
             </dl>
 
