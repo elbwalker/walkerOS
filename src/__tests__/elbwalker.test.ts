@@ -188,7 +188,7 @@ describe('elbwalker', () => {
   });
     test('walker config', () => {
       elbwalker.push('walker run');
-      elbwalker.push('walker config', { prefix: 'elb' });
+      elbwalker.push('walker config', { prefix: 'data-elb' });
       expect(mockFn).toHaveBeenCalledWith(
         expect.objectContaining({
           prefix: 'data-elb'
