@@ -8,7 +8,7 @@ import {
   randomString,
   trycatch,
 } from './lib/utils';
-import { config } from 'process';
+
 
 const w = window;
 const elbwalker = {} as Elbwalker.Function;
@@ -32,8 +32,6 @@ elbwalker.go = function (config: Elbwalker.Config = {}) {
   // Set config version to differentiate between setups
   if (config.version) version.config = config.version;
   if (config.prefix) prefix = config.prefix;
- 
-
 
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(elbwalker);
