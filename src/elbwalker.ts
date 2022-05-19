@@ -176,7 +176,7 @@ function run(elbwalker: Elbwalker.Function) {
 
   // Load globals properties
   // Due to site performance only once every run
-  globals = getGlobalProperties();
+  globals = getGlobalProperties(prefix);
 
   // Run predefined elbLayer stack once
   if (firstRun) {
@@ -184,7 +184,7 @@ function run(elbwalker: Elbwalker.Function) {
     callPredefined(elbwalker);
   }
 
-  trycatch(triggerLoad)();
+  trycatch(triggerLoad)(prefix);
 }
 
 // Handle existing events in the elbLayer on first run
