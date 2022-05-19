@@ -35,6 +35,8 @@
       // Set user ids (before the first run)
       walker('walker user', { device: 'c00k131d', id: 'h4sh3dcrm1d' }); // Read from storage
 
+      walker('walker config', { prefix: 'data-elb' });
+
       // Simulate a consent granted event
       setTimeout(() => {
         walker('consent granted', { marketing: true });

@@ -53,6 +53,7 @@ describe('elbwalker', () => {
       trigger: '',
       entity: 'entity',
       action: 'action',
+      prefix: 'data-elb',
       timestamp: expect.any(Number),
       timing: expect.any(Number),
       group: expect.any(String),
@@ -71,6 +72,7 @@ describe('elbwalker', () => {
       trigger: '',
       entity: 'entity',
       action: 'action',
+      prefix: 'data-elb',
       timestamp: expect.any(Number),
       timing: expect.any(Number),
       group: expect.any(String),
@@ -183,5 +185,15 @@ describe('elbwalker', () => {
         user: { id: 'userid', device: 'userid', hash: 'hashid' },
       }),
     );
+  });
+    test('walker config', () => {
+      elbwalker.push('walker run');
+      elbwalker.push('walker config', { prefix: 'elb' });
+      expect(mockFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          prefix: 'data-elb'
+        }),
+      );
+
   });
 });

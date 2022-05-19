@@ -8,6 +8,7 @@ import {
   randomString,
   trycatch,
 } from './lib/utils';
+import { config } from 'process';
 
 const w = window;
 const elbwalker = {} as Elbwalker.Function;
@@ -18,16 +19,21 @@ const version: Elbwalker.Version = {
   config: 0,
 };
 
+
 let count = 0; // Event counter for each run
 let group = ''; // random id to group events of a run
 let globals: AnyObject = {}; // init globals as some random var
 let user: Elbwalker.User = {}; // handles the user ids
 let firstRun = true; // The first run is a special one due to state changes
 let allowRunning = false; // Wait for explicit run command to start
+let prefix = ""
 
 elbwalker.go = function (config: Elbwalker.Config = {}) {
   // Set config version to differentiate between setups
   if (config.version) version.config = config.version;
+  if (config.prefix) prefix = config.prefix;
+ 
+
 
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(elbwalker);
@@ -109,6 +115,7 @@ elbwalker.push = function (
         group,
         count,
         version,
+        prefix,
       });
     })();
   });
