@@ -173,6 +173,7 @@ function getActionselector(trigger: string) {
 
   // support both elbaction and legacy selector elb-action
   return `[${getElbAttributeName(
+    'data-elb',
     'action',
     false,
   )}*=${trigger}],[${getElbAttributeName('action')}*=${trigger}]`;

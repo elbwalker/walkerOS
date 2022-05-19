@@ -173,6 +173,17 @@ describe('Walker', () => {
       },
     ]);
   });
+
+  test.only('Prefix', () => {
+    expect(walker(getElem('basic'), 'load', 'data-elb')).toMatchObject([
+      {
+        entity: 'entity',
+        action: 'action',
+        data: { k: 'v' },
+      },
+    ]);
+  });
+
 });
 
 function getElem(selector: string) {
