@@ -178,7 +178,7 @@ function isVisible(elem: HTMLElement): boolean {
 function handleTrigger(
   element: Element,
   trigger: Walker.Trigger,
-  prefix: Elbwalker.Prefix,
+  prefix: string,
 ) {
   const events = walker(element, trigger, prefix);
   events.forEach((event) => {

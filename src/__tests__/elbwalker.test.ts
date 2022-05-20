@@ -18,14 +18,14 @@ beforeEach(() => {
   w.dataLayer!.push = mockFn;
   w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
   elbwalker = require('../elbwalker').default;
-  elbwalker.go('elb');
+  elbwalker.go();
 });
 
 describe('elbwalker', () => {
   test('go', () => {
     w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
     expect(window.elbLayer).toBeUndefined();
-    elbwalker.go('elb');
+    elbwalker.go();
     expect(window.elbLayer).toBeDefined();
   });
 
@@ -36,7 +36,7 @@ describe('elbwalker', () => {
     expect(mockFn).toHaveBeenCalledTimes(1); // only page view
   });
 
-  test('regular push', () => {
+  test.only('regular push', () => {
     elbwalker.push('walker run');
     jest.clearAllMocks(); // skip auto page view event
 
