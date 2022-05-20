@@ -2,6 +2,7 @@ import { Elbwalker, WebDestination } from '@elbwalker/types';
 
 const w = window;
 let elbwalker: Elbwalker.Function;
+const prefix = 'elb';
 
 function walker(...args: unknown[]) {
   (window.elbLayer = window.elbLayer || []).push(arguments);
@@ -26,7 +27,7 @@ beforeEach(() => {
 
 describe('elbLayer', () => {
   test('arguments and event pushes', () => {
-    elbwalker.go();
+    elbwalker.go(prefix);
 
     walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
@@ -50,7 +51,7 @@ describe('elbLayer', () => {
   });
 
   test('predefined stack without run', () => {
-    elbwalker.go({ custom: true });
+    elbwalker.go(prefix, { custom: true });
     walker('walker destination', destination);
     walker('entity action');
 
@@ -61,7 +62,7 @@ describe('elbLayer', () => {
     walker('e 1');
     walker('walker destination', destination);
 
-    elbwalker.go({ custom: true });
+    elbwalker.go(prefix, { custom: true });
     walker('e 2');
     walker('walker run');
     // auto call: walker('page view');
@@ -97,7 +98,7 @@ describe('elbLayer', () => {
   });
 
   test('predefined stack with run', () => {
-    elbwalker.go({ custom: true });
+    elbwalker.go(prefix, { custom: true });
 
     walker('walker destination', destination);
     walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
@@ -117,7 +118,7 @@ describe('elbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    elbwalker.go({ custom: true });
+    elbwalker.go(prefix, { custom: true });
 
     walker();
     walker('event postponed');

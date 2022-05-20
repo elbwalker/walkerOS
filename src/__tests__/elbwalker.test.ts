@@ -18,14 +18,14 @@ beforeEach(() => {
   w.dataLayer!.push = mockFn;
   w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
   elbwalker = require('../elbwalker').default;
-  elbwalker.go();
+  elbwalker.go('elb');
 });
 
 describe('elbwalker', () => {
   test('go', () => {
     w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
     expect(window.elbLayer).toBeUndefined();
-    elbwalker.go();
+    elbwalker.go('elb');
     expect(window.elbLayer).toBeDefined();
   });
 
