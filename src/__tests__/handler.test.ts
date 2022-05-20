@@ -30,7 +30,7 @@ beforeEach(() => {
     },
   );
 
-  elbwalker.go();
+  elbwalker.go('elb');
 });
 
 describe('handler', () => {
