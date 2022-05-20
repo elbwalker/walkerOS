@@ -30,11 +30,16 @@ export function initHandler(prefix: string): void {
       triggerSubmit.call(this, ev, prefix);
     }),
   );
+  d.addEventListener(
+    'submit',
+    trycatch(function (this: Document, ev: SubmitEvent) {
+      triggerSubmit.call(this, ev, prefix);
+    }),
+  );
 }
 
 // Called for each new run to setup triggers
 export function triggerLoad(prefix: string) {
-  console.log('args', arguments);
   // Trigger static page view
   view();
 
@@ -52,7 +57,7 @@ export function triggerLoad(prefix: string) {
   triggerVisible(prefix, d, true);
 }
 
-function triggerClick(this: Document, ev: MouseEvent, prefix: string) {
+function triggerClick(ev: MouseEvent, prefix: string) {
   handleTrigger(ev.target as Element, 'click', prefix);
 }
 

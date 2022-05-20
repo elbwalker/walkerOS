@@ -186,8 +186,7 @@ function run(elbwalker: Elbwalker.Function) {
     callPredefined(elbwalker);
   }
 
-  //TODO trycatch fehlt
-  triggerLoad('elb');
+  trycatch(triggerLoad)('elb');
 }
 
 // Handle existing events in the elbLayer on first run
