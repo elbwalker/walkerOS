@@ -4,7 +4,7 @@ import { Elbwalker, Walker } from '@elbwalker/types';
 
 const d = document;
 const w = window;
-const observer = trycatch(observerVisible)(1000);
+const observer = trycatch(observerVisible)(1000, 'data-elb'); //TODO
 
 export function ready(run: Function, elbwalker: Elbwalker.Function) {
   const fn = () => {
@@ -17,13 +17,24 @@ export function ready(run: Function, elbwalker: Elbwalker.Function) {
   }
 }
 
-export function initHandler(): void {
-  d.addEventListener('click', trycatch(triggerClick));
-  d.addEventListener('submit', trycatch(triggerSubmit));
+export function initHandler(prefix: string): void {
+  d.addEventListener(
+    'click',
+    trycatch(function (this: Document, ev: MouseEvent) {
+      triggerClick.call(this, ev, prefix);
+    }),
+  );
+  d.addEventListener(
+    'submit',
+    trycatch(function (this: Document, ev: SubmitEvent) {
+      triggerSubmit.call(this, ev, prefix);
+    }),
+  );
 }
 
 // Called for each new run to setup triggers
 export function triggerLoad(prefix: string) {
+  console.log('args', arguments);
   // Trigger static page view
   view();
 
@@ -41,12 +52,12 @@ export function triggerLoad(prefix: string) {
   triggerVisible(prefix, d, true);
 }
 
-function triggerClick(this: Document, ev: MouseEvent) {
-  handleTrigger(ev.target as Element, 'click');
+function triggerClick(this: Document, ev: MouseEvent, prefix: string) {
+  handleTrigger(ev.target as Element, 'click', prefix);
 }
 
-function triggerSubmit(ev: Event) {
-  handleTrigger(ev.target as Element, 'submit');
+function triggerSubmit(ev: Event, prefix: string) {
+  handleTrigger(ev.target as Element, 'submit', prefix);
 }
 
 export function triggerVisible(
@@ -180,6 +191,7 @@ function getActionselector(prefix: string, trigger: string) {
   // when the 'load' term is in selector but not as a trigger
 
   // support both elbaction and legacy selector elb-action
+
   return `[${getElbAttributeName(
     prefix,
     'action',

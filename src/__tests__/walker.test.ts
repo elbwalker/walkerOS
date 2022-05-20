@@ -16,7 +16,7 @@ beforeEach(() => {
 
 describe('Walker', () => {
   test('Basic collection', () => {
-    expect(walker(getElem('basic'), 'load', 'elb')).toMatchObject([
+    expect(walker(getElem('basic'), 'load')).toMatchObject([
       {
         entity: 'entity',
         action: 'action',
@@ -26,7 +26,7 @@ describe('Walker', () => {
   });
 
   test('Nested entites', () => {
-    expect(walker(getElem('nested'), 'load', 'elb')).toMatchObject([
+    expect(walker(getElem('nested'), 'load')).toMatchObject([
       {
         entity: 'mother',
         action: 'like',
@@ -44,7 +44,7 @@ describe('Walker', () => {
       },
     ]);
 
-    expect(walker(getElem('son'), 'load', 'elb')).toMatchObject([
+    expect(walker(getElem('son'), 'load')).toMatchObject([
       {
         entity: 'son',
         action: 'speak',
@@ -55,7 +55,7 @@ describe('Walker', () => {
   });
 
   test('Nested entites filtered', () => {
-    expect(walker(getElem('daughter'), 'load', 'elb')).toMatchObject([
+    expect(walker(getElem('daughter'), 'load')).toMatchObject([
       {
         entity: 'daughter',
         action: 'care',
@@ -65,7 +65,7 @@ describe('Walker', () => {
   });
 
   test('Nested entites filtered multiple', () => {
-    expect(walker(getElem('baby'), 'load', 'elb')).toMatchObject([
+    expect(walker(getElem('baby'), 'load')).toMatchObject([
       {
         entity: 'baby',
         action: 'play',
@@ -76,14 +76,14 @@ describe('Walker', () => {
   });
 
   test('Quoted Attributes', () => {
-    expect(walker(getElem('attributes'), 'load', 'elb')).toMatchObject([
+    expect(walker(getElem('attributes'), 'load')).toMatchObject([
       {
         entity: 'attributes',
         action: 'act;ion',
         data: { foo: 'ba;r', key: 'value' },
       },
     ]);
-    expect(walker(getElem('attributes'), 'click', 'elb')).toMatchObject([
+    expect(walker(getElem('attributes'), 'click')).toMatchObject([
       {
         entity: 'attributes',
         action: 'action;',
@@ -93,7 +93,7 @@ describe('Walker', () => {
   });
 
   test('No elbwalker attribute at clicked element', () => {
-    expect(walker(getElem('click_test'), 'click', 'elb')).toMatchObject([
+    expect(walker(getElem('click_test'), 'click')).toMatchObject([
       {
         entity: 'click',
         action: 'test',
@@ -103,7 +103,7 @@ describe('Walker', () => {
   });
 
   test('No action attribute at clicked element', () => {
-    expect(walker(getElem('click_bubble'), 'click', 'elb')).toEqual([
+    expect(walker(getElem('click_bubble'), 'click')).toEqual([
       {
         entity: 'click',
         action: 'test',
@@ -115,7 +115,7 @@ describe('Walker', () => {
   });
 
   test('Empty action attribute at clicked element', () => {
-    expect(walker(getElem('click_bubble_action'), 'click', 'elb')).toEqual([
+    expect(walker(getElem('click_bubble_action'), 'click')).toEqual([
       {
         entity: 'click',
         action: 'test',
@@ -147,7 +147,7 @@ describe('Walker', () => {
   });
 
   test('Dynamic values', () => {
-    expect(walker(getElem('dynamic_values'), 'click', 'elb')).toEqual([
+    expect(walker(getElem('dynamic_values'), 'click')).toEqual([
       {
         action: 'click',
         entity: 'dynamic',
@@ -165,7 +165,7 @@ describe('Walker', () => {
   });
 
   test('Legacy action syntax', () => {
-    expect(walker(getElem('elb-action'), 'load', 'elb')).toMatchObject([
+    expect(walker(getElem('elb-action'), 'load')).toMatchObject([
       {
         entity: 'legacy',
         action: 'support',
