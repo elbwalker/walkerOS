@@ -6,6 +6,7 @@ export function walker(
   trigger: Walker.Trigger,
   prefix: Elbwalker.Prefix,
 ): Walker.Events {
+  //prefix optional - standardwert "elb"
   const [action, filter] = getActionAndFilter(target, trigger, prefix);
   if (!action) return [];
 

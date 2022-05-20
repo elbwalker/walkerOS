@@ -23,22 +23,22 @@ export function initHandler(): void {
 }
 
 // Called for each new run to setup triggers
-export function triggerLoad() {
+export function triggerLoad(prefix: string) {
   // Trigger static page view
   view();
 
   // Trigger load
-  d.querySelectorAll(getActionselector('load')).forEach((element) => {
-    handleTrigger(element, 'load');
+  d.querySelectorAll(getActionselector(prefix, 'load')).forEach((element) => {
+    handleTrigger(element, 'load', prefix);
   });
 
   // Trigger wait
-  d.querySelectorAll(getActionselector('wait')).forEach((element) => {
-    setTimeout(() => handleTrigger(element, 'wait'), 4000); // @TODO use dynamic value
+  d.querySelectorAll(getActionselector(prefix, 'wait')).forEach((element) => {
+    setTimeout(() => handleTrigger(element, 'wait', prefix), 4000); // @TODO use dynamic value
   });
 
   // Trigger visible
-  triggerVisible(d, true);
+  triggerVisible(prefix, d, true);
 }
 
 function triggerClick(this: Document, ev: MouseEvent) {
@@ -50,6 +50,7 @@ function triggerSubmit(ev: Event) {
 }
 
 export function triggerVisible(
+  prefix: string,
   scope: Document | Element,
   disconnect = false,
 ): IntersectionObserver | undefined {
@@ -58,7 +59,7 @@ export function triggerVisible(
     if (disconnect) observer.disconnect();
 
     // support both elbaction and legacy selector elb-action
-    const visibleSelector = getActionselector('visible');
+    const visibleSelector = getActionselector(prefix, 'visible');
 
     scope.querySelectorAll(visibleSelector).forEach((element) => {
       observer.observe(element);
@@ -83,7 +84,10 @@ function view() {
   w.elbLayer.push('page view', data, 'load');
 }
 
-function observerVisible(duration = 1000): IntersectionObserver | undefined {
+function observerVisible(
+  duration = 1000,
+  prefix: string,
+): IntersectionObserver | undefined {
   if (!w.IntersectionObserver) return;
 
   return new w.IntersectionObserver(
@@ -95,7 +99,7 @@ function observerVisible(duration = 1000): IntersectionObserver | undefined {
         if (entry.intersectionRatio >= 0.5) {
           const timer = w.setTimeout(function () {
             if (isVisible(target)) {
-              handleTrigger(target as Element, 'visible');
+              handleTrigger(target as Element, 'visible', prefix);
 
               // Just count once
               delete target.dataset[timerId];
@@ -155,8 +159,12 @@ function isVisible(elem: HTMLElement): boolean {
   return false;
 }
 
-function handleTrigger(element: Element, trigger: Walker.Trigger) {
-  const events = walker(element, trigger, 'elb');
+function handleTrigger(
+  element: Element,
+  trigger: Walker.Trigger,
+  prefix: Elbwalker.Prefix,
+) {
+  const events = walker(element, trigger, prefix);
   events.forEach((event) => {
     w.elbLayer.push(
       `${event.entity} ${event.action}`,
@@ -167,14 +175,14 @@ function handleTrigger(element: Element, trigger: Walker.Trigger) {
   });
 }
 
-function getActionselector(trigger: string) {
+function getActionselector(prefix: string, trigger: string) {
   // @TODO dealing with wildcart edge-case
   // when the 'load' term is in selector but not as a trigger
 
   // support both elbaction and legacy selector elb-action
   return `[${getElbAttributeName(
+    prefix,
     'action',
-    'elb',
     false,
-  )}*=${trigger}],[${getElbAttributeName('action')}*=${trigger}]`;
+  )}*=${trigger}],[${getElbAttributeName(prefix, 'action')}*=${trigger}]`;
 }

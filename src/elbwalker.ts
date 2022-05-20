@@ -26,7 +26,7 @@ let firstRun = true; // The first run is a special one due to state changes
 let allowRunning = false; // Wait for explicit run command to start
 let prefix = '';
 
-elbwalker.go = function (prefix: string, config: Elbwalker.Config = {}) {
+elbwalker.go = function (config: Elbwalker.Config = {}) {
   // Set config version to differentiate between setups
   if (config.version) version.config = config.version;
 
