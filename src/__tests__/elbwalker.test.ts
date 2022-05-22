@@ -36,7 +36,7 @@ describe('elbwalker', () => {
     expect(mockFn).toHaveBeenCalledTimes(1); // only page view
   });
 
-  test.only('regular push', () => {
+  test('regular push', () => {
     elbwalker.push('walker run');
     jest.clearAllMocks(); // skip auto page view event
 

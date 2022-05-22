@@ -4,7 +4,7 @@ import { Elbwalker, Walker } from '@elbwalker/types';
 
 const d = document;
 const w = window;
-const observer = trycatch(observerVisible)(1000, 'data-elb'); //TODO
+const observer = trycatch(observerVisible)(1000, 'elb'); //TODO
 
 export function ready(run: Function, elbwalker: Elbwalker.Function) {
   const fn = () => {

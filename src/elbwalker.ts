@@ -27,6 +27,7 @@ let allowRunning = false; // Wait for explicit run command to start
 
 elbwalker.go = function (config: Elbwalker.Config = { prefix: 'elb' }) {
   // Set config version to differentiate between setups
+  elbwalker.config = config;
   if (config.version) version.config = config.version;
 
   // Setup pushes for elbwalker via elbLayer
@@ -45,7 +46,6 @@ elbwalker.go = function (config: Elbwalker.Config = { prefix: 'elb' }) {
   } else {
     // custom: use the elbLayer
   }
-
   //Das sieht nicht legal aus
   if (config.prefix) {
     initHandler(config.prefix);
@@ -121,6 +121,7 @@ function handleCommand(
   data: Elbwalker.PushData = {},
   elbwalker: Elbwalker.Function,
 ) {
+  //TODO config.prefix ist hier null
   switch (action) {
     case Elbwalker.Commands.Destination:
       addDestination(data);
@@ -167,8 +168,8 @@ function elbLayerInit(elbwalker: Elbwalker.Function) {
 
 function run(elbwalker: Elbwalker.Function) {
   // When run is called, the walker may start running
+  console.log('hallo', elbwalker.config.prefix);
   allowRunning = true;
-  console.log('args', elbwalker.config);
   // Reset the run counter
   count = 0;
 
@@ -177,6 +178,7 @@ function run(elbwalker: Elbwalker.Function) {
 
   // Load globals properties
   // Due to site performance only once every run
+
   if (elbwalker.config.prefix) {
     globals = getGlobalProperties(elbwalker.config.prefix);
   }
