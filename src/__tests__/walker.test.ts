@@ -127,15 +127,15 @@ describe('Walker', () => {
   });
 
   test('Empty action attribute at clicked element and missing action attribute at parent', () => {
-    expect(walker(getElem('click_invalid'), 'click', 'elb')).toEqual([]);
+    expect(walker(getElem('click_invalid'), 'click')).toEqual([]);
   });
 
   test('Missing action and property', () => {
-    expect(walker(getElem('just_entity'), 'click', 'elb')).toEqual([]);
+    expect(walker(getElem('just_entity'), 'click')).toEqual([]);
   });
 
   test('Get nested child data properties with higher priority', () => {
-    expect(walker(getElem('propert_priority'), 'click', 'elb')).toEqual([
+    expect(walker(getElem('propert_priority'), 'click')).toEqual([
       {
         entity: 'property',
         action: 'priority',

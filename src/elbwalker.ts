@@ -46,7 +46,7 @@ elbwalker.go = function (config: Elbwalker.Config = { prefix: 'elb' }) {
   } else {
     // custom: use the elbLayer
   }
-  //Das sieht nicht legal aus
+
   if (config.prefix) {
     initHandler(config.prefix);
   }

@@ -11,7 +11,6 @@ if (elem) {
   version = parseInt(elem.getAttribute('data-version') || '1'); // config version
 }
 
-//TODO
 elbwalker.go({ projectId, custom, version });
 
 // Global object

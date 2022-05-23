@@ -64,7 +64,7 @@ describe('elbLayer', () => {
     elbwalker.go({ custom: true });
     walker('e 2');
     walker('walker run');
-    //walker('page view');
+    // auto call: walker('page view');
     walker('e 4');
 
     expect(mockPush).toHaveBeenCalledWith(
