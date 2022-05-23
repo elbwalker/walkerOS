@@ -57,7 +57,7 @@ describe('elbLayer', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  test.only('walker push pre and post go', () => {
+  test('walker push pre and post go', () => {
     walker('e 1');
     walker('walker destination', destination);
 

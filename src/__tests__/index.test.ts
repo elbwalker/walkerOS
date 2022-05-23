@@ -28,7 +28,7 @@ describe('index', () => {
     document.getElementsByTagName('html')[0].innerHTML = '';
   });
 
-  test.only('initialize elbwalker on window', () => {
+  test('initialize elbwalker on window', () => {
     w.elbwalker = undefined as unknown as Elbwalker.Function;
     expect(w.elbwalker).toBeUndefined();
     jest.resetModules();

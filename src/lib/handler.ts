@@ -5,7 +5,7 @@ import elbwalker from '../elbwalker';
 
 const d = document;
 const w = window;
-const observer = trycatch(observerVisible)(1000); //TODO
+const observer = trycatch(observerVisible)(1000);
 
 export function ready(run: Function, elbwalker: Elbwalker.Function) {
   const fn = () => {

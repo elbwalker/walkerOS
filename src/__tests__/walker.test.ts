@@ -174,7 +174,7 @@ describe('Walker', () => {
     ]);
   });
 
-  test.only('Prefix', () => {
+  test('Prefix', () => {
     expect(walker(getElem('prefix'), 'load', 'data-elb')).toMatchObject([
       {
         entity: 'entity',
