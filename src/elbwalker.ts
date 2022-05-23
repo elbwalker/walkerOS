@@ -121,7 +121,9 @@ function handleCommand(
   data: Elbwalker.PushData = {},
   elbwalker: Elbwalker.Function,
 ) {
-  //TODO config.prefix ist hier null
+  if (elbwalker.config.prefix === undefined) {
+    elbwalker.config.prefix = 'elb';
+  }
   switch (action) {
     case Elbwalker.Commands.Destination:
       addDestination(data);
@@ -168,7 +170,6 @@ function elbLayerInit(elbwalker: Elbwalker.Function) {
 
 function run(elbwalker: Elbwalker.Function) {
   // When run is called, the walker may start running
-  console.log('hallo', elbwalker.config.prefix);
   allowRunning = true;
   // Reset the run counter
   count = 0;

@@ -57,14 +57,14 @@ describe('elbLayer', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  test('walker push pre and post go', () => {
+  test.only('walker push pre and post go', () => {
     walker('e 1');
     walker('walker destination', destination);
 
     elbwalker.go({ custom: true });
     walker('e 2');
     walker('walker run');
-    walker('page view'); //throwing error without this line being called - was outlined before?
+    //walker('page view');
     walker('e 4');
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -116,7 +116,7 @@ describe('elbLayer', () => {
     );
   });
 
-  test.only('prioritize walker commands before run', () => {
+  test('prioritize walker commands before run', () => {
     elbwalker.go({ custom: true });
 
     walker();
