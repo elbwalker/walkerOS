@@ -25,9 +25,10 @@ let user: Elbwalker.User = {}; // handles the user ids
 let firstRun = true; // The first run is a special one due to state changes
 let allowRunning = false; // Wait for explicit run command to start
 
-elbwalker.go = function (config: Elbwalker.Config = { prefix: 'elb' }) {
+elbwalker.go = function (config: Elbwalker.Config = {}) {
   // Set config version to differentiate between setups
   elbwalker.config = config;
+  const prefix = config.prefix || 'elb';
   if (config.version) version.config = config.version;
 
   // Setup pushes for elbwalker via elbLayer
@@ -46,10 +47,7 @@ elbwalker.go = function (config: Elbwalker.Config = { prefix: 'elb' }) {
   } else {
     // custom: use the elbLayer
   }
-
-  if (config.prefix) {
-    initHandler(config.prefix);
-  }
+  initHandler(prefix);
 };
 
 elbwalker.push = function (
@@ -121,9 +119,8 @@ function handleCommand(
   data: Elbwalker.PushData = {},
   elbwalker: Elbwalker.Function,
 ) {
-  if (elbwalker.config.prefix === undefined) {
-    elbwalker.config.prefix = 'elb';
-  }
+  elbwalker.config.prefix = elbwalker.config.prefix || 'elb';
+
   switch (action) {
     case Elbwalker.Commands.Destination:
       addDestination(data);
@@ -171,6 +168,7 @@ function elbLayerInit(elbwalker: Elbwalker.Function) {
 function run(elbwalker: Elbwalker.Function) {
   // When run is called, the walker may start running
   allowRunning = true;
+
   // Reset the run counter
   count = 0;
 
@@ -180,17 +178,16 @@ function run(elbwalker: Elbwalker.Function) {
   // Load globals properties
   // Due to site performance only once every run
 
-  if (elbwalker.config.prefix) {
-    globals = getGlobalProperties(elbwalker.config.prefix);
-  }
+  const prefix = elbwalker.config.prefix || 'elb';
+  globals = getGlobalProperties(prefix);
+
   // Run predefined elbLayer stack once
   if (firstRun) {
     firstRun = false;
     callPredefined(elbwalker);
   }
-  if (elbwalker.config.prefix) {
-    trycatch(triggerLoad)(elbwalker.config.prefix);
-  }
+
+  trycatch(triggerLoad)(prefix);
 }
 
 // Handle existing events in the elbLayer on first run

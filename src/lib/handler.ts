@@ -109,19 +109,12 @@ function observerVisible(duration = 1000): IntersectionObserver | undefined {
       entries.forEach((entry) => {
         const target = entry.target as HTMLElement;
         const timerId = 'elbTimerId';
+        const prefix = elbwalker.config.prefix || 'elb';
 
         if (entry.intersectionRatio >= 0.5) {
           const timer = w.setTimeout(function () {
-            //no good solution
-            if (elbwalker.config.prefix === undefined) {
-              elbwalker.config.prefix = 'elb';
-            }
             if (isVisible(target)) {
-              handleTrigger(
-                target as Element,
-                'visible',
-                elbwalker.config.prefix,
-              );
+              handleTrigger(target as Element, 'visible', prefix);
               // Just count once
               delete target.dataset[timerId];
               if (observer) observer.unobserve(target);
