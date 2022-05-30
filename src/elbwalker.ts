@@ -25,10 +25,9 @@ let user: Elbwalker.User = {}; // handles the user ids
 let firstRun = true; // The first run is a special one due to state changes
 let allowRunning = false; // Wait for explicit run command to start
 
-elbwalker.go = function (config: Elbwalker.Config = {}) {
+elbwalker.go = function (config: Elbwalker.Config = { prefix: 'elb' }) {
   // Set config version to differentiate between setups
   elbwalker.config = config;
-  const prefix = config.prefix || 'elb';
   if (config.version) version.config = config.version;
 
   // Setup pushes for elbwalker via elbLayer
@@ -47,7 +46,7 @@ elbwalker.go = function (config: Elbwalker.Config = {}) {
   } else {
     // custom: use the elbLayer
   }
-  initHandler(prefix);
+  initHandler(config.prefix);
 };
 
 elbwalker.push = function (
@@ -119,8 +118,6 @@ function handleCommand(
   data: Elbwalker.PushData = {},
   elbwalker: Elbwalker.Function,
 ) {
-  elbwalker.config.prefix = elbwalker.config.prefix || 'elb';
-
   switch (action) {
     case Elbwalker.Commands.Destination:
       addDestination(data);
@@ -178,8 +175,7 @@ function run(elbwalker: Elbwalker.Function) {
   // Load globals properties
   // Due to site performance only once every run
 
-  const prefix = elbwalker.config.prefix || 'elb';
-  globals = getGlobalProperties(prefix);
+  globals = getGlobalProperties(elbwalker.config.prefix);
 
   // Run predefined elbLayer stack once
   if (firstRun) {
@@ -187,7 +183,7 @@ function run(elbwalker: Elbwalker.Function) {
     callPredefined(elbwalker);
   }
 
-  trycatch(triggerLoad)(prefix);
+  trycatch(triggerLoad)(elbwalker.config.prefix);
 }
 
 // Handle existing events in the elbLayer on first run

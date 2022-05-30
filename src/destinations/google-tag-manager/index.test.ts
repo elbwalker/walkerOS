@@ -21,7 +21,7 @@ describe('destination google-tag-manager', () => {
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
 
-    elbwalker.go({ custom: true });
+    elbwalker.go({ custom: true, prefix: 'elb' });
     elbwalker.push('walker run');
     elbwalker.push('walker destination', destination);
   });

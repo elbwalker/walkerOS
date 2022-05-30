@@ -19,7 +19,7 @@ describe('Destination Google GA4', () => {
     elbwalker = require('../../elbwalker').default;
     destination = require('./index').destination;
 
-    elbwalker.go({ custom: true });
+    elbwalker.go({ custom: true, prefix: 'elb' });
     elbwalker.push('walker run');
     w.gtag = mockFn;
   });

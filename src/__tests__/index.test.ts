@@ -42,7 +42,12 @@ describe('index', () => {
 
     jest.requireActual('../index');
     expect(elbwalker.go).toHaveBeenCalledTimes(1);
-    expect(elbwalker.go).toHaveBeenCalledWith({});
+    expect(elbwalker.go).toHaveBeenCalledWith({
+      custom: undefined,
+      prefix: 'elb',
+      projectId: undefined,
+      version: undefined,
+    });
   });
 
   test('default init mode', () => {
@@ -54,6 +59,8 @@ describe('index', () => {
     expect(elbwalker.go).toHaveBeenCalledWith({
       custom: false,
       version: 1,
+      projectId: undefined,
+      prefix: 'elb',
     });
     expect(window.document.scripts.length).toBe(1);
   });
@@ -68,6 +75,7 @@ describe('index', () => {
       projectId,
       custom: false,
       version: 1,
+      prefix: 'elb',
     });
 
     expect(window.document.scripts.length).toBe(2);
@@ -84,6 +92,8 @@ describe('index', () => {
     expect(elbwalker.go).toHaveBeenCalledWith({
       custom: true,
       version: 1,
+      prefix: 'elb',
+      projectId: undefined,
     });
   });
 
