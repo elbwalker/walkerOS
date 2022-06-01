@@ -18,12 +18,12 @@ const version: Elbwalker.Version = {
   config: 0,
 };
 
-let count = 0; // Event counter for each run
-let group = ''; // random id to group events of a run
-let globals: AnyObject = {}; // init globals as some random var
-let user: Elbwalker.User = {}; // handles the user ids
-let firstRun = true; // The first run is a special one due to state changes
-let allowRunning = false; // Wait for explicit run command to start
+let _count = 0; // Event counter for each run
+let _group = ''; // random id to group events of a run
+let _globals: AnyObject = {}; // init globals as some random var
+let _user: Elbwalker.User = {}; // handles the user ids
+let _firstRun = true; // The first run is a special one due to state changes
+let _allowRunning = false; // Wait for explicit run command to start
 
 elbwalker.config = {
   prefix: Elbwalker.Commands.Elb,
@@ -65,7 +65,7 @@ elbwalker.push = function (
   if (!event || typeof event !== 'string') return;
 
   // Check if walker is allowed to run
-  if (!allowRunning) {
+  if (!_allowRunning) {
     // If not yet allowed check if this is the time
     // If it's not that time do not process events yet
     if (event != runCommand) return;
@@ -81,10 +81,10 @@ elbwalker.push = function (
     return;
   }
 
-  ++count;
+  ++_count;
   const timestamp = Date.now();
   const timing = Math.round(performance.now() / 10) / 100;
-  const id = `${timestamp}-${group}-${count}`;
+  const id = `${timestamp}-${_group}-${_count}`;
 
   destinations.map((destination) => {
     trycatch(() => {
@@ -103,8 +103,8 @@ elbwalker.push = function (
         // Create a new objects for each destination
         // to prevent data manipulation
         data: assign({}, data as AnyObject),
-        globals: assign({}, globals),
-        user: assign({}, user as AnyObject),
+        globals: assign({}, _globals),
+        user: assign({}, _user as AnyObject),
         nested: nested || [],
         id,
         trigger: trigger || '',
@@ -112,8 +112,8 @@ elbwalker.push = function (
         action,
         timestamp,
         timing,
-        group,
-        count,
+        group: _group,
+        count: _count,
         version,
       });
     })();
@@ -171,22 +171,22 @@ function elbLayerInit(elbwalker: Elbwalker.Function) {
 
 function run(elbwalker: Elbwalker.Function) {
   // When run is called, the walker may start running
-  allowRunning = true;
+  _allowRunning = true;
 
   // Reset the run counter
-  count = 0;
+  _count = 0;
 
   // Generate a new group id for each run
-  group = randomString();
+  _group = randomString();
 
   // Load globals properties
   // Due to site performance only once every run
 
-  globals = getGlobalProperties(elbwalker.config.prefix);
+  _globals = getGlobalProperties(elbwalker.config.prefix);
 
   // Run predefined elbLayer stack once
-  if (firstRun) {
-    firstRun = false;
+  if (_firstRun) {
+    _firstRun = false;
     callPredefined(elbwalker);
   }
 
@@ -238,9 +238,9 @@ function callPredefined(elbwalker: Elbwalker.Function) {
 
 function setUserIds(data: Elbwalker.User) {
   // user ids can't be set to undefined
-  if (data.id) user.id = data.id;
-  if (data.device) user.device = data.device;
-  if (data.hash) user.hash = data.hash;
+  if (data.id) _user.id = data.id;
+  if (data.device) _user.device = data.device;
+  if (data.hash) _user.hash = data.hash;
 }
 
 function addDestination(data: Elbwalker.PushData) {
