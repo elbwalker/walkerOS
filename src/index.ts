@@ -1,7 +1,7 @@
 import elbwalker from './elbwalker';
 
 let projectId, custom, version;
-let prefix = 'elb';
+
 // walker script
 const elem = document.querySelector('script.elbwalker');
 
@@ -11,7 +11,7 @@ if (elem) {
   version = parseInt(elem.getAttribute('data-version') || '1'); // config version
 }
 
-elbwalker.go({ projectId, custom, version, prefix });
+elbwalker.go({ projectId, custom, version });
 
 // Global object
 window.elbwalker = elbwalker;

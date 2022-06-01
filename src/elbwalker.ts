@@ -25,10 +25,16 @@ let user: Elbwalker.User = {}; // handles the user ids
 let firstRun = true; // The first run is a special one due to state changes
 let allowRunning = false; // Wait for explicit run command to start
 
-elbwalker.go = function (config: Elbwalker.Config = { prefix: 'elb' }) {
+elbwalker.config = {
+  prefix: Elbwalker.Commands.Elb,
+};
+
+elbwalker.go = function (config = {}) {
   // Set config version to differentiate between setups
-  elbwalker.config = config;
   if (config.version) version.config = config.version;
+
+  // Change the default HTML prefix attribute
+  if (config.prefix) this.config.prefix = config.prefix;
 
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(elbwalker);
@@ -46,7 +52,8 @@ elbwalker.go = function (config: Elbwalker.Config = { prefix: 'elb' }) {
   } else {
     // custom: use the elbLayer
   }
-  initHandler(config.prefix);
+
+  initHandler(this.config.prefix);
 };
 
 elbwalker.push = function (

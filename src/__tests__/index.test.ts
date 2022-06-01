@@ -44,7 +44,6 @@ describe('index', () => {
     expect(elbwalker.go).toHaveBeenCalledTimes(1);
     expect(elbwalker.go).toHaveBeenCalledWith({
       custom: undefined,
-      prefix: 'elb',
       projectId: undefined,
       version: undefined,
     });
@@ -60,7 +59,6 @@ describe('index', () => {
       custom: false,
       version: 1,
       projectId: undefined,
-      prefix: 'elb',
     });
     expect(window.document.scripts.length).toBe(1);
   });
@@ -75,7 +73,6 @@ describe('index', () => {
       projectId,
       custom: false,
       version: 1,
-      prefix: 'elb',
     });
 
     expect(window.document.scripts.length).toBe(2);
@@ -92,7 +89,6 @@ describe('index', () => {
     expect(elbwalker.go).toHaveBeenCalledWith({
       custom: true,
       version: 1,
-      prefix: 'elb',
       projectId: undefined,
     });
   });
@@ -114,6 +110,17 @@ describe('index', () => {
           walker: 1.2,
           config: 42,
         },
+      }),
+    );
+  });
+
+  test('custom prefix', () => {
+    const prefix = 'data-prefix';
+    elbwalker.go({ prefix });
+
+    expect(elbwalker.config).toStrictEqual(
+      expect.objectContaining({
+        prefix: prefix,
       }),
     );
   });
