@@ -107,4 +107,15 @@ describe('index', () => {
       }),
     );
   });
+
+  test('custom prefix', () => {
+    const prefix = 'data-prefix';
+    elbwalker.go({ prefix });
+
+    expect(elbwalker.config).toStrictEqual(
+      expect.objectContaining({
+        prefix: prefix,
+      }),
+    );
+  });
 });
