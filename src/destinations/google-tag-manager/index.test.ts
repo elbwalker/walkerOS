@@ -2,7 +2,7 @@ import { Elbwalker } from '@elbwalker/types';
 import { DestinationGTM } from '.';
 
 const w = window;
-const version = { config: 0, walker: 1.2 };
+const version = { config: 0, walker: expect.any(Number) };
 
 let elbwalker: Elbwalker.Function;
 let destination: DestinationGTM;
