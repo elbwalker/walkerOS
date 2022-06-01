@@ -14,7 +14,7 @@ const elbwalker = {} as Elbwalker.Function;
 const destinations: WebDestination.Functions = [];
 const runCommand = `${Elbwalker.Commands.Walker} ${Elbwalker.Commands.Run}`;
 const version: Elbwalker.Version = {
-  walker: 1.2,
+  walker: 1.3,
   config: 0,
 };
 
