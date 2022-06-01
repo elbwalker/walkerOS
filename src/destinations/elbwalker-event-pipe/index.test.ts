@@ -47,7 +47,7 @@ describe('Destination Elbwalker EventPipe', () => {
     destination = require('./index').destination;
     destination.config.projectId = projectId;
 
-    elbwalker.go({ custom: true, prefix: 'elb' });
+    elbwalker.go({ custom: true });
     elbwalker.push('walker run');
   });
 
