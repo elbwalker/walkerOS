@@ -2,7 +2,6 @@ import { Elbwalker, WebDestination } from '@elbwalker/types';
 
 const w = window;
 let elbwalker: Elbwalker.Function;
-const prefix = 'elb';
 
 function walker(...args: unknown[]) {
   (window.elbLayer = window.elbLayer || []).push(arguments);
@@ -51,7 +50,7 @@ describe('elbLayer', () => {
   });
 
   test('predefined stack without run', () => {
-    elbwalker.go({ custom: true, prefix });
+    elbwalker.go({ custom: true });
     walker('walker destination', destination);
     walker('entity action');
 
@@ -62,7 +61,7 @@ describe('elbLayer', () => {
     walker('e 1');
     walker('walker destination', destination);
 
-    elbwalker.go({ custom: true, prefix });
+    elbwalker.go({ custom: true });
     walker('e 2');
     walker('walker run');
     // auto call: walker('page view');
@@ -98,7 +97,7 @@ describe('elbLayer', () => {
   });
 
   test('predefined stack with run', () => {
-    elbwalker.go({ custom: true, prefix });
+    elbwalker.go({ custom: true });
 
     walker('walker destination', destination);
     walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
@@ -118,7 +117,7 @@ describe('elbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    elbwalker.go({ custom: true, prefix });
+    elbwalker.go({ custom: true });
 
     walker();
     walker('event postponed');
