@@ -1,21 +1,15 @@
 import React from 'react';
+import { BrowserRouter } from 'react-router-dom';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { CTA, Footer, Home, App, Pricing, Navigation } from './components';
+import App from './app';
 import './index.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
 root.render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <Navigation />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/app" element={<App />} />
-        <Route path="/pricing" element={<Pricing />} />
-      </Routes>
-      <CTA />
-      <Footer />
-    </BrowserRouter>
-  </React.StrictMode>,
+  // Note when using React.StrictMode the initial walker run is called twice
+  // due to mounting, unmounting & remounting again. But only in dev mode.
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>,
 );

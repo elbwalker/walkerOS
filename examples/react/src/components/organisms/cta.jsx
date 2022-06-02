@@ -10,7 +10,7 @@ export default function CTA() {
       <div className="mt-8 flex justify-center">
         <div className="inline-flex rounded-md shadow">
           <a
-            href="#"
+            href="#start"
             className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-elbwalker-600 hover:bg-elbwalker-700"
           >
             Get started
@@ -18,7 +18,7 @@ export default function CTA() {
         </div>
         <div className="ml-3 inline-flex">
           <a
-            href="#"
+            href="#learn"
             className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-elbwalker-700 bg-elbwalker-100 hover:bg-elbwalker-200"
           >
             Learn more

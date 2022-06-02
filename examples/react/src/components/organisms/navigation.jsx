@@ -14,7 +14,7 @@ export default function Navigation() {
           <div className="flex items-center">
             <a href="/">
               <span className="sr-only">React Demo</span>
-              <img className="h-10 w-auto" src="/logo192.png" alt="" />
+              <img className="h-10 w-auto" src="/logo.png" alt="" />
             </a>
             <div className="hidden ml-10 space-x-8 lg:block">
               {navigation.map((link) => (

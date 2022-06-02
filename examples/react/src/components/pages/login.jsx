@@ -1,7 +1,7 @@
 import React from 'react';
 import { LogIn } from '..';
 
-export default function App() {
+export default function LogIn() {
   return (
     <div className="min-h-full pt-16 pb-12 flex flex-col bg-gray-800">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
