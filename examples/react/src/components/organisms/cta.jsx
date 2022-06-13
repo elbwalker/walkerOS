@@ -1,4 +1,5 @@
 import React from 'react';
+import { ButtonPrimary, ButtonSecondary } from '../atoms/button';
 
 export default function CTA() {
   return (
@@ -9,20 +10,10 @@ export default function CTA() {
       </h2>
       <div className="mt-8 flex justify-center">
         <div className="inline-flex rounded-md shadow">
-          <a
-            href="#start"
-            className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-elbwalker-600 hover:bg-elbwalker-700"
-          >
-            Get started
-          </a>
+          <ButtonPrimary label="Get started" action={'start'} />
         </div>
         <div className="ml-3 inline-flex">
-          <a
-            href="#learn"
-            className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-elbwalker-700 bg-elbwalker-100 hover:bg-elbwalker-200"
-          >
-            Learn more
-          </a>
+          <ButtonSecondary label="Learn more" action={'learn'} />
         </div>
       </div>
     </div>

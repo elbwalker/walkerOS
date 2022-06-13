@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogIn } from '../';
+import { SignUp } from '../';
 
 export default function Home() {
   return (
@@ -22,7 +22,7 @@ export default function Home() {
                 </div>
               </div>
               <div className="mt-16 sm:mt-24 lg:mt-0 lg:col-span-6">
-                <LogIn />
+                <SignUp />
               </div>
             </div>
           </div>

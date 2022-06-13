@@ -1,11 +1,12 @@
 import React from 'react';
+import { ButtonPrimary } from '../atoms/button';
 
-export default function LogIn() {
+export default function SignUp() {
   return (
     <div className="bg-white sm:max-w-md sm:w-full sm:mx-auto sm:rounded-lg sm:overflow-hidden">
       <div className="px-4 py-8 sm:px-10">
         <div className="mt-6">
-          <form action="#" method="POST" className="space-y-6">
+          <form elb="app" onSubmit={console.log} className="space-y-6">
             <div>
               <label htmlFor="name" className="sr-only">
                 Full name
@@ -52,12 +53,10 @@ export default function LogIn() {
             </div>
 
             <div>
-              <button
-                type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-elbwalker-600 hover:bg-elbwalker-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-elbwalker-500"
-              >
-                Create your account
-              </button>
+              <ButtonPrimary
+                label="Create your account"
+                action={'create'}
+              ></ButtonPrimary>
             </div>
           </form>
         </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogIn } from '..';
+import { SignUp } from '..';
 
 export default function LogIn() {
   return (
@@ -16,7 +16,7 @@ export default function LogIn() {
         </p>
       </div>
       <div className="mt-6 flex-shrink-0 flex justify-center">
-        <LogIn />
+        <SignUp />
       </div>
     </div>
   );
