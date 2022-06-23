@@ -75,7 +75,6 @@ export function triggerVisible(
     // Disconnect previous
     if (disconnect) observer.disconnect();
 
-    // support both elbaction and legacy selector elb-action
     const visibleSelector = getActionselector(prefix, 'visible');
 
     scope.querySelectorAll(visibleSelector).forEach((element) => {
@@ -196,11 +195,5 @@ function getActionselector(prefix: string, trigger: string) {
   // @TODO dealing with wildcart edge-case
   // when the 'load' term is in selector but not as a trigger
 
-  // support both elbaction and legacy selector elb-action
-
-  return `[${getElbAttributeName(
-    prefix,
-    'action',
-    false,
-  )}*=${trigger}],[${getElbAttributeName(prefix, 'action')}*=${trigger}]`;
+  return `[${getElbAttributeName(prefix, 'action', false)}*=${trigger}]`;
 }
