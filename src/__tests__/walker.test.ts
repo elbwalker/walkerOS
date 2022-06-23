@@ -165,7 +165,7 @@ describe('Walker', () => {
   });
 
   test('Legacy action syntax', () => {
-    expect(walker(getElem('elb-action'), 'load')).toMatchObject([
+    expect(walker(getElem('data-elb-action'), 'load')).toMatchObject([
       {
         entity: 'legacy',
         action: 'support',
@@ -175,7 +175,7 @@ describe('Walker', () => {
   });
 
   test('Prefix', () => {
-    expect(walker(getElem('prefix'), 'load', 'data-elb')).toMatchObject([
+    expect(walker(getElem('prefix'), 'load', 'elb')).toMatchObject([
       {
         entity: 'entity',
         action: 'action',

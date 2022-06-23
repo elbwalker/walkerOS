@@ -4,7 +4,7 @@ import { assign, getAttribute, parseAttribute, splitAttribute } from './utils';
 export function walker(
   target: Element,
   trigger: Walker.Trigger,
-  prefix = 'elb',
+  prefix: string = Elbwalker.Commands.Prefix,
 ): Walker.Events {
   const [action, filter] = getActionAndFilter(target, trigger, prefix);
   if (!action) return [];
