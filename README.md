@@ -73,7 +73,7 @@ dataLayer.push({
 
 You are completely free to define naming conventions. All you need to get started are the **entity, action & trigger attributes**. Learn more about the elbwalker [event model](https://www.elbwalker.com/blog/elbwalker-event-concept) and background in our [blog](https://www.elbwalker.com/blog/).
 
-1. You define the entity scope by setting the `elb` attribute with the name of an entity to an element, e.g. `data-elb="product"`.
+1. You define the entity scope by setting the `data-elb` attribute with the name of an entity to an element, e.g. `data-elb="product"`.
 2. An action can be added by setting the `data-elbaction` attribute on the same level or all child elements in combination with a matching trigger, e.g. `data-elbaction="click:add"` to fire a _product add_ event when a user clicks on the tagged element.
 3. (Optional) To define the entities' properties, set the composited attribute `data-elb-ENTITY` with the name and value, e.g. `data-elb-product="name:Everyday Ruck Snack;price:220"`.
 
