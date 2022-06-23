@@ -29,15 +29,10 @@ function getActionAndFilter(
   let element = target as Node['parentElement'];
 
   while (element) {
-    const attr =
-      getAttribute(
-        element,
-        getElbAttributeName(prefix, Elbwalker.Commands.Action, false),
-      ) ||
-      getAttribute(
-        element,
-        getElbAttributeName(prefix, Elbwalker.Commands.Action),
-      ); // legacy elb-action
+    const attr = getAttribute(
+      element,
+      getElbAttributeName(prefix, Elbwalker.Commands.Action, false),
+    );
 
     const [action, filterAttr] = parseAttribute(
       splitAttribute(attr)[triggerType] || '',
