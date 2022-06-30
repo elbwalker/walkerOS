@@ -6,7 +6,7 @@
     <script
       async
       class="elbwalker"
-      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.2/dist/walker.js"
+      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@latest/dist/walker.js"
     ></script>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
@@ -20,30 +20,23 @@
             Frequently asked questions
           </h2>
           <dl class="mt-6 space-y-6 divide-y divide-gray-200">
-            <div elb="question" class="pt-6">
+            <div data-elb="question" class="pt-6">
               <dt class="text-lg">
                 <!-- Expand/collapse question button -->
                 <button
-                  elbaction="click:click"
+                  data-elbaction="click"
                   type="button"
                   class="text-left w-full flex justify-between items-start text-gray-400"
                   aria-controls="faq-0"
                   aria-expanded="false"
                 >
                   <span
-                    elb-question="question: Whats the best thing about Switzerland?"
+                    data-elb-question="question: Whats the best thing about Switzerland?"
                     class="font-medium text-gray-900"
                   >
                     What&#039;s the best thing about Switzerland?
                   </span>
                   <span class="ml-6 h-7 flex items-center">
-                    <!--
-                    Expand/collapse icon, toggle classes based on question open state.
-  
-                    Heroicon name: outline/chevron-down
-  
-                    Open: "-rotate-180", Closed: "rotate-0"
-                        -->
                     <svg
                       class="rotate-0 h-6 w-6 transform"
                       xmlns="http://www.w3.org/2000/svg"
@@ -64,7 +57,7 @@
               </dt>
               <dd class="mt-2 pr-12" id="faq-0">
                 <p
-                  elb-question="answer: The flag is cool. "
+                  data-elb-question="answer:The flag is cool."
                   class="text-base text-gray-500"
                 >
                   The flag is cool.
@@ -75,26 +68,19 @@
               <dt class="text-lg">
                 <!-- Expand/collapse question button -->
                 <button
-                  elbaction="click:click"
+                  data-elbaction="click"
                   type="button"
                   class="text-left w-full flex justify-between items-start text-gray-400"
                   aria-controls="faq-0"
                   aria-expanded="false"
                 >
                   <span
-                    elb-question="question: How are you?"
+                    data-elb-question="question: How are you?"
                     class="font-medium text-gray-900"
                   >
                     How are you?
                   </span>
                   <span class="ml-6 h-7 flex items-center">
-                    <!--
-                    Expand/collapse icon, toggle classes based on question open state.
-  
-                    Heroicon name: outline/chevron-down
-  
-                    Open: "-rotate-180", Closed: "rotate-0"
-                        -->
                     <svg
                       class="rotate-0 h-6 w-6 transform"
                       xmlns="http://www.w3.org/2000/svg"
@@ -115,7 +101,7 @@
               </dt>
               <dd class="mt-2 pr-12" id="faq-0">
                 <p
-                  elb-question="answer: I dont know."
+                  data-elb-question="answer:I dont know."
                   class="text-base text-gray-500"
                 >
                   I dont know.

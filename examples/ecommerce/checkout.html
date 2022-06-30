@@ -5,12 +5,12 @@
     <script
       async
       class="elbwalker"
-      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.2/dist/walker.js"
+      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@latest/dist/walker.js"
     ></script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,aspect-ratio"></script>
   </head>
   <body>
-    <div elb="checkout" elbaction="load:view" class="bg-gray-50">
+    <div data-elb="checkout" data-elbaction="load:view" class="bg-gray-50">
       <div
         class="max-w-2xl mx-auto pt-16 pb-24 px-4 sm:px-6 lg:max-w-7xl lg:px-8"
       >
@@ -232,7 +232,7 @@
             >
               <h3 class="sr-only">Items in your cart</h3>
               <ul role="list" class="divide-y divide-gray-200">
-                <li elb="product" class="flex py-6 px-4 sm:px-6">
+                <li data-elb="product" class="flex py-6 px-4 sm:px-6">
                   <div class="flex-shrink-0">
                     <img
                       src="https://dummyimage.com/640x360/fff/aaa.png?text=product+image"
@@ -246,7 +246,7 @@
                       <div class="min-w-0 flex-1">
                         <h4 class="text-sm">
                           <a
-                            elb-product="name:Everyday Ruck Snack"
+                            data-elb-product="name:Everyday Ruck Snack"
                             href="#"
                             class="font-medium text-gray-700 hover:text-gray-800"
                           >
@@ -254,13 +254,13 @@
                           </a>
                         </h4>
                         <p
-                          elb-product="color:black"
+                          data-elb-product="color:black"
                           class="mt-1 text-sm text-gray-500"
                         >
                           Black
                         </p>
                         <p
-                          elb-product="size:large"
+                          data-elb-product="size:large"
                           class="mt-1 text-sm text-gray-500"
                         >
                           Large
@@ -293,7 +293,7 @@
 
                     <div class="flex-1 pt-2 flex items-end justify-between">
                       <p
-                        elb-product="price:220;currency:EUR"
+                        data-elb-product="price:220;currency:EUR"
                         class="mt-1 text-sm font-medium text-gray-900"
                       >
                         &euro;220.00
@@ -304,7 +304,7 @@
                         <select
                           id="quantity"
                           name="quantity"
-                          elb-product="quantity:#value"
+                          data-elb-product="quantity:#value"
                           class="rounded-md border border-gray-300 text-base font-medium text-gray-700 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                         >
                           <option value="1">1</option>
@@ -320,7 +320,7 @@
                     </div>
                   </div>
                 </li>
-                <li elb="product" class="flex py-6 px-4 sm:px-6">
+                <li data-elb="product" class="flex py-6 px-4 sm:px-6">
                   <div class="flex-shrink-0">
                     <img
                       src="https://dummyimage.com/640x360/fff/aaa.png?text=product+image"
@@ -334,7 +334,7 @@
                       <div class="min-w-0 flex-1">
                         <h4 class="text-sm">
                           <a
-                            elb-product="name:Cool Cap"
+                            data-elb-product="name:Cool Cap"
                             href="#"
                             class="font-medium text-gray-700 hover:text-gray-800"
                           >
@@ -342,13 +342,13 @@
                           </a>
                         </h4>
                         <p
-                          elb-product="color:green"
+                          data-elb-product="color:green"
                           class="mt-1 text-sm text-gray-500"
                         >
                           Green
                         </p>
                         <p
-                          elb-product="size:onesize"
+                          data-elb-product="size:onesize"
                           class="mt-1 text-sm text-gray-500"
                         >
                           One-Size
@@ -357,7 +357,7 @@
 
                       <div class="ml-4 flex-shrink-0 flow-root">
                         <button
-                          elbaction="click:remove"
+                          data-elbaction="click:remove"
                           type="button"
                           class="-m-2.5 bg-white p-2.5 flex items-center justify-center text-gray-400 hover:text-gray-500"
                         >
@@ -382,7 +382,7 @@
 
                     <div class="flex-1 pt-2 flex items-end justify-between">
                       <p
-                        elb-product="price:39;currency:EUR"
+                        data-elb-product="price:39;currency:EUR"
                         class="mt-1 text-sm font-medium text-gray-900"
                       >
                         &euro;39.00
@@ -393,7 +393,7 @@
                         <select
                           id="quantity"
                           name="quantity"
-                          elb-product="quantity:#value"
+                          data-elb-product="quantity:#value"
                           class="rounded-md border border-gray-300 text-base font-medium text-gray-700 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
                         >
                           <option value="1">1</option>
@@ -416,7 +416,7 @@
                 <div class="flex items-center justify-between">
                   <dt class="text-sm">Subtotal</dt>
                   <dd
-                    elb-checkout="subtotal:259;currency:EUR"
+                    data-elb-checkout="subtotal:259;currency:EUR"
                     class="text-sm font-medium text-gray-900"
                   >
                     &euro;259.00
@@ -425,7 +425,7 @@
                 <div class="flex items-center justify-between">
                   <dt class="text-sm">Shipping</dt>
                   <dd
-                    elb-checkout="shipping:5;currency:EUR"
+                    data-elb-checkout="shipping:5;currency:EUR"
                     class="text-sm font-medium text-gray-900"
                   >
                     &euro;5.00
@@ -434,7 +434,7 @@
                 <div class="flex items-center justify-between">
                   <dt class="text-sm">Taxes</dt>
                   <dd
-                    elb-checkout="taxes:5.52;currency:EUR"
+                    data-elb-checkout="taxes:5.52;currency:EUR"
                     class="text-sm font-medium text-gray-900"
                   >
                     &euro;5.52
@@ -445,7 +445,7 @@
                 >
                   <dt class="text-base font-medium">Total</dt>
                   <dd
-                    elb-checkout="total:269.52;currency:EUR"
+                    data-elb-checkout="total:269.52;currency:EUR"
                     class="text-base font-medium text-gray-900"
                   >
                     &euro;269.52
@@ -456,7 +456,7 @@
               <div class="border-t border-gray-200 py-6 px-4 sm:px-6">
                 <button
                   type="button"
-                  elbaction="click:confirm"
+                  data-elbaction="click:confirm"
                   class="w-full bg-elbwalker border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 focus:ring-elbwalker-500"
                 >
                   Confirm order

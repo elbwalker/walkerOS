@@ -5,14 +5,14 @@
     <script
       async
       class="elbwalker"
-      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.2/dist/walker.js"
+      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@latest/dist/walker.js"
     ></script>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body>
     <div
-      elb="form"
-      elbaction="load:view"
+      data-elb="form"
+      data-elbaction="load:view"
       class="bg-white py-16 px-4 overflow-hidden sm:px-6 lg:px-8 lg:py-24"
     >
       <div class="relative max-w-xl mx-auto">
@@ -239,7 +239,7 @@
             </div>
             <div class="sm:col-span-2">
               <button
-                elbaction="click:submit"
+                data-elbaction="click:submit"
                 type="submit"
                 class="w-full bg-elbwalker border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 focus:ring-elbwalker-500"
               >
