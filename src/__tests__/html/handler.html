@@ -1,13 +1,15 @@
-<div elb="e" elb-e="k:v" elbaction="load:a;click:nope"></div>
+<div data-elb="e" data-elb-e="k:v" data-elbaction="load:a;click:nope"></div>
 
-<form id="form" elb="form" elbaction="submit">
+<div id="click" data-elb="e" data-elbaction="click"></div>
+
+<form id="form" data-elb="form" data-elbaction="submit">
   <input type="text" />
   <button type="submit">Submit</button>
 </form>
 
 <div
   id="timer"
-  elb="timer"
-  elb-timer="its:time"
-  elbaction="wait(4000):alarm"
+  data-elb="timer"
+  data-elb-timer="its:time"
+  data-elbaction="wait(4000):alarm"
 ></div>

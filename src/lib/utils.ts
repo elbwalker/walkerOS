@@ -18,8 +18,12 @@ export function randomString(): string {
   return Math.random().toString(36).slice(2, 8);
 }
 
-export function getGlobalProperties(): AnyObject {
-  const globalsName = getElbAttributeName(Elbwalker.Commands.Globals, false);
+export function getGlobalProperties(prefix: string): AnyObject {
+  const globalsName = getElbAttributeName(
+    prefix,
+    Elbwalker.Commands.Globals,
+    false,
+  );
   const globalSelector = `[${globalsName}]`;
   let values = {};
 
@@ -73,4 +77,8 @@ export function getAttribute(element: Element, name: string): string {
 
 export function assign(base: AnyObject, props: AnyObject = {}): AnyObject {
   return { ...base, ...props };
+}
+
+export function isArgument(event: unknown) {
+  return {}.hasOwnProperty.call(event, 'callee');
 }

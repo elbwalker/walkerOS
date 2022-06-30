@@ -1,52 +1,73 @@
 import { getElbAttributeName, walker } from './walker';
 import { trycatch } from './utils';
-import { Walker } from '@elbwalker/types';
+import { Elbwalker, Walker } from '@elbwalker/types';
+import elbwalker from '../elbwalker';
 
 const d = document;
 const w = window;
 const observer = trycatch(observerVisible)(1000);
 
-export function initHandler(): void {
-  if (d.readyState !== 'loading') {
-    trycatch(load)();
+export function ready(run: Function, elbwalker: Elbwalker.Function) {
+  const fn = () => {
+    run(elbwalker);
+  };
+  if (document.readyState !== 'loading') {
+    fn();
   } else {
-    d.addEventListener('DOMContentLoaded', trycatch(load));
+    document.addEventListener('DOMContentLoaded', fn);
   }
-
-  d.addEventListener('click', trycatch(click));
-  d.addEventListener('submit', trycatch(submit));
 }
 
-// Called when DOM is ready
-function load() {
+export function initHandler(prefix: string): void {
+  d.addEventListener(
+    'click',
+    trycatch(function (this: Document, ev: MouseEvent) {
+      triggerClick.call(this, ev, prefix);
+    }),
+  );
+  d.addEventListener(
+    'submit',
+    trycatch(function (this: Document, ev: SubmitEvent) {
+      triggerSubmit.call(this, ev, prefix);
+    }),
+  );
+  d.addEventListener(
+    'submit',
+    trycatch(function (this: Document, ev: SubmitEvent) {
+      triggerSubmit.call(this, ev, prefix);
+    }),
+  );
+}
+
+// Called for each new run to setup triggers
+export function triggerLoad(prefix: string) {
   // Trigger static page view
   view();
 
   // Trigger load
-  d.querySelectorAll(getActionselector('load')).forEach((element) => {
-    // @TODO dealing with wildcart edge-case
-    // when the 'load' term is in selector but not as a trigger
-    handleTrigger(element, 'load');
+  d.querySelectorAll(getActionselector(prefix, 'load')).forEach((element) => {
+    handleTrigger(element, 'load', prefix);
   });
 
   // Trigger wait
-  d.querySelectorAll(getActionselector('wait')).forEach((element) => {
-    setTimeout(() => handleTrigger(element, 'wait'), 4000); // @TODO use dynamic value
+  d.querySelectorAll(getActionselector(prefix, 'wait')).forEach((element) => {
+    setTimeout(() => handleTrigger(element, 'wait', prefix), 4000); // @TODO use dynamic value
   });
 
   // Trigger visible
-  visible(d, true);
+  triggerVisible(prefix, d, true);
 }
 
-function click(this: Document, ev: MouseEvent) {
-  handleTrigger(ev.target as Element, 'click');
+function triggerClick(ev: MouseEvent, prefix: string) {
+  handleTrigger(ev.target as Element, 'click', prefix);
 }
 
-function submit(ev: Event) {
-  handleTrigger(ev.target as Element, 'submit');
+function triggerSubmit(ev: Event, prefix: string) {
+  handleTrigger(ev.target as Element, 'submit', prefix);
 }
 
-export function visible(
+export function triggerVisible(
+  prefix: string,
   scope: Document | Element,
   disconnect = false,
 ): IntersectionObserver | undefined {
@@ -54,8 +75,7 @@ export function visible(
     // Disconnect previous
     if (disconnect) observer.disconnect();
 
-    // support both elbaction and legacy selector elb-action
-    const visibleSelector = getActionselector('visible');
+    const visibleSelector = getActionselector(prefix, 'visible');
 
     scope.querySelectorAll(visibleSelector).forEach((element) => {
       observer.observe(element);
@@ -92,8 +112,11 @@ function observerVisible(duration = 1000): IntersectionObserver | undefined {
         if (entry.intersectionRatio >= 0.5) {
           const timer = w.setTimeout(function () {
             if (isVisible(target)) {
-              handleTrigger(target as Element, 'visible');
-
+              handleTrigger(
+                target as Element,
+                'visible',
+                elbwalker.config.prefix,
+              );
               // Just count once
               delete target.dataset[timerId];
               if (observer) observer.unobserve(target);
@@ -152,8 +175,12 @@ function isVisible(elem: HTMLElement): boolean {
   return false;
 }
 
-function handleTrigger(element: Element, trigger: Walker.Trigger) {
-  const events = walker(element, trigger);
+function handleTrigger(
+  element: Element,
+  trigger: Walker.Trigger,
+  prefix: string,
+) {
+  const events = walker(element, trigger, prefix);
   events.forEach((event) => {
     w.elbLayer.push(
       `${event.entity} ${event.action}`,
@@ -164,10 +191,9 @@ function handleTrigger(element: Element, trigger: Walker.Trigger) {
   });
 }
 
-function getActionselector(trigger: string) {
-  // support both elbaction and legacy selector elb-action
-  return `[${getElbAttributeName(
-    'action',
-    false,
-  )}*=${trigger}],[${getElbAttributeName('action')}*=${trigger}]`;
+function getActionselector(prefix: string, trigger: string) {
+  // @TODO dealing with wildcart edge-case
+  // when the 'load' term is in selector but not as a trigger
+
+  return `[${getElbAttributeName(prefix, 'action', false)}*=${trigger}]`;
 }

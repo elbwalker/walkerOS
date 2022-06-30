@@ -5,20 +5,20 @@
     <script
       async
       class="elbwalker"
-      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.2/dist/walker.js"
+      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@latest/dist/walker.js"
     ></script>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body>
     <div class="bg-white">
       <div
-        elb="product"
-        elbaction="load:view"
-        elb-product="id:rcksnck"
+        data-elb="product"
+        data-elbaction="load:view"
+        data-elb-product="id:rcksnck"
         class="max-w-2xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:max-w-7xl lg:px-8 lg:grid lg:grid-cols-2 lg:gap-x-8"
       >
         <div class="lg:max-w-lg lg:self-end">
-          <nav elb-product="category:Travel/Bags" aria-label="Breadcrumb">
+          <nav data-elb-product="category:Travel/Bags" aria-label="Breadcrumb">
             <ol role="list" class="flex items-center space-x-2">
               <li>
                 <div class="flex items-center text-sm">
@@ -56,7 +56,7 @@
 
           <div class="mt-4">
             <h1
-              elb-product="name:Everyday Ruck Snack"
+              data-elb-product="name:Everyday Ruck Snack"
               class="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl"
             >
               Everyday Ruck Snack
@@ -70,7 +70,7 @@
 
             <div class="flex items-center">
               <p
-                elb-product="price:220;currency:EUR"
+                data-elb-product="price:220;currency:EUR"
                 class="text-lg text-gray-900 sm:text-xl"
               >
                 &euro;220
@@ -145,12 +145,12 @@
                         />
                       </svg>
                     </div>
-                    <p elb-product="rating:4" class="sr-only">
+                    <p data-elb-product="rating:4" class="sr-only">
                       4 out of 5 stars
                     </p>
                   </div>
                   <p
-                    elb-product="reviews:1624"
+                    data-elb-product="reviews:1624"
                     class="ml-2 text-sm text-gray-500"
                   >
                     1624 reviews
@@ -184,7 +184,7 @@
                 />
               </svg>
               <p
-                elb-product="availability:in_stock"
+                data-elb-product="availability:in_stock"
                 class="ml-2 text-sm text-gray-500"
               >
                 In stock and ready to ship
@@ -210,7 +210,7 @@
           <section aria-labelledby="options-heading">
             <div class="mt-6">
               <button
-                elbaction="click:add"
+                data-elbaction="click:add"
                 class="w-full bg-elbwalker border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 focus:ring-elbwalker-500"
               >
                 Add to bag
