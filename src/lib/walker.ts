@@ -4,7 +4,7 @@ import { assign, getAttribute, parseAttribute, splitAttribute } from './utils';
 export function walker(
   target: Element,
   trigger: Walker.Trigger,
-  prefix = 'elb',
+  prefix: string = Elbwalker.Commands.Prefix,
 ): Walker.Events {
   const [action, filter] = getActionAndFilter(target, trigger, prefix);
   if (!action) return [];
@@ -29,15 +29,10 @@ function getActionAndFilter(
   let element = target as Node['parentElement'];
 
   while (element) {
-    const attr =
-      getAttribute(
-        element,
-        getElbAttributeName(prefix, Elbwalker.Commands.Action, false),
-      ) ||
-      getAttribute(
-        element,
-        getElbAttributeName(prefix, Elbwalker.Commands.Action),
-      ); // legacy elb-action
+    const attr = getAttribute(
+      element,
+      getElbAttributeName(prefix, Elbwalker.Commands.Action, false),
+    );
 
     const [action, filterAttr] = parseAttribute(
       splitAttribute(attr)[triggerType] || '',

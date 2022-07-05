@@ -14,7 +14,7 @@ const elbwalker = {} as Elbwalker.Function;
 const destinations: WebDestination.Functions = [];
 const runCommand = `${Elbwalker.Commands.Walker} ${Elbwalker.Commands.Run}`;
 const version: Elbwalker.Version = {
-  walker: 1.3,
+  walker: 1.4,
   config: 0,
 };
 
@@ -26,7 +26,7 @@ let _firstRun = true; // The first run is a special one due to state changes
 let _allowRunning = false; // Wait for explicit run command to start
 
 elbwalker.config = {
-  prefix: Elbwalker.Commands.Elb,
+  prefix: Elbwalker.Commands.Prefix,
 };
 
 elbwalker.go = function (config = {}) {
