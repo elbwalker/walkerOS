@@ -1,19 +1,20 @@
-<p align="center">
+<p align="left">
   <a href="https://elbwalker.com">
     <img title="elbwalker" src='https://www.elbwalker.com/elbwalker.png' width="300px"/>
   </a>
-</p>
-<div align="center">
-<img src="https://img.shields.io/github/license/elbwalker/walker.js" />
-<img src="https://img.shields.io/github/languages/top/elbwalker/walker.js" />
-</div>
 
 # walker.js
 
 Walker.js is an open-source event tracker. Easy, standardized & flexible. With walker.js you can capture user events in the browser and send them to any destination - just by setting HTML attributes.
 Become independent from locked-in analytics systems and set up reliable tracking the moment you design your front-end.
 
-[**Explore the docs**](https://docs.elbwalker.com) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elbwalker-demo/30min)
+[Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elbwalker-demo/30min)
+
+<div align="left">
+<img src="https://img.shields.io/github/license/elbwalker/walker.js" />
+<img src="https://img.shields.io/github/languages/top/elbwalker/walker.js" />
+<a href="https://docs.elbwalker.com/"><img src="https://img.shields.io/badge/docs-docs.elbwalker.com-yellow" alt="elbwalker Documentation"></a>
+</div>
 
 ## 🤓 Usage
 
