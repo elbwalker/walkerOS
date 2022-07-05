@@ -1,8 +1,12 @@
-<p align="left">
+<p align="center">
   <a href="https://elbwalker.com">
     <img title="elbwalker" src='https://www.elbwalker.com/elbwalker.png' width="300px"/>
   </a>
 </p>
+<div align="center">
+<img src="https://img.shields.io/github/license/elbwalker/walker.js" />
+<img src="https://img.shields.io/github/languages/top/elbwalker/walker.js" />
+</div>
 
 # walker.js
 
