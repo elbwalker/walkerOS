@@ -9,16 +9,16 @@
 Walker.js is an open-source event tracker. Easy, standardized & flexible. With walker.js you can capture user events in the browser and send them to any destination - just by setting HTML attributes.
 Become independent from locked-in analytics systems and set up reliable tracking the moment you design your front-end.
 
-[**Explore the docs**](https://docs.elbwalker.com) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elbwalker-demo/30min)
+[**Explore the docs**](https://docs.elbwalker.com) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elb-alexander/30min)
 
 ## 🤓 Usage
 
-You can implement all sorts of front-end user events easily with walker.js. From e-commerce actions like product add to carts or order complete events to product and UX events like navigation, or filter usage, etc.
+You can implement all sorts of front-end user events easily with walker.js. From product and UX events like "newsletter signup", or filter usage, etc. to e-commerce actions like product add to carts or order complete events. It's up to you what you want to measure!
 
 Just set a few HTML attributes
 
 ```html
-<!-- General usage -->
+<!-- Generic usage -->
 <div
   data-elb="ENTITY"
   data-elb-ENTITY="KEY:VALUE"
@@ -27,9 +27,9 @@ Just set a few HTML attributes
 
 <!-- Example usage -->
 <div
-  data-elb="product"
-  data-elb-product="name:Everyday Ruck Snack;price:220"
-  data-elbaction="click:add"
+  data-elb="newsletter"
+  data-elb-newsletter="list:analytics_hacks;position:overlay"
+  data-elbaction="click:signup"
 />
 ```
 
@@ -37,11 +37,11 @@ The result is for example something like this:
 
 ```js
 dataLayer.push({
-  event: 'product add', // combination of entity and action
+  event: 'newsletter signup', // combination of entity and action
   data: {
-    // all set properties with the data-elb-product attribute
-    name: 'Everyday Ruck Snack',
-    price: 220,
+    // arbitrary set properties with the data-elb-newsletter attribute
+    list: 'analytics_hacks',
+    position: 'overlay'
   },
   globals: {
     // all set properties with the data-elbglobals attribute
@@ -50,14 +50,15 @@ dataLayer.push({
     test: 'darkmode',
   },
   user: {
-    // a stored random id in the cookie (manually added once)
+    // stored user ids (manually added once)
+    id: 'userid',
     device: 'cookieid',
   },
-  nested: [], // all nested entities within the product
+  nested: [], // all nested entities within the newsletter
   id: '1647968113641-01b5e2-5', // timestamp, group & count of the event
   trigger: 'click', // name of the trigger that fired
-  entity: 'product', // entity name
-  action: 'add', // entity action
+  entity: 'newsletter', // entity name
+  action: 'signup', // entity action
   timestamp: 1647968113641, // time when the event fired
   timing: 13.37, // how long it took from the page load to trigger the event
   group: '01b5e2', // random group id for all events on a page
@@ -73,16 +74,15 @@ dataLayer.push({
 
 You are completely free to define naming conventions. All you need to get started are the **entity, action & trigger attributes**. Learn more about the elbwalker [event model](https://www.elbwalker.com/blog/elbwalker-event-concept) and background in our [blog](https://www.elbwalker.com/blog/).
 
-1. You define the entity scope by setting the `data-elb` attribute with the name of an entity to an element, e.g. `data-elb="product"`.
-2. An action can be added by setting the `data-elbaction` attribute on the same level or all child elements in combination with a matching trigger, e.g. `data-elbaction="click:add"` to fire a _product add_ event when a user clicks on the tagged element.
-3. (Optional) To define the entities' properties, set the composited attribute `data-elb-ENTITY` with the name and value, e.g. `data-elb-product="name:Everyday Ruck Snack;price:220"`.
+1. You define the entity scope by setting the `data-elb` attribute with the name of an entity to an element, e.g. `data-elb="newsletter"`.
+2. An action can be added by setting the `data-elbaction` attribute on the same level or all child elements in combination with a matching trigger, e.g. `data-elbaction="click:signup"` to fire a _newsletter signup_ event when a user clicks on the tagged element.
+3. (Optional) To define the entities' properties, set the composited attribute `data-elb-ENTITY` with the name and value, e.g. `data-elb-newsletter="list:analytics_hacks;position:overlay"`.
 
 ```html
 <body data-elbglobals="language:en;test:darkmode">
-  <div data-elb="product">
-    <h1 data-elb-product="name:Everyday Ruck Snack">Everyday Ruck Snack</h1>
-    <p data-elb-product="price:220">Price: 220 Euro</p>
-    <button data-elbaction="click:add">Add to cart</button>
+  <div data-elb="newsletter" data-elb-newsletter="position:overlay">
+    <h1 data-elb-newsletter="list:analytics_hacks">Awesome Analytics Hacks Newsletter</h1>
+    <button data-elbaction="click:signup">Signup</button>
   </div>
 </body>
 ```
@@ -118,8 +118,8 @@ Or as a script
 By using the walker.js you don't have to deal with event listener or mutation observer initialization anymore. The walker comes with a bunch of integrated triggers that will fire your event at the right moment.
 
 ```html
-<!-- The trigger will fire the "product action" event -->
-<b data-elb="product" data-elbaction="TRIGGER:action">...</b>
+<!-- The trigger will fire the "app login" event -->
+<b data-elb="app" data-elbaction="TRIGGER:login">...</b>
 ```
 
 <table>
