@@ -9,7 +9,13 @@
 Walker.js is an open-source event tracker. Easy, standardized & flexible. With walker.js you can capture user events in the browser and send them to any destination - just by setting HTML attributes.
 Become independent from locked-in analytics systems and set up reliable tracking the moment you design your front-end.
 
-[**Explore the docs**](https://docs.elbwalker.com) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elb-alexander/30min)
+[Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elb-alexander/30min)
+
+<div align="left">
+  <img src="https://img.shields.io/github/license/elbwalker/walker.js" />
+  <img src="https://img.shields.io/github/languages/top/elbwalker/walker.js" />
+  <a href="https://docs.elbwalker.com/"><img src="https://img.shields.io/badge/docs-docs.elbwalker.com-yellow" alt="elbwalker Documentation"></a>
+</div>
 
 ## 🤓 Usage
 
@@ -41,7 +47,7 @@ dataLayer.push({
   data: {
     // arbitrary set properties with the data-elb-newsletter attribute
     list: 'analytics_hacks',
-    position: 'overlay'
+    position: 'overlay',
   },
   globals: {
     // all set properties with the data-elbglobals attribute
@@ -81,7 +87,9 @@ You are completely free to define naming conventions. All you need to get starte
 ```html
 <body data-elbglobals="language:en;test:darkmode">
   <div data-elb="newsletter" data-elb-newsletter="position:overlay">
-    <h1 data-elb-newsletter="list:analytics_hacks">Awesome Analytics Hacks Newsletter</h1>
+    <h1 data-elb-newsletter="list:analytics_hacks">
+      Awesome Analytics Hacks Newsletter
+    </h1>
     <button data-elbaction="click:signup">Signup</button>
   </div>
 </body>
