@@ -19,7 +19,7 @@ Become independent from locked-in analytics systems and set up reliable tracking
 
 ## 🤓 Usage
 
-You can implement all sorts of front-end user events easily with walker.js. From product and UX events like "newsletter signup", or filter usage, etc. to e-commerce actions like product add to carts or order complete events. It's up to you what you want to measure!
+You can implement all sorts of front-end user events easily with walker.js. From product and UX events like "newsletter signup", or filter usage, etc. to e-commerce actions like product add to carts or order complete events.
 
 Just set a few HTML attributes
 
