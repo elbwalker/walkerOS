@@ -155,6 +155,25 @@ describe('handler', () => {
     );
   });
 
+  test('hover', () => {
+    const elem = document.getElementById('hover') as Element;
+    const hoverEvent = new MouseEvent('mouseenter', {
+      view: window,
+      bubbles: true,
+      cancelable: true,
+    });
+
+    // Fire hover event
+    elem.dispatchEvent(hoverEvent);
+
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'mouse hover',
+        trigger: 'hover',
+      }),
+    );
+  });
+
   test.skip('wait', () => {
     // @TODO it's very stupid to write your own tests. Change the time 4000 ...
 

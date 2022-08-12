@@ -43,6 +43,11 @@ export function triggerLoad(prefix: string) {
     handleTrigger(element, 'load', prefix);
   });
 
+  // Trigger hover
+  d.querySelectorAll(getActionselector(prefix, 'hover')).forEach((element) => {
+    handleTrigger(element, 'hover', prefix);
+  });
+
   // Trigger wait
   d.querySelectorAll(getActionselector(prefix, 'wait')).forEach((element) => {
     setTimeout(() => handleTrigger(element, 'wait', prefix), 4000); // @TODO use dynamic value
