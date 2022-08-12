@@ -31,12 +31,6 @@ export function initHandler(prefix: string): void {
       triggerSubmit.call(this, ev, prefix);
     }),
   );
-  d.addEventListener(
-    'submit',
-    trycatch(function (this: Document, ev: SubmitEvent) {
-      triggerSubmit.call(this, ev, prefix);
-    }),
-  );
 }
 
 // Called for each new run to setup triggers
