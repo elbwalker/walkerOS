@@ -1,9 +1,10 @@
 require('intersection-observer');
-
+import { Elbwalker } from '@elbwalker/types';
 import fs from 'fs';
 import { AnyObject } from '@elbwalker/types';
-import elbwalker from '../elbwalker';
+
 const w = window;
+let elbwalker: Elbwalker.Function;
 
 jest.useFakeTimers();
 jest.spyOn(global, 'setTimeout');
@@ -18,11 +19,16 @@ const html: string = fs
 
 describe('handler', () => {
   beforeEach(() => {
+    // reset DOM with event listeners etc.
     document.body = document.body.cloneNode() as HTMLElement;
     document.body.innerHTML = html;
+
+    jest.clearAllMocks();
+    jest.resetModules();
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
-    jest.clearAllMocks();
+    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
+    elbwalker = require('../elbwalker').default;
 
     events = {};
     document.addEventListener = mockAddEventListener.mockImplementation(
@@ -155,8 +161,9 @@ describe('handler', () => {
     );
   });
 
-  test.only('hover', () => {
+  test('hover', () => {
     jest.resetAllMocks();
+
     const elem = document.getElementById('hover') as Element;
     const hoverEvent = new MouseEvent('mouseenter', {
       view: window,
@@ -168,7 +175,7 @@ describe('handler', () => {
     expect(mockFn).not.toHaveBeenCalled();
     expect(mockFn).toHaveBeenCalledTimes(0);
 
-    // Fire hover event
+    // Simulate hover event
     elem.dispatchEvent(hoverEvent);
     expect(mockFn).toHaveBeenCalledTimes(1);
 
