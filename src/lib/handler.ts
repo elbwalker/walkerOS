@@ -31,6 +31,19 @@ export function initHandler(prefix: string): void {
       triggerSubmit.call(this, ev, prefix);
     }),
   );
+
+  // Trigger hover
+  d.querySelectorAll<HTMLElement>(getActionselector(prefix, 'hover')).forEach(
+    (element) => {
+      element.addEventListener(
+        'mouseenter',
+        trycatch(function (this: Document, ev: MouseEvent) {
+          if (ev.target instanceof Element)
+            handleTrigger(ev.target, 'hover', prefix);
+        }),
+      );
+    },
+  );
 }
 
 // Called for each new run to setup triggers
@@ -41,11 +54,6 @@ export function triggerLoad(prefix: string) {
   // Trigger load
   d.querySelectorAll(getActionselector(prefix, 'load')).forEach((element) => {
     handleTrigger(element, 'load', prefix);
-  });
-
-  // Trigger hover
-  d.querySelectorAll(getActionselector(prefix, 'hover')).forEach((element) => {
-    handleTrigger(element, 'hover', prefix);
   });
 
   // Trigger wait

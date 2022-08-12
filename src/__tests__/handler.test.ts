@@ -16,24 +16,24 @@ const html: string = fs
   .readFileSync(__dirname + '/html/handler.html')
   .toString();
 
-beforeEach(() => {
-  document.body = document.body.cloneNode() as HTMLElement;
-  document.body.innerHTML = html;
-  w.dataLayer = w.dataLayer || [];
-  w.dataLayer.push = mockFn;
-  jest.clearAllMocks();
-
-  events = {};
-  document.addEventListener = mockAddEventListener.mockImplementation(
-    (event, callback) => {
-      events[event] = callback;
-    },
-  );
-
-  elbwalker.go();
-});
-
 describe('handler', () => {
+  beforeEach(() => {
+    document.body = document.body.cloneNode() as HTMLElement;
+    document.body.innerHTML = html;
+    w.dataLayer = [];
+    w.dataLayer.push = mockFn;
+    jest.clearAllMocks();
+
+    events = {};
+    document.addEventListener = mockAddEventListener.mockImplementation(
+      (event, callback) => {
+        events[event] = callback;
+      },
+    );
+
+    elbwalker.go();
+  });
+
   test('init', () => {
     expect(mockAddEventListener).toHaveBeenCalledWith(
       'click',
@@ -155,7 +155,8 @@ describe('handler', () => {
     );
   });
 
-  test('hover', () => {
+  test.only('hover', () => {
+    jest.resetAllMocks();
     const elem = document.getElementById('hover') as Element;
     const hoverEvent = new MouseEvent('mouseenter', {
       view: window,
@@ -163,8 +164,13 @@ describe('handler', () => {
       cancelable: true,
     });
 
+    // jest.clearAllMocks();
+    expect(mockFn).not.toHaveBeenCalled();
+    expect(mockFn).toHaveBeenCalledTimes(0);
+
     // Fire hover event
     elem.dispatchEvent(hoverEvent);
+    expect(mockFn).toHaveBeenCalledTimes(1);
 
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -172,6 +178,11 @@ describe('handler', () => {
         trigger: 'hover',
       }),
     );
+
+    // Fire multiple hover event
+    elem.dispatchEvent(hoverEvent);
+    elem.dispatchEvent(hoverEvent);
+    expect(mockFn).toHaveBeenCalledTimes(3);
   });
 
   test.skip('wait', () => {
