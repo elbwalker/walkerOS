@@ -14,10 +14,10 @@ const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
 
 let events: AnyObject = {};
 const html: string = fs
-  .readFileSync(__dirname + '/html/handler.html')
+  .readFileSync(__dirname + '/html/trigger.html')
   .toString();
 
-describe('handler', () => {
+describe('trigger', () => {
   beforeEach(() => {
     // reset DOM with event listeners etc.
     document.body = document.body.cloneNode() as HTMLElement;

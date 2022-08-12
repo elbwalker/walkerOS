@@ -18,7 +18,7 @@ export function ready(run: Function, elbwalker: Elbwalker.Function) {
   }
 }
 
-export function initHandler(prefix: string): void {
+export function initTrigger(prefix: string): void {
   d.addEventListener(
     'click',
     trycatch(function (this: Document, ev: MouseEvent) {
