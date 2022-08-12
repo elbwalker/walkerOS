@@ -15,16 +15,16 @@ const destination: WebDestination.Function = {
   config: { init: true },
 };
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  jest.resetModules();
-  w.elbLayer = [];
-  w.dataLayer = [];
-  w.dataLayer.push = mockPush;
-  elbwalker = require('../elbwalker').default;
-});
-
 describe('elbLayer', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.resetModules();
+    w.elbLayer = [];
+    w.dataLayer = [];
+    w.dataLayer.push = mockPush;
+    elbwalker = require('../elbwalker').default;
+  });
+
   test('arguments and event pushes', () => {
     elbwalker.go();
 

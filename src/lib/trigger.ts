@@ -18,7 +18,7 @@ export function ready(run: Function, elbwalker: Elbwalker.Function) {
   }
 }
 
-export function initHandler(prefix: string): void {
+export function initTrigger(prefix: string): void {
   d.addEventListener(
     'click',
     trycatch(function (this: Document, ev: MouseEvent) {
@@ -31,11 +31,18 @@ export function initHandler(prefix: string): void {
       triggerSubmit.call(this, ev, prefix);
     }),
   );
-  d.addEventListener(
-    'submit',
-    trycatch(function (this: Document, ev: SubmitEvent) {
-      triggerSubmit.call(this, ev, prefix);
-    }),
+
+  // Trigger hover
+  d.querySelectorAll<HTMLElement>(getActionselector(prefix, 'hover')).forEach(
+    (element) => {
+      element.addEventListener(
+        'mouseenter',
+        trycatch(function (this: Document, ev: MouseEvent) {
+          if (ev.target instanceof Element)
+            handleTrigger(ev.target, 'hover', prefix);
+        }),
+      );
+    },
   );
 }
 

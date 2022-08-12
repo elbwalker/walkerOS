@@ -1,5 +1,5 @@
 import { AnyObject, Elbwalker, Walker, WebDestination } from '@elbwalker/types';
-import { initHandler, ready, triggerLoad } from './lib/handler';
+import { initTrigger, ready, triggerLoad } from './lib/trigger';
 import { destination } from './destinations/google-tag-manager';
 import {
   assign,
@@ -53,7 +53,7 @@ elbwalker.go = function (config = {}) {
     // custom: use the elbLayer
   }
 
-  initHandler(this.config.prefix);
+  initTrigger(this.config.prefix);
 };
 
 elbwalker.push = function (
