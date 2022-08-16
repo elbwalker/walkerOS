@@ -1,12 +1,13 @@
 import React from 'react';
 import { CheckIcon } from '@heroicons/react/outline';
+import { ButtonPrimary, ButtonSecondary } from '../atoms/button';
 
 const pricing = {
   tiers: [
     {
       title: 'Freelancer',
+      action: 'freelancer',
       price: 24,
-      frequency: '/month',
       description: 'The essentials to provide your best work for clients.',
       features: [
         '5 products',
@@ -14,13 +15,11 @@ const pricing = {
         'Basic analytics',
         '48-hour support response time',
       ],
-      cta: 'Monthly billing',
-      mostPopular: false,
     },
     {
       title: 'Startup',
+      action: 'startup',
       price: 32,
-      frequency: '/month',
       description: 'A plan that scales with your rapidly growing business.',
       features: [
         '25 products',
@@ -29,13 +28,12 @@ const pricing = {
         '24-hour support response time',
         'Marketing automations',
       ],
-      cta: 'Monthly billing',
       mostPopular: true,
     },
     {
       title: 'Enterprise',
+      action: 'enterprise',
       price: 48,
-      frequency: '/month',
       description: 'Dedicated support and infrastructure for your company.',
       features: [
         'Unlimited products',
@@ -45,8 +43,6 @@ const pricing = {
         'Marketing automations',
         'Custom integrations',
       ],
-      cta: 'Monthly billing',
-      mostPopular: false,
     },
   ],
 };
@@ -57,7 +53,11 @@ function classNames(...classes) {
 
 export default function Example() {
   return (
-    <div className="max-w-7xl mx-auto py-24 px-4 sm:px-6 lg:px-8">
+    <div
+      className="max-w-7xl mx-auto py-24 px-4 sm:px-6 lg:px-8"
+      elb="pricing"
+      elbaction="load:view"
+    >
       <h2 className="text-3xl font-extrabold text-gray-900 sm:text-5xl sm:leading-none sm:tracking-tight lg:text-6xl">
         Pricing plans for teams of all sizes
       </h2>
@@ -66,14 +66,13 @@ export default function Example() {
         engaging your audience, creating customer loyalty, and driving sales.
       </p>
 
-      {/* Tiers */}
       <div className="mt-24 space-y-12 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-x-8">
         {pricing.tiers.map((tier) => (
           <div
             key={tier.title}
             className="relative p-8 bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col"
           >
-            <div className="flex-1">
+            <div className="flex-1 mb-12">
               <h3 className="text-xl font-semibold text-gray-900">
                 {tier.title}
               </h3>
@@ -86,13 +85,10 @@ export default function Example() {
                 <span className="text-5xl font-extrabold tracking-tight">
                   ${tier.price}
                 </span>
-                <span className="ml-1 text-xl font-semibold">
-                  {tier.frequency}
-                </span>
+                <span className="ml-1 text-xl font-semibold">/month</span>
               </p>
               <p className="mt-6 text-gray-500">{tier.description}</p>
 
-              {/* Feature list */}
               <ul className="mt-6 space-y-6">
                 {tier.features.map((feature) => (
                   <li key={feature} className="flex">
@@ -106,17 +102,11 @@ export default function Example() {
               </ul>
             </div>
 
-            <a
-              href="/app"
-              className={classNames(
-                tier.mostPopular
-                  ? 'bg-elbwalker-500 text-white hover:bg-elbwalker-600'
-                  : 'bg-elbwalker-50 text-elbwalker-700 hover:bg-elbwalker-100',
-                'mt-8 block w-full py-3 px-6 border border-transparent rounded-md text-center font-medium',
-              )}
-            >
-              {tier.cta}
-            </a>
+            {tier.mostPopular ? (
+              <ButtonPrimary label="Get started" action={tier.action} />
+            ) : (
+              <ButtonSecondary label="Get started" action={tier.action} />
+            )}
           </div>
         ))}
       </div>
