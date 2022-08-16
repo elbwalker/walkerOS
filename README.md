@@ -148,6 +148,10 @@ By using the walker.js you don't have to deal with event listener or mutation ob
     <td>after the element has been in viewport for at least 50% for one second</td>
   </tr>
   <tr>
+    <td>hover</td>
+    <td>each time the mouse enters the corresponding element</td>
+  </tr>
+  <tr>
     <td>submit</td>
     <td>on a valid form submission</td>
   </tr>
@@ -157,7 +161,7 @@ By using the walker.js you don't have to deal with event listener or mutation ob
   </tr>
 </table>
 
-_For further inspiration, please refer to the industry examples in our [docs](https://docs.elbwalker.com/sources/web/industry-examples)._
+_For further inspiration, please refer to the industry examples in our [docs](https://docs.elbwalker.com/examples/ecommerce)._
 
 ### 🎯 Destinations
 
