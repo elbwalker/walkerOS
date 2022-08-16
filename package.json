@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/walker.js",
   "description": "An event tracker for all tools. Easy, standardized & flexible",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/elbwalker/walker.js.git"
@@ -20,7 +20,7 @@
     "@babel/plugin-transform-runtime": "^7.18.9",
     "@babel/preset-env": "^7.18.9",
     "@babel/preset-typescript": "^7.18.6",
-    "@elbwalker/types": "^0.0.16",
+    "@elbwalker/types": "^0.0.17",
     "@types/jest": "^28.1.6",
     "@types/lodash": "^4.14.182",
     "@types/node": "^18.6.2",
