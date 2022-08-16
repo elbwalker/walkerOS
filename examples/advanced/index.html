@@ -35,6 +35,9 @@
       // Set user ids (before the first run)
       walker('walker user', { device: 'c00k131d', id: 'h4sh3dcrm1d' }); // Read from storage
 
+      // Change the default data-elb prefix to a custom naming
+      // walker('walker config', { prefix: 'elb' });
+
       // Simulate a consent granted event
       setTimeout(() => {
         walker('consent granted', { marketing: true });
@@ -50,7 +53,7 @@
       <div>
         <header class="relative bg-white">
           <p
-            elbglobals="promo:delivery100"
+            data-elbglobals="promo:delivery100"
             class="bg-elbwalker-600 h-10 flex items-center justify-center text-sm font-medium text-white px-4 sm:px-6 lg:px-8"
           >
             Get free delivery on orders over &euro;100
@@ -89,7 +92,7 @@
 
                 <div class="ml-auto flex items-center">
                   <div
-                    elbglobals="user_state:anonymous"
+                    data-elbglobals="user_state:anonymous"
                     class="hidden lg:flex lg:flex-1 lg:items-center lg:justify-end lg:space-x-6"
                   >
                     <a
@@ -114,7 +117,7 @@
                       class="text-gray-700 hover:text-gray-800 flex items-center"
                     >
                       <span
-                        elbglobals="currency:eur"
+                        data-elbglobals="currency:eur"
                         class="ml-1 block text-sm font-medium"
                       >
                         EUR
@@ -142,7 +145,7 @@
                         />
                       </svg>
                       <span
-                        elbglobals="cart_count:2"
+                        data-elbglobals="cart_count:2"
                         class="ml-2 text-sm font-medium text-gray-700 group-hover:text-gray-800"
                         >2</span
                       >
@@ -195,7 +198,7 @@
         </div>
 
         <main
-          elb-product="list:new_arrivals"
+          data-elb-product="list:new_arrivals"
           class="max-w-2xl mx-auto px-4 lg:max-w-7xl lg:px-8"
         >
           <div class="border-b border-gray-200 pt-8 pb-10">
@@ -419,9 +422,9 @@
                 class="grid grid-cols-1 gap-y-4 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-10 lg:gap-x-8 xl:grid-cols-3"
               >
                 <div
-                  elb="product"
-                  elbaction="visible;click"
-                  elb-product="id:bsct8pck;position:1"
+                  data-elb="product"
+                  data-elbaction="visible;click"
+                  data-elb-product="id:bsct8pck;position:1"
                   class="group relative bg-white border border-gray-200 rounded-lg flex flex-col overflow-hidden"
                 >
                   <div
@@ -435,7 +438,7 @@
                   </div>
                   <div class="flex-1 p-4 space-y-2 flex flex-col">
                     <h3
-                      elb-product="name:Basic Tee 8-Pack"
+                      data-elb-product="name:Basic Tee 8-Pack"
                       class="text-sm font-medium text-gray-900"
                     >
                       <a href="#">
@@ -453,7 +456,7 @@
                     <div class="flex-1 flex flex-col justify-end">
                       <p class="text-sm italic text-gray-500">8 colors</p>
                       <p
-                        elb-product="price:256"
+                        data-elb-product="price:256"
                         class="text-base font-medium text-gray-900"
                       >
                         &euro;256
@@ -463,9 +466,9 @@
                 </div>
 
                 <div
-                  elb="product"
-                  elbaction="visible;click"
-                  elb-product="id:bsct;position:2"
+                  data-elb="product"
+                  data-elbaction="visible;click"
+                  data-elb-product="id:bsct;position:2"
                   class="group relative bg-white border border-gray-200 rounded-lg flex flex-col overflow-hidden"
                 >
                   <div
@@ -479,7 +482,7 @@
                   </div>
                   <div class="flex-1 p-4 space-y-2 flex flex-col">
                     <h3
-                      elb-product="name:Basic Tee"
+                      data-elb-product="name:Basic Tee"
                       class="text-sm font-medium text-gray-900"
                     >
                       <a href="#">
@@ -497,7 +500,7 @@
                     <div class="flex-1 flex flex-col justify-end">
                       <p class="text-sm italic text-gray-500">Black</p>
                       <p
-                        elb-product="price:32"
+                        data-elb-product="price:32"
                         class="text-base font-medium text-gray-900"
                       >
                         &euro;32
@@ -512,7 +515,7 @@
           </div>
         </main>
 
-        <div elb="page" elbaction="visible:read" class="p-1"></div>
+        <div data-elb="page" data-elbaction="visible:read" class="p-1"></div>
 
         <footer
           aria-labelledby="footer-heading"
@@ -659,8 +662,8 @@
 
                 <!-- Newsletter section -->
                 <div
-                  elb="newsletter"
-                  elb-newsletter="position:footer;text:deals&savings-weekly"
+                  data-elb="newsletter"
+                  data-elb-newsletter="position:footer;text:deals&savings-weekly"
                   class="mt-12 md:mt-0 md:row-start-2 md:col-start-3 md:col-span-8 lg:row-start-1 lg:col-start-9 lg:col-span-4"
                 >
                   <h3 class="text-sm font-medium text-gray-900">
@@ -670,7 +673,7 @@
                     The latest deals and savings, sent to your inbox weekly.
                   </p>
                   <form
-                    elbaction="submit:subscribe"
+                    data-elbaction="submit:subscribe"
                     class="mt-2 flex sm:max-w-md"
                     action="#"
                   >

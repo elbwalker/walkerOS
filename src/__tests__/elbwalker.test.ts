@@ -4,24 +4,24 @@ import fs from 'fs';
 import _ from 'lodash';
 
 const w = window;
-const version = { config: 0, walker: 1.2 };
+const version = { config: 0, walker: 1.4 };
 let elbwalker: Elbwalker.Function;
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-beforeEach(() => {
-  // reset DOM with event listeners etc.
-  document.body = document.body.cloneNode() as HTMLElement;
-  jest.clearAllMocks();
-  jest.resetModules();
-  w.dataLayer = [];
-  w.dataLayer!.push = mockFn;
-  w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
-  elbwalker = require('../elbwalker').default;
-  elbwalker.go();
-});
-
 describe('elbwalker', () => {
+  beforeEach(() => {
+    // reset DOM with event listeners etc.
+    document.body = document.body.cloneNode() as HTMLElement;
+    jest.clearAllMocks();
+    jest.resetModules();
+    w.dataLayer = [];
+    w.dataLayer!.push = mockFn;
+    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
+    elbwalker = require('../elbwalker').default;
+    elbwalker.go();
+  });
+
   test('go', () => {
     w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
     expect(window.elbLayer).toBeUndefined();

@@ -1,16 +1,15 @@
 import { AnyObject, Elbwalker, Walker } from '@elbwalker/types';
 import { assign, getAttribute, parseAttribute, splitAttribute } from './utils';
 
-const _prefix = 'elb';
-
 export function walker(
   target: Element,
   trigger: Walker.Trigger,
+  prefix: string = Elbwalker.Commands.Prefix,
 ): Walker.Events {
-  const [action, filter] = getActionAndFilter(target, trigger);
+  const [action, filter] = getActionAndFilter(target, trigger, prefix);
   if (!action) return [];
 
-  const entities = getEntities(target, filter);
+  const entities = getEntities(target, filter, prefix);
   return entities.map((entity) => {
     return {
       entity: entity.type,
@@ -25,16 +24,15 @@ export function walker(
 function getActionAndFilter(
   target: Element,
   triggerType: Walker.Trigger,
+  prefix: string,
 ): [string?, Walker.Filter?] {
   let element = target as Node['parentElement'];
 
   while (element) {
-    const attr =
-      getAttribute(
-        element,
-        getElbAttributeName(Elbwalker.Commands.Action, false),
-      ) ||
-      getAttribute(element, getElbAttributeName(Elbwalker.Commands.Action)); // legacy elb-action
+    const attr = getAttribute(
+      element,
+      getElbAttributeName(prefix, Elbwalker.Commands.Action, false),
+    );
 
     const [action, filterAttr] = parseAttribute(
       splitAttribute(attr)[triggerType] || '',
@@ -54,11 +52,15 @@ function getActionAndFilter(
   return [];
 }
 
-function getEntities(target: Element, filter: Walker.Filter): Walker.Entities {
+function getEntities(
+  target: Element,
+  filter: Walker.Filter,
+  prefix: string,
+): Walker.Entities {
   const entities: Walker.Entities = [];
   let element = target as Node['parentElement'];
   while (element) {
-    const entity = getEntity(element);
+    const entity = getEntity(prefix, element);
 
     if (entity && (!filter || filter[entity.type])) entities.push(entity);
 
@@ -68,26 +70,26 @@ function getEntities(target: Element, filter: Walker.Filter): Walker.Entities {
   return entities;
 }
 
-function getEntity(element: Element): Walker.Entity | null {
-  const type = getAttribute(element, getElbAttributeName());
+function getEntity(prefix: string, element: Element): Walker.Entity | null {
+  const type = getAttribute(element, getElbAttributeName(prefix));
 
   if (!type) return null; // It's not a (valid) entity element
 
   let data: AnyObject = {};
-  const entitySelector = `[${getElbAttributeName(type)}]`;
+  const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
 
   // Get all parent data properties with decreasing priority
   let parent = element as Node['parentElement'];
   while (parent) {
     if (parent.matches(entitySelector))
-      data = assign(getElbValues(parent, type), data);
+      data = assign(getElbValues(prefix, parent, type), data);
 
     parent = parent.parentElement;
   }
 
   // Get nested child data properties with higher priority
   element.querySelectorAll<HTMLElement>(entitySelector).forEach((child) => {
-    const properties = getElbValues(child, type);
+    const properties = getElbValues(prefix, child, type);
     Object.entries(properties).forEach(([key, property]) => {
       if (property.charAt(0) === '#') {
         property = property.substring(1);
@@ -108,22 +110,32 @@ function getEntity(element: Element): Walker.Entity | null {
   // Get nested entities
   const nested: Walker.Entities = [];
   element
-    .querySelectorAll(`[${getElbAttributeName()}]`)
+    .querySelectorAll(`[${getElbAttributeName(prefix)}]`)
     .forEach((nestedEntityElement) => {
-      const nestedEntity = getEntity(nestedEntityElement);
+      const nestedEntity = getEntity(prefix, nestedEntityElement);
       if (nestedEntity) nested.push(nestedEntity);
     });
 
   return { type, data: data as Walker.EntityData, nested };
 }
 
-export function getElbAttributeName(name?: string, isProperty = true): string {
+export function getElbAttributeName(
+  prefix: string,
+  name?: string,
+  isProperty = true,
+): string {
   // separate dynamic properties from walker commands
   const separator = isProperty ? '-' : '';
   name = name ? separator + name : '';
-  return _prefix + name;
+  return prefix + name;
 }
 
-function getElbValues(element: Element, name: string): Walker.Values {
-  return splitAttribute(getAttribute(element, getElbAttributeName(name)) || '');
+function getElbValues(
+  prefix: string,
+  element: Element,
+  name: string,
+): Walker.Values {
+  return splitAttribute(
+    getAttribute(element, getElbAttributeName(prefix, name)) || '',
+  );
 }

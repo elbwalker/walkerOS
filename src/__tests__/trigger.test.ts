@@ -1,9 +1,10 @@
 require('intersection-observer');
-
+import { Elbwalker } from '@elbwalker/types';
 import fs from 'fs';
 import { AnyObject } from '@elbwalker/types';
-import elbwalker from '../elbwalker';
+
 const w = window;
+let elbwalker: Elbwalker.Function;
 
 jest.useFakeTimers();
 jest.spyOn(global, 'setTimeout');
@@ -13,27 +14,32 @@ const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
 
 let events: AnyObject = {};
 const html: string = fs
-  .readFileSync(__dirname + '/html/handler.html')
+  .readFileSync(__dirname + '/html/trigger.html')
   .toString();
 
-beforeEach(() => {
-  document.body = document.body.cloneNode() as HTMLElement;
-  document.body.innerHTML = html;
-  w.dataLayer = w.dataLayer || [];
-  w.dataLayer.push = mockFn;
-  jest.clearAllMocks();
+describe('trigger', () => {
+  beforeEach(() => {
+    // reset DOM with event listeners etc.
+    document.body = document.body.cloneNode() as HTMLElement;
+    document.body.innerHTML = html;
 
-  events = {};
-  document.addEventListener = mockAddEventListener.mockImplementation(
-    (event, callback) => {
-      events[event] = callback;
-    },
-  );
+    jest.clearAllMocks();
+    jest.resetModules();
+    w.dataLayer = [];
+    w.dataLayer.push = mockFn;
+    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
+    elbwalker = require('../elbwalker').default;
 
-  elbwalker.go();
-});
+    events = {};
+    document.addEventListener = mockAddEventListener.mockImplementation(
+      (event, callback) => {
+        events[event] = callback;
+      },
+    );
 
-describe('handler', () => {
+    elbwalker.go();
+  });
+
   test('init', () => {
     expect(mockAddEventListener).toHaveBeenCalledWith(
       'click',
@@ -153,6 +159,37 @@ describe('handler', () => {
         trigger: 'submit',
       }),
     );
+  });
+
+  test('hover', () => {
+    jest.resetAllMocks();
+
+    const elem = document.getElementById('hover') as Element;
+    const hoverEvent = new MouseEvent('mouseenter', {
+      view: window,
+      bubbles: true,
+      cancelable: true,
+    });
+
+    // jest.clearAllMocks();
+    expect(mockFn).not.toHaveBeenCalled();
+    expect(mockFn).toHaveBeenCalledTimes(0);
+
+    // Simulate hover event
+    elem.dispatchEvent(hoverEvent);
+    expect(mockFn).toHaveBeenCalledTimes(1);
+
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'mouse hover',
+        trigger: 'hover',
+      }),
+    );
+
+    // Fire multiple hover event
+    elem.dispatchEvent(hoverEvent);
+    elem.dispatchEvent(hoverEvent);
+    expect(mockFn).toHaveBeenCalledTimes(3);
   });
 
   test.skip('wait', () => {
