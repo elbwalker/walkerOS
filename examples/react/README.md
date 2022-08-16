@@ -14,6 +14,8 @@ function walker() {
 }
 ```
 
+We're using `console.log` as our default destination (see public/index.html:23).
+
 ## Trigger page views
 
 We need to set up the typical page view behavior. Therefore we’re pushing the `walker run` event each time the location changes.

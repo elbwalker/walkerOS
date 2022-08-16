@@ -4,13 +4,13 @@ import { ButtonPrimary, ButtonSecondary } from '../atoms/button';
 export default function CTA({ title, description, position }) {
   return (
     <div
-      elb="cta"
-      elbaction="visible"
-      elb-cta={'goal:trial' + (position ? `;position:${position}` : '')}
+      data-elb="cta"
+      data-elbaction="visible"
+      data-elb-cta={'goal:trial' + (position ? `;position:${position}` : '')}
       className="max-w-7xl mx-auto text-center py-12 px-4 sm:px-6 lg:py-16 lg:px-8"
     >
       <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-        <span elb-cta={`title:${title}`} className="block">
+        <span data-elb-cta={`title:${title}`} className="block">
           {title}
         </span>
         <span className="block">{description}</span>

@@ -51,8 +51,8 @@ export default function Example() {
   return (
     <div
       className="max-w-7xl mx-auto py-24 px-4 sm:px-6 lg:px-8"
-      elb="pricing"
-      elbaction="load:view"
+      data-elb="pricing"
+      data-elbaction="load:view"
     >
       <h2 className="text-3xl font-extrabold text-gray-900 sm:text-5xl sm:leading-none sm:tracking-tight lg:text-6xl">
         Pricing plans for teams of all sizes

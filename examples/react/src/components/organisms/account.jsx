@@ -5,7 +5,7 @@ export function AccountLogIn() {
   return (
     <div className="bg-white sm:max-w-md sm:w-full sm:mx-auto sm:rounded-lg sm:overflow-hidden">
       <div className="px-4 py-8 sm:px-10">
-        <form elb="account" className="space-y-6">
+        <form data-elb="account" className="space-y-6">
           <div>
             <label htmlFor="mobile-or-email" className="sr-only">
               Mobile number or email
@@ -50,7 +50,7 @@ export function AccountSignUp() {
     <div className="bg-white sm:max-w-md sm:w-full sm:mx-auto sm:rounded-lg sm:overflow-hidden">
       <div className="px-4 py-8 sm:px-10">
         <div className="mt-6">
-          <form elb="account" onSubmit={console.log} className="space-y-6">
+          <form data-elb="account" onSubmit={console.log} className="space-y-6">
             <div>
               <label htmlFor="name" className="sr-only">
                 Full name
