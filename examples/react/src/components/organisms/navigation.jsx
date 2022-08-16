@@ -29,12 +29,13 @@ export default function Navigation() {
             </div>
           </div>
           <div className="ml-10 space-x-4">
-            <a
-              href="/login"
+            <NavLink
               className="inline-block bg-white py-2 px-4 border border-transparent rounded-md text-base font-medium text-elbwalker-600 hover:bg-elbwalker-50"
+              key="Log In"
+              to="/login"
             >
-              Sign in
-            </a>
+              Log In
+            </NavLink>
           </div>
         </div>
         <div className="py-4 flex flex-wrap justify-center space-x-6 lg:hidden">
