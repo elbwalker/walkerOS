@@ -20,7 +20,11 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/pricing" element={<Pricing />} />
       </Routes>
-      <CTA />
+      <CTA
+        title="Ready to dive in?"
+        description="Start your free trial today."
+        position="footer"
+      />
       <Footer />
     </>
   );

@@ -1,12 +1,19 @@
 import React from 'react';
 import { ButtonPrimary, ButtonSecondary } from '../atoms/button';
 
-export default function CTA() {
+export default function CTA({ title, description, position }) {
   return (
-    <div className="max-w-7xl mx-auto text-center py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
+    <div
+      elb="cta"
+      elbaction="visible"
+      elb-cta={'goal:trial' + (position ? `;position:${position}` : '')}
+      className="max-w-7xl mx-auto text-center py-12 px-4 sm:px-6 lg:py-16 lg:px-8"
+    >
       <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-        <span className="block">Ready to dive in?</span>
-        <span className="block">Start your free trial today.</span>
+        <span elb-cta={`title:${title}`} className="block">
+          {title}
+        </span>
+        <span className="block">{description}</span>
       </h2>
       <div className="mt-8 flex justify-center">
         <div className="inline-flex rounded-md shadow">
