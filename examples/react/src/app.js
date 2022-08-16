@@ -1,6 +1,6 @@
 import React from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
-import { CTA, Footer, Home, Pricing, Navigation } from './components';
+import { Footer, Home, Navigation, Pricing, LogIn } from './components';
 
 export function walker() {
   (window.elbLayer = window.elbLayer || []).push(arguments);
@@ -19,12 +19,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/pricing" element={<Pricing />} />
+        <Route path="/login" element={<LogIn />} />
       </Routes>
-      <CTA
-        title="Ready to dive in?"
-        description="Start your free trial today."
-        position="footer"
-      />
       <Footer />
     </>
   );

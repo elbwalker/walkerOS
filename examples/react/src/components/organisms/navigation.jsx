@@ -30,7 +30,7 @@ export default function Navigation() {
           </div>
           <div className="ml-10 space-x-4">
             <a
-              href="/app"
+              href="/login"
               className="inline-block bg-white py-2 px-4 border border-transparent rounded-md text-base font-medium text-elbwalker-600 hover:bg-elbwalker-50"
             >
               Sign in

@@ -1,5 +1,5 @@
 import React from 'react';
-import { SignUp } from '../';
+import { AccountSignUp, CTA } from '../';
 
 export default function Home() {
   return (
@@ -22,11 +22,19 @@ export default function Home() {
                 </div>
               </div>
               <div className="mt-16 sm:mt-24 lg:mt-0 lg:col-span-6">
-                <SignUp />
+                <AccountSignUp />
               </div>
             </div>
           </div>
         </main>
+      </div>
+
+      <div className="relative bg-gray-100">
+        <CTA
+          title="Ready to dive in?"
+          description="Start your free trial today."
+          position="home-footer"
+        />
       </div>
     </div>
   );
