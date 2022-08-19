@@ -10,7 +10,6 @@ const w = window;
 
 export interface DestinationPlausible extends WebDestination.Function {
   config: WebDestination.Config & {
-    apiHost?: string;
     domain?: string;
     scriptLoad?: boolean;
   };
@@ -34,7 +33,7 @@ export const destination: DestinationPlausible = {
   },
 
   push(event: Elbwalker.Event): void {
-    w.plausible(`${event.event}`);
+    w.plausible(`${event.event}`, { props: event.data });
   },
 };
 

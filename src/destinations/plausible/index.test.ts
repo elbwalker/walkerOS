@@ -68,9 +68,10 @@ describe('destination plausible', () => {
 
   test('push', () => {
     elbwalker.push('walker destination', destination);
-    elbwalker.push(event, { a: 1 }, 'manual');
+    const data = { a: 1 };
+    elbwalker.push(event, data, 'manual');
 
     expect(w.plausible).toBeDefined();
-    expect(mockFn).toHaveBeenNthCalledWith(1, event);
+    expect(mockFn).toHaveBeenNthCalledWith(1, event, { props: data });
   });
 });
