@@ -1,4 +1,4 @@
-import { Elbwalker, WebDestination } from '@elbwalker/types';
+import { AnyObject, Elbwalker, WebDestination } from '@elbwalker/types';
 
 declare global {
   interface Window {
@@ -33,11 +33,19 @@ export const destination: DestinationPlausible = {
   },
 
   push(event: Elbwalker.Event): void {
-    w.plausible(`${event.event}`, { props: event.data });
+    // page view event
+    if (event.event === 'page view') {
+      w.plausible('pageview');
+    } else {
+      w.plausible(`${event.event}`, { props: event.data });
+    }
   },
 };
 
-function addScript(domain?: string, src = 'https://plausible.io/js/script.js') {
+function addScript(
+  domain?: string,
+  src = 'https://plausible.io/js/script.manual.js',
+) {
   const script = document.createElement('script');
   script.src = src;
   if (domain) script.dataset.domain = domain;

@@ -8,6 +8,7 @@ let destination: DestinationPlausible;
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 
 const event = 'entity action';
+const script = 'https://plausible.io/js/script.manual.js';
 
 describe('destination plausible', () => {
   beforeEach(() => {
@@ -41,7 +42,6 @@ describe('destination plausible', () => {
     destination.config.scriptLoad = true;
     elbwalker.push('walker destination', destination);
 
-    const script = 'https://plausible.io/js/script.js';
     const scriptSelector = `script[src="${script}"]`;
 
     let elem = document.querySelector(scriptSelector);
@@ -57,7 +57,6 @@ describe('destination plausible', () => {
     destination.config.domain = 'elbwalker.com';
     elbwalker.push('walker destination', destination);
 
-    const script = 'https://plausible.io/js/script.js';
     const scriptSelector = `script[src="${script}"]`;
 
     elbwalker.push(event);
@@ -73,5 +72,14 @@ describe('destination plausible', () => {
 
     expect(w.plausible).toBeDefined();
     expect(mockFn).toHaveBeenNthCalledWith(1, event, { props: data });
+  });
+
+  test('page view event', () => {
+    elbwalker.push('walker destination', destination);
+    const data = { a: 1 };
+    elbwalker.push('page view', data);
+
+    expect(w.plausible).toBeDefined();
+    expect(mockFn).toHaveBeenNthCalledWith(1, 'pageview');
   });
 });
