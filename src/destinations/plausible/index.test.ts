@@ -21,10 +21,11 @@ describe('destination plausible', () => {
 
     elbwalker.go({ custom: true });
     elbwalker.push('walker run');
-    elbwalker.push('walker destination', destination);
   });
 
   test('init', () => {
+    elbwalker.push('walker destination', destination);
+
     w.plausible = undefined;
     expect(w.plausible).toBeUndefined();
 
@@ -32,8 +33,25 @@ describe('destination plausible', () => {
     expect(w.plausible).toBeDefined();
   });
 
+  test('init with script load', () => {
+    destination.config.scriptLoad = true;
+    elbwalker.push('walker destination', destination);
+
+    const script = 'https://plausible.io/js/script.js';
+    const scriptSelector = `script[src="${script}"]`;
+
+    let elem = document.querySelector(scriptSelector);
+    expect(elem === null).toBe(true);
+    elbwalker.push(event);
+
+    elem = document.querySelector(scriptSelector);
+    expect(elem !== null).toBe(true);
+  });
+
   test('push', () => {
+    elbwalker.push('walker destination', destination);
     elbwalker.push(event, { a: 1 }, 'manual');
+
     expect(w.plausible).toBeDefined();
     expect(mockFn).toHaveBeenNthCalledWith(1, event);
   });
