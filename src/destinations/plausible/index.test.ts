@@ -23,6 +23,10 @@ describe('destination plausible', () => {
     elbwalker.push('walker run');
   });
 
+  afterEach(() => {
+    document.getElementsByTagName('html')[0].innerHTML = '';
+  });
+
   test('init', () => {
     elbwalker.push('walker destination', destination);
 
@@ -46,6 +50,20 @@ describe('destination plausible', () => {
 
     elem = document.querySelector(scriptSelector);
     expect(elem !== null).toBe(true);
+  });
+
+  test('init with domain', () => {
+    destination.config.scriptLoad = true;
+    destination.config.domain = 'elbwalker.com';
+    elbwalker.push('walker destination', destination);
+
+    const script = 'https://plausible.io/js/script.js';
+    const scriptSelector = `script[src="${script}"]`;
+
+    elbwalker.push(event);
+
+    const elem = document.querySelector(scriptSelector) as HTMLScriptElement;
+    expect(elem.dataset.domain).toBe('elbwalker.com');
   });
 
   test('push', () => {
