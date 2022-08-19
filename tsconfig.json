@@ -13,7 +13,8 @@
     "typeRoots": ["node_modules/@types", "src/types"],
     "types": ["jest", "node"],
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true
   },
   "exclude": ["node_modules", "dist"],
   "include": ["src/**/*.ts", ".eslintrc.js"],
