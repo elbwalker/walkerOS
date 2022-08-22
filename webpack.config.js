@@ -4,7 +4,6 @@ const env = process.env.ENV || 'defaults';
 
 const nodeConfig = {
   mode: 'production',
-  target: 'node',
   entry: './src/index.ts',
   module: {
     rules: [
@@ -21,6 +20,7 @@ const nodeConfig = {
   output: {
     filename: 'index.js',
     path: path.resolve(__dirname, 'dist'),
+    libraryTarget : 'commonjs2'
   },
   plugins: [
     new Dotenv({
