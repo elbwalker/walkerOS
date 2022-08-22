@@ -188,7 +188,7 @@ function handleTrigger(
   prefix: string,
 ) {
   const events = walker(element, trigger, prefix);
-  events.forEach((event) => {
+  events.forEach((event: Walker.Event) => {
     w.elbLayer.push(
       `${event.entity} ${event.action}`,
       event.data,

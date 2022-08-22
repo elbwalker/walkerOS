@@ -1,16 +1,16 @@
 import { Elbwalker } from '../../types';
 import { DestinationPlausible } from '.';
 
-const w = window;
-
-let elbwalker: Elbwalker.Function;
-let destination: DestinationPlausible;
-const mockFn = jest.fn(); //.mockImplementation(console.log);
-
-const event = 'entity action';
-const script = 'https://plausible.io/js/script.manual.js';
-
 describe('destination plausible', () => {
+  const w = window;
+
+  let elbwalker: Elbwalker.Function;
+  let destination: DestinationPlausible;
+  const mockFn = jest.fn(); //.mockImplementation(console.log);
+
+  const event = 'entity action';
+  const script = 'https://plausible.io/js/script.manual.js';
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();

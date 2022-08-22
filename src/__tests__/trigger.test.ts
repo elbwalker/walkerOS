@@ -1,6 +1,6 @@
-require('intersection-observer');
-import { AnyObject, Elbwalker } from '../types';
+import { Elbwalker } from "../types";
 import fs from 'fs';
+require('intersection-observer');
 
 const w = window;
 let elbwalker: Elbwalker.Function;
@@ -11,7 +11,7 @@ jest.spyOn(global, 'setTimeout');
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
 
-let events: AnyObject = {};
+let events: Elbwalker.AnyObject = {};
 const html: string = fs
   .readFileSync(__dirname + '/html/trigger.html')
   .toString();

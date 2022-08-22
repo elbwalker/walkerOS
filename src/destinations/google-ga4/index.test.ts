@@ -1,18 +1,18 @@
 import { Elbwalker } from '../../types';
 import { DestinationGA4 } from '.';
 
-const w = window;
-let elbwalker: Elbwalker.Function;
-let destination: DestinationGA4;
-const mockFn = jest.fn();
-
-const event = 'entity action';
-const data = { foo: 'bar' };
-const trigger = 'manual';
-const measurementId = 'G-XXXXXX-1';
-const transport_url = 'https://collect.example.com';
-
 describe('Destination Google GA4', () => {
+  const w = window;
+  let elbwalker: Elbwalker.Function;
+  let destination: DestinationGA4;
+  const mockFn = jest.fn();
+
+  const event = 'entity action';
+  const data = { foo: 'bar' };
+  const trigger = 'manual';
+  const measurementId = 'G-XXXXXX-1';
+  const transport_url = 'https://collect.example.com';
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();

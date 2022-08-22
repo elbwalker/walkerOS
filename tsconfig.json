@@ -13,6 +13,7 @@
     "typeRoots": ["src/types", "node_modules/@types"],
     "types": ["jest", "node"],
     "esModuleInterop": true,
+    "declaration": true,
     "forceConsistentCasingInFileNames": true
   },
   "exclude": ["node_modules", "dist"],
