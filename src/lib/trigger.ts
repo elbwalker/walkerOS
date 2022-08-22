@@ -1,11 +1,10 @@
 import { Elbwalker, Walker } from '../types';
 import { getElbAttributeName, walker } from './walker';
 import { trycatch } from './utils';
-import elbwalker from '../elbwalker';
 
 const d = document;
 const w = window;
-const observer = trycatch(observerVisible)(1000);
+let observer: IntersectionObserver | undefined;
 
 export function ready(run: Function, elbwalker: Elbwalker.Function) {
   const fn = () => {
@@ -62,6 +61,7 @@ export function triggerLoad(prefix: string) {
   });
 
   // Trigger visible
+  observer = trycatch(observerVisible)(prefix, 1000);
   triggerVisible(prefix, d, true);
 }
 
@@ -85,7 +85,7 @@ export function triggerVisible(
     const visibleSelector = getActionselector(prefix, 'visible');
 
     scope.querySelectorAll(visibleSelector).forEach((element) => {
-      observer.observe(element);
+      observer!.observe(element);
     });
   }
 
@@ -107,7 +107,10 @@ function view() {
   w.elbLayer.push('page view', data, 'load');
 }
 
-function observerVisible(duration = 1000): IntersectionObserver | undefined {
+function observerVisible(
+  prefix: string,
+  duration = 1000,
+): IntersectionObserver | undefined {
   if (!w.IntersectionObserver) return;
 
   return new w.IntersectionObserver(
@@ -119,11 +122,7 @@ function observerVisible(duration = 1000): IntersectionObserver | undefined {
         if (entry.intersectionRatio >= 0.5) {
           const timer = w.setTimeout(function () {
             if (isVisible(target)) {
-              handleTrigger(
-                target as Element,
-                'visible',
-                elbwalker.config.prefix,
-              );
+              handleTrigger(target as Element, 'visible', prefix);
               // Just count once
               delete target.dataset[timerId];
               if (observer) observer.unobserve(target);
