@@ -1,4 +1,4 @@
-import { AnyObject, Elbwalker, Walker, WebDestination } from '@elbwalker/types';
+import { AnyObject, Elbwalker, Walker, WebDestination } from './types';
 import { initTrigger, ready, triggerLoad } from './lib/trigger';
 import { destination } from './destinations/google-tag-manager';
 import {

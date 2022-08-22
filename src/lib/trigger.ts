@@ -1,6 +1,6 @@
+import { Elbwalker, Walker } from '../types';
 import { getElbAttributeName, walker } from './walker';
 import { trycatch } from './utils';
-import { Elbwalker, Walker } from '@elbwalker/types';
 import elbwalker from '../elbwalker';
 
 const d = document;

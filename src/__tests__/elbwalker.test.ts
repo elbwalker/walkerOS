@@ -1,5 +1,5 @@
 require('intersection-observer');
-import { Elbwalker } from '@elbwalker/types';
+import { Elbwalker } from '../types';
 import fs from 'fs';
 import _ from 'lodash';
 

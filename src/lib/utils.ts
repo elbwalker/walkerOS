@@ -1,4 +1,4 @@
-import { AnyObject, Elbwalker, Walker } from '@elbwalker/types';
+import { AnyObject, Elbwalker, Walker } from '../types';
 import { getElbAttributeName } from './walker';
 
 export function trycatch<P extends unknown[], R>(

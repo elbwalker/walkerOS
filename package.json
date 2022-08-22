@@ -6,7 +6,9 @@
     "type": "git",
     "url": "git+https://github.com/elbwalker/walker.js.git"
   },
-  "main": "src/elbwalker.ts",
+  "browser": "dist/walker.js",
+  "main": "dist/index.js",
+  "types": "src/types/index.d.ts",
   "scripts": {
     "test": "jest --colors --coverage",
     "dev": "jest --watchAll --colors",
@@ -15,9 +17,7 @@
   },
   "author": "elbwalker GmbH",
   "license": "MIT",
-  "dependencies": {
-    "@elbwalker/types": "^0.0.17"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@babel/core": "^7.18.10",
     "@babel/plugin-transform-runtime": "^7.18.10",

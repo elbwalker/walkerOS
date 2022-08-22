@@ -1,4 +1,4 @@
-import { AnyObject, Elbwalker, WebDestination } from '@elbwalker/types';
+import { AnyObject, Elbwalker, WebDestination } from '../types';
 
 const w = window;
 let elbwalker: Elbwalker.Function;

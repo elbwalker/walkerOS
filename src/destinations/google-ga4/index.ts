@@ -1,4 +1,4 @@
-import { AnyObject, Elbwalker, WebDestination } from '@elbwalker/types';
+import { AnyObject, Elbwalker, WebDestination } from '../../types';
 
 declare global {
   interface Window {

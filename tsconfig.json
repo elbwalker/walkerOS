@@ -10,7 +10,7 @@
     "moduleResolution": "node",
     "noImplicitReturns": true,
     "noImplicitAny": true,
-    "typeRoots": ["node_modules/@types", "src/types"],
+    "typeRoots": ["src/types", "node_modules/@types"],
     "types": ["jest", "node"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true

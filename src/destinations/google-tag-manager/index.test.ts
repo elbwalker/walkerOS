@@ -1,4 +1,4 @@
-import { Elbwalker } from '@elbwalker/types';
+import { Elbwalker } from '../../types';
 import { DestinationGTM } from '.';
 
 const w = window;

@@ -1,4 +1,4 @@
-import { AnyObject, Elbwalker, Walker } from '@elbwalker/types';
+import { AnyObject, Elbwalker, Walker } from '../types';
 import { assign, getAttribute, parseAttribute, splitAttribute } from './utils';
 
 export function walker(

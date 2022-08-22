@@ -1,4 +1,4 @@
-import { Elbwalker } from '@elbwalker/types';
+import { Elbwalker } from '../../types';
 import { DestinationGA4 } from '.';
 
 const w = window;

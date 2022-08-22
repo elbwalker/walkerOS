@@ -1,4 +1,4 @@
-import { Elbwalker, WebDestination } from '@elbwalker/types';
+import { Elbwalker, WebDestination } from '../../types';
 
 declare global {
   interface Window {

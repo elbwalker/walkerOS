@@ -1,7 +1,6 @@
 require('intersection-observer');
-import { Elbwalker } from '@elbwalker/types';
+import { AnyObject, Elbwalker } from '../types';
 import fs from 'fs';
-import { AnyObject } from '@elbwalker/types';
 
 const w = window;
 let elbwalker: Elbwalker.Function;
