@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES5",
-    "module": "ES2015",
+    "module": "CommonJS",
     "lib": ["dom", "es6"],
     "outDir": "dist",
     "preserveConstEnums": true,
@@ -10,9 +10,10 @@
     "moduleResolution": "node",
     "noImplicitReturns": true,
     "noImplicitAny": true,
-    "typeRoots": ["node_modules/@types", "src/types"],
+    "typeRoots": ["src/types", "node_modules/@types"],
     "types": ["jest", "node"],
     "esModuleInterop": true,
+    "declaration": true,
     "forceConsistentCasingInFileNames": true
   },
   "exclude": ["node_modules", "dist"],

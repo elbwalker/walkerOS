@@ -1,19 +1,19 @@
-import { AnyObject, Elbwalker, WebDestination } from '@elbwalker/types';
-
-const w = window;
-let elbwalker: Elbwalker.Function;
-
-const mockPush = jest.fn(); //.mockImplementation(console.log);
-const mockInit = jest.fn().mockImplementation(() => {
-  return true;
-});
-
-const mockError = jest.fn();
-console.error = mockError;
-
-let destination: WebDestination.Function;
+import { Elbwalker, WebDestination } from "../types";
 
 describe('destination', () => {
+  const w = window;
+  let elbwalker: Elbwalker.Function;
+
+  const mockPush = jest.fn(); //.mockImplementation(console.log);
+  const mockInit = jest.fn().mockImplementation(() => {
+    return true;
+  });
+
+  const mockError = jest.fn();
+  console.error = mockError;
+
+  let destination: WebDestination.Function;
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();

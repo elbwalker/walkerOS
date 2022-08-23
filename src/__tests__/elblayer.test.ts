@@ -1,21 +1,21 @@
-import { Elbwalker, WebDestination } from '@elbwalker/types';
-
-const w = window;
-let elbwalker: Elbwalker.Function;
-
-function walker(...args: unknown[]) {
-  (window.elbLayer = window.elbLayer || []).push(arguments);
-}
-
-const mockPush = jest.fn(); //.mockImplementation(console.log);
-const mockInit = jest.fn(); //.mockImplementation(console.log);
-const destination: WebDestination.Function = {
-  init: mockInit,
-  push: mockPush,
-  config: { init: true },
-};
+import { Elbwalker, WebDestination } from "../types";
 
 describe('elbLayer', () => {
+  const w = window;
+  let elbwalker: Elbwalker.Function;
+
+  function walker(...args: unknown[]) {
+    (window.elbLayer = window.elbLayer || []).push(arguments);
+  }
+
+  const mockPush = jest.fn(); //.mockImplementation(console.log);
+  const mockInit = jest.fn(); //.mockImplementation(console.log);
+  const destination: WebDestination.Function = {
+    init: mockInit,
+    push: mockPush,
+    config: { init: true },
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
