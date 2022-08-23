@@ -22,7 +22,6 @@
   "author": "elbwalker GmbH <hello@elbwalker.com>",
   "license": "MIT",
   "devDependencies": {
-    "@elbwalker/types": "^0.0.17",
     "@babel/core": "^7.18.10",
     "@babel/plugin-transform-runtime": "^7.18.10",
     "@babel/preset-env": "^7.18.10",
