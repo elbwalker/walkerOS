@@ -4,7 +4,7 @@ const env = process.env.ENV || 'defaults';
 
 const nodeConfig = {
   mode: 'production',
-  entry: './src/index.ts',
+  entry: './src/node.ts',
   module: {
     rules: [
       {
@@ -55,4 +55,4 @@ const browserConfig = {
   ],
 };
 
-module.exports = [nodeConfig, browserConfig];
+module.exports = [browserConfig, nodeConfig];
