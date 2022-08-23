@@ -1,8 +1,8 @@
-import { DestinationElbwalkerEventPipe } from './index';
+import { DestinationEventPipe } from '.';
 
 describe('Destination Elbwalker EventPipe', () => {
   const w = window;
-  let elbwalker, destination: DestinationElbwalkerEventPipe;
+  let elbwalker, destination: DestinationEventPipe;
 
   const mockXHROpen = jest.fn();
   const mockXHRSend = jest.fn();

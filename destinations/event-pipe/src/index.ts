@@ -6,7 +6,7 @@ declare global {
   }
 }
 
-export interface DestinationElbwalkerEventPipe extends WebDestination.Function {
+export interface DestinationEventPipe extends WebDestination.Function {
   config: WebDestination.Config & {
     projectId?: string;
     exclusionParameters?: ExclusionParameters;
@@ -25,7 +25,7 @@ const api =
     ? '//moin.p.elbwalkerapis.com/lama'
     : '//moin.s.elbwalkerapis.com/lama';
 
-export const destination: DestinationElbwalkerEventPipe = {
+export const destination: DestinationEventPipe = {
   config: {},
 
   init() {
