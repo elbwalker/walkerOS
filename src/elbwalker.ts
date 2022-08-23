@@ -1,6 +1,6 @@
 import { Elbwalker, Walker, WebDestination } from './types';
 import { initTrigger, ready, triggerLoad } from './lib/trigger';
-import { destination } from './destinations/google-tag-manager';
+import { destination } from '../destinations/google-gtm';
 import {
   assign,
   getGlobalProperties,
@@ -45,7 +45,7 @@ elbwalker.go = function (config = {}) {
     loadProject(config.projectId);
   } else if (!config.custom) {
     // default: add GTM destination and auto run
-    addDestination(destination);
+    addDestination(destination as WebDestination.Function);
     ready(run, elbwalker);
 
     // @TODO TEST WALKER COMMANDS ON DEFAULT MODE TOO
