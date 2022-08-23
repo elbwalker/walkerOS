@@ -165,20 +165,24 @@ _For further inspiration, please refer to the industry examples in our [docs](ht
 
 ### 🎯 Destinations
 
-By default all events get pushed into the `dataLayer`, but you can customize the destinations. Walker.js comes with optional build-in destinations.
+By default all events get pushed into the `dataLayer`, but you can customize the destinations. Walker.js is extensible and supports multiple destinations at once.
 
 Example of adding a GA4 destination:
 
+```sh
+npm i npm i @elbwalker/destination-web-google-ga4 --save
+```
+
 ```js
-import GA4 from './destinations/google-ga4'; // Load the destination
-GA4.config.measurementId = 'G-XXXXXXX'; // Set all required properties
-elbwalker.push('walker destination', GA4); // Add the destination
+import GA4Destination from '@elbwalker/destination-web-google-ga4'; // Load the destination
+GA4Destination.config.measurementId = 'G-XXXXXXX'; // Set all required properties
+elbwalker.push('walker destination', GA4Destination); // Add the destination
 ```
 
 A destination has a `config` object and an optional `init` as well as the `push` function.
 As soon as an event triggers the destinations init function gets called once so that all events will get sent to the additional destination now.
 
-_See more examples, learn how to customize, or write your own in the [destinations deep dive](./src/destinations/)_.
+_See more examples, learn how to customize, or write your own in the [destinations deep dive](./destinations/)_.
 
 ## 🛠 Contributing
 
