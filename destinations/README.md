@@ -2,11 +2,13 @@
 
 Understand the concept of destinations, learn how to use them, and how to write you own.
 
-- [elbwalker event pipe](./elbwalker-event-pipe/)
+- [event pipe](./event-pipe/)
 - [Google GA4](./google-ga4/)
-- [Google Tag Manager](./google-tag-manager/)
+- [Google Tag Manager](./google-gtm/)
+- [Plausible](./plausible/)
 
-Couldn't find what you were looking for? [Request a destination](https://github.com/elbwalker/walker.js/issues/new)
+Couldn't find what you were looking for? [Request a destination](https://github.com/elbwalker/walker.js/issues/new).
+If you want your destination to be added feel free to create an issue.
 
 ## 🤓 Write your own
 
