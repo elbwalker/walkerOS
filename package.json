@@ -8,12 +8,16 @@
   },
   "main": "dist/index.js",
   "types": "dist/src/index.d.ts",
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
+  ],
   "scripts": {
     "copy:dts": "copyfiles -u 1 \"src/**/*.d.ts\" dist/src",
     "test": "jest --colors --coverage",
     "dev": "jest --watchAll --colors",
     "build": "webpack && npm run copy:dts",
-    "publish": "npm publish --access public"
+    "publish": "npm run test && npm run build && npm publish --access public"
   },
   "author": "elbwalker GmbH <hello@elbwalker.com>",
   "license": "MIT",
