@@ -1,10 +1,10 @@
 {
   "name": "@elbwalker/walker.js",
   "description": "An event tracker for all tools. Easy, standardized & flexible",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/elbwalker/walker.js.git"
+    "url": "https://github.com/elbwalker/walker.js"
   },
   "main": "dist/index.js",
   "types": "dist/src/index.d.ts",
@@ -15,7 +15,7 @@
     "build": "webpack && npm run copy:dts",
     "publish": "npm publish --access public"
   },
-  "author": "elbwalker GmbH",
+  "author": "elbwalker GmbH <hello@elbwalker.com>",
   "license": "MIT",
   "devDependencies": {
     "@elbwalker/types": "^0.0.17",
@@ -60,6 +60,7 @@
     "example": "examples"
   },
   "keywords": [
+    "walker",
     "analytics",
     "tracking",
     "measurement",
@@ -69,5 +70,11 @@
     "data-collection",
     "product-analytics",
     "ecommerce-tracking"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
   ]
 }
