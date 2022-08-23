@@ -36,7 +36,7 @@ describe('destination google-tag-manager', () => {
   test('push', () => {
     elbwalker.push(event, { a: 1 }, 'manual');
     expect(w.dataLayer).toBeDefined();
-    expect(mockFn).toHaveBeenNthCalledWith(1, {
+    expect(mockFn).toHaveBeenLastCalledWith({
       event,
       data: { a: 1 },
       globals: {},
