@@ -1,16 +1,16 @@
-import { Elbwalker } from '@elbwalker/types';
+import { Elbwalker } from '../../types';
 import { DestinationGTM } from '.';
 
-const w = window;
-const version = { config: 0, walker: expect.any(Number) };
-
-let elbwalker: Elbwalker.Function;
-let destination: DestinationGTM;
-const mockFn = jest.fn(); //.mockImplementation(console.log);
-
-const event = 'entity action';
-
 describe('destination google-tag-manager', () => {
+  const w = window;
+  const version = { config: 0, walker: expect.any(Number) };
+
+  let elbwalker: Elbwalker.Function;
+  let destination: DestinationGTM;
+  const mockFn = jest.fn(); //.mockImplementation(console.log);
+
+  const event = 'entity action';
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();

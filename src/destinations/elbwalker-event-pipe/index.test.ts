@@ -1,34 +1,34 @@
-import { Elbwalker } from '@elbwalker/types';
+import { Elbwalker } from '../../types';
 import { DestinationElbwalkerEventPipe } from './index';
 
-const w = window;
-let elbwalker: Elbwalker.Function;
-let destination: DestinationElbwalkerEventPipe;
-const mockXHROpen = jest.fn();
-const mockXHRSend = jest.fn();
-const mockXHRHeader = jest.fn();
-const mockXHR = {
-  open: mockXHROpen,
-  send: mockXHRSend,
-  setRequestHeader: mockXHRHeader,
-  readyState: 4,
-  responseText: JSON.stringify('demo'),
-};
-const oldXMLHttpRequest = w.XMLHttpRequest;
-const oldLocation = w.location;
-
-const projectId = 'W3BP4G3';
-const version = '3';
-const url = 'https://www.elbwalker.com/path?q=Analytics#hash';
-const referrer = 'https://www.previous.com/a?b=2&c=3#d';
-const event = 'entity action';
-const data = { foo: 'bar' };
-const api = '//moin.p.elbwalkerapis.com/lama';
-const referrerExcluded = 'https://www.previous.com/a?b=xxx&c=3#d';
-const urlExcluded = 'https://www.elbwalker.com/path?q=xxx#hash';
-const dataExcluded = { id: 'path', search: '?q=xxx' };
-
 describe('Destination Elbwalker EventPipe', () => {
+  const w = window;
+  let elbwalker: Elbwalker.Function;
+  let destination: DestinationElbwalkerEventPipe;
+  const mockXHROpen = jest.fn();
+  const mockXHRSend = jest.fn();
+  const mockXHRHeader = jest.fn();
+  const mockXHR = {
+    open: mockXHROpen,
+    send: mockXHRSend,
+    setRequestHeader: mockXHRHeader,
+    readyState: 4,
+    responseText: JSON.stringify('demo'),
+  };
+  const oldXMLHttpRequest = w.XMLHttpRequest;
+  const oldLocation = w.location;
+
+  const projectId = 'W3BP4G3';
+  const version = '3';
+  const url = 'https://www.elbwalker.com/path?q=Analytics#hash';
+  const referrer = 'https://www.previous.com/a?b=2&c=3#d';
+  const event = 'entity action';
+  const data = { foo: 'bar' };
+  const api = '//moin.p.elbwalkerapis.com/lama';
+  const referrerExcluded = 'https://www.previous.com/a?b=xxx&c=3#d';
+  const urlExcluded = 'https://www.elbwalker.com/path?q=xxx#hash';
+  const dataExcluded = { id: 'path', search: '?q=xxx' };
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();

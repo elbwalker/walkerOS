@@ -1,7 +1,7 @@
-require('intersection-observer');
-import { Elbwalker } from '@elbwalker/types';
+import { Elbwalker } from "../types";
 import fs from 'fs';
 import _ from 'lodash';
+require('intersection-observer');
 
 const w = window;
 const version = { config: 0, walker: 1.4 };

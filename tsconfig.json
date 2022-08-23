@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES5",
-    "module": "ES2015",
+    "module": "CommonJS",
     "lib": ["dom", "es6"],
     "outDir": "dist",
     "preserveConstEnums": true,
@@ -10,13 +10,13 @@
     "moduleResolution": "node",
     "noImplicitReturns": true,
     "noImplicitAny": true,
-    "typeRoots": ["node_modules/@types", "src/types"],
+    "typeRoots": ["src/types", "node_modules/@types"],
     "types": ["jest", "node"],
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "declaration": true
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "exclude": ["node_modules", "dist"],
+  "exclude": ["node_modules", "dist", "**/*.test.*"],
   "include": ["src/**/*.ts", ".eslintrc.js"],
   "$schema": "https://json.schemastore.org/tsconfig"
 }

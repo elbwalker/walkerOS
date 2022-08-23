@@ -1,4 +1,4 @@
-import { AnyObject, Elbwalker, Walker } from '@elbwalker/types';
+import { Elbwalker, Walker } from '../types';
 import { assign, getAttribute, parseAttribute, splitAttribute } from './utils';
 
 export function walker(
@@ -75,7 +75,7 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
 
   if (!type) return null; // It's not a (valid) entity element
 
-  let data: AnyObject = {};
+  let data: Elbwalker.AnyObject = {};
   const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
 
   // Get all parent data properties with decreasing priority

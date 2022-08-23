@@ -1,4 +1,4 @@
-import { AnyObject, Elbwalker, WebDestination } from '@elbwalker/types';
+import { Elbwalker, WebDestination } from "../../types";
 
 declare global {
   interface Window {
@@ -22,7 +22,7 @@ export const destination: DestinationGA4 = {
 
   init() {
     let config = this.config;
-    const settings: AnyObject = {};
+    const settings: Elbwalker.AnyObject = {};
 
     // required measuremt id
     if (!config.measurementId) return false;

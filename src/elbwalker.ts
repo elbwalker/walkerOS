@@ -1,4 +1,4 @@
-import { AnyObject, Elbwalker, Walker, WebDestination } from '@elbwalker/types';
+import { Elbwalker, Walker, WebDestination } from './types';
 import { initTrigger, ready, triggerLoad } from './lib/trigger';
 import { destination } from './destinations/google-tag-manager';
 import {
@@ -20,7 +20,7 @@ const version: Elbwalker.Version = {
 
 let _count = 0; // Event counter for each run
 let _group = ''; // random id to group events of a run
-let _globals: AnyObject = {}; // init globals as some random var
+let _globals: Elbwalker.AnyObject = {}; // init globals as some random var
 let _user: Elbwalker.User = {}; // handles the user ids
 let _firstRun = true; // The first run is a special one due to state changes
 let _allowRunning = false; // Wait for explicit run command to start
@@ -102,9 +102,9 @@ elbwalker.push = function (
         event,
         // Create a new objects for each destination
         // to prevent data manipulation
-        data: assign({}, data as AnyObject),
+        data: assign({}, data as Elbwalker.AnyObject),
         globals: assign({}, _globals),
-        user: assign({}, _user as AnyObject),
+        user: assign({}, _user as Elbwalker.AnyObject),
         nested: nested || [],
         id,
         trigger: trigger || '',
@@ -133,7 +133,7 @@ function handleCommand(
       ready(run, elbwalker);
       break;
     case Elbwalker.Commands.User:
-      setUserIds(data as AnyObject);
+      setUserIds(data as Elbwalker.AnyObject);
       break;
     default:
       break;

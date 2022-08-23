@@ -1,4 +1,3 @@
 import elbwalker from './elbwalker';
 export default elbwalker;
-
-export * from "./types"
+export * from "./types";

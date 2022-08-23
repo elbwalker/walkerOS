@@ -1,4 +1,4 @@
-import { AnyObject, Elbwalker, Walker } from '@elbwalker/types';
+import { Elbwalker, Walker } from '../types';
 import { getElbAttributeName } from './walker';
 
 export function trycatch<P extends unknown[], R>(
@@ -18,7 +18,7 @@ export function randomString(): string {
   return Math.random().toString(36).slice(2, 8);
 }
 
-export function getGlobalProperties(prefix: string): AnyObject {
+export function getGlobalProperties(prefix: string): Elbwalker.AnyObject {
   const globalsName = getElbAttributeName(
     prefix,
     Elbwalker.Commands.Globals,
@@ -75,7 +75,7 @@ export function getAttribute(element: Element, name: string): string {
   return element.getAttribute(name) || '';
 }
 
-export function assign(base: AnyObject, props: AnyObject = {}): AnyObject {
+export function assign(base: Elbwalker.AnyObject, props: Elbwalker.AnyObject = {}): Elbwalker.AnyObject {
   return { ...base, ...props };
 }
 

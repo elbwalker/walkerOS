@@ -1,22 +1,26 @@
 {
   "name": "@elbwalker/walker.js",
   "description": "An event tracker for all tools. Easy, standardized & flexible",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/elbwalker/walker.js.git"
+    "url": "https://github.com/elbwalker/walker.js"
   },
-  "main": "src/elbwalker.ts",
-  "types": "src/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/src",
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
+  ],
   "scripts": {
+    "copy:dts": "copyfiles -u 1 \"src/**/*.d.ts\" dist/src",
     "test": "jest --colors --coverage",
     "dev": "jest --watchAll --colors",
-    "build": "webpack",
-    "publish": "npm publish --access public"
+    "build": "webpack && npm run copy:dts",
+    "publish": "npm run test && npm run build && npm publish --access public"
   },
-  "author": "elbwalker GmbH",
+  "author": "elbwalker GmbH <hello@elbwalker.com>",
   "license": "MIT",
-  "dependencies": {},
   "devDependencies": {
     "@elbwalker/types": "^0.0.17",
     "@babel/core": "^7.18.10",
@@ -28,6 +32,7 @@
     "@types/node": "^18.7.6",
     "@typescript-eslint/eslint-plugin": "^5.33.1",
     "@typescript-eslint/parser": "^5.33.1",
+    "copyfiles": "^2.4.1",
     "dotenv-webpack": "^8.0.1",
     "eslint": "^8.22.0",
     "eslint-config-prettier": "^8.5.0",
@@ -59,6 +64,7 @@
     "example": "examples"
   },
   "keywords": [
+    "walker",
     "analytics",
     "tracking",
     "measurement",
@@ -68,5 +74,11 @@
     "data-collection",
     "product-analytics",
     "ecommerce-tracking"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
   ]
 }
