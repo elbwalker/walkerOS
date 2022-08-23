@@ -1,11 +1,9 @@
-import { Elbwalker } from '../../types';
 import { DestinationPlausible } from '.';
 
 describe('destination plausible', () => {
   const w = window;
 
-  let elbwalker: Elbwalker.Function;
-  let destination: DestinationPlausible;
+  let elbwalker, destination: DestinationPlausible;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const event = 'entity action';
@@ -14,8 +12,9 @@ describe('destination plausible', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
-    elbwalker = require('../../elbwalker').default;
-    destination = require('./index').destination;
+
+    elbwalker = require('@elbwalker/walker.js').default;
+    destination = require('.').default;
 
     w.elbLayer = [];
     w.plausible = mockFn;
