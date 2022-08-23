@@ -7,6 +7,7 @@
   "scripts": {
     "build" : "tsc",
     "dev": "jest --watchAll --colors",
+    "publish": "npm i && npm run test && npm run build && npm publish --access public",
     "test": "jest --colors --coverage"
   },
   "author": "elbwalker <hello@elbwalker.com>",
