@@ -1,11 +1,9 @@
-import { Elbwalker } from '../../types';
 import { DestinationGA4 } from '.';
 
 describe('Destination Google GA4', () => {
   const w = window;
-  let elbwalker: Elbwalker.Function;
-  let destination: DestinationGA4;
-  const mockFn = jest.fn();
+  let elbwalker, destination: DestinationGA4;
+  const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const event = 'entity action';
   const data = { foo: 'bar' };
@@ -13,11 +11,15 @@ describe('Destination Google GA4', () => {
   const measurementId = 'G-XXXXXX-1';
   const transport_url = 'https://collect.example.com';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     jest.resetModules();
-    elbwalker = require('../../elbwalker').default;
-    destination = require('./index').destination;
+
+    elbwalker = require('@elbwalker/walker.js').default;
+    destination = require('.').default;
+
+    w.elbLayer = [];
+    w.dataLayer = [];
 
     elbwalker.go({ custom: true });
     elbwalker.push('walker run');

@@ -1,6 +1,6 @@
 import { Elbwalker, Walker, WebDestination } from './types';
 import { initTrigger, ready, triggerLoad } from './lib/trigger';
-import { destination } from '../destinations/google-tag-manager';
+import { destination } from '../destinations/google-gtm';
 import {
   assign,
   getGlobalProperties,
