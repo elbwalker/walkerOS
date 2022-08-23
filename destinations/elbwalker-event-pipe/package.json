@@ -1,0 +1,54 @@
+{
+  "name": "@elbwalker/destination-web-event-pipe",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist",
+  "scripts": {
+    "build" : "tsc",
+    "dev": "jest --watchAll --colors",
+    "publish": "npm i && npm run test && npm run build && npm publish --access public",
+    "test": "jest --colors --coverage"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elbwalker/walker.js",
+    "directory": "destinations/elbwalker-event-pipe"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
+  ],
+  "dependencies": {
+    "@elbwalker/walker.js": "^1.4.4"
+  },
+  "devDependencies": {
+    "@types/jest": "^28.1.7",
+    "jest": "^28.1.3",
+    "jest-environment-jsdom": "^28.1.3",
+    "ts-jest": "^28.0.8",
+    "typescript": "^4.7.4"
+  },
+  "bugs": {
+    "url": "https://github.com/elbwalker/walker.js/issues"
+  },
+  "homepage": "https://github.com/elbwalker/walker.js#readme",
+  "keywords": [
+    "elb",
+    "elbwalker",
+    "walker",
+    "walker.js",
+    "walker destination",
+    "analytics",
+    "tracking",
+    "event pipe"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

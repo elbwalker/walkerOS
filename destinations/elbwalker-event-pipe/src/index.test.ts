@@ -1,10 +1,9 @@
-import { Elbwalker } from '../../types';
 import { DestinationElbwalkerEventPipe } from './index';
 
 describe('Destination Elbwalker EventPipe', () => {
   const w = window;
-  let elbwalker: Elbwalker.Function;
-  let destination: DestinationElbwalkerEventPipe;
+  let elbwalker, destination: DestinationElbwalkerEventPipe;
+
   const mockXHROpen = jest.fn();
   const mockXHRSend = jest.fn();
   const mockXHRHeader = jest.fn();
@@ -43,8 +42,9 @@ describe('Destination Elbwalker EventPipe', () => {
       writable: true,
     });
 
-    elbwalker = require('../../elbwalker').default;
-    destination = require('./index').destination;
+    elbwalker = require('@elbwalker/walker.js').default;
+    destination = require('.').default;
+
     destination.config.projectId = projectId;
 
     elbwalker.go({ custom: true });
