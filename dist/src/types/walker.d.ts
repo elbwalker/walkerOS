@@ -1,4 +1,4 @@
-import { Elbwalker } from ".";
+import { IElbwalker } from ".";
 
 export namespace Walker {
   type PushEvent = Array<[string, unknown]>;
@@ -7,7 +7,7 @@ export namespace Walker {
   interface Event {
     entity: string;
     action: string;
-    data?: Elbwalker.AnyObject;
+    data?: IElbwalker.AnyObject;
     trigger?: string;
     nested: Walker.Entities;
   }

@@ -1,5 +1,5 @@
 // browser version
-import elbwalker from './elbwalker';
+import Elbwalker from './elbwalker';
 
 let projectId, custom, version;
 
@@ -12,9 +12,9 @@ if (elem) {
   version = parseInt(elem.getAttribute('data-version') || '1'); // config version
 }
 
-elbwalker.go({ projectId, custom, version });
+const instance = Elbwalker({ projectId, custom, version });
 
 // Global object
-window.elbwalker = elbwalker;
+window.elbwalker = instance;
 
-export default elbwalker;
+export default instance;

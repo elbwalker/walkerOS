@@ -1,8 +1,9 @@
-import { Elbwalker, WebDestination } from "../types";
+import Elbwalker from '../elbwalker';
+import { IElbwalker, WebDestination } from '../types';
 
-describe('elbLayer', () => {
+describe('ElbLayer', () => {
   const w = window;
-  let elbwalker: Elbwalker.Function;
+  let elbwalker: IElbwalker.Function;
 
   function walker(...args: unknown[]) {
     (window.elbLayer = window.elbLayer || []).push(arguments);
@@ -22,12 +23,10 @@ describe('elbLayer', () => {
     w.elbLayer = [];
     w.dataLayer = [];
     w.dataLayer.push = mockPush;
-    elbwalker = require('../elbwalker').default;
   });
 
   test('arguments and event pushes', () => {
-    elbwalker.go();
-
+    elbwalker = Elbwalker();
     walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
@@ -50,7 +49,7 @@ describe('elbLayer', () => {
   });
 
   test('predefined stack without run', () => {
-    elbwalker.go({ custom: true });
+    elbwalker = Elbwalker({ custom: true });
     walker('walker destination', destination);
     walker('entity action');
 
@@ -61,7 +60,7 @@ describe('elbLayer', () => {
     walker('e 1');
     walker('walker destination', destination);
 
-    elbwalker.go({ custom: true });
+    elbwalker = Elbwalker({ custom: true });
     walker('e 2');
     walker('walker run');
     // auto call: walker('page view');
@@ -97,7 +96,7 @@ describe('elbLayer', () => {
   });
 
   test('predefined stack with run', () => {
-    elbwalker.go({ custom: true });
+    elbwalker = Elbwalker({ custom: true });
 
     walker('walker destination', destination);
     walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
@@ -117,7 +116,7 @@ describe('elbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    elbwalker.go({ custom: true });
+    elbwalker = Elbwalker({ custom: true });
 
     walker();
     walker('event postponed');

@@ -1,3 +1,3 @@
-import elbwalker from './elbwalker';
-export default elbwalker;
+import Elbwalker from './elbwalker';
+export default Elbwalker;
 export * from "./types";

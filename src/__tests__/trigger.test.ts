@@ -1,9 +1,10 @@
-import { Elbwalker } from "../types";
+import Elbwalker from '../elbwalker'
+import { IElbwalker } from "../types";
 import fs from 'fs';
 require('intersection-observer');
 
 const w = window;
-let elbwalker: Elbwalker.Function;
+let elbwalker: IElbwalker.Function;
 
 jest.useFakeTimers();
 jest.spyOn(global, 'setTimeout');
@@ -11,12 +12,12 @@ jest.spyOn(global, 'setTimeout');
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
 
-let events: Elbwalker.AnyObject = {};
+let events: IElbwalker.AnyObject = {};
 const html: string = fs
   .readFileSync(__dirname + '/html/trigger.html')
   .toString();
 
-describe('trigger', () => {
+describe('Trigger', () => {
   beforeEach(() => {
     // reset DOM with event listeners etc.
     document.body = document.body.cloneNode() as HTMLElement;
@@ -26,8 +27,7 @@ describe('trigger', () => {
     jest.resetModules();
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
-    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
-    elbwalker = require('../elbwalker').default;
+    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
 
     events = {};
     document.addEventListener = mockAddEventListener.mockImplementation(
@@ -36,7 +36,7 @@ describe('trigger', () => {
       },
     );
 
-    elbwalker.go();
+    elbwalker = Elbwalker();
   });
 
   test('init', () => {

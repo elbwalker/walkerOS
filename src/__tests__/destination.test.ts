@@ -1,8 +1,9 @@
-import { Elbwalker, WebDestination } from "../types";
+import Elbwalker from '../elbwalker'
+import { IElbwalker, WebDestination } from "../types";
 
-describe('destination', () => {
+describe('Destination', () => {
   const w = window;
-  let elbwalker: Elbwalker.Function;
+  let elbwalker: IElbwalker.Function;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn().mockImplementation(() => {
@@ -18,8 +19,9 @@ describe('destination', () => {
     jest.clearAllMocks();
     jest.resetModules();
     w.elbLayer = [];
-    elbwalker = require('../elbwalker').default;
-    elbwalker.go();
+    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
+
+    elbwalker = Elbwalker();
 
     destination = {
       init: mockInit,
