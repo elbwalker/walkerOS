@@ -1,8 +1,8 @@
-import { Elbwalker } from ".";
+import { IElbwalker } from ".";
 
 declare global {
   interface Window {
-    elbwalker: Elbwalker.Function;
-    elbLayer: Elbwalker.ElbLayer;
+    elbwalker: IElbwalker.Function;
+    elbLayer: IElbwalker.ElbLayer;
   }
 }

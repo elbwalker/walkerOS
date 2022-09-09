@@ -14,18 +14,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.destination = void 0;
 // Globals
 var w = window;
+var api;
 var projectId;
 var exclusionParameters;
-var api = process.env.ENV === 'prod'
-    ? '//moin.p.elbwalkerapis.com/lama'
-    : '//moin.s.elbwalkerapis.com/lama';
 exports.destination = {
     config: {},
     init: function () {
         var config = this.config;
-        // required projectId
+        // require projectId
         if (!config.projectId)
             return false;
+        api = config.api || 'https://moin.p.elbwalkerapis.com/lama';
         projectId = config.projectId;
         exclusionParameters = config.exclusionParameters || [];
         return true;

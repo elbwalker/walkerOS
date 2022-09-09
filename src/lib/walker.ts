@@ -1,10 +1,10 @@
-import { Elbwalker, Walker } from '../types';
+import { IElbwalker, Walker } from '../types';
 import { assign, getAttribute, parseAttribute, splitAttribute } from './utils';
 
 export function walker(
   target: Element,
   trigger: Walker.Trigger,
-  prefix: string = Elbwalker.Commands.Prefix,
+  prefix: string = IElbwalker.Commands.Prefix,
 ): Walker.Events {
   const [action, filter] = getActionAndFilter(target, trigger, prefix);
   if (!action) return [];
@@ -31,7 +31,7 @@ function getActionAndFilter(
   while (element) {
     const attr = getAttribute(
       element,
-      getElbAttributeName(prefix, Elbwalker.Commands.Action, false),
+      getElbAttributeName(prefix, IElbwalker.Commands.Action, false),
     );
 
     const [action, filterAttr] = parseAttribute(
@@ -75,7 +75,7 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
 
   if (!type) return null; // It's not a (valid) entity element
 
-  let data: Elbwalker.AnyObject = {};
+  let data: IElbwalker.AnyObject = {};
   const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
 
   // Get all parent data properties with decreasing priority

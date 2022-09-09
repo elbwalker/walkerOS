@@ -1,15 +1,16 @@
-import { Elbwalker } from "../types";
+import Elbwalker from '../elbwalker';
+import { IElbwalker } from '../';
 import fs from 'fs';
 import _ from 'lodash';
 require('intersection-observer');
 
-const w = window;
-const version = { config: 0, walker: 1.4 };
-let elbwalker: Elbwalker.Function;
+describe('Elbwalker', () => {
+  const w = window;
+  const mockFn = jest.fn(); //.mockImplementation(console.log);
+  const version = { config: 0, walker: 1.4 };
 
-const mockFn = jest.fn(); //.mockImplementation(console.log);
+  let elbwalker: IElbwalker.Function;
 
-describe('elbwalker', () => {
   beforeEach(() => {
     // reset DOM with event listeners etc.
     document.body = document.body.cloneNode() as HTMLElement;
@@ -17,15 +18,15 @@ describe('elbwalker', () => {
     jest.resetModules();
     w.dataLayer = [];
     w.dataLayer!.push = mockFn;
-    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
-    elbwalker = require('../elbwalker').default;
-    elbwalker.go();
+    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
+
+    elbwalker = Elbwalker();
   });
 
   test('go', () => {
-    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
+    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
     expect(window.elbLayer).toBeUndefined();
-    elbwalker.go();
+    Elbwalker();
     expect(window.elbLayer).toBeDefined();
   });
 

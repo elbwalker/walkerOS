@@ -1,10 +1,9 @@
 import { Walker, WebDestination } from ".";
 
-export namespace Elbwalker {
+export namespace IElbwalker {
   type AnyObject = Record<string, unknown>;
 
   export interface Function {
-    go: (config?: Partial<Config>) => void;
     push: (
       event?: IArguments | unknown,
       data?: PushData,
@@ -16,7 +15,7 @@ export namespace Elbwalker {
 
   type ElbLayer = [
     (IArguments | unknown)?,
-    Elbwalker.PushData?,
+    PushData?,
     string?,
     Walker.Entities?,
   ];
@@ -26,7 +25,7 @@ export namespace Elbwalker {
     prefix: string;
     custom?: boolean;
     projectId?: string;
-    version?: number;
+    version: number;
   }
 
   type Events = Event[];

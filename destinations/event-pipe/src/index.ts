@@ -8,6 +8,7 @@ declare global {
 
 export interface DestinationEventPipe extends WebDestination.Function {
   config: WebDestination.Config & {
+    api?: string;
     projectId?: string;
     exclusionParameters?: ExclusionParameters;
   };
@@ -17,13 +18,9 @@ type ExclusionParameters = string[];
 
 // Globals
 const w = window;
+let api: string;
 let projectId: string;
 let exclusionParameters: ExclusionParameters;
-
-const api =
-  process.env.ENV === 'prod'
-    ? '//moin.p.elbwalkerapis.com/lama'
-    : '//moin.s.elbwalkerapis.com/lama';
 
 export const destination: DestinationEventPipe = {
   config: {},
@@ -31,10 +28,11 @@ export const destination: DestinationEventPipe = {
   init() {
     let config = this.config;
 
-    // required projectId
+    // require projectId
     if (!config.projectId) return false;
-    projectId = config.projectId;
 
+    api = config.api || 'https://moin.p.elbwalkerapis.com/lama';
+    projectId = config.projectId;
     exclusionParameters = config.exclusionParameters || [];
 
     return true;

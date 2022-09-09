@@ -1,4 +1,4 @@
-import { Elbwalker, Walker } from '../types';
+import { IElbwalker, Walker } from '../types';
 import { getElbAttributeName, walker } from './walker';
 import { trycatch } from './utils';
 
@@ -6,7 +6,7 @@ const d = document;
 const w = window;
 let observer: IntersectionObserver | undefined;
 
-export function ready(run: Function, elbwalker: Elbwalker.Function) {
+export function ready(run: Function, elbwalker: IElbwalker.Function) {
   const fn = () => {
     run(elbwalker);
   };
