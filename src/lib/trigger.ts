@@ -4,11 +4,11 @@ import { trycatch } from './utils';
 
 const d = document;
 const w = window;
-let observer: IntersectionObserver | undefined;
+let observer: IntersectionObserver | undefined;
 
-export function ready(run: Function, elbwalker: IElbwalker.Function) {
+export function ready(run: Function, instance: IElbwalker.Function) {
   const fn = () => {
-    run(elbwalker);
+    run(instance);
   };
   if (document.readyState !== 'loading') {
     fn();
@@ -17,60 +17,62 @@ export function ready(run: Function, elbwalker: IElbwalker.Function) {
   }
 }
 
-export function initTrigger(prefix: string): void {
+export function initTrigger(instance: IElbwalker.Function): void {
   d.addEventListener(
     'click',
     trycatch(function (this: Document, ev: MouseEvent) {
-      triggerClick.call(this, ev, prefix);
+      triggerClick.call(this, ev, instance);
     }),
   );
   d.addEventListener(
     'submit',
     trycatch(function (this: Document, ev: SubmitEvent) {
-      triggerSubmit.call(this, ev, prefix);
+      triggerSubmit.call(this, ev, instance);
     }),
   );
 
   // Trigger hover
-  d.querySelectorAll<HTMLElement>(getActionselector(prefix, 'hover')).forEach(
-    (element) => {
-      element.addEventListener(
-        'mouseenter',
-        trycatch(function (this: Document, ev: MouseEvent) {
-          if (ev.target instanceof Element)
-            handleTrigger(ev.target, 'hover', prefix);
-        }),
-      );
-    },
-  );
+  d.querySelectorAll<HTMLElement>(
+    getActionselector(instance.config.prefix, 'hover'),
+  ).forEach((element) => {
+    element.addEventListener(
+      'mouseenter',
+      trycatch(function (this: Document, ev: MouseEvent) {
+        if (ev.target instanceof Element)
+          handleTrigger(ev.target, 'hover', instance);
+      }),
+    );
+  });
 }
 
 // Called for each new run to setup triggers
-export function triggerLoad(prefix: string) {
+export function triggerLoad(instance: IElbwalker.Function) {
+  const prefix = instance.config.prefix;
+
   // Trigger static page view
-  view();
+  view(instance);
 
   // Trigger load
   d.querySelectorAll(getActionselector(prefix, 'load')).forEach((element) => {
-    handleTrigger(element, 'load', prefix);
+    handleTrigger(element, 'load', instance);
   });
 
   // Trigger wait
   d.querySelectorAll(getActionselector(prefix, 'wait')).forEach((element) => {
-    setTimeout(() => handleTrigger(element, 'wait', prefix), 4000); // @TODO use dynamic value
+    setTimeout(() => handleTrigger(element, 'wait', instance), 4000); // @TODO use dynamic value
   });
 
   // Trigger visible
-  observer = trycatch(observerVisible)(prefix, 1000);
+  observer = trycatch(observerVisible)(instance, 1000);
   triggerVisible(prefix, d, true);
 }
 
-function triggerClick(ev: MouseEvent, prefix: string) {
-  handleTrigger(ev.target as Element, 'click', prefix);
+function triggerClick(ev: MouseEvent, instance: IElbwalker.Function) {
+  handleTrigger(ev.target as Element, 'click', instance);
 }
 
-function triggerSubmit(ev: Event, prefix: string) {
-  handleTrigger(ev.target as Element, 'submit', prefix);
+function triggerSubmit(ev: Event, instance: IElbwalker.Function) {
+  handleTrigger(ev.target as Element, 'submit', instance);
 }
 
 export function triggerVisible(
@@ -92,7 +94,7 @@ export function triggerVisible(
   return observer;
 }
 
-function view() {
+function view(instance: IElbwalker.Function) {
   // static page view
   const l = w.location;
   const data = {
@@ -104,11 +106,11 @@ function view() {
   if (l.hash) data.hash = l.hash;
 
   // @TODO get all nested entities
-  w.elbLayer.push('page view', data, 'load');
+  instance.config.elbLayer.push('page view', data, 'load');
 }
 
 function observerVisible(
-  prefix: string,
+  instance: IElbwalker.Function,
   duration = 1000,
 ): IntersectionObserver | undefined {
   if (!w.IntersectionObserver) return;
@@ -122,7 +124,7 @@ function observerVisible(
         if (entry.intersectionRatio >= 0.5) {
           const timer = w.setTimeout(function () {
             if (isVisible(target)) {
-              handleTrigger(target as Element, 'visible', prefix);
+              handleTrigger(target as Element, 'visible', instance);
               // Just count once
               delete target.dataset[timerId];
               if (observer) observer.unobserve(target);
@@ -184,11 +186,11 @@ function isVisible(elem: HTMLElement): boolean {
 function handleTrigger(
   element: Element,
   trigger: Walker.Trigger,
-  prefix: string,
+  instance: IElbwalker.Function,
 ) {
-  const events = walker(element, trigger, prefix);
+  const events = walker(element, trigger, instance.config.prefix);
   events.forEach((event: Walker.Event) => {
-    w.elbLayer.push(
+    instance.config.elbLayer.push(
       `${event.entity} ${event.action}`,
       event.data,
       trigger,

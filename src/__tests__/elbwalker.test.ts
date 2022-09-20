@@ -26,8 +26,8 @@ describe('Elbwalker', () => {
   test('go', () => {
     w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
     expect(window.elbLayer).toBeUndefined();
-    Elbwalker();
-    expect(window.elbLayer).toBeDefined();
+    const instance = Elbwalker();
+    expect(instance.config.elbLayer).toBeDefined();
   });
 
   test('empty push', () => {

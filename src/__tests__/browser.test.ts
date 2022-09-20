@@ -25,9 +25,6 @@ describe('Browser', () => {
 
     jest.resetModules();
     jest.clearAllMocks();
-
-    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
-    // elbwalker = require('../elbwalker').default;
   });
 
   afterEach(() => {

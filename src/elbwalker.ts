@@ -20,6 +20,7 @@ function Elbwalker(
   const instance: IElbwalker.Function = {
     push,
     config: {
+      elbLayer: config.elbLayer || w.elbLayer || [],
       prefix: config.prefix || IElbwalker.Commands.Prefix, // HTML prefix attribute
       version: config.version || 0,
     },
@@ -50,7 +51,7 @@ function Elbwalker(
     // custom: use the elbLayer
   }
 
-  initTrigger(instance.config.prefix);
+  initTrigger(instance);
 
   function push(
     event?: unknown,
@@ -140,9 +141,9 @@ function Elbwalker(
   }
 
   function elbLayerInit(elbwalker: IElbwalker.Function) {
-    w.elbLayer = w.elbLayer || [];
+    const elbLayer = elbwalker.config.elbLayer;
 
-    w.elbLayer.push = function (
+    elbLayer.push = function (
       event?: IArguments | unknown,
       data?: IElbwalker.PushData,
       trigger?: string,
@@ -159,7 +160,7 @@ function Elbwalker(
     };
 
     // Look if the run command is stacked
-    const containsRun = w.elbLayer.find((element) => {
+    const containsRun = elbLayer.find((element) => {
       // Differentiate between the two types of possible event pushes
       element = isArgument(element) ? (element as IArguments)[0] : element;
       return element == runCommand;
@@ -189,7 +190,7 @@ function Elbwalker(
       callPredefined(elbwalker);
     }
 
-    trycatch(triggerLoad)(elbwalker.config.prefix);
+    trycatch(triggerLoad)(elbwalker);
   }
 
   // Handle existing events in the elbLayer on first run
@@ -203,7 +204,7 @@ function Elbwalker(
     let isFirstRunEvent = true;
 
     // At that time the dataLayer was not yet initialized
-    w.elbLayer.map((pushedEvent) => {
+    elbwalker.config.elbLayer.map((pushedEvent) => {
       let [event, data, trigger, nested] = [
         ...Array.from(pushedEvent as IArguments),
       ] as IElbwalker.ElbLayer;

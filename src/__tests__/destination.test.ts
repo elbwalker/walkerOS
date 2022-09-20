@@ -18,8 +18,6 @@ describe('Destination', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
-    w.elbLayer = [];
-    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
 
     elbwalker = Elbwalker();
 
