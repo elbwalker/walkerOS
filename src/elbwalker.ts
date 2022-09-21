@@ -85,6 +85,38 @@ function Elbwalker(
     const id = `${timestamp}-${_group}-${_count}`;
 
     destinations.map((destination) => {
+      const pushEvent: IElbwalker.Event = {
+        event,
+        // Create a new objects for each destination
+        // to prevent data manipulation
+        data: assign({}, data as IElbwalker.AnyObject),
+        globals: assign({}, _globals),
+        user: assign({}, _user as IElbwalker.AnyObject),
+        nested: nested || [],
+        id,
+        trigger: trigger || '',
+        entity,
+        action,
+        timestamp,
+        timing,
+        group: _group,
+        count: _count,
+        version: {
+          config: instance.config.version,
+          walker: version,
+        },
+      };
+
+      // Check for an active mapping for proper event handling
+      const mapping = destination.config.mapping;
+      if (mapping) {
+        const mappingEntity = mapping[entity] || mapping['*'] || {};
+        const mappingEvent = mappingEntity[action] || mappingEntity['*'];
+
+        // don't push if there's no matching mapping
+        if (!mappingEvent) return;
+      }
+
       trycatch(() => {
         // Destination initialization
         // Check if the destination was initialized properly or try to do so
@@ -96,27 +128,7 @@ function Elbwalker(
           if (!init) return;
         }
 
-        destination.push({
-          event,
-          // Create a new objects for each destination
-          // to prevent data manipulation
-          data: assign({}, data as IElbwalker.AnyObject),
-          globals: assign({}, _globals),
-          user: assign({}, _user as IElbwalker.AnyObject),
-          nested: nested || [],
-          id,
-          trigger: trigger || '',
-          entity,
-          action,
-          timestamp,
-          timing,
-          group: _group,
-          count: _count,
-          version: {
-            config: instance.config.version,
-            walker: version,
-          },
-        });
+        destination.push(pushEvent);
       })();
     });
   }
