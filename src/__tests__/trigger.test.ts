@@ -6,9 +6,6 @@ require('intersection-observer');
 const w = window;
 let elbwalker: IElbwalker.Function;
 
-jest.useFakeTimers();
-jest.spyOn(global, 'setTimeout');
-jest.spyOn(global, 'setInterval');
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
@@ -26,6 +23,9 @@ describe('Trigger', () => {
 
     jest.clearAllMocks();
     jest.resetModules();
+    jest.useFakeTimers();
+    jest.spyOn(global, 'setTimeout');
+    jest.spyOn(global, 'setInterval');
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
     w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
@@ -220,7 +220,7 @@ describe('Trigger', () => {
     );
   });
 
-  test.only('pulse', () => {
+  test('pulse', () => {
     expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 5000);
 
     expect(mockFn).not.toHaveBeenCalledWith(
