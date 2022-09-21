@@ -1,5 +1,5 @@
-import Elbwalker from '../elbwalker'
-import { IElbwalker } from "../types";
+import Elbwalker from '../elbwalker';
+import { IElbwalker } from '../types';
 import fs from 'fs';
 require('intersection-observer');
 
@@ -191,25 +191,31 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenCalledTimes(3);
   });
 
-  test.skip('wait', () => {
-    // @TODO it's very stupid to write your own tests. Change the time 4000 ...
-
+  test('wait', () => {
     expect(setTimeout).toHaveBeenLastCalledWith(expect.any(Function), 4000);
-    expect(mockFn).not.toHaveBeenLastCalledWith(
-      'timer alarm',
-      { its: 'time' },
-      'wait',
-      [],
+
+    expect(mockFn).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        trigger: 'wait',
+      }),
     );
 
-    // Simulate timer
-    jest.runAllTimers();
+    jest.clearAllMocks();
+
+    // Simulate timer, expected a 4sec wait
+    jest.advanceTimersByTime(2000);
+
+    expect(mockFn).not.toHaveBeenCalled();
+
+    // Simulate timer to total waiting time of 4000ms
+    jest.advanceTimersByTime(2000);
 
     expect(mockFn).toHaveBeenLastCalledWith(
-      'timer alarm',
-      { its: 'time' },
-      'wait',
-      [],
+      expect.objectContaining({
+        event: 'timer alarm',
+        trigger: 'wait',
+        data: { its: 'time' },
+      }),
     );
   });
 });

@@ -1,4 +1,4 @@
-import { IElbwalker } from ".";
+import { IElbwalker } from '.';
 
 export namespace Walker {
   type PushEvent = Array<[string, unknown]>;
@@ -12,7 +12,7 @@ export namespace Walker {
     nested: Walker.Entities;
   }
 
-  type Entities = Entity[];
+  type Entities = Array<Entity>;
   interface Entity {
     type: EntityType;
     data: EntityData;
@@ -25,11 +25,31 @@ export namespace Walker {
   };
 
   type KeyVal = [string, string];
+
+  type Attributes = Array<string>;
+  // @TODO make trigger to const enums
   type Trigger = 'click' | 'hover' | 'load' | 'submit' | 'visible' | 'wait';
-  type Filter = Values | undefined;
+
+  interface Filter {
+    [name: string]: boolean;
+  }
+
   type Scope = Document | Element;
 
   interface Values {
     [name: string]: string;
+  }
+
+  interface TriggersActions {
+    [trigger: string]: TriggerActions;
+  }
+
+  type TriggerActions = Array<TriggerAction>;
+
+  interface TriggerAction {
+    trigger: string;
+    triggerParams?: string;
+    action: string;
+    actionParams?: string;
   }
 }

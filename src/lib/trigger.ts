@@ -1,5 +1,5 @@
 import { IElbwalker, Walker } from '../types';
-import { getElbAttributeName, walker } from './walker';
+import { resolveAttributes, getElbAttributeName, walker } from './walker';
 import { trycatch } from './utils';
 
 const d = document;
@@ -59,7 +59,14 @@ export function triggerLoad(instance: IElbwalker.Function) {
 
   // Trigger wait
   d.querySelectorAll(getActionselector(prefix, 'wait')).forEach((element) => {
-    setTimeout(() => handleTrigger(element, 'wait', instance), 4000); // @TODO use dynamic value
+    resolveAttributes(instance.config.prefix, element, 'wait').forEach(
+      (triggerAction) => {
+        const waitTime = parseInt(triggerAction.triggerParams || '');
+
+        if (waitTime)
+          setTimeout(() => handleTrigger(element, 'wait', instance), waitTime);
+      },
+    );
   });
 
   // Trigger visible
