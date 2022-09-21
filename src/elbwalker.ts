@@ -20,6 +20,7 @@ function Elbwalker(
   const instance: IElbwalker.Function = {
     push,
     config: {
+      consent: config.consent || {},
       elbLayer: config.elbLayer || w.elbLayer || [],
       pageview: 'pageview' in config ? !!config.pageview : true, // Trigger a page view event by default
       prefix: config.prefix || IElbwalker.Commands.Prefix, // HTML prefix attribute
@@ -31,6 +32,7 @@ function Elbwalker(
   let _count = 0; // Event counter for each run
   let _group = ''; // random id to group events of a run
   let _globals: IElbwalker.AnyObject = {}; // init globals as some random var
+  // @TODO move _user to config for better init and transparency
   let _user: IElbwalker.User = {}; // handles the user ids
   let _firstRun = true; // The first run is a special one due to state changes
   let _allowRunning = false; // Wait for explicit run command to start
@@ -139,6 +141,9 @@ function Elbwalker(
     elbwalker: IElbwalker.Function,
   ) {
     switch (action) {
+      case IElbwalker.Commands.Consent:
+        setConsent(data as IElbwalker.Consent, elbwalker);
+        break;
       case IElbwalker.Commands.Destination:
         addDestination(data);
         break;
@@ -247,6 +252,17 @@ function Elbwalker(
       const [event, data, trigger, nested] = item;
       elbwalker.push(event, data, trigger, nested);
     });
+  }
+
+  function setConsent(
+    data: IElbwalker.Consent,
+    elbwalker: IElbwalker.Function,
+  ) {
+    Object.entries(data).forEach(([consent, granted]) => {
+      elbwalker.config.consent[consent] = !!granted;
+    });
+
+    // @TODO fire destination queues
   }
 
   function setUserIds(data: IElbwalker.User) {

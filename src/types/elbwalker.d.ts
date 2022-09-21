@@ -22,6 +22,7 @@ export namespace IElbwalker {
   type PushData = AnyObject | WebDestination.Function;
 
   interface Config {
+    consent: Consent;
     prefix: string;
     pageview: boolean;
     custom?: boolean;
@@ -65,6 +66,10 @@ export namespace IElbwalker {
     Run = 'run',
     User = 'user',
     Walker = 'walker',
+  }
+
+  interface Consent {
+    [name: string]: boolean; // name of consent group or tool
   }
 
   interface Version {
