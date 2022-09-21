@@ -78,7 +78,10 @@ export function triggerLoad(instance: IElbwalker.Function) {
         const waitTime = parseInt(triggerAction.triggerParams || '');
 
         if (waitTime)
-          setInterval(() => handleTrigger(element, 'pulse', instance), waitTime);
+          setInterval(() => {
+            // Only trigger when tab is active
+            if (!document.hidden) handleTrigger(element, 'pulse', instance);
+          }, waitTime);
       },
     );
   });

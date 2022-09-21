@@ -254,5 +254,24 @@ describe('Trigger', () => {
         trigger: 'pulse',
       }),
     );
+
+    // Test the active page check
+    Object.defineProperty(document, 'hidden', {
+      value: true,
+      writable: true,
+    });
+
+    jest.clearAllMocks();
+    jest.advanceTimersByTime(10000);
+    expect(mockFn).not.toHaveBeenCalled();
+
+    Object.defineProperty(document, 'hidden', {
+      value: false,
+      writable: true,
+    });
+
+    jest.clearAllMocks();
+    jest.advanceTimersByTime(5000);
+    expect(mockFn).toHaveBeenCalled();
   });
 });
