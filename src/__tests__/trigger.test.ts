@@ -8,6 +8,7 @@ let elbwalker: IElbwalker.Function;
 
 jest.useFakeTimers();
 jest.spyOn(global, 'setTimeout');
+jest.spyOn(global, 'setInterval');
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
@@ -215,6 +216,42 @@ describe('Trigger', () => {
         event: 'timer alarm',
         trigger: 'wait',
         data: { its: 'time' },
+      }),
+    );
+  });
+
+  test.only('pulse', () => {
+    expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 5000);
+
+    expect(mockFn).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        trigger: 'pulse',
+      }),
+    );
+
+    jest.clearAllMocks();
+
+    jest.advanceTimersByTime(2500);
+
+    expect(mockFn).not.toHaveBeenCalled();
+
+    jest.advanceTimersByTime(2500);
+
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'pulse beat',
+        trigger: 'pulse',
+      }),
+    );
+
+    jest.clearAllMocks();
+    expect(mockFn).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(5000);
+
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'pulse beat',
+        trigger: 'pulse',
       }),
     );
   });

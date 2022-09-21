@@ -52,6 +52,8 @@ export function triggerLoad(instance: IElbwalker.Function) {
   // Trigger static page view
   view(instance);
 
+  // @TODO Test if querying generic data-elbaction once and loop them might be better
+
   // Trigger load
   d.querySelectorAll(getActionselector(prefix, 'load')).forEach((element) => {
     handleTrigger(element, 'load', instance);
@@ -65,6 +67,18 @@ export function triggerLoad(instance: IElbwalker.Function) {
 
         if (waitTime)
           setTimeout(() => handleTrigger(element, 'wait', instance), waitTime);
+      },
+    );
+  });
+
+  // Trigger pulse
+  d.querySelectorAll(getActionselector(prefix, 'pulse')).forEach((element) => {
+    resolveAttributes(instance.config.prefix, element, 'pulse').forEach(
+      (triggerAction) => {
+        const waitTime = parseInt(triggerAction.triggerParams || '');
+
+        if (waitTime)
+          setInterval(() => handleTrigger(element, 'pulse', instance), waitTime);
       },
     );
   });
