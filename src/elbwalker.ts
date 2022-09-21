@@ -86,7 +86,39 @@ function Elbwalker(
     const timing = Math.round(performance.now() / 10) / 100;
     const id = `${timestamp}-${_group}-${_count}`;
 
+    // Set the current consent states
+    const consentStates = instance.config.consent;
+
     destinations.map((destination) => {
+      // Check for consent
+      const destinationConsent = destination.config.consent;
+      if (destinationConsent) {
+        // Let's be strict here
+        let granted = false;
+
+        Object.keys(destinationConsent).forEach((consent) => {
+          if (consentStates[consent]) granted = true;
+        });
+
+        // No required consent given yet
+        if (!granted) {
+          // @TODO add event to queue
+
+          // Stop processing the event on this destination
+          return;
+        }
+      }
+
+      // Check for an active mapping for proper event handling
+      const mapping = destination.config.mapping;
+      if (mapping) {
+        const mappingEntity = mapping[entity] || mapping['*'] || {};
+        const mappingEvent = mappingEntity[action] || mappingEntity['*'];
+
+        // don't push if there's no matching mapping
+        if (!mappingEvent) return;
+      }
+
       const pushEvent: IElbwalker.Event = {
         event,
         // Create a new objects for each destination
@@ -108,16 +140,6 @@ function Elbwalker(
           walker: version,
         },
       };
-
-      // Check for an active mapping for proper event handling
-      const mapping = destination.config.mapping;
-      if (mapping) {
-        const mappingEntity = mapping[entity] || mapping['*'] || {};
-        const mappingEvent = mappingEntity[action] || mappingEntity['*'];
-
-        // don't push if there's no matching mapping
-        if (!mappingEvent) return;
-      }
 
       trycatch(() => {
         // Destination initialization
@@ -199,8 +221,10 @@ function Elbwalker(
 
     // Load globals properties
     // Due to site performance only once every run
-
     _globals = getGlobalProperties(elbwalker.config.prefix);
+
+    // Reset all destination queues
+    // @TODO do so!
 
     // Run predefined elbLayer stack once
     if (_firstRun) {
