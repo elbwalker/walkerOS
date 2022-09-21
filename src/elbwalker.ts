@@ -21,6 +21,7 @@ function Elbwalker(
     push,
     config: {
       elbLayer: config.elbLayer || w.elbLayer || [],
+      pageview: 'pageview' in config ? !!config.pageview : true, // Trigger a page view event by default
       prefix: config.prefix || IElbwalker.Commands.Prefix, // HTML prefix attribute
       version: config.version || 0,
     },

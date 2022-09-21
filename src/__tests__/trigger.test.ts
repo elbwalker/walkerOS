@@ -6,7 +6,6 @@ require('intersection-observer');
 const w = window;
 let elbwalker: IElbwalker.Function;
 
-
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
 
@@ -57,6 +56,24 @@ describe('Trigger', () => {
         event: 'page view',
         data: { domain: 'localhost', id: '/', title: '' },
         trigger: 'load',
+      }),
+    );
+  });
+
+  test('disable page view', () => {
+    // First default beforeEach call with pageview true by default
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'page view',
+      }),
+    );
+
+    jest.clearAllMocks();
+    elbwalker = Elbwalker({ pageview: false });
+
+    expect(mockFn).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'page view',
       }),
     );
   });

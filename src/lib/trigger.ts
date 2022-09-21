@@ -49,8 +49,8 @@ export function initTrigger(instance: IElbwalker.Function): void {
 export function triggerLoad(instance: IElbwalker.Function) {
   const prefix = instance.config.prefix;
 
-  // Trigger static page view
-  view(instance);
+  // Trigger static page view if enabled
+  if (instance.config.pageview) view(instance);
 
   // @TODO Test if querying generic data-elbaction once and loop them might be better
 

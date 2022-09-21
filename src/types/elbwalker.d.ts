@@ -23,6 +23,7 @@ export namespace IElbwalker {
 
   interface Config {
     prefix: string;
+    pageview: boolean;
     custom?: boolean;
     elbLayer: ElbLayer;
     projectId?: string;
