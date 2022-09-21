@@ -33,13 +33,13 @@ export function initTrigger(instance: IElbwalker.Function): void {
 
   // Trigger hover
   d.querySelectorAll<HTMLElement>(
-    getActionselector(instance.config.prefix, 'hover'),
+    getActionselector(instance.config.prefix, Walker.Trigger.Hover),
   ).forEach((element) => {
     element.addEventListener(
       'mouseenter',
       trycatch(function (this: Document, ev: MouseEvent) {
         if (ev.target instanceof Element)
-          handleTrigger(ev.target, 'hover', instance);
+          handleTrigger(ev.target, Walker.Trigger.Hover, instance);
       }),
     );
   });
@@ -55,36 +55,50 @@ export function triggerLoad(instance: IElbwalker.Function) {
   // @TODO Test if querying generic data-elbaction once and loop them might be better
 
   // Trigger load
-  d.querySelectorAll(getActionselector(prefix, 'load')).forEach((element) => {
-    handleTrigger(element, 'load', instance);
-  });
+  d.querySelectorAll(getActionselector(prefix, Walker.Trigger.Load)).forEach(
+    (element) => {
+      handleTrigger(element, Walker.Trigger.Load, instance);
+    },
+  );
 
   // Trigger wait
-  d.querySelectorAll(getActionselector(prefix, 'wait')).forEach((element) => {
-    resolveAttributes(instance.config.prefix, element, 'wait').forEach(
-      (triggerAction) => {
+  d.querySelectorAll(getActionselector(prefix, Walker.Trigger.Wait)).forEach(
+    (element) => {
+      resolveAttributes(
+        instance.config.prefix,
+        element,
+        Walker.Trigger.Wait,
+      ).forEach((triggerAction) => {
         const waitTime = parseInt(triggerAction.triggerParams || '');
 
         if (waitTime)
-          setTimeout(() => handleTrigger(element, 'wait', instance), waitTime);
-      },
-    );
-  });
+          setTimeout(
+            () => handleTrigger(element, Walker.Trigger.Wait, instance),
+            waitTime,
+          );
+      });
+    },
+  );
 
   // Trigger pulse
-  d.querySelectorAll(getActionselector(prefix, 'pulse')).forEach((element) => {
-    resolveAttributes(instance.config.prefix, element, 'pulse').forEach(
-      (triggerAction) => {
+  d.querySelectorAll(getActionselector(prefix, Walker.Trigger.Pulse)).forEach(
+    (element) => {
+      resolveAttributes(
+        instance.config.prefix,
+        element,
+        Walker.Trigger.Pulse,
+      ).forEach((triggerAction) => {
         const waitTime = parseInt(triggerAction.triggerParams || '');
 
         if (waitTime)
           setInterval(() => {
             // Only trigger when tab is active
-            if (!document.hidden) handleTrigger(element, 'pulse', instance);
+            if (!document.hidden)
+              handleTrigger(element, Walker.Trigger.Pulse, instance);
           }, waitTime);
-      },
-    );
-  });
+      });
+    },
+  );
 
   // Trigger visible
   observer = trycatch(observerVisible)(instance, 1000);
@@ -92,11 +106,11 @@ export function triggerLoad(instance: IElbwalker.Function) {
 }
 
 function triggerClick(ev: MouseEvent, instance: IElbwalker.Function) {
-  handleTrigger(ev.target as Element, 'click', instance);
+  handleTrigger(ev.target as Element, Walker.Trigger.Click, instance);
 }
 
 function triggerSubmit(ev: Event, instance: IElbwalker.Function) {
-  handleTrigger(ev.target as Element, 'submit', instance);
+  handleTrigger(ev.target as Element, Walker.Trigger.Submit, instance);
 }
 
 export function triggerVisible(
@@ -108,7 +122,7 @@ export function triggerVisible(
     // Disconnect previous
     if (disconnect) observer.disconnect();
 
-    const visibleSelector = getActionselector(prefix, 'visible');
+    const visibleSelector = getActionselector(prefix, Walker.Trigger.Visible);
 
     scope.querySelectorAll(visibleSelector).forEach((element) => {
       observer!.observe(element);
@@ -130,7 +144,7 @@ function view(instance: IElbwalker.Function) {
   if (l.hash) data.hash = l.hash;
 
   // @TODO get all nested entities
-  instance.config.elbLayer.push('page view', data, 'load');
+  instance.config.elbLayer.push('page view', data, Walker.Trigger.Load);
 }
 
 function observerVisible(
@@ -148,7 +162,11 @@ function observerVisible(
         if (entry.intersectionRatio >= 0.5) {
           const timer = w.setTimeout(function () {
             if (isVisible(target)) {
-              handleTrigger(target as Element, 'visible', instance);
+              handleTrigger(
+                target as Element,
+                Walker.Trigger.Visible,
+                instance,
+              );
               // Just count once
               delete target.dataset[timerId];
               if (observer) observer.unobserve(target);
@@ -227,5 +245,9 @@ function getActionselector(prefix: string, trigger: string) {
   // @TODO dealing with wildcart edge-case
   // when the 'load' term is in selector but not as a trigger
 
-  return `[${getElbAttributeName(prefix, 'action', false)}*=${trigger}]`;
+  return `[${getElbAttributeName(
+    prefix,
+    IElbwalker.Commands.Action,
+    false,
+  )}*=${trigger}]`;
 }
