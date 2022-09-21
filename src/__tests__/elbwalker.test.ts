@@ -1,5 +1,5 @@
 import Elbwalker from '../elbwalker';
-import { IElbwalker } from '../';
+import { IElbwalker, Walker } from '../';
 import fs from 'fs';
 import _ from 'lodash';
 require('intersection-observer');
@@ -26,8 +26,8 @@ describe('Elbwalker', () => {
   test('go', () => {
     w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
     expect(window.elbLayer).toBeUndefined();
-    Elbwalker();
-    expect(window.elbLayer).toBeDefined();
+    const instance = Elbwalker();
+    expect(instance.config.elbLayer).toBeDefined();
   });
 
   test('empty push', () => {
@@ -97,7 +97,7 @@ describe('Elbwalker', () => {
       user: {},
       nested: [],
       id: expect.any(String),
-      trigger: 'load',
+      trigger: Walker.Trigger.Load,
       entity: 'page',
       action: 'view',
       timestamp: expect.any(Number),
@@ -115,7 +115,7 @@ describe('Elbwalker', () => {
       user: {},
       nested: [],
       id: expect.any(String),
-      trigger: 'load',
+      trigger: Walker.Trigger.Load,
       entity: 'entity',
       action: 'action',
       timestamp: expect.any(Number),

@@ -1,4 +1,4 @@
-import { Walker, WebDestination } from ".";
+import { Walker, WebDestination } from '.';
 
 export namespace IElbwalker {
   type AnyObject = Record<string, unknown>;
@@ -23,7 +23,9 @@ export namespace IElbwalker {
 
   interface Config {
     prefix: string;
+    pageview: boolean;
     custom?: boolean;
+    elbLayer: ElbLayer;
     projectId?: string;
     version: number;
   }

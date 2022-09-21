@@ -20,6 +20,8 @@ function Elbwalker(
   const instance: IElbwalker.Function = {
     push,
     config: {
+      elbLayer: config.elbLayer || w.elbLayer || [],
+      pageview: 'pageview' in config ? !!config.pageview : true, // Trigger a page view event by default
       prefix: config.prefix || IElbwalker.Commands.Prefix, // HTML prefix attribute
       version: config.version || 0,
     },
@@ -50,7 +52,7 @@ function Elbwalker(
     // custom: use the elbLayer
   }
 
-  initTrigger(instance.config.prefix);
+  initTrigger(instance);
 
   function push(
     event?: unknown,
@@ -83,6 +85,38 @@ function Elbwalker(
     const id = `${timestamp}-${_group}-${_count}`;
 
     destinations.map((destination) => {
+      const pushEvent: IElbwalker.Event = {
+        event,
+        // Create a new objects for each destination
+        // to prevent data manipulation
+        data: assign({}, data as IElbwalker.AnyObject),
+        globals: assign({}, _globals),
+        user: assign({}, _user as IElbwalker.AnyObject),
+        nested: nested || [],
+        id,
+        trigger: trigger || '',
+        entity,
+        action,
+        timestamp,
+        timing,
+        group: _group,
+        count: _count,
+        version: {
+          config: instance.config.version,
+          walker: version,
+        },
+      };
+
+      // Check for an active mapping for proper event handling
+      const mapping = destination.config.mapping;
+      if (mapping) {
+        const mappingEntity = mapping[entity] || mapping['*'] || {};
+        const mappingEvent = mappingEntity[action] || mappingEntity['*'];
+
+        // don't push if there's no matching mapping
+        if (!mappingEvent) return;
+      }
+
       trycatch(() => {
         // Destination initialization
         // Check if the destination was initialized properly or try to do so
@@ -94,27 +128,7 @@ function Elbwalker(
           if (!init) return;
         }
 
-        destination.push({
-          event,
-          // Create a new objects for each destination
-          // to prevent data manipulation
-          data: assign({}, data as IElbwalker.AnyObject),
-          globals: assign({}, _globals),
-          user: assign({}, _user as IElbwalker.AnyObject),
-          nested: nested || [],
-          id,
-          trigger: trigger || '',
-          entity,
-          action,
-          timestamp,
-          timing,
-          group: _group,
-          count: _count,
-          version: {
-            config: instance.config.version,
-            walker: version,
-          },
-        });
+        destination.push(pushEvent);
       })();
     });
   }
@@ -140,9 +154,9 @@ function Elbwalker(
   }
 
   function elbLayerInit(elbwalker: IElbwalker.Function) {
-    w.elbLayer = w.elbLayer || [];
+    const elbLayer = elbwalker.config.elbLayer;
 
-    w.elbLayer.push = function (
+    elbLayer.push = function (
       event?: IArguments | unknown,
       data?: IElbwalker.PushData,
       trigger?: string,
@@ -159,7 +173,7 @@ function Elbwalker(
     };
 
     // Look if the run command is stacked
-    const containsRun = w.elbLayer.find((element) => {
+    const containsRun = elbLayer.find((element) => {
       // Differentiate between the two types of possible event pushes
       element = isArgument(element) ? (element as IArguments)[0] : element;
       return element == runCommand;
@@ -189,7 +203,7 @@ function Elbwalker(
       callPredefined(elbwalker);
     }
 
-    trycatch(triggerLoad)(elbwalker.config.prefix);
+    trycatch(triggerLoad)(elbwalker);
   }
 
   // Handle existing events in the elbLayer on first run
@@ -203,7 +217,7 @@ function Elbwalker(
     let isFirstRunEvent = true;
 
     // At that time the dataLayer was not yet initialized
-    w.elbLayer.map((pushedEvent) => {
+    elbwalker.config.elbLayer.map((pushedEvent) => {
       let [event, data, trigger, nested] = [
         ...Array.from(pushedEvent as IArguments),
       ] as IElbwalker.ElbLayer;
