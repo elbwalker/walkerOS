@@ -7,7 +7,7 @@ require('intersection-observer');
 describe('Elbwalker', () => {
   const w = window;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
-  const version = { config: 0, walker: 1.4 };
+  const version = { config: 0, walker: 1.5 };
 
   let elbwalker: IElbwalker.Function;
 

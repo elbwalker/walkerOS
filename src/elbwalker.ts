@@ -9,7 +9,7 @@ import {
   trycatch,
 } from './lib/utils';
 
-const version = 1.4;
+const version = 1.5;
 const w = window;
 
 function Elbwalker(

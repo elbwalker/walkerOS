@@ -238,7 +238,7 @@ describe('Destination', () => {
     expect(mockPushC).toHaveBeenCalledTimes(0);
   });
 
-  test.only('consent', () => {
+  test('consent', () => {
     jest.clearAllMocks();
     elbwalker = Elbwalker({
       consent: { functional: true, marketing: false },

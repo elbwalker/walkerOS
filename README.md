@@ -33,9 +33,9 @@ Just set a few HTML attributes
 
 <!-- Example usage -->
 <div
-  data-elb="newsletter"
-  data-elb-newsletter="list:analytics_hacks;position:overlay"
-  data-elbaction="click:signup"
+  data-elb="article"
+  data-elb-article="name:Seting up tracking easily;category:analytics"
+  data-elbaction="load:view"
 />
 ```
 
@@ -43,11 +43,11 @@ The result is for example something like this:
 
 ```js
 dataLayer.push({
-  event: 'newsletter signup', // combination of entity and action
+  event: 'article view', // combination of entity and action
   data: {
-    // arbitrary set properties with the data-elb-newsletter attribute
-    list: 'analytics_hacks',
-    position: 'overlay',
+    // arbitrary set properties with the data-elb-article attribute
+    name: 'Seting up tracking easily',
+    category: 'analytics',
   },
   globals: {
     // all set properties with the data-elbglobals attribute
@@ -60,18 +60,18 @@ dataLayer.push({
     id: 'userid',
     device: 'cookieid',
   },
-  nested: [], // all nested entities within the newsletter
+  nested: [], // all nested entities within the article
   id: '1647968113641-01b5e2-5', // timestamp, group & count of the event
-  trigger: 'click', // name of the trigger that fired
-  entity: 'newsletter', // entity name
-  action: 'signup', // entity action
+  trigger: 'load', // name of the trigger that fired
+  entity: 'article', // entity name
+  action: 'view', // entity action
   timestamp: 1647968113641, // time when the event fired
-  timing: 13.37, // how long it took from the page load to trigger the event
+  timing: 3.14, // how long it took from the page load to trigger the event
   group: '01b5e2', // random group id for all events on a page
   count: 2, // incremental counter of the events on a page
   version: {
     // Helpful when working with raw data
-    walker: 1.4, // used walker.js version
+    walker: 1.5, // used walker.js version
     config: 42, // a custom configuration version number
   },
   walker: true, // flag to filter events
@@ -80,17 +80,17 @@ dataLayer.push({
 
 You are completely free to define naming conventions. All you need to get started are the **entity, action & trigger attributes**. Learn more about the elbwalker [event model](https://www.elbwalker.com/blog/elbwalker-event-concept) and background in our [blog](https://www.elbwalker.com/blog/).
 
-1. You define the entity scope by setting the `data-elb` attribute with the name of an entity to an element, e.g. `data-elb="newsletter"`.
-2. An action can be added by setting the `data-elbaction` attribute on the same level or all child elements in combination with a matching trigger, e.g. `data-elbaction="click:signup"` to fire a _newsletter signup_ event when a user clicks on the tagged element.
-3. (Optional) To define the entities' properties, set the composited attribute `data-elb-ENTITY` with the name and value, e.g. `data-elb-newsletter="list:analytics_hacks;position:overlay"`.
+1. You define the entity scope by setting the `data-elb` attribute with the name of an entity to an element, e.g. `data-elb="article"`.
+2. An action can be added by setting the `data-elbaction` attribute on the same level or all child elements in combination with a matching trigger, e.g. `data-elbaction="click:signup"` to fire a _article view_ event when a user clicks on the tagged element.
+3. (Optional) To define the entities' properties, set the composited attribute `data-elb-ENTITY` with the name and value, e.g. `data-elb-article="name:Seting up tracking easily;category:analytics"`.
 
 ```html
 <body data-elbglobals="language:en;test:darkmode">
-  <div data-elb="newsletter" data-elb-newsletter="position:overlay">
-    <h1 data-elb-newsletter="list:analytics_hacks">
-      Awesome Analytics Hacks Newsletter
+  <div data-elb="article" data-elbaction="load:view">
+    <h1 data-elb-article="name:Seting up tracking easily">
+      Seting up tracking easily
     </h1>
-    <button data-elbaction="click:signup">Signup</button>
+    <p data-elb-article="category:analytics">Analytics</p>
   </div>
 </body>
 ```
@@ -112,12 +112,17 @@ Either use the walker.js via [npm](https://www.npmjs.com/package/@elbwalker/walk
 npm i @elbwalker/walker.js --save
 ```
 
+```ts
+import Elbwalker from './walker.js';
+const elbwalker = Elbwalker({});
+```
+
 Or as a script
 
 ```html
 <script
   class="elbwalker"
-  src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.4/dist/walker.js"
+  src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.5/dist/walker.js"
 ></script>
 ```
 
@@ -154,6 +159,14 @@ By using the walker.js you don't have to deal with event listener or mutation ob
   <tr>
     <td>submit</td>
     <td>on a valid form submission</td>
+  </tr>
+  <tr>
+    <td>pulse(ms)</td>
+    <td>recurring trigger every _ms_ seconds (15 sec by default) if page is not hidden</td>
+  </tr>
+  <tr>
+    <td>wait(ms)</td>
+    <td>waits _ms_ seconds (15 sec by default) until triggering</td>
   </tr>
   <tr>
     <td>custom</td>
