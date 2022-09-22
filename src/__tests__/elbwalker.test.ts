@@ -1,15 +1,16 @@
-import { Elbwalker } from "../types";
+import Elbwalker from '../elbwalker';
+import { IElbwalker, Walker } from '../';
 import fs from 'fs';
 import _ from 'lodash';
 require('intersection-observer');
 
-const w = window;
-const version = { config: 0, walker: 1.4 };
-let elbwalker: Elbwalker.Function;
+describe('Elbwalker', () => {
+  const w = window;
+  const mockFn = jest.fn(); //.mockImplementation(console.log);
+  const version = { config: 0, walker: 1.5 };
 
-const mockFn = jest.fn(); //.mockImplementation(console.log);
+  let elbwalker: IElbwalker.Function;
 
-describe('elbwalker', () => {
   beforeEach(() => {
     // reset DOM with event listeners etc.
     document.body = document.body.cloneNode() as HTMLElement;
@@ -17,16 +18,16 @@ describe('elbwalker', () => {
     jest.resetModules();
     w.dataLayer = [];
     w.dataLayer!.push = mockFn;
-    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
-    elbwalker = require('../elbwalker').default;
-    elbwalker.go();
+    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
+
+    elbwalker = Elbwalker();
   });
 
   test('go', () => {
-    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
+    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
     expect(window.elbLayer).toBeUndefined();
-    elbwalker.go();
-    expect(window.elbLayer).toBeDefined();
+    const instance = Elbwalker();
+    expect(instance.config.elbLayer).toBeDefined();
   });
 
   test('empty push', () => {
@@ -96,7 +97,7 @@ describe('elbwalker', () => {
       user: {},
       nested: [],
       id: expect.any(String),
-      trigger: 'load',
+      trigger: Walker.Trigger.Load,
       entity: 'page',
       action: 'view',
       timestamp: expect.any(Number),
@@ -114,7 +115,7 @@ describe('elbwalker', () => {
       user: {},
       nested: [],
       id: expect.any(String),
-      trigger: 'load',
+      trigger: Walker.Trigger.Load,
       entity: 'entity',
       action: 'action',
       timestamp: expect.any(Number),
@@ -183,5 +184,27 @@ describe('elbwalker', () => {
         user: { id: 'userid', device: 'userid', hash: 'hashid' },
       }),
     );
+  });
+
+  test('walker consent', () => {
+    jest.clearAllMocks();
+    elbwalker = Elbwalker({
+      consent: { functional: true },
+      custom: true,
+      pageview: false,
+    });
+
+    elbwalker.push('walker run');
+
+    expect(elbwalker.config.consent.functional).toBeTruthy();
+    expect(elbwalker.config.consent.marketing).not.toBeTruthy();
+
+    // Grant permissions
+    elbwalker.push('walker consent', { marketing: true });
+    expect(elbwalker.config.consent.marketing).toBeTruthy();
+
+    // Revoke permissions
+    elbwalker.push('walker consent', { marketing: false });
+    expect(elbwalker.config.consent.marketing).not.toBeTruthy();
   });
 });

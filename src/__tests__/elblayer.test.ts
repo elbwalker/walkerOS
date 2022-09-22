@@ -1,8 +1,9 @@
-import { Elbwalker, WebDestination } from "../types";
+import Elbwalker from '../elbwalker';
+import { IElbwalker, WebDestination } from '../types';
 
-describe('elbLayer', () => {
+describe('ElbLayer', () => {
   const w = window;
-  let elbwalker: Elbwalker.Function;
+  let elbwalker: IElbwalker.Function;
 
   function walker(...args: unknown[]) {
     (window.elbLayer = window.elbLayer || []).push(arguments);
@@ -22,12 +23,10 @@ describe('elbLayer', () => {
     w.elbLayer = [];
     w.dataLayer = [];
     w.dataLayer.push = mockPush;
-    elbwalker = require('../elbwalker').default;
   });
 
   test('arguments and event pushes', () => {
-    elbwalker.go();
-
+    elbwalker = Elbwalker();
     walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
@@ -50,7 +49,7 @@ describe('elbLayer', () => {
   });
 
   test('predefined stack without run', () => {
-    elbwalker.go({ custom: true });
+    elbwalker = Elbwalker({ custom: true });
     walker('walker destination', destination);
     walker('entity action');
 
@@ -61,7 +60,7 @@ describe('elbLayer', () => {
     walker('e 1');
     walker('walker destination', destination);
 
-    elbwalker.go({ custom: true });
+    elbwalker = Elbwalker({ custom: true });
     walker('e 2');
     walker('walker run');
     // auto call: walker('page view');
@@ -97,7 +96,7 @@ describe('elbLayer', () => {
   });
 
   test('predefined stack with run', () => {
-    elbwalker.go({ custom: true });
+    elbwalker = Elbwalker({ custom: true });
 
     walker('walker destination', destination);
     walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
@@ -117,7 +116,7 @@ describe('elbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    elbwalker.go({ custom: true });
+    elbwalker = Elbwalker({ custom: true });
 
     walker();
     walker('event postponed');
@@ -145,6 +144,70 @@ describe('elbLayer', () => {
       expect.objectContaining({
         event: 'event later',
         user: { id: 'userid' },
+      }),
+    );
+  });
+
+  test('custom elbLayer', () => {
+    w.elbLayer = undefined as any;
+    w.dataLayer = [];
+    const customLayer1 = [] as IElbwalker.ElbLayer;
+    const customLayer2 = [] as IElbwalker.ElbLayer;
+    const instance1 = Elbwalker({ elbLayer: customLayer1 });
+    const instance2 = Elbwalker({ elbLayer: customLayer2 });
+
+    const mockDest1 = jest.fn();
+    const mockDest2 = jest.fn();
+    customLayer1.push('walker destination', {
+      push: mockDest1,
+    });
+    customLayer2.push('walker destination', {
+      push: mockDest2,
+    });
+
+    customLayer1.push('e a');
+    expect(mockDest1).toHaveBeenCalled();
+    expect(mockDest2).not.toHaveBeenCalled();
+
+    jest.clearAllMocks();
+    customLayer2.push('e a');
+    expect(mockDest1).not.toHaveBeenCalled();
+    expect(mockDest2).toHaveBeenCalled();
+
+    jest.clearAllMocks();
+    instance1.push('foo bar');
+    expect(mockDest1).toHaveBeenCalled();
+    expect(mockDest2).not.toHaveBeenCalled();
+
+    jest.clearAllMocks();
+    instance2.push('bar foo');
+    expect(mockDest1).not.toHaveBeenCalled();
+    expect(mockDest2).toHaveBeenCalled();
+
+    const length = w.dataLayer.length;
+    expect(w.dataLayer[length - 1]).toEqual(
+      expect.objectContaining({
+        event: 'bar foo',
+      }),
+    );
+    expect(w.dataLayer[length - 2]).toEqual(
+      expect.objectContaining({
+        event: 'foo bar',
+      }),
+    );
+
+    jest.clearAllMocks();
+    document.body.innerHTML = `<div data-elb="e" data-elbaction="load"></div>`;
+    instance1.push('walker run');
+    instance2.push('walker run');
+    expect(mockDest1).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e load',
+      }),
+    );
+    expect(mockDest2).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e load',
       }),
     );
   });

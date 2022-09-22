@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/walker.js",
-  "description": "An event tracker for all tools. Easy, standardized & flexible",
-  "version": "1.4.4",
+  "description": "Lightweight & vendor-agnostic tracking implementation layer by simply adding attributes to your markup.",
+  "version": "1.5.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/elbwalker/walker.js"
@@ -22,7 +22,6 @@
   "author": "elbwalker GmbH <hello@elbwalker.com>",
   "license": "MIT",
   "devDependencies": {
-    "@elbwalker/types": "^0.0.17",
     "@babel/core": "^7.18.10",
     "@babel/plugin-transform-runtime": "^7.18.10",
     "@babel/preset-env": "^7.18.10",

@@ -1,3 +1,4 @@
+import { Walker } from '../types';
 import { walker } from '../lib/walker';
 
 import fs from 'fs';
@@ -16,7 +17,7 @@ beforeEach(() => {
 
 describe('Walker', () => {
   test('Basic collection', () => {
-    expect(walker(getElem('basic'), 'load')).toMatchObject([
+    expect(walker(getElem('basic'), Walker.Trigger.Load)).toMatchObject([
       {
         entity: 'entity',
         action: 'action',
@@ -26,12 +27,12 @@ describe('Walker', () => {
   });
 
   test('Nested entites', () => {
-    expect(walker(getElem('nested'), 'load')).toMatchObject([
+    expect(walker(getElem('nested'), Walker.Trigger.Load)).toMatchObject([
       {
         entity: 'mother',
         action: 'like',
         data: { label: 'grandmother' },
-        trigger: 'load',
+        trigger: Walker.Trigger.Load,
         nested: [
           { type: 'son', data: { interested_in: 'pizza' } },
           {
@@ -44,7 +45,7 @@ describe('Walker', () => {
       },
     ]);
 
-    expect(walker(getElem('son'), 'load')).toMatchObject([
+    expect(walker(getElem('son'), Walker.Trigger.Load)).toMatchObject([
       {
         entity: 'son',
         action: 'speak',
@@ -55,7 +56,7 @@ describe('Walker', () => {
   });
 
   test('Nested entites filtered', () => {
-    expect(walker(getElem('daughter'), 'load')).toMatchObject([
+    expect(walker(getElem('daughter'), Walker.Trigger.Load)).toMatchObject([
       {
         entity: 'daughter',
         action: 'care',
@@ -65,7 +66,7 @@ describe('Walker', () => {
   });
 
   test('Nested entites filtered multiple', () => {
-    expect(walker(getElem('baby'), 'load')).toMatchObject([
+    expect(walker(getElem('baby'), Walker.Trigger.Load)).toMatchObject([
       {
         entity: 'baby',
         action: 'play',
@@ -76,14 +77,14 @@ describe('Walker', () => {
   });
 
   test('Quoted Attributes', () => {
-    expect(walker(getElem('attributes'), 'load')).toMatchObject([
+    expect(walker(getElem('attributes'), Walker.Trigger.Load)).toMatchObject([
       {
         entity: 'attributes',
         action: 'act;ion',
         data: { foo: 'ba;r', key: 'value' },
       },
     ]);
-    expect(walker(getElem('attributes'), 'click')).toMatchObject([
+    expect(walker(getElem('attributes'), Walker.Trigger.Click)).toMatchObject([
       {
         entity: 'attributes',
         action: 'action;',
@@ -93,7 +94,7 @@ describe('Walker', () => {
   });
 
   test('No elbwalker attribute at clicked element', () => {
-    expect(walker(getElem('click_test'), 'click')).toMatchObject([
+    expect(walker(getElem('click_test'), Walker.Trigger.Click)).toMatchObject([
       {
         entity: 'click',
         action: 'test',
@@ -103,51 +104,53 @@ describe('Walker', () => {
   });
 
   test('No action attribute at clicked element', () => {
-    expect(walker(getElem('click_bubble'), 'click')).toEqual([
+    expect(walker(getElem('click_bubble'), Walker.Trigger.Click)).toEqual([
       {
         entity: 'click',
         action: 'test',
         data: { foo: 'bar', key: 'value' },
-        trigger: 'click',
+        trigger: Walker.Trigger.Click,
         nested: [],
       },
     ]);
   });
 
   test('Empty action attribute at clicked element', () => {
-    expect(walker(getElem('click_bubble_action'), 'click')).toEqual([
+    expect(
+      walker(getElem('click_bubble_action'), Walker.Trigger.Click),
+    ).toEqual([
       {
         entity: 'click',
         action: 'test',
         data: { foo: 'bar', key: 'value' },
-        trigger: 'click',
+        trigger: Walker.Trigger.Click,
         nested: [],
       },
     ]);
   });
 
   test('Empty action attribute at clicked element and missing action attribute at parent', () => {
-    expect(walker(getElem('click_invalid'), 'click')).toEqual([]);
+    expect(walker(getElem('click_invalid'), Walker.Trigger.Click)).toEqual([]);
   });
 
   test('Missing action and property', () => {
-    expect(walker(getElem('just_entity'), 'click')).toEqual([]);
+    expect(walker(getElem('just_entity'), Walker.Trigger.Click)).toEqual([]);
   });
 
   test('Get nested child data properties with higher priority', () => {
-    expect(walker(getElem('propert_priority'), 'click')).toEqual([
+    expect(walker(getElem('propert_priority'), Walker.Trigger.Click)).toEqual([
       {
         entity: 'property',
         action: 'priority',
         data: { parent: 'property', prefere: 'deeper' },
-        trigger: 'click',
+        trigger: Walker.Trigger.Click,
         nested: [],
       },
     ]);
   });
 
   test('Dynamic values', () => {
-    expect(walker(getElem('dynamic_values'), 'click')).toEqual([
+    expect(walker(getElem('dynamic_values'), Walker.Trigger.Click)).toEqual([
       {
         action: 'click',
         entity: 'dynamic',
@@ -158,20 +161,22 @@ describe('Walker', () => {
           static: 'value',
           option: 'choosen',
         },
-        trigger: 'click',
+        trigger: Walker.Trigger.Click,
         nested: [],
       },
     ]);
   });
 
   test('Prefix', () => {
-    expect(walker(getElem('prefix'), 'load', 'elb')).toMatchObject([
-      {
-        entity: 'entity',
-        action: 'action',
-        data: { k: 'v' },
-      },
-    ]);
+    expect(walker(getElem('prefix'), Walker.Trigger.Load, 'elb')).toMatchObject(
+      [
+        {
+          entity: 'entity',
+          action: 'action',
+          data: { k: 'v' },
+        },
+      ],
+    );
   });
 });
 

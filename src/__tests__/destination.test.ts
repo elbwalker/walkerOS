@@ -1,8 +1,9 @@
-import { Elbwalker, WebDestination } from "../types";
+import Elbwalker from '../elbwalker';
+import { IElbwalker, WebDestination } from '../types';
 
-describe('destination', () => {
+describe('Destination', () => {
   const w = window;
-  let elbwalker: Elbwalker.Function;
+  let elbwalker: IElbwalker.Function;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn().mockImplementation(() => {
@@ -17,9 +18,8 @@ describe('destination', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
-    w.elbLayer = [];
-    elbwalker = require('../elbwalker').default;
-    elbwalker.go();
+
+    elbwalker = Elbwalker();
 
     destination = {
       init: mockInit,
@@ -143,103 +143,154 @@ describe('destination', () => {
     expect(mockInit).toHaveBeenCalled(); // 2nd destination
   });
 
-  // @TODO Mapping not active yet
-  test.skip('mapping', () => {
+  test('mapping', () => {
+    jest.clearAllMocks();
+    elbwalker = Elbwalker({ elbLayer: [], custom: true, pageview: false });
+    elbwalker.push('walker run');
+
     const mockPushA = jest.fn();
     const mockPushB = jest.fn();
     const mockPushC = jest.fn();
 
-    elbwalker.push('walker destination', {
-      init: mockInit,
+    const destinationA: WebDestination.Function = {
       push: mockPushA,
-    });
-    elbwalker.push('walker destination', {
-      init: mockInit,
+      config: {
+        mapping: {
+          entity: { action: {} },
+          foo: { bar: { custom: { strict: true } } },
+        },
+      },
+    };
+
+    const destinationB: WebDestination.Function = {
       push: mockPushB,
-      config: { mapping: { entity: { action: true } } },
-    });
-    elbwalker.push('walker destination', {
-      init: mockInit,
+      config: {
+        mapping: { '*': { action: {} } },
+      },
+    };
+
+    const destinationC: WebDestination.Function = {
       push: mockPushC,
-      config: { mapping: { food: { like: true } } },
-    });
+      config: { mapping: { entity: { '*': {} } } },
+    };
+
+    elbwalker.push('walker destination', destinationA);
+    elbwalker.push('walker destination', destinationB);
+    elbwalker.push('walker destination', destinationC);
 
     elbwalker.push('entity action');
-    expect(mockInit).toHaveBeenCalledTimes(3);
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
-    expect(mockPushA).toHaveBeenCalledWith({
-      event: 'entity action',
-      data: {},
-      globals: {},
-      user: {},
-      nested: [],
-      id: expect.any(String),
-      trigger: '',
-      entity: 'entity',
-      action: 'action',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: 1,
-    });
-    expect(mockPushB).toHaveBeenCalledWith({
-      event: 'entity action',
-      data: {},
-      globals: {},
-      user: {},
-      nested: [],
-      id: expect.any(String),
-      trigger: '',
-      entity: 'entity',
-      action: 'action',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: 1,
-    });
+    expect(mockPushA).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+      }),
+    );
+    expect(mockPushB).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+      }),
+    );
+    expect(mockPushC).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+      }),
+    );
 
     jest.clearAllMocks();
     elbwalker.push('foo bar');
     expect(mockPushA).toHaveBeenCalledTimes(1);
-    expect(mockPushB).toHaveBeenCalledTimes(1);
-    expect(mockPushC).toHaveBeenCalledTimes(1);
-    expect(mockPushA).toHaveBeenCalledWith({
-      event: 'foo bar',
-      data: {},
-      globals: {},
-      user: {},
-      nested: [],
-      id: expect.any(String),
-      trigger: '',
-      entity: 'foo',
-      action: 'bar',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: 2,
-    });
+    expect(mockPushB).toHaveBeenCalledTimes(0);
+    expect(mockPushC).toHaveBeenCalledTimes(0);
+    expect(mockPushA).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'foo bar',
+      }),
+    );
 
     jest.clearAllMocks();
-    elbwalker.push('food like');
+    elbwalker.push('random action');
+    expect(mockPushA).toHaveBeenCalledTimes(0);
+    expect(mockPushB).toHaveBeenCalledTimes(1);
+    expect(mockPushC).toHaveBeenCalledTimes(0);
+    expect(mockPushB).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'random action',
+      }),
+    );
+
+    jest.clearAllMocks();
+    elbwalker.push('entity random');
+    expect(mockPushA).toHaveBeenCalledTimes(0);
+    expect(mockPushB).toHaveBeenCalledTimes(0);
+    expect(mockPushC).toHaveBeenCalledTimes(1);
+    expect(mockPushC).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity random',
+      }),
+    );
+
+    jest.clearAllMocks();
+    elbwalker.push('absolutely unacceptable');
+    expect(mockPushA).toHaveBeenCalledTimes(0);
+    expect(mockPushB).toHaveBeenCalledTimes(0);
+    expect(mockPushC).toHaveBeenCalledTimes(0);
+  });
+
+  test('consent', () => {
+    jest.clearAllMocks();
+    elbwalker = Elbwalker({
+      consent: { functional: true, marketing: false },
+      custom: true,
+      pageview: false,
+    });
+    elbwalker.push('walker run');
+
+    const mockPushA = jest.fn();
+    const mockPushB = jest.fn();
+    const mockPushC = jest.fn();
+
+    const destinationA: WebDestination.Function = {
+      push: mockPushA,
+      config: {}, // No consent settings
+    };
+
+    const destinationB: WebDestination.Function = {
+      push: mockPushB,
+      config: { consent: { functional: true } },
+    };
+
+    const destinationC: WebDestination.Function = {
+      push: mockPushC,
+      config: { consent: { marketing: true } },
+    };
+
+    elbwalker.push('walker destination', destinationA);
+    elbwalker.push('walker destination', destinationB);
+    elbwalker.push('walker destination', destinationC);
+
+    // Init consent state
+    jest.clearAllMocks();
+    elbwalker.push('e a');
+    expect(mockPushA).toHaveBeenCalledTimes(1);
+    expect(mockPushB).toHaveBeenCalledTimes(1);
+    expect(mockPushC).toHaveBeenCalledTimes(0);
+
+    // Accepted consent
+    jest.clearAllMocks();
+    elbwalker.push('walker consent', { marketing: true });
+    elbwalker.push('e a');
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
-    expect(mockPushC).toHaveBeenCalledWith({
-      event: 'food like',
-      data: {},
-      globals: {},
-      user: {},
-      nested: [],
-      id: expect.any(String),
-      trigger: '',
-      entity: 'food',
-      action: 'like',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: 3,
-    });
+
+    // Revoked consent
+    jest.clearAllMocks();
+    elbwalker.push('walker consent', { functional: false, marketing: false });
+    elbwalker.push('e a');
+    expect(mockPushA).toHaveBeenCalledTimes(1);
+    expect(mockPushB).toHaveBeenCalledTimes(0);
+    expect(mockPushC).toHaveBeenCalledTimes(0);
   });
 });

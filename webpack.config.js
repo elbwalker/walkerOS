@@ -31,7 +31,7 @@ const nodeConfig = {
 
 const browserConfig = {
   mode: 'production',
-  entry: './src/walker.ts',
+  entry: './src/browser.ts',
   module: {
     rules: [
       {

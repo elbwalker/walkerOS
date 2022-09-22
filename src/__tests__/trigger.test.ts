@@ -1,22 +1,20 @@
-import { Elbwalker } from "../types";
+import Elbwalker from '../elbwalker';
+import { IElbwalker, Walker } from '../types';
 import fs from 'fs';
 require('intersection-observer');
 
 const w = window;
-let elbwalker: Elbwalker.Function;
-
-jest.useFakeTimers();
-jest.spyOn(global, 'setTimeout');
+let elbwalker: IElbwalker.Function;
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
 
-let events: Elbwalker.AnyObject = {};
+let events: IElbwalker.AnyObject = {};
 const html: string = fs
   .readFileSync(__dirname + '/html/trigger.html')
   .toString();
 
-describe('trigger', () => {
+describe('Trigger', () => {
   beforeEach(() => {
     // reset DOM with event listeners etc.
     document.body = document.body.cloneNode() as HTMLElement;
@@ -24,10 +22,12 @@ describe('trigger', () => {
 
     jest.clearAllMocks();
     jest.resetModules();
+    jest.useFakeTimers();
+    jest.spyOn(global, 'setTimeout');
+    jest.spyOn(global, 'setInterval');
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
-    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
-    elbwalker = require('../elbwalker').default;
+    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
 
     events = {};
     document.addEventListener = mockAddEventListener.mockImplementation(
@@ -36,16 +36,16 @@ describe('trigger', () => {
       },
     );
 
-    elbwalker.go();
+    elbwalker = Elbwalker();
   });
 
   test('init', () => {
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      'click',
+      Walker.Trigger.Click,
       expect.any(Function),
     );
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      'submit',
+      Walker.Trigger.Submit,
       expect.any(Function),
     );
   });
@@ -55,7 +55,25 @@ describe('trigger', () => {
       expect.objectContaining({
         event: 'page view',
         data: { domain: 'localhost', id: '/', title: '' },
-        trigger: 'load',
+        trigger: Walker.Trigger.Load,
+      }),
+    );
+  });
+
+  test('disable page view', () => {
+    // First default beforeEach call with pageview true by default
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'page view',
+      }),
+    );
+
+    jest.clearAllMocks();
+    elbwalker = Elbwalker({ pageview: false });
+
+    expect(mockFn).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'page view',
       }),
     );
   });
@@ -84,7 +102,7 @@ describe('trigger', () => {
           hash: '#hash',
           title: 'Title',
         },
-        trigger: 'load',
+        trigger: Walker.Trigger.Load,
       }),
     );
 
@@ -94,7 +112,7 @@ describe('trigger', () => {
         data: {
           k: 'v',
         },
-        trigger: 'load',
+        trigger: Walker.Trigger.Load,
       }),
     );
 
@@ -121,7 +139,7 @@ describe('trigger', () => {
       1,
       expect.objectContaining({
         event: 'page view',
-        trigger: 'load',
+        trigger: Walker.Trigger.Load,
       }),
     );
 
@@ -140,7 +158,7 @@ describe('trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'e click',
-        trigger: 'click',
+        trigger: Walker.Trigger.Click,
       }),
     );
   });
@@ -155,7 +173,7 @@ describe('trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'form submit',
-        trigger: 'submit',
+        trigger: Walker.Trigger.Submit,
       }),
     );
   });
@@ -181,7 +199,7 @@ describe('trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'mouse hover',
-        trigger: 'hover',
+        trigger: Walker.Trigger.Hover,
       }),
     );
 
@@ -191,25 +209,86 @@ describe('trigger', () => {
     expect(mockFn).toHaveBeenCalledTimes(3);
   });
 
-  test.skip('wait', () => {
-    // @TODO it's very stupid to write your own tests. Change the time 4000 ...
-
+  test('wait', () => {
     expect(setTimeout).toHaveBeenLastCalledWith(expect.any(Function), 4000);
-    expect(mockFn).not.toHaveBeenLastCalledWith(
-      'timer alarm',
-      { its: 'time' },
-      'wait',
-      [],
+
+    expect(mockFn).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        trigger: Walker.Trigger.Wait,
+      }),
     );
 
-    // Simulate timer
-    jest.runAllTimers();
+    jest.clearAllMocks();
+
+    // Simulate timer, expected a 4sec wait
+    jest.advanceTimersByTime(2000);
+
+    expect(mockFn).not.toHaveBeenCalled();
+
+    // Simulate timer to total waiting time of 4000ms
+    jest.advanceTimersByTime(2000);
 
     expect(mockFn).toHaveBeenLastCalledWith(
-      'timer alarm',
-      { its: 'time' },
-      'wait',
-      [],
+      expect.objectContaining({
+        event: 'timer alarm',
+        trigger: Walker.Trigger.Wait,
+        data: { its: 'time' },
+      }),
     );
+  });
+
+  test('pulse', () => {
+    expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 5000);
+
+    expect(mockFn).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        trigger: Walker.Trigger.Pulse,
+      }),
+    );
+
+    jest.clearAllMocks();
+
+    jest.advanceTimersByTime(2500);
+
+    expect(mockFn).not.toHaveBeenCalled();
+
+    jest.advanceTimersByTime(2500);
+
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'pulse beat',
+        trigger: Walker.Trigger.Pulse,
+      }),
+    );
+
+    jest.clearAllMocks();
+    expect(mockFn).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(5000);
+
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'pulse beat',
+        trigger: Walker.Trigger.Pulse,
+      }),
+    );
+
+    // Test the active page check
+    Object.defineProperty(document, 'hidden', {
+      value: true,
+      writable: true,
+    });
+
+    jest.clearAllMocks();
+    jest.advanceTimersByTime(10000);
+    expect(mockFn).not.toHaveBeenCalled();
+
+    Object.defineProperty(document, 'hidden', {
+      value: false,
+      writable: true,
+    });
+
+    jest.clearAllMocks();
+    jest.advanceTimersByTime(5000);
+    expect(mockFn).toHaveBeenCalled();
   });
 });

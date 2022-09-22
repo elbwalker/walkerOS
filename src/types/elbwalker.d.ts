@@ -1,10 +1,9 @@
-import { Walker, WebDestination } from ".";
+import { Walker, WebDestination } from '.';
 
-export namespace Elbwalker {
+export namespace IElbwalker {
   type AnyObject = Record<string, unknown>;
 
   export interface Function {
-    go: (config?: Partial<Config>) => void;
     push: (
       event?: IArguments | unknown,
       data?: PushData,
@@ -16,17 +15,20 @@ export namespace Elbwalker {
 
   type ElbLayer = [
     (IArguments | unknown)?,
-    Elbwalker.PushData?,
+    PushData?,
     string?,
     Walker.Entities?,
   ];
   type PushData = AnyObject | WebDestination.Function;
 
   interface Config {
+    consent: Consent;
     prefix: string;
+    pageview: boolean;
     custom?: boolean;
+    elbLayer: ElbLayer;
     projectId?: string;
-    version?: number;
+    version: number;
   }
 
   type Events = Event[];
@@ -64,6 +66,10 @@ export namespace Elbwalker {
     Run = 'run',
     User = 'user',
     Walker = 'walker',
+  }
+
+  interface Consent {
+    [name: string]: boolean; // name of consent group or tool
   }
 
   interface Version {

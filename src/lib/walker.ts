@@ -1,50 +1,72 @@
-import { Elbwalker, Walker } from '../types';
-import { assign, getAttribute, parseAttribute, splitAttribute } from './utils';
+import { IElbwalker, Walker } from '../types';
+import {
+  assign,
+  getAttribute,
+  parseAttribute,
+  splitAttribute,
+  splitKeyVal,
+} from './utils';
 
 export function walker(
   target: Element,
   trigger: Walker.Trigger,
-  prefix: string = Elbwalker.Commands.Prefix,
+  prefix: string = IElbwalker.Commands.Prefix,
 ): Walker.Events {
-  const [action, filter] = getActionAndFilter(target, trigger, prefix);
-  if (!action) return [];
+  const events: Walker.Events = [];
 
-  const entities = getEntities(target, filter, prefix);
-  return entities.map((entity) => {
-    return {
-      entity: entity.type,
-      action,
-      data: entity.data,
-      trigger,
-      nested: entity.nested,
-    };
+  // Check for an action (data-elbaction) attribute and resolve it
+  const actions = resolveAttributes(prefix, target, trigger);
+
+  // Stop if there's no valid action combo
+  if (!actions) return events;
+
+  actions.forEach((triggerAction) => {
+    const filter = splitAttribute(triggerAction.actionParams || '', ',').reduce(
+      (filter, param) => {
+        filter[param] = true;
+        return filter;
+      },
+      {} as Walker.Filter,
+    );
+
+    // Get the entities with their properties
+    const entities = getEntities(prefix, target, filter);
+
+    // Return a list of all full events
+    entities.forEach((entity) => {
+      events.push({
+        entity: entity.type,
+        action: triggerAction.action,
+        data: entity.data,
+        trigger,
+        nested: entity.nested,
+      });
+    });
   });
+
+  return events;
 }
 
-function getActionAndFilter(
-  target: Element,
-  triggerType: Walker.Trigger,
+export function resolveAttributes(
   prefix: string,
-): [string?, Walker.Filter?] {
+  target: Element,
+  trigger: Walker.Trigger,
+): Walker.TriggerActions {
   let element = target as Node['parentElement'];
 
   while (element) {
-    const attr = getAttribute(
+    const attribute = getAttribute(
       element,
-      getElbAttributeName(prefix, Elbwalker.Commands.Action, false),
+      getElbAttributeName(prefix, IElbwalker.Commands.Action, false),
     );
 
-    const [action, filterAttr] = parseAttribute(
-      splitAttribute(attr)[triggerType] || '',
-    );
+    // Get action string related to trigger
+    const triggerActions = getTriggerActions(attribute);
 
-    // Action found directly on element
-    // or check parent elements for click trigger
-    // @TODO always checking parent elements?!
-    if (action || triggerType !== 'click') {
-      const filter = filterAttr ? splitAttribute(filterAttr, ',') : undefined;
-      return [action, filter];
-    }
+    // Action found on element or is not a click trigger
+    // @TODO aggregate all click triggers, too
+    if (triggerActions[trigger] || trigger !== 'click')
+      return triggerActions[trigger];
 
     element = element.parentElement;
   }
@@ -52,13 +74,44 @@ function getActionAndFilter(
   return [];
 }
 
+function getTriggerActions(
+  str: string,
+  separator = ';',
+): Walker.TriggersActions {
+  const values: Walker.TriggersActions = {};
+
+  const attributes = splitAttribute(str);
+
+  attributes.forEach((str) => {
+    let [triggerAttr, actionAttr] = splitKeyVal(str);
+    const [trigger, triggerParams] = parseAttribute(triggerAttr);
+
+    if (!trigger) return;
+
+    let [action, actionParams] = parseAttribute(actionAttr || '');
+
+    // Shortcut if trigger and action are the same (click:click)
+    action = action || trigger;
+
+    if (!values[trigger]) values[trigger] = [];
+
+    values[trigger].push({ trigger, triggerParams, action, actionParams });
+  });
+
+  return values;
+}
+
 function getEntities(
-  target: Element,
-  filter: Walker.Filter,
   prefix: string,
+  target: Element,
+  filter?: Walker.Filter,
 ): Walker.Entities {
   const entities: Walker.Entities = [];
   let element = target as Node['parentElement'];
+
+  // Unset empty filter object
+  filter = Object.keys(filter || {}).length !== 0 ? filter : undefined;
+
   while (element) {
     const entity = getEntity(prefix, element);
 
@@ -75,7 +128,7 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
 
   if (!type) return null; // It's not a (valid) entity element
 
-  let data: Elbwalker.AnyObject = {};
+  let data: IElbwalker.AnyObject = {};
   const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
 
   // Get all parent data properties with decreasing priority
@@ -130,12 +183,22 @@ export function getElbAttributeName(
   return prefix + name;
 }
 
-function getElbValues(
+export function getElbValues(
   prefix: string,
   element: Element,
   name: string,
+  isProperty = true,
 ): Walker.Values {
-  return splitAttribute(
-    getAttribute(element, getElbAttributeName(prefix, name)) || '',
-  );
+  const values = splitAttribute(
+    getAttribute(element, getElbAttributeName(prefix, name, isProperty)) || '',
+  ).reduce((values, str) => {
+    let [key, val] = splitKeyVal(str);
+
+    // @TODO parse val format
+    values[key] = val;
+
+    return values;
+  }, {} as Walker.Values);
+
+  return values;
 }
