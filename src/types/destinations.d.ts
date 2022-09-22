@@ -10,7 +10,7 @@ export namespace WebDestination {
   }
 
   interface Config {
-    consent?: Consent; // Required consent states to init and push events
+    consent?: IElbwalker.Consent; // Required consent states to init and push events
     custom?: IElbwalker.AnyObject; // Arbitrary but protected configurations for custom enhancements
     init?: boolean; // if the destination has been initialized by calling the init method
     mapping?: Mapping; // a map to handle events individually
@@ -21,11 +21,7 @@ export namespace WebDestination {
   }
 
   interface MappingEvent {
-    consent?: Consent; // Required consent states to init and push events
+    consent?: IElbwalker.Consent; // Required consent states to init and push events
     custom?: IElbwalker.AnyObject; // Arbitrary but protected configurations for custom enhancements
-  }
-
-  interface Consent {
-    [name: string]: boolean; // name of consent group or tool
   }
 }

@@ -20,6 +20,7 @@ function Elbwalker(
   const instance: IElbwalker.Function = {
     push,
     config: {
+      consent: config.consent || {},
       elbLayer: config.elbLayer || w.elbLayer || [],
       pageview: 'pageview' in config ? !!config.pageview : true, // Trigger a page view event by default
       prefix: config.prefix || IElbwalker.Commands.Prefix, // HTML prefix attribute
@@ -31,6 +32,7 @@ function Elbwalker(
   let _count = 0; // Event counter for each run
   let _group = ''; // random id to group events of a run
   let _globals: IElbwalker.AnyObject = {}; // init globals as some random var
+  // @TODO move _user to config for better init and transparency
   let _user: IElbwalker.User = {}; // handles the user ids
   let _firstRun = true; // The first run is a special one due to state changes
   let _allowRunning = false; // Wait for explicit run command to start
@@ -84,7 +86,39 @@ function Elbwalker(
     const timing = Math.round(performance.now() / 10) / 100;
     const id = `${timestamp}-${_group}-${_count}`;
 
+    // Set the current consent states
+    const consentStates = instance.config.consent;
+
     destinations.map((destination) => {
+      // Check for consent
+      const destinationConsent = destination.config.consent;
+      if (destinationConsent) {
+        // Let's be strict here
+        let granted = false;
+
+        Object.keys(destinationConsent).forEach((consent) => {
+          if (consentStates[consent]) granted = true;
+        });
+
+        // No required consent given yet
+        if (!granted) {
+          // @TODO add event to queue
+
+          // Stop processing the event on this destination
+          return;
+        }
+      }
+
+      // Check for an active mapping for proper event handling
+      const mapping = destination.config.mapping;
+      if (mapping) {
+        const mappingEntity = mapping[entity] || mapping['*'] || {};
+        const mappingEvent = mappingEntity[action] || mappingEntity['*'];
+
+        // don't push if there's no matching mapping
+        if (!mappingEvent) return;
+      }
+
       const pushEvent: IElbwalker.Event = {
         event,
         // Create a new objects for each destination
@@ -106,16 +140,6 @@ function Elbwalker(
           walker: version,
         },
       };
-
-      // Check for an active mapping for proper event handling
-      const mapping = destination.config.mapping;
-      if (mapping) {
-        const mappingEntity = mapping[entity] || mapping['*'] || {};
-        const mappingEvent = mappingEntity[action] || mappingEntity['*'];
-
-        // don't push if there's no matching mapping
-        if (!mappingEvent) return;
-      }
 
       trycatch(() => {
         // Destination initialization
@@ -139,6 +163,9 @@ function Elbwalker(
     elbwalker: IElbwalker.Function,
   ) {
     switch (action) {
+      case IElbwalker.Commands.Consent:
+        setConsent(data as IElbwalker.Consent, elbwalker);
+        break;
       case IElbwalker.Commands.Destination:
         addDestination(data);
         break;
@@ -194,8 +221,10 @@ function Elbwalker(
 
     // Load globals properties
     // Due to site performance only once every run
-
     _globals = getGlobalProperties(elbwalker.config.prefix);
+
+    // Reset all destination queues
+    // @TODO do so!
 
     // Run predefined elbLayer stack once
     if (_firstRun) {
@@ -247,6 +276,17 @@ function Elbwalker(
       const [event, data, trigger, nested] = item;
       elbwalker.push(event, data, trigger, nested);
     });
+  }
+
+  function setConsent(
+    data: IElbwalker.Consent,
+    elbwalker: IElbwalker.Function,
+  ) {
+    Object.entries(data).forEach(([consent, granted]) => {
+      elbwalker.config.consent[consent] = !!granted;
+    });
+
+    // @TODO fire destination queues
   }
 
   function setUserIds(data: IElbwalker.User) {

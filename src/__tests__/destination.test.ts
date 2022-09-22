@@ -144,6 +144,7 @@ describe('Destination', () => {
   });
 
   test('mapping', () => {
+    jest.clearAllMocks();
     elbwalker = Elbwalker({ elbLayer: [], custom: true, pageview: false });
     elbwalker.push('walker run');
 
@@ -233,6 +234,62 @@ describe('Destination', () => {
     jest.clearAllMocks();
     elbwalker.push('absolutely unacceptable');
     expect(mockPushA).toHaveBeenCalledTimes(0);
+    expect(mockPushB).toHaveBeenCalledTimes(0);
+    expect(mockPushC).toHaveBeenCalledTimes(0);
+  });
+
+  test.only('consent', () => {
+    jest.clearAllMocks();
+    elbwalker = Elbwalker({
+      consent: { functional: true, marketing: false },
+      custom: true,
+      pageview: false,
+    });
+    elbwalker.push('walker run');
+
+    const mockPushA = jest.fn();
+    const mockPushB = jest.fn();
+    const mockPushC = jest.fn();
+
+    const destinationA: WebDestination.Function = {
+      push: mockPushA,
+      config: {}, // No consent settings
+    };
+
+    const destinationB: WebDestination.Function = {
+      push: mockPushB,
+      config: { consent: { functional: true } },
+    };
+
+    const destinationC: WebDestination.Function = {
+      push: mockPushC,
+      config: { consent: { marketing: true } },
+    };
+
+    elbwalker.push('walker destination', destinationA);
+    elbwalker.push('walker destination', destinationB);
+    elbwalker.push('walker destination', destinationC);
+
+    // Init consent state
+    jest.clearAllMocks();
+    elbwalker.push('e a');
+    expect(mockPushA).toHaveBeenCalledTimes(1);
+    expect(mockPushB).toHaveBeenCalledTimes(1);
+    expect(mockPushC).toHaveBeenCalledTimes(0);
+
+    // Accepted consent
+    jest.clearAllMocks();
+    elbwalker.push('walker consent', { marketing: true });
+    elbwalker.push('e a');
+    expect(mockPushA).toHaveBeenCalledTimes(1);
+    expect(mockPushB).toHaveBeenCalledTimes(1);
+    expect(mockPushC).toHaveBeenCalledTimes(1);
+
+    // Revoked consent
+    jest.clearAllMocks();
+    elbwalker.push('walker consent', { functional: false, marketing: false });
+    elbwalker.push('e a');
+    expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(0);
   });

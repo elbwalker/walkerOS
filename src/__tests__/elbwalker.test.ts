@@ -185,4 +185,26 @@ describe('Elbwalker', () => {
       }),
     );
   });
+
+  test('walker consent', () => {
+    jest.clearAllMocks();
+    elbwalker = Elbwalker({
+      consent: { functional: true },
+      custom: true,
+      pageview: false,
+    });
+
+    elbwalker.push('walker run');
+
+    expect(elbwalker.config.consent.functional).toBeTruthy();
+    expect(elbwalker.config.consent.marketing).not.toBeTruthy();
+
+    // Grant permissions
+    elbwalker.push('walker consent', { marketing: true });
+    expect(elbwalker.config.consent.marketing).toBeTruthy();
+
+    // Revoke permissions
+    elbwalker.push('walker consent', { marketing: false });
+    expect(elbwalker.config.consent.marketing).not.toBeTruthy();
+  });
 });
