@@ -1,11 +1,11 @@
 {
   "name": "@elbwalker/destination-web-event-pipe",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "",
   "main": "dist/index.js",
   "types": "dist",
   "scripts": {
-    "build" : "tsc",
+    "build": "tsc",
     "dev": "jest --watchAll --colors",
     "publish": "npm i && npm run test && npm run build && npm publish --access public",
     "test": "jest --colors --coverage"
@@ -22,7 +22,7 @@
     "dist/**/*.d.ts"
   ],
   "dependencies": {
-    "@elbwalker/walker.js": "^1.4.4"
+    "@elbwalker/walker.js": "^1.5.0"
   },
   "devDependencies": {
     "@types/jest": "^28.1.7",

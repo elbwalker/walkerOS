@@ -1,3 +1,4 @@
+import Elbwalker from '@elbwalker/walker.js';
 import { DestinationEventPipe } from '.';
 
 describe('Destination Elbwalker EventPipe', () => {
@@ -42,12 +43,11 @@ describe('Destination Elbwalker EventPipe', () => {
       writable: true,
     });
 
-    elbwalker = require('@elbwalker/walker.js').default;
     destination = require('.').default;
 
     destination.config.projectId = projectId;
 
-    elbwalker.go({ custom: true });
+    elbwalker = Elbwalker({ custom: true });
     elbwalker.push('walker run');
   });
 

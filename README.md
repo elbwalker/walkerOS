@@ -183,7 +183,7 @@ By default all events get pushed into the `dataLayer`, but you can customize the
 Example of adding a GA4 destination:
 
 ```sh
-npm i npm i @elbwalker/destination-web-google-ga4 --save
+npm i @elbwalker/destination-web-google-ga4 --save
 ```
 
 ```js
