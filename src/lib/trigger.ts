@@ -69,13 +69,12 @@ export function triggerLoad(instance: IElbwalker.Function) {
         element,
         Walker.Trigger.Wait,
       ).forEach((triggerAction) => {
-        const waitTime = parseInt(triggerAction.triggerParams || '');
+        const waitTime = parseInt(triggerAction.triggerParams || '') || 15000;
 
-        if (waitTime)
-          setTimeout(
-            () => handleTrigger(element, Walker.Trigger.Wait, instance),
-            waitTime,
-          );
+        setTimeout(
+          () => handleTrigger(element, Walker.Trigger.Wait, instance),
+          waitTime,
+        );
       });
     },
   );
@@ -88,14 +87,13 @@ export function triggerLoad(instance: IElbwalker.Function) {
         element,
         Walker.Trigger.Pulse,
       ).forEach((triggerAction) => {
-        const waitTime = parseInt(triggerAction.triggerParams || '');
+        const waitTime = parseInt(triggerAction.triggerParams || '') || 15000;
 
-        if (waitTime)
-          setInterval(() => {
-            // Only trigger when tab is active
-            if (!document.hidden)
-              handleTrigger(element, Walker.Trigger.Pulse, instance);
-          }, waitTime);
+        setInterval(() => {
+          // Only trigger when tab is active
+          if (!document.hidden)
+            handleTrigger(element, Walker.Trigger.Pulse, instance);
+        }, waitTime);
       });
     },
   );
@@ -229,6 +227,7 @@ function handleTrigger(
   element: Element,
   trigger: Walker.Trigger,
   instance: IElbwalker.Function,
+  // @TODO add triggerParams to filter for specific trigger
 ) {
   const events = walker(element, trigger, instance.config.prefix);
   events.forEach((event: Walker.Event) => {
