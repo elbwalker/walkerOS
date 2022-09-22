@@ -1,4 +1,4 @@
-import { Elbwalker, WebDestination } from '@elbwalker/walker.js';
+import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
@@ -17,7 +17,7 @@ export const destination: DestinationGTM = {
     return true;
   },
 
-  push(event: Elbwalker.Event): void {
+  push(event: IElbwalker.Event): void {
     window.dataLayer!.push({
       ...event,
       walker: true,

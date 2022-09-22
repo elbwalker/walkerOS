@@ -1,8 +1,9 @@
-import elbwalker from '@elbwalker/walker.js';
+import Elbwalker from '@elbwalker/walker.js';
 import { DestinationGTM } from '.';
 
 describe('destination google-tag-manager', () => {
   const w = window;
+  let elbwalker;
   const version = { config: 0, walker: expect.any(Number) };
 
   let destination: DestinationGTM;
@@ -19,7 +20,7 @@ describe('destination google-tag-manager', () => {
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
 
-    elbwalker.go({ custom: true });
+    elbwalker = Elbwalker({ custom: true });
     elbwalker.push('walker run');
     elbwalker.push('walker destination', destination);
   });
