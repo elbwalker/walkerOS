@@ -86,39 +86,7 @@ function Elbwalker(
     const timing = Math.round(performance.now() / 10) / 100;
     const id = `${timestamp}-${_group}-${_count}`;
 
-    // Set the current consent states
-    const consentStates = instance.config.consent;
-
-    destinations.map((destination) => {
-      // Check for consent
-      const destinationConsent = destination.config.consent;
-      if (destinationConsent) {
-        // Let's be strict here
-        let granted = false;
-
-        Object.keys(destinationConsent).forEach((consent) => {
-          if (consentStates[consent]) granted = true;
-        });
-
-        // No required consent given yet
-        if (!granted) {
-          // @TODO add event to queue
-
-          // Stop processing the event on this destination
-          return;
-        }
-      }
-
-      // Check for an active mapping for proper event handling
-      const mapping = destination.config.mapping;
-      if (mapping) {
-        const mappingEntity = mapping[entity] || mapping['*'] || {};
-        const mappingEvent = mappingEntity[action] || mappingEntity['*'];
-
-        // don't push if there's no matching mapping
-        if (!mappingEvent) return;
-      }
-
+    destinations.forEach((destination) => {
       const pushEvent: IElbwalker.Event = {
         event,
         // Create a new objects for each destination
@@ -141,20 +109,76 @@ function Elbwalker(
         },
       };
 
-      trycatch(() => {
-        // Destination initialization
-        // Check if the destination was initialized properly or try to do so
-        if (destination.init && !destination.config.init) {
-          const init = destination.init();
-          destination.config.init = init;
-
-          // don't push if init is false
-          if (!init) return;
-        }
-
-        destination.push(pushEvent);
-      })();
+      pushToDestination(instance, destination, pushEvent);
     });
+  }
+
+  function allowedToPush(
+    instance: IElbwalker.Function,
+    destination: WebDestination.Function,
+  ): boolean {
+    // Default without consent handling
+    let granted = true;
+
+    // Check for consent
+    const destinationConsent = destination.config.consent;
+
+    if (destinationConsent) {
+      // Let's be strict here
+      granted = false;
+
+      // Set the current consent states
+      const consentStates = instance.config.consent;
+
+      // Search for a required and granted consent
+      Object.keys(destinationConsent).forEach((consent) => {
+        if (consentStates[consent]) granted = true;
+      });
+    }
+
+    return granted;
+  }
+
+  function pushToDestination(
+    instance: IElbwalker.Function,
+    destination: WebDestination.Function,
+    event: IElbwalker.Event,
+    useQueue = true,
+  ) {
+    // No required consent given yet
+    if (!allowedToPush(instance, destination)) {
+      if (useQueue) {
+        destination.queue = destination.queue || [];
+        destination.queue.push(event);
+      }
+
+      // Stop processing the event on this destination
+      return;
+    }
+
+    // Check for an active mapping for proper event handling
+    const mapping = destination.config.mapping;
+    if (mapping) {
+      const mappingEntity = mapping[event.entity] || mapping['*'] || {};
+      const mappingEvent = mappingEntity[event.action] || mappingEntity['*'];
+
+      // don't push if there's no matching mapping
+      if (!mappingEvent) return;
+    }
+
+    trycatch(() => {
+      // Destination initialization
+      // Check if the destination was initialized properly or try to do so
+      if (destination.init && !destination.config.init) {
+        const init = destination.init();
+        destination.config.init = init;
+
+        // don't push if init is false
+        if (!init) return;
+      }
+
+      destination.push(event);
+    })();
   }
 
   function handleCommand(
