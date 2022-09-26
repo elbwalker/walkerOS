@@ -77,7 +77,7 @@ function Elbwalker(
 
     // Handle internal walker command events
     if (entity === IElbwalker.Commands.Walker) {
-      handleCommand(action, data, instance);
+      handleCommand(instance, action, data);
       return;
     }
 
@@ -87,6 +87,7 @@ function Elbwalker(
     const id = `${timestamp}-${_group}-${_count}`;
 
     destinations.forEach((destination) => {
+      // Individual event per destination to prevent a pointer mess
       const pushEvent: IElbwalker.Event = {
         event,
         // Create a new objects for each destination
@@ -182,19 +183,19 @@ function Elbwalker(
   }
 
   function handleCommand(
+    instance: IElbwalker.Function,
     action: string,
     data: IElbwalker.PushData = {},
-    elbwalker: IElbwalker.Function,
   ) {
     switch (action) {
       case IElbwalker.Commands.Consent:
-        setConsent(data as IElbwalker.Consent, elbwalker);
+        setConsent(instance, data as IElbwalker.Consent);
         break;
       case IElbwalker.Commands.Destination:
         addDestination(data);
         break;
       case IElbwalker.Commands.Run:
-        ready(run, elbwalker);
+        ready(run, instance);
         break;
       case IElbwalker.Commands.User:
         setUserIds(data as IElbwalker.AnyObject);
@@ -204,8 +205,8 @@ function Elbwalker(
     }
   }
 
-  function elbLayerInit(elbwalker: IElbwalker.Function) {
-    const elbLayer = elbwalker.config.elbLayer;
+  function elbLayerInit(instance: IElbwalker.Function) {
+    const elbLayer = instance.config.elbLayer;
 
     elbLayer.push = function (
       event?: IArguments | unknown,
@@ -218,7 +219,7 @@ function Elbwalker(
         [event, data, trigger, nested] = [...Array.from(event as IArguments)];
       }
 
-      elbwalker.push(event, data, trigger, nested);
+      instance.push(event, data, trigger, nested);
 
       return Array.prototype.push.apply(this, [arguments]);
     };
@@ -230,10 +231,10 @@ function Elbwalker(
       return element == runCommand;
     });
 
-    if (containsRun) ready(run, elbwalker); // Run walker run
+    if (containsRun) ready(run, instance); // Run walker run
   }
 
-  function run(elbwalker: IElbwalker.Function) {
+  function run(instance: IElbwalker.Function) {
     // When run is called, the walker may start running
     _allowRunning = true;
 
@@ -245,7 +246,7 @@ function Elbwalker(
 
     // Load globals properties
     // Due to site performance only once every run
-    _globals = getGlobalProperties(elbwalker.config.prefix);
+    _globals = getGlobalProperties(instance.config.prefix);
 
     // Reset all destination queues
     // @TODO do so!
@@ -253,14 +254,14 @@ function Elbwalker(
     // Run predefined elbLayer stack once
     if (_firstRun) {
       _firstRun = false;
-      callPredefined(elbwalker);
+      callPredefined(instance);
     }
 
-    trycatch(triggerLoad)(elbwalker);
+    trycatch(triggerLoad)(instance);
   }
 
   // Handle existing events in the elbLayer on first run
-  function callPredefined(elbwalker: IElbwalker.Function) {
+  function callPredefined(instance: IElbwalker.Function) {
     // there is a special execution order for all predefined events
     // walker events gets prioritized before others
     // this garantees a fully configuration before the first run
@@ -270,7 +271,7 @@ function Elbwalker(
     let isFirstRunEvent = true;
 
     // At that time the dataLayer was not yet initialized
-    elbwalker.config.elbLayer.map((pushedEvent) => {
+    instance.config.elbLayer.map((pushedEvent) => {
       let [event, data, trigger, nested] = [
         ...Array.from(pushedEvent as IArguments),
       ] as IElbwalker.ElbLayer;
@@ -298,19 +299,24 @@ function Elbwalker(
     // Prefere all walker commands before events during processing the predefined ones
     walkerEvents.concat(customEvents).map((item) => {
       const [event, data, trigger, nested] = item;
-      elbwalker.push(event, data, trigger, nested);
+      instance.push(event, data, trigger, nested);
     });
   }
 
-  function setConsent(
-    data: IElbwalker.Consent,
-    elbwalker: IElbwalker.Function,
-  ) {
+  function setConsent(instance: IElbwalker.Function, data: IElbwalker.Consent) {
+    let runQueue = false;
     Object.entries(data).forEach(([consent, granted]) => {
-      elbwalker.config.consent[consent] = !!granted;
+      const state = !!granted;
+
+      instance.config.consent[consent] = state;
+
+      // Only run queue if state was set to true
+      runQueue = runQueue || state;
     });
 
-    // @TODO fire destination queues
+    if (runQueue) {
+      // @TODO
+    }
   }
 
   function setUserIds(data: IElbwalker.User) {
