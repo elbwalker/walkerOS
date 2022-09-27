@@ -371,5 +371,14 @@ describe('Destination', () => {
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(0);
+
+    // New run without previous events
+    jest.clearAllMocks();
+    elbwalker.push('walker run');
+    elbwalker.push('walker consent', { functional: true, marketing: true });
+    elbwalker.push('only one');
+    expect(mockPushA).toHaveBeenCalledTimes(1);
+    expect(mockPushB).toHaveBeenCalledTimes(1);
+    expect(mockPushC).toHaveBeenCalledTimes(1);
   });
 });

@@ -253,7 +253,9 @@ function Elbwalker(
     _globals = getGlobalProperties(instance.config.prefix);
 
     // Reset all destination queues
-    // @TODO do so!
+    destinations.forEach((destination) => {
+      destination.queue = [];
+    });
 
     // Run predefined elbLayer stack once
     if (_firstRun) {
