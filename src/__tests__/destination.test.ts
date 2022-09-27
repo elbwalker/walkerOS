@@ -280,6 +280,10 @@ describe('Destination', () => {
     // Accepted consent
     jest.clearAllMocks();
     elbwalker.push('walker consent', { marketing: true });
+    expect(mockPushC).toHaveBeenCalledTimes(1); // retroactively pushed
+
+    // Regular push to all now
+    jest.clearAllMocks();
     elbwalker.push('e a');
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
@@ -289,6 +293,81 @@ describe('Destination', () => {
     jest.clearAllMocks();
     elbwalker.push('walker consent', { functional: false, marketing: false });
     elbwalker.push('e a');
+    expect(mockPushA).toHaveBeenCalledTimes(1);
+    expect(mockPushB).toHaveBeenCalledTimes(0);
+    expect(mockPushC).toHaveBeenCalledTimes(0);
+  });
+
+  test('queue', () => {
+    elbwalker = Elbwalker({
+      consent: { functional: true },
+      custom: true,
+      pageview: false,
+    });
+    elbwalker.push('walker run');
+
+    const mockPushA = jest.fn();
+    const mockPushB = jest.fn();
+    const mockPushC = jest.fn();
+
+    const destinationA: WebDestination.Function = {
+      push: mockPushA,
+      config: {}, // No consent settings
+    };
+
+    const destinationB: WebDestination.Function = {
+      push: mockPushB,
+      config: { consent: { functional: true } },
+    };
+
+    const destinationC: WebDestination.Function = {
+      push: mockPushC,
+      config: { consent: { marketing: true } },
+    };
+
+    elbwalker.push('walker destination', destinationA);
+    elbwalker.push('walker destination', destinationB);
+    elbwalker.push('walker destination', destinationC);
+
+    // Init consent state
+    jest.clearAllMocks();
+    elbwalker.push('p v');
+    expect(mockPushA).toHaveBeenCalledTimes(1);
+    expect(mockPushB).toHaveBeenCalledTimes(1);
+    expect(mockPushC).toHaveBeenCalledTimes(0);
+
+    elbwalker.push('e a');
+    expect(mockPushC).toHaveBeenCalledTimes(0);
+
+    // Accepted consent
+    elbwalker.push('walker consent', { marketing: true });
+
+    expect(mockPushC).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        event: 'p v',
+      }),
+    );
+
+    expect(mockPushC).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        event: 'e a',
+      }),
+    );
+
+    elbwalker.push('f b');
+    expect(mockPushC).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        event: 'f b',
+      }),
+    );
+
+    // Revoked consent
+    jest.clearAllMocks();
+    elbwalker.push('walker consent', { functional: false, marketing: false });
+    elbwalker.push('no pe');
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(0);

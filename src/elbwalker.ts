@@ -145,8 +145,8 @@ function Elbwalker(
     destination: WebDestination.Function,
     event: IElbwalker.Event,
     useQueue = true,
-  ) {
-    // No required consent given yet
+  ): boolean {
+    // Always check for required consent states before pushing
     if (!allowedToPush(instance, destination)) {
       if (useQueue) {
         destination.queue = destination.queue || [];
@@ -154,7 +154,7 @@ function Elbwalker(
       }
 
       // Stop processing the event on this destination
-      return;
+      return false;
     }
 
     // Check for an active mapping for proper event handling
@@ -164,10 +164,10 @@ function Elbwalker(
       const mappingEvent = mappingEntity[event.action] || mappingEntity['*'];
 
       // don't push if there's no matching mapping
-      if (!mappingEvent) return;
+      if (!mappingEvent) return false;
     }
 
-    trycatch(() => {
+    const pushed = !!trycatch(() => {
       // Destination initialization
       // Check if the destination was initialized properly or try to do so
       if (destination.init && !destination.config.init) {
@@ -175,11 +175,15 @@ function Elbwalker(
         destination.config.init = init;
 
         // don't push if init is false
-        if (!init) return;
+        if (!init) return false;
       }
 
       destination.push(event);
+
+      return true;
     })();
+
+    return pushed;
   }
 
   function handleCommand(
@@ -315,7 +319,14 @@ function Elbwalker(
     });
 
     if (runQueue) {
-      // @TODO
+      destinations.forEach((destination) => {
+        let queue = destination.queue || [];
+
+        // Try to push and remove successful ones from queue
+        queue = queue.filter(
+          (event) => !pushToDestination(instance, destination, event, false),
+        );
+      });
     }
   }
 
