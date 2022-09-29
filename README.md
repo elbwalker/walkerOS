@@ -19,9 +19,9 @@ Become independent from locked-in analytics systems and set up reliable tracking
 
 ## 🤓 Usage
 
-You can implement all sorts of front-end user events easily with walker.js. From product and UX events like "newsletter signup", or filter usage, etc. to e-commerce actions like product add to carts or order complete events.
+You can implement all sorts of front-end user events easily with walker.js. From product and UX events like "newsletter signup", or filter usage, etc. to e-commerce actions like product add to carts or order complete events. The walker.js handles all [trigger initializations](#-triggers) and race conditions, builds the [events with context](#-usage) and distributes them based on [consent states](#-consent) and [mapping definitions](#destination-configuration) to any [destinations](#-destinations).
 
-Just set a few HTML attributes
+Start by just set a few HTML attributes
 
 ```html
 <!-- Generic usage -->
@@ -113,7 +113,7 @@ npm i @elbwalker/walker.js --save
 ```
 
 ```ts
-import Elbwalker from './walker.js';
+import Elbwalker from '@elbwalker/walker.js';
 const elbwalker = Elbwalker({});
 ```
 
@@ -126,13 +126,15 @@ Or as a script
 ></script>
 ```
 
+> Note: Loading from external ressources is not recommended for production mode. You should always host it by your own in terms of GDPR.
+
 ### 🎬 Triggers
 
 By using the walker.js you don't have to deal with event listener or mutation observer initialization anymore. The walker comes with a bunch of integrated triggers that will fire your event at the right moment.
 
 ```html
-<!-- The trigger will fire the "app login" event -->
-<b data-elb="app" data-elbaction="TRIGGER:login">...</b>
+<!-- The trigger will fire the "entity action" event -->
+<b data-elb="entity" data-elbaction="TRIGGER:action">...</b>
 ```
 
 <table>
@@ -174,7 +176,7 @@ By using the walker.js you don't have to deal with event listener or mutation ob
   </tr>
 </table>
 
-_To see how triggers are used with different components, please refer to the exemplary usage in our [Template Gallery](/https://www.elbwalker.com/gallery)._
+_To see how triggers are used with different components, please refer to the exemplary usage in our [Template Gallery](https://www.elbwalker.com/gallery)._
 
 ### 🎯 Destinations
 
@@ -194,7 +196,7 @@ elbwalker.push('walker destination', GA4Destination); // Add the destination
 
 A destination has a `config` object and a `push` function. The optional `init` function will only get called if available and as long as `config.init !== true`. It's meant to load external scripts or configure mandatory fields required for all following events. If you don't want the build-in `init` function to get called, set `config.init = true` before adding it. Note that no events will be processed as long as the `init` functions return anything other than true.
 
-A complete destination configuration:
+#### Destination configuration:
 
 ```js
 // Typed as WebDestination.Function
@@ -235,7 +237,7 @@ const ExampleDestination = {
   },
 };
 
-walker('walker destination', ExampleDestination);
+elbwalker.push('walker destination', ExampleDestination);
 ```
 
 _See more examples, learn how to customize, or write your own in the [destinations deep dive](./destinations/)_.
@@ -247,10 +249,10 @@ You can define required consent states for each destination individually. With e
 Typically a Consent Management Platform (CMP) handles the consent. This is an asynchronous process. To set/change the consent state, the CMP should push one command with the permission state (true/false) of a group or an individual tool. If only one condition applies, consent is granted. Updating only one value won't override others.
 
 ```js
-walker('walker consent', { marketing: true });
+elbwalker.push('walker consent', { marketing: true });
 ```
 
-You are free to define consent keys (typically known as _functional_, _statistics_, _marketing_). But you can also use individual names for each vendor. The key has to match with the key used in each `destination.config.consent`. To revoke consent and stop sharing events with a destination set all matching rules to false, `walker('walker consent', { marketing: false });`.
+You are free to define consent keys (typically known as _functional_, _statistics_, _marketing_). But you can also use individual names for each vendor. The key has to match with the key used in each `destination.config.consent`. To revoke consent and stop sharing events with a destination set all matching rules to false, `elbwalker.push('walker consent', { marketing: false });`.
 
 ## 🛠 Contributing
 
