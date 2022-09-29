@@ -214,7 +214,7 @@ const ExampleDestination = {
     custom: {
       // anything you want and need
     },
-    // Current state of initializatio
+    // Current state of initialization
     init: false,
     // Individual event handling
     mapping: {
