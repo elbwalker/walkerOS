@@ -192,8 +192,48 @@ GA4Destination.config.measurementId = 'G-XXXXXXX'; // Set all required propertie
 elbwalker.push('walker destination', GA4Destination); // Add the destination
 ```
 
-A destination has a `config` object and an optional `init` as well as the `push` function.
-As soon as an event triggers the destinations init function gets called once so that all events will get sent to the additional destination now.
+A destination has a `config` object and the `push` function. The optional `init` function will only get called if available and as long as `config.init !== true`. It's meant to load external scripts or configure mandatory fields required for all following events. If you don't want the build in `init` function to get called, set `config.init = true` before adding it. Note that, no events will be processed as long as the `init` functions returns anything other than true.
+
+A complete destination configuration:
+
+```js
+// Typed as WebDestination.Function
+const ExampleDestination = {
+  push: console.log,
+  // Global settings are all optional
+  // Each destination might add new fields
+  config: {
+    // Required consent setting
+    consent: {
+      // List all required consent states
+      // At least one needs to be true to pass
+      marketing: true,
+      exampleDestination: true,
+    },
+    // Protected object for customized handling
+    custom: {
+      // anything you want and need
+    },
+    // Current state of initializatio
+    init: false,
+    // Individual event handling
+    mapping: {
+      // Each destination can have its own Event Mapping definitions
+      entity: { action: {} }, // Basic mapping structure
+      article: { view: {}, read: {} }, // Handling article events
+      // Matching all events
+      '*': {
+        '*': {
+          // Example value of a custom mapping for unspecified events
+          custom: { logUnknown: true },
+        },
+      },
+    },
+    // Additional settings depending on the destinations definitions
+  },
+};
+walker('walker destination', Debug);
+```
 
 _See more examples, learn how to customize, or write your own in the [destinations deep dive](./destinations/)_.
 
