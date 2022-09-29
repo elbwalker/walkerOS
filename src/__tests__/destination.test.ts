@@ -356,6 +356,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'p v',
       }),
+      undefined,
     );
 
     expect(mockPushC).toHaveBeenNthCalledWith(
@@ -363,6 +364,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'e a',
       }),
+      undefined,
     );
 
     elbwalker.push('f b');
@@ -371,6 +373,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'f b',
       }),
+      undefined,
     );
 
     // Revoked consent

@@ -235,7 +235,7 @@ const ExampleDestination = {
   },
 };
 
-walker('walker destination', ExampleDestination);
+elbwalker('walker destination', ExampleDestination);
 ```
 
 _See more examples, learn how to customize, or write your own in the [destinations deep dive](./destinations/)_.
@@ -247,7 +247,7 @@ You can define required consent states for each destination individually. With e
 Typically a Consent Management Platform (CMP) handles the consent. This is an asynchronous process. To set/change the consent state, the CMP should push one command with the permission state (true/false) of a group or an individual tool. If only one condition applies, consent is granted. Updating only one value won't override others.
 
 ```js
-walker('walker consent', { marketing: true });
+elbwalker('walker consent', { marketing: true });
 ```
 
 You are free to define consent keys (typically known as _functional_, _statistics_, _marketing_). But you can also use individual names for each vendor. The key has to match with the key used in each `destination.config.consent`. To revoke consent and stop sharing events with a destination set all matching rules to false, `walker('walker consent', { marketing: false });`.

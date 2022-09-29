@@ -158,10 +158,11 @@ function Elbwalker(
     }
 
     // Check for an active mapping for proper event handling
+    let mappingEvent: WebDestination.MappingEvent;
     const mapping = destination.config.mapping;
     if (mapping) {
       const mappingEntity = mapping[event.entity] || mapping['*'] || {};
-      const mappingEvent = mappingEntity[event.action] || mappingEntity['*'];
+      mappingEvent = mappingEntity[event.action] || mappingEntity['*'];
 
       // don't push if there's no matching mapping
       if (!mappingEvent) return false;
@@ -178,7 +179,7 @@ function Elbwalker(
         if (!init) return false;
       }
 
-      destination.push(event);
+      destination.push(event, mappingEvent);
 
       return true;
     })();
