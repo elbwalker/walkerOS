@@ -174,7 +174,7 @@ By using the walker.js you don't have to deal with event listener or mutation ob
   </tr>
 </table>
 
-_For further inspiration, please refer to the industry examples in our [docs](https://docs.elbwalker.com/examples/ecommerce)._
+_To see how triggers are used with different components, please refer to the exemplary usage in our [Template Gallery](/https://www.elbwalker.com/gallery)._
 
 ### 🎯 Destinations
 
