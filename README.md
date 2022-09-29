@@ -199,11 +199,13 @@ A complete destination configuration:
 ```js
 // Typed as WebDestination.Function
 const ExampleDestination = {
+  // Interface where each events is sent to
+  // (usually a bit more complex than here)
   push: console.log,
-  // Global settings are all optional
+  // All global settings are optional
   // Each destination might add new fields
   config: {
-    // Required consent setting
+    // Required consent setting to receive events
     consent: {
       // List all required consent states
       // At least one needs to be true to pass
@@ -237,6 +239,18 @@ walker('walker destination', ExampleDestination);
 ```
 
 _See more examples, learn how to customize, or write your own in the [destinations deep dive](./destinations/)_.
+
+### 🔐 Consent
+
+You can define required consent states for each destination individually. With each event the consent states gets checked. The walker.js handles the race conditions. If there is no required consent yet, the event will be added to an ordered queue. The queue is reset with each `walker run` command. And will be processed with each `walker consent` update.
+
+Typically a Consent Management Platform (CMP) handles the consent. This is an asynchronous process. To set/change the consent state, the CMP should push one command with the permission state (true/false) of a group or an individual tool. If only one condition applies, consent is granted. Updating only one value won't override others.
+
+```js
+walker('walker consent', { marketing: true });
+```
+
+You are free to define consent keys (typically known as _functional_, _statistics_, _marketing_). But you can also use individual names for each vendor. The key has to match with the key used in each `destination.config.consent`. To revoke consent and stop sharing events with a destination set all matching rules to false, `walker('walker consent', { marketing: false });`.
 
 ## 🛠 Contributing
 
