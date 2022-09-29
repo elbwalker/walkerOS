@@ -232,7 +232,8 @@ const ExampleDestination = {
     // Additional settings depending on the destinations definitions
   },
 };
-walker('walker destination', Debug);
+
+walker('walker destination', ExampleDestination);
 ```
 
 _See more examples, learn how to customize, or write your own in the [destinations deep dive](./destinations/)_.
