@@ -4,7 +4,7 @@ export namespace WebDestination {
   type Functions = Function[];
   interface Function {
     init?: () => boolean;
-    push: (event: IElbwalker.Event) => void;
+    push: (event: IElbwalker.Event, mapping?: MappingEvent) => void;
     config: Config;
     queue?: Array<IElbwalker.Event>; // Non processed events yet and resettet with each new run
   }
