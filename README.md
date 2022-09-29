@@ -192,7 +192,7 @@ GA4Destination.config.measurementId = 'G-XXXXXXX'; // Set all required propertie
 elbwalker.push('walker destination', GA4Destination); // Add the destination
 ```
 
-A destination has a `config` object and the `push` function. The optional `init` function will only get called if available and as long as `config.init !== true`. It's meant to load external scripts or configure mandatory fields required for all following events. If you don't want the build in `init` function to get called, set `config.init = true` before adding it. Note that, no events will be processed as long as the `init` functions returns anything other than true.
+A destination has a `config` object and a `push` function. The optional `init` function will only get called if available and as long as `config.init !== true`. It's meant to load external scripts or configure mandatory fields required for all following events. If you don't want the build-in `init` function to get called, set `config.init = true` before adding it. Note that no events will be processed as long as the `init` functions return anything other than true.
 
 A complete destination configuration:
 
