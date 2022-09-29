@@ -41,6 +41,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity action',
       }),
+      undefined,
     );
   });
 
@@ -96,6 +97,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity action',
       }),
+      undefined,
     );
   });
 
@@ -122,6 +124,7 @@ describe('Destination', () => {
         event: 'entity action',
         data,
       }),
+      undefined,
     );
   });
 
@@ -186,16 +189,19 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity action',
       }),
+      {},
     );
     expect(mockPushB).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
       }),
+      {},
     );
     expect(mockPushC).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
       }),
+      {},
     );
 
     jest.clearAllMocks();
@@ -207,6 +213,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'foo bar',
       }),
+      { custom: { strict: true } },
     );
 
     jest.clearAllMocks();
@@ -218,6 +225,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'random action',
       }),
+      {},
     );
 
     jest.clearAllMocks();
@@ -229,6 +237,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity random',
       }),
+      {},
     );
 
     jest.clearAllMocks();
