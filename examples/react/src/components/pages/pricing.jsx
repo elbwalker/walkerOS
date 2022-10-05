@@ -47,13 +47,9 @@ const pricing = {
   ],
 };
 
-export default function Example() {
+export default function Pricing() {
   return (
-    <div
-      className="max-w-7xl mx-auto py-24 px-4 sm:px-6 lg:px-8"
-      data-elb="pricing"
-      data-elbaction="load:view"
-    >
+    <div className="max-w-7xl mx-auto py-24 px-4 sm:px-6 lg:px-8">
       <h2 className="text-3xl font-extrabold text-gray-900 sm:text-5xl sm:leading-none sm:tracking-tight lg:text-6xl">
         Pricing plans for teams of all sizes
       </h2>
