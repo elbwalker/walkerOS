@@ -20,11 +20,11 @@ function Elbwalker(
   const instance: IElbwalker.Function = {
     push,
     config: {
-      consent: config.consent || {},
-      elbLayer: config.elbLayer || w.elbLayer || [],
+      consent: config.consent || {}, // Handle the cosnent states
+      elbLayer: config.elbLayer || (w.elbLayer = w.elbLayer || []), // Async access api in window as array
       pageview: 'pageview' in config ? !!config.pageview : true, // Trigger a page view event by default
       prefix: config.prefix || IElbwalker.Commands.Prefix, // HTML prefix attribute
-      version: config.version || 0,
+      version: config.version || 0, // Helpful to differentiate the clients used setup version
     },
   };
 
