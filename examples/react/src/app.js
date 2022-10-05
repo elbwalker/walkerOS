@@ -1,7 +1,6 @@
 import React from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { Footer, Home, LogIn, Navigation, Pricing } from './components';
-import {} from './data';
 
 export default function App() {
   // https://v5.reactrouter.com/web/api/Hooks/uselocation

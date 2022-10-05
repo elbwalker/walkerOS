@@ -1,4 +1,4 @@
-export const ButtonPrimary = ({ label, action }) => {
+export const ButtonPrimary = ({ label }) => {
   return (
     <Button
       label={label}
@@ -7,7 +7,7 @@ export const ButtonPrimary = ({ label, action }) => {
   );
 };
 
-export const ButtonSecondary = ({ label, action }) => {
+export const ButtonSecondary = ({ label }) => {
   return (
     <Button
       label={label}
