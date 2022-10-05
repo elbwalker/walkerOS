@@ -157,6 +157,14 @@ describe('ElbLayer', () => {
     );
   });
 
+  test('elbLayer initialization', () => {
+    w.elbLayer = undefined as any;
+
+    elbwalker = Elbwalker();
+
+    expect(w.elbLayer).toBeDefined();
+  });
+
   test('custom elbLayer', () => {
     w.elbLayer = undefined as any;
     w.dataLayer = [];

@@ -69,6 +69,7 @@ describe('Trigger', () => {
     );
 
     jest.clearAllMocks();
+    w.elbLayer = [];
     elbwalker = Elbwalker({ pageview: false });
 
     expect(mockFn).not.toHaveBeenCalledWith(
