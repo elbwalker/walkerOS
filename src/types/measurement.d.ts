@@ -1,13 +1,39 @@
 import { Walker } from './walker';
+import { WebDestination } from './destinations';
 
 export namespace Measurement {
   export interface Plan {
-    entities: Entities;
+    version: number;
     sources: Sources;
     destinations: Destinations;
+    owners: Owners;
+  }
+
+  interface Sources {
+    [sourceId: string]: Source;
+  }
+
+  interface Source {
+    name: string;
+    type: SourceType;
+    owners: Array<Owner>;
+    entities: Entities;
     globals: Properties;
-    version: string;
-    users: Users;
+  }
+
+  const enum SourceType {
+    App = 'app',
+    Other = 'other',
+    Server = 'server',
+    Web = 'web',
+  }
+
+  interface EntityIds {
+    [entityId: string]: string;
+  }
+
+  interface ActionIds {
+    [actionId: string]: string;
   }
 
   interface Entities {
@@ -19,7 +45,7 @@ export namespace Measurement {
     description: string;
     actions: Actions;
     properties: Properties;
-    owner: User;
+    owners: Array<Owner>;
   }
 
   interface Actions {
@@ -28,33 +54,20 @@ export namespace Measurement {
 
   interface Action {
     name: string;
-    consent: ConsentList;
     description: string;
-    properties: PropertyLink;
-    sources: ActionSources;
-    trigger: Trigger;
+    properties: Array<PropertyLink>;
+    trigger: Walker.Trigger;
     type: ActionType;
   }
-  type ActionType = 'core' | 'additional';
 
-  interface ActionSources {
-    [sourceId: string]: SourceLink;
-  }
-
-  type ConsentList = Array<ConsentId>;
-  type ConsentId = string;
-
-  interface Consent {
-    id: ConsentId;
-    name: string;
-  }
-
-  interface SourceLink {
-    required: boolean;
+  const enum ActionType {
+    Core = 'core',
+    Basic = 'basic',
+    UX = 'ux',
   }
 
   interface PropertyLink {
-    id: string;
+    propertyId: string;
     required: boolean;
   }
 
@@ -65,29 +78,9 @@ export namespace Measurement {
   interface Property {
     name: string;
     type: PropertyType;
-    consent: ConsentList;
-    example: string; // @TODO corresponding to type
   }
 
   type PropertyType = string | number | boolean;
-
-  interface Trigger {
-    type: TriggerType;
-  }
-
-  type TriggerType = Walker.Trigger;
-
-  interface Sources {
-    [sourceId: string]: Source;
-  }
-
-  interface Source {
-    name: string;
-    type: SourceType;
-    owner: User;
-  }
-
-  type SourceType = 'app' | 'other' | 'server' | 'web';
 
   interface Destinations {
     [destinationId: string]: Destination;
@@ -96,7 +89,8 @@ export namespace Measurement {
   interface Destination {
     name: string;
     type: DestinationType;
-    owner: User;
+    owners: Array<Owner>;
+    config: WebDestination.Config;
   }
 
   type DestinationType =
@@ -106,11 +100,11 @@ export namespace Measurement {
     | 'plausible'
     | 'custom';
 
-  interface Users {
-    [userId: string]: User;
+  interface Owners {
+    [ownerId: string]: Owner;
   }
 
-  interface User {
+  interface Owner {
     name: string;
   }
 }

@@ -21,7 +21,7 @@ export namespace WebDestination {
   }
 
   interface MappingEvent {
-    consent?: IElbwalker.Consent; // Required consent states to init and push events
+    consent?: IElbwalker.Consent; // Required consent states for a specific event
     custom?: IElbwalker.AnyObject; // Arbitrary but protected configurations for custom enhancements
   }
 }
