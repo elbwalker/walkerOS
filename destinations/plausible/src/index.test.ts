@@ -1,3 +1,4 @@
+import Elbwalker from '@elbwalker/walker.js';
 import { DestinationPlausible } from '.';
 
 describe('destination plausible', () => {
@@ -19,7 +20,7 @@ describe('destination plausible', () => {
     w.elbLayer = [];
     w.plausible = mockFn;
 
-    elbwalker.go({ custom: true });
+    elbwalker = Elbwalker({ custom: true });
     elbwalker.push('walker run');
   });
 

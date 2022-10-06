@@ -1,4 +1,4 @@
-import { Walker, WebDestination } from ".";
+import { Walker, WebDestination } from '.';
 
 export namespace IElbwalker {
   type AnyObject = Record<string, unknown>;
@@ -22,8 +22,11 @@ export namespace IElbwalker {
   type PushData = AnyObject | WebDestination.Function;
 
   interface Config {
+    consent: Consent;
     prefix: string;
+    pageview: boolean;
     custom?: boolean;
+    elbLayer: ElbLayer;
     projectId?: string;
     version: number;
   }
@@ -63,6 +66,10 @@ export namespace IElbwalker {
     Run = 'run',
     User = 'user',
     Walker = 'walker',
+  }
+
+  interface Consent {
+    [name: string]: boolean; // name of consent group or tool
   }
 
   interface Version {

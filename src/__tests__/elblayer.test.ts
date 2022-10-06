@@ -71,6 +71,7 @@ describe('ElbLayer', () => {
         event: 'e 1',
         count: 1,
       }),
+      undefined,
     );
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -78,6 +79,7 @@ describe('ElbLayer', () => {
         event: 'e 2',
         count: 2,
       }),
+      undefined,
     );
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -85,6 +87,7 @@ describe('ElbLayer', () => {
         event: 'page view',
         count: 3,
       }),
+      undefined,
     );
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -92,6 +95,7 @@ describe('ElbLayer', () => {
         event: 'e 4',
         count: 4,
       }),
+      undefined,
     );
   });
 
@@ -107,11 +111,13 @@ describe('ElbLayer', () => {
       expect.objectContaining({
         event: 'ingest argument',
       }),
+      undefined,
     );
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'ingest event',
       }),
+      undefined,
     );
   });
 
@@ -131,6 +137,7 @@ describe('ElbLayer', () => {
         event: 'event postponed',
         user: { id: 'userid' },
       }),
+      undefined,
     );
     expect(mockPush).toHaveBeenNthCalledWith(
       2,
@@ -138,6 +145,7 @@ describe('ElbLayer', () => {
         event: 'page view',
         user: { id: 'userid' },
       }),
+      undefined,
     );
     expect(mockPush).toHaveBeenNthCalledWith(
       3,
@@ -145,6 +153,81 @@ describe('ElbLayer', () => {
         event: 'event later',
         user: { id: 'userid' },
       }),
+      undefined,
+    );
+  });
+
+  test('elbLayer initialization', () => {
+    w.elbLayer = undefined as any;
+
+    elbwalker = Elbwalker();
+
+    expect(w.elbLayer).toBeDefined();
+  });
+
+  test('custom elbLayer', () => {
+    w.elbLayer = undefined as any;
+    w.dataLayer = [];
+    const customLayer1 = [] as IElbwalker.ElbLayer;
+    const customLayer2 = [] as IElbwalker.ElbLayer;
+    const instance1 = Elbwalker({ elbLayer: customLayer1 });
+    const instance2 = Elbwalker({ elbLayer: customLayer2 });
+
+    const mockDest1 = jest.fn();
+    const mockDest2 = jest.fn();
+    customLayer1.push('walker destination', {
+      push: mockDest1,
+    });
+    customLayer2.push('walker destination', {
+      push: mockDest2,
+    });
+
+    customLayer1.push('e a');
+    expect(mockDest1).toHaveBeenCalled();
+    expect(mockDest2).not.toHaveBeenCalled();
+
+    jest.clearAllMocks();
+    customLayer2.push('e a');
+    expect(mockDest1).not.toHaveBeenCalled();
+    expect(mockDest2).toHaveBeenCalled();
+
+    jest.clearAllMocks();
+    instance1.push('foo bar');
+    expect(mockDest1).toHaveBeenCalled();
+    expect(mockDest2).not.toHaveBeenCalled();
+
+    jest.clearAllMocks();
+    instance2.push('bar foo');
+    expect(mockDest1).not.toHaveBeenCalled();
+    expect(mockDest2).toHaveBeenCalled();
+
+    const length = w.dataLayer.length;
+    expect(w.dataLayer[length - 1]).toEqual(
+      expect.objectContaining({
+        event: 'bar foo',
+      }),
+    );
+    expect(w.dataLayer[length - 2]).toEqual(
+      expect.objectContaining({
+        event: 'foo bar',
+      }),
+    );
+
+    jest.clearAllMocks();
+    document.body.innerHTML = `<div data-elb="e" data-elbaction="load"></div>`;
+    instance1.push('walker run');
+    instance2.push('walker run');
+    expect(mockDest1).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e load',
+      }),
+      undefined,
+    );
+    expect(mockDest2).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e load',
+      }),
+      undefined,
     );
   });
 });

@@ -1,4 +1,4 @@
-import { Elbwalker, WebDestination } from '@elbwalker/walker.js';
+import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
@@ -32,7 +32,7 @@ export const destination: DestinationPlausible = {
     return true;
   },
 
-  push(event: Elbwalker.Event): void {
+  push(event: IElbwalker.Event): void {
     // page view event
     if (event.event === 'page view') {
       w.plausible('pageview');

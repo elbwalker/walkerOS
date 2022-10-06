@@ -1,4 +1,4 @@
-import { Elbwalker, WebDestination } from '@elbwalker/walker.js';
+import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
@@ -38,7 +38,7 @@ export const destination: DestinationEventPipe = {
     return true;
   },
 
-  push(event: Elbwalker.Event) {
+  push(event: IElbwalker.Event) {
     const href = excludeParameters(location.href, exclusionParameters);
     const referrer = excludeParameters(document.referrer, exclusionParameters);
 

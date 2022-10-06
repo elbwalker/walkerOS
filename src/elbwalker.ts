@@ -9,7 +9,7 @@ import {
   trycatch,
 } from './lib/utils';
 
-const version = 1.4;
+const version = 1.5;
 const w = window;
 
 function Elbwalker(
@@ -20,8 +20,11 @@ function Elbwalker(
   const instance: IElbwalker.Function = {
     push,
     config: {
+      consent: config.consent || {}, // Handle the cosnent states
+      elbLayer: config.elbLayer || (w.elbLayer = w.elbLayer || []), // Async access api in window as array
+      pageview: 'pageview' in config ? !!config.pageview : true, // Trigger a page view event by default
       prefix: config.prefix || IElbwalker.Commands.Prefix, // HTML prefix attribute
-      version: config.version || 0,
+      version: config.version || 0, // Helpful to differentiate the clients used setup version
     },
   };
 
@@ -29,6 +32,7 @@ function Elbwalker(
   let _count = 0; // Event counter for each run
   let _group = ''; // random id to group events of a run
   let _globals: IElbwalker.AnyObject = {}; // init globals as some random var
+  // @TODO move _user to config for better init and transparency
   let _user: IElbwalker.User = {}; // handles the user ids
   let _firstRun = true; // The first run is a special one due to state changes
   let _allowRunning = false; // Wait for explicit run command to start
@@ -50,7 +54,7 @@ function Elbwalker(
     // custom: use the elbLayer
   }
 
-  initTrigger(instance.config.prefix);
+  initTrigger(instance);
 
   function push(
     event?: unknown,
@@ -73,7 +77,7 @@ function Elbwalker(
 
     // Handle internal walker command events
     if (entity === IElbwalker.Commands.Walker) {
-      handleCommand(action, data, instance);
+      handleCommand(instance, action, data);
       return;
     }
 
@@ -82,54 +86,121 @@ function Elbwalker(
     const timing = Math.round(performance.now() / 10) / 100;
     const id = `${timestamp}-${_group}-${_count}`;
 
-    destinations.map((destination) => {
-      trycatch(() => {
-        // Destination initialization
-        // Check if the destination was initialized properly or try to do so
-        if (destination.init && !destination.config.init) {
-          const init = destination.init();
-          destination.config.init = init;
+    destinations.forEach((destination) => {
+      // Individual event per destination to prevent a pointer mess
+      const pushEvent: IElbwalker.Event = {
+        event,
+        // Create a new objects for each destination
+        // to prevent data manipulation
+        data: assign({}, data as IElbwalker.AnyObject),
+        globals: assign({}, _globals),
+        user: assign({}, _user as IElbwalker.AnyObject),
+        nested: nested || [],
+        id,
+        trigger: trigger || '',
+        entity,
+        action,
+        timestamp,
+        timing,
+        group: _group,
+        count: _count,
+        version: {
+          config: instance.config.version,
+          walker: version,
+        },
+      };
 
-          // don't push if init is false
-          if (!init) return;
-        }
-
-        destination.push({
-          event,
-          // Create a new objects for each destination
-          // to prevent data manipulation
-          data: assign({}, data as IElbwalker.AnyObject),
-          globals: assign({}, _globals),
-          user: assign({}, _user as IElbwalker.AnyObject),
-          nested: nested || [],
-          id,
-          trigger: trigger || '',
-          entity,
-          action,
-          timestamp,
-          timing,
-          group: _group,
-          count: _count,
-          version: {
-            config: instance.config.version,
-            walker: version,
-          },
-        });
-      })();
+      pushToDestination(instance, destination, pushEvent);
     });
   }
 
+  function allowedToPush(
+    instance: IElbwalker.Function,
+    destination: WebDestination.Function,
+  ): boolean {
+    // Default without consent handling
+    let granted = true;
+
+    // Check for consent
+    const destinationConsent = destination.config.consent;
+
+    if (destinationConsent) {
+      // Let's be strict here
+      granted = false;
+
+      // Set the current consent states
+      const consentStates = instance.config.consent;
+
+      // Search for a required and granted consent
+      Object.keys(destinationConsent).forEach((consent) => {
+        if (consentStates[consent]) granted = true;
+      });
+    }
+
+    return granted;
+  }
+
+  function pushToDestination(
+    instance: IElbwalker.Function,
+    destination: WebDestination.Function,
+    event: IElbwalker.Event,
+    useQueue = true,
+  ): boolean {
+    // Always check for required consent states before pushing
+    if (!allowedToPush(instance, destination)) {
+      if (useQueue) {
+        destination.queue = destination.queue || [];
+        destination.queue.push(event);
+      }
+
+      // Stop processing the event on this destination
+      return false;
+    }
+
+    // Check for an active mapping for proper event handling
+    let mappingEvent: WebDestination.MappingEvent;
+    const mapping = destination.config.mapping;
+    if (mapping) {
+      const mappingEntity = mapping[event.entity] || mapping['*'] || {};
+      mappingEvent = mappingEntity[event.action] || mappingEntity['*'];
+
+      // don't push if there's no matching mapping
+      if (!mappingEvent) return false;
+    }
+
+    const pushed = !!trycatch(() => {
+      // Destination initialization
+      // Check if the destination was initialized properly or try to do so
+      if (destination.init && !destination.config.init) {
+        const init = destination.init();
+        destination.config.init = init;
+
+        // don't push if init is false
+        if (!init) return false;
+      }
+
+      destination.push(event, mappingEvent);
+
+      return true;
+    })();
+
+    return pushed;
+  }
+
   function handleCommand(
+    instance: IElbwalker.Function,
     action: string,
     data: IElbwalker.PushData = {},
-    elbwalker: IElbwalker.Function,
   ) {
     switch (action) {
+      case IElbwalker.Commands.Consent:
+        setConsent(instance, data as IElbwalker.Consent);
+        break;
       case IElbwalker.Commands.Destination:
         addDestination(data);
         break;
       case IElbwalker.Commands.Run:
-        ready(run, elbwalker);
+        ready(run, instance);
         break;
       case IElbwalker.Commands.User:
         setUserIds(data as IElbwalker.AnyObject);
@@ -139,10 +210,10 @@ function Elbwalker(
     }
   }
 
-  function elbLayerInit(elbwalker: IElbwalker.Function) {
-    w.elbLayer = w.elbLayer || [];
+  function elbLayerInit(instance: IElbwalker.Function) {
+    const elbLayer = instance.config.elbLayer;
 
-    w.elbLayer.push = function (
+    elbLayer.push = function (
       event?: IArguments | unknown,
       data?: IElbwalker.PushData,
       trigger?: string,
@@ -153,22 +224,22 @@ function Elbwalker(
         [event, data, trigger, nested] = [...Array.from(event as IArguments)];
       }
 
-      elbwalker.push(event, data, trigger, nested);
+      instance.push(event, data, trigger, nested);
 
       return Array.prototype.push.apply(this, [arguments]);
     };
 
     // Look if the run command is stacked
-    const containsRun = w.elbLayer.find((element) => {
+    const containsRun = elbLayer.find((element) => {
       // Differentiate between the two types of possible event pushes
       element = isArgument(element) ? (element as IArguments)[0] : element;
       return element == runCommand;
     });
 
-    if (containsRun) ready(run, elbwalker); // Run walker run
+    if (containsRun) ready(run, instance); // Run walker run
   }
 
-  function run(elbwalker: IElbwalker.Function) {
+  function run(instance: IElbwalker.Function) {
     // When run is called, the walker may start running
     _allowRunning = true;
 
@@ -180,20 +251,24 @@ function Elbwalker(
 
     // Load globals properties
     // Due to site performance only once every run
+    _globals = getGlobalProperties(instance.config.prefix);
 
-    _globals = getGlobalProperties(elbwalker.config.prefix);
+    // Reset all destination queues
+    destinations.forEach((destination) => {
+      destination.queue = [];
+    });
 
     // Run predefined elbLayer stack once
     if (_firstRun) {
       _firstRun = false;
-      callPredefined(elbwalker);
+      callPredefined(instance);
     }
 
-    trycatch(triggerLoad)(elbwalker.config.prefix);
+    trycatch(triggerLoad)(instance);
   }
 
   // Handle existing events in the elbLayer on first run
-  function callPredefined(elbwalker: IElbwalker.Function) {
+  function callPredefined(instance: IElbwalker.Function) {
     // there is a special execution order for all predefined events
     // walker events gets prioritized before others
     // this garantees a fully configuration before the first run
@@ -203,7 +278,7 @@ function Elbwalker(
     let isFirstRunEvent = true;
 
     // At that time the dataLayer was not yet initialized
-    w.elbLayer.map((pushedEvent) => {
+    instance.config.elbLayer.map((pushedEvent) => {
       let [event, data, trigger, nested] = [
         ...Array.from(pushedEvent as IArguments),
       ] as IElbwalker.ElbLayer;
@@ -231,8 +306,31 @@ function Elbwalker(
     // Prefere all walker commands before events during processing the predefined ones
     walkerEvents.concat(customEvents).map((item) => {
       const [event, data, trigger, nested] = item;
-      elbwalker.push(event, data, trigger, nested);
+      instance.push(event, data, trigger, nested);
     });
+  }
+
+  function setConsent(instance: IElbwalker.Function, data: IElbwalker.Consent) {
+    let runQueue = false;
+    Object.entries(data).forEach(([consent, granted]) => {
+      const state = !!granted;
+
+      instance.config.consent[consent] = state;
+
+      // Only run queue if state was set to true
+      runQueue = runQueue || state;
+    });
+
+    if (runQueue) {
+      destinations.forEach((destination) => {
+        let queue = destination.queue || [];
+
+        // Try to push and remove successful ones from queue
+        queue = queue.filter(
+          (event) => !pushToDestination(instance, destination, event, false),
+        );
+      });
+    }
   }
 
   function setUserIds(data: IElbwalker.User) {

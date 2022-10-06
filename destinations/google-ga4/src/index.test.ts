@@ -1,3 +1,4 @@
+import Elbwalker from '@elbwalker/walker.js';
 import { DestinationGA4 } from '.';
 
 describe('Destination Google GA4', () => {
@@ -15,13 +16,12 @@ describe('Destination Google GA4', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    elbwalker = require('@elbwalker/walker.js').default;
     destination = require('.').default;
 
     w.elbLayer = [];
     w.dataLayer = [];
 
-    elbwalker.go({ custom: true });
+    elbwalker = Elbwalker({ custom: true });
     elbwalker.push('walker run');
     w.gtag = mockFn;
   });

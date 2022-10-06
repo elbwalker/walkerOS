@@ -1,5 +1,5 @@
 import Elbwalker from '../elbwalker';
-import { IElbwalker } from '../';
+import { IElbwalker, Walker } from '../';
 import fs from 'fs';
 import _ from 'lodash';
 require('intersection-observer');
@@ -7,7 +7,7 @@ require('intersection-observer');
 describe('Elbwalker', () => {
   const w = window;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
-  const version = { config: 0, walker: 1.4 };
+  const version = { config: 0, walker: 1.5 };
 
   let elbwalker: IElbwalker.Function;
 
@@ -26,8 +26,8 @@ describe('Elbwalker', () => {
   test('go', () => {
     w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
     expect(window.elbLayer).toBeUndefined();
-    Elbwalker();
-    expect(window.elbLayer).toBeDefined();
+    const instance = Elbwalker();
+    expect(instance.config.elbLayer).toBeDefined();
   });
 
   test('empty push', () => {
@@ -97,7 +97,7 @@ describe('Elbwalker', () => {
       user: {},
       nested: [],
       id: expect.any(String),
-      trigger: 'load',
+      trigger: Walker.Trigger.Load,
       entity: 'page',
       action: 'view',
       timestamp: expect.any(Number),
@@ -115,7 +115,7 @@ describe('Elbwalker', () => {
       user: {},
       nested: [],
       id: expect.any(String),
-      trigger: 'load',
+      trigger: Walker.Trigger.Load,
       entity: 'entity',
       action: 'action',
       timestamp: expect.any(Number),
@@ -184,5 +184,27 @@ describe('Elbwalker', () => {
         user: { id: 'userid', device: 'userid', hash: 'hashid' },
       }),
     );
+  });
+
+  test('walker consent', () => {
+    jest.clearAllMocks();
+    elbwalker = Elbwalker({
+      consent: { functional: true },
+      custom: true,
+      pageview: false,
+    });
+
+    elbwalker.push('walker run');
+
+    expect(elbwalker.config.consent.functional).toBeTruthy();
+    expect(elbwalker.config.consent.marketing).not.toBeTruthy();
+
+    // Grant permissions
+    elbwalker.push('walker consent', { marketing: true });
+    expect(elbwalker.config.consent.marketing).toBeTruthy();
+
+    // Revoke permissions
+    elbwalker.push('walker consent', { marketing: false });
+    expect(elbwalker.config.consent.marketing).not.toBeTruthy();
   });
 });

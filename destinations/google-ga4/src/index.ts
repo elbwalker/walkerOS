@@ -1,4 +1,4 @@
-import { Elbwalker, WebDestination } from '@elbwalker/walker.js';
+import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
@@ -22,7 +22,7 @@ export const destination: DestinationGA4 = {
 
   init() {
     let config = this.config;
-    const settings: Elbwalker.AnyObject = {};
+    const settings: IElbwalker.AnyObject = {};
 
     // required measuremt id
     if (!config.measurementId) return false;
@@ -47,7 +47,7 @@ export const destination: DestinationGA4 = {
     return true;
   },
 
-  push(event: Elbwalker.Event) {
+  push(event: IElbwalker.Event) {
     let data = event.data || {};
     data.send_to = measurementId;
 
