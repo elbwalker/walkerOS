@@ -94,9 +94,9 @@ export default function Pricing() {
             </div>
 
             {tier.mostPopular ? (
-              <ButtonPrimary label="Get started" action={tier.action} />
+              <ButtonPrimary label="Get started" />
             ) : (
-              <ButtonSecondary label="Get started" action={tier.action} />
+              <ButtonSecondary label="Get started" />
             )}
           </div>
         ))}
