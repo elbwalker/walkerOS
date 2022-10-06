@@ -1,5 +1,5 @@
-import React from 'react';
-import { AccountSignUp, CTA } from '../';
+import { AccountSignUp } from '../organisms/account';
+import CTA from '../organisms/cta';
 
 export default function Home() {
   return (
@@ -33,7 +33,6 @@ export default function Home() {
         <CTA
           title="Ready to dive in?"
           description="Start your free trial today."
-          position="home-footer"
         />
       </div>
     </div>

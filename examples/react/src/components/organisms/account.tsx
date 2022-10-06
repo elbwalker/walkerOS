@@ -1,7 +1,11 @@
-import React from 'react';
-import { ButtonPrimary } from '../atoms/button';
+import { ReactNode } from 'react';
+import { ButtonPrimary } from '../molecules/buttons';
 
-function AccountBox({ children }) {
+interface Props {
+  children?: ReactNode;
+}
+
+function AccountBox({ children }: Props) {
   return (
     <div className="bg-white sm:max-w-md sm:w-full sm:mx-auto sm:rounded-lg sm:overflow-hidden">
       <div className="px-4 py-8 sm:px-10">{children}</div>

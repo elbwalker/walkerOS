@@ -1,7 +1,11 @@
-import React from 'react';
-import { ButtonPrimary, ButtonSecondary } from '../atoms/button';
+import { ButtonPrimary, ButtonSecondary } from '../molecules/buttons';
 
-export default function CTA({ title, description }) {
+interface Props {
+  title: string;
+  description: string;
+}
+
+export default function CTA({ title, description }: Props) {
   return (
     <div
       data-elb="cta"

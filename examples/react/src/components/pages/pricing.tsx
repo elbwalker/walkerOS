@@ -1,6 +1,5 @@
-import React from 'react';
 import { CheckIcon } from '@heroicons/react/outline';
-import { ButtonPrimary, ButtonSecondary } from '../atoms/button';
+import { ButtonPrimary, ButtonSecondary } from '../molecules/buttons';
 
 const pricing = {
   tiers: [

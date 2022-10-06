@@ -277,7 +277,7 @@ function Elbwalker(
     const customEvents: Array<IElbwalker.ElbLayer> = [];
     let isFirstRunEvent = true;
 
-    // At that time the dataLayer was not yet initialized
+    // At that time the elbLayer was not yet initialized
     instance.config.elbLayer.map((pushedEvent) => {
       let [event, data, trigger, nested] = [
         ...Array.from(pushedEvent as IArguments),
