@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@elbwalker/destination-web-google-gtm": "^1.1.0",
+    "@elbwalker/walker.js": "^1.5.1",
     "@headlessui/react": "^1.6.1",
     "@heroicons/react": "^1.0.6",
     "@testing-library/jest-dom": "^5.16.4",
