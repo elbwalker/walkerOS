@@ -1,5 +1,6 @@
 import Elbwalker from '@elbwalker/walker.js';
 import DestinationGTM from '@elbwalker/destination-web-google-gtm';
+import DestinationGA4 from './ga4';
 import Data from './plan';
 
 export function walker(...args: unknown[]) {
