@@ -33,6 +33,7 @@ export default function Home() {
         <CTA
           title="Ready to dive in?"
           description="Start your free trial today."
+          position="footer"
         />
       </div>
     </div>

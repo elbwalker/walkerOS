@@ -12,10 +12,13 @@ const Actions = {
   Start: 'start',
   View: 'view',
   Visible: 'visible',
+  Signup: 'signup',
+  Login: 'login',
 };
 
 const Properties = {
   Title: 'title',
+  Position: 'position',
 };
 
 const Owners = {
@@ -24,10 +27,29 @@ const Owners = {
 };
 
 const Plan: Measurement.Plan = {
-  version: 1,
+  version: 2,
   name: 'elbwalker.com',
   owners: [Owners.Alexander, Owners.Ayla],
   entities: {
+    [Entities.Account]: {
+      name: 'Account',
+      actions: {
+        [Actions.Signup]: {
+          name: 'Acount signup',
+          properties: [],
+          trigger: Measurement.Trigger.Click,
+          type: Measurement.ActionType.Core,
+        },
+        [Actions.Login]: {
+          name: 'Acount login',
+          properties: [],
+          trigger: Measurement.Trigger.Click,
+          type: Measurement.ActionType.Core,
+        },
+      },
+      properties: {},
+      owners: [Owners.Alexander],
+    },
     [Entities.Promotion]: {
       name: 'Promotion Banner (CTA)',
       actions: {
@@ -85,7 +107,7 @@ const Plan: Measurement.Plan = {
   },
 };
 
-const Data = { Plan, Entities, Actions };
+const Data = { Plan, Entities, Actions, Properties };
 
 export default Data;
 
