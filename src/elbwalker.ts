@@ -158,7 +158,7 @@ function Elbwalker(
     }
 
     // Check for an active mapping for proper event handling
-    let mappingEvent: WebDestination.MappingEvent;
+    let mappingEvent: WebDestination.EventConfig;
     const mapping = destination.config.mapping;
     if (mapping) {
       const mappingEntity = mapping[event.entity] || mapping['*'] || {};
