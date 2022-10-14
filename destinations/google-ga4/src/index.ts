@@ -7,20 +7,22 @@ declare global {
   }
 }
 
-export interface DestinationGA4Config extends WebDestination.Config {
-  custom: {
-    measurementId: string;
-    transport_url?: string;
-  };
-}
+export namespace DestinationGA4 {
+  export interface Config extends WebDestination.Config {
+    custom: {
+      measurementId: string;
+      transport_url?: string;
+    };
+  }
 
-export interface DestinationGA4 extends WebDestination.Function {
-  config: DestinationGA4Config;
+  export interface Function extends WebDestination.Function {
+    config: Config;
+  }
 }
 
 const w = window;
 
-export const destination: DestinationGA4 = {
+export const destination: DestinationGA4.Function = {
   config: { custom: { measurementId: '' } },
 
   init() {
@@ -49,7 +51,7 @@ export const destination: DestinationGA4 = {
     return true;
   },
 
-  push(event: IElbwalker.Event, mapping?: WebDestination.MappingEvent) {
+  push(event: IElbwalker.Event, mapping?: WebDestination.EventConfig) {
     let data = event.data || {};
     data.send_to = this.config.custom.measurementId;
 
