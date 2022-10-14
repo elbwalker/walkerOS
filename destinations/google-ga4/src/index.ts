@@ -13,10 +13,15 @@ export namespace DestinationGA4 {
       measurementId: string;
       transport_url?: string;
     };
+    mapping?: WebDestination.Mapping<EventConfig>;
   }
 
   export interface Function extends WebDestination.Function {
     config: Config;
+  }
+
+  export interface EventConfig extends WebDestination.EventConfig {
+    name?: string; // Use a custom event name
   }
 }
 
@@ -51,11 +56,16 @@ export const destination: DestinationGA4.Function = {
     return true;
   },
 
-  push(event: IElbwalker.Event, mapping?: WebDestination.EventConfig) {
+  push(event: IElbwalker.Event, mapping: DestinationGA4.EventConfig = {}) {
     let data = event.data || {};
     data.send_to = this.config.custom.measurementId;
 
-    w.gtag('event', `${event.entity} ${event.action}`, data);
+    // event name
+    let eventName = mapping.name
+      ? mapping.name
+      : `${event.entity} ${event.action}`;
+
+    w.gtag('event', eventName, data);
   },
 };
 

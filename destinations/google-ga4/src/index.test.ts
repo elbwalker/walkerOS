@@ -84,4 +84,13 @@ describe('Destination Google GA4', () => {
 
     expect(mockFn).toHaveBeenCalledWith('event', event, data);
   });
+
+  test('Custom event name', () => {
+    config.mapping = { entity: { action: { name: 'custom_name' } } };
+    elbwalker.push('walker destination', destination);
+    elbwalker.push(event, data, trigger);
+
+    Object.assign(data, { send_to: measurementId });
+    expect(mockFn).toHaveBeenCalledWith('event', 'custom_name', data);
+  });
 });
