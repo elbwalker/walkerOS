@@ -33,7 +33,7 @@ describe('Destination Google GA4', () => {
     expect(w.dataLayer).not.toBeDefined();
     expect(w.gtag).not.toBeDefined();
 
-    destination.config.measurementId = measurementId;
+    destination.config.custom.measurementId = measurementId;
     elbwalker.push('walker destination', destination);
     expect(w.dataLayer).not.toBeDefined();
     expect(w.gtag).not.toBeDefined();
@@ -46,7 +46,7 @@ describe('Destination Google GA4', () => {
   });
 
   test('Init calls', () => {
-    destination.config.measurementId = measurementId;
+    destination.config.custom.measurementId = measurementId;
     elbwalker.push('walker destination', destination);
 
     elbwalker.push(event);
@@ -55,7 +55,7 @@ describe('Destination Google GA4', () => {
   });
 
   test('Push', () => {
-    destination.config.measurementId = measurementId;
+    destination.config.custom.measurementId = measurementId;
     elbwalker.push('walker destination', destination);
     elbwalker.push(event, data, trigger);
 
@@ -64,8 +64,8 @@ describe('Destination Google GA4', () => {
   });
 
   test('Settings', () => {
-    destination.config.measurementId = measurementId;
-    destination.config.transport_url = transport_url;
+    destination.config.custom.measurementId = measurementId;
+    destination.config.custom.transport_url = transport_url;
     elbwalker.push('walker destination', destination);
     elbwalker.push(event, data, trigger);
 

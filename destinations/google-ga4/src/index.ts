@@ -7,29 +7,32 @@ declare global {
   }
 }
 
-export interface DestinationGA4 extends WebDestination.Function {
-  config: WebDestination.Config & {
-    measurementId?: string;
+export interface DestinationGA4Config extends WebDestination.Config {
+  custom: {
+    measurementId: string;
     transport_url?: string;
   };
 }
 
+export interface DestinationGA4 extends WebDestination.Function {
+  config: DestinationGA4Config;
+}
+
 const w = window;
-let measurementId: string;
 
 export const destination: DestinationGA4 = {
-  config: {},
+  config: { custom: { measurementId: '' } },
 
   init() {
     let config = this.config;
     const settings: IElbwalker.AnyObject = {};
 
     // required measuremt id
-    if (!config.measurementId) return false;
-    measurementId = config.measurementId;
+    if (!config.custom.measurementId) return false;
 
     // custom transport url
-    if (config.transport_url) settings.transport_url = config.transport_url;
+    if (config.custom.transport_url)
+      settings.transport_url = config.custom.transport_url;
 
     // setup required methods
     w.dataLayer = w.dataLayer || [];
@@ -37,19 +40,18 @@ export const destination: DestinationGA4 = {
       w.gtag = function gtag() {
         w.dataLayer!.push(arguments);
       };
-      w.gtag('js', 's');
-      // w.gtag('js', new Date());
+      w.gtag('js', new Date());
     }
 
     // gtag init call
-    w.gtag('config', measurementId, settings);
+    w.gtag('config', config.custom.measurementId, settings);
 
     return true;
   },
 
-  push(event: IElbwalker.Event) {
+  push(event: IElbwalker.Event, mapping?: WebDestination.MappingEvent) {
     let data = event.data || {};
-    data.send_to = measurementId;
+    data.send_to = this.config.custom.measurementId;
 
     w.gtag('event', `${event.entity} ${event.action}`, data);
   },
