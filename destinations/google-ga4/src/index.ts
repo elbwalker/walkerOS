@@ -41,6 +41,9 @@ export const destination: DestinationGA4.Function = {
     if (config.custom.transport_url)
       settings.transport_url = config.custom.transport_url;
 
+    // Load the gtag script
+    if (config.loadScript) addScript(config.custom.measurementId);
+
     // setup required methods
     w.dataLayer = w.dataLayer || [];
     if (!w.gtag) {
@@ -68,5 +71,14 @@ export const destination: DestinationGA4.Function = {
     w.gtag('event', eventName, data);
   },
 };
+
+function addScript(
+  measurementId: string,
+  src = 'https://www.googletagmanager.com/gtag/js?id=',
+) {
+  const script = document.createElement('script');
+  script.src = src + measurementId;
+  document.head.appendChild(script);
+}
 
 export default destination;

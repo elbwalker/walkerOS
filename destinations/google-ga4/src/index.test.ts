@@ -61,6 +61,21 @@ describe('Destination Google GA4', () => {
     expect(mockFn).toHaveBeenNthCalledWith(1, 'config', measurementId, {});
   });
 
+  test('init with load script', () => {
+    destination.config.loadScript = true;
+    elbwalker.push('walker destination', destination);
+
+    const scriptSelector = `script[src="https://www.googletagmanager.com/gtag/js?id=${measurementId}"]`;
+
+    let elem = document.querySelector(scriptSelector);
+    expect(elem).not.toBeTruthy();
+
+    elbwalker.push(event);
+
+    elem = document.querySelector(scriptSelector);
+    expect(elem).toBeTruthy();
+  });
+
   test('Push', () => {
     elbwalker.push('walker destination', destination);
     elbwalker.push(event, data, trigger);

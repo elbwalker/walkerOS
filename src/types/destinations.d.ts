@@ -10,10 +10,11 @@ export namespace WebDestination {
   }
 
   interface Config {
+    loadScript?: boolean; // If an additional script to work should be loaded
     consent?: IElbwalker.Consent; // Required consent states to init and push events
     custom?: IElbwalker.AnyObject; // Arbitrary but protected configurations for custom enhancements
-    init?: boolean; // if the destination has been initialized by calling the init method
-    mapping?: Mapping<EventConfig>; // a map to handle events individually
+    init?: boolean; // If the destination has been initialized by calling the init method
+    mapping?: Mapping<EventConfig>; // A map to handle events individually
   }
 
   interface Mapping<EventConfig> {
