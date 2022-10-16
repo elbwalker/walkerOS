@@ -27,7 +27,6 @@ export namespace IElbwalker {
     pageview: boolean;
     custom?: boolean;
     elbLayer: ElbLayer;
-    projectId?: string;
     version: number;
   }
 

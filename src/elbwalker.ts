@@ -1,5 +1,4 @@
 import { IElbwalker, Walker, WebDestination } from './types';
-import { destination } from '../destinations/google-gtm';
 import { initTrigger, ready, triggerLoad } from './lib/trigger';
 import {
   assign,
@@ -41,15 +40,20 @@ function Elbwalker(
   elbLayerInit(instance);
 
   // Switch between init modes
-  if (config.projectId) {
-    // managed: use project configuration service
-    loadProject(config.projectId);
-  } else if (!config.custom) {
-    // default: add GTM destination and auto run
-    addDestination(destination as WebDestination.Function);
+  if (!config.custom) {
+    // use dataLayer as default destination
+    w.dataLayer = w.dataLayer || [];
+    const destination: WebDestination.Function = {
+      config: {},
+      push: (event) => {
+        w.dataLayer.push({
+          ...event,
+          walker: true,
+        });
+      },
+    };
+    addDestination(destination);
     ready(run, instance);
-
-    // @TODO TEST WALKER COMMANDS ON DEFAULT MODE TOO
   } else {
     // custom: use the elbLayer
   }
@@ -358,12 +362,6 @@ function Elbwalker(
     } as WebDestination.Function;
 
     destinations.push(destination);
-  }
-
-  function loadProject(projectId: string) {
-    const script = document.createElement('script');
-    script.src = `${process.env.PROJECT_FILE}${projectId}.js`;
-    document.head.appendChild(script);
   }
 
   return instance;
