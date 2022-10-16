@@ -164,8 +164,14 @@ function Elbwalker(
       const mappingEntity = mapping[event.entity] || mapping['*'] || {};
       mappingEvent = mappingEntity[event.action] || mappingEntity['*'];
 
-      // Check if event should be processed or ignored
-      if (mappingEvent && mappingEvent.ignore) return false;
+      // Handle individual event settings
+      if (mappingEvent) {
+        // Check if event should be processed or ignored
+        if (mappingEvent.ignore) return false;
+
+        // Check to use specific event names
+        if (mappingEvent.name) event.event = mappingEvent.name;
+      }
 
       // don't push if there's no matching mapping
       if (!mappingEvent) return false;

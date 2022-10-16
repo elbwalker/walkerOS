@@ -21,7 +21,7 @@ export namespace DestinationGA4 {
   }
 
   export interface EventConfig extends WebDestination.EventConfig {
-    name?: string; // Use a custom event name
+    // Custom destination event mapping properties
   }
 }
 
@@ -63,12 +63,7 @@ export const destination: DestinationGA4.Function = {
     let data = event.data || {};
     data.send_to = this.config.custom.measurementId;
 
-    // event name
-    let eventName = mapping.name
-      ? mapping.name
-      : `${event.entity} ${event.action}`;
-
-    w.gtag('event', eventName, data);
+    w.gtag('event', event.event, data);
   },
 };
 

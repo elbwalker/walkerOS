@@ -160,7 +160,7 @@ describe('Destination', () => {
       config: {
         mapping: {
           entity: { action: {} },
-          foo: { bar: { name: 'hi' } },
+          foo: { bar: { name: 'foo bar' } },
         },
       },
     };
@@ -213,7 +213,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'foo bar',
       }),
-      { name: 'hi' },
+      { name: 'foo bar' },
     );
 
     jest.clearAllMocks();
@@ -417,5 +417,29 @@ describe('Destination', () => {
     destinationIgnore.config.mapping!.foo.bar.ignore = true;
     elbwalker.push('foo bar');
     expect(mockPushA).toHaveBeenCalledTimes(0);
+  });
+
+  test('Custom event name', () => {
+    elbwalker.push('walker run');
+
+    const mockPushA = jest.fn();
+
+    const destination: WebDestination.Function = {
+      push: mockPushA,
+      config: {
+        mapping: {
+          page: { view: { name: 'page_view' } },
+        },
+      },
+    };
+    elbwalker.push('walker destination', destination);
+
+    elbwalker.push('page view');
+    expect(mockPushA).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'page_view',
+      }),
+      { name: 'page_view' },
+    );
   });
 });
