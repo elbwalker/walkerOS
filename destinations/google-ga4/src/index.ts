@@ -27,7 +27,7 @@ export namespace DestinationGA4 {
 
 const w = window;
 
-export const destination: DestinationGA4.Function = {
+const destination: DestinationGA4.Function = {
   config: { custom: { measurementId: '' } },
 
   init() {

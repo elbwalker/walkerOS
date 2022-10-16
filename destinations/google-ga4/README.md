@@ -2,7 +2,7 @@
 
 Made to be used with [@elbwalker/walker.js](https://github.com/elbwalker/walker.js).
 
-More detailled information and examples can be found at the [documentation](https://docs.elbwalker.com/).
+More detailed information and examples can be found in the [documentation](https://docs.elbwalker.com/).
 
 ## Installation
 
@@ -26,6 +26,7 @@ const config: DestinationGA4.Config = {
   // init: false, // Status if destination was initialized successfully or should be skipped
   // loadScript: true, // Load additional required scripts on init
   mapping: {
+    '*': { '*': {} }, // Process all events
     // entity: { action: { name: 'custom_name' } },
     page: { view: { ignore: true } }, // Ignore page view events
   },
