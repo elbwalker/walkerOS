@@ -132,12 +132,23 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
   let data: IElbwalker.AnyObject = {};
   let context: IElbwalker.AnyObject = {};
   const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
+  const contextSelector = `[${getElbAttributeName(
+    prefix,
+    IElbwalker.Commands.Context,
+    false,
+  )}]`;
 
   // Get all parent data properties with decreasing priority
   let parent = element as Node['parentElement'];
   while (parent) {
     if (parent.matches(entitySelector))
       data = assign(getElbValues(prefix, parent, type), data);
+
+    if (parent.matches(contextSelector))
+      context = assign(
+        getElbValues(prefix, parent, IElbwalker.Commands.Context, false),
+        context,
+      );
 
     parent = parent.parentElement;
   }

@@ -171,13 +171,11 @@ describe('Walker', () => {
     );
   });
 
-  test.skip('Context', () => {
-    expect(
-      walker(getElem('context'), Walker.Trigger.Click, 'elb'),
-    ).toMatchObject([
+  test('Context', () => {
+    expect(walker(getElem('context'), Walker.Trigger.Click)).toMatchObject([
       {
         entity: 'e',
-        action: 'action',
+        action: 'click',
         context: {
           test: 'engagement',
           recommendation: 'smart_ai',

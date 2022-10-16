@@ -106,8 +106,9 @@
 
 <div id="prefix" elb="entity" elb-entity="k:v" elbaction="load:action"></div>
 
-<div id="context" data-elbcontext="test:engagement">
+<div data-elbcontext="test:engagement">
   <div data-elbcontext="recommendation:smart_ai">
-    <div data-elb="e" data-elbaction="click">click me</div>
+    <p data-elbcontext="not:included"></p>
+    <p id="context" data-elb="e" data-elbaction="click">click me</p>
   </div>
 </div>
