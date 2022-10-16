@@ -27,7 +27,7 @@ describe('destination google-tag-manager', () => {
   });
 
   test('init', () => {
-    w.dataLayer = undefined;
+    w.dataLayer = undefined as any;
     expect(w.dataLayer).toBeUndefined();
 
     elbwalker.push(event);
