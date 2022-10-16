@@ -61,6 +61,7 @@ function Elbwalker(
     data?: IElbwalker.PushData,
     trigger?: string,
     nested?: Walker.Entities,
+    context?: IElbwalker.AnyObject,
   ): void {
     if (!event || typeof event !== 'string') return;
 
@@ -93,6 +94,7 @@ function Elbwalker(
         // Create a new objects for each destination
         // to prevent data manipulation
         data: assign({}, data as IElbwalker.AnyObject),
+        context: assign({}, context),
         globals: assign({}, _globals),
         user: assign({}, _user as IElbwalker.AnyObject),
         nested: nested || [],

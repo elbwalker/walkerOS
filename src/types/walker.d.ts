@@ -8,6 +8,7 @@ export namespace Walker {
     entity: string;
     action: string;
     data?: IElbwalker.AnyObject;
+    context?: IElbwalker.AnyObject;
     trigger?: string;
     nested: Walker.Entities;
   }
@@ -17,6 +18,7 @@ export namespace Walker {
     type: EntityType;
     data: EntityData;
     nested: Entities;
+    context: IElbwalker.AnyObject;
   }
 
   type EntityType = string;
