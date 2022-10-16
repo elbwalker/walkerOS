@@ -53,19 +53,19 @@ describe('Browser', () => {
     jest.requireActual('../browser');
     expect(mockFn).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledWith({
-      custom: false,
+      default: false,
       version: 1,
     });
     expect(window.document.scripts.length).toBe(1);
   });
 
-  test('custom init mode', () => {
+  test('default init mode', () => {
     const elem = document.getElementsByTagName('script')[0];
-    elem.setAttribute('data-custom', 'true');
+    elem.setAttribute('data-default', 'true');
 
     jest.requireActual('../browser');
     expect(mockFn).toHaveBeenCalledWith({
-      custom: true,
+      default: true,
       version: 1,
     });
   });

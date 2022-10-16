@@ -40,7 +40,7 @@ function Elbwalker(
   elbLayerInit(instance);
 
   // Switch between init modes
-  if (!config.custom) {
+  if (config.default) {
     // use dataLayer as default destination
     w.dataLayer = w.dataLayer || [];
     const destination: WebDestination.Function = {
@@ -54,8 +54,6 @@ function Elbwalker(
     };
     addDestination(destination);
     ready(run, instance);
-  } else {
-    // custom: use the elbLayer
   }
 
   initTrigger(instance);

@@ -148,7 +148,7 @@ describe('Destination', () => {
 
   test('mapping', () => {
     jest.clearAllMocks();
-    elbwalker = Elbwalker({ elbLayer: [], custom: true, pageview: false });
+    elbwalker = Elbwalker({ elbLayer: [], pageview: false });
     elbwalker.push('walker run');
 
     const mockPushA = jest.fn();
@@ -251,7 +251,6 @@ describe('Destination', () => {
     jest.clearAllMocks();
     elbwalker = Elbwalker({
       consent: { functional: true, marketing: false },
-      custom: true,
       pageview: false,
     });
     elbwalker.push('walker run');
@@ -310,7 +309,6 @@ describe('Destination', () => {
   test('queue', () => {
     elbwalker = Elbwalker({
       consent: { functional: true },
-      custom: true,
       pageview: false,
     });
     elbwalker.push('walker run');
