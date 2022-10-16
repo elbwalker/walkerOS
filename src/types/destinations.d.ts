@@ -24,5 +24,7 @@ export namespace WebDestination {
   interface EventConfig {
     // Recommended common event config
     consent?: IElbwalker.Consent; // Required consent states to init and push events
+    ignore?: boolean; // Choose to no process an event when set to true
+    name?: string; // Use a custom event name
   }
 }
