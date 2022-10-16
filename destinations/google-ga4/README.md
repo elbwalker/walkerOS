@@ -4,7 +4,7 @@ Made to be used with [@elbwalker/walker.js](https://github.com/elbwalker/walker.
 
 More detailed information and examples can be found in the [documentation](https://docs.elbwalker.com/).
 
-## Installation
+## 🤓 Usage
 
 Start by installing the destination with npm:
 

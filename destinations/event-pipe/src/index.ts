@@ -23,9 +23,9 @@ export namespace DestinationEventPipe {
   export interface EventConfig extends WebDestination.EventConfig {
     // Custom destination event mapping properties
   }
-}
 
-type ExclusionParameters = string[];
+  export type ExclusionParameters = string[];
+}
 
 // Globals
 const w = window;
@@ -87,7 +87,7 @@ const destination: DestinationEventPipe.Function = {
 
 function excludeParameters(
   href: string,
-  exclusionParameters: ExclusionParameters = [],
+  exclusionParameters: DestinationEventPipe.ExclusionParameters = [],
 ): string {
   if (!exclusionParameters.length) return href;
 

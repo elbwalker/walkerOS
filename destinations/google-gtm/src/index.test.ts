@@ -1,15 +1,16 @@
-import Elbwalker from '@elbwalker/walker.js';
+import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
 import { DestinationGTM } from '.';
 
 describe('destination google-tag-manager', () => {
   const w = window;
-  let elbwalker;
-  const version = { config: 0, walker: expect.any(Number) };
-
-  let destination: DestinationGTM;
+  let elbwalker: IElbwalker.Function,
+    destination: DestinationGTM.Function,
+    config: DestinationGTM.Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
+  const containerId = 'GTM-XXXXXXX';
   const event = 'entity action';
+  const version = { config: 0, walker: expect.any(Number) };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -31,6 +32,40 @@ describe('destination google-tag-manager', () => {
 
     elbwalker.push(event);
     expect(w.dataLayer).toBeDefined();
+  });
+
+  test('init with load script', () => {
+    destination.config = {
+      loadScript: true,
+      custom: { containerId },
+    };
+
+    elbwalker.push('walker destination', destination);
+
+    const scriptSelector = `script[src="https://www.googletagmanager.com/gtm.js?id=${containerId}"]`;
+
+    let elem = document.querySelector(scriptSelector);
+    expect(elem).not.toBeTruthy();
+
+    elbwalker.push(event);
+
+    elem = document.querySelector(scriptSelector);
+    expect(elem).toBeTruthy();
+  });
+
+  test('custom dataLayer name', () => {
+    const customLayer = 'customLayer';
+    destination.config = {
+      custom: { dataLayer: customLayer },
+    };
+
+    elbwalker.push('walker destination', destination);
+
+    expect(window[customLayer]).toBeFalsy();
+
+    elbwalker.push(event);
+
+    expect(window[customLayer]).toBeTruthy();
   });
 
   test('push', () => {
