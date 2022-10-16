@@ -105,13 +105,11 @@ describe('Walker', () => {
 
   test('No action attribute at clicked element', () => {
     expect(walker(getElem('click_bubble'), Walker.Trigger.Click)).toEqual([
-      {
+      expect.objectContaining({
         entity: 'click',
         action: 'test',
         data: { foo: 'bar', key: 'value' },
-        trigger: Walker.Trigger.Click,
-        nested: [],
-      },
+      }),
     ]);
   });
 
@@ -119,13 +117,11 @@ describe('Walker', () => {
     expect(
       walker(getElem('click_bubble_action'), Walker.Trigger.Click),
     ).toEqual([
-      {
+      expect.objectContaining({
         entity: 'click',
         action: 'test',
         data: { foo: 'bar', key: 'value' },
-        trigger: Walker.Trigger.Click,
-        nested: [],
-      },
+      }),
     ]);
   });
 
@@ -139,19 +135,17 @@ describe('Walker', () => {
 
   test('Get nested child data properties with higher priority', () => {
     expect(walker(getElem('propert_priority'), Walker.Trigger.Click)).toEqual([
-      {
+      expect.objectContaining({
         entity: 'property',
         action: 'priority',
         data: { parent: 'property', prefere: 'deeper' },
-        trigger: Walker.Trigger.Click,
-        nested: [],
-      },
+      }),
     ]);
   });
 
   test('Dynamic values', () => {
     expect(walker(getElem('dynamic_values'), Walker.Trigger.Click)).toEqual([
-      {
+      expect.objectContaining({
         action: 'click',
         entity: 'dynamic',
         data: {
@@ -161,9 +155,7 @@ describe('Walker', () => {
           static: 'value',
           option: 'choosen',
         },
-        trigger: Walker.Trigger.Click,
-        nested: [],
-      },
+      }),
     ]);
   });
 
@@ -177,6 +169,21 @@ describe('Walker', () => {
         },
       ],
     );
+  });
+
+  test.skip('Context', () => {
+    expect(
+      walker(getElem('context'), Walker.Trigger.Click, 'elb'),
+    ).toMatchObject([
+      {
+        entity: 'e',
+        action: 'action',
+        context: {
+          test: 'engagement',
+          recommendation: 'smart_ai',
+        },
+      },
+    ]);
   });
 });
 

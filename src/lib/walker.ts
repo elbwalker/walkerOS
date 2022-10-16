@@ -40,6 +40,7 @@ export function walker(
         data: entity.data,
         trigger,
         nested: entity.nested,
+        context: entity.context,
       });
     });
   });
@@ -129,6 +130,7 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
   if (!type) return null; // It's not a (valid) entity element
 
   let data: IElbwalker.AnyObject = {};
+  let context: IElbwalker.AnyObject = {};
   const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
 
   // Get all parent data properties with decreasing priority
@@ -169,7 +171,7 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
       if (nestedEntity) nested.push(nestedEntity);
     });
 
-  return { type, data: data as Walker.EntityData, nested };
+  return { type, data: data as Walker.EntityData, context, nested };
 }
 
 export function getElbAttributeName(

@@ -35,6 +35,7 @@ export namespace IElbwalker {
   interface Event {
     event: string;
     data: AnyObject;
+    context: AnyObject;
     globals: AnyObject;
     user: User;
     nested: Walker.Entities;
@@ -59,6 +60,7 @@ export namespace IElbwalker {
     Action = 'action',
     Config = 'config',
     Consent = 'consent',
+    Context = 'context',
     Destination = 'destination',
     Elb = 'elb',
     Globals = 'globals',
