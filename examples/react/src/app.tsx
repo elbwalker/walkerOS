@@ -5,7 +5,7 @@ import Navigation from './components/organisms/navigation';
 import Home from './components/pages/home';
 import LogIn from './components/pages/login';
 import Pricing from './components/pages/pricing';
-import { setupAnalytics, walker } from './data';
+import { elb, setupAnalytics } from './data';
 
 setupAnalytics();
 
@@ -13,7 +13,7 @@ export default function App() {
   // https://v5.reactrouter.com/web/api/Hooks/uselocation
   const location = useLocation();
   React.useEffect(() => {
-    walker('walker run');
+    elb('walker run');
   }, [location]);
 
   return (

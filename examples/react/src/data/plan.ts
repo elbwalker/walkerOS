@@ -1,3 +1,4 @@
+import { DestinationEventPipe } from '@elbwalker/destination-web-event-pipe/dist';
 import { Measurement } from './measurement.d';
 
 const Entities = {
@@ -27,7 +28,7 @@ const Owners = {
 };
 
 const Plan: Measurement.Plan = {
-  version: 2,
+  version: 3,
   name: 'elbwalker.com',
   owners: [Owners.Alexander, Owners.Ayla],
   entities: {
@@ -94,9 +95,9 @@ const Plan: Measurement.Plan = {
       type: 'custom',
       owners: [Owners.Alexander],
       config: {
-        // consent: {},
+        consent: { gtm: true },
         mapping: {
-          [Entities.Promotion]: {
+          '*': {
             '*': {
               custom: {},
             },
@@ -110,27 +111,3 @@ const Plan: Measurement.Plan = {
 const Data = { Plan, Entities, Actions, Properties };
 
 export default Data;
-
-// DestinationGA4.config = Data.Plan.destinations.ga4.config;
-// walker('walker destination', DestinationGA4);
-
-// import { DestinationGA4Config } from './ga4';
-
-// const DestinationGA4: DestinationGA4Config = {
-//   loadScript: true,
-//   measurementId: 'G-4WP1Y3GPLW',
-//   mapping: {
-//     [Entities.Page]: {
-//       [Actions.View]: {
-//         custom: { ignore: true },
-//       },
-//     },
-//   },
-// };
-
-// ga4: {
-//   name: 'Google GA4',
-//   type: 'custom',
-//   owners: [Owners.Alexander],
-//   config: DestinationGA4,
-// },

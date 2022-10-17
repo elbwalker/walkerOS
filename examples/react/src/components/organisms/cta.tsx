@@ -16,7 +16,12 @@ export default function CTA({ title, description, position }: Props) {
       className="max-w-7xl mx-auto text-center py-12 px-4 sm:px-6 lg:py-16 lg:px-8"
     >
       <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-        <span data-elb-promotion={`${Data.Properties.Title}:${title}`} className="block">{title}</span>
+        <span
+          data-elb-promotion={`${Data.Properties.Title}:${title}`}
+          className="block"
+        >
+          {title}
+        </span>
         <span className="block">{description}</span>
       </h2>
       <div className="mt-8 flex justify-center">
