@@ -28,7 +28,7 @@ describe('Destination Google GA4', () => {
     w.elbLayer = [];
     w.dataLayer = [];
 
-    elbwalker = Elbwalker({ custom: true });
+    elbwalker = Elbwalker();
     elbwalker.push('walker run');
     w.gtag = mockFn;
   });

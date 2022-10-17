@@ -2,7 +2,6 @@ import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
-    dataLayer?: unknown[];
     gtag: Function;
   }
 }
