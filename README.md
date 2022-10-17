@@ -83,7 +83,7 @@ generates an event like
     config: 42, // a custom configuration version number
   },
   walker: true, // flag to filter events
-};
+}
 ```
 
 ## Contact

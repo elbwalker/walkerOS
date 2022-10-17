@@ -9,12 +9,13 @@ More detailed information and examples can be found in the [documentation](https
 Start by installing the destination with npm:
 
 ```sh
-npm i --save @elbwalker/destination-web-google-gtm
+npm i --save @elbwalker/walker.js @elbwalker/destination-web-google-gtm
 ```
 
 Import, configure and add the destination
 
 ```ts
+import { elb } from '@elbwalker/walker.js';
 import { DestinationGTM } from '@elbwalker/destination-web-google-gtm';
 
 const config: DestinationGTM.Config = {
@@ -24,14 +25,14 @@ const config: DestinationGTM.Config = {
   //   dataLayer: "dataLayer", // Name of the dataLayer array
   //   domain: "https://www.googletagmanager.com/gtm.js?id="; // Source domain of the GTM
   // },
-  // init: false, // Status if destination was initialized successfully or should be skipped
+  // init: false, // Status if the destination was initialized successfully or should be skipped
   // mapping: { '*': { '*': {} } }, // Process all events
 };
 
 DestinationGTM.config = config;
 
 // And add the destination to the walker.js
-elbwalker.push('walker destination', DestinationGTM); // elbwalker as instance of Elbwalker
+elb('walker destination', DestinationGTM);
 ```
 
 ## Contribute

@@ -9,12 +9,13 @@ More detailed information and examples can be found in the [documentation](https
 Start by installing the destination with npm:
 
 ```sh
-npm i --save @elbwalker/destination-web-google-ga4
+npm i --save @elbwalker/walker.js @elbwalker/destination-web-google-ga4
 ```
 
 Import, configure and add the destination
 
 ```ts
+import { elb } from '@elbwalker/walker.js';
 import { DestinationGA4 } from '@elbwalker/destination-web-google-ga4';
 
 const config: DestinationGA4.Config = {
@@ -23,7 +24,7 @@ const config: DestinationGA4.Config = {
     measurementId: 'G-XXXXXX-1', // Required
     // transport_url: '', // optional: endpoint where to send data to
   },
-  // init: false, // Status if destination was initialized successfully or should be skipped
+  // init: false, // Status if the destination was initialized successfully or should be skipped
   // loadScript: true, // Load additional required scripts on init
   mapping: {
     '*': { '*': {} }, // Process all events
@@ -35,7 +36,7 @@ const config: DestinationGA4.Config = {
 DestinationGA4.config = config;
 
 // And add the destination to the walker.js
-elbwalker.push('walker destination', DestinationGA4); // elbwalker as instance of Elbwalker
+elb('walker destination', DestinationGA4);
 ```
 
 ## Contribute

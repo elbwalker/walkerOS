@@ -9,12 +9,13 @@ More detailed information and examples can be found in the [documentation](https
 Start by installing the destination with npm:
 
 ```sh
-npm i --save @elbwalker/destination-web-plausible
+npm i --save @elbwalker/walker.js @elbwalker/destination-web-plausible
 ```
 
 Import, configure and add the destination
 
 ```ts
+import { elb } from '@elbwalker/walker.js';
 import { DestinationPlausible } from '@elbwalker/destination-web-plausible';
 
 const config: DestinationPlausible.Config = {
@@ -22,7 +23,7 @@ const config: DestinationPlausible.Config = {
   // custom: {
   //   domain: 'elbwalker.com'; // Name of the domain to be tracked
   // },
-  // init: false, // Status if destination was initialized successfully or should be skipped
+  // init: false, // Status if the destination was initialized successfully or should be skipped
   // loadScript: true, // Load additional required scripts on init
   // mapping: {
   //   '*': { '*': {} }, // Process all events
@@ -33,7 +34,7 @@ const config: DestinationPlausible.Config = {
 DestinationPlausible.config = config;
 
 // And add the destination to the walker.js
-elbwalker.push('walker destination', DestinationPlausible); // elbwalker as instance of Elbwalker
+elb('walker destination', DestinationPlausible);
 ```
 
 ## Contribute
