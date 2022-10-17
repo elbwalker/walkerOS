@@ -22,7 +22,7 @@ describe('destination plausible', () => {
     w.elbLayer = [];
     w.plausible = mockFn;
 
-    elbwalker = Elbwalker({ custom: true });
+    elbwalker = Elbwalker();
     elbwalker.push('walker run');
   });
 

@@ -4,11 +4,18 @@ declare global {
         plausible?: any;
     }
 }
-export interface DestinationPlausible extends WebDestination.Function {
-    config: WebDestination.Config & {
-        domain?: string;
-        scriptLoad?: boolean;
-    };
+export declare namespace DestinationPlausible {
+    interface Config extends WebDestination.Config {
+        custom?: {
+            domain?: string;
+        };
+        mapping?: WebDestination.Mapping<EventConfig>;
+    }
+    interface Function extends WebDestination.Function {
+        config: Config;
+    }
+    interface EventConfig extends WebDestination.EventConfig {
+    }
 }
-export declare const destination: DestinationPlausible;
+export declare const destination: DestinationPlausible.Function;
 export default destination;

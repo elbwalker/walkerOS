@@ -23,8 +23,6 @@ export namespace DestinationPlausible {
   export interface EventConfig extends WebDestination.EventConfig {
     // Custom destination event mapping properties
   }
-
-  export type ExclusionParameters = string[];
 }
 
 export const destination: DestinationPlausible.Function = {
