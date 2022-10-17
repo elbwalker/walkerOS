@@ -82,3 +82,7 @@ export function assign(
 export function isArgument(event: unknown) {
   return {}.hasOwnProperty.call(event, 'callee');
 }
+
+export function elb(...args: unknown[]) {
+  (window.elbLayer = window.elbLayer || []).push(...args);
+}

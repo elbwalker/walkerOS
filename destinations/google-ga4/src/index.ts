@@ -7,29 +7,42 @@ declare global {
   }
 }
 
-export interface DestinationGA4 extends WebDestination.Function {
-  config: WebDestination.Config & {
-    measurementId?: string;
-    transport_url?: string;
-  };
+export namespace DestinationGA4 {
+  export interface Config extends WebDestination.Config {
+    custom: {
+      measurementId: string;
+      transport_url?: string;
+    };
+    mapping?: WebDestination.Mapping<EventConfig>;
+  }
+
+  export interface Function extends WebDestination.Function {
+    config: Config;
+  }
+
+  export interface EventConfig extends WebDestination.EventConfig {
+    // Custom destination event mapping properties
+  }
 }
 
 const w = window;
-let measurementId: string;
 
-export const destination: DestinationGA4 = {
-  config: {},
+const destination: DestinationGA4.Function = {
+  config: { custom: { measurementId: '' } },
 
   init() {
     let config = this.config;
     const settings: IElbwalker.AnyObject = {};
 
     // required measuremt id
-    if (!config.measurementId) return false;
-    measurementId = config.measurementId;
+    if (!config.custom.measurementId) return false;
 
     // custom transport url
-    if (config.transport_url) settings.transport_url = config.transport_url;
+    if (config.custom.transport_url)
+      settings.transport_url = config.custom.transport_url;
+
+    // Load the gtag script
+    if (config.loadScript) addScript(config.custom.measurementId);
 
     // setup required methods
     w.dataLayer = w.dataLayer || [];
@@ -37,22 +50,30 @@ export const destination: DestinationGA4 = {
       w.gtag = function gtag() {
         w.dataLayer!.push(arguments);
       };
-      w.gtag('js', 's');
-      // w.gtag('js', new Date());
+      w.gtag('js', new Date());
     }
 
     // gtag init call
-    w.gtag('config', measurementId, settings);
+    w.gtag('config', config.custom.measurementId, settings);
 
     return true;
   },
 
-  push(event: IElbwalker.Event) {
+  push(event: IElbwalker.Event, mapping: DestinationGA4.EventConfig = {}) {
     let data = event.data || {};
-    data.send_to = measurementId;
+    data.send_to = this.config.custom.measurementId;
 
-    w.gtag('event', `${event.entity} ${event.action}`, data);
+    w.gtag('event', event.event, data);
   },
 };
+
+function addScript(
+  measurementId: string,
+  src = 'https://www.googletagmanager.com/gtag/js?id=',
+) {
+  const script = document.createElement('script');
+  script.src = src + measurementId;
+  document.head.appendChild(script);
+}
 
 export default destination;

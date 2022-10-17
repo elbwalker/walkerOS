@@ -26,7 +26,7 @@ describe('ElbLayer', () => {
   });
 
   test('arguments and event pushes', () => {
-    elbwalker = Elbwalker();
+    elbwalker = Elbwalker({ default: true });
     walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
@@ -49,7 +49,7 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack without run', () => {
-    elbwalker = Elbwalker({ custom: true });
+    elbwalker = Elbwalker();
     walker('walker destination', destination);
     walker('entity action');
 
@@ -60,7 +60,7 @@ describe('ElbLayer', () => {
     walker('e 1');
     walker('walker destination', destination);
 
-    elbwalker = Elbwalker({ custom: true });
+    elbwalker = Elbwalker();
     walker('e 2');
     walker('walker run');
     // auto call: walker('page view');
@@ -100,7 +100,7 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack with run', () => {
-    elbwalker = Elbwalker({ custom: true });
+    elbwalker = Elbwalker();
 
     walker('walker destination', destination);
     walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
@@ -122,7 +122,7 @@ describe('ElbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    elbwalker = Elbwalker({ custom: true });
+    elbwalker = Elbwalker();
 
     walker();
     walker('event postponed');
@@ -170,8 +170,8 @@ describe('ElbLayer', () => {
     w.dataLayer = [];
     const customLayer1 = [] as IElbwalker.ElbLayer;
     const customLayer2 = [] as IElbwalker.ElbLayer;
-    const instance1 = Elbwalker({ elbLayer: customLayer1 });
-    const instance2 = Elbwalker({ elbLayer: customLayer2 });
+    const instance1 = Elbwalker({ elbLayer: customLayer1, default: true });
+    const instance2 = Elbwalker({ elbLayer: customLayer2, default: true });
 
     const mockDest1 = jest.fn();
     const mockDest2 = jest.fn();

@@ -20,7 +20,7 @@ describe('Elbwalker', () => {
     w.dataLayer!.push = mockFn;
     w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
 
-    elbwalker = Elbwalker();
+    elbwalker = Elbwalker({ default: true });
   });
 
   test('go', () => {
@@ -173,7 +173,6 @@ describe('Elbwalker', () => {
     jest.clearAllMocks();
     elbwalker = Elbwalker({
       consent: { functional: true },
-      custom: true,
       pageview: false,
     });
 

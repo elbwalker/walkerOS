@@ -1,4 +1,6 @@
 import Elbwalker from './elbwalker';
 export default Elbwalker;
 
-export * from "./types"
+export { elb } from './lib/utils';
+
+export * from './types';

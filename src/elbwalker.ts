@@ -1,5 +1,4 @@
 import { IElbwalker, Walker, WebDestination } from './types';
-import { destination } from '../destinations/google-gtm';
 import { initTrigger, ready, triggerLoad } from './lib/trigger';
 import {
   assign,
@@ -41,17 +40,20 @@ function Elbwalker(
   elbLayerInit(instance);
 
   // Switch between init modes
-  if (config.projectId) {
-    // managed: use project configuration service
-    loadProject(config.projectId);
-  } else if (!config.custom) {
-    // default: add GTM destination and auto run
-    addDestination(destination as WebDestination.Function);
+  if (config.default) {
+    // use dataLayer as default destination
+    w.dataLayer = w.dataLayer || [];
+    const destination: WebDestination.Function = {
+      config: {},
+      push: (event) => {
+        w.dataLayer.push({
+          ...event,
+          walker: true,
+        });
+      },
+    };
+    addDestination(destination);
     ready(run, instance);
-
-    // @TODO TEST WALKER COMMANDS ON DEFAULT MODE TOO
-  } else {
-    // custom: use the elbLayer
   }
 
   initTrigger(instance);
@@ -160,11 +162,20 @@ function Elbwalker(
     }
 
     // Check for an active mapping for proper event handling
-    let mappingEvent: WebDestination.MappingEvent;
+    let mappingEvent: WebDestination.EventConfig;
     const mapping = destination.config.mapping;
     if (mapping) {
       const mappingEntity = mapping[event.entity] || mapping['*'] || {};
       mappingEvent = mappingEntity[event.action] || mappingEntity['*'];
+
+      // Handle individual event settings
+      if (mappingEvent) {
+        // Check if event should be processed or ignored
+        if (mappingEvent.ignore) return false;
+
+        // Check to use specific event names
+        if (mappingEvent.name) event.event = mappingEvent.name;
+      }
 
       // don't push if there's no matching mapping
       if (!mappingEvent) return false;
@@ -351,12 +362,6 @@ function Elbwalker(
     } as WebDestination.Function;
 
     destinations.push(destination);
-  }
-
-  function loadProject(projectId: string) {
-    const script = document.createElement('script');
-    script.src = `${process.env.PROJECT_FILE}${projectId}.js`;
-    document.head.appendChild(script);
   }
 
   return instance;

@@ -148,7 +148,7 @@ describe('Destination', () => {
 
   test('mapping', () => {
     jest.clearAllMocks();
-    elbwalker = Elbwalker({ elbLayer: [], custom: true, pageview: false });
+    elbwalker = Elbwalker({ elbLayer: [], pageview: false });
     elbwalker.push('walker run');
 
     const mockPushA = jest.fn();
@@ -160,7 +160,7 @@ describe('Destination', () => {
       config: {
         mapping: {
           entity: { action: {} },
-          foo: { bar: { custom: { strict: true } } },
+          foo: { bar: { name: 'foo bar' } },
         },
       },
     };
@@ -213,7 +213,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'foo bar',
       }),
-      { custom: { strict: true } },
+      { name: 'foo bar' },
     );
 
     jest.clearAllMocks();
@@ -251,7 +251,6 @@ describe('Destination', () => {
     jest.clearAllMocks();
     elbwalker = Elbwalker({
       consent: { functional: true, marketing: false },
-      custom: true,
       pageview: false,
     });
     elbwalker.push('walker run');
@@ -310,7 +309,6 @@ describe('Destination', () => {
   test('queue', () => {
     elbwalker = Elbwalker({
       consent: { functional: true },
-      custom: true,
       pageview: false,
     });
     elbwalker.push('walker run');
@@ -392,5 +390,54 @@ describe('Destination', () => {
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
+  });
+
+  test('ignoring events', () => {
+    elbwalker.push('walker run');
+
+    const mockPushA = jest.fn();
+
+    const destinationIgnore: WebDestination.Function = {
+      push: mockPushA,
+      config: {
+        mapping: {
+          foo: { bar: { ignore: false } },
+        },
+      },
+    };
+    elbwalker.push('walker destination', destinationIgnore);
+
+    elbwalker.push('foo bar');
+    expect(mockPushA).toHaveBeenCalledTimes(1);
+
+    jest.clearAllMocks();
+
+    destinationIgnore.config.mapping!.foo.bar.ignore = true;
+    elbwalker.push('foo bar');
+    expect(mockPushA).toHaveBeenCalledTimes(0);
+  });
+
+  test('Custom event name', () => {
+    elbwalker.push('walker run');
+
+    const mockPushA = jest.fn();
+
+    const destination: WebDestination.Function = {
+      push: mockPushA,
+      config: {
+        mapping: {
+          page: { view: { name: 'page_view' } },
+        },
+      },
+    };
+    elbwalker.push('walker destination', destination);
+
+    elbwalker.push('page view');
+    expect(mockPushA).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'page_view',
+      }),
+      { name: 'page_view' },
+    );
   });
 });

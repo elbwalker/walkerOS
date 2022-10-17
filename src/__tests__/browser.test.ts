@@ -12,8 +12,6 @@ describe('Browser', () => {
     return mockFn;
   });
 
-  const projectFileUrl = 'https://project-file.s.elbwalkerapis.com/';
-  const projectId = 'W3BP4G3';
   const html: string = fs
     .readFileSync(__dirname + '/html/index.html')
     .toString();
@@ -55,19 +53,19 @@ describe('Browser', () => {
     jest.requireActual('../browser');
     expect(mockFn).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledWith({
-      custom: false,
+      default: false,
       version: 1,
     });
     expect(window.document.scripts.length).toBe(1);
   });
 
-  test('custom init mode', () => {
+  test('default init mode', () => {
     const elem = document.getElementsByTagName('script')[0];
-    elem.setAttribute('data-custom', 'true');
+    elem.setAttribute('data-default', 'true');
 
     jest.requireActual('../browser');
     expect(mockFn).toHaveBeenCalledWith({
-      custom: true,
+      default: true,
       version: 1,
     });
   });
@@ -82,23 +80,5 @@ describe('Browser', () => {
         version: 42,
       }),
     );
-  });
-
-  test.skip('managed project', () => {
-    expect(window.document.scripts.length).toBe(1);
-    const elem = document.getElementsByTagName('script')[0];
-    elem.setAttribute('data-project', projectId);
-
-    jest.requireActual('../browser');
-    expect(mockFn).toHaveBeenCalledWith({
-      projectId,
-      custom: false,
-      version: 1,
-    });
-
-    expect(window.document.scripts.length).toBe(2);
-    expect(
-      document.querySelector(`[src="${projectFileUrl}${projectId}.js"]`),
-    ).toBeInstanceOf(HTMLScriptElement);
   });
 });

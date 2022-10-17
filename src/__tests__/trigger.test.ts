@@ -36,7 +36,7 @@ describe('Trigger', () => {
       },
     );
 
-    elbwalker = Elbwalker();
+    elbwalker = Elbwalker({ default: true });
   });
 
   test('init', () => {

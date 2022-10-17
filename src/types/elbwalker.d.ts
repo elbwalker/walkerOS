@@ -25,9 +25,8 @@ export namespace IElbwalker {
     consent: Consent;
     prefix: string;
     pageview: boolean;
-    custom?: boolean;
+    default?: boolean;
     elbLayer: ElbLayer;
-    projectId?: string;
     version: number;
   }
 
