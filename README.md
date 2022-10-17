@@ -18,14 +18,14 @@ Walker.js is a first-party event tracker for simplified and compliant data colle
 
 ## 🤓 Usage
 
-You can implement all sorts of front-end user events. From product and UX events like "promotion view", or filter usage, etc. to e-commerce actions like product add to carts or order complete events. The walker.js handles all [trigger initializations](#-triggers) and race conditions, builds the [events with context](#-usage), and distributes them based on [consent states](#-consent) and [mapping definitions](#destination-configuration) to any [destinations](#-destinations).
+You can implement all sorts of front-end user events. From product and UX events like "promotion view", or filter usage, etc. to e-commerce actions like product add to carts or order complete events. The walker.js handles all [trigger initializations](https://docs.elbwalker.com/tagging/available-triggers) and race conditions, builds the [events with context](https://docs.elbwalker.com/tagging/basics), and distributes them based on [consent states](https://docs.elbwalker.com/privacy/consent) and [mapping definitions](https://docs.elbwalker.com/destinations/basics#mapping) to any [destinations](https://docs.elbwalker.com/destinations/details).
 
-To get started take a look at our detailled [documentation](https://docs.elbwalker.com).
+To get started take a look at our detailed [documentation](https://docs.elbwalker.com/).
 
-1. [Installation]()
-2. [Tagging]()
-3. [Destinations]()
-4. [Consent]()
+1. [Installation](https://docs.elbwalker.com/getting-started/installation)
+2. [Tagging](https://docs.elbwalker.com/tagging/basics)
+3. [Destinations](https://docs.elbwalker.com/destinations/basics)
+4. [Consent](https://docs.elbwalker.com/privacy/consent)
 
 ### Basic example
 
@@ -86,10 +86,12 @@ generates an event like
 }
 ```
 
+that [destinations](https://docs.elbwalker.com/destinations/details) automatically translates into proper implementations.
+
 ## Contact
 
 Send us an email if you have any questions or feedback at hello@elbwalker.com
 
-Want to send the data directly to your Google BigQuery instance? Check out our hosted version at https://elbwalker.com/
+Want to send the data directly to your Google BigQuery instance? Check out our hosted version at https://www.elbwalker.com/
 
 <p align="right">(<a href="#top">back to top</a>)</p>
