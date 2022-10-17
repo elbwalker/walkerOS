@@ -8,3 +8,4 @@ export declare function parseAttribute(str: string): Walker.KeyVal;
 export declare function getAttribute(element: Element, name: string): string;
 export declare function assign(base: IElbwalker.AnyObject, props?: IElbwalker.AnyObject): IElbwalker.AnyObject;
 export declare function isArgument(event: unknown): boolean;
+export declare function elb(...args: unknown[]): void;
