@@ -1,9 +1,7 @@
 import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
 
 declare global {
-  interface Window {
-    [dataLayer: string]: unknown[];
-  }
+  interface Window {}
 }
 
 export namespace DestinationGTM {
@@ -23,8 +21,6 @@ export namespace DestinationGTM {
   export interface EventConfig extends WebDestination.EventConfig {
     // Custom destination event mapping properties
   }
-
-  export type ExclusionParameters = string[];
 }
 
 const defaultDataLayer = 'dataLayer';
@@ -39,9 +35,9 @@ export const destination: DestinationGTM.Function = {
 
     const dataLayer = config.custom.dataLayer || defaultDataLayer;
 
-    window[dataLayer] = window[dataLayer] || [];
+    window[dataLayer as any] = window[dataLayer as any] || [];
 
-    window[dataLayer].push({
+    (window as any)[dataLayer].push({
       'gtm.start': new Date().getTime(),
       event: 'gtm.js',
     });

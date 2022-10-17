@@ -21,7 +21,7 @@ describe('destination google-tag-manager', () => {
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
 
-    elbwalker = Elbwalker({ custom: true });
+    elbwalker = Elbwalker();
     elbwalker.push('walker run');
     elbwalker.push('walker destination', destination);
   });
@@ -74,6 +74,7 @@ describe('destination google-tag-manager', () => {
     expect(mockFn).toHaveBeenLastCalledWith({
       event,
       data: { a: 1 },
+      context: {},
       globals: {},
       user: {},
       nested: [],
