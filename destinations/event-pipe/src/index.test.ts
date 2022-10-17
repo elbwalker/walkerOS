@@ -52,7 +52,7 @@ describe('Destination Elbwalker EventPipe', () => {
     destination = require('.').default;
     destination.config = config;
 
-    elbwalker = Elbwalker({ custom: true });
+    elbwalker = Elbwalker();
     elbwalker.push('walker run');
   });
 
