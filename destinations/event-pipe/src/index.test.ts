@@ -1,9 +1,11 @@
-import Elbwalker from '@elbwalker/walker.js';
+import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
 import { DestinationEventPipe } from '.';
 
 describe('Destination Elbwalker EventPipe', () => {
   const w = window;
-  let elbwalker, destination: DestinationEventPipe;
+  let elbwalker: IElbwalker.Function,
+    destination: DestinationEventPipe.Function,
+    config: DestinationEventPipe.Config;
 
   const mockXHROpen = jest.fn();
   const mockXHRSend = jest.fn();
@@ -43,11 +45,14 @@ describe('Destination Elbwalker EventPipe', () => {
       writable: true,
     });
 
+    config = {
+      custom: { projectId },
+    };
+
     destination = require('.').default;
+    destination.config = config;
 
-    destination.config.projectId = projectId;
-
-    elbwalker = Elbwalker({ custom: true });
+    elbwalker = Elbwalker();
     elbwalker.push('walker run');
   });
 
@@ -57,13 +62,13 @@ describe('Destination Elbwalker EventPipe', () => {
   });
 
   test('Init', () => {
-    destination.config.projectId = undefined;
+    destination.config.custom.projectId = undefined;
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
 
     expect(destination.config.init).toBeFalsy();
 
-    destination.config.projectId = projectId;
+    destination.config.custom.projectId = projectId;
     elbwalker.push(event);
 
     expect(destination.config.init).toBeTruthy();
@@ -95,7 +100,7 @@ describe('Destination Elbwalker EventPipe', () => {
       writable: true,
     });
 
-    destination.config.exclusionParameters = ['b'];
+    destination.config.custom.exclusionParameters = ['b'];
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
 
@@ -108,7 +113,7 @@ describe('Destination Elbwalker EventPipe', () => {
   });
 
   test('Exclusion parameter Location', () => {
-    destination.config.exclusionParameters = ['q'];
+    destination.config.custom.exclusionParameters = ['q'];
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
 
@@ -121,7 +126,7 @@ describe('Destination Elbwalker EventPipe', () => {
   });
 
   test('Multiple exclusion parameters', () => {
-    destination.config.exclusionParameters = ['b', 'q'];
+    destination.config.custom.exclusionParameters = ['b', 'q'];
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
 

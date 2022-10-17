@@ -6,8 +6,9 @@ exports.destination = {
     config: {},
     init: function () {
         var config = this.config;
-        if (config.scriptLoad)
-            addScript(config.domain);
+        config.custom = config.custom || {};
+        if (config.loadScript)
+            addScript(config.custom.domain);
         w.plausible =
             w.plausible ||
                 function () {
@@ -16,13 +17,7 @@ exports.destination = {
         return true;
     },
     push: function (event) {
-        // page view event
-        if (event.event === 'page view') {
-            w.plausible('pageview');
-        }
-        else {
-            w.plausible("".concat(event.event), { props: event.data });
-        }
+        w.plausible("".concat(event.event), { props: event.data });
     },
 };
 function addScript(domain, src) {

@@ -1,16 +1,19 @@
 import React from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
-import { Footer, Home, Navigation, Pricing, LogIn } from './components';
+import Footer from './components/organisms/footer';
+import Navigation from './components/organisms/navigation';
+import Home from './components/pages/home';
+import LogIn from './components/pages/login';
+import Pricing from './components/pages/pricing';
+import { elb, setupAnalytics } from './data';
 
-export function walker() {
-  (window.elbLayer = window.elbLayer || []).push(arguments);
-}
+setupAnalytics();
 
 export default function App() {
   // https://v5.reactrouter.com/web/api/Hooks/uselocation
   const location = useLocation();
   React.useEffect(() => {
-    walker('walker run');
+    elb('walker run');
   }, [location]);
 
   return (

@@ -8,20 +8,31 @@ declare global {
 
 const w = window;
 
-export interface DestinationPlausible extends WebDestination.Function {
-  config: WebDestination.Config & {
-    domain?: string;
-    scriptLoad?: boolean;
-  };
+export namespace DestinationPlausible {
+  export interface Config extends WebDestination.Config {
+    custom?: {
+      domain?: string; // Name of the domain to be tracked
+    };
+    mapping?: WebDestination.Mapping<EventConfig>;
+  }
+
+  export interface Function extends WebDestination.Function {
+    config: Config;
+  }
+
+  export interface EventConfig extends WebDestination.EventConfig {
+    // Custom destination event mapping properties
+  }
 }
 
-export const destination: DestinationPlausible = {
+export const destination: DestinationPlausible.Function = {
   config: {},
 
   init() {
     let config = this.config;
+    config.custom = config.custom || {};
 
-    if (config.scriptLoad) addScript(config.domain);
+    if (config.loadScript) addScript(config.custom.domain);
 
     w.plausible =
       w.plausible ||
@@ -33,12 +44,7 @@ export const destination: DestinationPlausible = {
   },
 
   push(event: IElbwalker.Event): void {
-    // page view event
-    if (event.event === 'page view') {
-      w.plausible('pageview');
-    } else {
-      w.plausible(`${event.event}`, { props: event.data });
-    }
+    w.plausible(`${event.event}`, { props: event.data });
   },
 };
 

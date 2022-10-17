@@ -1,10 +1,12 @@
-import Elbwalker from '@elbwalker/walker.js';
+import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
 import { DestinationPlausible } from '.';
 
 describe('destination plausible', () => {
   const w = window;
+  let elbwalker: IElbwalker.Function,
+    destination: DestinationPlausible.Function,
+    config: DestinationPlausible.Config;
 
-  let elbwalker, destination: DestinationPlausible;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const event = 'entity action';
@@ -20,7 +22,7 @@ describe('destination plausible', () => {
     w.elbLayer = [];
     w.plausible = mockFn;
 
-    elbwalker = Elbwalker({ custom: true });
+    elbwalker = Elbwalker();
     elbwalker.push('walker run');
   });
 
@@ -39,7 +41,7 @@ describe('destination plausible', () => {
   });
 
   test('init with script load', () => {
-    destination.config.scriptLoad = true;
+    destination.config.loadScript = true;
     elbwalker.push('walker destination', destination);
 
     const scriptSelector = `script[src="${script}"]`;
@@ -53,8 +55,11 @@ describe('destination plausible', () => {
   });
 
   test('init with domain', () => {
-    destination.config.scriptLoad = true;
-    destination.config.domain = 'elbwalker.com';
+    const domain = 'elbwalker.com';
+    destination.config = {
+      loadScript: true,
+      custom: { domain },
+    };
     elbwalker.push('walker destination', destination);
 
     const scriptSelector = `script[src="${script}"]`;
@@ -62,7 +67,7 @@ describe('destination plausible', () => {
     elbwalker.push(event);
 
     const elem = document.querySelector(scriptSelector) as HTMLScriptElement;
-    expect(elem.dataset.domain).toBe('elbwalker.com');
+    expect(elem.dataset.domain).toBe(domain);
   });
 
   test('push', () => {
@@ -72,14 +77,5 @@ describe('destination plausible', () => {
 
     expect(w.plausible).toBeDefined();
     expect(mockFn).toHaveBeenNthCalledWith(1, event, { props: data });
-  });
-
-  test('page view event', () => {
-    elbwalker.push('walker destination', destination);
-    const data = { a: 1 };
-    elbwalker.push('page view', data);
-
-    expect(w.plausible).toBeDefined();
-    expect(mockFn).toHaveBeenNthCalledWith(1, 'pageview');
   });
 });

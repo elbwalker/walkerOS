@@ -5,16 +5,16 @@ It’s a SaaS landing page where we want to know more about the general usage of
 
 ## Setup and helper function
 
-Using the walker.js with a SPA requires activating the **custom mode** to disable auto events (set `data-custom=“true”` on the walker script element).
+Using the walker.js with a SPA requires activating the **custom mode** to disable auto start (set `data-custom=“true”` on the walker script element).
 We also use a short helper function to push events to the walker.js
 
 ```js
-function walker() {
-  (window.elbLayer = window.elbLayer || []).push(arguments);
+export function walker(...args: unknown[]) {
+  (window.elbLayer = window.elbLayer || []).push(...args);
 }
 ```
 
-We're using `console.log` as our default destination (see public/index.html:23).
+We're using `console.log` and `dataLayer` as our default destinations (see src/data.ts).
 
 ## Trigger page views
 
@@ -28,7 +28,7 @@ Update your Routes file with a `useEffect` on the `useLocation` (./src/app.js he
 ```js
 const location = useLocation();
 React.useEffect(() => {
-  walker(‘walker run’);
+  walker('walker run');
 }, [location]);
 ```
 

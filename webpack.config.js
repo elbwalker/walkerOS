@@ -1,6 +1,4 @@
 const path = require('path');
-const Dotenv = require('dotenv-webpack');
-const env = process.env.ENV || 'defaults';
 
 const nodeConfig = {
   mode: 'production',
@@ -20,13 +18,9 @@ const nodeConfig = {
   output: {
     filename: 'index.js',
     path: path.resolve(__dirname, 'dist'),
-    libraryTarget : 'commonjs2'
+    libraryTarget: 'commonjs2',
   },
-  plugins: [
-    new Dotenv({
-      path: `./.env.${env}`,
-    }),
-  ],
+  plugins: [],
 };
 
 const browserConfig = {
@@ -48,11 +42,7 @@ const browserConfig = {
     filename: 'walker.js',
     path: path.resolve(__dirname, 'dist'),
   },
-  plugins: [
-    new Dotenv({
-      path: `./.env.${env}`,
-    }),
-  ],
+  plugins: [],
 };
 
 module.exports = [browserConfig, nodeConfig];

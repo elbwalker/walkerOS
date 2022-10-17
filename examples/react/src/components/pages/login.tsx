@@ -1,5 +1,4 @@
-import React from 'react';
-import { AccountLogIn } from '..';
+import { AccountLogIn } from '../organisms/account';
 
 export default function LogIn() {
   return (

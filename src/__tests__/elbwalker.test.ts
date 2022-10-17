@@ -20,7 +20,7 @@ describe('Elbwalker', () => {
     w.dataLayer!.push = mockFn;
     w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
 
-    elbwalker = Elbwalker();
+    elbwalker = Elbwalker({ default: true });
   });
 
   test('go', () => {
@@ -47,6 +47,7 @@ describe('Elbwalker', () => {
     expect(mockFn).toHaveBeenNthCalledWith(1, {
       event: 'entity action',
       data: expect.any(Object),
+      context: {},
       globals: {},
       user: {},
       nested: [],
@@ -65,6 +66,7 @@ describe('Elbwalker', () => {
     expect(mockFn).toHaveBeenNthCalledWith(2, {
       event: 'entity action',
       data: { foo: 'bar' },
+      context: {},
       globals: {},
       user: {},
       nested: [],
@@ -90,41 +92,22 @@ describe('Elbwalker', () => {
     jest.clearAllMocks(); // skip auto page view event
     elbwalker.push('walker run');
 
-    expect(mockFn).toHaveBeenNthCalledWith(1, {
-      event: 'page view',
-      data: expect.any(Object),
-      globals: { outof: 'scope' },
-      user: {},
-      nested: [],
-      id: expect.any(String),
-      trigger: Walker.Trigger.Load,
-      entity: 'page',
-      action: 'view',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: 1,
-      version,
-      walker: true,
-    });
+    expect(mockFn).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        event: 'page view',
+        globals: { outof: 'scope' },
+      }),
+    );
 
-    expect(mockFn).toHaveBeenNthCalledWith(2, {
-      event: 'entity action',
-      data: { foo: 'bar' },
-      globals: { outof: 'scope' },
-      user: {},
-      nested: [],
-      id: expect.any(String),
-      trigger: Walker.Trigger.Load,
-      entity: 'entity',
-      action: 'action',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: 2,
-      version,
-      walker: true,
-    });
+    expect(mockFn).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        event: 'entity action',
+        data: { foo: 'bar' },
+        globals: { outof: 'scope' },
+      }),
+    );
   });
 
   test('group ids', () => {
@@ -190,7 +173,6 @@ describe('Elbwalker', () => {
     jest.clearAllMocks();
     elbwalker = Elbwalker({
       consent: { functional: true },
-      custom: true,
       pageview: false,
     });
 

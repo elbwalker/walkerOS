@@ -1,9 +1,11 @@
-import Elbwalker from '@elbwalker/walker.js';
+import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
 import { DestinationGA4 } from '.';
 
 describe('Destination Google GA4', () => {
   const w = window;
-  let elbwalker, destination: DestinationGA4;
+  let elbwalker: IElbwalker.Function,
+    destination: DestinationGA4.Function,
+    config: DestinationGA4.Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const event = 'entity action';
@@ -16,12 +18,17 @@ describe('Destination Google GA4', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
+    config = {
+      custom: { measurementId },
+    };
+
     destination = require('.').default;
+    destination.config = config;
 
     w.elbLayer = [];
     w.dataLayer = [];
 
-    elbwalker = Elbwalker({ custom: true });
+    elbwalker = Elbwalker();
     elbwalker.push('walker run');
     w.gtag = mockFn;
   });
@@ -33,7 +40,7 @@ describe('Destination Google GA4', () => {
     expect(w.dataLayer).not.toBeDefined();
     expect(w.gtag).not.toBeDefined();
 
-    destination.config.measurementId = measurementId;
+    destination.config = config;
     elbwalker.push('walker destination', destination);
     expect(w.dataLayer).not.toBeDefined();
     expect(w.gtag).not.toBeDefined();
@@ -46,7 +53,7 @@ describe('Destination Google GA4', () => {
   });
 
   test('Init calls', () => {
-    destination.config.measurementId = measurementId;
+    destination.config = config;
     elbwalker.push('walker destination', destination);
 
     elbwalker.push(event);
@@ -54,8 +61,22 @@ describe('Destination Google GA4', () => {
     expect(mockFn).toHaveBeenNthCalledWith(1, 'config', measurementId, {});
   });
 
+  test('init with load script', () => {
+    destination.config.loadScript = true;
+    elbwalker.push('walker destination', destination);
+
+    const scriptSelector = `script[src="https://www.googletagmanager.com/gtag/js?id=${measurementId}"]`;
+
+    let elem = document.querySelector(scriptSelector);
+    expect(elem).not.toBeTruthy();
+
+    elbwalker.push(event);
+
+    elem = document.querySelector(scriptSelector);
+    expect(elem).toBeTruthy();
+  });
+
   test('Push', () => {
-    destination.config.measurementId = measurementId;
     elbwalker.push('walker destination', destination);
     elbwalker.push(event, data, trigger);
 
@@ -64,16 +85,18 @@ describe('Destination Google GA4', () => {
   });
 
   test('Settings', () => {
-    destination.config.measurementId = measurementId;
-    destination.config.transport_url = transport_url;
+    config.custom.transport_url = transport_url;
+    destination.config = config;
+
     elbwalker.push('walker destination', destination);
     elbwalker.push(event, data, trigger);
 
     Object.assign(data, { send_to: measurementId });
-    expect(mockFn).toHaveBeenCalledWith('event', event, data);
 
     expect(mockFn).toHaveBeenCalledWith('config', measurementId, {
       transport_url,
     });
+
+    expect(mockFn).toHaveBeenCalledWith('event', event, data);
   });
 });

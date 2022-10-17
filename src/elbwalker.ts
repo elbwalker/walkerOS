@@ -1,5 +1,4 @@
 import { IElbwalker, Walker, WebDestination } from './types';
-import { destination } from '../destinations/google-gtm';
 import { initTrigger, ready, triggerLoad } from './lib/trigger';
 import {
   assign,
@@ -20,11 +19,11 @@ function Elbwalker(
   const instance: IElbwalker.Function = {
     push,
     config: {
-      consent: config.consent || {},
-      elbLayer: config.elbLayer || w.elbLayer || [],
+      consent: config.consent || {}, // Handle the cosnent states
+      elbLayer: config.elbLayer || (w.elbLayer = w.elbLayer || []), // Async access api in window as array
       pageview: 'pageview' in config ? !!config.pageview : true, // Trigger a page view event by default
       prefix: config.prefix || IElbwalker.Commands.Prefix, // HTML prefix attribute
-      version: config.version || 0,
+      version: config.version || 0, // Helpful to differentiate the clients used setup version
     },
   };
 
@@ -41,17 +40,20 @@ function Elbwalker(
   elbLayerInit(instance);
 
   // Switch between init modes
-  if (config.projectId) {
-    // managed: use project configuration service
-    loadProject(config.projectId);
-  } else if (!config.custom) {
-    // default: add GTM destination and auto run
-    addDestination(destination as WebDestination.Function);
+  if (config.default) {
+    // use dataLayer as default destination
+    w.dataLayer = w.dataLayer || [];
+    const destination: WebDestination.Function = {
+      config: {},
+      push: (event) => {
+        w.dataLayer.push({
+          ...event,
+          walker: true,
+        });
+      },
+    };
+    addDestination(destination);
     ready(run, instance);
-
-    // @TODO TEST WALKER COMMANDS ON DEFAULT MODE TOO
-  } else {
-    // custom: use the elbLayer
   }
 
   initTrigger(instance);
@@ -61,6 +63,7 @@ function Elbwalker(
     data?: IElbwalker.PushData,
     trigger?: string,
     nested?: Walker.Entities,
+    context?: IElbwalker.AnyObject,
   ): void {
     if (!event || typeof event !== 'string') return;
 
@@ -93,6 +96,7 @@ function Elbwalker(
         // Create a new objects for each destination
         // to prevent data manipulation
         data: assign({}, data as IElbwalker.AnyObject),
+        context: assign({}, context),
         globals: assign({}, _globals),
         user: assign({}, _user as IElbwalker.AnyObject),
         nested: nested || [],
@@ -158,11 +162,20 @@ function Elbwalker(
     }
 
     // Check for an active mapping for proper event handling
-    let mappingEvent: WebDestination.MappingEvent;
+    let mappingEvent: WebDestination.EventConfig;
     const mapping = destination.config.mapping;
     if (mapping) {
       const mappingEntity = mapping[event.entity] || mapping['*'] || {};
       mappingEvent = mappingEntity[event.action] || mappingEntity['*'];
+
+      // Handle individual event settings
+      if (mappingEvent) {
+        // Check if event should be processed or ignored
+        if (mappingEvent.ignore) return false;
+
+        // Check to use specific event names
+        if (mappingEvent.name) event.event = mappingEvent.name;
+      }
 
       // don't push if there's no matching mapping
       if (!mappingEvent) return false;
@@ -277,7 +290,7 @@ function Elbwalker(
     const customEvents: Array<IElbwalker.ElbLayer> = [];
     let isFirstRunEvent = true;
 
-    // At that time the dataLayer was not yet initialized
+    // At that time the elbLayer was not yet initialized
     instance.config.elbLayer.map((pushedEvent) => {
       let [event, data, trigger, nested] = [
         ...Array.from(pushedEvent as IArguments),
@@ -349,12 +362,6 @@ function Elbwalker(
     } as WebDestination.Function;
 
     destinations.push(destination);
-  }
-
-  function loadProject(projectId: string) {
-    const script = document.createElement('script');
-    script.src = `${process.env.PROJECT_FILE}${projectId}.js`;
-    document.head.appendChild(script);
   }
 
   return instance;
