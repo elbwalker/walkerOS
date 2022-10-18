@@ -62,8 +62,8 @@ function Elbwalker(
     event?: unknown,
     data?: IElbwalker.PushData,
     trigger?: string,
-    nested?: Walker.Entities,
     context?: IElbwalker.AnyObject,
+    nested?: Walker.Entities,
   ): void {
     if (!event || typeof event !== 'string') return;
 
@@ -230,14 +230,17 @@ function Elbwalker(
       event?: IArguments | unknown,
       data?: IElbwalker.PushData,
       trigger?: string,
+      context?: IElbwalker.AnyObject,
       nested?: Walker.Entities,
     ) {
       // Pushed as Arguments
       if (isArgument(event)) {
-        [event, data, trigger, nested] = [...Array.from(event as IArguments)];
+        [event, data, trigger, context, nested] = [
+          ...Array.from(event as IArguments),
+        ];
       }
 
-      instance.push(String(event), data, String(trigger), nested);
+      instance.push(String(event), data, String(trigger), context, nested);
 
       return Array.prototype.push.apply(this, [arguments]);
     };
@@ -292,13 +295,15 @@ function Elbwalker(
 
     // At that time the elbLayer was not yet initialized
     instance.config.elbLayer.map((pushedEvent) => {
-      let [event, data, trigger, nested] = [
+      let [event, data, trigger, context, nested] = [
         ...Array.from(pushedEvent as IArguments),
       ] as IElbwalker.ElbLayer;
 
       // Pushed as Arguments
       if ({}.hasOwnProperty.call(event, 'callee')) {
-        [event, data, trigger, nested] = [...Array.from(event as IArguments)];
+        [event, data, trigger, context, nested] = [
+          ...Array.from(event as IArguments),
+        ];
       }
 
       if (typeof event !== 'string') return;
@@ -312,14 +317,14 @@ function Elbwalker(
 
       // check if event is a walker commend
       event.startsWith(walkerCommand)
-        ? walkerEvents.push([event, data, trigger, nested]) // stack it to the walker commands
-        : customEvents.push([event, data, trigger, nested]); // stack it to the custom events
+        ? walkerEvents.push([event, data, trigger, context, nested]) // stack it to the walker commands
+        : customEvents.push([event, data, trigger, context, nested]); // stack it to the custom events
     });
 
     // Prefere all walker commands before events during processing the predefined ones
     walkerEvents.concat(customEvents).map((item) => {
-      const [event, data, trigger, nested] = item;
-      instance.push(String(event), data, trigger, nested);
+      const [event, data, trigger, context, nested] = item;
+      instance.push(String(event), data, trigger, context, nested);
     });
   }
 

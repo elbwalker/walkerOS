@@ -13,8 +13,8 @@ export namespace IElbwalker {
       event: string,
       data?: PushData,
       trigger?: string,
+      context?: AnyObject,
       nested?: Walker.Entities,
-      context?: IElbwalker.AnyObject,
     ): void;
     (event: 'walker consent', consent: Consent): void;
     (event: 'walker destination', destination: WebDestination.Function): void;
@@ -23,9 +23,10 @@ export namespace IElbwalker {
   }
 
   type ElbLayer = [
-    (IArguments | unknown)?,
+    (IArguments | string)?,
     PushData?,
     string?,
+    AnyObject?,
     Walker.Entities?,
   ];
 
