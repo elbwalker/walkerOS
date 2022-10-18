@@ -11,7 +11,7 @@ export namespace Walker {
 
   type Property = boolean | string | number;
   interface Properties {
-    [key: string]: Property;
+    [key: string]: Property | Array<Property>;
   }
 
   type Entities = Array<Entity>;

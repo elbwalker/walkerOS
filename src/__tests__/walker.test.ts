@@ -203,13 +203,13 @@ describe('Walker', () => {
     ]);
   });
 
-  test.only('Array properties', () => {
+  test('Array properties', () => {
     expect(walker(getElem('array'), Walker.Trigger.Load)).toMatchObject([
       {
         entity: 'array',
         action: 'props',
         data: {
-          size: ['m', 'l'],
+          size: ['s', 'm', 'l'],
         },
       },
     ]);

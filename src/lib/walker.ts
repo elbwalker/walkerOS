@@ -219,7 +219,15 @@ export function getElbValues(
       }
     }
 
-    values[key] = castValue(val);
+    // Array property
+    if (key.slice(-2) === '[]') {
+      key = key.slice(0, -2); // Remove [] symbol
+
+      if (!Array.isArray(values[key])) values[key] = [];
+      (values[key] as Walker.Property[]).push(castValue(val));
+    } else {
+      values[key] = castValue(val);
+    }
 
     return values;
   }, {} as Walker.Properties);
