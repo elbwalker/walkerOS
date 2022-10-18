@@ -202,6 +202,18 @@ describe('Walker', () => {
       },
     ]);
   });
+
+  test('Array properties', () => {
+    expect(walker(getElem('array'), Walker.Trigger.Load)).toMatchObject([
+      {
+        entity: 'array',
+        action: 'props',
+        data: {
+          size: ['s', 'm', 'l'],
+        },
+      },
+    ]);
+  });
 });
 
 function getElem(selector: string) {
