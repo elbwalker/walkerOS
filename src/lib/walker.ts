@@ -76,10 +76,7 @@ export function resolveAttributes(
   return [];
 }
 
-function getTriggerActions(
-  str: string,
-  separator = ';',
-): Walker.TriggersActions {
+function getTriggerActions(str: string): Walker.TriggersActions {
   const values: Walker.TriggersActions = {};
 
   const attributes = splitAttribute(str);
