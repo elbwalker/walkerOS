@@ -55,11 +55,15 @@
 </div>
 
 <div
-  id="attributes"
-  data-elb="attributes"
-  data-elb-attributes="foo:'ba;r';key:'value'"
+  id="properties"
+  data-elb="properties"
+  data-elb-properties="foo:'ba;r';key:'value'"
   data-elbaction="load:'act;ion';click:'action;'"
-></div>
+>
+  <p data-elb-properties=":value"></p>
+  <p data-elb-properties=":"></p>
+  <p data-elb-properties=""></p>
+</div>
 
 <div data-elb="click" data-elbaction="click:test">
   <div id="click_test"></div>
@@ -122,7 +126,4 @@
   <p data-elb-types="int:42"></p>
   <p data-elb-types="float:13.37"></p>
   <p data-elb-types="negative:-3.14"></p>
-  <p data-elb-types=":value"></p>
-  <p data-elb-types=":"></p>
-  <p data-elb-types=""></p>
 </div>

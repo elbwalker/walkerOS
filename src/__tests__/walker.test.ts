@@ -76,17 +76,17 @@ describe('Walker', () => {
     ]);
   });
 
-  test('Quoted Attributes', () => {
-    expect(walker(getElem('attributes'), Walker.Trigger.Load)).toMatchObject([
+  test('Quoted Properties', () => {
+    expect(walker(getElem('properties'), Walker.Trigger.Load)).toMatchObject([
       {
-        entity: 'attributes',
+        entity: 'properties',
         action: 'act;ion',
         data: { foo: 'ba;r', key: 'value' },
       },
     ]);
-    expect(walker(getElem('attributes'), Walker.Trigger.Click)).toMatchObject([
+    expect(walker(getElem('properties'), Walker.Trigger.Click)).toMatchObject([
       {
-        entity: 'attributes',
+        entity: 'properties',
         action: 'action;',
         data: { foo: 'ba;r', key: 'value' },
       },
