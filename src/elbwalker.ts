@@ -210,7 +210,7 @@ function Elbwalker(
         setConsent(instance, data as IElbwalker.Consent);
         break;
       case IElbwalker.Commands.Destination:
-        addDestination(data);
+        addDestination(data as WebDestination.Function);
         break;
       case IElbwalker.Commands.Run:
         ready(run, instance);
@@ -237,7 +237,7 @@ function Elbwalker(
         [event, data, trigger, nested] = [...Array.from(event as IArguments)];
       }
 
-      instance.push(event, data, trigger, nested);
+      instance.push(String(event), data, String(trigger), nested);
 
       return Array.prototype.push.apply(this, [arguments]);
     };
@@ -319,7 +319,7 @@ function Elbwalker(
     // Prefere all walker commands before events during processing the predefined ones
     walkerEvents.concat(customEvents).map((item) => {
       const [event, data, trigger, nested] = item;
-      instance.push(event, data, trigger, nested);
+      instance.push(String(event), data, trigger, nested);
     });
   }
 
@@ -353,7 +353,7 @@ function Elbwalker(
     if (data.hash) _user.hash = data.hash;
   }
 
-  function addDestination(data: IElbwalker.PushData) {
+  function addDestination(data: WebDestination.Function) {
     // Skip validation due to trycatch calls on push
     const destination = {
       init: data.init,
