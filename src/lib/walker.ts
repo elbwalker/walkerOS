@@ -192,6 +192,8 @@ export function getElbValues(
   ).reduce((values, str) => {
     let [key, val] = splitKeyVal(str);
 
+    if (!key) return values;
+
     // Handle keys without value
     if (!val) {
       // Manually remove the : from key on empty values
@@ -217,7 +219,7 @@ export function getElbValues(
       }
     }
 
-    if (key) values[key] = castValue(val);
+    values[key] = castValue(val);
 
     return values;
   }, {} as Walker.Properties);
