@@ -140,6 +140,7 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
   let parent = element as Node['parentElement'];
   while (parent) {
     if (parent.matches(entitySelector))
+      // Get higher properties first
       data = assign(getElbValues(prefix, parent, type), data);
 
     if (parent.matches(contextSelector))
@@ -151,26 +152,10 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
     parent = parent.parentElement;
   }
 
-  // Get nested child data properties with higher priority
+  // Get properties
   element.querySelectorAll<HTMLElement>(entitySelector).forEach((child) => {
-    const properties = getElbValues(prefix, child, type);
-
-    // @TODO move this part directly to getElbValues
-    Object.entries(properties).forEach(([key, property]) => {
-      if (typeof property === 'string' && property.charAt(0) === '#') {
-        property = property.substring(1);
-        try {
-          let value = (child as any)[property];
-          if (!value && property === 'selected') {
-            value = (child as any).options[(child as any).selectedIndex].text;
-          }
-          if (value) properties[key] = value;
-        } catch (error) {
-          properties[key] = '';
-        }
-      }
-    });
-    data = assign(data, properties);
+    // Eventually override closer peroperties
+    data = assign(data, getElbValues(prefix, child, type));
   });
 
   // Get nested entities
@@ -212,6 +197,24 @@ export function getElbValues(
       // Manually remove the : from key on empty values
       if (key.charAt(key.length - 1) === ':') key = key.slice(0, -1);
       val = '';
+    }
+
+    // Dynamic values
+    if (val.charAt(0) === '#') {
+      val = val.substring(1); // Remove # symbol
+      try {
+        // Read property value from element
+        let dynamicValue = (element as any)[val];
+        if (!dynamicValue && val === 'selected') {
+          // Try to read selected value with chance of error
+          dynamicValue = (element as HTMLSelectElement).options[
+            (element as HTMLSelectElement).selectedIndex
+          ].text;
+        }
+        if (dynamicValue) val = dynamicValue;
+      } catch (error) {
+        val = '';
+      }
     }
 
     if (key) values[key] = castValue(val);
