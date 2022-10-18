@@ -183,6 +183,25 @@ describe('Walker', () => {
       },
     ]);
   });
+
+  test('Casting', () => {
+    expect(walker(getElem('casting'), Walker.Trigger.Load)).toMatchObject([
+      {
+        entity: 'types',
+        action: 'cast',
+        data: {
+          string: 'text',
+          empty: '',
+          bool_true: true,
+          bool_false: false,
+          null: 0,
+          int: 42,
+          float: 13.37,
+          negative: -3.14,
+        },
+      },
+    ]);
+  });
 });
 
 function getElem(selector: string) {

@@ -1,6 +1,7 @@
 import { IElbwalker, Walker } from '../types';
 import {
   assign,
+  castValue,
   getAttribute,
   parseAttribute,
   splitAttribute,
@@ -129,8 +130,8 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
 
   if (!type) return null; // It's not a (valid) entity element
 
-  let data: IElbwalker.AnyObject = {};
-  let context: IElbwalker.AnyObject = {};
+  let data: Walker.Properties = {};
+  let context: Walker.Properties = {};
   const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
   const contextSelector = `[${getElbAttributeName(
     prefix,
@@ -156,8 +157,10 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
   // Get nested child data properties with higher priority
   element.querySelectorAll<HTMLElement>(entitySelector).forEach((child) => {
     const properties = getElbValues(prefix, child, type);
+
+    // @TODO move this part directly to getElbValues
     Object.entries(properties).forEach(([key, property]) => {
-      if (property.charAt(0) === '#') {
+      if (typeof property === 'string' && property.charAt(0) === '#') {
         property = property.substring(1);
         try {
           let value = (child as any)[property];
@@ -182,7 +185,7 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
       if (nestedEntity) nested.push(nestedEntity);
     });
 
-  return { type, data: data as Walker.EntityData, context, nested };
+  return { type, data, context, nested };
 }
 
 export function getElbAttributeName(
@@ -201,17 +204,23 @@ export function getElbValues(
   element: Element,
   name: string,
   isProperty = true,
-): Walker.Values {
+): Walker.Properties {
   const values = splitAttribute(
     getAttribute(element, getElbAttributeName(prefix, name, isProperty)) || '',
   ).reduce((values, str) => {
     let [key, val] = splitKeyVal(str);
 
-    // @TODO parse val format
-    values[key] = val;
+    // Handle keys without value
+    if (!val) {
+      // Manually remove the : from key on empty values
+      if (key.charAt(key.length - 1) === ':') key = key.slice(0, -1);
+      val = '';
+    }
+
+    if (key) values[key] = castValue(val);
 
     return values;
-  }, {} as Walker.Values);
+  }, {} as Walker.Properties);
 
   return values;
 }

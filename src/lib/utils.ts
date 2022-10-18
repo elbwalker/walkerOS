@@ -73,9 +73,9 @@ export function getAttribute(element: Element, name: string): string {
 }
 
 export function assign(
-  base: IElbwalker.AnyObject,
-  props: IElbwalker.AnyObject = {},
-): IElbwalker.AnyObject {
+  base: Walker.Properties,
+  props: Walker.Properties = {},
+): Walker.Properties {
   return { ...base, ...props };
 }
 
@@ -86,3 +86,13 @@ export function isArgument(event: unknown) {
 export const elb: IElbwalker.Elb = function () {
   (window.elbLayer = window.elbLayer || []).push(arguments);
 };
+
+export function castValue(value: unknown): Walker.Property {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+
+  const number = Number(value); // Converts "" to 0
+  if (value == number && value !== '') return number;
+
+  return String(value);
+}

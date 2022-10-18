@@ -1,30 +1,26 @@
-import { IElbwalker } from '.';
-
 export namespace Walker {
-  type PushEvent = Array<[string, unknown]>;
-
   type Events = Event[];
   interface Event {
     entity: string;
     action: string;
-    data?: IElbwalker.AnyObject;
-    context?: IElbwalker.AnyObject;
+    data?: Properties;
+    context?: Properties;
     trigger?: string;
     nested: Walker.Entities;
   }
 
-  type Entities = Array<Entity>;
-  interface Entity {
-    type: EntityType;
-    data: EntityData;
-    nested: Entities;
-    context: IElbwalker.AnyObject;
+  type Property = boolean | string | number;
+  interface Properties {
+    [key: string]: Property;
   }
 
-  type EntityType = string;
-  type EntityData = {
-    [name: string]: string;
-  };
+  type Entities = Array<Entity>;
+  interface Entity {
+    type: string;
+    data: Properties;
+    nested: Entities;
+    context: Properties;
+  }
 
   type KeyVal = [string, string];
 
@@ -45,10 +41,6 @@ export namespace Walker {
   }
 
   type Scope = Document | Element;
-
-  interface Values {
-    [name: string]: string;
-  }
 
   interface TriggersActions {
     [trigger: string]: TriggerActions;

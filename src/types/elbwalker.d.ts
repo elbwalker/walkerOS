@@ -30,7 +30,12 @@ export namespace IElbwalker {
     Walker.Entities?,
   ];
 
-  type PushData = AnyObject | Consent | User | WebDestination.Function;
+  type PushData =
+    | AnyObject
+    | Consent
+    | User
+    | Walker.Properties
+    | WebDestination.Function;
 
   interface Config {
     consent: Consent;

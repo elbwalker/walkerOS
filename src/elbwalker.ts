@@ -95,10 +95,10 @@ function Elbwalker(
         event,
         // Create a new objects for each destination
         // to prevent data manipulation
-        data: assign({}, data as IElbwalker.AnyObject),
-        context: assign({}, context),
-        globals: assign({}, _globals),
-        user: assign({}, _user as IElbwalker.AnyObject),
+        data: assign({}, data as Walker.Properties),
+        context: assign({}, context as Walker.Properties),
+        globals: assign({}, _globals as Walker.Properties),
+        user: assign({}, _user as Walker.Properties),
         nested: nested || [],
         id,
         trigger: trigger || '',
