@@ -235,6 +235,7 @@ function handleTrigger(
       `${event.entity} ${event.action}`,
       event.data,
       trigger,
+      event.context,
       event.nested,
     );
   });

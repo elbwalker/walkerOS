@@ -39,8 +39,8 @@ export function walker(
         action: triggerAction.action,
         data: entity.data,
         trigger,
-        nested: entity.nested,
         context: entity.context,
+        nested: entity.nested,
       });
     });
   });
