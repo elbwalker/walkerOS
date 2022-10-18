@@ -73,26 +73,26 @@ export function getAttribute(element: Element, name: string): string {
 }
 
 export function assign(
-  base: Walker.Properties,
-  props: Walker.Properties = {},
+  target: Walker.Properties,
+  source: Walker.Properties = {},
 ): Walker.Properties {
   // Check for array properties to merge them before overriding
-  Object.entries(props).forEach(([key, val]) => {
-    const baseArray = base[key];
+  Object.entries(source).forEach(([key, sourceProp]) => {
+    const targetProp = target[key];
 
     // Only merge  arrays
-    if (Array.isArray(baseArray) && Array.isArray(val)) {
-      props[key] = val.reduce(
+    if (Array.isArray(targetProp) && Array.isArray(sourceProp)) {
+      source[key] = sourceProp.reduce(
         (acc, item) => {
           // Remove duplicates
           return acc.includes(item) ? acc : [...acc, item];
         },
-        [...baseArray],
+        [...targetProp],
       );
     }
   });
 
-  return { ...base, ...props };
+  return { ...target, ...source };
 }
 
 export function isArgument(event: unknown) {
