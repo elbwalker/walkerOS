@@ -1,5 +1,6 @@
 // browser version
 import Elbwalker from './elbwalker';
+import { elb } from './lib/utils';
 
 let defaultMode, version;
 
@@ -15,5 +16,6 @@ const instance = Elbwalker({ default: defaultMode, version });
 
 // Global object
 window.elbwalker = instance;
+window.elb = elb;
 
 export default instance;
