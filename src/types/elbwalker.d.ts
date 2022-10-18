@@ -13,7 +13,7 @@ export namespace IElbwalker {
       event: string,
       data?: PushData,
       trigger?: string,
-      context?: AnyObject,
+      context?: Walker.Properties,
       nested?: Walker.Entities,
     ): void;
     (event: 'walker consent', consent: Consent): void;
@@ -26,11 +26,11 @@ export namespace IElbwalker {
     (IArguments | string)?,
     PushData?,
     string?,
-    AnyObject?,
+    Walker.Properties?,
     Walker.Entities?,
   ];
 
-  type PushData = AnyObject | Consent | User | WebDestination.Function;
+  type PushData = Consent | User | Walker.Properties | WebDestination.Function;
 
   interface Config {
     consent: Consent;
@@ -44,9 +44,9 @@ export namespace IElbwalker {
   type Events = Event[];
   interface Event {
     event: string;
-    data: AnyObject;
-    context: AnyObject;
-    globals: AnyObject;
+    data: Walker.Properties;
+    context: Walker.Properties;
+    globals: Walker.Properties;
     user: User;
     nested: Walker.Entities;
     id: string;

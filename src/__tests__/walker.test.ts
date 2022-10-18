@@ -76,17 +76,17 @@ describe('Walker', () => {
     ]);
   });
 
-  test('Quoted Attributes', () => {
-    expect(walker(getElem('attributes'), Walker.Trigger.Load)).toMatchObject([
+  test('Quoted Properties', () => {
+    expect(walker(getElem('properties'), Walker.Trigger.Load)).toMatchObject([
       {
-        entity: 'attributes',
+        entity: 'properties',
         action: 'act;ion',
         data: { foo: 'ba;r', key: 'value' },
       },
     ]);
-    expect(walker(getElem('attributes'), Walker.Trigger.Click)).toMatchObject([
+    expect(walker(getElem('properties'), Walker.Trigger.Click)).toMatchObject([
       {
-        entity: 'attributes',
+        entity: 'properties',
         action: 'action;',
         data: { foo: 'ba;r', key: 'value' },
       },
@@ -179,6 +179,25 @@ describe('Walker', () => {
         context: {
           test: 'engagement',
           recommendation: 'smart_ai',
+        },
+      },
+    ]);
+  });
+
+  test('Casting', () => {
+    expect(walker(getElem('casting'), Walker.Trigger.Load)).toMatchObject([
+      {
+        entity: 'types',
+        action: 'cast',
+        data: {
+          string: 'text',
+          empty: '',
+          bool_true: true,
+          bool_false: false,
+          null: 0,
+          int: 42,
+          float: 13.37,
+          negative: -3.14,
         },
       },
     ]);
