@@ -18,7 +18,7 @@ export function randomString(): string {
   return Math.random().toString(36).slice(2, 8);
 }
 
-export function getGlobalProperties(prefix: string): IElbwalker.AnyObject {
+export function getGlobalProperties(prefix: string): Walker.Properties {
   const globalsName = getElbAttributeName(
     prefix,
     IElbwalker.Commands.Globals,
