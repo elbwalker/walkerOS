@@ -1,6 +1,7 @@
 import { IElbwalker, Walker } from '../types';
 import {
   assign,
+  castValue,
   getAttribute,
   parseAttribute,
   splitAttribute,
@@ -39,8 +40,8 @@ export function walker(
         action: triggerAction.action,
         data: entity.data,
         trigger,
-        nested: entity.nested,
         context: entity.context,
+        nested: entity.nested,
       });
     });
   });
@@ -75,10 +76,7 @@ export function resolveAttributes(
   return [];
 }
 
-function getTriggerActions(
-  str: string,
-  separator = ';',
-): Walker.TriggersActions {
+function getTriggerActions(str: string): Walker.TriggersActions {
   const values: Walker.TriggersActions = {};
 
   const attributes = splitAttribute(str);
@@ -129,8 +127,8 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
 
   if (!type) return null; // It's not a (valid) entity element
 
-  let data: IElbwalker.AnyObject = {};
-  let context: IElbwalker.AnyObject = {};
+  let data: Walker.Properties = {};
+  let context: Walker.Properties = {};
   const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
   const contextSelector = `[${getElbAttributeName(
     prefix,
@@ -142,6 +140,7 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
   let parent = element as Node['parentElement'];
   while (parent) {
     if (parent.matches(entitySelector))
+      // Get higher properties first
       data = assign(getElbValues(prefix, parent, type), data);
 
     if (parent.matches(contextSelector))
@@ -153,24 +152,10 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
     parent = parent.parentElement;
   }
 
-  // Get nested child data properties with higher priority
+  // Get properties
   element.querySelectorAll<HTMLElement>(entitySelector).forEach((child) => {
-    const properties = getElbValues(prefix, child, type);
-    Object.entries(properties).forEach(([key, property]) => {
-      if (property.charAt(0) === '#') {
-        property = property.substring(1);
-        try {
-          let value = (child as any)[property];
-          if (!value && property === 'selected') {
-            value = (child as any).options[(child as any).selectedIndex].text;
-          }
-          if (value) properties[key] = value;
-        } catch (error) {
-          properties[key] = '';
-        }
-      }
-    });
-    data = assign(data, properties);
+    // Eventually override closer peroperties
+    data = assign(data, getElbValues(prefix, child, type));
   });
 
   // Get nested entities
@@ -182,7 +167,7 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
       if (nestedEntity) nested.push(nestedEntity);
     });
 
-  return { type, data: data as Walker.EntityData, context, nested };
+  return { type, data, context, nested };
 }
 
 export function getElbAttributeName(
@@ -201,17 +186,51 @@ export function getElbValues(
   element: Element,
   name: string,
   isProperty = true,
-): Walker.Values {
+): Walker.Properties {
   const values = splitAttribute(
     getAttribute(element, getElbAttributeName(prefix, name, isProperty)) || '',
   ).reduce((values, str) => {
     let [key, val] = splitKeyVal(str);
 
-    // @TODO parse val format
-    values[key] = val;
+    if (!key) return values;
+
+    // Handle keys without value
+    if (!val) {
+      // Manually remove the : from key on empty values
+      if (key.charAt(key.length - 1) === ':') key = key.slice(0, -1);
+      val = '';
+    }
+
+    // Dynamic values
+    if (val.charAt(0) === '#') {
+      val = val.substring(1); // Remove # symbol
+      try {
+        // Read property value from element
+        let dynamicValue = (element as any)[val];
+        if (!dynamicValue && val === 'selected') {
+          // Try to read selected value with chance of error
+          dynamicValue = (element as HTMLSelectElement).options[
+            (element as HTMLSelectElement).selectedIndex
+          ].text;
+        }
+        if (dynamicValue) val = dynamicValue;
+      } catch (error) {
+        val = '';
+      }
+    }
+
+    // Array property
+    if (key.slice(-2) === '[]') {
+      key = key.slice(0, -2); // Remove [] symbol
+
+      if (!Array.isArray(values[key])) values[key] = [];
+      (values[key] as Walker.Property[]).push(castValue(val));
+    } else {
+      values[key] = castValue(val);
+    }
 
     return values;
-  }, {} as Walker.Values);
+  }, {} as Walker.Properties);
 
   return values;
 }

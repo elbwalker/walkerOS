@@ -113,7 +113,7 @@ function triggerSubmit(ev: Event, instance: IElbwalker.Function) {
 
 export function triggerVisible(
   prefix: string,
-  scope: Document | Element,
+  scope: Walker.Scope,
   disconnect = false,
 ): IntersectionObserver | undefined {
   if (observer) {
@@ -137,7 +137,7 @@ function view(instance: IElbwalker.Function) {
     domain: l.hostname,
     id: l.pathname,
     title: d.title,
-  } as Walker.EntityData;
+  } as Walker.Properties;
   if (l.search) data.search = l.search;
   if (l.hash) data.hash = l.hash;
 
@@ -235,6 +235,7 @@ function handleTrigger(
       `${event.entity} ${event.action}`,
       event.data,
       trigger,
+      event.context,
       event.nested,
     );
   });

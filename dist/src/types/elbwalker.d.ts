@@ -4,22 +4,33 @@ export namespace IElbwalker {
   type AnyObject = Record<string, unknown>;
 
   export interface Function {
-    push: (
-      event?: IArguments | unknown,
-      data?: PushData,
-      trigger?: string,
-      nested?: Walker.Entities,
-    ) => void;
+    push: Elb;
     config: Config;
   }
 
+  interface Elb {
+    (
+      event: string,
+      data?: PushData,
+      trigger?: string,
+      context?: Walker.Properties,
+      nested?: Walker.Entities,
+    ): void;
+    (event: 'walker consent', consent: Consent): void;
+    (event: 'walker destination', destination: WebDestination.Function): void;
+    (event: 'walker run'): void;
+    (event: 'walker user', user: User): void;
+  }
+
   type ElbLayer = [
-    (IArguments | unknown)?,
+    (IArguments | string)?,
     PushData?,
     string?,
+    Walker.Properties?,
     Walker.Entities?,
   ];
-  type PushData = AnyObject | WebDestination.Function;
+
+  type PushData = Consent | User | Walker.Properties | WebDestination.Function;
 
   interface Config {
     consent: Consent;
@@ -33,9 +44,9 @@ export namespace IElbwalker {
   type Events = Event[];
   interface Event {
     event: string;
-    data: AnyObject;
-    context: AnyObject;
-    globals: AnyObject;
+    data: Walker.Properties;
+    context: Walker.Properties;
+    globals: Walker.Properties;
     user: User;
     nested: Walker.Entities;
     id: string;

@@ -1,7 +1,7 @@
 {
-  "name": "@elbwalker/destination-web-google-ga4",
-  "version": "1.1.2",
-  "description": "Google GA4 web destination for walker.js",
+  "name": "@elbwalker/tagger",
+  "description": "A helper to set up tracking based on walker.js",
+  "version": "1.0.0",
   "main": "dist/index.js",
   "types": "dist",
   "scripts": {
@@ -15,7 +15,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/elbwalker/walker.js",
-    "directory": "destinations/google-ga4"
+    "directory": "tagger"
   },
   "files": [
     "dist/**/*.js",
@@ -40,11 +40,8 @@
     "elbwalker",
     "walker",
     "walker.js",
-    "walker destination",
-    "analytics",
-    "tracking",
-    "google analytics 4",
-    "ga4"
+    "tagger",
+    "tracking"
   ],
   "funding": [
     {

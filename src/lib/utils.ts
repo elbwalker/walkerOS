@@ -18,7 +18,7 @@ export function randomString(): string {
   return Math.random().toString(36).slice(2, 8);
 }
 
-export function getGlobalProperties(prefix: string): IElbwalker.AnyObject {
+export function getGlobalProperties(prefix: string): Walker.Properties {
   const globalsName = getElbAttributeName(
     prefix,
     IElbwalker.Commands.Globals,
@@ -73,16 +73,42 @@ export function getAttribute(element: Element, name: string): string {
 }
 
 export function assign(
-  base: IElbwalker.AnyObject,
-  props: IElbwalker.AnyObject = {},
-): IElbwalker.AnyObject {
-  return { ...base, ...props };
+  target: Walker.Properties,
+  source: Walker.Properties = {},
+): Walker.Properties {
+  // Check for array properties to merge them before overriding
+  Object.entries(source).forEach(([key, sourceProp]) => {
+    const targetProp = target[key];
+
+    // Only merge  arrays
+    if (Array.isArray(targetProp) && Array.isArray(sourceProp)) {
+      source[key] = sourceProp.reduce(
+        (acc, item) => {
+          // Remove duplicates
+          return acc.includes(item) ? acc : [...acc, item];
+        },
+        [...targetProp],
+      );
+    }
+  });
+
+  return { ...target, ...source };
 }
 
 export function isArgument(event: unknown) {
   return {}.hasOwnProperty.call(event, 'callee');
 }
 
-export function elb(...args: unknown[]) {
-  (window.elbLayer = window.elbLayer || []).push(...args);
+export const elb: IElbwalker.Elb = function () {
+  (window.elbLayer = window.elbLayer || []).push(arguments);
+};
+
+export function castValue(value: unknown): Walker.Property {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+
+  const number = Number(value); // Converts "" to 0
+  if (value == number && value !== '') return number;
+
+  return String(value);
 }

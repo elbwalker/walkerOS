@@ -30,7 +30,7 @@ function Elbwalker(
   // Internal properties
   let _count = 0; // Event counter for each run
   let _group = ''; // random id to group events of a run
-  let _globals: IElbwalker.AnyObject = {}; // init globals as some random var
+  let _globals: Walker.Properties = {}; // init globals as some random var
   // @TODO move _user to config for better init and transparency
   let _user: IElbwalker.User = {}; // handles the user ids
   let _firstRun = true; // The first run is a special one due to state changes
@@ -62,8 +62,8 @@ function Elbwalker(
     event?: unknown,
     data?: IElbwalker.PushData,
     trigger?: string,
+    context?: Walker.Properties,
     nested?: Walker.Entities,
-    context?: IElbwalker.AnyObject,
   ): void {
     if (!event || typeof event !== 'string') return;
 
@@ -95,10 +95,10 @@ function Elbwalker(
         event,
         // Create a new objects for each destination
         // to prevent data manipulation
-        data: assign({}, data as IElbwalker.AnyObject),
-        context: assign({}, context),
-        globals: assign({}, _globals),
-        user: assign({}, _user as IElbwalker.AnyObject),
+        data: assign({}, data as Walker.Properties),
+        context: assign({}, context as Walker.Properties),
+        globals: assign({}, _globals as Walker.Properties),
+        user: assign({}, _user as Walker.Properties),
         nested: nested || [],
         id,
         trigger: trigger || '',
@@ -210,13 +210,13 @@ function Elbwalker(
         setConsent(instance, data as IElbwalker.Consent);
         break;
       case IElbwalker.Commands.Destination:
-        addDestination(data);
+        addDestination(data as WebDestination.Function);
         break;
       case IElbwalker.Commands.Run:
         ready(run, instance);
         break;
       case IElbwalker.Commands.User:
-        setUserIds(data as IElbwalker.AnyObject);
+        setUserIds(data as IElbwalker.User);
         break;
       default:
         break;
@@ -230,14 +230,17 @@ function Elbwalker(
       event?: IArguments | unknown,
       data?: IElbwalker.PushData,
       trigger?: string,
+      context?: Walker.Properties,
       nested?: Walker.Entities,
     ) {
       // Pushed as Arguments
       if (isArgument(event)) {
-        [event, data, trigger, nested] = [...Array.from(event as IArguments)];
+        [event, data, trigger, context, nested] = [
+          ...Array.from(event as IArguments),
+        ];
       }
 
-      instance.push(event, data, trigger, nested);
+      instance.push(String(event), data, String(trigger), context, nested);
 
       return Array.prototype.push.apply(this, [arguments]);
     };
@@ -292,13 +295,15 @@ function Elbwalker(
 
     // At that time the elbLayer was not yet initialized
     instance.config.elbLayer.map((pushedEvent) => {
-      let [event, data, trigger, nested] = [
+      let [event, data, trigger, context, nested] = [
         ...Array.from(pushedEvent as IArguments),
       ] as IElbwalker.ElbLayer;
 
       // Pushed as Arguments
       if ({}.hasOwnProperty.call(event, 'callee')) {
-        [event, data, trigger, nested] = [...Array.from(event as IArguments)];
+        [event, data, trigger, context, nested] = [
+          ...Array.from(event as IArguments),
+        ];
       }
 
       if (typeof event !== 'string') return;
@@ -312,14 +317,14 @@ function Elbwalker(
 
       // check if event is a walker commend
       event.startsWith(walkerCommand)
-        ? walkerEvents.push([event, data, trigger, nested]) // stack it to the walker commands
-        : customEvents.push([event, data, trigger, nested]); // stack it to the custom events
+        ? walkerEvents.push([event, data, trigger, context, nested]) // stack it to the walker commands
+        : customEvents.push([event, data, trigger, context, nested]); // stack it to the custom events
     });
 
     // Prefere all walker commands before events during processing the predefined ones
     walkerEvents.concat(customEvents).map((item) => {
-      const [event, data, trigger, nested] = item;
-      instance.push(event, data, trigger, nested);
+      const [event, data, trigger, context, nested] = item;
+      instance.push(String(event), data, trigger, context, nested);
     });
   }
 
@@ -353,7 +358,7 @@ function Elbwalker(
     if (data.hash) _user.hash = data.hash;
   }
 
-  function addDestination(data: IElbwalker.PushData) {
+  function addDestination(data: WebDestination.Function) {
     // Skip validation due to trycatch calls on push
     const destination = {
       init: data.init,

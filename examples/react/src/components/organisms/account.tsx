@@ -1,4 +1,3 @@
-import Data from '../../data';
 import { AccountBox } from '../molecules/account';
 import { ButtonPrimary } from '../molecules/buttons';
 
@@ -37,7 +36,7 @@ export function AccountLogIn() {
         </div>
 
         <div>
-          <ButtonPrimary action={Data.Actions.Login} label="Login"></ButtonPrimary>
+          <ButtonPrimary action="login" label="Login"></ButtonPrimary>
         </div>
       </form>
     </AccountBox>
@@ -95,7 +94,10 @@ export function AccountSignUp() {
           </div>
 
           <div>
-            <ButtonPrimary action={Data.Actions.Signup} label="Create your account"></ButtonPrimary>
+            <ButtonPrimary
+              action="signup"
+              label="Create your account"
+            ></ButtonPrimary>
           </div>
           <div className="text-xs leading-5 text-gray-500">
             <p>

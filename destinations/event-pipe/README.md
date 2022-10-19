@@ -9,7 +9,7 @@ More detailed information and examples can be found in the [documentation](https
 Start by installing the destination with npm:
 
 ```sh
-npm i --save @elbwalker/walker.js @elbwalker/destination-web-event-pipe
+npm i --save @elbwalker/destination-web-event-pipe
 ```
 
 Import, configure and add the destination
