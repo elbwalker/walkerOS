@@ -9,13 +9,15 @@ export namespace ITagger {
 
   export interface Function {
     config: Config;
-    entity: (name: string) => AnyObject;
-    action: (trigger: ITagger.Trigger, action?: string) => AnyObject;
+    entity: (name: string) => Walker.Properties;
+    action: (trigger: ITagger.Trigger, action?: string) => Walker.Properties;
     property: (
       entity: string,
       prop: string,
       value: Walker.Property,
-    ) => AnyObject;
+    ) => Walker.Properties;
+    context: (property: string, value: Walker.Property) => Walker.Properties;
+    globals: (property: string, value: Walker.Property) => Walker.Properties;
   }
 
   export type Trigger =
@@ -36,21 +38,40 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
     entity,
     action,
     property,
+    context,
+    globals,
   };
 
+  // entity("promotion") -> data-elb="promotion"
   function entity(name: string) {
     return { [attrName()]: name };
   }
 
-  // property("entity", "property", "value") -> data-elb-entity="property:value"
+  // action("visible", "view") -> data-elbaction="visible:view"
+  function action(trigger: ITagger.Trigger, action?: string) {
+    action = action || trigger;
+    return {
+      [attrName(IElbwalker.Commands.Action, false)]: trigger + ':' + action,
+    };
+  }
+
+  // property("promotion", "category", "analytics") -> data-elb-promotion="category:analytics"
   function property(entity: string, property: string, value: Walker.Property) {
     return { [attrName(entity)]: property + ':' + value };
   }
 
-  // property("entity", "property", "value") -> data-elb-entity="property:value"
-  function action(trigger: ITagger.Trigger, action?: string) {
-    action = action || trigger;
-    return { [attrName('action', false)]: trigger + ':' + action };
+  // context("test", "engagement") -> data-elbcontext="test:engagement"
+  function context(property: string, value: Walker.Property) {
+    return {
+      [attrName(IElbwalker.Commands.Context, false)]: property + ':' + value,
+    };
+  }
+
+  // globals("language", "en") -> data-elbglobals="language:en"
+  function globals(property: string, value: Walker.Property) {
+    return {
+      [attrName(IElbwalker.Commands.Globals, false)]: property + ':' + value,
+    };
   }
 
   function attrName(name?: string, isProperty = true) {

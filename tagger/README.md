@@ -12,15 +12,17 @@ Start by installing the tagger with npm:
 npm i --save @elbwalker/tagger
 ```
 
-Import, configure and add the tagger
+Import, instantiate and use the tagger
 
 ```ts
 import { Tagger } from '@elbwalker/tagger';
 
 const tagger = Tagger();
-tagger.entity('product'); // { "data-elb": "product" }
-tagger.action('click', 'add'); // { "data-elbaction": "click:add" }
-tagger.property('product', 'name', 'tagger'); // { "data-elb.product": "name:Tagger" }
+tagger.entity('promotion'); // { "data-elb": "promotion" }
+tagger.action('visible', 'view'); // { "data-elbaction": "visible:view" }
+tagger.property('promotion', 'category', 'analytics'); // { "data-elb-promotion": "category:analytics" }
+tagger.context('test', 'engagement'); // { "data-elbcontext": "test:engagement" }
+tagger.globals('language', 'en'); // { "data-elbglobals": "language:en" }
 ```
 
 ## Contribute

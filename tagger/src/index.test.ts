@@ -25,20 +25,34 @@ describe('Tagger', () => {
   });
 
   test('Entity', () => {
-    expect(tagger.entity('e')).toMatchObject({
-      'data-elb': 'e',
+    expect(tagger.entity('promotion')).toMatchObject({
+      'data-elb': 'promotion',
     });
   });
 
   test('Action', () => {
-    expect(tagger.action('click', 'a')).toMatchObject({
-      'data-elbaction': 'click:a',
+    expect(tagger.action('visible', 'view')).toMatchObject({
+      'data-elbaction': 'visible:view',
     });
   });
 
   test('Property', () => {
-    expect(tagger.property('e', 'p', 'v')).toMatchObject({
-      'data-elb-e': 'p:v',
+    expect(tagger.property('promotion', 'category', 'analytics')).toMatchObject(
+      {
+        'data-elb-promotion': 'category:analytics',
+      },
+    );
+  });
+
+  test('Context', () => {
+    expect(tagger.context('test', 'engagement')).toMatchObject({
+      'data-elbcontext': 'test:engagement',
+    });
+  });
+
+  test('Globals', () => {
+    expect(tagger.globals('language', 'en')).toMatchObject({
+      'data-elbglobals': 'language:en',
     });
   });
 });
