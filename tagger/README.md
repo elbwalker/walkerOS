@@ -15,7 +15,7 @@ npm i --save @elbwalker/tagger
 Import, instantiate and use the tagger
 
 ```ts
-import { Tagger } from '@elbwalker/tagger';
+import Tagger from '@elbwalker/tagger';
 
 const tagger = Tagger();
 tagger.entity('promotion'); // { "data-elb": "promotion" }
