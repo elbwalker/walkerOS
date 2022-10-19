@@ -1,11 +1,12 @@
 import React from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
+import { elb } from '@elbwalker/walker.js';
+import { setupAnalytics } from './data';
 import Footer from './components/organisms/footer';
 import Navigation from './components/organisms/navigation';
 import Home from './components/pages/home';
 import LogIn from './components/pages/login';
 import Pricing from './components/pages/pricing';
-import { elb, setupAnalytics } from './data';
 
 setupAnalytics();
 

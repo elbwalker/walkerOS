@@ -22,7 +22,7 @@
     "dist/**/*.d.ts"
   ],
   "dependencies": {
-    "@elbwalker/walker.js": "^1.5.2"
+    "@elbwalker/walker.js": "^1.5.3"
   },
   "devDependencies": {
     "@types/jest": "^28.1.7",

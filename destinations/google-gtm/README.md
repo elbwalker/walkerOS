@@ -9,7 +9,7 @@ More detailed information and examples can be found in the [documentation](https
 Start by installing the destination with npm:
 
 ```sh
-npm i --save @elbwalker/walker.js @elbwalker/destination-web-google-gtm
+npm i --save @elbwalker/destination-web-google-gtm
 ```
 
 Import, configure and add the destination

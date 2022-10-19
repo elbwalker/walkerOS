@@ -1,18 +1,19 @@
-import Elbwalker from '@elbwalker/walker.js';
+import Elbwalker, { elb, WebDestination } from '@elbwalker/walker.js';
 import DestinationGTM from '@elbwalker/destination-web-google-gtm';
-import Data from './plan';
-
-export function elb(...args: unknown[]) {
-  (window.elbLayer = window.elbLayer || []).push(...args);
-}
 
 export function setupAnalytics() {
+  window.elbLayer = [];
   window.elbwalker = Elbwalker();
+  window.elb = elb;
 
+  // Google Tag Manager
+  DestinationGTM.config = {
+    consent: { functional: true },
+    mapping: { '*': { '*': {} } },
+  };
   elb('walker destination', DestinationGTM);
+
   elb('walker destination', {
     push: console.log,
-  });
+  } as WebDestination.Function);
 }
-
-export default Data;

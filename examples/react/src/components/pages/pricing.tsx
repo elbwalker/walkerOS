@@ -61,6 +61,8 @@ export default function Pricing() {
         {pricing.tiers.map((tier) => (
           <div
             key={tier.title}
+            data-elb="pricing"
+            data-elb-pricing={`name:${tier.title}`}
             className="relative p-8 bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col"
           >
             <div className="flex-1 mb-12">
@@ -73,7 +75,7 @@ export default function Pricing() {
                 </p>
               ) : null}
               <p className="mt-4 flex items-baseline text-gray-900">
-                <span className="text-5xl font-extrabold tracking-tight">
+                <span data-elb-pricing={`price:${tier.price}`} className="text-5xl font-extrabold tracking-tight">
                   ${tier.price}
                 </span>
                 <span className="ml-1 text-xl font-semibold">/month</span>
@@ -94,9 +96,9 @@ export default function Pricing() {
             </div>
 
             {tier.mostPopular ? (
-              <ButtonPrimary label="Get started" />
+              <ButtonPrimary label="Get started" action={tier.action} />
             ) : (
-              <ButtonSecondary label="Get started" />
+              <ButtonSecondary label="Get started" action={tier.action} />
             )}
           </div>
         ))}
