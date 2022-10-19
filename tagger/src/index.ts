@@ -1,8 +1,6 @@
 import { IElbwalker, Walker } from '@elbwalker/walker.js';
 
 export namespace ITagger {
-  type AnyObject = Record<string, unknown>;
-
   export interface Config {
     prefix: string;
   }
