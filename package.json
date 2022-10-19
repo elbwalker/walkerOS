@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/walker.js",
   "description": "Lightweight & vendor-agnostic tracking implementation layer by simply adding attributes to your markup.",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "repository": {
     "type": "git",
     "url": "https://github.com/elbwalker/walker.js"

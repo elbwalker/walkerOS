@@ -5,5 +5,6 @@ declare global {
     elbwalker: IElbwalker.Function;
     elbLayer: IElbwalker.ElbLayer;
     dataLayer: unknown[];
+    elb: IElbwalker.Elb;
   }
 }
