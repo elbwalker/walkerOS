@@ -16,9 +16,11 @@ Import, configure and add the destination
 
 ```ts
 import { elb } from '@elbwalker/walker.js';
-import { DestinationEventPipe } from '@elbwalker/destination-web-event-pipe';
+import destinationEventPipe, {
+  DestinationEventPipe, // Types
+} from '@elbwalker/destination-web-event-pipe';
 
-const config: DestinationEventPipe.Config = {
+const configEventPipe: DestinationEventPipe.Config = {
   // consent: { functional: true }, // Neccessary consent states
   custom: {
     projectId: 'W3BP4G3', // Required
@@ -29,10 +31,9 @@ const config: DestinationEventPipe.Config = {
   // mapping: { '*': { '*': {} } }, // Process all events
 };
 
-DestinationEventPipe.config = config;
-
 // And add the destination to the walker.js
-elb('walker destination', DestinationEventPipe);
+destinationEventPipe.config = configEventPipe;
+elb('walker destination', destinationEventPipe);
 ```
 
 ## Contribute

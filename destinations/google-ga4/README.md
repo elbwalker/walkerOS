@@ -16,9 +16,11 @@ Import, configure and add the destination
 
 ```ts
 import { elb } from '@elbwalker/walker.js';
-import { DestinationGA4 } from '@elbwalker/destination-web-google-ga4';
+import destinationGA4, {
+  DestinationGA4, // Types
+} from '@elbwalker/destination-web-google-ga4';
 
-const config: DestinationGA4.Config = {
+const configGA4: DestinationGA4.Config = {
   // consent: { marketing: true }, // Neccessary consent states
   custom: {
     measurementId: 'G-XXXXXX-1', // Required
@@ -33,9 +35,8 @@ const config: DestinationGA4.Config = {
   },
 };
 
-DestinationGA4.config = config;
-
 // And add the destination to the walker.js
+destinationGA4.config = configGA4;
 elb('walker destination', DestinationGA4);
 ```
 

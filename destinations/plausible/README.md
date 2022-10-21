@@ -16,9 +16,11 @@ Import, configure and add the destination
 
 ```ts
 import { elb } from '@elbwalker/walker.js';
-import { DestinationPlausible } from '@elbwalker/destination-web-plausible';
+import destinationPlausible, {
+  DestinationPlausible, // Types
+} from '@elbwalker/destination-web-plausible';
 
-const config: DestinationPlausible.Config = {
+const configPlausible: DestinationPlausible.Config = {
   // consent: { marketing: true }, // Neccessary consent states
   // custom: {
   //   domain: 'elbwalker.com'; // Name of the domain to be tracked
@@ -31,10 +33,9 @@ const config: DestinationPlausible.Config = {
   // },
 };
 
-DestinationPlausible.config = config;
-
 // And add the destination to the walker.js
-elb('walker destination', DestinationPlausible);
+destinationPlausible.config = configPlausible;
+elb('walker destination', destinationPlausible);
 ```
 
 ## Contribute
