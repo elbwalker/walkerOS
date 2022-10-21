@@ -16,9 +16,11 @@ Import, configure and add the destination
 
 ```ts
 import { elb } from '@elbwalker/walker.js';
-import { DestinationGTM } from '@elbwalker/destination-web-google-gtm';
+import destinationGTM, {
+  DestinationGTM, // Types
+} from '@elbwalker/destination-web-google-gtm';
 
-const config: DestinationGTM.Config = {
+const configGTM: DestinationGTM.Config = {
   // consent: { functional: true }, // Neccessary consent states
   // custom: {
   //   containerId: "GTM-XXXXXXX", // The published container id
@@ -29,10 +31,9 @@ const config: DestinationGTM.Config = {
   // mapping: { '*': { '*': {} } }, // Process all events
 };
 
-DestinationGTM.config = config;
-
 // And add the destination to the walker.js
-elb('walker destination', DestinationGTM);
+destinationGTM.config = configGTM;
+elb('walker destination', destinationGTM);
 ```
 
 ## Contribute
