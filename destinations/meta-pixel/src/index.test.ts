@@ -93,6 +93,30 @@ describe('Destination Meta Pixel', () => {
 
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
-    expect(mockFn).toHaveBeenCalledWith('track', 'Contact');
+    expect(mockFn).toHaveBeenCalledWith('track', 'Contact', {});
+  });
+
+  test('push purchase', () => {
+    destination.config.mapping = {
+      entity: { action: { track: 'Purchase', value: 'revenue' } },
+    };
+
+    elbwalker.push('walker destination', destination);
+    elbwalker.push(event, { revenue: 42 });
+    expect(mockFn).toHaveBeenCalledWith(
+      'track',
+      'Purchase',
+      expect.objectContaining({
+        currency: 'EUR',
+        value: 42,
+      }),
+    );
+
+    elbwalker.push(event);
+    expect(mockFn).toHaveBeenCalledWith(
+      'track',
+      'Purchase',
+      expect.objectContaining({ value: 1 }),
+    );
   });
 });

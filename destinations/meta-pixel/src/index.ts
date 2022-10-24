@@ -25,6 +25,7 @@ export namespace DestinationMeta {
 
   export interface EventConfig extends WebDestination.EventConfig {
     track?: StandardEventNames; // Name of a standard event to track
+    value?: string; // Name of data property key to use for value
   }
 
   export type StandardEventNames =
@@ -45,6 +46,12 @@ export namespace DestinationMeta {
     | 'SubmitApplication'
     | 'Subscribe'
     | 'ViewContent';
+
+  export interface StartSubscribeParameters {
+    currency?: string;
+    predicted_ltv?: number;
+    value?: number;
+  }
 }
 
 // https://developers.facebook.com/docs/meta-pixel/
@@ -54,19 +61,24 @@ export const destination: DestinationMeta.Function = {
 
   init() {
     let config = this.config;
+    const custom = config.custom;
+
+    // load fbevents.js
+    if (config.loadScript) addScript();
 
     // required pixel id
-    if (!config.custom.pixelId) return false;
+    if (!custom.pixelId) return false;
 
     // fbq function setup
     setup();
 
-    w.fbq('init', config.custom.pixelId);
+    w.fbq('init', custom.pixelId);
 
     // PageView event (deactivate actively)
-    if (config.custom.pageview !== false) w.fbq('track', 'PageView');
+    if (custom.pageview !== false) w.fbq('track', 'PageView');
 
-    if (config.loadScript) addScript();
+    // Default currency value
+    // custom.currency = custom.currency || 'EUR';
 
     return true;
   },
@@ -77,7 +89,13 @@ export const destination: DestinationMeta.Function = {
   ): void {
     // Standard events
     if (mapping.track) {
-      w.fbq('track', mapping.track);
+      const parameters = getParameters(
+        mapping.track,
+        event,
+        mapping,
+        this.config.custom.currency,
+      );
+      w.fbq('track', mapping.track, parameters);
     } else {
       // Custom events
       w.fbq('trackCustom', event.event);
@@ -96,6 +114,66 @@ function setup() {
   n.loaded = !0;
   n.version = '2.0';
   n.queue = [];
+}
+
+function getParameters(
+  track: DestinationMeta.StandardEventNames,
+  event: IElbwalker.Event,
+  mapping: DestinationMeta.EventConfig,
+  currency: string = 'EUR',
+) {
+  if (track === 'AddPaymentInfo') {
+    const parameters: facebook.Pixel.AddPaymentInfoParameters = {};
+    return parameters;
+  }
+  if (track === 'AddToCart') {
+    const parameters: facebook.Pixel.AddToCartParameters = {};
+    return parameters;
+  }
+  if (track === 'AddToWishlist') {
+    const parameters: facebook.Pixel.AddToWishlistParameters = {};
+    return parameters;
+  }
+  if (track === 'CompleteRegistration') {
+    const parameters: facebook.Pixel.CompleteRegistrationParameters = {};
+    return parameters;
+  }
+  if (track === 'InitiateCheckout') {
+    const parameters: facebook.Pixel.InitiateCheckoutParameters = {};
+    return parameters;
+  }
+  if (track === 'Lead') {
+    const parameters: facebook.Pixel.LeadParameters = {};
+    return parameters;
+  }
+  if (track === 'Purchase') {
+    const value = (event.data[mapping.value + ''] as number) || 1;
+    const parameters: facebook.Pixel.PurchaseParameters = {
+      value,
+      currency,
+    };
+    return parameters;
+  }
+  if (track === 'Search') {
+    const parameters: facebook.Pixel.SearchParameters = {};
+    return parameters;
+  }
+  if (track === 'StartTrial') {
+    const parameters: DestinationMeta.StartSubscribeParameters = {};
+    return parameters;
+  }
+  if (track === 'Subscribe') {
+    const parameters: DestinationMeta.StartSubscribeParameters = {};
+    return parameters;
+  }
+  if (track === 'ViewContent') {
+    const parameters: facebook.Pixel.ViewContentParameters = {};
+    return parameters;
+  }
+
+  // Contact, CustomizeProduct, Donate, FindLocation, Schedule, SubmitApplication
+  const parameters: facebook.Pixel.CustomParameters = {};
+  return parameters;
 }
 
 function addScript(src = 'https://connect.facebook.net/en_US/fbevents.js') {
