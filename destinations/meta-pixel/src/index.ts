@@ -121,11 +121,14 @@ function getParameters(
   mapping: DestinationMeta.EventConfig,
   currency: string = 'EUR',
 ) {
-  const value = mapping.value ? event.data[mapping.value] : '';
+  const value = mapping.value ? (event.data[mapping.value] as number) : 1;
   const content_name = mapping.name ? (event.data[mapping.name] as string) : '';
 
   if (track === 'AddPaymentInfo') {
-    const parameters: facebook.Pixel.AddPaymentInfoParameters = {};
+    const parameters: facebook.Pixel.AddPaymentInfoParameters = {
+      currency,
+      value,
+    };
     return parameters;
   }
   if (track === 'AddToCart') {
@@ -145,39 +148,56 @@ function getParameters(
   if (track === 'CompleteRegistration') {
     const parameters: facebook.Pixel.CompleteRegistrationParameters = {
       content_name,
+      currency,
     };
     return parameters;
   }
   if (track === 'InitiateCheckout') {
-    const parameters: facebook.Pixel.InitiateCheckoutParameters = {};
+    const parameters: facebook.Pixel.InitiateCheckoutParameters = {
+      currency,
+      value,
+    };
     return parameters;
   }
   if (track === 'Lead') {
-    const parameters: facebook.Pixel.LeadParameters = { content_name };
+    const parameters: facebook.Pixel.LeadParameters = {
+      content_name,
+      currency,
+    };
     return parameters;
   }
   if (track === 'Purchase') {
     const parameters: facebook.Pixel.PurchaseParameters = {
       content_name,
-      value: (value as number) || 1,
+      value: value || 1,
       currency,
     };
     return parameters;
   }
   if (track === 'Search') {
-    const parameters: facebook.Pixel.SearchParameters = {};
+    const parameters: facebook.Pixel.SearchParameters = { currency, value };
     return parameters;
   }
   if (track === 'StartTrial') {
-    const parameters: DestinationMeta.StartSubscribeParameters = {};
+    const parameters: DestinationMeta.StartSubscribeParameters = {
+      currency,
+      value,
+    };
     return parameters;
   }
   if (track === 'Subscribe') {
-    const parameters: DestinationMeta.StartSubscribeParameters = {};
+    const parameters: DestinationMeta.StartSubscribeParameters = {
+      currency,
+      value,
+    };
     return parameters;
   }
   if (track === 'ViewContent') {
-    const parameters: facebook.Pixel.ViewContentParameters = { content_name };
+    const parameters: facebook.Pixel.ViewContentParameters = {
+      content_name,
+      currency,
+      value,
+    };
     return parameters;
   }
 
