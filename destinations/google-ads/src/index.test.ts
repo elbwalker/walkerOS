@@ -116,7 +116,14 @@ describe('destination Google Ads', () => {
       currency: 'EUR',
     });
 
-    // @TODO use with default value
+    // Use a default conversion value
+    destination.config.custom.defaultValue = 3.14;
+    elbwalker.push(event, {});
+    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
+      send_to: `${conversionId}/${label}`,
+      currency: 'EUR',
+      value: 3.14,
+    });
 
     // With value property
     elbwalker.push(event, { revenue: 42 });

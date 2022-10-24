@@ -13,6 +13,7 @@ export namespace DestinationAds {
     custom: {
       conversionId: string;
       currency?: string;
+      defaultValue?: number;
     };
     mapping?: WebDestination.Mapping<EventConfig>;
   }
@@ -68,7 +69,9 @@ export const destination: DestinationAds.Function = {
       currency: this.config.custom.currency,
     };
 
-    if (mapping.value) eventParams.value = event.data[mapping.value];
+    if (mapping.value)
+      eventParams.value =
+        event.data[mapping.value] || this.config.custom.defaultValue;
 
     w.gtag('event', 'conversion', eventParams);
   },
