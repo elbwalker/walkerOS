@@ -72,11 +72,11 @@ export const destination: DestinationAds.Function = {
     };
 
     // value
-    if (mapping.value)
-      eventParams.value =
-        event.data[mapping.value] || this.config.custom.defaultValue;
+    if (mapping.value) eventParams.value = event.data[mapping.value];
 
-    // @TODO use defaultValue also without mapping.value
+    // default value
+    if (this.config.custom.defaultValue && !eventParams.value)
+      eventParams.value = this.config.custom.defaultValue;
 
     // transaction_id
     if (mapping.id) eventParams.transaction_id = event.data[mapping.id];
