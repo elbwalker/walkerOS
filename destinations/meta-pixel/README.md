@@ -22,17 +22,24 @@ import destinationMeta, {
 
 const configMeta: DestinationMeta.Config = {
   // consent: { marketing: true }, // Neccessary consent states
-  // custom: {
-  //
-  // },
+  custom: {
+    pixelId: '1234567890', // The ads accounts id used for every conversion
+    // currency: 'EUR', // Default currency is EUR
+    // pageview: true, // Send the PageView event (default yes, deactivate actively)
+  },
   // init: false, // Status if the destination was initialized successfully or should be skipped
   // loadScript: true, // Load additional required scripts on init
-  // mapping: {
-  //   '*': { '*': {} }, // Process all events
-  // },
+  mapping: {
+    order: {
+      complete: {
+        // id: 'order_id', // Name of data property key to use in content_ids
+        // name: 'title', // Name of data property key to use as content_name
+        track: 'Purchase', // Name of a standard event to track
+        value: 'revenue', // Name of data property key to use for value
+      },
+    },
+  },
 };
-
-// And add the destination to the walker.js
 destinationMeta.config = configMeta;
 elb('walker destination', destinationMeta);
 ```
