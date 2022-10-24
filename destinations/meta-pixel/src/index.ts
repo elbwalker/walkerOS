@@ -2,7 +2,7 @@ import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
-    xxx?: Function; // global window objects
+    _fbq?: any;
   }
 }
 
@@ -10,8 +10,8 @@ const w = window;
 
 export namespace DestinationMeta {
   export interface Config extends WebDestination.Config {
-    custom?: {
-      // XXXs custom settings
+    custom: {
+      pixelId: string;
     };
     mapping?: WebDestination.Mapping<EventConfig>;
   }
@@ -28,14 +28,20 @@ export namespace DestinationMeta {
 // https://developers.facebook.com/docs/meta-pixel/
 
 export const destination: DestinationMeta.Function = {
-  config: {},
+  config: { custom: { pixelId: '' } },
 
   init() {
     let config = this.config;
 
-    if (config.loadScript) addScript();
+    // required pixel id
+    if (!config.custom.pixelId) return false;
 
-    // Do something initializing
+    // fbq function setup
+    setup();
+
+    w.fbq('init', config.custom.pixelId);
+
+    if (config.loadScript) addScript();
 
     return true;
   },
@@ -44,11 +50,24 @@ export const destination: DestinationMeta.Function = {
     event: IElbwalker.Event,
     mapping: DestinationMeta.EventConfig = {},
   ): void {
-    // Do something magical
+    w.fbq('trackCustom', event.event);
   },
 };
 
-function addScript(src = 'https://XXX_DOMAIN/xxx.js') {
+function setup() {
+  if (w.fbq as any) return;
+
+  const n = (w.fbq = function (): void {
+    n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+  }) as any;
+  if (!w._fbq) w._fbq = n;
+  n.push = n;
+  n.loaded = !0;
+  n.version = '2.0';
+  n.queue = [];
+}
+
+function addScript(src = 'https://connect.facebook.net/en_US/fbevents.js') {
   const script = document.createElement('script');
   script.src = src;
   document.head.appendChild(script);

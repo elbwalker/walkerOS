@@ -10,15 +10,21 @@ describe('Destination Meta Pixel', () => {
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const event = 'entity action';
+  const pixelId = '1234567890';
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
 
+    config = {
+      custom: { pixelId },
+    };
+
     destination = require('.').default;
+    destination.config = config;
 
     w.elbLayer = [];
-    w.xxx = mockFn;
+    w.fbq = mockFn;
 
     elbwalker = Elbwalker();
     elbwalker.push('walker run');
@@ -29,17 +35,43 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('init', () => {
-    destination.config = {
-      custom: {},
-    };
+    (w.fbq as any) = undefined;
+
+    expect(w.fbq).not.toBeDefined();
+
     elbwalker.push('walker destination', destination);
 
-    expect(true).toBeTruthy();
+    elbwalker.push(event);
+    expect(w.fbq).toBeDefined();
+  });
+
+  test('Init calls', () => {
+    elbwalker.push('walker destination', destination);
+
+    elbwalker.push(event);
+
+    expect(mockFn).toHaveBeenNthCalledWith(1, 'init', pixelId);
+  });
+
+  test('init with load script', () => {
+    destination.config.loadScript = true;
+    elbwalker.push('walker destination', destination);
+
+    const scriptSelector = `script[src="https://connect.facebook.net/en_US/fbevents.js"]`;
+
+    let elem = document.querySelector(scriptSelector);
+    expect(elem).not.toBeTruthy();
+
+    elbwalker.push(event);
+
+    elem = document.querySelector(scriptSelector);
+    expect(elem).toBeTruthy();
   });
 
   test('push', () => {
+    // Missing mapping
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
-    // expect(mockFn).toHaveBeenNthCalledWith(1, event);
+    expect(mockFn).toHaveBeenCalledWith('trackCustom', event);
   });
 });
