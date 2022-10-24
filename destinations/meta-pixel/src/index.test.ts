@@ -69,9 +69,18 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('push', () => {
-    // Missing mapping
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
     expect(mockFn).toHaveBeenCalledWith('trackCustom', event);
+  });
+
+  test('push standard event', () => {
+    destination.config.mapping = {
+      entity: { action: { track: "Contact" } },
+    };
+
+    elbwalker.push('walker destination', destination);
+    elbwalker.push(event);
+    expect(mockFn).toHaveBeenCalledWith('track', "Contact");
   });
 });

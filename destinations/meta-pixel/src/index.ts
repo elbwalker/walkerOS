@@ -2,7 +2,8 @@ import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
-    _fbq?: any;
+    _fbq?: facebook.Pixel.Event;
+    fbq?: facebook.Pixel.Event;
   }
 }
 
@@ -21,8 +22,27 @@ export namespace DestinationMeta {
   }
 
   export interface EventConfig extends WebDestination.EventConfig {
-    // Custom destination event mapping properties
+    track?: StandardEventNames;
   }
+
+  export type StandardEventNames =
+    | 'AddPaymentInfo'
+    | 'AddToCart'
+    | 'AddToWishlist'
+    | 'CompleteRegistration'
+    | 'Contact'
+    | 'CustomizeProduct'
+    | 'Donate'
+    | 'FindLocation'
+    | 'InitiateCheckout'
+    | 'Lead'
+    | 'Purchase'
+    | 'Schedule'
+    | 'Search'
+    | 'StartTrial'
+    | 'SubmitApplication'
+    | 'Subscribe'
+    | 'ViewContent';
 }
 
 // https://developers.facebook.com/docs/meta-pixel/
@@ -50,7 +70,13 @@ export const destination: DestinationMeta.Function = {
     event: IElbwalker.Event,
     mapping: DestinationMeta.EventConfig = {},
   ): void {
-    w.fbq('trackCustom', event.event);
+    // Standard events
+    if (mapping.track) {
+      w.fbq('track', mapping.track);
+    } else {
+      // Custom events
+      w.fbq('trackCustom', event.event);
+    }
   },
 };
 
