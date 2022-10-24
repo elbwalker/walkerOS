@@ -28,19 +28,19 @@ export namespace DestinationAds {
 }
 
 export const destination: DestinationAds.Function = {
-  config: {} as DestinationAds.Config,
+  config: { custom: {} } as DestinationAds.Config,
 
   init() {
-    let config = this.config;
-    const settings: IElbwalker.AnyObject = {};
+    const config = this.config;
+    const custom = config.custom;
 
     // required measuremt id
-    if (!config.custom.conversionId) return false;
+    if (!custom.conversionId) return false;
 
     // Default currency value
-    config.custom.currency = config.custom.currency || 'EUR';
+    custom.currency = custom.currency || 'EUR';
 
-    if (config.loadScript) addScript(config.custom.conversionId);
+    if (config.loadScript) addScript(custom.conversionId);
 
     w.dataLayer = w.dataLayer || [];
     if (!w.gtag) {
@@ -51,7 +51,7 @@ export const destination: DestinationAds.Function = {
     }
 
     // gtag init call
-    w.gtag('config', config.custom.conversionId);
+    w.gtag('config', custom.conversionId);
 
     return true;
   },
