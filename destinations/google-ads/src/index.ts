@@ -64,19 +64,20 @@ export const destination: DestinationAds.Function = {
     mapping: DestinationAds.EventConfig = {},
   ): void {
     if (!mapping.label) return;
+    const custom = this.config.custom;
 
     // Basic conversion parameters
     const eventParams: Gtag.CustomParams = {
-      send_to: `${this.config.custom.conversionId}/${mapping.label}`,
-      currency: this.config.custom.currency,
+      send_to: `${custom.conversionId}/${mapping.label}`,
+      currency: custom.currency,
     };
 
     // value
     if (mapping.value) eventParams.value = event.data[mapping.value];
 
     // default value
-    if (this.config.custom.defaultValue && !eventParams.value)
-      eventParams.value = this.config.custom.defaultValue;
+    if (custom.defaultValue && !eventParams.value)
+      eventParams.value = custom.defaultValue;
 
     // transaction_id
     if (mapping.id) eventParams.transaction_id = event.data[mapping.id];
