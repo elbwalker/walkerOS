@@ -134,7 +134,21 @@ describe('destination Google Ads', () => {
     });
   });
 
-  test.skip('push with transaction_id', () => {
-    // transaction_id
+  test('push with transaction_id', () => {
+    elbwalker.push('walker destination', destination);
+    const transaction_id = '0rd3r1d';
+    destination.config.mapping = {
+      entity: { action: { label, id: 'order_id' } },
+    };
+
+    elbwalker.push(event, { order_id: transaction_id });
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'conversion',
+      expect.objectContaining({
+        send_to: `${conversionId}/${label}`,
+        transaction_id,
+      }),
+    );
   });
 });
