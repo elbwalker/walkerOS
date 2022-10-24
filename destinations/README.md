@@ -12,7 +12,7 @@ If you want your destination to be added feel free to create an issue.
 
 ## 🤓 Write your own
 
-Creating your own destinations is easy. A valid `WebDestination.Function` consists of a `config` object, and the two methods:
+Creating your own destinations is easy. Use [XXX Boilerplate](./xxx_boilerplate/) to get started. A valid `WebDestination.Function` consists of a `config` object, and the two methods:
 
 ```ts
 interface Function {
