@@ -11,9 +11,9 @@ const w = window;
 export namespace DestinationAds {
   export interface Config extends WebDestination.Config {
     custom: {
-      conversionId: string;
-      currency?: string;
-      defaultValue?: number;
+      conversionId: string; // The ads accounts id used for every conversion
+      currency?: string; // Default currency is EUR
+      defaultValue?: number; // Used default value for conversions
     };
     mapping?: WebDestination.Mapping<EventConfig>;
   }
@@ -75,6 +75,8 @@ export const destination: DestinationAds.Function = {
     if (mapping.value)
       eventParams.value =
         event.data[mapping.value] || this.config.custom.defaultValue;
+
+    // @TODO use defaultValue also without mapping.value
 
     // transaction_id
     if (mapping.id) eventParams.transaction_id = event.data[mapping.id];

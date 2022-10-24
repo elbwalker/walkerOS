@@ -22,14 +22,22 @@ import destinationAds, {
 
 const configAds: DestinationAds.Config = {
   // consent: { marketing: true }, // Neccessary consent states
-  // custom: {
-  //   xxx
-  // },
+  custom: {
+    conversionId: 'abc', // The ads accounts id used for every conversion
+    // currency: 'EUR', // Default currency is EUR
+    // defaultValue: 1, // Used default value for conversions
+  },
   // init: false, // Status if the destination was initialized successfully or should be skipped
   // loadScript: true, // Load additional required scripts on init
-  // mapping: {
-  //   '*': { '*': {} }, // Process all events
-  // },
+  mapping: {
+    // order: {
+    //   complete: {
+    //     id: 'order_id', // Name of data property key to use as transaction id
+    //     label: 'abc', // Conversion label
+    //     value: 'revenue', // Name of data property key to use for value
+    //   },
+    // },
+  },
 };
 
 // And add the destination to the walker.js
