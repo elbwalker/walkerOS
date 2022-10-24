@@ -12,6 +12,7 @@ export namespace DestinationAds {
   export interface Config extends WebDestination.Config {
     custom: {
       conversionId: string;
+      currency?: string;
     };
     mapping?: WebDestination.Mapping<EventConfig>;
   }
@@ -22,11 +23,12 @@ export namespace DestinationAds {
 
   export interface EventConfig extends WebDestination.EventConfig {
     // Custom destination event mapping properties
+    label?: string;
   }
 }
 
 export const destination: DestinationAds.Function = {
-  config: { custom: { conversionId: '' } },
+  config: { custom: { conversionId: '', currency: 'EUR' } },
 
   init() {
     let config = this.config;
@@ -51,8 +53,15 @@ export const destination: DestinationAds.Function = {
     return true;
   },
 
-  push(event: IElbwalker.Event): void {
-    // Do something magical
+  push(
+    event: IElbwalker.Event,
+    mapping: DestinationAds.EventConfig = {},
+  ): void {
+    if (!mapping.label) return;
+
+    w.gtag('event', 'conversion', {
+      send_to: `${this.config.custom.conversionId}/${mapping.label}`,
+    });
   },
 };
 

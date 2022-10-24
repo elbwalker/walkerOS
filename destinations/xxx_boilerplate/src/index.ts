@@ -38,7 +38,10 @@ export const destination: DestinationXXX.Function = {
     return true;
   },
 
-  push(event: IElbwalker.Event): void {
+  push(
+    event: IElbwalker.Event,
+    mapping: DestinationXXX.EventConfig = {},
+  ): void {
     // Do something magical
   },
 };

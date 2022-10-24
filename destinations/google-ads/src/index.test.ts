@@ -76,8 +76,25 @@ describe('destination Google Ads', () => {
   });
 
   test('push', () => {
+    const label = 'abc';
+
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
-    // expect(mockFn).toHaveBeenNthCalledWith(1, event);
+    expect(mockFn).not.toHaveBeenCalledWith('event', 'conversion', {
+      send_to: `${conversionId}/${label}`,
+    });
+
+    destination.config.mapping = {
+      entity: { action: { label } },
+    };
+
+    elbwalker.push(event);
+    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
+      send_to: `${conversionId}/${label}`,
+    });
   });
+
+  test.skip('push without mapping', () => {});
+  test.skip('currency update', () => {});
+  test.skip('mapping value', () => {});
 });
