@@ -3,6 +3,7 @@
 Understand the concept of destinations, learn how to use them, and how to write you own.
 
 - [event pipe](./event-pipe/)
+- [Google Ads](./google-ads/)
 - [Google GA4](./google-ga4/)
 - [Google Tag Manager](./google-gtm/)
 - [Plausible](./plausible/)
@@ -12,7 +13,7 @@ If you want your destination to be added feel free to create an issue.
 
 ## 🤓 Write your own
 
-Creating your own destinations is easy. A valid `WebDestination.Function` consists of a `config` object, and the two methods:
+Creating your own destinations is easy. Use [XXX Boilerplate](./xxx_boilerplate/) to get started. A valid `WebDestination.Function` consists of a `config` object, and the two methods:
 
 ```ts
 interface Function {
