@@ -24,6 +24,8 @@ export namespace DestinationMeta {
   }
 
   export interface EventConfig extends WebDestination.EventConfig {
+    id?: string; // Name of data property key to use in content_ids
+    name?: string; // Name of data property key to use as content_name
     track?: StandardEventNames; // Name of a standard event to track
     value?: string; // Name of data property key to use for value
   }
@@ -77,9 +79,6 @@ export const destination: DestinationMeta.Function = {
     // PageView event (deactivate actively)
     if (custom.pageview !== false) w.fbq('track', 'PageView');
 
-    // Default currency value
-    // custom.currency = custom.currency || 'EUR';
-
     return true;
   },
 
@@ -122,12 +121,17 @@ function getParameters(
   mapping: DestinationMeta.EventConfig,
   currency: string = 'EUR',
 ) {
+  const value = mapping.value ? event.data[mapping.value] : '';
+
   if (track === 'AddPaymentInfo') {
     const parameters: facebook.Pixel.AddPaymentInfoParameters = {};
     return parameters;
   }
   if (track === 'AddToCart') {
-    const parameters: facebook.Pixel.AddToCartParameters = {};
+    const parameters: facebook.Pixel.AddToCartParameters = {
+      currency,
+      value: value as number,
+    };
     return parameters;
   }
   if (track === 'AddToWishlist') {
@@ -147,9 +151,8 @@ function getParameters(
     return parameters;
   }
   if (track === 'Purchase') {
-    const value = (event.data[mapping.value + ''] as number) || 1;
     const parameters: facebook.Pixel.PurchaseParameters = {
-      value,
+      value: (value as number) || 1,
       currency,
     };
     return parameters;

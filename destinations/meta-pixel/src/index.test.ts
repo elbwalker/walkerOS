@@ -119,4 +119,21 @@ describe('Destination Meta Pixel', () => {
       expect.objectContaining({ value: 1 }),
     );
   });
+
+  test('push addtocart', () => {
+    destination.config.mapping = {
+      entity: { action: { track: 'AddToCart', value: 'price' } },
+    };
+
+    elbwalker.push('walker destination', destination);
+    elbwalker.push(event, { price: 3.14 });
+    expect(mockFn).toHaveBeenCalledWith(
+      'track',
+      'AddToCart',
+      expect.objectContaining({
+        currency: 'EUR',
+        value: 3.14,
+      }),
+    );
+  });
 });
