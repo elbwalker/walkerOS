@@ -12,8 +12,9 @@ const w = window;
 export namespace DestinationMeta {
   export interface Config extends WebDestination.Config {
     custom: {
-      pixelId: string;
-      pageview?: boolean;
+      pixelId: string; // Required pixel id
+      currency?: string; // Default currency is EUR
+      pageview?: boolean; // Send the PageView event (default yes, deactivate actively)
     };
     mapping?: WebDestination.Mapping<EventConfig>;
   }
@@ -23,7 +24,7 @@ export namespace DestinationMeta {
   }
 
   export interface EventConfig extends WebDestination.EventConfig {
-    track?: StandardEventNames;
+    track?: StandardEventNames; // Name of a standard event to track
   }
 
   export type StandardEventNames =
@@ -62,7 +63,8 @@ export const destination: DestinationMeta.Function = {
 
     w.fbq('init', config.custom.pixelId);
 
-    if (config.custom.pageview) w.fbq('track', 'PageView');
+    // PageView event (deactivate actively)
+    if (config.custom.pageview !== false) w.fbq('track', 'PageView');
 
     if (config.loadScript) addScript();
 

@@ -75,10 +75,15 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('pageview', () => {
-    destination.config.custom.pageview = true;
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
     expect(mockFn).toHaveBeenCalledWith('track', 'PageView');
+
+    jest.clearAllMocks();
+    destination.config.custom.pageview = false;
+    destination.config.init = false;
+    elbwalker.push(event);
+    expect(mockFn).not.toHaveBeenCalledWith('track', 'PageView');
   });
 
   test('push standard event', () => {
