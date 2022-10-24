@@ -98,15 +98,18 @@ describe('Destination Meta Pixel', () => {
 
   test('push purchase', () => {
     destination.config.mapping = {
-      entity: { action: { track: 'Purchase', value: 'revenue' } },
+      entity: {
+        action: { track: 'Purchase', name: 'title', value: 'revenue' },
+      },
     };
 
     elbwalker.push('walker destination', destination);
-    elbwalker.push(event, { revenue: 42 });
+    elbwalker.push(event, { title: 'Shirt', revenue: 42 });
     expect(mockFn).toHaveBeenCalledWith(
       'track',
       'Purchase',
       expect.objectContaining({
+        content_name: 'Shirt',
         currency: 'EUR',
         value: 42,
       }),
@@ -122,15 +125,16 @@ describe('Destination Meta Pixel', () => {
 
   test('push addtocart', () => {
     destination.config.mapping = {
-      entity: { action: { track: 'AddToCart', value: 'price' } },
+      entity: { action: { track: 'AddToCart', name: 'title', value: 'price' } },
     };
 
     elbwalker.push('walker destination', destination);
-    elbwalker.push(event, { price: 3.14 });
+    elbwalker.push(event, { title: 'Shirt', price: 3.14 });
     expect(mockFn).toHaveBeenCalledWith(
       'track',
       'AddToCart',
       expect.objectContaining({
+        content_name: 'Shirt',
         currency: 'EUR',
         value: 3.14,
       }),

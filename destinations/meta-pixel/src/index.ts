@@ -122,6 +122,7 @@ function getParameters(
   currency: string = 'EUR',
 ) {
   const value = mapping.value ? event.data[mapping.value] : '';
+  const content_name = mapping.name ? (event.data[mapping.name] as string) : '';
 
   if (track === 'AddPaymentInfo') {
     const parameters: facebook.Pixel.AddPaymentInfoParameters = {};
@@ -129,17 +130,22 @@ function getParameters(
   }
   if (track === 'AddToCart') {
     const parameters: facebook.Pixel.AddToCartParameters = {
+      content_name,
       currency,
       value: value as number,
     };
     return parameters;
   }
   if (track === 'AddToWishlist') {
-    const parameters: facebook.Pixel.AddToWishlistParameters = {};
+    const parameters: facebook.Pixel.AddToWishlistParameters = {
+      content_name,
+    };
     return parameters;
   }
   if (track === 'CompleteRegistration') {
-    const parameters: facebook.Pixel.CompleteRegistrationParameters = {};
+    const parameters: facebook.Pixel.CompleteRegistrationParameters = {
+      content_name,
+    };
     return parameters;
   }
   if (track === 'InitiateCheckout') {
@@ -147,11 +153,12 @@ function getParameters(
     return parameters;
   }
   if (track === 'Lead') {
-    const parameters: facebook.Pixel.LeadParameters = {};
+    const parameters: facebook.Pixel.LeadParameters = { content_name };
     return parameters;
   }
   if (track === 'Purchase') {
     const parameters: facebook.Pixel.PurchaseParameters = {
+      content_name,
       value: (value as number) || 1,
       currency,
     };
@@ -170,7 +177,7 @@ function getParameters(
     return parameters;
   }
   if (track === 'ViewContent') {
-    const parameters: facebook.Pixel.ViewContentParameters = {};
+    const parameters: facebook.Pixel.ViewContentParameters = { content_name };
     return parameters;
   }
 
