@@ -13,6 +13,7 @@ export namespace DestinationMeta {
   export interface Config extends WebDestination.Config {
     custom: {
       pixelId: string;
+      pageview?: boolean;
     };
     mapping?: WebDestination.Mapping<EventConfig>;
   }
@@ -61,6 +62,8 @@ export const destination: DestinationMeta.Function = {
 
     w.fbq('init', config.custom.pixelId);
 
+    if (config.custom.pageview) w.fbq('track', 'PageView');
+
     if (config.loadScript) addScript();
 
     return true;
@@ -96,6 +99,7 @@ function setup() {
 function addScript(src = 'https://connect.facebook.net/en_US/fbevents.js') {
   const script = document.createElement('script');
   script.src = src;
+  script.async = true;
   document.head.appendChild(script);
 }
 

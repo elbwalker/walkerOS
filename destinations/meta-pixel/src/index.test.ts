@@ -74,13 +74,20 @@ describe('Destination Meta Pixel', () => {
     expect(mockFn).toHaveBeenCalledWith('trackCustom', event);
   });
 
+  test('pageview', () => {
+    destination.config.custom.pageview = true;
+    elbwalker.push('walker destination', destination);
+    elbwalker.push(event);
+    expect(mockFn).toHaveBeenCalledWith('track', 'PageView');
+  });
+
   test('push standard event', () => {
     destination.config.mapping = {
-      entity: { action: { track: "Contact" } },
+      entity: { action: { track: 'Contact' } },
     };
 
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
-    expect(mockFn).toHaveBeenCalledWith('track', "Contact");
+    expect(mockFn).toHaveBeenCalledWith('track', 'Contact');
   });
 });
