@@ -6,6 +6,7 @@ Understand the concept of destinations, learn how to use them, and how to write 
 - [Google Ads](./google-ads/)
 - [Google GA4](./google-ga4/)
 - [Google Tag Manager](./google-gtm/)
+- [Meta Pixel (Facebook Pixel)](./meta-pixel/)
 - [Plausible](./plausible/)
 
 Couldn't find what you were looking for? [Request a destination](https://github.com/elbwalker/walker.js/issues/new).

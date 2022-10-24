@@ -1,7 +1,7 @@
 import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
 import { DestinationXXX } from '.';
 
-describe('destination XXX', () => {
+describe('Destination XXX', () => {
   const w = window;
   let elbwalker: IElbwalker.Function,
     destination: DestinationXXX.Function,
