@@ -91,10 +91,19 @@ describe('destination Google Ads', () => {
     elbwalker.push(event);
     expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
       send_to: `${conversionId}/${label}`,
+      currency: 'EUR',
+    });
+
+    // Change currency
+    const currency = 'USD';
+    destination.config.custom.currency = currency;
+
+    elbwalker.push(event);
+    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
+      send_to: `${conversionId}/${label}`,
+      currency,
     });
   });
 
-  test.skip('push without mapping', () => {});
-  test.skip('currency update', () => {});
   test.skip('mapping value', () => {});
 });

@@ -28,7 +28,7 @@ export namespace DestinationAds {
 }
 
 export const destination: DestinationAds.Function = {
-  config: { custom: { conversionId: '', currency: 'EUR' } },
+  config: {} as DestinationAds.Config,
 
   init() {
     let config = this.config;
@@ -36,6 +36,9 @@ export const destination: DestinationAds.Function = {
 
     // required measuremt id
     if (!config.custom.conversionId) return false;
+
+    // Default currency value
+    config.custom.currency = config.custom.currency || 'EUR';
 
     if (config.loadScript) addScript(config.custom.conversionId);
 
@@ -61,6 +64,7 @@ export const destination: DestinationAds.Function = {
 
     w.gtag('event', 'conversion', {
       send_to: `${this.config.custom.conversionId}/${mapping.label}`,
+      currency: this.config.custom.currency,
     });
   },
 };
