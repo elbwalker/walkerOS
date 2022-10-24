@@ -23,7 +23,8 @@ export namespace DestinationAds {
 
   export interface EventConfig extends WebDestination.EventConfig {
     // Custom destination event mapping properties
-    label?: string;
+    label?: string; // Conversion label
+    value?: string; // Name of data property key to use for value
   }
 }
 
@@ -62,10 +63,14 @@ export const destination: DestinationAds.Function = {
   ): void {
     if (!mapping.label) return;
 
-    w.gtag('event', 'conversion', {
+    const eventParams: Gtag.CustomParams = {
       send_to: `${this.config.custom.conversionId}/${mapping.label}`,
       currency: this.config.custom.currency,
-    });
+    };
+
+    if (mapping.value) eventParams.value = event.data[mapping.value];
+
+    w.gtag('event', 'conversion', eventParams);
   },
 };
 

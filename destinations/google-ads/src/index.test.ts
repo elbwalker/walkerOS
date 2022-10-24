@@ -11,6 +11,7 @@ describe('destination Google Ads', () => {
 
   const event = 'entity action';
   const conversionId = 'AW-123456789';
+  const label = 'abc';
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -76,18 +77,15 @@ describe('destination Google Ads', () => {
   });
 
   test('push', () => {
-    const label = 'abc';
-
+    // Missing mapping
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
     expect(mockFn).not.toHaveBeenCalledWith('event', 'conversion', {
       send_to: `${conversionId}/${label}`,
     });
 
-    destination.config.mapping = {
-      entity: { action: { label } },
-    };
-
+    // Correct mapping
+    destination.config.mapping = { entity: { action: { label } } };
     elbwalker.push(event);
     expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
       send_to: `${conversionId}/${label}`,
@@ -105,5 +103,31 @@ describe('destination Google Ads', () => {
     });
   });
 
-  test.skip('mapping value', () => {});
+  test('push with value', () => {
+    elbwalker.push('walker destination', destination);
+    destination.config.mapping = {
+      entity: { action: { label, value: 'revenue' } },
+    };
+
+    // Missing value property
+    elbwalker.push(event, {});
+    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
+      send_to: `${conversionId}/${label}`,
+      currency: 'EUR',
+    });
+
+    // @TODO use with default value
+
+    // With value property
+    elbwalker.push(event, { revenue: 42 });
+    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
+      send_to: `${conversionId}/${label}`,
+      currency: 'EUR',
+      value: 42,
+    });
+  });
+
+  test.skip('push with transaction_id', () => {
+    // transaction_id
+  });
 });
