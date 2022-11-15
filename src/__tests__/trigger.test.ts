@@ -54,7 +54,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page view',
-        data: { domain: 'localhost', id: '/', title: '' },
+        data: { domain: 'localhost', id: '/', title: '', referrer: '' },
         trigger: Walker.Trigger.Load,
       }),
     );
@@ -79,13 +79,18 @@ describe('Trigger', () => {
     );
   });
 
-  test('load view location', () => {
+  test('load view location and referrer', () => {
     const location = document.location;
     const title = document.title;
+    const referrer = document.referrer;
 
     document.title = 'Title';
     Object.defineProperty(window, 'location', {
       value: new URL('https://www.elbwalker.com/p?q=Analytics#hash'),
+      writable: true,
+    });
+    Object.defineProperty(document, 'referrer', {
+      value: 'https://docs.elbwalker.com',
       writable: true,
     });
 
@@ -102,6 +107,7 @@ describe('Trigger', () => {
           search: '?q=Analytics',
           hash: '#hash',
           title: 'Title',
+          referrer: 'https://docs.elbwalker.com',
         },
         trigger: Walker.Trigger.Load,
       }),
@@ -119,6 +125,10 @@ describe('Trigger', () => {
 
     window.location = location;
     document.title = title;
+    Object.defineProperty(document, 'referrer', {
+      value: referrer,
+      writable: true,
+    });
   });
 
   test('load readyState loading', () => {

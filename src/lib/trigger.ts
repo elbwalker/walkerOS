@@ -137,6 +137,7 @@ function view(instance: IElbwalker.Function) {
     domain: l.hostname,
     id: l.pathname,
     title: d.title,
+    referrer: d.referrer,
   } as Walker.Properties;
   if (l.search) data.search = l.search;
   if (l.hash) data.hash = l.hash;
