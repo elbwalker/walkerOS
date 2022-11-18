@@ -31,6 +31,7 @@ export namespace Walker {
     Hover = 'hover',
     Load = 'load',
     Pulse = 'pulse',
+    Scroll = 'scroll',
     Submit = 'submit',
     Visible = 'visible',
     Wait = 'wait',
