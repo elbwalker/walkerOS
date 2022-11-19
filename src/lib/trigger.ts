@@ -5,6 +5,7 @@ import { trycatch } from './utils';
 const d = document;
 const w = window;
 let observer: IntersectionObserver | undefined;
+let scrollElements: Array<[HTMLElement, number]> = [];
 
 export function ready(run: Function, instance: IElbwalker.Function) {
   const fn = () => {
@@ -99,59 +100,65 @@ export function triggerLoad(instance: IElbwalker.Function) {
   );
 
   // Trigger scroll
-  // @TODO disconnect and unlisten previous
-  d.querySelectorAll(getActionselector(prefix, Walker.Trigger.Scroll)).forEach(
-    (element) => {
-      const windowHeight = window.innerHeight;
-      const depths: Record<string, Array<Element>> = {};
+  // @TODO unlisten on empty scrollElements stack
+  // @TODO check for Infinity calculation
+  // @TODO test debounce vs throttling
+  // @TODO pass instance and stack
 
-      // Create scroll depth groups by percentage
-      resolveAttributes(
-        instance.config.prefix,
-        element,
-        Walker.Trigger.Scroll,
-      ).forEach((triggerAction) => {
-        // Scroll depth in percent, default 50%
-        let depth = (parseInt(triggerAction.triggerParams || '') || 50) / 100;
+  scrollElements = [];
+  d.querySelectorAll<HTMLElement>(
+    getActionselector(prefix, Walker.Trigger.Scroll),
+  ).forEach((element) => {
+    // Create scroll depth groups by percentage
+    resolveAttributes(
+      instance.config.prefix,
+      element,
+      Walker.Trigger.Scroll,
+    ).forEach((triggerAction) => {
+      // Scroll depth in percent, default 50%
+      let depth = parseInt(triggerAction.triggerParams || '') || 50;
 
-        // Adjust long elements with a height bigger than the actual window size
-        // Use a workaround since Intersection Observer can't handle this cases
-        const elementHeight = element.clientHeight;
-        if (elementHeight > windowHeight) {
-          // @TODO KEEP THE NUMBER, MAYBE ADD 1?
-          depth = 2; // Special identifier
+      // Ignore invalid parameters
+      if (depth < 0 || depth > 100) return;
+
+      scrollElements.push([element, depth]);
+    });
+
+    // Don't add unnecessary scroll listeners
+    if (!scrollElements.length) return;
+
+    const throttle = (fn: Function, delay = 1000) => {
+      let time = Date.now();
+
+      return () => {
+        if (time + delay - Date.now() <= 0) {
+          fn();
+          time = Date.now();
+        }
+      };
+    };
+
+    function scrolling() {
+      scrollElements = scrollElements.filter(([element, depth]) => {
+        var elemHeight = element.clientHeight;
+        var elemTop = element.offsetTop;
+        var elemBottom = elemTop + elemHeight;
+        var windowBottom = window.scrollY + window.innerHeight;
+        var hidden = elemBottom - windowBottom;
+        var scrollDepth = (1 - hidden / elemHeight) * 100;
+
+        // Enough scrolling, it's time
+        if (scrollDepth >= depth) {
+          handleTrigger(element, Walker.Trigger.Scroll, instance);
+          return false;
         }
 
-        const depthKey = String(depth.toFixed(2));
-        if (!depths[depthKey]) depths[depthKey] = [];
-        depths[depthKey].push(element);
+        return true;
       });
+    }
 
-      // Set up scroll tracking for each element
-      Object.entries(depths).forEach(([depth, targets]) => {
-        let options = {
-          threshold: parseFloat(depth),
-        };
-
-        let callback: IntersectionObserverCallback = (entries, observer) => {
-          entries.forEach((entry) => {
-            if (!entry.isIntersecting) return;
-
-            // @TODO check for the large ones
-
-            // Enough scrolling, it's time
-            observer.unobserve(entry.target);
-            handleTrigger(element, Walker.Trigger.Scroll, instance);
-          });
-        };
-
-        let observer = new IntersectionObserver(callback, options);
-        targets.forEach((target) => {
-          observer.observe(target);
-        });
-      });
-    },
-  );
+    window.addEventListener('scroll', throttle(scrolling, 1000));
+  });
 
   // Trigger visible
   observer = trycatch(observerVisible)(instance, 1000);
