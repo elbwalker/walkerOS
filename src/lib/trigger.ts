@@ -4,7 +4,7 @@ import { throttle, trycatch } from './utils';
 
 const d = document;
 const w = window;
-let observer: IntersectionObserver | undefined;
+let visibleObserver: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
 
@@ -123,8 +123,7 @@ export function triggerLoad(instance: IElbwalker.Function) {
   if (scrollElements.length) triggerScroll(instance);
 
   // Trigger visible
-  observer = trycatch(observerVisible)(instance, 1000);
-  triggerVisible(prefix, d, true);
+  triggerVisible(d, instance);
 }
 
 function triggerClick(ev: MouseEvent, instance: IElbwalker.Function) {
@@ -135,23 +134,23 @@ function triggerSubmit(ev: Event, instance: IElbwalker.Function) {
   handleTrigger(ev.target as Element, Walker.Trigger.Submit, instance);
 }
 
-export function triggerVisible(
-  prefix: string,
-  scope: Walker.Scope,
-  disconnect = false,
-): IntersectionObserver | undefined {
-  if (observer) {
-    // Disconnect previous
-    if (disconnect) observer.disconnect();
+function triggerVisible(scope: Walker.Scope, instance: IElbwalker.Function) {
+  visibleObserver =
+    visibleObserver || trycatch(observerVisible)(instance, 1000);
 
-    const visibleSelector = getActionselector(prefix, Walker.Trigger.Visible);
+  if (!visibleObserver) return;
 
-    scope.querySelectorAll(visibleSelector).forEach((element) => {
-      observer!.observe(element);
-    });
-  }
+  // Disconnect previous on full loads
+  if (scope === d) visibleObserver.disconnect();
 
-  return observer;
+  const visibleSelector = getActionselector(
+    instance.config.prefix,
+    Walker.Trigger.Visible,
+  );
+
+  scope.querySelectorAll(visibleSelector).forEach((element) => {
+    visibleObserver!.observe(element);
+  });
 }
 
 function triggerScroll(instance: IElbwalker.Function) {
@@ -238,7 +237,7 @@ function observerVisible(
               );
               // Just count once
               delete target.dataset[timerId];
-              if (observer) observer.unobserve(target);
+              if (visibleObserver) visibleObserver.unobserve(target);
             }
           }, duration);
 
