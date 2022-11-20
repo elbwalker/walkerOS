@@ -112,3 +112,24 @@ export function castValue(value: unknown): Walker.Property {
 
   return String(value);
 }
+
+export function throttle<P extends unknown[]>(
+  fn: (...args: P) => void,
+  delay = 1000,
+) {
+  let isBlocked: NodeJS.Timeout | 0;
+
+  return (...args: P) => {
+    // Skip since function is still blocked by previous call
+    if (!isBlocked) {
+      // Call the function
+      fn(...args);
+
+      // Set a blocking timeout
+      isBlocked = setTimeout(() => {
+        // Unblock function
+        isBlocked = 0;
+      }, delay);
+    }
+  };
+}

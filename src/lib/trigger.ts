@@ -1,6 +1,6 @@
 import { IElbwalker, Walker } from '../types';
 import { resolveAttributes, getElbAttributeName, walker } from './walker';
-import { trycatch } from './utils';
+import { throttle, trycatch } from './utils';
 
 const d = document;
 const w = window;
@@ -124,16 +124,6 @@ export function triggerLoad(instance: IElbwalker.Function) {
 
   // Don't add unnecessary scroll listeners
   if (scrollElements.length) {
-    const throttle = (fn: Function, delay = 1000) => {
-      let time = Date.now();
-
-      return () => {
-        if (time + delay - Date.now() <= 0) {
-          fn();
-          time = Date.now();
-        }
-      };
-    };
 
     const scrolling = () => {
       scrollElements = scrollElements.filter(([element, depth]) => {
@@ -167,6 +157,7 @@ export function triggerLoad(instance: IElbwalker.Function) {
         return true;
       });
     };
+
     window.addEventListener('scroll', throttle(scrolling, 2000));
   }
 
