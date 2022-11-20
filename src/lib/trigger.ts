@@ -135,7 +135,6 @@ function view(instance: IElbwalker.Function) {
   const l = w.location;
   const data = {
     domain: l.hostname,
-    id: l.pathname,
     title: d.title,
     referrer: d.referrer,
   } as Walker.Properties;

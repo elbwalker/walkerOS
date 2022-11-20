@@ -113,13 +113,14 @@ describe('Trigger', () => {
       }),
     );
 
+    elbwalker.push('page click', { foo: 'bar' });
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'e a',
+        event: 'page click',
         data: {
-          k: 'v',
+          id: '/p', // Added automatically
+          foo: 'bar',
         },
-        trigger: Walker.Trigger.Load,
       }),
     );
 

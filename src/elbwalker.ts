@@ -60,7 +60,7 @@ function Elbwalker(
 
   function push(
     event?: unknown,
-    data?: IElbwalker.PushData,
+    data: IElbwalker.PushData = {},
     trigger?: string,
     context?: Walker.Properties,
     nested?: Walker.Entities,
@@ -82,6 +82,12 @@ function Elbwalker(
     if (entity === IElbwalker.Commands.Walker) {
       handleCommand(instance, action, data);
       return;
+    }
+
+    // Special case for page entity to add the id by default
+    if (entity === 'page') {
+      (data as Walker.Properties).id =
+        (data as Walker.Properties).id || window.location.pathname;
     }
 
     ++_count;
