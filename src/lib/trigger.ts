@@ -196,7 +196,7 @@ function triggerScroll(instance: IElbwalker.Function) {
       scrollElements = scrolling.call(document, scrollElements, instance);
     });
 
-    window.addEventListener('scroll', scrollListener);
+    d.addEventListener('scroll', scrollListener);
   }
 }
 
