@@ -214,6 +214,16 @@ describe('Walker', () => {
       },
     ]);
   });
+
+  test('Page entity as default', () => {
+    expect(walker(getElem('no_entity'), Walker.Trigger.Click)).toMatchObject([
+      {
+        entity: 'page',
+        action: 'click',
+        data: {},
+      },
+    ]);
+  });
 });
 
 function getElem(selector: string) {

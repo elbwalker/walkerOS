@@ -33,6 +33,15 @@ export function walker(
     // Get the entities with their properties
     const entities = getEntities(prefix, target, filter);
 
+    // Use page as default entity if no one was set
+    if (!entities.length)
+      entities.push({
+        type: 'page',
+        data: {},
+        nested: [],
+        context: {}, // @TODO handle the context
+      });
+
     // Return a list of all full events
     entities.forEach((entity) => {
       events.push({
