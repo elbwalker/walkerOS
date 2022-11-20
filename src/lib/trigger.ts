@@ -6,6 +6,7 @@ const d = document;
 const w = window;
 let observer: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];
+let scrollListener: EventListenerOrEventListenerObject | undefined;
 
 export function ready(run: Function, instance: IElbwalker.Function) {
   const fn = () => {
@@ -100,7 +101,6 @@ export function triggerLoad(instance: IElbwalker.Function) {
   );
 
   // Trigger scroll
-  // @TODO unlisten on empty scrollElements stack
   scrollElements = [];
   d.querySelectorAll<HTMLElement>(
     getActionselector(prefix, Walker.Trigger.Scroll),
@@ -120,52 +120,7 @@ export function triggerLoad(instance: IElbwalker.Function) {
       scrollElements.push([element, depth]);
     });
   });
-
-  // Don't add unnecessary scroll listeners
-  if (scrollElements.length) {
-    const scrolling = (
-      scrollElements: Walker.ScrollElements,
-      instance: IElbwalker.Function,
-    ) => {
-      return scrollElements.filter(([element, depth]) => {
-        // Distance from top to the bottom of the visible screen
-        let windowBottom = window.scrollY + window.innerHeight;
-        // Distance from top to the elements relevant content
-        let elemTop = element.offsetTop;
-
-        // Skip calulations if not in viewport yet
-        if (windowBottom < elemTop) return true;
-
-        // Height of the elements box as 100 percent base
-        let elemHeight = element.clientHeight;
-        // Distance from top to the elements bottom
-        let elemBottom = elemTop + elemHeight;
-        // Height of the non-visible pixels below visible screen
-        let hidden = elemBottom - windowBottom;
-        // Visible percentage of the element
-        let scrollDepth = (1 - hidden / (elemHeight || 1)) * 100;
-
-        // Check if the elements visibility skipped the required border
-        if (scrollDepth >= depth) {
-          // Enough scrolling, it's time
-          handleTrigger(element, Walker.Trigger.Scroll, instance);
-
-          // Remove the element from scrollEvents
-          return false;
-        }
-
-        // Keep observing the element
-        return true;
-      });
-    };
-
-    window.addEventListener(
-      'scroll',
-      throttle(function () {
-        scrollElements = scrolling.call(document, scrollElements, instance);
-      }),
-    );
-  }
+  if (scrollElements.length) triggerScroll(instance);
 
   // Trigger visible
   observer = trycatch(observerVisible)(instance, 1000);
@@ -197,6 +152,53 @@ export function triggerVisible(
   }
 
   return observer;
+}
+
+function triggerScroll(instance: IElbwalker.Function) {
+  const scrolling = (
+    scrollElements: Walker.ScrollElements,
+    instance: IElbwalker.Function,
+  ) => {
+    return scrollElements.filter(([element, depth]) => {
+      // Distance from top to the bottom of the visible screen
+      let windowBottom = window.scrollY + window.innerHeight;
+      // Distance from top to the elements relevant content
+      let elemTop = element.offsetTop;
+
+      // Skip calulations if not in viewport yet
+      if (windowBottom < elemTop) return true;
+
+      // Height of the elements box as 100 percent base
+      let elemHeight = element.clientHeight;
+      // Distance from top to the elements bottom
+      let elemBottom = elemTop + elemHeight;
+      // Height of the non-visible pixels below visible screen
+      let hidden = elemBottom - windowBottom;
+      // Visible percentage of the element
+      let scrollDepth = (1 - hidden / (elemHeight || 1)) * 100;
+
+      // Check if the elements visibility skipped the required border
+      if (scrollDepth >= depth) {
+        // Enough scrolling, it's time
+        handleTrigger(element, Walker.Trigger.Scroll, instance);
+
+        // Remove the element from scrollEvents
+        return false;
+      }
+
+      // Keep observing the element
+      return true;
+    });
+  };
+
+  // Don't add unnecessary scroll listeners
+  if (!scrollListener) {
+    scrollListener = throttle(function () {
+      scrollElements = scrolling.call(document, scrollElements, instance);
+    });
+
+    window.addEventListener('scroll', scrollListener);
+  }
 }
 
 function view(instance: IElbwalker.Function) {
