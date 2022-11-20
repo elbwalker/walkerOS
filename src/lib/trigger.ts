@@ -5,7 +5,7 @@ import { throttle, trycatch } from './utils';
 const d = document;
 const w = window;
 let observer: IntersectionObserver | undefined;
-let scrollElements: Array<[HTMLElement, number]> = [];
+let scrollElements: Walker.ScrollElements = [];
 
 export function ready(run: Function, instance: IElbwalker.Function) {
   const fn = () => {
@@ -101,7 +101,6 @@ export function triggerLoad(instance: IElbwalker.Function) {
 
   // Trigger scroll
   // @TODO unlisten on empty scrollElements stack
-  // @TODO pass instance and stack
   scrollElements = [];
   d.querySelectorAll<HTMLElement>(
     getActionselector(prefix, Walker.Trigger.Scroll),
@@ -124,9 +123,11 @@ export function triggerLoad(instance: IElbwalker.Function) {
 
   // Don't add unnecessary scroll listeners
   if (scrollElements.length) {
-
-    const scrolling = () => {
-      scrollElements = scrollElements.filter(([element, depth]) => {
+    const scrolling = (
+      scrollElements: Walker.ScrollElements,
+      instance: IElbwalker.Function,
+    ) => {
+      return scrollElements.filter(([element, depth]) => {
         // Distance from top to the bottom of the visible screen
         let windowBottom = window.scrollY + window.innerHeight;
         // Distance from top to the elements relevant content
@@ -158,7 +159,12 @@ export function triggerLoad(instance: IElbwalker.Function) {
       });
     };
 
-    window.addEventListener('scroll', throttle(scrolling, 2000));
+    window.addEventListener(
+      'scroll',
+      throttle(function () {
+        scrollElements = scrolling.call(document, scrollElements, instance);
+      }),
+    );
   }
 
   // Trigger visible

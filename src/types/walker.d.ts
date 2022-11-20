@@ -55,4 +55,6 @@ export namespace Walker {
     action: string;
     actionParams?: string;
   }
+
+  type ScrollElements = Array<[HTMLElement, number]>
 }
