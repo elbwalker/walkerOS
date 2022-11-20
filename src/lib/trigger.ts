@@ -101,10 +101,7 @@ export function triggerLoad(instance: IElbwalker.Function) {
 
   // Trigger scroll
   // @TODO unlisten on empty scrollElements stack
-  // @TODO check for Infinity calculation
-  // @TODO test debounce vs throttling
   // @TODO pass instance and stack
-
   scrollElements = [];
   d.querySelectorAll<HTMLElement>(
     getActionselector(prefix, Walker.Trigger.Scroll),
@@ -123,10 +120,10 @@ export function triggerLoad(instance: IElbwalker.Function) {
 
       scrollElements.push([element, depth]);
     });
+  });
 
-    // Don't add unnecessary scroll listeners
-    if (!scrollElements.length) return;
-
+  // Don't add unnecessary scroll listeners
+  if (scrollElements.length) {
     const throttle = (fn: Function, delay = 1000) => {
       let time = Date.now();
 
@@ -138,27 +135,40 @@ export function triggerLoad(instance: IElbwalker.Function) {
       };
     };
 
-    function scrolling() {
+    const scrolling = () => {
       scrollElements = scrollElements.filter(([element, depth]) => {
-        var elemHeight = element.clientHeight;
-        var elemTop = element.offsetTop;
-        var elemBottom = elemTop + elemHeight;
-        var windowBottom = window.scrollY + window.innerHeight;
-        var hidden = elemBottom - windowBottom;
-        var scrollDepth = (1 - hidden / elemHeight) * 100;
+        // Distance from top to the bottom of the visible screen
+        let windowBottom = window.scrollY + window.innerHeight;
+        // Distance from top to the elements relevant content
+        let elemTop = element.offsetTop;
 
-        // Enough scrolling, it's time
+        // Skip calulations if not in viewport yet
+        if (windowBottom < elemTop) return true;
+
+        // Height of the elements box as 100 percent base
+        let elemHeight = element.clientHeight;
+        // Distance from top to the elements bottom
+        let elemBottom = elemTop + elemHeight;
+        // Height of the non-visible pixels below visible screen
+        let hidden = elemBottom - windowBottom;
+        // Visible percentage of the element
+        let scrollDepth = (1 - hidden / (elemHeight || 1)) * 100;
+
+        // Check if the elements visibility skipped the required border
         if (scrollDepth >= depth) {
+          // Enough scrolling, it's time
           handleTrigger(element, Walker.Trigger.Scroll, instance);
+
+          // Remove the element from scrollEvents
           return false;
         }
 
+        // Keep observing the element
         return true;
       });
-    }
-
-    window.addEventListener('scroll', throttle(scrolling, 1000));
-  });
+    };
+    window.addEventListener('scroll', throttle(scrolling, 2000));
+  }
 
   // Trigger visible
   observer = trycatch(observerVisible)(instance, 1000);
