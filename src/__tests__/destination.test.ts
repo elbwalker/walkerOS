@@ -50,6 +50,7 @@ describe('Destination', () => {
 
     // No init function
     elbwalker.push('walker destination', {
+      config: {},
       push: mockPush,
     });
     elbwalker.push('entity action');
@@ -70,6 +71,7 @@ describe('Destination', () => {
       return false;
     });
     elbwalker.push('walker destination', {
+      config: {},
       init: mockInitFalse,
       push: mockPush,
     });
@@ -134,6 +136,7 @@ describe('Destination', () => {
     // create invalid breaking destinations
     elbwalker.push('walker destination');
     elbwalker.push('walker destination', {
+      config: {},
       init: () => {
         throw new Error();
       },

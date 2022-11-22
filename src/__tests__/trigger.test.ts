@@ -9,7 +9,7 @@ let elbwalker: IElbwalker.Function;
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
 
-let events: IElbwalker.AnyObject = {};
+let events: Record<string, EventListenerOrEventListenerObject> = {};
 const html: string = fs
   .readFileSync(__dirname + '/html/trigger.html')
   .toString();
@@ -302,5 +302,65 @@ describe('Trigger', () => {
     jest.clearAllMocks();
     jest.advanceTimersByTime(5000);
     expect(mockFn).toHaveBeenCalled();
+  });
+
+  test('scroll', () => {
+    // New instance without cached scrollIstener
+    const Elbwalker = require('../elbwalker').default
+    elbwalker = Elbwalker({ default: true });
+
+    const innerHeight = window.innerHeight;
+    const elem = document.getElementById('scroll') as HTMLElement;
+
+    expect(mockAddEventListener).toHaveBeenCalledWith(
+      Walker.Trigger.Scroll,
+      expect.any(Function),
+    );
+
+    jest.clearAllMocks();
+
+    // Create a small window
+    window.innerHeight = 10;
+
+    // Position element and set a height
+    Object.defineProperty(elem, 'offsetTop', {
+      value: 100,
+      writable: true,
+    });
+    Object.defineProperty(elem, 'clientHeight', {
+      value: 50,
+      writable: true,
+    });
+
+    // Simulate scroll event
+    (events.scroll as Function)({} as Event);
+
+    expect(mockFn).not.toHaveBeenCalled();
+
+    // Scroll to 50% of elem in viewport
+    window.scrollY = 115;
+
+    // Skip throttling timer
+    jest.advanceTimersByTime(1000);
+    (events.scroll as Function)({} as Event);
+
+    // Not 80% in viewport yet
+    expect(mockFn).not.toHaveBeenCalled();
+
+    // Scroll to 50% of elem in viewport
+    window.scrollY = 170;
+
+    // Skip throttling timer
+    jest.advanceTimersByTime(1000);
+    (events.scroll as Function)({} as Event);
+
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'scoll 80percent',
+        trigger: Walker.Trigger.Scroll,
+      }),
+    );
+
+    window.innerHeight = innerHeight;
   });
 });

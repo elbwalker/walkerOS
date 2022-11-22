@@ -1,10 +1,12 @@
 import { IElbwalker, Walker } from '../types';
 import { resolveAttributes, getElbAttributeName, walker } from './walker';
-import { trycatch } from './utils';
+import { throttle, trycatch } from './utils';
 
 const d = document;
 const w = window;
-let observer: IntersectionObserver | undefined;
+let visibleObserver: IntersectionObserver | undefined;
+let scrollElements: Walker.ScrollElements = [];
+let scrollListener: EventListenerOrEventListenerObject | undefined;
 
 export function ready(run: Function, instance: IElbwalker.Function) {
   const fn = () => {
@@ -98,9 +100,30 @@ export function triggerLoad(instance: IElbwalker.Function) {
     },
   );
 
+  // Trigger scroll
+  scrollElements = [];
+  d.querySelectorAll<HTMLElement>(
+    getActionselector(prefix, Walker.Trigger.Scroll),
+  ).forEach((element) => {
+    // Create scroll depth groups by percentage
+    resolveAttributes(
+      instance.config.prefix,
+      element,
+      Walker.Trigger.Scroll,
+    ).forEach((triggerAction) => {
+      // Scroll depth in percent, default 50%
+      let depth = parseInt(triggerAction.triggerParams || '') || 50;
+
+      // Ignore invalid parameters
+      if (depth < 0 || depth > 100) return;
+
+      scrollElements.push([element, depth]);
+    });
+  });
+  if (scrollElements.length) triggerScroll(instance);
+
   // Trigger visible
-  observer = trycatch(observerVisible)(instance, 1000);
-  triggerVisible(prefix, d, true);
+  triggerVisible(d, instance);
 }
 
 function triggerClick(ev: MouseEvent, instance: IElbwalker.Function) {
@@ -111,23 +134,70 @@ function triggerSubmit(ev: Event, instance: IElbwalker.Function) {
   handleTrigger(ev.target as Element, Walker.Trigger.Submit, instance);
 }
 
-export function triggerVisible(
-  prefix: string,
-  scope: Walker.Scope,
-  disconnect = false,
-): IntersectionObserver | undefined {
-  if (observer) {
-    // Disconnect previous
-    if (disconnect) observer.disconnect();
+function triggerVisible(scope: Walker.Scope, instance: IElbwalker.Function) {
+  visibleObserver =
+    visibleObserver || trycatch(observerVisible)(instance, 1000);
 
-    const visibleSelector = getActionselector(prefix, Walker.Trigger.Visible);
+  if (!visibleObserver) return;
 
-    scope.querySelectorAll(visibleSelector).forEach((element) => {
-      observer!.observe(element);
+  // Disconnect previous on full loads
+  if (scope === d) visibleObserver.disconnect();
+
+  const visibleSelector = getActionselector(
+    instance.config.prefix,
+    Walker.Trigger.Visible,
+  );
+
+  scope.querySelectorAll(visibleSelector).forEach((element) => {
+    visibleObserver!.observe(element);
+  });
+}
+
+function triggerScroll(instance: IElbwalker.Function) {
+  const scrolling = (
+    scrollElements: Walker.ScrollElements,
+    instance: IElbwalker.Function,
+  ) => {
+    return scrollElements.filter(([element, depth]) => {
+      // Distance from top to the bottom of the visible screen
+      let windowBottom = window.scrollY + window.innerHeight;
+      // Distance from top to the elements relevant content
+      let elemTop = element.offsetTop;
+
+      // Skip calulations if not in viewport yet
+      if (windowBottom < elemTop) return true;
+
+      // Height of the elements box as 100 percent base
+      let elemHeight = element.clientHeight;
+      // Distance from top to the elements bottom
+      let elemBottom = elemTop + elemHeight;
+      // Height of the non-visible pixels below visible screen
+      let hidden = elemBottom - windowBottom;
+      // Visible percentage of the element
+      let scrollDepth = (1 - hidden / (elemHeight || 1)) * 100;
+
+      // Check if the elements visibility skipped the required border
+      if (scrollDepth >= depth) {
+        // Enough scrolling, it's time
+        handleTrigger(element, Walker.Trigger.Scroll, instance);
+
+        // Remove the element from scrollEvents
+        return false;
+      }
+
+      // Keep observing the element
+      return true;
     });
-  }
+  };
 
-  return observer;
+  // Don't add unnecessary scroll listeners
+  if (!scrollListener) {
+    scrollListener = throttle(function () {
+      scrollElements = scrolling.call(document, scrollElements, instance);
+    });
+
+    d.addEventListener('scroll', scrollListener);
+  }
 }
 
 function view(instance: IElbwalker.Function) {
@@ -167,7 +237,7 @@ function observerVisible(
               );
               // Just count once
               delete target.dataset[timerId];
-              if (observer) observer.unobserve(target);
+              if (visibleObserver) visibleObserver.unobserve(target);
             }
           }, duration);
 

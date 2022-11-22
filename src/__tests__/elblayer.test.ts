@@ -176,9 +176,11 @@ describe('ElbLayer', () => {
     const mockDest1 = jest.fn();
     const mockDest2 = jest.fn();
     customLayer1.push('walker destination', {
+      config: {},
       push: mockDest1,
     });
     customLayer2.push('walker destination', {
+      config: {},
       push: mockDest2,
     });
 
