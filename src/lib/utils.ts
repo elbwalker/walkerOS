@@ -133,3 +133,24 @@ export function throttle<P extends unknown[], R>(
     return fn(...args);
   };
 }
+
+export function debounce<P extends unknown[], R>(
+  fn: (...args: P) => R,
+  wait = 1000,
+) {
+  let timer: NodeJS.Timeout;
+
+  return (...args: P): Promise<R> => {
+    // abort previous invocation
+    clearTimeout(timer);
+
+    // Return value as promise
+    return new Promise((resolve) => {
+      // Schedule execution
+      timer = setTimeout(() => {
+        // Call the function
+        resolve(fn(...args));
+      }, wait);
+    });
+  };
+}

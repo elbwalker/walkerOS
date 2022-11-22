@@ -1,4 +1,4 @@
-import { elb, throttle } from '../lib/utils';
+import { debounce, elb, throttle } from '../lib/utils';
 
 const w = window;
 
@@ -24,7 +24,7 @@ describe('Utils', () => {
     expect(mockFn).toBeCalledWith(expect.objectContaining(['e a']));
   });
 
-  test('throttling', () => {
+  test('throttle', () => {
     const fn = throttle(mockFn, 50);
 
     fn();
@@ -44,6 +44,32 @@ describe('Utils', () => {
     jest.advanceTimersByTime(50);
 
     fn('arg');
+    expect(mockFn).toHaveBeenCalledWith('arg');
+  });
+
+  test('debounce', async () => {
+    const fn = debounce(mockFn, 50);
+
+    fn();
+    expect(mockFn).not.toHaveBeenCalled();
+
+    jest.advanceTimersByTime(50);
+    expect(mockFn).toHaveBeenCalled();
+
+    jest.clearAllMocks();
+
+    fn();
+    expect(mockFn).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(49);
+    expect(mockFn).not.toHaveBeenCalled();
+    fn();
+    jest.advanceTimersByTime(2);
+    expect(mockFn).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(99);
+    expect(mockFn).toHaveBeenCalled();
+
+    fn('arg');
+    jest.advanceTimersByTime(50);
     expect(mockFn).toHaveBeenCalledWith('arg');
   });
 });
