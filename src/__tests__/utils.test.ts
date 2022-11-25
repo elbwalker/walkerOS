@@ -91,6 +91,8 @@ describe('Utils', () => {
     expect(getItem(key)).toBe(value);
     removeItem(key);
     expect(getItem(key)).toBe('');
+    w.sessionStorage.setItem(key, 's');
+    expect(getItem(key)).toBe('s');
 
     // Local
     setItem(key, value, 1, Utils.Storage.Type.Local);
@@ -99,20 +101,40 @@ describe('Utils', () => {
     expect(getItem(key, Utils.Storage.Type.Local)).toBe('');
 
     // Cookie
-    // @TODO
+    Object.defineProperty(document, 'cookie', {
+      writable: true,
+      value: '',
+    });
+    setItem(key, value, 1, Utils.Storage.Type.Cookie);
+    expect(getItem(key, Utils.Storage.Type.Cookie)).toBe(value);
+    removeItem(key, Utils.Storage.Type.Cookie);
+    expect(getItem(key, Utils.Storage.Type.Cookie)).toBe('');
+    expect(getItem('foo', Utils.Storage.Type.Cookie)).toBe('');
+    setItem(key, value, 1, Utils.Storage.Type.Cookie, 'elbwalker.com');
+    expect(document.cookie).toContain('domain=elbwalker.com');
 
-    // Expiration
+    // Expiration Session
     setItem(key, value, 5);
     expect(getItem(key)).toBe(value);
     jest.advanceTimersByTime(6 * 60 * 1000);
     expect(w.sessionStorage.getItem(key)).toBeDefined();
     expect(getItem(key)).toBe('');
     expect(w.sessionStorage.getItem(key)).toBeNull();
+
+    // Expiration Local
     setItem(key, value, 5, Utils.Storage.Type.Local);
     expect(getItem(key, Utils.Storage.Type.Local)).toBe(value);
     jest.advanceTimersByTime(6 * 60 * 1000);
     expect(w.localStorage.getItem(key)).toBeDefined();
     expect(getItem(key, Utils.Storage.Type.Local)).toBe('');
     expect(w.localStorage.getItem(key)).toBeNull();
+
+    // Expiration Cookie
+    setItem(key, value, 5, Utils.Storage.Type.Cookie);
+    expect(document.cookie).toContain('max-age=300');
+
+    // Cast
+    setItem(key, true);
+    expect(getItem(key)).toBe(true);
   });
 });

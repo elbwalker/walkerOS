@@ -162,6 +162,7 @@ export function setItem(
   value: Walker.Property,
   maxAgeInMinutes = 30,
   storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+  domain?: string,
 ) {
   const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
   const item: Utils.Storage.Value = { e, v: String(value) };
@@ -169,7 +170,13 @@ export function setItem(
 
   switch (storage) {
     case Utils.Storage.Type.Cookie:
-      // @TODO
+      let cookie = `${key}=${encodeURIComponent(value)}; max-age=${
+        maxAgeInMinutes * 60
+      }; path=/; SameSite=Lax; secure`;
+
+      if (domain) cookie += '; domain=' + domain;
+
+      document.cookie = cookie;
       break;
     case Utils.Storage.Type.Local:
       w.localStorage.setItem(key, stringifiedItem);
@@ -184,12 +191,34 @@ export function getItem(
   key: string,
   storage: Utils.Storage.Type = Utils.Storage.Type.Session,
 ): Walker.Property {
+  // Helper function for local and session storage to support expiration
+  function parseItem(string: string | null): Utils.Storage.Value {
+    console.log('🚀 ~ file: utils.ts ~ line 196 ~ parseItem ~ string', string);
+    try {
+      return JSON.parse(string || '');
+    } catch (err) {
+      let e = 1,
+        v = '';
+
+      // Remove expiration date
+      if (string) {
+        e = 0;
+        v = string;
+      }
+
+      return { e, v };
+    }
+  }
   let value, item;
 
   switch (storage) {
     case Utils.Storage.Type.Cookie:
-      // @TODO
-      value = '';
+      value = decodeURIComponent(
+        document.cookie
+          .split('; ')
+          .find((row) => row.startsWith(key + '='))
+          ?.split('=')[1] || '',
+      );
       break;
     case Utils.Storage.Type.Local:
       item = parseItem(w.localStorage.getItem(key));
@@ -203,26 +232,13 @@ export function getItem(
   if (item) {
     value = item.v;
 
-    if (item.e < Date.now()) {
+    if (item.e != 0 && item.e < Date.now()) {
       removeItem(key, storage); // Remove item
       value = ''; // Conceal the outdated value
     }
   }
 
   return castValue(value || '');
-}
-
-function parseItem(string: string | null): Utils.Storage.Value {
-  try {
-    return JSON.parse(string || '');
-  } catch (err) {
-    let e = 1;
-
-    // Remove expiration date
-    if (string) e = 0;
-
-    return { e, v: '' };
-  }
 }
 
 export function removeItem(
@@ -232,6 +248,7 @@ export function removeItem(
   switch (storage) {
     case Utils.Storage.Type.Cookie:
       // @TODO
+      setItem(key, '', 0, storage);
       break;
     case Utils.Storage.Type.Local:
       w.localStorage.removeItem(key);
