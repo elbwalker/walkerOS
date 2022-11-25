@@ -200,9 +200,13 @@ export function getItem(
   }
 
   // Check if item is expired
-  if (item && item.e < Date.now()) {
-    removeItem(key, storage); // Remove item
-    value = ''; // Conceal the outdated value
+  if (item) {
+    value = item.v;
+
+    if (item.e < Date.now()) {
+      removeItem(key, storage); // Remove item
+      value = ''; // Conceal the outdated value
+    }
   }
 
   return castValue(value || '');

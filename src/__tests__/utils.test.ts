@@ -1,4 +1,12 @@
-import { debounce, elb, throttle } from '../lib/utils';
+import {
+  debounce,
+  elb,
+  getItem,
+  removeItem,
+  setItem,
+  throttle,
+} from '../lib/utils';
+import { Utils } from '../types';
 
 const w = window;
 
@@ -72,5 +80,39 @@ describe('Utils', () => {
     fn('arg');
     jest.advanceTimersByTime(50);
     expect(mockFn).toHaveBeenCalledWith('arg');
+  });
+
+  test('storage', async () => {
+    const key = 'id';
+    const value = 'abc';
+
+    // Session
+    setItem(key, value);
+    expect(getItem(key)).toBe(value);
+    removeItem(key);
+    expect(getItem(key)).toBe('');
+
+    // Local
+    setItem(key, value, 1, Utils.Storage.Type.Local);
+    expect(getItem(key, Utils.Storage.Type.Local)).toBe(value);
+    removeItem(key, Utils.Storage.Type.Local);
+    expect(getItem(key, Utils.Storage.Type.Local)).toBe('');
+
+    // Cookie
+    // @TODO
+
+    // Expiration
+    setItem(key, value, 5);
+    expect(getItem(key)).toBe(value);
+    jest.advanceTimersByTime(6 * 60 * 1000);
+    expect(w.sessionStorage.getItem(key)).toBeDefined();
+    expect(getItem(key)).toBe('');
+    expect(w.sessionStorage.getItem(key)).toBeNull();
+    setItem(key, value, 5, Utils.Storage.Type.Local);
+    expect(getItem(key, Utils.Storage.Type.Local)).toBe(value);
+    jest.advanceTimersByTime(6 * 60 * 1000);
+    expect(w.localStorage.getItem(key)).toBeDefined();
+    expect(getItem(key, Utils.Storage.Type.Local)).toBe('');
+    expect(w.localStorage.getItem(key)).toBeNull();
   });
 });
