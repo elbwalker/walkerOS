@@ -165,7 +165,7 @@ export function setItem(
   storage: Utils.Storage.Type = Utils.Storage.Type.Session,
 ) {
   const maxAge = Date.now(); // @TODO add max age
-  const item: Utils.Storage.Value = { t: maxAge, v: String(value) };
+  const item: Utils.Storage.Value = { e: maxAge, v: String(value) };
   const stringify = JSON.stringify(item);
 
   switch (storage) {
@@ -181,14 +181,60 @@ export function setItem(
   }
 }
 
-// @TODO add max age support
 export function getItem(
   key: string,
-  value: Walker.Property,
   storage: Utils.Storage.Type = Utils.Storage.Type.Session,
-) {}
+): string {
+  let value, item;
+
+  switch (storage) {
+    case Utils.Storage.Type.Cookie:
+      // @TODO
+      value = '';
+      break;
+    case Utils.Storage.Type.Local:
+      item = parseItem(w.localStorage.getItem(key));
+      break;
+    case Utils.Storage.Type.Session:
+      item = parseItem(w.sessionStorage.getItem(key));
+      break;
+  }
+
+  if (item) {
+    // @TODO check if max age expired and remove old ones
+    value = item.v;
+  }
+
+  return value || '';
+}
+
+function parseItem(string: string | null): Utils.Storage.Value {
+  try {
+    return JSON.parse(string || '');
+  } catch (e) {
+    if (string) {
+      // Return the string with no expiration date
+      return { e: 0, v: '' };
+    }
+
+    // Return an empty, but expired item
+    return { e: 1, v: '' };
+  }
+}
 
 export function removeItem(
   key: string,
   storage: Utils.Storage.Type = Utils.Storage.Type.Session,
-) {}
+) {
+  switch (storage) {
+    case Utils.Storage.Type.Cookie:
+      // @TODO
+      break;
+    case Utils.Storage.Type.Local:
+      w.localStorage.removeItem(key);
+      break;
+    case Utils.Storage.Type.Session:
+      w.sessionStorage.removeItem(key);
+      break;
+  }
+}

@@ -7,8 +7,8 @@ export namespace Utils {
     }
 
     interface Value {
-      t: number;
-      v: string;
+      e: number; // Expiration timestamp
+      v: string; // Value
     }
   }
 }
