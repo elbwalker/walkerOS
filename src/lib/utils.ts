@@ -193,7 +193,6 @@ export function getItem(
 ): Walker.Property {
   // Helper function for local and session storage to support expiration
   function parseItem(string: string | null): Utils.Storage.Value {
-    console.log('🚀 ~ file: utils.ts ~ line 196 ~ parseItem ~ string', string);
     try {
       return JSON.parse(string || '');
     } catch (err) {
