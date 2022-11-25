@@ -1,6 +1,7 @@
-import { IElbwalker, Walker } from '../types';
+import { IElbwalker, Utils, Walker } from '../types';
 import { getElbAttributeName, getElbValues } from './walker';
 
+const w = window;
 export function trycatch<P extends unknown[], R>(
   fn: (...args: P) => R | undefined,
 ): (...args: P) => R | undefined {
@@ -100,7 +101,7 @@ export function isArgument(event: unknown) {
 }
 
 export const elb: IElbwalker.Elb = function () {
-  (window.elbLayer = window.elbLayer || []).push(arguments);
+  (w.elbLayer = w.elbLayer || []).push(arguments);
 };
 
 export function castValue(value: unknown): Walker.Property {
@@ -154,3 +155,40 @@ export function debounce<P extends unknown[], R>(
     });
   };
 }
+
+// @TODO add max age support
+// @TODO cookie support
+// @TODO minify switch to HOF
+export function setItem(
+  key: string,
+  value: Walker.Property,
+  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+) {
+  const maxAge = Date.now(); // @TODO add max age
+  const item: Utils.Storage.Value = { t: maxAge, v: String(value) };
+  const stringify = JSON.stringify(item);
+
+  switch (storage) {
+    case Utils.Storage.Type.Cookie:
+      // @TODO
+      break;
+    case Utils.Storage.Type.Local:
+      w.localStorage.setItem(key, stringify);
+      break;
+    case Utils.Storage.Type.Session:
+      w.sessionStorage.setItem(key, stringify);
+      break;
+  }
+}
+
+// @TODO add max age support
+export function getItem(
+  key: string,
+  value: Walker.Property,
+  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+) {}
+
+export function removeItem(
+  key: string,
+  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+) {}

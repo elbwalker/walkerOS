@@ -48,15 +48,16 @@ describe('Utils', () => {
   });
 
   test('debounce', async () => {
-    const fn = debounce(mockFn, 50);
+    let fn = debounce(mockFn);
 
     fn();
     expect(mockFn).not.toHaveBeenCalled();
 
-    jest.advanceTimersByTime(50);
+    jest.advanceTimersByTime(1000);
     expect(mockFn).toHaveBeenCalled();
 
     jest.clearAllMocks();
+    fn = debounce(mockFn, 50);
 
     fn();
     expect(mockFn).not.toHaveBeenCalled();
