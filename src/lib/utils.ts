@@ -156,27 +156,26 @@ export function debounce<P extends unknown[], R>(
   };
 }
 
-// @TODO add max age support
 // @TODO cookie support
-// @TODO minify switch to HOF
 export function setItem(
   key: string,
   value: Walker.Property,
+  maxAgeInMinutes = 30,
   storage: Utils.Storage.Type = Utils.Storage.Type.Session,
 ) {
-  const maxAge = Date.now(); // @TODO add max age
-  const item: Utils.Storage.Value = { e: maxAge, v: String(value) };
-  const stringify = JSON.stringify(item);
+  const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
+  const item: Utils.Storage.Value = { e, v: String(value) };
+  const stringifiedItem = JSON.stringify(item);
 
   switch (storage) {
     case Utils.Storage.Type.Cookie:
       // @TODO
       break;
     case Utils.Storage.Type.Local:
-      w.localStorage.setItem(key, stringify);
+      w.localStorage.setItem(key, stringifiedItem);
       break;
     case Utils.Storage.Type.Session:
-      w.sessionStorage.setItem(key, stringify);
+      w.sessionStorage.setItem(key, stringifiedItem);
       break;
   }
 }
@@ -200,9 +199,10 @@ export function getItem(
       break;
   }
 
-  if (item) {
-    // @TODO check if max age expired and remove old ones
-    value = item.v;
+  // Check if item is expired
+  if (item && item.e < Date.now()) {
+    removeItem(key, storage); // Remove item
+    value = ''; // Conceal the outdated value
   }
 
   return value || '';
@@ -211,14 +211,13 @@ export function getItem(
 function parseItem(string: string | null): Utils.Storage.Value {
   try {
     return JSON.parse(string || '');
-  } catch (e) {
-    if (string) {
-      // Return the string with no expiration date
-      return { e: 0, v: '' };
-    }
+  } catch (err) {
+    let e = 1;
 
-    // Return an empty, but expired item
-    return { e: 1, v: '' };
+    // Remove expiration date
+    if (string) e = 0;
+
+    return { e, v: '' };
   }
 }
 
