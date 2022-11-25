@@ -183,7 +183,7 @@ export function setItem(
 export function getItem(
   key: string,
   storage: Utils.Storage.Type = Utils.Storage.Type.Session,
-): string {
+): Walker.Property {
   let value, item;
 
   switch (storage) {
@@ -205,7 +205,7 @@ export function getItem(
     value = ''; // Conceal the outdated value
   }
 
-  return value || '';
+  return castValue(value || '');
 }
 
 function parseItem(string: string | null): Utils.Storage.Value {
