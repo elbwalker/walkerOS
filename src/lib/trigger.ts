@@ -265,18 +265,15 @@ function isVisible(elem: HTMLElement): boolean {
   if (style.display === 'none') return false;
   if (style.visibility !== 'visible') return false;
   if (Number(style.opacity) < 0.1) return false;
-  if (
-    elem.offsetWidth +
-      elem.offsetHeight +
-      elem.getBoundingClientRect().height +
-      elem.getBoundingClientRect().width ===
-    0
-  ) {
+
+  const rect = elem.getBoundingClientRect();
+
+  if (elem.offsetWidth + elem.offsetHeight + rect.height + rect.width === 0) {
     return false;
   }
   const elemCenter = {
-    x: elem.getBoundingClientRect().left + elem.offsetWidth / 2,
-    y: elem.getBoundingClientRect().top + elem.offsetHeight / 2,
+    x: rect.left + elem.offsetWidth / 2,
+    y: rect.top + elem.offsetHeight / 2,
   };
   if (elemCenter.x < 0) return false;
   if (elemCenter.x > (d.documentElement.clientWidth || w.innerWidth))
