@@ -33,6 +33,27 @@ export function walker(
     // Get the entities with their properties
     const entities = getEntities(prefix, target, filter);
 
+    // Use page as default entity if no one was set
+    if (!entities.length) {
+      const type = 'page';
+      const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
+
+      // Get matching properties from the element and its parents
+      let [data, context] = getThisAndParentProperties(
+        target,
+        entitySelector,
+        prefix,
+        type,
+      );
+
+      entities.push({
+        type, // page
+        data, // Consider only upper data
+        nested: [], // Skip nested in this faked page case
+        context,
+      });
+    }
+
     // Return a list of all full events
     entities.forEach((entity) => {
       events.push({
@@ -127,30 +148,15 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
 
   if (!type) return null; // It's not a (valid) entity element
 
-  let data: Walker.Properties = {};
-  let context: Walker.Properties = {};
   const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
-  const contextSelector = `[${getElbAttributeName(
+
+  // Get matching properties from the element and its parents
+  let [data, context] = getThisAndParentProperties(
+    element,
+    entitySelector,
     prefix,
-    IElbwalker.Commands.Context,
-    false,
-  )}]`;
-
-  // Get all parent data properties with decreasing priority
-  let parent = element as Node['parentElement'];
-  while (parent) {
-    if (parent.matches(entitySelector))
-      // Get higher properties first
-      data = assign(getElbValues(prefix, parent, type), data);
-
-    if (parent.matches(contextSelector))
-      context = assign(
-        getElbValues(prefix, parent, IElbwalker.Commands.Context, false),
-        context,
-      );
-
-    parent = parent.parentElement;
-  }
+    type,
+  );
 
   // Get properties
   element.querySelectorAll<HTMLElement>(entitySelector).forEach((child) => {
@@ -168,6 +174,39 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
     });
 
   return { type, data, context, nested };
+}
+
+function getThisAndParentProperties(
+  element: Element,
+  entitySelector: string,
+  prefix: string,
+  type: string,
+): [data: Walker.Properties, context: Walker.Properties] {
+  let data: Walker.Properties = {};
+  let context: Walker.Properties = {};
+  let parent = element as Node['parentElement'];
+  const contextSelector = `[${getElbAttributeName(
+    prefix,
+    IElbwalker.Commands.Context,
+    false,
+  )}]`;
+
+  // Get all bubbling-up properties with decreasing priority
+  while (parent) {
+    if (parent.matches(entitySelector))
+      // Get higher properties first
+      data = assign(getElbValues(prefix, parent, type), data);
+
+    if (parent.matches(contextSelector))
+      context = assign(
+        getElbValues(prefix, parent, IElbwalker.Commands.Context, false),
+        context,
+      );
+
+    parent = parent.parentElement;
+  }
+
+  return [data, context];
 }
 
 export function getElbAttributeName(
