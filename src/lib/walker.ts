@@ -37,7 +37,7 @@ export function walker(
     if (!entities.length)
       entities.push({
         type: 'page',
-        data: {},
+        data: {}, // @TODO handle the data
         nested: [],
         context: {}, // @TODO handle the context
       });
@@ -136,30 +136,15 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
 
   if (!type) return null; // It's not a (valid) entity element
 
-  let data: Walker.Properties = {};
-  let context: Walker.Properties = {};
   const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
-  const contextSelector = `[${getElbAttributeName(
+
+  // Get matching parent data properties and context
+  let [data, context] = getParentPropertiesAndContext(
+    element,
+    entitySelector,
     prefix,
-    IElbwalker.Commands.Context,
-    false,
-  )}]`;
-
-  // Get all parent data properties with decreasing priority
-  let parent = element as Node['parentElement'];
-  while (parent) {
-    if (parent.matches(entitySelector))
-      // Get higher properties first
-      data = assign(getElbValues(prefix, parent, type), data);
-
-    if (parent.matches(contextSelector))
-      context = assign(
-        getElbValues(prefix, parent, IElbwalker.Commands.Context, false),
-        context,
-      );
-
-    parent = parent.parentElement;
-  }
+    type,
+  );
 
   // Get properties
   element.querySelectorAll<HTMLElement>(entitySelector).forEach((child) => {
@@ -177,6 +162,39 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
     });
 
   return { type, data, context, nested };
+}
+
+function getParentPropertiesAndContext(
+  element: Element,
+  entitySelector: string,
+  prefix: string,
+  type: string,
+): [Walker.Properties, Walker.Properties] {
+  let data: Walker.Properties = {};
+  let context: Walker.Properties = {};
+  let parent = element as Node['parentElement'];
+  const contextSelector = `[${getElbAttributeName(
+    prefix,
+    IElbwalker.Commands.Context,
+    false,
+  )}]`;
+
+  // Get all parent data properties with decreasing priority
+  while (parent) {
+    if (parent.matches(entitySelector))
+      // Get higher properties first
+      data = assign(getElbValues(prefix, parent, type), data);
+
+    if (parent.matches(contextSelector))
+      context = assign(
+        getElbValues(prefix, parent, IElbwalker.Commands.Context, false),
+        context,
+      );
+
+    parent = parent.parentElement;
+  }
+
+  return [data, context];
 }
 
 export function getElbAttributeName(
