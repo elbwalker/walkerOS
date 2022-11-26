@@ -1,9 +1,9 @@
 export namespace Utils {
   namespace Storage {
     const enum Type {
-      Cookie = 'cookie',
-      Local = 'local',
-      Session = 'session',
+      Cookie = 0,
+      Local = 1,
+      Session = 2,
     }
 
     interface Value {

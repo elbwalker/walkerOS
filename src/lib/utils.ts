@@ -192,7 +192,6 @@ export function debounce<P extends unknown[], R>(
   };
 }
 
-// @TODO cookie support
 export function setItem(
   key: string,
   value: Walker.Property,
@@ -282,7 +281,6 @@ export function removeItem(
 ) {
   switch (storage) {
     case Utils.Storage.Type.Cookie:
-      // @TODO
       setItem(key, '', 0, storage);
       break;
     case Utils.Storage.Type.Local:
