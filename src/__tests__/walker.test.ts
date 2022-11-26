@@ -220,7 +220,8 @@ describe('Walker', () => {
       {
         entity: 'page',
         action: 'click',
-        data: {},
+        data: { e: 'v', p: 'v' },
+        context: { k: 'c' },
       },
     ]);
   });

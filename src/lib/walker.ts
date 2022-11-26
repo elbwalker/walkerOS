@@ -34,13 +34,25 @@ export function walker(
     const entities = getEntities(prefix, target, filter);
 
     // Use page as default entity if no one was set
-    if (!entities.length)
+    if (!entities.length) {
+      const type = 'page';
+      const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
+
+      // Get matching properties from the element and its parents
+      let [data, context] = getThisAndParentProperties(
+        target,
+        entitySelector,
+        prefix,
+        type,
+      );
+
       entities.push({
-        type: 'page',
-        data: {}, // @TODO handle the data
-        nested: [],
-        context: {}, // @TODO handle the context
+        type, // page
+        data, // Consider only upper data
+        nested: [], // Skip nested in this faked page case
+        context,
       });
+    }
 
     // Return a list of all full events
     entities.forEach((entity) => {
@@ -138,8 +150,8 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
 
   const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
 
-  // Get matching parent data properties and context
-  let [data, context] = getParentPropertiesAndContext(
+  // Get matching properties from the element and its parents
+  let [data, context] = getThisAndParentProperties(
     element,
     entitySelector,
     prefix,
@@ -164,12 +176,12 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
   return { type, data, context, nested };
 }
 
-function getParentPropertiesAndContext(
+function getThisAndParentProperties(
   element: Element,
   entitySelector: string,
   prefix: string,
   type: string,
-): [Walker.Properties, Walker.Properties] {
+): [data: Walker.Properties, context: Walker.Properties] {
   let data: Walker.Properties = {};
   let context: Walker.Properties = {};
   let parent = element as Node['parentElement'];
@@ -179,7 +191,7 @@ function getParentPropertiesAndContext(
     false,
   )}]`;
 
-  // Get all parent data properties with decreasing priority
+  // Get all bubbling-up properties with decreasing priority
   while (parent) {
     if (parent.matches(entitySelector))
       // Get higher properties first
