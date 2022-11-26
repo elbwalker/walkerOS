@@ -2,6 +2,8 @@ import { IElbwalker, Utils, Walker } from '../types';
 import { getElbAttributeName, getElbValues } from './walker';
 
 const w = window;
+const d = document;
+
 export function trycatch<P extends unknown[], R>(
   fn: (...args: P) => R | undefined,
 ): (...args: P) => R | undefined {
@@ -98,6 +100,40 @@ export function assign(
 
 export function isArgument(event: unknown) {
   return {}.hasOwnProperty.call(event, 'callee');
+}
+
+// @TODO bugfix when element bigger than viewport
+export function isVisible(elem: HTMLElement): boolean {
+  const style = getComputedStyle(elem);
+
+  if (style.display === 'none') return false;
+  if (style.visibility !== 'visible') return false;
+  if (style.opacity && Number(style.opacity) < 0.1) return false;
+
+  const rect = elem.getBoundingClientRect();
+
+  if (elem.offsetWidth + elem.offsetHeight + rect.height + rect.width === 0) {
+    return false;
+  }
+  const elemCenter = {
+    x: rect.left + elem.offsetWidth / 2,
+    y: rect.top + elem.offsetHeight / 2,
+  };
+
+  if (elemCenter.x < 0) return false;
+  if (elemCenter.x > (d.documentElement.clientWidth || w.innerWidth))
+    return false;
+  if (elemCenter.y < 0) return false;
+  if (elemCenter.y > (d.documentElement.clientHeight || w.innerHeight))
+    return false;
+  let pointContainer = d.elementFromPoint(elemCenter.x, elemCenter.y);
+  if (pointContainer) {
+    do {
+      if (pointContainer === elem) return true;
+    } while ((pointContainer = pointContainer.parentElement));
+  }
+
+  return false;
 }
 
 export const elb: IElbwalker.Elb = function () {
