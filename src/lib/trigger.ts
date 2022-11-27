@@ -1,6 +1,6 @@
 import { IElbwalker, Walker } from '../types';
 import { resolveAttributes, getElbAttributeName, walker } from './walker';
-import { throttle, trycatch } from './utils';
+import { isVisible, throttle, trycatch } from './utils';
 
 const d = document;
 const w = window;
@@ -255,39 +255,6 @@ function observerVisible(
       threshold: [0.5],
     },
   );
-}
-
-// https://stackoverflow.com/questions/19669786/check-if-element-is-visible-in-dom#41698614
-// @TODO bugfix when element bigger than viewport
-function isVisible(elem: HTMLElement): boolean {
-  const style = getComputedStyle(elem);
-
-  if (style.display === 'none') return false;
-  if (style.visibility !== 'visible') return false;
-  if (Number(style.opacity) < 0.1) return false;
-
-  const rect = elem.getBoundingClientRect();
-
-  if (elem.offsetWidth + elem.offsetHeight + rect.height + rect.width === 0) {
-    return false;
-  }
-  const elemCenter = {
-    x: rect.left + elem.offsetWidth / 2,
-    y: rect.top + elem.offsetHeight / 2,
-  };
-  if (elemCenter.x < 0) return false;
-  if (elemCenter.x > (d.documentElement.clientWidth || w.innerWidth))
-    return false;
-  if (elemCenter.y < 0) return false;
-  if (elemCenter.y > (d.documentElement.clientHeight || w.innerHeight))
-    return false;
-  let pointContainer = d.elementFromPoint(elemCenter.x, elemCenter.y);
-  if (pointContainer) {
-    do {
-      if (pointContainer === elem) return true;
-    } while ((pointContainer = pointContainer.parentElement));
-  }
-  return false;
 }
 
 function handleTrigger(

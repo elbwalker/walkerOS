@@ -1,4 +1,4 @@
-import { IElbwalker, Walker } from '../types';
+import { IElbwalker, Utils, Walker } from '../types';
 import { getElbAttributeName, getElbValues } from './walker';
 
 const w = window;
@@ -165,7 +165,7 @@ export function isVisible(element: HTMLElement): boolean {
 }
 
 export const elb: IElbwalker.Elb = function () {
-  (window.elbLayer = window.elbLayer || []).push(arguments);
+  (w.elbLayer = w.elbLayer || []).push(arguments);
 };
 
 export function castValue(value: unknown): Walker.Property {
@@ -197,4 +197,125 @@ export function throttle<P extends unknown[], R>(
     // Call the function
     return fn(...args);
   };
+}
+
+export function debounce<P extends unknown[], R>(
+  fn: (...args: P) => R,
+  wait = 1000,
+) {
+  let timer: NodeJS.Timeout;
+
+  return (...args: P): Promise<R> => {
+    // abort previous invocation
+    clearTimeout(timer);
+
+    // Return value as promise
+    return new Promise((resolve) => {
+      // Schedule execution
+      timer = setTimeout(() => {
+        // Call the function
+        resolve(fn(...args));
+      }, wait);
+    });
+  };
+}
+
+export function setItem(
+  key: string,
+  value: Walker.Property,
+  maxAgeInMinutes = 30,
+  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+  domain?: string,
+) {
+  const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
+  const item: Utils.Storage.Value = { e, v: String(value) };
+  const stringifiedItem = JSON.stringify(item);
+
+  switch (storage) {
+    case Utils.Storage.Type.Cookie:
+      let cookie = `${key}=${encodeURIComponent(value)}; max-age=${
+        maxAgeInMinutes * 60
+      }; path=/; SameSite=Lax; secure`;
+
+      if (domain) cookie += '; domain=' + domain;
+
+      document.cookie = cookie;
+      break;
+    case Utils.Storage.Type.Local:
+      w.localStorage.setItem(key, stringifiedItem);
+      break;
+    case Utils.Storage.Type.Session:
+      w.sessionStorage.setItem(key, stringifiedItem);
+      break;
+  }
+}
+
+export function getItem(
+  key: string,
+  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+): Walker.Property {
+  // Helper function for local and session storage to support expiration
+  function parseItem(string: string | null): Utils.Storage.Value {
+    try {
+      return JSON.parse(string || '');
+    } catch (err) {
+      let e = 1,
+        v = '';
+
+      // Remove expiration date
+      if (string) {
+        e = 0;
+        v = string;
+      }
+
+      return { e, v };
+    }
+  }
+  let value, item;
+
+  switch (storage) {
+    case Utils.Storage.Type.Cookie:
+      value = decodeURIComponent(
+        document.cookie
+          .split('; ')
+          .find((row) => row.startsWith(key + '='))
+          ?.split('=')[1] || '',
+      );
+      break;
+    case Utils.Storage.Type.Local:
+      item = parseItem(w.localStorage.getItem(key));
+      break;
+    case Utils.Storage.Type.Session:
+      item = parseItem(w.sessionStorage.getItem(key));
+      break;
+  }
+
+  // Check if item is expired
+  if (item) {
+    value = item.v;
+
+    if (item.e != 0 && item.e < Date.now()) {
+      removeItem(key, storage); // Remove item
+      value = ''; // Conceal the outdated value
+    }
+  }
+
+  return castValue(value || '');
+}
+
+export function removeItem(
+  key: string,
+  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+) {
+  switch (storage) {
+    case Utils.Storage.Type.Cookie:
+      setItem(key, '', 0, storage);
+      break;
+    case Utils.Storage.Type.Local:
+      w.localStorage.removeItem(key);
+      break;
+    case Utils.Storage.Type.Session:
+      w.sessionStorage.removeItem(key);
+      break;
+  }
 }
