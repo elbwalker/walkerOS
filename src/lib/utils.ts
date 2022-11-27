@@ -1,6 +1,9 @@
 import { IElbwalker, Walker } from '../types';
 import { getElbAttributeName, getElbValues } from './walker';
 
+const w = window;
+const d = document;
+
 export function trycatch<P extends unknown[], R>(
   fn: (...args: P) => R | undefined,
 ): (...args: P) => R | undefined {
@@ -97,6 +100,68 @@ export function assign(
 
 export function isArgument(event: unknown) {
   return {}.hasOwnProperty.call(event, 'callee');
+}
+
+export function isVisible(element: HTMLElement): boolean {
+  // Check for hiding styles
+  const style = getComputedStyle(element);
+  if (style.display === 'none') return false;
+  if (style.visibility !== 'visible') return false;
+  if (style.opacity && Number(style.opacity) < 0.1) return false;
+
+  // Element positions
+  let pointContainer;
+  const rect = element.getBoundingClientRect();
+  const windowHeight = w.innerHeight;
+  const windowTop = w.scrollY;
+  const elementHeight = element.clientHeight;
+  const elementTop = element.offsetTop;
+  const elementBottom = elementTop + elementHeight;
+  const elemCenter = {
+    x: rect.left + element.offsetWidth / 2,
+    y: rect.top + element.offsetHeight / 2,
+  };
+
+  // Check for elements that are smaller than the viewport
+  if (elementHeight <= windowHeight) {
+    // Must have a width
+    if (element.offsetWidth + rect.width === 0) return false;
+    // Must have a height
+    if (element.offsetHeight + rect.height === 0) return false;
+
+    if (elemCenter.x < 0) return false;
+    if (elemCenter.x > (d.documentElement.clientWidth || w.innerWidth))
+      return false;
+    if (elemCenter.y < 0) return false;
+    if (elemCenter.y > (d.documentElement.clientHeight || w.innerHeight))
+      return false;
+
+    // Select the element that is at the center of the target
+    pointContainer = d.elementFromPoint(elemCenter.x, elemCenter.y);
+  } else {
+    // Check for elements that are higher than the viewport
+
+    // that are considered visible if they fill half of the screen
+    const viewportCenter = windowTop + windowHeight / 2;
+
+    // Check if upper part is above than the viewports center
+    if (elementTop > viewportCenter) return false;
+
+    // Check if lower part is below than the viewports center
+    if (elementBottom < viewportCenter) return false;
+
+    // Select the element that is in the middle of the screen
+    pointContainer = d.elementFromPoint(elemCenter.x, windowHeight / 2);
+  }
+
+  // Check for potential overlays
+  if (pointContainer) {
+    do {
+      if (pointContainer === element) return true; // should be visible
+    } while ((pointContainer = pointContainer.parentElement));
+  }
+
+  return false;
 }
 
 export const elb: IElbwalker.Elb = function () {

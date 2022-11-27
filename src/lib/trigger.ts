@@ -160,21 +160,21 @@ function triggerScroll(instance: IElbwalker.Function) {
   ) => {
     return scrollElements.filter(([element, depth]) => {
       // Distance from top to the bottom of the visible screen
-      let windowBottom = window.scrollY + window.innerHeight;
+      const windowBottom = w.scrollY + w.innerHeight;
       // Distance from top to the elements relevant content
-      let elemTop = element.offsetTop;
+      const elemTop = element.offsetTop;
 
       // Skip calulations if not in viewport yet
       if (windowBottom < elemTop) return true;
 
       // Height of the elements box as 100 percent base
-      let elemHeight = element.clientHeight;
+      const elemHeight = element.clientHeight;
       // Distance from top to the elements bottom
-      let elemBottom = elemTop + elemHeight;
+      const elemBottom = elemTop + elemHeight;
       // Height of the non-visible pixels below visible screen
-      let hidden = elemBottom - windowBottom;
+      const hidden = elemBottom - windowBottom;
       // Visible percentage of the element
-      let scrollDepth = (1 - hidden / (elemHeight || 1)) * 100;
+      const scrollDepth = (1 - hidden / (elemHeight || 1)) * 100;
 
       // Check if the elements visibility skipped the required border
       if (scrollDepth >= depth) {
