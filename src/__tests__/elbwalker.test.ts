@@ -2,7 +2,6 @@ import Elbwalker from '../elbwalker';
 import { IElbwalker, Walker } from '../';
 import fs from 'fs';
 import _ from 'lodash';
-require('intersection-observer');
 
 describe('Elbwalker', () => {
   const w = window;
