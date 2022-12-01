@@ -181,9 +181,9 @@ function getThisAndParentProperties(
   entitySelector: string,
   prefix: string,
   type: string,
-): [data: Walker.Properties, context: Walker.Properties] {
+): [data: Walker.Properties, context: Walker.OrderedProperties] {
   let data: Walker.Properties = {};
-  let context: Walker.Properties = {};
+  let context: Walker.OrderedProperties = {};
   let parent = element as Node['parentElement'];
   const contextSelector = `[${getElbAttributeName(
     prefix,
@@ -192,16 +192,23 @@ function getThisAndParentProperties(
   )}]`;
 
   // Get all bubbling-up properties with decreasing priority
+  let contextI = 0; // Context counter
   while (parent) {
     if (parent.matches(entitySelector))
       // Get higher properties first
       data = assign(getElbValues(prefix, parent, type), data);
 
-    if (parent.matches(contextSelector))
-      context = assign(
+    if (parent.matches(contextSelector)) {
+      Object.entries(
         getElbValues(prefix, parent, IElbwalker.Commands.Context, false),
-        context,
-      );
+      ).forEach(([key, val]) => {
+        // Don't override context with same but higher key
+        if (!context[key]) context[key] = [val, contextI];
+      });
+
+      // Increase context counter with each parent level
+      ++contextI;
+    }
 
     parent = parent.parentElement;
   }
@@ -263,7 +270,7 @@ export function getElbValues(
       key = key.slice(0, -2); // Remove [] symbol
 
       if (!Array.isArray(values[key])) values[key] = [];
-      (values[key] as Walker.Property[]).push(castValue(val));
+      (values[key] as Walker.PropertyType[]).push(castValue(val));
     } else {
       values[key] = castValue(val);
     }
