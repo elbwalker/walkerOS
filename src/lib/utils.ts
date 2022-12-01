@@ -112,8 +112,6 @@ export function isVisible(element: HTMLElement): boolean {
   // Window positions
   let pointContainer;
   const windowHeight = w.innerHeight; // Height of the viewport
-  const windowTop = w.scrollY; // Absolute distance from 0 to window top
-  const windowBottom = windowTop + windowHeight; // Absolute distance from 0 to window bottom
 
   // Element positions
   const elemRectRel = element.getBoundingClientRect(); // Get the elements relative to the viewport

@@ -227,32 +227,51 @@ function observerVisible(
         const target = entry.target as HTMLElement;
         const timerId = 'elbTimerId';
 
-        if (entry.intersectionRatio >= 0.5) {
-          const timer = w.setTimeout(function () {
-            if (isVisible(target)) {
-              handleTrigger(
-                target as Element,
-                Walker.Trigger.Visible,
-                instance,
-              );
-              // Just count once
-              delete target.dataset[timerId];
-              if (visibleObserver) visibleObserver.unobserve(target);
-            }
-          }, duration);
+        // Check for an existing timer
+        let timer = Number(target.dataset[timerId]);
 
-          target.dataset[timerId] = String(timer);
-        } else {
-          if (target.dataset[timerId]) {
-            clearTimeout(Number(target.dataset[timerId]));
-            delete target.dataset[timerId];
+        if (entry.intersectionRatio > 0) {
+          // Check if a large target element is in viewport
+          const largeElemInViewport =
+            target.offsetHeight > w.innerHeight && isVisible(target);
+
+          // Element is more than 50% in viewport
+          if (largeElemInViewport || entry.intersectionRatio >= 0.5) {
+            // Take existing scheduled function or create a new one
+            timer =
+              timer ||
+              w.setTimeout(function () {
+                if (isVisible(target)) {
+                  handleTrigger(
+                    target as Element,
+                    Walker.Trigger.Visible,
+                    instance,
+                  );
+                  // Just count once
+                  delete target.dataset[timerId];
+                  if (visibleObserver) visibleObserver.unobserve(target);
+                }
+              }, duration);
+
+            // Remember the timer, temporarily
+            target.dataset[timerId] = String(timer);
+
+            // We're done here
+            return;
           }
+        }
+
+        // Element isn't in viewport
+        // Clearing a timer is more easy than computing isVisible
+        if (timer) {
+          clearTimeout(timer);
+          delete target.dataset[timerId];
         }
       });
     },
     {
       rootMargin: '0px',
-      threshold: [0.5],
+      threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5], // Trigger for the first 50%
     },
   );
 }
