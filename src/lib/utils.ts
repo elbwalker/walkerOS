@@ -175,7 +175,7 @@ export const elb: IElbwalker.Elb = function () {
   (w.elbLayer = w.elbLayer || []).push(arguments);
 };
 
-export function castValue(value: unknown): Walker.Property {
+export function castValue(value: unknown): Walker.PropertyType {
   if (value === 'true') return true;
   if (value === 'false') return false;
 
@@ -229,7 +229,7 @@ export function debounce<P extends unknown[], R>(
 
 export function setItem(
   key: string,
-  value: Walker.Property,
+  value: Walker.PropertyType,
   maxAgeInMinutes = 30,
   storage: Utils.Storage.Type = Utils.Storage.Type.Session,
   domain?: string,
@@ -260,7 +260,7 @@ export function setItem(
 export function getItem(
   key: string,
   storage: Utils.Storage.Type = Utils.Storage.Type.Session,
-): Walker.Property {
+): Walker.PropertyType {
   // Helper function for local and session storage to support expiration
   function parseItem(string: string | null): Utils.Storage.Value {
     try {
