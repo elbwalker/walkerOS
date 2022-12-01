@@ -56,6 +56,10 @@ describe('Utils', () => {
       value: height,
       writable: true,
     });
+    Object.defineProperty(elem, 'clientHeight', {
+      value: height,
+      writable: true,
+    });
     elem.getBoundingClientRect = jest.fn(() => ({
       x,
       y,
@@ -87,6 +91,12 @@ describe('Utils', () => {
     elem.style.opacity = '0.0';
     expect(isVisible(elem)).toBeFalsy();
     elem.style.opacity = '1';
+    expect(isVisible(elem)).toBeTruthy();
+
+    Object.defineProperty(elem, 'clientHeight', {
+      value: 250,
+      writable: true,
+    });
     expect(isVisible(elem)).toBeTruthy();
 
     window.innerHeight = innerHeight;

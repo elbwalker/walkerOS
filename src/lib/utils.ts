@@ -102,34 +102,69 @@ export function isArgument(event: unknown) {
   return {}.hasOwnProperty.call(event, 'callee');
 }
 
-// @TODO bugfix when element bigger than viewport
-export function isVisible(elem: HTMLElement): boolean {
-  const style = getComputedStyle(elem);
-
+export function isVisible(element: HTMLElement): boolean {
+  // Check for hiding styles
+  const style = getComputedStyle(element);
   if (style.display === 'none') return false;
   if (style.visibility !== 'visible') return false;
   if (style.opacity && Number(style.opacity) < 0.1) return false;
 
-  const rect = elem.getBoundingClientRect();
+  // Window positions
+  let pointContainer;
+  const windowHeight = w.innerHeight; // Height of the viewport
 
-  if (elem.offsetWidth + elem.offsetHeight + rect.height + rect.width === 0) {
-    return false;
-  }
-  const elemCenter = {
-    x: rect.left + elem.offsetWidth / 2,
-    y: rect.top + elem.offsetHeight / 2,
+  // Element positions
+  const elemRectRel = element.getBoundingClientRect(); // Get the elements relative to the viewport
+  const elementHeight = elemRectRel.height; // Height of the element
+  const elementTopRel = elemRectRel.y; // Relative distance from window top to element top
+  const elementBottomRel = elementTopRel + elementHeight; // Relative distance from window to to element bottom
+  const elemCenterRel = {
+    // Relative position on viewport of the elements center
+    x: elemRectRel.x + element.offsetWidth / 2,
+    y: elemRectRel.y + element.offsetHeight / 2,
   };
 
-  if (elemCenter.x < 0) return false;
-  if (elemCenter.x > (d.documentElement.clientWidth || w.innerWidth))
-    return false;
-  if (elemCenter.y < 0) return false;
-  if (elemCenter.y > (d.documentElement.clientHeight || w.innerHeight))
-    return false;
-  let pointContainer = d.elementFromPoint(elemCenter.x, elemCenter.y);
+  // Differentiate between small and large elements
+  if (elementHeight <= windowHeight) {
+    // Smaller than the viewport
+
+    // Must have a width and height
+    if (
+      element.offsetWidth + elemRectRel.width === 0 ||
+      element.offsetHeight + elemRectRel.height === 0
+    )
+      return false;
+
+    if (elemCenterRel.x < 0) return false;
+    if (elemCenterRel.x > (d.documentElement.clientWidth || w.innerWidth))
+      return false;
+    if (elemCenterRel.y < 0) return false;
+    if (elemCenterRel.y > (d.documentElement.clientHeight || w.innerHeight))
+      return false;
+
+    // Select the element that is at the center of the target
+    pointContainer = d.elementFromPoint(elemCenterRel.x, elemCenterRel.y);
+  } else {
+    // Bigger than the viewport
+
+    // that are considered visible if they fill half of the screen
+    const viewportCenter = windowHeight / 2;
+
+    // Check if upper part is above the viewports center
+    if (elementTopRel < 0 && elementBottomRel < viewportCenter) return false;
+
+    // Check if lower part is below the viewports center
+    if (elementBottomRel > windowHeight && elementTopRel > viewportCenter)
+      return false;
+
+    // Select the element that is in the middle of the screen
+    pointContainer = d.elementFromPoint(elemCenterRel.x, windowHeight / 2);
+  }
+
+  // Check for potential overlays
   if (pointContainer) {
     do {
-      if (pointContainer === elem) return true;
+      if (pointContainer === element) return true; // should be visible
     } while ((pointContainer = pointContainer.parentElement));
   }
 

@@ -160,21 +160,21 @@ function triggerScroll(instance: IElbwalker.Function) {
   ) => {
     return scrollElements.filter(([element, depth]) => {
       // Distance from top to the bottom of the visible screen
-      let windowBottom = window.scrollY + window.innerHeight;
+      const windowBottom = w.scrollY + w.innerHeight;
       // Distance from top to the elements relevant content
-      let elemTop = element.offsetTop;
+      const elemTop = element.offsetTop;
 
       // Skip calulations if not in viewport yet
       if (windowBottom < elemTop) return true;
 
       // Height of the elements box as 100 percent base
-      let elemHeight = element.clientHeight;
+      const elemHeight = element.clientHeight;
       // Distance from top to the elements bottom
-      let elemBottom = elemTop + elemHeight;
+      const elemBottom = elemTop + elemHeight;
       // Height of the non-visible pixels below visible screen
-      let hidden = elemBottom - windowBottom;
+      const hidden = elemBottom - windowBottom;
       // Visible percentage of the element
-      let scrollDepth = (1 - hidden / (elemHeight || 1)) * 100;
+      const scrollDepth = (1 - hidden / (elemHeight || 1)) * 100;
 
       // Check if the elements visibility skipped the required border
       if (scrollDepth >= depth) {
@@ -227,32 +227,51 @@ function observerVisible(
         const target = entry.target as HTMLElement;
         const timerId = 'elbTimerId';
 
-        if (entry.intersectionRatio >= 0.5) {
-          const timer = w.setTimeout(function () {
-            if (isVisible(target)) {
-              handleTrigger(
-                target as Element,
-                Walker.Trigger.Visible,
-                instance,
-              );
-              // Just count once
-              delete target.dataset[timerId];
-              if (visibleObserver) visibleObserver.unobserve(target);
-            }
-          }, duration);
+        // Check for an existing timer
+        let timer = Number(target.dataset[timerId]);
 
-          target.dataset[timerId] = String(timer);
-        } else {
-          if (target.dataset[timerId]) {
-            clearTimeout(Number(target.dataset[timerId]));
-            delete target.dataset[timerId];
+        if (entry.intersectionRatio > 0) {
+          // Check if a large target element is in viewport
+          const largeElemInViewport =
+            target.offsetHeight > w.innerHeight && isVisible(target);
+
+          // Element is more than 50% in viewport
+          if (largeElemInViewport || entry.intersectionRatio >= 0.5) {
+            // Take existing scheduled function or create a new one
+            timer =
+              timer ||
+              w.setTimeout(function () {
+                if (isVisible(target)) {
+                  handleTrigger(
+                    target as Element,
+                    Walker.Trigger.Visible,
+                    instance,
+                  );
+                  // Just count once
+                  delete target.dataset[timerId];
+                  if (visibleObserver) visibleObserver.unobserve(target);
+                }
+              }, duration);
+
+            // Remember the timer, temporarily
+            target.dataset[timerId] = String(timer);
+
+            // We're done here
+            return;
           }
+        }
+
+        // Element isn't in viewport
+        // Clearing a timer is more easy than computing isVisible
+        if (timer) {
+          clearTimeout(timer);
+          delete target.dataset[timerId];
         }
       });
     },
     {
       rootMargin: '0px',
-      threshold: [0.5],
+      threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5], // Trigger for the first 50%
     },
   );
 }

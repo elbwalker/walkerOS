@@ -1,7 +1,6 @@
 import Elbwalker from '../elbwalker';
 import { IElbwalker, Walker } from '../types';
 import fs from 'fs';
-require('intersection-observer');
 
 const w = window;
 let elbwalker: IElbwalker.Function;
@@ -306,7 +305,8 @@ describe('Trigger', () => {
 
   test('scroll', () => {
     // New instance without cached scrollIstener
-    const Elbwalker = require('../elbwalker').default
+    w.elbLayer = [];
+    const Elbwalker = jest.requireActual('../elbwalker').default;
     elbwalker = Elbwalker({ default: true });
 
     const innerHeight = window.innerHeight;
@@ -362,5 +362,83 @@ describe('Trigger', () => {
     );
 
     window.innerHeight = innerHeight;
+  });
+
+  test('visible', () => {
+    // Mock Intersection Observer
+    const mockObserve = jest.fn();
+    const mockUnobserve = jest.fn();
+    const mockDisconnect = jest.fn();
+    w.IntersectionObserver = jest.fn(
+      () =>
+        ({
+          observe: mockObserve,
+          unobserve: mockUnobserve,
+          disconnect: mockDisconnect,
+        } as unknown as IntersectionObserver),
+    );
+
+    // mock isVisible to return true
+    jest.mock('../lib/utils', () => ({
+      ...jest.requireActual('../lib/utils'),
+      isVisible: () => true,
+    }));
+
+    jest.clearAllMocks();
+    jest.spyOn(global, 'setTimeout');
+    jest.spyOn(global, 'clearTimeout');
+
+    w.elbLayer = [];
+    const Elbwalker = jest.requireActual('../elbwalker').default;
+    elbwalker = Elbwalker({ default: true });
+
+    const target = document.getElementById('visible');
+    const [observer] = (window.IntersectionObserver as jest.Mock).mock.calls[0];
+
+    // Check for disconnection to prevent double listens
+    expect(mockDisconnect).toBeCalled();
+
+    jest.clearAllMocks();
+    expect(setTimeout).toHaveBeenCalledTimes(0);
+
+    // Simulate scroll event
+    observer([
+      {
+        target,
+        isIntersecting: false,
+        intersectionRatio: 1,
+      },
+      {
+        target,
+        isIntersecting: false,
+        intersectionRatio: 0.2,
+      },
+    ]);
+
+    // Called for getting into viewport
+    expect(setTimeout).toHaveBeenCalledTimes(1);
+    // Called for getting out of viewport
+    expect(clearTimeout).toHaveBeenCalledTimes(1);
+
+    // Completely in viewport
+    observer([
+      {
+        target,
+        isIntersecting: false,
+        intersectionRatio: 1,
+      },
+    ]);
+
+    jest.advanceTimersByTime(1000);
+
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'visible impression',
+        trigger: Walker.Trigger.Visible,
+      }),
+    );
+
+    // Stop watching
+    expect(mockUnobserve).toHaveBeenCalled();
   });
 });
