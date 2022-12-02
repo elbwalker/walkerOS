@@ -56,7 +56,7 @@ function Elbwalker(
     event?: unknown,
     data: IElbwalker.PushData = {},
     trigger?: string,
-    context?: Walker.Properties,
+    context?: Walker.Properties, // œTODO Ordered?
     nested?: Walker.Entities,
   ): void {
     if (!event || typeof event !== 'string') return;
@@ -208,7 +208,10 @@ function Elbwalker(
   ) {
     switch (action) {
       case IElbwalker.Commands.Config:
-        // @TODO setConfig
+        instance.config = getConfig(
+          data as IElbwalker.Consent,
+          instance.config,
+        );
         break;
       case IElbwalker.Commands.Consent:
         setConsent(instance, data as IElbwalker.Consent);

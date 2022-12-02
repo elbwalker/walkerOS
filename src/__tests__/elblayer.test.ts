@@ -162,6 +162,41 @@ describe('ElbLayer', () => {
     expect(w.elbLayer).toBeDefined();
   });
 
+  test('config update', () => {
+    const defaultConfig = {
+      consent: {},
+      elbLayer: w.elbLayer,
+      pageview: true,
+      prefix: 'data-elb',
+      version: 0,
+    };
+
+    elbwalker = Elbwalker();
+    elb('walker run');
+
+    expect(elbwalker.config).toStrictEqual(defaultConfig);
+
+    let update: IElbwalker.AnyObject = { prefix: 'data-custom' };
+    let config = { ...defaultConfig, ...update };
+    elb('walker config', update);
+    expect(elbwalker.config).toStrictEqual(expect.objectContaining(update)); // Partial test
+    expect(elbwalker.config).toStrictEqual(config); // Full test
+
+    update = { unknown: 'random' };
+    elb('walker config', update);
+    expect(elbwalker.config).toStrictEqual(config);
+
+    update = { version: 2 };
+    elb('walker config', update);
+    expect(elbwalker.config).toStrictEqual(expect.objectContaining(update));
+
+    update = { pageview: false };
+    elb('walker config', update);
+    expect(elbwalker.config).toStrictEqual(expect.objectContaining(update));
+
+    // @TODO Globals
+  });
+
   test('custom elbLayer', () => {
     w.elbLayer = undefined as any;
     w.dataLayer = [];
