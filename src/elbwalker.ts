@@ -18,13 +18,7 @@ function Elbwalker(
   const runCommand = `${IElbwalker.Commands.Walker} ${IElbwalker.Commands.Run}`;
   const instance: IElbwalker.Function = {
     push,
-    config: {
-      consent: config.consent || {}, // Handle the consent states
-      elbLayer: config.elbLayer || (w.elbLayer = w.elbLayer || []), // Async access api in window as array
-      pageview: 'pageview' in config ? !!config.pageview : true, // Trigger a page view event by default
-      prefix: config.prefix || IElbwalker.Commands.Prefix, // HTML prefix attribute
-      version: config.version || 0, // Helpful to differentiate the clients used setup version
-    },
+    config: getConfig(config),
   };
 
   // Internal properties
@@ -101,6 +95,7 @@ function Elbwalker(
         event,
         // Create a new objects for each destination
         // to prevent data manipulation
+        // @TODO check for potential issue due to casting (OrderedProperties)
         data: assign({}, data as Walker.Properties),
         context: assign({}, context as Walker.Properties),
         globals: assign({}, _globals as Walker.Properties),
@@ -212,6 +207,9 @@ function Elbwalker(
     data: IElbwalker.PushData = {},
   ) {
     switch (action) {
+      case IElbwalker.Commands.Config:
+        // @TODO setConfig
+        break;
       case IElbwalker.Commands.Consent:
         setConsent(instance, data as IElbwalker.Consent);
         break;
@@ -373,6 +371,29 @@ function Elbwalker(
     } as WebDestination.Function;
 
     destinations.push(destination);
+  }
+
+  function getConfig(
+    values: Partial<IElbwalker.Config>,
+    current: Partial<IElbwalker.Config> = {},
+  ): IElbwalker.Config {
+    return {
+      // Value hierarchy: values > current > default
+
+      // Handle the consent states
+      consent: values.consent || current.consent || {},
+      // Async access api in window as array
+      elbLayer:
+        values.elbLayer || current.elbLayer || (w.elbLayer = w.elbLayer || []),
+      // Trigger a page view event by default
+      pageview:
+        'pageview' in values ? !!values.pageview : current.pageview || true,
+      // HTML prefix attribute
+      prefix: values.prefix || current.prefix || IElbwalker.Commands.Prefix,
+      // Helpful to differentiate the clients used setup version
+      version: values.version || current.version || 0,
+      // @TODO move _globals here
+    };
   }
 
   return instance;
