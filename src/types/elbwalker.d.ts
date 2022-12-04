@@ -39,11 +39,12 @@ export namespace IElbwalker {
 
   interface Config {
     consent: Consent;
-    prefix: string;
-    pageview: boolean;
-    default?: boolean;
     elbLayer: ElbLayer;
+    globals: Walker.Properties;
+    pageview: boolean;
+    prefix: string;
     version: number;
+    default?: boolean;
   }
 
   type Events = Event[];

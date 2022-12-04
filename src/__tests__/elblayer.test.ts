@@ -166,6 +166,7 @@ describe('ElbLayer', () => {
     const defaultConfig = {
       consent: {},
       elbLayer: w.elbLayer,
+      globals: {},
       pageview: true,
       prefix: 'data-elb',
       version: 0,
