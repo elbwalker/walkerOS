@@ -1,6 +1,6 @@
 import Elbwalker from '../elbwalker';
 import { elb } from '../lib/utils';
-import { IElbwalker, WebDestination } from '../types';
+import { IElbwalker, Walker, WebDestination } from '../types';
 
 describe('ElbLayer', () => {
   const w = window;
@@ -195,7 +195,21 @@ describe('ElbLayer', () => {
     elb('walker config', update);
     expect(elbwalker.config).toStrictEqual(expect.objectContaining(update));
 
-    // @TODO Globals
+    // Reset with w.elbLayer = [] creates another array than in defaultConfig
+    w.elbLayer.length = 0;
+    let globals: Walker.Properties = { static: 'value' };
+    config = { ...defaultConfig, globals };
+    elbwalker = Elbwalker({ globals });
+    elb('walker run');
+    expect(elbwalker.config).toStrictEqual(config);
+
+    update = { globals: { foo: 'bar' } };
+    elb('walker config', update); // @TODO check type
+    globals = { ...globals, foo: 'bar' };
+
+    expect(elbwalker.config).toStrictEqual(
+      expect.objectContaining({ globals }),
+    );
   });
 
   test('custom elbLayer', () => {

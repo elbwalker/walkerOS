@@ -208,10 +208,7 @@ function Elbwalker(
   ) {
     switch (action) {
       case IElbwalker.Commands.Config:
-        instance.config = getConfig(
-          data as IElbwalker.Consent,
-          instance.config,
-        );
+        instance.config = getConfig(data as IElbwalker.Config, instance.config);
         break;
       case IElbwalker.Commands.Consent:
         setConsent(instance, data as IElbwalker.Consent);
