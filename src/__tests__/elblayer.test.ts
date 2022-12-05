@@ -177,7 +177,9 @@ describe('ElbLayer', () => {
 
     expect(elbwalker.config).toStrictEqual(defaultConfig);
 
-    let update: IElbwalker.AnyObject = { prefix: 'data-custom' };
+    let update: Walker.Properties | Partial<IElbwalker.Config> = {
+      prefix: 'data-custom',
+    };
     let config = { ...defaultConfig, ...update };
     elb('walker config', update);
     expect(elbwalker.config).toStrictEqual(expect.objectContaining(update)); // Partial test
@@ -203,9 +205,9 @@ describe('ElbLayer', () => {
     elb('walker run');
     expect(elbwalker.config).toStrictEqual(config);
 
-    update = { globals: { foo: 'bar' } };
-    elb('walker config', update); // @TODO check type
-    globals = { ...globals, foo: 'bar' };
+    update = { foo: 'bar' };
+    elb('walker config', { globals: update });
+    globals = { ...globals, ...update };
 
     expect(elbwalker.config).toStrictEqual(
       expect.objectContaining({ globals }),
