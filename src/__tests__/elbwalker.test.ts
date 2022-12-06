@@ -139,6 +139,40 @@ describe('Elbwalker', () => {
     expect(mockFn.mock.calls[3][0].group).not.toEqual(groupId); // page view
   });
 
+  test('source', () => {
+    const location = document.location;
+    const referrer = document.referrer;
+
+    const newPageId = '/source_id';
+    const newPageReferrer = 'https://docs.elbwalker.com';
+    Object.defineProperty(window, 'location', {
+      value: new URL(`https://www.elbwalker.com${newPageId}`),
+      writable: true,
+    });
+    Object.defineProperty(document, 'referrer', {
+      value: newPageReferrer,
+      writable: true,
+    });
+
+    elbwalker.push('entity source');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'entity source',
+        source: {
+          type: IElbwalker.SourceType.Web,
+          id: newPageId,
+          previous_id: newPageReferrer,
+        },
+      }),
+    );
+
+    window.location = location;
+    Object.defineProperty(document, 'referrer', {
+      value: referrer,
+      writable: true,
+    });
+  });
+
   test('walker commands', () => {
     mockFn.mockClear();
     elbwalker.push('walker action');
@@ -202,6 +236,8 @@ describe('Elbwalker', () => {
     // Grant permissions
     elbwalker.push('walker consent', { marketing: true });
     expect(elbwalker.config.consent.marketing).toBeTruthy();
+
+    // @TODO check for consent in event
 
     // Revoke permissions
     elbwalker.push('walker consent', { marketing: false });
