@@ -212,6 +212,22 @@ describe('ElbLayer', () => {
     expect(elbwalker.config).toStrictEqual(
       expect.objectContaining({ globals }),
     );
+
+    update = { another: 'value' };
+    elb('walker config', { globals: update });
+    globals = { ...globals, ...update };
+
+    expect(elbwalker.config).toStrictEqual(
+      expect.objectContaining({ globals }),
+    );
+
+    update = { static: 'override' };
+    elb('walker config', { globals: update });
+    globals = { ...globals, ...update };
+
+    expect(elbwalker.config).toStrictEqual(
+      expect.objectContaining({ globals }),
+    );
   });
 
   test('custom elbLayer', () => {

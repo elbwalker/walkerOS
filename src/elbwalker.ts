@@ -389,8 +389,11 @@ function Elbwalker(
       // Async access api in window as array
       elbLayer:
         values.elbLayer || current.elbLayer || (w.elbLayer = w.elbLayer || []),
-      // Globals enhanced with the static globals from init
-      globals: assign(staticGlobals, values.globals || current.globals || {}),
+      // Globals enhanced with the static globals from init and previous values
+      globals: assign(
+        staticGlobals,
+        assign(current.globals || {}, values.globals || {}),
+      ),
       // Trigger a page view event by default
       pageview:
         'pageview' in values ? !!values.pageview : current.pageview || true,
