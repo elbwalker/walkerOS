@@ -59,24 +59,6 @@ describe('Trigger', () => {
     );
   });
 
-  test('disable page view', () => {
-    // First default beforeEach call with pageview true by default
-    expect(mockFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: 'page view',
-      }),
-    );
-
-    jest.clearAllMocks();
-    w.elbLayer = [];
-    elbwalker = Elbwalker({ pageview: false });
-
-    expect(mockFn).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: 'page view',
-      }),
-    );
-  });
 
   test('load view location and referrer', () => {
     const location = document.location;

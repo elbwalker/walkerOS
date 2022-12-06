@@ -1,13 +1,10 @@
 import Elbwalker from '../elbwalker';
-import { IElbwalker, WebDestination } from '../types';
+import { elb } from '../lib/utils';
+import { IElbwalker, Walker, WebDestination } from '../types';
 
 describe('ElbLayer', () => {
   const w = window;
   let elbwalker: IElbwalker.Function;
-
-  function walker(...args: unknown[]) {
-    (window.elbLayer = window.elbLayer || []).push(arguments);
-  }
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn(); //.mockImplementation(console.log);
@@ -27,7 +24,7 @@ describe('ElbLayer', () => {
 
   test('arguments and event pushes', () => {
     elbwalker = Elbwalker({ default: true });
-    walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
+    elb('ingest argument', { a: 1 }, 'a', {}); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -50,21 +47,21 @@ describe('ElbLayer', () => {
 
   test('predefined stack without run', () => {
     elbwalker = Elbwalker();
-    walker('walker destination', destination);
-    walker('entity action');
+    elb('walker destination', destination);
+    elb('entity action');
 
     expect(mockPush).not.toHaveBeenCalled();
   });
 
   test('walker push pre and post go', () => {
-    walker('e 1');
-    walker('walker destination', destination);
+    elb('e 1');
+    elb('walker destination', destination);
 
     elbwalker = Elbwalker();
-    walker('e 2');
-    walker('walker run');
+    elb('e 2');
+    elb('walker run');
     // auto call: walker('page view');
-    walker('e 4');
+    elb('e 4');
 
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -102,10 +99,10 @@ describe('ElbLayer', () => {
   test('predefined stack with run', () => {
     elbwalker = Elbwalker();
 
-    walker('walker destination', destination);
-    walker('ingest argument', { a: 1 }, 'a', []); // Push as arguments
+    elb('walker destination', destination);
+    elb('ingest argument', { a: 1 }, 'a'); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
-    walker('walker run');
+    elb('walker run');
 
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -124,12 +121,12 @@ describe('ElbLayer', () => {
   test('prioritize walker commands before run', () => {
     elbwalker = Elbwalker();
 
-    walker();
-    walker('event postponed');
-    walker('walker destination', destination);
-    walker('walker user', { id: 'userid' });
-    walker('walker run');
-    walker('event later');
+    (elb as Function)();
+    elb('event postponed');
+    elb('walker destination', destination);
+    elb('walker user', { id: 'userid' });
+    elb('walker run');
+    elb('event later');
 
     expect(mockPush).toHaveBeenNthCalledWith(
       1,
@@ -163,6 +160,74 @@ describe('ElbLayer', () => {
     elbwalker = Elbwalker();
 
     expect(w.elbLayer).toBeDefined();
+  });
+
+  test('config update', () => {
+    const defaultConfig = {
+      consent: {},
+      elbLayer: w.elbLayer,
+      globals: {},
+      pageview: true,
+      prefix: 'data-elb',
+      version: 0,
+    };
+
+    elbwalker = Elbwalker();
+    elb('walker run');
+
+    expect(elbwalker.config).toStrictEqual(defaultConfig);
+
+    let update: Walker.Properties | Partial<IElbwalker.Config> = {
+      prefix: 'data-custom',
+    };
+    let config = { ...defaultConfig, ...update };
+    elb('walker config', update);
+    expect(elbwalker.config).toStrictEqual(expect.objectContaining(update)); // Partial test
+    expect(elbwalker.config).toStrictEqual(config); // Full test
+
+    update = { unknown: 'random' };
+    elb('walker config', update);
+    expect(elbwalker.config).toStrictEqual(config);
+
+    update = { version: 2 };
+    elb('walker config', update);
+    expect(elbwalker.config).toStrictEqual(expect.objectContaining(update));
+
+    update = { pageview: false };
+    elb('walker config', update);
+    expect(elbwalker.config).toStrictEqual(expect.objectContaining(update));
+
+    // Reset with w.elbLayer = [] creates another array than in defaultConfig
+    w.elbLayer.length = 0;
+    let globals: Walker.Properties = { static: 'value' };
+    config = { ...defaultConfig, globals };
+    elbwalker = Elbwalker({ globals });
+    elb('walker run');
+    expect(elbwalker.config).toStrictEqual(config);
+
+    update = { foo: 'bar' };
+    elb('walker config', { globals: update });
+    globals = { ...globals, ...update };
+
+    expect(elbwalker.config).toStrictEqual(
+      expect.objectContaining({ globals }),
+    );
+
+    update = { another: 'value' };
+    elb('walker config', { globals: update });
+    globals = { ...globals, ...update };
+
+    expect(elbwalker.config).toStrictEqual(
+      expect.objectContaining({ globals }),
+    );
+
+    update = { static: 'override' };
+    elb('walker config', { globals: update });
+    globals = { ...globals, ...update };
+
+    expect(elbwalker.config).toStrictEqual(
+      expect.objectContaining({ globals }),
+    );
   });
 
   test('custom elbLayer', () => {

@@ -1,7 +1,6 @@
 import Elbwalker from '../elbwalker';
-import { IElbwalker, Walker } from '../';
+import { IElbwalker } from '../';
 import fs from 'fs';
-import _ from 'lodash';
 
 describe('Elbwalker', () => {
   const w = window;
@@ -82,29 +81,37 @@ describe('Elbwalker', () => {
     });
   });
 
-  test('Global properties', () => {
+  test('globals properties', () => {
     const html: string = fs
       .readFileSync(__dirname + '/html/globals.html')
       .toString();
     document.body.innerHTML = html;
 
-    jest.clearAllMocks(); // skip auto page view event
-    elbwalker.push('walker run');
+    jest.clearAllMocks(); // skip previous init
+    w.elbLayer = [];
+    elbwalker = Elbwalker({
+      default: true,
+      pageview: false,
+      globals: { outof: 'override', static: 'value' },
+    });
 
     expect(mockFn).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        event: 'page view',
-        globals: { outof: 'scope' },
+        event: 'entity action',
+        data: { foo: 'bar' },
+        globals: { outof: 'scope', static: 'value' },
       }),
     );
 
+    jest.clearAllMocks(); // skip previous init
+    elbwalker.push('walker run');
     expect(mockFn).toHaveBeenNthCalledWith(
-      2,
+      1,
       expect.objectContaining({
         event: 'entity action',
         data: { foo: 'bar' },
-        globals: { outof: 'scope' },
+        globals: { outof: 'scope', static: 'value' },
       }),
     );
   });

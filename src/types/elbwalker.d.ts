@@ -16,6 +16,7 @@ export namespace IElbwalker {
       context?: Walker.Properties,
       nested?: Walker.Entities,
     ): void;
+    (event: 'walker config', config: Partial<Config>): void;
     (event: 'walker consent', consent: Consent): void;
     (event: 'walker destination', destination: WebDestination.Function): void;
     (event: 'walker run'): void;
@@ -30,15 +31,21 @@ export namespace IElbwalker {
     Walker.Entities?,
   ];
 
-  type PushData = Consent | User | Walker.Properties | WebDestination.Function;
+  type PushData =
+    | Partial<Config>
+    | Consent
+    | User
+    | Walker.Properties
+    | WebDestination.Function;
 
   interface Config {
     consent: Consent;
-    prefix: string;
-    pageview: boolean;
-    default?: boolean;
     elbLayer: ElbLayer;
+    globals: Walker.Properties;
+    pageview: boolean;
+    prefix: string;
     version: number;
+    default?: boolean;
   }
 
   type Events = Event[];

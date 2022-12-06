@@ -16,21 +16,15 @@ function Elbwalker(
 ): IElbwalker.Function {
   const destinations: WebDestination.Functions = [];
   const runCommand = `${IElbwalker.Commands.Walker} ${IElbwalker.Commands.Run}`;
+  const staticGlobals = config.globals || {};
   const instance: IElbwalker.Function = {
     push,
-    config: {
-      consent: config.consent || {}, // Handle the consent states
-      elbLayer: config.elbLayer || (w.elbLayer = w.elbLayer || []), // Async access api in window as array
-      pageview: 'pageview' in config ? !!config.pageview : true, // Trigger a page view event by default
-      prefix: config.prefix || IElbwalker.Commands.Prefix, // HTML prefix attribute
-      version: config.version || 0, // Helpful to differentiate the clients used setup version
-    },
+    config: getConfig(config),
   };
 
   // Internal properties
   let _count = 0; // Event counter for each run
   let _group = ''; // random id to group events of a run
-  let _globals: Walker.Properties = {}; // init globals as some random var
   // @TODO move _user to config for better init and transparency
   let _user: IElbwalker.User = {}; // handles the user ids
   let _firstRun = true; // The first run is a special one due to state changes
@@ -39,7 +33,7 @@ function Elbwalker(
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(instance);
 
-  // Switch between init modes
+  // Use the default init mode for auto run and dataLayer destination
   if (config.default) {
     // use dataLayer as default destination
     w.dataLayer = w.dataLayer || [];
@@ -62,7 +56,7 @@ function Elbwalker(
     event?: unknown,
     data: IElbwalker.PushData = {},
     trigger?: string,
-    context?: Walker.Properties,
+    context?: Walker.Properties, // œTODO Ordered?
     nested?: Walker.Entities,
   ): void {
     if (!event || typeof event !== 'string') return;
@@ -101,9 +95,10 @@ function Elbwalker(
         event,
         // Create a new objects for each destination
         // to prevent data manipulation
+        // @TODO check for potential issue due to casting (OrderedProperties)
         data: assign({}, data as Walker.Properties),
         context: assign({}, context as Walker.Properties),
-        globals: assign({}, _globals as Walker.Properties),
+        globals: assign({}, instance.config.globals),
         user: assign({}, _user as Walker.Properties),
         nested: nested || [],
         id,
@@ -212,6 +207,9 @@ function Elbwalker(
     data: IElbwalker.PushData = {},
   ) {
     switch (action) {
+      case IElbwalker.Commands.Config:
+        instance.config = getConfig(data as IElbwalker.Config, instance.config);
+        break;
       case IElbwalker.Commands.Consent:
         setConsent(instance, data as IElbwalker.Consent);
         break;
@@ -272,8 +270,12 @@ function Elbwalker(
     _group = randomString();
 
     // Load globals properties
+    // Use the default globals set by initalization
     // Due to site performance only once every run
-    _globals = getGlobalProperties(instance.config.prefix);
+    instance.config.globals = assign(
+      staticGlobals,
+      getGlobalProperties(instance.config.prefix),
+    );
 
     // Reset all destination queues
     destinations.forEach((destination) => {
@@ -373,6 +375,33 @@ function Elbwalker(
     } as WebDestination.Function;
 
     destinations.push(destination);
+  }
+
+  function getConfig(
+    values: Partial<IElbwalker.Config>,
+    current: Partial<IElbwalker.Config> = {},
+  ): IElbwalker.Config {
+    return {
+      // Value hierarchy: values > current > default
+
+      // Handle the consent states
+      consent: values.consent || current.consent || {},
+      // Async access api in window as array
+      elbLayer:
+        values.elbLayer || current.elbLayer || (w.elbLayer = w.elbLayer || []),
+      // Globals enhanced with the static globals from init and previous values
+      globals: assign(
+        staticGlobals,
+        assign(current.globals || {}, values.globals || {}),
+      ),
+      // Trigger a page view event by default
+      pageview:
+        'pageview' in values ? !!values.pageview : current.pageview || true,
+      // HTML prefix attribute
+      prefix: values.prefix || current.prefix || IElbwalker.Commands.Prefix,
+      // Helpful to differentiate the clients used setup version
+      version: values.version || current.version || 0,
+    };
   }
 
   return instance;
