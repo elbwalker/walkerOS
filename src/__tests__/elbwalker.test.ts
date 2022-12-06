@@ -225,6 +225,7 @@ describe('Elbwalker', () => {
     jest.clearAllMocks();
     elbwalker = Elbwalker({
       consent: { functional: true },
+      default: true,
       pageview: false,
     });
 
@@ -232,15 +233,34 @@ describe('Elbwalker', () => {
 
     expect(elbwalker.config.consent.functional).toBeTruthy();
     expect(elbwalker.config.consent.marketing).not.toBeTruthy();
+    elbwalker.push('consent check');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'consent check',
+        consent: { functional: true },
+      }),
+    );
 
     // Grant permissions
     elbwalker.push('walker consent', { marketing: true });
     expect(elbwalker.config.consent.marketing).toBeTruthy();
-
-    // @TODO check for consent in event
+    elbwalker.push('consent check');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'consent check',
+        consent: { functional: true, marketing: true },
+      }),
+    );
 
     // Revoke permissions
     elbwalker.push('walker consent', { marketing: false });
     expect(elbwalker.config.consent.marketing).not.toBeTruthy();
+    elbwalker.push('consent check');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'consent check',
+        consent: { functional: true, marketing: false },
+      }),
+    );
   });
 });
