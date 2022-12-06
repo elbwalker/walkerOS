@@ -18,7 +18,7 @@ describe('Elbwalker', () => {
     w.dataLayer!.push = mockFn;
     w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
 
-    elbwalker = Elbwalker({ default: true });
+    elbwalker = Elbwalker({ default: true, consent: { test: true } });
   });
 
   test('go', () => {
@@ -49,6 +49,7 @@ describe('Elbwalker', () => {
       globals: {},
       user: {},
       nested: [],
+      consent: { test: true },
       id: expect.any(String),
       trigger: '',
       entity: 'entity',
@@ -58,6 +59,11 @@ describe('Elbwalker', () => {
       group: expect.any(String),
       count: 2,
       version,
+      source: {
+        type: IElbwalker.SourceType.Web,
+        id: '/',
+        previous_id: '',
+      },
       walker: true,
     });
 
@@ -68,6 +74,7 @@ describe('Elbwalker', () => {
       globals: {},
       user: {},
       nested: [],
+      consent: { test: true },
       id: expect.any(String),
       trigger: '',
       entity: 'entity',
@@ -77,6 +84,11 @@ describe('Elbwalker', () => {
       group: expect.any(String),
       count: 3,
       version,
+      source: {
+        type: IElbwalker.SourceType.Web,
+        id: '/',
+        previous_id: '',
+      },
       walker: true,
     });
   });

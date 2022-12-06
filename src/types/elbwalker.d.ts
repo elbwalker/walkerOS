@@ -56,6 +56,7 @@ export namespace IElbwalker {
     globals: Walker.Properties;
     user: User;
     nested: Walker.Entities;
+    consent: Consent;
     id: string;
     trigger: string;
     entity: string;
@@ -65,6 +66,7 @@ export namespace IElbwalker {
     group: string;
     count: number;
     version: Version;
+    source: Source;
   }
 
   interface User {
@@ -94,5 +96,18 @@ export namespace IElbwalker {
   interface Version {
     walker: number;
     config: number;
+  }
+
+  interface Source {
+    type: SourceType;
+    id: string; // https://github.com/elbwalker/walker.js
+    previous_id: string; // https://www.elbwalker.com/
+  }
+
+  const enum SourceType {
+    Web = 1,
+    Server = 2,
+    App = 3,
+    Other = 4,
   }
 }

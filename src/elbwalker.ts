@@ -88,6 +88,11 @@ function Elbwalker(
     const timestamp = Date.now();
     const timing = Math.round(performance.now() / 10) / 100;
     const id = `${timestamp}-${_group}-${_count}`;
+    const source = {
+      type: IElbwalker.SourceType.Web,
+      id: window.location.pathname,
+      previous_id: document.referrer,
+    };
 
     destinations.forEach((destination) => {
       // Individual event per destination to prevent a pointer mess
@@ -101,6 +106,7 @@ function Elbwalker(
         globals: assign({}, instance.config.globals),
         user: assign({}, _user as Walker.Properties),
         nested: nested || [],
+        consent: instance.config.consent, // @TODO use assign with generic type response
         id,
         trigger: trigger || '',
         entity,
@@ -113,6 +119,7 @@ function Elbwalker(
           config: instance.config.version,
           walker: version,
         },
+        source,
       };
 
       pushToDestination(instance, destination, pushEvent);
