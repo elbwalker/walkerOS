@@ -1,5 +1,10 @@
 import { IElbwalker, Walker, WebDestination } from './types';
-import { initStaticTrigger, ready, triggerLoad } from './lib/trigger';
+import {
+  initDynamicTrigger,
+  initStaticTrigger,
+  ready,
+  triggerLoad,
+} from './lib/trigger';
 import {
   assign,
   getGlobalProperties,
@@ -217,7 +222,7 @@ function Elbwalker(
         addDestination(data as WebDestination.Function);
         break;
       case IElbwalker.Commands.Init:
-        // @TODO
+        initDynamicTrigger(instance, data as HTMLElement);
         break;
       case IElbwalker.Commands.Run:
         ready(run, instance);

@@ -19,6 +19,7 @@ export namespace IElbwalker {
     (event: 'walker config', config: Partial<Config>): void;
     (event: 'walker consent', consent: Consent): void;
     (event: 'walker destination', destination: WebDestination.Function): void;
+    (event: 'walker init', scope: Document | HTMLElement): void;
     (event: 'walker run'): void;
     (event: 'walker user', user: User): void;
   }
@@ -34,9 +35,12 @@ export namespace IElbwalker {
   type PushData =
     | Partial<Config>
     | Consent
+    | Scope
     | User
     | Walker.Properties
     | WebDestination.Function;
+
+  type Scope = Document | HTMLElement;
 
   interface Config {
     consent: Consent;

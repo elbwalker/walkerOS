@@ -38,7 +38,7 @@ describe('Trigger', () => {
     elbwalker = Elbwalker({ default: true });
   });
 
-  test('init', () => {
+  test('static init', () => {
     expect(mockAddEventListener).toHaveBeenCalledWith(
       Walker.Trigger.Click,
       expect.any(Function),
@@ -47,6 +47,17 @@ describe('Trigger', () => {
       Walker.Trigger.Submit,
       expect.any(Function),
     );
+  });
+
+  test('dynamic init', () => {
+    jest.clearAllMocks();
+    elbwalker.push('walker init');
+    expect(mockAddEventListener).not.toHaveBeenCalled();
+
+    elbwalker.push('walker init', document);
+    expect(mockAddEventListener).toHaveBeenCalled();
+
+    // @TODO more tests
   });
 
   test('load view', () => {
@@ -58,7 +69,6 @@ describe('Trigger', () => {
       }),
     );
   });
-
 
   test('load view location and referrer', () => {
     const location = document.location;
