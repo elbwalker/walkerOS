@@ -101,12 +101,12 @@ function Elbwalker(
         // Create a new objects for each destination
         // to prevent data manipulation
         // @TODO check for potential issue due to casting (OrderedProperties)
-        data: assign({}, data as Walker.Properties),
-        context: assign({}, context as Walker.Properties),
-        globals: assign({}, instance.config.globals),
-        user: assign({}, _user as Walker.Properties),
+        data: Object.assign({}, data as Walker.Properties),
+        context: Object.assign({}, context),
+        globals: Object.assign({}, instance.config.globals),
+        user: Object.assign({}, _user),
         nested: nested || [],
-        consent: instance.config.consent, // @TODO use assign with generic type response
+        consent: Object.assign({}, instance.config.consent),
         id,
         trigger: trigger || '',
         entity,
