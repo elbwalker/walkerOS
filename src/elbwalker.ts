@@ -56,7 +56,7 @@ function Elbwalker(
     event?: unknown,
     data: IElbwalker.PushData = {},
     trigger?: string,
-    context?: Walker.Properties, // œTODO Ordered?
+    context?: Walker.OrderedProperties,
     nested?: Walker.Entities,
   ): void {
     if (!event || typeof event !== 'string') return;
@@ -100,7 +100,6 @@ function Elbwalker(
         event,
         // Create a new objects for each destination
         // to prevent data manipulation
-        // @TODO check for potential issue due to casting (OrderedProperties)
         data: Object.assign({}, data as Walker.Properties),
         context: Object.assign({}, context),
         globals: Object.assign({}, instance.config.globals),
@@ -241,7 +240,7 @@ function Elbwalker(
       event?: IArguments | unknown,
       data?: IElbwalker.PushData,
       trigger?: string,
-      context?: Walker.Properties,
+      context?: Walker.OrderedProperties,
       nested?: Walker.Entities,
     ) {
       // Pushed as Arguments

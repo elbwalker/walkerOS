@@ -13,7 +13,7 @@ export namespace IElbwalker {
       event: string,
       data?: PushData,
       trigger?: string,
-      context?: Walker.Properties,
+      context?: Walker.OrderedProperties,
       nested?: Walker.Entities,
     ): void;
     (event: 'walker config', config: Partial<Config>): void;
@@ -27,7 +27,7 @@ export namespace IElbwalker {
     (IArguments | string)?,
     PushData?,
     string?,
-    Walker.Properties?,
+    Walker.OrderedProperties?,
     Walker.Entities?,
   ];
 
@@ -52,7 +52,7 @@ export namespace IElbwalker {
   interface Event {
     event: string;
     data: Walker.Properties;
-    context: Walker.Properties;
+    context: Walker.OrderedProperties;
     globals: Walker.Properties;
     user: User;
     nested: Walker.Entities;
