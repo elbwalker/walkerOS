@@ -18,7 +18,7 @@ describe('Elbwalker', () => {
     w.dataLayer!.push = mockFn;
     w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
 
-    elbwalker = Elbwalker({ default: true });
+    elbwalker = Elbwalker({ default: true, consent: { test: true } });
   });
 
   test('go', () => {
@@ -49,6 +49,7 @@ describe('Elbwalker', () => {
       globals: {},
       user: {},
       nested: [],
+      consent: { test: true },
       id: expect.any(String),
       trigger: '',
       entity: 'entity',
@@ -58,6 +59,11 @@ describe('Elbwalker', () => {
       group: expect.any(String),
       count: 2,
       version,
+      source: {
+        type: IElbwalker.SourceType.Web,
+        id: '/',
+        previous_id: '',
+      },
       walker: true,
     });
 
@@ -68,6 +74,7 @@ describe('Elbwalker', () => {
       globals: {},
       user: {},
       nested: [],
+      consent: { test: true },
       id: expect.any(String),
       trigger: '',
       entity: 'entity',
@@ -77,6 +84,11 @@ describe('Elbwalker', () => {
       group: expect.any(String),
       count: 3,
       version,
+      source: {
+        type: IElbwalker.SourceType.Web,
+        id: '/',
+        previous_id: '',
+      },
       walker: true,
     });
   });
@@ -125,6 +137,40 @@ describe('Elbwalker', () => {
     // Start a new initialization with a new group ip
     elbwalker.push('walker run');
     expect(mockFn.mock.calls[3][0].group).not.toEqual(groupId); // page view
+  });
+
+  test('source', () => {
+    const location = document.location;
+    const referrer = document.referrer;
+
+    const newPageId = '/source_id';
+    const newPageReferrer = 'https://docs.elbwalker.com';
+    Object.defineProperty(window, 'location', {
+      value: new URL(`https://www.elbwalker.com${newPageId}`),
+      writable: true,
+    });
+    Object.defineProperty(document, 'referrer', {
+      value: newPageReferrer,
+      writable: true,
+    });
+
+    elbwalker.push('entity source');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'entity source',
+        source: {
+          type: IElbwalker.SourceType.Web,
+          id: newPageId,
+          previous_id: newPageReferrer,
+        },
+      }),
+    );
+
+    window.location = location;
+    Object.defineProperty(document, 'referrer', {
+      value: referrer,
+      writable: true,
+    });
   });
 
   test('walker commands', () => {
@@ -179,6 +225,7 @@ describe('Elbwalker', () => {
     jest.clearAllMocks();
     elbwalker = Elbwalker({
       consent: { functional: true },
+      default: true,
       pageview: false,
     });
 
@@ -186,13 +233,34 @@ describe('Elbwalker', () => {
 
     expect(elbwalker.config.consent.functional).toBeTruthy();
     expect(elbwalker.config.consent.marketing).not.toBeTruthy();
+    elbwalker.push('consent check');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'consent check',
+        consent: { functional: true },
+      }),
+    );
 
     // Grant permissions
     elbwalker.push('walker consent', { marketing: true });
     expect(elbwalker.config.consent.marketing).toBeTruthy();
+    elbwalker.push('consent check');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'consent check',
+        consent: { functional: true, marketing: true },
+      }),
+    );
 
     // Revoke permissions
     elbwalker.push('walker consent', { marketing: false });
     expect(elbwalker.config.consent.marketing).not.toBeTruthy();
+    elbwalker.push('consent check');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'consent check',
+        consent: { functional: true, marketing: false },
+      }),
+    );
   });
 });

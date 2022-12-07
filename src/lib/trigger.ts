@@ -203,11 +203,11 @@ function triggerScroll(instance: IElbwalker.Function) {
 function view(instance: IElbwalker.Function) {
   // static page view
   const l = w.location;
-  const data = {
+  const data: Walker.Properties = {
     domain: l.hostname,
     title: d.title,
     referrer: d.referrer,
-  } as Walker.Properties;
+  };
   if (l.search) data.search = l.search;
   if (l.hash) data.hash = l.hash;
 

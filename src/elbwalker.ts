@@ -56,7 +56,7 @@ function Elbwalker(
     event?: unknown,
     data: IElbwalker.PushData = {},
     trigger?: string,
-    context?: Walker.Properties, // œTODO Ordered?
+    context?: Walker.OrderedProperties,
     nested?: Walker.Entities,
   ): void {
     if (!event || typeof event !== 'string') return;
@@ -88,6 +88,11 @@ function Elbwalker(
     const timestamp = Date.now();
     const timing = Math.round(performance.now() / 10) / 100;
     const id = `${timestamp}-${_group}-${_count}`;
+    const source = {
+      type: IElbwalker.SourceType.Web,
+      id: window.location.pathname,
+      previous_id: document.referrer,
+    };
 
     destinations.forEach((destination) => {
       // Individual event per destination to prevent a pointer mess
@@ -95,12 +100,12 @@ function Elbwalker(
         event,
         // Create a new objects for each destination
         // to prevent data manipulation
-        // @TODO check for potential issue due to casting (OrderedProperties)
-        data: assign({}, data as Walker.Properties),
-        context: assign({}, context as Walker.Properties),
-        globals: assign({}, instance.config.globals),
-        user: assign({}, _user as Walker.Properties),
+        data: Object.assign({}, data as Walker.Properties),
+        context: Object.assign({}, context),
+        globals: Object.assign({}, instance.config.globals),
+        user: Object.assign({}, _user),
         nested: nested || [],
+        consent: Object.assign({}, instance.config.consent),
         id,
         trigger: trigger || '',
         entity,
@@ -113,6 +118,7 @@ function Elbwalker(
           config: instance.config.version,
           walker: version,
         },
+        source,
       };
 
       pushToDestination(instance, destination, pushEvent);
@@ -234,7 +240,7 @@ function Elbwalker(
       event?: IArguments | unknown,
       data?: IElbwalker.PushData,
       trigger?: string,
-      context?: Walker.Properties,
+      context?: Walker.OrderedProperties,
       nested?: Walker.Entities,
     ) {
       // Pushed as Arguments

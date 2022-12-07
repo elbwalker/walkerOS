@@ -69,6 +69,7 @@ generates an event like
     hash: 'sessionid',
   },
   nested: [], // all nested entities within the promotion
+  consent: { functional: true }, // status of the consent state(s)
   id: '1647968113641-01b5e2-5', // timestamp, group & count of the event
   trigger: 'visible', // name of the trigger that fired
   entity: 'promotion', // entity name
@@ -81,6 +82,12 @@ generates an event like
     // Helpful when working with raw data
     walker: 1.5, // used walker.js version
     config: 42, // a custom configuration version number
+  },
+  source: {
+    // Origins of the event
+    type: 1, // Source type of the event (1=web)
+    id: '/elbwalker/walker.js', // Source id of the event's origin (pagepath)
+    previous_id: 'https://www.elbwalker.com/' // Previous source id of the event's origin (referrer)
   },
   walker: true, // flag to filter events
 }
