@@ -1,5 +1,5 @@
 import { IElbwalker, Walker } from '../types';
-import { resolveAttributes, getElbAttributeName, walker } from './walker';
+import { getElbAttributeName, walker, getTriggerActions } from './walker';
 import { isVisible, throttle, trycatch } from './utils';
 
 const d = document;
@@ -38,94 +38,90 @@ export function initDynamicTrigger(
   instance: IElbwalker.Function,
   scope: IElbwalker.Scope = d,
 ) {
-  // @TODO Test if querying generic data-elbaction once and loop them might be better
   const prefix = instance.config.prefix;
 
-  // Trigger load
-  scope
-    .querySelectorAll(getActionselector(prefix, Walker.Trigger.Load))
-    .forEach((element) => {
-      handleTrigger(element, Walker.Trigger.Load, instance);
-    });
+  const selectorAction = getElbAttributeName(
+    prefix,
+    IElbwalker.Commands.Action,
+    false,
+  );
 
-  // Trigger wait
-  scope
-    .querySelectorAll(getActionselector(prefix, Walker.Trigger.Wait))
-    .forEach((element) => {
-      resolveAttributes(
-        instance.config.prefix,
-        element,
-        Walker.Trigger.Wait,
-      ).forEach((triggerAction) => {
-        const waitTime = parseInt(triggerAction.triggerParams || '') || 15000;
+  function handleActionElem(elem: HTMLElement, selectorAction: string) {
+    const actionAttr = elem.getAttribute(selectorAction);
 
-        setTimeout(
-          () => handleTrigger(element, Walker.Trigger.Wait, instance),
-          waitTime,
-        );
-      });
-    });
+    if (!actionAttr) return;
 
-  // Trigger pulse
-  scope
-    .querySelectorAll(getActionselector(prefix, Walker.Trigger.Pulse))
-    .forEach((element) => {
-      resolveAttributes(
-        instance.config.prefix,
-        element,
-        Walker.Trigger.Pulse,
-      ).forEach((triggerAction) => {
-        const waitTime = parseInt(triggerAction.triggerParams || '') || 15000;
+    // TriggersActionGroups ([trigger: string]: TriggerActions)
+    Object.values(getTriggerActions(actionAttr)).forEach((triggerActions) =>
+      // TriggerActions (Array<TriggerAction>)
+      triggerActions.forEach((triggerAction) => {
+        // TriggerAction ({ trigger, triggerParams, action, actionparams })
+        switch (triggerAction.trigger) {
+          case Walker.Trigger.Load:
+            handleTrigger(elem, Walker.Trigger.Load, instance);
+            break;
+          case Walker.Trigger.Wait:
+            setTimeout(
+              () => handleTrigger(elem, Walker.Trigger.Wait, instance),
+              parseInt(triggerAction.triggerParams || '') || 15000,
+            );
+            break;
+          case Walker.Trigger.Pulse:
+            setInterval(() => {
+              // Only trigger when tab is active
+              if (!document.hidden)
+                handleTrigger(elem, Walker.Trigger.Pulse, instance);
+            }, parseInt(triggerAction.triggerParams || '') || 15000);
+            break;
+          case Walker.Trigger.Hover:
+            elem.addEventListener(
+              'mouseenter',
+              trycatch(function (this: Document, ev: MouseEvent) {
+                if (ev.target instanceof Element)
+                  handleTrigger(ev.target, Walker.Trigger.Hover, instance);
+              }),
+            );
+            break;
+          case Walker.Trigger.Scroll:
+            // Scroll depth in percent, default 50%
+            let depth = parseInt(triggerAction.triggerParams || '') || 50;
 
-        setInterval(() => {
-          // Only trigger when tab is active
-          if (!document.hidden)
-            handleTrigger(element, Walker.Trigger.Pulse, instance);
-        }, waitTime);
-      });
-    });
+            // Ignore invalid parameters
+            if (depth < 0 || depth > 100) return;
 
-  // Trigger hover
-  scope
-    .querySelectorAll<HTMLElement>(
-      getActionselector(instance.config.prefix, Walker.Trigger.Hover),
-    )
-    .forEach((element) => {
-      element.addEventListener(
-        'mouseenter',
-        trycatch(function (this: Document, ev: MouseEvent) {
-          if (ev.target instanceof Element)
-            handleTrigger(ev.target, Walker.Trigger.Hover, instance);
-        }),
-      );
-    });
+            scrollElements.push([elem, depth]);
+            break;
+          case Walker.Trigger.Visible:
+            if (!visibleObserver) return;
+            visibleObserver!.observe(elem);
+            break;
+        }
+      }),
+    );
+  }
 
-  // Trigger scroll
+  // Reset all scroll events @TODO check if it's right here
   scrollElements = [];
+
+  // Load the visible observer
+  visibleObserver =
+    visibleObserver || trycatch(observerVisible)(instance, 1000);
+
+  // Handle the elements action(s) if it's not the document
+  if (scope !== d) handleActionElem(scope as HTMLElement, selectorAction);
+
+  // Disconnect previous on full loads
+  if (scope === d) visibleObserver && visibleObserver.disconnect();
+
+  // Handle all children action(s)
   scope
-    .querySelectorAll<HTMLElement>(
-      getActionselector(prefix, Walker.Trigger.Scroll),
-    )
-    .forEach((element) => {
-      // Create scroll depth groups by percentage
-      resolveAttributes(
-        instance.config.prefix,
-        element,
-        Walker.Trigger.Scroll,
-      ).forEach((triggerAction) => {
-        // Scroll depth in percent, default 50%
-        let depth = parseInt(triggerAction.triggerParams || '') || 50;
+    .querySelectorAll<HTMLElement>(`[${selectorAction}]`)
+    .forEach((elem) => handleActionElem(elem, selectorAction));
 
-        // Ignore invalid parameters
-        if (depth < 0 || depth > 100) return;
-
-        scrollElements.push([element, depth]);
-      });
-    });
   if (scrollElements.length) triggerScroll(instance);
 
   // Trigger visible
-  triggerVisible(d, instance);
+  // triggerVisible(d, instance); // @TODO change this one, too
 }
 
 // Called for each new run to setup triggers
@@ -142,25 +138,6 @@ function triggerClick(ev: MouseEvent, instance: IElbwalker.Function) {
 
 function triggerSubmit(ev: Event, instance: IElbwalker.Function) {
   handleTrigger(ev.target as Element, Walker.Trigger.Submit, instance);
-}
-
-function triggerVisible(scope: Walker.Scope, instance: IElbwalker.Function) {
-  visibleObserver =
-    visibleObserver || trycatch(observerVisible)(instance, 1000);
-
-  if (!visibleObserver) return;
-
-  // Disconnect previous on full loads
-  if (scope === d) visibleObserver.disconnect();
-
-  const visibleSelector = getActionselector(
-    instance.config.prefix,
-    Walker.Trigger.Visible,
-  );
-
-  scope.querySelectorAll(visibleSelector).forEach((element) => {
-    visibleObserver!.observe(element);
-  });
 }
 
 function triggerScroll(instance: IElbwalker.Function) {
@@ -302,15 +279,4 @@ function handleTrigger(
       event.nested,
     );
   });
-}
-
-function getActionselector(prefix: string, trigger: string) {
-  // @TODO dealing with wildcart edge-case
-  // when the 'load' term is in selector but not as a trigger
-
-  return `[${getElbAttributeName(
-    prefix,
-    IElbwalker.Commands.Action,
-    false,
-  )}*=${trigger}]`;
 }

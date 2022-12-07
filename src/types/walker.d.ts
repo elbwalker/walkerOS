@@ -47,7 +47,7 @@ export namespace Walker {
 
   type Scope = Document | Element;
 
-  interface TriggersActions {
+  interface TriggersActionGroups {
     [trigger: string]: TriggerActions;
   }
 

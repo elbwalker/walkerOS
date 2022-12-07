@@ -49,7 +49,7 @@ describe('Trigger', () => {
     );
   });
 
-  test('dynamic init', () => {
+  test.skip('dynamic init', () => {
     jest.clearAllMocks();
 
     // Both e load events should be triggered
