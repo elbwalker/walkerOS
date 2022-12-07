@@ -9,6 +9,8 @@ import {
   assign,
   getGlobalProperties,
   isArgument,
+  isElement,
+  isObject,
   randomString,
   trycatch,
 } from './lib/utils';
@@ -59,7 +61,7 @@ function Elbwalker(
 
   function push(
     event?: unknown,
-    data: IElbwalker.PushData = {},
+    data?: IElbwalker.PushData,
     trigger?: string,
     context?: Walker.Properties, // œTODO Ordered?
     nested?: Walker.Entities,
@@ -82,6 +84,9 @@ function Elbwalker(
       handleCommand(instance, action, data);
       return;
     }
+
+    // Set default value if undefined
+    data = data || {};
 
     // Special case for page entity to add the id by default
     if (entity === 'page') {
@@ -209,26 +214,31 @@ function Elbwalker(
   function handleCommand(
     instance: IElbwalker.Function,
     action: string,
-    data: IElbwalker.PushData = {},
+    data?: IElbwalker.PushData,
   ) {
     switch (action) {
       case IElbwalker.Commands.Config:
-        instance.config = getConfig(data as IElbwalker.Config, instance.config);
+        if (isObject(data))
+          instance.config = getConfig(
+            data as IElbwalker.Config,
+            instance.config,
+          );
         break;
       case IElbwalker.Commands.Consent:
-        setConsent(instance, data as IElbwalker.Consent);
+        isObject(data) && setConsent(instance, data as IElbwalker.Consent);
         break;
       case IElbwalker.Commands.Destination:
-        addDestination(data as WebDestination.Function);
+        isObject(data) && addDestination(data as WebDestination.Function);
         break;
       case IElbwalker.Commands.Init:
-        initDynamicTrigger(instance, data as HTMLElement);
+        // @TODO accept multiple elements as array
+        isElement(data) && initDynamicTrigger(instance, data as HTMLElement);
         break;
       case IElbwalker.Commands.Run:
         ready(run, instance);
         break;
       case IElbwalker.Commands.User:
-        setUserIds(data as IElbwalker.User);
+        isObject(data) && setUserIds(data as IElbwalker.User);
         break;
       default:
         break;
@@ -375,12 +385,14 @@ function Elbwalker(
   }
 
   function addDestination(data: WebDestination.Function) {
-    // Skip validation due to trycatch calls on push
-    const destination = {
+    // Basic validation
+    if (!data.push) return;
+
+    const destination: WebDestination.Function = {
       init: data.init,
       push: data.push,
       config: data.config || { init: false },
-    } as WebDestination.Function;
+    };
 
     destinations.push(destination);
   }

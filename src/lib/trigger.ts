@@ -38,8 +38,6 @@ export function initDynamicTrigger(
   instance: IElbwalker.Function,
   scope: IElbwalker.Scope = d,
 ) {
-  if (scope && !scope.querySelectorAll) return; // Basic check if scope is an element
-
   // @TODO Test if querying generic data-elbaction once and loop them might be better
   const prefix = instance.config.prefix;
 
