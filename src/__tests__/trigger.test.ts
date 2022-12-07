@@ -51,13 +51,36 @@ describe('Trigger', () => {
 
   test('dynamic init', () => {
     jest.clearAllMocks();
+
+    // Both e load events should be triggered
     elbwalker.push('walker init');
-    expect(mockAddEventListener).not.toHaveBeenCalled();
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e all',
+      }),
+    );
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e init',
+      }),
+    );
 
-    elbwalker.push('walker init', document);
-    expect(mockAddEventListener).toHaveBeenCalled();
+    jest.clearAllMocks();
+    const elem = document.querySelector('#init div')!;
 
-    // @TODO more tests
+    // Only the e init event should be triggered
+    elbwalker.push('walker init', elem);
+    expect(mockFn).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e all',
+      }),
+    );
+
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e init',
+      }),
+    );
   });
 
   test('load view', () => {

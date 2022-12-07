@@ -232,7 +232,8 @@ function Elbwalker(
         break;
       case IElbwalker.Commands.Init:
         // @TODO accept multiple elements as array
-        isElement(data) && initDynamicTrigger(instance, data as HTMLElement);
+        (!data || isElement(data)) && // Either undefined or an element
+          initDynamicTrigger(instance, data as IElbwalker.Scope);
         break;
       case IElbwalker.Commands.Run:
         ready(run, instance);
