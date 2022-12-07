@@ -19,7 +19,7 @@ export function ready(run: Function, instance: IElbwalker.Function) {
   }
 }
 
-export function initTrigger(instance: IElbwalker.Function): void {
+export function initStaticTrigger(instance: IElbwalker.Function): void {
   d.addEventListener(
     'click',
     trycatch(function (this: Document, ev: MouseEvent) {
@@ -32,40 +32,23 @@ export function initTrigger(instance: IElbwalker.Function): void {
       triggerSubmit.call(this, ev, instance);
     }),
   );
-
-  // Trigger hover
-  d.querySelectorAll<HTMLElement>(
-    getActionselector(instance.config.prefix, Walker.Trigger.Hover),
-  ).forEach((element) => {
-    element.addEventListener(
-      'mouseenter',
-      trycatch(function (this: Document, ev: MouseEvent) {
-        if (ev.target instanceof Element)
-          handleTrigger(ev.target, Walker.Trigger.Hover, instance);
-      }),
-    );
-  });
 }
 
-// Called for each new run to setup triggers
-export function triggerLoad(instance: IElbwalker.Function) {
+export function initDynamicTrigger(instance: IElbwalker.Function, scope = d) {
+  // @TODO Test if querying generic data-elbaction once and loop them might be better
   const prefix = instance.config.prefix;
 
-  // Trigger static page view if enabled
-  if (instance.config.pageview) view(instance);
-
-  // @TODO Test if querying generic data-elbaction once and loop them might be better
-
   // Trigger load
-  d.querySelectorAll(getActionselector(prefix, Walker.Trigger.Load)).forEach(
-    (element) => {
+  scope
+    .querySelectorAll(getActionselector(prefix, Walker.Trigger.Load))
+    .forEach((element) => {
       handleTrigger(element, Walker.Trigger.Load, instance);
-    },
-  );
+    });
 
   // Trigger wait
-  d.querySelectorAll(getActionselector(prefix, Walker.Trigger.Wait)).forEach(
-    (element) => {
+  scope
+    .querySelectorAll(getActionselector(prefix, Walker.Trigger.Wait))
+    .forEach((element) => {
       resolveAttributes(
         instance.config.prefix,
         element,
@@ -78,12 +61,12 @@ export function triggerLoad(instance: IElbwalker.Function) {
           waitTime,
         );
       });
-    },
-  );
+    });
 
   // Trigger pulse
-  d.querySelectorAll(getActionselector(prefix, Walker.Trigger.Pulse)).forEach(
-    (element) => {
+  scope
+    .querySelectorAll(getActionselector(prefix, Walker.Trigger.Pulse))
+    .forEach((element) => {
       resolveAttributes(
         instance.config.prefix,
         element,
@@ -97,33 +80,57 @@ export function triggerLoad(instance: IElbwalker.Function) {
             handleTrigger(element, Walker.Trigger.Pulse, instance);
         }, waitTime);
       });
-    },
-  );
+    });
+
+  // Trigger hover
+  scope
+    .querySelectorAll<HTMLElement>(
+      getActionselector(instance.config.prefix, Walker.Trigger.Hover),
+    )
+    .forEach((element) => {
+      element.addEventListener(
+        'mouseenter',
+        trycatch(function (this: Document, ev: MouseEvent) {
+          if (ev.target instanceof Element)
+            handleTrigger(ev.target, Walker.Trigger.Hover, instance);
+        }),
+      );
+    });
 
   // Trigger scroll
   scrollElements = [];
-  d.querySelectorAll<HTMLElement>(
-    getActionselector(prefix, Walker.Trigger.Scroll),
-  ).forEach((element) => {
-    // Create scroll depth groups by percentage
-    resolveAttributes(
-      instance.config.prefix,
-      element,
-      Walker.Trigger.Scroll,
-    ).forEach((triggerAction) => {
-      // Scroll depth in percent, default 50%
-      let depth = parseInt(triggerAction.triggerParams || '') || 50;
+  scope
+    .querySelectorAll<HTMLElement>(
+      getActionselector(prefix, Walker.Trigger.Scroll),
+    )
+    .forEach((element) => {
+      // Create scroll depth groups by percentage
+      resolveAttributes(
+        instance.config.prefix,
+        element,
+        Walker.Trigger.Scroll,
+      ).forEach((triggerAction) => {
+        // Scroll depth in percent, default 50%
+        let depth = parseInt(triggerAction.triggerParams || '') || 50;
 
-      // Ignore invalid parameters
-      if (depth < 0 || depth > 100) return;
+        // Ignore invalid parameters
+        if (depth < 0 || depth > 100) return;
 
-      scrollElements.push([element, depth]);
+        scrollElements.push([element, depth]);
+      });
     });
-  });
   if (scrollElements.length) triggerScroll(instance);
 
   // Trigger visible
   triggerVisible(d, instance);
+}
+
+// Called for each new run to setup triggers
+export function triggerLoad(instance: IElbwalker.Function) {
+  // Trigger static page view if enabled
+  if (instance.config.pageview) view(instance);
+
+  initDynamicTrigger(instance);
 }
 
 function triggerClick(ev: MouseEvent, instance: IElbwalker.Function) {
