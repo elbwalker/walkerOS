@@ -19,17 +19,25 @@ export function ready(run: Function, instance: IElbwalker.Function) {
   }
 }
 
+// Called for each new run to setup triggers
+export function load(instance: IElbwalker.Function) {
+  // Trigger static page view if enabled
+  if (instance.config.pageview) view(instance);
+
+  initDynamicTrigger(instance);
+}
+
 export function initStaticTrigger(instance: IElbwalker.Function): void {
   d.addEventListener(
     'click',
     trycatch(function (this: Document, ev: MouseEvent) {
-      triggerClick.call(this, ev, instance);
+      triggerClick.call(this, instance, ev);
     }),
   );
   d.addEventListener(
     'submit',
     trycatch(function (this: Document, ev: SubmitEvent) {
-      triggerSubmit.call(this, ev, instance);
+      triggerSubmit.call(this, instance, ev);
     }),
   );
 }
@@ -65,7 +73,25 @@ export function initDynamicTrigger(
     .querySelectorAll<HTMLElement>(`[${selectorAction}]`)
     .forEach((elem) => handleActionElem(instance, elem, selectorAction));
 
-  if (scrollElements.length) triggerScroll(instance);
+  if (scrollElements.length) scroll(instance);
+}
+
+function handleTrigger(
+  instance: IElbwalker.Function,
+  element: Element,
+  trigger: Walker.Trigger,
+  // @TODO add triggerParams to filter for specific trigger
+) {
+  const events = walker(element, trigger, instance.config.prefix);
+  events.forEach((event: Walker.Event) => {
+    instance.config.elbLayer.push(
+      `${event.entity} ${event.action}`,
+      event.data,
+      trigger,
+      event.context,
+      event.nested,
+    );
+  });
 }
 
 function handleActionElem(
@@ -83,66 +109,91 @@ function handleActionElem(
     triggerActions.forEach((triggerAction) => {
       // TriggerAction ({ trigger, triggerParams, action, actionparams })
       switch (triggerAction.trigger) {
-        case Walker.Trigger.Load:
-          handleTrigger(instance, elem, Walker.Trigger.Load);
+        case Walker.Trigger.Hover:
+          triggerHover(instance, elem);
           break;
-        case Walker.Trigger.Wait:
-          setTimeout(
-            () => handleTrigger(instance, elem, Walker.Trigger.Wait),
-            parseInt(triggerAction.triggerParams || '') || 15000,
-          );
+        case Walker.Trigger.Load:
+          triggerLoad(instance, elem);
           break;
         case Walker.Trigger.Pulse:
-          setInterval(() => {
-            // Only trigger when tab is active
-            if (!document.hidden)
-              handleTrigger(instance, elem, Walker.Trigger.Pulse);
-          }, parseInt(triggerAction.triggerParams || '') || 15000);
-          break;
-        case Walker.Trigger.Hover:
-          elem.addEventListener(
-            'mouseenter',
-            trycatch(function (this: Document, ev: MouseEvent) {
-              if (ev.target instanceof Element)
-                handleTrigger(instance, ev.target, Walker.Trigger.Hover);
-            }),
-          );
+          triggerPulse(instance, elem, triggerAction.triggerParams);
           break;
         case Walker.Trigger.Scroll:
-          // Scroll depth in percent, default 50%
-          let depth = parseInt(triggerAction.triggerParams || '') || 50;
-
-          // Ignore invalid parameters
-          if (depth < 0 || depth > 100) return;
-
-          scrollElements.push([elem, depth]);
+          triggerScroll(elem, triggerAction.triggerParams);
           break;
         case Walker.Trigger.Visible:
-          if (!visibleObserver) return;
-          visibleObserver!.observe(elem);
+          triggerVisible(elem, visibleObserver);
+          break;
+        case Walker.Trigger.Wait:
+          triggerWait(instance, elem, triggerAction.triggerParams);
           break;
       }
     }),
   );
 }
 
-// Called for each new run to setup triggers
-export function triggerLoad(instance: IElbwalker.Function) {
-  // Trigger static page view if enabled
-  if (instance.config.pageview) view(instance);
-
-  initDynamicTrigger(instance);
-}
-
-function triggerClick(ev: MouseEvent, instance: IElbwalker.Function) {
+function triggerClick(instance: IElbwalker.Function, ev: MouseEvent) {
   handleTrigger(instance, ev.target as Element, Walker.Trigger.Click);
 }
 
-function triggerSubmit(ev: Event, instance: IElbwalker.Function) {
+function triggerHover(instance: IElbwalker.Function, elem: HTMLElement) {
+  elem.addEventListener(
+    'mouseenter',
+    trycatch(function (this: Document, ev: MouseEvent) {
+      if (ev.target instanceof Element)
+        handleTrigger(instance, ev.target, Walker.Trigger.Hover);
+    }),
+  );
+}
+
+function triggerLoad(instance: IElbwalker.Function, elem: HTMLElement) {
+  handleTrigger(instance, elem, Walker.Trigger.Load);
+}
+
+function triggerPulse(
+  instance: IElbwalker.Function,
+  elem: HTMLElement,
+  triggerParams: string = '',
+) {
+  setInterval(() => {
+    // Only trigger when tab is active
+    if (!document.hidden) handleTrigger(instance, elem, Walker.Trigger.Pulse);
+  }, parseInt(triggerParams || '') || 15000);
+}
+
+function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
+  // Scroll depth in percent, default 50%
+  let depth = parseInt(triggerParams || '') || 50;
+
+  // Ignore invalid parameters
+  if (depth < 0 || depth > 100) return;
+
+  scrollElements.push([elem, depth]);
+}
+
+function triggerSubmit(instance: IElbwalker.Function, ev: Event) {
   handleTrigger(instance, ev.target as Element, Walker.Trigger.Submit);
 }
 
-function triggerScroll(instance: IElbwalker.Function) {
+function triggerVisible(
+  elem: HTMLElement,
+  visibleObserver?: IntersectionObserver,
+) {
+  if (visibleObserver) visibleObserver!.observe(elem);
+}
+
+function triggerWait(
+  instance: IElbwalker.Function,
+  elem: HTMLElement,
+  triggerParams: string = '',
+) {
+  setTimeout(
+    () => handleTrigger(instance, elem, Walker.Trigger.Wait),
+    parseInt(triggerParams || '') || 15000,
+  );
+}
+
+function scroll(instance: IElbwalker.Function) {
   const scrolling = (
     scrollElements: Walker.ScrollElements,
     instance: IElbwalker.Function,
@@ -263,22 +314,4 @@ function observerVisible(
       threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5], // Trigger for the first 50%
     },
   );
-}
-
-function handleTrigger(
-  instance: IElbwalker.Function,
-  element: Element,
-  trigger: Walker.Trigger,
-  // @TODO add triggerParams to filter for specific trigger
-) {
-  const events = walker(element, trigger, instance.config.prefix);
-  events.forEach((event: Walker.Event) => {
-    instance.config.elbLayer.push(
-      `${event.entity} ${event.action}`,
-      event.data,
-      trigger,
-      event.context,
-      event.nested,
-    );
-  });
 }

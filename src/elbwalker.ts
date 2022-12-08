@@ -3,7 +3,7 @@ import {
   initDynamicTrigger,
   initStaticTrigger,
   ready,
-  triggerLoad,
+  load,
 } from './lib/trigger';
 import {
   assign,
@@ -307,7 +307,7 @@ function Elbwalker(
       callPredefined(instance);
     }
 
-    trycatch(triggerLoad)(instance);
+    trycatch(load)(instance);
   }
 
   // Handle existing events in the elbLayer on first run
