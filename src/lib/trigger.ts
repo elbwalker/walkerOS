@@ -2,8 +2,6 @@ import { IElbwalker, Walker } from '../types';
 import { getElbAttributeName, walker, getTriggerActions } from './walker';
 import { isVisible, throttle, trycatch } from './utils';
 
-const d = document;
-const w = window;
 let visibleObserver: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
@@ -28,13 +26,13 @@ export function load(instance: IElbwalker.Function) {
 }
 
 export function initGlobalTrigger(instance: IElbwalker.Function): void {
-  d.addEventListener(
+  document.addEventListener(
     'click',
     trycatch(function (this: Document, ev: MouseEvent) {
       triggerClick.call(this, instance, ev);
     }),
   );
-  d.addEventListener(
+  document.addEventListener(
     'submit',
     trycatch(function (this: Document, ev: SubmitEvent) {
       triggerSubmit.call(this, instance, ev);
@@ -44,7 +42,7 @@ export function initGlobalTrigger(instance: IElbwalker.Function): void {
 
 export function initScopeTrigger(
   instance: IElbwalker.Function,
-  scope: IElbwalker.Scope = d,
+  scope: IElbwalker.Scope = document,
 ) {
   // Reset all scroll events @TODO check if it's right here
   scrollElements = [];
@@ -60,7 +58,7 @@ export function initScopeTrigger(
     false,
   );
 
-  if (scope === d) {
+  if (scope === document) {
     // Disconnect previous on full loads
     visibleObserver && visibleObserver.disconnect();
   } else {
@@ -200,7 +198,7 @@ function scroll(instance: IElbwalker.Function) {
   ) => {
     return scrollElements.filter(([element, depth]) => {
       // Distance from top to the bottom of the visible screen
-      const windowBottom = w.scrollY + w.innerHeight;
+      const windowBottom = window.scrollY + window.innerHeight;
       // Distance from top to the elements relevant content
       const elemTop = element.offsetTop;
 
@@ -236,17 +234,17 @@ function scroll(instance: IElbwalker.Function) {
       scrollElements = scrolling.call(document, scrollElements, instance);
     });
 
-    d.addEventListener('scroll', scrollListener);
+    document.addEventListener('scroll', scrollListener);
   }
 }
 
 function view(instance: IElbwalker.Function) {
   // static page view
-  const l = w.location;
+  const l = window.location;
   const data: Walker.Properties = {
     domain: l.hostname,
-    title: d.title,
-    referrer: d.referrer,
+    title: document.title,
+    referrer: document.referrer,
   };
   if (l.search) data.search = l.search;
   if (l.hash) data.hash = l.hash;
@@ -259,9 +257,9 @@ function observerVisible(
   instance: IElbwalker.Function,
   duration = 1000,
 ): IntersectionObserver | undefined {
-  if (!w.IntersectionObserver) return;
+  if (!window.IntersectionObserver) return;
 
-  return new w.IntersectionObserver(
+  return new window.IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
         const target = entry.target as HTMLElement;
@@ -273,14 +271,14 @@ function observerVisible(
         if (entry.intersectionRatio > 0) {
           // Check if a large target element is in viewport
           const largeElemInViewport =
-            target.offsetHeight > w.innerHeight && isVisible(target);
+            target.offsetHeight > window.innerHeight && isVisible(target);
 
           // Element is more than 50% in viewport
           if (largeElemInViewport || entry.intersectionRatio >= 0.5) {
             // Take existing scheduled function or create a new one
             timer =
               timer ||
-              w.setTimeout(function () {
+              window.setTimeout(function () {
                 if (isVisible(target)) {
                   handleTrigger(
                     instance,

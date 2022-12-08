@@ -15,12 +15,10 @@ import {
   trycatch,
 } from './lib/utils';
 
-const version = 1.5;
-const w = window;
-
 function Elbwalker(
   config: Partial<IElbwalker.Config> = {},
 ): IElbwalker.Function {
+  const version = 1.5;
   const destinations: WebDestination.Functions = [];
   const runCommand = `${IElbwalker.Commands.Walker} ${IElbwalker.Commands.Run}`;
   const staticGlobals = config.globals || {};
@@ -43,11 +41,11 @@ function Elbwalker(
   // Use the default init mode for auto run and dataLayer destination
   if (config.default) {
     // use dataLayer as default destination
-    w.dataLayer = w.dataLayer || [];
+    window.dataLayer = window.dataLayer || [];
     const destination: WebDestination.Function = {
       config: {},
       push: (event) => {
-        w.dataLayer.push({
+        window.dataLayer.push({
           ...event,
           walker: true,
         });
@@ -419,7 +417,7 @@ function Elbwalker(
       consent: values.consent || current.consent || {},
       // Async access api in window as array
       elbLayer:
-        values.elbLayer || current.elbLayer || (w.elbLayer = w.elbLayer || []),
+        values.elbLayer || current.elbLayer || (window.elbLayer = window.elbLayer || []),
       // Globals enhanced with the static globals from init and previous values
       globals: assign(
         staticGlobals,
