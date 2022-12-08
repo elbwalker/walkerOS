@@ -9,7 +9,7 @@ import {
   assign,
   getGlobalProperties,
   isArgument,
-  isElement,
+  isElementOrDocument,
   isObject,
   randomString,
   trycatch,
@@ -231,9 +231,13 @@ function Elbwalker(
         isObject(data) && addDestination(data as WebDestination.Function);
         break;
       case IElbwalker.Commands.Init:
-        // @TODO accept multiple elements as array
-        (!data || isElement(data)) && // Either undefined or an element
-          initScopeTrigger(instance, data as IElbwalker.Scope);
+        const elems: unknown[] = Array.isArray(data)
+          ? data
+          : [data || document];
+        elems.forEach((elem) => {
+          isElementOrDocument(elem) &&
+            initScopeTrigger(instance, elem as IElbwalker.Scope);
+        });
         break;
       case IElbwalker.Commands.Run:
         ready(run, instance);
