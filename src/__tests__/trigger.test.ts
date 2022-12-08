@@ -38,7 +38,7 @@ describe('Trigger', () => {
     elbwalker = Elbwalker({ default: true });
   });
 
-  test('init', () => {
+  test('init global', () => {
     expect(mockAddEventListener).toHaveBeenCalledWith(
       Walker.Trigger.Click,
       expect.any(Function),
@@ -46,6 +46,40 @@ describe('Trigger', () => {
     expect(mockAddEventListener).toHaveBeenCalledWith(
       Walker.Trigger.Submit,
       expect.any(Function),
+    );
+  });
+
+  test('init scope', () => {
+    jest.clearAllMocks();
+
+    // Both e load events should be triggered
+    elbwalker.push('walker init');
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e all',
+      }),
+    );
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e init',
+      }),
+    );
+
+    jest.clearAllMocks();
+    const elem = document.querySelector('#init div')!;
+
+    // Only the e init event should be triggered
+    elbwalker.push('walker init', elem);
+    expect(mockFn).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e all',
+      }),
+    );
+
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e init',
+      }),
     );
   });
 
@@ -58,7 +92,6 @@ describe('Trigger', () => {
       }),
     );
   });
-
 
   test('load view location and referrer', () => {
     const location = document.location;

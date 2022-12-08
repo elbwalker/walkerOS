@@ -97,8 +97,8 @@ export function resolveAttributes(
   return [];
 }
 
-function getTriggerActions(str: string): Walker.TriggersActions {
-  const values: Walker.TriggersActions = {};
+export function getTriggerActions(str: string): Walker.TriggersActionGroups {
+  const values: Walker.TriggersActionGroups = {};
 
   const attributes = splitAttribute(str);
 

@@ -184,6 +184,7 @@ describe('Elbwalker', () => {
   test('walker user', () => {
     elbwalker.push('walker run');
 
+    // Missing argument
     elbwalker.push('walker user');
     elbwalker.push('entity action');
     expect(mockFn).toHaveBeenCalledWith(
@@ -240,6 +241,11 @@ describe('Elbwalker', () => {
         consent: { functional: true },
       }),
     );
+
+    // Missing argument
+    elbwalker.push('walker consent');
+    expect(elbwalker.config.consent.functional).toBeTruthy();
+    expect(elbwalker.config.consent.marketing).not.toBeTruthy();
 
     // Grant permissions
     elbwalker.push('walker consent', { marketing: true });

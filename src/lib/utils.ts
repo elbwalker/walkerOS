@@ -326,3 +326,11 @@ export function removeItem(
       break;
   }
 }
+
+export function isObject(obj: unknown) {
+  return typeof obj === 'object' && !Array.isArray(obj) && obj !== null;
+}
+
+export function isElementOrDocument(elem: unknown) {
+  return elem === document || elem instanceof HTMLElement;
+}
