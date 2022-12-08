@@ -24,10 +24,10 @@ export function load(instance: IElbwalker.Function) {
   // Trigger static page view if enabled
   if (instance.config.pageview) view(instance);
 
-  initDynamicTrigger(instance);
+  initScopeTrigger(instance);
 }
 
-export function initStaticTrigger(instance: IElbwalker.Function): void {
+export function initGlobalTrigger(instance: IElbwalker.Function): void {
   d.addEventListener(
     'click',
     trycatch(function (this: Document, ev: MouseEvent) {
@@ -42,7 +42,7 @@ export function initStaticTrigger(instance: IElbwalker.Function): void {
   );
 }
 
-export function initDynamicTrigger(
+export function initScopeTrigger(
   instance: IElbwalker.Function,
   scope: IElbwalker.Scope = d,
 ) {

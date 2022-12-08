@@ -1,7 +1,7 @@
 import { IElbwalker, Walker, WebDestination } from './types';
 import {
-  initDynamicTrigger,
-  initStaticTrigger,
+  initScopeTrigger,
+  initGlobalTrigger,
   ready,
   load,
 } from './lib/trigger';
@@ -57,7 +57,7 @@ function Elbwalker(
     ready(run, instance);
   }
 
-  initStaticTrigger(instance);
+  initGlobalTrigger(instance);
 
   function push(
     event?: unknown,
@@ -233,7 +233,7 @@ function Elbwalker(
       case IElbwalker.Commands.Init:
         // @TODO accept multiple elements as array
         (!data || isElement(data)) && // Either undefined or an element
-          initDynamicTrigger(instance, data as IElbwalker.Scope);
+          initScopeTrigger(instance, data as IElbwalker.Scope);
         break;
       case IElbwalker.Commands.Run:
         ready(run, instance);

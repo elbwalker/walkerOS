@@ -38,7 +38,7 @@ describe('Trigger', () => {
     elbwalker = Elbwalker({ default: true });
   });
 
-  test('static init', () => {
+  test('init global', () => {
     expect(mockAddEventListener).toHaveBeenCalledWith(
       Walker.Trigger.Click,
       expect.any(Function),
@@ -49,7 +49,7 @@ describe('Trigger', () => {
     );
   });
 
-  test('dynamic init', () => {
+  test('init scope', () => {
     jest.clearAllMocks();
 
     // Both e load events should be triggered
