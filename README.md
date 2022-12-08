@@ -66,7 +66,7 @@ generates an event like
     // stored user ids (manually added once)
     id: 'userid',
     device: 'cookieid',
-    hash: 'sessionid',
+    session: 'sessionid',
   },
   nested: [], // all nested entities within the promotion
   consent: { functional: true }, // status of the consent state(s)

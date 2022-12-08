@@ -390,7 +390,7 @@ function Elbwalker(
     // user ids can't be set to undefined
     if (data.id) _user.id = data.id;
     if (data.device) _user.device = data.device;
-    if (data.hash) _user.hash = data.hash;
+    if (data.session) _user.session = data.session;
   }
 
   function addDestination(data: WebDestination.Function) {
@@ -417,7 +417,9 @@ function Elbwalker(
       consent: values.consent || current.consent || {},
       // Async access api in window as array
       elbLayer:
-        values.elbLayer || current.elbLayer || (window.elbLayer = window.elbLayer || []),
+        values.elbLayer ||
+        current.elbLayer ||
+        (window.elbLayer = window.elbLayer || []),
       // Globals enhanced with the static globals from init and previous values
       globals: assign(
         staticGlobals,
