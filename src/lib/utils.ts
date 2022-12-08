@@ -1,9 +1,6 @@
 import { IElbwalker, Utils, Walker } from '../types';
 import { getElbAttributeName, getElbValues } from './walker';
 
-const w = window;
-const d = document;
-
 export function trycatch<P extends unknown[], R>(
   fn: (...args: P) => R | undefined,
 ): (...args: P) => R | undefined {
@@ -111,7 +108,7 @@ export function isVisible(element: HTMLElement): boolean {
 
   // Window positions
   let pointContainer;
-  const windowHeight = w.innerHeight; // Height of the viewport
+  const windowHeight = window.innerHeight; // Height of the viewport
 
   // Element positions
   const elemRectRel = element.getBoundingClientRect(); // Get the elements relative to the viewport
@@ -136,14 +133,14 @@ export function isVisible(element: HTMLElement): boolean {
       return false;
 
     if (elemCenterRel.x < 0) return false;
-    if (elemCenterRel.x > (d.documentElement.clientWidth || w.innerWidth))
+    if (elemCenterRel.x > (document.documentElement.clientWidth || window.innerWidth))
       return false;
     if (elemCenterRel.y < 0) return false;
-    if (elemCenterRel.y > (d.documentElement.clientHeight || w.innerHeight))
+    if (elemCenterRel.y > (document.documentElement.clientHeight || window.innerHeight))
       return false;
 
     // Select the element that is at the center of the target
-    pointContainer = d.elementFromPoint(elemCenterRel.x, elemCenterRel.y);
+    pointContainer = document.elementFromPoint(elemCenterRel.x, elemCenterRel.y);
   } else {
     // Bigger than the viewport
 
@@ -158,7 +155,7 @@ export function isVisible(element: HTMLElement): boolean {
       return false;
 
     // Select the element that is in the middle of the screen
-    pointContainer = d.elementFromPoint(elemCenterRel.x, windowHeight / 2);
+    pointContainer = document.elementFromPoint(elemCenterRel.x, windowHeight / 2);
   }
 
   // Check for potential overlays
@@ -172,7 +169,7 @@ export function isVisible(element: HTMLElement): boolean {
 }
 
 export const elb: IElbwalker.Elb = function () {
-  (w.elbLayer = w.elbLayer || []).push(arguments);
+  (window.elbLayer = window.elbLayer || []).push(arguments);
 };
 
 export function castValue(value: unknown): Walker.PropertyType {
@@ -249,10 +246,10 @@ export function setItem(
       document.cookie = cookie;
       break;
     case Utils.Storage.Type.Local:
-      w.localStorage.setItem(key, stringifiedItem);
+      window.localStorage.setItem(key, stringifiedItem);
       break;
     case Utils.Storage.Type.Session:
-      w.sessionStorage.setItem(key, stringifiedItem);
+      window.sessionStorage.setItem(key, stringifiedItem);
       break;
   }
 }
@@ -290,10 +287,10 @@ export function getItem(
       );
       break;
     case Utils.Storage.Type.Local:
-      item = parseItem(w.localStorage.getItem(key));
+      item = parseItem(window.localStorage.getItem(key));
       break;
     case Utils.Storage.Type.Session:
-      item = parseItem(w.sessionStorage.getItem(key));
+      item = parseItem(window.sessionStorage.getItem(key));
       break;
   }
 
@@ -319,10 +316,10 @@ export function removeItem(
       setItem(key, '', 0, storage);
       break;
     case Utils.Storage.Type.Local:
-      w.localStorage.removeItem(key);
+      window.localStorage.removeItem(key);
       break;
     case Utils.Storage.Type.Session:
-      w.sessionStorage.removeItem(key);
+      window.sessionStorage.removeItem(key);
       break;
   }
 }
