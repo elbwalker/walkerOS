@@ -77,7 +77,7 @@ export namespace IElbwalker {
   interface User {
     id?: string;
     device?: string;
-    hash?: string;
+    session?: string;
   }
 
   const enum Commands {

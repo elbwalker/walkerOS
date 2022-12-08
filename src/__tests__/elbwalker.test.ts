@@ -212,12 +212,12 @@ describe('Elbwalker', () => {
       }),
     );
 
-    elbwalker.push('walker user', { hash: 'hashid' });
+    elbwalker.push('walker user', { session: 'sessionid' });
     elbwalker.push('entity action');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
-        user: { id: 'userid', device: 'userid', hash: 'hashid' },
+        user: { id: 'userid', device: 'userid', session: 'sessionid' },
       }),
     );
   });
