@@ -45,8 +45,6 @@ export namespace Walker {
     [name: string]: boolean;
   }
 
-  type Scope = Document | Element;
-
   interface TriggersActionGroups {
     [trigger: string]: TriggerActions;
   }
