@@ -133,14 +133,23 @@ export function isVisible(element: HTMLElement): boolean {
       return false;
 
     if (elemCenterRel.x < 0) return false;
-    if (elemCenterRel.x > (document.documentElement.clientWidth || window.innerWidth))
+    if (
+      elemCenterRel.x >
+      (document.documentElement.clientWidth || window.innerWidth)
+    )
       return false;
     if (elemCenterRel.y < 0) return false;
-    if (elemCenterRel.y > (document.documentElement.clientHeight || window.innerHeight))
+    if (
+      elemCenterRel.y >
+      (document.documentElement.clientHeight || window.innerHeight)
+    )
       return false;
 
     // Select the element that is at the center of the target
-    pointContainer = document.elementFromPoint(elemCenterRel.x, elemCenterRel.y);
+    pointContainer = document.elementFromPoint(
+      elemCenterRel.x,
+      elemCenterRel.y,
+    );
   } else {
     // Bigger than the viewport
 
@@ -155,7 +164,10 @@ export function isVisible(element: HTMLElement): boolean {
       return false;
 
     // Select the element that is in the middle of the screen
-    pointContainer = document.elementFromPoint(elemCenterRel.x, windowHeight / 2);
+    pointContainer = document.elementFromPoint(
+      elemCenterRel.x,
+      windowHeight / 2,
+    );
   }
 
   // Check for potential overlays
