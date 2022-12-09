@@ -1,6 +1,6 @@
 // browser version
-import Elbwalker from './elbwalker';
-import { elb } from './lib/utils';
+import Elbwalker from '../elbwalker';
+import { elb } from '../lib/utils';
 
 let defaultMode, version;
 

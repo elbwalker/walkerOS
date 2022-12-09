@@ -2,7 +2,7 @@ const path = require('path');
 
 const nodeConfig = {
   mode: 'production',
-  entry: './src/node.ts',
+  entry: './src/modules/node.ts',
   module: {
     rules: [
       {
@@ -25,7 +25,7 @@ const nodeConfig = {
 
 const browserConfig = {
   mode: 'production',
-  entry: './src/browser.ts',
+  entry: './src/modules/browser.ts',
   module: {
     rules: [
       {
