@@ -1,12 +1,9 @@
-import Elbwalker from '../elbwalker';
 import { IElbwalker } from '../types';
 import fs from 'fs';
 
 describe('Browser', () => {
   const w = window;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
-
-  let elbwalker: IElbwalker.Function;
 
   jest.mock('../elbwalker', () => {
     return mockFn;
@@ -33,14 +30,14 @@ describe('Browser', () => {
     w.elbwalker = undefined as unknown as IElbwalker.Function;
     expect(w.elbwalker).toBeUndefined();
     jest.resetModules();
-    jest.requireActual('../browser');
+    jest.requireActual('../modules/browser');
     const elbwalker = require('../elbwalker').default;
     expect(w.elbwalker).toEqual(elbwalker);
   });
 
   test('no script tag', () => {
     document.body.innerHTML = '';
-    jest.requireActual('../browser');
+    jest.requireActual('../modules/browser');
 
     expect(mockFn).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledWith({});
@@ -50,7 +47,7 @@ describe('Browser', () => {
     const elem = document.getElementsByTagName('script')[0];
     elem.removeAttribute('data-project');
 
-    jest.requireActual('../browser');
+    jest.requireActual('../modules/browser');
     expect(mockFn).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledWith({
       default: false,
@@ -63,7 +60,7 @@ describe('Browser', () => {
     const elem = document.getElementsByTagName('script')[0];
     elem.setAttribute('data-default', 'true');
 
-    jest.requireActual('../browser');
+    jest.requireActual('../modules/browser');
     expect(mockFn).toHaveBeenCalledWith({
       default: true,
       version: 1,
@@ -74,7 +71,7 @@ describe('Browser', () => {
     const elem = document.getElementsByTagName('script')[0];
     elem.setAttribute('data-version', '42');
 
-    jest.requireActual('../browser');
+    jest.requireActual('../modules/browser');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         version: 42,
