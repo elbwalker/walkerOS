@@ -98,7 +98,7 @@ function Elbwalker(
     const id = `${timestamp}-${_group}-${_count}`;
     const source = {
       type: IElbwalker.SourceType.Web,
-      id: window.location.pathname,
+      id: window.location.href,
       previous_id: document.referrer,
     };
 

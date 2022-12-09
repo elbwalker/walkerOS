@@ -61,7 +61,7 @@ describe('Elbwalker', () => {
       version,
       source: {
         type: IElbwalker.SourceType.Web,
-        id: '/',
+        id: 'http://localhost/',
         previous_id: '',
       },
       walker: true,
@@ -86,7 +86,7 @@ describe('Elbwalker', () => {
       version,
       source: {
         type: IElbwalker.SourceType.Web,
-        id: '/',
+        id: 'http://localhost/',
         previous_id: '',
       },
       walker: true,
@@ -143,10 +143,10 @@ describe('Elbwalker', () => {
     const location = document.location;
     const referrer = document.referrer;
 
-    const newPageId = '/source_id';
+    const newPageId = 'https://www.elbwalker.com/source_id';
     const newPageReferrer = 'https://docs.elbwalker.com';
     Object.defineProperty(window, 'location', {
-      value: new URL(`https://www.elbwalker.com${newPageId}`),
+      value: new URL(newPageId),
       writable: true,
     });
     Object.defineProperty(document, 'referrer', {
