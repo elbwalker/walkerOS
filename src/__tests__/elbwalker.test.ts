@@ -5,7 +5,7 @@ import fs from 'fs';
 describe('Elbwalker', () => {
   const w = window;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
-  const version = { config: 0, walker: 1.5 };
+  const version = { config: 0, walker: 1.6 };
 
   let elbwalker: IElbwalker.Function;
 

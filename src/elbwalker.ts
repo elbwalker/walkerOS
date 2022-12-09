@@ -18,7 +18,7 @@ import {
 function Elbwalker(
   config: Partial<IElbwalker.Config> = {},
 ): IElbwalker.Function {
-  const version = 1.5;
+  const version = 1.6;
   const destinations: WebDestination.Functions = [];
   const runCommand = `${IElbwalker.Commands.Walker} ${IElbwalker.Commands.Run}`;
   const staticGlobals = config.globals || {};
