@@ -14,17 +14,19 @@ describe('Destination', () => {
   console.error = mockError;
 
   let destination: WebDestination.Function;
+  let config: WebDestination.Config;
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
 
     elbwalker = Elbwalker();
+    config = { init: false };
 
     destination = {
       init: mockInit,
       push: mockPush,
-      config: { init: false },
+      config,
     };
   });
 
@@ -42,6 +44,7 @@ describe('Destination', () => {
         event: 'entity action',
       }),
       undefined,
+      config,
     );
   });
 
@@ -100,6 +103,7 @@ describe('Destination', () => {
         event: 'entity action',
       }),
       undefined,
+      { init: true },
     );
   });
 
@@ -127,6 +131,7 @@ describe('Destination', () => {
         data,
       }),
       undefined,
+      config,
     );
   });
 
@@ -193,18 +198,21 @@ describe('Destination', () => {
         event: 'entity action',
       }),
       {},
+      expect.anything(),
     );
     expect(mockPushB).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
       }),
       {},
+      expect.anything(),
     );
     expect(mockPushC).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
       }),
       {},
+      expect.anything(),
     );
 
     jest.clearAllMocks();
@@ -217,6 +225,7 @@ describe('Destination', () => {
         event: 'foo bar',
       }),
       { name: 'foo bar' },
+      expect.anything(),
     );
 
     jest.clearAllMocks();
@@ -229,6 +238,7 @@ describe('Destination', () => {
         event: 'random action',
       }),
       {},
+      expect.anything(),
     );
 
     jest.clearAllMocks();
@@ -241,6 +251,7 @@ describe('Destination', () => {
         event: 'entity random',
       }),
       {},
+      expect.anything(),
     );
 
     jest.clearAllMocks();
@@ -358,6 +369,7 @@ describe('Destination', () => {
         event: 'p v',
       }),
       undefined,
+      expect.anything(),
     );
 
     expect(mockPushC).toHaveBeenNthCalledWith(
@@ -366,6 +378,7 @@ describe('Destination', () => {
         event: 'e a',
       }),
       undefined,
+      expect.anything(),
     );
 
     elbwalker.push('f b');
@@ -375,6 +388,7 @@ describe('Destination', () => {
         event: 'f b',
       }),
       undefined,
+      expect.anything(),
     );
 
     // Revoked consent
@@ -424,14 +438,15 @@ describe('Destination', () => {
     elbwalker.push('walker run');
 
     const mockPushA = jest.fn();
+    config = {
+      mapping: {
+        page: { view: { name: 'page_view' } },
+      },
+    };
 
     const destination: WebDestination.Function = {
       push: mockPushA,
-      config: {
-        mapping: {
-          page: { view: { name: 'page_view' } },
-        },
-      },
+      config,
     };
     elbwalker.push('walker destination', destination);
 
@@ -441,6 +456,7 @@ describe('Destination', () => {
         event: 'page_view',
       }),
       { name: 'page_view' },
+      config,
     );
   });
 });

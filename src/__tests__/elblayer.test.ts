@@ -69,6 +69,7 @@ describe('ElbLayer', () => {
         count: 1,
       }),
       undefined,
+      expect.anything(),
     );
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -77,6 +78,7 @@ describe('ElbLayer', () => {
         count: 2,
       }),
       undefined,
+      expect.anything(),
     );
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -85,6 +87,7 @@ describe('ElbLayer', () => {
         count: 3,
       }),
       undefined,
+      expect.anything(),
     );
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -93,6 +96,7 @@ describe('ElbLayer', () => {
         count: 4,
       }),
       undefined,
+      expect.anything(),
     );
   });
 
@@ -109,12 +113,14 @@ describe('ElbLayer', () => {
         event: 'ingest argument',
       }),
       undefined,
+      expect.anything(),
     );
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'ingest event',
       }),
       undefined,
+      expect.anything(),
     );
   });
 
@@ -135,6 +141,7 @@ describe('ElbLayer', () => {
         user: { id: 'userid' },
       }),
       undefined,
+      expect.anything(),
     );
     expect(mockPush).toHaveBeenNthCalledWith(
       2,
@@ -143,6 +150,7 @@ describe('ElbLayer', () => {
         user: { id: 'userid' },
       }),
       undefined,
+      expect.anything(),
     );
     expect(mockPush).toHaveBeenNthCalledWith(
       3,
@@ -151,6 +159,7 @@ describe('ElbLayer', () => {
         user: { id: 'userid' },
       }),
       undefined,
+      expect.anything(),
     );
   });
 
@@ -289,12 +298,14 @@ describe('ElbLayer', () => {
         event: 'e load',
       }),
       undefined,
+      expect.anything(),
     );
     expect(mockDest2).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e load',
       }),
       undefined,
+      expect.anything(),
     );
   });
 });
