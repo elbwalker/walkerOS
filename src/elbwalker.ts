@@ -379,7 +379,7 @@ function Elbwalker(
         let queue = destination.queue || [];
 
         // Try to push and remove successful ones from queue
-        queue = queue.filter(
+        destination.queue = queue.filter(
           (event) => !pushToDestination(instance, destination, event, false),
         );
       });
