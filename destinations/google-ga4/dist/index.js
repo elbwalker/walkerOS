@@ -3,18 +3,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var w = window;
 var destination = {
     config: { custom: { measurementId: '' } },
-    init: function () {
-        var config = this.config;
+    init: function (config) {
+        var custom = config.custom || {};
         var settings = {};
         // required measuremt id
-        if (!config.custom.measurementId)
+        if (!custom.measurementId)
             return false;
         // custom transport url
-        if (config.custom.transport_url)
-            settings.transport_url = config.custom.transport_url;
+        if (custom.transport_url)
+            settings.transport_url = custom.transport_url;
         // Load the gtag script
         if (config.loadScript)
-            addScript(config.custom.measurementId);
+            addScript(custom.measurementId);
         // setup required methods
         w.dataLayer = w.dataLayer || [];
         if (!w.gtag) {
@@ -24,13 +24,17 @@ var destination = {
             w.gtag('js', new Date());
         }
         // gtag init call
-        w.gtag('config', config.custom.measurementId, settings);
+        w.gtag('config', custom.measurementId, settings);
         return true;
     },
-    push: function (event, mapping) {
+    push: function (event, config, mapping) {
         if (mapping === void 0) { mapping = {}; }
+        config = config || {};
+        var custom = config.custom || {};
+        if (!custom.measurementId)
+            return;
         var data = event.data || {};
-        data.send_to = this.config.custom.measurementId;
+        data.send_to = custom.measurementId;
         w.gtag('event', event.event, data);
     },
 };
