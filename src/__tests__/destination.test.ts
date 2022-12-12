@@ -43,8 +43,8 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity action',
       }),
-      undefined,
       config,
+      undefined,
     );
   });
 
@@ -102,8 +102,8 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity action',
       }),
-      undefined,
       { init: true },
+      undefined,
     );
   });
 
@@ -130,8 +130,8 @@ describe('Destination', () => {
         event: 'entity action',
         data,
       }),
-      undefined,
       config,
+      undefined,
     );
   });
 
@@ -197,22 +197,22 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity action',
       }),
-      {},
       expect.anything(),
+      {},
     );
     expect(mockPushB).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
       }),
-      {},
       expect.anything(),
+      {},
     );
     expect(mockPushC).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
       }),
-      {},
       expect.anything(),
+      {},
     );
 
     jest.clearAllMocks();
@@ -224,8 +224,8 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'foo bar',
       }),
-      { name: 'foo bar' },
       expect.anything(),
+      { name: 'foo bar' },
     );
 
     jest.clearAllMocks();
@@ -237,8 +237,8 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'random action',
       }),
-      {},
       expect.anything(),
+      {},
     );
 
     jest.clearAllMocks();
@@ -250,8 +250,8 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity random',
       }),
-      {},
       expect.anything(),
+      {},
     );
 
     jest.clearAllMocks();
@@ -368,8 +368,8 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'p v',
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
 
     expect(mockPushC).toHaveBeenNthCalledWith(
@@ -377,8 +377,8 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'e a',
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
 
     elbwalker.push('f b');
@@ -387,8 +387,8 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'f b',
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
 
     // Revoked consent
@@ -455,8 +455,8 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'page_view',
       }),
-      { name: 'page_view' },
       config,
+      { name: 'page_view' },
     );
   });
 });

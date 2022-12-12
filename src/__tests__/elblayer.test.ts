@@ -68,8 +68,8 @@ describe('ElbLayer', () => {
         event: 'e 1',
         count: 1,
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -77,8 +77,8 @@ describe('ElbLayer', () => {
         event: 'e 2',
         count: 2,
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -86,8 +86,8 @@ describe('ElbLayer', () => {
         event: 'page view',
         count: 3,
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -95,8 +95,8 @@ describe('ElbLayer', () => {
         event: 'e 4',
         count: 4,
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
   });
 
@@ -112,15 +112,15 @@ describe('ElbLayer', () => {
       expect.objectContaining({
         event: 'ingest argument',
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'ingest event',
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
   });
 
@@ -140,8 +140,8 @@ describe('ElbLayer', () => {
         event: 'event postponed',
         user: { id: 'userid' },
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
     expect(mockPush).toHaveBeenNthCalledWith(
       2,
@@ -149,8 +149,8 @@ describe('ElbLayer', () => {
         event: 'page view',
         user: { id: 'userid' },
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
     expect(mockPush).toHaveBeenNthCalledWith(
       3,
@@ -158,8 +158,8 @@ describe('ElbLayer', () => {
         event: 'event later',
         user: { id: 'userid' },
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
   });
 
@@ -297,15 +297,15 @@ describe('ElbLayer', () => {
       expect.objectContaining({
         event: 'e load',
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
     expect(mockDest2).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e load',
       }),
-      undefined,
       expect.anything(),
+      undefined,
     );
   });
 });

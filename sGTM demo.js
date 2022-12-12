@@ -1,0 +1,1 @@
+  // General walker configuration

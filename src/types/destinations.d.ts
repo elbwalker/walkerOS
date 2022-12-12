@@ -6,8 +6,8 @@ export namespace WebDestination {
     init?: (config: Config) => boolean;
     push: (
       event: IElbwalker.Event,
-      mapping?: EventConfig,
       config?: Config,
+      mapping?: EventConfig,
     ) => void;
     config: Config;
     queue?: Array<IElbwalker.Event>; // Non processed events yet and resettet with each new run

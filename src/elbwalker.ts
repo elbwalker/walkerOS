@@ -208,7 +208,7 @@ function Elbwalker(
       }
 
       // It's time to go to the destination's side now
-      destination.push(event, mappingEvent, destination.config);
+      destination.push(event, destination.config, mappingEvent);
 
       return true;
     })();
