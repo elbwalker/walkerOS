@@ -3,10 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.destination = void 0;
 var w = window;
 exports.destination = {
-    config: { custom: {} },
-    init: function () {
-        var config = this.config;
-        var custom = config.custom;
+    config: {},
+    init: function (config) {
+        var custom = config.custom || {};
         // required measuremt id
         if (!custom.conversionId)
             return false;
@@ -25,11 +24,12 @@ exports.destination = {
         w.gtag('config', custom.conversionId);
         return true;
     },
-    push: function (event, mapping) {
-        if (mapping === void 0) { mapping = {}; }
+    push: function (event, config, mapping) {
+        config = config || {};
+        mapping = mapping || {};
         if (!mapping.label)
             return;
-        var custom = this.config.custom;
+        var custom = config.custom || {};
         // Basic conversion parameters
         var eventParams = {
             send_to: "".concat(custom.conversionId, "/").concat(mapping.label),

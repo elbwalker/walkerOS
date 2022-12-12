@@ -2,7 +2,7 @@ import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
-    gtag?: Gtag.Gtag
+    gtag?: Gtag.Gtag;
   }
 }
 
@@ -10,8 +10,8 @@ const w = window;
 
 export namespace DestinationAds {
   export interface Config extends WebDestination.Config {
-    custom: {
-      conversionId: string; // The ads accounts id used for every conversion
+    custom?: {
+      conversionId?: string; // The ads accounts id used for every conversion
       currency?: string; // Default currency is EUR
       defaultValue?: number; // Used default value for conversions
     };
@@ -31,11 +31,10 @@ export namespace DestinationAds {
 }
 
 export const destination: DestinationAds.Function = {
-  config: { custom: {} } as DestinationAds.Config,
+  config: {},
 
-  init() {
-    const config = this.config;
-    const custom = config.custom;
+  init(config: DestinationAds.Config) {
+    const custom = config.custom || {};
 
     // required measuremt id
     if (!custom.conversionId) return false;
@@ -61,10 +60,14 @@ export const destination: DestinationAds.Function = {
 
   push(
     event: IElbwalker.Event,
-    mapping: DestinationAds.EventConfig = {},
+    config?: DestinationAds.Config,
+    mapping?: DestinationAds.EventConfig,
   ): void {
+    config = config || {};
+    mapping = mapping || {};
+
     if (!mapping.label) return;
-    const custom = this.config.custom;
+    const custom = config.custom || {};
 
     // Basic conversion parameters
     const eventParams: Gtag.CustomParams = {

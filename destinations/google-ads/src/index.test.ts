@@ -94,7 +94,7 @@ describe('destination Google Ads', () => {
 
     // Change currency
     const currency = 'USD';
-    destination.config.custom.currency = currency;
+    destination.config.custom!.currency = currency;
 
     elbwalker.push(event);
     expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
@@ -117,7 +117,7 @@ describe('destination Google Ads', () => {
     });
 
     // Use a default conversion value
-    destination.config.custom.defaultValue = 3.14;
+    destination.config.custom!.defaultValue = 3.14;
     elbwalker.push(event, {});
     expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
       send_to: `${conversionId}/${label}`,
