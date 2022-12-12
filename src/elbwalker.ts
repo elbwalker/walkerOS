@@ -375,13 +375,19 @@ function Elbwalker(
     });
 
     if (runQueue) {
+      const config = instance.config;
       destinations.forEach((destination) => {
         let queue = destination.queue || [];
 
         // Try to push and remove successful ones from queue
-        destination.queue = queue.filter(
-          (event) => !pushToDestination(instance, destination, event, false),
-        );
+        destination.queue = queue.filter((event) => {
+          // Update previous values with the current state
+          event.consent = config.consent;
+          event.globals = config.globals;
+          event.user = config.user;
+
+          return !pushToDestination(instance, destination, event, false);
+        });
       });
     }
   }
