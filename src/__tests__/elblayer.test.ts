@@ -178,6 +178,7 @@ describe('ElbLayer', () => {
       globals: {},
       pageview: true,
       prefix: 'data-elb',
+      user: {},
       version: 0,
     };
 

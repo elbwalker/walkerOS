@@ -49,6 +49,7 @@ export namespace IElbwalker {
     globals: Walker.Properties;
     pageview: boolean;
     prefix: string;
+    user: User;
     version: number;
     default?: boolean;
   }
