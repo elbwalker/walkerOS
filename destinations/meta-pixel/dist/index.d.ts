@@ -8,8 +8,8 @@ declare global {
 }
 export declare namespace DestinationMeta {
     interface Config extends WebDestination.Config {
-        custom: {
-            pixelId: string;
+        custom?: {
+            pixelId?: string;
             currency?: string;
             pageview?: boolean;
         };

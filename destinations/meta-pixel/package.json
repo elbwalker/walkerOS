@@ -1,6 +1,6 @@
 {
   "name": "@elbwalker/destination-web-meta-pixel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Meta pixel web destination for walker.js",
   "main": "dist/index.js",
   "types": "dist",
@@ -22,7 +22,7 @@
     "dist/**/*.d.ts"
   ],
   "dependencies": {
-    "@elbwalker/walker.js": "^1.5.3"
+    "@elbwalker/walker.js": "^1.6.0"
   },
   "devDependencies": {
     "@types/facebook-pixel": "^0.0.24",

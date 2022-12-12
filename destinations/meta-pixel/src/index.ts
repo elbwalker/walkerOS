@@ -11,8 +11,8 @@ const w = window;
 
 export namespace DestinationMeta {
   export interface Config extends WebDestination.Config {
-    custom: {
-      pixelId: string; // Required pixel id
+    custom?: {
+      pixelId?: string; // Required pixel id
       currency?: string; // Default currency is EUR
       pageview?: boolean; // Send the PageView event (default yes, deactivate actively)
     };
@@ -61,9 +61,8 @@ export namespace DestinationMeta {
 export const destination: DestinationMeta.Function = {
   config: { custom: { pixelId: '' } },
 
-  init() {
-    let config = this.config;
-    const custom = config.custom;
+  init(config: DestinationMeta.Config) {
+    const custom = config.custom || {};
 
     // load fbevents.js
     if (config.loadScript) addScript();
@@ -84,15 +83,19 @@ export const destination: DestinationMeta.Function = {
 
   push(
     event: IElbwalker.Event,
+    config?: DestinationMeta.Config,
     mapping: DestinationMeta.EventConfig = {},
   ): void {
+    config = config || {};
+    const custom = config.custom || {};
+
     // Standard events
     if (mapping.track) {
       const parameters = getParameters(
         mapping.track,
         event,
         mapping,
-        this.config.custom.currency,
+        custom.currency,
       );
       w.fbq('track', mapping.track, parameters);
     } else {

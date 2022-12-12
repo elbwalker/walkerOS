@@ -5,9 +5,8 @@ var w = window;
 // https://developers.facebook.com/docs/meta-pixel/
 exports.destination = {
     config: { custom: { pixelId: '' } },
-    init: function () {
-        var config = this.config;
-        var custom = config.custom;
+    init: function (config) {
+        var custom = config.custom || {};
         // load fbevents.js
         if (config.loadScript)
             addScript();
@@ -22,11 +21,13 @@ exports.destination = {
             w.fbq('track', 'PageView');
         return true;
     },
-    push: function (event, mapping) {
+    push: function (event, config, mapping) {
         if (mapping === void 0) { mapping = {}; }
+        config = config || {};
+        var custom = config.custom || {};
         // Standard events
         if (mapping.track) {
-            var parameters = getParameters(mapping.track, event, mapping, this.config.custom.currency);
+            var parameters = getParameters(mapping.track, event, mapping, custom.currency);
             w.fbq('track', mapping.track, parameters);
         }
         else {

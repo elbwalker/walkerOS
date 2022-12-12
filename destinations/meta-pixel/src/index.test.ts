@@ -80,7 +80,7 @@ describe('Destination Meta Pixel', () => {
     expect(mockFn).toHaveBeenCalledWith('track', 'PageView');
 
     jest.clearAllMocks();
-    destination.config.custom.pageview = false;
+    destination.config.custom!.pageview = false;
     destination.config.init = false;
     elbwalker.push(event);
     expect(mockFn).not.toHaveBeenCalledWith('track', 'PageView');
