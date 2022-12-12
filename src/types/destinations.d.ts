@@ -3,7 +3,7 @@ import { IElbwalker } from '.';
 export namespace WebDestination {
   type Functions = Function[];
   interface Function {
-    init?: () => boolean;
+    init?: (config: Config) => boolean;
     push: (
       event: IElbwalker.Event,
       mapping?: EventConfig,

@@ -200,7 +200,7 @@ function Elbwalker(
       // Destination initialization
       // Check if the destination was initialized properly or try to do so
       if (destination.init && !destination.config.init) {
-        const init = destination.init();
+        const init = destination.init(destination.config);
         destination.config.init = init;
 
         // don't push if init is false
