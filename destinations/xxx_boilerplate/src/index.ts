@@ -28,9 +28,7 @@ export namespace DestinationXXX {
 export const destination: DestinationXXX.Function = {
   config: {},
 
-  init() {
-    let config = this.config;
-
+  init(config: DestinationXXX.Config) {
     if (config.loadScript) addScript();
 
     // Do something initializing
@@ -40,6 +38,7 @@ export const destination: DestinationXXX.Function = {
 
   push(
     event: IElbwalker.Event,
+    config?: DestinationXXX.Config,
     mapping: DestinationXXX.EventConfig = {},
   ): void {
     // Do something magical

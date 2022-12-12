@@ -18,8 +18,12 @@ Creating your own destinations is easy. Use [XXX Boilerplate](./xxx_boilerplate/
 
 ```ts
 interface Function {
-  init?: () => boolean;
-  push: (event: Elbwalker.Event) => void;
+  init?: (config: Config) => boolean;
+  push: (
+    event: IElbwalker.Event,
+    config?: Config,
+    mapping?: EventConfig,
+  ) => void;
   config: Config;
 }
 ```
@@ -34,7 +38,7 @@ The default interface the walker uses to deliver events to each destination.
 
 ### Init
 
-This function is optional. It has to return a boolean if initialization has worked out properly. As long as init returns `false` no events will get pushed but each time an event occurs walker.js tries to init again.
+This function is optional. It has to return a boolean if initialization has worked out properly. As long as init doesn't return `true` no events will get pushed but each time an event occurs walker.js tries to init again.
 
 The walker checks the `config.init` value to see if a destination has been initialized, or not. This way you can add a destination that has already been initialized.
 
