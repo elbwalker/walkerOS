@@ -62,13 +62,13 @@ describe('Destination Elbwalker EventPipe', () => {
   });
 
   test('Init', () => {
-    destination.config.custom.projectId = undefined;
+    destination.config.custom!.projectId = undefined;
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
 
     expect(destination.config.init).toBeFalsy();
 
-    destination.config.custom.projectId = projectId;
+    destination.config.custom!.projectId = projectId;
     elbwalker.push(event);
 
     expect(destination.config.init).toBeTruthy();
@@ -100,7 +100,7 @@ describe('Destination Elbwalker EventPipe', () => {
       writable: true,
     });
 
-    destination.config.custom.exclusionParameters = ['b'];
+    destination.config.custom!.exclusionParameters = ['b'];
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
 
@@ -113,7 +113,7 @@ describe('Destination Elbwalker EventPipe', () => {
   });
 
   test('Exclusion parameter Location', () => {
-    destination.config.custom.exclusionParameters = ['q'];
+    destination.config.custom!.exclusionParameters = ['q'];
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
 
@@ -126,7 +126,7 @@ describe('Destination Elbwalker EventPipe', () => {
   });
 
   test('Multiple exclusion parameters', () => {
-    destination.config.custom.exclusionParameters = ['b', 'q'];
+    destination.config.custom!.exclusionParameters = ['b', 'q'];
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
 

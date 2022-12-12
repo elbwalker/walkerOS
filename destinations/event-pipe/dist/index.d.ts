@@ -5,7 +5,7 @@ declare global {
 }
 export declare namespace DestinationEventPipe {
     interface Config extends WebDestination.Config {
-        custom: {
+        custom?: {
             api?: string;
             projectId?: string;
             exclusionParameters?: ExclusionParameters;

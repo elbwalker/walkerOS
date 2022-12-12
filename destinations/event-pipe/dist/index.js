@@ -16,16 +16,18 @@ var w = window;
 var defaultAPI = 'https://moin.p.elbwalkerapis.com/lama';
 var destination = {
     config: { custom: { projectId: '' } },
-    init: function () {
-        var config = this.config;
+    init: function (config) {
+        if (!config.custom)
+            config.custom = {};
         // Require projectId
         if (!config.custom.projectId)
             return false;
         return true;
     },
-    push: function (event, mapping) {
-        if (mapping === void 0) { mapping = {}; }
-        var config = this.config;
+    push: function (event, config, mapping) {
+        config = config || { custom: { projectId: '' } };
+        if (!config.custom)
+            config.custom = {};
         var href = excludeParameters(location.href, config.custom.exclusionParameters);
         var referrer = excludeParameters(document.referrer, config.custom.exclusionParameters);
         // Custom check for default the page view event with search parameter
