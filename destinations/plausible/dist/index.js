@@ -4,11 +4,10 @@ exports.destination = void 0;
 var w = window;
 exports.destination = {
     config: {},
-    init: function () {
-        var config = this.config;
-        config.custom = config.custom || {};
+    init: function (config) {
+        var custom = config.custom || {};
         if (config.loadScript)
-            addScript(config.custom.domain);
+            addScript(custom.domain);
         w.plausible =
             w.plausible ||
                 function () {
