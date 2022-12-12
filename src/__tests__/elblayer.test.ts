@@ -68,6 +68,7 @@ describe('ElbLayer', () => {
         event: 'e 1',
         count: 1,
       }),
+      expect.anything(),
       undefined,
     );
 
@@ -76,6 +77,7 @@ describe('ElbLayer', () => {
         event: 'e 2',
         count: 2,
       }),
+      expect.anything(),
       undefined,
     );
 
@@ -84,6 +86,7 @@ describe('ElbLayer', () => {
         event: 'page view',
         count: 3,
       }),
+      expect.anything(),
       undefined,
     );
 
@@ -92,6 +95,7 @@ describe('ElbLayer', () => {
         event: 'e 4',
         count: 4,
       }),
+      expect.anything(),
       undefined,
     );
   });
@@ -108,12 +112,14 @@ describe('ElbLayer', () => {
       expect.objectContaining({
         event: 'ingest argument',
       }),
+      expect.anything(),
       undefined,
     );
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'ingest event',
       }),
+      expect.anything(),
       undefined,
     );
   });
@@ -134,6 +140,7 @@ describe('ElbLayer', () => {
         event: 'event postponed',
         user: { id: 'userid' },
       }),
+      expect.anything(),
       undefined,
     );
     expect(mockPush).toHaveBeenNthCalledWith(
@@ -142,6 +149,7 @@ describe('ElbLayer', () => {
         event: 'page view',
         user: { id: 'userid' },
       }),
+      expect.anything(),
       undefined,
     );
     expect(mockPush).toHaveBeenNthCalledWith(
@@ -150,6 +158,7 @@ describe('ElbLayer', () => {
         event: 'event later',
         user: { id: 'userid' },
       }),
+      expect.anything(),
       undefined,
     );
   });
@@ -169,6 +178,7 @@ describe('ElbLayer', () => {
       globals: {},
       pageview: true,
       prefix: 'data-elb',
+      user: {},
       version: 0,
     };
 
@@ -288,12 +298,14 @@ describe('ElbLayer', () => {
       expect.objectContaining({
         event: 'e load',
       }),
+      expect.anything(),
       undefined,
     );
     expect(mockDest2).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e load',
       }),
+      expect.anything(),
       undefined,
     );
   });

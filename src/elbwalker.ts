@@ -18,7 +18,7 @@ import {
 function Elbwalker(
   config: Partial<IElbwalker.Config> = {},
 ): IElbwalker.Function {
-  const version = 1.5;
+  const version = 1.6;
   const destinations: WebDestination.Functions = [];
   const runCommand = `${IElbwalker.Commands.Walker} ${IElbwalker.Commands.Run}`;
   const staticGlobals = config.globals || {};
@@ -30,8 +30,6 @@ function Elbwalker(
   // Internal properties
   let _count = 0; // Event counter for each run
   let _group = ''; // random id to group events of a run
-  // @TODO move _user to config for better init and transparency
-  let _user: IElbwalker.User = {}; // handles the user ids
   let _firstRun = true; // The first run is a special one due to state changes
   let _allowRunning = false; // Wait for explicit run command to start
 
@@ -93,12 +91,13 @@ function Elbwalker(
     }
 
     ++_count;
+    const config = instance.config;
     const timestamp = Date.now();
     const timing = Math.round(performance.now() / 10) / 100;
     const id = `${timestamp}-${_group}-${_count}`;
     const source = {
       type: IElbwalker.SourceType.Web,
-      id: window.location.pathname,
+      id: window.location.href,
       previous_id: document.referrer,
     };
 
@@ -110,10 +109,10 @@ function Elbwalker(
         // to prevent data manipulation
         data: Object.assign({}, data as Walker.Properties),
         context: Object.assign({}, context),
-        globals: Object.assign({}, instance.config.globals),
-        user: Object.assign({}, _user),
+        globals: Object.assign({}, config.globals),
+        user: Object.assign({}, config.user),
         nested: nested || [],
-        consent: Object.assign({}, instance.config.consent),
+        consent: Object.assign({}, config.consent),
         id,
         trigger: trigger || '',
         entity,
@@ -123,7 +122,7 @@ function Elbwalker(
         group: _group,
         count: _count,
         version: {
-          config: instance.config.version,
+          config: config.version,
           walker: version,
         },
         source,
@@ -200,14 +199,15 @@ function Elbwalker(
       // Destination initialization
       // Check if the destination was initialized properly or try to do so
       if (destination.init && !destination.config.init) {
-        const init = destination.init();
+        const init = destination.init(destination.config);
         destination.config.init = init;
 
         // don't push if init is false
         if (!init) return false;
       }
 
-      destination.push(event, mappingEvent);
+      // It's time to go to the destination's side now
+      destination.push(event, destination.config, mappingEvent);
 
       return true;
     })();
@@ -247,7 +247,7 @@ function Elbwalker(
         ready(run, instance);
         break;
       case IElbwalker.Commands.User:
-        isObject(data) && setUserIds(data as IElbwalker.User);
+        isObject(data) && setUserIds(instance, data as IElbwalker.User);
         break;
       default:
         break;
@@ -375,22 +375,29 @@ function Elbwalker(
     });
 
     if (runQueue) {
+      const config = instance.config;
       destinations.forEach((destination) => {
         let queue = destination.queue || [];
 
         // Try to push and remove successful ones from queue
-        queue = queue.filter(
-          (event) => !pushToDestination(instance, destination, event, false),
-        );
+        destination.queue = queue.filter((event) => {
+          // Update previous values with the current state
+          event.consent = config.consent;
+          event.globals = config.globals;
+          event.user = config.user;
+
+          return !pushToDestination(instance, destination, event, false);
+        });
       });
     }
   }
 
-  function setUserIds(data: IElbwalker.User) {
+  function setUserIds(instance: IElbwalker.Function, data: IElbwalker.User) {
+    const user = instance.config.user;
     // user ids can't be set to undefined
-    if (data.id) _user.id = data.id;
-    if (data.device) _user.device = data.device;
-    if (data.session) _user.session = data.session;
+    if (data.id) user.id = data.id;
+    if (data.device) user.device = data.device;
+    if (data.session) user.session = data.session;
   }
 
   function addDestination(data: WebDestination.Function) {
@@ -430,6 +437,8 @@ function Elbwalker(
         'pageview' in values ? !!values.pageview : current.pageview || true,
       // HTML prefix attribute
       prefix: values.prefix || current.prefix || IElbwalker.Commands.Prefix,
+      // Handles the user ids
+      user: values.user || current.user || {},
       // Helpful to differentiate the clients used setup version
       version: values.version || current.version || 0,
     };

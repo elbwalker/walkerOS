@@ -14,17 +14,19 @@ describe('Destination', () => {
   console.error = mockError;
 
   let destination: WebDestination.Function;
+  let config: WebDestination.Config;
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
 
     elbwalker = Elbwalker();
+    config = { init: false };
 
     destination = {
       init: mockInit,
       push: mockPush,
-      config: { init: false },
+      config,
     };
   });
 
@@ -41,6 +43,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity action',
       }),
+      config,
       undefined,
     );
   });
@@ -99,6 +102,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity action',
       }),
+      { init: true },
       undefined,
     );
   });
@@ -126,6 +130,7 @@ describe('Destination', () => {
         event: 'entity action',
         data,
       }),
+      config,
       undefined,
     );
   });
@@ -192,18 +197,21 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity action',
       }),
+      expect.anything(),
       {},
     );
     expect(mockPushB).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
       }),
+      expect.anything(),
       {},
     );
     expect(mockPushC).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
       }),
+      expect.anything(),
       {},
     );
 
@@ -216,6 +224,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'foo bar',
       }),
+      expect.anything(),
       { name: 'foo bar' },
     );
 
@@ -228,6 +237,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'random action',
       }),
+      expect.anything(),
       {},
     );
 
@@ -240,6 +250,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity random',
       }),
+      expect.anything(),
       {},
     );
 
@@ -357,6 +368,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'p v',
       }),
+      expect.anything(),
       undefined,
     );
 
@@ -365,6 +377,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'e a',
       }),
+      expect.anything(),
       undefined,
     );
 
@@ -374,6 +387,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'f b',
       }),
+      expect.anything(),
       undefined,
     );
 
@@ -424,14 +438,15 @@ describe('Destination', () => {
     elbwalker.push('walker run');
 
     const mockPushA = jest.fn();
+    config = {
+      mapping: {
+        page: { view: { name: 'page_view' } },
+      },
+    };
 
     const destination: WebDestination.Function = {
       push: mockPushA,
-      config: {
-        mapping: {
-          page: { view: { name: 'page_view' } },
-        },
-      },
+      config,
     };
     elbwalker.push('walker destination', destination);
 
@@ -440,6 +455,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'page_view',
       }),
+      config,
       { name: 'page_view' },
     );
   });
