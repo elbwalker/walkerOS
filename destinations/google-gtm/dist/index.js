@@ -16,8 +16,7 @@ var defaultDataLayer = 'dataLayer';
 var defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
 exports.destination = {
     config: {},
-    init: function () {
-        var config = this.config;
+    init: function (config) {
         config.custom = config.custom || {};
         var dataLayer = config.custom.dataLayer || defaultDataLayer;
         window[dataLayer] = window[dataLayer] || [];
