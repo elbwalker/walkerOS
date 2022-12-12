@@ -85,8 +85,8 @@ generates an event like
   },
   source: {
     // Origins of the event
-    type: 1, // Source type of the event (1=web)
-    id: '/elbwalker/walker.js', // Source id of the event's origin (pagepath)
+    type: 1, // Source type of the event (1=Web)
+    id: 'https://github.com/elbwalker/walker.js', // Source id of the event's origin (url)
     previous_id: 'https://www.elbwalker.com/' // Previous source id of the event's origin (referrer)
   },
   walker: true, // flag to filter events
