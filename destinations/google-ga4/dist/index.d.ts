@@ -6,8 +6,8 @@ declare global {
 }
 export declare namespace DestinationGA4 {
     interface Config extends WebDestination.Config {
-        custom: {
-            measurementId: string;
+        custom?: {
+            measurementId?: string;
             transport_url?: string;
         };
         mapping?: WebDestination.Mapping<EventConfig>;

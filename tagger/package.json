@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/tagger",
   "description": "A helper to set up tracking based on walker.js",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist",
   "scripts": {
@@ -22,7 +22,7 @@
     "dist/**/*.d.ts"
   ],
   "dependencies": {
-    "@elbwalker/walker.js": "^1.5.3"
+    "@elbwalker/walker.js": "^1.6.0"
   },
   "devDependencies": {
     "@types/jest": "^28.1.7",

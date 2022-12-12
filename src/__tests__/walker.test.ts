@@ -177,8 +177,9 @@ describe('Walker', () => {
         entity: 'e',
         action: 'click',
         context: {
-          test: 'engagement',
-          recommendation: 'smart_ai',
+          recommendation: ['smart_ai', 0],
+          same: ['level', 0],
+          test: ['engagement', 1],
         },
       },
     ]);
@@ -211,6 +212,17 @@ describe('Walker', () => {
         data: {
           size: ['s', 'm', 'l'],
         },
+      },
+    ]);
+  });
+
+  test('Page entity as default', () => {
+    expect(walker(getElem('no_entity'), Walker.Trigger.Click)).toMatchObject([
+      {
+        entity: 'page',
+        action: 'click',
+        data: { e: 'v', p: 'v' },
+        context: { k: ['c', 0] },
       },
     ]);
   });

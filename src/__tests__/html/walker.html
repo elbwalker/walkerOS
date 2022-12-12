@@ -111,7 +111,7 @@
 <div id="prefix" elb="entity" elb-entity="k:v" elbaction="load:action"></div>
 
 <div data-elbcontext="test:engagement">
-  <div data-elbcontext="recommendation:smart_ai">
+  <div data-elbcontext="recommendation:smart_ai;same:level">
     <p data-elbcontext="not:included"></p>
     <p id="context" data-elb="e" data-elbaction="click">click me</p>
   </div>
@@ -131,4 +131,10 @@
 <div id="array" data-elb="array" data-elbaction="load:props">
   <p data-elb-array="size[]:s;size[]:m"></p>
   <p data-elb-array="size[]:l"></p>
+</div>
+
+<div data-elbcontext="k:c" data-elb-page="p:v">
+  <div id="no_entity" data-elbaction="click" data-elb-page="e:v">
+    <p data-elb-page="ignore:this"></p>
+  </div>
 </div>

@@ -1,52 +1,49 @@
 import { IElbwalker, Walker, WebDestination } from './types';
-import { initTrigger, ready, triggerLoad } from './lib/trigger';
+import {
+  initScopeTrigger,
+  initGlobalTrigger,
+  ready,
+  load,
+} from './lib/trigger';
 import {
   assign,
   getGlobalProperties,
   isArgument,
+  isElementOrDocument,
+  isObject,
   randomString,
   trycatch,
 } from './lib/utils';
 
-const version = 1.5;
-const w = window;
-
 function Elbwalker(
   config: Partial<IElbwalker.Config> = {},
 ): IElbwalker.Function {
+  const version = 1.6;
   const destinations: WebDestination.Functions = [];
   const runCommand = `${IElbwalker.Commands.Walker} ${IElbwalker.Commands.Run}`;
+  const staticGlobals = config.globals || {};
   const instance: IElbwalker.Function = {
     push,
-    config: {
-      consent: config.consent || {}, // Handle the cosnent states
-      elbLayer: config.elbLayer || (w.elbLayer = w.elbLayer || []), // Async access api in window as array
-      pageview: 'pageview' in config ? !!config.pageview : true, // Trigger a page view event by default
-      prefix: config.prefix || IElbwalker.Commands.Prefix, // HTML prefix attribute
-      version: config.version || 0, // Helpful to differentiate the clients used setup version
-    },
+    config: getConfig(config),
   };
 
   // Internal properties
   let _count = 0; // Event counter for each run
   let _group = ''; // random id to group events of a run
-  let _globals: Walker.Properties = {}; // init globals as some random var
-  // @TODO move _user to config for better init and transparency
-  let _user: IElbwalker.User = {}; // handles the user ids
   let _firstRun = true; // The first run is a special one due to state changes
   let _allowRunning = false; // Wait for explicit run command to start
 
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(instance);
 
-  // Switch between init modes
+  // Use the default init mode for auto run and dataLayer destination
   if (config.default) {
     // use dataLayer as default destination
-    w.dataLayer = w.dataLayer || [];
+    window.dataLayer = window.dataLayer || [];
     const destination: WebDestination.Function = {
       config: {},
       push: (event) => {
-        w.dataLayer.push({
+        window.dataLayer.push({
           ...event,
           walker: true,
         });
@@ -56,13 +53,13 @@ function Elbwalker(
     ready(run, instance);
   }
 
-  initTrigger(instance);
+  initGlobalTrigger(instance);
 
   function push(
     event?: unknown,
     data?: IElbwalker.PushData,
     trigger?: string,
-    context?: Walker.Properties,
+    context?: Walker.OrderedProperties,
     nested?: Walker.Entities,
   ): void {
     if (!event || typeof event !== 'string') return;
@@ -84,10 +81,25 @@ function Elbwalker(
       return;
     }
 
+    // Set default value if undefined
+    data = data || {};
+
+    // Special case for page entity to add the id by default
+    if (entity === 'page') {
+      (data as Walker.Properties).id =
+        (data as Walker.Properties).id || window.location.pathname;
+    }
+
     ++_count;
+    const config = instance.config;
     const timestamp = Date.now();
     const timing = Math.round(performance.now() / 10) / 100;
     const id = `${timestamp}-${_group}-${_count}`;
+    const source = {
+      type: IElbwalker.SourceType.Web,
+      id: window.location.href,
+      previous_id: document.referrer,
+    };
 
     destinations.forEach((destination) => {
       // Individual event per destination to prevent a pointer mess
@@ -95,11 +107,12 @@ function Elbwalker(
         event,
         // Create a new objects for each destination
         // to prevent data manipulation
-        data: assign({}, data as Walker.Properties),
-        context: assign({}, context as Walker.Properties),
-        globals: assign({}, _globals as Walker.Properties),
-        user: assign({}, _user as Walker.Properties),
+        data: Object.assign({}, data as Walker.Properties),
+        context: Object.assign({}, context),
+        globals: Object.assign({}, config.globals),
+        user: Object.assign({}, config.user),
         nested: nested || [],
+        consent: Object.assign({}, config.consent),
         id,
         trigger: trigger || '',
         entity,
@@ -109,9 +122,10 @@ function Elbwalker(
         group: _group,
         count: _count,
         version: {
-          config: instance.config.version,
+          config: config.version,
           walker: version,
         },
+        source,
       };
 
       pushToDestination(instance, destination, pushEvent);
@@ -185,14 +199,15 @@ function Elbwalker(
       // Destination initialization
       // Check if the destination was initialized properly or try to do so
       if (destination.init && !destination.config.init) {
-        const init = destination.init();
+        const init = destination.init(destination.config);
         destination.config.init = init;
 
         // don't push if init is false
         if (!init) return false;
       }
 
-      destination.push(event, mappingEvent);
+      // It's time to go to the destination's side now
+      destination.push(event, destination.config, mappingEvent);
 
       return true;
     })();
@@ -203,20 +218,36 @@ function Elbwalker(
   function handleCommand(
     instance: IElbwalker.Function,
     action: string,
-    data: IElbwalker.PushData = {},
+    data?: IElbwalker.PushData,
   ) {
     switch (action) {
+      case IElbwalker.Commands.Config:
+        if (isObject(data))
+          instance.config = getConfig(
+            data as IElbwalker.Config,
+            instance.config,
+          );
+        break;
       case IElbwalker.Commands.Consent:
-        setConsent(instance, data as IElbwalker.Consent);
+        isObject(data) && setConsent(instance, data as IElbwalker.Consent);
         break;
       case IElbwalker.Commands.Destination:
-        addDestination(data as WebDestination.Function);
+        isObject(data) && addDestination(data as WebDestination.Function);
+        break;
+      case IElbwalker.Commands.Init:
+        const elems: unknown[] = Array.isArray(data)
+          ? data
+          : [data || document];
+        elems.forEach((elem) => {
+          isElementOrDocument(elem) &&
+            initScopeTrigger(instance, elem as IElbwalker.Scope);
+        });
         break;
       case IElbwalker.Commands.Run:
         ready(run, instance);
         break;
       case IElbwalker.Commands.User:
-        setUserIds(data as IElbwalker.User);
+        isObject(data) && setUserIds(instance, data as IElbwalker.User);
         break;
       default:
         break;
@@ -230,7 +261,7 @@ function Elbwalker(
       event?: IArguments | unknown,
       data?: IElbwalker.PushData,
       trigger?: string,
-      context?: Walker.Properties,
+      context?: Walker.OrderedProperties,
       nested?: Walker.Entities,
     ) {
       // Pushed as Arguments
@@ -266,8 +297,12 @@ function Elbwalker(
     _group = randomString();
 
     // Load globals properties
+    // Use the default globals set by initalization
     // Due to site performance only once every run
-    _globals = getGlobalProperties(instance.config.prefix);
+    instance.config.globals = assign(
+      staticGlobals,
+      getGlobalProperties(instance.config.prefix),
+    );
 
     // Reset all destination queues
     destinations.forEach((destination) => {
@@ -280,7 +315,7 @@ function Elbwalker(
       callPredefined(instance);
     }
 
-    trycatch(triggerLoad)(instance);
+    trycatch(load)(instance);
   }
 
   // Handle existing events in the elbLayer on first run
@@ -340,33 +375,73 @@ function Elbwalker(
     });
 
     if (runQueue) {
+      const config = instance.config;
       destinations.forEach((destination) => {
         let queue = destination.queue || [];
 
         // Try to push and remove successful ones from queue
-        queue = queue.filter(
-          (event) => !pushToDestination(instance, destination, event, false),
-        );
+        destination.queue = queue.filter((event) => {
+          // Update previous values with the current state
+          event.consent = config.consent;
+          event.globals = config.globals;
+          event.user = config.user;
+
+          return !pushToDestination(instance, destination, event, false);
+        });
       });
     }
   }
 
-  function setUserIds(data: IElbwalker.User) {
+  function setUserIds(instance: IElbwalker.Function, data: IElbwalker.User) {
+    const user = instance.config.user;
     // user ids can't be set to undefined
-    if (data.id) _user.id = data.id;
-    if (data.device) _user.device = data.device;
-    if (data.hash) _user.hash = data.hash;
+    if (data.id) user.id = data.id;
+    if (data.device) user.device = data.device;
+    if (data.session) user.session = data.session;
   }
 
   function addDestination(data: WebDestination.Function) {
-    // Skip validation due to trycatch calls on push
-    const destination = {
+    // Basic validation
+    if (!data.push) return;
+
+    const destination: WebDestination.Function = {
       init: data.init,
       push: data.push,
       config: data.config || { init: false },
-    } as WebDestination.Function;
+    };
 
     destinations.push(destination);
+  }
+
+  function getConfig(
+    values: Partial<IElbwalker.Config>,
+    current: Partial<IElbwalker.Config> = {},
+  ): IElbwalker.Config {
+    return {
+      // Value hierarchy: values > current > default
+
+      // Handle the consent states
+      consent: values.consent || current.consent || {},
+      // Async access api in window as array
+      elbLayer:
+        values.elbLayer ||
+        current.elbLayer ||
+        (window.elbLayer = window.elbLayer || []),
+      // Globals enhanced with the static globals from init and previous values
+      globals: assign(
+        staticGlobals,
+        assign(current.globals || {}, values.globals || {}),
+      ),
+      // Trigger a page view event by default
+      pageview:
+        'pageview' in values ? !!values.pageview : current.pageview || true,
+      // HTML prefix attribute
+      prefix: values.prefix || current.prefix || IElbwalker.Commands.Prefix,
+      // Handles the user ids
+      user: values.user || current.user || {},
+      // Helpful to differentiate the clients used setup version
+      version: values.version || current.version || 0,
+    };
   }
 
   return instance;

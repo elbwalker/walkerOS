@@ -28,11 +28,10 @@ export namespace DestinationPlausible {
 export const destination: DestinationPlausible.Function = {
   config: {},
 
-  init() {
-    let config = this.config;
-    config.custom = config.custom || {};
+  init(config: DestinationPlausible.Config) {
+    const custom = config.custom || {};
 
-    if (config.loadScript) addScript(config.custom.domain);
+    if (config.loadScript) addScript(custom.domain);
 
     w.plausible =
       w.plausible ||

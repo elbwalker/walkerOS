@@ -85,7 +85,7 @@ describe('Destination Google GA4', () => {
   });
 
   test('Settings', () => {
-    config.custom.transport_url = transport_url;
+    config.custom!.transport_url = transport_url;
     destination.config = config;
 
     elbwalker.push('walker destination', destination);

@@ -8,8 +8,8 @@ declare global {
 
 export namespace DestinationGA4 {
   export interface Config extends WebDestination.Config {
-    custom: {
-      measurementId: string;
+    custom?: {
+      measurementId?: string;
       transport_url?: string;
     };
     mapping?: WebDestination.Mapping<EventConfig>;
@@ -29,19 +29,18 @@ const w = window;
 const destination: DestinationGA4.Function = {
   config: { custom: { measurementId: '' } },
 
-  init() {
-    let config = this.config;
+  init(config: DestinationGA4.Config) {
+    const custom = config.custom || {};
     const settings: IElbwalker.AnyObject = {};
 
     // required measuremt id
-    if (!config.custom.measurementId) return false;
+    if (!custom.measurementId) return false;
 
     // custom transport url
-    if (config.custom.transport_url)
-      settings.transport_url = config.custom.transport_url;
+    if (custom.transport_url) settings.transport_url = custom.transport_url;
 
     // Load the gtag script
-    if (config.loadScript) addScript(config.custom.measurementId);
+    if (config.loadScript) addScript(custom.measurementId);
 
     // setup required methods
     w.dataLayer = w.dataLayer || [];
@@ -53,14 +52,24 @@ const destination: DestinationGA4.Function = {
     }
 
     // gtag init call
-    w.gtag('config', config.custom.measurementId, settings);
+    w.gtag('config', custom.measurementId, settings);
 
     return true;
   },
 
-  push(event: IElbwalker.Event, mapping: DestinationGA4.EventConfig = {}) {
+  push(
+    event: IElbwalker.Event,
+    config?: DestinationGA4.Config,
+    mapping: DestinationGA4.EventConfig = {},
+  ) {
+    config = config || {};
+    const custom = config.custom || {};
+
+    if (!custom.measurementId) return;
+
     let data = event.data || {};
-    data.send_to = this.config.custom.measurementId;
+
+    data.send_to = custom.measurementId;
 
     w.gtag('event', event.event, data);
   },

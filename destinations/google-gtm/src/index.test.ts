@@ -78,6 +78,7 @@ describe('destination google-tag-manager', () => {
       globals: {},
       user: {},
       nested: [],
+      consent: {},
       id: expect.any(String),
       trigger: 'manual',
       entity: 'entity',
@@ -87,6 +88,11 @@ describe('destination google-tag-manager', () => {
       group: expect.any(String),
       count: 2,
       version,
+      source: {
+        type: 1,
+        id: expect.any(String),
+        previous_id: expect.any(String),
+      },
       walker: true,
     });
   });

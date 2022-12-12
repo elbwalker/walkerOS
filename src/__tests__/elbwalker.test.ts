@@ -1,13 +1,11 @@
 import Elbwalker from '../elbwalker';
-import { IElbwalker, Walker } from '../';
+import { IElbwalker } from '../';
 import fs from 'fs';
-import _ from 'lodash';
-require('intersection-observer');
 
 describe('Elbwalker', () => {
   const w = window;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
-  const version = { config: 0, walker: 1.5 };
+  const version = { config: 0, walker: 1.6 };
 
   let elbwalker: IElbwalker.Function;
 
@@ -20,7 +18,7 @@ describe('Elbwalker', () => {
     w.dataLayer!.push = mockFn;
     w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
 
-    elbwalker = Elbwalker({ default: true });
+    elbwalker = Elbwalker({ default: true, consent: { test: true } });
   });
 
   test('go', () => {
@@ -51,6 +49,7 @@ describe('Elbwalker', () => {
       globals: {},
       user: {},
       nested: [],
+      consent: { test: true },
       id: expect.any(String),
       trigger: '',
       entity: 'entity',
@@ -60,6 +59,11 @@ describe('Elbwalker', () => {
       group: expect.any(String),
       count: 2,
       version,
+      source: {
+        type: IElbwalker.SourceType.Web,
+        id: 'http://localhost/',
+        previous_id: '',
+      },
       walker: true,
     });
 
@@ -70,6 +74,7 @@ describe('Elbwalker', () => {
       globals: {},
       user: {},
       nested: [],
+      consent: { test: true },
       id: expect.any(String),
       trigger: '',
       entity: 'entity',
@@ -79,33 +84,46 @@ describe('Elbwalker', () => {
       group: expect.any(String),
       count: 3,
       version,
+      source: {
+        type: IElbwalker.SourceType.Web,
+        id: 'http://localhost/',
+        previous_id: '',
+      },
       walker: true,
     });
   });
 
-  test('Global properties', () => {
+  test('globals properties', () => {
     const html: string = fs
       .readFileSync(__dirname + '/html/globals.html')
       .toString();
     document.body.innerHTML = html;
 
-    jest.clearAllMocks(); // skip auto page view event
-    elbwalker.push('walker run');
+    jest.clearAllMocks(); // skip previous init
+    w.elbLayer = [];
+    elbwalker = Elbwalker({
+      default: true,
+      pageview: false,
+      globals: { outof: 'override', static: 'value' },
+    });
 
     expect(mockFn).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        event: 'page view',
-        globals: { outof: 'scope' },
+        event: 'entity action',
+        data: { foo: 'bar' },
+        globals: { outof: 'scope', static: 'value' },
       }),
     );
 
+    jest.clearAllMocks(); // skip previous init
+    elbwalker.push('walker run');
     expect(mockFn).toHaveBeenNthCalledWith(
-      2,
+      1,
       expect.objectContaining({
         event: 'entity action',
         data: { foo: 'bar' },
-        globals: { outof: 'scope' },
+        globals: { outof: 'scope', static: 'value' },
       }),
     );
   });
@@ -121,6 +139,40 @@ describe('Elbwalker', () => {
     expect(mockFn.mock.calls[3][0].group).not.toEqual(groupId); // page view
   });
 
+  test('source', () => {
+    const location = document.location;
+    const referrer = document.referrer;
+
+    const newPageId = 'https://www.elbwalker.com/source_id';
+    const newPageReferrer = 'https://docs.elbwalker.com';
+    Object.defineProperty(window, 'location', {
+      value: new URL(newPageId),
+      writable: true,
+    });
+    Object.defineProperty(document, 'referrer', {
+      value: newPageReferrer,
+      writable: true,
+    });
+
+    elbwalker.push('entity source');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'entity source',
+        source: {
+          type: IElbwalker.SourceType.Web,
+          id: newPageId,
+          previous_id: newPageReferrer,
+        },
+      }),
+    );
+
+    window.location = location;
+    Object.defineProperty(document, 'referrer', {
+      value: referrer,
+      writable: true,
+    });
+  });
+
   test('walker commands', () => {
     mockFn.mockClear();
     elbwalker.push('walker action');
@@ -132,6 +184,7 @@ describe('Elbwalker', () => {
   test('walker user', () => {
     elbwalker.push('walker run');
 
+    // Missing argument
     elbwalker.push('walker user');
     elbwalker.push('entity action');
     expect(mockFn).toHaveBeenCalledWith(
@@ -159,12 +212,12 @@ describe('Elbwalker', () => {
       }),
     );
 
-    elbwalker.push('walker user', { hash: 'hashid' });
+    elbwalker.push('walker user', { session: 'sessionid' });
     elbwalker.push('entity action');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
-        user: { id: 'userid', device: 'userid', hash: 'hashid' },
+        user: { id: 'userid', device: 'userid', session: 'sessionid' },
       }),
     );
   });
@@ -173,6 +226,7 @@ describe('Elbwalker', () => {
     jest.clearAllMocks();
     elbwalker = Elbwalker({
       consent: { functional: true },
+      default: true,
       pageview: false,
     });
 
@@ -180,13 +234,39 @@ describe('Elbwalker', () => {
 
     expect(elbwalker.config.consent.functional).toBeTruthy();
     expect(elbwalker.config.consent.marketing).not.toBeTruthy();
+    elbwalker.push('consent check');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'consent check',
+        consent: { functional: true },
+      }),
+    );
+
+    // Missing argument
+    elbwalker.push('walker consent');
+    expect(elbwalker.config.consent.functional).toBeTruthy();
+    expect(elbwalker.config.consent.marketing).not.toBeTruthy();
 
     // Grant permissions
     elbwalker.push('walker consent', { marketing: true });
     expect(elbwalker.config.consent.marketing).toBeTruthy();
+    elbwalker.push('consent check');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'consent check',
+        consent: { functional: true, marketing: true },
+      }),
+    );
 
     // Revoke permissions
     elbwalker.push('walker consent', { marketing: false });
     expect(elbwalker.config.consent.marketing).not.toBeTruthy();
+    elbwalker.push('consent check');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'consent check',
+        consent: { functional: true, marketing: false },
+      }),
+    );
   });
 });

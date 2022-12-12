@@ -56,7 +56,7 @@ generates an event like
   },
   context: {
     // Related properties defined with the data-elbcontext attribute
-    test: 'engagement'
+    test: ['engagement', 0] // Value and order
   },
   globals: {
     // General Properties defined with the data-elbglobals attribute
@@ -66,9 +66,10 @@ generates an event like
     // stored user ids (manually added once)
     id: 'userid',
     device: 'cookieid',
-    hash: 'sessionid',
+    session: 'sessionid',
   },
   nested: [], // all nested entities within the promotion
+  consent: { functional: true }, // status of the consent state(s)
   id: '1647968113641-01b5e2-5', // timestamp, group & count of the event
   trigger: 'visible', // name of the trigger that fired
   entity: 'promotion', // entity name
@@ -81,6 +82,12 @@ generates an event like
     // Helpful when working with raw data
     walker: 1.5, // used walker.js version
     config: 42, // a custom configuration version number
+  },
+  source: {
+    // Origins of the event
+    type: 1, // Source type of the event (1=Web)
+    id: 'https://github.com/elbwalker/walker.js', // Source id of the event's origin (url)
+    previous_id: 'https://www.elbwalker.com/' // Previous source id of the event's origin (referrer)
   },
   walker: true, // flag to filter events
 }

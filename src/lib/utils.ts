@@ -1,4 +1,4 @@
-import { IElbwalker, Walker } from '../types';
+import { IElbwalker, Utils, Walker } from '../types';
 import { getElbAttributeName, getElbValues } from './walker';
 
 export function trycatch<P extends unknown[], R>(
@@ -99,11 +99,92 @@ export function isArgument(event: unknown) {
   return {}.hasOwnProperty.call(event, 'callee');
 }
 
+export function isVisible(element: HTMLElement): boolean {
+  // Check for hiding styles
+  const style = getComputedStyle(element);
+  if (style.display === 'none') return false;
+  if (style.visibility !== 'visible') return false;
+  if (style.opacity && Number(style.opacity) < 0.1) return false;
+
+  // Window positions
+  let pointContainer;
+  const windowHeight = window.innerHeight; // Height of the viewport
+
+  // Element positions
+  const elemRectRel = element.getBoundingClientRect(); // Get the elements relative to the viewport
+  const elementHeight = elemRectRel.height; // Height of the element
+  const elementTopRel = elemRectRel.y; // Relative distance from window top to element top
+  const elementBottomRel = elementTopRel + elementHeight; // Relative distance from window to to element bottom
+  const elemCenterRel = {
+    // Relative position on viewport of the elements center
+    x: elemRectRel.x + element.offsetWidth / 2,
+    y: elemRectRel.y + element.offsetHeight / 2,
+  };
+
+  // Differentiate between small and large elements
+  if (elementHeight <= windowHeight) {
+    // Smaller than the viewport
+
+    // Must have a width and height
+    if (
+      element.offsetWidth + elemRectRel.width === 0 ||
+      element.offsetHeight + elemRectRel.height === 0
+    )
+      return false;
+
+    if (elemCenterRel.x < 0) return false;
+    if (
+      elemCenterRel.x >
+      (document.documentElement.clientWidth || window.innerWidth)
+    )
+      return false;
+    if (elemCenterRel.y < 0) return false;
+    if (
+      elemCenterRel.y >
+      (document.documentElement.clientHeight || window.innerHeight)
+    )
+      return false;
+
+    // Select the element that is at the center of the target
+    pointContainer = document.elementFromPoint(
+      elemCenterRel.x,
+      elemCenterRel.y,
+    );
+  } else {
+    // Bigger than the viewport
+
+    // that are considered visible if they fill half of the screen
+    const viewportCenter = windowHeight / 2;
+
+    // Check if upper part is above the viewports center
+    if (elementTopRel < 0 && elementBottomRel < viewportCenter) return false;
+
+    // Check if lower part is below the viewports center
+    if (elementBottomRel > windowHeight && elementTopRel > viewportCenter)
+      return false;
+
+    // Select the element that is in the middle of the screen
+    pointContainer = document.elementFromPoint(
+      elemCenterRel.x,
+      windowHeight / 2,
+    );
+  }
+
+  // Check for potential overlays
+  if (pointContainer) {
+    do {
+      if (pointContainer === element) return true; // should be visible
+    } while ((pointContainer = pointContainer.parentElement));
+  }
+
+  return false;
+}
+
 export const elb: IElbwalker.Elb = function () {
   (window.elbLayer = window.elbLayer || []).push(arguments);
 };
 
-export function castValue(value: unknown): Walker.Property {
+export function castValue(value: unknown): Walker.PropertyType {
   if (value === 'true') return true;
   if (value === 'false') return false;
 
@@ -111,4 +192,154 @@ export function castValue(value: unknown): Walker.Property {
   if (value == number && value !== '') return number;
 
   return String(value);
+}
+
+export function throttle<P extends unknown[], R>(
+  fn: (...args: P) => R | undefined,
+  delay = 1000,
+): (...args: P) => R | undefined {
+  let isBlocked: NodeJS.Timeout | 0;
+
+  return function (...args: P): R | undefined {
+    // Skip since function is still blocked by previous call
+    if (isBlocked) return;
+
+    // Set a blocking timeout
+    isBlocked = setTimeout(() => {
+      // Unblock function
+      isBlocked = 0;
+    }, delay);
+
+    // Call the function
+    return fn(...args);
+  };
+}
+
+export function debounce<P extends unknown[], R>(
+  fn: (...args: P) => R,
+  wait = 1000,
+) {
+  let timer: NodeJS.Timeout;
+
+  return (...args: P): Promise<R> => {
+    // abort previous invocation
+    clearTimeout(timer);
+
+    // Return value as promise
+    return new Promise((resolve) => {
+      // Schedule execution
+      timer = setTimeout(() => {
+        // Call the function
+        resolve(fn(...args));
+      }, wait);
+    });
+  };
+}
+
+export function setItem(
+  key: string,
+  value: Walker.PropertyType,
+  maxAgeInMinutes = 30,
+  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+  domain?: string,
+) {
+  const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
+  const item: Utils.Storage.Value = { e, v: String(value) };
+  const stringifiedItem = JSON.stringify(item);
+
+  switch (storage) {
+    case Utils.Storage.Type.Cookie:
+      let cookie = `${key}=${encodeURIComponent(value)}; max-age=${
+        maxAgeInMinutes * 60
+      }; path=/; SameSite=Lax; secure`;
+
+      if (domain) cookie += '; domain=' + domain;
+
+      document.cookie = cookie;
+      break;
+    case Utils.Storage.Type.Local:
+      window.localStorage.setItem(key, stringifiedItem);
+      break;
+    case Utils.Storage.Type.Session:
+      window.sessionStorage.setItem(key, stringifiedItem);
+      break;
+  }
+}
+
+export function getItem(
+  key: string,
+  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+): Walker.PropertyType {
+  // Helper function for local and session storage to support expiration
+  function parseItem(string: string | null): Utils.Storage.Value {
+    try {
+      return JSON.parse(string || '');
+    } catch (err) {
+      let e = 1,
+        v = '';
+
+      // Remove expiration date
+      if (string) {
+        e = 0;
+        v = string;
+      }
+
+      return { e, v };
+    }
+  }
+  let value, item;
+
+  switch (storage) {
+    case Utils.Storage.Type.Cookie:
+      value = decodeURIComponent(
+        document.cookie
+          .split('; ')
+          .find((row) => row.startsWith(key + '='))
+          ?.split('=')[1] || '',
+      );
+      break;
+    case Utils.Storage.Type.Local:
+      item = parseItem(window.localStorage.getItem(key));
+      break;
+    case Utils.Storage.Type.Session:
+      item = parseItem(window.sessionStorage.getItem(key));
+      break;
+  }
+
+  // Check if item is expired
+  if (item) {
+    value = item.v;
+
+    if (item.e != 0 && item.e < Date.now()) {
+      removeItem(key, storage); // Remove item
+      value = ''; // Conceal the outdated value
+    }
+  }
+
+  return castValue(value || '');
+}
+
+export function removeItem(
+  key: string,
+  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+) {
+  switch (storage) {
+    case Utils.Storage.Type.Cookie:
+      setItem(key, '', 0, storage);
+      break;
+    case Utils.Storage.Type.Local:
+      window.localStorage.removeItem(key);
+      break;
+    case Utils.Storage.Type.Session:
+      window.sessionStorage.removeItem(key);
+      break;
+  }
+}
+
+export function isObject(obj: unknown) {
+  return typeof obj === 'object' && !Array.isArray(obj) && obj !== null;
+}
+
+export function isElementOrDocument(elem: unknown) {
+  return elem === document || elem instanceof HTMLElement;
 }

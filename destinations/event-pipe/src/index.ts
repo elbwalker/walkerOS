@@ -8,7 +8,7 @@ declare global {
 
 export namespace DestinationEventPipe {
   export interface Config extends WebDestination.Config {
-    custom: {
+    custom?: {
       api?: string;
       projectId?: string;
       exclusionParameters?: ExclusionParameters;
@@ -34,8 +34,8 @@ const defaultAPI = 'https://moin.p.elbwalkerapis.com/lama';
 const destination: DestinationEventPipe.Function = {
   config: { custom: { projectId: '' } },
 
-  init() {
-    let config = this.config;
+  init(config: DestinationEventPipe.Config) {
+    if (!config.custom) config.custom = {};
 
     // Require projectId
     if (!config.custom.projectId) return false;
@@ -45,9 +45,12 @@ const destination: DestinationEventPipe.Function = {
 
   push(
     event: IElbwalker.Event,
-    mapping: DestinationEventPipe.EventConfig = {},
+    config?: DestinationEventPipe.Config,
+    mapping?: DestinationEventPipe.EventConfig,
   ) {
-    const config = this.config;
+    config = config || { custom: { projectId: '' } };
+    if (!config.custom) config.custom = {};
+
     const href = excludeParameters(
       location.href,
       config.custom.exclusionParameters,

@@ -14,16 +14,16 @@
     ></script>
     <script>
       // Function to push events
-      function walker() {
+      function elb() {
         (window.elbLayer = window.elbLayer || []).push(arguments);
       }
 
       // Static event that will be executed after all walker commands
-      walker('user status', {});
+      elb('user status', {});
 
       // Add destinations
-      walker('walker destination', { push: console.log }); // Debug destination
-      walker('walker destination', {
+      elb('walker destination', { push: console.log }); // Debug destination
+      elb('walker destination', {
         init: function () {
           window.dataLayer = [];
         },
@@ -33,23 +33,23 @@
       }); // GTM destination
 
       // Set user ids (before the first run)
-      walker('walker user', { device: 'c00k131d', id: 'h4sh3dcrm1d' }); // Read from storage
+      elb('walker user', { device: 'c00k131d', id: 'h4sh3dcrm1d' }); // Read from storage
 
       // Change the default data-elb prefix to a custom naming
-      // walker('walker config', { prefix: 'elb' });
+      // elb('walker config', { prefix: 'elb' });
 
       // Simulate a consent granted event
       setTimeout(() => {
-        walker('consent granted', { marketing: true });
+        elb('consent granted', { marketing: true });
       }, 3000);
 
       // Start everything, necessary in custom mode
-      walker('walker run');
+      elb('walker run');
     </script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,aspect-ratio"></script>
   </head>
   <body>
-    <div class="bg-white" elbglobal="page_type:category">
+    <div class="bg-white" data-elbglobals="page_type:category">
       <div>
         <header class="relative bg-white">
           <p
@@ -92,7 +92,7 @@
 
                 <div class="ml-auto flex items-center">
                   <div
-                    data-elbglobals="user_state:anonymous"
+                    data-elbglobals="loggedin:false"
                     class="hidden lg:flex lg:flex-1 lg:items-center lg:justify-end lg:space-x-6"
                   >
                     <a

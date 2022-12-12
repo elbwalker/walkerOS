@@ -3,8 +3,12 @@ import { IElbwalker } from '.';
 export namespace WebDestination {
   type Functions = Function[];
   interface Function {
-    init?: () => boolean;
-    push: (event: IElbwalker.Event, mapping?: EventConfig) => void;
+    init?: (config: Config) => boolean;
+    push: (
+      event: IElbwalker.Event,
+      config?: Config,
+      mapping?: EventConfig,
+    ) => void;
     config: Config;
     queue?: Array<IElbwalker.Event>; // Non processed events yet and resettet with each new run
   }

@@ -29,8 +29,7 @@ const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
 export const destination: DestinationGTM.Function = {
   config: {},
 
-  init() {
-    let config = this.config;
+  init(config: DestinationGTM.Config) {
     config.custom = config.custom || {};
 
     const dataLayer = config.custom.dataLayer || defaultDataLayer;

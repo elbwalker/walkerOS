@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ES5",
-    "module": "CommonJS",
+    "target": "es2018",
+    "module": "esnext",
     "lib": ["dom", "es6"],
     "outDir": "dist",
     "preserveConstEnums": true,
