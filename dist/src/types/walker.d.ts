@@ -4,14 +4,18 @@ export namespace Walker {
     entity: string;
     action: string;
     data?: Properties;
-    context?: Properties;
+    context?: OrderedProperties;
     trigger?: string;
     nested: Walker.Entities;
   }
 
-  type Property = boolean | string | number;
+  type PropertyType = boolean | string | number;
+  type Property = PropertyType | Array<PropertyType>;
   interface Properties {
-    [key: string]: Property | Array<Property>;
+    [key: string]: Property;
+  }
+  interface OrderedProperties {
+    [key: string]: [Property, number];
   }
 
   type Entities = Array<Entity>;
@@ -19,7 +23,7 @@ export namespace Walker {
     type: string;
     data: Properties;
     nested: Entities;
-    context: Properties;
+    context: OrderedProperties;
   }
 
   type KeyVal = [string, string];
@@ -31,6 +35,7 @@ export namespace Walker {
     Hover = 'hover',
     Load = 'load',
     Pulse = 'pulse',
+    Scroll = 'scroll',
     Submit = 'submit',
     Visible = 'visible',
     Wait = 'wait',
@@ -40,9 +45,7 @@ export namespace Walker {
     [name: string]: boolean;
   }
 
-  type Scope = Document | Element;
-
-  interface TriggersActions {
+  interface TriggersActionGroups {
     [trigger: string]: TriggerActions;
   }
 
@@ -54,4 +57,6 @@ export namespace Walker {
     action: string;
     actionParams?: string;
   }
+
+  type ScrollElements = Array<[HTMLElement, number]>;
 }
