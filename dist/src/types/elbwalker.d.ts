@@ -18,7 +18,11 @@ export namespace IElbwalker {
     ): void;
     (event: 'walker config', config: Partial<Config>): void;
     (event: 'walker consent', consent: Consent): void;
-    (event: 'walker destination', destination: WebDestination.Function): void;
+    (
+      event: 'walker destination',
+      destination: WebDestination.Function,
+      config?: WebDestination.Config,
+    ): void;
     (event: 'walker init', scope: Scope | Scope[]): void;
     (event: 'walker run'): void;
     (event: 'walker user', user: User): void;

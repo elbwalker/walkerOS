@@ -58,7 +58,7 @@ function Elbwalker(
   function push(
     event?: unknown,
     data?: IElbwalker.PushData,
-    trigger?: string,
+    options?: string | WebDestination.Config,
     context?: Walker.OrderedProperties,
     nested?: Walker.Entities,
   ): void {
@@ -77,7 +77,7 @@ function Elbwalker(
 
     // Handle internal walker command events
     if (entity === IElbwalker.Commands.Walker) {
-      handleCommand(instance, action, data);
+      handleCommand(instance, action, data, options as WebDestination.Config);
       return;
     }
 
@@ -114,7 +114,7 @@ function Elbwalker(
         nested: nested || [],
         consent: Object.assign({}, config.consent),
         id,
-        trigger: trigger || '',
+        trigger: (options as string) || '',
         entity,
         action,
         timestamp,
@@ -219,6 +219,7 @@ function Elbwalker(
     instance: IElbwalker.Function,
     action: string,
     data?: IElbwalker.PushData,
+    options?: WebDestination.Config,
   ) {
     switch (action) {
       case IElbwalker.Commands.Config:
@@ -232,7 +233,8 @@ function Elbwalker(
         isObject(data) && setConsent(instance, data as IElbwalker.Consent);
         break;
       case IElbwalker.Commands.Destination:
-        isObject(data) && addDestination(data as WebDestination.Function);
+        isObject(data) &&
+          addDestination(data as WebDestination.Function, options);
         break;
       case IElbwalker.Commands.Init:
         const elems: unknown[] = Array.isArray(data)
@@ -400,14 +402,20 @@ function Elbwalker(
     if (data.session) user.session = data.session;
   }
 
-  function addDestination(data: WebDestination.Function) {
+  function addDestination(
+    data: WebDestination.Function,
+    options?: WebDestination.Config,
+  ) {
     // Basic validation
     if (!data.push) return;
+
+    // Prefere explicit given config over default config
+    const config = options || data.config || { init: false };
 
     const destination: WebDestination.Function = {
       init: data.init,
       push: data.push,
-      config: data.config || { init: false },
+      config,
     };
 
     destinations.push(destination);
