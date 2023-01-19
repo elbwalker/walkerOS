@@ -464,35 +464,44 @@ describe('Destination', () => {
     elbwalker = Elbwalker({ elbLayer: [], pageview: false });
     elbwalker.push('walker run');
 
+    const mockInitA = jest.fn();
     const mockPushA = jest.fn();
+    const mockInitB = jest.fn().mockImplementation(() => {
+      return true;
+    });
     const mockPushB = jest.fn();
 
     const name = 'foo';
-    const config = { mapping: { p: { v: { name } } } };
+    const config = { init: true, mapping: { p: { v: { name } } } };
 
     const destinationA: WebDestination.Function = {
+      init: mockInitA,
       push: mockPushA,
       config,
     };
 
     const destinationB: WebDestination.Function = {
+      init: mockInitB,
       push: mockPushB,
       config,
     };
 
     elbwalker.push('walker destination', destinationA);
     elbwalker.push('walker destination', destinationB, {
+      init: false,
       mapping: { p: { v: { name: 'different' } } },
     });
 
     jest.clearAllMocks();
     elbwalker.push('p v');
 
+    expect(mockInitA).not.toHaveBeenCalled();
     expect(mockPushA).toHaveBeenCalledWith(
       expect.objectContaining({ event: name }),
       expect.anything(),
       { name },
     );
+    expect(mockInitB).toHaveBeenCalled();
     expect(mockPushB).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'different' }),
       expect.anything(),
