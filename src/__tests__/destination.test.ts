@@ -434,7 +434,7 @@ describe('Destination', () => {
     expect(mockPushA).toHaveBeenCalledTimes(0);
   });
 
-  test('Custom event name', () => {
+  test('custom event name', () => {
     elbwalker.push('walker run');
 
     const mockPushA = jest.fn();
@@ -457,6 +457,46 @@ describe('Destination', () => {
       }),
       config,
       { name: 'page_view' },
+    );
+  });
+
+  test('set config on init', () => {
+    elbwalker = Elbwalker({ elbLayer: [], pageview: false });
+    elbwalker.push('walker run');
+
+    const mockPushA = jest.fn();
+    const mockPushB = jest.fn();
+
+    const name = 'foo';
+    const config = { mapping: { p: { v: { name } } } };
+
+    const destinationA: WebDestination.Function = {
+      push: mockPushA,
+      config,
+    };
+
+    const destinationB: WebDestination.Function = {
+      push: mockPushB,
+      config,
+    };
+
+    elbwalker.push('walker destination', destinationA);
+    elbwalker.push('walker destination', destinationB, {
+      mapping: { p: { v: { name: 'different' } } },
+    });
+
+    jest.clearAllMocks();
+    elbwalker.push('p v');
+
+    expect(mockPushA).toHaveBeenCalledWith(
+      expect.objectContaining({ event: name }),
+      expect.anything(),
+      { name },
+    );
+    expect(mockPushB).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'different' }),
+      expect.anything(),
+      { name: 'different' },
     );
   });
 });
