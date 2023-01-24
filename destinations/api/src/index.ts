@@ -1,9 +1,7 @@
 import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
 
 declare global {
-  interface Window {
-    xxx?: Function; // global window objects
-  }
+  interface Window {}
 }
 
 const w = window;
@@ -11,7 +9,7 @@ const w = window;
 export namespace DestinationAPI {
   export interface Config extends WebDestination.Config {
     custom?: {
-      // APIs custom settings
+      url?: string;
     };
     mapping?: WebDestination.Mapping<EventConfig>;
   }
@@ -29,8 +27,6 @@ export const destination: DestinationAPI.Function = {
   config: {},
 
   init(config: DestinationAPI.Config) {
-    if (config.loadScript) addScript();
-
     // Do something initializing
 
     return true;
@@ -38,17 +34,18 @@ export const destination: DestinationAPI.Function = {
 
   push(
     event: IElbwalker.Event,
-    config?: DestinationAPI.Config,
+    config: DestinationAPI.Config = {},
     mapping: DestinationAPI.EventConfig = {},
   ): void {
-    // Do something magical
+    const custom = config.custom || {};
+
+    if (!custom.url) return;
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', custom.url, true);
+    xhr.setRequestHeader('Content-type', 'text/plain; charset=utf-8');
+    xhr.send(JSON.stringify(event));
   },
 };
-
-function addScript(src = 'https://API_DOMAIN/xxx.js') {
-  const script = document.createElement('script');
-  script.src = src;
-  document.head.appendChild(script);
-}
 
 export default destination;
