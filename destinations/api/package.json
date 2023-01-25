@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-api",
   "version": "1.0.0",
-  "description": "",
+  "description": "API web destination for walker.js",
   "main": "dist/index.js",
   "types": "dist",
   "scripts": {

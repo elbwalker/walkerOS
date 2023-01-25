@@ -23,7 +23,8 @@ import destinationAPI, {
 const configAPI: DestinationAPI.Config = {
   // consent: { marketing: true }, // Neccessary consent states
   // custom: {
-  //   XXX
+  //   url: 'https://api.example.com/', // Required
+  //   transport: 'fetch' // Optional, default fetch, xhr as alternative
   // },
   // init: false, // Status if the destination was initialized successfully or should be skipped
   // loadScript: true, // Load additional required scripts on init
