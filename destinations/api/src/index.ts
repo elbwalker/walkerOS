@@ -10,6 +10,7 @@ export namespace DestinationAPI {
   export interface Config extends WebDestination.Config {
     custom?: {
       url?: string;
+      transport?: Transport;
     };
     mapping?: WebDestination.Mapping<EventConfig>;
   }
@@ -21,6 +22,8 @@ export namespace DestinationAPI {
   export interface EventConfig extends WebDestination.EventConfig {
     // Custom destination event mapping properties
   }
+
+  type Transport = 'fetch' | 'xhr';
 }
 
 export const destination: DestinationAPI.Function = {
@@ -41,11 +44,35 @@ export const destination: DestinationAPI.Function = {
 
     if (!custom.url) return;
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', custom.url, true);
-    xhr.setRequestHeader('Content-type', 'text/plain; charset=utf-8');
-    xhr.send(JSON.stringify(event));
+    const data = JSON.stringify(event);
+    switch (custom.transport) {
+      case 'xhr':
+        sendAsXhr(data, custom.url);
+        break;
+      case 'fetch':
+      default:
+        sendAsFetch(data, custom.url);
+        break;
+    }
   },
 };
+
+function sendAsFetch(data: string, url: string) {
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    keepalive: true, // Sending data even after the tab is closed
+    body: data,
+  });
+}
+
+function sendAsXhr(data: string, url: string) {
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', url, true);
+  xhr.setRequestHeader('Content-type', 'text/plain; charset=utf-8');
+  xhr.send(data);
+}
 
 export default destination;

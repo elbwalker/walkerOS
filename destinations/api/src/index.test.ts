@@ -8,6 +8,7 @@ describe('Destination API', () => {
     config: DestinationAPI.Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
+  const mockFetch = jest.fn();
   const mockXHROpen = jest.fn();
   const mockXHRSend = jest.fn();
   const mockXHRHeader = jest.fn();
@@ -19,8 +20,10 @@ describe('Destination API', () => {
     responseText: JSON.stringify('demo'),
   };
   const oldXMLHttpRequest = w.XMLHttpRequest;
+  const oldFetch = w.fetch;
 
   const event = 'entity action';
+  const url = 'https://api.elbwalker.com/';
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -33,6 +36,7 @@ describe('Destination API', () => {
     elbwalker = Elbwalker();
     elbwalker.push('walker run');
 
+    window.fetch = mockFetch;
     Object.defineProperty(window, 'XMLHttpRequest', {
       value: jest.fn(() => mockXHR),
       writable: true,
@@ -41,6 +45,7 @@ describe('Destination API', () => {
 
   afterEach(() => {
     document.getElementsByTagName('html')[0].innerHTML = '';
+    window.fetch = oldFetch;
     window.XMLHttpRequest = oldXMLHttpRequest;
   });
 
@@ -53,9 +58,22 @@ describe('Destination API', () => {
     expect(true).toBeTruthy();
   });
 
-  test('push', () => {
+  test('fetch', () => {
     destination.config = {
-      custom: { url: 'https://api.elbwalker.com/' },
+      custom: { url, transport: 'fetch' },
+    };
+    elbwalker.push('walker destination', destination);
+    elbwalker.push(event);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      url,
+      expect.objectContaining({ keepalive: true }),
+    );
+  });
+
+  test('xhr', () => {
+    destination.config = {
+      custom: { url, transport: 'xhr' },
     };
     elbwalker.push('walker destination', destination);
     elbwalker.push(event);
