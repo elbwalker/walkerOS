@@ -21,5 +21,5 @@ export namespace DestinationAPI {
     // Custom destination event mapping properties
   }
 
-  type Transport = 'fetch' | 'xhr';
+  type Transport = 'fetch' | 'beacon' | 'xhr';
 }

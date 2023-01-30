@@ -1,5 +1,5 @@
 import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationAPI } from '.';
+import { DestinationAPI } from './types';
 
 describe('Destination API', () => {
   const w = window;
@@ -9,6 +9,7 @@ describe('Destination API', () => {
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
   const mockFetch = jest.fn();
+  const mockBeacon = jest.fn();
   const mockXHROpen = jest.fn();
   const mockXHRSend = jest.fn();
   const mockXHRHeader = jest.fn();
@@ -21,6 +22,7 @@ describe('Destination API', () => {
   };
   const oldXMLHttpRequest = w.XMLHttpRequest;
   const oldFetch = w.fetch;
+  const oldBeacon = navigator.sendBeacon;
 
   const event = 'entity action';
   const url = 'https://api.elbwalker.com/';
@@ -37,6 +39,7 @@ describe('Destination API', () => {
     elbwalker.push('walker run');
 
     window.fetch = mockFetch;
+    navigator.sendBeacon = mockBeacon;
     Object.defineProperty(window, 'XMLHttpRequest', {
       value: jest.fn(() => mockXHR),
       writable: true,
@@ -46,6 +49,7 @@ describe('Destination API', () => {
   afterEach(() => {
     document.getElementsByTagName('html')[0].innerHTML = '';
     window.fetch = oldFetch;
+    navigator.sendBeacon = oldBeacon;
     window.XMLHttpRequest = oldXMLHttpRequest;
   });
 
@@ -69,6 +73,19 @@ describe('Destination API', () => {
       url,
       expect.objectContaining({ keepalive: true }),
     );
+  });
+
+  test('beacon', () => {
+    destination.config = {
+      custom: { url, transport: 'beacon' },
+    };
+    elbwalker.push('walker destination', destination);
+    elbwalker.push(event);
+
+    expect(mockBeacon).toHaveBeenCalledWith(url, expect.any(String));
+
+    const sentPayload = JSON.parse(mockBeacon.mock.calls[0][1]);
+    expect(sentPayload).toEqual(expect.objectContaining({ event }));
   });
 
   test('xhr', () => {

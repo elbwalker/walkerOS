@@ -24,7 +24,7 @@ const configAPI: DestinationAPI.Config = {
   // consent: { marketing: true }, // Neccessary consent states
   custom: {
     url: 'https://httpbin.org/anything', // Required
-    // transport: 'fetch' // Optional, default fetch, xhr as alternative
+    // transport: 'fetch' // fetch (default), xhr or beacon
   },
   // init: false, // Status if the destination was initialized successfully or should be skipped
   // mapping: {

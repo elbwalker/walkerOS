@@ -21,18 +21,21 @@ const destination: DestinationAPI.Function = {
 
     const data = JSON.stringify(event);
     switch (custom.transport) {
+      case 'beacon':
+        sendAsBeacon(custom.url, data);
+        break;
       case 'xhr':
-        sendAsXhr(data, custom.url);
+        sendAsXhr(custom.url, data);
         break;
       case 'fetch':
       default:
-        sendAsFetch(data, custom.url);
+        sendAsFetch(custom.url, data);
         break;
     }
   },
 };
 
-function sendAsFetch(data: string, url: string) {
+function sendAsFetch(url: string, data: string) {
   fetch(url, {
     method: 'POST',
     headers: {
@@ -43,7 +46,11 @@ function sendAsFetch(data: string, url: string) {
   });
 }
 
-function sendAsXhr(data: string, url: string) {
+function sendAsBeacon(url: string, data: string) {
+  navigator.sendBeacon(url, data);
+}
+
+function sendAsXhr(url: string, data: string) {
   const xhr = new XMLHttpRequest();
   xhr.open('POST', url, true);
   xhr.setRequestHeader('Content-type', 'text/plain; charset=utf-8');
