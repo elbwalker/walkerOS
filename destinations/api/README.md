@@ -6,7 +6,7 @@ More detailed information and examples can be found in the [documentation](https
 
 ## 🤓 Usage
 
-Start by installing the destination with npm:
+Using the destination with npm:
 
 ```sh
 npm i --save @elbwalker/destination-web-api
@@ -22,20 +22,31 @@ import destinationAPI, {
 
 const configAPI: DestinationAPI.Config = {
   // consent: { marketing: true }, // Neccessary consent states
-  // custom: {
-  //   url: 'https://api.example.com/', // Required
-  //   transport: 'fetch' // Optional, default fetch, xhr as alternative
-  // },
+  custom: {
+    url: 'https://httpbin.org/anything', // Required
+    // transport: 'fetch' // Optional, default fetch, xhr as alternative
+  },
   // init: false, // Status if the destination was initialized successfully or should be skipped
-  // loadScript: true, // Load additional required scripts on init
   // mapping: {
   //   '*': { '*': {} }, // Process all events
   // },
 };
 
 // And add the destination to the walker.js
-destinationAPI.config = configAPI;
-elb('walker destination', destinationAPI);
+elb('walker destination', destinationAPI, configAPI);
+```
+
+Using the destination via web import in the browser:
+
+```html
+<script type="module">
+  // Upload the dist/browser.js on your own server
+  import destination from 'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api/dist/browser.js';
+
+  elb('walker destination', destination, {
+    custom: { url: 'https://httpbin.org/anything' },
+  });
+</script>
 ```
 
 ## Contribute
