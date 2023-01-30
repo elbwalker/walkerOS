@@ -1,32 +1,7 @@
-import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
+import { IElbwalker } from '@elbwalker/walker.js';
+import { DestinationAPI } from './types';
 
-declare global {
-  interface Window {}
-}
-
-const w = window;
-
-export namespace DestinationAPI {
-  export interface Config extends WebDestination.Config {
-    custom?: {
-      url?: string;
-      transport?: Transport;
-    };
-    mapping?: WebDestination.Mapping<EventConfig>;
-  }
-
-  export interface Function extends WebDestination.Function {
-    config: Config;
-  }
-
-  export interface EventConfig extends WebDestination.EventConfig {
-    // Custom destination event mapping properties
-  }
-
-  type Transport = 'fetch' | 'xhr';
-}
-
-export const destination: DestinationAPI.Function = {
+const destination: DestinationAPI.Function = {
   config: {},
 
   init(config: DestinationAPI.Config) {
