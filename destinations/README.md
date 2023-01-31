@@ -2,6 +2,7 @@
 
 Understand the concept of destinations, learn how to use them, and how to write you own.
 
+- [API](./api/)
 - [event pipe](./event-pipe/)
 - [Google Ads](./google-ads/)
 - [Google GA4](./google-ga4/)
