@@ -241,12 +241,19 @@ describe('ElbLayer', () => {
   });
 
   test('custom elbLayer', () => {
-    w.elbLayer = undefined as any;
     w.dataLayer = [];
     const customLayer1 = [] as IElbwalker.ElbLayer;
     const customLayer2 = [] as IElbwalker.ElbLayer;
-    const instance1 = Elbwalker({ elbLayer: customLayer1, default: true });
-    const instance2 = Elbwalker({ elbLayer: customLayer2, default: true });
+    const instance1 = Elbwalker({
+      elbLayer: customLayer1,
+      default: true,
+      pageview: false,
+    });
+    const instance2 = Elbwalker({
+      elbLayer: customLayer2,
+      default: true,
+      pageview: false,
+    });
 
     const mockDest1 = jest.fn();
     const mockDest2 = jest.fn();

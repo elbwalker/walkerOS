@@ -19,6 +19,7 @@ export namespace WebDestination {
     init?: boolean; // If the destination has been initialized by calling the init method
     loadScript?: boolean; // If an additional script to work should be loaded
     mapping?: Mapping<EventConfig>; // A map to handle events individually
+    queue?: boolean; // Disable processing of previously pushed events
   }
 
   interface Mapping<EventConfig> {
