@@ -529,6 +529,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
 
+    // Expect previous events
     const mockPushLate = jest.fn();
     const destinationLate: WebDestination.Function = {
       push: mockPushLate,
@@ -543,6 +544,35 @@ describe('Destination', () => {
       undefined,
     );
 
-    // @TODO Test for reset on new run
+    // Expect to only process current events
+    elbwalker.push('walker run');
+    jest.clearAllMocks();
+
+    elbwalker.push('p v2');
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'p v2',
+      }),
+      expect.anything(),
+      undefined,
+    );
+    const mockPushLater = jest.fn();
+    const destinationLater: WebDestination.Function = {
+      push: mockPushLater,
+      config,
+    };
+    elbwalker.push('walker destination', destinationLater);
+    expect(mockPushLater).toHaveBeenCalledTimes(1);
+
+    // Disable processing previous events
+    const mockPushLatest = jest.fn();
+    const destinationLatest: WebDestination.Function = {
+      push: mockPushLatest,
+      config,
+    };
+    elbwalker.push('walker destination', destinationLatest, {
+      queue: false,
+    });
+    expect(mockPushLatest).toHaveBeenCalledTimes(0);
   });
 });

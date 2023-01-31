@@ -428,11 +428,11 @@ function Elbwalker(
       config,
     };
 
-    // Push previous events
-    // @TODO option to disable
-    _queue.forEach((pushEvent) => {
-      pushToDestination(instance, destination, pushEvent);
-    });
+    // Process previous events if not disabled
+    if (config.queue !== false)
+      _queue.forEach((pushEvent) => {
+        pushToDestination(instance, destination, pushEvent);
+      });
 
     destinations.push(destination);
   }
