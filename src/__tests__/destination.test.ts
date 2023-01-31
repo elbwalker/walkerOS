@@ -20,7 +20,7 @@ describe('Destination', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    elbwalker = Elbwalker();
+    elbwalker = Elbwalker({ pageview: false });
     config = { init: false };
 
     destination = {
@@ -73,15 +73,19 @@ describe('Destination', () => {
     const mockInitFalse = jest.fn().mockImplementation(() => {
       return false;
     });
+    const mockPushFalse = jest.fn();
     elbwalker.push('walker destination', {
       config: {},
       init: mockInitFalse,
-      push: mockPush,
+      push: mockPushFalse,
     });
+
+    jest.clearAllMocks();
     elbwalker.push('entity action');
     expect(mockInitFalse).toHaveBeenCalledTimes(1);
     elbwalker.push('entity action');
     expect(mockInitFalse).toHaveBeenCalledTimes(2);
+    expect(mockPushFalse).not.toHaveBeenCalled();
   });
 
   test('multiple destinations', () => {
@@ -507,5 +511,38 @@ describe('Destination', () => {
       expect.anything(),
       { name: 'different' },
     );
+  });
+
+  test('temp async queue', () => {
+    elbwalker = Elbwalker({ elbLayer: [], pageview: false });
+    elbwalker.push('walker run');
+    elbwalker.push('walker destination', destination);
+
+    elbwalker.push('p v');
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'p v',
+      }),
+      expect.anything(),
+      undefined,
+    );
+
+    jest.clearAllMocks();
+
+    const mockPushLate = jest.fn();
+    const destinationLate: WebDestination.Function = {
+      push: mockPushLate,
+      config,
+    };
+    elbwalker.push('walker destination', destinationLate);
+    expect(mockPushLate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'p v',
+      }),
+      expect.anything(),
+      undefined,
+    );
+
+    // @TODO Test for reset on new run
   });
 });

@@ -32,6 +32,7 @@ function Elbwalker(
   let _group = ''; // random id to group events of a run
   let _firstRun = true; // The first run is a special one due to state changes
   let _allowRunning = false; // Wait for explicit run command to start
+  let _queue: IElbwalker.Event[] = []; // Temporary event queue for all events of a run
 
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(instance);
@@ -49,7 +50,7 @@ function Elbwalker(
         });
       },
     };
-    addDestination(destination);
+    addDestination(instance, destination);
     ready(run, instance);
   }
 
@@ -58,9 +59,9 @@ function Elbwalker(
   function push(
     event?: unknown,
     data?: IElbwalker.PushData,
-    options?: string | WebDestination.Config,
-    context?: Walker.OrderedProperties,
-    nested?: Walker.Entities,
+    options: string | WebDestination.Config = '',
+    context: Walker.OrderedProperties = {},
+    nested: Walker.Entities = [],
   ): void {
     if (!event || typeof event !== 'string') return;
 
@@ -101,33 +102,35 @@ function Elbwalker(
       previous_id: document.referrer,
     };
 
-    destinations.forEach((destination) => {
-      // Individual event per destination to prevent a pointer mess
-      const pushEvent: IElbwalker.Event = {
-        event,
-        // Create a new objects for each destination
-        // to prevent data manipulation
-        data: Object.assign({}, data as Walker.Properties),
-        context: Object.assign({}, context),
-        globals: Object.assign({}, config.globals),
-        user: Object.assign({}, config.user),
-        nested: nested || [],
-        consent: Object.assign({}, config.consent),
-        id,
-        trigger: (options as string) || '',
-        entity,
-        action,
-        timestamp,
-        timing,
-        group: _group,
-        count: _count,
-        version: {
-          config: config.version,
-          walker: version,
-        },
-        source,
-      };
+    const pushEvent: IElbwalker.Event = {
+      event,
+      // Create a new objects for each destination
+      // to prevent data manipulation
+      data: data as Walker.Properties,
+      context,
+      globals: config.globals,
+      user: config.user,
+      nested,
+      consent: config.consent,
+      id,
+      trigger: options as string,
+      entity,
+      action,
+      timestamp,
+      timing,
+      group: _group,
+      count: _count,
+      version: {
+        config: config.version,
+        walker: version,
+      },
+      source,
+    };
 
+    // Add event to internal queue
+    _queue.push(pushEvent);
+
+    destinations.forEach((destination) => {
       pushToDestination(instance, destination, pushEvent);
     });
   }
@@ -164,6 +167,9 @@ function Elbwalker(
     event: IElbwalker.Event,
     useQueue = true,
   ): boolean {
+    // Deep copy event to prevent a pointer mess
+    event = JSON.parse(JSON.stringify(event));
+
     // Always check for required consent states before pushing
     if (!allowedToPush(instance, destination)) {
       if (useQueue) {
@@ -234,7 +240,7 @@ function Elbwalker(
         break;
       case IElbwalker.Commands.Destination:
         isObject(data) &&
-          addDestination(data as WebDestination.Function, options);
+          addDestination(instance, data as WebDestination.Function, options);
         break;
       case IElbwalker.Commands.Init:
         const elems: unknown[] = Array.isArray(data)
@@ -297,6 +303,9 @@ function Elbwalker(
 
     // Generate a new group id for each run
     _group = randomString();
+
+    // Reset the queue for each run
+    _queue = [];
 
     // Load globals properties
     // Use the default globals set by initalization
@@ -403,6 +412,7 @@ function Elbwalker(
   }
 
   function addDestination(
+    instance: IElbwalker.Function,
     data: WebDestination.Function,
     options?: WebDestination.Config,
   ) {
@@ -417,6 +427,12 @@ function Elbwalker(
       push: data.push,
       config,
     };
+
+    // Push previous events
+    // @TODO option to disable
+    _queue.forEach((pushEvent) => {
+      pushToDestination(instance, destination, pushEvent);
+    });
 
     destinations.push(destination);
   }
