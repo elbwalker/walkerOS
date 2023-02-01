@@ -33,6 +33,7 @@ function Elbwalker(
   let _firstRun = true; // The first run is a special one due to state changes
   let _allowRunning = false; // Wait for explicit run command to start
   let _queue: IElbwalker.Event[] = []; // Temporary event queue for all events of a run
+  let _timing: number = 0; // Offset counter to calculate timing property
 
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(instance);
@@ -94,7 +95,7 @@ function Elbwalker(
     ++_count;
     const config = instance.config;
     const timestamp = Date.now();
-    const timing = Math.round(performance.now() / 10) / 100;
+    const timing = Math.round((performance.now() - _timing) / 10) / 100;
     const id = `${timestamp}-${_group}-${_count}`;
     const source = {
       type: IElbwalker.SourceType.Web,
@@ -104,8 +105,6 @@ function Elbwalker(
 
     const pushEvent: IElbwalker.Event = {
       event,
-      // Create a new objects for each destination
-      // to prevent data manipulation
       data: data as Walker.Properties,
       context,
       globals: config.globals,
@@ -324,6 +323,8 @@ function Elbwalker(
     if (_firstRun) {
       _firstRun = false;
       callPredefined(instance);
+    } else {
+      _timing = performance.now();
     }
 
     trycatch(load)(instance);
