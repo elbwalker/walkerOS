@@ -20,7 +20,7 @@ export function ready(run: Function, instance: IElbwalker.Function) {
 // Called for each new run to setup triggers
 export function load(instance: IElbwalker.Function) {
   // Trigger static page view if enabled
-  if (instance.config.pageview) view(instance);
+  if (instance.config.pageview) pageView(instance);
 
   initScopeTrigger(instance);
 }
@@ -238,16 +238,39 @@ function scroll(instance: IElbwalker.Function) {
   }
 }
 
-function view(instance: IElbwalker.Function) {
+// @TODO maybe better as a util?
+export function sessionStart(instance: IElbwalker.Function) {
+  // static session start
+  const loc = new URL(window.location.href);
+  const ref = document.referrer && new URL(document.referrer);
+  const data: Walker.Properties = {};
+
+  // @TODO check compatibility
+  const [perf] = performance.getEntriesByType(
+    'navigation',
+  ) as PerformanceNavigationTiming[];
+
+  // @TODO check all possibilities (privacy modes)
+  const isExternal = loc.hostname != (ref && ref.hostname);
+
+  // @TODO check for utm parameters
+  const isMarketing = false;
+
+  // @TODO Only focus on navigation types to ignore reloads
+  if (perf.type === 'navigate')
+    instance.config.elbLayer.push('session start', data, Walker.Trigger.Load);
+}
+
+function pageView(instance: IElbwalker.Function) {
   // static page view
-  const l = window.location;
+  const loc = window.location;
   const data: Walker.Properties = {
-    domain: l.hostname,
+    domain: loc.hostname,
     title: document.title,
     referrer: document.referrer,
   };
-  if (l.search) data.search = l.search;
-  if (l.hash) data.hash = l.hash;
+  if (loc.search) data.search = loc.search;
+  if (loc.hash) data.hash = loc.hash;
 
   // @TODO get all nested entities
   instance.config.elbLayer.push('page view', data, Walker.Trigger.Load);
