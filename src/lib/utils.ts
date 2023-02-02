@@ -376,20 +376,25 @@ export function sessionStart(config: Utils.SessionStart = {}) {
   elbLayer.push('session start', data, Walker.Trigger.Load);
 }
 
-// @TODO option for custom parameters
-export function getMarketingParameters(url: URL): Walker.Properties {
+export function getMarketingParameters(
+  url: URL,
+  custom: Utils.MarketingParameters = {},
+): Walker.Properties {
   const data: Walker.Properties = {};
-  const parameters = {
-    utm_campaign: 'campaign',
-    utm_content: 'content',
-    dclid: 'clickId',
-    fbclid: 'clickId',
-    gclid: 'clickId',
-    utm_medium: 'medium',
-    msclkid: 'clickId',
-    utm_source: 'source',
-    utm_term: 'term',
-  };
+  const parameters = Object.assign(
+    {
+      utm_campaign: 'campaign',
+      utm_content: 'content',
+      dclid: 'clickId',
+      fbclid: 'clickId',
+      gclid: 'clickId',
+      utm_medium: 'medium',
+      msclkid: 'clickId',
+      utm_source: 'source',
+      utm_term: 'term',
+    },
+    custom,
+  );
 
   Object.entries(parameters).forEach(([param, name]) => {
     const value = url.searchParams.get(param);

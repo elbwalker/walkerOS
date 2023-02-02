@@ -210,7 +210,7 @@ describe('Utils', () => {
     expect(getItem(key)).toBe(true);
   });
 
-  test.only('session start', () => {
+  test('session start', () => {
     w.elbLayer = [] as IElbwalker.ElbLayer;
     w.elbLayer.push = mockFn;
 
@@ -255,7 +255,7 @@ describe('Utils', () => {
     expect(mockFn).not.toHaveBeenCalled();
   });
 
-  test('marketing parameters', () => {
+  test.only('marketing parameters', () => {
     const url = 'https://www.elbwalker.com/?';
     expect(getMarketingParameters(new URL(url))).toStrictEqual({});
 
@@ -286,5 +286,12 @@ describe('Utils', () => {
     expect(getMarketingParameters(new URL(url + 'utm_term=t'))).toStrictEqual(
       expect.objectContaining({ term: 't' }),
     );
+
+    // Custom parameters
+    expect(
+      getMarketingParameters(new URL(url + 'utm_custom=bar'), {
+        utm_custom: 'foo',
+      }),
+    ).toStrictEqual(expect.objectContaining({ foo: 'bar' }));
   });
 });

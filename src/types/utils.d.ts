@@ -17,4 +17,8 @@ export namespace Utils {
   interface SessionStart {
     elbLayer?: IElbwalker.ElbLayer;
   }
+
+  interface MarketingParameters {
+    [key: string]: string;
+  }
 }
