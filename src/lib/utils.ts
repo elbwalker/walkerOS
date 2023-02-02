@@ -363,7 +363,7 @@ export function sessionStart(config: Utils.SessionStart = {}) {
   const data: Walker.Properties = {};
 
   // Ignore internal traffic
-  // Small chance of multiple triggers for some users
+  // Small chance of multiple inintendet events for some same users
   // https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding
   if (ref && ref.hostname == loc.hostname) return;
 
@@ -372,4 +372,24 @@ export function sessionStart(config: Utils.SessionStart = {}) {
 }
 
 // @TODO option for custom parameters
-// @TODO export function getMarketingParameters() {}
+export function getMarketingParameters(url: URL): Walker.Properties {
+  const data: Walker.Properties = {};
+  const parameters = {
+    utm_campaign: 'campaign',
+    utm_content: 'content',
+    dclid: 'clickId',
+    fbclid: 'clickId',
+    gclid: 'clickId',
+    utm_medium: 'medium',
+    msclkid: 'clickId',
+    utm_source: 'source',
+    utm_term: 'term',
+  };
+
+  Object.entries(parameters).forEach(([param, name]) => {
+    const value = url.searchParams.get(param);
+    if (value) data[name] = value;
+  });
+
+  return data;
+}

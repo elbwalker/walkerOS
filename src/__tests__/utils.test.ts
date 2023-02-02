@@ -2,6 +2,7 @@ import {
   debounce,
   elb,
   getItem,
+  getMarketingParameters,
   isVisible,
   removeItem,
   sessionStart,
@@ -209,7 +210,7 @@ describe('Utils', () => {
     expect(getItem(key)).toBe(true);
   });
 
-  test.only('session start', () => {
+  test('session start', () => {
     w.elbLayer = [] as IElbwalker.ElbLayer;
     w.elbLayer.push = mockFn;
 
@@ -240,5 +241,38 @@ describe('Utils', () => {
     });
     sessionStart();
     expect(mockFn).not.toHaveBeenCalled();
+  });
+
+  test.only('marketing parameters', () => {
+    const url = 'https://www.elbwalker.com/?';
+    expect(getMarketingParameters(new URL(url))).toStrictEqual({});
+
+    expect(
+      getMarketingParameters(new URL(url + 'utm_campaign=c')),
+    ).toStrictEqual(expect.objectContaining({ campaign: 'c' }));
+    expect(
+      getMarketingParameters(new URL(url + 'utm_content=c')),
+    ).toStrictEqual(expect.objectContaining({ content: 'c' }));
+    expect(getMarketingParameters(new URL(url + 'dclid=id'))).toStrictEqual(
+      expect.objectContaining({ clickId: 'id' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'fbclid=id'))).toStrictEqual(
+      expect.objectContaining({ clickId: 'id' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'gclid=id'))).toStrictEqual(
+      expect.objectContaining({ clickId: 'id' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'utm_medium=m'))).toStrictEqual(
+      expect.objectContaining({ medium: 'm' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'msclkid=id'))).toStrictEqual(
+      expect.objectContaining({ clickId: 'id' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'utm_source=s'))).toStrictEqual(
+      expect.objectContaining({ source: 's' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'utm_term=t'))).toStrictEqual(
+      expect.objectContaining({ term: 't' }),
+    );
   });
 });
