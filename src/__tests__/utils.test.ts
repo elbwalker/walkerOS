@@ -4,10 +4,11 @@ import {
   getItem,
   isVisible,
   removeItem,
+  sessionStart,
   setItem,
   throttle,
 } from '../lib/utils';
-import { Utils } from '../types';
+import { IElbwalker, Utils, Walker } from '../types';
 
 const w = window;
 
@@ -34,8 +35,8 @@ describe('Utils', () => {
   });
 
   test('isVisible', () => {
-    const innerHeight = window.innerHeight;
-    window.innerHeight = 100; // Create a small window
+    const innerHeight = w.innerHeight;
+    w.innerHeight = 100; // Create a small window
 
     let x = 25,
       y = 25,
@@ -99,7 +100,7 @@ describe('Utils', () => {
     });
     expect(isVisible(elem)).toBeTruthy();
 
-    window.innerHeight = innerHeight;
+    w.innerHeight = innerHeight;
   });
 
   test('throttle', () => {
@@ -206,5 +207,38 @@ describe('Utils', () => {
     // Cast
     setItem(key, true);
     expect(getItem(key)).toBe(true);
+  });
+
+  test.only('session start', () => {
+    w.elbLayer = [] as IElbwalker.ElbLayer;
+    w.elbLayer.push = mockFn;
+
+    Object.defineProperty(w, 'performance', {
+      value: {
+        getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
+      },
+    });
+
+    // Direct
+    jest.clearAllMocks();
+    Object.defineProperty(document, 'referrer', {
+      value: '',
+    });
+    sessionStart();
+    expect(mockFn).toHaveBeenCalledWith(
+      'session start',
+      expect.anything(),
+      Walker.Trigger.Load,
+    );
+
+    // Ignore reload
+    jest.clearAllMocks();
+    Object.defineProperty(w, 'performance', {
+      value: {
+        getEntriesByType: jest.fn().mockReturnValue([{ type: 'reload' }]),
+      },
+    });
+    sessionStart();
+    expect(mockFn).not.toHaveBeenCalled();
   });
 });

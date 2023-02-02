@@ -343,3 +343,33 @@ export function isObject(obj: unknown) {
 export function isElementOrDocument(elem: unknown) {
   return elem === document || elem instanceof HTMLElement;
 }
+
+export function sessionStart(config: Utils.SessionStart = {}) {
+  // @TODO
+  // - sub-domain settings
+  // - extract marketing parameters
+  // - optional storage option
+  // - only marketing sessions
+
+  const [perf] = performance.getEntriesByType(
+    'navigation',
+  ) as PerformanceNavigationTiming[];
+
+  // Only focus on navigation types to ignore reloads and others
+  if (perf.type !== 'navigate') return;
+
+  const loc = new URL(window.location.href);
+  const ref = document.referrer && new URL(document.referrer);
+  const data: Walker.Properties = {};
+
+  // Ignore internal traffic
+  // Small chance of multiple triggers for some users
+  // https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding
+  if (ref && ref.hostname == loc.hostname) return;
+
+  const elbLayer = config.elbLayer || window.elbLayer;
+  elbLayer.push('session start', data, Walker.Trigger.Load);
+}
+
+// @TODO option for custom parameters
+// @TODO export function getMarketingParameters() {}

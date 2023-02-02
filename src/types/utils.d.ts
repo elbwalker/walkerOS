@@ -1,3 +1,5 @@
+import { IElbwalker } from './elbwalker';
+
 export namespace Utils {
   namespace Storage {
     const enum Type {
@@ -10,5 +12,9 @@ export namespace Utils {
       e: number; // Expiration timestamp
       v: string; // Value
     }
+  }
+
+  interface SessionStart {
+    elbLayer?: IElbwalker.ElbLayer;
   }
 }

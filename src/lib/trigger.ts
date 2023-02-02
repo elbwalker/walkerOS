@@ -238,29 +238,6 @@ function scroll(instance: IElbwalker.Function) {
   }
 }
 
-// @TODO maybe better as a util?
-export function sessionStart(instance: IElbwalker.Function) {
-  // static session start
-  const loc = new URL(window.location.href);
-  const ref = document.referrer && new URL(document.referrer);
-  const data: Walker.Properties = {};
-
-  // @TODO check compatibility
-  const [perf] = performance.getEntriesByType(
-    'navigation',
-  ) as PerformanceNavigationTiming[];
-
-  // @TODO check all possibilities (privacy modes)
-  const isExternal = loc.hostname != (ref && ref.hostname);
-
-  // @TODO check for utm parameters
-  const isMarketing = false;
-
-  // @TODO Only focus on navigation types to ignore reloads
-  if (perf.type === 'navigate')
-    instance.config.elbLayer.push('session start', data, Walker.Trigger.Load);
-}
-
 function pageView(instance: IElbwalker.Function) {
   // static page view
   const loc = window.location;
