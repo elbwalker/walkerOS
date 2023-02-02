@@ -210,7 +210,7 @@ describe('Utils', () => {
     expect(getItem(key)).toBe(true);
   });
 
-  test('session start', () => {
+  test.only('session start', () => {
     w.elbLayer = [] as IElbwalker.ElbLayer;
     w.elbLayer.push = mockFn;
 
@@ -232,7 +232,19 @@ describe('Utils', () => {
       Walker.Trigger.Load,
     );
 
-    // Ignore reload
+    // Marketing
+    jest.clearAllMocks();
+    Object.defineProperty(window, 'location', {
+      value: new URL('https://www.example.com/?utm_campaign=foo'),
+    });
+    sessionStart();
+    expect(mockFn).toHaveBeenCalledWith(
+      'session start',
+      expect.objectContaining({ campaign: 'foo', marketing: true }),
+      Walker.Trigger.Load,
+    );
+
+    // Reload
     jest.clearAllMocks();
     Object.defineProperty(w, 'performance', {
       value: {
@@ -243,7 +255,7 @@ describe('Utils', () => {
     expect(mockFn).not.toHaveBeenCalled();
   });
 
-  test.only('marketing parameters', () => {
+  test('marketing parameters', () => {
     const url = 'https://www.elbwalker.com/?';
     expect(getMarketingParameters(new URL(url))).toStrictEqual({});
 

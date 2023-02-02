@@ -362,6 +362,11 @@ export function sessionStart(config: Utils.SessionStart = {}) {
   const ref = document.referrer && new URL(document.referrer);
   const data: Walker.Properties = {};
 
+  // Check for marketing parameters like UTM and add existing
+  const marketing = getMarketingParameters(loc);
+  if (Object.keys(marketing).length)
+    Object.assign(data, { marketing: true }, marketing);
+
   // Ignore internal traffic
   // Small chance of multiple inintendet events for some same users
   // https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding
