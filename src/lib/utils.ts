@@ -344,36 +344,49 @@ export function isElementOrDocument(elem: unknown) {
   return elem === document || elem instanceof HTMLElement;
 }
 
-export function sessionStart(config: Utils.SessionStart = {}) {
-  // @TODO
-  // - sub-domain settings
-  // - extract marketing parameters
-  // - optional storage option
-  // - only marketing sessions
+export function sessionStart(config: Utils.SessionStart = {}): boolean {
+  // @TODO sub-domain settings
 
-  const [perf] = performance.getEntriesByType(
-    'navigation',
-  ) as PerformanceNavigationTiming[];
+  // Force a new session or start checking if it's a regular new one
+  let isNew = config.isNew || false;
 
-  // Only focus on navigation types to ignore reloads and others
-  if (perf.type !== 'navigate') return;
+  // Loading type
+  if (!isNew) {
+    // Only focus on linked or direct navigation types
+    // and ignore reloads and all others
+    const [perf] = performance.getEntriesByType(
+      'navigation',
+    ) as PerformanceNavigationTiming[];
+    if (perf.type !== 'navigate') return false;
+  }
 
   const loc = new URL(window.location.href);
-  const ref = document.referrer && new URL(document.referrer);
   const data: Walker.Properties = {};
 
-  // Check for marketing parameters like UTM and add existing
+  // Marketing
   const marketing = getMarketingParameters(loc);
-  if (Object.keys(marketing).length)
+  if (Object.keys(marketing).length) {
+    // Check for marketing parameters like UTM and add existing
     Object.assign(data, { marketing: true }, marketing);
+    isNew = true;
+  }
 
-  // Ignore internal traffic
-  // Small chance of multiple inintendet events for some same users
-  // https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding
-  if (ref && ref.hostname == loc.hostname) return;
+  // Referrer
+  if (!isNew) {
+    // Ignore internal traffic
+    // Small chance of multiple inintendet events for some same users
+    // https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding
+    const ref = document.referrer && new URL(document.referrer);
+    if (ref && ref.hostname != loc.hostname) isNew = true;
+  }
 
-  const elbLayer = config.elbLayer || window.elbLayer;
-  elbLayer.push('session start', data, Walker.Trigger.Load);
+  if (isNew) {
+    // It's a new session, moin
+    const elbLayer = config.elbLayer || window.elbLayer;
+    elbLayer.push('session start', data, Walker.Trigger.Load);
+  }
+
+  return isNew;
 }
 
 export function getMarketingParameters(
