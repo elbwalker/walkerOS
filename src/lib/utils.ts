@@ -379,11 +379,11 @@ export function getSession(
   if (!isNew) {
     // Small chance of multiple unintendet events for same users
     // https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding
+    // Use domains: [''] to disable direct or hidden referrer
 
-    // @TODO Ignore internal traffic
-    if (referrer != url.hostname) {
-      isNew = true;
-    }
+    const domains = config.domains || [];
+    domains.push(url.hostname);
+    isNew = !domains.includes(referrer);
   }
 
   // No new session
@@ -395,7 +395,6 @@ export function getSession(
     {
       id: session.id || randomString(12),
     },
-
     marketing,
     config.data,
   );

@@ -262,6 +262,22 @@ describe('Utils', () => {
       }),
     );
 
+    // Referrer with custom domains
+    expect(
+      getSession({
+        url: 'https://www.elbwalker.com',
+        referrer: 'https://docs.elbwalker.com',
+        domains: ['docs.elbwalker.com'],
+      }),
+    ).toBeFalsy();
+    expect(
+      getSession({
+        url: 'https://www.elbwalker.com',
+        referrer: '',
+        domains: [''], // Hack to disable direct or hidden referrer
+      }),
+    ).toBeFalsy();
+
     // Default url and referrer
     Object.defineProperty(document, 'referrer', {
       value: referrer,
