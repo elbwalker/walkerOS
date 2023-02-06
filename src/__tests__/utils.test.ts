@@ -5,7 +5,7 @@ import {
   getMarketingParameters,
   isVisible,
   removeItem,
-  sessionStart,
+  getSession,
   setItem,
   throttle,
 } from '../lib/utils';
@@ -211,51 +211,81 @@ describe('Utils', () => {
   });
 
   test('session start', () => {
-    w.elbLayer = [] as IElbwalker.ElbLayer;
-    w.elbLayer.push = mockFn;
-
+    const url = 'https://www.elbwalker.com/';
+    const referrer = 'https://www.example.com/';
     Object.defineProperty(w, 'performance', {
       value: {
         getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
       },
     });
 
-    // Direct
-    jest.clearAllMocks();
-    Object.defineProperty(document, 'referrer', {
-      value: '',
-    });
-    sessionStart();
-    expect(mockFn).toHaveBeenCalledWith(
-      'session start',
-      expect.anything(),
-      Walker.Trigger.Load,
+    // Is new
+    expect(getSession({ url, referrer: url, isNew: true })).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String) }),
     );
 
+    // Referral
+    expect(getSession({ url, referrer })).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String) }),
+    );
+
+    // Direct
+    expect(getSession({ url, referrer: '' })).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String) }),
+    );
+
+    // Predefined data
+    expect(
+      getSession({ url, referrer, data: { id: 'sessionId' } }),
+    ).toStrictEqual(expect.objectContaining({ id: 'sessionId' }));
+
     // Marketing
-    jest.clearAllMocks();
-    Object.defineProperty(window, 'location', {
-      value: new URL('https://www.example.com/?utm_campaign=foo'),
+    expect(getSession({ url: url + '?utm_campaign=foo' })).toStrictEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        campaign: 'foo',
+        marketing: true,
+      }),
+    );
+
+    // Marketing with custom marketing parameter
+    expect(
+      getSession({
+        url: url + '?affiliate=parameter',
+        parameters: { affiliate: 'custom' },
+      }),
+    ).toStrictEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        custom: 'parameter',
+        marketing: true,
+      }),
+    );
+
+    // Default url and referrer
+    Object.defineProperty(document, 'referrer', {
+      value: referrer,
     });
-    sessionStart();
-    expect(mockFn).toHaveBeenCalledWith(
-      'session start',
-      expect.objectContaining({ campaign: 'foo', marketing: true }),
-      Walker.Trigger.Load,
+    Object.defineProperty(window, 'location', {
+      value: new URL(url),
+    });
+    expect(getSession()).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String) }),
     );
 
     // Reload
-    jest.clearAllMocks();
     Object.defineProperty(w, 'performance', {
       value: {
         getEntriesByType: jest.fn().mockReturnValue([{ type: 'reload' }]),
       },
     });
-    sessionStart();
-    expect(mockFn).not.toHaveBeenCalled();
+    expect(getSession()).toBeFalsy();
+
+    // Reload with marketing parameter
+    expect(getSession({ url: url + '?utm_campaign=foo' })).toBeFalsy();
   });
 
-  test.only('marketing parameters', () => {
+  test('marketing parameters', () => {
     const url = 'https://www.elbwalker.com/?';
     expect(getMarketingParameters(new URL(url))).toStrictEqual({});
 

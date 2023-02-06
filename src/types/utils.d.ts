@@ -1,4 +1,4 @@
-import { IElbwalker } from './elbwalker';
+import { Walker } from './walker';
 
 export namespace Utils {
   namespace Storage {
@@ -15,8 +15,12 @@ export namespace Utils {
   }
 
   interface SessionStart {
-    elbLayer?: IElbwalker.ElbLayer;
+    data?: Walker.Properties;
+    domains?: string[];
     isNew?: boolean;
+    parameters?: MarketingParameters;
+    referrer?: string;
+    url?: string;
   }
 
   interface MarketingParameters {
