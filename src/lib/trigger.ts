@@ -20,7 +20,7 @@ export function ready(run: Function, instance: IElbwalker.Function) {
 // Called for each new run to setup triggers
 export function load(instance: IElbwalker.Function) {
   // Trigger static page view if enabled
-  if (instance.config.pageview) view(instance);
+  if (instance.config.pageview) pageView(instance);
 
   initScopeTrigger(instance);
 }
@@ -238,16 +238,16 @@ function scroll(instance: IElbwalker.Function) {
   }
 }
 
-function view(instance: IElbwalker.Function) {
+function pageView(instance: IElbwalker.Function) {
   // static page view
-  const l = window.location;
+  const loc = window.location;
   const data: Walker.Properties = {
-    domain: l.hostname,
+    domain: loc.hostname,
     title: document.title,
     referrer: document.referrer,
   };
-  if (l.search) data.search = l.search;
-  if (l.hash) data.hash = l.hash;
+  if (loc.search) data.search = loc.search;
+  if (loc.hash) data.hash = loc.hash;
 
   // @TODO get all nested entities
   instance.config.elbLayer.push('page view', data, Walker.Trigger.Load);

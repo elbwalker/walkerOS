@@ -14,8 +14,10 @@ export function trycatch<P extends unknown[], R>(
   };
 }
 
-export function randomString(): string {
-  return Math.random().toString(36).slice(2, 8);
+export function randomString(length = 6): string {
+  for (var str = '', l = 36; str.length < length; )
+    str += ((Math.random() * l) | 0).toString(l);
+  return str;
 }
 
 export function getGlobalProperties(prefix: string): Walker.Properties {
@@ -342,4 +344,89 @@ export function isObject(obj: unknown) {
 
 export function isElementOrDocument(elem: unknown) {
   return elem === document || elem instanceof HTMLElement;
+}
+
+export function getSession(
+  config: Utils.SessionStart = {},
+): Walker.Properties | false {
+  // Force a new session or start checking if it's a regular new one
+  let isNew = config.isNew || false;
+
+  // Entry type
+  if (!isNew) {
+    // Only focus on linked or direct navigation types
+    // and ignore reloads and all others
+    const [perf] = performance.getEntriesByType(
+      'navigation',
+    ) as PerformanceNavigationTiming[];
+    if (perf.type !== 'navigate') return false;
+  }
+
+  const url = new URL(config.url || window.location.href);
+  const ref = config.referrer || document.referrer;
+  const referrer = ref && new URL(ref).hostname;
+  const session: Walker.Properties = {};
+
+  // Marketing
+  const marketing = getMarketingParameters(url, config.parameters);
+  if (Object.keys(marketing).length) {
+    // Check for marketing parameters like UTM and add existing
+    session.marketing = true; // Flag as a marketing session
+    isNew = true;
+  }
+
+  // Referrer
+  if (!isNew) {
+    // Small chance of multiple unintendet events for same users
+    // https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding
+    // Use domains: [''] to disable direct or hidden referrer
+
+    const domains = config.domains || [];
+    domains.push(url.hostname);
+    isNew = !domains.includes(referrer);
+  }
+
+  // No new session
+  if (!isNew) return false;
+
+  if (referrer) session.referrer = referrer;
+  Object.assign(
+    session,
+    {
+      id: session.id || randomString(12),
+    },
+    marketing,
+    config.data,
+  );
+
+  // It's a new session, moin
+  return session;
+}
+
+export function getMarketingParameters(
+  url: URL,
+  custom: Utils.MarketingParameters = {},
+): Walker.Properties {
+  const data: Walker.Properties = {};
+  const parameters = Object.assign(
+    {
+      utm_campaign: 'campaign',
+      utm_content: 'content',
+      dclid: 'clickId',
+      fbclid: 'clickId',
+      gclid: 'clickId',
+      utm_medium: 'medium',
+      msclkid: 'clickId',
+      utm_source: 'source',
+      utm_term: 'term',
+    },
+    custom,
+  );
+
+  Object.entries(parameters).forEach(([param, name]) => {
+    const value = url.searchParams.get(param);
+    if (value) data[name] = value;
+  });
+
+  return data;
 }

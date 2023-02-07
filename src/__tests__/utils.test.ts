@@ -2,12 +2,14 @@ import {
   debounce,
   elb,
   getItem,
+  getMarketingParameters,
   isVisible,
   removeItem,
+  getSession,
   setItem,
   throttle,
 } from '../lib/utils';
-import { Utils } from '../types';
+import { IElbwalker, Utils, Walker } from '../types';
 
 const w = window;
 
@@ -34,8 +36,8 @@ describe('Utils', () => {
   });
 
   test('isVisible', () => {
-    const innerHeight = window.innerHeight;
-    window.innerHeight = 100; // Create a small window
+    const innerHeight = w.innerHeight;
+    w.innerHeight = 100; // Create a small window
 
     let x = 25,
       y = 25,
@@ -99,7 +101,7 @@ describe('Utils', () => {
     });
     expect(isVisible(elem)).toBeTruthy();
 
-    window.innerHeight = innerHeight;
+    w.innerHeight = innerHeight;
   });
 
   test('throttle', () => {
@@ -206,5 +208,136 @@ describe('Utils', () => {
     // Cast
     setItem(key, true);
     expect(getItem(key)).toBe(true);
+  });
+
+  test('session start', () => {
+    const url = 'https://www.elbwalker.com/';
+    const referrer = 'https://www.example.com/';
+    Object.defineProperty(w, 'performance', {
+      value: {
+        getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
+      },
+    });
+
+    // Is new
+    expect(getSession({ url, referrer: url, isNew: true })).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String) }),
+    );
+
+    // Referral
+    expect(getSession({ url, referrer })).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String) }),
+    );
+
+    // Direct
+    expect(getSession({ url, referrer: '' })).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String) }),
+    );
+
+    // Predefined data
+    expect(
+      getSession({ url, referrer, data: { id: 'sessionId' } }),
+    ).toStrictEqual(expect.objectContaining({ id: 'sessionId' }));
+
+    // Marketing
+    expect(getSession({ url: url + '?utm_campaign=foo' })).toStrictEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        campaign: 'foo',
+        marketing: true,
+      }),
+    );
+
+    // Marketing with custom marketing parameter
+    expect(
+      getSession({
+        url: url + '?affiliate=parameter',
+        parameters: { affiliate: 'custom' },
+      }),
+    ).toStrictEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        custom: 'parameter',
+        marketing: true,
+      }),
+    );
+
+    // Referrer with custom domains
+    expect(
+      getSession({
+        url: 'https://www.elbwalker.com',
+        referrer: 'https://docs.elbwalker.com',
+        domains: ['docs.elbwalker.com'],
+      }),
+    ).toBeFalsy();
+    expect(
+      getSession({
+        url: 'https://www.elbwalker.com',
+        referrer: '',
+        domains: [''], // Hack to disable direct or hidden referrer
+      }),
+    ).toBeFalsy();
+
+    // Default url and referrer
+    Object.defineProperty(document, 'referrer', {
+      value: referrer,
+    });
+    Object.defineProperty(window, 'location', {
+      value: new URL(url),
+    });
+    expect(getSession()).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String) }),
+    );
+
+    // Reload
+    Object.defineProperty(w, 'performance', {
+      value: {
+        getEntriesByType: jest.fn().mockReturnValue([{ type: 'reload' }]),
+      },
+    });
+    expect(getSession()).toBeFalsy();
+
+    // Reload with marketing parameter
+    expect(getSession({ url: url + '?utm_campaign=foo' })).toBeFalsy();
+  });
+
+  test('marketing parameters', () => {
+    const url = 'https://www.elbwalker.com/?';
+    expect(getMarketingParameters(new URL(url))).toStrictEqual({});
+
+    expect(
+      getMarketingParameters(new URL(url + 'utm_campaign=c')),
+    ).toStrictEqual(expect.objectContaining({ campaign: 'c' }));
+    expect(
+      getMarketingParameters(new URL(url + 'utm_content=c')),
+    ).toStrictEqual(expect.objectContaining({ content: 'c' }));
+    expect(getMarketingParameters(new URL(url + 'dclid=id'))).toStrictEqual(
+      expect.objectContaining({ clickId: 'id' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'fbclid=id'))).toStrictEqual(
+      expect.objectContaining({ clickId: 'id' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'gclid=id'))).toStrictEqual(
+      expect.objectContaining({ clickId: 'id' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'utm_medium=m'))).toStrictEqual(
+      expect.objectContaining({ medium: 'm' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'msclkid=id'))).toStrictEqual(
+      expect.objectContaining({ clickId: 'id' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'utm_source=s'))).toStrictEqual(
+      expect.objectContaining({ source: 's' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'utm_term=t'))).toStrictEqual(
+      expect.objectContaining({ term: 't' }),
+    );
+
+    // Custom parameters
+    expect(
+      getMarketingParameters(new URL(url + 'utm_custom=bar'), {
+        utm_custom: 'foo',
+      }),
+    ).toStrictEqual(expect.objectContaining({ foo: 'bar' }));
   });
 });

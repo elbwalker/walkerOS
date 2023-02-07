@@ -322,6 +322,8 @@ function Elbwalker(
     // Run predefined elbLayer stack once
     if (_firstRun) {
       _firstRun = false;
+
+      // Process existing elbLayer events
       callPredefined(instance);
     } else {
       _timing = performance.now();
