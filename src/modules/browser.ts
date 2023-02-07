@@ -1,6 +1,6 @@
 // browser version
 import Elbwalker from '../elbwalker';
-import { elb } from '../lib/utils';
+import { elb, getAttribute } from '../lib/utils';
 
 let defaultMode, version;
 
@@ -8,8 +8,8 @@ let defaultMode, version;
 const elem = document.querySelector('script.elbwalker');
 
 if (elem) {
-  defaultMode = !!elem.getAttribute('data-default'); // default mode
-  version = parseInt(elem.getAttribute('data-version') || '1'); // config version
+  defaultMode = !!getAttribute(elem, 'data-default'); // default mode
+  version = parseInt(getAttribute(elem, 'data-version') || '1'); // config version
 }
 
 const instance = Elbwalker({ default: defaultMode, version });

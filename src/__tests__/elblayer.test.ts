@@ -60,7 +60,7 @@ describe('ElbLayer', () => {
     elbwalker = Elbwalker();
     elb('e 2');
     elb('walker run');
-    // auto call: walker('page view');
+    // auto call: elb('page view');
     elb('e 4');
 
     expect(mockPush).toHaveBeenCalledWith(

@@ -1,26 +1,69 @@
 import { IElbwalker, Utils, Walker } from '../types';
 import { getElbAttributeName, getElbValues } from './walker';
 
-export function trycatch<P extends unknown[], R>(
-  fn: (...args: P) => R | undefined,
-): (...args: P) => R | undefined {
-  return function (...args: P): R | undefined {
-    try {
-      return fn(...args);
-    } catch (err) {
-      console.error(IElbwalker.Commands.Walker, err);
-      return;
+export const elb: IElbwalker.Elb = function () {
+  (window.elbLayer = window.elbLayer || []).push(arguments);
+};
+
+export function assign(
+  target: Walker.Properties,
+  source: Walker.Properties = {},
+): Walker.Properties {
+  // Check for array properties to merge them before overriding
+  Object.entries(source).forEach(([key, sourceProp]) => {
+    const targetProp = target[key];
+
+    // Only merge arrays
+    if (Array.isArray(targetProp) && Array.isArray(sourceProp)) {
+      source[key] = sourceProp.reduce(
+        (acc, item) => {
+          // Remove duplicates
+          return acc.includes(item) ? acc : [...acc, item];
+        },
+        [...targetProp],
+      );
     }
+  });
+
+  return { ...target, ...source };
+}
+
+export function castValue(value: unknown): Walker.PropertyType {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+
+  const number = Number(value); // Converts "" to 0
+  if (value == number && value !== '') return number;
+
+  return String(value);
+}
+
+export function debounce<P extends unknown[], R>(
+  fn: (...args: P) => R,
+  wait = 1000,
+) {
+  let timer: NodeJS.Timeout;
+
+  return (...args: P): Promise<R> => {
+    // abort previous invocation
+    clearTimeout(timer);
+
+    // Return value as promise
+    return new Promise((resolve) => {
+      // Schedule execution
+      timer = setTimeout(() => {
+        // Call the function
+        resolve(fn(...args));
+      }, wait);
+    });
   };
 }
 
-export function randomString(length = 6): string {
-  for (var str = '', l = 36; str.length < length; )
-    str += ((Math.random() * l) | 0).toString(l);
-  return str;
+export function getAttribute(element: Element, name: string): string {
+  return element.getAttribute(name) || '';
 }
 
-export function getGlobalProperties(prefix: string): Walker.Properties {
+export function getGlobals(prefix: string): Walker.Properties {
   const globalsName = getElbAttributeName(
     prefix,
     IElbwalker.Commands.Globals,
@@ -39,66 +82,38 @@ export function getGlobalProperties(prefix: string): Walker.Properties {
   return values;
 }
 
-export function splitAttribute(
-  str: string,
-  separator = ';',
-): Walker.Attributes {
-  const values: Walker.Attributes = [];
-
-  if (!str) return values;
-
-  const reg = new RegExp(`(?:[^${separator}']+|'[^']*')+`, 'ig');
-  return str.match(reg) || [];
+export function getId(length = 6): string {
+  for (var str = '', l = 36; str.length < length; )
+    str += ((Math.random() * l) | 0).toString(l);
+  return str;
 }
 
-export function splitKeyVal(str: string): Walker.KeyVal {
-  const [key, value] = str.split(/:(.+)/, 2);
-  return [trim(key), trim(value)];
-}
-
-export function parseAttribute(str: string): Walker.KeyVal {
-  // action(a, b, c)
-  const [key, value] = str.split('(', 2);
-  const param = value ? value.slice(0, -1) : ''; // Remove the )
-  // key = 'action'
-  // param = 'a, b, c'
-  return [key, param];
-}
-
-function trim(str: string): string {
-  // Remove quotes and whitespaces
-  return str ? str.trim().replace(/^'|'$/g, '').trim() : '';
-}
-
-export function getAttribute(element: Element, name: string): string {
-  return element.getAttribute(name) || '';
-}
-
-export function assign(
-  target: Walker.Properties,
-  source: Walker.Properties = {},
+export function getMarketingParameters(
+  url: URL,
+  custom: Utils.MarketingParameters = {},
 ): Walker.Properties {
-  // Check for array properties to merge them before overriding
-  Object.entries(source).forEach(([key, sourceProp]) => {
-    const targetProp = target[key];
+  const data: Walker.Properties = {};
+  const parameters = Object.assign(
+    {
+      utm_campaign: 'campaign',
+      utm_content: 'content',
+      dclid: 'clickId',
+      fbclid: 'clickId',
+      gclid: 'clickId',
+      utm_medium: 'medium',
+      msclkid: 'clickId',
+      utm_source: 'source',
+      utm_term: 'term',
+    },
+    custom,
+  );
 
-    // Only merge  arrays
-    if (Array.isArray(targetProp) && Array.isArray(sourceProp)) {
-      source[key] = sourceProp.reduce(
-        (acc, item) => {
-          // Remove duplicates
-          return acc.includes(item) ? acc : [...acc, item];
-        },
-        [...targetProp],
-      );
-    }
+  Object.entries(parameters).forEach(([param, name]) => {
+    const value = url.searchParams.get(param);
+    if (value) data[name] = value;
   });
 
-  return { ...target, ...source };
-}
-
-export function isArgument(event: unknown) {
-  return {}.hasOwnProperty.call(event, 'callee');
+  return data;
 }
 
 export function isVisible(element: HTMLElement): boolean {
@@ -182,171 +197,7 @@ export function isVisible(element: HTMLElement): boolean {
   return false;
 }
 
-export const elb: IElbwalker.Elb = function () {
-  (window.elbLayer = window.elbLayer || []).push(arguments);
-};
-
-export function castValue(value: unknown): Walker.PropertyType {
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-
-  const number = Number(value); // Converts "" to 0
-  if (value == number && value !== '') return number;
-
-  return String(value);
-}
-
-export function throttle<P extends unknown[], R>(
-  fn: (...args: P) => R | undefined,
-  delay = 1000,
-): (...args: P) => R | undefined {
-  let isBlocked: NodeJS.Timeout | 0;
-
-  return function (...args: P): R | undefined {
-    // Skip since function is still blocked by previous call
-    if (isBlocked) return;
-
-    // Set a blocking timeout
-    isBlocked = setTimeout(() => {
-      // Unblock function
-      isBlocked = 0;
-    }, delay);
-
-    // Call the function
-    return fn(...args);
-  };
-}
-
-export function debounce<P extends unknown[], R>(
-  fn: (...args: P) => R,
-  wait = 1000,
-) {
-  let timer: NodeJS.Timeout;
-
-  return (...args: P): Promise<R> => {
-    // abort previous invocation
-    clearTimeout(timer);
-
-    // Return value as promise
-    return new Promise((resolve) => {
-      // Schedule execution
-      timer = setTimeout(() => {
-        // Call the function
-        resolve(fn(...args));
-      }, wait);
-    });
-  };
-}
-
-export function setItem(
-  key: string,
-  value: Walker.PropertyType,
-  maxAgeInMinutes = 30,
-  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
-  domain?: string,
-) {
-  const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
-  const item: Utils.Storage.Value = { e, v: String(value) };
-  const stringifiedItem = JSON.stringify(item);
-
-  switch (storage) {
-    case Utils.Storage.Type.Cookie:
-      let cookie = `${key}=${encodeURIComponent(value)}; max-age=${
-        maxAgeInMinutes * 60
-      }; path=/; SameSite=Lax; secure`;
-
-      if (domain) cookie += '; domain=' + domain;
-
-      document.cookie = cookie;
-      break;
-    case Utils.Storage.Type.Local:
-      window.localStorage.setItem(key, stringifiedItem);
-      break;
-    case Utils.Storage.Type.Session:
-      window.sessionStorage.setItem(key, stringifiedItem);
-      break;
-  }
-}
-
-export function getItem(
-  key: string,
-  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
-): Walker.PropertyType {
-  // Helper function for local and session storage to support expiration
-  function parseItem(string: string | null): Utils.Storage.Value {
-    try {
-      return JSON.parse(string || '');
-    } catch (err) {
-      let e = 1,
-        v = '';
-
-      // Remove expiration date
-      if (string) {
-        e = 0;
-        v = string;
-      }
-
-      return { e, v };
-    }
-  }
-  let value, item;
-
-  switch (storage) {
-    case Utils.Storage.Type.Cookie:
-      value = decodeURIComponent(
-        document.cookie
-          .split('; ')
-          .find((row) => row.startsWith(key + '='))
-          ?.split('=')[1] || '',
-      );
-      break;
-    case Utils.Storage.Type.Local:
-      item = parseItem(window.localStorage.getItem(key));
-      break;
-    case Utils.Storage.Type.Session:
-      item = parseItem(window.sessionStorage.getItem(key));
-      break;
-  }
-
-  // Check if item is expired
-  if (item) {
-    value = item.v;
-
-    if (item.e != 0 && item.e < Date.now()) {
-      removeItem(key, storage); // Remove item
-      value = ''; // Conceal the outdated value
-    }
-  }
-
-  return castValue(value || '');
-}
-
-export function removeItem(
-  key: string,
-  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
-) {
-  switch (storage) {
-    case Utils.Storage.Type.Cookie:
-      setItem(key, '', 0, storage);
-      break;
-    case Utils.Storage.Type.Local:
-      window.localStorage.removeItem(key);
-      break;
-    case Utils.Storage.Type.Session:
-      window.sessionStorage.removeItem(key);
-      break;
-  }
-}
-
-export function isObject(obj: unknown) {
-  return typeof obj === 'object' && !Array.isArray(obj) && obj !== null;
-}
-
-export function isElementOrDocument(elem: unknown) {
-  return elem === document || elem instanceof HTMLElement;
-}
-
-export function getSession(
+export function startSession(
   config: Utils.SessionStart = {},
 ): Walker.Properties | false {
   // Force a new session or start checking if it's a regular new one
@@ -393,7 +244,7 @@ export function getSession(
   Object.assign(
     session,
     {
-      id: session.id || randomString(12),
+      id: session.id || getId(12),
     },
     marketing,
     config.data,
@@ -403,30 +254,142 @@ export function getSession(
   return session;
 }
 
-export function getMarketingParameters(
-  url: URL,
-  custom: Utils.MarketingParameters = {},
-): Walker.Properties {
-  const data: Walker.Properties = {};
-  const parameters = Object.assign(
-    {
-      utm_campaign: 'campaign',
-      utm_content: 'content',
-      dclid: 'clickId',
-      fbclid: 'clickId',
-      gclid: 'clickId',
-      utm_medium: 'medium',
-      msclkid: 'clickId',
-      utm_source: 'source',
-      utm_term: 'term',
-    },
-    custom,
-  );
+export function storageDelete(
+  key: string,
+  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+) {
+  switch (storage) {
+    case Utils.Storage.Type.Cookie:
+      storageWrite(key, '', 0, storage);
+      break;
+    case Utils.Storage.Type.Local:
+      window.localStorage.removeItem(key);
+      break;
+    case Utils.Storage.Type.Session:
+      window.sessionStorage.removeItem(key);
+      break;
+  }
+}
 
-  Object.entries(parameters).forEach(([param, name]) => {
-    const value = url.searchParams.get(param);
-    if (value) data[name] = value;
-  });
+export function storageRead(
+  key: string,
+  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+): Walker.PropertyType {
+  // Helper function for local and session storage to support expiration
+  function parseItem(string: string | null): Utils.Storage.Value {
+    try {
+      return JSON.parse(string || '');
+    } catch (err) {
+      let e = 1,
+        v = '';
 
-  return data;
+      // Remove expiration date
+      if (string) {
+        e = 0;
+        v = string;
+      }
+
+      return { e, v };
+    }
+  }
+  let value, item;
+
+  switch (storage) {
+    case Utils.Storage.Type.Cookie:
+      value = decodeURIComponent(
+        document.cookie
+          .split('; ')
+          .find((row) => row.startsWith(key + '='))
+          ?.split('=')[1] || '',
+      );
+      break;
+    case Utils.Storage.Type.Local:
+      item = parseItem(window.localStorage.getItem(key));
+      break;
+    case Utils.Storage.Type.Session:
+      item = parseItem(window.sessionStorage.getItem(key));
+      break;
+  }
+
+  // Check if item is expired
+  if (item) {
+    value = item.v;
+
+    if (item.e != 0 && item.e < Date.now()) {
+      storageDelete(key, storage); // Remove item
+      value = ''; // Conceal the outdated value
+    }
+  }
+
+  return castValue(value || '');
+}
+
+export function storageWrite(
+  key: string,
+  value: Walker.PropertyType,
+  maxAgeInMinutes = 30,
+  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+  domain?: string,
+) {
+  const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
+  const item: Utils.Storage.Value = { e, v: String(value) };
+  const stringifiedItem = JSON.stringify(item);
+
+  switch (storage) {
+    case Utils.Storage.Type.Cookie:
+      let cookie = `${key}=${encodeURIComponent(value)}; max-age=${
+        maxAgeInMinutes * 60
+      }; path=/; SameSite=Lax; secure`;
+
+      if (domain) cookie += '; domain=' + domain;
+
+      document.cookie = cookie;
+      break;
+    case Utils.Storage.Type.Local:
+      window.localStorage.setItem(key, stringifiedItem);
+      break;
+    case Utils.Storage.Type.Session:
+      window.sessionStorage.setItem(key, stringifiedItem);
+      break;
+  }
+}
+
+export function throttle<P extends unknown[], R>(
+  fn: (...args: P) => R | undefined,
+  delay = 1000,
+): (...args: P) => R | undefined {
+  let isBlocked: NodeJS.Timeout | 0;
+
+  return function (...args: P): R | undefined {
+    // Skip since function is still blocked by previous call
+    if (isBlocked) return;
+
+    // Set a blocking timeout
+    isBlocked = setTimeout(() => {
+      // Unblock function
+      isBlocked = 0;
+    }, delay);
+
+    // Call the function
+    return fn(...args);
+  };
+}
+
+export function trim(str: string): string {
+  // Remove quotes and whitespaces
+  return str ? str.trim().replace(/^'|'$/g, '').trim() : '';
+}
+
+export function trycatch<P extends unknown[], R>(
+  fn: (...args: P) => R | undefined,
+): (...args: P) => R | undefined {
+  return function (...args: P): R | undefined {
+    try {
+      return fn(...args);
+    } catch (err) {
+      // @TODO custom fn
+      console.error(IElbwalker.Commands.Walker, err);
+      return;
+    }
+  };
 }
