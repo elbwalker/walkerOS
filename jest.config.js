@@ -1,10 +1,14 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  globals: {
-    'ts-jest': {
-      diagnostics: false,
-    },
+  transform: {
+    '^.+.tsx?$': [
+      'ts-jest',
+      {
+        // isolatedModules: true,
+        diagnostics: true,
+      },
+    ],
   },
   moduleFileExtensions: ['js', 'ts', 'd.ts'],
   rootDir: 'src',
