@@ -1,5 +1,4 @@
 import { IElbwalker, Utils, Walker } from '../types';
-import { getElbAttributeName, getElbValues } from './walker';
 
 export const elb: IElbwalker.Elb = function () {
   (window.elbLayer = window.elbLayer || []).push(arguments);
@@ -61,25 +60,6 @@ export function debounce<P extends unknown[], R>(
 
 export function getAttribute(element: Element, name: string): string {
   return element.getAttribute(name) || '';
-}
-
-export function getGlobals(prefix: string): Walker.Properties {
-  const globalsName = getElbAttributeName(
-    prefix,
-    IElbwalker.Commands.Globals,
-    false,
-  );
-  const globalSelector = `[${globalsName}]`;
-  let values = {};
-
-  document.querySelectorAll(globalSelector).forEach((element) => {
-    values = assign(
-      values,
-      getElbValues(prefix, element, IElbwalker.Commands.Globals, false),
-    );
-  });
-
-  return values;
 }
 
 export function getId(length = 6): string {

@@ -5,7 +5,8 @@ import {
   ready,
   load,
 } from './lib/trigger';
-import { assign, getGlobals, getId, trycatch } from './lib/utils';
+import { assign, getId, trycatch } from './lib/utils';
+import { getGlobals } from './lib/walker';
 
 function Elbwalker(
   config: Partial<IElbwalker.Config> = {},

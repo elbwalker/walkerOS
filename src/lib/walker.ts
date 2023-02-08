@@ -128,6 +128,24 @@ export function getEvents(
   return events;
 }
 
+export function getGlobals(prefix: string): Walker.Properties {
+  const globalsName = getElbAttributeName(
+    prefix,
+    IElbwalker.Commands.Globals,
+    false,
+  );
+  const globalSelector = `[${globalsName}]`;
+  let values = {};
+
+  document.querySelectorAll(globalSelector).forEach((element) => {
+    values = assign(
+      values,
+      getElbValues(prefix, element, IElbwalker.Commands.Globals, false),
+    );
+  });
+
+  return values;
+}
 export function getTriggerActions(str: string): Walker.TriggersActionGroups {
   const values: Walker.TriggersActionGroups = {};
 
