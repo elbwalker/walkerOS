@@ -1,23 +1,12 @@
-import { IElbwalker } from '@elbwalker/walker.js';
 import { DestinationAPI } from './types';
+export * from './types/index.d';
 
-const destination: DestinationAPI.Function = {
+export const destinationAPI: DestinationAPI.Function = {
   config: {},
 
-  init(config: DestinationAPI.Config) {
-    // Do something initializing
-
-    return true;
-  },
-
-  push(
-    event: IElbwalker.Event,
-    config: DestinationAPI.Config = {},
-    mapping: DestinationAPI.EventConfig = {},
-  ): void {
-    const custom = config.custom || {};
-
-    if (!custom.url) return;
+  push(event, config, mapping = {}) {
+    const custom = config.custom;
+    if (!custom) return;
 
     const data = JSON.stringify(event);
     switch (custom.transport) {
@@ -57,4 +46,4 @@ function sendAsXhr(url: string, data: string) {
   xhr.send(data);
 }
 
-export default destination;
+export default destinationAPI;

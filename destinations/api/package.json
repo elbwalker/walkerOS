@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "API web destination for walker.js",
   "main": "dist/index.js",
-  "types": "dist/types",
+  "types": "dist",
   "scripts": {
-    "build": "node ./esbuild.js && npm run copy:dts",
-    "copy:dts": "copyfiles -u 1 \"src/types/*.d.ts\" dist/types",
+    "build": "node ./esbuild.mjs",
+    "postbuild": "tsc && copyfiles -u 1 src/types/*.d.ts dist",
     "dev": "jest --watchAll --colors",
     "publish": "npm i && npm run test && npm run build && npm publish --access public",
     "test": "jest --colors --coverage"
@@ -41,7 +41,7 @@
     "elb",
     "elbwalker",
     "walker",
-    "walker.js",
+    "walkerjs",
     "walker destination",
     "analytics",
     "tracking",
