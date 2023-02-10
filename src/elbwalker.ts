@@ -12,7 +12,7 @@ function Elbwalker(
   config: Partial<IElbwalker.Config> = {},
 ): IElbwalker.Function {
   const version = 1.6;
-  const destinations: WebDestination.Functions = [];
+  const destinations: Array<WebDestination.Function> = [];
   const runCommand = `${IElbwalker.Commands.Walker} ${IElbwalker.Commands.Run}`;
   const staticGlobals = config.globals || {};
   const instance: IElbwalker.Function = {
