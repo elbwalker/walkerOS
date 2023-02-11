@@ -4,22 +4,21 @@ declare global {
   interface Window {}
 }
 
-export namespace DestinationAPI {
-  export interface Config extends WebDestination.Config {
-    custom?: {
-      url?: string;
-      transport?: Transport;
-    };
-    mapping?: WebDestination.Mapping<EventConfig>;
+export declare namespace DestinationAPI {
+  interface Function
+    extends WebDestination.Function<CustomConfig, CustomEventConfig> {}
+
+  type Config = WebDestination.Config<
+    DestinationAPI.CustomConfig,
+    CustomEventConfig
+  >;
+
+  interface CustomConfig {
+    url: string;
+    transport?: Transport;
   }
 
-  export interface Function extends WebDestination.Function {
-    config: Config;
-  }
-
-  export interface EventConfig extends WebDestination.EventConfig {
-    // Custom destination event mapping properties
-  }
+  interface CustomEventConfig {}
 
   type Transport = 'fetch' | 'beacon' | 'xhr';
 }

@@ -12,10 +12,7 @@ export namespace WebDestination {
     queue?: Array<IElbwalker.Event>; // Non processed events yet and resettet with each new run
   }
 
-  interface Config<
-    Custom = IElbwalker.AnyObject,
-    EventCustom = IElbwalker.AnyObject,
-  > {
+  interface Config<Custom = unknown, EventCustom = unknown> {
     consent?: IElbwalker.Consent; // Required consent states to init and push events
     custom?: Custom; // Arbitrary but protected configurations for custom enhancements
     init?: boolean; // If the destination has been initialized by calling the init method
