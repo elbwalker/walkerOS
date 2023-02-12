@@ -1,21 +1,22 @@
 import { WebDestination } from '@elbwalker/walker.js';
 
 declare global {
-  interface Window {}
+  interface Window {
+    dataLayer: Array<unknown>;
+  }
 }
 
-export declare namespace DestinationAPI {
+export declare namespace DestinationGTM {
   interface Function
     extends WebDestination.Function<CustomConfig, CustomEventConfig> {}
 
   type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 
   interface CustomConfig {
-    url: string;
-    transport?: Transport;
+    containerId?: string; // GTM-XXXXXXX
+    dataLayer?: string; // dataLayer
+    domain?: string; // Source domain of the GTM
   }
 
   interface CustomEventConfig {}
-
-  type Transport = 'fetch' | 'beacon' | 'xhr';
 }

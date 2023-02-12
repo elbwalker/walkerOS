@@ -1,5 +1,5 @@
 import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationAds } from '.';
+import { DestinationAds } from './types';
 
 describe('destination Google Ads', () => {
   const w = window;
@@ -28,7 +28,7 @@ describe('destination Google Ads', () => {
     w.dataLayer = [];
     w.gtag = mockFn;
 
-    elbwalker = Elbwalker();
+    elbwalker = Elbwalker({ pageview: false });
     elbwalker.push('walker run');
   });
 
@@ -85,7 +85,7 @@ describe('destination Google Ads', () => {
     });
 
     // Correct mapping
-    destination.config.mapping = { entity: { action: { label } } };
+    destination.config.mapping = { entity: { action: { custom: { label } } } };
     elbwalker.push(event);
     expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
       send_to: `${conversionId}/${label}`,
@@ -106,7 +106,7 @@ describe('destination Google Ads', () => {
   test('push with value', () => {
     elbwalker.push('walker destination', destination);
     destination.config.mapping = {
-      entity: { action: { label, value: 'revenue' } },
+      entity: { action: { custom: { label, value: 'revenue' } } },
     };
 
     // Missing value property
@@ -138,7 +138,7 @@ describe('destination Google Ads', () => {
     elbwalker.push('walker destination', destination);
     const transaction_id = '0rd3r1d';
     destination.config.mapping = {
-      entity: { action: { label, id: 'order_id' } },
+      entity: { action: { custom: { label, id: 'order_id' } } },
     };
 
     elbwalker.push(event, { order_id: transaction_id });

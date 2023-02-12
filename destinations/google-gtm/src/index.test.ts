@@ -1,5 +1,5 @@
 import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationGTM } from '.';
+import { DestinationGTM } from './types';
 
 describe('destination google-tag-manager', () => {
   const w = window;
@@ -15,18 +15,19 @@ describe('destination google-tag-manager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
-    destination = require('./index').destination;
+    destination = require('./index').default;
 
     w.elbLayer = [];
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
 
-    elbwalker = Elbwalker();
+    elbwalker = Elbwalker({ pageview: false });
     elbwalker.push('walker run');
-    elbwalker.push('walker destination', destination);
   });
 
   test('init', () => {
+    elbwalker.push('walker destination', destination);
+
     w.dataLayer = undefined as any;
     expect(w.dataLayer).toBeUndefined();
 
@@ -54,21 +55,22 @@ describe('destination google-tag-manager', () => {
   });
 
   test('custom dataLayer name', () => {
+    const w = window as any;
     const customLayer = 'customLayer';
-    destination.config = {
+
+    elbwalker.push('walker destination', destination, {
       custom: { dataLayer: customLayer },
-    };
+    });
 
-    elbwalker.push('walker destination', destination);
-
-    expect(window[customLayer]).toBeFalsy();
+    expect(w[customLayer]).toBeFalsy();
 
     elbwalker.push(event);
 
-    expect(window[customLayer]).toBeTruthy();
+    expect(w[customLayer]).toBeTruthy();
   });
 
   test('push', () => {
+    elbwalker.push('walker destination', destination);
     elbwalker.push(event, { a: 1 }, 'manual');
     expect(w.dataLayer).toBeDefined();
     expect(mockFn).toHaveBeenLastCalledWith({
@@ -86,7 +88,7 @@ describe('destination google-tag-manager', () => {
       timestamp: expect.any(Number),
       timing: expect.any(Number),
       group: expect.any(String),
-      count: 2,
+      count: 1,
       version,
       source: {
         type: 1,

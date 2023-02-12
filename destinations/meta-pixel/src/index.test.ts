@@ -1,5 +1,5 @@
 import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationMeta } from '.';
+import { DestinationMeta } from './types';
 
 describe('Destination Meta Pixel', () => {
   const w = window;
@@ -26,7 +26,7 @@ describe('Destination Meta Pixel', () => {
     w.elbLayer = [];
     w.fbq = mockFn;
 
-    elbwalker = Elbwalker();
+    elbwalker = Elbwalker({ pageview: false });
     elbwalker.push('walker run');
   });
 
@@ -88,7 +88,7 @@ describe('Destination Meta Pixel', () => {
 
   test('push standard event', () => {
     destination.config.mapping = {
-      entity: { action: { track: 'Contact' } },
+      entity: { action: { custom: { track: 'Contact' } } },
     };
 
     elbwalker.push('walker destination', destination);
@@ -99,11 +99,13 @@ describe('Destination Meta Pixel', () => {
   test('push purchase', () => {
     destination.config.mapping = {
       entity: {
-        action: { track: 'Purchase', name: 'title', value: 'revenue' },
+        action: {
+          custom: { track: 'Purchase', name: 'title', value: 'revenue' },
+        },
       },
     };
-
     elbwalker.push('walker destination', destination);
+
     elbwalker.push(event, { title: 'Shirt', revenue: 42 });
     expect(mockFn).toHaveBeenCalledWith(
       'track',
@@ -125,7 +127,11 @@ describe('Destination Meta Pixel', () => {
 
   test('push addtocart', () => {
     destination.config.mapping = {
-      entity: { action: { track: 'AddToCart', name: 'title', value: 'price' } },
+      entity: {
+        action: {
+          custom: { track: 'AddToCart', name: 'title', value: 'price' },
+        },
+      },
     };
 
     elbwalker.push('walker destination', destination);

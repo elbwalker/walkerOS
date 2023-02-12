@@ -4,7 +4,7 @@ export * from './types/index.d';
 export const destinationAPI: DestinationAPI.Function = {
   config: {},
 
-  push(event, config, mapping = {}) {
+  push(event, config) {
     const custom = config.custom;
     if (!custom) return;
 

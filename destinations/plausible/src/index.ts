@@ -1,34 +1,10 @@
-import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
-
-declare global {
-  interface Window {
-    plausible?: any;
-  }
-}
-
-const w = window;
-
-export namespace DestinationPlausible {
-  export interface Config extends WebDestination.Config {
-    custom?: {
-      domain?: string; // Name of the domain to be tracked
-    };
-    mapping?: WebDestination.Mapping<EventConfig>;
-  }
-
-  export interface Function extends WebDestination.Function {
-    config: Config;
-  }
-
-  export interface EventConfig extends WebDestination.EventConfig {
-    // Custom destination event mapping properties
-  }
-}
+import { DestinationPlausible } from './types';
 
 export const destination: DestinationPlausible.Function = {
   config: {},
 
   init(config: DestinationPlausible.Config) {
+    const w = window;
     const custom = config.custom || {};
 
     if (config.loadScript) addScript(custom.domain);
@@ -42,8 +18,8 @@ export const destination: DestinationPlausible.Function = {
     return true;
   },
 
-  push(event: IElbwalker.Event): void {
-    w.plausible(`${event.event}`, { props: event.data });
+  push(event) {
+    window.plausible(`${event.event}`, { props: event.data });
   },
 };
 

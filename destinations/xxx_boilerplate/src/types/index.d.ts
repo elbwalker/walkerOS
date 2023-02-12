@@ -1,21 +1,22 @@
 import { WebDestination } from '@elbwalker/walker.js';
 
 declare global {
-  interface Window {}
+  interface Window {
+    xxx?: Function; // global window objects}
+  }
 }
 
-export declare namespace DestinationAPI {
+export declare namespace DestinationXXX {
   interface Function
     extends WebDestination.Function<CustomConfig, CustomEventConfig> {}
 
   type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 
   interface CustomConfig {
-    url: string;
-    transport?: Transport;
+    // XXXs custom settings
   }
 
-  interface CustomEventConfig {}
-
-  type Transport = 'fetch' | 'beacon' | 'xhr';
+  interface CustomEventConfig {
+    // Custom destination event mapping properties
+  }
 }
