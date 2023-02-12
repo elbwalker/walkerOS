@@ -1,6 +1,6 @@
 {
   "name": "@elbwalker/destination-web-api",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "API web destination for walker.js",
   "main": "dist/index.js",
   "types": "dist",
@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@types/jest": "^29.2.6",
+    "copyfiles": "^2.4.1",
     "esbuild": "^0.17.4",
     "jest": "^29.3.1",
     "jest-environment-jsdom": "^29.3.1",

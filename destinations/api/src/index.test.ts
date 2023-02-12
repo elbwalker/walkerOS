@@ -35,7 +35,7 @@ describe('Destination API', () => {
 
     w.elbLayer = [];
 
-    elbwalker = Elbwalker();
+    elbwalker = Elbwalker({ pageview: false });
     elbwalker.push('walker run');
 
     window.fetch = mockFetch;
@@ -54,19 +54,27 @@ describe('Destination API', () => {
   });
 
   test('init', () => {
-    destination.config = {
-      custom: {},
-    };
     elbwalker.push('walker destination', destination);
+    elbwalker.push(event);
 
-    expect(true).toBeTruthy();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   test('fetch', () => {
-    destination.config = {
-      custom: { url, transport: 'fetch' },
+    config = {
+      custom: { url }, // fetch as default
     };
-    elbwalker.push('walker destination', destination);
+    elbwalker.push('walker destination', destination, config);
+    elbwalker.push(event);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      url,
+      expect.objectContaining({ keepalive: true }),
+    );
+
+    elbwalker.push('walker destination', destination, {
+      custom: { url, transport: 'fetch' },
+    });
     elbwalker.push(event);
 
     expect(mockFetch).toHaveBeenCalledWith(
@@ -76,10 +84,10 @@ describe('Destination API', () => {
   });
 
   test('beacon', () => {
-    destination.config = {
+    config = {
       custom: { url, transport: 'beacon' },
     };
-    elbwalker.push('walker destination', destination);
+    elbwalker.push('walker destination', destination, config);
     elbwalker.push(event);
 
     expect(mockBeacon).toHaveBeenCalledWith(url, expect.any(String));
@@ -89,10 +97,10 @@ describe('Destination API', () => {
   });
 
   test('xhr', () => {
-    destination.config = {
+    config = {
       custom: { url, transport: 'xhr' },
     };
-    elbwalker.push('walker destination', destination);
+    elbwalker.push('walker destination', destination, config);
     elbwalker.push(event);
 
     expect(mockXHROpen).toHaveBeenCalledWith('POST', expect.any(String), true);
