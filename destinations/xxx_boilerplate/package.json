@@ -20,6 +20,7 @@
   },
   "files": [
     "dist/**/*.js",
+    "dist/**/*.mjs",
     "dist/**/*.d.ts"
   ],
   "dependencies": {
