@@ -1,6 +1,6 @@
 {
   "name": "@elbwalker/destination-web-google-ads",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Google Ads web destination for walker.js",
   "main": "dist/index.js",
   "types": "dist",
@@ -20,6 +20,7 @@
   },
   "files": [
     "dist/**/*.js",
+    "dist/**/*.mjs",
     "dist/**/*.d.ts"
   ],
   "dependencies": {

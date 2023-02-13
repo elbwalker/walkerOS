@@ -10,6 +10,7 @@
   "types": "dist/src",
   "files": [
     "dist/**/*.js",
+    "dist/**/*.mjs",
     "dist/**/*.d.ts"
   ],
   "scripts": {
