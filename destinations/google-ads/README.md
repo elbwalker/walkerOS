@@ -6,43 +6,72 @@ More detailed information and examples can be found in the [documentation](https
 
 ## 🤓 Usage
 
-Start by installing the destination with npm:
+Start by setting up the config for the destination. Optional fields as comments.
+Destinations can be used via node or directly in the browser.
+
+## Configuration
+
+```ts
+import { DestinationGoogleAds } from '@elbwalker/destination-web-google-ads';
+
+const config /* : DestinationGoogleAds.Config */ = {
+  // consent: { marketing: true }, // Neccessary consent states
+  custom: {
+    conversionId: 'AW-123456789', // Ads accounts id used for every conversion
+    // currency: 'EUR', // Default currency is EUR
+    // defaultValue: 1, // Used default value for conversions
+  },
+  // init: true, // Skip the initialisation
+  // loadScript: true, // Load additional required scripts on init
+  mapping: {
+    // e.g. order
+    entity: {
+      // e.g. complete
+      action: {
+        custom: {
+          id: 'order_id', // Property key to use as transaction id
+          label: 'abc', // Conversion label
+          value: 'revenue', // Name of data property key to use for value
+        },
+      },
+    },
+  },
+};
+```
+
+### Node usage
 
 ```sh
 npm i --save @elbwalker/destination-web-google-ads
 ```
 
-Import, configure and add the destination
-
 ```ts
 import { elb } from '@elbwalker/walker.js';
-import destinationAds, {
-  DestinationAds, // Types
-} from '@elbwalker/destination-web-google-ads';
+import destinationGoogleAds from '@elbwalker/destination-web-google-ads';
 
-const configAds: DestinationAds.Config = {
-  // consent: { marketing: true }, // Neccessary consent states
-  custom: {
-    conversionId: 'AW-123456789', // The ads accounts id used for every conversion
-    // currency: 'EUR', // Default currency is EUR
-    // defaultValue: 1, // Used default value for conversions
-  },
-  // init: false, // Status if the destination was initialized successfully or should be skipped
-  // loadScript: true, // Load additional required scripts on init
-  mapping: {
-    // order: {
-    //   complete: {
-    //     id: 'order_id', // Name of data property key to use as transaction id
-    //     label: 'abc', // Conversion label
-    //     value: 'revenue', // Name of data property key to use for value
-    //   },
-    // },
-  },
-};
+elb('walker destination', destinationGoogleAds, config);
+```
 
-// And add the destination to the walker.js
-destinationAds.config = configAds;
-elb('walker destination', destinationAds);
+### Browser usage
+
+Loading the destination via dynamic import
+
+```html
+<script>
+  // Make sure to initialize the elb function once.
+  function elb() {
+    (window.elbLayer = window.elbLayer || []).push(arguments);
+  }
+
+  // Upload the dist/index.mjs on your own server
+  const destination = (
+    await import(
+      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ads/dist/index.mjs'
+    )
+  ).default;
+
+  elb('walker destination', destination, config);
+</script>
 ```
 
 ## Contribute

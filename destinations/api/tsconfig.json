@@ -7,6 +7,9 @@
     "esModuleInterop": true,
     "moduleResolution": "node",
     "outDir": "dist",
+    "declaration": true,
+    "isolatedModules": true,
+    "emitDeclarationOnly": true,
     "typeRoots": ["@elbwalker/walker.js", "node_modules/@types"]
   },
   "exclude": ["node_modules", "dist", "**/*.test.*"],

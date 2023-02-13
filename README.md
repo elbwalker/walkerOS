@@ -13,6 +13,7 @@ Walker.js is a first-party event tracker for simplified and compliant data colle
 <div align="left">
   <img src="https://img.shields.io/github/license/elbwalker/walker.js" />
   <img src="https://img.shields.io/github/languages/top/elbwalker/walker.js" />
+  <img src="https://img.shields.io/github/size/elbwalker/walker.js/dist/walker.js" />
   <a href="https://docs.elbwalker.com/"><img src="https://img.shields.io/badge/docs-docs.elbwalker.com-yellow" alt="elbwalker Documentation"></a>
 </div>
 

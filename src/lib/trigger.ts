@@ -1,6 +1,6 @@
 import { IElbwalker, Walker } from '../types';
-import { getElbAttributeName, walker, getTriggerActions } from './walker';
-import { isVisible, throttle, trycatch } from './utils';
+import { getElbAttributeName, getEvents, getTriggerActions } from './walker';
+import { getAttribute, isVisible, throttle, trycatch } from './utils';
 
 let visibleObserver: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];
@@ -80,7 +80,7 @@ function handleTrigger(
   trigger: Walker.Trigger,
   // @TODO add triggerParams to filter for specific trigger
 ) {
-  const events = walker(element, trigger, instance.config.prefix);
+  const events = getEvents(element, trigger, instance.config.prefix);
   events.forEach((event: Walker.Event) => {
     instance.config.elbLayer.push(
       `${event.entity} ${event.action}`,
@@ -97,7 +97,7 @@ function handleActionElem(
   elem: HTMLElement,
   selectorAction: string,
 ) {
-  const actionAttr = elem.getAttribute(selectorAction);
+  const actionAttr = getAttribute(elem, selectorAction);
 
   if (!actionAttr) return;
 

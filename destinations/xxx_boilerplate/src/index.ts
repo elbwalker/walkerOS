@@ -1,34 +1,13 @@
-import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
+import { DestinationXXX } from './types';
 
 declare global {
-  interface Window {
-    xxx?: Function; // global window objects
-  }
+  interface Window {}
 }
 
-const w = window;
-
-export namespace DestinationXXX {
-  export interface Config extends WebDestination.Config {
-    custom?: {
-      // XXXs custom settings
-    };
-    mapping?: WebDestination.Mapping<EventConfig>;
-  }
-
-  export interface Function extends WebDestination.Function {
-    config: Config;
-  }
-
-  export interface EventConfig extends WebDestination.EventConfig {
-    // Custom destination event mapping properties
-  }
-}
-
-export const destination: DestinationXXX.Function = {
+export const destinationXXX: DestinationXXX.Function = {
   config: {},
 
-  init(config: DestinationXXX.Config) {
+  init(config) {
     if (config.loadScript) addScript();
 
     // Do something initializing
@@ -36,11 +15,7 @@ export const destination: DestinationXXX.Function = {
     return true;
   },
 
-  push(
-    event: IElbwalker.Event,
-    config?: DestinationXXX.Config,
-    mapping: DestinationXXX.EventConfig = {},
-  ): void {
+  push(event, config, mapping = {}) {
     // Do something magical
   },
 };
@@ -51,4 +26,4 @@ function addScript(src = 'https://XXX_DOMAIN/xxx.js') {
   document.head.appendChild(script);
 }
 
-export default destination;
+export default destinationXXX;

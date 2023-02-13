@@ -1,35 +1,11 @@
-import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
+import { IElbwalker } from '@elbwalker/walker.js';
+import { DestinationGoogleGA4 } from './types';
 
-declare global {
-  interface Window {
-    gtag: Function;
-  }
-}
-
-export namespace DestinationGA4 {
-  export interface Config extends WebDestination.Config {
-    custom?: {
-      measurementId?: string;
-      transport_url?: string;
-    };
-    mapping?: WebDestination.Mapping<EventConfig>;
-  }
-
-  export interface Function extends WebDestination.Function {
-    config: Config;
-  }
-
-  export interface EventConfig extends WebDestination.EventConfig {
-    // Custom destination event mapping properties
-  }
-}
-
-const w = window;
-
-const destination: DestinationGA4.Function = {
+const destinationGoogleGA4: DestinationGoogleGA4.Function = {
   config: { custom: { measurementId: '' } },
 
-  init(config: DestinationGA4.Config) {
+  init(config: DestinationGoogleGA4.Config) {
+    const w = window;
     const custom = config.custom || {};
     const settings: IElbwalker.AnyObject = {};
 
@@ -57,13 +33,9 @@ const destination: DestinationGA4.Function = {
     return true;
   },
 
-  push(
-    event: IElbwalker.Event,
-    config?: DestinationGA4.Config,
-    mapping: DestinationGA4.EventConfig = {},
-  ) {
-    config = config || {};
-    const custom = config.custom || {};
+  push(event, config) {
+    const custom = config.custom;
+    if (!custom) return;
 
     if (!custom.measurementId) return;
 
@@ -71,7 +43,7 @@ const destination: DestinationGA4.Function = {
 
     data.send_to = custom.measurementId;
 
-    w.gtag('event', event.event, data);
+    window.gtag('event', event.event, data);
   },
 };
 
@@ -84,4 +56,4 @@ function addScript(
   document.head.appendChild(script);
 }
 
-export default destination;
+export default destinationGoogleGA4;

@@ -1,38 +1,14 @@
-import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
-
-declare global {
-  interface Window {}
-}
-
-export namespace DestinationGTM {
-  export interface Config extends WebDestination.Config {
-    custom?: {
-      containerId?: string; // GTM-XXXXXXX
-      dataLayer?: string; // dataLayer
-      domain?: string; // Source domain of the GTM
-    };
-    mapping?: WebDestination.Mapping<EventConfig>;
-  }
-
-  export interface Function extends WebDestination.Function {
-    config: Config;
-  }
-
-  export interface EventConfig extends WebDestination.EventConfig {
-    // Custom destination event mapping properties
-  }
-}
+import { DestinationGoogleGTM } from './types';
 
 const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
 
-export const destination: DestinationGTM.Function = {
+export const destinationGoogleGTM: DestinationGoogleGTM.Function = {
   config: {},
 
-  init(config: DestinationGTM.Config) {
-    config.custom = config.custom || {};
-
-    const dataLayer = config.custom.dataLayer || defaultDataLayer;
+  init(config: DestinationGoogleGTM.Config) {
+    const custom = config.custom || {};
+    const dataLayer = custom.dataLayer || defaultDataLayer;
 
     window[dataLayer as any] = window[dataLayer as any] || [];
 
@@ -42,17 +18,13 @@ export const destination: DestinationGTM.Function = {
     });
 
     // Load the gtm script and container
-    if (config.loadScript && config.custom.containerId)
-      addScript(
-        config.custom.containerId,
-        config.custom.domain || defaultDomain,
-        dataLayer,
-      );
+    if (config.loadScript && custom.containerId)
+      addScript(custom.containerId, custom.domain || defaultDomain, dataLayer);
 
     return true;
   },
 
-  push(event: IElbwalker.Event): void {
+  push(event) {
     window.dataLayer!.push({
       ...event,
       walker: true,
@@ -67,4 +39,4 @@ function addScript(containerId: string, src: string, dataLayerName: string) {
   document.head.appendChild(script);
 }
 
-export default destination;
+export default destinationGoogleGTM;

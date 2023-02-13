@@ -6,46 +6,59 @@ More detailed information and examples can be found in the [documentation](https
 
 ## 🤓 Usage
 
-Using the destination with npm:
+Start by setting up the config for the destination. Optional fields as comments.
+Destinations can be used via node or directly in the browser.
 
-```sh
-npm i --save @elbwalker/destination-web-api
-```
-
-Import, configure and add the destination
+## Configuration
 
 ```ts
-import { elb } from '@elbwalker/walker.js';
-import destinationAPI, {
-  DestinationAPI, // Types
-} from '@elbwalker/destination-web-api';
+import { DestinationAPI } from '@elbwalker/destination-web-api';
 
-const configAPI: DestinationAPI.Config = {
+const config /* : DestinationAPI.Config */ = {
   // consent: { marketing: true }, // Neccessary consent states
   custom: {
     url: 'https://httpbin.org/anything', // Required
     // transport: 'fetch' // fetch (default), xhr or beacon
   },
-  // init: false, // Status if the destination was initialized successfully or should be skipped
+  // init: true, // Skip the initialisation
   // mapping: {
   //   '*': { '*': {} }, // Process all events
   // },
 };
-
-// And add the destination to the walker.js
-elb('walker destination', destinationAPI, configAPI);
 ```
 
-Using the destination via web import in the browser:
+### Node usage
+
+```sh
+npm i --save @elbwalker/destination-web-api
+```
+
+```ts
+import { elb } from '@elbwalker/walker.js';
+import destinationAPI from '@elbwalker/destination-web-api';
+
+elb('walker destination', destinationAPI, config);
+```
+
+### Browser usage
+
+Loading the destination via dynamic import
 
 ```html
-<script type="module">
-  // Upload the dist/browser.js on your own server
-  import destination from 'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api/dist/browser.js';
+<script>
+  // Make sure to initialize the elb function once.
+  function elb() {
+    (window.elbLayer = window.elbLayer || []).push(arguments);
+  }
 
-  elb('walker destination', destination, {
-    custom: { url: 'https://httpbin.org/anything' },
-  });
+  // Upload the dist/index.mjs on your own server
+  const destination = (
+    await import(
+      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api/dist/index.mjs'
+    )
+  ).default;
+
+  elb('walker destination', destination, config);
 </script>
 ```
 

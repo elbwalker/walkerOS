@@ -9,6 +9,16 @@ export namespace IElbwalker {
   }
 
   interface Elb {
+    (event: 'walker config', config: Partial<Config>): void;
+    (event: 'walker consent', consent: Consent): void;
+    (
+      event: 'walker destination',
+      destination: WebDestination.Function<any, any>,
+      config?: WebDestination.Config,
+    ): void;
+    (event: 'walker init', scope: Scope | Scope[]): void;
+    (event: 'walker run'): void;
+    (event: 'walker user', user: User): void;
     (
       event: string,
       data?: PushData,
@@ -16,16 +26,6 @@ export namespace IElbwalker {
       context?: Walker.OrderedProperties,
       nested?: Walker.Entities,
     ): void;
-    (event: 'walker config', config: Partial<Config>): void;
-    (event: 'walker consent', consent: Consent): void;
-    (
-      event: 'walker destination',
-      destination: WebDestination.Function,
-      config?: WebDestination.Config,
-    ): void;
-    (event: 'walker init', scope: Scope | Scope[]): void;
-    (event: 'walker run'): void;
-    (event: 'walker user', user: User): void;
   }
 
   type ElbLayer = [
