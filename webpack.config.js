@@ -45,6 +45,34 @@ const browserConfig = {
   plugins: [],
 };
 
+const moduleConfig = {
+  mode: 'production',
+  entry: './src/modules/node.ts',
+  module: {
+    rules: [
+      {
+        test: /\.tsx?$/,
+        use: 'ts-loader',
+        exclude: /node_modules/,
+      },
+    ],
+  },
+  resolve: {
+    extensions: ['.tsx', '.ts', '.js'],
+  },
+  experiments: {
+    outputModule: true,
+  },
+  output: {
+    library: {
+      type: 'module',
+    },
+    filename: 'index.mjs',
+    path: path.resolve(__dirname, 'dist'),
+  },
+  plugins: [],
+};
+
 const utilsConfig = {
   mode: 'production',
   entry: './src/lib/utils.ts',
@@ -73,4 +101,4 @@ const utilsConfig = {
   plugins: [],
 };
 
-module.exports = [browserConfig, nodeConfig, utilsConfig];
+module.exports = [browserConfig, nodeConfig, moduleConfig, utilsConfig];
