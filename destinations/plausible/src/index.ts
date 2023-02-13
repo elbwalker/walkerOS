@@ -1,6 +1,6 @@
 import { DestinationPlausible } from './types';
 
-export const destination: DestinationPlausible.Function = {
+export const destinationPlausible: DestinationPlausible.Function = {
   config: {},
 
   init(config: DestinationPlausible.Config) {
@@ -33,4 +33,4 @@ function addScript(
   document.head.appendChild(script);
 }
 
-export default destination;
+export default destinationPlausible;

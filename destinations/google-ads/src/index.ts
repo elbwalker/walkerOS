@@ -1,9 +1,9 @@
-import { DestinationAds } from './types';
+import { DestinationGoogleAds } from './types';
 
-export const destinationGoogleAds: DestinationAds.Function = {
+export const destinationGoogleAds: DestinationGoogleAds.Function = {
   config: {},
 
-  init(config: DestinationAds.Config) {
+  init(config: DestinationGoogleAds.Config) {
     const custom = config.custom || {};
     const w = window;
 

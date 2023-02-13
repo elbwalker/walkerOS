@@ -6,7 +6,7 @@ declare global {
   }
 }
 
-export declare namespace DestinationGA4 {
+export declare namespace DestinationGoogleGA4 {
   interface Function
     extends WebDestination.Function<CustomConfig, CustomEventConfig> {}
 

@@ -1,12 +1,12 @@
 import { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationMeta } from './types';
+import { DestinationMetaPixel } from './types';
 
 // https://developers.facebook.com/docs/meta-pixel/
 
-export const destinationMetaPixel: DestinationMeta.Function = {
+export const destinationMetaPixel: DestinationMetaPixel.Function = {
   config: {},
 
-  init(config: DestinationMeta.Config) {
+  init(config: DestinationMetaPixel.Config) {
     const custom = config.custom || {};
 
     // load fbevents.js
@@ -59,7 +59,7 @@ function setup() {
 
 function getParameters(
   event: IElbwalker.Event,
-  mapping: DestinationMeta.CustomEventConfig,
+  mapping: DestinationMetaPixel.CustomEventConfig,
   currency: string = 'EUR',
 ) {
   const value = mapping.value ? (event.data[mapping.value] as number) : 1;
@@ -111,12 +111,12 @@ function getParameters(
       return {
         currency,
         value,
-      } as DestinationMeta.StartSubscribeParameters;
+      } as DestinationMetaPixel.StartSubscribeParameters;
     case 'Subscribe':
       return {
         currency,
         value,
-      } as DestinationMeta.StartSubscribeParameters;
+      } as DestinationMetaPixel.StartSubscribeParameters;
     case 'ViewContent':
       return {
         content_name,

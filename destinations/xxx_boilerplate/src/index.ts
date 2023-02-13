@@ -4,7 +4,7 @@ declare global {
   interface Window {}
 }
 
-export const destination: DestinationXXX.Function = {
+export const destinationXXX: DestinationXXX.Function = {
   config: {},
 
   init(config) {
@@ -26,4 +26,4 @@ function addScript(src = 'https://XXX_DOMAIN/xxx.js') {
   document.head.appendChild(script);
 }
 
-export default destination;
+export default destinationXXX;

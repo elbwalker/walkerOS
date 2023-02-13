@@ -6,7 +6,7 @@ declare global {
   }
 }
 
-export declare namespace DestinationGTM {
+export declare namespace DestinationGoogleGTM {
   interface Function
     extends WebDestination.Function<CustomConfig, CustomEventConfig> {}
 

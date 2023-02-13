@@ -7,7 +7,7 @@ declare global {
   }
 }
 
-export declare namespace DestinationMeta {
+export declare namespace DestinationMetaPixel {
   interface Function
     extends WebDestination.Function<CustomConfig, CustomEventConfig> {}
 

@@ -6,7 +6,7 @@ declare global {
   }
 }
 
-export declare namespace DestinationAds {
+export declare namespace DestinationGoogleAds {
   interface Function
     extends WebDestination.Function<CustomConfig, CustomEventConfig> {}
 

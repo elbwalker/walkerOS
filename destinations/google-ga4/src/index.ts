@@ -1,10 +1,10 @@
 import { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationGA4 } from './types';
+import { DestinationGoogleGA4 } from './types';
 
-const destinationGoogleGA4: DestinationGA4.Function = {
+const destinationGoogleGA4: DestinationGoogleGA4.Function = {
   config: { custom: { measurementId: '' } },
 
-  init(config: DestinationGA4.Config) {
+  init(config: DestinationGoogleGA4.Config) {
     const w = window;
     const custom = config.custom || {};
     const settings: IElbwalker.AnyObject = {};

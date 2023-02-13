@@ -1,15 +1,18 @@
 {
   "compilerOptions": {
-    "target": "ES5",
-    "module": "CommonJS",
-    "rootDirs": ["."],
+    "target": "ES6",
+    "lib": ["ES6", "dom"],
+    "strict": true,
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
     "outDir": "dist",
     "declaration": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "typeRoots": ["@elbwalker/walker.js", "node_modules/@types"],
-    "strict": true
+    "isolatedModules": true,
+    "emitDeclarationOnly": true,
+    "typeRoots": ["@elbwalker/walker.js", "node_modules/@types"]
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.*"]
+  "exclude": ["node_modules", "dist", "**/*.test.*"],
+  "include": ["src/**/*.ts", ".eslintrc.js"],
+  "$schema": "https://json.schemastore.org/tsconfig"
 }

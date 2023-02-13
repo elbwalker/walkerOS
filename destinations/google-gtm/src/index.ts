@@ -1,12 +1,12 @@
-import { DestinationGTM } from './types';
+import { DestinationGoogleGTM } from './types';
 
 const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
 
-export const destinationGoogleGTM: DestinationGTM.Function = {
+export const destinationGoogleGTM: DestinationGoogleGTM.Function = {
   config: {},
 
-  init(config: DestinationGTM.Config) {
+  init(config: DestinationGoogleGTM.Config) {
     const custom = config.custom || {};
     const dataLayer = custom.dataLayer || defaultDataLayer;
 
