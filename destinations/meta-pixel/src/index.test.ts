@@ -1,11 +1,11 @@
 import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationMeta } from './types';
+import { DestinationMetaPixel } from './types';
 
 describe('Destination Meta Pixel', () => {
   const w = window;
   let elbwalker: IElbwalker.Function,
-    destination: DestinationMeta.Function,
-    config: DestinationMeta.Config;
+    destination: DestinationMetaPixel.Function,
+    config: DestinationMetaPixel.Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 

@@ -1,11 +1,11 @@
 import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationAds } from './types';
+import { DestinationGoogleAds } from './types';
 
 describe('destination Google Ads', () => {
   const w = window;
   let elbwalker: IElbwalker.Function,
-    destination: DestinationAds.Function,
-    config: DestinationAds.Config;
+    destination: DestinationGoogleAds.Function,
+    config: DestinationGoogleAds.Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 

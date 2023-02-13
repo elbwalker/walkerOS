@@ -1,11 +1,11 @@
 import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationGTM } from './types';
+import { DestinationGoogleGTM } from './types';
 
 describe('destination google-tag-manager', () => {
   const w = window;
   let elbwalker: IElbwalker.Function,
-    destination: DestinationGTM.Function,
-    config: DestinationGTM.Config;
+    destination: DestinationGoogleGTM.Function,
+    config: DestinationGoogleGTM.Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const containerId = 'GTM-XXXXXXX';
