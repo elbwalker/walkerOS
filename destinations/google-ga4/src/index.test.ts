@@ -1,11 +1,11 @@
 import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationGA4 } from './types';
+import { DestinationGoogleGA4 } from './types';
 
 describe('Destination Google GA4', () => {
   const w = window;
   let elbwalker: IElbwalker.Function,
-    destination: DestinationGA4.Function,
-    config: DestinationGA4.Config;
+    destination: DestinationGoogleGA4.Function,
+    config: DestinationGoogleGA4.Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const event = 'entity action';
