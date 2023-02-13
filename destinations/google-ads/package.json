@@ -1,11 +1,12 @@
 {
   "name": "@elbwalker/destination-web-google-ads",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Google Ads web destination for walker.js",
   "main": "dist/index.js",
   "types": "dist",
   "scripts": {
-    "build": "tsc",
+    "build": "node ./esbuild.mjs",
+    "postbuild": "tsc && copyfiles -u 1 src/types/*.d.ts dist",
     "dev": "jest --watchAll --colors",
     "publish": "npm i && npm run test && npm run build && npm publish --access public",
     "test": "jest --colors --coverage"
@@ -26,11 +27,13 @@
   },
   "devDependencies": {
     "@types/gtag.js": "^0.0.12",
-    "@types/jest": "^28.1.7",
-    "jest": "^28.1.3",
-    "jest-environment-jsdom": "^28.1.3",
-    "ts-jest": "^28.0.8",
-    "typescript": "^4.7.4"
+    "@types/jest": "^29.2.6",
+    "copyfiles": "^2.4.1",
+    "esbuild": "^0.17.4",
+    "jest": "^29.3.1",
+    "jest-environment-jsdom": "^29.3.1",
+    "ts-jest": "^29.0.5",
+    "typescript": "^4.9.4"
   },
   "bugs": {
     "url": "https://github.com/elbwalker/walker.js/issues"
@@ -40,7 +43,7 @@
     "elb",
     "elbwalker",
     "walker",
-    "walker.js",
+    "walkerjs",
     "walker destination",
     "analytics",
     "tracking",

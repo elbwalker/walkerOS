@@ -1,6 +1,6 @@
 import { IElbwalker, Walker } from '../types';
-import { getElbAttributeName, walker, getTriggerActions } from './walker';
-import { isVisible, throttle, trycatch } from './utils';
+import { getElbAttributeName, getEvents, getTriggerActions } from './walker';
+import { getAttribute, isVisible, throttle, trycatch } from './utils';
 
 let visibleObserver: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];
@@ -20,7 +20,7 @@ export function ready(run: Function, instance: IElbwalker.Function) {
 // Called for each new run to setup triggers
 export function load(instance: IElbwalker.Function) {
   // Trigger static page view if enabled
-  if (instance.config.pageview) view(instance);
+  if (instance.config.pageview) pageView(instance);
 
   initScopeTrigger(instance);
 }
@@ -80,7 +80,7 @@ function handleTrigger(
   trigger: Walker.Trigger,
   // @TODO add triggerParams to filter for specific trigger
 ) {
-  const events = walker(element, trigger, instance.config.prefix);
+  const events = getEvents(element, trigger, instance.config.prefix);
   events.forEach((event: Walker.Event) => {
     instance.config.elbLayer.push(
       `${event.entity} ${event.action}`,
@@ -97,7 +97,7 @@ function handleActionElem(
   elem: HTMLElement,
   selectorAction: string,
 ) {
-  const actionAttr = elem.getAttribute(selectorAction);
+  const actionAttr = getAttribute(elem, selectorAction);
 
   if (!actionAttr) return;
 
@@ -238,16 +238,16 @@ function scroll(instance: IElbwalker.Function) {
   }
 }
 
-function view(instance: IElbwalker.Function) {
+function pageView(instance: IElbwalker.Function) {
   // static page view
-  const l = window.location;
+  const loc = window.location;
   const data: Walker.Properties = {
-    domain: l.hostname,
+    domain: loc.hostname,
     title: document.title,
     referrer: document.referrer,
   };
-  if (l.search) data.search = l.search;
-  if (l.hash) data.hash = l.hash;
+  if (loc.search) data.search = loc.search;
+  if (loc.hash) data.hash = loc.hash;
 
   // @TODO get all nested entities
   instance.config.elbLayer.push('page view', data, Walker.Trigger.Load);

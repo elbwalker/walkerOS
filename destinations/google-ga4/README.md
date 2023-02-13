@@ -6,27 +6,21 @@ More detailed information and examples can be found in the [documentation](https
 
 ## 🤓 Usage
 
-Start by installing the destination with npm:
+Start by setting up the config for the destination. Optional fields as comments.
+Destinations can be used via node or directly in the browser.
 
-```sh
-npm i --save @elbwalker/destination-web-google-ga4
-```
-
-Import, configure and add the destination
+## Configuration
 
 ```ts
-import { elb } from '@elbwalker/walker.js';
-import destinationGA4, {
-  DestinationGA4, // Types
-} from '@elbwalker/destination-web-google-ga4';
+import { DestinationGoogleGA4 } from '@elbwalker/destination-web-google-ga4';
 
-const configGA4: DestinationGA4.Config = {
+const config /* : DestinationGoogleGA4.Config */ = {
   // consent: { marketing: true }, // Neccessary consent states
   custom: {
     measurementId: 'G-XXXXXX-1', // Required
     // transport_url: '', // optional: endpoint where to send data to
   },
-  // init: false, // Status if the destination was initialized successfully or should be skipped
+  // init: true, // Skip the initialisation
   // loadScript: true, // Load additional required scripts on init
   mapping: {
     '*': { '*': {} }, // Process all events
@@ -34,10 +28,41 @@ const configGA4: DestinationGA4.Config = {
     page: { view: { ignore: true } }, // Ignore page view events
   },
 };
+```
 
-// And add the destination to the walker.js
-destinationGA4.config = configGA4;
-elb('walker destination', DestinationGA4);
+### Node usage
+
+```sh
+npm i --save @elbwalker/destination-web-google-ga4
+```
+
+```ts
+import { elb } from '@elbwalker/walker.js';
+import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
+
+elb('walker destination', destinationGoogleGA4, config);
+```
+
+### Browser usage
+
+Loading the destination via dynamic import
+
+```html
+<script>
+  // Make sure to initialize the elb function once.
+  function elb() {
+    (window.elbLayer = window.elbLayer || []).push(arguments);
+  }
+
+  // Upload the dist/index.mjs on your own server
+  const destination = (
+    await import(
+      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4/dist/index.mjs'
+    )
+  ).default;
+
+  elb('walker destination', destination, config);
+</script>
 ```
 
 ## Contribute

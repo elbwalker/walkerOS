@@ -6,34 +6,59 @@ More detailed information and examples can be found in the [documentation](https
 
 ## 🤓 Usage
 
-Start by installing the destination with npm:
+Start by setting up the config for the destination. Optional fields as comments.
+Destinations can be used via node or directly in the browser.
+
+## Configuration
+
+```ts
+import { DestinationGoogleGTM } from '@elbwalker/destination-web-google-gtm';
+
+const config /* : DestinationGoogleGTM.Config */ = {
+  // consent: { functional: true }, // Neccessary consent states
+  // custom: {
+  //   containerId: "GTM-XXXXXXX", // The published container id
+  //   dataLayer: "dataLayer", // Name of the dataLayer array
+  //   domain: "https://www.googletagmanager.com/gtm.js?id="; // Source domain
+  // },
+  // init: true, // Skip the initialisation
+  // mapping: { '*': { '*': {} } }, // Process all events
+};
+```
+
+### Node usage
 
 ```sh
 npm i --save @elbwalker/destination-web-google-gtm
 ```
 
-Import, configure and add the destination
-
 ```ts
 import { elb } from '@elbwalker/walker.js';
-import destinationGTM, {
-  DestinationGTM, // Types
-} from '@elbwalker/destination-web-google-gtm';
+import destinationGoogleGTM from '@elbwalker/destination-web-google-gtm';
 
-const configGTM: DestinationGTM.Config = {
-  // consent: { functional: true }, // Neccessary consent states
-  // custom: {
-  //   containerId: "GTM-XXXXXXX", // The published container id
-  //   dataLayer: "dataLayer", // Name of the dataLayer array
-  //   domain: "https://www.googletagmanager.com/gtm.js?id="; // Source domain of the GTM
-  // },
-  // init: false, // Status if the destination was initialized successfully or should be skipped
-  // mapping: { '*': { '*': {} } }, // Process all events
-};
+elb('walker destination', destinationGoogleGTM, config);
+```
 
-// And add the destination to the walker.js
-destinationGTM.config = configGTM;
-elb('walker destination', destinationGTM);
+### Browser usage
+
+Loading the destination via dynamic import
+
+```html
+<script>
+  // Make sure to initialize the elb function once.
+  function elb() {
+    (window.elbLayer = window.elbLayer || []).push(arguments);
+  }
+
+  // Upload the dist/index.mjs on your own server
+  const destination = (
+    await import(
+      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-gtm/dist/index.mjs'
+    )
+  ).default;
+
+  elb('walker destination', destination, config);
+</script>
 ```
 
 ## Contribute

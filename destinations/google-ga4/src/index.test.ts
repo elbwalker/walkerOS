@@ -1,5 +1,5 @@
 import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationGA4 } from '.';
+import { DestinationGA4 } from './types';
 
 describe('Destination Google GA4', () => {
   const w = window;
@@ -28,7 +28,7 @@ describe('Destination Google GA4', () => {
     w.elbLayer = [];
     w.dataLayer = [];
 
-    elbwalker = Elbwalker();
+    elbwalker = Elbwalker({ pageview: false });
     elbwalker.push('walker run');
     w.gtag = mockFn;
   });

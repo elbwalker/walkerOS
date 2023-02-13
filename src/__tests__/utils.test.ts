@@ -1,10 +1,12 @@
 import {
-  debounce,
   elb,
-  getItem,
+  debounce,
+  getMarketingParameters,
   isVisible,
-  removeItem,
-  setItem,
+  startSession,
+  storageDelete,
+  storageRead,
+  storageWrite,
   throttle,
 } from '../lib/utils';
 import { Utils } from '../types';
@@ -34,8 +36,8 @@ describe('Utils', () => {
   });
 
   test('isVisible', () => {
-    const innerHeight = window.innerHeight;
-    window.innerHeight = 100; // Create a small window
+    const innerHeight = w.innerHeight;
+    w.innerHeight = 100; // Create a small window
 
     let x = 25,
       y = 25,
@@ -99,7 +101,7 @@ describe('Utils', () => {
     });
     expect(isVisible(elem)).toBeTruthy();
 
-    window.innerHeight = innerHeight;
+    w.innerHeight = innerHeight;
   });
 
   test('throttle', () => {
@@ -157,54 +159,185 @@ describe('Utils', () => {
     const value = 'abc';
 
     // Session
-    setItem(key, value);
-    expect(getItem(key)).toBe(value);
-    removeItem(key);
-    expect(getItem(key)).toBe('');
+    storageWrite(key, value);
+    expect(storageRead(key)).toBe(value);
+    storageDelete(key);
+    expect(storageRead(key)).toBe('');
     w.sessionStorage.setItem(key, 's');
-    expect(getItem(key)).toBe('s');
+    expect(storageRead(key)).toBe('s');
 
     // Local
-    setItem(key, value, 1, Utils.Storage.Type.Local);
-    expect(getItem(key, Utils.Storage.Type.Local)).toBe(value);
-    removeItem(key, Utils.Storage.Type.Local);
-    expect(getItem(key, Utils.Storage.Type.Local)).toBe('');
+    storageWrite(key, value, 1, Utils.Storage.Type.Local);
+    expect(storageRead(key, Utils.Storage.Type.Local)).toBe(value);
+    storageDelete(key, Utils.Storage.Type.Local);
+    expect(storageRead(key, Utils.Storage.Type.Local)).toBe('');
 
     // Cookie
     Object.defineProperty(document, 'cookie', {
       writable: true,
       value: '',
     });
-    setItem(key, value, 1, Utils.Storage.Type.Cookie);
-    expect(getItem(key, Utils.Storage.Type.Cookie)).toBe(value);
-    removeItem(key, Utils.Storage.Type.Cookie);
-    expect(getItem(key, Utils.Storage.Type.Cookie)).toBe('');
-    expect(getItem('foo', Utils.Storage.Type.Cookie)).toBe('');
-    setItem(key, value, 1, Utils.Storage.Type.Cookie, 'elbwalker.com');
+    storageWrite(key, value, 1, Utils.Storage.Type.Cookie);
+    expect(storageRead(key, Utils.Storage.Type.Cookie)).toBe(value);
+    storageDelete(key, Utils.Storage.Type.Cookie);
+    expect(storageRead(key, Utils.Storage.Type.Cookie)).toBe('');
+    expect(storageRead('foo', Utils.Storage.Type.Cookie)).toBe('');
+    storageWrite(key, value, 1, Utils.Storage.Type.Cookie, 'elbwalker.com');
     expect(document.cookie).toContain('domain=elbwalker.com');
 
     // Expiration Session
-    setItem(key, value, 5);
-    expect(getItem(key)).toBe(value);
+    storageWrite(key, value, 5);
+    expect(storageRead(key)).toBe(value);
     jest.advanceTimersByTime(6 * 60 * 1000);
     expect(w.sessionStorage.getItem(key)).toBeDefined();
-    expect(getItem(key)).toBe('');
+    expect(storageRead(key)).toBe('');
     expect(w.sessionStorage.getItem(key)).toBeNull();
 
     // Expiration Local
-    setItem(key, value, 5, Utils.Storage.Type.Local);
-    expect(getItem(key, Utils.Storage.Type.Local)).toBe(value);
+    storageWrite(key, value, 5, Utils.Storage.Type.Local);
+    expect(storageRead(key, Utils.Storage.Type.Local)).toBe(value);
     jest.advanceTimersByTime(6 * 60 * 1000);
     expect(w.localStorage.getItem(key)).toBeDefined();
-    expect(getItem(key, Utils.Storage.Type.Local)).toBe('');
+    expect(storageRead(key, Utils.Storage.Type.Local)).toBe('');
     expect(w.localStorage.getItem(key)).toBeNull();
 
     // Expiration Cookie
-    setItem(key, value, 5, Utils.Storage.Type.Cookie);
+    storageWrite(key, value, 5, Utils.Storage.Type.Cookie);
     expect(document.cookie).toContain('max-age=300');
 
     // Cast
-    setItem(key, true);
-    expect(getItem(key)).toBe(true);
+    storageWrite(key, true);
+    expect(storageRead(key)).toBe(true);
+  });
+
+  test('session start', () => {
+    const url = 'https://www.elbwalker.com/';
+    const referrer = 'https://www.example.com/';
+    Object.defineProperty(w, 'performance', {
+      value: {
+        getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
+      },
+    });
+
+    // Is new
+    expect(startSession({ url, referrer: url, isNew: true })).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String) }),
+    );
+
+    // Referral
+    expect(startSession({ url, referrer })).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String) }),
+    );
+
+    // Direct
+    expect(startSession({ url, referrer: '' })).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String) }),
+    );
+
+    // Predefined data
+    expect(
+      startSession({ url, referrer, data: { id: 'sessionId' } }),
+    ).toStrictEqual(expect.objectContaining({ id: 'sessionId' }));
+
+    // Marketing
+    expect(startSession({ url: url + '?utm_campaign=foo' })).toStrictEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        campaign: 'foo',
+        marketing: true,
+      }),
+    );
+
+    // Marketing with custom marketing parameter
+    expect(
+      startSession({
+        url: url + '?affiliate=parameter',
+        parameters: { affiliate: 'custom' },
+      }),
+    ).toStrictEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        custom: 'parameter',
+        marketing: true,
+      }),
+    );
+
+    // Referrer with custom domains
+    expect(
+      startSession({
+        url: 'https://www.elbwalker.com',
+        referrer: 'https://docs.elbwalker.com',
+        domains: ['docs.elbwalker.com'],
+      }),
+    ).toBeFalsy();
+    expect(
+      startSession({
+        url: 'https://www.elbwalker.com',
+        referrer: '',
+        domains: [''], // Hack to disable direct or hidden referrer
+      }),
+    ).toBeFalsy();
+
+    // Default url and referrer
+    Object.defineProperty(document, 'referrer', {
+      value: referrer,
+    });
+    Object.defineProperty(window, 'location', {
+      value: new URL(url),
+    });
+    expect(startSession()).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String) }),
+    );
+
+    // Reload
+    Object.defineProperty(w, 'performance', {
+      value: {
+        getEntriesByType: jest.fn().mockReturnValue([{ type: 'reload' }]),
+      },
+    });
+    expect(startSession()).toBeFalsy();
+
+    // Reload with marketing parameter
+    expect(startSession({ url: url + '?utm_campaign=foo' })).toBeFalsy();
+  });
+
+  test('marketing parameters', () => {
+    const url = 'https://www.elbwalker.com/?';
+    expect(getMarketingParameters(new URL(url))).toStrictEqual({});
+
+    expect(
+      getMarketingParameters(new URL(url + 'utm_campaign=c')),
+    ).toStrictEqual(expect.objectContaining({ campaign: 'c' }));
+    expect(
+      getMarketingParameters(new URL(url + 'utm_content=c')),
+    ).toStrictEqual(expect.objectContaining({ content: 'c' }));
+    expect(getMarketingParameters(new URL(url + 'dclid=id'))).toStrictEqual(
+      expect.objectContaining({ clickId: 'id' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'fbclid=id'))).toStrictEqual(
+      expect.objectContaining({ clickId: 'id' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'gclid=id'))).toStrictEqual(
+      expect.objectContaining({ clickId: 'id' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'utm_medium=m'))).toStrictEqual(
+      expect.objectContaining({ medium: 'm' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'msclkid=id'))).toStrictEqual(
+      expect.objectContaining({ clickId: 'id' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'utm_source=s'))).toStrictEqual(
+      expect.objectContaining({ source: 's' }),
+    );
+    expect(getMarketingParameters(new URL(url + 'utm_term=t'))).toStrictEqual(
+      expect.objectContaining({ term: 't' }),
+    );
+
+    // Custom parameters
+    expect(
+      getMarketingParameters(new URL(url + 'utm_custom=bar'), {
+        utm_custom: 'foo',
+      }),
+    ).toStrictEqual(expect.objectContaining({ foo: 'bar' }));
   });
 });

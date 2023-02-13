@@ -83,7 +83,7 @@ describe('Trigger', () => {
     );
   });
 
-  test('load view', () => {
+  test('load page view', () => {
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page view',

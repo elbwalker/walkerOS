@@ -1,5 +1,5 @@
 import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationPlausible } from '.';
+import { DestinationPlausible } from './types';
 
 describe('destination plausible', () => {
   const w = window;
@@ -22,7 +22,7 @@ describe('destination plausible', () => {
     w.elbLayer = [];
     w.plausible = mockFn;
 
-    elbwalker = Elbwalker();
+    elbwalker = Elbwalker({ pageview: false });
     elbwalker.push('walker run');
   });
 

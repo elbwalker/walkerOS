@@ -2,6 +2,7 @@
 
 Understand the concept of destinations, learn how to use them, and how to write you own.
 
+- [API](./api/)
 - [event pipe](./event-pipe/)
 - [Google Ads](./google-ads/)
 - [Google GA4](./google-ga4/)
@@ -18,13 +19,13 @@ Creating your own destinations is easy. Use [XXX Boilerplate](./xxx_boilerplate/
 
 ```ts
 interface Function {
-  init?: (config: Config) => boolean;
+  init?: (config: Config<Custom, EventCustom>) => boolean;
   push: (
     event: IElbwalker.Event,
-    config?: Config,
-    mapping?: EventConfig,
+    config: Config<Custom, EventCustom>,
+    mapping?: EventConfig<EventCustom>,
   ) => void;
-  config: Config;
+  config: Config<Custom, EventCustom>;
 }
 ```
 
@@ -32,7 +33,7 @@ interface Function {
 
 Set all necessary parameters and handle the states. It's separated to keep control of the destination once it's been added to the walker using `destination.config`.
 
-### Push(event)
+### Push(event, config, mapping)
 
 The default interface the walker uses to deliver events to each destination.
 

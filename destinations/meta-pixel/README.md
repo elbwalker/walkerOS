@@ -6,42 +6,73 @@ More detailed information and examples can be found in the [documentation](https
 
 ## 🤓 Usage
 
-Start by installing the destination with npm:
+Start by setting up the config for the destination. Optional fields as comments.
+Destinations can be used via node or directly in the browser.
 
-```sh
-npm i --save @elbwalker/destination-web-meta-pixel
-```
-
-Import, configure and add the destination
+## Configuration
 
 ```ts
-import { elb } from '@elbwalker/walker.js';
-import destinationMeta, {
-  DestinationMeta, // Types
-} from '@elbwalker/destination-web-meta-pixel';
+import { DestinationMeta } from '@elbwalker/destination-web-meta-pixel';
 
-const configMeta: DestinationMeta.Config = {
+const config /* : DestinationMeta.Config */ = {
   // consent: { marketing: true }, // Neccessary consent states
   custom: {
     pixelId: '1234567890', // The ads accounts id used for every conversion
     // currency: 'EUR', // Default currency is EUR
     // pageview: true, // Send the PageView event (default yes, deactivate actively)
   },
-  // init: false, // Status if the destination was initialized successfully or should be skipped
+  // init: true, // Skip the initialisation
   // loadScript: true, // Load additional required scripts on init
   mapping: {
-    order: {
-      complete: {
-        // id: 'order_id', // Name of data property key to use in content_ids
-        // name: 'title', // Name of data property key to use as content_name
-        track: 'Purchase', // Name of a standard event to track
-        value: 'revenue', // Name of data property key to use for value
+    // e.g. order
+    entity: {
+      // e.g. complete
+      action: {
+        custom: {
+          // id: 'order_id', // Name of data property key to use in content_ids
+          // name: 'title', // Name of data property key to use as content_name
+          track: 'Purchase', // Name of a standard event to track
+          value: 'revenue', // Name of data property key to use for value
+        },
       },
     },
   },
 };
-destinationMeta.config = configMeta;
-elb('walker destination', destinationMeta);
+```
+
+### Node usage
+
+```sh
+npm i --save @elbwalker/destination-web-meta-pixel
+```
+
+```ts
+import { elb } from '@elbwalker/walker.js';
+import destinationMetaPixel from '@elbwalker/destination-web-meta-pixel';
+
+elb('walker destination', destinationMetaPixel, config);
+```
+
+### Browser usage
+
+Loading the destination via dynamic import
+
+```html
+<script>
+  // Make sure to initialize the elb function once.
+  function elb() {
+    (window.elbLayer = window.elbLayer || []).push(arguments);
+  }
+
+  // Upload the dist/index.mjs on your own server
+  const destination = (
+    await import(
+      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-meta-pixel/dist/index.mjs'
+    )
+  ).default;
+
+  elb('walker destination', destination, config);
+</script>
 ```
 
 ## Contribute

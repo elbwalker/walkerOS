@@ -1,67 +1,12 @@
-import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
-
-declare global {
-  interface Window {
-    _fbq?: facebook.Pixel.Event;
-    fbq?: facebook.Pixel.Event;
-  }
-}
-
-const w = window;
-
-export namespace DestinationMeta {
-  export interface Config extends WebDestination.Config {
-    custom?: {
-      pixelId?: string; // Required pixel id
-      currency?: string; // Default currency is EUR
-      pageview?: boolean; // Send the PageView event (default yes, deactivate actively)
-    };
-    mapping?: WebDestination.Mapping<EventConfig>;
-  }
-
-  export interface Function extends WebDestination.Function {
-    config: Config;
-  }
-
-  export interface EventConfig extends WebDestination.EventConfig {
-    id?: string; // Name of data property key to use in content_ids
-    name?: string; // Name of data property key to use as content_name
-    track?: StandardEventNames; // Name of a standard event to track
-    value?: string; // Name of data property key to use for value
-  }
-
-  export type StandardEventNames =
-    | 'AddPaymentInfo'
-    | 'AddToCart'
-    | 'AddToWishlist'
-    | 'CompleteRegistration'
-    | 'Contact'
-    | 'CustomizeProduct'
-    | 'Donate'
-    | 'FindLocation'
-    | 'InitiateCheckout'
-    | 'Lead'
-    | 'Purchase'
-    | 'Schedule'
-    | 'Search'
-    | 'StartTrial'
-    | 'SubmitApplication'
-    | 'Subscribe'
-    | 'ViewContent';
-
-  export interface StartSubscribeParameters {
-    currency?: string;
-    predicted_ltv?: number;
-    value?: number;
-  }
-}
+import { IElbwalker } from '@elbwalker/walker.js';
+import { DestinationMetaPixel } from './types';
 
 // https://developers.facebook.com/docs/meta-pixel/
 
-export const destination: DestinationMeta.Function = {
-  config: { custom: { pixelId: '' } },
+export const destinationMetaPixel: DestinationMetaPixel.Function = {
+  config: {},
 
-  init(config: DestinationMeta.Config) {
+  init(config: DestinationMetaPixel.Config) {
     const custom = config.custom || {};
 
     // load fbevents.js
@@ -73,39 +18,33 @@ export const destination: DestinationMeta.Function = {
     // fbq function setup
     setup();
 
-    w.fbq('init', custom.pixelId);
+    window.fbq('init', custom.pixelId);
 
     // PageView event (deactivate actively)
-    if (custom.pageview !== false) w.fbq('track', 'PageView');
+    if (custom.pageview !== false) window.fbq('track', 'PageView');
 
     return true;
   },
 
-  push(
-    event: IElbwalker.Event,
-    config?: DestinationMeta.Config,
-    mapping: DestinationMeta.EventConfig = {},
-  ): void {
-    config = config || {};
-    const custom = config.custom || {};
+  push(event, config, mapping = {}) {
+    const custom = config.custom;
+    if (!custom) return;
+
+    const customMapping = mapping.custom || {};
 
     // Standard events
-    if (mapping.track) {
-      const parameters = getParameters(
-        mapping.track,
-        event,
-        mapping,
-        custom.currency,
-      );
-      w.fbq('track', mapping.track, parameters);
+    if (customMapping.track) {
+      const parameters = getParameters(event, customMapping, custom.currency);
+      window.fbq('track', customMapping.track, parameters);
     } else {
       // Custom events
-      w.fbq('trackCustom', event.event);
+      window.fbq('trackCustom', event.event);
     }
   },
 };
 
 function setup() {
+  const w = window;
   if (w.fbq as any) return;
 
   const n = (w.fbq = function (): void {
@@ -119,94 +58,75 @@ function setup() {
 }
 
 function getParameters(
-  track: DestinationMeta.StandardEventNames,
   event: IElbwalker.Event,
-  mapping: DestinationMeta.EventConfig,
+  mapping: DestinationMetaPixel.CustomEventConfig,
   currency: string = 'EUR',
 ) {
   const value = mapping.value ? (event.data[mapping.value] as number) : 1;
   const content_name = mapping.name ? (event.data[mapping.name] as string) : '';
 
-  if (track === 'AddPaymentInfo') {
-    const parameters: facebook.Pixel.AddPaymentInfoParameters = {
-      currency,
-      value,
-    };
-    return parameters;
+  switch (mapping.track) {
+    case 'AddPaymentInfo':
+      return {
+        currency,
+        value,
+      } as facebook.Pixel.AddPaymentInfoParameters;
+    case 'AddToCart':
+      return {
+        content_name,
+        currency,
+        value: value as number,
+      } as facebook.Pixel.AddToCartParameters;
+    case 'AddToWishlist':
+      return {
+        content_name,
+      } as facebook.Pixel.AddToWishlistParameters;
+    case 'CompleteRegistration':
+      return {
+        content_name,
+        currency,
+      } as facebook.Pixel.CompleteRegistrationParameters;
+    case 'InitiateCheckout':
+      return {
+        currency,
+        value,
+      } as facebook.Pixel.InitiateCheckoutParameters;
+    case 'Lead':
+      return {
+        content_name,
+        currency,
+      } as facebook.Pixel.LeadParameters;
+    case 'Purchase':
+      return {
+        content_name,
+        value: value || 1,
+        currency,
+      } as facebook.Pixel.PurchaseParameters;
+    case 'Search':
+      return {
+        currency,
+        value,
+      } as facebook.Pixel.SearchParameters;
+    case 'StartTrial':
+      return {
+        currency,
+        value,
+      } as DestinationMetaPixel.StartSubscribeParameters;
+    case 'Subscribe':
+      return {
+        currency,
+        value,
+      } as DestinationMetaPixel.StartSubscribeParameters;
+    case 'ViewContent':
+      return {
+        content_name,
+        currency,
+        value,
+      } as facebook.Pixel.ViewContentParameters;
+    default:
+      // Contact, CustomizeProduct, Donate, FindLocation, Schedule, SubmitApplication
+      return {} as facebook.Pixel.CustomParameters;
   }
-  if (track === 'AddToCart') {
-    const parameters: facebook.Pixel.AddToCartParameters = {
-      content_name,
-      currency,
-      value: value as number,
-    };
-    return parameters;
-  }
-  if (track === 'AddToWishlist') {
-    const parameters: facebook.Pixel.AddToWishlistParameters = {
-      content_name,
-    };
-    return parameters;
-  }
-  if (track === 'CompleteRegistration') {
-    const parameters: facebook.Pixel.CompleteRegistrationParameters = {
-      content_name,
-      currency,
-    };
-    return parameters;
-  }
-  if (track === 'InitiateCheckout') {
-    const parameters: facebook.Pixel.InitiateCheckoutParameters = {
-      currency,
-      value,
-    };
-    return parameters;
-  }
-  if (track === 'Lead') {
-    const parameters: facebook.Pixel.LeadParameters = {
-      content_name,
-      currency,
-    };
-    return parameters;
-  }
-  if (track === 'Purchase') {
-    const parameters: facebook.Pixel.PurchaseParameters = {
-      content_name,
-      value: value || 1,
-      currency,
-    };
-    return parameters;
-  }
-  if (track === 'Search') {
-    const parameters: facebook.Pixel.SearchParameters = { currency, value };
-    return parameters;
-  }
-  if (track === 'StartTrial') {
-    const parameters: DestinationMeta.StartSubscribeParameters = {
-      currency,
-      value,
-    };
-    return parameters;
-  }
-  if (track === 'Subscribe') {
-    const parameters: DestinationMeta.StartSubscribeParameters = {
-      currency,
-      value,
-    };
-    return parameters;
-  }
-  if (track === 'ViewContent') {
-    const parameters: facebook.Pixel.ViewContentParameters = {
-      content_name,
-      currency,
-      value,
-    };
-    return parameters;
-  }
-
-  // Contact, CustomizeProduct, Donate, FindLocation, Schedule, SubmitApplication
-  const parameters: facebook.Pixel.CustomParameters = {};
-  return parameters;
 }
 
 function addScript(src = 'https://connect.facebook.net/en_US/fbevents.js') {
@@ -216,4 +136,4 @@ function addScript(src = 'https://connect.facebook.net/en_US/fbevents.js') {
   document.head.appendChild(script);
 }
 
-export default destination;
+export default destinationMetaPixel;

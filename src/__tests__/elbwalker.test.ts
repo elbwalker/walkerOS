@@ -269,4 +269,21 @@ describe('Elbwalker', () => {
       }),
     );
   });
+
+  test('timing', () => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    jest.advanceTimersByTime(2500); // 2.5 sec load time
+    elbwalker = Elbwalker({ elbLayer: [], default: true });
+
+    expect(mockFn.mock.calls[0][0].timing).toEqual(2.5);
+
+    jest.advanceTimersByTime(1000); // 1 sec to new run
+    elbwalker.push('walker run');
+    expect(mockFn.mock.calls[1][0].timing).toEqual(0); // Start from 0 not 3.5
+
+    jest.advanceTimersByTime(5000); // wait 5 sec
+    elbwalker.push('e a');
+    expect(mockFn.mock.calls[2][0].timing).toEqual(5);
+  });
 });

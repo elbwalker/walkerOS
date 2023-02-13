@@ -13,6 +13,7 @@
     "typeRoots": ["src/types", "node_modules/@types"],
     "types": ["jest", "node"],
     "esModuleInterop": true,
+    // @TODO "isolatedModules": true,
     "declaration": true,
     "forceConsistentCasingInFileNames": true
   },
