@@ -8,35 +8,66 @@ More detailed information and examples can be found in the [documentation](https
 
 ## 🤓 Usage
 
-Start by installing the destination with npm:
+Start by setting up the config for the destination. Optional fields as comments.
+Destinations can be used via node or directly in the browser.
+
+## Configuration
+
+```ts
+import { DestinationXXX } from '@elbwalker/destination-web-xxx';
+
+const config /* : DestinationXXX.Config */ = {
+  // consent: { marketing: true }, // Neccessary consent states
+  custom: {
+    // CustomConfig
+  },
+  // init: true, // Skip the initialisation
+  // loadScript: true, // Load additional required scripts on init
+  mapping: {
+    '*': {
+      '*': {
+        custom: {
+          // CustomEventConfig
+        },
+      },
+    },
+  },
+};
+```
+
+### Node usage
 
 ```sh
 npm i --save @elbwalker/destination-web-xxx
 ```
 
-Import, configure and add the destination
-
 ```ts
 import { elb } from '@elbwalker/walker.js';
-import destinationXXX, {
-  DestinationXXX, // Types
-} from '@elbwalker/destination-web-xxx';
+import destinationXXX from '@elbwalker/destination-web-xxx';
 
-const configXXX: DestinationXXX.Config = {
-  // consent: { marketing: true }, // Neccessary consent states
-  // custom: {
-  //   xxx
-  // },
-  // init: false, // Status if the destination was initialized successfully or should be skipped
-  // loadScript: true, // Load additional required scripts on init
-  // mapping: {
-  //   '*': { '*': {} }, // Process all events
-  // },
-};
+elb('walker destination', destinationXXX, config);
+```
 
-// And add the destination to the walker.js
-destinationXXX.config = configXXX;
-elb('walker destination', destinationXXX);
+### Browser usage
+
+Loading the destination via dynamic import
+
+```html
+<script>
+  // Make sure to initialize the elb function once.
+  function elb() {
+    (window.elbLayer = window.elbLayer || []).push(arguments);
+  }
+
+  // Upload the dist/index.mjs on your own server
+  const destination = (
+    await import(
+      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-xxx/dist/index.mjs'
+    )
+  ).default;
+
+  elb('walker destination', destination, config);
+</script>
 ```
 
 ## Contribute
