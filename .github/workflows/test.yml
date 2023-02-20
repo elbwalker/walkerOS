@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        destinations:
+        destination:
           - api
           - google-ads
           - google-ga4
