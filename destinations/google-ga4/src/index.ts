@@ -34,30 +34,37 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
     return true;
   },
 
-  push(event, config) {
+  push(event, config, mapping = {}) {
     const custom = config.custom;
+    const customEvent = mapping.custom || {};
     if (!custom) return;
 
     if (!custom.measurementId) return;
 
-    let data: Gtag.ControlParams & Gtag.EventParams & Gtag.CustomParams = {};
+    let eventParams: Gtag.ControlParams & Gtag.EventParams & Gtag.CustomParams =
+      {};
 
-    // Override event parameters complete if properties are set
-    if (custom.properties) {
-      Object.entries(custom.properties).forEach(([prop, key]) => {
-        // @TODO prefere event mapping
-        data[prop] = event.data[key];
+    // Override event parameters completely if properties are set
+    // Prefer event mapping over general mapping
+    const properties = Object.entries({
+      ...custom.properties,
+      ...customEvent.properties,
+    });
+    if (properties.length) {
+      properties.forEach(([prop, key]) => {
+        mapping;
+        eventParams[prop] = event.data[key];
       });
     } else {
-      data = event.data;
+      eventParams = event.data;
     }
 
-    data.send_to = custom.measurementId;
+    eventParams.send_to = custom.measurementId;
 
     // Debug mode
-    if (custom.debug) data.debug_mode = true;
+    if (custom.debug) eventParams.debug_mode = true;
 
-    window.gtag('event', event.event, data);
+    window.gtag('event', event.event, eventParams);
   },
 };
 

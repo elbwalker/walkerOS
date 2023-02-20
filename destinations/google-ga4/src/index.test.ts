@@ -116,6 +116,7 @@ describe('Destination Google GA4', () => {
   test.only('Items mapping', () => {
     const data_ecom = {
       id: 'T_12345_1',
+      nope_id: 'ignore me',
       revenue: 25.42,
       tax: 4.9,
       shipping: 5.99,
@@ -178,11 +179,8 @@ describe('Destination Google GA4', () => {
       custom: {
         measurementId,
         properties: {
-          transaction_id: 'id',
+          transaction_id: 'nope_id', // override at order complete
           value: 'revenue',
-          tax: 'tax',
-          shipping: 'shipping',
-          currency: 'currency',
         },
       },
       init: true,
@@ -190,7 +188,14 @@ describe('Destination Google GA4', () => {
         order: {
           complete: {
             name: 'purchase',
-            custom: {},
+            custom: {
+              properties: {
+                tax: 'tax',
+                transaction_id: 'id',
+                shipping: 'shipping',
+                currency: 'currency',
+              },
+            },
           },
         },
       },
