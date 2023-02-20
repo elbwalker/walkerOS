@@ -45,7 +45,7 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
     data.send_to = custom.measurementId;
 
     // Debug mode
-    if(custom.debug) data.debug_mode = true;
+    if (custom.debug) data.debug_mode = true;
 
     window.gtag('event', event.event, data);
   },

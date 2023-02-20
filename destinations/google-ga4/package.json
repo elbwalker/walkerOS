@@ -27,6 +27,7 @@
     "@elbwalker/walker.js": "^1.6.1"
   },
   "devDependencies": {
+    "@types/gtag.js": "^0.0.12",
     "@types/jest": "^29.2.6",
     "copyfiles": "^2.4.1",
     "esbuild": "^0.17.4",

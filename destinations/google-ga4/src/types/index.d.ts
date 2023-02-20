@@ -2,7 +2,7 @@ import { WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
-    gtag: Function;
+    gtag: Gtag.Gtag;
   }
 }
 
