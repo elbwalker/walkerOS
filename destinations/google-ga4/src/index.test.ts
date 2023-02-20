@@ -76,6 +76,19 @@ describe('Destination Google GA4', () => {
     expect(elem).toBeTruthy();
   });
 
+  test('debug mode', () => {
+    config.custom!.debug = true;
+    destination.config = config;
+    elbwalker.push('walker destination', destination);
+    elbwalker.push(event);
+
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      event,
+      expect.objectContaining({ debug_mode: true }),
+    );
+  });
+
   test('Push', () => {
     elbwalker.push('walker destination', destination);
     elbwalker.push(event, data, trigger);

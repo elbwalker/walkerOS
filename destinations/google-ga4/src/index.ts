@@ -6,7 +6,8 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
 
   init(config: DestinationGoogleGA4.Config) {
     const w = window;
-    const custom = config.custom || {};
+    const custom: Partial<DestinationGoogleGA4.CustomConfig> =
+      config.custom || {};
     const settings: IElbwalker.AnyObject = {};
 
     // required measuremt id
@@ -42,6 +43,9 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
     let data = event.data || {};
 
     data.send_to = custom.measurementId;
+
+    // Debug mode
+    if(custom.debug) data.debug_mode = true;
 
     window.gtag('event', event.event, data);
   },

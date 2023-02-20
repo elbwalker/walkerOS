@@ -17,6 +17,7 @@ import { DestinationGoogleGA4 } from '@elbwalker/destination-web-google-ga4';
 const config /* : DestinationGoogleGA4.Config */ = {
   // consent: { marketing: true }, // Neccessary consent states
   custom: {
+    // debug: true, // Enable debug mode
     measurementId: 'G-XXXXXX-1', // Required
     // transport_url: '', // optional: endpoint where to send data to
   },
