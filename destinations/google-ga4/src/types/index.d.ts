@@ -15,8 +15,15 @@ export declare namespace DestinationGoogleGA4 {
   interface CustomConfig {
     debug?: boolean;
     measurementId: string;
+    properties?: PropertyMapping;
     transport_url?: string;
   }
 
-  interface CustomEventConfig {}
+  interface CustomEventConfig {
+    properties?: PropertyMapping;
+  }
+
+  interface PropertyMapping {
+    [key: string]: string; // @TODO or object with default
+  }
 }

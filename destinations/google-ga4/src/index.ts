@@ -1,4 +1,4 @@
-import { IElbwalker } from '@elbwalker/walker.js';
+import { IElbwalker, Walker } from '@elbwalker/walker.js';
 import { DestinationGoogleGA4 } from './types';
 
 const destinationGoogleGA4: DestinationGoogleGA4.Function = {
@@ -40,7 +40,17 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
 
     if (!custom.measurementId) return;
 
-    let data = event.data || {};
+    let data: Gtag.ControlParams & Gtag.EventParams & Gtag.CustomParams = {};
+
+    // Override event parameters complete if properties are set
+    if (custom.properties) {
+      Object.entries(custom.properties).forEach(([prop, key]) => {
+        // @TODO prefere event mapping
+        data[prop] = event.data[key];
+      });
+    } else {
+      data = event.data;
+    }
 
     data.send_to = custom.measurementId;
 

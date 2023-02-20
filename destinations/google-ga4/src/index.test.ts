@@ -1,4 +1,4 @@
-import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
+import Elbwalker, { IElbwalker, Walker } from '@elbwalker/walker.js';
 import { DestinationGoogleGA4 } from './types';
 
 describe('Destination Google GA4', () => {
@@ -111,5 +111,102 @@ describe('Destination Google GA4', () => {
     });
 
     expect(mockFn).toHaveBeenCalledWith('event', event, data);
+  });
+
+  test.only('Items mapping', () => {
+    const data_ecom = {
+      id: 'T_12345_1',
+      revenue: 25.42,
+      tax: 4.9,
+      shipping: 5.99,
+      currency: 'USD',
+    };
+    const nested: Walker.Entities = [
+      {
+        type: 'product',
+        data: {
+          id: 'SKU_12345',
+          name: 'Stan and Friends Tee',
+          brand: 'ACME',
+          price: 9.99,
+          quantity: 1,
+        },
+        nested: [],
+        context: {},
+      },
+      {
+        type: 'product',
+        data: {
+          id: 'SKU_12346',
+          name: "Google Grey Women's Tee",
+          category: 'Apparel',
+          price: 20.99,
+          quantity: 1,
+        },
+        nested: [],
+        context: { source: ['related_products', 0] },
+      },
+    ];
+    const ga4purchase = {
+      transaction_id: 'T_12345_1',
+      value: 25.42,
+      tax: 4.9,
+      shipping: 5.99,
+      currency: 'USD',
+      // items: [
+      //   {
+      //     item_id: 'SKU_12345',
+      //     item_name: 'Stan and Friends Tee',
+      //     index: 0,
+      //     item_brand: 'ACME',
+      //     price: 9.99,
+      //     quantity: 1,
+      //   },
+      //   {
+      //     item_id: 'SKU_12346',
+      //     item_name: "Grey Women's Tee",
+      //     index: 1,
+      //     item_category: 'Apparel',
+      //     item_list_id: 'related_products',
+      //     price: 20.99,
+      //     quantity: 1,
+      //   },
+      // ],
+    };
+
+    const config: DestinationGoogleGA4.Config = {
+      custom: {
+        measurementId,
+        properties: {
+          transaction_id: 'id',
+          value: 'revenue',
+          tax: 'tax',
+          shipping: 'shipping',
+          currency: 'currency',
+        },
+      },
+      init: true,
+      mapping: {
+        order: {
+          complete: {
+            name: 'purchase',
+            custom: {},
+          },
+        },
+      },
+    };
+    elbwalker.push('walker destination', destination, config);
+
+    elbwalker.push(
+      'order complete',
+      data_ecom,
+      trigger,
+      { key: ['value', 1] },
+      nested,
+    );
+
+    const ga4event = Object.assign(ga4purchase, { send_to: measurementId });
+
+    expect(mockFn).toHaveBeenCalledWith('event', 'purchase', ga4event);
   });
 });
