@@ -2,7 +2,7 @@ import { WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
-    gtag: Function;
+    gtag: Gtag.Gtag;
   }
 }
 
@@ -13,7 +13,8 @@ export declare namespace DestinationGoogleGA4 {
   type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 
   interface CustomConfig {
-    measurementId?: string;
+    debug?: boolean;
+    measurementId: string;
     transport_url?: string;
   }
 
