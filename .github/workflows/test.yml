@@ -17,11 +17,20 @@ jobs:
       - run: npm run build
 
   destinations:
-    name: destination api
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        destinations:
+          - api
+          - google-ads
+          - google-ga4
+          - google-gtm
+          - meta-pixel
+          - plausible
+    name: destination ${{ matrix.destination }}
     defaults:
       run:
-        working-directory: destinations/api
+        working-directory: destinations/${{ matrix.destination }}
     steps:
       - uses: actions/checkout@v3
       - run: npm install
