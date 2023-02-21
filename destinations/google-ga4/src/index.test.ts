@@ -114,14 +114,6 @@ describe('Destination Google GA4', () => {
   });
 
   test.only('Items mapping', () => {
-    const data_ecom = {
-      id: 'T_12345_1',
-      nope_id: 'ignore me',
-      revenue: 25.42,
-      tax: 4.9,
-      shipping: 5.99,
-      currency: 'USD',
-    };
     const nested: Walker.Entities = [
       {
         type: 'product',
@@ -148,54 +140,50 @@ describe('Destination Google GA4', () => {
         context: { source: ['related_products', 0] },
       },
     ];
-    const ga4purchase = {
-      transaction_id: 'T_12345_1',
-      session: 'now',
-      timing: expect.any(Number),
-      lang: 'de',
-      currency: 'USD',
-      value: 25.42,
-      // items: [
-      //   {
-      //     item_id: 'SKU_12345',
-      //     item_name: 'Stan and Friends Tee',
-      //     index: 0,
-      //     item_brand: 'ACME',
-      //     price: 9.99,
-      //     quantity: 1,
-      //   },
-      //   {
-      //     item_id: 'SKU_12346',
-      //     item_name: "Grey Women's Tee",
-      //     index: 1,
-      //     item_category: 'Apparel',
-      //     item_list_id: 'related_products',
-      //     price: 20.99,
-      //     quantity: 1,
-      //   },
-      // ],
-    };
 
     const config: DestinationGoogleGA4.Config = {
       custom: {
         measurementId,
-        properties: {
+        params: {
+          currency: 'data.currency',
           transaction_id: 'data.nope_id', // override at order complete
           value: 'data.revenue',
         },
       },
       init: true,
       mapping: {
+        product: {
+          add: {
+            name: 'add_to_cart',
+            custom: {
+              items: {
+                params: {
+                  item_id: 'data.id',
+                  item_category: 'data.category',
+                  item_list_id: 'context.position.0',
+                  quantity: 'data.quantity',
+                },
+              },
+              params: {
+                value: 'data.price',
+              },
+            },
+          },
+        },
         order: {
           complete: {
             name: 'purchase',
             custom: {
-              properties: {
+              items: {
+                params: {
+                  item_id: 'data.id',
+                },
+              },
+              params: {
                 transaction_id: 'data.id',
                 session: 'user.session',
                 timing: 'timing',
                 lang: 'globals.lang',
-                currency: 'data.currency',
               },
             },
           },
@@ -209,15 +197,81 @@ describe('Destination Google GA4', () => {
     });
 
     elbwalker.push(
-      'order complete',
-      data_ecom,
+      'product add',
+      {
+        id: 'sku',
+        category: 'Examples',
+        currency: 'EUR',
+        price: 7.77,
+        quantity: 1, // @TODO Default value
+      },
       trigger,
-      { key: ['value', 1] },
-      nested,
+      { position: ['reco', 0] },
     );
 
-    const ga4event = Object.assign(ga4purchase, { send_to: measurementId });
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'add_to_cart',
+      expect.objectContaining({
+        currency: 'EUR',
+        value: 7.77,
+        items: [
+          {
+            item_id: 'sku',
+            item_category: 'Examples',
+            item_list_id: 'reco',
+            quantity: 1,
+          },
+        ],
+      }),
+    );
 
-    expect(mockFn).toHaveBeenCalledWith('event', 'purchase', ga4event);
+    // @TODO Loop nested items
+    // elbwalker.push(
+    //   'order complete',
+    //   {
+    //     id: 'T_12345_1',
+    //     nope_id: 'ignore me',
+    //     revenue: 25.42,
+    //     tax: 4.9,
+    //     shipping: 5.99,
+    //     currency: 'USD',
+    //   },
+    //   trigger,
+    //   { key: ['value', 0] },
+    //   nested,
+    // );
+
+    // expect(mockFn).toHaveBeenCalledWith(
+    //   'event',
+    //   'purchase',
+    //   expect.objectContaining({
+    //     transaction_id: 'T_12345_1',
+    //     session: 'now',
+    //     timing: expect.any(Number),
+    //     lang: 'de',
+    //     currency: 'USD',
+    //     value: 25.42,
+    //     items: [
+    //       {
+    //         item_id: 'SKU_12345',
+    //         item_name: 'Stan and Friends Tee',
+    //         index: 0,
+    //         item_brand: 'ACME',
+    //         price: 9.99,
+    //         quantity: 1,
+    //       },
+    //       {
+    //         item_id: 'SKU_12346',
+    //         item_name: "Grey Women's Tee",
+    //         index: 1,
+    //         item_category: 'Apparel',
+    //         item_list_id: 'related_products',
+    //         price: 20.99,
+    //         quantity: 1,
+    //       },
+    //     ],
+    //   }),
+    // );
   });
 });

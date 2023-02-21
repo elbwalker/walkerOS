@@ -1,4 +1,4 @@
-import { IElbwalker, Walker } from '@elbwalker/walker.js';
+import { IElbwalker } from '@elbwalker/walker.js';
 import { DestinationGoogleGA4 } from './types';
 
 const destinationGoogleGA4: DestinationGoogleGA4.Function = {
@@ -44,20 +44,41 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
     let eventParams: Gtag.ControlParams & Gtag.EventParams & Gtag.CustomParams =
       {};
 
-    // Override event parameters completely if properties are set
-    // Prefer event mapping over general mapping
-    const properties = Object.entries({
-      ...custom.properties,
-      ...customEvent.properties,
+    // Parameters
+    const params = Object.entries({
+      // Prefer event mapping over general mapping
+      ...custom.params,
+      ...customEvent.params,
     });
-    if (properties.length) {
-      properties.forEach(([prop, key]) => {
+    if (params.length) {
+      // Override event parameters completely if properties are set
+      params.forEach(([prop, key]) => {
         // String dot notation for object ("data.id" -> { data: { id: 1 } })
-        eventParams[prop] = key.split('.').reduce((o, i) => o[i], event);
+        const value = key.split('.').reduce((o, i) => o[i], event);
+        if (value) eventParams[prop] = value;
       });
     } else {
       // No properties mapping
       eventParams = event.data;
+    }
+
+    // Item parameters
+    const itemParams = Object.entries({
+      // Prefer event item mapping over general item mapping
+      ...(custom.items && custom.items.params),
+      ...(customEvent.items && customEvent.items.params),
+    });
+    if (itemParams.length) {
+      // let items: Gtag.Item[] = [];
+      let item: Gtag.Item = {};
+
+      itemParams.forEach(([prop, key]) => {
+        // String dot notation for object ("data.id" -> { data: { id: 1 } })
+        const value = key.split('.').reduce((o, i) => o[i], event);
+        if (value) item[prop] = key.split('.').reduce((o, i) => o[i], event);
+      });
+
+      eventParams.items = [item];
     }
 
     eventParams.send_to = custom.measurementId;

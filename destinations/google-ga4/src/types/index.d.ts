@@ -14,13 +14,19 @@ export declare namespace DestinationGoogleGA4 {
 
   interface CustomConfig {
     debug?: boolean;
+    items?: Items;
     measurementId: string;
-    properties?: PropertyMapping;
+    params?: PropertyMapping;
     transport_url?: string;
   }
 
   interface CustomEventConfig {
-    properties?: PropertyMapping;
+    items?: Items;
+    params?: PropertyMapping;
+  }
+
+  interface Items {
+    params?: PropertyMapping;
   }
 
   interface PropertyMapping {
