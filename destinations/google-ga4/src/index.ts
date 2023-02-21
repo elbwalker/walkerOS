@@ -52,10 +52,11 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
     });
     if (properties.length) {
       properties.forEach(([prop, key]) => {
-        mapping;
-        eventParams[prop] = event.data[key];
+        // String dot notation for object ("data.id" -> { data: { id: 1 } })
+        eventParams[prop] = key.split('.').reduce((o, i) => o[i], event);
       });
     } else {
+      // No properties mapping
       eventParams = event.data;
     }
 

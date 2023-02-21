@@ -150,10 +150,11 @@ describe('Destination Google GA4', () => {
     ];
     const ga4purchase = {
       transaction_id: 'T_12345_1',
-      value: 25.42,
-      tax: 4.9,
-      shipping: 5.99,
+      session: 'now',
+      timing: expect.any(Number),
+      lang: 'de',
       currency: 'USD',
+      value: 25.42,
       // items: [
       //   {
       //     item_id: 'SKU_12345',
@@ -179,8 +180,8 @@ describe('Destination Google GA4', () => {
       custom: {
         measurementId,
         properties: {
-          transaction_id: 'nope_id', // override at order complete
-          value: 'revenue',
+          transaction_id: 'data.nope_id', // override at order complete
+          value: 'data.revenue',
         },
       },
       init: true,
@@ -190,10 +191,11 @@ describe('Destination Google GA4', () => {
             name: 'purchase',
             custom: {
               properties: {
-                tax: 'tax',
-                transaction_id: 'id',
-                shipping: 'shipping',
-                currency: 'currency',
+                transaction_id: 'data.id',
+                session: 'user.session',
+                timing: 'timing',
+                lang: 'globals.lang',
+                currency: 'data.currency',
               },
             },
           },
@@ -201,6 +203,10 @@ describe('Destination Google GA4', () => {
       },
     };
     elbwalker.push('walker destination', destination, config);
+    elbwalker.push('walker config', {
+      globals: { lang: 'de' },
+      user: { session: 'now' },
+    });
 
     elbwalker.push(
       'order complete',
