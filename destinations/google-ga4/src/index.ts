@@ -44,8 +44,6 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
     let eventParams: DestinationGoogleGA4.Parameters = {};
 
     // Parameters
-
-    // No properties mapping
     eventParams =
       getMappedParams(
         {
@@ -67,6 +65,7 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
     );
     if (item) eventParams.items = [item];
 
+    // Set the GA4 stream id
     eventParams.send_to = custom.measurementId;
 
     // Debug mode
