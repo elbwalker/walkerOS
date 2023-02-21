@@ -55,15 +55,21 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
       ) || event.data;
 
     // Item parameters
-    const item = getMappedParams(
-      {
-        // Prefer event item mapping over general item mapping
-        ...(custom.items && custom.items.params),
-        ...(customEvent.items && customEvent.items.params),
-      },
-      event,
-    );
-    if (item) eventParams.items = [item];
+    const items: DestinationGoogleGA4.Items = [];
+    // Loop for each nested entity but at least one time
+    for (var i = 0, l = event.nested.length || 1; i < l; i++) {
+      const item = getMappedParams(
+        {
+          // Prefer event item mapping over general item mapping
+          ...(custom.items && custom.items.params),
+          ...(customEvent.items && customEvent.items.params),
+        },
+        event,
+        i,
+      );
+      if (item) items.push(item);
+    }
+    if (items.length) eventParams.items = items;
 
     // Set the GA4 stream id
     eventParams.send_to = custom.measurementId;
@@ -87,12 +93,19 @@ function addScript(
 function getMappedParams(
   mapping: DestinationGoogleGA4.PropertyMapping,
   event: IElbwalker.Event,
+  i: number = 0,
 ) {
   let params: DestinationGoogleGA4.Parameters = {};
 
   Object.entries(mapping).forEach(([prop, key]) => {
     // String dot notation for object ("data.id" -> { data: { id: 1 } })
-    const value = key.split('.').reduce((o, i) => o[i], event);
+    const value = key.split('.').reduce((obj, key) => {
+      // Update the wildcard to the current nested index
+      if (key == '*') key = String(i);
+
+      return obj[key];
+    }, event);
+
     if (value) params[prop] = value;
   });
 

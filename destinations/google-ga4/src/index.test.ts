@@ -113,34 +113,7 @@ describe('Destination Google GA4', () => {
     expect(mockFn).toHaveBeenCalledWith('event', event, data);
   });
 
-  test.only('Items mapping', () => {
-    const nested: Walker.Entities = [
-      {
-        type: 'product',
-        data: {
-          id: 'SKU_12345',
-          name: 'Stan and Friends Tee',
-          brand: 'ACME',
-          price: 9.99,
-          quantity: 1,
-        },
-        nested: [],
-        context: {},
-      },
-      {
-        type: 'product',
-        data: {
-          id: 'SKU_12346',
-          name: "Google Grey Women's Tee",
-          category: 'Apparel',
-          price: 20.99,
-          quantity: 1,
-        },
-        nested: [],
-        context: { source: ['related_products', 0] },
-      },
-    ];
-
+  test('Items mapping', () => {
     const config: DestinationGoogleGA4.Config = {
       custom: {
         measurementId,
@@ -177,9 +150,7 @@ describe('Destination Google GA4', () => {
                   quantity: 'data.quantity',
                 },
               },
-              params: {
-                value: 'data.price',
-              },
+              params: { value: 'data.price' },
             },
           },
         },
@@ -189,12 +160,10 @@ describe('Destination Google GA4', () => {
             custom: {
               items: {
                 params: {
-                  item_id: 'data.id',
+                  item_id: 'nested.*.data.id',
                 },
               },
-              params: {
-                transaction_id: 'data.id',
-              },
+              params: { transaction_id: 'data.id' },
             },
           },
         },
@@ -211,7 +180,6 @@ describe('Destination Google GA4', () => {
       { old: false, override: 'important' },
       trigger,
       { position: ['reco', 0] },
-      nested,
     );
 
     expect(mockFn).toHaveBeenCalledWith(
@@ -250,52 +218,26 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    //   elbwalker.push(
-    //     'order complete',
-    //     {
-    //       id: 'T_12345_1',
-    //       nope_id: 'ignore me',
-    //       revenue: 25.42,
-    //       tax: 4.9,
-    //       shipping: 5.99,
-    //       currency: 'USD',
-    //     },
-    //     trigger,
-    //     { key: ['value', 0] },
-    //     nested,
-    //   );
+    elbwalker.push(
+      'order complete',
+      { id: 'orderid', revenue: 25.42, currency: 'EUR' },
+      trigger,
+      { key: ['value', 0] },
+      [
+        { type: 'product', data: { id: 'a' }, nested: [], context: {} },
+        { type: 'product', data: { id: 'b' }, nested: [], context: {} },
+      ],
+    );
 
-    //   expect(mockFn).toHaveBeenCalledWith(
-    //     'event',
-    //     'purchase',
-    //     expect.objectContaining({
-    //       transaction_id: 'T_12345_1',
-    //       session: 'now',
-    //       timing: expect.any(Number),
-    //       lang: 'de',
-    //       currency: 'USD',
-    //       value: 25.42,
-    //       items: [
-    //         {
-    //           item_id: 'SKU_12345',
-    //           item_name: 'Stan and Friends Tee',
-    //           index: 0,
-    //           item_brand: 'ACME',
-    //           price: 9.99,
-    //           quantity: 1,
-    //         },
-    //         {
-    //           item_id: 'SKU_12346',
-    //           item_name: "Grey Women's Tee",
-    //           index: 1,
-    //           item_category: 'Apparel',
-    //           item_list_id: 'related_products',
-    //           price: 20.99,
-    //           quantity: 1,
-    //         },
-    //       ],
-    //     }),
-    //   );
-    // });
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'purchase',
+      expect.objectContaining({
+        transaction_id: 'orderid',
+        currency: 'EUR',
+        value: 25.42,
+        items: [{ item_id: 'a' }, { item_id: 'b' }],
+      }),
+    );
   });
 });

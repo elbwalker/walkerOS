@@ -14,18 +14,18 @@ export declare namespace DestinationGoogleGA4 {
 
   interface CustomConfig {
     debug?: boolean;
-    items?: Items;
+    items?: ItemsConfig;
     measurementId: string;
     params?: PropertyMapping;
     transport_url?: string;
   }
 
   interface CustomEventConfig {
-    items?: Items;
+    items?: ItemsConfig;
     params?: PropertyMapping;
   }
 
-  interface Items {
+  interface ItemsConfig {
     params?: PropertyMapping;
   }
 
@@ -33,5 +33,6 @@ export declare namespace DestinationGoogleGA4 {
     [key: string]: string; // @TODO or object with default
   }
 
+  type Items = Gtag.Item[];
   type Parameters = Gtag.ControlParams & Gtag.EventParams & Gtag.CustomParams;
 }
