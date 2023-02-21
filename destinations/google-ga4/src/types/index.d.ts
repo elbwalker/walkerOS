@@ -32,4 +32,6 @@ export declare namespace DestinationGoogleGA4 {
   interface PropertyMapping {
     [key: string]: string; // @TODO or object with default
   }
+
+  type Parameters = Gtag.ControlParams & Gtag.EventParams & Gtag.CustomParams;
 }

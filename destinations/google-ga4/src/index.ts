@@ -41,45 +41,31 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
 
     if (!custom.measurementId) return;
 
-    let eventParams: Gtag.ControlParams & Gtag.EventParams & Gtag.CustomParams =
-      {};
+    let eventParams: DestinationGoogleGA4.Parameters = {};
 
     // Parameters
-    const params = Object.entries({
-      // Prefer event mapping over general mapping
-      ...custom.params,
-      ...customEvent.params,
-    });
-    if (params.length) {
-      // Override event parameters completely if properties are set
-      params.forEach(([prop, key]) => {
-        // String dot notation for object ("data.id" -> { data: { id: 1 } })
-        const value = key.split('.').reduce((o, i) => o[i], event);
-        if (value) eventParams[prop] = value;
-      });
-    } else {
-      // No properties mapping
-      eventParams = event.data;
-    }
+
+    // No properties mapping
+    eventParams =
+      getMappedParams(
+        {
+          // Prefer event mapping over general mapping
+          ...custom.params,
+          ...customEvent.params,
+        },
+        event,
+      ) || event.data;
 
     // Item parameters
-    const itemParams = Object.entries({
-      // Prefer event item mapping over general item mapping
-      ...(custom.items && custom.items.params),
-      ...(customEvent.items && customEvent.items.params),
-    });
-    if (itemParams.length) {
-      // let items: Gtag.Item[] = [];
-      let item: Gtag.Item = {};
-
-      itemParams.forEach(([prop, key]) => {
-        // String dot notation for object ("data.id" -> { data: { id: 1 } })
-        const value = key.split('.').reduce((o, i) => o[i], event);
-        if (value) item[prop] = key.split('.').reduce((o, i) => o[i], event);
-      });
-
-      eventParams.items = [item];
-    }
+    const item = getMappedParams(
+      {
+        // Prefer event item mapping over general item mapping
+        ...(custom.items && custom.items.params),
+        ...(customEvent.items && customEvent.items.params),
+      },
+      event,
+    );
+    if (item) eventParams.items = [item];
 
     eventParams.send_to = custom.measurementId;
 
@@ -97,6 +83,21 @@ function addScript(
   const script = document.createElement('script');
   script.src = src + measurementId;
   document.head.appendChild(script);
+}
+
+function getMappedParams(
+  mapping: DestinationGoogleGA4.PropertyMapping,
+  event: IElbwalker.Event,
+) {
+  let params: DestinationGoogleGA4.Parameters = {};
+
+  Object.entries(mapping).forEach(([prop, key]) => {
+    // String dot notation for object ("data.id" -> { data: { id: 1 } })
+    const value = key.split('.').reduce((o, i) => o[i], event);
+    if (value) params[prop] = value;
+  });
+
+  return Object.keys(params).length ? params : false;
 }
 
 export default destinationGoogleGA4;
