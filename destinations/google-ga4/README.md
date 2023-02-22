@@ -18,18 +18,68 @@ const config /* : DestinationGoogleGA4.Config */ = {
   // consent: { marketing: true }, // Neccessary consent states
   custom: {
     // debug: true, // Enable debug mode
+    // items: {}, // Set item properties for every event
     measurementId: 'G-XXXXXX-1', // Required
-    // transport_url: '', // optional: endpoint where to send data to
+    // pageview: false, // Disable the default pageview event
+    // params: {
+    //   // Set event parameters for every event
+    //   currency: {
+    //     default: 'EUR', // Default value if key is undefined or non-existent
+    //     key: 'data.currency', // Access value from event.data.currency
+    //   },
+    //   user_id: 'user.id', // Set a custom user id
+    // },
+    // transport_url: '', // Endpoint where to send data to
   },
   // init: true, // Skip the initialisation
   // loadScript: true, // Load additional required scripts on init
-  mapping: {
-    '*': { '*': {} }, // Process all events
-    // entity: { action: { name: 'custom_name' } },
-    page: { view: { ignore: true } }, // Ignore page view events
-  },
+  // mapping: {
+  //   // Only defined events get processed if mapping is used
+  //   '*': { '*': {} }, // Process all events
+  //   // entity: { action: { name: 'custom_name' } },
+  //   page: { view: { ignore: true } }, // Ignore page view events
+  //   product: {
+  //     add: {
+  //       name: 'add_to_cart', // Rename the product add event to add_to_cart
+  //       custom: {
+  //         // Set parameters for items array
+  //         items: {
+  //           params: {
+  //             item_id: 'data.id',
+  //             item_category: 'context.category.0', // Value is an array
+  //             quantity: { default: 1, key: 'data.quantity' },
+  //           },
+  //         },
+  //         // Set event parameters
+  //         params: { value: 'data.price' },
+  //       },
+  //     },
+  //     // Add view and other product-related actions
+  //   },
+  //   order: {
+  //     complete: {
+  //       name: 'purchase',
+  //       custom: {
+  //         items: {
+  //           params: {
+  //             // Nested entities are looped and can be used with a wildcard
+  //             // This will add multiple items to the event
+  //             item_id: 'nested.*.data.id',
+  //           },
+  //         },
+  //         params: { transaction_id: 'data.id', value: 'data.revenue' },
+  //       },
+  //     },
+  //   },
+  // },
 };
 ```
+
+Both `params` and `items` are available at the config and event levels. Settings on the event level will override the general ones.
+
+Use the `string-dot` notation (`data.id`, `user.id`, `group`, `context.position.0`) to access all vlues of an event.
+
+Nested entities will be looped if available. Use `items` and the wildcard (\*) to access and add them dynamically (for `order complete` events with multiple nested `product` entities for example).
 
 ### Node usage
 
