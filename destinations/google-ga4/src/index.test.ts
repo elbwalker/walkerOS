@@ -89,6 +89,19 @@ describe('Destination Google GA4', () => {
     );
   });
 
+  test('disable pageview', () => {
+    config.custom!.pageview = false;
+    destination.config = config;
+    elbwalker.push('walker destination', destination);
+    elbwalker.push(event);
+
+    expect(mockFn).toHaveBeenCalledWith(
+      'config',
+      measurementId,
+      expect.objectContaining({ send_page_view: false }),
+    );
+  });
+
   test('Push', () => {
     elbwalker.push('walker destination', destination);
     elbwalker.push(event, data, trigger);

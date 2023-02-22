@@ -16,6 +16,7 @@ export declare namespace DestinationGoogleGA4 {
     debug?: boolean;
     items?: ItemsConfig;
     measurementId: string;
+    pageview?: boolean;
     params?: PropertyMapping;
     transport_url?: string;
   }

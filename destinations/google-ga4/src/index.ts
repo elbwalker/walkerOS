@@ -16,6 +16,9 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
     // custom transport url
     if (custom.transport_url) settings.transport_url = custom.transport_url;
 
+    // disable pageviews
+    if (custom.pageview === false) settings.send_page_view = false;
+
     // Load the gtag script
     if (config.loadScript) addScript(custom.measurementId);
 
