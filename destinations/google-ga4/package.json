@@ -1,6 +1,6 @@
 {
   "name": "@elbwalker/destination-web-google-ga4",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Google GA4 web destination for walker.js",
   "main": "dist/index.js",
   "types": "dist",
