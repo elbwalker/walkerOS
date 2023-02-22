@@ -126,7 +126,7 @@ describe('Destination Google GA4', () => {
     expect(mockFn).toHaveBeenCalledWith('event', event, data);
   });
 
-  test('Items mapping', () => {
+  test('Parameters', () => {
     const config: DestinationGoogleGA4.Config = {
       custom: {
         measurementId,
@@ -152,6 +152,47 @@ describe('Destination Google GA4', () => {
             },
           },
         },
+      },
+    };
+    elbwalker.push('walker destination', destination, config);
+    elbwalker.push('walker config', {
+      globals: { lang: 'de' },
+      user: { session: 'now' },
+    });
+
+    elbwalker.push(
+      'ga4 params',
+      { old: false, override: 'important' },
+      trigger,
+      { position: ['reco', 0] },
+    );
+
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'ga4_params',
+      expect.objectContaining({
+        currency: 'EUR', // default value
+        lang: 'de',
+        override: 'important',
+        position: 'reco',
+        session: 'now',
+        timing: expect.any(Number),
+      }),
+    );
+  });
+
+  test('Items', () => {
+    const config: DestinationGoogleGA4.Config = {
+      custom: {
+        measurementId,
+        params: {
+          currency: { default: 'EUR', key: 'data.currency' },
+          override: 'data.old', // override at event level
+          value: 'data.revenue',
+        },
+      },
+      init: true,
+      mapping: {
         product: {
           add: {
             name: 'add_to_cart',
@@ -183,30 +224,6 @@ describe('Destination Google GA4', () => {
       },
     };
     elbwalker.push('walker destination', destination, config);
-    elbwalker.push('walker config', {
-      globals: { lang: 'de' },
-      user: { session: 'now' },
-    });
-
-    elbwalker.push(
-      'ga4 params',
-      { old: false, override: 'important' },
-      trigger,
-      { position: ['reco', 0] },
-    );
-
-    expect(mockFn).toHaveBeenCalledWith(
-      'event',
-      'ga4_params',
-      expect.objectContaining({
-        currency: 'EUR', // default value
-        lang: 'de',
-        override: 'important',
-        position: 'reco',
-        session: 'now',
-        timing: expect.any(Number),
-      }),
-    );
 
     elbwalker.push('product add', {
       id: 'sku',
