@@ -54,10 +54,23 @@ describe('Destination Google GA4', () => {
 
   test('Init calls', () => {
     destination.config = config;
+
+    // Bad configs
+    elbwalker.push('walker destination', destination, {});
+    elbwalker.push('walker destination', destination, { custom: {} });
+    elbwalker.push('walker destination', destination, { custom: {} });
+    elbwalker.push('walker destination', destination, { init: true });
+    elbwalker.push('walker destination', destination, {
+      custom: {},
+      init: true,
+    });
+
+    // Regular config
     elbwalker.push('walker destination', destination);
 
     elbwalker.push(event);
 
+    expect(mockFn).toHaveBeenCalledTimes(2);
     expect(mockFn).toHaveBeenNthCalledWith(1, 'config', measurementId, {});
   });
 
@@ -133,6 +146,7 @@ describe('Destination Google GA4', () => {
         params: {
           currency: { default: 'EUR', key: 'data.currency' },
           override: 'data.old', // override at event level
+          user_id: 'user.id',
           value: 'data.revenue',
         },
       },
@@ -145,7 +159,6 @@ describe('Destination Google GA4', () => {
               params: {
                 override: 'data.override',
                 position: 'context.position.0',
-                session: 'user.session',
                 timing: 'timing',
                 lang: 'globals.lang',
               },
@@ -157,7 +170,7 @@ describe('Destination Google GA4', () => {
     elbwalker.push('walker destination', destination, config);
     elbwalker.push('walker config', {
       globals: { lang: 'de' },
-      user: { session: 'now' },
+      user: { id: 'us3r1d' },
     });
 
     elbwalker.push(
@@ -175,7 +188,7 @@ describe('Destination Google GA4', () => {
         lang: 'de',
         override: 'important',
         position: 'reco',
-        session: 'now',
+        user_id: 'us3r1d',
         timing: expect.any(Number),
       }),
     );
