@@ -118,7 +118,7 @@ describe('Destination Google GA4', () => {
       custom: {
         measurementId,
         params: {
-          currency: 'data.currency',
+          currency: { default: 'EUR', key: 'data.currency' },
           override: 'data.old', // override at event level
           value: 'data.revenue',
         },
@@ -147,7 +147,7 @@ describe('Destination Google GA4', () => {
                 params: {
                   item_id: 'data.id',
                   item_category: 'data.category',
-                  quantity: 'data.quantity',
+                  quantity: { default: 1, key: 'data.quantity' },
                 },
               },
               params: { value: 'data.price' },
@@ -186,6 +186,7 @@ describe('Destination Google GA4', () => {
       'event',
       'ga4_params',
       expect.objectContaining({
+        currency: 'EUR', // default value
         lang: 'de',
         override: 'important',
         position: 'reco',
@@ -197,22 +198,21 @@ describe('Destination Google GA4', () => {
     elbwalker.push('product add', {
       id: 'sku',
       category: 'Examples',
-      currency: 'EUR',
+      currency: 'USD', // override default
       price: 7.77,
-      quantity: 1, // @TODO Default value
     });
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'add_to_cart',
       expect.objectContaining({
-        currency: 'EUR',
+        currency: 'USD',
         value: 7.77,
         items: [
           {
             item_id: 'sku',
             item_category: 'Examples',
-            quantity: 1,
+            quantity: 1, // Event level default
           },
         ],
       }),
@@ -220,7 +220,7 @@ describe('Destination Google GA4', () => {
 
     elbwalker.push(
       'order complete',
-      { id: 'orderid', revenue: 25.42, currency: 'EUR' },
+      { id: 'orderid', revenue: 25.42 },
       trigger,
       { key: ['value', 0] },
       [

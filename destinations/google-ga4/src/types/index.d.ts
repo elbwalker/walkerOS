@@ -1,4 +1,4 @@
-import { WebDestination } from '@elbwalker/walker.js';
+import { Walker, WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
@@ -30,7 +30,12 @@ export declare namespace DestinationGoogleGA4 {
   }
 
   interface PropertyMapping {
-    [key: string]: string; // @TODO or object with default
+    [key: string]: string | PropertyMappingValue;
+  }
+
+  interface PropertyMappingValue {
+    key: string;
+    default?: Walker.PropertyType;
   }
 
   type Items = Gtag.Item[];

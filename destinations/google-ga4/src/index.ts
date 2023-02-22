@@ -1,4 +1,4 @@
-import { IElbwalker } from '@elbwalker/walker.js';
+import { IElbwalker, Walker } from '@elbwalker/walker.js';
 import { DestinationGoogleGA4 } from './types';
 
 const destinationGoogleGA4: DestinationGoogleGA4.Function = {
@@ -97,13 +97,23 @@ function getMappedParams(
 ) {
   let params: DestinationGoogleGA4.Parameters = {};
 
-  Object.entries(mapping).forEach(([prop, key]) => {
+  Object.entries(mapping).forEach(([prop, keyRef]) => {
+    let key: string;
+    let defaultValue: Walker.PropertyType | undefined;
+
+    if (typeof keyRef == 'string') {
+      key = keyRef;
+    } else {
+      key = keyRef.key;
+      defaultValue = keyRef.default;
+    }
+
     // String dot notation for object ("data.id" -> { data: { id: 1 } })
     const value = key.split('.').reduce((obj, key) => {
       // Update the wildcard to the current nested index
       if (key == '*') key = String(i);
 
-      return obj[key];
+      return obj[key] || defaultValue;
     }, event);
 
     if (value) params[prop] = value;
