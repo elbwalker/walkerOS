@@ -19,6 +19,7 @@ export declare namespace DestinationGoogleGA4 {
     measurementId: string;
     pageview?: boolean;
     params?: PropertyMapping;
+    snakeCase?: boolean;
     transport_url?: string;
   }
 

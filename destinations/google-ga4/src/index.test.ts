@@ -8,7 +8,8 @@ describe('Destination Google GA4', () => {
     config: DestinationGoogleGA4.Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  const event = 'entity action';
+  const event = 'Entity Action';
+  const eventName = 'entity_action';
   const data = { foo: 'bar' };
   const trigger = 'manual';
   const measurementId = 'G-XXXXXX-1';
@@ -74,7 +75,7 @@ describe('Destination Google GA4', () => {
     expect(mockFn).toHaveBeenNthCalledWith(1, 'config', measurementId, {});
   });
 
-  test('init with load script', () => {
+  test('Init with load script', () => {
     destination.config.loadScript = true;
     elbwalker.push('walker destination', destination);
 
@@ -89,7 +90,7 @@ describe('Destination Google GA4', () => {
     expect(elem).toBeTruthy();
   });
 
-  test('debug mode', () => {
+  test('Debug mode', () => {
     config.custom!.debug = true;
     destination.config = config;
     elbwalker.push('walker destination', destination);
@@ -97,12 +98,12 @@ describe('Destination Google GA4', () => {
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
-      event,
+      eventName,
       expect.objectContaining({ debug_mode: true }),
     );
   });
 
-  test('disable pageview', () => {
+  test('Disable pageview', () => {
     config.custom!.pageview = false;
     destination.config = config;
     elbwalker.push('walker destination', destination);
@@ -119,7 +120,7 @@ describe('Destination Google GA4', () => {
     elbwalker.push('walker destination', destination);
     elbwalker.push(event, data, trigger);
 
-    expect(mockFn).toHaveBeenCalledWith('event', event, {
+    expect(mockFn).toHaveBeenCalledWith('event', eventName, {
       data_foo: 'bar',
       send_to: measurementId,
     });
@@ -138,7 +139,7 @@ describe('Destination Google GA4', () => {
       transport_url,
     });
 
-    expect(mockFn).toHaveBeenCalledWith('event', event, expect.any(Object));
+    expect(mockFn).toHaveBeenCalledWith('event', eventName, expect.any(Object));
   });
 
   test('Parameters', () => {
@@ -156,7 +157,7 @@ describe('Destination Google GA4', () => {
       mapping: {
         ga4: {
           params: {
-            name: 'ga4_params',
+            name: 'mapped_ga4_params',
             custom: {
               params: {
                 override: 'data.override',
@@ -184,7 +185,7 @@ describe('Destination Google GA4', () => {
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
-      'ga4_params',
+      'mapped_ga4_params',
       expect.objectContaining({
         currency: 'EUR', // default value
         lang: 'de',
@@ -229,7 +230,7 @@ describe('Destination Google GA4', () => {
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
-      'entity action',
+      'entity_action',
       expect.objectContaining({
         data_foo: 'foo', // Overwritten by params.data_foo with override
         globals_lang: 'de',
@@ -239,7 +240,7 @@ describe('Destination Google GA4', () => {
     elbwalker.push('entity event', {}, trigger);
     expect(mockFn).toHaveBeenCalledWith(
       'event',
-      'entity event',
+      'entity_event',
       expect.objectContaining({
         event_id: expect.any(String),
         event_timing: expect.any(Number),
@@ -256,7 +257,7 @@ describe('Destination Google GA4', () => {
     });
     expect(mockFn).toHaveBeenCalledWith(
       'event',
-      'entity all',
+      'entity_all',
       expect.objectContaining({
         context_position: 'reco',
         data_foo: 'bar',
@@ -267,7 +268,7 @@ describe('Destination Google GA4', () => {
     );
 
     elbwalker.push('entity none', { foo: 'bar' });
-    expect(mockFn).toHaveBeenCalledWith('event', 'entity none', {
+    expect(mockFn).toHaveBeenCalledWith('event', 'entity_none', {
       send_to: measurementId,
     });
   });
@@ -359,6 +360,22 @@ describe('Destination Google GA4', () => {
         value: 25.42,
         items: [{ item_id: 'a' }, { item_id: 'b' }],
       }),
+    );
+  });
+
+  test('Snake case disabled', () => {
+    const config: DestinationGoogleGA4.Config = {
+      custom: { measurementId, snakeCase: false },
+      init: true,
+    };
+    elbwalker.push('walker destination', destination, config);
+
+    elbwalker.push('Original Case');
+
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'Original Case',
+      expect.objectContaining({}),
     );
   });
 });
