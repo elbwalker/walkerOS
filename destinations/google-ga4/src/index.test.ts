@@ -219,6 +219,7 @@ describe('Destination Google GA4', () => {
           },
           all: { custom: { include: ['all'] } },
           event: { custom: { include: ['event'] } },
+          none: { custom: { include: [] } },
         },
       },
     };
@@ -264,6 +265,11 @@ describe('Destination Google GA4', () => {
         user_id: 'us3r1d',
       }),
     );
+
+    elbwalker.push('entity none', { foo: 'bar' });
+    expect(mockFn).toHaveBeenCalledWith('event', 'entity none', {
+      send_to: measurementId,
+    });
   });
 
   test('Items', () => {
