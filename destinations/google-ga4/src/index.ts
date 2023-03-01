@@ -46,8 +46,21 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
 
     let eventParams: DestinationGoogleGA4.Parameters = {};
 
+    // Add data to include by default
+    const include = customEvent.include || custom.include || ['data'];
+
+    include.forEach((group) => {
+      const prefix = group + '_';
+
+      // @TODO event avvess
+      Object.entries(event[group]).forEach(([key, val]) => {
+        eventParams[prefix + key] = val;
+      });
+    });
+
     // Parameters
-    eventParams =
+    Object.assign(
+      eventParams,
       getMappedParams(
         {
           // Prefer event mapping over general mapping
@@ -55,7 +68,8 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
           ...customEvent.params,
         },
         event,
-      ) || event.data;
+      ),
+    );
 
     // Item parameters
     const items: DestinationGoogleGA4.Items = [];

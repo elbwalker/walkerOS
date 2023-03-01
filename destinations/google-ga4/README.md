@@ -18,6 +18,7 @@ const config /* : DestinationGoogleGA4.Config */ = {
   // consent: { marketing: true }, // Neccessary consent states
   custom: {
     // debug: true, // Enable debug mode
+    // include: ['globals'], // Add globals to parameters
     // items: {}, // Set item properties for every event
     measurementId: 'G-XXXXXX-1', // Required
     // pageview: false, // Disable the default pageview event
@@ -43,6 +44,7 @@ const config /* : DestinationGoogleGA4.Config */ = {
   //       name: 'add_to_cart', // Rename the product add event to add_to_cart
   //       custom: {
   //         // Set parameters for items array
+  //         include: ['all'], // Add all properties to parameters
   //         items: {
   //           params: {
   //             item_id: 'data.id',
@@ -75,11 +77,14 @@ const config /* : DestinationGoogleGA4.Config */ = {
 };
 ```
 
-Both `params` and `items` are available at the config and event levels. Settings on the event level will override the general ones.
+`params`, `items`, and `include` are available at the config and event levels. Settings on the event level will override the general ones.
 
-Use the `string-dot` notation (`data.id`, `user.id`, `group`, `context.position.0`) to access all vlues of an event.
+Use the `string-dot` notation (`data.id`, `user.id`, `group`, `context.position.0`) to access all values of an event.
 
 Nested entities will be looped if available. Use `items` and the wildcard (\*) to access and add them dynamically (for `order complete` events with multiple nested `product` entities for example).
+
+Use the `include` option to bulk-add event properties without explicitly mapping custom event parameters. This adds all available properties of the specified group. Available groups are `event` (for basic ones like entity, timing, etc.), `data`, `context`, `globals`, `user`, or just `all`. All `data` properties are added automatically by default. If you don't want this add `include: []`.
+Note: `nested`, `consent`, `version`, and `source` are not available, but you can add them explicitly using `params` or `items`. The properties get prefixed with the group's name and underscore (like `globals_lang` for `{ globals: { lang: 'de' } }`). Custom parameters will override `include` values with the same key.
 
 ### Node usage
 

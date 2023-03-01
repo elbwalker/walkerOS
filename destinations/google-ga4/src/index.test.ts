@@ -194,6 +194,51 @@ describe('Destination Google GA4', () => {
     );
   });
 
+  test.only('Parameters include', () => {
+    elbwalker.push('walker config', {
+      globals: { lang: 'de' },
+      user: { id: 'us3r1d' },
+    });
+    const config: DestinationGoogleGA4.Config = {
+      custom: {
+        measurementId,
+        // include: ['data'], // Default behaviour
+      },
+      init: true,
+      mapping: {
+        entity: {
+          action: {
+            custom: {
+              include: ['data', 'globals'],
+              params: {
+                // @TODO override
+              },
+            },
+          },
+        },
+      },
+    };
+    elbwalker.push('walker destination', destination, config);
+
+    elbwalker.push('entity action', { foo: 'bar' }, trigger, {
+      position: ['reco', 0],
+    });
+
+    // @TODO override by explicit name
+    // @TODO groups
+    // @TODO all group
+    // @TODO disable auto data include?
+
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'entity action',
+      expect.objectContaining({
+        data_foo: 'bar',
+        globals_lang: 'de',
+      }),
+    );
+  });
+
   test('Items', () => {
     const config: DestinationGoogleGA4.Config = {
       custom: {

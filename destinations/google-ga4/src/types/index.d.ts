@@ -14,6 +14,7 @@ export declare namespace DestinationGoogleGA4 {
 
   interface CustomConfig {
     debug?: boolean;
+    include?: Include;
     items?: ItemsConfig;
     measurementId: string;
     pageview?: boolean;
@@ -22,6 +23,7 @@ export declare namespace DestinationGoogleGA4 {
   }
 
   interface CustomEventConfig {
+    include?: Include;
     items?: ItemsConfig;
     params?: PropertyMapping;
   }
@@ -39,6 +41,9 @@ export declare namespace DestinationGoogleGA4 {
     default?: Walker.PropertyType;
   }
 
+  type Include = Array<
+    'all' | 'context' | 'data' | 'event' | 'globals' | 'user'
+  >;
   type Items = Gtag.Item[];
   type Parameters = Gtag.ControlParams & Gtag.EventParams & Gtag.CustomParams;
 }
