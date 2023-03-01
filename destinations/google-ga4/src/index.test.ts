@@ -211,32 +211,58 @@ describe('Destination Google GA4', () => {
             custom: {
               include: ['data', 'globals'],
               params: {
-                // @TODO override
+                data_foo: 'data.override',
               },
             },
           },
+          all: { custom: { include: ['all'] } },
+          event: { custom: { include: ['event'] } },
         },
       },
     };
     elbwalker.push('walker destination', destination, config);
 
-    elbwalker.push('entity action', { foo: 'bar' }, trigger, {
-      position: ['reco', 0],
-    });
+    elbwalker.push('entity action', { foo: 'bar', override: 'foo' });
 
-    // @TODO override by explicit name
     // @TODO groups
     // @TODO all group
-    // @TODO disable auto data include?
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'entity action',
       expect.objectContaining({
-        data_foo: 'bar',
+        data_foo: 'foo', // Overwritten by params.data_foo with override
         globals_lang: 'de',
       }),
     );
+
+    elbwalker.push('entity event', {}, trigger);
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'entity event',
+      expect.objectContaining({
+        event_id: expect.any(String),
+        event_timing: expect.any(Number),
+        event_trigger: trigger,
+        event_entity: 'entity',
+        event_action: 'event',
+        event_group: expect.any(String),
+        event_count: expect.any(Number),
+      }),
+    );
+
+    // elbwalker.push('entity all', { foo: 'bar' }, trigger, {
+    //   position: ['reco', 0],
+    // });
+    // expect(mockFn).toHaveBeenCalledWith(
+    //   'event',
+    //   'entity all',
+    //   expect.objectContaining({
+    //     data_foo: 'bar',
+    //     globals_lang: 'de',
+    //     event_trigger: trigger,
+    //   }),
+    // );
   });
 
   test('Items', () => {

@@ -49,12 +49,23 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
     // Add data to include by default
     const include = customEvent.include || custom.include || ['data'];
 
-    include.forEach((group) => {
-      const prefix = group + '_';
+    include.forEach((groupName) => {
+      let group = event[groupName];
 
-      // @TODO event avvess
-      Object.entries(event[group]).forEach(([key, val]) => {
-        eventParams[prefix + key] = val;
+      // Create a fake group for event properties
+      if (groupName == 'event')
+        group = {
+          id: event.id,
+          timing: event.timing,
+          trigger: event.trigger,
+          entity: event.entity,
+          action: event.action,
+          group: event.group,
+          count: event.count,
+        };
+
+      Object.entries(group).forEach(([key, val]) => {
+        eventParams[`${groupName}_${key}`] = val;
       });
     });
 
