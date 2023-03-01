@@ -30,6 +30,7 @@ const config /* : DestinationGoogleGA4.Config */ = {
     //   },
     //   user_id: 'user.id', // Set a custom user id
     // },
+    // snakeCase: false, // disable the auto snake_case renaming
     // transport_url: '', // Endpoint where to send data to
   },
   // init: true, // Skip the initialisation

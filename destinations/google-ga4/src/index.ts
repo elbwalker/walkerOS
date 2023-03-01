@@ -107,13 +107,19 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
     }
     if (items.length) eventParams.items = items;
 
+    // Event name (snake_case default)
+    let eventName = event.event; // Assume custom mapped name
+    if (!mapping.name && custom.snakeCase !== false)
+      // Use snake case if not mapped or disabled
+      eventName = eventName.replace(' ', '_').toLowerCase();
+
     // Set the GA4 stream id
     eventParams.send_to = custom.measurementId;
 
     // Debug mode
     if (custom.debug) eventParams.debug_mode = true;
 
-    window.gtag('event', event.event, eventParams);
+    window.gtag('event', eventName, eventParams);
   },
 };
 
