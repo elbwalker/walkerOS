@@ -119,8 +119,10 @@ describe('Destination Google GA4', () => {
     elbwalker.push('walker destination', destination);
     elbwalker.push(event, data, trigger);
 
-    Object.assign(data, { send_to: measurementId });
-    expect(mockFn).toHaveBeenCalledWith('event', event, data);
+    expect(mockFn).toHaveBeenCalledWith('event', event, {
+      data_foo: 'bar',
+      send_to: measurementId,
+    });
   });
 
   test('Settings', () => {
@@ -136,7 +138,7 @@ describe('Destination Google GA4', () => {
       transport_url,
     });
 
-    expect(mockFn).toHaveBeenCalledWith('event', event, data);
+    expect(mockFn).toHaveBeenCalledWith('event', event, expect.any(Object));
   });
 
   test('Parameters', () => {
@@ -192,6 +194,82 @@ describe('Destination Google GA4', () => {
         timing: expect.any(Number),
       }),
     );
+  });
+
+  test('Parameters include', () => {
+    elbwalker.push('walker config', {
+      globals: { lang: 'de' },
+      user: { id: 'us3r1d' },
+    });
+    const config: DestinationGoogleGA4.Config = {
+      custom: {
+        measurementId,
+        // include: ['data'], // Default behaviour
+      },
+      init: true,
+      mapping: {
+        entity: {
+          action: {
+            custom: {
+              include: ['data', 'globals'],
+              params: {
+                data_foo: 'data.override',
+              },
+            },
+          },
+          all: { custom: { include: ['all'] } },
+          event: { custom: { include: ['event'] } },
+          none: { custom: { include: [] } },
+        },
+      },
+    };
+    elbwalker.push('walker destination', destination, config);
+
+    elbwalker.push('entity action', { foo: 'bar', override: 'foo' });
+
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'entity action',
+      expect.objectContaining({
+        data_foo: 'foo', // Overwritten by params.data_foo with override
+        globals_lang: 'de',
+      }),
+    );
+
+    elbwalker.push('entity event', {}, trigger);
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'entity event',
+      expect.objectContaining({
+        event_id: expect.any(String),
+        event_timing: expect.any(Number),
+        event_trigger: trigger,
+        event_entity: 'entity',
+        event_action: 'event',
+        event_group: expect.any(String),
+        event_count: expect.any(Number),
+      }),
+    );
+
+    elbwalker.push('entity all', { foo: 'bar' }, trigger, {
+      position: ['reco', 0],
+    });
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'entity all',
+      expect.objectContaining({
+        context_position: 'reco',
+        data_foo: 'bar',
+        event_trigger: trigger,
+        globals_lang: 'de',
+        user_id: 'us3r1d',
+      }),
+    );
+
+    elbwalker.push('entity none', { foo: 'bar' });
+    expect(mockFn).toHaveBeenCalledWith('event', 'entity none', {
+      send_to: measurementId,
+    });
   });
 
   test('Items', () => {

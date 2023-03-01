@@ -46,8 +46,40 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
 
     let eventParams: DestinationGoogleGA4.Parameters = {};
 
+    // Add data to include by default
+    let include = customEvent.include || custom.include || ['data'];
+
+    // Check for the 'all' group to add each group
+    if (include.includes('all'))
+      include = ['context', 'data', 'event', 'globals', 'user'];
+
+    include.forEach((groupName) => {
+      let group: Walker.Properties | Walker.OrderedProperties =
+        event[groupName];
+
+      // Create a fake group for event properties
+      if (groupName == 'event')
+        group = {
+          id: event.id,
+          timing: event.timing,
+          trigger: event.trigger,
+          entity: event.entity,
+          action: event.action,
+          group: event.group,
+          count: event.count,
+        };
+
+      Object.entries(group).forEach(([key, val]) => {
+        // Different value access for context
+        if (groupName == 'context') val = (val as Walker.OrderedProperties)[0];
+
+        eventParams[`${groupName}_${key}`] = val;
+      });
+    });
+
     // Parameters
-    eventParams =
+    Object.assign(
+      eventParams,
       getMappedParams(
         {
           // Prefer event mapping over general mapping
@@ -55,7 +87,8 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
           ...customEvent.params,
         },
         event,
-      ) || event.data;
+      ),
+    );
 
     // Item parameters
     const items: DestinationGoogleGA4.Items = [];
