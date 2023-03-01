@@ -47,10 +47,15 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
     let eventParams: DestinationGoogleGA4.Parameters = {};
 
     // Add data to include by default
-    const include = customEvent.include || custom.include || ['data'];
+    let include = customEvent.include || custom.include || ['data'];
+
+    // Check for the 'all' group to add each group
+    if (include.includes('all'))
+      include = ['context', 'data', 'event', 'globals', 'user'];
 
     include.forEach((groupName) => {
-      let group = event[groupName];
+      let group: Walker.Properties | Walker.OrderedProperties =
+        event[groupName];
 
       // Create a fake group for event properties
       if (groupName == 'event')
@@ -65,6 +70,9 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
         };
 
       Object.entries(group).forEach(([key, val]) => {
+        // Different value access for context
+        if (groupName == 'context') val = (val as Walker.OrderedProperties)[0];
+
         eventParams[`${groupName}_${key}`] = val;
       });
     });

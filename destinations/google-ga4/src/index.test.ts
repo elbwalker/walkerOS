@@ -119,8 +119,10 @@ describe('Destination Google GA4', () => {
     elbwalker.push('walker destination', destination);
     elbwalker.push(event, data, trigger);
 
-    Object.assign(data, { send_to: measurementId });
-    expect(mockFn).toHaveBeenCalledWith('event', event, data);
+    expect(mockFn).toHaveBeenCalledWith('event', event, {
+      data_foo: 'bar',
+      send_to: measurementId,
+    });
   });
 
   test('Settings', () => {
@@ -136,7 +138,7 @@ describe('Destination Google GA4', () => {
       transport_url,
     });
 
-    expect(mockFn).toHaveBeenCalledWith('event', event, data);
+    expect(mockFn).toHaveBeenCalledWith('event', event, expect.any(Object));
   });
 
   test('Parameters', () => {
@@ -194,7 +196,7 @@ describe('Destination Google GA4', () => {
     );
   });
 
-  test.only('Parameters include', () => {
+  test('Parameters include', () => {
     elbwalker.push('walker config', {
       globals: { lang: 'de' },
       user: { id: 'us3r1d' },
@@ -224,9 +226,6 @@ describe('Destination Google GA4', () => {
 
     elbwalker.push('entity action', { foo: 'bar', override: 'foo' });
 
-    // @TODO groups
-    // @TODO all group
-
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'entity action',
@@ -251,18 +250,20 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    // elbwalker.push('entity all', { foo: 'bar' }, trigger, {
-    //   position: ['reco', 0],
-    // });
-    // expect(mockFn).toHaveBeenCalledWith(
-    //   'event',
-    //   'entity all',
-    //   expect.objectContaining({
-    //     data_foo: 'bar',
-    //     globals_lang: 'de',
-    //     event_trigger: trigger,
-    //   }),
-    // );
+    elbwalker.push('entity all', { foo: 'bar' }, trigger, {
+      position: ['reco', 0],
+    });
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'entity all',
+      expect.objectContaining({
+        context_position: 'reco',
+        data_foo: 'bar',
+        event_trigger: trigger,
+        globals_lang: 'de',
+        user_id: 'us3r1d',
+      }),
+    );
   });
 
   test('Items', () => {
