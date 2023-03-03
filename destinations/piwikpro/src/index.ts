@@ -36,7 +36,14 @@ export const destinationPiwikPro: DestinationPiwikPro.Function = {
   },
 
   push(event, config, mapping = {}) {
-    // Do something magical
+    window._paq!.push([
+      'trackEvent',
+      event.entity,
+      event.action,
+      // name,
+      // value,
+      // dimensions
+    ]);
   },
 };
 
