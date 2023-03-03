@@ -26,6 +26,7 @@ jobs:
           - google-ga4
           - google-gtm
           - meta-pixel
+          - piwikpro
           - plausible
     name: destination ${{ matrix.destination }}
     defaults:

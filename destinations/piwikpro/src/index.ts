@@ -1,11 +1,11 @@
-import { DestinationXXX } from './types';
+import { DestinationPiwikPro } from './types';
 export * from './types/index.d';
 
-export const destinationXXX: DestinationXXX.Function = {
+export const destinationPiwikPro: DestinationPiwikPro.Function = {
   config: {},
 
   init(config) {
-    if (config.loadScript) addScript();
+    // if (config.loadScript) addScript();
 
     // Do something initializing
 
@@ -17,10 +17,10 @@ export const destinationXXX: DestinationXXX.Function = {
   },
 };
 
-function addScript(src = 'https://XXX_DOMAIN/xxx.js') {
+function addScript(src: string) {
   const script = document.createElement('script');
   script.src = src;
   document.head.appendChild(script);
 }
 
-export default destinationXXX;
+export default destinationPiwikPro;
