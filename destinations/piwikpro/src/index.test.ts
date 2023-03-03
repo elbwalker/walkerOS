@@ -10,6 +10,8 @@ describe('Destination PiwikPro', () => {
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const event = 'entity action';
+  const appId = 'XXX-XXX-XXX-XXX-XXX';
+  const url = 'https://your_account_name.piwik.pro/';
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -18,7 +20,8 @@ describe('Destination PiwikPro', () => {
     destination = require('.').default;
 
     w.elbLayer = [];
-    w._paq = mockFn;
+    w._paq = [];
+    w._paq.push = mockFn;
 
     elbwalker = Elbwalker();
     elbwalker.push('walker run');
@@ -30,7 +33,7 @@ describe('Destination PiwikPro', () => {
 
   test('init', () => {
     destination.config = {
-      custom: {},
+      custom: { appId, url },
     };
     elbwalker.push('walker destination', destination);
 

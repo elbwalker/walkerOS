@@ -14,9 +14,9 @@ export declare namespace DestinationPiwikPro {
 
   interface CustomConfig {
     appId: string;
-    // @TODO pageview?: boolean;
+    linkTracking?: boolean;
+    pageview?: boolean;
     url: string;
-    // @TODO useTagManager?: boolean
   }
 
   interface CustomEventConfig {

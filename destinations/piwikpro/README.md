@@ -18,7 +18,9 @@ const config /* : DestinationPiwikPro.Config */ = {
   // consent: { marketing: true }, // Neccessary consent states
   custom: {
     appId: 'XXX-XXX-XXX-XXX-XXX', // Id of the site
-    url: 'https://your_account_name.piwik.pro/', // Same as Piwik PRO login address
+    // linkTracking: false, // Disable download and outlink tracking
+    // pageview: false, // Disable default pageview events
+    url: 'https://your_account_name.piwik.pro/', // Same address as the Piwik login
   },
   // init: true, // Skip the initialisation
   // loadScript: true, // Load additional required scripts on init
@@ -33,6 +35,8 @@ const config /* : DestinationPiwikPro.Config */ = {
   },
 };
 ```
+
+> Note: Both `setSiteId` and `setTrackerUrl` are only set with `loadScript = true`.
 
 ### Node usage
 

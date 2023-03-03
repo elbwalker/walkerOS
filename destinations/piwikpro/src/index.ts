@@ -16,22 +16,21 @@ export const destinationPiwikPro: DestinationPiwikPro.Function = {
     w._paq = w._paq || [];
 
     if (config.loadScript) {
+      // Load the JavaScript Tracking Client
       addScript(custom.url);
 
       // Register the tracker url only with script loading
       w._paq.push(['setTrackerUrl', custom.url + 'ppms.php']);
+
+      // Register app id
+      w._paq.push(['setSiteId', custom.appId]);
     }
 
-    // Register site Id
-    w._paq.push(['setSiteId', custom.appId]);
+    // Send pageviews if not disabled
+    if (custom.pageview !== false) w._paq.push(['trackPageView']);
 
-    // Send pageview event
-    // @TODO disable pageview
-    w._paq.push(['trackPageView']);
-
-    // Download & Outlink tracking
-    // @TODO disable link tracking
-    w._paq.push(['enableLinkTracking']);
+    // Enable download and outlink tracking if not disabled
+    if (custom.linkTracking !== false) w._paq.push(['enableLinkTracking']);
 
     return true;
   },
