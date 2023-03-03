@@ -5,9 +5,33 @@ export const destinationPiwikPro: DestinationPiwikPro.Function = {
   config: {},
 
   init(config) {
-    // if (config.loadScript) addScript();
+    const w = window;
+    const custom: Partial<DestinationPiwikPro.CustomConfig> =
+      config.custom || {};
 
-    // Do something initializing
+    // Required parameters
+    if (!custom.appId || !custom.url) return false;
+
+    // Set up the Piwik Pro interface _paq
+    w._paq = w._paq || [];
+
+    if (config.loadScript) {
+      addScript(custom.url);
+
+      // Register the tracker url only with script loading
+      w._paq.push(['setTrackerUrl', custom.url + 'ppms.php']);
+    }
+
+    // Register site Id
+    w._paq.push(['setSiteId', custom.appId]);
+
+    // Send pageview event
+    // @TODO disable pageview
+    w._paq.push(['trackPageView']);
+
+    // Download & Outlink tracking
+    // @TODO disable link tracking
+    w._paq.push(['enableLinkTracking']);
 
     return true;
   },
@@ -17,9 +41,12 @@ export const destinationPiwikPro: DestinationPiwikPro.Function = {
   },
 };
 
-function addScript(src: string) {
+function addScript(url: string) {
   const script = document.createElement('script');
-  script.src = src;
+  script.type = 'text/javascript';
+  script.src = url + 'ppms.js';
+  script.async = true;
+  script.defer = true;
   document.head.appendChild(script);
 }
 

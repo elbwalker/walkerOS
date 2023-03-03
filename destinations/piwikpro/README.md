@@ -17,7 +17,8 @@ import { DestinationPiwikPro } from '@elbwalker/destination-web-piwikpro';
 const config /* : DestinationPiwikPro.Config */ = {
   // consent: { marketing: true }, // Neccessary consent states
   custom: {
-    // CustomConfig
+    appId: 'XXX-XXX-XXX-XXX-XXX', // Id of the site
+    url: 'https://your_account_name.piwik.pro/', // Same as Piwik PRO login address
   },
   // init: true, // Skip the initialisation
   // loadScript: true, // Load additional required scripts on init
@@ -66,6 +67,18 @@ Loading the destination via dynamic import
 
   elb('walker destination', destination, config);
 </script>
+```
+
+## Debugging
+
+Learn how to [check your tracking](https://help.piwik.pro/support/collecting-data/tracker-debugger/#check-your-tracking)
+
+```js
+_paq.push([
+  function () {
+    console.log(this.getVisitorId());
+  },
+]);
 ```
 
 ## Contribute

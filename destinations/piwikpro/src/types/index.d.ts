@@ -2,7 +2,7 @@ import { WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
-    _paq?: Function; // @TODO types
+    _paq?: Array<unknown>;
   }
 }
 
@@ -13,7 +13,10 @@ export declare namespace DestinationPiwikPro {
   type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 
   interface CustomConfig {
-    // custom settings
+    appId: string;
+    // @TODO pageview?: boolean;
+    url: string;
+    // @TODO useTagManager?: boolean
   }
 
   interface CustomEventConfig {
