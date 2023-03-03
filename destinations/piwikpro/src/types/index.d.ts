@@ -20,6 +20,9 @@ export declare namespace DestinationPiwikPro {
   }
 
   interface CustomEventConfig {
-    // Custom destination event mapping properties
+    name?: string;
+    value?: string;
+    // @TODO dimensions
+    // @TODO goals
   }
 }

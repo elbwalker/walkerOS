@@ -1,3 +1,4 @@
+import { IElbwalker } from '@elbwalker/walker.js/dist/src';
 import { DestinationPiwikPro } from './types';
 export * from './types/index.d';
 
@@ -36,12 +37,21 @@ export const destinationPiwikPro: DestinationPiwikPro.Function = {
   },
 
   push(event, config, mapping = {}) {
+    const customMapping = mapping.custom;
+
+    let name: unknown, value: unknown; // @TODO fix types
+
+    if (customMapping) {
+      if (customMapping.name) name = getValue(event, customMapping.name);
+      if (customMapping.value) value = getValue(event, customMapping.value);
+    }
+
     window._paq!.push([
       'trackEvent',
       event.entity,
       event.action,
-      // name,
-      // value,
+      name,
+      value,
       // dimensions
     ]);
   },
@@ -54,6 +64,15 @@ function addScript(url: string) {
   script.async = true;
   script.defer = true;
   document.head.appendChild(script);
+}
+
+function getValue(event: IElbwalker.Event, key: string): unknown {
+  // String dot notation for object ("data.id" -> { data: { id: 1 } })
+  const value = key.split('.').reduce((obj, key) => {
+    return obj[key];
+  }, event);
+
+  return value;
 }
 
 export default destinationPiwikPro;
