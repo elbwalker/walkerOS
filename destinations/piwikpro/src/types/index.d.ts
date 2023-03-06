@@ -23,6 +23,7 @@ export declare namespace DestinationPiwikPro {
     name?: string;
     value?: string;
     // @TODO dimensions
-    // @TODO goals
+    goalId?: string;
+    goalValue?: string;
   }
 }

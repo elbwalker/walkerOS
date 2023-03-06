@@ -49,7 +49,7 @@ export const destinationPiwikPro: DestinationPiwikPro.Function = {
       return;
     }
 
-    const customMapping = mapping.custom;
+    const customMapping = mapping.custom || {};
 
     let name: unknown, value: unknown; // @TODO fix types
 
@@ -64,8 +64,21 @@ export const destinationPiwikPro: DestinationPiwikPro.Function = {
       event.action,
       name,
       value,
-      // dimensions
+      // @TODO dimensions
     ]);
+
+    if (customMapping.goalId) {
+      const goalValue = customMapping.goalValue
+        ? getValue(event, customMapping.goalValue)
+        : undefined;
+
+      window._paq!.push([
+        'trackGoal',
+        customMapping.goalId,
+        goalValue,
+        // @TODO dimensions
+      ]);
+    }
   },
 };
 
