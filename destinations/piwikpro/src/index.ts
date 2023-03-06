@@ -27,9 +27,6 @@ export const destinationPiwikPro: DestinationPiwikPro.Function = {
       w._paq.push(['setSiteId', custom.appId]);
     }
 
-    // Send pageviews if not disabled
-    if (custom.pageview !== false) w._paq.push(['trackPageView']);
-
     // Enable download and outlink tracking if not disabled
     if (custom.linkTracking !== false) w._paq.push(['enableLinkTracking']);
 
@@ -37,6 +34,21 @@ export const destinationPiwikPro: DestinationPiwikPro.Function = {
   },
 
   push(event, config, mapping = {}) {
+    const custom: Partial<DestinationPiwikPro.CustomConfig> =
+      config.custom || {};
+
+    // Send pageviews if not disabled
+    if (
+      custom.pageview !== false &&
+      event.entity === 'page' &&
+      event.action === 'view'
+    ) {
+      // Pageview tracking will move to run part in next version
+      window._paq!.push(['trackPageView', getValue(event, 'data.title')]);
+
+      return;
+    }
+
     const customMapping = mapping.custom;
 
     let name: unknown, value: unknown; // @TODO fix types
