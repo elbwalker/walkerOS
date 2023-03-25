@@ -2,6 +2,13 @@ import { IElbwalker } from '@elbwalker/walker.js/dist/src';
 import { DestinationPiwikPro } from './types';
 export * from './types/index.d';
 
+// @TODOs
+// - static values besides dynamic data values
+// - site search
+// - e-commerce support
+// - duspport for dimensions
+// - testing
+
 export const destinationPiwikPro: DestinationPiwikPro.Function = {
   config: {},
 
@@ -49,7 +56,8 @@ export const destinationPiwikPro: DestinationPiwikPro.Function = {
       return;
     }
 
-    const customMapping = mapping.custom || {};
+    const customMapping: DestinationPiwikPro.CustomEventConfig =
+      mapping.custom || {};
 
     let name: unknown, value: unknown; // @TODO fix types
 

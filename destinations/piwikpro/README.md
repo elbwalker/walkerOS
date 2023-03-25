@@ -20,7 +20,7 @@ const config /* : DestinationPiwikPro.Config */ = {
     appId: 'XXX-XXX-XXX-XXX-XXX', // Id of the site
     // linkTracking: false, // Disable download and outlink tracking
     // pageview: false, // Disable default pageview events
-    url: 'https://your_account_name.piwik.pro/', // Same address as the Piwik login
+    url: 'https://your_account_name.piwik.pro/', // Same address as the login
   },
   // init: true, // Skip the initialisation
   // loadScript: true, // Load additional required scripts on init
@@ -29,6 +29,10 @@ const config /* : DestinationPiwikPro.Config */ = {
       '*': {
         custom: {
           // CustomEventConfig
+          goalId: 'xxx-xxx-...', // Count the event as a goal
+          goalValue: '', // Property to be used as goal value
+          name: '', // Renaming the event
+          value: '', // Property to be used for the value
         },
       },
     },

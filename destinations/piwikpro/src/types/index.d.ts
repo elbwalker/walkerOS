@@ -14,16 +14,21 @@ export declare namespace DestinationPiwikPro {
 
   interface CustomConfig {
     appId: string;
+    // dimensions?: Dimensions;
     linkTracking?: boolean;
     pageview?: boolean;
     url: string;
   }
 
   interface CustomEventConfig {
-    name?: string;
-    value?: string;
-    // @TODO dimensions
+    // dimensions?: Dimensions;
     goalId?: string;
     goalValue?: string;
+    name?: string;
+    value?: string;
+  }
+
+  interface Dimensions {
+    [i: number]: string;
   }
 }
