@@ -71,17 +71,17 @@ generates an event like
   },
   nested: [], // all nested entities within the promotion
   consent: { functional: true }, // status of the consent state(s)
-  id: '1647968113641-01b5e2-5', // timestamp, group & count of the event
+  id: '1647261462000-01b5e2-5', // timestamp, group & count of the event
   trigger: 'visible', // name of the trigger that fired
   entity: 'promotion', // entity name
   action: 'view', // entity action
-  timestamp: 1647968113641, // time when the event fired
+  timestamp: 1647261462000, // time when the event fired
   timing: 3.14, // how long it took from the page load to trigger the event
   group: '01b5e2', // random group id for all events on a page
   count: 2, // incremental counter of the events on a page
   version: {
     // Helpful when working with raw data
-    walker: 1.5, // used walker.js version
+    walker: 1.6, // used walker.js version
     config: 42, // a custom configuration version number
   },
   source: {
