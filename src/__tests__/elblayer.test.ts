@@ -316,4 +316,37 @@ describe('ElbLayer', () => {
       undefined,
     );
   });
+
+  test('elbLayer push override', () => {
+    const layer: IElbwalker.ElbLayer = [];
+
+    elbwalker = Elbwalker({ elbLayer: layer, pageview: false });
+    layer.push('walker run'); // Overrites push function
+    layer.push('walker destination', destination, {
+      init: true,
+      custom: { a: 1 },
+    });
+    layer.push('e a');
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e a',
+      }),
+      { init: true, custom: { a: 1 } },
+      undefined,
+    );
+  });
+
+  test('command order', () => {
+    elbwalker = Elbwalker();
+    elb('walker run');
+
+    // Arguments
+    expect(JSON.stringify(w.elbLayer[0])).toEqual(
+      JSON.stringify({ '0': { '0': 'walker run' } }),
+    );
+
+    // Parameters
+    expect((w.elbLayer[1] as any)[0]).toBe('page view');
+  });
 });
