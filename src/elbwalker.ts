@@ -164,7 +164,7 @@ function Elbwalker(
         ];
       }
 
-      instance.push(String(event), data, String(trigger), context, nested);
+      instance.push(String(event), data, trigger, context, nested);
 
       return Array.prototype.push.apply(this, [arguments]);
     };

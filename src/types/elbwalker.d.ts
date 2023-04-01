@@ -22,7 +22,7 @@ export namespace IElbwalker {
     (
       event: string,
       data?: PushData,
-      trigger?: string,
+      options?: string | WebDestination.Config,
       context?: Walker.OrderedProperties,
       nested?: Walker.Entities,
     ): void;
@@ -31,7 +31,7 @@ export namespace IElbwalker {
   type ElbLayer = [
     (IArguments | string)?,
     PushData?,
-    string?,
+    (string | WebDestination.Config)?,
     Walker.OrderedProperties?,
     Walker.Entities?,
   ];
