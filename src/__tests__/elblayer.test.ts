@@ -336,4 +336,17 @@ describe('ElbLayer', () => {
       undefined,
     );
   });
+
+  test('command order', () => {
+    elbwalker = Elbwalker();
+    elb('walker run');
+
+    // Arguments
+    expect(JSON.stringify(w.elbLayer[0])).toEqual(
+      JSON.stringify({ '0': { '0': 'walker run' } }),
+    );
+
+    // Parameters
+    expect((w.elbLayer[1] as any)[0]).toBe('page view');
+  });
 });

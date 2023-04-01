@@ -164,9 +164,10 @@ function Elbwalker(
         ];
       }
 
+      let i = Array.prototype.push.apply(this, [arguments]);
       instance.push(String(event), data, trigger, context, nested);
 
-      return Array.prototype.push.apply(this, [arguments]);
+      return i;
     };
 
     // Look if the run command is stacked
