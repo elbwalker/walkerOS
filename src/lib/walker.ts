@@ -146,6 +146,7 @@ export function getGlobals(prefix: string): Walker.Properties {
 
   return values;
 }
+
 export function getTriggerActions(str: string): Walker.TriggersActionGroups {
   const values: Walker.TriggersActionGroups = {};
 
@@ -182,7 +183,7 @@ function getEntities(
   filter = Object.keys(filter || {}).length !== 0 ? filter : undefined;
 
   while (element) {
-    const entity = getEntity(prefix, element);
+    const entity = getEntity(prefix, element, target);
 
     if (entity && (!filter || filter[entity.type])) entities.push(entity);
 
@@ -192,7 +193,11 @@ function getEntities(
   return entities;
 }
 
-function getEntity(prefix: string, element: Element): Walker.Entity | null {
+function getEntity(
+  prefix: string,
+  element: Element,
+  origin?: Element,
+): Walker.Entity | null {
   const type = getAttribute(element, getElbAttributeName(prefix));
 
   if (!type) return null; // It's not a (valid) entity element
@@ -201,7 +206,7 @@ function getEntity(prefix: string, element: Element): Walker.Entity | null {
 
   // Get matching properties from the element and its parents
   let [data, context] = getThisAndParentProperties(
-    element,
+    origin || element,
     entitySelector,
     prefix,
     type,
