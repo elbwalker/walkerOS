@@ -310,7 +310,7 @@ export function storageWrite(
   maxAgeInMinutes = 30,
   storage: Utils.Storage.Type = Utils.Storage.Type.Session,
   domain?: string,
-) {
+): Walker.PropertyType {
   const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
   const item: Utils.Storage.Value = { e, v: String(value) };
   const stringifiedItem = JSON.stringify(item);
@@ -332,6 +332,8 @@ export function storageWrite(
       window.sessionStorage.setItem(key, stringifiedItem);
       break;
   }
+
+  return storageRead(key, storage);
 }
 
 export function throttle<P extends unknown[], R>(
