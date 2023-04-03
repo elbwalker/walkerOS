@@ -177,8 +177,7 @@ describe('Utils', () => {
       writable: true,
       value: '',
     });
-    storageWrite(key, value, 1, Utils.Storage.Type.Cookie);
-    expect(storageRead(key, Utils.Storage.Type.Cookie)).toBe(value);
+    expect(storageWrite(key, value, 1, Utils.Storage.Type.Cookie)).toBe(value);
     storageDelete(key, Utils.Storage.Type.Cookie);
     expect(storageRead(key, Utils.Storage.Type.Cookie)).toBe('');
     expect(storageRead('foo', Utils.Storage.Type.Cookie)).toBe('');
@@ -186,16 +185,14 @@ describe('Utils', () => {
     expect(document.cookie).toContain('domain=elbwalker.com');
 
     // Expiration Session
-    storageWrite(key, value, 5);
-    expect(storageRead(key)).toBe(value);
+    expect(storageWrite(key, value, 5)).toBe(value);
     jest.advanceTimersByTime(6 * 60 * 1000);
     expect(w.sessionStorage.getItem(key)).toBeDefined();
     expect(storageRead(key)).toBe('');
     expect(w.sessionStorage.getItem(key)).toBeNull();
 
     // Expiration Local
-    storageWrite(key, value, 5, Utils.Storage.Type.Local);
-    expect(storageRead(key, Utils.Storage.Type.Local)).toBe(value);
+    expect(storageWrite(key, value, 5, Utils.Storage.Type.Local)).toBe(value);
     jest.advanceTimersByTime(6 * 60 * 1000);
     expect(w.localStorage.getItem(key)).toBeDefined();
     expect(storageRead(key, Utils.Storage.Type.Local)).toBe('');
@@ -206,8 +203,7 @@ describe('Utils', () => {
     expect(document.cookie).toContain('max-age=300');
 
     // Cast
-    storageWrite(key, true);
-    expect(storageRead(key)).toBe(true);
+    expect(storageWrite(key, true)).toBe(true);
   });
 
   test('session start', () => {
