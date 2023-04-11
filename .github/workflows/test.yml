@@ -8,12 +8,32 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  walkerjs:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v2
-      - name: Install dependencies
-        run: npm install
+      - uses: actions/checkout@v3
+      - run: npm install
+      - run: npm test
+      - run: npm run build
+
+  destinations:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        destination:
+          - api
+          - google-ads
+          - google-ga4
+          - google-gtm
+          - meta-pixel
+          - piwikpro
+          - plausible
+    name: destination ${{ matrix.destination }}
+    defaults:
+      run:
+        working-directory: destinations/${{ matrix.destination }}
+    steps:
+      - uses: actions/checkout@v3
+      - run: npm install
       - run: npm test
       - run: npm run build

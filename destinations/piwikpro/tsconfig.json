@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "lib": ["ES6", "dom"],
+    "strict": true,
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "declaration": true,
+    "isolatedModules": true,
+    "emitDeclarationOnly": true,
+    "typeRoots": ["@elbwalker/walker.js", "node_modules/@types"]
+  },
+  "exclude": ["node_modules", "dist", "**/*.test.*"],
+  "include": ["src/**/*.ts", ".eslintrc.js"],
+  "$schema": "https://json.schemastore.org/tsconfig"
+}

@@ -187,9 +187,10 @@ describe('Walker', () => {
         entity: 'e',
         action: 'click',
         context: {
-          recommendation: ['smart_ai', 0],
-          same: ['level', 0],
-          test: ['engagement', 1],
+          inside: ['entity', 0],
+          recommendation: ['smart_ai', 1],
+          same: ['level', 1],
+          test: ['engagement', 2],
         },
       },
     ]);

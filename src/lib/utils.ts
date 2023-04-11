@@ -96,6 +96,24 @@ export function getMarketingParameters(
   return data;
 }
 
+export function getByStringDot(
+  event: unknown,
+  key: string,
+  i: unknown = 0,
+): unknown {
+  // String dot notation for object ("data.id" -> { data: { id: 1 } })
+  const value = key.split('.').reduce((obj, key) => {
+    // Update the wildcard to the given index
+    if (key == '*') key = String(i);
+
+    if (obj instanceof Object) return obj[key as keyof typeof obj];
+
+    return;
+  }, event);
+
+  return value;
+}
+
 export function isVisible(element: HTMLElement): boolean {
   // Check for hiding styles
   const style = getComputedStyle(element);
@@ -310,7 +328,7 @@ export function storageWrite(
   maxAgeInMinutes = 30,
   storage: Utils.Storage.Type = Utils.Storage.Type.Session,
   domain?: string,
-) {
+): Walker.PropertyType {
   const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
   const item: Utils.Storage.Value = { e, v: String(value) };
   const stringifiedItem = JSON.stringify(item);
@@ -332,6 +350,8 @@ export function storageWrite(
       window.sessionStorage.setItem(key, stringifiedItem);
       break;
   }
+
+  return storageRead(key, storage);
 }
 
 export function throttle<P extends unknown[], R>(

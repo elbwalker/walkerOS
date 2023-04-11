@@ -6,11 +6,12 @@ export declare function debounce<P extends unknown[], R>(fn: (...args: P) => R, 
 export declare function getAttribute(element: Element, name: string): string;
 export declare function getId(length?: number): string;
 export declare function getMarketingParameters(url: URL, custom?: Utils.MarketingParameters): Walker.Properties;
+export declare function getByStringDot(event: unknown, key: string, i?: unknown): unknown;
 export declare function isVisible(element: HTMLElement): boolean;
 export declare function startSession(config?: Utils.SessionStart): Walker.Properties | false;
 export declare function storageDelete(key: string, storage?: Utils.Storage.Type): void;
 export declare function storageRead(key: string, storage?: Utils.Storage.Type): Walker.PropertyType;
-export declare function storageWrite(key: string, value: Walker.PropertyType, maxAgeInMinutes?: number, storage?: Utils.Storage.Type, domain?: string): void;
+export declare function storageWrite(key: string, value: Walker.PropertyType, maxAgeInMinutes?: number, storage?: Utils.Storage.Type, domain?: string): Walker.PropertyType;
 export declare function throttle<P extends unknown[], R>(fn: (...args: P) => R | undefined, delay?: number): (...args: P) => R | undefined;
 export declare function trim(str: string): string;
 export declare function trycatch<P extends unknown[], R>(fn: (...args: P) => R | undefined): (...args: P) => R | undefined;

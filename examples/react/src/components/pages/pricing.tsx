@@ -1,4 +1,4 @@
-import { CheckIcon } from '@heroicons/react/outline';
+import { CheckIcon } from '@heroicons/react/24/outline';
 import { ButtonPrimary, ButtonSecondary } from '../molecules/buttons';
 
 const pricing = {
@@ -75,7 +75,10 @@ export default function Pricing() {
                 </p>
               ) : null}
               <p className="mt-4 flex items-baseline text-gray-900">
-                <span data-elb-pricing={`price:${tier.price}`} className="text-5xl font-extrabold tracking-tight">
+                <span
+                  data-elb-pricing={`price:${tier.price}`}
+                  className="text-5xl font-extrabold tracking-tight"
+                >
                   ${tier.price}
                 </span>
                 <span className="ml-1 text-xl font-semibold">/month</span>

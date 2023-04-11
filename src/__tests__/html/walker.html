@@ -6,28 +6,6 @@
 ></div>
 
 <div
-  id="nestedx"
-  data-elb="entity"
-  data-elb-entity="ke:ve"
-  data-elbaction="load:view"
->
-  <div
-    id="b"
-    data-elb="b"
-    data-elb-b="kb:vb"
-    data-elbaction="load:nested_view"
-  ></div>
-  <div id="c" data-elb="c" data-elb-c="kc:vc" data-elbaction="load:ac(c)">
-    <div
-      id="d"
-      data-elb="d"
-      data-elb-d="kd:vd"
-      data-elbaction="load:ad(d,entity)"
-    ></div>
-  </div>
-</div>
-
-<div
   id="nested"
   data-elb="mother"
   data-elb-mother="label:grandmother"
@@ -111,9 +89,13 @@
 <div id="prefix" elb="entity" elb-entity="k:v" elbaction="load:action"></div>
 
 <div data-elbcontext="test:engagement">
-  <div data-elbcontext="recommendation:smart_ai;same:level">
+  <div data-elbcontext="recommendation:smart_ai;same:level;inside:overritten">
     <p data-elbcontext="not:included"></p>
-    <p id="context" data-elb="e" data-elbaction="click">click me</p>
+    <div data-elb="e">
+      <p id="context" data-elbcontext="inside:entity" data-elbaction="click">
+        click me
+      </p>
+    </div>
   </div>
 </div>
 

@@ -1,8 +1,5 @@
 import { DestinationXXX } from './types';
-
-declare global {
-  interface Window {}
-}
+export * from './types/index.d';
 
 export const destinationXXX: DestinationXXX.Function = {
   config: {},
