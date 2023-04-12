@@ -21,6 +21,7 @@ function Elbwalker(
   };
 
   // Internal properties
+  // @TODO migrate all to RunState
   let _count = 0; // Event counter for each run
   let _group = ''; // random id to group events of a run
   let _firstRun = true; // The first run is a special one due to state changes
@@ -64,6 +65,7 @@ function Elbwalker(
     const destination: WebDestination.Function = {
       init: data.init,
       push: data.push,
+      run: data.run,
       config,
     };
 
@@ -422,9 +424,20 @@ function Elbwalker(
       getGlobals(instance.config.prefix),
     );
 
+    // @TODO move to config
+    const state: IElbwalker.RunState = {
+      consent: instance.config.consent,
+      firstRun: _firstRun,
+      globals: instance.config.globals,
+      group: _group,
+      user: instance.config.user,
+    };
+
     // Reset all destination queues
     destinations.forEach((destination) => {
       destination.queue = [];
+      // @TODO move after callPredefined
+      destination.run && destination.run(state); // @TODO Promise
     });
 
     // Run predefined elbLayer stack once

@@ -121,4 +121,12 @@ export namespace IElbwalker {
     App = 3,
     Other = 4,
   }
+
+  interface RunState {
+    consent: IElbwalker.Consent;
+    firstRun: boolean;
+    globals: Walker.Properties;
+    group: string;
+    user: IElbwalker.User;
+  }
 }

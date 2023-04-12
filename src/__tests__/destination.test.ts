@@ -9,6 +9,7 @@ describe('Destination', () => {
   const mockInit = jest.fn().mockImplementation(() => {
     return true;
   });
+  const mockRun = jest.fn(); //.mockImplementation(console.log);
 
   const mockError = jest.fn();
   console.error = mockError;
@@ -86,6 +87,30 @@ describe('Destination', () => {
     elbwalker.push('entity action');
     expect(mockInitFalse).toHaveBeenCalledTimes(2);
     expect(mockPushFalse).not.toHaveBeenCalled();
+  });
+
+  test('run call', () => {
+    // @TODO queue run calls
+    elbwalker.push('walker run');
+
+    elbwalker.push('walker destination', {
+      config: {},
+      push: mockPush,
+      run: mockRun,
+    });
+    expect(mockRun).toHaveBeenCalledTimes(0);
+
+    elbwalker.push('walker run');
+
+    expect(mockRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        consent: expect.any(Object),
+        firstRun: false,
+        globals: expect.any(Object),
+        group: expect.any(String),
+        user: expect.any(Object),
+      }),
+    );
   });
 
   test('multiple destinations', () => {
