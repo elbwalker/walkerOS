@@ -20,15 +20,6 @@ function Elbwalker(
     config: getConfig(config),
   };
 
-  // Internal properties
-  // @TODO migrate all to RunState
-  let _count = 0; // Event counter for each run
-  let _group = ''; // random id to group events of a run
-  let _firstRun = true; // The first run is a special one due to state changes
-  let _allowRunning = false; // Wait for explicit run command to start
-  let _queue: IElbwalker.Event[] = []; // Temporary event queue for all events of a run
-  let _timing: number = 0; // Offset counter to calculate timing property
-
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(instance);
 
@@ -71,7 +62,7 @@ function Elbwalker(
 
     // Process previous events if not disabled
     if (config.queue !== false)
-      _queue.forEach((pushEvent) => {
+      instance.config.queue.forEach((pushEvent) => {
         pushToDestination(instance, destination, pushEvent);
       });
 
@@ -186,26 +177,37 @@ function Elbwalker(
     values: Partial<IElbwalker.Config>,
     current: Partial<IElbwalker.Config> = {},
   ): IElbwalker.Config {
+    // Value hierarchy: values > current > default
     return {
-      // Value hierarchy: values > current > default
-
+      // Wait for explicit run command to start
+      allowRunning: values.allowRunning || current.allowRunning || false,
       // Handle the consent states
       consent: values.consent || current.consent || {},
+      // Event counter for each run
+      count: values.count || current.count || 0,
       // Async access api in window as array
       elbLayer:
         values.elbLayer ||
         current.elbLayer ||
         (window.elbLayer = window.elbLayer || []),
+      // The first run is a special one due to state changes
+      firstRun: values.firstRun || current.firstRun || true,
       // Globals enhanced with the static globals from init and previous values
       globals: assign(
         staticGlobals,
         assign(current.globals || {}, values.globals || {}),
       ),
+      // Random id to group events of a run
+      group: values.group || current.group || '',
       // Trigger a page view event by default
       pageview:
         'pageview' in values ? !!values.pageview : current.pageview || true,
       // HTML prefix attribute
       prefix: values.prefix || current.prefix || IElbwalker.Commands.Prefix,
+      // Temporary event queue for all events of a run
+      queue: values.queue || current.queue || [],
+      // Offset counter to calculate timing property
+      timing: values.timing || current.timing || 0,
       // Handles the user ids
       user: values.user || current.user || {},
       // Helpful to differentiate the clients used setup version
@@ -275,8 +277,10 @@ function Elbwalker(
   ): void {
     if (!event || typeof event !== 'string') return;
 
+    const config = instance.config;
+
     // Check if walker is allowed to run
-    if (!_allowRunning) {
+    if (!config.allowRunning) {
       // If not yet allowed check if this is the time
       // If it's not that time do not process events yet
       if (event != runCommand) return;
@@ -301,11 +305,10 @@ function Elbwalker(
         (data as Walker.Properties).id || window.location.pathname;
     }
 
-    ++_count;
-    const config = instance.config;
+    ++config.count;
     const timestamp = Date.now();
-    const timing = Math.round((performance.now() - _timing) / 10) / 100;
-    const id = `${timestamp}-${_group}-${_count}`;
+    const timing = Math.round((performance.now() - config.timing) / 10) / 100;
+    const id = `${timestamp}-${config.group}-${config.count}`;
     const source = {
       type: IElbwalker.SourceType.Web,
       id: window.location.href,
@@ -326,8 +329,8 @@ function Elbwalker(
       action,
       timestamp,
       timing,
-      group: _group,
-      count: _count,
+      group: config.group,
+      count: config.count,
       version: {
         config: config.version,
         walker: version,
@@ -336,7 +339,7 @@ function Elbwalker(
     };
 
     // Add event to internal queue
-    _queue.push(pushEvent);
+    config.queue.push(pushEvent);
 
     destinations.forEach((destination) => {
       pushToDestination(instance, destination, pushEvent);
@@ -404,50 +407,36 @@ function Elbwalker(
   }
 
   function run(instance: IElbwalker.Function) {
-    // When run is called, the walker may start running
-    _allowRunning = true;
-
-    // Reset the run counter
-    _count = 0;
-
-    // Generate a new group id for each run
-    _group = getId();
-
-    // Reset the queue for each run
-    _queue = [];
-
-    // Load globals properties
-    // Use the default globals set by initalization
-    // Due to site performance only once every run
-    instance.config.globals = assign(
-      staticGlobals,
-      getGlobals(instance.config.prefix),
-    );
-
-    // @TODO move to config
-    const state: IElbwalker.RunState = {
-      consent: instance.config.consent,
-      firstRun: _firstRun,
-      globals: instance.config.globals,
-      group: _group,
-      user: instance.config.user,
-    };
+    instance.config = assign(instance.config, {
+      allowRunning: true, // When run is called, the walker may start running
+      count: 0, // Reset the run counter
+      globals: assign(
+        // Load globals properties
+        // Use the default globals set by initalization
+        // Due to site performance only once every run
+        staticGlobals,
+        getGlobals(instance.config.prefix),
+      ),
+      group: getId(), // Generate a new group id for each run
+    });
+    // Reset the queue for each run without merging
+    instance.config.queue = [];
 
     // Reset all destination queues
     destinations.forEach((destination) => {
       destination.queue = [];
       // @TODO move after callPredefined
-      destination.run && destination.run(state); // @TODO Promise
+      destination.run && destination.run(instance.config); // @TODO Promise
     });
 
     // Run predefined elbLayer stack once
-    if (_firstRun) {
-      _firstRun = false;
+    if (instance.config.firstRun) {
+      instance.config.firstRun = false;
 
       // Process existing elbLayer events
       callPredefined(instance);
     } else {
-      _timing = performance.now();
+      instance.config.timing = performance.now();
     }
 
     trycatch(load)(instance);

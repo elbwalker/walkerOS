@@ -172,12 +172,18 @@ describe('ElbLayer', () => {
   });
 
   test('config update', () => {
-    const defaultConfig = {
+    const defaultConfig: IElbwalker.Config = {
+      allowRunning: true,
       consent: {},
+      count: expect.any(Number),
       elbLayer: w.elbLayer,
+      firstRun: expect.any(Boolean),
       globals: {},
+      group: expect.any(String),
       pageview: true,
       prefix: 'data-elb',
+      queue: expect.any(Array),
+      timing: expect.any(Number),
       user: {},
       version: 0,
     };

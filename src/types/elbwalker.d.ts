@@ -48,11 +48,17 @@ export namespace IElbwalker {
   type Scope = Document | HTMLElement;
 
   interface Config {
+    allowRunning: boolean;
     consent: Consent;
+    count: number; // @TODO add run count
     elbLayer: ElbLayer;
+    firstRun: boolean;
     globals: Walker.Properties;
+    group: string;
     pageview: boolean;
     prefix: string;
+    queue: IElbwalker.Event[];
+    timing: number;
     user: User;
     version: number;
     default?: boolean;
@@ -120,13 +126,5 @@ export namespace IElbwalker {
     Server = 2,
     App = 3,
     Other = 4,
-  }
-
-  interface RunState {
-    consent: IElbwalker.Consent;
-    firstRun: boolean;
-    globals: Walker.Properties;
-    group: string;
-    user: IElbwalker.User;
   }
 }

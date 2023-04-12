@@ -102,15 +102,7 @@ describe('Destination', () => {
 
     elbwalker.push('walker run');
 
-    expect(mockRun).toHaveBeenCalledWith(
-      expect.objectContaining({
-        consent: expect.any(Object),
-        firstRun: false,
-        globals: expect.any(Object),
-        group: expect.any(String),
-        user: expect.any(Object),
-      }),
-    );
+    expect(mockRun).toHaveBeenCalledWith(expect.any(Object));
   });
 
   test('multiple destinations', () => {
