@@ -56,7 +56,6 @@ function Elbwalker(
     const destination: WebDestination.Function = {
       init: data.init,
       push: data.push,
-      run: data.run,
       config,
     };
 
@@ -399,7 +398,12 @@ function Elbwalker(
       }
 
       // It's time to go to the destination's side now
-      destination.push(event, destination.config, mappingEvent);
+      destination.push(
+        event,
+        destination.config,
+        mappingEvent,
+        instance.config,
+      );
 
       return true;
     })();
@@ -426,8 +430,6 @@ function Elbwalker(
     // Reset all destination queues
     destinations.forEach((destination) => {
       destination.queue = [];
-      // @TODO move after callPredefined
-      destination.run && destination.run(instance.config); // @TODO Promise
     });
 
     // Increase round counter and check if this is the first run
