@@ -173,7 +173,7 @@ describe('ElbLayer', () => {
 
   test('config update', () => {
     const defaultConfig: IElbwalker.Config = {
-      allowRunning: true,
+      allowed: true,
       consent: {},
       count: expect.any(Number),
       elbLayer: w.elbLayer,

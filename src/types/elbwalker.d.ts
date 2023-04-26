@@ -48,11 +48,12 @@ export namespace IElbwalker {
   type Scope = Document | HTMLElement;
 
   interface Config {
-    allowRunning: boolean;
+    allowed: boolean;
     consent: Consent;
-    count: number; // @TODO add run count
+    count: number;
+    // @TODO custom state support
     elbLayer: ElbLayer;
-    firstRun: boolean;
+    firstRun: boolean; // @TODO convert to number
     globals: Walker.Properties;
     group: string;
     pageview: boolean;

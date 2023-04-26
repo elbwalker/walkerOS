@@ -180,7 +180,7 @@ function Elbwalker(
     // Value hierarchy: values > current > default
     return {
       // Wait for explicit run command to start
-      allowRunning: values.allowRunning || current.allowRunning || false,
+      allowed: values.allowed || current.allowed || false,
       // Handle the consent states
       consent: values.consent || current.consent || {},
       // Event counter for each run
@@ -246,6 +246,7 @@ function Elbwalker(
         });
         break;
       case IElbwalker.Commands.Run:
+        // @TODO maybe pass run state with argument
         ready(run, instance);
         break;
       case IElbwalker.Commands.User:
@@ -280,7 +281,7 @@ function Elbwalker(
     const config = instance.config;
 
     // Check if walker is allowed to run
-    if (!config.allowRunning) {
+    if (!config.allowed) {
       // If not yet allowed check if this is the time
       // If it's not that time do not process events yet
       if (event != runCommand) return;
@@ -408,7 +409,7 @@ function Elbwalker(
 
   function run(instance: IElbwalker.Function) {
     instance.config = assign(instance.config, {
-      allowRunning: true, // When run is called, the walker may start running
+      allowed: true, // When run is called, the walker may start running
       count: 0, // Reset the run counter
       globals: assign(
         // Load globals properties
