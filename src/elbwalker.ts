@@ -190,8 +190,6 @@ function Elbwalker(
         values.elbLayer ||
         current.elbLayer ||
         (window.elbLayer = window.elbLayer || []),
-      // The first run is a special one due to state changes
-      firstRun: values.firstRun || current.firstRun || true,
       // Globals enhanced with the static globals from init and previous values
       globals: assign(
         staticGlobals,
@@ -206,6 +204,8 @@ function Elbwalker(
       prefix: values.prefix || current.prefix || IElbwalker.Commands.Prefix,
       // Temporary event queue for all events of a run
       queue: values.queue || current.queue || [],
+      // The first round is a special one due to state changes
+      round: values.round || current.round || 0,
       // Offset counter to calculate timing property
       timing: values.timing || current.timing || 0,
       // Handles the user ids
@@ -430,13 +430,12 @@ function Elbwalker(
       destination.run && destination.run(instance.config); // @TODO Promise
     });
 
-    // Run predefined elbLayer stack once
-    if (instance.config.firstRun) {
-      instance.config.firstRun = false;
-
-      // Process existing elbLayer events
+    // Increase round counter and check if this is the first run
+    if (++instance.config.round == 1) {
+      // Run predefined elbLayer stack once
       callPredefined(instance);
     } else {
+      // Reset timing with each new run
       instance.config.timing = performance.now();
     }
 

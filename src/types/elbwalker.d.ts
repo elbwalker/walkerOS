@@ -53,12 +53,12 @@ export namespace IElbwalker {
     count: number;
     // @TODO custom state support
     elbLayer: ElbLayer;
-    firstRun: boolean; // @TODO convert to number
     globals: Walker.Properties;
     group: string;
     pageview: boolean;
     prefix: string;
     queue: IElbwalker.Event[];
+    round: number;
     timing: number;
     user: User;
     version: number;
