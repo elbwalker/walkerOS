@@ -49,9 +49,9 @@ generates an event like
 
 ```js
 {
-  event: 'promotion view', // combination of entity and action
+  event: 'promotion view', // Combination of entity and action
   data: {
-    // arbitrary set properties with the data-elb-promotion attribute
+    // Arbitrary set properties with the data-elb-promotion attribute
     name: 'Setting up tracking easily',
     category: 'analytics',
   },
@@ -64,33 +64,33 @@ generates an event like
     language: 'en'
   },
   user: {
-    // stored user ids (manually added once)
+    // Stored user ids (manually added once)
     id: 'userid',
     device: 'cookieid',
     session: 'sessionid',
   },
-  nested: [], // all nested entities within the promotion
-  consent: { functional: true }, // status of the consent state(s)
-  id: '1647261462000-01b5e2-5', // timestamp, group & count of the event
-  trigger: 'visible', // name of the trigger that fired
-  entity: 'promotion', // entity name
-  action: 'view', // entity action
-  timestamp: 1647261462000, // time when the event fired
-  timing: 3.14, // how long it took from the page load to trigger the event
-  group: '01b5e2', // random group id for all events on a page
-  count: 2, // incremental counter of the events on a page
+  nested: [], // All nested entities within the promotion
+  consent: { functional: true }, // Status of the consent state(s)
+  id: '1647261462000-01b5e2-5', // Timestamp, group & count of the event
+  trigger: 'visible', // Name of the trigger that fired
+  entity: 'promotion', // Entity name
+  action: 'view', // Entity action
+  timestamp: 1647261462000, // Time when the event fired
+  timing: 3.14, // How long it took from the page load to trigger the event
+  group: '01b5e2', // Random group id for all events on a page
+  count: 2, // Incremental counter of the events on a page
   version: {
     // Helpful when working with raw data
-    walker: 1.6, // used walker.js version
-    config: 42, // a custom configuration version number
+    walker: 1.6, // Used walker.js version
+    config: 42, // A custom configuration version number
   },
   source: {
     // Origins of the event
     type: 1, // Source type of the event (1=Web)
     id: 'https://github.com/elbwalker/walker.js', // Source id of the event's origin (url)
-    previous_id: 'https://www.elbwalker.com/' // Previous source id of the event's origin (referrer)
+    previous_id: 'https://www.elbwalker.com/' // Previous source id (referrer)
   },
-  walker: true, // flag to filter events
+  walker: true, // Flag to filter events
 }
 ```
 
