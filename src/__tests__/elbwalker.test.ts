@@ -18,7 +18,11 @@ describe('Elbwalker', () => {
     w.dataLayer!.push = mockFn;
     w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
 
-    elbwalker = Elbwalker({ default: true, consent: { test: true } });
+    elbwalker = Elbwalker({
+      default: true,
+      consent: { test: true },
+      pageview: false,
+    });
   });
 
   test('go', () => {
@@ -32,12 +36,11 @@ describe('Elbwalker', () => {
     (elbwalker as any).push();
     elbwalker.push('');
     elbwalker.push('entity');
-    expect(mockFn).toHaveBeenCalledTimes(1); // only page view
+    expect(mockFn).toHaveBeenCalledTimes(0);
   });
 
   test('regular push', () => {
     elbwalker.push('walker run');
-    jest.clearAllMocks(); // skip auto page view event
 
     elbwalker.push('entity action');
     elbwalker.push('entity action', { foo: 'bar' });
@@ -57,7 +60,7 @@ describe('Elbwalker', () => {
       timestamp: expect.any(Number),
       timing: expect.any(Number),
       group: expect.any(String),
-      count: 2,
+      count: 1,
       version,
       source: {
         type: IElbwalker.SourceType.Web,
@@ -82,7 +85,7 @@ describe('Elbwalker', () => {
       timestamp: expect.any(Number),
       timing: expect.any(Number),
       group: expect.any(String),
-      count: 3,
+      count: 2,
       version,
       source: {
         type: IElbwalker.SourceType.Web,
@@ -136,7 +139,8 @@ describe('Elbwalker', () => {
 
     // Start a new initialization with a new group ip
     elbwalker.push('walker run');
-    expect(mockFn.mock.calls[3][0].group).not.toEqual(groupId); // page view
+    elbwalker.push('entity action');
+    expect(mockFn.mock.calls[2][0].group).not.toEqual(groupId); // page view
   });
 
   test('source', () => {
@@ -285,5 +289,23 @@ describe('Elbwalker', () => {
     jest.advanceTimersByTime(5000); // wait 5 sec
     elbwalker.push('e a');
     expect(mockFn.mock.calls[2][0].timing).toEqual(5);
+  });
+
+  test.skip('Element parameter', () => {
+    document.body.innerHTML = `
+      <div data-elb="e" data-elbaction="load">
+        <p data-elb-e="k:v"></p>
+      </div>
+    `;
+    const elem = document.getElementById('basic') as HTMLElement;
+
+    elbwalker.push('entity custom', elem);
+
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e custom',
+        data: { k: 'v' },
+      }),
+    );
   });
 });
