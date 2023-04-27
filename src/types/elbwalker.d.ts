@@ -48,11 +48,18 @@ export namespace IElbwalker {
   type Scope = Document | HTMLElement;
 
   interface Config {
+    allowed: boolean;
     consent: Consent;
+    count: number;
+    // @TODO custom state support
     elbLayer: ElbLayer;
     globals: Walker.Properties;
+    group: string;
     pageview: boolean;
     prefix: string;
+    queue: IElbwalker.Event[];
+    round: number;
+    timing: number;
     user: User;
     version: number;
     default?: boolean;

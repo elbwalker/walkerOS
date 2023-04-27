@@ -70,6 +70,7 @@ describe('ElbLayer', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -79,6 +80,7 @@ describe('ElbLayer', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -88,6 +90,7 @@ describe('ElbLayer', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
 
     expect(mockPush).toHaveBeenCalledWith(
@@ -97,6 +100,7 @@ describe('ElbLayer', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
   });
 
@@ -114,6 +118,7 @@ describe('ElbLayer', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -121,6 +126,7 @@ describe('ElbLayer', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
   });
 
@@ -142,6 +148,7 @@ describe('ElbLayer', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
     expect(mockPush).toHaveBeenNthCalledWith(
       2,
@@ -151,6 +158,7 @@ describe('ElbLayer', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
     expect(mockPush).toHaveBeenNthCalledWith(
       3,
@@ -160,6 +168,7 @@ describe('ElbLayer', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
   });
 
@@ -172,12 +181,18 @@ describe('ElbLayer', () => {
   });
 
   test('config update', () => {
-    const defaultConfig = {
+    const defaultConfig: IElbwalker.Config = {
+      allowed: true,
       consent: {},
+      count: expect.any(Number),
       elbLayer: w.elbLayer,
       globals: {},
+      group: expect.any(String),
       pageview: true,
       prefix: 'data-elb',
+      queue: expect.any(Array),
+      round: expect.any(Number),
+      timing: expect.any(Number),
       user: {},
       version: 0,
     };
@@ -307,6 +322,7 @@ describe('ElbLayer', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
     expect(mockDest2).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -314,6 +330,7 @@ describe('ElbLayer', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
   });
 
@@ -334,6 +351,7 @@ describe('ElbLayer', () => {
       }),
       { init: true, custom: { a: 1 } },
       undefined,
+      expect.anything(),
     );
   });
 
