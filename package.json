@@ -19,7 +19,7 @@
     "dev": "jest --watchAll --colors",
     "build": "webpack && npm run copy:dts && npm run es5",
     "es5": "npm run es5:build && npm run es5:minify",
-    "es5:build": "babel dist/walker.js --presets @babel/preset-env --no-babelrc -o dist/es5.js",
+    "es5:build": "babel dist/es5.js --presets @babel/preset-env --no-babelrc -o dist/es5.js",
     "es5:minify": "uglifyjs --compress --mangle -o dist/es5.js -- dist/es5.js",
     "publish": "npm run test && npm run build && npm publish --access public"
   },

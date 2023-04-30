@@ -45,6 +45,32 @@ const browserConfig = {
   plugins: [],
 };
 
+const es5Config = {
+  mode: 'production',
+  entry: './src/modules/es5.ts',
+  module: {
+    rules: [
+      {
+        test: /\.tsx?$/,
+        use: 'ts-loader',
+        exclude: /node_modules/,
+      },
+    ],
+  },
+  resolve: {
+    extensions: ['.tsx', '.ts', '.js'],
+  },
+  output: {
+    filename: 'es5.js',
+    library: {
+      type: 'umd',
+      name: 'Elbwalker',
+      export: 'default',
+    },
+  },
+  plugins: [],
+};
+
 const moduleConfig = {
   mode: 'production',
   entry: './src/modules/node.ts',
@@ -101,4 +127,5 @@ const utilsConfig = {
   plugins: [],
 };
 
-module.exports = [browserConfig, nodeConfig, moduleConfig, utilsConfig];
+// module.exports = [browserConfig, nodeConfig, moduleConfig, utilsConfig];
+module.exports = [es5Config];
