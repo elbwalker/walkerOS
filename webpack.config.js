@@ -127,5 +127,10 @@ const utilsConfig = {
   plugins: [],
 };
 
-// module.exports = [browserConfig, nodeConfig, moduleConfig, utilsConfig];
-module.exports = [es5Config];
+module.exports = [
+  browserConfig,
+  es5Config,
+  nodeConfig,
+  moduleConfig,
+  utilsConfig,
+];
