@@ -45,9 +45,9 @@ const browserConfig = {
   plugins: [],
 };
 
-const es5Config = {
+const es5WalkerConfig = {
   mode: 'production',
-  entry: './src/modules/es5.ts',
+  entry: './src/modules/walker.es5.ts',
   module: {
     rules: [
       {
@@ -61,10 +61,36 @@ const es5Config = {
     extensions: ['.tsx', '.ts', '.js'],
   },
   output: {
-    filename: 'es5.js',
+    filename: 'walker.es5.js',
     library: {
       type: 'umd',
       name: 'Elbwalker',
+      export: 'default',
+    },
+  },
+  plugins: [],
+};
+
+const es5UtilsConfig = {
+  mode: 'production',
+  entry: './src/modules/utils.es5.ts',
+  module: {
+    rules: [
+      {
+        test: /\.tsx?$/,
+        use: 'ts-loader',
+        exclude: /node_modules/,
+      },
+    ],
+  },
+  resolve: {
+    extensions: ['.tsx', '.ts', '.js'],
+  },
+  output: {
+    filename: 'utils.es5.js',
+    library: {
+      type: 'umd',
+      name: 'Elbutils',
       export: 'default',
     },
   },
@@ -129,7 +155,8 @@ const utilsConfig = {
 
 module.exports = [
   browserConfig,
-  es5Config,
+  es5WalkerConfig,
+  es5UtilsConfig,
   nodeConfig,
   moduleConfig,
   utilsConfig,
