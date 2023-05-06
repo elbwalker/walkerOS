@@ -32,6 +32,7 @@ export namespace Walker {
 
   const enum Trigger {
     Click = 'click',
+    Custom = 'custom', // @TODO string
     Hover = 'hover',
     Load = 'load',
     Pulse = 'pulse',

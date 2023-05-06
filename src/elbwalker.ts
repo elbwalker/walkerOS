@@ -6,7 +6,7 @@ import {
   load,
 } from './lib/trigger';
 import { assign, getId, trycatch } from './lib/utils';
-import { getGlobals } from './lib/walker';
+import { getEntities, getGlobals } from './lib/walker';
 
 function Elbwalker(
   config: Partial<IElbwalker.Config> = {},
@@ -272,7 +272,7 @@ function Elbwalker(
     event?: unknown,
     data?: IElbwalker.PushData,
     options: string | WebDestination.Config = '',
-    context: Walker.OrderedProperties = {},
+    context: Walker.OrderedProperties | Element = {},
     nested: Walker.Entities = [],
   ): void {
     if (!event || typeof event !== 'string') return;
@@ -294,6 +294,28 @@ function Elbwalker(
     if (entity === IElbwalker.Commands.Walker) {
       handleCommand(instance, action, data, options as WebDestination.Config);
       return;
+    }
+
+    // Get data and context from element parameter
+    let elemParameter: undefined | Element;
+    let dataIsElem = false;
+    if (isElementOrDocument(data)) {
+      elemParameter = data as Element;
+      dataIsElem = true;
+    } else if (isElementOrDocument(context)) {
+      elemParameter = context as Element;
+    }
+
+    if (elemParameter) {
+      // Filter for the entity type from the events name
+      const entityObj = getEntities(config.prefix, elemParameter).find(
+        (obj) => obj.type == entity,
+      );
+
+      if (entityObj) {
+        data = dataIsElem ? entityObj.data : data;
+        context = entityObj.context;
+      }
     }
 
     // Set default value if undefined
@@ -318,7 +340,7 @@ function Elbwalker(
     const pushEvent: IElbwalker.Event = {
       event,
       data: data as Walker.Properties,
-      context,
+      context: context as Walker.OrderedProperties,
       globals: config.globals,
       user: config.user,
       nested,
