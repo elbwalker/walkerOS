@@ -311,5 +311,16 @@ describe('Elbwalker', () => {
         context: { c: ['o', 0] },
       }),
     );
+
+    elbwalker.push('e context', { a: 1 }, 'custom', elem);
+
+    expect(mockFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e context',
+        trigger: 'custom',
+        data: { a: 1 },
+        context: { c: ['o', 0] },
+      }),
+    );
   });
 });

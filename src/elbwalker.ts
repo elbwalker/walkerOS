@@ -272,7 +272,7 @@ function Elbwalker(
     event?: unknown,
     data?: IElbwalker.PushData,
     options: string | WebDestination.Config = '',
-    context: Walker.OrderedProperties = {}, // @TODO Element
+    context: Walker.OrderedProperties | Element = {},
     nested: Walker.Entities = [],
   ): void {
     if (!event || typeof event !== 'string') return;
@@ -297,14 +297,23 @@ function Elbwalker(
     }
 
     // Get data and context from element parameter
+    let elemParameter: undefined | Element;
+    let dataIsElem = false;
     if (isElementOrDocument(data)) {
+      elemParameter = data as Element;
+      dataIsElem = true;
+    } else if (isElementOrDocument(context)) {
+      elemParameter = context as Element;
+    }
+
+    if (elemParameter) {
       // Filter for the entity type from the events name
-      const entityObj = getEntities(config.prefix, data as HTMLElement).find(
+      const entityObj = getEntities(config.prefix, elemParameter).find(
         (obj) => obj.type == entity,
       );
 
       if (entityObj) {
-        data = entityObj.data;
+        data = dataIsElem ? entityObj.data : data;
         context = entityObj.context;
       }
     }
@@ -331,7 +340,7 @@ function Elbwalker(
     const pushEvent: IElbwalker.Event = {
       event,
       data: data as Walker.Properties,
-      context,
+      context: context as Walker.OrderedProperties,
       globals: config.globals,
       user: config.user,
       nested,

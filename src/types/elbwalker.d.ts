@@ -23,7 +23,7 @@ export namespace IElbwalker {
       event: string,
       data?: PushData,
       options?: string | WebDestination.Config, // @TODO use Walker.Trigger
-      context?: Walker.OrderedProperties,
+      context?: Walker.OrderedProperties | Element,
       nested?: Walker.Entities,
     ): void;
   }
