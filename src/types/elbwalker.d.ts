@@ -22,7 +22,7 @@ export namespace IElbwalker {
     (
       event: string,
       data?: PushData,
-      options?: string | WebDestination.Config,
+      options?: string | WebDestination.Config, // @TODO use Walker.Trigger
       context?: Walker.OrderedProperties,
       nested?: Walker.Entities,
     ): void;
@@ -39,6 +39,7 @@ export namespace IElbwalker {
   type PushData =
     | Partial<Config>
     | Consent
+    | Element
     | Scope
     | Scope[]
     | User

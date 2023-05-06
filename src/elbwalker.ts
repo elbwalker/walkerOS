@@ -6,7 +6,7 @@ import {
   load,
 } from './lib/trigger';
 import { assign, getId, trycatch } from './lib/utils';
-import { getGlobals } from './lib/walker';
+import { getEntities, getGlobals } from './lib/walker';
 
 function Elbwalker(
   config: Partial<IElbwalker.Config> = {},
@@ -272,7 +272,7 @@ function Elbwalker(
     event?: unknown,
     data?: IElbwalker.PushData,
     options: string | WebDestination.Config = '',
-    context: Walker.OrderedProperties = {},
+    context: Walker.OrderedProperties = {}, // @TODO Element
     nested: Walker.Entities = [],
   ): void {
     if (!event || typeof event !== 'string') return;
@@ -294,6 +294,19 @@ function Elbwalker(
     if (entity === IElbwalker.Commands.Walker) {
       handleCommand(instance, action, data, options as WebDestination.Config);
       return;
+    }
+
+    // Get data and context from element parameter
+    if (isElementOrDocument(data)) {
+      // Filter for the entity type from the events name
+      const entityObj = getEntities(config.prefix, data as HTMLElement).find(
+        (obj) => obj.type == entity,
+      );
+
+      if (entityObj) {
+        data = entityObj.data;
+        context = entityObj.context;
+      }
     }
 
     // Set default value if undefined

@@ -291,20 +291,24 @@ describe('Elbwalker', () => {
     expect(mockFn.mock.calls[2][0].timing).toEqual(5);
   });
 
-  test.skip('Element parameter', () => {
+  test('Element parameter', () => {
     document.body.innerHTML = `
-      <div data-elb="e" data-elbaction="load">
-        <p data-elb-e="k:v"></p>
+      <div data-elbcontext="c:o">
+        <div id="e" data-elb="e" data-elbaction="load">
+          <p data-elb-e="k:v"></p>
+        </div>
       </div>
     `;
-    const elem = document.getElementById('basic') as HTMLElement;
+    const elem = document.getElementById('e') as HTMLElement;
 
-    elbwalker.push('entity custom', elem);
+    elbwalker.push('e custom', elem, 'custom');
 
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e custom',
+        trigger: 'custom',
         data: { k: 'v' },
+        context: { c: ['o', 0] },
       }),
     );
   });
