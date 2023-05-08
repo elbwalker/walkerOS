@@ -1,6 +1,6 @@
 import { IElbwalker, Utils, Walker } from '../types';
 export declare const elb: IElbwalker.Elb;
-export declare function assign(target: Walker.Properties, source?: Walker.Properties): Walker.Properties;
+export declare function assign<T>(target: T, source?: Object): T;
 export declare function castValue(value: unknown): Walker.PropertyType;
 export declare function debounce<P extends unknown[], R>(fn: (...args: P) => R, wait?: number): (...args: P) => Promise<R>;
 export declare function getAttribute(element: Element, name: string): string;

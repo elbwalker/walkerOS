@@ -7,6 +7,7 @@ export namespace WebDestination {
       event: IElbwalker.Event,
       config: Config<Custom, EventCustom>,
       mapping?: EventConfig<EventCustom>,
+      runState?: IElbwalker.Config,
     ) => void;
     config: Config<Custom, EventCustom>;
     queue?: Array<IElbwalker.Event>; // Non processed events yet and resettet with each new run
