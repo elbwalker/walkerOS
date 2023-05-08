@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/walker.js",
   "description": "Lightweight & vendor-agnostic tracking implementation layer for data-collection by simply adding attributes to your markup.",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "repository": {
     "type": "git",
     "url": "https://github.com/elbwalker/walker.js"
@@ -17,12 +17,20 @@
     "copy:dts": "copyfiles -u 1 \"src/**/*.d.ts\" dist/src",
     "test": "jest --colors --coverage",
     "dev": "jest --watchAll --colors",
-    "build": "webpack && npm run copy:dts",
+    "build": "webpack && npm run copy:dts && npm run es5",
+    "es5": "npm run es5:build && npm run es5:minify",
+    "es5:build": "npm run es5:build-walker && npm run es5:build-utils",
+    "es5:build-walker": "babel dist/walker.es5.js --presets @babel/preset-env --no-babelrc -o dist/walker.es5.js",
+    "es5:build-utils": "babel dist/utils.es5.js --presets @babel/preset-env --no-babelrc -o dist/utils.es5.js",
+    "es5:minify": "npm run es5:minify-walker && npm run es5:minify-utils",
+    "es5:minify-walker": "uglifyjs --compress --mangle -o dist/walker.es5.js -- dist/walker.es5.js",
+    "es5:minify-utils": "uglifyjs --compress --mangle -o dist/utils.es5.js -- dist/utils.es5.js",
     "publish": "npm run test && npm run build && npm publish --access public"
   },
   "author": "elbwalker GmbH <hello@elbwalker.com>",
   "license": "MIT",
   "devDependencies": {
+    "@babel/cli": "^7.21.0",
     "@babel/core": "^7.21.4",
     "@babel/plugin-transform-runtime": "^7.21.4",
     "@babel/preset-env": "^7.21.4",
@@ -45,6 +53,7 @@
     "ts-jest": "^29.1.0",
     "ts-loader": "^9.4.2",
     "typescript": "^5.0.4",
+    "uglify-js": "^3.17.4",
     "webpack": "^5.78.0",
     "webpack-cli": "^5.0.1"
   },

@@ -45,6 +45,7 @@ describe('Destination', () => {
       }),
       config,
       undefined,
+      expect.anything(),
     );
   });
 
@@ -88,6 +89,41 @@ describe('Destination', () => {
     expect(mockPushFalse).not.toHaveBeenCalled();
   });
 
+  test('run call', () => {
+    elbwalker.push('walker run');
+    elbwalker.push('run one');
+
+    elbwalker.push('walker destination', {
+      config: {},
+      push: mockPush,
+    });
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'run one',
+      }),
+      expect.anything(),
+      undefined,
+      expect.objectContaining({
+        round: 1,
+      }),
+    );
+
+    elbwalker.push('walker run');
+    elbwalker.push('run two');
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'run two',
+      }),
+      expect.anything(),
+      undefined,
+      expect.objectContaining({
+        round: 2,
+      }),
+    );
+  });
+
   test('multiple destinations', () => {
     elbwalker.push('walker run');
 
@@ -108,6 +144,7 @@ describe('Destination', () => {
       }),
       { init: true },
       undefined,
+      expect.anything(),
     );
   });
 
@@ -136,6 +173,7 @@ describe('Destination', () => {
       }),
       config,
       undefined,
+      expect.anything(),
     );
   });
 
@@ -203,6 +241,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       {},
+      expect.anything(),
     );
     expect(mockPushB).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -210,6 +249,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       {},
+      expect.anything(),
     );
     expect(mockPushC).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -217,6 +257,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       {},
+      expect.anything(),
     );
 
     jest.clearAllMocks();
@@ -230,6 +271,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       { name: 'foo bar' },
+      expect.anything(),
     );
 
     jest.clearAllMocks();
@@ -243,6 +285,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       {},
+      expect.anything(),
     );
 
     jest.clearAllMocks();
@@ -256,6 +299,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       {},
+      expect.anything(),
     );
 
     jest.clearAllMocks();
@@ -374,6 +418,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
 
     expect(mockPushC).toHaveBeenNthCalledWith(
@@ -383,6 +428,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
 
     elbwalker.push('f b');
@@ -393,6 +439,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
 
     // Revoked consent
@@ -461,6 +508,7 @@ describe('Destination', () => {
       }),
       config,
       { name: 'page_view' },
+      expect.anything(),
     );
   });
 
@@ -504,12 +552,14 @@ describe('Destination', () => {
       expect.objectContaining({ event: name }),
       expect.anything(),
       { name },
+      expect.anything(),
     );
     expect(mockInitB).toHaveBeenCalled();
     expect(mockPushB).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'different' }),
       expect.anything(),
       { name: 'different' },
+      expect.anything(),
     );
   });
 
@@ -525,6 +575,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
 
     jest.clearAllMocks();
@@ -542,6 +593,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
 
     // Expect to only process current events
@@ -555,6 +607,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       undefined,
+      expect.anything(),
     );
     const mockPushLater = jest.fn();
     const destinationLater: WebDestination.Function = {

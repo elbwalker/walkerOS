@@ -22,8 +22,8 @@ export namespace IElbwalker {
     (
       event: string,
       data?: PushData,
-      options?: string | WebDestination.Config,
-      context?: Walker.OrderedProperties,
+      options?: string | WebDestination.Config, // @TODO use Walker.Trigger
+      context?: Walker.OrderedProperties | Element,
       nested?: Walker.Entities,
     ): void;
   }
@@ -39,6 +39,7 @@ export namespace IElbwalker {
   type PushData =
     | Partial<Config>
     | Consent
+    | Element
     | Scope
     | Scope[]
     | User
@@ -48,11 +49,18 @@ export namespace IElbwalker {
   type Scope = Document | HTMLElement;
 
   interface Config {
+    allowed: boolean;
     consent: Consent;
+    count: number;
+    // @TODO custom state support
     elbLayer: ElbLayer;
     globals: Walker.Properties;
+    group: string;
     pageview: boolean;
     prefix: string;
+    queue: IElbwalker.Event[];
+    round: number;
+    timing: number;
     user: User;
     version: number;
     default?: boolean;

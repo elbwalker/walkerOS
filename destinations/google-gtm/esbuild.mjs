@@ -15,3 +15,13 @@ await esbuild.build({
   platform: 'neutral',
   outfile: 'dist/index.mjs',
 });
+
+await esbuild.build({
+  entryPoints: ['src/es5.ts'],
+  bundle: true,
+  minify: true,
+  format: 'iife',
+  globalName: 'destination',
+  platform: 'browser',
+  outfile: 'dist/es5.js',
+});

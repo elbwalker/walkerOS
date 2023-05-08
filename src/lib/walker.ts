@@ -171,7 +171,7 @@ export function getTriggerActions(str: string): Walker.TriggersActionGroups {
   return values;
 }
 
-function getEntities(
+export function getEntities(
   prefix: string,
   target: Element,
   filter?: Walker.Filter,

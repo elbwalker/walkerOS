@@ -24,6 +24,7 @@ interface Function {
     event: IElbwalker.Event,
     config: Config<Custom, EventCustom>,
     mapping?: EventConfig<EventCustom>,
+    runState?: IElbwalker.Config,
   ) => void;
   config: Config<Custom, EventCustom>;
 }
