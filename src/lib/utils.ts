@@ -377,15 +377,16 @@ export function trim(str: string): string {
   return str ? str.trim().replace(/^'|'$/g, '').trim() : '';
 }
 
-export function trycatch<P extends unknown[], R>(
+export function trycatch<P extends unknown[], R, S>(
   fn: (...args: P) => R | undefined,
+  onError?: (err: unknown) => S,
 ): (...args: P) => R | undefined {
   return function (...args: P): R | undefined {
     try {
       return fn(...args);
     } catch (err) {
-      // @TODO custom fn
-      console.error(IElbwalker.Commands.Walker, err);
+      // Call either the custom error handler or console.error
+      (onError && onError(err)) || console.error(err);
       return;
     }
   };
