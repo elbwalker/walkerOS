@@ -143,6 +143,21 @@ describe('Elbwalker', () => {
     expect(mockFn.mock.calls[2][0].group).not.toEqual(groupId); // page view
   });
 
+  test('hooks', () => {
+    const hookFn = jest.fn()
+    elbwalker = Elbwalker({
+      default: true,
+      hooks: {
+        prepush: hookFn,
+        postpush: hookFn,
+      },
+    });
+
+    expect(hookFn).toHaveBeenCalledTimes(2);
+
+    // @TODO test hook command with push if it's updated
+  });
+
   test('source', () => {
     const location = document.location;
     const referrer = document.referrer;

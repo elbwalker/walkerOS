@@ -5,7 +5,7 @@ import {
   ready,
   load,
 } from './lib/trigger';
-import { assign, getId, trycatch } from './lib/utils';
+import { assign, getId, isSameType, trycatch, useHooks } from './lib/utils';
 import { getEntities, getGlobals } from './lib/walker';
 
 function Elbwalker(
@@ -15,9 +15,10 @@ function Elbwalker(
   const destinations: Array<WebDestination.Function> = [];
   const runCommand = `${IElbwalker.Commands.Walker} ${IElbwalker.Commands.Run}`;
   const staticGlobals = config.globals || {};
+  const fullConfig = getConfig(config);
   const instance: IElbwalker.Function = {
-    push,
-    config: getConfig(config),
+    push: useHooks(push, 'push', fullConfig.hooks),
+    config: fullConfig,
   };
 
   // Setup pushes for elbwalker via elbLayer
@@ -66,6 +67,15 @@ function Elbwalker(
       });
 
     destinations.push(destination);
+  }
+
+  function addHook(
+    config: IElbwalker.Config,
+    name: string,
+    hookFn: (...args: any[]) => void,
+  ) {
+    // @TODO this can be used in commands directly
+    config.hooks[name] = hookFn;
   }
 
   function allowedToPush(
@@ -117,7 +127,7 @@ function Elbwalker(
         ];
       }
 
-      if (typeof event !== 'string') return;
+      if (!isSameType(event, '')) return;
 
       // Skip the first stacked run event since it's the reason we're here
       // and to prevent duplicate execution which we don't want
@@ -196,6 +206,8 @@ function Elbwalker(
       ),
       // Random id to group events of a run
       group: values.group || current.group || '',
+      // Manage the hook functions
+      hooks: values.hooks || current.hooks || {},
       // Trigger a page view event by default
       pageview:
         'pageview' in values ? !!values.pageview : current.pageview || true,
@@ -235,6 +247,10 @@ function Elbwalker(
         isObject(data) &&
           addDestination(instance, data as WebDestination.Function, options);
         break;
+      case IElbwalker.Commands.Hook:
+        if (isSameType(data, '') && isSameType(options, isSameType))
+          addHook(instance.config, data, options);
+        break;
       case IElbwalker.Commands.Init:
         const elems: unknown[] = Array.isArray(data)
           ? data
@@ -265,17 +281,17 @@ function Elbwalker(
   }
 
   function isObject(obj: unknown) {
-    return typeof obj === 'object' && !Array.isArray(obj) && obj !== null;
+    return isSameType(obj, {}) && !Array.isArray(obj) && obj !== null;
   }
 
   function push(
     event?: unknown,
     data?: IElbwalker.PushData,
-    options: string | WebDestination.Config = '',
-    context: Walker.OrderedProperties | Element = {},
+    options: IElbwalker.PushOptions = '',
+    context: IElbwalker.PushContext = {},
     nested: Walker.Entities = [],
   ): void {
-    if (!event || typeof event !== 'string') return;
+    if (!event || !isSameType(event, '')) return;
 
     const config = instance.config;
 

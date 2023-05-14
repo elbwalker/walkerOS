@@ -16,14 +16,15 @@ export namespace IElbwalker {
       destination: WebDestination.Function<any, any>,
       config?: WebDestination.Config,
     ): void;
+    (event: 'walker hook', name: string, hookFn: HookFn): void;
     (event: 'walker init', scope: Scope | Scope[]): void;
     (event: 'walker run'): void;
     (event: 'walker user', user: User): void;
     (
       event: string,
       data?: PushData,
-      options?: string | WebDestination.Config, // @TODO use Walker.Trigger
-      context?: Walker.OrderedProperties | Element,
+      options?: PushOptions,
+      context?: PushContext,
       nested?: Walker.Entities,
     ): void;
   }
@@ -31,7 +32,7 @@ export namespace IElbwalker {
   type ElbLayer = [
     (IArguments | string)?,
     PushData?,
-    (string | WebDestination.Config)?,
+    PushOptions?,
     Walker.OrderedProperties?,
     Walker.Entities?,
   ];
@@ -42,9 +43,13 @@ export namespace IElbwalker {
     | Element
     | Scope
     | Scope[]
+    | String
     | User
     | Walker.Properties
     | WebDestination.Function;
+
+  type PushOptions = string | HookFn | WebDestination.Config; // @TODO use Walker.Trigger
+  type PushContext = Walker.OrderedProperties | Element;
 
   type Scope = Document | HTMLElement;
 
@@ -56,6 +61,7 @@ export namespace IElbwalker {
     elbLayer: ElbLayer;
     globals: Walker.Properties;
     group: string;
+    hooks: Hooks<HookFn>;
     pageview: boolean;
     prefix: string;
     queue: IElbwalker.Event[];
@@ -101,6 +107,7 @@ export namespace IElbwalker {
     Destination = 'destination',
     Elb = 'elb',
     Globals = 'globals',
+    Hook = 'hook',
     Init = 'init',
     Prefix = 'data-elb',
     Run = 'run',
@@ -111,6 +118,15 @@ export namespace IElbwalker {
   interface Consent {
     [name: string]: boolean; // name of consent group or tool
   }
+
+  type Hooks<T extends (...args: unknown[]) => unknown> = {
+    [key: string]: T;
+  };
+
+  type HookFn<
+    R = unknown,
+    T extends (...args: unknown[]) => unknown = () => R,
+  > = (...args: Parameters<T>) => ReturnType<T>;
 
   interface Version {
     walker: number;

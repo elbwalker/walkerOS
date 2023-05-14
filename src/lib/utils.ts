@@ -110,6 +110,12 @@ export function getByStringDot(
 
   return value;
 }
+export function isSameType<T>(
+  variable: unknown,
+  type: T,
+): variable is typeof type {
+  return typeof variable === typeof type;
+}
 
 export function isVisible(element: HTMLElement): boolean {
   // Check for hiding styles
@@ -389,5 +395,25 @@ export function trycatch<P extends unknown[], R, S>(
       (onError && onError(err)) || console.error(err);
       return;
     }
+  };
+}
+
+export function useHooks<P extends unknown[], R>(
+  fn: (...args: P) => R,
+  name: string,
+  hooks: Record<string, (...args: P) => R> = {},
+): (...args: P) => R | undefined {
+  return function (...args: P): R {
+    const preHook = 'pre' + name;
+    const postHook = 'post' + name;
+
+    // @TODO change the parameters and call fn with them
+    if (hooks[preHook]) hooks[preHook](...args);
+
+    // Regular function call
+    let result = fn(...args);
+
+    if (hooks[postHook]) result = hooks[postHook](...args);
+    return result;
   };
 }
