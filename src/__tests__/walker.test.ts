@@ -239,6 +239,15 @@ describe('Walker', () => {
       ],
     );
   });
+
+  test.only('Generic properties', () => {
+    expect(getEvents(getElem('generic'), Walker.Trigger.Click)).toMatchObject([
+      {
+        entity: 'generic',
+        data: { p: 'v', k: 'v', g: 'v', o: 'v' },
+      },
+    ]);
+  });
 });
 
 function getElem(selector: string) {
