@@ -240,7 +240,7 @@ describe('Walker', () => {
     );
   });
 
-  test.only('Generic properties', () => {
+  test('Generic properties', () => {
     expect(getEvents(getElem('generic'), Walker.Trigger.Click)).toMatchObject([
       {
         entity: 'generic',

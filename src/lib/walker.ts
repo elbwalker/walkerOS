@@ -209,7 +209,7 @@ function getEntity(
   )}],[${getElbAttributeName(prefix, '\\*')}]`;
 
   // Get matching properties from the element and its parents
-  let [data, context] = getThisAndParentProperties(
+  let [parentProps, context] = getThisAndParentProperties(
     origin || element,
     entitySelector,
     prefix,
@@ -217,11 +217,16 @@ function getEntity(
   );
 
   // Get properties
+  let data: Walker.Properties = {};
+  let genericProps: Walker.Properties = {};
   element.querySelectorAll<HTMLElement>(entitySelector).forEach((child) => {
     // Eventually override closer peroperties
-    data = assign(data, getElbValues(prefix, child, '*')); // Generic
-    data = assign(data, getElbValues(prefix, child, type)); // Explicit
+    genericProps = assign(genericProps, getElbValues(prefix, child, '*'));
+    data = assign(data, getElbValues(prefix, child, type));
   });
+
+  // Merge properties with the hirarchy data > generic > parent
+  data = assign(parentProps, assign(genericProps, data));
 
   // Get nested entities
   const nested: Walker.Entities = [];
