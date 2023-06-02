@@ -94,6 +94,7 @@ export function getEvents(
     // Use page as default entity if no one was set
     if (!entities.length) {
       const type = 'page';
+      // Only use explicit page properties and ignore generic properties
       const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
 
       // Get matching properties from the element and its parents
@@ -202,10 +203,13 @@ function getEntity(
 
   if (!type) return null; // It's not a (valid) entity element
 
-  const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
+  const entitySelector = `[${getElbAttributeName(
+    prefix,
+    type,
+  )}],[${getElbAttributeName(prefix, '\\*')}]`;
 
   // Get matching properties from the element and its parents
-  let [data, context] = getThisAndParentProperties(
+  let [parentProps, context] = getThisAndParentProperties(
     origin || element,
     entitySelector,
     prefix,
@@ -213,10 +217,16 @@ function getEntity(
   );
 
   // Get properties
+  let data: Walker.Properties = {};
+  let genericProps: Walker.Properties = {};
   element.querySelectorAll<HTMLElement>(entitySelector).forEach((child) => {
     // Eventually override closer peroperties
+    genericProps = assign(genericProps, getElbValues(prefix, child, '*'));
     data = assign(data, getElbValues(prefix, child, type));
   });
+
+  // Merge properties with the hirarchy data > generic > parent
+  data = assign(parentProps, assign(genericProps, data));
 
   // Get nested entities
   const nested: Walker.Entities = [];
@@ -248,9 +258,11 @@ function getThisAndParentProperties(
   // Get all bubbling-up properties with decreasing priority
   let contextI = 0; // Context counter
   while (parent) {
-    if (parent.matches(entitySelector))
-      // Get higher properties first
-      data = assign(getElbValues(prefix, parent, type), data);
+    // Get higher properties first
+    if (parent.matches(entitySelector)) {
+      data = assign(getElbValues(prefix, parent, '*'), data); // Generic
+      data = assign(getElbValues(prefix, parent, type), data); // Explicit
+    }
 
     if (parent.matches(contextSelector)) {
       Object.entries(
