@@ -13,92 +13,54 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
     globals: globalsMethod,
   };
 
-  // entity("promotion") -> data-elb="promotion"
+  // data-elb="entity"
   function entity(name: string) {
     return { [attrName()]: name };
   }
 
-  // data-elbaction="visible:view"
+  // data-elbaction="trigger:action"
   function actionMethod(
     triggerActions: ITagger.Trigger | ITagger.KevVal,
     action?: string,
   ): Walker.Properties {
-    if (typeof triggerActions === 'string') {
-      return actionMethod({ [triggerActions]: action || triggerActions });
-    }
-
-    let str = '';
-    let separator = '';
-
-    Object.entries(triggerActions).forEach(([key, val]) => {
-      str += `${separator}${key}:${val}`;
-      separator = ';';
-    });
+    if (typeof triggerActions === 'string')
+      triggerActions = { [triggerActions]: action || triggerActions };
 
     return {
-      [attrName('action', false)]: str,
+      [attrName('action', false)]: getStr(triggerActions),
     };
   }
 
-  // data-elb-promotion="category:analytics"
+  // data-elb-entity="key:val"
   function propertyMethod(
     entity: string,
     properties: string | ITagger.KevVal,
     value?: Walker.Property,
   ): Walker.Properties {
-    if (typeof properties === 'string') {
-      return propertyMethod(entity, { [properties]: value || '' });
-    }
+    if (typeof properties === 'string')
+      properties = { [properties]: value || '' };
 
-    let str = '';
-    let separator = '';
-
-    Object.entries(properties).forEach(([key, val]) => {
-      str += `${separator}${key}:${val}`;
-      separator = ';';
-    });
-
-    return { [attrName(entity)]: str };
+    return { [attrName(entity)]: getStr(properties) };
   }
 
-  // data-elbcontext="test:a:shopping:discovery"
+  // data-elbcontext="key:val"
   function contextMethod(
     context: string | ITagger.KevVal,
     value?: Walker.Property,
   ): Walker.Properties {
-    if (typeof context === 'string') {
-      return contextMethod({ [context]: value || '' });
-    }
+    if (typeof context === 'string') context = { [context]: value || '' };
 
-    let str = '';
-    let separator = '';
-
-    Object.entries(context).forEach(([key, val]) => {
-      str += `${separator}${key}:${val}`;
-      separator = ';';
-    });
-
-    return { [attrName('context', false)]: str };
+    return { [attrName('context', false)]: getStr(context) };
   }
 
-  // globals("language", "en") -> data-elbglobals="language:en"
+  // data-elbglobals="key:val"
   function globalsMethod(
-    global: string | ITagger.KevVal,
+    globals: string | ITagger.KevVal,
     value?: Walker.Property,
   ): Walker.Properties {
-    if (typeof global === 'string') {
-      return globalsMethod({ [global]: value || '' });
-    }
+    if (typeof globals === 'string') globals = { [globals]: value || '' };
 
-    let str = '';
-    let separator = '';
-
-    Object.entries(global).forEach(([key, val]) => {
-      str += `${separator}${key}:${val}`;
-      separator = ';';
-    });
-
-    return { [attrName('globals', false)]: str };
+    return { [attrName('globals', false)]: getStr(globals) };
   }
 
   function attrName(name?: string, isProperty = true) {
@@ -106,6 +68,18 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
     name = name ? separator + name : '';
 
     return instance.config.prefix + name;
+  }
+
+  function getStr(obj: ITagger.KevVal): string {
+    let str = '';
+    let separator = '';
+
+    Object.entries(obj).forEach(([key, val]) => {
+      str += `${separator}${key}:${val}`;
+      separator = ';';
+    });
+
+    return str;
   }
 
   return instance;
