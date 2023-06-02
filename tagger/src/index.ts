@@ -31,7 +31,7 @@ export namespace ITagger {
 function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
   const instance: ITagger.Function = {
     config: {
-      prefix: config.prefix || IElbwalker.Commands.Prefix,
+      prefix: config.prefix || 'data-elb',
     },
     entity,
     action,
@@ -49,7 +49,7 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
   function action(trigger: ITagger.Trigger, action?: string) {
     action = action || trigger;
     return {
-      [attrName(IElbwalker.Commands.Action, false)]: trigger + ':' + action,
+      [attrName('action', false)]: trigger + ':' + action,
     };
   }
 
@@ -61,14 +61,14 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
   // context("test", "engagement") -> data-elbcontext="test:engagement"
   function context(property: string, value: Walker.Property) {
     return {
-      [attrName(IElbwalker.Commands.Context, false)]: property + ':' + value,
+      [attrName('context', false)]: property + ':' + value,
     };
   }
 
   // globals("language", "en") -> data-elbglobals="language:en"
   function globals(property: string, value: Walker.Property) {
     return {
-      [attrName(IElbwalker.Commands.Globals, false)]: property + ':' + value,
+      [attrName('globals', false)]: property + ':' + value,
     };
   }
 
