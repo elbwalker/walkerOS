@@ -9,7 +9,7 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
     entity,
     action: actionMethod,
     property: propertyMethod,
-    context,
+    context: contextMethod,
     globals,
   };
 
@@ -61,11 +61,24 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
     return { [attrName(entity)]: str };
   }
 
-  // context("test", "engagement") -> data-elbcontext="test:engagement"
-  function context(property: string, value: Walker.Property) {
-    return {
-      [attrName('context', false)]: property + ':' + value,
-    };
+  // data-elbcontext="test:a:shopping:discovery"
+  function contextMethod(
+    context: string | ITagger.KevVal,
+    value?: Walker.Property,
+  ): Walker.Properties {
+    if (typeof context === 'string') {
+      return contextMethod({ [context]: value || '' });
+    }
+
+    let str = '';
+    let separator = '';
+
+    Object.entries(context).forEach(([key, val]) => {
+      str += `${separator}${key}:${val}`;
+      separator = ';';
+    });
+
+    return { [attrName('context', false)]: str };
   }
 
   // globals("language", "en") -> data-elbglobals="language:en"

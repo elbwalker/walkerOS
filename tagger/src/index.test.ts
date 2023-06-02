@@ -68,6 +68,15 @@ describe('Tagger', () => {
     expect(tagger.context('test', 'engagement')).toMatchObject({
       'data-elbcontext': 'test:engagement',
     });
+
+    expect(
+      tagger.context({
+        test: 'a',
+        shopping: 'discovery',
+      }),
+    ).toMatchObject({
+      'data-elbcontext': 'test:a;shopping:discovery',
+    });
   });
 
   test('Globals', () => {
