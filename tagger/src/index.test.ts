@@ -1,4 +1,5 @@
-import Tagger, { ITagger } from '.';
+import Tagger from '.';
+import { ITagger } from './types';
 
 describe('Tagger', () => {
   const w = window;
@@ -43,6 +44,17 @@ describe('Tagger', () => {
       },
     );
   });
+
+  // test('Multiple properties', () => {
+  //   expect(
+  //     tagger.property('product', {
+  //       name: 'Cool product',
+  //       price: 0,
+  //     }),
+  //   ).toMatchObject({
+  //     'data-elb-product': 'name:Cool product;price:0',
+  //   });
+  // });
 
   test('Context', () => {
     expect(tagger.context('test', 'engagement')).toMatchObject({

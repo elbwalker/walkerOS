@@ -1,32 +1,5 @@
-import { IElbwalker, Walker } from '@elbwalker/walker.js';
-
-export namespace ITagger {
-  export interface Config {
-    prefix: string;
-  }
-
-  export interface Function {
-    config: Config;
-    entity: (name: string) => Walker.Properties;
-    action: (trigger: ITagger.Trigger, action?: string) => Walker.Properties;
-    property: (
-      entity: string,
-      prop: string,
-      value: Walker.Property,
-    ) => Walker.Properties;
-    context: (property: string, value: Walker.Property) => Walker.Properties;
-    globals: (property: string, value: Walker.Property) => Walker.Properties;
-  }
-
-  export type Trigger =
-    | 'click'
-    | 'hover'
-    | 'load'
-    | 'pulse'
-    | 'submit'
-    | 'visible'
-    | 'wait';
-}
+import { Walker } from '@elbwalker/walker.js';
+import type { ITagger } from './types';
 
 function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
   const instance: ITagger.Function = {
