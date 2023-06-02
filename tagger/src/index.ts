@@ -7,7 +7,7 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
       prefix: config.prefix || 'data-elb',
     },
     entity,
-    action,
+    action: actionMethod,
     property,
     context,
     globals,
@@ -18,11 +18,25 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
     return { [attrName()]: name };
   }
 
-  // action("visible", "view") -> data-elbaction="visible:view"
-  function action(trigger: ITagger.Trigger, action?: string) {
-    action = action || trigger;
+  // data-elbaction="visible:view"
+  function actionMethod(
+    triggerActions: ITagger.Trigger | ITagger.KevVal,
+    action?: string,
+  ): Walker.Properties {
+    if (typeof triggerActions === 'string') {
+      return actionMethod({ [triggerActions]: action || triggerActions });
+    }
+
+    let actions = '';
+    let separator = '';
+
+    Object.entries(triggerActions).forEach(([key, val]) => {
+      actions += `${separator}${key}:${val}`;
+      separator = ';';
+    });
+
     return {
-      [attrName('action', false)]: trigger + ':' + action,
+      [attrName('action', false)]: actions,
     };
   }
 

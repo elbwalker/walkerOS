@@ -8,7 +8,7 @@ export namespace ITagger {
   interface Function {
     config: Config;
     entity: (name: string) => Walker.Properties;
-    action: (trigger: ITagger.Trigger, action?: string) => Walker.Properties;
+    action: ActionMethod;
     property: (
       entity: string,
       prop: string,
@@ -18,12 +18,23 @@ export namespace ITagger {
     globals: (property: string, value: Walker.Property) => Walker.Properties;
   }
 
+  type ActionMethod = {
+    (trigger: Trigger, action?: string): Walker.Properties;
+    (triggerActions: KevVal): Walker.Properties;
+  };
+
+  interface KevVal {
+    [key: string | Trigger]: Walker.Property;
+  }
+
   type Trigger =
     | 'click'
+    | 'custom'
     | 'hover'
     | 'load'
     | 'pulse'
     | 'submit'
     | 'visible'
-    | 'wait';
+    | 'wait'
+    | string;
 }

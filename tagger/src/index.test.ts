@@ -35,6 +35,16 @@ describe('Tagger', () => {
     expect(tagger.action('visible', 'view')).toMatchObject({
       'data-elbaction': 'visible:view',
     });
+
+    expect(
+      tagger.action({
+        visible: 'impression',
+        load: 'view',
+        'load(entity)': 'filter',
+      }),
+    ).toMatchObject({
+      'data-elbaction': 'visible:impression;load:view;load(entity):filter',
+    });
   });
 
   test('Property', () => {
@@ -44,17 +54,6 @@ describe('Tagger', () => {
       },
     );
   });
-
-  // test('Multiple properties', () => {
-  //   expect(
-  //     tagger.property('product', {
-  //       name: 'Cool product',
-  //       price: 0,
-  //     }),
-  //   ).toMatchObject({
-  //     'data-elb-product': 'name:Cool product;price:0',
-  //   });
-  // });
 
   test('Context', () => {
     expect(tagger.context('test', 'engagement')).toMatchObject({
