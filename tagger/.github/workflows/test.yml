@@ -1,0 +1,17 @@
+name: test
+
+on:
+  push:
+    branches:
+      - '*'
+
+  workflow_dispatch:
+
+jobs:
+  tagger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: npm install
+      - run: npm test
+      - run: npm run build
