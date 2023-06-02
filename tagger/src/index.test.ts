@@ -53,6 +53,15 @@ describe('Tagger', () => {
         'data-elb-promotion': 'category:analytics',
       },
     );
+
+    expect(
+      tagger.property('product', {
+        id: 'abc',
+        price: 42,
+      }),
+    ).toMatchObject({
+      'data-elb-product': 'id:abc;price:42',
+    });
   });
 
   test('Context', () => {

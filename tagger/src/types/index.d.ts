@@ -9,11 +9,7 @@ export namespace ITagger {
     config: Config;
     entity: (name: string) => Walker.Properties;
     action: ActionMethod;
-    property: (
-      entity: string,
-      prop: string,
-      value: Walker.Property,
-    ) => Walker.Properties;
+    property: PropertyMethod;
     context: (property: string, value: Walker.Property) => Walker.Properties;
     globals: (property: string, value: Walker.Property) => Walker.Properties;
   }
@@ -21,6 +17,11 @@ export namespace ITagger {
   type ActionMethod = {
     (trigger: Trigger, action?: string): Walker.Properties;
     (triggerActions: KevVal): Walker.Properties;
+  };
+
+  type PropertyMethod = {
+    (entity: string, prop: string, value?: Walker.Property): Walker.Properties;
+    (entity: string, properties: KevVal): Walker.Properties;
   };
 
   interface KevVal {

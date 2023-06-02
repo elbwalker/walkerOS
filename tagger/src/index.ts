@@ -8,7 +8,7 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
     },
     entity,
     action: actionMethod,
-    property,
+    property: propertyMethod,
     context,
     globals,
   };
@@ -27,22 +27,38 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
       return actionMethod({ [triggerActions]: action || triggerActions });
     }
 
-    let actions = '';
+    let str = '';
     let separator = '';
 
     Object.entries(triggerActions).forEach(([key, val]) => {
-      actions += `${separator}${key}:${val}`;
+      str += `${separator}${key}:${val}`;
       separator = ';';
     });
 
     return {
-      [attrName('action', false)]: actions,
+      [attrName('action', false)]: str,
     };
   }
 
-  // property("promotion", "category", "analytics") -> data-elb-promotion="category:analytics"
-  function property(entity: string, property: string, value: Walker.Property) {
-    return { [attrName(entity)]: property + ':' + value };
+  // data-elb-promotion="category:analytics"
+  function propertyMethod(
+    entity: string,
+    properties: string | ITagger.KevVal,
+    value?: Walker.Property,
+  ): Walker.Properties {
+    if (typeof properties === 'string') {
+      return propertyMethod(entity, { [properties]: value || '' });
+    }
+
+    let str = '';
+    let separator = '';
+
+    Object.entries(properties).forEach(([key, val]) => {
+      str += `${separator}${key}:${val}`;
+      separator = ';';
+    });
+
+    return { [attrName(entity)]: str };
   }
 
   // context("test", "engagement") -> data-elbcontext="test:engagement"
