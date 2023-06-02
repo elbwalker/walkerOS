@@ -11,7 +11,7 @@ export namespace ITagger {
     action: ActionMethod;
     property: PropertyMethod;
     context: ContextMethod;
-    globals: (property: string, value: Walker.Property) => Walker.Properties;
+    globals: GlobalsMethod;
   }
 
   type ActionMethod = {
@@ -22,6 +22,11 @@ export namespace ITagger {
   type ContextMethod = {
     (context: string, value?: Walker.Property): Walker.Properties;
     (context: KevVal): Walker.Properties;
+  };
+
+  type GlobalsMethod = {
+    (global: string, value?: Walker.Property): Walker.Properties;
+    (global: KevVal): Walker.Properties;
   };
 
   type PropertyMethod = {

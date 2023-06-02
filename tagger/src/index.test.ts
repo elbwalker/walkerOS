@@ -83,5 +83,14 @@ describe('Tagger', () => {
     expect(tagger.globals('language', 'en')).toMatchObject({
       'data-elbglobals': 'language:en',
     });
+
+    expect(
+      tagger.globals({
+        language: 'de',
+        pagegroup: 'shop',
+      }),
+    ).toMatchObject({
+      'data-elbglobals': 'language:de;pagegroup:shop',
+    });
   });
 });

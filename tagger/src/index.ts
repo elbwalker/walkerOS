@@ -10,7 +10,7 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
     action: actionMethod,
     property: propertyMethod,
     context: contextMethod,
-    globals,
+    globals: globalsMethod,
   };
 
   // entity("promotion") -> data-elb="promotion"
@@ -82,10 +82,23 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
   }
 
   // globals("language", "en") -> data-elbglobals="language:en"
-  function globals(property: string, value: Walker.Property) {
-    return {
-      [attrName('globals', false)]: property + ':' + value,
-    };
+  function globalsMethod(
+    global: string | ITagger.KevVal,
+    value?: Walker.Property,
+  ): Walker.Properties {
+    if (typeof global === 'string') {
+      return globalsMethod({ [global]: value || '' });
+    }
+
+    let str = '';
+    let separator = '';
+
+    Object.entries(global).forEach(([key, val]) => {
+      str += `${separator}${key}:${val}`;
+      separator = ';';
+    });
+
+    return { [attrName('globals', false)]: str };
   }
 
   function attrName(name?: string, isProperty = true) {
