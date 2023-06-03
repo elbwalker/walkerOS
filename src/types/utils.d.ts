@@ -26,4 +26,14 @@ export namespace Utils {
   interface MarketingParameters {
     [key: string]: string;
   }
+
+  type HookFn<
+    R = unknown,
+    T extends (...args: unknown[]) => unknown = () => R,
+  > = (...args: Parameters<T>) => ReturnType<T>;
+
+  type HookParameter<P extends unknown[], R> = {
+    fn: (...args: P) => R;
+    result?: R;
+  };
 }

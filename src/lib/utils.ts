@@ -401,19 +401,29 @@ export function trycatch<P extends unknown[], R, S>(
 export function useHooks<P extends unknown[], R>(
   fn: (...args: P) => R,
   name: string,
-  hooks: Record<string, (...args: P) => R> = {},
+  hooks: Record<
+    string,
+    (params: Utils.HookParameter<P, R>, ...args: P) => R
+  > = {},
 ): (...args: P) => R | undefined {
-  return function (...args: P): R {
+  return function (...args: P): R | undefined {
     const preHook = 'pre' + name;
     const postHook = 'post' + name;
 
-    // @TODO change the parameters and call fn with them
-    if (hooks[preHook]) hooks[preHook](...args);
+    let result: R;
+    if (hooks[preHook]) {
+      // Call the original function within the preHook
+      result = hooks[preHook]({ fn }, ...args);
+    } else {
+      // Regular function call
+      result = fn(...args);
+    }
 
-    // Regular function call
-    let result = fn(...args);
+    if (hooks[postHook]) {
+      // Call the post-hook function with fn, result, and the original args
+      result = hooks[postHook]({ fn, result }, ...args);
+    }
 
-    if (hooks[postHook]) result = hooks[postHook](...args);
     return result;
   };
 }

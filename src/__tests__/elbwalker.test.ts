@@ -144,18 +144,48 @@ describe('Elbwalker', () => {
   });
 
   test('hooks', () => {
-    const hookFn = jest.fn()
+    const preHookFn = jest.fn().mockReturnValue('foo');
+    const postHookFn = jest.fn();
     elbwalker = Elbwalker({
-      default: true,
       hooks: {
-        prepush: hookFn,
-        postpush: hookFn,
+        prepush: preHookFn,
+        postpush: postHookFn,
       },
     });
+    elbwalker.push('walker run');
+    elbwalker.push('a a', { a: 1 }, 't', { c: ['v', 0] }, []);
 
-    expect(hookFn).toHaveBeenCalledTimes(2);
+    expect(preHookFn).toHaveBeenCalledTimes(2);
+    expect(preHookFn).toHaveBeenNthCalledWith(
+      1,
+      { fn: expect.any(Function) },
+      'walker run',
+    );
+    expect(preHookFn).toHaveBeenNthCalledWith(
+      2,
+      { fn: expect.any(Function) },
+      'a a',
+      { a: 1 },
+      't',
+      { c: ['v', 0] },
+      [],
+    );
 
-    // @TODO test hook command with push if it's updated
+    expect(postHookFn).toHaveBeenCalledTimes(2);
+    expect(postHookFn).toHaveBeenNthCalledWith(
+      1,
+      { fn: expect.any(Function), result: 'foo' },
+      'walker run',
+    );
+    expect(postHookFn).toHaveBeenNthCalledWith(
+      2,
+      { fn: expect.any(Function), result: 'foo' },
+      'a a',
+      { a: 1 },
+      't',
+      { c: ['v', 0] },
+      [],
+    );
   });
 
   test('source', () => {

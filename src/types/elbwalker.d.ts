@@ -1,4 +1,4 @@
-import { Walker, WebDestination } from '.';
+import { Utils, Walker, WebDestination } from '.';
 
 export namespace IElbwalker {
   type AnyObject = Record<string, unknown>;
@@ -16,7 +16,7 @@ export namespace IElbwalker {
       destination: WebDestination.Function<any, any>,
       config?: WebDestination.Config,
     ): void;
-    (event: 'walker hook', name: string, hookFn: HookFn): void;
+    (event: 'walker hook', name: string, hookFn: Utils.HookFn): void;
     (event: 'walker init', scope: Scope | Scope[]): void;
     (event: 'walker run'): void;
     (event: 'walker user', user: User): void;
@@ -48,7 +48,7 @@ export namespace IElbwalker {
     | Walker.Properties
     | WebDestination.Function;
 
-  type PushOptions = string | HookFn | WebDestination.Config; // @TODO use Walker.Trigger
+  type PushOptions = string | Utils.HookFn | WebDestination.Config; // @TODO use Walker.Trigger
   type PushContext = Walker.OrderedProperties | Element;
 
   type Scope = Document | HTMLElement;
@@ -61,7 +61,7 @@ export namespace IElbwalker {
     elbLayer: ElbLayer;
     globals: Walker.Properties;
     group: string;
-    hooks: Hooks<HookFn>;
+    hooks: Hooks<Utils.HookFn>;
     pageview: boolean;
     prefix: string;
     queue: IElbwalker.Event[];
@@ -122,11 +122,6 @@ export namespace IElbwalker {
   type Hooks<T extends (...args: unknown[]) => unknown> = {
     [key: string]: T;
   };
-
-  type HookFn<
-    R = unknown,
-    T extends (...args: unknown[]) => unknown = () => R,
-  > = (...args: Parameters<T>) => ReturnType<T>;
 
   interface Version {
     walker: number;
