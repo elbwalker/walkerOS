@@ -248,6 +248,18 @@ describe('Walker', () => {
       },
     ]);
   });
+
+  test('Link', () => {
+    const data = { k: 'v', l0: 0, l1: 1, l2: 2, l3: 3 };
+
+    expect(
+      getEvents(getElem('link-parent'), Walker.Trigger.Click),
+    ).toMatchObject([{ entity: 'l', data }]);
+
+    // expect(
+    //   getEvents(getElem('link-child'), Walker.Trigger.Click),
+    // ).toMatchObject([{ entity: 'l', data }]);
+  });
 });
 
 function getElem(selector: string) {

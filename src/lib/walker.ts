@@ -216,10 +216,35 @@ function getEntity(
     type,
   );
 
+  // Add linked elements (data-elblink)
+  const elements = [element]; // Add entity element
+  const linkName = getElbAttributeName(prefix, IElbwalker.Commands.Link, false); // data-elblink
+  const linkSelector = `[${linkName}]`;
+  element.querySelectorAll(linkSelector).forEach((link) => {
+    // Get all linked elements
+    const linkId = getAttribute(link, linkName);
+    document
+      .querySelectorAll(`[${linkName}="${linkId}"]`)
+      .forEach((wormhole) => {
+        // Skip original elblink element and add only new ones
+        if (wormhole !== link) elements.push(wormhole);
+      });
+  });
+
+  // Get all property elements including from linked elements
+  let propertyElems: Array<Element> = [];
+  elements.forEach((elem) => {
+    // Also check for property on same level
+    if (elem.matches(entitySelector)) propertyElems.push(elem);
+    elem.querySelectorAll(entitySelector).forEach((elem) => {
+      propertyElems.push(elem);
+    });
+  });
+
   // Get properties
   let data: Walker.Properties = {};
   let genericProps: Walker.Properties = {};
-  element.querySelectorAll<HTMLElement>(entitySelector).forEach((child) => {
+  propertyElems.forEach((child) => {
     // Eventually override closer peroperties
     genericProps = assign(genericProps, getElbValues(prefix, child, '*'));
     data = assign(data, getElbValues(prefix, child, type));
