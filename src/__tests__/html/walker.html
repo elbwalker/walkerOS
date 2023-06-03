@@ -136,12 +136,14 @@
     data-elb="l"
     data-elbaction="click"
     data-elb-l="k:v"
-    data-elbcontext=""
+    data-elbcontext="entity:link"
   >
-    <div data-elblink="wh:parent"><div data-elb-l="l0:0"></div></div>
+    <div data-elblink="wh:parent" data-elbcontext="parent:link">
+      <div data-elb-l="l0:0"></div>
+    </div>
   </div>
   <div data-elblink="wh:child"><div data-elb-l="l1:1"></div></div>
-  <div data-elblink="wh:child" data-elb-l="l2:2" data-elbcontext="">
+  <div data-elblink="wh:child" data-elb-l="l2:2" data-elbcontext="child:link">
     <div id="link-child" data-elb-l="l3:3" data-elbaction="click"></div>
   </div>
   <div data-elblink="bh"><div data-elb-l="no:pe"></div></div>

@@ -188,9 +188,7 @@ export function getEntities(
 
     if (entity && (!filter || filter[entity.type])) entities.push(entity);
 
-    // @TODO link
-
-    element = element.parentElement;
+    element = getParent(prefix, element);
   }
 
   return entities;
@@ -267,6 +265,21 @@ function getEntity(
   return { type, data, context, nested };
 }
 
+function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
+  const linkName = getElbAttributeName(prefix, IElbwalker.Commands.Link, false); // data-elblink
+
+  // Link
+  if (elem.matches(`[${linkName}]`)) {
+    let [linkId, linkState] = splitKeyVal(getAttribute(elem, linkName));
+    if (linkState === 'child') {
+      // If current element is a child-link jump to the parent
+      return document.querySelector(`[${linkName}="${linkId}:parent"]`);
+    }
+  }
+
+  return elem.parentElement;
+}
+
 function getThisAndParentProperties(
   element: Element,
   entitySelector: string,
@@ -285,12 +298,14 @@ function getThisAndParentProperties(
   // Get all bubbling-up properties with decreasing priority
   let contextI = 0; // Context counter
   while (parent) {
-    // Get higher properties first
+    // Properties
     if (parent.matches(entitySelector)) {
+      // Get higher properties first
       data = assign(getElbValues(prefix, parent, '*'), data); // Generic
       data = assign(getElbValues(prefix, parent, type), data); // Explicit
     }
 
+    // Context
     if (parent.matches(contextSelector)) {
       Object.entries(
         getElbValues(prefix, parent, IElbwalker.Commands.Context, false),
@@ -303,7 +318,7 @@ function getThisAndParentProperties(
       ++contextI;
     }
 
-    parent = parent.parentElement;
+    parent = getParent(prefix, parent);
   }
 
   return [data, context];
@@ -330,7 +345,7 @@ function resolveAttributes(
     if (triggerActions[trigger] || trigger !== 'click')
       return triggerActions[trigger];
 
-    element = element.parentElement;
+    element = getParent(prefix, element);
   }
 
   return [];

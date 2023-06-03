@@ -254,11 +254,21 @@ describe('Walker', () => {
 
     expect(
       getEvents(getElem('link-parent'), Walker.Trigger.Click),
-    ).toMatchObject([{ entity: 'l', data }]);
+    ).toMatchObject([{ entity: 'l', context: { entity: ['link', 0] }, data }]);
 
-    // expect(
-    //   getEvents(getElem('link-child'), Walker.Trigger.Click),
-    // ).toMatchObject([{ entity: 'l', data }]);
+    expect(
+      getEvents(getElem('link-child'), Walker.Trigger.Click),
+    ).toMatchObject([
+      {
+        entity: 'l',
+        context: {
+          child: ['link', 0],
+          parent: ['link', 1],
+          entity: ['link', 2],
+        },
+        data,
+      },
+    ]);
   });
 });
 
