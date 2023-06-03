@@ -188,6 +188,8 @@ export function getEntities(
 
     if (entity && (!filter || filter[entity.type])) entities.push(entity);
 
+    // @TODO link
+
     element = element.parentElement;
   }
 
@@ -203,12 +205,13 @@ function getEntity(
 
   if (!type) return null; // It's not a (valid) entity element
 
+  const scopeElems = [element]; // Alle related elements
   const entitySelector = `[${getElbAttributeName(
     prefix,
     type,
-  )}],[${getElbAttributeName(prefix, '\\*')}]`;
+  )}],[${getElbAttributeName(prefix, '\\*')}]`; // [data-elb-entity,data-elb-*]
+  const linkName = getElbAttributeName(prefix, IElbwalker.Commands.Link, false); // data-elblink
 
-  // Get matching properties from the element and its parents
   let [parentProps, context] = getThisAndParentProperties(
     origin || element,
     entitySelector,
@@ -217,23 +220,22 @@ function getEntity(
   );
 
   // Add linked elements (data-elblink)
-  const elements = [element]; // Add entity element
-  const linkName = getElbAttributeName(prefix, IElbwalker.Commands.Link, false); // data-elblink
-  const linkSelector = `[${linkName}]`;
-  element.querySelectorAll(linkSelector).forEach((link) => {
-    // Get all linked elements
-    const linkId = getAttribute(link, linkName);
-    document
-      .querySelectorAll(`[${linkName}="${linkId}"]`)
-      .forEach((wormhole) => {
-        // Skip original elblink element and add only new ones
-        if (wormhole !== link) elements.push(wormhole);
-      });
+  element.querySelectorAll(`[${linkName}]`).forEach((link) => {
+    let [linkId, linkState] = splitKeyVal(getAttribute(link, linkName));
+
+    // Get all linked child elements if link is a parent
+    if (linkState === 'parent')
+      document
+        .querySelectorAll(`[${linkName}="${linkId}:child"]`)
+        .forEach((wormhole) => {
+          // Skip original elblink element and add only new ones
+          if (wormhole !== link) scopeElems.push(wormhole);
+        });
   });
 
-  // Get all property elements including from linked elements
+  // Get all property elements including linked elements
   let propertyElems: Array<Element> = [];
-  elements.forEach((elem) => {
+  scopeElems.forEach((elem) => {
     // Also check for property on same level
     if (elem.matches(entitySelector)) propertyElems.push(elem);
     elem.querySelectorAll(entitySelector).forEach((elem) => {
