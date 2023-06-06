@@ -19,10 +19,18 @@ import Tagger from '@elbwalker/tagger';
 
 const tagger = Tagger();
 tagger.entity('promotion'); // { "data-elb": "promotion" }
-tagger.action('visible', 'view'); // { "data-elbaction": "visible:view" }
-tagger.property('promotion', 'category', 'analytics'); // { "data-elb-promotion": "category:analytics" }
-tagger.context('test', 'engagement'); // { "data-elbcontext": "test:engagement" }
+
+tagger.action('visible', 'impression'); // { "data-elbaction": "visible:impression" }
+tagger.action({ click: 'add', load: 'view' }); // { "data-elbaction": "click:add;load:view" }
+
+tagger.property('promo', 'text', 'hey'); // { "data-elb-promo": "text:hey" }
+tagger.property('promo', { id: '1', text: 'hey' }); // { "data-elb-e": "id:1;text:hey" }
+
+tagger.context('test', 'a'); // { "data-elbcontext": "test:a" }
+tagger.context({ test: 'a', pos: 'hero' }); // { "data-elbcontext": "test:a;pos:hero" }
+
 tagger.globals('language', 'en'); // { "data-elbglobals": "language:en" }
+tagger.globals({ language: 'de', pagegroup: 'shop' }); // { "data-elbglobals": "language:de;pagegroup:shop" }
 ```
 
 ## Contribute
