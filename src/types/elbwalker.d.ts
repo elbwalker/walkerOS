@@ -102,6 +102,7 @@ export namespace IElbwalker {
     Elb = 'elb',
     Globals = 'globals',
     Init = 'init',
+    Link = 'link',
     Prefix = 'data-elb',
     Run = 'run',
     User = 'user',
