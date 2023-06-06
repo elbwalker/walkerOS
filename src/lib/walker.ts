@@ -207,7 +207,7 @@ function getEntity(
   const entitySelector = `[${getElbAttributeName(
     prefix,
     type,
-  )}],[${getElbAttributeName(prefix, '\\*')}]`; // [data-elb-entity,data-elb-*]
+  )}],[${getElbAttributeName(prefix, '\\$')}]`; // [data-elb-entity,data-elb-$]
   const linkName = getElbAttributeName(prefix, IElbwalker.Commands.Link, false); // data-elblink
 
   let [parentProps, context] = getThisAndParentProperties(
@@ -246,7 +246,7 @@ function getEntity(
   let genericProps: Walker.Properties = {};
   propertyElems.forEach((child) => {
     // Eventually override closer peroperties
-    genericProps = assign(genericProps, getElbValues(prefix, child, '*'));
+    genericProps = assign(genericProps, getElbValues(prefix, child, '$'));
     data = assign(data, getElbValues(prefix, child, type));
   });
 
@@ -301,7 +301,7 @@ function getThisAndParentProperties(
     // Properties
     if (parent.matches(entitySelector)) {
       // Get higher properties first
-      data = assign(getElbValues(prefix, parent, '*'), data); // Generic
+      data = assign(getElbValues(prefix, parent, '$'), data); // Generic
       data = assign(getElbValues(prefix, parent, type), data); // Explicit
     }
 
