@@ -1,75 +1,66 @@
-import { IElbwalker, Walker } from '@elbwalker/walker.js';
-
-export namespace ITagger {
-  export interface Config {
-    prefix: string;
-  }
-
-  export interface Function {
-    config: Config;
-    entity: (name: string) => Walker.Properties;
-    action: (trigger: ITagger.Trigger, action?: string) => Walker.Properties;
-    property: (
-      entity: string,
-      prop: string,
-      value: Walker.Property,
-    ) => Walker.Properties;
-    context: (property: string, value: Walker.Property) => Walker.Properties;
-    globals: (property: string, value: Walker.Property) => Walker.Properties;
-  }
-
-  export type Trigger =
-    | 'click'
-    | 'hover'
-    | 'load'
-    | 'pulse'
-    | 'submit'
-    | 'visible'
-    | 'wait';
-}
+import { Walker } from '@elbwalker/walker.js';
+import type { ITagger } from './types';
 
 function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
   const instance: ITagger.Function = {
     config: {
-      prefix: config.prefix || IElbwalker.Commands.Prefix,
+      prefix: config.prefix || 'data-elb',
     },
     entity,
-    action,
-    property,
-    context,
-    globals,
+    action: actionMethod,
+    property: propertyMethod,
+    context: contextMethod,
+    globals: globalsMethod,
   };
 
-  // entity("promotion") -> data-elb="promotion"
+  // data-elb="entity"
   function entity(name: string) {
     return { [attrName()]: name };
   }
 
-  // action("visible", "view") -> data-elbaction="visible:view"
-  function action(trigger: ITagger.Trigger, action?: string) {
-    action = action || trigger;
+  // data-elbaction="trigger:action"
+  function actionMethod(
+    triggerActions: ITagger.Trigger | ITagger.KevVal,
+    action?: string,
+  ): Walker.Properties {
+    if (typeof triggerActions === 'string')
+      triggerActions = { [triggerActions]: action || triggerActions };
+
     return {
-      [attrName(IElbwalker.Commands.Action, false)]: trigger + ':' + action,
+      [attrName('action', false)]: getStr(triggerActions),
     };
   }
 
-  // property("promotion", "category", "analytics") -> data-elb-promotion="category:analytics"
-  function property(entity: string, property: string, value: Walker.Property) {
-    return { [attrName(entity)]: property + ':' + value };
+  // data-elb-entity="key:val"
+  function propertyMethod(
+    entity: string,
+    properties: string | ITagger.KevVal,
+    value?: Walker.Property,
+  ): Walker.Properties {
+    if (typeof properties === 'string')
+      properties = { [properties]: value || '' };
+
+    return { [attrName(entity)]: getStr(properties) };
   }
 
-  // context("test", "engagement") -> data-elbcontext="test:engagement"
-  function context(property: string, value: Walker.Property) {
-    return {
-      [attrName(IElbwalker.Commands.Context, false)]: property + ':' + value,
-    };
+  // data-elbcontext="key:val"
+  function contextMethod(
+    context: string | ITagger.KevVal,
+    value?: Walker.Property,
+  ): Walker.Properties {
+    if (typeof context === 'string') context = { [context]: value || '' };
+
+    return { [attrName('context', false)]: getStr(context) };
   }
 
-  // globals("language", "en") -> data-elbglobals="language:en"
-  function globals(property: string, value: Walker.Property) {
-    return {
-      [attrName(IElbwalker.Commands.Globals, false)]: property + ':' + value,
-    };
+  // data-elbglobals="key:val"
+  function globalsMethod(
+    globals: string | ITagger.KevVal,
+    value?: Walker.Property,
+  ): Walker.Properties {
+    if (typeof globals === 'string') globals = { [globals]: value || '' };
+
+    return { [attrName('globals', false)]: getStr(globals) };
   }
 
   function attrName(name?: string, isProperty = true) {
@@ -77,6 +68,18 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
     name = name ? separator + name : '';
 
     return instance.config.prefix + name;
+  }
+
+  function getStr(obj: ITagger.KevVal): string {
+    let str = '';
+    let separator = '';
+
+    Object.entries(obj).forEach(([key, val]) => {
+      str += `${separator}${key}:${val}`;
+      separator = ';';
+    });
+
+    return str;
   }
 
   return instance;

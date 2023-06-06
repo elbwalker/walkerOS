@@ -239,6 +239,37 @@ describe('Walker', () => {
       ],
     );
   });
+
+  test('Generic properties', () => {
+    expect(getEvents(getElem('generic'), Walker.Trigger.Click)).toMatchObject([
+      {
+        entity: 'generic',
+        data: { p: 'v', k: 'v', g: 'v', o: 'v' },
+      },
+    ]);
+  });
+
+  test('Link', () => {
+    const data = { k: 'v', l0: 0, l1: 1, l2: 2, l3: 3 };
+
+    expect(
+      getEvents(getElem('link-parent'), Walker.Trigger.Click),
+    ).toMatchObject([{ entity: 'l', context: { entity: ['link', 0] }, data }]);
+
+    expect(
+      getEvents(getElem('link-child'), Walker.Trigger.Click),
+    ).toMatchObject([
+      {
+        entity: 'l',
+        context: {
+          child: ['link', 0],
+          parent: ['link', 1],
+          entity: ['link', 2],
+        },
+        data,
+      },
+    ]);
+  });
 });
 
 function getElem(selector: string) {

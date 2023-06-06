@@ -8,7 +8,7 @@ export function getElbAttributeName(
 ): string {
   // separate dynamic properties from walker commands
   const separator = isProperty ? '-' : '';
-  name = name ? separator + name : '';
+  name = name != undefined ? separator + name : '';
   return prefix + name;
 }
 
@@ -94,6 +94,7 @@ export function getEvents(
     // Use page as default entity if no one was set
     if (!entities.length) {
       const type = 'page';
+      // Only use explicit page properties and ignore generic properties
       const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
 
       // Get matching properties from the element and its parents
@@ -187,7 +188,7 @@ export function getEntities(
 
     if (entity && (!filter || filter[entity.type])) entities.push(entity);
 
-    element = element.parentElement;
+    element = getParent(prefix, element);
   }
 
   return entities;
@@ -202,21 +203,55 @@ function getEntity(
 
   if (!type) return null; // It's not a (valid) entity element
 
-  const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
+  const scopeElems = [element]; // Alle related elements
+  const entitySelector = `[${getElbAttributeName(
+    prefix,
+    type,
+  )}],[${getElbAttributeName(prefix, '')}]`; // [data-elb-entity,data-elb-]
+  const linkName = getElbAttributeName(prefix, IElbwalker.Commands.Link, false); // data-elblink
 
-  // Get matching properties from the element and its parents
-  let [data, context] = getThisAndParentProperties(
+  let [parentProps, context] = getThisAndParentProperties(
     origin || element,
     entitySelector,
     prefix,
     type,
   );
 
+  // Add linked elements (data-elblink)
+  element.querySelectorAll(`[${linkName}]`).forEach((link) => {
+    let [linkId, linkState] = splitKeyVal(getAttribute(link, linkName));
+
+    // Get all linked child elements if link is a parent
+    if (linkState === 'parent')
+      document
+        .querySelectorAll(`[${linkName}="${linkId}:child"]`)
+        .forEach((wormhole) => {
+          // Skip original elblink element and add only new ones
+          if (wormhole !== link) scopeElems.push(wormhole);
+        });
+  });
+
+  // Get all property elements including linked elements
+  let propertyElems: Array<Element> = [];
+  scopeElems.forEach((elem) => {
+    // Also check for property on same level
+    if (elem.matches(entitySelector)) propertyElems.push(elem);
+    elem.querySelectorAll(entitySelector).forEach((elem) => {
+      propertyElems.push(elem);
+    });
+  });
+
   // Get properties
-  element.querySelectorAll<HTMLElement>(entitySelector).forEach((child) => {
+  let data: Walker.Properties = {};
+  let genericProps: Walker.Properties = {};
+  propertyElems.forEach((child) => {
     // Eventually override closer peroperties
+    genericProps = assign(genericProps, getElbValues(prefix, child, ''));
     data = assign(data, getElbValues(prefix, child, type));
   });
+
+  // Merge properties with the hirarchy data > generic > parent
+  data = assign(parentProps, assign(genericProps, data));
 
   // Get nested entities
   const nested: Walker.Entities = [];
@@ -228,6 +263,21 @@ function getEntity(
     });
 
   return { type, data, context, nested };
+}
+
+function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
+  const linkName = getElbAttributeName(prefix, IElbwalker.Commands.Link, false); // data-elblink
+
+  // Link
+  if (elem.matches(`[${linkName}]`)) {
+    let [linkId, linkState] = splitKeyVal(getAttribute(elem, linkName));
+    if (linkState === 'child') {
+      // If current element is a child-link jump to the parent
+      return document.querySelector(`[${linkName}="${linkId}:parent"]`);
+    }
+  }
+
+  return elem.parentElement;
 }
 
 function getThisAndParentProperties(
@@ -248,10 +298,14 @@ function getThisAndParentProperties(
   // Get all bubbling-up properties with decreasing priority
   let contextI = 0; // Context counter
   while (parent) {
-    if (parent.matches(entitySelector))
+    // Properties
+    if (parent.matches(entitySelector)) {
       // Get higher properties first
-      data = assign(getElbValues(prefix, parent, type), data);
+      data = assign(getElbValues(prefix, parent, ''), data); // Generic
+      data = assign(getElbValues(prefix, parent, type), data); // Explicit
+    }
 
+    // Context
     if (parent.matches(contextSelector)) {
       Object.entries(
         getElbValues(prefix, parent, IElbwalker.Commands.Context, false),
@@ -264,7 +318,7 @@ function getThisAndParentProperties(
       ++contextI;
     }
 
-    parent = parent.parentElement;
+    parent = getParent(prefix, parent);
   }
 
   return [data, context];
@@ -291,7 +345,7 @@ function resolveAttributes(
     if (triggerActions[trigger] || trigger !== 'click')
       return triggerActions[trigger];
 
-    element = element.parentElement;
+    element = getParent(prefix, element);
   }
 
   return [];
