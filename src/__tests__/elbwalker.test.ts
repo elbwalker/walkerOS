@@ -144,11 +144,14 @@ describe('Elbwalker', () => {
   });
 
   test('hooks', () => {
-    const preHookFn = jest.fn().mockImplementation(function () {
-      return 'foo';
+    const preHookFn = jest.fn().mockImplementation(function (params, ...args) {
+      mockFn(...args); // Custom code
+      params.fn(...args); // Regular call
+      return 'foo'; // Updated response
     });
     const postHookFn = jest.fn();
     elbwalker = Elbwalker({
+      pageview: false,
       hooks: {
         prepush: preHookFn,
         postpush: postHookFn,
