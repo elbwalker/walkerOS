@@ -144,7 +144,9 @@ describe('Elbwalker', () => {
   });
 
   test('hooks', () => {
-    const preHookFn = jest.fn().mockReturnValue('foo');
+    const preHookFn = jest.fn().mockImplementation(function () {
+      return 'foo';
+    });
     const postHookFn = jest.fn();
     elbwalker = Elbwalker({
       hooks: {
@@ -153,7 +155,7 @@ describe('Elbwalker', () => {
       },
     });
     elbwalker.push('walker run');
-    elbwalker.push('a a', { a: 1 }, 't', { c: ['v', 0] }, []);
+    elbwalker.push('e a', { a: 1 }, 't', { c: ['v', 0] }, []);
 
     expect(preHookFn).toHaveBeenCalledTimes(2);
     expect(preHookFn).toHaveBeenNthCalledWith(
@@ -164,7 +166,7 @@ describe('Elbwalker', () => {
     expect(preHookFn).toHaveBeenNthCalledWith(
       2,
       { fn: expect.any(Function) },
-      'a a',
+      'e a',
       { a: 1 },
       't',
       { c: ['v', 0] },
@@ -180,7 +182,7 @@ describe('Elbwalker', () => {
     expect(postHookFn).toHaveBeenNthCalledWith(
       2,
       { fn: expect.any(Function), result: 'foo' },
-      'a a',
+      'e a',
       { a: 1 },
       't',
       { c: ['v', 0] },

@@ -405,8 +405,8 @@ export function useHooks<P extends unknown[], R>(
     string,
     (params: Utils.HookParameter<P, R>, ...args: P) => R
   > = {},
-): (...args: P) => R | undefined {
-  return function (...args: P): R | undefined {
+): (...args: P) => R {
+  return function (...args: P): R {
     const preHook = 'pre' + name;
     const postHook = 'post' + name;
 

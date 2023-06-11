@@ -1,4 +1,4 @@
-import { IElbwalker, Walker, WebDestination } from './types';
+import { IElbwalker, Utils, Walker, WebDestination } from './types';
 import {
   initScopeTrigger,
   initGlobalTrigger,
@@ -9,23 +9,23 @@ import { assign, getId, isSameType, trycatch, useHooks } from './lib/utils';
 import { getEntities, getGlobals } from './lib/walker';
 
 function Elbwalker(
-  config: Partial<IElbwalker.Config> = {},
+  customConfig: Partial<IElbwalker.Config> = {},
 ): IElbwalker.Function {
   const version = 1.6;
   const destinations: Array<WebDestination.Function> = [];
   const runCommand = `${IElbwalker.Commands.Walker} ${IElbwalker.Commands.Run}`;
-  const staticGlobals = config.globals || {};
-  const fullConfig = getConfig(config);
+  const staticGlobals = customConfig.globals || {};
+  const config = getConfig(customConfig);
   const instance: IElbwalker.Function = {
-    push: useHooks(push, 'push', fullConfig.hooks),
-    config: fullConfig,
+    push: useHooks(push, 'push', config.hooks),
+    config,
   };
 
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(instance);
 
   // Use the default init mode for auto run and dataLayer destination
-  if (config.default) {
+  if (customConfig.default) {
     // use dataLayer as default destination
     window.dataLayer = window.dataLayer || [];
     const destination: WebDestination.Function = {
@@ -72,7 +72,7 @@ function Elbwalker(
   function addHook(
     config: IElbwalker.Config,
     name: string,
-    hookFn: (...args: any[]) => void,
+    hookFn: (...args: unknown[]) => unknown,
   ) {
     // @TODO this can be used in commands directly
     config.hooks[name] = hookFn;
@@ -230,7 +230,7 @@ function Elbwalker(
     instance: IElbwalker.Function,
     action: string,
     data?: IElbwalker.PushData,
-    options?: WebDestination.Config,
+    options?: IElbwalker.PushOptions,
   ) {
     switch (action) {
       case IElbwalker.Commands.Config:
@@ -245,11 +245,15 @@ function Elbwalker(
         break;
       case IElbwalker.Commands.Destination:
         isObject(data) &&
-          addDestination(instance, data as WebDestination.Function, options);
+          addDestination(
+            instance,
+            data as WebDestination.Function,
+            options as WebDestination.Config,
+          );
         break;
       case IElbwalker.Commands.Hook:
         if (isSameType(data, '') && isSameType(options, isSameType))
-          addHook(instance.config, data, options);
+          addHook(instance.config, data, options as Utils.HookFn);
         break;
       case IElbwalker.Commands.Init:
         const elems: unknown[] = Array.isArray(data)
