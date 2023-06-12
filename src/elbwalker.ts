@@ -381,6 +381,7 @@ function Elbwalker(
     };
 
     // Add event to internal queue
+    // @TODO useHook here?
     config.queue.push(pushEvent);
 
     destinations.forEach((destination) => {
@@ -395,6 +396,7 @@ function Elbwalker(
     useQueue = true,
   ): boolean {
     // Deep copy event to prevent a pointer mess
+    // Update to structuredClone if support > 95%
     event = JSON.parse(JSON.stringify(event));
 
     // Always check for required consent states before pushing
@@ -432,7 +434,12 @@ function Elbwalker(
       // Destination initialization
       // Check if the destination was initialized properly or try to do so
       if (destination.init && !destination.config.init) {
-        const init = destination.init(destination.config);
+        const init = useHooks(
+          destination.init,
+          'destinationInit',
+          config.hooks,
+        )(destination.config) as ReturnType<typeof destination.init>;
+        // const init = destination.init(destination.config);
         destination.config.init = init;
 
         // don't push if init is false
@@ -440,7 +447,7 @@ function Elbwalker(
       }
 
       // It's time to go to the destination's side now
-      destination.push(
+      useHooks(destination.push, 'destinationPush', config.hooks)(
         event,
         destination.config,
         mappingEvent,
