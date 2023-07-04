@@ -159,7 +159,7 @@ function getMappedParams(
   return Object.keys(params).length ? params : false;
 }
 
-function getByStringDot(event: unknown, key: string, i: unknown = 0): unknown {
+function getByStringDot(event: unknown, key: string, i: number): unknown {
   // String dot notation for object ("data.id" -> { data: { id: 1 } })
   const value = key.split('.').reduce((obj, key) => {
     // Update the wildcard to the given index
