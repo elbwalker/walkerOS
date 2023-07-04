@@ -162,6 +162,8 @@ describe('Destination Google GA4', () => {
               params: {
                 override: 'data.override',
                 position: 'context.position.0',
+                unavailable: { key: 'context.doesnt.exist', default: 'backup' },
+                empty: 'context.not.there',
                 timing: 'timing',
                 lang: 'globals.lang',
               },
@@ -191,6 +193,7 @@ describe('Destination Google GA4', () => {
         lang: 'de',
         override: 'important',
         position: 'reco',
+        unavailable: 'backup',
         user_id: 'us3r1d',
         timing: expect.any(Number),
       }),
