@@ -8,7 +8,7 @@ export default defineConfig({
       title: 'walker.js docs',
       customCss: ['/src/styles/custom.css'],
       logo: {
-        src: '/src/styles/favicon.svg',
+        src: '/public/favicon.svg',
       },
       social: {
         github: 'https://github.com/elbwalker/walker.js',
