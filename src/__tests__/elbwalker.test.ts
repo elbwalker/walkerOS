@@ -153,8 +153,8 @@ describe('Elbwalker', () => {
     elbwalker = Elbwalker({
       pageview: false,
       hooks: {
-        prepush: preHookFn,
-        postpush: postHookFn,
+        prePush: preHookFn,
+        postPush: postHookFn,
       },
     });
     elbwalker.push('walker run');

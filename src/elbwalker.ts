@@ -17,7 +17,7 @@ function Elbwalker(
   const staticGlobals = customConfig.globals || {};
   const config = getConfig(customConfig);
   const instance: IElbwalker.Function = {
-    push: useHooks(push, 'push', config.hooks),
+    push: useHooks(push, 'Push', config.hooks),
     config,
   };
 
@@ -381,7 +381,6 @@ function Elbwalker(
     };
 
     // Add event to internal queue
-    // @TODO useHook here?
     config.queue.push(pushEvent);
 
     destinations.forEach((destination) => {
@@ -436,7 +435,7 @@ function Elbwalker(
       if (destination.init && !destination.config.init) {
         const init = useHooks(
           destination.init,
-          'destinationInit',
+          'DestinationInit',
           config.hooks,
         )(destination.config) as ReturnType<typeof destination.init>;
         // const init = destination.init(destination.config);
@@ -447,7 +446,7 @@ function Elbwalker(
       }
 
       // It's time to go to the destination's side now
-      useHooks(destination.push, 'destinationPush', config.hooks)(
+      useHooks(destination.push, 'DestinationPush', config.hooks)(
         event,
         destination.config,
         mappingEvent,
