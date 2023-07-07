@@ -6,6 +6,8 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'walker.js docs',
+      site: 'https://elbwalker.github.io',
+      base: '/walker.js',
       customCss: ['/src/styles/custom.css'],
       logo: {
         src: '/public/favicon.svg',
