@@ -3,11 +3,11 @@ import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://elbwalker.github.io',
+  base: '/walker.js',
   integrations: [
     starlight({
       title: 'walker.js docs',
-      site: 'https://elbwalker.github.io',
-      base: '/walker.js',
       customCss: ['/src/styles/custom.css'],
       logo: {
         src: '/public/favicon.svg',
