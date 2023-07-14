@@ -17,15 +17,59 @@ export default defineConfig({
       },
       sidebar: [
         {
-          label: 'Introduction',
+          label: '👋 INTRODUCTION',
           items: [
             // Each item here is one entry in the navigation menu.
-            { label: 'Example Guide', link: '/introduction/basic-idea/' },
+            { label: 'What is walker.js?', link: '/introduction/what-is-walkerjs/' },
+            { label: 'Basic Idea', link: '/introduction/basic-idea/' },
           ],
         },
         {
-          label: 'Reference',
-          autogenerate: { directory: 'reference' },
+          label: '🚀 GETTING STARTED',
+          items: [
+            // Each item here is one entry in the navigation menu.
+            { label: 'Installation', link: '/getting-started/installation/' },
+            { label: 'Commands', link: '/getting-started/commands/' },
+          ]
+        },
+        {
+          label: '🪄 TAGGING',
+          items: [
+            // Each item here is one entry in the navigation menu.
+            { label: 'General usage', link: '/tagging/general-usage/' },
+            { label: 'Triggers', link: '/tagging/triggers/' },
+            { label: 'Properties', link: '/tagging/properties/' },
+            { label: 'Nested Entities', link: '/tagging/nested-entities/' },
+            { label: 'Context', link: '/tagging/context/' },
+            { label: 'Globals', link: '/tagging/globals/' },
+            { label: 'User identification', link: '/tagging/user-identification/' },
+            { label: 'Using JavaScript (elb)', link: '/tagging/using-javascript/' },
+            { label: 'Tagger', link: '/tagging/tagger/' },
+          ],
+        },
+        {
+          label: '🎯 DESTINATIONS',
+          items: [
+            // Each item here is one entry in the navigation menu.
+            { label: 'Basics', link: '/destinations/basics/' },
+            { label: 'Details', link: '/destinations/details/' },
+            { label: 'Custom (create your own)', link: '/destinations/custom/' },
+          ]
+        },
+        {
+          label: '🔓 PRIVACY',
+          items: [
+            // Each item here is one entry in the navigation menu.
+            { label: 'Consent', link: '/privacy/consent/' },
+          ],
+        },
+        {
+          label: '🔧 CODING',
+          items: [
+            // Each item here is one entry in the navigation menu.
+            { label: 'Debugging', link: '/coding/debugging/' },
+            { label: 'Utils', link: '/coding/utils/' },
+          ]
         },
       ],
     }),

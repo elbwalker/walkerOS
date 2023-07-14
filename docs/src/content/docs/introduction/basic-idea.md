@@ -1,11 +1,25 @@
 ---
-title: Example Guide Hallo
+title: Basic Idea
 description: A guide in my new Starlight docs site.
 ---
 
-Guides lead a user through a specific task they want to accomplish, often with a sequence of steps.
-Writing a good guide requires thinking about what your users are trying to do.
+import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## Further reading
+#### Set data-attributes:
 
-- Read [about how-to guides](https://diataxis.fr/how-to-guides/) in the Diátaxis framework
+Use the elb-attributes data-elb, data-elbaction, data-elb-*, data-elbcontext, and data-elbglobals for tagging.
+
+// codeblock
+
+#### Your web event is built on the fly:
+
+//codeblock
+
+#### Contribute on GitHub
+
+<CardGrid stagger>
+  <Card title="Update content" icon="pencil">
+    Edit `src/content/docs/index.mdx` to see this page change.
+  </Card>
+
+And ⭐️ us if you like what we do
