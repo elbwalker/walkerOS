@@ -1,7 +1,12 @@
 ---
 title: What is walker.js?
-desription: Walker.js is an open library to capture user events and send them to any analytics tool. It was created to enable data ownership, improve web data quality, and scale tracking implementation processes.
 ---
+
+
+Walker.js is an open library to capture user events and send them to any analytics tool. It was created to enable data ownership, improve web data quality, and scale tracking implementation processes.
+
+
+
 ## Introducing walker.js
 
 Walker.js is an implementation layer that creates reliable event data with context. It adds maximum <b>ownership</b> and <b>scalability</b> to your web-tracking implementation. 

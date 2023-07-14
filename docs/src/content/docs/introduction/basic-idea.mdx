@@ -1,0 +1,77 @@
+---
+title: Basic Idea
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Icon } from '@astrojs/starlight/components';
+
+Walker.js is an open library to capture user events and send them to any analytics tool. It was created to enable data ownership, improve web data quality, and scale tracking implementation processes.
+
+#### Set data-attributes:
+
+Use the elb-attributes data-elb, data-elbaction, data-elb-*, data-elbcontext, and data-elbglobals for tagging.
+
+```html
+<body data-elbglobals="language:en">
+  <div data-elbcontext="test:engagement">
+    <div data-elb="promotion" data-elbaction="visible:view">
+      <h1 data-elb-promotion="name:Setting up tracking easily">
+        Setting up tracking easily
+      </h1>
+      <p data-elb-promotion="category:analytics">Analytics</p>
+    </div>
+  </div>
+</body>
+```
+
+#### Your web event is built on the fly:
+
+```js
+{
+  event: 'promotion view', // combination of entity and action
+  data: {
+    // arbitrary set properties with the data-elb-promotion attribute
+    name: 'Setting up tracking easily',
+    category: 'analytics',
+  },
+  context: {
+    // Related properties defined with the data-elbcontext attribute
+    test: ['engagement', 0] // Value and order
+  },
+  globals: {
+    // General Properties defined with the data-elbglobals attribute
+    language: 'en'
+  },
+  user: {
+    // stored user ids (manually added once)
+    id: 'userid',
+    device: 'cookieid',
+    session: 'sessionid',
+  },
+  nested: [], // all nested entities within the promotion
+  consent: { functional: true }, // status of the consent state(s)
+  id: '1647968113641-01b5e2-5', // timestamp, group & count of the event
+  trigger: 'visible', // name of the trigger that fired
+  entity: 'promotion', // entity name
+  action: 'view', // entity action
+  timestamp: 1647968113641, // time when the event fired
+  timing: 3.14, // how long it took from the page load to trigger the event
+  group: '01b5e2', // random group id for all events on a page
+  count: 2, // incremental counter of the events on a page
+  version: {
+    // Helpful when working with raw data
+    walker: 1.5, // used walker.js version
+    config: 42, // a custom configuration version number
+  },
+  source: {
+    // Origins of the event
+    type: 1, // Source type of the event (1=Web)
+    id: 'https://github.com/elbwalker/walker.js', // Source id of the event's origin (url)
+    previous_id: 'https://www.elbwalker.com/' // Previous source id of the event's origin (referrer)
+  },
+  walker: true, // flag to filter events
+}
+```
+<Card title="GitHub - elbwalker/walker.js"><Icon name="github" color="black" size="3rem" /> [walker.js](/github.com/elbwalker/walker.js)</Card>
+
+And ⭐️ us if you like what we do
