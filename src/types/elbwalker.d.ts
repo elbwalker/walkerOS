@@ -119,7 +119,7 @@ export namespace IElbwalker {
   }
 
   interface Source {
-    type: SourceType;
+    type: string;
     id: string; // https://github.com/elbwalker/walker.js
     previous_id: string; // https://www.elbwalker.com/
   }
