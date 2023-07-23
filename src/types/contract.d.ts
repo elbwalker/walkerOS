@@ -1,5 +1,3 @@
-import { Walker } from './walker';
-
 export namespace Contract {
   export interface Data {
     version: string;
@@ -30,7 +28,8 @@ export namespace Contract {
   interface Entity {}
 
   interface Property {
-    name: string;
-    type: Walker.Property;
+    type: PropertyType;
   }
+
+  type PropertyType = 'boolean' | 'string' | 'number';
 }
