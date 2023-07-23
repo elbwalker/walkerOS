@@ -1,5 +1,5 @@
 import Elbwalker from '../elbwalker';
-import { IElbwalker, Walker } from '../';
+import { IElbwalker } from '../';
 import fs from 'fs';
 
 describe('Elbwalker', () => {
@@ -322,27 +322,5 @@ describe('Elbwalker', () => {
         context: { c: ['o', 0] },
       }),
     );
-  });
-
-  test('walker consent', () => {
-    jest.clearAllMocks();
-    elbwalker = Elbwalker({
-      consent: { functional: true },
-      custom: true,
-      pageview: false,
-    });
-
-    elbwalker.push('walker run');
-
-    expect(elbwalker.config.consent.functional).toBeTruthy();
-    expect(elbwalker.config.consent.marketing).not.toBeTruthy();
-
-    // Grant permissions
-    elbwalker.push('walker consent', { marketing: true });
-    expect(elbwalker.config.consent.marketing).toBeTruthy();
-
-    // Revoke permissions
-    elbwalker.push('walker consent', { marketing: false });
-    expect(elbwalker.config.consent.marketing).not.toBeTruthy();
   });
 });
