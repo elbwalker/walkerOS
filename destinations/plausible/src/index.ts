@@ -1,27 +1,13 @@
-import { IElbwalker, WebDestination } from '@elbwalker/walker.js';
+import { DestinationPlausible } from './types';
 
-declare global {
-  interface Window {
-    plausible?: any;
-  }
-}
-
-const w = window;
-
-export interface DestinationPlausible extends WebDestination.Function {
-  config: WebDestination.Config & {
-    domain?: string;
-    scriptLoad?: boolean;
-  };
-}
-
-export const destination: DestinationPlausible = {
+export const destinationPlausible: DestinationPlausible.Function = {
   config: {},
 
-  init() {
-    let config = this.config;
+  init(config: DestinationPlausible.Config) {
+    const w = window;
+    const custom = config.custom || {};
 
-    if (config.scriptLoad) addScript(config.domain);
+    if (config.loadScript) addScript(custom.domain);
 
     w.plausible =
       w.plausible ||
@@ -32,13 +18,8 @@ export const destination: DestinationPlausible = {
     return true;
   },
 
-  push(event: IElbwalker.Event): void {
-    // page view event
-    if (event.event === 'page view') {
-      w.plausible('pageview');
-    } else {
-      w.plausible(`${event.event}`, { props: event.data });
-    }
+  push(event) {
+    window.plausible(`${event.event}`, { props: event.data });
   },
 };
 
@@ -52,4 +33,4 @@ function addScript(
   document.head.appendChild(script);
 }
 
-export default destination;
+export default destinationPlausible;

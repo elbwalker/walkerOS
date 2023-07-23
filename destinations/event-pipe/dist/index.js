@@ -11,46 +11,45 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.destination = void 0;
 // Globals
 var w = window;
-var api;
-var projectId;
-var exclusionParameters;
-exports.destination = {
-    config: {},
-    init: function () {
-        var config = this.config;
-        // require projectId
-        if (!config.projectId)
+var defaultAPI = 'https://moin.p.elbwalkerapis.com/lama';
+var destination = {
+    config: { custom: { projectId: '' } },
+    init: function (config) {
+        if (!config.custom)
+            config.custom = {};
+        // Require projectId
+        if (!config.custom.projectId)
             return false;
-        api = config.api || 'https://moin.p.elbwalkerapis.com/lama';
-        projectId = config.projectId;
-        exclusionParameters = config.exclusionParameters || [];
         return true;
     },
-    push: function (event) {
-        var href = excludeParameters(location.href, exclusionParameters);
-        var referrer = excludeParameters(document.referrer, exclusionParameters);
+    push: function (event, config, mapping) {
+        config = config || { custom: { projectId: '' } };
+        if (!config.custom)
+            config.custom = {};
+        var href = excludeParameters(location.href, config.custom.exclusionParameters);
+        var referrer = excludeParameters(document.referrer, config.custom.exclusionParameters);
         // Custom check for default the page view event with search parameter
         if (event.event === 'page view' && event.data && event.data.search) {
             var origin_1 = location.origin;
-            var search = excludeParameters(origin_1 + event.data.search, exclusionParameters);
+            var search = excludeParameters(origin_1 + event.data.search, config.custom.exclusionParameters);
             event.data.search = search.substring(origin_1.length + 1);
         }
-        var payload = __assign(__assign({}, event), { projectId: projectId, source: {
+        var payload = __assign(__assign({}, event), { projectId: config.custom.projectId, source: {
                 type: 'web',
                 id: href,
                 referrer: referrer,
                 version: '3',
             } });
         var xhr = new XMLHttpRequest();
-        xhr.open('POST', api, true);
+        xhr.open('POST', config.custom.api || defaultAPI, true);
         xhr.setRequestHeader('Content-type', 'text/plain; charset=utf-8');
         xhr.send(JSON.stringify(payload));
     },
 };
 function excludeParameters(href, exclusionParameters) {
+    if (exclusionParameters === void 0) { exclusionParameters = []; }
     if (!exclusionParameters.length)
         return href;
     try {
@@ -67,4 +66,4 @@ function excludeParameters(href, exclusionParameters) {
         return '';
     }
 }
-exports.default = exports.destination;
+exports.default = destination;

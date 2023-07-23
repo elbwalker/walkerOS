@@ -1,35 +1,61 @@
-<div id="basic" data-elb="entity" data-elb-entity="k:v" data-elbaction="load:action"></div>
+<div
+  id="basic"
+  data-elb="entity"
+  data-elb-entity="k:v"
+  data-elbaction="load:action"
+></div>
 
-<div id="nestedx" data-elb="entity" data-elb-entity="ke:ve" data-elbaction="load:view">
-  <div id="b" data-elb="b" data-elb-b="kb:vb" data-elbaction="load:nested_view"></div>
-  <div id="c" data-elb="c" data-elb-c="kc:vc" data-elbaction="load:ac(c)">
-    <div id="d" data-elb="d" data-elb-d="kd:vd" data-elbaction="load:ad(d,entity)"></div>
-  </div>
-</div>
-
-<div id="nested" data-elb="mother" data-elb-mother="label:grandmother" data-elbaction="load:like">
-  <div id="son" data-elb="son" data-elb-son="interested_in:pizza" data-elbaction="load:speak"></div>
-  <div id="daughter" data-elb="daughter" data-elb-daughter="status:hungry" data-elbaction="load:care(daughter)">
-    <div id="baby" data-elb="baby" data-elb-baby="status:infant" data-elbaction="load:play(baby,mother)"></div>
+<div
+  id="nested"
+  data-elb="mother"
+  data-elb-mother="label:grandmother"
+  data-elbaction="load:like"
+>
+  <div
+    id="son"
+    data-elb="son"
+    data-elb-son="interested_in:pizza"
+    data-elbaction="load:speak"
+  ></div>
+  <div
+    id="daughter"
+    data-elb="daughter"
+    data-elb-daughter="status:hungry"
+    data-elbaction="load:care(daughter)"
+  >
+    <div
+      id="baby"
+      data-elb="baby"
+      data-elb-baby="status:infant"
+      data-elbaction="load:play(baby,mother)"
+    ></div>
   </div>
 </div>
 
 <div
-  id="attributes"
-  data-elb="attributes"
-  data-elb-attributes="foo:'ba;r';key:'value'"
+  id="properties"
+  data-elb="properties"
+  data-elb-properties="foo:'ba;r';key:'value'"
   data-elbaction="load:'act;ion';click:'action;'"
-></div>
+>
+  <p data-elb-properties=":value"></p>
+  <p data-elb-properties=":"></p>
+  <p data-elb-properties=""></p>
+</div>
 
 <div data-elb="click" data-elbaction="click:test">
   <div id="click_test"></div>
 </div>
 
-<div id="click_bubble" data-elb="click" data-elb-click="foo:bar" data-elbaction="click:test">
+<div
+  id="click_bubble"
+  data-elb="click"
+  data-elb-click="foo:bar"
+  data-elbaction="click:test"
+>
   <div id="click_bubble" data-elb-click="key:value"></div>
   <div id="click_bubble_action" data-elbaction=""></div>
 </div>
-
 
 <div data-elb="click" data-elb-click="foo:bar">
   <div id="click_invalid" data-elbaction=""></div>
@@ -39,15 +65,20 @@
 
 <div data-elb-property="not_in:scope"></div>
 <div data-elb-property="parent:property">
-  <div id="propert_priority" data-elb="property" data-elb-property="prefere:higher" data-elbaction="click:priority">
+  <div
+    id="propert_priority"
+    data-elb="property"
+    data-elb-property="prefere:higher"
+    data-elbaction="click:priority"
+  >
     <div data-elb-property="prefere:deeper"></div>
   </div>
 </div>
 
 <div id="dynamic_values" data-elb="dynamic" data-elbaction="click">
-  <input type="text" value="text" data-elb-dynamic="value_value:#value"></input>
+  <input type="text" value="text" data-elb-dynamic="value_value:#value" />
   <div data-elb-dynamic="html:#innerHTML">inner</div>
-  <div data-elb-dynamic="id:#id;static:value" id='id_value'>inner</div>
+  <div data-elb-dynamic="id:#id;static:value" id="id_value">inner</div>
   <select data-elb-dynamic="option:#selected">
     <option value="a">foo</option>
     <option value="b" selected="selected">choosen</option>
@@ -56,3 +87,64 @@
 </div>
 
 <div id="prefix" elb="entity" elb-entity="k:v" elbaction="load:action"></div>
+
+<div data-elbcontext="test:engagement">
+  <div data-elbcontext="recommendation:smart_ai;same:level;inside:overritten">
+    <p data-elbcontext="not:included"></p>
+    <div data-elb="e">
+      <p id="context" data-elbcontext="inside:entity" data-elbaction="click">
+        click me
+      </p>
+    </div>
+  </div>
+</div>
+
+<div id="casting" data-elb="types" data-elbaction="load:cast">
+  <p data-elb-types="string:text"></p>
+  <p data-elb-types="empty:"></p>
+  <p data-elb-types="bool_true:true"></p>
+  <p data-elb-types="bool_false:false"></p>
+  <p data-elb-types="null:0"></p>
+  <p data-elb-types="int:42"></p>
+  <p data-elb-types="float:13.37"></p>
+  <p data-elb-types="negative:-3.14"></p>
+</div>
+
+<div id="array" data-elb="array" data-elbaction="load:props">
+  <p data-elb-array="size[]:s;size[]:m"></p>
+  <p data-elb-array="size[]:l"></p>
+</div>
+
+<div data-elbcontext="k:c" data-elb-page="p:v">
+  <div id="no_entity" data-elbaction="click" data-elb-page="e:v">
+    <p data-elb-page="ignore:this"></p>
+  </div>
+</div>
+
+<div data-elb-="p:v">
+  <div id="generic" data-elbaction="click" data-elb="generic">
+    <p data-elb-generic="k:v"></p>
+    <p data-elb-="g:v"></p>
+    <p data-elb-generic="o:v"></p>
+    <p data-elb-="o:x"></p>
+  </div>
+</div>
+
+<div>
+  <div
+    id="link-parent"
+    data-elb="l"
+    data-elbaction="click"
+    data-elb-l="k:v"
+    data-elbcontext="entity:link"
+  >
+    <div data-elblink="wh:parent" data-elbcontext="parent:link">
+      <div data-elb-l="l0:0"></div>
+    </div>
+  </div>
+  <div data-elblink="wh:child"><div data-elb-l="l1:1"></div></div>
+  <div data-elblink="wh:child" data-elb-l="l2:2" data-elbcontext="child:link">
+    <div id="link-child" data-elb-l="l3:3" data-elbaction="click"></div>
+  </div>
+  <div data-elblink="bh"><div data-elb-l="no:pe"></div></div>
+</div>

@@ -1,27 +1,35 @@
 import { IElbwalker } from '.';
 
 export namespace WebDestination {
-  type Functions = Function[];
-  interface Function {
-    init?: () => boolean;
-    push: (event: IElbwalker.Event, mapping?: MappingEvent) => void;
-    config: Config;
+  interface Function<Custom = unknown, EventCustom = unknown> {
+    init?: (config: Config<Custom, EventCustom>) => boolean;
+    push: (
+      event: IElbwalker.Event,
+      config: Config<Custom, EventCustom>,
+      mapping?: EventConfig<EventCustom>,
+      runState?: IElbwalker.Config,
+    ) => void;
+    config: Config<Custom, EventCustom>;
     queue?: Array<IElbwalker.Event>; // Non processed events yet and resettet with each new run
   }
 
-  interface Config {
+  interface Config<Custom = unknown, EventCustom = unknown> {
     consent?: IElbwalker.Consent; // Required consent states to init and push events
-    custom?: IElbwalker.AnyObject; // Arbitrary but protected configurations for custom enhancements
-    init?: boolean; // if the destination has been initialized by calling the init method
-    mapping?: Mapping; // a map to handle events individually
+    custom?: Custom; // Arbitrary but protected configurations for custom enhancements
+    init?: boolean; // If the destination has been initialized by calling the init method
+    loadScript?: boolean; // If an additional script to work should be loaded
+    mapping?: Mapping<EventCustom>; // A map to handle events individually
+    queue?: boolean; // Disable processing of previously pushed events
   }
 
-  interface Mapping {
-    [entity: string]: { [action: string]: MappingEvent };
+  interface Mapping<EventCustom> {
+    [entity: string]: { [action: string]: EventConfig<EventCustom> };
   }
 
-  interface MappingEvent {
-    consent?: IElbwalker.Consent; // Required consent states for a specific event
-    custom?: IElbwalker.AnyObject; // Arbitrary but protected configurations for custom enhancements
+  interface EventConfig<EventCustom = unknown> {
+    consent?: IElbwalker.Consent; // Required consent states to init and push events
+    custom?: EventCustom; // Arbitrary but protected configurations for custom event config
+    ignore?: boolean; // Choose to no process an event when set to true
+    name?: string; // Use a custom event name
   }
 }

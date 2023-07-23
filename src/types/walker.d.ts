@@ -1,28 +1,30 @@
-import { IElbwalker } from '.';
-
 export namespace Walker {
-  type PushEvent = Array<[string, unknown]>;
-
   type Events = Event[];
   interface Event {
     entity: string;
     action: string;
-    data?: IElbwalker.AnyObject;
+    data?: Properties;
+    context?: OrderedProperties;
     trigger?: string;
     nested: Walker.Entities;
   }
 
-  type Entities = Array<Entity>;
-  interface Entity {
-    type: EntityType;
-    data: EntityData;
-    nested: Entities;
+  type PropertyType = boolean | string | number;
+  type Property = PropertyType | Array<PropertyType>;
+  interface Properties {
+    [key: string]: Property;
+  }
+  interface OrderedProperties {
+    [key: string]: [Property, number];
   }
 
-  type EntityType = string;
-  type EntityData = {
-    [name: string]: string;
-  };
+  type Entities = Array<Entity>;
+  interface Entity {
+    type: string;
+    data: Properties;
+    nested: Entities;
+    context: OrderedProperties;
+  }
 
   type KeyVal = [string, string];
 
@@ -30,9 +32,11 @@ export namespace Walker {
 
   const enum Trigger {
     Click = 'click',
+    Custom = 'custom', // @TODO string
     Hover = 'hover',
     Load = 'load',
     Pulse = 'pulse',
+    Scroll = 'scroll',
     Submit = 'submit',
     Visible = 'visible',
     Wait = 'wait',
@@ -42,13 +46,7 @@ export namespace Walker {
     [name: string]: boolean;
   }
 
-  type Scope = Document | Element;
-
-  interface Values {
-    [name: string]: string;
-  }
-
-  interface TriggersActions {
+  interface TriggersActionGroups {
     [trigger: string]: TriggerActions;
   }
 
@@ -60,4 +58,6 @@ export namespace Walker {
     action: string;
     actionParams?: string;
   }
+
+  type ScrollElements = Array<[HTMLElement, number]>;
 }

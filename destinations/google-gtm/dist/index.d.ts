@@ -1,10 +1,3 @@
-import { WebDestination } from '@elbwalker/walker.js';
-declare global {
-    interface Window {
-        dataLayer?: unknown[];
-    }
-}
-export interface DestinationGTM extends WebDestination.Function {
-}
-export declare const destination: DestinationGTM;
-export default destination;
+import { DestinationGoogleGTM } from './types';
+export declare const destinationGoogleGTM: DestinationGoogleGTM.Function;
+export default destinationGoogleGTM;

@@ -3,13 +3,21 @@ declare global {
     interface Window {
     }
 }
-export interface DestinationEventPipe extends WebDestination.Function {
-    config: WebDestination.Config & {
-        api?: string;
-        projectId?: string;
-        exclusionParameters?: ExclusionParameters;
-    };
+export declare namespace DestinationEventPipe {
+    interface Config extends WebDestination.Config {
+        custom?: {
+            api?: string;
+            projectId?: string;
+            exclusionParameters?: ExclusionParameters;
+        };
+        mapping?: WebDestination.Mapping<EventConfig>;
+    }
+    interface Function extends WebDestination.Function {
+        config: Config;
+    }
+    interface EventConfig extends WebDestination.EventConfig {
+    }
+    type ExclusionParameters = string[];
 }
-declare type ExclusionParameters = string[];
-export declare const destination: DestinationEventPipe;
+declare const destination: DestinationEventPipe.Function;
 export default destination;

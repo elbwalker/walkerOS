@@ -1,15 +1,3 @@
-import { WebDestination } from '@elbwalker/walker.js';
-declare global {
-    interface Window {
-        dataLayer?: unknown[];
-        gtag: Function;
-    }
-}
-export interface DestinationGA4 extends WebDestination.Function {
-    config: WebDestination.Config & {
-        measurementId?: string;
-        transport_url?: string;
-    };
-}
-export declare const destination: DestinationGA4;
-export default destination;
+import { DestinationGoogleGA4 } from './types';
+declare const destinationGoogleGA4: DestinationGoogleGA4.Function;
+export default destinationGoogleGA4;
