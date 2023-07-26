@@ -28,7 +28,12 @@ export default defineConfig({
           label: '🚀 GETTING STARTED',
           items: [
             // Each item here is one entry in the navigation menu.
-            { label: 'Installation', link: '/getting-started/installation/' },
+            { label: 'Installation', 
+            items: [
+              { label: 'Basic', link: '/getting-started/installation/' },
+              { label: 'Google Tag Manager', link: '/getting-started/gtm/' },
+            ]
+            },
             { label: 'Commands', link: '/getting-started/commands/' },
           ]
         },
@@ -77,6 +82,22 @@ export default defineConfig({
         },
         {
           label: '🔧 CODING',
+          items: [
+            // Each item here is one entry in the navigation menu.
+            { label: 'Debugging', link: '/coding/debugging/' },
+            { label: 'Utils', link: '/coding/utils/' },
+          ]
+        },
+        {
+          label: '🎓 EXAMPLES & TUTORIALS',
+          items: [
+            // Each item here is one entry in the navigation menu.
+            { label: 'Debugging', link: '/coding/debugging/' },
+            { label: 'Utils', link: '/coding/utils/' },
+          ]
+        },
+        {
+          label: ' SUPPORT',
           items: [
             // Each item here is one entry in the navigation menu.
             { label: 'Debugging', link: '/coding/debugging/' },

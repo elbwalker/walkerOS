@@ -1,12 +1,13 @@
 ---
 title: Google Tag Manager
 ---
+import { Card, CardGrid } from '@astrojs/starlight/components';
 
 How to install walker.js with Google Tag Manager (GTM)
 
 The Google Tag Manager only supports ES5 JavaScript from 2009. But there are pre-build versions for walker.js, the destinations and utils available. This is an example configuration. Just follow the instructions and copy the code.
 
-### walker.js
+## walker.js
 
 Add a new User-Defined Variable and select the Custom JavaScript type. The pre-built script creates the Elbwalker variable we want to return. Insert the following code
 
@@ -38,3 +39,8 @@ Now create a new Custom HTML Tag where we first define the `elb` function and cr
 We import the User-Defined Variable `{{walker.js}}`, manually call the run command, and add an optional `destination` to log all events to the console.
 Because of the initialization of the `elb` function, we want this Tag to fire before other related tags, where we might want to call `elb()`. Open the Advanced Settings and set a number above the default of 0 into the Tag firing priority field.
 Use "All Pages" as the Firing Trigger
+
+
+Grab the latest script version:
+
+<Card title="GitHub - elbwalker/walker.js" icon="github" color="black" size="2rem"> [walker.js](/github.com/elbwalker/walker.js)</Card>

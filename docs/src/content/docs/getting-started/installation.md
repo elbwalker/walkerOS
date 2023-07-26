@@ -1,11 +1,6 @@
 ---
 title: Installation
 ---
-import { Card, CardGrid } from '@astrojs/starlight/components';
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-
-<Tabs>
-    <TabItem label="Basic">
 
 How to install walker.js.
 
@@ -34,10 +29,9 @@ To integrate walker.js with your website, you can use this [NPM module](https://
 npm i --save @elbwalker/walker.js
 ```
 
-<cardgrid>
-<Card title="" icon="information">This NPM module is only meant to be used for a browser installation.</Card>
-</cardgrid>
-
+:::caution[Caution]
+This NPM module is only meant to be used for a browser installation.
+:::
 As a next step run the following code snippet once:
 
 ```js
@@ -90,9 +84,9 @@ To quickly try it out, you can also grab the latest default walker.js configurat
 <script async class="elbwalker" src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@latest/dist/walker.js" data-default="true"></script>
 ```
 
-<cardgrid>
-<Card title="" icon="information">It's recommended to use the externally hosted version only for demo purposes and not in production. Also, be aware of the latest version, better use a specific version like 1.6</Card>
-</cardgrid>
+:::note[Info]
+It's recommended to use the externally hosted version only for demo purposes and not in production. Also, be aware of the latest version, better use a specific version like 1.6
+:::
 
 In most of the examples, you'll find the imported elb function. The hosted browser version also comes with it but should be loaded async. Add the following snippet manually in addition to the script:
 
@@ -102,48 +96,4 @@ In most of the examples, you'll find the imported elb function. The hosted brows
 </script>
 ```
 
-    </TabItem>
-    <TabItem label="Google Tag Manager">
-How to install walker.js with Google Tag Manager (GTM)
-
-The Google Tag Manager only supports ES5 JavaScript from 2009. But there are pre-build versions for walker.js, the destinations and utils available. This is an example configuration. Just follow the instructions and copy the code.
-
-## walker.js
-
-Add a new User-Defined Variable and select the Custom JavaScript type. The pre-built script creates the Elbwalker variable we want to return. Insert the following code
-
-```js
-function () {
-  // Copy walker.es5.js code here
-
-  return Elbwalker;
-}
-```
-
-Get the latest code directly from the GitHub repository [elbwalker/walker.js](https://github.com/elbwalker/walker.js). Go to the [dist/walker.es5.js](https://github.com/elbwalker/walker.js/blob/main/dist/walker.es5.js) file and copy the whole script. Insert it in the GTM variable as shown in the screenshot
-
-![test](https://91951938-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F-MNYSefehQWgpbcQJFEb%2Fuploads%2FHgM86IXpqbnZFRUDT13z%2FScreenshot%202023-05-06%20at%208.52.01%20PM.png?alt=media&token=41d56e69-9638-456c-bf29-f4ac19d6d990)
-
-Now create a new Custom HTML Tag where we first define the `elb` function and create the elbwalker. See [Configuration](#Configuration) if you want to use a custom config.
-
-```js
-<script>
-  var elb = function(){ window.elbLayer.push(arguments)};
-  var elbwalker = {{walker.js}}({
-    // config
-  });
-  elb('walker run');
-  elb('walker destination', { push: console.log }); // Optional
-</script>
-```
-
-We import the User-Defined Variable `{{walker.js}}`, manually call the run command, and add an optional `destination` to log all events to the console.
-Because of the initialization of the `elb` function, we want this Tag to fire before other related tags, where we might want to call `elb()`. Open the Advanced Settings and set a number above the default of 0 into the Tag firing priority field.
-Use "All Pages" as the Firing Trigger
-    </TabItem>
-</Tabs>
-
-Grab the latest script version:
-
-<Card title="GitHub - elbwalker/walker.js" icon="github" color="black" size="2rem"> [walker.js](/github.com/elbwalker/walker.js)</Card>
 
