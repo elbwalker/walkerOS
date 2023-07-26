@@ -8,7 +8,7 @@ You can implement all sorts of <b>front-end</b> user <b>events</b> easily with w
 
 #### Tagging a page with
 
-```js
+```html
 <!-- Generic usage -->
 <div
   data-elb="ENTITY"
@@ -90,7 +90,7 @@ You are completely <b>free to define naming conventions</b>. All you need to get
 
 Use the `data-elblink` tag to extend the scope of an entity by other elements, placed somewhere else (like modals). Linked elements are related by some id. They are hierarchically and can either be a parent or a child.
 
-```js
+```html
 <div data-elb="info" data-elblink="details:parent"> ... </div>
 ...
 <div data-elblink="details:child" data-elbaction="visible"> ... </div>

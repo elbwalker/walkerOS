@@ -53,7 +53,27 @@ export default defineConfig({
             // Each item here is one entry in the navigation menu.
             { label: 'Basics', link: '/destinations/basics/' },
             { label: 'Details', link: '/destinations/details/' },
-            { label: 'Custom (create your own)', link: '/destinations/custom/' },
+            { label: 'API', link: '/destinations/api/' },
+            { label: 'Google Ads', link: '/destinations/gads/' },
+            { label: 'Google Analytics 4 (GA4)', link: '/destinations/ga4/' },
+            { label: 'Google Tag Manager', link: '/destinations/gtm/' },
+            { label: 'Meta Pixel', link: '/destinations/meta/' },
+            { label: 'Piwik PRO', link: '/destinations/piwik/' },
+            { label: 'Plausible', link: '/destinations/plausible/' },
+            { label: 'Custom (create your own)', 
+            items: [
+              // Each item here is one entry in the navigation menu.
+              { label: 'Basics', link: '/destinations/basics/' },
+              { label: 'Details', link: '/destinations/details/' },
+              { label: 'API', link: '/destinations/api/' },
+              { label: 'Google Ads', link: '/destinations/gads/' },
+              { label: 'Google Analytics 4 (GA4)', link: '/destinations/ga4/' },
+              { label: 'Google Tag Manager', link: '/destinations/gtm/' },
+              { label: 'Meta Pixel', link: '/destinations/meta/' },
+              { label: 'Piwik PRO', link: '/destinations/piwik/' },
+              { label: 'Plausible', link: '/destinations/plausible/' },
+              { label: 'Custom (create your own)', link: '/destinations/custom/' },
+            ] },
           ]
         },
         {
@@ -73,7 +93,7 @@ export default defineConfig({
         },
       ],
     }),
-  ],
+  ],  
 
   // Process images with sharp: https://docs.astro.build/en/guides/assets/#using-sharp
   image: { service: { entrypoint: 'astro/assets/services/sharp' } },
