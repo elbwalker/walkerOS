@@ -6,7 +6,7 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 You can implement all sorts of <b>front-end</b> user <b>events</b> easily with walker.js. From product and UX events like promotion view, filter usage, etc. to e-commerce actions like product add to carts or order complete events. The walker.js handles all <b>trigger initialization</b>s and <b>race conditions</b>, builds the <b>events with context</b>, and distributes them based on <b>consent states</b> and <b>mapping definitions</b> to any destinations.
 
-#### Tagging a page with
+## Tagging a page with
 
 ```html
 <!-- Generic usage -->
@@ -32,7 +32,7 @@ You can implement all sorts of <b>front-end</b> user <b>events</b> easily with w
 ```
 
 
-#### Get a full event like the following as a result for instance:
+## Get a full event like the following as a result for instance:
 
 ```js
 {
@@ -86,7 +86,7 @@ You are completely <b>free to define naming conventions</b>. All you need to get
 2. An <b>action</b> can be added by setting the data-elbaction attribute on the <b>same level or all child</b> elements in combination with a <b>matching trigger</b>, e.g. `data-elbaction="visible:view"` to fire a promotion view event when a user clicks on the tagged element. 
 3. (Optional) To define the entities' <b>properties</b>, set the <b>composited attribute</b> data-elb-ENTITY with the name and value, e.g. `data-elb-promotion="name:Setting up tracking easily;position:overlay"`.
 
-#### Linking elements
+## Linking elements
 
 Use the `data-elblink` tag to extend the scope of an entity by other elements, placed somewhere else (like modals). Linked elements are related by some id. They are hierarchically and can either be a parent or a child.
 

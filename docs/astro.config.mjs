@@ -52,29 +52,21 @@ export default defineConfig({
           items: [
             // Each item here is one entry in the navigation menu.
             { label: 'Basics', link: '/destinations/basics/' },
-            { label: 'Details', link: '/destinations/details/' },
-            { label: 'API', link: '/destinations/api/' },
-            { label: 'Google Ads', link: '/destinations/gads/' },
-            { label: 'Google Analytics 4 (GA4)', link: '/destinations/ga4/' },
-            { label: 'Google Tag Manager', link: '/destinations/gtm/' },
-            { label: 'Meta Pixel', link: '/destinations/meta/' },
-            { label: 'Piwik PRO', link: '/destinations/piwik/' },
-            { label: 'Plausible', link: '/destinations/plausible/' },
-            { label: 'Custom (create your own)', 
+            { label: 'Details', 
             items: [
-              // Each item here is one entry in the navigation menu.
-              { label: 'Basics', link: '/destinations/basics/' },
-              { label: 'Details', link: '/destinations/details/' },
+              { label: '- - OVERVIEW - -', link: '/destinations/overview/' },
               { label: 'API', link: '/destinations/api/' },
               { label: 'Google Ads', link: '/destinations/gads/' },
               { label: 'Google Analytics 4 (GA4)', link: '/destinations/ga4/' },
               { label: 'Google Tag Manager', link: '/destinations/gtm/' },
               { label: 'Meta Pixel', link: '/destinations/meta/' },
               { label: 'Piwik PRO', link: '/destinations/piwik/' },
-              { label: 'Plausible', link: '/destinations/plausible/' },
-              { label: 'Custom (create your own)', link: '/destinations/custom/' },
-            ] },
-          ]
+              { label: 'Plausible Analytics', link: '/destinations/plausible/' },
+              { label: 'Event Pipeline', link: '/destinations/pipeline/' },
+            ],
+            }, 
+            { label: 'Custom (create your own)', link: '/destinations/custom/' },
+          ],
         },
         {
           label: '🔓 PRIVACY',

@@ -2,7 +2,7 @@
 title: Properties
 ---
 
-#### Basic attributes
+## Basic attributes
 
 Use the name of the entity to specify its properties. Property attributes have to be inside of the entity-scope
 
@@ -13,7 +13,7 @@ Use the name of the entity to specify its properties. Property attributes have t
 </div>
 ```
 
-##### Type casting
+### Type casting
 
 Property values will be casted to their type, supporting string, number & boolean.
 
@@ -25,7 +25,7 @@ Property values will be casted to their type, supporting string, number & boolea
 </div>
 ```
 
-#### Multiple attributes
+## Multiple attributes
 
 Browsers override duplicate attributes. Hence an element can only have one `data-elb`, `data-elb-ENTITY`, and/or data-elbaction attribute at a time. Nevertheless, it’s possible to define multiple entities, properties, and/or actions all at once within one attribute using quotes and semicolons. 
 Key-value pairs are split by a semicolon. Therefore it’s necessary to escape values containing a semicolon. Quotes are here to meet your needs. To prevent a mistaken value-split use single quotes.
@@ -50,7 +50,7 @@ The semicolon can be used as a separator to list multiple values inside of a `da
 <p data-elb="foo" data-elb-foo="a:1;b:2">{ "a": 1, "b": 2 }</p>
 ```
 
-#### Dynamic field values
+## Dynamic field values
 
 You might want to measure dynamic field values e.g. the quantity of a product or the value of the selected element. Use a `#` at the beginning followed by the attributes name to get access to the value of the element attribute.
 
@@ -69,7 +69,7 @@ To capture a selected option from a list use `elb-ENTITY="KEY:#selected"` to get
 </select>
 ```
 
-#### Arrays
+## Arrays
 
 To use array types add the `[]` suffix to a properties name, like `size[]:m`. The walker.js will generate de-duplicated data properties.
 
@@ -89,7 +89,7 @@ To use array types add the `[]` suffix to a properties name, like `size[]:m`. Th
 }
 ```
 
-#### Generic properties
+## Generic properties
 
 Leave the entity name empty (`data-elb-`) to add the property to any related entity. Explicitly named properties are preferred over generic ones. It's suggested to <b> HIER FEHLT TEXT!!!!</b>
 

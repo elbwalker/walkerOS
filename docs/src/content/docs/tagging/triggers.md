@@ -22,7 +22,7 @@ You don't have to deal with event listener or mutation observer initialization a
 Trigger names are predefined and need to be selected from the list while the `action` can be an arbitrarily defined name.
 :::
 
-#### Abbreviation
+## Abbreviation
 
 If the trigger and action values are equal, e.g. for click events, you can just shorten the implementation:
 
@@ -30,7 +30,7 @@ If the trigger and action values are equal, e.g. for click events, you can just 
 <b data-elbaction="click">short</b> is equal to <s data-elbaction="click:click">long</s>
 ```
 
-#### Parameters
+## Parameters
 
 Some triggers require more information during their initialization, others accept optional parameters. A scroll trigger needs to know about the percentage a user scrolls down while a wait trigger wants to know about the number of milliseconds until the action gets triggered. Use brackets behind the trigger to pass that information.
 
@@ -40,7 +40,7 @@ Some triggers require more information during their initialization, others accep
 <p data-elbaction="pulse(10):interested"></p>
 ```
 
-#### Action filter
+## Action filter
 
 At some point, you might want to nest an entity inside another. To prevent an action to trigger both entities you can restrict the action to a specific entity by adding the name, e.g. data-elbaction="load:view(product)".If the trigger event gets called, the result will only include the property values from the specific entities.
 
@@ -53,7 +53,7 @@ At some point, you might want to nest an entity inside another. To prevent an ac
 </div>
 ```
 
-#### Up-bubbling click trigger
+## Up-bubbling click trigger
 
 By clicking an element the event is bubbling up to the body element. If the walker finds a data-elbaction with the click trigger it will fire the action. It's often the image or a whole div-block that gets clicked, not the parent a-element. Using the bubbling-up flow, the walker still triggers the actions for you.
 

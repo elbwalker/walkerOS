@@ -13,7 +13,7 @@ function elb(){(window.elbLayer = window.elbLayer || []).push(arguments);}
 
 To configure elbwalker use the walker prefix (like an entity) to call a command.
 
-### config
+## config
 
 Setting the general configuration. Almost identical to the settings at the installation, except for default. 
 
@@ -29,7 +29,7 @@ elb("walker config", {
 });
 ```
 
-### consent
+## consent
 
 Handles the consent states for specific groups or tools. Those names can be defined arbitrarily, but common groups are functional, statistical, and marketing. Values are booleans and once a value is set to true it’s treated as consent being granted. Previously pushed events during the run are shared now with destinations as well as new ones.
 
@@ -37,7 +37,7 @@ Handles the consent states for specific groups or tools. Those names can be defi
 elb("walker consent" { marketing: true, randomTool: true });
 ```
 
-### destination
+## destination
 
 Used to add a new destination. Individual destination configurations can be made by using the destination.config property.
 
@@ -49,7 +49,7 @@ const destinationLog = { push: console.log }; // Demo destination for console.lo
 elb("walker destination", destinationLog);
 ```
 
-### init
+## init
 
 (Re-)initializes event listeners on one or multiple target elements. Can be used for e.g. asynchronously loaded content like newly added products in a category list or a wizard.
 
@@ -57,7 +57,7 @@ elb("walker destination", destinationLog);
 elb("walker init", element); // or an array of elements
 ```
 
-### run
+## run
 
 Used to actually start the walker, like a regular page view. (Re-)Initializes the handler, resets counters, clears queues, and updates the globals
 
@@ -65,7 +65,7 @@ Used to actually start the walker, like a regular page view. (Re-)Initializes th
 elb("walker run");
 ```
 
-### user
+## user
 
 Setting the user ids. There are three levels for user identification. Typically the user is a company's internal id. In contrast, the device id can be treated as a value stored in a cookie for a longer time period and the session can be used for temporary identification.
 

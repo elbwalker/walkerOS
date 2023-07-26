@@ -13,7 +13,7 @@ elb('entity action', data, trigger, context, nested);
 
 Both <i>entity</i> and <i>action</i> are combined in one string separated by space and required. The optional data object holds all properties of an entity. The [trigger](https://docs.elbwalker.com/tagging/available-triggers) is optional and is expected to be a string.
 
-#### Examples
+## Examples
 
 ```js
 // Virtual page view of an overlay popup

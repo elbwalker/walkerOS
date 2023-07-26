@@ -66,7 +66,7 @@ const destination: WebDestination.Function<CustomConfig, CustomEventConfig> = {
 elb('walker destination', destination, config);
 ```
 
-### Overview
+## Overview
 
 If you can't find your desired destination, you can [request it](https://github.com/elbwalker/walker.js/issues/new?assignees=&labels=&template=feature_request.md&title=) or [build your own](https://docs.elbwalker.com/destinations/custom).
 
@@ -76,9 +76,9 @@ If you can't find your desired destination, you can [request it](https://github.
 
 <b>Hier noch die richtigen Kacheln einsetzen statt der Tabelle!!!</b>
 
-### Usage
+## Usage
 
-#### Configuration
+### Configuration
 
 Each destination requires its own configuration. While there are common settings like `consent`, `init`, or `loadScript` there are also individual settings only available for a specific destination in the `custom` object and `mapping`.
 
