@@ -1,5 +1,5 @@
 import Elbwalker from '../elbwalker';
-import { Contract, IElbwalker } from '../';
+import { Data, IElbwalker } from '../';
 import fs from 'fs';
 
 describe('Elbwalker', () => {
@@ -325,12 +325,14 @@ describe('Elbwalker', () => {
   });
 
   test('Contract', () => {
-    const contract: Contract.Data = {
+    const contract: Data.Contract = {
       version: '',
       globals: {
         pagegroup: {
-          type: "string"
-        }
+          type: 'string',
+          values: [2, '2', []],
+        },
+        pagetype: {},
       },
       context: {},
       entities: {},

@@ -1,4 +1,4 @@
-export * from './contract';
+export * from './data';
 export * from './destinations';
 export * from './elbwalker';
 export * from './globals';

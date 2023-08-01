@@ -1,9 +1,12 @@
-export namespace Contract {
-  export interface Data {
+import { Walker } from './walker';
+
+export namespace Data {
+  export interface Contract {
     version: string;
     globals: Globals;
     context: Contexts;
     entities: Entities;
+    // @TODO data as ref
   }
 
   interface Globals {
@@ -23,13 +26,25 @@ export namespace Contract {
   }
 
   interface Global extends Property {}
+
   interface Context extends Property {}
 
-  interface Entity {}
+  interface Entity {
+    data: Properties;
+    actions: Actions;
+  }
+
+  interface Actions {}
 
   interface Property {
-    type: PropertyType;
+    type?: PropertyType; // @TODO support multiple
+    required?: boolean;
+    values?: PropertyValues;
   }
 
   type PropertyType = 'boolean' | 'string' | 'number';
+
+  type PropertyValues = Array<Walker.Property>;
+
+  interface PropertyValue {}
 }
