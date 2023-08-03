@@ -1,4 +1,4 @@
-import { IElbwalker } from '@elbwalker/walker.js';
+import { IElbwalker, Walker, getByStringDot } from '@elbwalker/walker.js';
 import { DestinationMetaPixel } from './types';
 
 // https://developers.facebook.com/docs/meta-pixel/
@@ -62,8 +62,10 @@ function getParameters(
   mapping: DestinationMetaPixel.CustomEventConfig,
   currency: string = 'EUR',
 ) {
-  const value = mapping.value ? (event.data[mapping.value] as number) : 1;
-  const content_name = mapping.name ? (event.data[mapping.name] as string) : '';
+  const value = mapping.value
+    ? parseFloat(String(event.data[mapping.value]))
+    : 1;
+  const content_name = mapping.name ? String(event.data[mapping.name]) : '';
 
   switch (mapping.track) {
     case 'AddPaymentInfo':
@@ -75,7 +77,8 @@ function getParameters(
       return {
         content_name,
         currency,
-        value: value as number,
+        value,
+        contents: getParameterContents(event, mapping),
       } as facebook.Pixel.AddToCartParameters;
     case 'AddToWishlist':
       return {
@@ -127,6 +130,47 @@ function getParameters(
       // Contact, CustomizeProduct, Donate, FindLocation, Schedule, SubmitApplication
       return {} as facebook.Pixel.CustomParameters;
   }
+}
+
+function getMappedParam(
+  event: IElbwalker.Event,
+  param: DestinationMetaPixel.PropertyMapping,
+  i: number = 0,
+) {
+  let params: DestinationMetaPixel.Parameters = {};
+  let key: string;
+  let defaultValue: Walker.PropertyType | undefined;
+
+  if (typeof param == 'string') {
+    key = param;
+  } else {
+    key = param.key;
+    defaultValue = param.default;
+  }
+
+  // String dot notation for object ("data.id" -> { data: { id: 1 } })
+  const value = getByStringDot(event, key, i) || defaultValue;
+
+  return value;
+}
+
+function getParameterContents(
+  event: IElbwalker.Event,
+  mapping: DestinationMetaPixel.CustomEventConfig,
+): Array<{ id: string; quantity: number }> | undefined {
+  const contents = mapping.contents;
+  if (!contents) return;
+
+  const id = String(getMappedParam(event, contents.id));
+  const quantity = parseFloat(String(getMappedParam(event, contents.quantity)));
+
+  if (id && quantity)
+    return [
+      {
+        id,
+        quantity,
+      },
+    ];
 }
 
 function addScript(src = 'https://connect.facebook.net/en_US/fbevents.js') {

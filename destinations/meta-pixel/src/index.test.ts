@@ -146,4 +146,68 @@ describe('Destination Meta Pixel', () => {
       }),
     );
   });
+
+  test('Property contents', () => {
+    // @TODO switch to string dot notation everywhere
+
+    destination.config.mapping = {
+      use: {
+        data: {
+          custom: {
+            track: 'AddToCart',
+            contents: {
+              id: 'data.id',
+              quantity: {
+                key: 'data.quantity',
+                default: 1111,
+              },
+            },
+          },
+        },
+        nested: {
+          custom: {
+            track: 'AddToCart',
+            contents: {
+              id: 'data.id',
+              quantity: 'data.quantity',
+            },
+          },
+        },
+      },
+    };
+
+    elbwalker.push('walker destination', destination);
+
+    elbwalker.push('use data', { id: 'sku', quantity: 5 });
+
+    expect(mockFn).toHaveBeenCalledWith(
+      'track',
+      'AddToCart',
+      expect.objectContaining({
+        contents: [{ id: 'sku', quantity: 5 }],
+      }),
+    );
+
+    // elbwalker.push('use nested', {}, 'custom', { quantity: [2, 0] }, [
+    //   {
+    //     type: 'product',
+    //     data: { id: 'a', quantity: 3 },
+    //     nested: [],
+    //     context: {},
+    //   },
+    //   {
+    //     type: 'product',
+    //     data: { id: 'b' },
+    //     nested: [],
+    //     context: {},
+    //   },
+    // ]);
+    // expect(mockFn).toHaveBeenCalledWith(
+    //   'track',
+    //   'AddToCart',
+    //   expect.objectContaining({
+    //     todo: true,
+    //   }),
+    // );
+  });
 });
