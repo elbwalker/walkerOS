@@ -1,6 +1,6 @@
 {
   "name": "@elbwalker/destination-web-meta-pixel",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Meta pixel web destination for walker.js",
   "main": "dist/index.js",
   "types": "dist",
@@ -24,7 +24,7 @@
     "dist/**/*.d.ts"
   ],
   "dependencies": {
-    "@elbwalker/walker.js": "^1.6.2"
+    "@elbwalker/walker.js": "^1.6.4"
   },
   "devDependencies": {
     "@babel/cli": "^7.21.5",
