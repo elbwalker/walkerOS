@@ -196,7 +196,7 @@ describe('Destination Meta Pixel', () => {
       },
       {
         type: 'product',
-        data: { id: 'b' },
+        data: { id: 'b', quantity: 9 }, // @TODO undefined default fallback
         nested: [],
         context: {},
       },

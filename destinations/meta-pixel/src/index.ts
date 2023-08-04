@@ -165,31 +165,27 @@ function getParam(param: DestinationMetaPixel.PropertyMapping) {
 function getParameterContents(
   event: IElbwalker.Event,
   mapping: DestinationMetaPixel.CustomEventConfig,
-): Array<{ id: string; quantity: number }> | undefined {
+): DestinationMetaPixel.Contents | undefined {
   const contentsMapping = mapping.contents;
   if (!contentsMapping) return;
 
-  const contents: Array<{ id: string; quantity: number }> = [];
-  const idKey = getParam(contentsMapping.id).key;
-  const [key, i] = idKey.split('.');
+  const contents: DestinationMetaPixel.Contents = [];
 
-  //@TODO handle the * and also context
-  if (key == 'nested' && i == '*') {
-    event[key].map((e, i) => {
-      const id = String(getMappedParam(event, contentsMapping.id, i));
-      const quantity = parseFloat(
-        String(getMappedParam(event, contentsMapping.quantity, i)),
-      );
+  let id = getByStringDot(event, getParam(contentsMapping.id).key);
+  let quantity = getByStringDot(event, getParam(contentsMapping.quantity).key);
 
-      if (id && quantity) contents[i] = { id, quantity };
-    });
-  } else {
-    const id = String(getMappedParam(event, contentsMapping.id));
-    const quantity = parseFloat(
-      String(getMappedParam(event, contentsMapping.quantity)),
-    );
+  if (!id || !quantity) return;
 
-    if (id && quantity) contents[0] = { id, quantity };
+  if (!Array.isArray(id)) id = [id];
+  if (!Array.isArray(quantity)) quantity = [quantity];
+
+  if (Array.isArray(id) && Array.isArray(quantity)) {
+    for (let i = 0; i < id.length; i++) {
+      contents.push({
+        id: String(id[i]),
+        quantity: parseFloat(String(quantity[i])),
+      });
+    }
   }
 
   return contents;
@@ -197,16 +193,30 @@ function getParameterContents(
 
 function getByStringDot(event: unknown, key: string, i: unknown = 0): unknown {
   // String dot notation for object ("data.id" -> { data: { id: 1 } })
-  const value = key.split('.').reduce((obj, key) => {
-    // Update the wildcard to the given index
-    if (key == '*') key = String(i);
+  const keys = key.split('.');
+  let values: unknown = event;
 
-    if (obj instanceof Object) return obj[key as keyof typeof obj];
+  for (let index = 0; index < keys.length; index++) {
+    const k = keys[index];
 
-    return;
-  }, event);
+    if (k === '*' && Array.isArray(values)) {
+      const remainingKeys = keys.slice(index + 1).join('.');
+      const result: unknown[] = [];
 
-  return value;
+      for (const item of values) {
+        const value = getByStringDot(item, remainingKeys, i);
+        result.push(value);
+      }
+
+      return result;
+    }
+
+    values =
+      values instanceof Object ? values[k as keyof typeof values] : undefined;
+    if (!values) break;
+  }
+
+  return values;
 }
 
 function addScript(src = 'https://connect.facebook.net/en_US/fbevents.js') {

@@ -39,6 +39,8 @@ export declare namespace DestinationMetaPixel {
     quantity: PropertyMapping;
   }
 
+  type Contents = facebook.Pixel.ViewContentParameters['contents'];
+
   type StandardEventNames =
     | 'AddPaymentInfo'
     | 'AddToCart'
