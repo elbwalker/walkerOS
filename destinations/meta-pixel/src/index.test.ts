@@ -205,6 +205,7 @@ describe('Destination Meta Pixel', () => {
       'track',
       'ViewContent',
       expect.objectContaining({
+        content_ids: ['a', 'b'],
         contents: [
           { id: 'a', quantity: 3 },
           { id: 'b', quantity: 9 },

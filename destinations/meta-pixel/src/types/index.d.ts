@@ -39,6 +39,10 @@ export declare namespace DestinationMetaPixel {
     quantity: PropertyMapping;
   }
 
+  type ContentIds =
+    | facebook.Pixel.DPA.ViewContentParameters['content_ids']
+    | facebook.Pixel.DPA.AddToCartParameters['content_ids']
+    | facebook.Pixel.DPA.PurchaseParameters['content_ids'];
   type Contents = facebook.Pixel.ViewContentParameters['contents'];
 
   type StandardEventNames =

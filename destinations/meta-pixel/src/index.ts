@@ -66,21 +66,25 @@ function getParameters(
     ? parseFloat(String(event.data[mapping.value]))
     : 1;
   const content_name = mapping.name ? String(event.data[mapping.name]) : '';
+  const content_ids = getParameterContentIds(event, mapping);
 
   switch (mapping.track) {
     case 'AddPaymentInfo':
       return {
+        content_ids,
         currency,
         value,
       } as facebook.Pixel.AddPaymentInfoParameters;
     case 'AddToCart':
       return {
+        content_ids,
         content_name,
         currency,
         value,
       } as facebook.Pixel.AddToCartParameters;
     case 'AddToWishlist':
       return {
+        content_ids,
         content_name,
       } as facebook.Pixel.AddToWishlistParameters;
     case 'CompleteRegistration':
@@ -90,16 +94,19 @@ function getParameters(
       } as facebook.Pixel.CompleteRegistrationParameters;
     case 'InitiateCheckout':
       return {
+        content_ids,
         currency,
         value,
       } as facebook.Pixel.InitiateCheckoutParameters;
     case 'Lead':
       return {
+        content_ids,
         content_name,
         currency,
       } as facebook.Pixel.LeadParameters;
     case 'Purchase':
       return {
+        content_ids,
         content_name,
         value: value || 1,
         currency,
@@ -107,6 +114,7 @@ function getParameters(
       } as facebook.Pixel.PurchaseParameters;
     case 'Search':
       return {
+        content_ids,
         currency,
         value,
       } as facebook.Pixel.SearchParameters;
@@ -122,6 +130,7 @@ function getParameters(
       } as DestinationMetaPixel.StartSubscribeParameters;
     case 'ViewContent':
       return {
+        content_ids,
         content_name,
         currency,
         value,
@@ -160,6 +169,32 @@ function getParam(param: DestinationMetaPixel.PropertyMapping) {
   }
 
   return { key, defaultValue };
+}
+
+function getParameterContentIds(
+  event: IElbwalker.Event,
+  mapping: DestinationMetaPixel.CustomEventConfig,
+): DestinationMetaPixel.ContentIds | undefined {
+  const contentsMapping = mapping.contents;
+  if (!contentsMapping) return;
+
+  const ids: DestinationMetaPixel.ContentIds = [];
+
+  const idParams = getParam(contentsMapping.id);
+  let id = getByStringDot(event, idParams.key, idParams.defaultValue);
+
+  // Both values are required
+  if (!id) return;
+
+  if (!Array.isArray(id)) id = [id];
+
+  if (Array.isArray(id)) {
+    for (let i = 0; i < id.length; i++) {
+      ids.push(String(id[i]));
+    }
+  }
+
+  return ids;
 }
 
 function getParameterContents(
