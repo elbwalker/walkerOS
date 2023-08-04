@@ -78,7 +78,6 @@ function getParameters(
         content_name,
         currency,
         value,
-        contents: getParameterContents(event, mapping),
       } as facebook.Pixel.AddToCartParameters;
     case 'AddToWishlist':
       return {
@@ -104,6 +103,7 @@ function getParameters(
         content_name,
         value: value || 1,
         currency,
+        contents: getParameterContents(event, mapping),
       } as facebook.Pixel.PurchaseParameters;
     case 'Search':
       return {
@@ -125,6 +125,7 @@ function getParameters(
         content_name,
         currency,
         value,
+        contents: getParameterContents(event, mapping),
       } as facebook.Pixel.ViewContentParameters;
     default:
       // Contact, CustomizeProduct, Donate, FindLocation, Schedule, SubmitApplication
@@ -136,8 +137,18 @@ function getMappedParam(
   event: IElbwalker.Event,
   param: DestinationMetaPixel.PropertyMapping,
   i: number = 0,
-) {
-  let params: DestinationMetaPixel.Parameters = {};
+): Walker.PropertyType | undefined {
+  let { key, defaultValue } = getParam(param);
+
+  // String dot notation for object ("data.id" -> { data: { id: 1 } })
+  const value =
+    (getByStringDot(event, key, i) as Walker.PropertyType | undefined) ||
+    defaultValue;
+
+  return value;
+}
+
+function getParam(param: DestinationMetaPixel.PropertyMapping) {
   let key: string;
   let defaultValue: Walker.PropertyType | undefined;
 
@@ -148,29 +159,40 @@ function getMappedParam(
     defaultValue = param.default;
   }
 
-  // String dot notation for object ("data.id" -> { data: { id: 1 } })
-  const value = getByStringDot(event, key, i) || defaultValue;
-
-  return value;
+  return { key, defaultValue };
 }
 
 function getParameterContents(
   event: IElbwalker.Event,
   mapping: DestinationMetaPixel.CustomEventConfig,
 ): Array<{ id: string; quantity: number }> | undefined {
-  const contents = mapping.contents;
-  if (!contents) return;
+  const contentsMapping = mapping.contents;
+  if (!contentsMapping) return;
 
-  const id = String(getMappedParam(event, contents.id));
-  const quantity = parseFloat(String(getMappedParam(event, contents.quantity)));
+  const contents: Array<{ id: string; quantity: number }> = [];
+  const idKey = getParam(contentsMapping.id).key;
+  const [key, i] = idKey.split('.');
 
-  if (id && quantity)
-    return [
-      {
-        id,
-        quantity,
-      },
-    ];
+  //@TODO handle the * and also context
+  if (key == 'nested' && i == '*') {
+    event[key].map((e, i) => {
+      const id = String(getMappedParam(event, contentsMapping.id, i));
+      const quantity = parseFloat(
+        String(getMappedParam(event, contentsMapping.quantity, i)),
+      );
+
+      if (id && quantity) contents[i] = { id, quantity };
+    });
+  } else {
+    const id = String(getMappedParam(event, contentsMapping.id));
+    const quantity = parseFloat(
+      String(getMappedParam(event, contentsMapping.quantity)),
+    );
+
+    if (id && quantity) contents[0] = { id, quantity };
+  }
+
+  return contents;
 }
 
 function getByStringDot(event: unknown, key: string, i: unknown = 0): unknown {

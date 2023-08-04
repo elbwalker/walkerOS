@@ -154,7 +154,7 @@ describe('Destination Meta Pixel', () => {
       use: {
         data: {
           custom: {
-            track: 'AddToCart',
+            track: 'Purchase',
             contents: {
               id: 'data.id',
               quantity: {
@@ -166,10 +166,10 @@ describe('Destination Meta Pixel', () => {
         },
         nested: {
           custom: {
-            track: 'AddToCart',
+            track: 'ViewContent',
             contents: {
-              id: 'data.id',
-              quantity: 'data.quantity',
+              id: 'nested.*.data.id',
+              quantity: { key: 'nested.*.data.quantity', default: 9 },
             },
           },
         },
@@ -179,35 +179,37 @@ describe('Destination Meta Pixel', () => {
     elbwalker.push('walker destination', destination);
 
     elbwalker.push('use data', { id: 'sku', quantity: 5 });
-
     expect(mockFn).toHaveBeenCalledWith(
       'track',
-      'AddToCart',
+      'Purchase',
       expect.objectContaining({
         contents: [{ id: 'sku', quantity: 5 }],
       }),
     );
 
-    // elbwalker.push('use nested', {}, 'custom', { quantity: [2, 0] }, [
-    //   {
-    //     type: 'product',
-    //     data: { id: 'a', quantity: 3 },
-    //     nested: [],
-    //     context: {},
-    //   },
-    //   {
-    //     type: 'product',
-    //     data: { id: 'b' },
-    //     nested: [],
-    //     context: {},
-    //   },
-    // ]);
-    // expect(mockFn).toHaveBeenCalledWith(
-    //   'track',
-    //   'AddToCart',
-    //   expect.objectContaining({
-    //     todo: true,
-    //   }),
-    // );
+    elbwalker.push('use nested', {}, 'custom', { quantity: [2, 0] }, [
+      {
+        type: 'product',
+        data: { id: 'a', quantity: 3 },
+        nested: [],
+        context: {},
+      },
+      {
+        type: 'product',
+        data: { id: 'b' },
+        nested: [],
+        context: {},
+      },
+    ]);
+    expect(mockFn).toHaveBeenCalledWith(
+      'track',
+      'ViewContent',
+      expect.objectContaining({
+        contents: [
+          { id: 'a', quantity: 3 },
+          { id: 'b', quantity: 9 },
+        ],
+      }),
+    );
   });
 });
