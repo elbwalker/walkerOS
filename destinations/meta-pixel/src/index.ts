@@ -1,5 +1,5 @@
-import { IElbwalker, Walker, getByStringDot } from '@elbwalker/walker.js';
-import { DestinationMetaPixel } from './types';
+import type { IElbwalker, Walker } from '@elbwalker/walker.js';
+import type { DestinationMetaPixel } from './types';
 
 // https://developers.facebook.com/docs/meta-pixel/
 
@@ -171,6 +171,20 @@ function getParameterContents(
         quantity,
       },
     ];
+}
+
+function getByStringDot(event: unknown, key: string, i: unknown = 0): unknown {
+  // String dot notation for object ("data.id" -> { data: { id: 1 } })
+  const value = key.split('.').reduce((obj, key) => {
+    // Update the wildcard to the given index
+    if (key == '*') key = String(i);
+
+    if (obj instanceof Object) return obj[key as keyof typeof obj];
+
+    return;
+  }, event);
+
+  return value;
 }
 
 function addScript(src = 'https://connect.facebook.net/en_US/fbevents.js') {
