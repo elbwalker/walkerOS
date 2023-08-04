@@ -171,9 +171,16 @@ function getParameterContents(
 
   const contents: DestinationMetaPixel.Contents = [];
 
-  let id = getByStringDot(event, getParam(contentsMapping.id).key);
-  let quantity = getByStringDot(event, getParam(contentsMapping.quantity).key);
+  const idParams = getParam(contentsMapping.id);
+  const quantityParams = getParam(contentsMapping.quantity);
+  let id = getByStringDot(event, idParams.key, idParams.defaultValue);
+  let quantity = getByStringDot(
+    event,
+    quantityParams.key,
+    quantityParams.defaultValue,
+  );
 
+  // Both values are required
   if (!id || !quantity) return;
 
   if (!Array.isArray(id)) id = [id];
@@ -191,7 +198,12 @@ function getParameterContents(
   return contents;
 }
 
-function getByStringDot(event: unknown, key: string, i: unknown = 0): unknown {
+function getByStringDot(
+  event: unknown,
+  key: string,
+  defaultValue?: unknown,
+  i: unknown = 0,
+): unknown {
   // String dot notation for object ("data.id" -> { data: { id: 1 } })
   const keys = key.split('.');
   let values: unknown = event;
@@ -204,7 +216,7 @@ function getByStringDot(event: unknown, key: string, i: unknown = 0): unknown {
       const result: unknown[] = [];
 
       for (const item of values) {
-        const value = getByStringDot(item, remainingKeys, i);
+        const value = getByStringDot(item, remainingKeys, defaultValue, i);
         result.push(value);
       }
 
@@ -213,10 +225,11 @@ function getByStringDot(event: unknown, key: string, i: unknown = 0): unknown {
 
     values =
       values instanceof Object ? values[k as keyof typeof values] : undefined;
+
     if (!values) break;
   }
 
-  return values;
+  return values || defaultValue;
 }
 
 function addScript(src = 'https://connect.facebook.net/en_US/fbevents.js') {
