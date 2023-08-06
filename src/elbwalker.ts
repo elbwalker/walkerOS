@@ -1,4 +1,4 @@
-import { IElbwalker, Utils, Walker, WebDestination } from './types';
+import { Hooks, IElbwalker, Walker, WebDestination } from './types';
 import {
   initScopeTrigger,
   initGlobalTrigger,
@@ -69,10 +69,10 @@ function Elbwalker(
     destinations.push(destination);
   }
 
-  function addHook(
+  function addHook<T extends (...args: any[]) => any>(
     config: IElbwalker.Config,
     name: string,
-    hookFn: (...args: unknown[]) => unknown,
+    hookFn: Hooks.HookFn<T>,
   ) {
     // @TODO this can be used in commands directly
     config.hooks[name] = hookFn;
@@ -253,7 +253,7 @@ function Elbwalker(
         break;
       case IElbwalker.Commands.Hook:
         if (isSameType(data, '') && isSameType(options, isSameType))
-          addHook(instance.config, data, options as Utils.HookFn);
+          addHook(instance.config, data, options);
         break;
       case IElbwalker.Commands.Init:
         const elems: unknown[] = Array.isArray(data)

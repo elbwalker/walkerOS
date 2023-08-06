@@ -1,4 +1,4 @@
-import { IElbwalker, Utils, Walker } from '../types';
+import { Hooks, IElbwalker, Utils, Walker } from '../types';
 
 export const elb: IElbwalker.Elb = function () {
   (window.elbLayer = window.elbLayer || []).push(arguments);
@@ -398,13 +398,10 @@ export function trycatch<P extends unknown[], R, S>(
   };
 }
 
-export function useHooks<P extends unknown[], R>(
+export function useHooks<P extends any[], R>(
   fn: (...args: P) => R,
   name: string,
-  hooks: Record<
-    string,
-    (params: Utils.HookParameter<P, R>, ...args: P) => R
-  > = {},
+  hooks: Hooks.Functions,
 ): (...args: P) => R {
   return function (...args: P): R {
     const preHook = 'pre' + name;
@@ -413,7 +410,7 @@ export function useHooks<P extends unknown[], R>(
     let result: R;
     if (hooks[preHook]) {
       // Call the original function within the preHook
-      result = hooks[preHook]({ fn }, ...args);
+      result = (hooks[preHook] as Hooks.HookFn<typeof fn>)({ fn }, ...args);
     } else {
       // Regular function call
       result = fn(...args);
@@ -421,7 +418,10 @@ export function useHooks<P extends unknown[], R>(
 
     if (hooks[postHook]) {
       // Call the post-hook function with fn, result, and the original args
-      result = hooks[postHook]({ fn, result }, ...args);
+      result = (hooks[postHook] as Hooks.HookFn<typeof fn>)(
+        { fn, result: result },
+        ...args,
+      );
     }
 
     return result;

@@ -144,29 +144,29 @@ describe('Elbwalker', () => {
   });
 
   test('hooks', () => {
-    const preHookFn = jest.fn().mockImplementation(function (params, ...args) {
+    const prePush = jest.fn().mockImplementation(function (params, ...args) {
       mockFn(...args); // Custom code
       params.fn(...args); // Regular call
       return 'foo'; // Updated response
     });
-    const postHookFn = jest.fn();
+    const postPush = jest.fn();
     elbwalker = Elbwalker({
       pageview: false,
       hooks: {
-        prePush: preHookFn,
-        postPush: postHookFn,
+        prePush,
+        postPush,
       },
     });
     elbwalker.push('walker run');
     elbwalker.push('e a', { a: 1 }, 't', { c: ['v', 0] }, []);
 
-    expect(preHookFn).toHaveBeenCalledTimes(2);
-    expect(preHookFn).toHaveBeenNthCalledWith(
+    expect(prePush).toHaveBeenCalledTimes(2);
+    expect(prePush).toHaveBeenNthCalledWith(
       1,
       { fn: expect.any(Function) },
       'walker run',
     );
-    expect(preHookFn).toHaveBeenNthCalledWith(
+    expect(prePush).toHaveBeenNthCalledWith(
       2,
       { fn: expect.any(Function) },
       'e a',
@@ -176,13 +176,13 @@ describe('Elbwalker', () => {
       [],
     );
 
-    expect(postHookFn).toHaveBeenCalledTimes(2);
-    expect(postHookFn).toHaveBeenNthCalledWith(
+    expect(postPush).toHaveBeenCalledTimes(2);
+    expect(postPush).toHaveBeenNthCalledWith(
       1,
       { fn: expect.any(Function), result: 'foo' },
       'walker run',
     );
-    expect(postHookFn).toHaveBeenNthCalledWith(
+    expect(postPush).toHaveBeenNthCalledWith(
       2,
       { fn: expect.any(Function), result: 'foo' },
       'e a',
