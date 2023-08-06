@@ -69,10 +69,10 @@ function Elbwalker(
     destinations.push(destination);
   }
 
-  function addHook(
+  function addHook<Hook extends keyof Hooks.Functions>(
     config: IElbwalker.Config,
-    name: keyof Hooks.Functions,
-    hookFn: Hooks.Functions[keyof Hooks.Functions],
+    name: Hook,
+    hookFn: Hooks.Functions[Hook],
   ) {
     // @TODO this can be used in commands directly
     config.hooks[name] = hookFn;

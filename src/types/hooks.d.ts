@@ -18,12 +18,9 @@ export namespace Hooks {
     postPush?: PostPush;
     //  preDestinationInit?: PreDestinationInit;
     //  postDestinationInit?: PostDestinationInit;
-    // preDestinationPush?: PreDestinationPush;
-    // postDestinationPush?: PostDestinationPush;
+    preDestinationPush?: PreDestinationPush;
+    postDestinationPush?: PostDestinationPush;
   };
-
-  type Value = Values<Functions>;
-  type Values<T> = T[keyof T];
 
   type PrePush = HookFn<IElbwalker.Elb>;
   type PostPush = HookFn<IElbwalker.Elb>;

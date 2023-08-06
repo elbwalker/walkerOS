@@ -16,7 +16,11 @@ export namespace IElbwalker {
       destination: WebDestination.Function<any, any>,
       config?: WebDestination.Config,
     ): void;
-    (event: 'walker hook', name: string, hookFn: Hooks.Value): void;
+    <K extends keyof Hooks.Functions>(
+      event: 'walker hook',
+      name: K,
+      hookFn: Hooks.Functions[K],
+    ): void;
     (event: 'walker init', scope: Scope | Scope[]): void;
     (event: 'walker run'): void;
     (event: 'walker user', user: User): void;
@@ -48,7 +52,7 @@ export namespace IElbwalker {
     | Walker.Properties
     | WebDestination.Function;
 
-  type PushOptions = string | Hooks.Value | WebDestination.Config; // @TODO use Walker.Trigger
+  type PushOptions = string | Hooks.Functions | WebDestination.Config; // @TODO use Walker.Trigger
   type PushContext = Walker.OrderedProperties | Element;
 
   type Scope = Document | HTMLElement;
