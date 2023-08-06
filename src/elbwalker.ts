@@ -437,8 +437,8 @@ function Elbwalker(
           destination.init,
           'DestinationInit',
           config.hooks,
-        )(destination.config) as ReturnType<typeof destination.init>;
-        // const init = destination.init(destination.config);
+        )(destination.config);
+
         destination.config.init = init;
 
         // don't push if init is false

@@ -400,28 +400,27 @@ export function trycatch<P extends unknown[], R, S>(
 
 export function useHooks<P extends any[], R>(
   fn: (...args: P) => R,
-  name: string,
+  name: Hooks.Names,
   hooks: Hooks.Functions,
 ): (...args: P) => R {
   return function (...args: P): R {
     let result: R;
-    const preHook = 'pre' + name;
-    const postHook = 'post' + name;
+    const preHook = ('pre' + name) as keyof Hooks.Functions;
+    const postHook = ('post' + name) as keyof Hooks.Functions;
+    const preHookFn = hooks[preHook] as unknown as Hooks.HookFn<typeof fn>;
+    const postHookFn = hooks[postHook] as unknown as Hooks.HookFn<typeof fn>;
 
-    if (hooks[preHook]) {
+    if (preHookFn) {
       // Call the original function within the preHook
-      result = (hooks[preHook] as Hooks.HookFn<typeof fn>)({ fn }, ...args);
+      result = preHookFn({ fn }, ...args);
     } else {
       // Regular function call
       result = fn(...args);
     }
 
-    if (hooks[postHook]) {
+    if (postHookFn) {
       // Call the post-hook function with fn, result, and the original args
-      result = (hooks[postHook] as Hooks.HookFn<typeof fn>)(
-        { fn, result },
-        ...args,
-      );
+      result = postHookFn({ fn, result }, ...args);
     }
 
     return result;

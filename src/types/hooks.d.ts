@@ -13,9 +13,14 @@ export namespace Hooks {
 
   type Names = 'Push' | 'DestinationInit' | 'DestinationPush';
 
-  interface Functions {
-    [key: string]: HookFn<any>;
-  }
+  type Functions = {
+    prePush?: PrePush;
+    postPush?: PostPush;
+    //  preDestinationInit?: PreDestinationInit;
+    //  postDestinationInit?: PostDestinationInit;
+    // preDestinationPush?: PreDestinationPush;
+    // postDestinationPush?: PostDestinationPush;
+  };
 
   type Value = Values<Functions>;
   type Values<T> = T[keyof T];
