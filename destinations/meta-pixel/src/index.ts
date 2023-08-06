@@ -62,10 +62,29 @@ function getParameters(
   mapping: DestinationMetaPixel.CustomEventConfig,
   currency: string = 'EUR',
 ) {
-  const value = mapping.value
-    ? parseFloat(String(event.data[mapping.value]))
-    : 1;
-  const content_name = mapping.content_name ? String(event.data[mapping.content_name]) : '';
+  // value
+  let value = 1;
+  if (mapping.value) {
+    const valueParams = getParam(mapping.value);
+    value = parseFloat(
+      String(getByStringDot(event, valueParams.key, valueParams.defaultValue)),
+    );
+  }
+
+  // content_name
+  let content_name = '';
+  if (mapping.content_name) {
+    const content_nameParams = getParam(mapping.content_name);
+    content_name = String(
+      getByStringDot(
+        event,
+        content_nameParams.key,
+        content_nameParams.defaultValue,
+      ),
+    );
+  }
+
+  // content_ids
   const content_ids = getParameterContentIds(event, mapping);
 
   switch (mapping.track) {

@@ -100,7 +100,11 @@ describe('Destination Meta Pixel', () => {
     destination.config.mapping = {
       entity: {
         action: {
-          custom: { track: 'Purchase', content_name: 'title', value: 'revenue' },
+          custom: {
+            track: 'Purchase',
+            content_name: 'data.title',
+            value: 'data.revenue',
+          },
         },
       },
     };
@@ -129,7 +133,11 @@ describe('Destination Meta Pixel', () => {
     destination.config.mapping = {
       entity: {
         action: {
-          custom: { track: 'AddToCart', content_name: 'title', value: 'price' },
+          custom: {
+            track: 'AddToCart',
+            content_name: 'data.title',
+            value: 'data.price',
+          },
         },
       },
     };
@@ -148,8 +156,6 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('Property contents', () => {
-    // @TODO switch to string dot notation everywhere
-
     destination.config.mapping = {
       use: {
         data: {
@@ -159,7 +165,6 @@ describe('Destination Meta Pixel', () => {
               id: 'data.id',
               quantity: {
                 key: 'data.quantity',
-                default: 1111,
               },
             },
           },
