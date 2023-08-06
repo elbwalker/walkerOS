@@ -69,10 +69,10 @@ function Elbwalker(
     destinations.push(destination);
   }
 
-  function addHook<T extends (...args: any[]) => any>(
+  function addHook(
     config: IElbwalker.Config,
-    name: string,
-    hookFn: Hooks.HookFn<T>,
+    name: keyof Hooks.Functions,
+    hookFn: Hooks.Functions[keyof Hooks.Functions],
   ) {
     // @TODO this can be used in commands directly
     config.hooks[name] = hookFn;
@@ -253,7 +253,7 @@ function Elbwalker(
         break;
       case IElbwalker.Commands.Hook:
         if (isSameType(data, '') && isSameType(options, isSameType))
-          addHook(instance.config, data, options);
+          addHook(instance.config, data as keyof Hooks.Functions, options);
         break;
       case IElbwalker.Commands.Init:
         const elems: unknown[] = Array.isArray(data)

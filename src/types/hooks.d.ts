@@ -1,3 +1,5 @@
+import { IElbwalker, WebDestination } from '.';
+
 export namespace Hooks {
   interface Parameter<T extends any[], R> {
     fn: (...args: T) => R;
@@ -9,10 +11,19 @@ export namespace Hooks {
     ...args: Parameters<T>
   ) => ReturnType<T>;
 
+  type Names = 'Push' | 'DestinationInit' | 'DestinationPush';
+
   interface Functions {
     [key: string]: HookFn<any>;
   }
 
   type Value = Values<Functions>;
   type Values<T> = T[keyof T];
+
+  type PrePush = HookFn<IElbwalker.Elb>;
+  type PostPush = HookFn<IElbwalker.Elb>;
+  // type PreDestinationInit = HookFn<WebDestination.Function['init']>;
+  // type PostDestinationInit = HookFn<WebDestination.Function['init']>;
+  type PreDestinationPush = HookFn<WebDestination.Function['push']>;
+  type PostDestinationPush = HookFn<WebDestination.Function['push']>;
 }

@@ -404,10 +404,10 @@ export function useHooks<P extends any[], R>(
   hooks: Hooks.Functions,
 ): (...args: P) => R {
   return function (...args: P): R {
+    let result: R;
     const preHook = 'pre' + name;
     const postHook = 'post' + name;
 
-    let result: R;
     if (hooks[preHook]) {
       // Call the original function within the preHook
       result = (hooks[preHook] as Hooks.HookFn<typeof fn>)({ fn }, ...args);
@@ -419,7 +419,7 @@ export function useHooks<P extends any[], R>(
     if (hooks[postHook]) {
       // Call the post-hook function with fn, result, and the original args
       result = (hooks[postHook] as Hooks.HookFn<typeof fn>)(
-        { fn, result: result },
+        { fn, result },
         ...args,
       );
     }
