@@ -84,6 +84,9 @@ function getParameters(
     );
   }
 
+  // content_type
+  let content_type = mapping.content_type ? mapping.content_type : '';
+
   // content_ids
   const content_ids = getParameterContentIds(event, mapping);
 
@@ -98,6 +101,7 @@ function getParameters(
       return {
         content_ids,
         content_name,
+        content_type,
         currency,
         value,
       } as facebook.Pixel.AddToCartParameters;
@@ -127,6 +131,7 @@ function getParameters(
       return {
         content_ids,
         content_name,
+        content_type,
         value: value || 1,
         currency,
         contents: getParameterContents(event, mapping),
@@ -134,8 +139,10 @@ function getParameters(
     case 'Search':
       return {
         content_ids,
+        content_type,
         currency,
         value,
+        contents: getParameterContents(event, mapping),
       } as facebook.Pixel.SearchParameters;
     case 'StartTrial':
       return {
@@ -151,6 +158,7 @@ function getParameters(
       return {
         content_ids,
         content_name,
+        content_type,
         currency,
         value,
         contents: getParameterContents(event, mapping),

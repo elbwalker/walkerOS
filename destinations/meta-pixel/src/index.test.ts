@@ -136,6 +136,7 @@ describe('Destination Meta Pixel', () => {
           custom: {
             track: 'AddToCart',
             content_name: 'data.title',
+            content_type: 'product',
             value: 'data.price',
           },
         },
@@ -149,6 +150,7 @@ describe('Destination Meta Pixel', () => {
       'AddToCart',
       expect.objectContaining({
         content_name: 'Shirt',
+        content_type: 'product',
         currency: 'EUR',
         value: 3.14,
       }),
