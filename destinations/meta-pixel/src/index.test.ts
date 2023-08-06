@@ -100,7 +100,7 @@ describe('Destination Meta Pixel', () => {
     destination.config.mapping = {
       entity: {
         action: {
-          custom: { track: 'Purchase', name: 'title', value: 'revenue' },
+          custom: { track: 'Purchase', content_name: 'title', value: 'revenue' },
         },
       },
     };
@@ -129,7 +129,7 @@ describe('Destination Meta Pixel', () => {
     destination.config.mapping = {
       entity: {
         action: {
-          custom: { track: 'AddToCart', name: 'title', value: 'price' },
+          custom: { track: 'AddToCart', content_name: 'title', value: 'price' },
         },
       },
     };

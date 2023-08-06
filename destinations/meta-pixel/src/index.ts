@@ -65,7 +65,7 @@ function getParameters(
   const value = mapping.value
     ? parseFloat(String(event.data[mapping.value]))
     : 1;
-  const content_name = mapping.name ? String(event.data[mapping.name]) : '';
+  const content_name = mapping.content_name ? String(event.data[mapping.content_name]) : '';
   const content_ids = getParameterContentIds(event, mapping);
 
   switch (mapping.track) {
@@ -140,21 +140,6 @@ function getParameters(
       // Contact, CustomizeProduct, Donate, FindLocation, Schedule, SubmitApplication
       return {} as facebook.Pixel.CustomParameters;
   }
-}
-
-function getMappedParam(
-  event: IElbwalker.Event,
-  param: DestinationMetaPixel.PropertyMapping,
-  i: number = 0,
-): Walker.PropertyType | undefined {
-  let { key, defaultValue } = getParam(param);
-
-  // String dot notation for object ("data.id" -> { data: { id: 1 } })
-  const value =
-    (getByStringDot(event, key, i) as Walker.PropertyType | undefined) ||
-    defaultValue;
-
-  return value;
 }
 
 function getParam(param: DestinationMetaPixel.PropertyMapping) {

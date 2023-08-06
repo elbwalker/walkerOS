@@ -20,8 +20,8 @@ export declare namespace DestinationMetaPixel {
   }
 
   interface CustomEventConfig {
-    id?: string; // Name of data property key to use in content_ids
-    name?: string; // Name of data property key to use as content_name
+    content_ids?: string; // Name of data property key to use in content_ids
+    content_name?: string; // Name of data property key to use as content_name
     track?: StandardEventNames; // Name of a standard event to track
     value?: string; // Name of data property key to use for value
     contents?: ParamContents; // Value(s) to be used for contents
