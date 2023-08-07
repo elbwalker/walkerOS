@@ -100,7 +100,11 @@ describe('Destination Meta Pixel', () => {
     destination.config.mapping = {
       entity: {
         action: {
-          custom: { track: 'Purchase', name: 'title', value: 'revenue' },
+          custom: {
+            track: 'Purchase',
+            content_name: 'data.title',
+            value: 'data.revenue',
+          },
         },
       },
     };
@@ -129,7 +133,12 @@ describe('Destination Meta Pixel', () => {
     destination.config.mapping = {
       entity: {
         action: {
-          custom: { track: 'AddToCart', name: 'title', value: 'price' },
+          custom: {
+            track: 'AddToCart',
+            content_name: 'data.title',
+            content_type: 'product',
+            value: 'data.price',
+          },
         },
       },
     };
@@ -141,8 +150,73 @@ describe('Destination Meta Pixel', () => {
       'AddToCart',
       expect.objectContaining({
         content_name: 'Shirt',
+        content_type: 'product',
         currency: 'EUR',
         value: 3.14,
+      }),
+    );
+  });
+
+  test('Property contents', () => {
+    destination.config.mapping = {
+      use: {
+        data: {
+          custom: {
+            track: 'Purchase',
+            contents: {
+              id: 'data.id',
+              quantity: {
+                key: 'data.quantity',
+              },
+            },
+          },
+        },
+        nested: {
+          custom: {
+            track: 'ViewContent',
+            contents: {
+              id: 'nested.*.data.id',
+              quantity: { key: 'nested.*.data.quantity', default: 9 },
+            },
+          },
+        },
+      },
+    };
+
+    elbwalker.push('walker destination', destination);
+
+    elbwalker.push('use data', { id: 'sku', quantity: 5 });
+    expect(mockFn).toHaveBeenCalledWith(
+      'track',
+      'Purchase',
+      expect.objectContaining({
+        contents: [{ id: 'sku', quantity: 5 }],
+      }),
+    );
+
+    elbwalker.push('use nested', {}, 'custom', { quantity: [2, 0] }, [
+      {
+        type: 'product',
+        data: { id: 'a', quantity: 3 },
+        nested: [],
+        context: {},
+      },
+      {
+        type: 'product',
+        data: { id: 'b' },
+        nested: [],
+        context: {},
+      },
+    ]);
+    expect(mockFn).toHaveBeenCalledWith(
+      'track',
+      'ViewContent',
+      expect.objectContaining({
+        content_ids: ['a', 'b'],
+        contents: [
+          { id: 'a', quantity: 3 },
+          { id: 'b', quantity: 9 },
+        ],
       }),
     );
   });

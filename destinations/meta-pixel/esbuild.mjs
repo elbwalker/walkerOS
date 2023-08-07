@@ -13,6 +13,7 @@ await esbuild.build({
   bundle: true,
   minify: true,
   platform: 'neutral',
+  mainFields: ['module', 'main'],
   outfile: 'dist/index.mjs',
 });
 

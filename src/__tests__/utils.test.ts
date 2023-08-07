@@ -9,12 +9,15 @@ import {
   storageWrite,
   throttle,
   getByStringDot,
+  trycatch,
 } from '../lib/utils';
 import { Utils } from '../types';
 
 const w = window;
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
+const mockError = jest.fn();
+console.error = mockError;
 
 describe('Utils', () => {
   beforeEach(() => {
@@ -349,5 +352,20 @@ describe('Utils', () => {
     expect(getByStringDot(obj, 'a.b')).toBe('c');
     expect(getByStringDot(obj, 'i.*.id', 2)).toBe('dynamic');
     expect(getByStringDot(undefined, 'na')).toBe(undefined);
+  });
+
+  test('trycatch', () => {
+    // Default error on console
+    trycatch(() => {
+      throw new Error('foo');
+    })();
+    expect(mockError).toHaveBeenCalledWith(expect.any(Error));
+
+    // Custom error handler
+    const onError = jest.fn();
+    trycatch(() => {
+      throw new Error('foo');
+    }, onError)();
+    expect(onError).toHaveBeenCalledWith(expect.any(Error));
   });
 });

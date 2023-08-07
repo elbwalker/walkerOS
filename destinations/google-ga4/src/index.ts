@@ -1,7 +1,9 @@
-import { IElbwalker, Walker } from '@elbwalker/walker.js';
+import type { IElbwalker, Walker } from '@elbwalker/walker.js';
 import { DestinationGoogleGA4 } from './types';
 
 const destinationGoogleGA4: DestinationGoogleGA4.Function = {
+  type: 'google-ga4',
+
   config: { custom: { measurementId: '' } },
 
   init(config: DestinationGoogleGA4.Config) {
@@ -51,7 +53,15 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
 
     // Check for the 'all' group to add each group
     if (include.includes('all'))
-      include = ['context', 'data', 'event', 'globals', 'user'];
+      include = [
+        'context',
+        'data',
+        'event',
+        'globals',
+        'source',
+        'user',
+        'version',
+      ];
 
     include.forEach((groupName) => {
       let group: Walker.Properties | Walker.OrderedProperties =
@@ -151,17 +161,26 @@ function getMappedParams(
     }
 
     // String dot notation for object ("data.id" -> { data: { id: 1 } })
-    const value = key.split('.').reduce((obj, key) => {
-      // Update the wildcard to the current nested index
-      if (key == '*') key = String(i);
-
-      return obj[key] || defaultValue;
-    }, event);
+    const value = getByStringDot(event, key, i) || defaultValue;
 
     if (value) params[prop] = value;
   });
 
   return Object.keys(params).length ? params : false;
+}
+
+function getByStringDot(event: unknown, key: string, i: number): unknown {
+  // String dot notation for object ("data.id" -> { data: { id: 1 } })
+  const value = key.split('.').reduce((obj, key) => {
+    // Update the wildcard to the given index
+    if (key == '*') key = String(i);
+
+    if (obj instanceof Object) return obj[key as keyof typeof obj];
+
+    return;
+  }, event);
+
+  return value;
 }
 
 export default destinationGoogleGA4;

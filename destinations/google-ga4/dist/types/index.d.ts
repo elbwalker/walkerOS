@@ -43,7 +43,14 @@ export declare namespace DestinationGoogleGA4 {
   }
 
   type Include = Array<
-    'all' | 'context' | 'data' | 'event' | 'globals' | 'user'
+    | 'all'
+    | 'context'
+    | 'data'
+    | 'event'
+    | 'globals'
+    | 'source'
+    | 'user'
+    | 'version'
   >;
   type Items = Gtag.Item[];
   type Parameters = Gtag.ControlParams & Gtag.EventParams & Gtag.CustomParams;
