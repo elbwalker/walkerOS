@@ -65,9 +65,9 @@ function Elbwalker(
         pushToDestination(instance, destination, pushEvent);
       });
 
-    // @TODO use the destination id as key if given and set it to the config
     // @TODO getId could be duplicate, use incremental id instead
-    instance.config.destinations[getId(6)] = destination;
+    const id = config.id || getId(6);
+    instance.config.destinations[id] = destination;
   }
 
   function addHook<Hook extends keyof Hooks.Functions>(
