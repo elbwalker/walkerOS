@@ -1,6 +1,8 @@
 import { DestinationPlausible } from './types';
 
 export const destinationPlausible: DestinationPlausible.Function = {
+  type: 'plausible',
+
   config: {},
 
   init(config: DestinationPlausible.Config) {

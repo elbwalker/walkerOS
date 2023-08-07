@@ -35,6 +35,7 @@ function Elbwalker(
           walker: true,
         });
       },
+      type: 'dataLayer',
     };
     addDestination(instance, destination);
     ready(run, instance);
@@ -57,6 +58,7 @@ function Elbwalker(
       init: data.init,
       push: data.push,
       config,
+      type: data.type,
     };
 
     // Process previous events if not disabled

@@ -14,6 +14,7 @@ export function setupAnalytics() {
   elb('walker destination', DestinationGTM);
 
   elb('walker destination', {
+    type: 'custom',
     push: console.log,
   } as WebDestination.Function);
 }

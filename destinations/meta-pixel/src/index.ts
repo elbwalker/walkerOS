@@ -4,6 +4,8 @@ import type { DestinationMetaPixel } from './types';
 // https://developers.facebook.com/docs/meta-pixel/
 
 export const destinationMetaPixel: DestinationMetaPixel.Function = {
+  type: 'meta-pixel',
+
   config: {},
 
   init(config: DestinationMetaPixel.Config) {

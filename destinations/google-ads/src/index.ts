@@ -1,6 +1,8 @@
 import { DestinationGoogleAds } from './types';
 
 export const destinationGoogleAds: DestinationGoogleAds.Function = {
+  type: 'google-ads',
+
   config: {},
 
   init(config: DestinationGoogleAds.Config) {

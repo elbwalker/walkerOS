@@ -2,6 +2,8 @@ import { DestinationAPI } from './types';
 export * from './types/index.d';
 
 export const destinationAPI: DestinationAPI.Function = {
+  type: 'api',
+
   config: {},
 
   push(event, config) {

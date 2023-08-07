@@ -200,7 +200,7 @@ describe('Destination Google GA4', () => {
     );
   });
 
-  test.only('Parameters include', () => {
+  test('Parameters include', () => {
     elbwalker.push('walker config', {
       globals: { lang: 'de' },
       user: { id: 'us3r1d' },
