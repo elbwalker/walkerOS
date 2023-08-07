@@ -2,6 +2,8 @@ import type { IElbwalker, Walker } from '@elbwalker/walker.js';
 import { DestinationGoogleGA4 } from './types';
 
 const destinationGoogleGA4: DestinationGoogleGA4.Function = {
+  type: 'google-ga4',
+
   config: { custom: { measurementId: '' } },
 
   init(config: DestinationGoogleGA4.Config) {
