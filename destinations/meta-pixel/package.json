@@ -1,8 +1,10 @@
 {
   "name": "@elbwalker/destination-web-meta-pixel",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Meta pixel web destination for walker.js",
   "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "browser": "dist/es5.js",
   "types": "dist",
   "scripts": {
     "build": "node ./esbuild.mjs && npm run es5",

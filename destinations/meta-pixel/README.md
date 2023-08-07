@@ -29,10 +29,15 @@ const config /* : DestinationMeta.Config */ = {
       // e.g. complete
       action: {
         custom: {
-          // id: 'order_id', // Name of data property key to use in content_ids
-          // name: 'title', // Name of data property key to use as content_name
           track: 'Purchase', // Name of a standard event to track
-          value: 'revenue', // Name of data property key to use for value
+          // id: 'data.order_id', // For content_ids, use * for arrays like "nested.*.quantity"
+          // name: 'data.title', // Key to use as content_name
+          contents: {
+            // Both, id and quantity are required
+            id: "data.id", // { key: "data.id", default: "unknown" }
+            quantity: "data.quantity", // or { key: "nested.0.quantity", default: 1 }
+          }
+          value: 'revenue', // Key to use for value
         },
       },
     },
