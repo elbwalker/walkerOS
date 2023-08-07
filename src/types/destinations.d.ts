@@ -21,6 +21,7 @@ export namespace WebDestination {
     loadScript?: boolean; // If an additional script to work should be loaded
     mapping?: Mapping<EventCustom>; // A map to handle events individually
     queue?: boolean; // Disable processing of previously pushed events
+    type?: string; // The type of the destination
   }
 
   interface Mapping<EventCustom> {

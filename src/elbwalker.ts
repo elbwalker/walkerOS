@@ -28,7 +28,7 @@ function Elbwalker(
     // use dataLayer as default destination
     window.dataLayer = window.dataLayer || [];
     const destination: WebDestination.Function = {
-      config: {},
+      config: { type: 'dataLayer' },
       push: (event) => {
         window.dataLayer.push({
           ...event,
