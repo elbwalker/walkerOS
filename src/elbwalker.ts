@@ -65,7 +65,9 @@ function Elbwalker(
         pushToDestination(instance, destination, pushEvent);
       });
 
-    instance.config.destinations.push(destination);
+    // @TODO use the destination id as key if given and set it to the config
+    // @TODO getId could be duplicate, use incremental id instead
+    instance.config.destinations[getId(6)] = destination;
   }
 
   function addHook<Hook extends keyof Hooks.Functions>(
@@ -194,7 +196,7 @@ function Elbwalker(
       // Event counter for each run
       count: values.count || current.count || 0,
       // Destination list
-      destinations: values.destinations || current.destinations || [],
+      destinations: values.destinations || current.destinations || {},
       // Async access api in window as array
       elbLayer:
         values.elbLayer ||
@@ -384,7 +386,7 @@ function Elbwalker(
     // Add event to internal queue
     config.queue.push(pushEvent);
 
-    config.destinations.forEach((destination) => {
+    Object.values(config.destinations).forEach((destination) => {
       pushToDestination(instance, destination, pushEvent);
     });
   }
@@ -477,7 +479,7 @@ function Elbwalker(
     instance.config.queue = [];
 
     // Reset all destination queues
-    instance.config.destinations.forEach((destination) => {
+    Object.values(instance.config.destinations).forEach((destination) => {
       destination.queue = [];
     });
 
@@ -507,7 +509,7 @@ function Elbwalker(
     });
 
     if (runQueue) {
-      config.destinations.forEach((destination) => {
+      Object.values(config.destinations).forEach((destination) => {
         let queue = destination.queue || [];
 
         // Try to push and remove successful ones from queue

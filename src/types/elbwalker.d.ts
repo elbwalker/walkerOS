@@ -61,7 +61,7 @@ export namespace IElbwalker {
     allowed: boolean;
     consent: Consent;
     count: number;
-    destinations: Array<WebDestination.Function>;
+    destinations: Destinations;
     // @TODO custom state support
     elbLayer: ElbLayer;
     globals: Walker.Properties;
@@ -75,6 +75,10 @@ export namespace IElbwalker {
     user: User;
     version: number;
     default?: boolean;
+  }
+
+  interface Destinations {
+    [name: string]: WebDestination.Function;
   }
 
   type Events = Array<Event>;
