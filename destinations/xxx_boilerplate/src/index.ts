@@ -2,6 +2,8 @@ import { DestinationXXX } from './types';
 export * from './types/index.d';
 
 export const destinationXXX: DestinationXXX.Function = {
+  type: 'xxx',
+
   config: {},
 
   init(config) {
