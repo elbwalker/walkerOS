@@ -16,16 +16,20 @@ export namespace Hooks {
   type Functions = {
     prePush?: PrePush;
     postPush?: PostPush;
-    //  preDestinationInit?: PreDestinationInit;
-    //  postDestinationInit?: PostDestinationInit;
+    preDestinationInit?: PreDestinationInit;
+    postDestinationInit?: PostDestinationInit;
     preDestinationPush?: PreDestinationPush;
     postDestinationPush?: PostDestinationPush;
   };
 
   type PrePush = HookFn<IElbwalker.Elb>;
   type PostPush = HookFn<IElbwalker.Elb>;
-  // type PreDestinationInit = HookFn<WebDestination.Function['init']>;
-  // type PostDestinationInit = HookFn<WebDestination.Function['init']>;
+  type PreDestinationInit = HookFn<
+    NonNullable<WebDestination.Function['init']>
+  >;
+  type PostDestinationInit = HookFn<
+    NonNullable<WebDestination.Function['init']>
+  >;
   type PreDestinationPush = HookFn<WebDestination.Function['push']>;
   type PostDestinationPush = HookFn<WebDestination.Function['push']>;
 }
