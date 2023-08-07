@@ -188,6 +188,7 @@ describe('ElbLayer', () => {
       elbLayer: w.elbLayer,
       globals: {},
       group: expect.any(String),
+      hooks: {},
       pageview: true,
       prefix: 'data-elb',
       queue: expect.any(Array),

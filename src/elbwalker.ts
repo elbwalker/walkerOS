@@ -1,30 +1,31 @@
-import { IElbwalker, Walker, WebDestination } from './types';
+import { Hooks, IElbwalker, Walker, WebDestination } from './types';
 import {
   initScopeTrigger,
   initGlobalTrigger,
   ready,
   load,
 } from './lib/trigger';
-import { assign, getId, trycatch } from './lib/utils';
+import { assign, getId, isSameType, trycatch, useHooks } from './lib/utils';
 import { getEntities, getGlobals } from './lib/walker';
 
 function Elbwalker(
-  config: Partial<IElbwalker.Config> = {},
+  customConfig: Partial<IElbwalker.Config> = {},
 ): IElbwalker.Function {
   const version = 1.6;
   const destinations: Array<WebDestination.Function> = [];
   const runCommand = `${IElbwalker.Commands.Walker} ${IElbwalker.Commands.Run}`;
-  const staticGlobals = config.globals || {};
+  const staticGlobals = customConfig.globals || {};
+  const config = getConfig(customConfig);
   const instance: IElbwalker.Function = {
-    push,
-    config: getConfig(config),
+    push: useHooks(push, 'Push', config.hooks),
+    config,
   };
 
   // Setup pushes for elbwalker via elbLayer
   elbLayerInit(instance);
 
   // Use the default init mode for auto run and dataLayer destination
-  if (config.default) {
+  if (customConfig.default) {
     // use dataLayer as default destination
     window.dataLayer = window.dataLayer || [];
     const destination: WebDestination.Function = {
@@ -66,6 +67,15 @@ function Elbwalker(
       });
 
     destinations.push(destination);
+  }
+
+  function addHook<Hook extends keyof Hooks.Functions>(
+    config: IElbwalker.Config,
+    name: Hook,
+    hookFn: Hooks.Functions[Hook],
+  ) {
+    // @TODO this can be used in commands directly
+    config.hooks[name] = hookFn;
   }
 
   function allowedToPush(
@@ -117,7 +127,7 @@ function Elbwalker(
         ];
       }
 
-      if (typeof event !== 'string') return;
+      if (!isSameType(event, '')) return;
 
       // Skip the first stacked run event since it's the reason we're here
       // and to prevent duplicate execution which we don't want
@@ -196,6 +206,8 @@ function Elbwalker(
       ),
       // Random id to group events of a run
       group: values.group || current.group || '',
+      // Manage the hook functions
+      hooks: values.hooks || current.hooks || {},
       // Trigger a page view event by default
       pageview:
         'pageview' in values ? !!values.pageview : current.pageview || true,
@@ -218,7 +230,7 @@ function Elbwalker(
     instance: IElbwalker.Function,
     action: string,
     data?: IElbwalker.PushData,
-    options?: WebDestination.Config,
+    options?: IElbwalker.PushOptions,
   ) {
     switch (action) {
       case IElbwalker.Commands.Config:
@@ -233,7 +245,15 @@ function Elbwalker(
         break;
       case IElbwalker.Commands.Destination:
         isObject(data) &&
-          addDestination(instance, data as WebDestination.Function, options);
+          addDestination(
+            instance,
+            data as WebDestination.Function,
+            options as WebDestination.Config,
+          );
+        break;
+      case IElbwalker.Commands.Hook:
+        if (isSameType(data, '') && isSameType(options, isSameType))
+          addHook(instance.config, data as keyof Hooks.Functions, options);
         break;
       case IElbwalker.Commands.Init:
         const elems: unknown[] = Array.isArray(data)
@@ -265,17 +285,17 @@ function Elbwalker(
   }
 
   function isObject(obj: unknown) {
-    return typeof obj === 'object' && !Array.isArray(obj) && obj !== null;
+    return isSameType(obj, {}) && !Array.isArray(obj) && obj !== null;
   }
 
   function push(
     event?: unknown,
     data?: IElbwalker.PushData,
-    options: string | WebDestination.Config = '',
-    context: Walker.OrderedProperties | Element = {},
+    options: IElbwalker.PushOptions = '',
+    context: IElbwalker.PushContext = {},
     nested: Walker.Entities = [],
   ): void {
-    if (!event || typeof event !== 'string') return;
+    if (!event || !isSameType(event, '')) return;
 
     const config = instance.config;
 
@@ -375,6 +395,7 @@ function Elbwalker(
     useQueue = true,
   ): boolean {
     // Deep copy event to prevent a pointer mess
+    // Update to structuredClone if support > 95%
     event = JSON.parse(JSON.stringify(event));
 
     // Always check for required consent states before pushing
@@ -412,7 +433,12 @@ function Elbwalker(
       // Destination initialization
       // Check if the destination was initialized properly or try to do so
       if (destination.init && !destination.config.init) {
-        const init = destination.init(destination.config);
+        const init = useHooks(
+          destination.init,
+          'DestinationInit',
+          config.hooks,
+        )(destination.config);
+
         destination.config.init = init;
 
         // don't push if init is false
@@ -420,7 +446,7 @@ function Elbwalker(
       }
 
       // It's time to go to the destination's side now
-      destination.push(
+      useHooks(destination.push, 'DestinationPush', config.hooks)(
         event,
         destination.config,
         mappingEvent,
