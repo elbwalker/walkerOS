@@ -185,6 +185,7 @@ describe('ElbLayer', () => {
       allowed: true,
       consent: {},
       count: expect.any(Number),
+      destinations: expect.any(Array),
       elbLayer: w.elbLayer,
       globals: {},
       group: expect.any(String),

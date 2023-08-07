@@ -61,6 +61,7 @@ export namespace IElbwalker {
     allowed: boolean;
     consent: Consent;
     count: number;
+    destinations: Array<WebDestination.Function>;
     // @TODO custom state support
     elbLayer: ElbLayer;
     globals: Walker.Properties;
@@ -68,7 +69,7 @@ export namespace IElbwalker {
     hooks: Hooks.Functions;
     pageview: boolean;
     prefix: string;
-    queue: IElbwalker.Event[];
+    queue: Events;
     round: number;
     timing: number;
     user: User;
@@ -76,7 +77,7 @@ export namespace IElbwalker {
     default?: boolean;
   }
 
-  type Events = Event[];
+  type Events = Array<Event>;
   interface Event {
     event: string;
     data: Walker.Properties;

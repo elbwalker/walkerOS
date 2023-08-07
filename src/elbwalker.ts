@@ -12,7 +12,6 @@ function Elbwalker(
   customConfig: Partial<IElbwalker.Config> = {},
 ): IElbwalker.Function {
   const version = 1.6;
-  const destinations: Array<WebDestination.Function> = [];
   const runCommand = `${IElbwalker.Commands.Walker} ${IElbwalker.Commands.Run}`;
   const staticGlobals = customConfig.globals || {};
   const config = getConfig(customConfig);
@@ -66,7 +65,7 @@ function Elbwalker(
         pushToDestination(instance, destination, pushEvent);
       });
 
-    destinations.push(destination);
+    instance.config.destinations.push(destination);
   }
 
   function addHook<Hook extends keyof Hooks.Functions>(
@@ -194,6 +193,8 @@ function Elbwalker(
       consent: values.consent || current.consent || {},
       // Event counter for each run
       count: values.count || current.count || 0,
+      // Destination list
+      destinations: values.destinations || current.destinations || [],
       // Async access api in window as array
       elbLayer:
         values.elbLayer ||
@@ -383,7 +384,7 @@ function Elbwalker(
     // Add event to internal queue
     config.queue.push(pushEvent);
 
-    destinations.forEach((destination) => {
+    config.destinations.forEach((destination) => {
       pushToDestination(instance, destination, pushEvent);
     });
   }
@@ -476,7 +477,7 @@ function Elbwalker(
     instance.config.queue = [];
 
     // Reset all destination queues
-    destinations.forEach((destination) => {
+    instance.config.destinations.forEach((destination) => {
       destination.queue = [];
     });
 
@@ -493,19 +494,20 @@ function Elbwalker(
   }
 
   function setConsent(instance: IElbwalker.Function, data: IElbwalker.Consent) {
+    const config = instance.config;
+
     let runQueue = false;
     Object.entries(data).forEach(([consent, granted]) => {
       const state = !!granted;
 
-      instance.config.consent[consent] = state;
+      config.consent[consent] = state;
 
       // Only run queue if state was set to true
       runQueue = runQueue || state;
     });
 
     if (runQueue) {
-      const config = instance.config;
-      destinations.forEach((destination) => {
+      config.destinations.forEach((destination) => {
         let queue = destination.queue || [];
 
         // Try to push and remove successful ones from queue
