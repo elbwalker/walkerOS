@@ -4,6 +4,8 @@ const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
 
 export const destinationGoogleGTM: DestinationGoogleGTM.Function = {
+  type: 'google-gtm',
+
   config: {},
 
   init(config: DestinationGoogleGTM.Config) {
