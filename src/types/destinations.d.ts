@@ -16,6 +16,7 @@ export namespace WebDestination {
   interface Config<Custom = unknown, EventCustom = unknown> {
     consent?: IElbwalker.Consent; // Required consent states to init and push events
     custom?: Custom; // Arbitrary but protected configurations for custom enhancements
+    id?: string; // A unique key for the destination
     init?: boolean; // If the destination has been initialized by calling the init method
     loadScript?: boolean; // If an additional script to work should be loaded
     mapping?: Mapping<EventCustom>; // A map to handle events individually
