@@ -628,4 +628,37 @@ describe('Destination', () => {
     });
     expect(mockPushLatest).toHaveBeenCalledTimes(0);
   });
+
+  test('id namings', () => {
+    elbwalker.push('walker run');
+    elbwalker.push('walker destination', destination, { id: 'foo' });
+    elbwalker.push('walker destination', destination, { id: 'foo' }); // Override
+    elbwalker.push('walker destination', destination, { id: 'bar' });
+
+    expect(elbwalker.config.destinations).toHaveProperty('foo');
+    expect(Object.keys(elbwalker.config.destinations)).toHaveLength(2);
+
+    elbwalker.push('e a');
+    expect(mockPush).toHaveBeenCalledTimes(2);
+    mockPush.mockClear();
+    delete elbwalker.config.destinations['foo']; // Delete destination
+    expect(elbwalker.config.destinations).not.toHaveProperty('foo');
+    expect(Object.keys(elbwalker.config.destinations)).toHaveLength(1);
+
+    elbwalker.push('e a');
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    elbwalker.push('walker destination', destination);
+    expect(Object.keys(elbwalker.config.destinations)).toHaveLength(2);
+  });
+
+  test.skip('TODO investigate this', () => {
+    elbwalker.push('walker destination', destination, { id: 'foo' });
+    elbwalker.push('walker run');
+
+    // @TODO
+    // the walker destination command is not processed
+    // only if walker run was called before
+    expect(elbwalker.config.destinations['foo']).toBe(destination);
+  });
 });

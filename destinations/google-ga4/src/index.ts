@@ -51,7 +51,15 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
 
     // Check for the 'all' group to add each group
     if (include.includes('all'))
-      include = ['context', 'data', 'event', 'globals', 'user'];
+      include = [
+        'context',
+        'data',
+        'event',
+        'globals',
+        'source',
+        'user',
+        'version',
+      ];
 
     include.forEach((groupName) => {
       let group: Walker.Properties | Walker.OrderedProperties =
