@@ -65,8 +65,13 @@ function Elbwalker(
         pushToDestination(instance, destination, pushEvent);
       });
 
-    // @TODO getId could be duplicate, use incremental id instead
-    const id = config.id || getId(6);
+    let id = config.id; // Use given id
+    if (!id) {
+      // Generate a new id if none was given
+      do {
+        id = getId(4);
+      } while (instance.config.destinations[id]);
+    }
     instance.config.destinations[id] = destination;
   }
 
