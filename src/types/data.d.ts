@@ -34,7 +34,15 @@ export namespace Data {
     actions: Actions;
   }
 
-  interface Actions {}
+  interface Actions {
+    [name: string]: Action;
+  }
+
+  interface Action {
+    trigger?: Trigger;
+  }
+
+  type Trigger = string; // @TODO change to Walker.Trigger once updated
 
   interface Property {
     type?: PropertyType; // @TODO support multiple
