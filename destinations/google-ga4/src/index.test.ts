@@ -1,4 +1,4 @@
-import Elbwalker, { IElbwalker, Walker } from '@elbwalker/walker.js';
+import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
 import { DestinationGoogleGA4 } from './types';
 
 describe('Destination Google GA4', () => {
@@ -29,7 +29,7 @@ describe('Destination Google GA4', () => {
     w.elbLayer = [];
     w.dataLayer = [];
 
-    elbwalker = Elbwalker({ pageview: false });
+    elbwalker = Elbwalker({ pageview: false, version: 2 });
     elbwalker.push('walker run');
     w.gtag = mockFn;
   });
@@ -200,7 +200,7 @@ describe('Destination Google GA4', () => {
     );
   });
 
-  test('Parameters include', () => {
+  test.only('Parameters include', () => {
     elbwalker.push('walker config', {
       globals: { lang: 'de' },
       user: { id: 'us3r1d' },
@@ -255,9 +255,15 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    elbwalker.push('entity all', { foo: 'bar' }, trigger, {
-      position: ['reco', 0],
-    });
+    elbwalker.push(
+      'entity all',
+      { foo: 'bar' },
+      trigger,
+      {
+        position: ['reco', 0],
+      },
+      [{ type: 'n', data: { k: 'v' }, nested: [], context: {} }],
+    );
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'entity_all',
@@ -266,7 +272,12 @@ describe('Destination Google GA4', () => {
         data_foo: 'bar',
         event_trigger: trigger,
         globals_lang: 'de',
+        source_type: expect.anything(),
+        source_id: expect.any(String),
+        source_previous_id: expect.any(String),
         user_id: 'us3r1d',
+        version_config: 2,
+        version_walker: expect.anything(),
       }),
     );
 
