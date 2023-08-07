@@ -1,4 +1,4 @@
-import { IElbwalker, Utils, Walker } from '../types';
+import { Hooks, IElbwalker, Utils, Walker } from '../types';
 
 export const elb: IElbwalker.Elb = function () {
   (window.elbLayer = window.elbLayer || []).push(arguments);
@@ -109,6 +109,12 @@ export function getByStringDot(
   }, event);
 
   return value;
+}
+export function isSameType<T>(
+  variable: unknown,
+  type: T,
+): variable is typeof type {
+  return typeof variable === typeof type;
 }
 
 export function isVisible(element: HTMLElement): boolean {
@@ -377,16 +383,46 @@ export function trim(str: string): string {
   return str ? str.trim().replace(/^'|'$/g, '').trim() : '';
 }
 
-export function trycatch<P extends unknown[], R>(
+export function trycatch<P extends unknown[], R, S>(
   fn: (...args: P) => R | undefined,
+  onError?: (err: unknown) => S,
 ): (...args: P) => R | undefined {
   return function (...args: P): R | undefined {
     try {
       return fn(...args);
     } catch (err) {
-      // @TODO custom fn
-      console.error(IElbwalker.Commands.Walker, err);
+      // Call either the custom error handler or console.error
+      (onError && onError(err)) || console.error(err);
       return;
     }
+  };
+}
+
+export function useHooks<P extends any[], R>(
+  fn: (...args: P) => R,
+  name: Hooks.Names,
+  hooks: Hooks.Functions,
+): (...args: P) => R {
+  return function (...args: P): R {
+    let result: R;
+    const preHook = ('pre' + name) as keyof Hooks.Functions;
+    const postHook = ('post' + name) as keyof Hooks.Functions;
+    const preHookFn = hooks[preHook] as unknown as Hooks.HookFn<typeof fn>;
+    const postHookFn = hooks[postHook] as unknown as Hooks.HookFn<typeof fn>;
+
+    if (preHookFn) {
+      // Call the original function within the preHook
+      result = preHookFn({ fn }, ...args);
+    } else {
+      // Regular function call
+      result = fn(...args);
+    }
+
+    if (postHookFn) {
+      // Call the post-hook function with fn, result, and the original args
+      result = postHookFn({ fn, result }, ...args);
+    }
+
+    return result;
   };
 }

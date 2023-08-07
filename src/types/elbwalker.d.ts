@@ -1,4 +1,4 @@
-import { Walker, WebDestination } from '.';
+import type { Hooks, Walker, WebDestination } from '.';
 
 export namespace IElbwalker {
   type AnyObject = Record<string, unknown>;
@@ -16,14 +16,19 @@ export namespace IElbwalker {
       destination: WebDestination.Function<any, any>,
       config?: WebDestination.Config,
     ): void;
+    <K extends keyof Hooks.Functions>(
+      event: 'walker hook',
+      name: K,
+      hookFn: Hooks.Functions[K],
+    ): void;
     (event: 'walker init', scope: Scope | Scope[]): void;
     (event: 'walker run'): void;
     (event: 'walker user', user: User): void;
     (
       event: string,
       data?: PushData,
-      options?: string | WebDestination.Config, // @TODO use Walker.Trigger
-      context?: Walker.OrderedProperties | Element,
+      options?: PushOptions,
+      context?: PushContext,
       nested?: Walker.Entities,
     ): void;
   }
@@ -31,7 +36,7 @@ export namespace IElbwalker {
   type ElbLayer = [
     (IArguments | string)?,
     PushData?,
-    (string | WebDestination.Config)?,
+    PushOptions?,
     Walker.OrderedProperties?,
     Walker.Entities?,
   ];
@@ -42,9 +47,13 @@ export namespace IElbwalker {
     | Element
     | Scope
     | Scope[]
+    | String
     | User
     | Walker.Properties
     | WebDestination.Function;
+
+  type PushOptions = string | Hooks.Functions | WebDestination.Config; // @TODO use Walker.Trigger
+  type PushContext = Walker.OrderedProperties | Element;
 
   type Scope = Document | HTMLElement;
 
@@ -52,13 +61,15 @@ export namespace IElbwalker {
     allowed: boolean;
     consent: Consent;
     count: number;
+    destinations: Destinations;
     // @TODO custom state support
     elbLayer: ElbLayer;
     globals: Walker.Properties;
     group: string;
+    hooks: Hooks.Functions;
     pageview: boolean;
     prefix: string;
-    queue: IElbwalker.Event[];
+    queue: Events;
     round: number;
     timing: number;
     user: User;
@@ -66,7 +77,11 @@ export namespace IElbwalker {
     default?: boolean;
   }
 
-  type Events = Event[];
+  interface Destinations {
+    [name: string]: WebDestination.Function;
+  }
+
+  type Events = Array<Event>;
   interface Event {
     event: string;
     data: Walker.Properties;
@@ -101,6 +116,7 @@ export namespace IElbwalker {
     Destination = 'destination',
     Elb = 'elb',
     Globals = 'globals',
+    Hook = 'hook',
     Init = 'init',
     Link = 'link',
     Prefix = 'data-elb',
