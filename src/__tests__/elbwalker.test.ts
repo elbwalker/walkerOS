@@ -1,5 +1,5 @@
 import Elbwalker from '../elbwalker';
-import { Hooks, IElbwalker, WebDestination, elb } from '../';
+import { Data, Hooks, IElbwalker, WebDestination, elb } from '../';
 import fs from 'fs';
 
 describe('Elbwalker', () => {
@@ -442,5 +442,22 @@ describe('Elbwalker', () => {
         context: { c: ['o', 0] },
       }),
     );
+  });
+
+  test('Contract', () => {
+    const contract: Data.Contract = {
+      version: '',
+      globals: {
+        pagegroup: {
+          type: 'string',
+          values: [2, '2', []],
+        },
+        pagetype: {},
+      },
+      context: {},
+      entities: {},
+    };
+
+    expect(contract).toBeDefined();
   });
 });
