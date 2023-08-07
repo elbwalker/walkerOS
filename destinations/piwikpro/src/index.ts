@@ -10,6 +10,8 @@ export * from './types/index.d';
 // - testing
 
 export const destinationPiwikPro: DestinationPiwikPro.Function = {
+  type: 'piwikpro',
+
   config: {},
 
   init(config) {
