@@ -56,7 +56,6 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
         'data',
         'event',
         'globals',
-        'nested',
         'source',
         'user',
         'version',

@@ -85,7 +85,10 @@ Use the `string-dot` notation (`data.id`, `user.id`, `group`, `context.position.
 Nested entities will be looped if available. Use `items` and the wildcard (\*) to access and add them dynamically (for `order complete` events with multiple nested `product` entities for example).
 
 Use the `include` option to bulk-add event properties without explicitly mapping custom event parameters. This adds all available properties of the specified group. Available groups are `event` (for basic event properties like trigger, timing, etc.), `data`, `context`, `globals`, `nested`, `source`, `user`, `version`, or just `all`. All `data` properties are added automatically by default. If you don't want this add `include: []`.
-Note: `consent` is not available via `include`, but you can add them explicitly. The properties get prefixed with the group's name and underscore (like `globals_lang` for `{ globals: { lang: 'de' } }`). Custom parameters will override `include` values with the same key.
+
+> Note: `consent` and `nested` are not available via `include`, but you can add them explicitly using `params` or `items`.
+
+The properties get prefixed with the group's name and underscore (like `globals_lang` for `{ globals: { lang: 'de' } }`). Custom parameters will override `include` values with the same key.
 
 ### Node usage
 

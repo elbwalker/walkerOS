@@ -1,4 +1,4 @@
-import Elbwalker, { IElbwalker, Walker } from '@elbwalker/walker.js';
+import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
 import { DestinationGoogleGA4 } from './types';
 
 describe('Destination Google GA4', () => {
@@ -252,9 +252,15 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    elbwalker.push('entity all', { foo: 'bar' }, trigger, {
-      position: ['reco', 0],
-    });
+    elbwalker.push(
+      'entity all',
+      { foo: 'bar' },
+      trigger,
+      {
+        position: ['reco', 0],
+      },
+      [{ type: 'n', data: { k: 'v' }, nested: [], context: {} }],
+    );
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'entity_all',

@@ -48,7 +48,6 @@ export declare namespace DestinationGoogleGA4 {
     | 'data'
     | 'event'
     | 'globals'
-    | 'nested'
     | 'source'
     | 'user'
     | 'version'
