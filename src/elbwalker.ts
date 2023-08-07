@@ -28,13 +28,14 @@ function Elbwalker(
     // use dataLayer as default destination
     window.dataLayer = window.dataLayer || [];
     const destination: WebDestination.Function = {
-      config: { type: 'dataLayer' },
+      config: {},
       push: (event) => {
         window.dataLayer.push({
           ...event,
           walker: true,
         });
       },
+      type: 'dataLayer',
     };
     addDestination(instance, destination);
     ready(run, instance);
@@ -57,6 +58,7 @@ function Elbwalker(
       init: data.init,
       push: data.push,
       config,
+      type: data.type,
     };
 
     // Process previous events if not disabled
