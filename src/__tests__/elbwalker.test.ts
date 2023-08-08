@@ -63,7 +63,7 @@ describe('Elbwalker', () => {
       count: 1,
       version,
       source: {
-        type: IElbwalker.SourceType.Web,
+        type: 'web',
         id: 'http://localhost/',
         previous_id: '',
       },
@@ -88,7 +88,7 @@ describe('Elbwalker', () => {
       count: 2,
       version,
       source: {
-        type: IElbwalker.SourceType.Web,
+        type: 'web',
         id: 'http://localhost/',
         previous_id: '',
       },
@@ -163,7 +163,7 @@ describe('Elbwalker', () => {
       expect.objectContaining({
         event: 'entity source',
         source: {
-          type: IElbwalker.SourceType.Web,
+          type: 'web',
           id: newPageId,
           previous_id: newPageReferrer,
         },
