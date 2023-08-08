@@ -332,7 +332,7 @@ function Elbwalker(
     const timing = Math.round((performance.now() - config.timing) / 10) / 100;
     const id = `${timestamp}-${config.group}-${config.count}`;
     const source = {
-      type: IElbwalker.SourceType.Web,
+      type: 'web',
       id: window.location.href,
       previous_id: document.referrer,
     };
