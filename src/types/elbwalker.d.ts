@@ -140,10 +140,5 @@ export namespace IElbwalker {
     previous_id: string; // https://www.elbwalker.com/
   }
 
-  const enum SourceType {
-    Web = 1,
-    Server = 2,
-    App = 3,
-    Other = 4,
-  }
+  type SourceType = 'web' | 'app' | 'server' | 'other' | string;
 }
