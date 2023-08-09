@@ -1,4 +1,5 @@
 import { IElbwalker, Walker } from '../types';
+import { Commands } from './constants';
 import { assign, castValue, getAttribute, trim } from './utils';
 
 export function getElbAttributeName(
@@ -69,7 +70,7 @@ export function getElbValues(
 export function getEvents(
   target: Element,
   trigger: Walker.Trigger,
-  prefix: string = IElbwalker.Commands.Prefix,
+  prefix: string = Commands.Prefix,
 ): Walker.Events {
   const events: Walker.Events = [];
 
@@ -132,7 +133,7 @@ export function getEvents(
 export function getGlobals(prefix: string): Walker.Properties {
   const globalsName = getElbAttributeName(
     prefix,
-    IElbwalker.Commands.Globals,
+    Commands.Globals,
     false,
   );
   const globalSelector = `[${globalsName}]`;
@@ -141,7 +142,7 @@ export function getGlobals(prefix: string): Walker.Properties {
   document.querySelectorAll(globalSelector).forEach((element) => {
     values = assign(
       values,
-      getElbValues(prefix, element, IElbwalker.Commands.Globals, false),
+      getElbValues(prefix, element, Commands.Globals, false),
     );
   });
 
@@ -208,7 +209,7 @@ function getEntity(
     prefix,
     type,
   )}],[${getElbAttributeName(prefix, '')}]`; // [data-elb-entity,data-elb-]
-  const linkName = getElbAttributeName(prefix, IElbwalker.Commands.Link, false); // data-elblink
+  const linkName = getElbAttributeName(prefix, Commands.Link, false); // data-elblink
 
   let [parentProps, context] = getThisAndParentProperties(
     origin || element,
@@ -266,7 +267,7 @@ function getEntity(
 }
 
 function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
-  const linkName = getElbAttributeName(prefix, IElbwalker.Commands.Link, false); // data-elblink
+  const linkName = getElbAttributeName(prefix, Commands.Link, false); // data-elblink
 
   // Link
   if (elem.matches(`[${linkName}]`)) {
@@ -291,7 +292,7 @@ function getThisAndParentProperties(
   let parent = element as Node['parentElement'];
   const contextSelector = `[${getElbAttributeName(
     prefix,
-    IElbwalker.Commands.Context,
+    Commands.Context,
     false,
   )}]`;
 
@@ -308,7 +309,7 @@ function getThisAndParentProperties(
     // Context
     if (parent.matches(contextSelector)) {
       Object.entries(
-        getElbValues(prefix, parent, IElbwalker.Commands.Context, false),
+        getElbValues(prefix, parent, Commands.Context, false),
       ).forEach(([key, val]) => {
         // Don't override context with same but higher key
         if (!context[key]) context[key] = [val, contextI];
@@ -334,7 +335,7 @@ function resolveAttributes(
   while (element) {
     const attribute = getAttribute(
       element,
-      getElbAttributeName(prefix, IElbwalker.Commands.Action, false),
+      getElbAttributeName(prefix, Commands.Action, false),
     );
 
     // Get action string related to trigger

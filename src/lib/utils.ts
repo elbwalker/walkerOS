@@ -1,5 +1,5 @@
 import { Hooks, IElbwalker, Utils, Walker } from '../types';
-
+import { UtilsStorage } from './constants';
 export const elb: IElbwalker.Elb = function () {
   (window.elbLayer = window.elbLayer || []).push(arguments);
 };
@@ -257,16 +257,16 @@ export function startSession(
 
 export function storageDelete(
   key: string,
-  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+  storage: Utils.Storage.Type = UtilsStorage.Session,
 ) {
   switch (storage) {
-    case Utils.Storage.Type.Cookie:
+    case UtilsStorage.Cookie:
       storageWrite(key, '', 0, storage);
       break;
-    case Utils.Storage.Type.Local:
+    case UtilsStorage.Local:
       window.localStorage.removeItem(key);
       break;
-    case Utils.Storage.Type.Session:
+    case UtilsStorage.Session:
       window.sessionStorage.removeItem(key);
       break;
   }
@@ -274,7 +274,7 @@ export function storageDelete(
 
 export function storageRead(
   key: string,
-  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+  storage: Utils.Storage.Type = UtilsStorage.Session,
 ): Walker.PropertyType {
   // Helper function for local and session storage to support expiration
   function parseItem(string: string | null): Utils.Storage.Value {
@@ -296,7 +296,7 @@ export function storageRead(
   let value, item;
 
   switch (storage) {
-    case Utils.Storage.Type.Cookie:
+    case UtilsStorage.Cookie:
       value = decodeURIComponent(
         document.cookie
           .split('; ')
@@ -304,10 +304,10 @@ export function storageRead(
           ?.split('=')[1] || '',
       );
       break;
-    case Utils.Storage.Type.Local:
+    case UtilsStorage.Local:
       item = parseItem(window.localStorage.getItem(key));
       break;
-    case Utils.Storage.Type.Session:
+    case UtilsStorage.Session:
       item = parseItem(window.sessionStorage.getItem(key));
       break;
   }
@@ -329,7 +329,7 @@ export function storageWrite(
   key: string,
   value: Walker.PropertyType,
   maxAgeInMinutes = 30,
-  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+  storage: Utils.Storage.Type = UtilsStorage.Session,
   domain?: string,
 ): Walker.PropertyType {
   const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
@@ -337,7 +337,7 @@ export function storageWrite(
   const stringifiedItem = JSON.stringify(item);
 
   switch (storage) {
-    case Utils.Storage.Type.Cookie:
+    case UtilsStorage.Cookie:
       let cookie = `${key}=${encodeURIComponent(value)}; max-age=${
         maxAgeInMinutes * 60
       }; path=/; SameSite=Lax; secure`;
@@ -346,10 +346,10 @@ export function storageWrite(
 
       document.cookie = cookie;
       break;
-    case Utils.Storage.Type.Local:
+    case UtilsStorage.Local:
       window.localStorage.setItem(key, stringifiedItem);
       break;
-    case Utils.Storage.Type.Session:
+    case UtilsStorage.Session:
       window.sessionStorage.setItem(key, stringifiedItem);
       break;
   }

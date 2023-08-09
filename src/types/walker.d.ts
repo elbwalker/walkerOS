@@ -30,17 +30,17 @@ export namespace Walker {
 
   type Attributes = Array<string>;
 
-  const enum Trigger {
-    Click = 'click',
-    Custom = 'custom', // @TODO string
-    Hover = 'hover',
-    Load = 'load',
-    Pulse = 'pulse',
-    Scroll = 'scroll',
-    Submit = 'submit',
-    Visible = 'visible',
-    Wait = 'wait',
-  }
+  type Trigger =
+    | 'click'
+    | 'custom'
+    | 'hover'
+    | 'load'
+    | 'pulse'
+    | 'scroll'
+    | 'submit'
+    | 'visible'
+    | 'wait';
+  // @TODO string
 
   interface Filter {
     [name: string]: boolean;

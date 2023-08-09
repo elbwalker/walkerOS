@@ -1,5 +1,6 @@
 import Elbwalker from '../elbwalker';
-import { IElbwalker, Walker } from '../types';
+import { Trigger } from '../lib/constants';
+import { IElbwalker } from '../types';
 import fs from 'fs';
 
 const w = window;
@@ -40,11 +41,11 @@ describe('Trigger', () => {
 
   test('init global', () => {
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      Walker.Trigger.Click,
+      Trigger.Click,
       expect.any(Function),
     );
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      Walker.Trigger.Submit,
+      Trigger.Submit,
       expect.any(Function),
     );
   });
@@ -88,7 +89,7 @@ describe('Trigger', () => {
       expect.objectContaining({
         event: 'page view',
         data: { domain: 'localhost', id: '/', title: '', referrer: '' },
-        trigger: Walker.Trigger.Load,
+        trigger: Trigger.Load,
       }),
     );
   });
@@ -123,7 +124,7 @@ describe('Trigger', () => {
           title: 'Title',
           referrer: 'https://docs.elbwalker.com',
         },
-        trigger: Walker.Trigger.Load,
+        trigger: Trigger.Load,
       }),
     );
 
@@ -165,7 +166,7 @@ describe('Trigger', () => {
       1,
       expect.objectContaining({
         event: 'page view',
-        trigger: Walker.Trigger.Load,
+        trigger: Trigger.Load,
       }),
     );
 
@@ -184,7 +185,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'e click',
-        trigger: Walker.Trigger.Click,
+        trigger: Trigger.Click,
       }),
     );
   });
@@ -199,7 +200,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'form submit',
-        trigger: Walker.Trigger.Submit,
+        trigger: Trigger.Submit,
       }),
     );
   });
@@ -225,7 +226,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'mouse hover',
-        trigger: Walker.Trigger.Hover,
+        trigger: Trigger.Hover,
       }),
     );
 
@@ -240,7 +241,7 @@ describe('Trigger', () => {
 
     expect(mockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        trigger: Walker.Trigger.Wait,
+        trigger: Trigger.Wait,
       }),
     );
 
@@ -257,7 +258,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'timer alarm',
-        trigger: Walker.Trigger.Wait,
+        trigger: Trigger.Wait,
         data: { its: 'time' },
       }),
     );
@@ -268,7 +269,7 @@ describe('Trigger', () => {
 
     expect(mockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        trigger: Walker.Trigger.Pulse,
+        trigger: Trigger.Pulse,
       }),
     );
 
@@ -283,7 +284,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'pulse beat',
-        trigger: Walker.Trigger.Pulse,
+        trigger: Trigger.Pulse,
       }),
     );
 
@@ -294,7 +295,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'pulse beat',
-        trigger: Walker.Trigger.Pulse,
+        trigger: Trigger.Pulse,
       }),
     );
 
@@ -328,7 +329,7 @@ describe('Trigger', () => {
     const elem = document.getElementById('scroll') as HTMLElement;
 
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      Walker.Trigger.Scroll,
+      Trigger.Scroll,
       expect.any(Function),
     );
 
@@ -372,7 +373,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'scoll 80percent',
-        trigger: Walker.Trigger.Scroll,
+        trigger: Trigger.Scroll,
       }),
     );
 
@@ -390,7 +391,7 @@ describe('Trigger', () => {
           observe: mockObserve,
           unobserve: mockUnobserve,
           disconnect: mockDisconnect,
-        } as unknown as IntersectionObserver),
+        }) as unknown as IntersectionObserver,
     );
 
     // mock isVisible to return true
@@ -449,7 +450,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'visible impression',
-        trigger: Walker.Trigger.Visible,
+        trigger: Trigger.Visible,
       }),
     );
 

@@ -108,23 +108,6 @@ export namespace IElbwalker {
     session?: string;
   }
 
-  const enum Commands {
-    Action = 'action',
-    Config = 'config',
-    Consent = 'consent',
-    Context = 'context',
-    Destination = 'destination',
-    Elb = 'elb',
-    Globals = 'globals',
-    Hook = 'hook',
-    Init = 'init',
-    Link = 'link',
-    Prefix = 'data-elb',
-    Run = 'run',
-    User = 'user',
-    Walker = 'walker',
-  }
-
   interface Consent {
     [name: string]: boolean; // name of consent group or tool
   }
@@ -139,6 +122,23 @@ export namespace IElbwalker {
     id: string; // https://github.com/elbwalker/walker.js
     previous_id: string; // https://www.elbwalker.com/
   }
+
+  type Commands =
+    | 'action'
+    | 'config'
+    | 'consent'
+    | 'context'
+    | 'destination'
+    | 'elb'
+    | 'globals'
+    | 'hook'
+    | 'init'
+    | 'link'
+    | 'data-elb'
+    | 'run'
+    | 'user'
+    | 'walker'
+    | string;
 
   type SourceType = 'web' | 'app' | 'server' | 'other' | string;
 }

@@ -2,11 +2,7 @@ import { Walker } from './walker';
 
 export namespace Utils {
   namespace Storage {
-    const enum Type {
-      Cookie = 0,
-      Local = 1,
-      Session = 2,
-    }
+    type Type = 'cookie' | 'local' | 'session';
 
     interface Value {
       e: number; // Expiration timestamp
