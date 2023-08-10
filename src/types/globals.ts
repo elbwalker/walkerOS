@@ -1,4 +1,4 @@
-import { IElbwalker } from '.';
+import type { IElbwalker } from '.';
 
 declare global {
   interface Window {

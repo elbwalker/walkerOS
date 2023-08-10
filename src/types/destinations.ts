@@ -1,7 +1,7 @@
-import { IElbwalker } from '.';
+import type { IElbwalker } from '.';
 
 export namespace WebDestination {
-  interface Function<Custom = unknown, EventCustom = unknown> {
+  export interface Function<Custom = unknown, EventCustom = unknown> {
     init?: (config: Config<Custom, EventCustom>) => boolean;
     push: (
       event: IElbwalker.Event,
@@ -14,7 +14,7 @@ export namespace WebDestination {
     type?: string; // The type of the destination
   }
 
-  interface Config<Custom = unknown, EventCustom = unknown> {
+  export interface Config<Custom = unknown, EventCustom = unknown> {
     consent?: IElbwalker.Consent; // Required consent states to init and push events
     custom?: Custom; // Arbitrary but protected configurations for custom enhancements
     id?: string; // A unique key for the destination
@@ -24,11 +24,11 @@ export namespace WebDestination {
     queue?: boolean; // Disable processing of previously pushed events
   }
 
-  interface Mapping<EventCustom> {
+  export  interface Mapping<EventCustom> {
     [entity: string]: { [action: string]: EventConfig<EventCustom> };
   }
 
-  interface EventConfig<EventCustom = unknown> {
+  export  interface EventConfig<EventCustom = unknown> {
     consent?: IElbwalker.Consent; // Required consent states to init and push events
     custom?: EventCustom; // Arbitrary but protected configurations for custom event config
     ignore?: boolean; // Choose to no process an event when set to true

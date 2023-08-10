@@ -4,7 +4,6 @@
     "module": "esnext",
     "lib": ["dom", "es2018"],
     "outDir": "dist",
-    "rootDir": ".",
     "strict": true,
     "moduleResolution": "node",
     "noImplicitReturns": true,

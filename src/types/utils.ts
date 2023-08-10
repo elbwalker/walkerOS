@@ -1,16 +1,16 @@
-import { Walker } from './walker';
+import type { Walker } from '.';
 
 export namespace Utils {
-  namespace Storage {
-    type Type = 'cookie' | 'local' | 'session';
+  export namespace Storage {
+    export type Type = 'cookie' | 'local' | 'session';
 
-    interface Value {
+    export interface Value {
       e: number; // Expiration timestamp
       v: string; // Value
     }
   }
 
-  interface SessionStart {
+  export interface SessionStart {
     data?: Walker.Properties;
     domains?: string[];
     isNew?: boolean;
@@ -19,7 +19,7 @@ export namespace Utils {
     url?: string;
   }
 
-  interface MarketingParameters {
+  export interface MarketingParameters {
     [key: string]: string;
   }
 }

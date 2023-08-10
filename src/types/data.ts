@@ -1,4 +1,4 @@
-import { Walker } from './walker';
+import type { Walker } from '.';
 
 export namespace Data {
   export interface Contract {

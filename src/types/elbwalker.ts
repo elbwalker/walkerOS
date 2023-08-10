@@ -1,14 +1,14 @@
 import type { Hooks, Walker, WebDestination } from '.';
 
 export namespace IElbwalker {
-  type AnyObject = Record<string, unknown>;
+  export type AnyObject = Record<string, unknown>;
 
-  interface Function {
+  export interface Function {
     push: Elb;
     config: Config;
   }
 
-  interface Elb {
+  export interface Elb {
     (event: 'walker config', config: Partial<Config>): void;
     (event: 'walker consent', consent: Consent): void;
     (
@@ -33,7 +33,7 @@ export namespace IElbwalker {
     ): void;
   }
 
-  type ElbLayer = [
+  export type ElbLayer = [
     (IArguments | string)?,
     PushData?,
     PushOptions?,
@@ -41,7 +41,7 @@ export namespace IElbwalker {
     Walker.Entities?,
   ];
 
-  type PushData =
+  export type PushData =
     | Partial<Config>
     | Consent
     | Element
@@ -52,12 +52,12 @@ export namespace IElbwalker {
     | Walker.Properties
     | WebDestination.Function;
 
-  type PushOptions = string | Hooks.Functions | WebDestination.Config; // @TODO use Walker.Trigger
-  type PushContext = Walker.OrderedProperties | Element;
+  export type PushOptions = string | Hooks.Functions | WebDestination.Config; // @TODO use Walker.Trigger
+  export type PushContext = Walker.OrderedProperties | Element;
 
-  type Scope = Document | HTMLElement;
+  export type Scope = Document | HTMLElement;
 
-  interface Config {
+  export interface Config {
     allowed: boolean;
     consent: Consent;
     count: number;
@@ -77,12 +77,12 @@ export namespace IElbwalker {
     default?: boolean;
   }
 
-  interface Destinations {
+  export interface Destinations {
     [name: string]: WebDestination.Function;
   }
 
-  type Events = Array<Event>;
-  interface Event {
+  export type Events = Array<Event>;
+  export interface Event {
     event: string;
     data: Walker.Properties;
     context: Walker.OrderedProperties;
@@ -102,28 +102,28 @@ export namespace IElbwalker {
     source: Source;
   }
 
-  interface User {
+  export interface User {
     id?: string;
     device?: string;
     session?: string;
   }
 
-  interface Consent {
+  export interface Consent {
     [name: string]: boolean; // name of consent group or tool
   }
 
-  interface Version {
+  export interface Version {
     walker: number;
     config: number;
   }
 
-  interface Source {
+  export interface Source {
     type: SourceType;
     id: string; // https://github.com/elbwalker/walker.js
     previous_id: string; // https://www.elbwalker.com/
   }
 
-  type Commands =
+  export type Commands =
     | 'action'
     | 'config'
     | 'consent'
@@ -140,5 +140,5 @@ export namespace IElbwalker {
     | 'walker'
     | string;
 
-  type SourceType = 'web' | 'app' | 'server' | 'other' | string;
+  export type SourceType = 'web' | 'app' | 'server' | 'other' | string;
 }
