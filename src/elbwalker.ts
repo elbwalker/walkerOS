@@ -7,13 +7,13 @@ import {
 } from './lib/trigger';
 import { assign, getId, isSameType, trycatch, useHooks } from './lib/utils';
 import { getEntities, getGlobals } from './lib/walker';
-import { Commands } from './lib/constants';
+import Const from './lib/constants';
 
 function Elbwalker(
   customConfig: Partial<IElbwalker.Config> = {},
 ): IElbwalker.Function {
   const version = 1.6;
-  const runCommand = `${Commands.Walker} ${Commands.Run}`;
+  const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
   const staticGlobals = customConfig.globals || {};
   const config = getConfig(customConfig);
   const instance: IElbwalker.Function = {
@@ -83,7 +83,7 @@ function Elbwalker(
     name: Hook,
     hookFn: Hooks.Functions[Hook],
   ) {
-    // @TODO this can be used in commands directly
+    // @TODO this can be used in Const.Commands directly
     config.hooks[name] = hookFn;
   }
 
@@ -118,7 +118,7 @@ function Elbwalker(
     // there is a special execution order for all predefined events
     // walker events gets prioritized before others
     // this garantees a fully configuration before the first run
-    const walkerCommand = `${Commands.Walker} `; // Space on purpose
+    const walkerCommand = `${Const.Commands.Walker} `; // Space on purpose
     const walkerEvents: Array<IElbwalker.ElbLayer> = [];
     const customEvents: Array<IElbwalker.ElbLayer> = [];
     let isFirstRunEvent = true;
@@ -147,11 +147,11 @@ function Elbwalker(
 
       // check if event is a walker commend
       event.startsWith(walkerCommand)
-        ? walkerEvents.push([event, data, trigger, context, nested]) // stack it to the walker commands
+        ? walkerEvents.push([event, data, trigger, context, nested]) // stack it to the walker Const.Commands
         : customEvents.push([event, data, trigger, context, nested]); // stack it to the custom events
     });
 
-    // Prefere all walker commands before events during processing the predefined ones
+    // Prefere all walker Const.Commands before events during processing the predefined ones
     walkerEvents.concat(customEvents).map((item) => {
       const [event, data, trigger, context, nested] = item;
       instance.push(String(event), data, trigger, context, nested);
@@ -223,7 +223,7 @@ function Elbwalker(
       pageview:
         'pageview' in values ? !!values.pageview : current.pageview || true,
       // HTML prefix attribute
-      prefix: values.prefix || current.prefix || Commands.Prefix,
+      prefix: values.prefix || current.prefix || Const.Commands.Prefix,
       // Temporary event queue for all events of a run
       queue: values.queue || current.queue || [],
       // The first round is a special one due to state changes
@@ -244,17 +244,17 @@ function Elbwalker(
     options?: IElbwalker.PushOptions,
   ) {
     switch (action) {
-      case Commands.Config:
+      case Const.Commands.Config:
         if (isObject(data))
           instance.config = getConfig(
             data as IElbwalker.Config,
             instance.config,
           );
         break;
-      case Commands.Consent:
+      case Const.Commands.Consent:
         isObject(data) && setConsent(instance, data as IElbwalker.Consent);
         break;
-      case Commands.Destination:
+      case Const.Commands.Destination:
         isObject(data) &&
           addDestination(
             instance,
@@ -262,11 +262,11 @@ function Elbwalker(
             options as WebDestination.Config,
           );
         break;
-      case Commands.Hook:
+      case Const.Commands.Hook:
         if (isSameType(data, '') && isSameType(options, isSameType))
           addHook(instance.config, data as keyof Hooks.Functions, options);
         break;
-      case Commands.Init:
+      case Const.Commands.Init:
         const elems: unknown[] = Array.isArray(data)
           ? data
           : [data || document];
@@ -275,11 +275,11 @@ function Elbwalker(
             initScopeTrigger(instance, elem as IElbwalker.Scope);
         });
         break;
-      case Commands.Run:
+      case Const.Commands.Run:
         // @TODO maybe pass run state with argument
         ready(run, instance);
         break;
-      case Commands.User:
+      case Const.Commands.User:
         isObject(data) && setUserIds(instance, data as IElbwalker.User);
         break;
       default:
@@ -322,7 +322,7 @@ function Elbwalker(
     if (!entity || !action) return;
 
     // Handle internal walker command events
-    if (entity === Commands.Walker) {
+    if (entity === Const.Commands.Walker) {
       handleCommand(instance, action, data, options as WebDestination.Config);
       return;
     }

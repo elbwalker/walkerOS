@@ -1,4 +1,4 @@
-import { UtilsStorage } from '../lib/constants';
+import Const from '../lib/constants';
 import {
   elb,
   debounce,
@@ -171,21 +171,21 @@ describe('Utils', () => {
     expect(storageRead(key)).toBe('s');
 
     // Local
-    storageWrite(key, value, 1, UtilsStorage.Local);
-    expect(storageRead(key, UtilsStorage.Local)).toBe(value);
-    storageDelete(key, UtilsStorage.Local);
-    expect(storageRead(key, UtilsStorage.Local)).toBe('');
+    storageWrite(key, value, 1, Const.UtilsStorage.Local);
+    expect(storageRead(key, Const.UtilsStorage.Local)).toBe(value);
+    storageDelete(key, Const.UtilsStorage.Local);
+    expect(storageRead(key, Const.UtilsStorage.Local)).toBe('');
 
     // Cookie
     Object.defineProperty(document, 'cookie', {
       writable: true,
       value: '',
     });
-    expect(storageWrite(key, value, 1, UtilsStorage.Cookie)).toBe(value);
-    storageDelete(key, UtilsStorage.Cookie);
-    expect(storageRead(key, UtilsStorage.Cookie)).toBe('');
-    expect(storageRead('foo', UtilsStorage.Cookie)).toBe('');
-    storageWrite(key, value, 1, UtilsStorage.Cookie, 'elbwalker.com');
+    expect(storageWrite(key, value, 1, Const.UtilsStorage.Cookie)).toBe(value);
+    storageDelete(key, Const.UtilsStorage.Cookie);
+    expect(storageRead(key, Const.UtilsStorage.Cookie)).toBe('');
+    expect(storageRead('foo', Const.UtilsStorage.Cookie)).toBe('');
+    storageWrite(key, value, 1, Const.UtilsStorage.Cookie, 'elbwalker.com');
     expect(document.cookie).toContain('domain=elbwalker.com');
 
     // Expiration Session
@@ -196,14 +196,14 @@ describe('Utils', () => {
     expect(w.sessionStorage.getItem(key)).toBeNull();
 
     // Expiration Local
-    expect(storageWrite(key, value, 5, UtilsStorage.Local)).toBe(value);
+    expect(storageWrite(key, value, 5, Const.UtilsStorage.Local)).toBe(value);
     jest.advanceTimersByTime(6 * 60 * 1000);
     expect(w.localStorage.getItem(key)).toBeDefined();
-    expect(storageRead(key, UtilsStorage.Local)).toBe('');
+    expect(storageRead(key, Const.UtilsStorage.Local)).toBe('');
     expect(w.localStorage.getItem(key)).toBeNull();
 
     // Expiration Cookie
-    storageWrite(key, value, 5, UtilsStorage.Cookie);
+    storageWrite(key, value, 5, Const.UtilsStorage.Cookie);
     expect(document.cookie).toContain('max-age=300');
 
     // Cast

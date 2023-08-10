@@ -1,5 +1,5 @@
 import Elbwalker from '../elbwalker';
-import { Trigger } from '../lib/constants';
+import Const from '../lib/constants';
 import { IElbwalker } from '../types';
 import fs from 'fs';
 
@@ -41,11 +41,11 @@ describe('Trigger', () => {
 
   test('init global', () => {
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      Trigger.Click,
+      Const.Trigger.Click,
       expect.any(Function),
     );
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      Trigger.Submit,
+      Const.Trigger.Submit,
       expect.any(Function),
     );
   });
@@ -89,7 +89,7 @@ describe('Trigger', () => {
       expect.objectContaining({
         event: 'page view',
         data: { domain: 'localhost', id: '/', title: '', referrer: '' },
-        trigger: Trigger.Load,
+        trigger: Const.Trigger.Load,
       }),
     );
   });
@@ -124,7 +124,7 @@ describe('Trigger', () => {
           title: 'Title',
           referrer: 'https://docs.elbwalker.com',
         },
-        trigger: Trigger.Load,
+        trigger: Const.Trigger.Load,
       }),
     );
 
@@ -166,7 +166,7 @@ describe('Trigger', () => {
       1,
       expect.objectContaining({
         event: 'page view',
-        trigger: Trigger.Load,
+        trigger: Const.Trigger.Load,
       }),
     );
 
@@ -185,7 +185,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'e click',
-        trigger: Trigger.Click,
+        trigger: Const.Trigger.Click,
       }),
     );
   });
@@ -200,7 +200,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'form submit',
-        trigger: Trigger.Submit,
+        trigger: Const.Trigger.Submit,
       }),
     );
   });
@@ -226,7 +226,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'mouse hover',
-        trigger: Trigger.Hover,
+        trigger: Const.Trigger.Hover,
       }),
     );
 
@@ -241,7 +241,7 @@ describe('Trigger', () => {
 
     expect(mockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        trigger: Trigger.Wait,
+        trigger: Const.Trigger.Wait,
       }),
     );
 
@@ -258,7 +258,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'timer alarm',
-        trigger: Trigger.Wait,
+        trigger: Const.Trigger.Wait,
         data: { its: 'time' },
       }),
     );
@@ -269,7 +269,7 @@ describe('Trigger', () => {
 
     expect(mockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        trigger: Trigger.Pulse,
+        trigger: Const.Trigger.Pulse,
       }),
     );
 
@@ -284,7 +284,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'pulse beat',
-        trigger: Trigger.Pulse,
+        trigger: Const.Trigger.Pulse,
       }),
     );
 
@@ -295,7 +295,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'pulse beat',
-        trigger: Trigger.Pulse,
+        trigger: Const.Trigger.Pulse,
       }),
     );
 
@@ -329,7 +329,7 @@ describe('Trigger', () => {
     const elem = document.getElementById('scroll') as HTMLElement;
 
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      Trigger.Scroll,
+      Const.Trigger.Scroll,
       expect.any(Function),
     );
 
@@ -373,7 +373,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'scoll 80percent',
-        trigger: Trigger.Scroll,
+        trigger: Const.Trigger.Scroll,
       }),
     );
 
@@ -450,7 +450,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'visible impression',
-        trigger: Trigger.Visible,
+        trigger: Const.Trigger.Visible,
       }),
     );
 

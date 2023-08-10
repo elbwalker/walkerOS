@@ -1,6 +1,6 @@
 import { IElbwalker, Utils, Walker } from '../types';
 
-export const Commands: { [key: string]: IElbwalker.Commands } = {
+const Commands: { [key: string]: IElbwalker.Commands } = {
   ['Action']: 'action',
   ['Config']: 'config',
   ['Consent']: 'consent',
@@ -17,7 +17,7 @@ export const Commands: { [key: string]: IElbwalker.Commands } = {
   ['Walker']: 'walker',
 } as const;
 
-export const Trigger: { [key: string]: Walker.Trigger } = {
+const Trigger: { [key: string]: Walker.Trigger } = {
   Click: 'click',
   Custom: 'custom',
   Hover: 'hover',
@@ -29,8 +29,10 @@ export const Trigger: { [key: string]: Walker.Trigger } = {
   Wait: 'wait',
 } as const;
 
-export const UtilsStorage: { [key: string]: Utils.Storage.Type } = {
+const UtilsStorage: { [key: string]: Utils.Storage.Type } = {
   Cookie: 'cookie',
   Local: 'local',
   Session: 'session',
 } as const;
+
+export default { Commands, Trigger, UtilsStorage };
