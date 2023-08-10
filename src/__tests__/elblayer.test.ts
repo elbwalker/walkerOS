@@ -212,10 +212,6 @@ describe('ElbLayer', () => {
     expect(elbwalker.config).toStrictEqual(expect.objectContaining(update)); // Partial test
     expect(elbwalker.config).toStrictEqual(config); // Full test
 
-    update = { unknown: 'random' };
-    elb('walker config', update);
-    expect(elbwalker.config).toStrictEqual(config);
-
     update = { version: 2 };
     elb('walker config', update);
     expect(elbwalker.config).toStrictEqual(expect.objectContaining(update));

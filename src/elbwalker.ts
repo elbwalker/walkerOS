@@ -195,45 +195,42 @@ function Elbwalker(
     values: Partial<IElbwalker.Config>,
     current: Partial<IElbwalker.Config> = {},
   ): IElbwalker.Config {
+    const defaultConfig: IElbwalker.Config = {
+      allowed: false, // Wait for explicit run command to start
+      consent: {}, // Handle the consent states
+      count: 0, // Event counter for each run
+      destinations: {}, // Destination list
+      elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
+      globals: assign(staticGlobals), // Globals enhanced with the static globals from init and previous values
+      group: '', // Random id to group events of a run
+      hooks: {}, // Manage the hook functions
+      pageview: true, // Trigger a page view event by default
+      prefix: Const.Commands.Prefix, // HTML prefix attribute
+      queue: [], // Temporary event queue for all events of a run
+      round: 0, // The first round is a special one due to state changes
+      timing: 0, // Offset counter to calculate timing property
+      user: {}, // Handles the user ids
+      version: 0, // Helpful to differentiate the clients used setup version
+    };
+
+    // If 'pageview' is explicitly provided in values, use it; otherwise, use current or default
+    const pageview =
+      'pageview' in values
+        ? !!values.pageview
+        : current.pageview || defaultConfig.pageview;
+
+    const globals = assign(
+      staticGlobals,
+      assign(current.globals || {}, values.globals || {}),
+    );
+
     // Value hierarchy: values > current > default
     return {
-      // Wait for explicit run command to start
-      allowed: values.allowed || current.allowed || false,
-      // Handle the consent states
-      consent: values.consent || current.consent || {},
-      // Event counter for each run
-      count: values.count || current.count || 0,
-      // Destination list
-      destinations: values.destinations || current.destinations || {},
-      // Async access api in window as array
-      elbLayer:
-        values.elbLayer ||
-        current.elbLayer ||
-        (window.elbLayer = window.elbLayer || []),
-      // Globals enhanced with the static globals from init and previous values
-      globals: assign(
-        staticGlobals,
-        assign(current.globals || {}, values.globals || {}),
-      ),
-      // Random id to group events of a run
-      group: values.group || current.group || '',
-      // Manage the hook functions
-      hooks: values.hooks || current.hooks || {},
-      // Trigger a page view event by default
-      pageview:
-        'pageview' in values ? !!values.pageview : current.pageview || true,
-      // HTML prefix attribute
-      prefix: values.prefix || current.prefix || Const.Commands.Prefix,
-      // Temporary event queue for all events of a run
-      queue: values.queue || current.queue || [],
-      // The first round is a special one due to state changes
-      round: values.round || current.round || 0,
-      // Offset counter to calculate timing property
-      timing: values.timing || current.timing || 0,
-      // Handles the user ids
-      user: values.user || current.user || {},
-      // Helpful to differentiate the clients used setup version
-      version: values.version || current.version || 0,
+      ...defaultConfig,
+      ...current,
+      ...values,
+      pageview,
+      globals,
     };
   }
 
