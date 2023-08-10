@@ -27,36 +27,20 @@ const commonConfig = {
             drop_debugger: true,
             pure_funcs: ['console.log'],
           },
-          // mangle: {
-          //   properties: {
-          //     reserved: [
-          //       'push',
-          //       'config',
-          //       'allowed',
-          //       'consent',
-          //       'count',
-          //       'destinations',
-          //       'elbLayer',
-          //       'globals',
-          //       'group',
-          //       'hooks',
-          //       'pageview',
-          //       'prefix',
-          //       'queue',
-          //       'round',
-          //       'timing',
-          //       'user',
-          //       'version',
-          //       // Add any other properties that should not be mangled here
-          //     ],
-          //   },
-          // },
+          mangle: {
+            properties: {
+              regex: /^[A-Z]/, // Only mangle capitalized properties
+              reserved: [
+                'Elbwalker', // Prevent mangling of Elbwalker
+              ],
+            },
+          },
           module: true,
           output: {
             comments: false,
             beautify: false,
           },
-          toplevel: false,
+          toplevel: true,
           nameCache: null,
           ie8: false,
           keep_classnames: undefined,
