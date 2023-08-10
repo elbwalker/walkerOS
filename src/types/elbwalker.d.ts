@@ -3,7 +3,7 @@ import type { Hooks, Walker, WebDestination } from '.';
 export namespace IElbwalker {
   type AnyObject = Record<string, unknown>;
 
-  export interface Function {
+  interface Function {
     push: Elb;
     config: Config;
   }

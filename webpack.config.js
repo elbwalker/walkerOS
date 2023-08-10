@@ -1,8 +1,8 @@
 const path = require('path');
+const TerserPlugin = require('terser-webpack-plugin');
 
-const nodeConfig = {
+const commonConfig = {
   mode: 'production',
-  entry: './src/modules/node.ts',
   module: {
     rules: [
       {
@@ -15,51 +15,80 @@ const nodeConfig = {
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
   },
+  optimization: {
+    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          ecma: 5,
+          warnings: false,
+          compress: {
+            drop_console: true,
+            drop_debugger: true,
+            pure_funcs: ['console.log'],
+          },
+          // mangle: {
+          //   properties: {
+          //     reserved: [
+          //       'push',
+          //       'config',
+          //       'allowed',
+          //       'consent',
+          //       'count',
+          //       'destinations',
+          //       'elbLayer',
+          //       'globals',
+          //       'group',
+          //       'hooks',
+          //       'pageview',
+          //       'prefix',
+          //       'queue',
+          //       'round',
+          //       'timing',
+          //       'user',
+          //       'version',
+          //       // Add any other properties that should not be mangled here
+          //     ],
+          //   },
+          // },
+          module: true,
+          output: {
+            comments: false,
+            beautify: false,
+          },
+          toplevel: false,
+          nameCache: null,
+          ie8: false,
+          keep_classnames: undefined,
+          keep_fnames: false,
+          safari10: false,
+        },
+      }),
+    ],
+  },
+};
+
+const nodeConfig = {
+  target: 'node',
+  entry: './src/modules/node.ts',
   output: {
     filename: 'index.js',
     path: path.resolve(__dirname, 'dist'),
     library: { type: 'commonjs2' },
   },
-  plugins: [],
 };
 
 const browserConfig = {
-  mode: 'production',
   entry: './src/modules/browser.ts',
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/,
-      },
-    ],
-  },
-  resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
-  },
   output: {
     filename: 'walker.js',
     path: path.resolve(__dirname, 'dist'),
   },
-  plugins: [],
 };
 
 const es5WalkerConfig = {
-  mode: 'production',
   entry: './src/modules/walker.es5.ts',
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/,
-      },
-    ],
-  },
-  resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
-  },
+
   output: {
     filename: 'walker.es5.js',
     library: {
@@ -68,24 +97,10 @@ const es5WalkerConfig = {
       export: 'default',
     },
   },
-  plugins: [],
 };
 
 const es5UtilsConfig = {
-  mode: 'production',
   entry: './src/modules/utils.es5.ts',
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/,
-      },
-    ],
-  },
-  resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
-  },
   output: {
     filename: 'utils.es5.js',
     library: {
@@ -94,24 +109,10 @@ const es5UtilsConfig = {
       export: 'default',
     },
   },
-  plugins: [],
 };
 
 const moduleConfig = {
-  mode: 'production',
   entry: './src/modules/node.ts',
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/,
-      },
-    ],
-  },
-  resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
-  },
   experiments: {
     outputModule: true,
   },
@@ -122,24 +123,10 @@ const moduleConfig = {
     filename: 'index.mjs',
     path: path.resolve(__dirname, 'dist'),
   },
-  plugins: [],
 };
 
 const utilsConfig = {
-  mode: 'production',
   entry: './src/lib/utils.ts',
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/,
-      },
-    ],
-  },
-  resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
-  },
   experiments: {
     outputModule: true,
   },
@@ -150,14 +137,13 @@ const utilsConfig = {
     filename: 'utils.js',
     path: path.resolve(__dirname, 'dist'),
   },
-  plugins: [],
 };
 
 module.exports = [
-  browserConfig,
-  es5WalkerConfig,
-  es5UtilsConfig,
-  nodeConfig,
-  moduleConfig,
-  utilsConfig,
+  { ...commonConfig, ...browserConfig },
+  { ...commonConfig, ...es5WalkerConfig },
+  { ...commonConfig, ...es5UtilsConfig },
+  { ...commonConfig, ...nodeConfig },
+  { ...commonConfig, ...moduleConfig },
+  { ...commonConfig, ...utilsConfig },
 ];
