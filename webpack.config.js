@@ -68,6 +68,26 @@ const commonConfig = {
   },
 };
 
+const es5Config = {
+  module: {
+    rules: [
+      {
+        test: /\.ts$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: [
+              '@babel/preset-env', // For ES5 conversion
+              '@babel/preset-typescript', // For TypeScript
+            ],
+          },
+        },
+      },
+    ],
+  },
+};
+
 const nodeConfig = {
   target: 'node',
   entry: './src/modules/node.ts',
@@ -88,7 +108,6 @@ const browserConfig = {
 
 const es5WalkerConfig = {
   entry: './src/modules/walker.es5.ts',
-
   output: {
     filename: 'walker.es5.js',
     library: {
@@ -141,8 +160,8 @@ const utilsConfig = {
 
 module.exports = [
   { ...commonConfig, ...browserConfig },
-  { ...commonConfig, ...es5WalkerConfig },
-  { ...commonConfig, ...es5UtilsConfig },
+  { ...commonConfig, ...es5Config, ...es5WalkerConfig },
+  { ...commonConfig, ...es5Config, ...es5UtilsConfig },
   { ...commonConfig, ...nodeConfig },
   { ...commonConfig, ...moduleConfig },
   { ...commonConfig, ...utilsConfig },
