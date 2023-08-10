@@ -1,4 +1,4 @@
-import { IElbwalker, Walker } from '../types';
+import type { IElbwalker, Walker } from '../types';
 import { getElbAttributeName, getEvents, getTriggerActions } from './walker';
 import { getAttribute, isVisible, throttle, trycatch } from './utils';
 import Const from './constants';

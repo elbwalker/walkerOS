@@ -3,7 +3,6 @@ module.exports = {
   env: {
     es6: true,
     browser: true,
-    node: true,
     jest: true,
   },
   parser: '@typescript-eslint/parser',
@@ -11,11 +10,8 @@ module.exports = {
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
-    'plugin:@typescript-eslint/eslint-recommended',
     'plugin:jest/recommended',
     'prettier',
-    'prettier/@typescript-eslint',
-    'plugin:compat/recommended',
   ],
   parserOptions: {
     project: 'tsconfig.json',

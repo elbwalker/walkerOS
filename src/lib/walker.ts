@@ -1,4 +1,4 @@
-import {  Walker } from '../types';
+import type { Walker } from '../types';
 import Const from './constants';
 import { assign, castValue, getAttribute, trim } from './utils';
 

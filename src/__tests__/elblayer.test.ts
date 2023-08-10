@@ -1,6 +1,6 @@
 import Elbwalker from '../elbwalker';
 import { elb } from '../lib/utils';
-import { IElbwalker, Walker, WebDestination } from '../types';
+import type { IElbwalker, Walker, WebDestination } from '../types';
 
 describe('ElbLayer', () => {
   const w = window;

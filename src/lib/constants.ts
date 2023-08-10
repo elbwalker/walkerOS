@@ -1,4 +1,4 @@
-import { IElbwalker, Utils, Walker } from '../types';
+import type { IElbwalker, Utils, Walker } from '../types';
 
 const Commands: { [key: string]: IElbwalker.Commands } = {
   Action: 'action',

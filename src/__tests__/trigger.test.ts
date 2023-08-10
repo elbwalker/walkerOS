@@ -1,6 +1,6 @@
 import Elbwalker from '../elbwalker';
 import Const from '../lib/constants';
-import { IElbwalker } from '../types';
+import type { IElbwalker } from '../types';
 import fs from 'fs';
 
 const w = window;

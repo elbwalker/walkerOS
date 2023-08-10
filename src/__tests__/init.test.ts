@@ -1,5 +1,5 @@
 import Elbwalker from '../elbwalker';
-import { IElbwalker } from '../types';
+import type { IElbwalker } from '../types';
 
 describe('Init', () => {
   const w = window;

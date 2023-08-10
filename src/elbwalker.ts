@@ -1,4 +1,4 @@
-import { Hooks, IElbwalker, Walker, WebDestination } from './types';
+import type { Hooks, IElbwalker, Walker, WebDestination } from './types';
 import {
   initScopeTrigger,
   initGlobalTrigger,

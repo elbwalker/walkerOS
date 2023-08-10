@@ -1,5 +1,6 @@
-import { Hooks, IElbwalker, Utils, Walker } from '../types';
+import type { Hooks, IElbwalker, Utils, Walker } from '../types';
 import Const from './constants';
+
 export const elb: IElbwalker.Elb = function () {
   (window.elbLayer = window.elbLayer || []).push(arguments);
 };
@@ -38,7 +39,7 @@ export function debounce<P extends unknown[], R>(
   fn: (...args: P) => R,
   wait = 1000,
 ) {
-  let timer: NodeJS.Timeout;
+  let timer: number | NodeJS.Timeout;
 
   return (...args: P): Promise<R> => {
     // abort previous invocation
@@ -361,7 +362,7 @@ export function throttle<P extends unknown[], R>(
   fn: (...args: P) => R | undefined,
   delay = 1000,
 ): (...args: P) => R | undefined {
-  let isBlocked: NodeJS.Timeout | 0;
+  let isBlocked: number | NodeJS.Timeout | 0;
 
   return function (...args: P): R | undefined {
     // Skip since function is still blocked by previous call

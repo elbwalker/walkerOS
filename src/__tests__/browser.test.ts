@@ -1,4 +1,4 @@
-import { IElbwalker } from '../types';
+import type { IElbwalker } from '../types';
 import fs from 'fs';
 
 describe('Browser', () => {
