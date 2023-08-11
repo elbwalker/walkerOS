@@ -2,20 +2,20 @@
   "compilerOptions": {
     "target": "es2018",
     "module": "esnext",
-    "lib": ["dom", "es6"],
+    "lib": ["dom", "es2018"],
     "outDir": "dist",
-    "preserveConstEnums": true,
-    "rootDir": ".",
     "strict": true,
     "moduleResolution": "node",
     "noImplicitReturns": true,
     "noImplicitAny": true,
     "typeRoots": ["src/types", "node_modules/@types"],
-    "types": ["jest", "node"],
+    "types": ["jest"],
     "esModuleInterop": true,
-    // @TODO "isolatedModules": true,
+    "isolatedModules": true,
     "declaration": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true
+    // "skipLibCheck": true
   },
   "exclude": ["node_modules", "dist", "**/*.test.*"],
   "include": ["src/**/*.ts", ".eslintrc.js"],

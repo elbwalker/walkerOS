@@ -1,17 +1,17 @@
+import Const from '../lib/constants';
 import {
   elb,
   debounce,
   getMarketingParameters,
   isVisible,
-  startSession,
   storageDelete,
   storageRead,
   storageWrite,
   throttle,
   getByStringDot,
   trycatch,
+  sessionStart,
 } from '../lib/utils';
-import { Utils } from '../types';
 
 const w = window;
 
@@ -171,21 +171,21 @@ describe('Utils', () => {
     expect(storageRead(key)).toBe('s');
 
     // Local
-    storageWrite(key, value, 1, Utils.Storage.Type.Local);
-    expect(storageRead(key, Utils.Storage.Type.Local)).toBe(value);
-    storageDelete(key, Utils.Storage.Type.Local);
-    expect(storageRead(key, Utils.Storage.Type.Local)).toBe('');
+    storageWrite(key, value, 1, Const.Utils.Storage.Local);
+    expect(storageRead(key, Const.Utils.Storage.Local)).toBe(value);
+    storageDelete(key, Const.Utils.Storage.Local);
+    expect(storageRead(key, Const.Utils.Storage.Local)).toBe('');
 
     // Cookie
     Object.defineProperty(document, 'cookie', {
       writable: true,
       value: '',
     });
-    expect(storageWrite(key, value, 1, Utils.Storage.Type.Cookie)).toBe(value);
-    storageDelete(key, Utils.Storage.Type.Cookie);
-    expect(storageRead(key, Utils.Storage.Type.Cookie)).toBe('');
-    expect(storageRead('foo', Utils.Storage.Type.Cookie)).toBe('');
-    storageWrite(key, value, 1, Utils.Storage.Type.Cookie, 'elbwalker.com');
+    expect(storageWrite(key, value, 1, Const.Utils.Storage.Cookie)).toBe(value);
+    storageDelete(key, Const.Utils.Storage.Cookie);
+    expect(storageRead(key, Const.Utils.Storage.Cookie)).toBe('');
+    expect(storageRead('foo', Const.Utils.Storage.Cookie)).toBe('');
+    storageWrite(key, value, 1, Const.Utils.Storage.Cookie, 'elbwalker.com');
     expect(document.cookie).toContain('domain=elbwalker.com');
 
     // Expiration Session
@@ -196,14 +196,14 @@ describe('Utils', () => {
     expect(w.sessionStorage.getItem(key)).toBeNull();
 
     // Expiration Local
-    expect(storageWrite(key, value, 5, Utils.Storage.Type.Local)).toBe(value);
+    expect(storageWrite(key, value, 5, Const.Utils.Storage.Local)).toBe(value);
     jest.advanceTimersByTime(6 * 60 * 1000);
     expect(w.localStorage.getItem(key)).toBeDefined();
-    expect(storageRead(key, Utils.Storage.Type.Local)).toBe('');
+    expect(storageRead(key, Const.Utils.Storage.Local)).toBe('');
     expect(w.localStorage.getItem(key)).toBeNull();
 
     // Expiration Cookie
-    storageWrite(key, value, 5, Utils.Storage.Type.Cookie);
+    storageWrite(key, value, 5, Const.Utils.Storage.Cookie);
     expect(document.cookie).toContain('max-age=300');
 
     // Cast
@@ -220,27 +220,27 @@ describe('Utils', () => {
     });
 
     // Is new
-    expect(startSession({ url, referrer: url, isNew: true })).toStrictEqual(
+    expect(sessionStart({ url, referrer: url, isNew: true })).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
 
     // Referral
-    expect(startSession({ url, referrer })).toStrictEqual(
+    expect(sessionStart({ url, referrer })).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
 
     // Direct
-    expect(startSession({ url, referrer: '' })).toStrictEqual(
+    expect(sessionStart({ url, referrer: '' })).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
 
     // Predefined data
     expect(
-      startSession({ url, referrer, data: { id: 'sessionId' } }),
+      sessionStart({ url, referrer, data: { id: 'sessionId' } }),
     ).toStrictEqual(expect.objectContaining({ id: 'sessionId' }));
 
     // Marketing
-    expect(startSession({ url: url + '?utm_campaign=foo' })).toStrictEqual(
+    expect(sessionStart({ url: url + '?utm_campaign=foo' })).toStrictEqual(
       expect.objectContaining({
         id: expect.any(String),
         campaign: 'foo',
@@ -250,7 +250,7 @@ describe('Utils', () => {
 
     // Marketing with custom marketing parameter
     expect(
-      startSession({
+      sessionStart({
         url: url + '?affiliate=parameter',
         parameters: { affiliate: 'custom' },
       }),
@@ -264,14 +264,14 @@ describe('Utils', () => {
 
     // Referrer with custom domains
     expect(
-      startSession({
+      sessionStart({
         url: 'https://www.elbwalker.com',
         referrer: 'https://docs.elbwalker.com',
         domains: ['docs.elbwalker.com'],
       }),
     ).toBeFalsy();
     expect(
-      startSession({
+      sessionStart({
         url: 'https://www.elbwalker.com',
         referrer: '',
         domains: [''], // Hack to disable direct or hidden referrer
@@ -285,7 +285,7 @@ describe('Utils', () => {
     Object.defineProperty(window, 'location', {
       value: new URL(url),
     });
-    expect(startSession()).toStrictEqual(
+    expect(sessionStart()).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
 
@@ -295,10 +295,10 @@ describe('Utils', () => {
         getEntriesByType: jest.fn().mockReturnValue([{ type: 'reload' }]),
       },
     });
-    expect(startSession()).toBeFalsy();
+    expect(sessionStart()).toBeFalsy();
 
     // Reload with marketing parameter
-    expect(startSession({ url: url + '?utm_campaign=foo' })).toBeFalsy();
+    expect(sessionStart({ url: url + '?utm_campaign=foo' })).toBeFalsy();
   });
 
   test('marketing parameters', () => {

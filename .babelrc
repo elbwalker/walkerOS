@@ -1,9 +1,12 @@
 {
   "presets": [
-    ["@babel/preset-env", {
-      "useBuiltIns": "usage",
-      "debug": false
-    }],
+    [
+      "@babel/preset-env",
+      {
+        "useBuiltIns": "usage",
+        "debug": false
+      }
+    ],
     "@babel/preset-typescript"
   ],
   "plugins": [
@@ -16,5 +19,6 @@
         "useESModules": false
       }
     ]
-  ]
+  ],
+  "sourceMaps": true
 }

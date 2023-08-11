@@ -1,9 +1,10 @@
-import Elbwalker from '../elbwalker';
-import { IElbwalker, Walker } from '../types';
+import ElbwalkerWeb from '../elbwalker';
+import Const from '../lib/constants';
+import type { Elbwalker } from '../types';
 import fs from 'fs';
 
 const w = window;
-let elbwalker: IElbwalker.Function;
+let elbwalker: Elbwalker.Function;
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
@@ -26,7 +27,7 @@ describe('Trigger', () => {
     jest.spyOn(global, 'setInterval');
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
-    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
+    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
 
     events = {};
     document.addEventListener = mockAddEventListener.mockImplementation(
@@ -35,16 +36,16 @@ describe('Trigger', () => {
       },
     );
 
-    elbwalker = Elbwalker({ default: true });
+    elbwalker = ElbwalkerWeb({ default: true });
   });
 
   test('init global', () => {
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      Walker.Trigger.Click,
+      Const.Trigger.Click,
       expect.any(Function),
     );
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      Walker.Trigger.Submit,
+      Const.Trigger.Submit,
       expect.any(Function),
     );
   });
@@ -88,7 +89,7 @@ describe('Trigger', () => {
       expect.objectContaining({
         event: 'page view',
         data: { domain: 'localhost', id: '/', title: '', referrer: '' },
-        trigger: Walker.Trigger.Load,
+        trigger: Const.Trigger.Load,
       }),
     );
   });
@@ -123,7 +124,7 @@ describe('Trigger', () => {
           title: 'Title',
           referrer: 'https://docs.elbwalker.com',
         },
-        trigger: Walker.Trigger.Load,
+        trigger: Const.Trigger.Load,
       }),
     );
 
@@ -165,7 +166,7 @@ describe('Trigger', () => {
       1,
       expect.objectContaining({
         event: 'page view',
-        trigger: Walker.Trigger.Load,
+        trigger: Const.Trigger.Load,
       }),
     );
 
@@ -184,7 +185,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'e click',
-        trigger: Walker.Trigger.Click,
+        trigger: Const.Trigger.Click,
       }),
     );
   });
@@ -199,7 +200,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'form submit',
-        trigger: Walker.Trigger.Submit,
+        trigger: Const.Trigger.Submit,
       }),
     );
   });
@@ -225,7 +226,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'mouse hover',
-        trigger: Walker.Trigger.Hover,
+        trigger: Const.Trigger.Hover,
       }),
     );
 
@@ -240,7 +241,7 @@ describe('Trigger', () => {
 
     expect(mockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        trigger: Walker.Trigger.Wait,
+        trigger: Const.Trigger.Wait,
       }),
     );
 
@@ -257,7 +258,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'timer alarm',
-        trigger: Walker.Trigger.Wait,
+        trigger: Const.Trigger.Wait,
         data: { its: 'time' },
       }),
     );
@@ -268,7 +269,7 @@ describe('Trigger', () => {
 
     expect(mockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        trigger: Walker.Trigger.Pulse,
+        trigger: Const.Trigger.Pulse,
       }),
     );
 
@@ -283,7 +284,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'pulse beat',
-        trigger: Walker.Trigger.Pulse,
+        trigger: Const.Trigger.Pulse,
       }),
     );
 
@@ -294,7 +295,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'pulse beat',
-        trigger: Walker.Trigger.Pulse,
+        trigger: Const.Trigger.Pulse,
       }),
     );
 
@@ -328,7 +329,7 @@ describe('Trigger', () => {
     const elem = document.getElementById('scroll') as HTMLElement;
 
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      Walker.Trigger.Scroll,
+      Const.Trigger.Scroll,
       expect.any(Function),
     );
 
@@ -372,7 +373,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'scoll 80percent',
-        trigger: Walker.Trigger.Scroll,
+        trigger: Const.Trigger.Scroll,
       }),
     );
 
@@ -390,7 +391,7 @@ describe('Trigger', () => {
           observe: mockObserve,
           unobserve: mockUnobserve,
           disconnect: mockDisconnect,
-        } as unknown as IntersectionObserver),
+        }) as unknown as IntersectionObserver,
     );
 
     // mock isVisible to return true
@@ -449,7 +450,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'visible impression',
-        trigger: Walker.Trigger.Visible,
+        trigger: Const.Trigger.Visible,
       }),
     );
 

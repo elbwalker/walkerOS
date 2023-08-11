@@ -1,7 +1,6 @@
-import { Walker } from '../types';
-import { getEvents } from '../lib/walker';
-
 import fs from 'fs';
+import { getEvents } from '../lib/walker';
+import Const from '../lib/constants';
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 
 const html: string = fs
@@ -17,7 +16,7 @@ beforeEach(() => {
 
 describe('Walker', () => {
   test('Basic collection', () => {
-    expect(getEvents(getElem('basic'), Walker.Trigger.Load)).toMatchObject([
+    expect(getEvents(getElem('basic'), Const.Trigger.Load)).toMatchObject([
       {
         entity: 'entity',
         action: 'action',
@@ -27,12 +26,12 @@ describe('Walker', () => {
   });
 
   test('Nested entites', () => {
-    expect(getEvents(getElem('nested'), Walker.Trigger.Load)).toMatchObject([
+    expect(getEvents(getElem('nested'), Const.Trigger.Load)).toMatchObject([
       {
         entity: 'mother',
         action: 'like',
         data: { label: 'grandmother' },
-        trigger: Walker.Trigger.Load,
+        trigger: Const.Trigger.Load,
         nested: [
           { type: 'son', data: { interested_in: 'pizza' } },
           {
@@ -45,7 +44,7 @@ describe('Walker', () => {
       },
     ]);
 
-    expect(getEvents(getElem('son'), Walker.Trigger.Load)).toMatchObject([
+    expect(getEvents(getElem('son'), Const.Trigger.Load)).toMatchObject([
       {
         entity: 'son',
         action: 'speak',
@@ -56,7 +55,7 @@ describe('Walker', () => {
   });
 
   test('Nested entites filtered', () => {
-    expect(getEvents(getElem('daughter'), Walker.Trigger.Load)).toMatchObject([
+    expect(getEvents(getElem('daughter'), Const.Trigger.Load)).toMatchObject([
       {
         entity: 'daughter',
         action: 'care',
@@ -66,7 +65,7 @@ describe('Walker', () => {
   });
 
   test('Nested entites filtered multiple', () => {
-    expect(getEvents(getElem('baby'), Walker.Trigger.Load)).toMatchObject([
+    expect(getEvents(getElem('baby'), Const.Trigger.Load)).toMatchObject([
       {
         entity: 'baby',
         action: 'play',
@@ -77,40 +76,38 @@ describe('Walker', () => {
   });
 
   test('Quoted Properties', () => {
-    expect(getEvents(getElem('properties'), Walker.Trigger.Load)).toMatchObject(
+    expect(getEvents(getElem('properties'), Const.Trigger.Load)).toMatchObject([
+      {
+        entity: 'properties',
+        action: 'act;ion',
+        data: { foo: 'ba;r', key: 'value' },
+      },
+    ]);
+    expect(getEvents(getElem('properties'), Const.Trigger.Click)).toMatchObject(
       [
         {
           entity: 'properties',
-          action: 'act;ion',
+          action: 'action;',
           data: { foo: 'ba;r', key: 'value' },
         },
       ],
     );
-    expect(
-      getEvents(getElem('properties'), Walker.Trigger.Click),
-    ).toMatchObject([
-      {
-        entity: 'properties',
-        action: 'action;',
-        data: { foo: 'ba;r', key: 'value' },
-      },
-    ]);
   });
 
   test('No elbwalker attribute at clicked element', () => {
-    expect(
-      getEvents(getElem('click_test'), Walker.Trigger.Click),
-    ).toMatchObject([
-      {
-        entity: 'click',
-        action: 'test',
-        data: {},
-      },
-    ]);
+    expect(getEvents(getElem('click_test'), Const.Trigger.Click)).toMatchObject(
+      [
+        {
+          entity: 'click',
+          action: 'test',
+          data: {},
+        },
+      ],
+    );
   });
 
   test('No action attribute at clicked element', () => {
-    expect(getEvents(getElem('click_bubble'), Walker.Trigger.Click)).toEqual([
+    expect(getEvents(getElem('click_bubble'), Const.Trigger.Click)).toEqual([
       expect.objectContaining({
         entity: 'click',
         action: 'test',
@@ -121,7 +118,7 @@ describe('Walker', () => {
 
   test('Empty action attribute at clicked element', () => {
     expect(
-      getEvents(getElem('click_bubble_action'), Walker.Trigger.Click),
+      getEvents(getElem('click_bubble_action'), Const.Trigger.Click),
     ).toEqual([
       expect.objectContaining({
         entity: 'click',
@@ -132,29 +129,29 @@ describe('Walker', () => {
   });
 
   test('Empty action attribute at clicked element and missing action attribute at parent', () => {
-    expect(getEvents(getElem('click_invalid'), Walker.Trigger.Click)).toEqual(
+    expect(getEvents(getElem('click_invalid'), Const.Trigger.Click)).toEqual(
       [],
     );
   });
 
   test('Missing action and property', () => {
-    expect(getEvents(getElem('just_entity'), Walker.Trigger.Click)).toEqual([]);
+    expect(getEvents(getElem('just_entity'), Const.Trigger.Click)).toEqual([]);
   });
 
   test('Get nested child data properties with higher priority', () => {
-    expect(
-      getEvents(getElem('propert_priority'), Walker.Trigger.Click),
-    ).toEqual([
-      expect.objectContaining({
-        entity: 'property',
-        action: 'priority',
-        data: { parent: 'property', prefere: 'deeper' },
-      }),
-    ]);
+    expect(getEvents(getElem('propert_priority'), Const.Trigger.Click)).toEqual(
+      [
+        expect.objectContaining({
+          entity: 'property',
+          action: 'priority',
+          data: { parent: 'property', prefere: 'deeper' },
+        }),
+      ],
+    );
   });
 
   test('Dynamic values', () => {
-    expect(getEvents(getElem('dynamic_values'), Walker.Trigger.Click)).toEqual([
+    expect(getEvents(getElem('dynamic_values'), Const.Trigger.Click)).toEqual([
       expect.objectContaining({
         action: 'click',
         entity: 'dynamic',
@@ -171,7 +168,7 @@ describe('Walker', () => {
 
   test('Prefix', () => {
     expect(
-      getEvents(getElem('prefix'), Walker.Trigger.Load, 'elb'),
+      getEvents(getElem('prefix'), Const.Trigger.Load, 'elb'),
     ).toMatchObject([
       {
         entity: 'entity',
@@ -182,7 +179,7 @@ describe('Walker', () => {
   });
 
   test('Context', () => {
-    expect(getEvents(getElem('context'), Walker.Trigger.Click)).toMatchObject([
+    expect(getEvents(getElem('context'), Const.Trigger.Click)).toMatchObject([
       {
         entity: 'e',
         action: 'click',
@@ -197,7 +194,7 @@ describe('Walker', () => {
   });
 
   test('Casting', () => {
-    expect(getEvents(getElem('casting'), Walker.Trigger.Load)).toMatchObject([
+    expect(getEvents(getElem('casting'), Const.Trigger.Load)).toMatchObject([
       {
         entity: 'types',
         action: 'cast',
@@ -216,7 +213,7 @@ describe('Walker', () => {
   });
 
   test('Array properties', () => {
-    expect(getEvents(getElem('array'), Walker.Trigger.Load)).toMatchObject([
+    expect(getEvents(getElem('array'), Const.Trigger.Load)).toMatchObject([
       {
         entity: 'array',
         action: 'props',
@@ -228,20 +225,18 @@ describe('Walker', () => {
   });
 
   test('Page entity as default', () => {
-    expect(getEvents(getElem('no_entity'), Walker.Trigger.Click)).toMatchObject(
-      [
-        {
-          entity: 'page',
-          action: 'click',
-          data: { e: 'v', p: 'v' },
-          context: { k: ['c', 0] },
-        },
-      ],
-    );
+    expect(getEvents(getElem('no_entity'), Const.Trigger.Click)).toMatchObject([
+      {
+        entity: 'page',
+        action: 'click',
+        data: { e: 'v', p: 'v' },
+        context: { k: ['c', 0] },
+      },
+    ]);
   });
 
   test('Generic properties', () => {
-    expect(getEvents(getElem('generic'), Walker.Trigger.Click)).toMatchObject([
+    expect(getEvents(getElem('generic'), Const.Trigger.Click)).toMatchObject([
       {
         entity: 'generic',
         data: { p: 'v', k: 'v', g: 'v', o: 'v' },
@@ -253,22 +248,22 @@ describe('Walker', () => {
     const data = { k: 'v', l0: 0, l1: 1, l2: 2, l3: 3 };
 
     expect(
-      getEvents(getElem('link-parent'), Walker.Trigger.Click),
+      getEvents(getElem('link-parent'), Const.Trigger.Click),
     ).toMatchObject([{ entity: 'l', context: { entity: ['link', 0] }, data }]);
 
-    expect(
-      getEvents(getElem('link-child'), Walker.Trigger.Click),
-    ).toMatchObject([
-      {
-        entity: 'l',
-        context: {
-          child: ['link', 0],
-          parent: ['link', 1],
-          entity: ['link', 2],
+    expect(getEvents(getElem('link-child'), Const.Trigger.Click)).toMatchObject(
+      [
+        {
+          entity: 'l',
+          context: {
+            child: ['link', 0],
+            parent: ['link', 1],
+            entity: ['link', 2],
+          },
+          data,
         },
-        data,
-      },
-    ]);
+      ],
+    );
   });
 });
 

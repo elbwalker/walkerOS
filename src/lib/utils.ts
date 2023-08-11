@@ -1,6 +1,7 @@
-import { Hooks, IElbwalker, Utils, Walker } from '../types';
+import type { Elbwalker, Hooks, Utils, Walker } from '../types';
+import Const from './constants';
 
-export const elb: IElbwalker.Elb = function () {
+export const elb: Elbwalker.Elb = function () {
   (window.elbLayer = window.elbLayer || []).push(arguments);
 };
 
@@ -38,7 +39,7 @@ export function debounce<P extends unknown[], R>(
   fn: (...args: P) => R,
   wait = 1000,
 ) {
-  let timer: NodeJS.Timeout;
+  let timer: number | NodeJS.Timeout;
 
   return (...args: P): Promise<R> => {
     // abort previous invocation
@@ -198,7 +199,7 @@ export function isVisible(element: HTMLElement): boolean {
   return false;
 }
 
-export function startSession(
+export function sessionStart(
   config: Utils.SessionStart = {},
 ): Walker.Properties | false {
   // Force a new session or start checking if it's a regular new one
@@ -257,16 +258,16 @@ export function startSession(
 
 export function storageDelete(
   key: string,
-  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+  storage: Utils.StorageType = Const.Utils.Storage.Session,
 ) {
   switch (storage) {
-    case Utils.Storage.Type.Cookie:
+    case Const.Utils.Storage.Cookie:
       storageWrite(key, '', 0, storage);
       break;
-    case Utils.Storage.Type.Local:
+    case Const.Utils.Storage.Local:
       window.localStorage.removeItem(key);
       break;
-    case Utils.Storage.Type.Session:
+    case Const.Utils.Storage.Session:
       window.sessionStorage.removeItem(key);
       break;
   }
@@ -274,10 +275,10 @@ export function storageDelete(
 
 export function storageRead(
   key: string,
-  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+  storage: Utils.StorageType = Const.Utils.Storage.Session,
 ): Walker.PropertyType {
   // Helper function for local and session storage to support expiration
-  function parseItem(string: string | null): Utils.Storage.Value {
+  function parseItem(string: string | null): Utils.StorageValue {
     try {
       return JSON.parse(string || '');
     } catch (err) {
@@ -296,7 +297,7 @@ export function storageRead(
   let value, item;
 
   switch (storage) {
-    case Utils.Storage.Type.Cookie:
+    case Const.Utils.Storage.Cookie:
       value = decodeURIComponent(
         document.cookie
           .split('; ')
@@ -304,10 +305,10 @@ export function storageRead(
           ?.split('=')[1] || '',
       );
       break;
-    case Utils.Storage.Type.Local:
+    case Const.Utils.Storage.Local:
       item = parseItem(window.localStorage.getItem(key));
       break;
-    case Utils.Storage.Type.Session:
+    case Const.Utils.Storage.Session:
       item = parseItem(window.sessionStorage.getItem(key));
       break;
   }
@@ -329,15 +330,15 @@ export function storageWrite(
   key: string,
   value: Walker.PropertyType,
   maxAgeInMinutes = 30,
-  storage: Utils.Storage.Type = Utils.Storage.Type.Session,
+  storage: Utils.StorageType = Const.Utils.Storage.Session,
   domain?: string,
 ): Walker.PropertyType {
   const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
-  const item: Utils.Storage.Value = { e, v: String(value) };
+  const item: Utils.StorageValue = { e, v: String(value) };
   const stringifiedItem = JSON.stringify(item);
 
   switch (storage) {
-    case Utils.Storage.Type.Cookie:
+    case Const.Utils.Storage.Cookie:
       let cookie = `${key}=${encodeURIComponent(value)}; max-age=${
         maxAgeInMinutes * 60
       }; path=/; SameSite=Lax; secure`;
@@ -346,10 +347,10 @@ export function storageWrite(
 
       document.cookie = cookie;
       break;
-    case Utils.Storage.Type.Local:
+    case Const.Utils.Storage.Local:
       window.localStorage.setItem(key, stringifiedItem);
       break;
-    case Utils.Storage.Type.Session:
+    case Const.Utils.Storage.Session:
       window.sessionStorage.setItem(key, stringifiedItem);
       break;
   }
@@ -361,7 +362,7 @@ export function throttle<P extends unknown[], R>(
   fn: (...args: P) => R | undefined,
   delay = 1000,
 ): (...args: P) => R | undefined {
-  let isBlocked: NodeJS.Timeout | 0;
+  let isBlocked: number | NodeJS.Timeout | 0;
 
   return function (...args: P): R | undefined {
     // Skip since function is still blocked by previous call

@@ -1,6 +1,6 @@
-import Elbwalker from './elbwalker';
-export default Elbwalker;
+import ElbwalkerWeb from './elbwalker';
+export default ElbwalkerWeb;
 
 export * from './lib/utils';
 
-export * from './types';
+export type * from './types';

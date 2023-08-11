@@ -1,4 +1,4 @@
-import { Hooks, IElbwalker, Walker, WebDestination } from './types';
+import type { Hooks, Elbwalker, Walker, WebDestination } from './types';
 import {
   initScopeTrigger,
   initGlobalTrigger,
@@ -7,15 +7,16 @@ import {
 } from './lib/trigger';
 import { assign, getId, isSameType, trycatch, useHooks } from './lib/utils';
 import { getEntities, getGlobals } from './lib/walker';
+import Const from './lib/constants';
 
-function Elbwalker(
-  customConfig: Partial<IElbwalker.Config> = {},
-): IElbwalker.Function {
+function ElbwalkerWeb(
+  customConfig: Partial<Elbwalker.Config> = {},
+): Elbwalker.Function {
   const version = 1.6;
-  const runCommand = `${IElbwalker.Commands.Walker} ${IElbwalker.Commands.Run}`;
+  const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
   const staticGlobals = customConfig.globals || {};
   const config = getConfig(customConfig);
-  const instance: IElbwalker.Function = {
+  const instance: Elbwalker.Function = {
     push: useHooks(push, 'Push', config.hooks),
     config,
   };
@@ -44,7 +45,7 @@ function Elbwalker(
   initGlobalTrigger(instance);
 
   function addDestination(
-    instance: IElbwalker.Function,
+    instance: Elbwalker.Function,
     data: WebDestination.Function,
     options?: WebDestination.Config,
   ) {
@@ -78,16 +79,15 @@ function Elbwalker(
   }
 
   function addHook<Hook extends keyof Hooks.Functions>(
-    config: IElbwalker.Config,
+    config: Elbwalker.Config,
     name: Hook,
     hookFn: Hooks.Functions[Hook],
   ) {
-    // @TODO this can be used in commands directly
     config.hooks[name] = hookFn;
   }
 
   function allowedToPush(
-    instance: IElbwalker.Function,
+    instance: Elbwalker.Function,
     destination: WebDestination.Function,
   ): boolean {
     // Default without consent handling
@@ -113,20 +113,20 @@ function Elbwalker(
   }
 
   // Handle existing events in the elbLayer on first run
-  function callPredefined(instance: IElbwalker.Function) {
+  function callPredefined(instance: Elbwalker.Function) {
     // there is a special execution order for all predefined events
     // walker events gets prioritized before others
     // this garantees a fully configuration before the first run
-    const walkerCommand = `${IElbwalker.Commands.Walker} `; // Space on purpose
-    const walkerEvents: Array<IElbwalker.ElbLayer> = [];
-    const customEvents: Array<IElbwalker.ElbLayer> = [];
+    const walkerCommand = `${Const.Commands.Walker} `; // Space on purpose
+    const walkerEvents: Array<Elbwalker.ElbLayer> = [];
+    const customEvents: Array<Elbwalker.ElbLayer> = [];
     let isFirstRunEvent = true;
 
     // At that time the elbLayer was not yet initialized
     instance.config.elbLayer.map((pushedEvent) => {
       let [event, data, trigger, context, nested] = [
         ...Array.from(pushedEvent as IArguments),
-      ] as IElbwalker.ElbLayer;
+      ] as Elbwalker.ElbLayer;
 
       // Pushed as Arguments
       if ({}.hasOwnProperty.call(event, 'callee')) {
@@ -146,23 +146,23 @@ function Elbwalker(
 
       // check if event is a walker commend
       event.startsWith(walkerCommand)
-        ? walkerEvents.push([event, data, trigger, context, nested]) // stack it to the walker commands
+        ? walkerEvents.push([event, data, trigger, context, nested]) // stack it to the walker Const.Commands
         : customEvents.push([event, data, trigger, context, nested]); // stack it to the custom events
     });
 
-    // Prefere all walker commands before events during processing the predefined ones
+    // Prefere all walker Const.Commands before events during processing the predefined ones
     walkerEvents.concat(customEvents).map((item) => {
       const [event, data, trigger, context, nested] = item;
       instance.push(String(event), data, trigger, context, nested);
     });
   }
 
-  function elbLayerInit(instance: IElbwalker.Function) {
+  function elbLayerInit(instance: Elbwalker.Function) {
     const elbLayer = instance.config.elbLayer;
 
     elbLayer.push = function (
       event?: IArguments | unknown,
-      data?: IElbwalker.PushData,
+      data?: Elbwalker.PushData,
       trigger?: string,
       context?: Walker.OrderedProperties,
       nested?: Walker.Entities,
@@ -191,69 +191,66 @@ function Elbwalker(
   }
 
   function getConfig(
-    values: Partial<IElbwalker.Config>,
-    current: Partial<IElbwalker.Config> = {},
-  ): IElbwalker.Config {
+    values: Partial<Elbwalker.Config>,
+    current: Partial<Elbwalker.Config> = {},
+  ): Elbwalker.Config {
+    const defaultConfig: Elbwalker.Config = {
+      allowed: false, // Wait for explicit run command to start
+      consent: {}, // Handle the consent states
+      count: 0, // Event counter for each run
+      destinations: {}, // Destination list
+      elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
+      globals: assign(staticGlobals), // Globals enhanced with the static globals from init and previous values
+      group: '', // Random id to group events of a run
+      hooks: {}, // Manage the hook functions
+      pageview: true, // Trigger a page view event by default
+      prefix: Const.Commands.Prefix, // HTML prefix attribute
+      queue: [], // Temporary event queue for all events of a run
+      round: 0, // The first round is a special one due to state changes
+      timing: 0, // Offset counter to calculate timing property
+      user: {}, // Handles the user ids
+      version: 0, // Helpful to differentiate the clients used setup version
+    };
+
+    // If 'pageview' is explicitly provided in values, use it; otherwise, use current or default
+    const pageview =
+      'pageview' in values
+        ? !!values.pageview
+        : current.pageview || defaultConfig.pageview;
+
+    const globals = assign(
+      staticGlobals,
+      assign(current.globals || {}, values.globals || {}),
+    );
+
     // Value hierarchy: values > current > default
     return {
-      // Wait for explicit run command to start
-      allowed: values.allowed || current.allowed || false,
-      // Handle the consent states
-      consent: values.consent || current.consent || {},
-      // Event counter for each run
-      count: values.count || current.count || 0,
-      // Destination list
-      destinations: values.destinations || current.destinations || {},
-      // Async access api in window as array
-      elbLayer:
-        values.elbLayer ||
-        current.elbLayer ||
-        (window.elbLayer = window.elbLayer || []),
-      // Globals enhanced with the static globals from init and previous values
-      globals: assign(
-        staticGlobals,
-        assign(current.globals || {}, values.globals || {}),
-      ),
-      // Random id to group events of a run
-      group: values.group || current.group || '',
-      // Manage the hook functions
-      hooks: values.hooks || current.hooks || {},
-      // Trigger a page view event by default
-      pageview:
-        'pageview' in values ? !!values.pageview : current.pageview || true,
-      // HTML prefix attribute
-      prefix: values.prefix || current.prefix || IElbwalker.Commands.Prefix,
-      // Temporary event queue for all events of a run
-      queue: values.queue || current.queue || [],
-      // The first round is a special one due to state changes
-      round: values.round || current.round || 0,
-      // Offset counter to calculate timing property
-      timing: values.timing || current.timing || 0,
-      // Handles the user ids
-      user: values.user || current.user || {},
-      // Helpful to differentiate the clients used setup version
-      version: values.version || current.version || 0,
+      ...defaultConfig,
+      ...current,
+      ...values,
+      pageview,
+      globals,
     };
   }
 
   function handleCommand(
-    instance: IElbwalker.Function,
+    instance: Elbwalker.Function,
     action: string,
-    data?: IElbwalker.PushData,
-    options?: IElbwalker.PushOptions,
+    data?: Elbwalker.PushData,
+    options?: Elbwalker.PushOptions,
   ) {
     switch (action) {
-      case IElbwalker.Commands.Config:
+      case Const.Commands.Config:
         if (isObject(data))
           instance.config = getConfig(
-            data as IElbwalker.Config,
+            data as Elbwalker.Config,
             instance.config,
           );
         break;
-      case IElbwalker.Commands.Consent:
-        isObject(data) && setConsent(instance, data as IElbwalker.Consent);
+      case Const.Commands.Consent:
+        isObject(data) && setConsent(instance, data as Elbwalker.Consent);
         break;
-      case IElbwalker.Commands.Destination:
+      case Const.Commands.Destination:
         isObject(data) &&
           addDestination(
             instance,
@@ -261,25 +258,24 @@ function Elbwalker(
             options as WebDestination.Config,
           );
         break;
-      case IElbwalker.Commands.Hook:
+      case Const.Commands.Hook:
         if (isSameType(data, '') && isSameType(options, isSameType))
           addHook(instance.config, data as keyof Hooks.Functions, options);
         break;
-      case IElbwalker.Commands.Init:
+      case Const.Commands.Init:
         const elems: unknown[] = Array.isArray(data)
           ? data
           : [data || document];
         elems.forEach((elem) => {
           isElementOrDocument(elem) &&
-            initScopeTrigger(instance, elem as IElbwalker.Scope);
+            initScopeTrigger(instance, elem as Elbwalker.Scope);
         });
         break;
-      case IElbwalker.Commands.Run:
-        // @TODO maybe pass run state with argument
+      case Const.Commands.Run:
         ready(run, instance);
         break;
-      case IElbwalker.Commands.User:
-        isObject(data) && setUserIds(instance, data as IElbwalker.User);
+      case Const.Commands.User:
+        isObject(data) && setUserIds(instance, data as Elbwalker.User);
         break;
       default:
         break;
@@ -300,9 +296,9 @@ function Elbwalker(
 
   function push(
     event?: unknown,
-    data?: IElbwalker.PushData,
-    options: IElbwalker.PushOptions = '',
-    context: IElbwalker.PushContext = {},
+    data?: Elbwalker.PushData,
+    options: Elbwalker.PushOptions = '',
+    context: Elbwalker.PushContext = {},
     nested: Walker.Entities = [],
   ): void {
     if (!event || !isSameType(event, '')) return;
@@ -321,7 +317,7 @@ function Elbwalker(
     if (!entity || !action) return;
 
     // Handle internal walker command events
-    if (entity === IElbwalker.Commands.Walker) {
+    if (entity === Const.Commands.Walker) {
       handleCommand(instance, action, data, options as WebDestination.Config);
       return;
     }
@@ -367,7 +363,7 @@ function Elbwalker(
       previous_id: document.referrer,
     };
 
-    const pushEvent: IElbwalker.Event = {
+    const pushEvent: Elbwalker.Event = {
       event,
       data: data as Walker.Properties,
       context: context as Walker.OrderedProperties,
@@ -399,9 +395,9 @@ function Elbwalker(
   }
 
   function pushToDestination(
-    instance: IElbwalker.Function,
+    instance: Elbwalker.Function,
     destination: WebDestination.Function,
-    event: IElbwalker.Event,
+    event: Elbwalker.Event,
     useQueue = true,
   ): boolean {
     // Deep copy event to prevent a pointer mess
@@ -469,7 +465,7 @@ function Elbwalker(
     return pushed;
   }
 
-  function run(instance: IElbwalker.Function) {
+  function run(instance: Elbwalker.Function) {
     instance.config = assign(instance.config, {
       allowed: true, // When run is called, the walker may start running
       count: 0, // Reset the run counter
@@ -502,7 +498,7 @@ function Elbwalker(
     trycatch(load)(instance);
   }
 
-  function setConsent(instance: IElbwalker.Function, data: IElbwalker.Consent) {
+  function setConsent(instance: Elbwalker.Function, data: Elbwalker.Consent) {
     const config = instance.config;
 
     let runQueue = false;
@@ -532,7 +528,7 @@ function Elbwalker(
     }
   }
 
-  function setUserIds(instance: IElbwalker.Function, data: IElbwalker.User) {
+  function setUserIds(instance: Elbwalker.Function, data: Elbwalker.User) {
     const user = instance.config.user;
     // user ids can't be set to undefined
     if (data.id) user.id = data.id;
@@ -543,4 +539,4 @@ function Elbwalker(
   return instance;
 }
 
-export default Elbwalker;
+export default ElbwalkerWeb;

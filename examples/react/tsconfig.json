@@ -15,7 +15,6 @@
     "isolatedModules": false,
     "noEmit": true,
     "jsx": "react-jsx",
-    "preserveConstEnums": true,
     "typeRoots": ["src/data", "node_modules/@types"]
   },
   "include": ["src"]

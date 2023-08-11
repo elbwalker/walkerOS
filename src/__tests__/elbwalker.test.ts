@@ -1,5 +1,5 @@
-import Elbwalker from '../elbwalker';
-import { Data, Hooks, IElbwalker, WebDestination, elb } from '../';
+import ElbwalkerWeb from '../elbwalker';
+import { Data, elb, Elbwalker, Hooks, WebDestination } from '../';
 import fs from 'fs';
 
 describe('Elbwalker', () => {
@@ -7,7 +7,7 @@ describe('Elbwalker', () => {
   const mockFn = jest.fn(); //.mockImplementation(console.log);
   const version = { config: 0, walker: 1.6 };
 
-  let elbwalker: IElbwalker.Function;
+  let elbwalker: Elbwalker.Function;
 
   beforeEach(() => {
     // reset DOM with event listeners etc.
@@ -16,9 +16,9 @@ describe('Elbwalker', () => {
     jest.resetModules();
     w.dataLayer = [];
     w.dataLayer!.push = mockFn;
-    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
+    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
 
-    elbwalker = Elbwalker({
+    elbwalker = ElbwalkerWeb({
       default: true,
       consent: { test: true },
       pageview: false,
@@ -26,9 +26,9 @@ describe('Elbwalker', () => {
   });
 
   test('go', () => {
-    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
+    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
     expect(window.elbLayer).toBeUndefined();
-    const instance = Elbwalker();
+    const instance = ElbwalkerWeb();
     expect(instance.config.elbLayer).toBeDefined();
   });
 
@@ -104,7 +104,7 @@ describe('Elbwalker', () => {
 
     jest.clearAllMocks(); // skip previous init
     w.elbLayer = [];
-    elbwalker = Elbwalker({
+    elbwalker = ElbwalkerWeb({
       default: true,
       pageview: false,
       globals: { outof: 'override', static: 'value' },
@@ -179,7 +179,7 @@ describe('Elbwalker', () => {
         return params.fn(...args);
       });
 
-    elbwalker = Elbwalker({
+    elbwalker = ElbwalkerWeb({
       pageview: false,
       hooks: {
         prePush,
@@ -348,7 +348,7 @@ describe('Elbwalker', () => {
 
   test('walker consent', () => {
     jest.clearAllMocks();
-    elbwalker = Elbwalker({
+    elbwalker = ElbwalkerWeb({
       consent: { functional: true },
       default: true,
       pageview: false,
@@ -398,7 +398,7 @@ describe('Elbwalker', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.advanceTimersByTime(2500); // 2.5 sec load time
-    elbwalker = Elbwalker({ elbLayer: [], default: true });
+    elbwalker = ElbwalkerWeb({ elbLayer: [], default: true });
 
     expect(mockFn.mock.calls[0][0].timing).toEqual(2.5);
 

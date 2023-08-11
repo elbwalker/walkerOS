@@ -1,12 +1,13 @@
-import { IElbwalker, Walker } from '../types';
+import type { Elbwalker, Walker } from '../types';
 import { getElbAttributeName, getEvents, getTriggerActions } from './walker';
 import { getAttribute, isVisible, throttle, trycatch } from './utils';
+import Const from './constants';
 
 let visibleObserver: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
 
-export function ready(run: Function, instance: IElbwalker.Function) {
+export function ready(run: Function, instance: Elbwalker.Function) {
   const fn = () => {
     run(instance);
   };
@@ -18,14 +19,14 @@ export function ready(run: Function, instance: IElbwalker.Function) {
 }
 
 // Called for each new run to setup triggers
-export function load(instance: IElbwalker.Function) {
+export function load(instance: Elbwalker.Function) {
   // Trigger static page view if enabled
   if (instance.config.pageview) pageView(instance);
 
   initScopeTrigger(instance);
 }
 
-export function initGlobalTrigger(instance: IElbwalker.Function): void {
+export function initGlobalTrigger(instance: Elbwalker.Function): void {
   document.addEventListener(
     'click',
     trycatch(function (this: Document, ev: MouseEvent) {
@@ -41,8 +42,8 @@ export function initGlobalTrigger(instance: IElbwalker.Function): void {
 }
 
 export function initScopeTrigger(
-  instance: IElbwalker.Function,
-  scope: IElbwalker.Scope = document,
+  instance: Elbwalker.Function,
+  scope: Elbwalker.Scope = document,
 ) {
   // Reset all scroll events @TODO check if it's right here
   scrollElements = [];
@@ -54,7 +55,7 @@ export function initScopeTrigger(
   // default data-elbaction
   const selectorAction = getElbAttributeName(
     instance.config.prefix,
-    IElbwalker.Commands.Action,
+    Const.Commands.Action,
     false,
   );
 
@@ -75,7 +76,7 @@ export function initScopeTrigger(
 }
 
 function handleTrigger(
-  instance: IElbwalker.Function,
+  instance: Elbwalker.Function,
   element: Element,
   trigger: Walker.Trigger,
   // @TODO add triggerParams to filter for specific trigger
@@ -93,7 +94,7 @@ function handleTrigger(
 }
 
 function handleActionElem(
-  instance: IElbwalker.Function,
+  instance: Elbwalker.Function,
   elem: HTMLElement,
   selectorAction: string,
 ) {
@@ -107,22 +108,22 @@ function handleActionElem(
     triggerActions.forEach((triggerAction) => {
       // TriggerAction ({ trigger, triggerParams, action, actionparams })
       switch (triggerAction.trigger) {
-        case Walker.Trigger.Hover:
+        case Const.Trigger.Hover:
           triggerHover(instance, elem);
           break;
-        case Walker.Trigger.Load:
+        case Const.Trigger.Load:
           triggerLoad(instance, elem);
           break;
-        case Walker.Trigger.Pulse:
+        case Const.Trigger.Pulse:
           triggerPulse(instance, elem, triggerAction.triggerParams);
           break;
-        case Walker.Trigger.Scroll:
+        case Const.Trigger.Scroll:
           triggerScroll(elem, triggerAction.triggerParams);
           break;
-        case Walker.Trigger.Visible:
+        case Const.Trigger.Visible:
           triggerVisible(elem, visibleObserver);
           break;
-        case Walker.Trigger.Wait:
+        case Const.Trigger.Wait:
           triggerWait(instance, elem, triggerAction.triggerParams);
           break;
       }
@@ -130,33 +131,36 @@ function handleActionElem(
   );
 }
 
-function triggerClick(instance: IElbwalker.Function, ev: MouseEvent) {
-  handleTrigger(instance, ev.target as Element, Walker.Trigger.Click);
+function triggerClick(instance: Elbwalker.Function, ev: MouseEvent) {
+  handleTrigger(instance, ev.target as Element, Const.Trigger.Click);
 }
 
-function triggerHover(instance: IElbwalker.Function, elem: HTMLElement) {
+function triggerHover(instance: Elbwalker.Function, elem: HTMLElement) {
   elem.addEventListener(
     'mouseenter',
     trycatch(function (this: Document, ev: MouseEvent) {
       if (ev.target instanceof Element)
-        handleTrigger(instance, ev.target, Walker.Trigger.Hover);
+        handleTrigger(instance, ev.target, Const.Trigger.Hover);
     }),
   );
 }
 
-function triggerLoad(instance: IElbwalker.Function, elem: HTMLElement) {
-  handleTrigger(instance, elem, Walker.Trigger.Load);
+function triggerLoad(instance: Elbwalker.Function, elem: HTMLElement) {
+  handleTrigger(instance, elem, Const.Trigger.Load);
 }
 
 function triggerPulse(
-  instance: IElbwalker.Function,
+  instance: Elbwalker.Function,
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
-  setInterval(() => {
-    // Only trigger when tab is active
-    if (!document.hidden) handleTrigger(instance, elem, Walker.Trigger.Pulse);
-  }, parseInt(triggerParams || '') || 15000);
+  setInterval(
+    () => {
+      // Only trigger when tab is active
+      if (!document.hidden) handleTrigger(instance, elem, Const.Trigger.Pulse);
+    },
+    parseInt(triggerParams || '') || 15000,
+  );
 }
 
 function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
@@ -169,8 +173,8 @@ function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
   scrollElements.push([elem, depth]);
 }
 
-function triggerSubmit(instance: IElbwalker.Function, ev: Event) {
-  handleTrigger(instance, ev.target as Element, Walker.Trigger.Submit);
+function triggerSubmit(instance: Elbwalker.Function, ev: Event) {
+  handleTrigger(instance, ev.target as Element, Const.Trigger.Submit);
 }
 
 function triggerVisible(
@@ -181,20 +185,20 @@ function triggerVisible(
 }
 
 function triggerWait(
-  instance: IElbwalker.Function,
+  instance: Elbwalker.Function,
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
   setTimeout(
-    () => handleTrigger(instance, elem, Walker.Trigger.Wait),
+    () => handleTrigger(instance, elem, Const.Trigger.Wait),
     parseInt(triggerParams || '') || 15000,
   );
 }
 
-function scroll(instance: IElbwalker.Function) {
+function scroll(instance: Elbwalker.Function) {
   const scrolling = (
     scrollElements: Walker.ScrollElements,
-    instance: IElbwalker.Function,
+    instance: Elbwalker.Function,
   ) => {
     return scrollElements.filter(([element, depth]) => {
       // Distance from top to the bottom of the visible screen
@@ -217,7 +221,7 @@ function scroll(instance: IElbwalker.Function) {
       // Check if the elements visibility skipped the required border
       if (scrollDepth >= depth) {
         // Enough scrolling, it's time
-        handleTrigger(instance, element, Walker.Trigger.Scroll);
+        handleTrigger(instance, element, Const.Trigger.Scroll);
 
         // Remove the element from scrollEvents
         return false;
@@ -238,7 +242,7 @@ function scroll(instance: IElbwalker.Function) {
   }
 }
 
-function pageView(instance: IElbwalker.Function) {
+function pageView(instance: Elbwalker.Function) {
   // static page view
   const loc = window.location;
   const data: Walker.Properties = {
@@ -250,11 +254,11 @@ function pageView(instance: IElbwalker.Function) {
   if (loc.hash) data.hash = loc.hash;
 
   // @TODO get all nested entities
-  instance.config.elbLayer.push('page view', data, Walker.Trigger.Load);
+  instance.config.elbLayer.push('page view', data, Const.Trigger.Load);
 }
 
 function observerVisible(
-  instance: IElbwalker.Function,
+  instance: Elbwalker.Function,
   duration = 1000,
 ): IntersectionObserver | undefined {
   if (!window.IntersectionObserver) return;
@@ -283,7 +287,7 @@ function observerVisible(
                   handleTrigger(
                     instance,
                     target as Element,
-                    Walker.Trigger.Visible,
+                    Const.Trigger.Visible,
                   );
                   // Just count once
                   delete target.dataset[timerId];
