@@ -13,7 +13,8 @@
     "esModuleInterop": true,
     "isolatedModules": true,
     "declaration": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true
     // "skipLibCheck": true
   },
   "exclude": ["node_modules", "dist", "**/*.test.*"],

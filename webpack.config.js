@@ -50,6 +50,7 @@ const commonConfig = {
       }),
     ],
   },
+  devtool: 'source-map',
 };
 
 const es5Config = {

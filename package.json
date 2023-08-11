@@ -12,7 +12,8 @@
   "files": [
     "dist/**/*.js",
     "dist/**/*.mjs",
-    "dist/**/*.d.ts"
+    "dist/**/*.d.ts",
+    "dist/**/*.js.map"
   ],
   "scripts": {
     "copy:dts": "copyfiles -u 1 \"src/**/*.d.ts\" dist/src",
