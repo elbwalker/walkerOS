@@ -258,16 +258,16 @@ export function sessionStart(
 
 export function storageDelete(
   key: string,
-  storage: Utils.StorageType = Const.UtilsStorage.Session,
+  storage: Utils.StorageType = Const.Utils.Storage.Session,
 ) {
   switch (storage) {
-    case Const.UtilsStorage.Cookie:
+    case Const.Utils.Storage.Cookie:
       storageWrite(key, '', 0, storage);
       break;
-    case Const.UtilsStorage.Local:
+    case Const.Utils.Storage.Local:
       window.localStorage.removeItem(key);
       break;
-    case Const.UtilsStorage.Session:
+    case Const.Utils.Storage.Session:
       window.sessionStorage.removeItem(key);
       break;
   }
@@ -275,7 +275,7 @@ export function storageDelete(
 
 export function storageRead(
   key: string,
-  storage: Utils.StorageType = Const.UtilsStorage.Session,
+  storage: Utils.StorageType = Const.Utils.Storage.Session,
 ): Walker.PropertyType {
   // Helper function for local and session storage to support expiration
   function parseItem(string: string | null): Utils.StorageValue {
@@ -297,7 +297,7 @@ export function storageRead(
   let value, item;
 
   switch (storage) {
-    case Const.UtilsStorage.Cookie:
+    case Const.Utils.Storage.Cookie:
       value = decodeURIComponent(
         document.cookie
           .split('; ')
@@ -305,10 +305,10 @@ export function storageRead(
           ?.split('=')[1] || '',
       );
       break;
-    case Const.UtilsStorage.Local:
+    case Const.Utils.Storage.Local:
       item = parseItem(window.localStorage.getItem(key));
       break;
-    case Const.UtilsStorage.Session:
+    case Const.Utils.Storage.Session:
       item = parseItem(window.sessionStorage.getItem(key));
       break;
   }
@@ -330,7 +330,7 @@ export function storageWrite(
   key: string,
   value: Walker.PropertyType,
   maxAgeInMinutes = 30,
-  storage: Utils.StorageType = Const.UtilsStorage.Session,
+  storage: Utils.StorageType = Const.Utils.Storage.Session,
   domain?: string,
 ): Walker.PropertyType {
   const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
@@ -338,7 +338,7 @@ export function storageWrite(
   const stringifiedItem = JSON.stringify(item);
 
   switch (storage) {
-    case Const.UtilsStorage.Cookie:
+    case Const.Utils.Storage.Cookie:
       let cookie = `${key}=${encodeURIComponent(value)}; max-age=${
         maxAgeInMinutes * 60
       }; path=/; SameSite=Lax; secure`;
@@ -347,10 +347,10 @@ export function storageWrite(
 
       document.cookie = cookie;
       break;
-    case Const.UtilsStorage.Local:
+    case Const.Utils.Storage.Local:
       window.localStorage.setItem(key, stringifiedItem);
       break;
-    case Const.UtilsStorage.Session:
+    case Const.Utils.Storage.Session:
       window.sessionStorage.setItem(key, stringifiedItem);
       break;
   }
