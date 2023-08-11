@@ -83,7 +83,6 @@ function ElbwalkerWeb(
     name: Hook,
     hookFn: Hooks.Functions[Hook],
   ) {
-    // @TODO this can be used in Const.Commands directly
     config.hooks[name] = hookFn;
   }
 
@@ -273,7 +272,6 @@ function ElbwalkerWeb(
         });
         break;
       case Const.Commands.Run:
-        // @TODO maybe pass run state with argument
         ready(run, instance);
         break;
       case Const.Commands.User:

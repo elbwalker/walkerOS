@@ -40,8 +40,8 @@ export type Trigger =
   | 'scroll'
   | 'submit'
   | 'visible'
-  | 'wait';
-// @TODO string
+  | 'wait'
+  | string;
 
 export interface Filter {
   [name: string]: boolean;

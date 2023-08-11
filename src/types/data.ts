@@ -41,7 +41,7 @@ export interface Action {
   trigger?: Trigger;
 }
 
-export type Trigger = string; // @TODO change to Walker.Trigger once updated
+export type Trigger = Walker.Trigger;
 
 export interface Property {
   type?: PropertyType; // @TODO support multiple

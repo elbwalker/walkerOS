@@ -51,7 +51,10 @@ export type PushData =
   | Walker.Properties
   | WebDestination.Function;
 
-export type PushOptions = string | Hooks.Functions | WebDestination.Config; // @TODO use Walker.Trigger
+export type PushOptions =
+  | Walker.Trigger
+  | Hooks.Functions
+  | WebDestination.Config;
 export type PushContext = Walker.OrderedProperties | Element;
 
 export type Scope = Document | HTMLElement;
