@@ -1,4 +1,4 @@
-import newElbwalker from '../elbwalker';
+import ElbwalkerWeb from '../elbwalker';
 import { elb } from '../lib/utils';
 import type { Elbwalker, Walker, WebDestination } from '../types';
 
@@ -23,7 +23,7 @@ describe('ElbLayer', () => {
   });
 
   test('arguments and event pushes', () => {
-    elbwalker = newElbwalker({ default: true });
+    elbwalker = ElbwalkerWeb({ default: true });
     elb('ingest argument', { a: 1 }, 'a', {}); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
@@ -46,7 +46,7 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack without run', () => {
-    elbwalker = newElbwalker();
+    elbwalker = ElbwalkerWeb();
     elb('walker destination', destination);
     elb('entity action');
 
@@ -57,7 +57,7 @@ describe('ElbLayer', () => {
     elb('e 1');
     elb('walker destination', destination);
 
-    elbwalker = newElbwalker();
+    elbwalker = ElbwalkerWeb();
     elb('e 2');
     elb('walker run');
     // auto call: elb('page view');
@@ -105,7 +105,7 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack with run', () => {
-    elbwalker = newElbwalker();
+    elbwalker = ElbwalkerWeb();
 
     elb('walker destination', destination);
     elb('ingest argument', { a: 1 }, 'a'); // Push as arguments
@@ -131,7 +131,7 @@ describe('ElbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    elbwalker = newElbwalker();
+    elbwalker = ElbwalkerWeb();
 
     (elb as Function)();
     elb('event postponed');
@@ -175,7 +175,7 @@ describe('ElbLayer', () => {
   test('elbLayer initialization', () => {
     w.elbLayer = undefined as any;
 
-    elbwalker = newElbwalker();
+    elbwalker = ElbwalkerWeb();
 
     expect(w.elbLayer).toBeDefined();
   });
@@ -199,7 +199,7 @@ describe('ElbLayer', () => {
       version: 0,
     };
 
-    elbwalker = newElbwalker();
+    elbwalker = ElbwalkerWeb();
     elb('walker run');
 
     expect(elbwalker.config).toStrictEqual(defaultConfig);
@@ -224,7 +224,7 @@ describe('ElbLayer', () => {
     w.elbLayer.length = 0;
     let globals: Walker.Properties = { static: 'value' };
     config = { ...defaultConfig, globals };
-    elbwalker = newElbwalker({ globals });
+    elbwalker = ElbwalkerWeb({ globals });
     elb('walker run');
     expect(elbwalker.config).toStrictEqual(config);
 
@@ -257,12 +257,12 @@ describe('ElbLayer', () => {
     w.dataLayer = [];
     const customLayer1 = [] as Elbwalker.ElbLayer;
     const customLayer2 = [] as Elbwalker.ElbLayer;
-    const instance1 = newElbwalker({
+    const instance1 = ElbwalkerWeb({
       elbLayer: customLayer1,
       default: true,
       pageview: false,
     });
-    const instance2 = newElbwalker({
+    const instance2 = ElbwalkerWeb({
       elbLayer: customLayer2,
       default: true,
       pageview: false,
@@ -335,7 +335,7 @@ describe('ElbLayer', () => {
   test('elbLayer push override', () => {
     const layer: Elbwalker.ElbLayer = [];
 
-    elbwalker = newElbwalker({ elbLayer: layer, pageview: false });
+    elbwalker = ElbwalkerWeb({ elbLayer: layer, pageview: false });
     layer.push('walker run'); // Overrites push function
     layer.push('walker destination', destination, {
       init: true,
@@ -354,7 +354,7 @@ describe('ElbLayer', () => {
   });
 
   test('command order', () => {
-    elbwalker = newElbwalker();
+    elbwalker = ElbwalkerWeb();
     elb('walker run');
 
     // Arguments

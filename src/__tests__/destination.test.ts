@@ -1,4 +1,4 @@
-import newElbwalker from '../elbwalker';
+import ElbwalkerWeb from '../elbwalker';
 import type { Elbwalker, WebDestination } from '../types';
 
 describe('Destination', () => {
@@ -20,7 +20,7 @@ describe('Destination', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    elbwalker = newElbwalker({ pageview: false });
+    elbwalker = ElbwalkerWeb({ pageview: false });
     config = { init: false };
 
     destination = {
@@ -198,7 +198,7 @@ describe('Destination', () => {
 
   test('mapping', () => {
     jest.clearAllMocks();
-    elbwalker = newElbwalker({ elbLayer: [], pageview: false });
+    elbwalker = ElbwalkerWeb({ elbLayer: [], pageview: false });
     elbwalker.push('walker run');
 
     const mockPushA = jest.fn();
@@ -311,7 +311,7 @@ describe('Destination', () => {
 
   test('consent', () => {
     jest.clearAllMocks();
-    elbwalker = newElbwalker({
+    elbwalker = ElbwalkerWeb({
       consent: { functional: true, marketing: false },
       pageview: false,
     });
@@ -369,7 +369,7 @@ describe('Destination', () => {
   });
 
   test('queue', () => {
-    elbwalker = newElbwalker({
+    elbwalker = ElbwalkerWeb({
       consent: { functional: true },
       pageview: false,
     });
@@ -513,7 +513,7 @@ describe('Destination', () => {
   });
 
   test('set config on init', () => {
-    elbwalker = newElbwalker({ elbLayer: [], pageview: false });
+    elbwalker = ElbwalkerWeb({ elbLayer: [], pageview: false });
     elbwalker.push('walker run');
 
     const mockInitA = jest.fn();
@@ -564,7 +564,7 @@ describe('Destination', () => {
   });
 
   test('temp async queue', () => {
-    elbwalker = newElbwalker({ elbLayer: [], pageview: false });
+    elbwalker = ElbwalkerWeb({ elbLayer: [], pageview: false });
     elbwalker.push('walker run');
     elbwalker.push('walker destination', destination);
 

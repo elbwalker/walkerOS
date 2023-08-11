@@ -1,4 +1,4 @@
 // es5 version
-import newElbwalker from '../elbwalker';
+import ElbwalkerWeb from '../elbwalker';
 
-export default newElbwalker;
+export default ElbwalkerWeb;

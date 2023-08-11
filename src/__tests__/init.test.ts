@@ -1,4 +1,4 @@
-import newElbwalker from '../elbwalker';
+import ElbwalkerWeb from '../elbwalker';
 import type { Elbwalker } from '../types';
 
 describe('Init', () => {
@@ -17,7 +17,7 @@ describe('Init', () => {
 
   test('custom prefix', () => {
     const prefix = 'data-prefix';
-    elbwalker = newElbwalker({ prefix });
+    elbwalker = ElbwalkerWeb({ prefix });
 
     expect(elbwalker.config).toStrictEqual(
       expect.objectContaining({
@@ -28,7 +28,7 @@ describe('Init', () => {
 
   test('disable page view', () => {
     // First default beforeEach call with pageview true by default
-    elbwalker = newElbwalker({ default: true });
+    elbwalker = ElbwalkerWeb({ default: true });
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page view',
@@ -37,7 +37,7 @@ describe('Init', () => {
 
     jest.clearAllMocks();
     w.elbLayer = [];
-    elbwalker = newElbwalker({ default: true, pageview: false });
+    elbwalker = ElbwalkerWeb({ default: true, pageview: false });
 
     expect(mockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({

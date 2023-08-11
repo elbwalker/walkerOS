@@ -9,7 +9,7 @@ import { assign, getId, isSameType, trycatch, useHooks } from './lib/utils';
 import { getEntities, getGlobals } from './lib/walker';
 import Const from './lib/constants';
 
-function newElbwalker(
+function ElbwalkerWeb(
   customConfig: Partial<Elbwalker.Config> = {},
 ): Elbwalker.Function {
   const version = 1.6;
@@ -541,4 +541,4 @@ function newElbwalker(
   return instance;
 }
 
-export default newElbwalker;
+export default ElbwalkerWeb;

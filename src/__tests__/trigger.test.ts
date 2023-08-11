@@ -1,4 +1,4 @@
-import newElbwalker from '../elbwalker';
+import ElbwalkerWeb from '../elbwalker';
 import Const from '../lib/constants';
 import type { Elbwalker } from '../types';
 import fs from 'fs';
@@ -36,7 +36,7 @@ describe('Trigger', () => {
       },
     );
 
-    elbwalker = newElbwalker({ default: true });
+    elbwalker = ElbwalkerWeb({ default: true });
   });
 
   test('init global', () => {
