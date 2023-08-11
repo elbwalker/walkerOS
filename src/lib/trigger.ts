@@ -1,4 +1,4 @@
-import type { IElbwalker, Walker } from '../types';
+import type { Elbwalker, Walker } from '../types';
 import { getElbAttributeName, getEvents, getTriggerActions } from './walker';
 import { getAttribute, isVisible, throttle, trycatch } from './utils';
 import Const from './constants';
@@ -7,7 +7,7 @@ let visibleObserver: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
 
-export function ready(run: Function, instance: IElbwalker.Function) {
+export function ready(run: Function, instance: Elbwalker.Function) {
   const fn = () => {
     run(instance);
   };
@@ -19,14 +19,14 @@ export function ready(run: Function, instance: IElbwalker.Function) {
 }
 
 // Called for each new run to setup triggers
-export function load(instance: IElbwalker.Function) {
+export function load(instance: Elbwalker.Function) {
   // Trigger static page view if enabled
   if (instance.config.pageview) pageView(instance);
 
   initScopeTrigger(instance);
 }
 
-export function initGlobalTrigger(instance: IElbwalker.Function): void {
+export function initGlobalTrigger(instance: Elbwalker.Function): void {
   document.addEventListener(
     'click',
     trycatch(function (this: Document, ev: MouseEvent) {
@@ -42,8 +42,8 @@ export function initGlobalTrigger(instance: IElbwalker.Function): void {
 }
 
 export function initScopeTrigger(
-  instance: IElbwalker.Function,
-  scope: IElbwalker.Scope = document,
+  instance: Elbwalker.Function,
+  scope: Elbwalker.Scope = document,
 ) {
   // Reset all scroll events @TODO check if it's right here
   scrollElements = [];
@@ -76,7 +76,7 @@ export function initScopeTrigger(
 }
 
 function handleTrigger(
-  instance: IElbwalker.Function,
+  instance: Elbwalker.Function,
   element: Element,
   trigger: Walker.Trigger,
   // @TODO add triggerParams to filter for specific trigger
@@ -94,7 +94,7 @@ function handleTrigger(
 }
 
 function handleActionElem(
-  instance: IElbwalker.Function,
+  instance: Elbwalker.Function,
   elem: HTMLElement,
   selectorAction: string,
 ) {
@@ -131,11 +131,11 @@ function handleActionElem(
   );
 }
 
-function triggerClick(instance: IElbwalker.Function, ev: MouseEvent) {
+function triggerClick(instance: Elbwalker.Function, ev: MouseEvent) {
   handleTrigger(instance, ev.target as Element, Const.Trigger.Click);
 }
 
-function triggerHover(instance: IElbwalker.Function, elem: HTMLElement) {
+function triggerHover(instance: Elbwalker.Function, elem: HTMLElement) {
   elem.addEventListener(
     'mouseenter',
     trycatch(function (this: Document, ev: MouseEvent) {
@@ -145,12 +145,12 @@ function triggerHover(instance: IElbwalker.Function, elem: HTMLElement) {
   );
 }
 
-function triggerLoad(instance: IElbwalker.Function, elem: HTMLElement) {
+function triggerLoad(instance: Elbwalker.Function, elem: HTMLElement) {
   handleTrigger(instance, elem, Const.Trigger.Load);
 }
 
 function triggerPulse(
-  instance: IElbwalker.Function,
+  instance: Elbwalker.Function,
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
@@ -173,7 +173,7 @@ function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
   scrollElements.push([elem, depth]);
 }
 
-function triggerSubmit(instance: IElbwalker.Function, ev: Event) {
+function triggerSubmit(instance: Elbwalker.Function, ev: Event) {
   handleTrigger(instance, ev.target as Element, Const.Trigger.Submit);
 }
 
@@ -185,7 +185,7 @@ function triggerVisible(
 }
 
 function triggerWait(
-  instance: IElbwalker.Function,
+  instance: Elbwalker.Function,
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
@@ -195,10 +195,10 @@ function triggerWait(
   );
 }
 
-function scroll(instance: IElbwalker.Function) {
+function scroll(instance: Elbwalker.Function) {
   const scrolling = (
     scrollElements: Walker.ScrollElements,
-    instance: IElbwalker.Function,
+    instance: Elbwalker.Function,
   ) => {
     return scrollElements.filter(([element, depth]) => {
       // Distance from top to the bottom of the visible screen
@@ -242,7 +242,7 @@ function scroll(instance: IElbwalker.Function) {
   }
 }
 
-function pageView(instance: IElbwalker.Function) {
+function pageView(instance: Elbwalker.Function) {
   // static page view
   const loc = window.location;
   const data: Walker.Properties = {
@@ -258,7 +258,7 @@ function pageView(instance: IElbwalker.Function) {
 }
 
 function observerVisible(
-  instance: IElbwalker.Function,
+  instance: Elbwalker.Function,
   duration = 1000,
 ): IntersectionObserver | undefined {
   if (!window.IntersectionObserver) return;

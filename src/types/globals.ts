@@ -1,10 +1,11 @@
-import type { IElbwalker } from '.';
+import type { Elbwalker } from '.';
 
+// @TODO global namespace pollution?
 declare global {
   interface Window {
-    elbwalker: IElbwalker.Function;
-    elbLayer: IElbwalker.ElbLayer;
+    elbwalker: Elbwalker.Function;
+    elbLayer: Elbwalker.ElbLayer;
     dataLayer: unknown[];
-    elb: IElbwalker.Elb;
+    elb: Elbwalker.Elb;
   }
 }

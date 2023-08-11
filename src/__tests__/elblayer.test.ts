@@ -1,10 +1,10 @@
-import Elbwalker from '../elbwalker';
+import newElbwalker from '../elbwalker';
 import { elb } from '../lib/utils';
-import type { IElbwalker, Walker, WebDestination } from '../types';
+import type { Elbwalker, Walker, WebDestination } from '../types';
 
 describe('ElbLayer', () => {
   const w = window;
-  let elbwalker: IElbwalker.Function;
+  let elbwalker: Elbwalker.Function;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn(); //.mockImplementation(console.log);
@@ -23,7 +23,7 @@ describe('ElbLayer', () => {
   });
 
   test('arguments and event pushes', () => {
-    elbwalker = Elbwalker({ default: true });
+    elbwalker = newElbwalker({ default: true });
     elb('ingest argument', { a: 1 }, 'a', {}); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
@@ -46,7 +46,7 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack without run', () => {
-    elbwalker = Elbwalker();
+    elbwalker = newElbwalker();
     elb('walker destination', destination);
     elb('entity action');
 
@@ -57,7 +57,7 @@ describe('ElbLayer', () => {
     elb('e 1');
     elb('walker destination', destination);
 
-    elbwalker = Elbwalker();
+    elbwalker = newElbwalker();
     elb('e 2');
     elb('walker run');
     // auto call: elb('page view');
@@ -105,7 +105,7 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack with run', () => {
-    elbwalker = Elbwalker();
+    elbwalker = newElbwalker();
 
     elb('walker destination', destination);
     elb('ingest argument', { a: 1 }, 'a'); // Push as arguments
@@ -131,7 +131,7 @@ describe('ElbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    elbwalker = Elbwalker();
+    elbwalker = newElbwalker();
 
     (elb as Function)();
     elb('event postponed');
@@ -175,13 +175,13 @@ describe('ElbLayer', () => {
   test('elbLayer initialization', () => {
     w.elbLayer = undefined as any;
 
-    elbwalker = Elbwalker();
+    elbwalker = newElbwalker();
 
     expect(w.elbLayer).toBeDefined();
   });
 
   test('config update', () => {
-    const defaultConfig: IElbwalker.Config = {
+    const defaultConfig: Elbwalker.Config = {
       allowed: true,
       consent: {},
       count: expect.any(Number),
@@ -199,12 +199,12 @@ describe('ElbLayer', () => {
       version: 0,
     };
 
-    elbwalker = Elbwalker();
+    elbwalker = newElbwalker();
     elb('walker run');
 
     expect(elbwalker.config).toStrictEqual(defaultConfig);
 
-    let update: Walker.Properties | Partial<IElbwalker.Config> = {
+    let update: Walker.Properties | Partial<Elbwalker.Config> = {
       prefix: 'data-custom',
     };
     let config = { ...defaultConfig, ...update };
@@ -224,7 +224,7 @@ describe('ElbLayer', () => {
     w.elbLayer.length = 0;
     let globals: Walker.Properties = { static: 'value' };
     config = { ...defaultConfig, globals };
-    elbwalker = Elbwalker({ globals });
+    elbwalker = newElbwalker({ globals });
     elb('walker run');
     expect(elbwalker.config).toStrictEqual(config);
 
@@ -255,14 +255,14 @@ describe('ElbLayer', () => {
 
   test('custom elbLayer', () => {
     w.dataLayer = [];
-    const customLayer1 = [] as IElbwalker.ElbLayer;
-    const customLayer2 = [] as IElbwalker.ElbLayer;
-    const instance1 = Elbwalker({
+    const customLayer1 = [] as Elbwalker.ElbLayer;
+    const customLayer2 = [] as Elbwalker.ElbLayer;
+    const instance1 = newElbwalker({
       elbLayer: customLayer1,
       default: true,
       pageview: false,
     });
-    const instance2 = Elbwalker({
+    const instance2 = newElbwalker({
       elbLayer: customLayer2,
       default: true,
       pageview: false,
@@ -333,9 +333,9 @@ describe('ElbLayer', () => {
   });
 
   test('elbLayer push override', () => {
-    const layer: IElbwalker.ElbLayer = [];
+    const layer: Elbwalker.ElbLayer = [];
 
-    elbwalker = Elbwalker({ elbLayer: layer, pageview: false });
+    elbwalker = newElbwalker({ elbLayer: layer, pageview: false });
     layer.push('walker run'); // Overrites push function
     layer.push('walker destination', destination, {
       init: true,
@@ -354,7 +354,7 @@ describe('ElbLayer', () => {
   });
 
   test('command order', () => {
-    elbwalker = Elbwalker();
+    elbwalker = newElbwalker();
     elb('walker run');
 
     // Arguments

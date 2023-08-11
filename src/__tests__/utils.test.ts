@@ -4,13 +4,13 @@ import {
   debounce,
   getMarketingParameters,
   isVisible,
-  startSession,
   storageDelete,
   storageRead,
   storageWrite,
   throttle,
   getByStringDot,
   trycatch,
+  sessionStart,
 } from '../lib/utils';
 
 const w = window;
@@ -220,27 +220,27 @@ describe('Utils', () => {
     });
 
     // Is new
-    expect(startSession({ url, referrer: url, isNew: true })).toStrictEqual(
+    expect(sessionStart({ url, referrer: url, isNew: true })).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
 
     // Referral
-    expect(startSession({ url, referrer })).toStrictEqual(
+    expect(sessionStart({ url, referrer })).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
 
     // Direct
-    expect(startSession({ url, referrer: '' })).toStrictEqual(
+    expect(sessionStart({ url, referrer: '' })).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
 
     // Predefined data
     expect(
-      startSession({ url, referrer, data: { id: 'sessionId' } }),
+      sessionStart({ url, referrer, data: { id: 'sessionId' } }),
     ).toStrictEqual(expect.objectContaining({ id: 'sessionId' }));
 
     // Marketing
-    expect(startSession({ url: url + '?utm_campaign=foo' })).toStrictEqual(
+    expect(sessionStart({ url: url + '?utm_campaign=foo' })).toStrictEqual(
       expect.objectContaining({
         id: expect.any(String),
         campaign: 'foo',
@@ -250,7 +250,7 @@ describe('Utils', () => {
 
     // Marketing with custom marketing parameter
     expect(
-      startSession({
+      sessionStart({
         url: url + '?affiliate=parameter',
         parameters: { affiliate: 'custom' },
       }),
@@ -264,14 +264,14 @@ describe('Utils', () => {
 
     // Referrer with custom domains
     expect(
-      startSession({
+      sessionStart({
         url: 'https://www.elbwalker.com',
         referrer: 'https://docs.elbwalker.com',
         domains: ['docs.elbwalker.com'],
       }),
     ).toBeFalsy();
     expect(
-      startSession({
+      sessionStart({
         url: 'https://www.elbwalker.com',
         referrer: '',
         domains: [''], // Hack to disable direct or hidden referrer
@@ -285,7 +285,7 @@ describe('Utils', () => {
     Object.defineProperty(window, 'location', {
       value: new URL(url),
     });
-    expect(startSession()).toStrictEqual(
+    expect(sessionStart()).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
 
@@ -295,10 +295,10 @@ describe('Utils', () => {
         getEntriesByType: jest.fn().mockReturnValue([{ type: 'reload' }]),
       },
     });
-    expect(startSession()).toBeFalsy();
+    expect(sessionStart()).toBeFalsy();
 
     // Reload with marketing parameter
-    expect(startSession({ url: url + '?utm_campaign=foo' })).toBeFalsy();
+    expect(sessionStart({ url: url + '?utm_campaign=foo' })).toBeFalsy();
   });
 
   test('marketing parameters', () => {

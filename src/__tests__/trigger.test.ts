@@ -1,10 +1,10 @@
-import Elbwalker from '../elbwalker';
+import newElbwalker from '../elbwalker';
 import Const from '../lib/constants';
-import type { IElbwalker } from '../types';
+import type { Elbwalker } from '../types';
 import fs from 'fs';
 
 const w = window;
-let elbwalker: IElbwalker.Function;
+let elbwalker: Elbwalker.Function;
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
@@ -27,7 +27,7 @@ describe('Trigger', () => {
     jest.spyOn(global, 'setInterval');
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
-    w.elbLayer = undefined as unknown as IElbwalker.ElbLayer;
+    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
 
     events = {};
     document.addEventListener = mockAddEventListener.mockImplementation(
@@ -36,7 +36,7 @@ describe('Trigger', () => {
       },
     );
 
-    elbwalker = Elbwalker({ default: true });
+    elbwalker = newElbwalker({ default: true });
   });
 
   test('init global', () => {

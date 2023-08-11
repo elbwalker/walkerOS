@@ -1,4 +1,4 @@
-import type { IElbwalker } from '../types';
+import type { Elbwalker } from '../types';
 import fs from 'fs';
 
 describe('Browser', () => {
@@ -27,7 +27,7 @@ describe('Browser', () => {
   });
 
   test('initialize elbwalker on window', () => {
-    w.elbwalker = undefined as unknown as IElbwalker.Function;
+    w.elbwalker = undefined as unknown as Elbwalker.Function;
     expect(w.elbwalker).toBeUndefined();
     jest.resetModules();
     jest.requireActual('../modules/browser');

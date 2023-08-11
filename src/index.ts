@@ -1,5 +1,5 @@
-import Elbwalker from './elbwalker';
-export default Elbwalker;
+import newElbwalker from './elbwalker';
+export default newElbwalker;
 
 export * from './lib/utils';
 

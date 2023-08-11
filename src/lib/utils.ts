@@ -1,7 +1,7 @@
-import type { Hooks, IElbwalker, Utils, Walker } from '../types';
+import type { Elbwalker, Hooks, Utils, Walker } from '../types';
 import Const from './constants';
 
-export const elb: IElbwalker.Elb = function () {
+export const elb: Elbwalker.Elb = function () {
   (window.elbLayer = window.elbLayer || []).push(arguments);
 };
 
@@ -199,7 +199,7 @@ export function isVisible(element: HTMLElement): boolean {
   return false;
 }
 
-export function startSession(
+export function sessionStart(
   config: Utils.SessionStart = {},
 ): Walker.Properties | false {
   // Force a new session or start checking if it's a regular new one
@@ -258,7 +258,7 @@ export function startSession(
 
 export function storageDelete(
   key: string,
-  storage: Utils.Storage.Type = Const.UtilsStorage.Session,
+  storage: Utils.StorageType = Const.UtilsStorage.Session,
 ) {
   switch (storage) {
     case Const.UtilsStorage.Cookie:
@@ -275,10 +275,10 @@ export function storageDelete(
 
 export function storageRead(
   key: string,
-  storage: Utils.Storage.Type = Const.UtilsStorage.Session,
+  storage: Utils.StorageType = Const.UtilsStorage.Session,
 ): Walker.PropertyType {
   // Helper function for local and session storage to support expiration
-  function parseItem(string: string | null): Utils.Storage.Value {
+  function parseItem(string: string | null): Utils.StorageValue {
     try {
       return JSON.parse(string || '');
     } catch (err) {
@@ -330,11 +330,11 @@ export function storageWrite(
   key: string,
   value: Walker.PropertyType,
   maxAgeInMinutes = 30,
-  storage: Utils.Storage.Type = Const.UtilsStorage.Session,
+  storage: Utils.StorageType = Const.UtilsStorage.Session,
   domain?: string,
 ): Walker.PropertyType {
   const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
-  const item: Utils.Storage.Value = { e, v: String(value) };
+  const item: Utils.StorageValue = { e, v: String(value) };
   const stringifiedItem = JSON.stringify(item);
 
   switch (storage) {
