@@ -1,11 +1,16 @@
 import type { Elbwalker } from '.';
 
-// @TODO global namespace pollution?
+type WalkerEvent = Array<
+  Elbwalker.Event & {
+    walker: true;
+  }
+>;
+
 declare global {
   interface Window {
     elbwalker: Elbwalker.Function;
     elbLayer: Elbwalker.ElbLayer;
-    dataLayer: unknown[];
+    dataLayer: WalkerEvent;
     elb: Elbwalker.Elb;
   }
 }
