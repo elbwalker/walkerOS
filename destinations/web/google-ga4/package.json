@@ -1,7 +1,7 @@
 {
-  "name": "@elbwalker/destination-web-google-ads",
-  "version": "1.1.2",
-  "description": "Google Ads web destination for walker.js",
+  "name": "@elbwalker/destination-web-google-ga4",
+  "version": "1.3.2",
+  "description": "Google GA4 web destination for walker.js",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist",
@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/elbwalker/walker.js",
-    "directory": "destinations/google-ads"
+    "directory": "destinations/web/google-ga4"
   },
   "files": [
     "dist/**/*.js",
@@ -56,7 +56,8 @@
     "walker destination",
     "analytics",
     "tracking",
-    "google ads"
+    "google analytics 4",
+    "ga4"
   ],
   "funding": [
     {

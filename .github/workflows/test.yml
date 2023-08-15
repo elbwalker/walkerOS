@@ -31,7 +31,7 @@ jobs:
     name: destination ${{ matrix.destination }}
     defaults:
       run:
-        working-directory: destinations/${{ matrix.destination }}
+        working-directory: destinations/web/${{ matrix.destination }}
     steps:
       - uses: actions/checkout@v3
       - run: npm install

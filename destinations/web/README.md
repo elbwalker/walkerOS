@@ -1,4 +1,4 @@
-# walker.js destinations
+# walker.js web destinations
 
 Understand the concept of destinations, learn how to use them, and how to write you own.
 

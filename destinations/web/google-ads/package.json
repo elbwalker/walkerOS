@@ -1,7 +1,7 @@
 {
-  "name": "@elbwalker/destination-web-google-gtm",
-  "version": "1.2.3",
-  "description": "Google Tag Manager (GTM) web destination for walker.js",
+  "name": "@elbwalker/destination-web-google-ads",
+  "version": "1.1.2",
+  "description": "Google Ads web destination for walker.js",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist",
@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/elbwalker/walker.js",
-    "directory": "destinations/google-gtm"
+    "directory": "destinations/web/google-ads"
   },
   "files": [
     "dist/**/*.js",
@@ -34,6 +34,7 @@
     "@babel/cli": "^7.22.10",
     "@babel/core": "^7.22.10",
     "@babel/preset-env": "^7.22.10",
+    "@types/gtag.js": "^0.0.12",
     "@types/jest": "^29.5.3",
     "copyfiles": "^2.4.1",
     "esbuild": "^0.18.19",
@@ -55,7 +56,7 @@
     "walker destination",
     "analytics",
     "tracking",
-    "google tag manager"
+    "google ads"
   ],
   "funding": [
     {
