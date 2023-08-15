@@ -4,6 +4,13 @@
   </a>
 </p>
 
+# @TODO
+- update .github actions
+- add pnpm support
+- create core package
+- install https://turbo.build/repo/docs/installing
+- update dir path for each package and other links
+
 # walker.js
 
 Walker.js is a first-party event tracker for simplified and compliant data collection. Standardized, agnostic & flexible. With walker.js you can capture user events in the browser and send them to any destination - just by setting HTML attributes. Become independent from locked-in analytics systems and set up reliable tracking the moment you design your front end.
