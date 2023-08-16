@@ -1,0 +1,40 @@
+{
+  "workspaces": [
+    "packages/*",
+    "packages/clients/",
+    "packages/destinations/web/*",
+    "packages/destinations/server/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.22.10",
+    "@babel/core": "^7.22.10",
+    "@babel/plugin-transform-runtime": "^7.22.10",
+    "@babel/preset-env": "^7.22.10",
+    "@babel/preset-typescript": "^7.22.5",
+    "@types/jest": "^29.5.3",
+    "babel-loader": "^9.1.3",
+    "eslint-config-custom": "*",
+    "jest": "^29.6.2",
+    "jest-environment-jsdom": "^29.6.2",
+    "prettier": "^3.0.1",
+    "ts-jest": "^29.1.1",
+    "ts-loader": "^9.4.4",
+    "turbo": "^1.10.12",
+    "typescript": "^5.1.6",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
+  },
+  "packageManager": "npm@9.6.7",
+  "browserslist": [
+    "> 0.2%",
+    "not dead",
+    "not ie < 11",
+    "not op_mini all"
+  ]
+}

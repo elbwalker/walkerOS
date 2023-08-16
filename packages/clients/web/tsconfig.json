@@ -1,23 +1,7 @@
 {
+  "extends": "@elbwalker/tsconfig/web.json",
   "compilerOptions": {
-    "target": "es2018",
-    "module": "esnext",
-    "lib": ["dom", "es2018"],
-    "outDir": "dist",
-    "strict": true,
-    "moduleResolution": "node",
-    "noImplicitReturns": true,
-    "noImplicitAny": true,
-    "typeRoots": ["src/types", "node_modules/@types"],
-    "types": ["jest"],
-    "esModuleInterop": true,
-    "isolatedModules": true,
-    "declaration": true,
-    "forceConsistentCasingInFileNames": true,
     "sourceMap": true
-    // "skipLibCheck": true
   },
-  "exclude": ["node_modules", "dist", "**/*.test.*"],
-  "include": ["src/**/*.ts", ".eslintrc.js"],
-  "$schema": "https://json.schemastore.org/tsconfig"
+  "exclude": ["node_modules", "dist", "**/*.test.*"]
 }
