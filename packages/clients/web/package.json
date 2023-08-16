@@ -6,11 +6,9 @@
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "source": "src/index.ts",
   "files": [
-    "dist/**/*.js",
-    "dist/**/*.mjs",
-    "dist/**/*.d.ts",
-    "dist/**/*.js.map"
+    "dist/**"
   ],
   "scripts": {
     "test": "jest --colors --coverage",
@@ -20,7 +18,7 @@
     "publish": "npm run test && npm run build && npm publish --access public"
   },
   "devDependencies": {
-    "@elbwalker/tsconfig": "*",
+    "tsconfig": "*",
     "eslint-config-custon": "*"
   },
   "repository": {
