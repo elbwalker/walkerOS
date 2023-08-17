@@ -86,3 +86,6 @@ typings/
 
 # JetBrains IDEs
 .idea
+
+# Turbobuild
+.turbo
