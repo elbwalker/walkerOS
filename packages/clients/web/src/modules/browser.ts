@@ -1,6 +1,6 @@
 // browser version
 import ElbwalkerWeb from '../elbwalker';
-import { elb, getAttribute } from '../lib/utils';
+import { elb, getAttribute } from '@elbwalker/utils';
 
 let defaultMode, version;
 

@@ -1,6 +1,6 @@
 import ElbwalkerWeb from '../elbwalker';
-import Const from '../lib/constants';
-import type { Elbwalker } from '../types';
+import { Const } from '@elbwalker/utils';
+import type { Elbwalker } from '@elbwalker/types';
 import fs from 'fs';
 
 const w = window;
@@ -395,8 +395,8 @@ describe('Trigger', () => {
     );
 
     // mock isVisible to return true
-    jest.mock('../lib/utils', () => ({
-      ...jest.requireActual('../lib/utils'),
+    jest.mock('@elbwalker/utils', () => ({
+      ...jest.requireActual('@elbwalker/utils'),
       isVisible: () => true,
     }));
 

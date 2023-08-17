@@ -1,4 +1,4 @@
-import type { Elbwalker, Utils as TUtils, Walker } from '../types';
+import type { Elbwalker, Utils as TUtils, Walker } from '@elbwalker/types';
 
 const Commands: { [key: string]: Elbwalker.Commands } = {
   Action: 'action',

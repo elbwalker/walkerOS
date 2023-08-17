@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { getEvents } from '../lib/walker';
-import Const from '../lib/constants';
+import { Const } from '@elbwalker/utils';
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 
 const html: string = fs

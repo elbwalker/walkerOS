@@ -1,4 +1,3 @@
-const path = require('path');
 const commonConfig = require('@elbwalker/webpack');
 
 const nodeConfig = {
@@ -6,7 +5,6 @@ const nodeConfig = {
   entry: './src/index.ts',
   output: {
     filename: 'index.js',
-    path: path.resolve(__dirname, 'dist'),
     library: { type: 'commonjs2' },
   },
 };
@@ -21,7 +19,6 @@ const moduleConfig = {
       type: 'module',
     },
     filename: 'index.mjs',
-    path: path.resolve(__dirname, 'dist'),
   },
 };
 

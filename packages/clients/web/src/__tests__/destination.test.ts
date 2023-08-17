@@ -1,5 +1,5 @@
 import ElbwalkerWeb from '../elbwalker';
-import type { Elbwalker, WebDestination } from '../types';
+import type { Elbwalker, WebDestination } from '@elbwalker/types';
 
 describe('Destination', () => {
   const w = window;

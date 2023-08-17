@@ -1,4 +1,4 @@
-import type { Elbwalker, Hooks, Utils, Walker } from '../types';
+import type { Elbwalker, Hooks, Utils, Walker } from '@elbwalker/types';
 import Const from './constants';
 
 export const elb: Elbwalker.Elb = function () {
@@ -34,6 +34,8 @@ export function castValue(value: unknown): Walker.PropertyType {
 
   return String(value);
 }
+
+export { Const };
 
 export function debounce<P extends unknown[], R>(
   fn: (...args: P) => R,

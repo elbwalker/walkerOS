@@ -1,4 +1,3 @@
-import Const from '../lib/constants';
 import {
   elb,
   debounce,
@@ -11,7 +10,8 @@ import {
   getByStringDot,
   trycatch,
   sessionStart,
-} from '../lib/utils';
+  Const,
+} from '../';
 
 const w = window;
 

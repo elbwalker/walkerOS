@@ -1,4 +1,4 @@
-import { Walker } from '@elbwalker/walker.js';
+import type { Walker } from '@elbwalker/types';
 import type { ITagger } from './types';
 
 function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {

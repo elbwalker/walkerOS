@@ -1,7 +1,12 @@
-import type { Elbwalker, Walker } from '../types';
+import type { Elbwalker, Walker } from '@elbwalker/types';
 import { getElbAttributeName, getEvents, getTriggerActions } from './walker';
-import { getAttribute, isVisible, throttle, trycatch } from './utils';
-import Const from './constants';
+import {
+  Const,
+  getAttribute,
+  isVisible,
+  throttle,
+  trycatch,
+} from '@elbwalker/utils';
 
 let visibleObserver: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];

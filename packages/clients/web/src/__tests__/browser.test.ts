@@ -1,4 +1,4 @@
-import type { Elbwalker } from '../types';
+import type { Elbwalker } from '@elbwalker/types';
 import fs from 'fs';
 
 describe('Browser', () => {

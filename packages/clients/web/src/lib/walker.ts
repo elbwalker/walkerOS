@@ -1,6 +1,5 @@
-import type { Walker } from '../types';
-import Const from './constants';
-import { assign, castValue, getAttribute, trim } from './utils';
+import type { Walker } from '@elbwalker/types';
+import { Const, assign, castValue, getAttribute, trim } from '@elbwalker/utils';
 
 export function getElbAttributeName(
   prefix: string,

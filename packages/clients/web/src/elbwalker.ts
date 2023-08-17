@@ -1,13 +1,24 @@
-import type { Hooks, Elbwalker, Walker, WebDestination } from './types';
+import type {
+  Hooks,
+  Elbwalker,
+  Walker,
+  WebDestination,
+} from '@elbwalker/types';
 import {
   initScopeTrigger,
   initGlobalTrigger,
   ready,
   load,
 } from './lib/trigger';
-import { assign, getId, isSameType, trycatch, useHooks } from './lib/utils';
+import {
+  Const,
+  assign,
+  getId,
+  isSameType,
+  trycatch,
+  useHooks,
+} from '@elbwalker/utils';
 import { getEntities, getGlobals } from './lib/walker';
-import Const from './lib/constants';
 
 function ElbwalkerWeb(
   customConfig: Partial<Elbwalker.Config> = {},
