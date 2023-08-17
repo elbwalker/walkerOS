@@ -17,10 +17,7 @@
     "publish": "npm run test && npm run build && npm publish --access public",
     "test": "jest --colors --coverage"
   },
-  "devDependencies": {
-    "@elbwalker/tsconfig": "*",
-    "eslint-config-custom": "*"
-  },
+  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "https://github.com/elbwalker/walker.js",
