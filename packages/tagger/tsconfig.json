@@ -1,5 +1,5 @@
 {
-  "extends": "tsconfig/server.json",
+  "extends": "@elbwalker/tsconfig/server.json",
   "compilerOptions": {
     "outDir": "dist",
     "sourceMap": true

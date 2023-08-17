@@ -1,5 +1,5 @@
 {
-  "name": "tsconfig",
+  "name": "@elbwalker/tsconfig",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",

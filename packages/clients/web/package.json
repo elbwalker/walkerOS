@@ -11,15 +11,15 @@
     "dist/**"
   ],
   "scripts": {
-    "test": "jest --colors --coverage",
-    "dev": "jest --watchAll --colors",
     "build": "webpack",
+    "dev": "jest --watchAll --colors",
     "lint": "eslint \"**/*.ts*\"",
-    "publish": "npm run test && npm run build && npm publish --access public"
+    "publish": "npm run test && npm run build && npm publish --access public",
+    "test": "jest --colors --coverage"
   },
   "devDependencies": {
-    "tsconfig": "*",
-    "eslint-config-custon": "*"
+    "@elbwalker/tsconfig": "*",
+    "eslint-config-custom": "*"
   },
   "repository": {
     "type": "git",

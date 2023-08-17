@@ -11,18 +11,13 @@
     "dist/**"
   ],
   "scripts": {
-    "build": "node ./esbuild.mjs",
-    "postbuild": "tsc && copyfiles -u 1 src/types/*.d.ts dist",
+    "build": "webpack",
     "dev": "jest --watchAll --colors",
     "publish": "npm i && npm run test && npm run build && npm publish --access public",
     "test": "jest --colors --coverage"
   },
   "dependencies": {
     "@elbwalker/walker.js": "^1.6.5"
-  },
-  "devDependencies": {
-    "copyfiles": "^2.4.1",
-    "esbuild": "^0.18.19"
   },
   "repository": {
     "type": "git",
