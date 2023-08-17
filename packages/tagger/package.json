@@ -2,8 +2,14 @@
   "name": "@elbwalker/tagger",
   "description": "A helper to set up tracking based on walker.js",
   "version": "1.0.2",
+  "license": "MIT",
   "main": "dist/index.js",
-  "types": "dist",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "source": "src/index.ts",
+  "files": [
+    "dist/**"
+  ],
   "scripts": {
     "build": "node ./esbuild.mjs",
     "postbuild": "tsc && copyfiles -u 1 src/types/*.d.ts dist",
@@ -11,33 +17,23 @@
     "publish": "npm i && npm run test && npm run build && npm publish --access public",
     "test": "jest --colors --coverage"
   },
-  "author": "elbwalker <hello@elbwalker.com>",
-  "license": "ISC",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/elbwalker/walker.js",
-    "directory": "tagger"
-  },
-  "files": [
-    "dist/**/*.js",
-    "dist/**/*.d.ts"
-  ],
   "dependencies": {
     "@elbwalker/walker.js": "^1.6.5"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.3",
     "copyfiles": "^2.4.1",
-    "esbuild": "^0.18.19",
-    "jest": "^29.6.2",
-    "jest-environment-jsdom": "^29.6.2",
-    "ts-jest": "^29.1.1",
-    "typescript": "^5.1.6"
+    "esbuild": "^0.18.19"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elbwalker/walker.js",
+    "directory": "packages/tagger"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walker.js#readme",
   "bugs": {
     "url": "https://github.com/elbwalker/walker.js/issues"
   },
-  "homepage": "https://github.com/elbwalker/walker.js#readme",
   "keywords": [
     "elb",
     "elbwalker",
