@@ -1,6 +1,7 @@
 {
   "workspaces": [
     "packages/*",
+    "packages/config/*",
     "packages/clients/*",
     "Xpackages/destinations/web/*",
     "packages/destinations/server/*"
