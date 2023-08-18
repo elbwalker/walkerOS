@@ -1,5 +1,4 @@
 import {
-  elb,
   debounce,
   getMarketingParameters,
   isVisible,
@@ -27,16 +26,6 @@ describe('Utils', () => {
     jest.clearAllMocks();
     jest.resetModules();
     jest.useFakeTimers();
-  });
-
-  test('elb', () => {
-    w.elbLayer = undefined as any;
-    elb('e a');
-    expect(w.elbLayer).toBeDefined;
-
-    w.elbLayer.push = mockFn;
-    elb('e a');
-    expect(mockFn).toBeCalledWith(expect.objectContaining(['e a']));
   });
 
   test('isVisible', () => {

@@ -1,11 +1,11 @@
-import ElbwalkerWeb from '../elbwalker';
-import type { Elbwalker } from '@elbwalker/types';
+import webCLient from '../';
+import type * as WebClient from '../types';
 
 describe('Init', () => {
   const w = window;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  let elbwalker: Elbwalker.Function;
+  let elbwalker: WebClient.Function;
 
   beforeEach(() => {
     jest.resetModules();
@@ -17,7 +17,7 @@ describe('Init', () => {
 
   test('custom prefix', () => {
     const prefix = 'data-prefix';
-    elbwalker = ElbwalkerWeb({ prefix });
+    elbwalker = webCLient({ prefix });
 
     expect(elbwalker.config).toStrictEqual(
       expect.objectContaining({
@@ -28,7 +28,7 @@ describe('Init', () => {
 
   test('disable page view', () => {
     // First default beforeEach call with pageview true by default
-    elbwalker = ElbwalkerWeb({ default: true });
+    elbwalker = webCLient({ default: true });
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page view',
@@ -37,7 +37,7 @@ describe('Init', () => {
 
     jest.clearAllMocks();
     w.elbLayer = [];
-    elbwalker = ElbwalkerWeb({ default: true, pageview: false });
+    elbwalker = webCLient({ default: true, pageview: false });
 
     expect(mockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({

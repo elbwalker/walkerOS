@@ -1,11 +1,11 @@
-import type { Elbwalker } from '@elbwalker/types';
+import type * as WebClient from '../types';
 import fs from 'fs';
 
 describe('Browser', () => {
   const w = window;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  jest.mock('../elbwalker', () => {
+  jest.mock('../', () => {
     return mockFn;
   });
 
@@ -27,17 +27,17 @@ describe('Browser', () => {
   });
 
   test('initialize elbwalker on window', () => {
-    w.elbwalker = undefined as unknown as Elbwalker.Function;
+    w.elbwalker = undefined as unknown as WebClient.Function;
     expect(w.elbwalker).toBeUndefined();
     jest.resetModules();
-    jest.requireActual('../modules/browser');
-    const elbwalker = require('../elbwalker').default;
+    jest.requireActual('../browser');
+    const elbwalker = require('../').default;
     expect(w.elbwalker).toEqual(elbwalker);
   });
 
   test('no script tag', () => {
     document.body.innerHTML = '';
-    jest.requireActual('../modules/browser');
+    jest.requireActual('../browser');
 
     expect(mockFn).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledWith({});
@@ -47,7 +47,7 @@ describe('Browser', () => {
     const elem = document.getElementsByTagName('script')[0];
     elem.removeAttribute('data-project');
 
-    jest.requireActual('../modules/browser');
+    jest.requireActual('../browser');
     expect(mockFn).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledWith({
       default: false,
@@ -60,7 +60,7 @@ describe('Browser', () => {
     const elem = document.getElementsByTagName('script')[0];
     elem.setAttribute('data-default', 'true');
 
-    jest.requireActual('../modules/browser');
+    jest.requireActual('../browser');
     expect(mockFn).toHaveBeenCalledWith({
       default: true,
       version: 1,
@@ -71,7 +71,7 @@ describe('Browser', () => {
     const elem = document.getElementsByTagName('script')[0];
     elem.setAttribute('data-version', '42');
 
-    jest.requireActual('../modules/browser');
+    jest.requireActual('../browser');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         version: 42,

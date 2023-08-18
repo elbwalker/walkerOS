@@ -1,10 +1,11 @@
-import ElbwalkerWeb from '../elbwalker';
-import { elb } from '@elbwalker/utils';
+import webClient from '../';
+import { elb } from '../lib/trigger';
+import type * as WebClient from '../types';
 import type { Elbwalker, Walker, WebDestination } from '@elbwalker/types';
 
 describe('ElbLayer', () => {
   const w = window;
-  let elbwalker: Elbwalker.Function;
+  let elbwalker: WebClient.Function;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn(); //.mockImplementation(console.log);
@@ -23,7 +24,7 @@ describe('ElbLayer', () => {
   });
 
   test('arguments and event pushes', () => {
-    elbwalker = ElbwalkerWeb({ default: true });
+    elbwalker = webClient({ default: true });
     elb('ingest argument', { a: 1 }, 'a', {}); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
@@ -46,7 +47,7 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack without run', () => {
-    elbwalker = ElbwalkerWeb();
+    elbwalker = webClient();
     elb('walker destination', destination);
     elb('entity action');
 
@@ -57,7 +58,7 @@ describe('ElbLayer', () => {
     elb('e 1');
     elb('walker destination', destination);
 
-    elbwalker = ElbwalkerWeb();
+    elbwalker = webClient();
     elb('e 2');
     elb('walker run');
     // auto call: elb('page view');
@@ -105,7 +106,7 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack with run', () => {
-    elbwalker = ElbwalkerWeb();
+    elbwalker = webClient();
 
     elb('walker destination', destination);
     elb('ingest argument', { a: 1 }, 'a'); // Push as arguments
@@ -131,7 +132,7 @@ describe('ElbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    elbwalker = ElbwalkerWeb();
+    elbwalker = webClient();
 
     (elb as Function)();
     elb('event postponed');
@@ -175,13 +176,13 @@ describe('ElbLayer', () => {
   test('elbLayer initialization', () => {
     w.elbLayer = undefined as any;
 
-    elbwalker = ElbwalkerWeb();
+    elbwalker = webClient();
 
     expect(w.elbLayer).toBeDefined();
   });
 
   test('config update', () => {
-    const defaultConfig: Elbwalker.Config = {
+    const defaultConfig: WebClient.Config = {
       allowed: true,
       consent: {},
       count: expect.any(Number),
@@ -199,7 +200,7 @@ describe('ElbLayer', () => {
       version: 0,
     };
 
-    elbwalker = ElbwalkerWeb();
+    elbwalker = webClient();
     elb('walker run');
 
     expect(elbwalker.config).toStrictEqual(defaultConfig);
@@ -224,7 +225,7 @@ describe('ElbLayer', () => {
     w.elbLayer.length = 0;
     let globals: Walker.Properties = { static: 'value' };
     config = { ...defaultConfig, globals };
-    elbwalker = ElbwalkerWeb({ globals });
+    elbwalker = webClient({ globals });
     elb('walker run');
     expect(elbwalker.config).toStrictEqual(config);
 
@@ -255,14 +256,14 @@ describe('ElbLayer', () => {
 
   test('custom elbLayer', () => {
     w.dataLayer = [];
-    const customLayer1 = [] as Elbwalker.ElbLayer;
-    const customLayer2 = [] as Elbwalker.ElbLayer;
-    const instance1 = ElbwalkerWeb({
+    const customLayer1 = [] as WebClient.ElbLayer;
+    const customLayer2 = [] as WebClient.ElbLayer;
+    const instance1 = webClient({
       elbLayer: customLayer1,
       default: true,
       pageview: false,
     });
-    const instance2 = ElbwalkerWeb({
+    const instance2 = webClient({
       elbLayer: customLayer2,
       default: true,
       pageview: false,
@@ -333,9 +334,9 @@ describe('ElbLayer', () => {
   });
 
   test('elbLayer push override', () => {
-    const layer: Elbwalker.ElbLayer = [];
+    const layer: WebClient.ElbLayer = [];
 
-    elbwalker = ElbwalkerWeb({ elbLayer: layer, pageview: false });
+    elbwalker = webClient({ elbLayer: layer, pageview: false });
     layer.push('walker run'); // Overrites push function
     layer.push('walker destination', destination, {
       init: true,
@@ -354,7 +355,7 @@ describe('ElbLayer', () => {
   });
 
   test('command order', () => {
-    elbwalker = ElbwalkerWeb();
+    elbwalker = webClient();
     elb('walker run');
 
     // Arguments

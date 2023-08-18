@@ -1,9 +1,10 @@
-import ElbwalkerWeb from '../elbwalker';
-import type { Elbwalker, WebDestination } from '@elbwalker/types';
+import webClient from '../';
+import type * as WebClient from '../types';
+import type { WebDestination } from '@elbwalker/types';
 
 describe('Destination', () => {
   const w = window;
-  let elbwalker: Elbwalker.Function;
+  let elbwalker: WebClient.Function;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn().mockImplementation(() => {
@@ -20,7 +21,7 @@ describe('Destination', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    elbwalker = ElbwalkerWeb({ pageview: false });
+    elbwalker = webClient({ pageview: false });
     config = { init: false };
 
     destination = {
@@ -198,7 +199,7 @@ describe('Destination', () => {
 
   test('mapping', () => {
     jest.clearAllMocks();
-    elbwalker = ElbwalkerWeb({ elbLayer: [], pageview: false });
+    elbwalker = webClient({ elbLayer: [], pageview: false });
     elbwalker.push('walker run');
 
     const mockPushA = jest.fn();
@@ -311,7 +312,7 @@ describe('Destination', () => {
 
   test('consent', () => {
     jest.clearAllMocks();
-    elbwalker = ElbwalkerWeb({
+    elbwalker = webClient({
       consent: { functional: true, marketing: false },
       pageview: false,
     });
@@ -369,7 +370,7 @@ describe('Destination', () => {
   });
 
   test('queue', () => {
-    elbwalker = ElbwalkerWeb({
+    elbwalker = webClient({
       consent: { functional: true },
       pageview: false,
     });
@@ -513,7 +514,7 @@ describe('Destination', () => {
   });
 
   test('set config on init', () => {
-    elbwalker = ElbwalkerWeb({ elbLayer: [], pageview: false });
+    elbwalker = webClient({ elbLayer: [], pageview: false });
     elbwalker.push('walker run');
 
     const mockInitA = jest.fn();
@@ -564,7 +565,7 @@ describe('Destination', () => {
   });
 
   test('temp async queue', () => {
-    elbwalker = ElbwalkerWeb({ elbLayer: [], pageview: false });
+    elbwalker = webClient({ elbLayer: [], pageview: false });
     elbwalker.push('walker run');
     elbwalker.push('walker destination', destination);
 

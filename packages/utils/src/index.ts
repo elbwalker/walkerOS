@@ -1,9 +1,5 @@
-import type { Elbwalker, Hooks, Utils, Walker } from '@elbwalker/types';
+import type { Hooks, Utils, Walker } from '@elbwalker/types';
 import Const from './constants';
-
-export const elb: Elbwalker.Elb = function () {
-  (window.elbLayer = window.elbLayer || []).push(arguments);
-};
 
 export function assign<T>(target: T, source: Object = {}): T {
   // Check for array properties to merge them before overriding

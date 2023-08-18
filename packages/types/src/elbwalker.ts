@@ -10,17 +10,12 @@ export interface Function {
 export interface Elb {
   (event: 'walker config', config: Partial<Config>): void;
   (event: 'walker consent', consent: Consent): void;
-  (
-    event: 'walker destination',
-    destination: WebDestination.Function<any, any>,
-    config?: WebDestination.Config,
-  ): void;
+
   <K extends keyof Hooks.Functions>(
     event: 'walker hook',
     name: K,
     hookFn: Hooks.Functions[K],
   ): void;
-  (event: 'walker init', scope: Scope | Scope[]): void;
   (event: 'walker run'): void;
   (event: 'walker user', user: User): void;
   (
@@ -32,20 +27,9 @@ export interface Elb {
   ): void;
 }
 
-export type ElbLayer = [
-  (IArguments | string)?,
-  PushData?,
-  PushOptions?,
-  Walker.OrderedProperties?,
-  Walker.Entities?,
-];
-
 export type PushData =
   | Partial<Config>
   | Consent
-  | Element
-  | Scope
-  | Scope[]
   | String
   | User
   | Walker.Properties
@@ -54,18 +38,14 @@ export type PushData =
 export type PushOptions =
   | Walker.Trigger
   | Hooks.Functions
-  | WebDestination.Config;
-export type PushContext = Walker.OrderedProperties | Element;
 
-export type Scope = Document | HTMLElement;
+export type PushContext = Walker.OrderedProperties;
 
 export interface Config {
   allowed: boolean;
   consent: Consent;
   count: number;
-  destinations: Destinations;
   // @TODO custom state support
-  elbLayer: ElbLayer;
   globals: Walker.Properties;
   group: string;
   hooks: Hooks.Functions;
@@ -77,10 +57,6 @@ export interface Config {
   user: User;
   version: number;
   default?: boolean;
-}
-
-export interface Destinations {
-  [name: string]: WebDestination.Function;
 }
 
 export type Events = Array<Event>;

@@ -1,6 +1,7 @@
 // browser version
-import ElbwalkerWeb from '../elbwalker';
-import { elb, getAttribute } from '@elbwalker/utils';
+import webClient from '.';
+import { getAttribute } from '@elbwalker/utils';
+import { elb } from './lib/trigger';
 
 let defaultMode, version;
 
@@ -12,7 +13,7 @@ if (elem) {
   version = parseInt(getAttribute(elem, 'data-version') || '1'); // config version
 }
 
-const instance = ElbwalkerWeb({ default: defaultMode, version });
+const instance = webClient({ default: defaultMode, version });
 
 // Global object
 window.elbwalker = instance;

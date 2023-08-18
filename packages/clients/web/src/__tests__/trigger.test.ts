@@ -1,10 +1,11 @@
-import ElbwalkerWeb from '../elbwalker';
+import webClient from '../';
 import { Const } from '@elbwalker/utils';
-import type { Elbwalker } from '@elbwalker/types';
+import type * as WebClient from '../types';
 import fs from 'fs';
+import { elb } from '../lib/trigger';
 
 const w = window;
-let elbwalker: Elbwalker.Function;
+let elbwalker: WebClient.Function;
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
@@ -27,7 +28,7 @@ describe('Trigger', () => {
     jest.spyOn(global, 'setInterval');
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
-    w.elbLayer = undefined as unknown as Elbwalker.ElbLayer;
+    w.elbLayer = undefined as unknown as WebClient.ElbLayer;
 
     events = {};
     document.addEventListener = mockAddEventListener.mockImplementation(
@@ -36,7 +37,17 @@ describe('Trigger', () => {
       },
     );
 
-    elbwalker = ElbwalkerWeb({ default: true });
+    elbwalker = webClient({ default: true });
+  });
+
+  test('elb', () => {
+    w.elbLayer = undefined as any;
+    elb('e a');
+    expect(w.elbLayer).toBeDefined;
+
+    w.elbLayer.push = mockFn;
+    elb('e a');
+    expect(mockFn).toBeCalledWith(expect.objectContaining(['e a']));
   });
 
   test('init global', () => {
@@ -322,7 +333,7 @@ describe('Trigger', () => {
   test('scroll', () => {
     // New instance without cached scrollIstener
     w.elbLayer = [];
-    const Elbwalker = jest.requireActual('../elbwalker').default;
+    const Elbwalker = jest.requireActual('../').default;
     elbwalker = Elbwalker({ default: true });
 
     const innerHeight = window.innerHeight;
@@ -405,7 +416,7 @@ describe('Trigger', () => {
     jest.spyOn(global, 'clearTimeout');
 
     w.elbLayer = [];
-    const Elbwalker = jest.requireActual('../elbwalker').default;
+    const Elbwalker = jest.requireActual('../').default;
     elbwalker = Elbwalker({ default: true });
 
     const target = document.getElementById('visible');
