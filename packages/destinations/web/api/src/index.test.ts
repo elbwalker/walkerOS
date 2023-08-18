@@ -1,10 +1,10 @@
 import webClient from '@elbwalker/walker.js';
-import type { Elbwalker } from '@elbwalker/types';
+import type { WebClient } from '@elbwalker/walker.js';
 import type { Function, Config } from './types';
 
 describe('Destination API', () => {
   const w = window;
-  let elbwalker: Elbwalker.Function, destination: Function, config: Config;
+  let elbwalker: WebClient.Function, destination: Function, config: Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
   const mockFetch = jest.fn();

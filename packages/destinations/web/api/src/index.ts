@@ -1,6 +1,6 @@
 import type { Function } from './types';
 
-export const destinationAPI: Function = {
+export const destinationWebAPI: Function = {
   type: 'api',
 
   config: {},
@@ -47,4 +47,4 @@ function sendAsXhr(url: string, data: string) {
   xhr.send(data);
 }
 
-export default destinationAPI;
+export default destinationWebAPI;

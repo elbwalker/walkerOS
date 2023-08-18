@@ -1,4 +1,4 @@
-import * as WebClient from './types';
+import type * as WebClient from './types';
 import type {
   Elbwalker,
   Hooks,
@@ -21,7 +21,9 @@ import {
 } from '@elbwalker/utils';
 import { getEntities, getGlobals } from './lib/walker';
 
-function webClient(
+export { WebClient };
+
+export function webClient(
   customConfig: Partial<WebClient.Config> = {},
 ): WebClient.Function {
   const version = 1.6;
