@@ -1,7 +1,6 @@
-import { DestinationAPI } from './types';
-export * from './types/index.d';
+import type { Function } from './types';
 
-export const destinationAPI: DestinationAPI.Function = {
+export const destinationAPI: Function = {
   type: 'api',
 
   config: {},

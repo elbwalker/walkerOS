@@ -1,11 +1,10 @@
-import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationAPI } from './types';
+import webClient from '@elbwalker/walker.js';
+import type { Elbwalker } from '@elbwalker/types';
+import type { Function, Config } from './types';
 
 describe('Destination API', () => {
   const w = window;
-  let elbwalker: IElbwalker.Function,
-    destination: DestinationAPI.Function,
-    config: DestinationAPI.Config;
+  let elbwalker: Elbwalker.Function, destination: Function, config: Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
   const mockFetch = jest.fn();
@@ -35,7 +34,7 @@ describe('Destination API', () => {
 
     w.elbLayer = [];
 
-    elbwalker = Elbwalker({ pageview: false });
+    elbwalker = webClient({ pageview: false });
     elbwalker.push('walker run');
 
     window.fetch = mockFetch;
