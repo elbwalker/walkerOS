@@ -6,13 +6,11 @@
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
-  "source": "src/index.ts",
-  "@TODO": "TEST THE FILES BLOB",
   "files": [
     "dist/**"
   ],
   "scripts": {
-    "build": "webpack",
+    "build": "tsup",
     "dev": "jest --watchAll --colors",
     "lint": "eslint \"**/*.ts*\"",
     "publish": "npm run test && npm run build && npm publish --access public",

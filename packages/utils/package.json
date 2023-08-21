@@ -6,12 +6,11 @@
   "main": "src/index.ts",
   "module": "src/index.ts",
   "types": "src/index.ts",
-  "source": "src/index.ts",
   "files": [
     "dist/**"
   ],
   "scripts": {
-    "build": "webpack",
+    "build": "tsup",
     "dev": "jest --watchAll --colors",
     "lint": "eslint \"**/*.ts*\"",
     "publish": "npm run test && npm run build && npm publish --access public",

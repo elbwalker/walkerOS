@@ -23,7 +23,7 @@ import { getEntities, getGlobals } from './lib/walker';
 
 export { WebClient };
 
-export function webClient(
+function webClient(
   customConfig: Partial<WebClient.Config> = {},
 ): WebClient.Function {
   const version = 1.6;
