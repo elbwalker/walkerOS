@@ -1,0 +1,25 @@
+name: Build and upload artifacts
+
+on:
+  push:
+    branches:
+      - develop # Trigger on pushes to the develop branch
+
+  workflow_dispatch:
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+      - run: npm install
+      - run: npm run build
+      - uses: actions/upload-artifact@v3
+        with:
+          name: dist-folders
+          path: packages/**/dist/**/*
