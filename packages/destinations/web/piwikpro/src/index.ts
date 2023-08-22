@@ -1,5 +1,6 @@
-import type { Elbwalker, Walker } from '@elbwalker/types';
 import type { CustomConfig, CustomEventConfig, Function } from './types';
+import { getByStringDot } from '@elbwalker/utils';
+
 // @TODOs
 // - static values besides dynamic data values
 // - site search
@@ -49,7 +50,7 @@ export const destinationPiwikPro: Function = {
       event.action === 'view'
     ) {
       // Pageview tracking will move to run part in next version
-      window._paq!.push(['trackPageView', getValue(event, 'data.title')]);
+      window._paq!.push(['trackPageView', getByStringDot(event, 'data.title')]);
 
       return;
     }
@@ -59,8 +60,9 @@ export const destinationPiwikPro: Function = {
     let name: unknown, value: unknown; // @TODO fix types
 
     if (customMapping) {
-      if (customMapping.name) name = getValue(event, customMapping.name);
-      if (customMapping.value) value = getValue(event, customMapping.value);
+      if (customMapping.name) name = getByStringDot(event, customMapping.name);
+      if (customMapping.value)
+        value = getByStringDot(event, customMapping.value);
     }
 
     window._paq!.push([
@@ -74,7 +76,7 @@ export const destinationPiwikPro: Function = {
 
     if (customMapping.goalId) {
       const goalValue = customMapping.goalValue
-        ? getValue(event, customMapping.goalValue)
+        ? getByStringDot(event, customMapping.goalValue)
         : undefined;
 
       window._paq!.push([
@@ -94,15 +96,6 @@ function addScript(url: string) {
   script.async = true;
   script.defer = true;
   document.head.appendChild(script);
-}
-
-function getValue(event: Elbwalker.Event, key: string): unknown {
-  // String dot notation for object ("data.id" -> { data: { id: 1 } })
-  const value = key.split('.').reduce((obj, key) => {
-    return obj[key];
-  }, event);
-
-  return value;
 }
 
 export default destinationPiwikPro;
