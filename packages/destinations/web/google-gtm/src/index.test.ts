@@ -90,7 +90,7 @@ describe('destination google-tag-manager', () => {
       count: 1,
       version,
       source: {
-        type: 1,
+        type: 'web',
         id: expect.any(String),
         previous_id: expect.any(String),
       },
