@@ -1,4 +1,4 @@
-name: Test and Build
+name: Build and test
 
 on:
   push:
@@ -8,7 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  build_and_test:
+    name: Build and test
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
@@ -19,14 +20,3 @@ jobs:
           cache: 'npm'
       - run: npm install
       - run: npm run test
-  build:
-    timeout-minutes: 15
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: 'npm'
-      - run: npm install
-      - run: npm run build
