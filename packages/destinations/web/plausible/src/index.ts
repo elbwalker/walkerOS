@@ -1,11 +1,11 @@
-import { DestinationPlausible } from './types';
+import type { Config, Function } from './types';
 
-export const destinationPlausible: DestinationPlausible.Function = {
+export const destinationPlausible: Function = {
   type: 'plausible',
 
   config: {},
 
-  init(config: DestinationPlausible.Config) {
+  init(config: Config) {
     const w = window;
     const custom = config.custom || {};
 

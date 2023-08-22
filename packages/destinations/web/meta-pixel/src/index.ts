@@ -1,6 +1,5 @@
 import type { Elbwalker, Walker } from '@elbwalker/types';
 import type {
-  Config,
   ContentIds,
   Contents,
   CustomEventConfig,
@@ -16,7 +15,7 @@ export const destinationMetaPixel: Function = {
 
   config: {},
 
-  init(config: Config) {
+  init(config) {
     const custom = config.custom || {};
 
     // load fbevents.js

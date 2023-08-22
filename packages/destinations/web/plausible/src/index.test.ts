@@ -1,11 +1,10 @@
-import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationPlausible } from './types';
+import webClient from '@elbwalker/walker.js';
+import type { WebClient } from '@elbwalker/walker.js';
+import type { Config, Function } from './types';
 
 describe('destination plausible', () => {
   const w = window;
-  let elbwalker: IElbwalker.Function,
-    destination: DestinationPlausible.Function,
-    config: DestinationPlausible.Config;
+  let elbwalker: WebClient.Function, destination: Function, config: Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
@@ -22,7 +21,7 @@ describe('destination plausible', () => {
     w.elbLayer = [];
     w.plausible = mockFn;
 
-    elbwalker = Elbwalker({ pageview: false });
+    elbwalker = webClient({ pageview: false });
     elbwalker.push('walker run');
   });
 
