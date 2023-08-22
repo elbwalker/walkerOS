@@ -1,11 +1,10 @@
-import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationGoogleGTM } from './types';
+import webClient from '@elbwalker/walker.js';
+import type { WebClient } from '@elbwalker/walker.js';
+import type { Config, Function } from './types';
 
 describe('destination google-tag-manager', () => {
   const w = window;
-  let elbwalker: IElbwalker.Function,
-    destination: DestinationGoogleGTM.Function,
-    config: DestinationGoogleGTM.Config;
+  let elbwalker: WebClient.Function, destination: Function, config: Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const containerId = 'GTM-XXXXXXX';
@@ -21,7 +20,7 @@ describe('destination google-tag-manager', () => {
     w.dataLayer = [];
     w.dataLayer.push = mockFn;
 
-    elbwalker = Elbwalker({ pageview: false });
+    elbwalker = webClient({ pageview: false });
     elbwalker.push('walker run');
   });
 
