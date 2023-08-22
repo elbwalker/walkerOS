@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@elbwalker/types": "*",
+    "@elbwalker/walker.js": "*",
     "@types/gtag.js": "^0.0.12"
   },
   "repository": {

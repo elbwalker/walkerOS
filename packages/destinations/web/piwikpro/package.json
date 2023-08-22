@@ -18,7 +18,8 @@
   },
   "devDependencies": {
     "@elbwalker/types": "*",
-    "@elbwalker/utils": "*"
+    "@elbwalker/utils": "*",
+    "@elbwalker/walker.js": "*"
   },
   "repository": {
     "type": "git",

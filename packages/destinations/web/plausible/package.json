@@ -17,7 +17,8 @@
     "test": "jest --colors --coverage"
   },
   "devDependencies": {
-    "@elbwalker/types": "*"
+    "@elbwalker/types": "*",
+    "@elbwalker/walker.js": "*"
   },
   "repository": {
     "type": "git",
