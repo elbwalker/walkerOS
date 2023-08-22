@@ -1,7 +1,5 @@
-import { IElbwalker } from '@elbwalker/walker.js/dist/src';
-import { DestinationPiwikPro } from './types';
-export * from './types/index.d';
-
+import type { Elbwalker, Walker } from '@elbwalker/types';
+import type { CustomConfig, CustomEventConfig, Function } from './types';
 // @TODOs
 // - static values besides dynamic data values
 // - site search
@@ -9,15 +7,14 @@ export * from './types/index.d';
 // - duspport for dimensions
 // - testing
 
-export const destinationPiwikPro: DestinationPiwikPro.Function = {
+export const destinationPiwikPro: Function = {
   type: 'piwikpro',
 
   config: {},
 
   init(config) {
     const w = window;
-    const custom: Partial<DestinationPiwikPro.CustomConfig> =
-      config.custom || {};
+    const custom: Partial<CustomConfig> = config.custom || {};
 
     // Required parameters
     if (!custom.appId || !custom.url) return false;
@@ -43,8 +40,7 @@ export const destinationPiwikPro: DestinationPiwikPro.Function = {
   },
 
   push(event, config, mapping = {}) {
-    const custom: Partial<DestinationPiwikPro.CustomConfig> =
-      config.custom || {};
+    const custom: Partial<CustomConfig> = config.custom || {};
 
     // Send pageviews if not disabled
     if (
@@ -58,8 +54,7 @@ export const destinationPiwikPro: DestinationPiwikPro.Function = {
       return;
     }
 
-    const customMapping: DestinationPiwikPro.CustomEventConfig =
-      mapping.custom || {};
+    const customMapping: CustomEventConfig = mapping.custom || {};
 
     let name: unknown, value: unknown; // @TODO fix types
 
@@ -101,7 +96,7 @@ function addScript(url: string) {
   document.head.appendChild(script);
 }
 
-function getValue(event: IElbwalker.Event, key: string): unknown {
+function getValue(event: Elbwalker.Event, key: string): unknown {
   // String dot notation for object ("data.id" -> { data: { id: 1 } })
   const value = key.split('.').reduce((obj, key) => {
     return obj[key];

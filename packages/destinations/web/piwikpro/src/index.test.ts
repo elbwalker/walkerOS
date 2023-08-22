@@ -1,11 +1,10 @@
-import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationPiwikPro } from './types';
+import webClient from '@elbwalker/walker.js';
+import type { WebClient } from '@elbwalker/walker.js';
+import type { Config, Function } from './types';
 
 describe('Destination PiwikPro', () => {
   const w = window;
-  let elbwalker: IElbwalker.Function,
-    destination: DestinationPiwikPro.Function,
-    config: DestinationPiwikPro.Config;
+  let elbwalker: WebClient.Function, destination: Function, config: Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
@@ -23,7 +22,7 @@ describe('Destination PiwikPro', () => {
     w._paq = [];
     w._paq.push = mockFn;
 
-    elbwalker = Elbwalker();
+    elbwalker = webClient();
     elbwalker.push('walker run');
   });
 
