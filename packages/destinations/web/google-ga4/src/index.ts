@@ -1,17 +1,21 @@
-import type { IElbwalker, Walker } from '@elbwalker/walker.js';
-import { DestinationGoogleGA4 } from './types';
+import type { Elbwalker, Walker } from '@elbwalker/types';
+import {
+  CustomConfig,
+  Function,
+  Items,
+  Parameters,
+  PropertyMapping,
+} from './types';
 
-const destinationGoogleGA4: DestinationGoogleGA4.Function = {
+const destinationGoogleGA4: Function = {
   type: 'google-ga4',
 
   config: { custom: { measurementId: '' } },
 
-  init(config: DestinationGoogleGA4.Config) {
+  init(config) {
     const w = window;
-    const custom: Partial<DestinationGoogleGA4.CustomConfig> =
-      config.custom || {};
-    const settings: IElbwalker.AnyObject = {};
-
+    const custom: Partial<CustomConfig> = config.custom || {};
+    const settings: Elbwalker.AnyObject = {};
     // required measuremt id
     if (!custom.measurementId) return false;
 
@@ -46,7 +50,7 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
 
     if (!custom.measurementId) return;
 
-    let eventParams: DestinationGoogleGA4.Parameters = {};
+    let eventParams: Parameters = {};
 
     // Add data to include by default
     let include = customEvent.include || custom.include || ['data'];
@@ -64,8 +68,7 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
       ];
 
     include.forEach((groupName) => {
-      let group: Walker.Properties | Walker.OrderedProperties =
-        event[groupName];
+      let group = event[groupName as keyof Omit<Elbwalker.Event, 'all'>];
 
       // Create a fake group for event properties
       if (groupName == 'event')
@@ -101,7 +104,7 @@ const destinationGoogleGA4: DestinationGoogleGA4.Function = {
     );
 
     // Item parameters
-    const items: DestinationGoogleGA4.Items = [];
+    const items: Items = [];
     // Loop for each nested entity but at least one time
     for (var i = 0, l = event.nested.length || 1; i < l; i++) {
       const item = getMappedParams(
@@ -143,11 +146,11 @@ function addScript(
 }
 
 function getMappedParams(
-  mapping: DestinationGoogleGA4.PropertyMapping,
-  event: IElbwalker.Event,
+  mapping: PropertyMapping,
+  event: Elbwalker.Event,
   i: number = 0,
 ) {
-  let params: DestinationGoogleGA4.Parameters = {};
+  let params: Parameters = {};
 
   Object.entries(mapping).forEach(([prop, keyRef]) => {
     let key: string;

@@ -1,11 +1,10 @@
-import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationGoogleGA4 } from './types';
+import webClient from '@elbwalker/walker.js';
+import type { WebClient } from '@elbwalker/walker.js';
+import type { Config, Function } from './types';
 
 describe('Destination Google GA4', () => {
   const w = window;
-  let elbwalker: IElbwalker.Function,
-    destination: DestinationGoogleGA4.Function,
-    config: DestinationGoogleGA4.Config;
+  let elbwalker: WebClient.Function, destination: Function, config: Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const event = 'Entity Action';
@@ -29,7 +28,7 @@ describe('Destination Google GA4', () => {
     w.elbLayer = [];
     w.dataLayer = [];
 
-    elbwalker = Elbwalker({ pageview: false, version: 2 });
+    elbwalker = webClient({ pageview: false, version: 2 });
     elbwalker.push('walker run');
     w.gtag = mockFn;
   });
@@ -143,7 +142,7 @@ describe('Destination Google GA4', () => {
   });
 
   test('Parameters', () => {
-    const config: DestinationGoogleGA4.Config = {
+    const config: Config = {
       custom: {
         measurementId,
         params: {
@@ -205,7 +204,7 @@ describe('Destination Google GA4', () => {
       globals: { lang: 'de' },
       user: { id: 'us3r1d' },
     });
-    const config: DestinationGoogleGA4.Config = {
+    const config: Config = {
       custom: {
         measurementId,
         // include: ['data'], // Default behaviour
@@ -288,7 +287,7 @@ describe('Destination Google GA4', () => {
   });
 
   test('Items', () => {
-    const config: DestinationGoogleGA4.Config = {
+    const config: Config = {
       custom: {
         measurementId,
         params: {
@@ -378,7 +377,7 @@ describe('Destination Google GA4', () => {
   });
 
   test('Snake case disabled', () => {
-    const config: DestinationGoogleGA4.Config = {
+    const config: Config = {
       custom: { measurementId, snakeCase: false },
       init: true,
     };

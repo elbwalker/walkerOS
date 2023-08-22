@@ -1,11 +1,10 @@
-import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationGoogleAds } from './types';
+import webClient from '@elbwalker/walker.js';
+import type { WebClient } from '@elbwalker/walker.js';
+import type { Config, Function } from './types';
 
 describe('destination Google Ads', () => {
   const w = window;
-  let elbwalker: IElbwalker.Function,
-    destination: DestinationGoogleAds.Function,
-    config: DestinationGoogleAds.Config;
+  let elbwalker: WebClient.Function, destination: Function, config: Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
@@ -28,7 +27,7 @@ describe('destination Google Ads', () => {
     w.dataLayer = [];
     w.gtag = mockFn;
 
-    elbwalker = Elbwalker({ pageview: false });
+    elbwalker = webClient({ pageview: false });
     elbwalker.push('walker run');
   });
 

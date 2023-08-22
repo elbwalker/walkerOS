@@ -2,8 +2,8 @@ import { WebDestination } from '@elbwalker/types';
 
 declare global {
   interface Window {
-    gtag?: Gtag.Gtag;
     dataLayer: Array<unknown>;
+    gtag?: Gtag.Gtag;
   }
 }
 
