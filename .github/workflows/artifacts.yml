@@ -3,8 +3,8 @@ name: Build and upload artifacts
 on:
   push:
     branches:
-      - develop # Trigger on pushes to the develop branch
-      - '*'
+      - develop
+      - main
 
   workflow_dispatch:
 
