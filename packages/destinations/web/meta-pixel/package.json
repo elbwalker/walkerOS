@@ -11,6 +11,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "lint": "eslint \"**/*.ts*\"",
     "publish": "npm run test && npm run build && npm publish --access public",
