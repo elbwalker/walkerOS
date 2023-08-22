@@ -11,12 +11,17 @@
   ],
   "scripts": {
     "build": "tsup",
-    "dev": "jest --watchAll --colors",
+    "dev": "npm run dev:build & npm run dev:test",
+    "dev:build": "npm run build -- --watch",
+    "dev:test": "jest --watchAll --colors",
     "lint": "eslint \"**/*.ts*\"",
     "publish": "npm run test && npm run build && npm publish --access public",
     "test": "jest --colors --coverage"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@elbwalker/types": "*",
+    "@elbwalker/utils": "*"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/elbwalker/walker.js",

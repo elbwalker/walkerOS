@@ -1,4 +1,4 @@
-import { Walker } from '@elbwalker/walker.js';
+import { Walker } from '@elbwalker/types';
 
 export namespace ITagger {
   interface Config {
