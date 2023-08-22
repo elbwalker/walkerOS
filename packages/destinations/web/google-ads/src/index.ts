@@ -1,11 +1,11 @@
-import { DestinationGoogleAds } from './types';
+import { Function } from './types';
 
-export const destinationGoogleAds: DestinationGoogleAds.Function = {
+export const destinationGoogleAds: Function = {
   type: 'google-ads',
 
   config: {},
 
-  init(config: DestinationGoogleAds.Config) {
+  init(config) {
     const custom = config.custom || {};
     const w = window;
 
