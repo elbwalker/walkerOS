@@ -3,18 +3,8 @@ import { Options, defineConfig } from 'tsup';
 const config: Options = {
   // clean: true, // Not yet supported for multiple entry points
   entry: ['src/index.ts'],
-  minify: 'terser',
+  minify: true, // Don't use terser to minify to preserve Const
   splitting: false,
-  terserOptions: {
-    mangle: {
-      properties: {
-        regex: /^[A-Z]/, // Only mangle capitalized properties
-        reserved: [
-          // Prevent mangle from renaming these properties
-        ],
-      },
-    },
-  },
 };
 
 export default defineConfig([
@@ -26,10 +16,8 @@ export default defineConfig([
   },
   {
     ...config,
-    entry: ['src/index.ts'],
     format: ['iife'],
     globalName: 'Elbutils',
-    minify: true,
     outExtension() {
       return { js: `.es5.js` };
     },
