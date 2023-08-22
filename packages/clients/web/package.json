@@ -13,7 +13,7 @@
     "build": "tsup",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "npm run dev:build & npm run dev:test",
-    "dev:build": "npm run build -- --watch",
+    "dev:build": "tsup --watch --config tsup.dev.config.ts",
     "dev:test": "jest --watchAll --colors",
     "lint": "eslint \"**/*.ts*\"",
     "publish": "npm run test && npm run build && npm publish --access public",
