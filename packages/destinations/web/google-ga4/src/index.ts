@@ -1,5 +1,5 @@
 import type { Elbwalker, Walker } from '@elbwalker/types';
-import {
+import type {
   CustomConfig,
   Function,
   Items,

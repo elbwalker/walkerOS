@@ -1,11 +1,10 @@
-import Elbwalker, { IElbwalker } from '@elbwalker/walker.js';
-import { DestinationMetaPixel } from './types';
+import webClient from '@elbwalker/walker.js';
+import type { WebClient } from '@elbwalker/walker.js';
+import type { Config, Function } from './types';
 
 describe('Destination Meta Pixel', () => {
   const w = window;
-  let elbwalker: IElbwalker.Function,
-    destination: DestinationMetaPixel.Function,
-    config: DestinationMetaPixel.Config;
+  let elbwalker: WebClient.Function, destination: Function, config: Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
@@ -26,7 +25,7 @@ describe('Destination Meta Pixel', () => {
     w.elbLayer = [];
     w.fbq = mockFn;
 
-    elbwalker = Elbwalker({ pageview: false });
+    elbwalker = webClient({ pageview: false });
     elbwalker.push('walker run');
   });
 

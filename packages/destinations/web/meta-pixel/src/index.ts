@@ -1,14 +1,22 @@
-import type { IElbwalker, Walker } from '@elbwalker/walker.js';
-import type { DestinationMetaPixel } from './types';
+import type { Elbwalker, Walker } from '@elbwalker/types';
+import type {
+  Config,
+  ContentIds,
+  Contents,
+  CustomEventConfig,
+  Function,
+  PropertyMapping,
+  StartSubscribeParameters,
+} from './types';
 
 // https://developers.facebook.com/docs/meta-pixel/
 
-export const destinationMetaPixel: DestinationMetaPixel.Function = {
+export const destinationMetaPixel: Function = {
   type: 'meta-pixel',
 
   config: {},
 
-  init(config: DestinationMetaPixel.Config) {
+  init(config: Config) {
     const custom = config.custom || {};
 
     // load fbevents.js
@@ -60,8 +68,8 @@ function setup() {
 }
 
 function getParameters(
-  event: IElbwalker.Event,
-  mapping: DestinationMetaPixel.CustomEventConfig,
+  event: Elbwalker.Event,
+  mapping: CustomEventConfig,
   currency: string = 'EUR',
 ) {
   // value
@@ -150,12 +158,12 @@ function getParameters(
       return {
         currency,
         value,
-      } as DestinationMetaPixel.StartSubscribeParameters;
+      } as StartSubscribeParameters;
     case 'Subscribe':
       return {
         currency,
         value,
-      } as DestinationMetaPixel.StartSubscribeParameters;
+      } as StartSubscribeParameters;
     case 'ViewContent':
       return {
         content_ids,
@@ -171,7 +179,7 @@ function getParameters(
   }
 }
 
-function getParam(param: DestinationMetaPixel.PropertyMapping) {
+function getParam(param: PropertyMapping) {
   let key: string;
   let defaultValue: Walker.PropertyType | undefined;
 
@@ -186,13 +194,13 @@ function getParam(param: DestinationMetaPixel.PropertyMapping) {
 }
 
 function getParameterContentIds(
-  event: IElbwalker.Event,
-  mapping: DestinationMetaPixel.CustomEventConfig,
-): DestinationMetaPixel.ContentIds | undefined {
+  event: Elbwalker.Event,
+  mapping: CustomEventConfig,
+): ContentIds | undefined {
   const contentsMapping = mapping.contents;
   if (!contentsMapping) return;
 
-  const ids: DestinationMetaPixel.ContentIds = [];
+  const ids: ContentIds = [];
 
   const idParams = getParam(contentsMapping.id);
   let id = getByStringDot(event, idParams.key, idParams.defaultValue);
@@ -212,13 +220,13 @@ function getParameterContentIds(
 }
 
 function getParameterContents(
-  event: IElbwalker.Event,
-  mapping: DestinationMetaPixel.CustomEventConfig,
-): DestinationMetaPixel.Contents | undefined {
+  event: Elbwalker.Event,
+  mapping: CustomEventConfig,
+): Contents | undefined {
   const contentsMapping = mapping.contents;
   if (!contentsMapping) return;
 
-  const contents: DestinationMetaPixel.Contents = [];
+  const contents: Contents = [];
 
   const idParams = getParam(contentsMapping.id);
   const quantityParams = getParam(contentsMapping.quantity);
