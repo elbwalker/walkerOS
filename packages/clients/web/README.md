@@ -4,23 +4,6 @@
   </a>
 </p>
 
-# @TODO
-
-- clients
-  - node/server
-- server destinations
-  - add type
-  - bigquery
-  - aws sns
-- stacks
-  - firebase
-  - aws
-- update examples
-  - simplify
-  - data contracts
-- merge docs
-- update READMEs
-
 # walker.js
 
 Walker.js is a first-party event tracker for simplified and compliant data collection. Standardized, agnostic & flexible. With walker.js you can capture user events in the browser and send them to any destination - just by setting HTML attributes. Become independent from locked-in analytics systems and set up reliable tracking the moment you design your front end.

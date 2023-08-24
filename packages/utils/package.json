@@ -1,0 +1,54 @@
+{
+  "name": "@elbwalker/utils",
+  "description": "Shared utils for walker.js packages",
+  "version": "1.6.5",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "npm run dev:build & npm run dev:test",
+    "dev:build": "tsup --watch --config tsup.dev.config.ts",
+    "dev:test": "jest --watchAll --colors",
+    "lint": "eslint \"**/*.ts*\"",
+    "publish": "npm run test && npm run build && npm publish --access public",
+    "test": "jest --colors --coverage"
+  },
+  "devDependencies": {
+    "@elbwalker/types": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elbwalker/walker.js",
+    "directory": "packages/utils"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walker.js#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walker.js/issues"
+  },
+  "keywords": [
+    "walker",
+    "walkerjs",
+    "walker.js",
+    "analytics",
+    "tracking",
+    "data collection",
+    "measurement",
+    "data privacy",
+    "privacy friendly",
+    "web analytics",
+    "product analytics"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

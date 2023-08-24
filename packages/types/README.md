@@ -1,0 +1,3 @@
+# walker.js types
+
+TBD

@@ -1,3 +1,5 @@
+dist
+
 # Logs
 logs
 *.log
@@ -86,3 +88,6 @@ typings/
 
 # JetBrains IDEs
 .idea
+
+# Turbobuild
+.turbo
