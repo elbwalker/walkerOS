@@ -5,11 +5,21 @@
 </p>
 
 # @TODO
-- update .github actions
-- add pnpm support
-- create core package
-- install https://turbo.build/repo/docs/installing
-- update dir path for each package and other links
+
+- clients
+  - node/server
+- server destinations
+  - add type
+  - bigquery
+  - aws sns
+- stacks
+  - firebase
+  - aws
+- update examples
+  - simplify
+  - data contracts
+- merge docs
+- update READMEs
 
 # walker.js
 
