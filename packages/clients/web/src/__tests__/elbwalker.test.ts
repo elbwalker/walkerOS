@@ -17,7 +17,7 @@ describe('Elbwalker', () => {
     jest.clearAllMocks();
     jest.resetModules();
     w.dataLayer = [];
-    w.dataLayer!.push = mockFn;
+    (w.dataLayer as unknown[]).push = mockFn;
     w.elbLayer = undefined as unknown as WebClient.ElbLayer;
 
     elbwalker = webClient({
@@ -446,6 +446,7 @@ describe('Elbwalker', () => {
     );
   });
 
+  // @TODO move to somewhere else
   test('Contract', () => {
     const contract: Data.Contract = {
       version: '',
