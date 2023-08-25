@@ -1,4 +1,4 @@
-import type * as WebClient from '../types';
+import type { WebClient } from '../types';
 import fs from 'fs';
 
 describe('Browser', () => {

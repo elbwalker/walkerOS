@@ -1,10 +1,5 @@
-import type * as WebClient from './types';
-import type {
-  Elbwalker,
-  Hooks,
-  Walker,
-  WebDestination,
-} from '@elbwalker/types';
+import type { Walker, WebClient, WebDestination } from './types';
+import type { Elbwalker, Hooks } from '@elbwalker/types';
 import {
   initScopeTrigger,
   initGlobalTrigger,
@@ -21,7 +16,7 @@ import {
 } from '@elbwalker/utils';
 import { getEntities, getGlobals } from './lib/walker';
 
-export { WebClient };
+export { Walker, WebClient, WebDestination };
 
 function webClient(
   customConfig: Partial<WebClient.Config> = {},
@@ -45,7 +40,7 @@ function webClient(
     const destination: WebDestination.Function = {
       config: {},
       push: (event) => {
-        window.dataLayer.push({
+        (window.dataLayer as unknown[]).push({
           ...event,
           walker: true,
         });
@@ -178,8 +173,8 @@ function webClient(
       event?: IArguments | unknown,
       data?: WebClient.PushData,
       trigger?: string,
-      context?: Walker.OrderedProperties,
-      nested?: Walker.Entities,
+      context?: Elbwalker.OrderedProperties,
+      nested?: Elbwalker.Entities,
     ) {
       // Pushed as Arguments
       if (isArgument(event)) {
@@ -313,7 +308,7 @@ function webClient(
     data?: WebClient.PushData,
     options: WebClient.PushOptions = '',
     context: WebClient.PushContext = {},
-    nested: Walker.Entities = [],
+    nested: Elbwalker.Entities = [],
   ): void {
     if (!event || !isSameType(event, '')) return;
 
@@ -363,8 +358,8 @@ function webClient(
 
     // Special case for page entity to add the id by default
     if (entity === 'page') {
-      (data as Walker.Properties).id =
-        (data as Walker.Properties).id || window.location.pathname;
+      (data as Elbwalker.Properties).id =
+        (data as Elbwalker.Properties).id || window.location.pathname;
     }
 
     ++config.count;
@@ -379,8 +374,8 @@ function webClient(
 
     const pushEvent: Elbwalker.Event = {
       event,
-      data: data as Walker.Properties,
-      context: context as Walker.OrderedProperties,
+      data: data as Elbwalker.Properties,
+      context: context as Elbwalker.OrderedProperties,
       globals: config.globals,
       user: config.user,
       nested,

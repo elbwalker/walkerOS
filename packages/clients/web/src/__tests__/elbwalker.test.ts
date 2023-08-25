@@ -1,7 +1,7 @@
 import webClient from '../';
 import { elb } from '../lib/trigger';
-import type * as WebClient from '../types';
-import type { Data, Hooks, WebDestination } from '@elbwalker/types';
+import type { WebClient, WebDestination } from '../types';
+import type { Data, Hooks } from '@elbwalker/types';
 import fs from 'fs';
 
 describe('Elbwalker', () => {

@@ -1,4 +1,4 @@
-import type { Elbwalker, Walker } from '@elbwalker/types';
+import type { Elbwalker } from '@elbwalker/types';
 import type {
   CustomConfig,
   Function,
@@ -32,7 +32,7 @@ const destinationGoogleGA4: Function = {
     w.dataLayer = w.dataLayer || [];
     if (!w.gtag) {
       w.gtag = function gtag() {
-        w.dataLayer!.push(arguments);
+        (w.dataLayer as unknown[]).push(arguments);
       };
       w.gtag('js', new Date());
     }
@@ -84,7 +84,8 @@ const destinationGoogleGA4: Function = {
 
       Object.entries(group).forEach(([key, val]) => {
         // Different value access for context
-        if (groupName == 'context') val = (val as Walker.OrderedProperties)[0];
+        if (groupName == 'context')
+          val = (val as Elbwalker.OrderedProperties)[0];
 
         eventParams[`${groupName}_${key}`] = val;
       });
@@ -154,7 +155,7 @@ function getMappedParams(
 
   Object.entries(mapping).forEach(([prop, keyRef]) => {
     let key: string;
-    let defaultValue: Walker.PropertyType | undefined;
+    let defaultValue: Elbwalker.PropertyType | undefined;
 
     if (typeof keyRef == 'string') {
       key = keyRef;

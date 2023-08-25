@@ -27,7 +27,7 @@ export const destinationGoogleGTM: Function = {
   },
 
   push(event) {
-    window.dataLayer!.push({
+    (window.dataLayer as unknown[]).push({
       ...event,
       walker: true,
     });

@@ -49,7 +49,7 @@ describe('Destination Google GA4', () => {
     expect(w.dataLayer).toBeDefined();
     expect(w.gtag).toBeDefined();
 
-    expect(w.dataLayer?.length).toBe(3);
+    expect((w.dataLayer as any).length).toBe(3);
   });
 
   test('Init calls', () => {

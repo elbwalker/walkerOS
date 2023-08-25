@@ -1,5 +1,5 @@
-import type { Walker } from '@elbwalker/types';
-import type * as WebClient from '../types';
+import type { Walker, WebClient } from '../types';
+import type { Elbwalker } from '@elbwalker/types';
 import { getElbAttributeName, getEvents, getTriggerActions } from './walker';
 import {
   Const,
@@ -16,6 +16,18 @@ let scrollListener: EventListenerOrEventListenerObject | undefined;
 export const elb: WebClient.Elb = function () {
   (window.elbLayer = window.elbLayer || []).push(arguments);
 };
+
+export const Trigger: { [key: string]: Walker.Trigger } = {
+  Click: 'click',
+  Custom: 'custom',
+  Hover: 'hover',
+  Load: 'load',
+  Pulse: 'pulse',
+  Scroll: 'scroll',
+  Submit: 'submit',
+  Visible: 'visible',
+  Wait: 'wait',
+} as const;
 
 export function ready(run: Function, instance: WebClient.Function) {
   const fn = () => {
@@ -118,22 +130,22 @@ function handleActionElem(
     triggerActions.forEach((triggerAction) => {
       // TriggerAction ({ trigger, triggerParams, action, actionparams })
       switch (triggerAction.trigger) {
-        case Const.Trigger.Hover:
+        case Trigger.Hover:
           triggerHover(instance, elem);
           break;
-        case Const.Trigger.Load:
+        case Trigger.Load:
           triggerLoad(instance, elem);
           break;
-        case Const.Trigger.Pulse:
+        case Trigger.Pulse:
           triggerPulse(instance, elem, triggerAction.triggerParams);
           break;
-        case Const.Trigger.Scroll:
+        case Trigger.Scroll:
           triggerScroll(elem, triggerAction.triggerParams);
           break;
-        case Const.Trigger.Visible:
+        case Trigger.Visible:
           triggerVisible(elem, visibleObserver);
           break;
-        case Const.Trigger.Wait:
+        case Trigger.Wait:
           triggerWait(instance, elem, triggerAction.triggerParams);
           break;
       }
@@ -142,7 +154,7 @@ function handleActionElem(
 }
 
 function triggerClick(instance: WebClient.Function, ev: MouseEvent) {
-  handleTrigger(instance, ev.target as Element, Const.Trigger.Click);
+  handleTrigger(instance, ev.target as Element, Trigger.Click);
 }
 
 function triggerHover(instance: WebClient.Function, elem: HTMLElement) {
@@ -150,13 +162,13 @@ function triggerHover(instance: WebClient.Function, elem: HTMLElement) {
     'mouseenter',
     trycatch(function (this: Document, ev: MouseEvent) {
       if (ev.target instanceof Element)
-        handleTrigger(instance, ev.target, Const.Trigger.Hover);
+        handleTrigger(instance, ev.target, Trigger.Hover);
     }),
   );
 }
 
 function triggerLoad(instance: WebClient.Function, elem: HTMLElement) {
-  handleTrigger(instance, elem, Const.Trigger.Load);
+  handleTrigger(instance, elem, Trigger.Load);
 }
 
 function triggerPulse(
@@ -167,7 +179,7 @@ function triggerPulse(
   setInterval(
     () => {
       // Only trigger when tab is active
-      if (!document.hidden) handleTrigger(instance, elem, Const.Trigger.Pulse);
+      if (!document.hidden) handleTrigger(instance, elem, Trigger.Pulse);
     },
     parseInt(triggerParams || '') || 15000,
   );
@@ -184,7 +196,7 @@ function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
 }
 
 function triggerSubmit(instance: WebClient.Function, ev: Event) {
-  handleTrigger(instance, ev.target as Element, Const.Trigger.Submit);
+  handleTrigger(instance, ev.target as Element, Trigger.Submit);
 }
 
 function triggerVisible(
@@ -200,7 +212,7 @@ function triggerWait(
   triggerParams: string = '',
 ) {
   setTimeout(
-    () => handleTrigger(instance, elem, Const.Trigger.Wait),
+    () => handleTrigger(instance, elem, Trigger.Wait),
     parseInt(triggerParams || '') || 15000,
   );
 }
@@ -231,7 +243,7 @@ function scroll(instance: WebClient.Function) {
       // Check if the elements visibility skipped the required border
       if (scrollDepth >= depth) {
         // Enough scrolling, it's time
-        handleTrigger(instance, element, Const.Trigger.Scroll);
+        handleTrigger(instance, element, Trigger.Scroll);
 
         // Remove the element from scrollEvents
         return false;
@@ -255,7 +267,7 @@ function scroll(instance: WebClient.Function) {
 function pageView(instance: WebClient.Function) {
   // static page view
   const loc = window.location;
-  const data: Walker.Properties = {
+  const data: Elbwalker.Properties = {
     domain: loc.hostname,
     title: document.title,
     referrer: document.referrer,
@@ -264,7 +276,7 @@ function pageView(instance: WebClient.Function) {
   if (loc.hash) data.hash = loc.hash;
 
   // @TODO get all nested entities
-  instance.config.elbLayer.push('page view', data, Const.Trigger.Load);
+  instance.config.elbLayer.push('page view', data, Trigger.Load);
 }
 
 function observerVisible(
@@ -294,11 +306,7 @@ function observerVisible(
               timer ||
               window.setTimeout(function () {
                 if (isVisible(target)) {
-                  handleTrigger(
-                    instance,
-                    target as Element,
-                    Const.Trigger.Visible,
-                  );
+                  handleTrigger(instance, target as Element, Trigger.Visible);
                   // Just count once
                   delete target.dataset[timerId];
                   if (visibleObserver) visibleObserver.unobserve(target);

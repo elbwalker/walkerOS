@@ -1,5 +1,5 @@
 import webCLient from '../';
-import type * as WebClient from '../types';
+import type { WebClient } from '../types';
 
 describe('Init', () => {
   const w = window;

@@ -18,7 +18,7 @@ describe('destination google-tag-manager', () => {
 
     w.elbLayer = [];
     w.dataLayer = [];
-    w.dataLayer.push = mockFn;
+    (w.dataLayer as unknown[]).push = mockFn;
 
     elbwalker = webClient({ pageview: false });
     elbwalker.push('walker run');

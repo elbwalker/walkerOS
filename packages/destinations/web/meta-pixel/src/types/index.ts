@@ -1,4 +1,5 @@
-import { Walker, WebDestination } from '@elbwalker/types';
+import type { WebDestination } from '@elbwalker/walker.js';
+import type { Elbwalker } from '@elbwalker/types';
 
 declare global {
   interface Window {
@@ -31,7 +32,7 @@ export type PropertyMapping = string | PropertyMappingValue;
 
 export interface PropertyMappingValue {
   key: string;
-  default?: Walker.PropertyType;
+  default?: Elbwalker.PropertyType;
 }
 
 export interface ParamContents {
