@@ -1,6 +1,6 @@
 import webClient from '../';
 import { elb } from '../lib/trigger';
-import type { Walker, WebClient, WebDestination } from '../types';
+import type { WebClient, WebDestination } from '../types';
 import type { Elbwalker } from '@elbwalker/types';
 
 describe('ElbLayer', () => {
@@ -20,7 +20,7 @@ describe('ElbLayer', () => {
     jest.resetModules();
     w.elbLayer = [];
     w.dataLayer = [];
-    w.dataLayer.push = mockPush;
+    (w.dataLayer as unknown[]).push = mockPush;
   });
 
   test('arguments and event pushes', () => {
@@ -197,7 +197,7 @@ describe('ElbLayer', () => {
       round: expect.any(Number),
       timing: expect.any(Number),
       user: {},
-      version: 0,
+      tagging: expect.any(Number),
     };
 
     elbwalker = webClient();
@@ -256,6 +256,7 @@ describe('ElbLayer', () => {
 
   test('custom elbLayer', () => {
     w.dataLayer = [];
+    let dataLayer = w.dataLayer as unknown[];
     const customLayer1 = [] as WebClient.ElbLayer;
     const customLayer2 = [] as WebClient.ElbLayer;
     const instance1 = webClient({
@@ -299,13 +300,13 @@ describe('ElbLayer', () => {
     expect(mockDest1).not.toHaveBeenCalled();
     expect(mockDest2).toHaveBeenCalled();
 
-    const length = w.dataLayer.length;
-    expect(w.dataLayer[length - 1]).toEqual(
+    const length = dataLayer.length;
+    expect(dataLayer[length - 1]).toEqual(
       expect.objectContaining({
         event: 'bar foo',
       }),
     );
-    expect(w.dataLayer[length - 2]).toEqual(
+    expect(dataLayer[length - 2]).toEqual(
       expect.objectContaining({
         event: 'foo bar',
       }),

@@ -7,7 +7,7 @@ import fs from 'fs';
 describe('Elbwalker', () => {
   const w = window;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
-  const version = { config: 0, walker: 1.6 };
+  const version = { client: expect.any(String), tagging: expect.any(Number) };
 
   let elbwalker: WebClient.Function;
 

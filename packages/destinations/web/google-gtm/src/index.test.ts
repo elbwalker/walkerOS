@@ -9,7 +9,7 @@ describe('destination google-tag-manager', () => {
 
   const containerId = 'GTM-XXXXXXX';
   const event = 'entity action';
-  const version = { config: 0, walker: expect.any(Number) };
+  const version = { client: expect.any(String), tagging: expect.any(Number) };
 
   beforeEach(() => {
     jest.clearAllMocks();

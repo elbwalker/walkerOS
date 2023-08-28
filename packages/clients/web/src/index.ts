@@ -21,7 +21,7 @@ export { Walker, WebClient, WebDestination };
 function webClient(
   customConfig: Partial<WebClient.Config> = {},
 ): WebClient.Function {
-  const version = 1.6;
+  const client = '2.0.0';
   const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
   const staticGlobals = customConfig.globals || {};
   const config = getConfig(customConfig);
@@ -218,7 +218,7 @@ function webClient(
       round: 0, // The first round is a special one due to state changes
       timing: 0, // Offset counter to calculate timing property
       user: {}, // Handles the user ids
-      version: 0, // Helpful to differentiate the clients used setup version
+      tagging: 0, // Helpful to differentiate the clients used setup version
     };
 
     // If 'pageview' is explicitly provided in values, use it; otherwise, use current or default
@@ -389,8 +389,8 @@ function webClient(
       group: config.group,
       count: config.count,
       version: {
-        config: config.version,
-        walker: version,
+        client,
+        tagging: config.tagging,
       },
       source,
     };

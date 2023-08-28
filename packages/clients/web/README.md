@@ -81,8 +81,8 @@ generates an event like
   count: 2, // Incremental counter of the events on a page
   version: {
     // Helpful when working with raw data
-    walker: 1.6, // Used walker.js version
-    config: 42, // A custom configuration version number
+    client: "2.x.x", // Used web client version
+    tagging: 42, // Used version number of the tagging
   },
   source: {
     // Origins of the event

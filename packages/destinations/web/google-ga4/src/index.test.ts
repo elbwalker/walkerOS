@@ -28,7 +28,7 @@ describe('Destination Google GA4', () => {
     w.elbLayer = [];
     w.dataLayer = [];
 
-    elbwalker = webClient({ pageview: false, version: 2 });
+    elbwalker = webClient({ pageview: false, tagging: 2 });
     elbwalker.push('walker run');
     w.gtag = mockFn;
   });
@@ -271,12 +271,12 @@ describe('Destination Google GA4', () => {
         data_foo: 'bar',
         event_trigger: trigger,
         globals_lang: 'de',
-        source_type: expect.anything(),
+        source_type: 'web',
         source_id: expect.any(String),
         source_previous_id: expect.any(String),
         user_id: 'us3r1d',
-        version_config: 2,
-        version_walker: expect.anything(),
+        version_tagging: 2,
+        version_client: expect.any(String),
       }),
     );
 

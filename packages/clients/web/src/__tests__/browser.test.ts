@@ -51,7 +51,7 @@ describe('Browser', () => {
     expect(mockFn).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledWith({
       default: false,
-      version: 1,
+      tagging: 1,
     });
     expect(window.document.scripts.length).toBe(1);
   });
@@ -63,7 +63,7 @@ describe('Browser', () => {
     jest.requireActual('../browser');
     expect(mockFn).toHaveBeenCalledWith({
       default: true,
-      version: 1,
+      tagging: 1,
     });
   });
 
@@ -74,7 +74,7 @@ describe('Browser', () => {
     jest.requireActual('../browser');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        version: 42,
+        tagging: 42,
       }),
     );
   });

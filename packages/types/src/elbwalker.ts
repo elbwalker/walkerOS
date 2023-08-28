@@ -44,7 +44,7 @@ export interface Config {
   round: number;
   timing: number;
   user: User;
-  version: number;
+  tagging: number;
   default?: boolean;
 }
 
@@ -86,7 +86,7 @@ export type Commands =
   | 'hook'
   | 'init'
   | 'link'
-  | 'data-elb'
+  // | 'data-elb' @TODO check this
   | 'run'
   | 'user'
   | 'walker'
@@ -99,8 +99,8 @@ export interface User {
 }
 
 export interface Version {
-  walker: number; // @TODO check this
-  config: number;
+  client: string;
+  tagging: number;
 }
 
 export interface Source {
