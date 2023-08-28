@@ -1,5 +1,6 @@
 import type { Elbwalker } from '@elbwalker/types';
-import type { WebDestination, Walker } from '.';
+import type * as WebDestination from './destination';
+import type * as Walker from './walker';
 
 declare global {
   interface Window {

@@ -1,2 +1,2 @@
 export type * as NodeClient from './client';
-export type * as ServerDestination from './destination';
+export type * as NodeDestination from './destination';

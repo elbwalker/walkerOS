@@ -1,5 +1,5 @@
 import type { Elbwalker } from '@elbwalker/types';
-import type { ServerDestination } from '.';
+import type { NodeDestination } from '.';
 
 export interface Function {
   addDestination: AddDestination;
@@ -9,7 +9,7 @@ export interface Function {
 }
 
 export interface AddDestination {
-  (id: string, destination: ServerDestination.Function<any, any>): void;
+  (id: string, destination: NodeDestination.Function<any, any>): void;
 }
 
 export interface Push {
@@ -17,8 +17,8 @@ export interface Push {
 }
 
 export interface PushResult {
-  successful: ServerDestination.PushSuccess;
-  failed: ServerDestination.PushFailure;
+  successful: NodeDestination.PushSuccess;
+  failed: NodeDestination.PushFailure;
 }
 
 export interface Config {
@@ -26,7 +26,7 @@ export interface Config {
 }
 
 export interface Destinations {
-  [key: string]: ServerDestination.Function;
+  [key: string]: NodeDestination.Function;
 }
 
 // interface ServerEvent extends WebEvent {

@@ -1,5 +1,5 @@
 import { Elbwalker } from '@elbwalker/types';
-import type { NodeClient, ServerDestination } from './types';
+import type { NodeClient, NodeDestination } from './types';
 
 function nodeClient(
   config: Partial<NodeClient.Config>,
@@ -43,12 +43,12 @@ async function pushToDestinations(
   destinations: NodeClient.Destinations,
   event: Elbwalker.Event,
 ): Promise<{
-  successful: ServerDestination.PushSuccess;
-  failed: ServerDestination.PushFailure;
+  successful: NodeDestination.PushSuccess;
+  failed: NodeDestination.PushFailure;
 }> {
   const results: {
     id: string;
-    destination: ServerDestination.Function;
+    destination: NodeDestination.Function;
     done: boolean;
     error?: unknown;
   }[] = await Promise.all(
@@ -62,8 +62,8 @@ async function pushToDestinations(
     }),
   );
 
-  const successful: ServerDestination.PushSuccess = [];
-  const failed: ServerDestination.PushFailure = [];
+  const successful: NodeDestination.PushSuccess = [];
+  const failed: NodeDestination.PushFailure = [];
 
   for (const result of results) {
     if (result.done) {

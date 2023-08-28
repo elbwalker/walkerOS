@@ -1,13 +1,6 @@
 import type { Elbwalker } from '.';
 
 export interface Function<Custom = unknown, EventCustom = unknown> {
-  init?: (config: Config<Custom, EventCustom>) => boolean;
-  push: (
-    event: Elbwalker.Event,
-    config: Config<Custom, EventCustom>,
-    mapping?: EventConfig<EventCustom>,
-    runState?: Elbwalker.Config,
-  ) => void;
   config: Config<Custom, EventCustom>;
   queue?: Array<Elbwalker.Event>; // Non processed events yet and resettet with each new run
   type?: string; // The type of the destination
