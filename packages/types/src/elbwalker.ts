@@ -74,6 +74,7 @@ export interface Consent {
   [name: string]: boolean; // name of consent group or tool
 }
 
+// @TODO move to web client?
 export type Commands =
   | 'action'
   | 'config'
@@ -108,7 +109,7 @@ export interface Source {
   previous_id: string; // https://www.elbwalker.com/
 }
 
-export type SourceType = 'web' | 'app' | 'server' | 'other' | string;
+export type SourceType = 'web' | 'node' | 'app' | 'other' | string;
 
 export type PropertyType = boolean | string | number;
 

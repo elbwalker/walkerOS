@@ -8,11 +8,7 @@ export interface Function<Custom = unknown, EventCustom = unknown>
   setup?: (
     config: Partial<Config<Partial<Custom>, Partial<EventCustom>>>,
   ) => Promise<boolean>;
-  push: (
-    event: Elbwalker.Event,
-    config?: Config<Custom, EventCustom>,
-    mapping?: EventConfig<EventCustom>,
-  ) => Promise<void>; // @TODO return failed events
+  push: (events: PushEvents) => Promise<void>;
 }
 
 export interface Config<Custom = unknown, EventCustom = unknown>
@@ -24,13 +20,25 @@ export interface Mapping<EventCustom>
 export interface EventConfig<EventCustom = unknown>
   extends Elbdestination.EventConfig<EventCustom> {}
 
-export type PushResult = {
+export type PushEvents = Array<PushEvent>;
+export type PushEvent = {
+  event: Elbwalker.Event;
+  config?: Config;
+  mapping?: EventConfig;
+};
+
+export type Ref = {
   id: string;
   destination: Function;
 };
 
-export type PushSuccess = Array<PushResult>;
+export type PushSuccess = Array<Ref>;
 
-export type PushFailure = Array<PushResult & { error: PushError }>;
+export type PushFailure = Array<Ref & { error: PushError }>;
 
 export type PushError = unknown;
+
+export type PushResult = {
+  successful: PushSuccess;
+  failed: PushFailure;
+};
