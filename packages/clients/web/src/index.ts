@@ -206,6 +206,7 @@ function webClient(
     const defaultConfig: WebClient.Config = {
       allowed: false, // Wait for explicit run command to start
       consent: {}, // Handle the consent states
+      custom: {}, // Custom state support
       count: 0, // Event counter for each run
       destinations: {}, // Destination list
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array

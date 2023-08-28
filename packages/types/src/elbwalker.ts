@@ -37,7 +37,7 @@ export interface Config {
   allowed: boolean;
   consent: Consent;
   count: number;
-  // @TODO custom state support
+  custom: Properties;
   globals: Properties;
   group: string;
   hooks: Hooks.Functions;
