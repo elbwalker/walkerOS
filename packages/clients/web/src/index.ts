@@ -376,6 +376,7 @@ function webClient(
       event,
       data: data as Elbwalker.Properties,
       context: context as Elbwalker.OrderedProperties,
+      custom: {},
       globals: config.globals,
       user: config.user,
       nested,

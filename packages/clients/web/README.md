@@ -59,6 +59,7 @@ generates an event like
     // Related properties defined with the data-elbcontext attribute
     test: ['engagement', 0] // Value and order
   },
+  custom: {}, // Additional custom data
   globals: {
     // General Properties defined with the data-elbglobals attribute
     language: 'en'

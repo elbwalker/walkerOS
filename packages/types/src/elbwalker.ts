@@ -53,7 +53,7 @@ export interface Event {
   event: string;
   data: Properties;
   context: OrderedProperties;
-  // @TODO custom state support?
+  custom: Properties;
   globals: Properties;
   user: User;
   nested: Entities;
@@ -74,7 +74,6 @@ export interface Consent {
   [name: string]: boolean; // name of consent group or tool
 }
 
-// @TODO move to web client?
 export type Commands =
   | 'action'
   | 'config'
@@ -86,7 +85,6 @@ export type Commands =
   | 'hook'
   | 'init'
   | 'link'
-  // | 'data-elb' @TODO check this
   | 'run'
   | 'user'
   | 'walker'

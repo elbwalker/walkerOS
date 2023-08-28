@@ -1,4 +1,4 @@
-import { Walker } from '.';
+import type { Elbwalker } from '.';
 
 export interface Contract {
   version: string;
@@ -41,7 +41,7 @@ export interface Action {
   trigger?: Trigger;
 }
 
-export type Trigger = Walker.Trigger;
+export type Trigger = string; // @TODO Move to web data contract
 
 export interface Property {
   type?: PropertyType; // @TODO support multiple
@@ -51,4 +51,4 @@ export interface Property {
 
 export type PropertyType = 'boolean' | 'string' | 'number';
 
-export type PropertyValues = Array<Walker.Property>;
+export type PropertyValues = Array<Elbwalker.Property>;

@@ -76,6 +76,7 @@ describe('destination google-tag-manager', () => {
       event,
       data: { a: 1 },
       context: {},
+      custom: {},
       globals: {},
       user: {},
       nested: [],

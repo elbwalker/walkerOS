@@ -7,7 +7,7 @@ export interface Event {
   action: string;
   data?: Elbwalker.Properties;
   context?: Elbwalker.OrderedProperties;
-  trigger?: string; // @TODO check
+  trigger?: Trigger;
   nested: Elbwalker.Entities;
 }
 
