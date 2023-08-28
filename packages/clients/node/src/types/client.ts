@@ -5,7 +5,6 @@ export interface Function {
   addDestination: AddDestination;
   push: Push;
   config: Config;
-  destinations: Destinations;
 }
 
 export interface AddDestination {
@@ -16,8 +15,9 @@ export interface Push {
   (event: Elbwalker.Event): Promise<NodeDestination.PushResult>;
 }
 
-export interface Config {
-  version: string;
+export interface Config extends Elbwalker.Config {
+  destinations: Destinations;
+  queue: Elbwalker.Events;
 }
 
 export interface Destinations {
