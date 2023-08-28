@@ -46,12 +46,7 @@ export type ElbLayer = [
   Elbwalker.Entities?,
 ];
 
-export type PushData =
-  | Elbwalker.PushData
-  | WebDestination.Function
-  | Element
-  | Scope
-  | Scope[];
+export type PushData = Elbwalker.PushData | WebDestination.Function | ScopeType;
 
 export type PushOptions =
   | Elbwalker.PushOptions
@@ -60,8 +55,8 @@ export type PushOptions =
 
 export type PushContext = Elbwalker.PushContext | Element;
 
-export type Scope = Document | HTMLElement;
-// @TODO ScopeType with Element
+export type Scope = Document | Element | HTMLElement;
+export type ScopeType = Scope | Scope[];
 
 export interface Config extends Elbwalker.Config {
   destinations: Destinations;
