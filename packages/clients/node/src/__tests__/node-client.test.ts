@@ -21,11 +21,11 @@ describe('Node Client', () => {
     timestamp: expect.any(Number),
     timing: expect.any(Number),
     group: expect.any(String),
-    count: 1,
+    count: expect.any(Number),
     version,
     source: {
-      type: 'server',
-      id: 'http://localhost/',
+      type: 'node',
+      id: '',
       previous_id: '',
     },
   };
@@ -54,8 +54,15 @@ describe('Node Client', () => {
     expect(elb).toBe(instance.push);
   });
 
+  test('add destination', async () => {
+    const { elb, instance } = getClient({});
+    expect(instance.config.destinations).toEqual({});
+    instance.addDestination('mock', mockDestination);
+    expect(instance.config.destinations).toEqual({ mock: mockDestination });
+  });
+
   test('push regular', async () => {
-    const { elb, instance } = getClient();
+    const { elb } = getClient();
     const result = await elb(mockEvent);
     expect(mockFn).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledWith([

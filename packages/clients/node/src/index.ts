@@ -1,6 +1,6 @@
 import type { Elbwalker } from '@elbwalker/types';
 import type { NodeClient, NodeDestination } from './types';
-import { assign } from '@elbwalker/utils';
+import { assign, isSameType, trycatch } from '@elbwalker/utils';
 
 export function createNodeClient(customConfig: Partial<NodeClient.Config>) {
   const instance = nodeClient(customConfig);
@@ -16,19 +16,13 @@ export function nodeClient(
   const config = getConfig(customConfig, staticGlobals);
 
   const addDestination: NodeClient.AddDestination = (id, destination) => {
-    config.destinations[id] = destination;
+    addDestinationFn(instance, id, destination);
   };
 
-  // @TODO push partial events
-  const push: NodeClient.Push = async (event) => {
-    // @TODO enhance event with globals etc.
-
-    const { successful, failed } = await pushToDestinations(
-      config.destinations,
-      event,
+  const push: NodeClient.Push = async (...args) => {
+    return (
+      trycatch(pushFn)(instance, ...args) || { successful: [], failed: [] }
     );
-
-    return { successful, failed };
   };
 
   // @TODO validate
@@ -43,6 +37,34 @@ export function nodeClient(
 
   return instance;
 }
+
+const addDestinationFn: NodeClient.PrependInstance<
+  NodeClient.AddDestination
+> = (instance, id, destination) => {
+  instance.config.destinations[id] = destination;
+};
+
+const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
+  instance,
+  nameOrEvent,
+  data,
+) => {
+  let event: Elbwalker.Event | undefined;
+
+  // Parameter handling
+  if (isSameType(nameOrEvent, '' as string))
+    nameOrEvent = { event: nameOrEvent };
+
+  // Create the event
+  event = getEvent(instance, nameOrEvent);
+
+  const { successful, failed } = await pushToDestinations(
+    instance.config.destinations,
+    event,
+  );
+
+  return { successful, failed };
+};
 
 function getConfig(
   values: Partial<NodeClient.Config>,
@@ -79,19 +101,55 @@ function getConfig(
   };
 }
 
+function getEvent(
+  instance: NodeClient.Function,
+  props: Partial<Elbwalker.Event>,
+): Elbwalker.Event {
+  if (!props.event) throw new Error('Event name is required');
+
+  const [entity, action] = props.event.split(' ');
+  if (!entity || !action) throw new Error('Event name is invalid');
+
+  const data = props.data || {};
+
+  // @TODO enhance event with globals etc.
+  return {
+    event: props.event,
+    data,
+    context: {},
+    custom: {},
+    globals: {},
+    user: {},
+    nested: [],
+    consent: {},
+    id: '',
+    trigger: '',
+    entity,
+    action,
+    timestamp: Date.now(),
+    timing: 0,
+    group: '',
+    count: 0,
+    version: { client: '', tagging: 0 },
+    source: {
+      type: 'node',
+      id: '',
+      previous_id: '',
+    },
+  };
+}
+
 async function pushToDestinations(
   destinations: NodeClient.Destinations,
   event: Elbwalker.Event,
-): Promise<{
-  successful: NodeDestination.PushSuccess;
-  failed: NodeDestination.PushFailure;
-}> {
+): Promise<NodeDestination.PushResult> {
   const results: {
     id: string;
     destination: NodeDestination.Function;
     error?: unknown;
   }[] = await Promise.all(
     Object.entries(destinations).map(async ([id, destination]) => {
+      // @TODO use trycatch
       try {
         await destination.push([
           {

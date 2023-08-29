@@ -12,14 +12,23 @@ export interface AddDestination {
 }
 
 export interface Push {
-  (event: Elbwalker.Event): Promise<NodeDestination.PushResult>;
+  (
+    nameOrEvent: string | Partial<Elbwalker.Event>,
+    data?: Elbwalker.PushData,
+  ): Promise<NodeDestination.PushResult>;
 }
 
 export interface Config extends Elbwalker.Config {
   destinations: Destinations;
   queue: Elbwalker.Events;
+  // @TODO onError? (error: Error): void; // Custom error handler
 }
 
 export interface Destinations {
   [key: string]: NodeDestination.Function;
 }
+
+export type PrependInstance<Fn extends (...args: any) => any> = (
+  instance: Function,
+  ...rest: Parameters<Fn>
+) => ReturnType<Fn>;

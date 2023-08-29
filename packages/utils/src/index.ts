@@ -109,6 +109,7 @@ export function getByStringDot(
 
   return value;
 }
+
 export function isSameType<T>(
   variable: unknown,
   type: T,
