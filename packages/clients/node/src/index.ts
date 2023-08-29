@@ -1,8 +1,10 @@
 import type { Elbwalker } from '@elbwalker/types';
 import type { NodeClient, NodeDestination } from './types';
-import { assign, isSameType, trycatch } from '@elbwalker/utils';
+import { assign, getId, isSameType, trycatch } from '@elbwalker/utils';
 
-export function createNodeClient(customConfig: Partial<NodeClient.Config>) {
+export function createNodeClient(
+  customConfig: Partial<NodeClient.Config> = {},
+) {
   const instance = nodeClient(customConfig);
   const elb = instance.push;
 
@@ -10,10 +12,11 @@ export function createNodeClient(customConfig: Partial<NodeClient.Config>) {
 }
 
 export function nodeClient(
-  customConfig: Partial<NodeClient.Config>,
+  customConfig: Partial<NodeClient.Config> = {},
 ): NodeClient.Function {
+  const client = '2.0.0';
   const staticGlobals = customConfig.globals || {};
-  const config = getConfig(customConfig, staticGlobals);
+  const config = getConfig(customConfig, { client }, staticGlobals);
 
   const addDestination: NodeClient.AddDestination = (id, destination) => {
     addDestinationFn(instance, id, destination);
@@ -25,15 +28,14 @@ export function nodeClient(
     );
   };
 
-  // @TODO validate
-
-  // @TODO enrich
-
   const instance: NodeClient.Function = {
     addDestination,
     push,
     config,
   };
+
+  // That's when the party starts
+  run(instance, staticGlobals); // @TODO check for allowed?
 
   return instance;
 }
@@ -73,6 +75,7 @@ function getConfig(
 ): NodeClient.Config {
   const defaultConfig: NodeClient.Config = {
     allowed: false, // Wait for explicit run command to start
+    client: '0.0.0', // Client version
     consent: {}, // Handle the consent states
     custom: {}, // Custom state support
     count: 0, // Event counter for each run
@@ -127,10 +130,10 @@ function getEvent(
     entity,
     action,
     timestamp: Date.now(),
-    timing: 0,
+    timing: instance.config.timing - Date.now(),
     group: '',
     count: 0,
-    version: { client: '', tagging: 0 },
+    version: { client: instance.config.client, tagging: 0 },
     source: {
       type: 'node',
       id: '',
@@ -181,6 +184,30 @@ async function pushToDestinations(
   }
 
   return { successful, failed };
+}
+
+function run(
+  instance: NodeClient.Function,
+  staticGlobals: Elbwalker.Properties,
+) {
+  instance.config = assign(instance.config, {
+    allowed: true, // Free the client
+    count: 0, // Reset the run counter
+    globals: assign(
+      // @TODO add a globals parameter
+      staticGlobals,
+    ),
+    timing: Date.now(), // Set the timing offset
+    group: getId(), // Generate a new group id for each run
+  });
+
+  // Reset the queue for each run without merging
+  instance.config.queue = [];
+
+  // Reset all destination queues
+  Object.values(instance.config.destinations).forEach((destination) => {
+    destination.queue = [];
+  });
 }
 
 export default createNodeClient;

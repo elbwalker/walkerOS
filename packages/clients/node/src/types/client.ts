@@ -19,6 +19,7 @@ export interface Push {
 }
 
 export interface Config extends Elbwalker.Config {
+  client: string;
   destinations: Destinations;
   queue: Elbwalker.Events;
   // @TODO onError? (error: Error): void; // Custom error handler
