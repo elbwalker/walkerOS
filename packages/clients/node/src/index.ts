@@ -2,7 +2,14 @@ import type { Elbwalker } from '@elbwalker/types';
 import type { NodeClient, NodeDestination } from './types';
 import { assign } from '@elbwalker/utils';
 
-function nodeClient(
+export function createNodeClient(customConfig: Partial<NodeClient.Config>) {
+  const instance = nodeClient(customConfig);
+  const elb = instance.push;
+
+  return { elb, instance };
+}
+
+export function nodeClient(
   customConfig: Partial<NodeClient.Config>,
 ): NodeClient.Function {
   const staticGlobals = customConfig.globals || {};
@@ -118,4 +125,4 @@ async function pushToDestinations(
   return { successful, failed };
 }
 
-export default nodeClient;
+export default createNodeClient;
