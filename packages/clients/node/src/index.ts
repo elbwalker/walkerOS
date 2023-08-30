@@ -1,6 +1,12 @@
 import type { Elbwalker } from '@elbwalker/types';
 import type { NodeClient, NodeDestination } from './types';
-import { assign, getId, isSameType, trycatch } from '@elbwalker/utils';
+import {
+  Const,
+  assign,
+  getId,
+  isSameType,
+  tryCatchAsync,
+} from '@elbwalker/utils';
 
 export function createNodeClient(
   customConfig: Partial<NodeClient.Config> = {},
@@ -23,9 +29,19 @@ export function nodeClient(
   };
 
   const push: NodeClient.Push = async (...args) => {
-    return (
-      trycatch(pushFn)(instance, ...args) || { successful: [], failed: [] }
-    );
+    const defaultResult: NodeClient.PushResult = {
+      status: { ok: false },
+      successful: [],
+      failed: [],
+    };
+
+    const { status, successful, failed } =
+      (await tryCatchAsync(pushFn, (error) => {
+        defaultResult.status.error = error;
+        return defaultResult;
+      })(instance, ...args)) || defaultResult;
+
+    return { status, successful, failed };
   };
 
   const instance: NodeClient.Function = {
@@ -51,21 +67,32 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
   nameOrEvent,
   data,
 ) => {
-  let event: Elbwalker.Event | undefined;
+  let status: NodeClient.Status = { ok: false };
+  let successful: NodeDestination.PushSuccess = [];
+  let failed: NodeDestination.PushFailure = [];
 
   // Parameter handling
   if (isSameType(nameOrEvent, '' as string))
     nameOrEvent = { event: nameOrEvent };
 
   // Create the event
-  event = getEvent(instance, nameOrEvent);
+  const eventOrAction = getEventOrAction(instance, nameOrEvent);
 
-  const { successful, failed } = await pushToDestinations(
-    instance.config.destinations,
-    event,
-  );
+  if (isSameType(eventOrAction, '' as string)) {
+    // Walker command
+    handleCommand(instance, eventOrAction, data);
+    status.ok = true;
+  } else {
+    // Regular event
+    ({ successful, failed } = await pushToDestinations(
+      instance.config.destinations,
+      eventOrAction,
+    ));
 
-  return { successful, failed };
+    status.ok = failed.length === 0;
+  }
+
+  return { status, successful, failed };
 };
 
 function getConfig(
@@ -104,14 +131,16 @@ function getConfig(
   };
 }
 
-function getEvent(
+function getEventOrAction(
   instance: NodeClient.Function,
-  props: Partial<Elbwalker.Event>,
-): Elbwalker.Event {
+  props: Partial<Elbwalker.Event> = {},
+): Elbwalker.Event | string {
   if (!props.event) throw new Error('Event name is required');
 
   const [entity, action] = props.event.split(' ');
   if (!entity || !action) throw new Error('Event name is invalid');
+
+  if (entity === Const.Commands.Walker) return action;
 
   const config = instance.config;
 
@@ -160,6 +189,14 @@ function getEvent(
     version,
     source,
   };
+}
+
+function handleCommand(
+  instance: NodeClient.Function,
+  action: string,
+  data?: Elbwalker.PushData,
+) {
+  console.log({ arguments });
 }
 
 async function pushToDestinations(

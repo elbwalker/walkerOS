@@ -15,7 +15,16 @@ export interface Push {
   (
     nameOrEvent: string | Partial<Elbwalker.Event>,
     data?: Elbwalker.PushData,
-  ): Promise<NodeDestination.PushResult>;
+  ): Promise<PushResult>;
+}
+
+export interface PushResult extends NodeDestination.PushResult {
+  status: Status;
+}
+
+export interface Status {
+  ok: boolean;
+  error?: unknown;
 }
 
 export interface Config extends Elbwalker.Config {
@@ -31,5 +40,5 @@ export interface Destinations {
 
 export type PrependInstance<Fn extends (...args: any) => any> = (
   instance: Function,
-  ...rest: Parameters<Fn>
+  ...args: Parameters<Fn>
 ) => ReturnType<Fn>;

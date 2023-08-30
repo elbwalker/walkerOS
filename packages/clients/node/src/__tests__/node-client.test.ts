@@ -3,7 +3,7 @@ import type { Elbwalker } from '@elbwalker/types';
 import { createNodeClient } from '../';
 
 describe('Node Client', () => {
-  const mockFn = jest.fn(); //.mockImplementation(console.log);
+  const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
   const version = { client: expect.any(String), tagging: expect.any(Number) };
   const mockEvent: Elbwalker.Event = {
     event: 'entity action',
@@ -31,7 +31,7 @@ describe('Node Client', () => {
   };
   const mockDestination: NodeDestination.Function = {
     config: {},
-    push: mockFn,
+    push: mockDestinationPush,
   };
 
   function getClient(custom?: unknown) {
@@ -55,7 +55,7 @@ describe('Node Client', () => {
   });
 
   test('add destination', async () => {
-    const { elb, instance } = getClient({});
+    const { instance } = getClient({});
     expect(instance.config.destinations).toEqual({});
     instance.addDestination('mock', mockDestination);
     expect(instance.config.destinations).toEqual({ mock: mockDestination });
@@ -64,13 +64,34 @@ describe('Node Client', () => {
   test('push regular', async () => {
     const { elb } = getClient();
     const result = await elb(mockEvent);
-    expect(mockFn).toHaveBeenCalledTimes(1);
-    expect(mockFn).toHaveBeenCalledWith([
+    expect(mockDestinationPush).toHaveBeenCalledTimes(1);
+    expect(mockDestinationPush).toHaveBeenCalledWith([
       { event: mockEvent, config: mockDestination.config },
     ]);
     expect(result).toEqual({
+      status: { ok: true },
       successful: [{ id: 'mock', destination: mockDestination }],
       failed: [],
     });
+  });
+
+  test('push failure', async () => {
+    const { elb } = getClient();
+    let result = await (elb as Function)();
+
+    expect(result.status).toHaveProperty('ok', false);
+    expect(result.status).toHaveProperty('error', expect.any(Error));
+    expect(result.status.error).toHaveProperty(
+      'message',
+      'Event name is required',
+    );
+
+    result = await elb('foo');
+    expect(result.status).toHaveProperty('ok', false);
+    expect(result.status).toHaveProperty('error', expect.any(Error));
+    expect(result.status.error).toHaveProperty(
+      'message',
+      'Event name is invalid',
+    );
   });
 });
