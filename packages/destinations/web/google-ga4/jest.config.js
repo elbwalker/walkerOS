@@ -1,5 +1,7 @@
 const commonConfig = require('@elbwalker/jest');
 
-const config = {};
+const config = {
+  testEnvironment: 'jsdom',
+};
 
 module.exports = { ...commonConfig, ...config };
