@@ -12,7 +12,7 @@ describe('Init', () => {
     jest.clearAllMocks();
 
     w.dataLayer = [];
-    w.dataLayer.push = mockFn;
+    (w.dataLayer as unknown[]).push = mockFn;
   });
 
   test('custom prefix', () => {

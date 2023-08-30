@@ -383,7 +383,7 @@ export function trim(str: string): string {
   return str ? str.trim().replace(/^'|'$/g, '').trim() : '';
 }
 
-export function trycatch<P extends unknown[], R, S>(
+export function tryCatch<P extends unknown[], R, S>(
   fn: (...args: P) => R | undefined,
   onError?: (err: unknown) => S,
 ): (...args: P) => R | undefined {
@@ -392,7 +392,12 @@ export function trycatch<P extends unknown[], R, S>(
       return fn(...args);
     } catch (err) {
       // Call either the custom error handler or console.error
-      (onError && onError(err)) || console.error(err);
+      if (onError) {
+        onError(err);
+      } else {
+        console.error(err);
+      }
+
       return;
     }
   };

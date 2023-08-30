@@ -26,7 +26,7 @@ describe('Trigger', () => {
     jest.spyOn(global, 'setTimeout');
     jest.spyOn(global, 'setInterval');
     w.dataLayer = [];
-    w.dataLayer.push = mockFn;
+    (w.dataLayer as unknown[]).push = mockFn;
     w.elbLayer = undefined as unknown as WebClient.ElbLayer;
 
     events = {};

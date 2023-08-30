@@ -6,7 +6,7 @@ import {
   getAttribute,
   isVisible,
   throttle,
-  trycatch,
+  tryCatch,
 } from '@elbwalker/utils';
 
 let visibleObserver: IntersectionObserver | undefined;
@@ -51,13 +51,13 @@ export function load(instance: WebClient.Function) {
 export function initGlobalTrigger(instance: WebClient.Function): void {
   document.addEventListener(
     'click',
-    trycatch(function (this: Document, ev: MouseEvent) {
+    tryCatch(function (this: Document, ev: MouseEvent) {
       triggerClick.call(this, instance, ev);
     }),
   );
   document.addEventListener(
     'submit',
-    trycatch(function (this: Document, ev: SubmitEvent) {
+    tryCatch(function (this: Document, ev: SubmitEvent) {
       triggerSubmit.call(this, instance, ev);
     }),
   );
@@ -72,7 +72,7 @@ export function initScopeTrigger(
 
   // Load the visible observer
   visibleObserver =
-    visibleObserver || trycatch(observerVisible)(instance, 1000);
+    visibleObserver || tryCatch(observerVisible)(instance, 1000);
 
   // default data-elbaction
   const selectorAction = getElbAttributeName(
@@ -160,7 +160,7 @@ function triggerClick(instance: WebClient.Function, ev: MouseEvent) {
 function triggerHover(instance: WebClient.Function, elem: HTMLElement) {
   elem.addEventListener(
     'mouseenter',
-    trycatch(function (this: Document, ev: MouseEvent) {
+    tryCatch(function (this: Document, ev: MouseEvent) {
       if (ev.target instanceof Element)
         handleTrigger(instance, ev.target, Trigger.Hover);
     }),

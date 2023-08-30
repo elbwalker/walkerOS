@@ -11,7 +11,7 @@ import {
   assign,
   getId,
   isSameType,
-  trycatch,
+  tryCatch,
   useHooks,
 } from '@elbwalker/utils';
 import { getEntities, getGlobals } from './lib/walker';
@@ -446,7 +446,7 @@ function webClient(
       if (!mappingEvent) return false;
     }
 
-    const pushed = !!trycatch(() => {
+    const pushed = !!tryCatch(() => {
       // Destination initialization
       // Check if the destination was initialized properly or try to do so
       if (destination.init && !destination.config.init) {
@@ -506,7 +506,7 @@ function webClient(
       instance.config.timing = performance.now();
     }
 
-    trycatch(load)(instance);
+    tryCatch(load)(instance);
   }
 
   function setConsent(instance: WebClient.Function, data: Elbwalker.Consent) {
