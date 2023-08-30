@@ -25,8 +25,8 @@ describe('Node Client', () => {
     version,
     source: {
       type: 'node',
-      id: '',
-      previous_id: '',
+      id: '@TODO',
+      previous_id: '@TODO',
     },
   };
   const mockDestination: NodeDestination.Function = {

@@ -113,32 +113,44 @@ function getEvent(
   const [entity, action] = props.event.split(' ');
   if (!entity || !action) throw new Error('Event name is invalid');
 
+  const config = instance.config;
   const data = props.data || {};
+
+  ++config.count;
+  const custom = props.custom || {};
+  const trigger = props.trigger || '';
+  const timestamp = Date.now();
+  const timing = Math.round((timestamp - config.timing) / 10) / 100;
+  const id = `${timestamp}-${config.group}-${config.count}`;
+  const source = {
+    type: 'node',
+    id: '@TODO',
+    previous_id: '@TODO',
+  };
 
   // @TODO enhance event with globals etc.
   return {
     event: props.event,
     data,
     context: {},
-    custom: {},
-    globals: {},
-    user: {},
+    custom,
+    globals: config.globals,
+    user: config.user,
     nested: [],
-    consent: {},
-    id: '',
-    trigger: '',
+    consent: config.consent,
+    id,
+    trigger,
     entity,
     action,
-    timestamp: Date.now(),
-    timing: instance.config.timing - Date.now(),
-    group: '',
+    timestamp,
+    timing,
+    group: config.group,
     count: 0,
-    version: { client: instance.config.client, tagging: 0 },
-    source: {
-      type: 'node',
-      id: '',
-      previous_id: '',
+    version: {
+      client: config.client,
+      tagging: config.tagging,
     },
+    source,
   };
 }
 
