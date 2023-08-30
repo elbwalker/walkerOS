@@ -10,6 +10,25 @@ describe('Commands', () => {
     jest.resetModules();
   });
 
+  test('config', async () => {
+    const { elb, instance } = getClient();
+    expect(instance.config).toHaveProperty('user', {});
+
+    let config = instance.config;
+    let result = await elb('walker config');
+
+    expect(result.command).toHaveProperty('name', 'config');
+    expect(result.command).toHaveProperty('data', config);
+
+    result = await elb('walker config', { custom: 'wildwest' });
+    expect(result.command!.data).toHaveProperty('custom', 'wildwest');
+    expect(instance.config).toHaveProperty('custom', 'wildwest');
+
+    result = await elb('walker config', { tagging: 1 });
+    expect(result.command!.data).toHaveProperty('tagging', 1);
+    expect(instance.config).toHaveProperty('tagging', 1);
+  });
+
   test('user', async () => {
     const { elb, instance } = getClient();
     expect(instance.config).toHaveProperty('user', {});

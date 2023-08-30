@@ -21,8 +21,10 @@ export function nodeClient(
   customConfig: Partial<NodeClient.Config> = {},
 ): NodeClient.Function {
   const client = '2.0.0';
-  const staticGlobals = customConfig.globals || {};
-  const config = getConfig(customConfig, { client }, staticGlobals);
+  const config = getConfig(customConfig, {
+    client,
+    globalsStatic: customConfig.globals, // Initial globals are static values
+  });
 
   const addDestination: NodeClient.AddDestination = (id, destination) => {
     addDestinationFn(instance, id, destination);
@@ -50,7 +52,7 @@ export function nodeClient(
   };
 
   // That's when the party starts
-  run(instance, staticGlobals); // @TODO check for allowed?
+  run(instance); // @TODO check for allowed?
 
   return instance;
 }
@@ -101,10 +103,10 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
 };
 
 function getConfig(
-  values: Partial<NodeClient.Config>,
+  values: Partial<NodeClient.Config> = {},
   current: Partial<NodeClient.Config> = {},
-  staticGlobals: Elbwalker.Properties = {},
 ): NodeClient.Config {
+  const globalsStatic = current.globalsStatic || {};
   const defaultConfig: NodeClient.Config = {
     allowed: false, // Wait for explicit run command to start
     client: '0.0.0', // Client version
@@ -112,7 +114,8 @@ function getConfig(
     custom: {}, // Custom state support
     count: 0, // Event counter for each run
     destinations: {}, // Destination list
-    globals: assign(staticGlobals), // Globals enhanced with the static globals from init and previous values
+    globals: {}, // To be overwritten
+    globalsStatic, // Basic values from initial config
     group: '', // Random id to group events of a run
     hooks: {}, // Manage the hook functions
     queue: [], // Temporary event queue for all events of a run
@@ -123,7 +126,7 @@ function getConfig(
   };
 
   const globals = assign(
-    staticGlobals,
+    globalsStatic,
     assign(current.globals || {}, values.globals || {}),
   );
 
@@ -133,6 +136,7 @@ function getConfig(
     ...current,
     ...values,
     globals,
+    globalsStatic,
   };
 }
 
@@ -201,10 +205,11 @@ function handleCommand(
   action: string,
   data?: Elbwalker.PushData,
 ): Elbwalker.PushData | undefined {
-  // @TODO throw error if no action
   switch (action) {
+    case Const.Commands.Config:
+      return setConfig(instance, data);
     case Const.Commands.User:
-      return setUserIds(instance, data);
+      return setUser(instance, data);
   }
 
   return;
@@ -254,7 +259,15 @@ async function pushToDestinations(
   return { successful, failed };
 }
 
-function setUserIds(instance: NodeClient.Function, data: unknown = {}) {
+function setConfig(instance: NodeClient.Function, data: unknown = {}) {
+  if (!isSameType(data, {} as Elbwalker.Config)) return;
+  //@TODO strict type checking
+
+  instance.config = getConfig(data, instance.config);
+  return instance.config;
+}
+
+function setUser(instance: NodeClient.Function, data: unknown = {}) {
   if (!isSameType(data, {} as Elbwalker.User)) return;
 
   const user: Elbwalker.User = {};
@@ -267,16 +280,13 @@ function setUserIds(instance: NodeClient.Function, data: unknown = {}) {
   return user;
 }
 
-function run(
-  instance: NodeClient.Function,
-  staticGlobals: Elbwalker.Properties,
-) {
+function run(instance: NodeClient.Function): Elbwalker.Config {
   instance.config = assign(instance.config, {
     allowed: true, // Free the client
     count: 0, // Reset the run counter
     globals: assign(
       // @TODO add a globals parameter
-      staticGlobals,
+      instance.config.globalsStatic,
     ),
     timing: Date.now(), // Set the timing offset
     group: getId(), // Generate a new group id for each run
@@ -289,6 +299,8 @@ function run(
   Object.values(instance.config.destinations).forEach((destination) => {
     destination.queue = [];
   });
+
+  return instance.config;
 }
 
 export default createNodeClient;
