@@ -141,4 +141,21 @@ describe('Node Client', () => {
       'Event name is invalid',
     );
   });
+
+  test('timing', async () => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    const { elb } = getClient();
+
+    jest.advanceTimersByTime(2500); // 2.5 sec load time
+
+    let result = await elb(mockEvent);
+    expect(result.event!.timing).toEqual(2.5);
+
+    jest.advanceTimersByTime(1000); // 1 sec to new run
+    result = await elb('foo bar');
+    expect(result.event!.timing).toEqual(3.5);
+
+    // @TODO test timing reset after walker run command
+  });
 });
