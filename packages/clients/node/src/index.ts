@@ -145,13 +145,14 @@ function getEventOrAction(
   const config = instance.config;
 
   ++config.count;
+  const event = props.event;
   const data = props.data || {};
   const context = props.context || {};
   const custom = props.custom || {};
-  const globals = props.globals || {};
-  const user = props.user || {};
+  const globals = props.globals || config.globals;
+  const user = props.user || config.user;
   const nested = props.nested || [];
-  const consent = props.consent || {};
+  const consent = props.consent || config.consent;
   const trigger = props.trigger || '';
   const timestamp = Date.now();
   const timing = Math.round((timestamp - config.timing) / 10) / 100;
@@ -168,9 +169,8 @@ function getEventOrAction(
     previous_id: '@TODO',
   };
 
-  // @TODO enhance event with globals etc.
   return {
-    event: props.event,
+    event,
     data,
     context,
     custom,

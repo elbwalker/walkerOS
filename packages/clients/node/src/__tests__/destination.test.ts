@@ -34,8 +34,8 @@ describe('Node Destination', () => {
     push: mockDestinationPush,
   };
 
-  function getClient(custom?: unknown) {
-    const config: Partial<NodeClient.Config> = custom || {
+  function getClient(custom?: Partial<NodeClient.Config>) {
+    const config = custom || {
       destinations: { mock: mockDestination },
     };
 

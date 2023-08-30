@@ -34,8 +34,8 @@ describe('Node Client', () => {
     push: mockDestinationPush,
   };
 
-  function getClient(custom?: unknown) {
-    const config: Partial<NodeClient.Config> = custom || {
+  function getClient(custom?: Partial<NodeClient.Config>) {
+    const config = custom || {
       destinations: { mock: mockDestination },
     };
 
@@ -73,6 +73,52 @@ describe('Node Client', () => {
       successful: [{ id: 'mock', destination: mockDestination }],
       failed: [],
     });
+  });
+
+  test('push event', async () => {
+    const { elb } = getClient({
+      destinations: { mock: mockDestination },
+      globals: { glow: 'balls' },
+      user: { id: 'us3r1d' },
+      consent: { test: true },
+      tagging: 42,
+    });
+    const event = {
+      event: 'e a',
+      data: {},
+      context: {},
+      custom: {},
+      globals: { glow: 'balls' },
+      user: { id: 'us3r1d' },
+      nested: [],
+      consent: { test: true },
+      id: expect.any(String),
+      trigger: '',
+      entity: 'e',
+      action: 'a',
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
+      group: expect.any(String),
+      count: 1,
+      version: {
+        client: expect.any(String),
+        tagging: 42,
+      },
+      source: {
+        type: 'node',
+        id: '@TODO',
+        previous_id: '@TODO',
+      },
+    };
+
+    await elb('e a');
+    expect(mockDestinationPush).toHaveBeenCalledTimes(1);
+    expect(mockDestinationPush).toHaveBeenCalledWith([
+      {
+        event,
+        config: mockDestination.config,
+      },
+    ]);
   });
 
   test('push failure', async () => {
