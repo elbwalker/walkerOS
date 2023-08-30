@@ -35,13 +35,12 @@ export function nodeClient(
       failed: [],
     };
 
-    const { status, successful, failed } =
+    return (
       (await tryCatchAsync(pushFn, (error) => {
         defaultResult.status.error = error;
         return defaultResult;
-      })(instance, ...args)) || defaultResult;
-
-    return { status, successful, failed };
+      })(instance, ...args)) || defaultResult
+    );
   };
 
   const instance: NodeClient.Function = {
@@ -67,9 +66,11 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
   nameOrEvent,
   data,
 ) => {
-  let status: NodeClient.Status = { ok: false };
-  let successful: NodeDestination.PushSuccess = [];
-  let failed: NodeDestination.PushFailure = [];
+  const result: NodeClient.PushResult = {
+    status: { ok: false },
+    successful: [],
+    failed: [],
+  };
 
   // Parameter handling
   if (isSameType(nameOrEvent, '' as string))
@@ -81,18 +82,22 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
   if (isSameType(eventOrAction, '' as string)) {
     // Walker command
     handleCommand(instance, eventOrAction, data);
-    status.ok = true;
+    result.action = eventOrAction;
+    result.status.ok = true;
   } else {
     // Regular event
-    ({ successful, failed } = await pushToDestinations(
+    const { successful, failed } = await pushToDestinations(
       instance.config.destinations,
       eventOrAction,
-    ));
+    );
 
-    status.ok = failed.length === 0;
+    result.event = eventOrAction;
+    result.status.ok = failed.length === 0;
+    result.successful = successful;
+    result.failed = failed;
   }
 
-  return { status, successful, failed };
+  return result;
 };
 
 function getConfig(

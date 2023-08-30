@@ -69,6 +69,7 @@ describe('Node Client', () => {
       { event: mockEvent, config: mockDestination.config },
     ]);
     expect(result).toEqual({
+      event: mockEvent,
       status: { ok: true },
       successful: [{ id: 'mock', destination: mockDestination }],
       failed: [],

@@ -58,9 +58,10 @@ describe('Node Destination', () => {
     const { elb } = getClient({
       destinations: { mockDestination, destinationFailure },
     });
-    const result = await elb('e a');
+    const result = await elb('entity action');
 
     expect(result).toEqual({
+      event: mockEvent,
       status: { ok: false },
       successful: [
         {
