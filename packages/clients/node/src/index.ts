@@ -114,14 +114,25 @@ function getEvent(
   if (!entity || !action) throw new Error('Event name is invalid');
 
   const config = instance.config;
-  const data = props.data || {};
 
   ++config.count;
+  const data = props.data || {};
+  const context = props.context || {};
   const custom = props.custom || {};
+  const globals = props.globals || {};
+  const user = props.user || {};
+  const nested = props.nested || [];
+  const consent = props.consent || {};
   const trigger = props.trigger || '';
   const timestamp = Date.now();
   const timing = Math.round((timestamp - config.timing) / 10) / 100;
-  const id = `${timestamp}-${config.group}-${config.count}`;
+  const group = config.group;
+  const count = config.count;
+  const id = `${timestamp}-${group}-${count}`;
+  const version = {
+    client: config.client,
+    tagging: config.tagging,
+  };
   const source = {
     type: 'node',
     id: '@TODO',
@@ -132,24 +143,21 @@ function getEvent(
   return {
     event: props.event,
     data,
-    context: {},
+    context,
     custom,
-    globals: config.globals,
-    user: config.user,
-    nested: [],
-    consent: config.consent,
+    globals,
+    user,
+    nested,
+    consent,
     id,
     trigger,
     entity,
     action,
     timestamp,
     timing,
-    group: config.group,
-    count: 0,
-    version: {
-      client: config.client,
-      tagging: config.tagging,
-    },
+    group,
+    count,
+    version,
     source,
   };
 }
