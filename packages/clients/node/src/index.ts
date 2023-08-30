@@ -208,6 +208,8 @@ function handleCommand(
   switch (action) {
     case Const.Commands.Config:
       return setConfig(instance, data);
+    case Const.Commands.Run:
+      return run(instance, data);
     case Const.Commands.User:
       return setUser(instance, data);
   }
@@ -280,14 +282,13 @@ function setUser(instance: NodeClient.Function, data: unknown = {}) {
   return user;
 }
 
-function run(instance: NodeClient.Function): Elbwalker.Config {
+function run(instance: NodeClient.Function, data: unknown = {}) {
+  if (!isSameType(data, {} as Elbwalker.Properties)) return;
+
   instance.config = assign(instance.config, {
     allowed: true, // Free the client
     count: 0, // Reset the run counter
-    globals: assign(
-      // @TODO add a globals parameter
-      instance.config.globalsStatic,
-    ),
+    globals: assign(data, instance.config.globalsStatic),
     timing: Date.now(), // Set the timing offset
     group: getId(), // Generate a new group id for each run
   });

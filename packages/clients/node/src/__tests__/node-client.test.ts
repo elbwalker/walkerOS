@@ -142,6 +142,28 @@ describe('Client', () => {
     );
   });
 
+  test('globals', async () => {
+    let { instance } = getClient({});
+    expect(instance.config).toHaveProperty('globals', {});
+    expect(instance.config).toHaveProperty('globalsStatic', {});
+
+    ({ instance } = getClient({ globals: { foo: 'bar' } }));
+    expect(instance.config).toHaveProperty('globals', { foo: 'bar' });
+    expect(instance.config).toHaveProperty('globalsStatic', { foo: 'bar' });
+
+    ({ instance } = getClient({ globals: { foo: 'bar' } }));
+    instance.config.globals.a = 1;
+    await instance.push('walker config', { globals: { b: 2 } });
+    let result = await instance.push('e a');
+    expect(result.event).toHaveProperty('count', 1);
+    expect(result.event).toHaveProperty('globals', { foo: 'bar', a: 1, b: 2 });
+
+    await instance.push('walker run', { c: 3 });
+    result = await instance.push('e a');
+    expect(result.event).toHaveProperty('count', 1);
+    expect(result.event).toHaveProperty('globals', { foo: 'bar', c: 3 });
+  });
+
   test('timing', async () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
@@ -150,7 +172,7 @@ describe('Client', () => {
     jest.advanceTimersByTime(2500); // 2.5 sec load time
 
     let result = await elb(mockEvent);
-    expect(result.event!.timing).toEqual(2.5);
+    expect(result.event?.timing).toEqual(2.5);
 
     jest.advanceTimersByTime(1000); // 1 sec to new run
     result = await elb('foo bar');
