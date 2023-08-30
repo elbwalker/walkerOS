@@ -403,6 +403,25 @@ export function tryCatch<P extends unknown[], R, S>(
   };
 }
 
+export function tryCatchAsync<P extends unknown[], R, S>(
+  fn: (...args: P) => R,
+  onError?: (err: unknown) => S,
+): (...args: P) => Promise<R | undefined> {
+  return async function (...args: P): Promise<R | undefined> {
+    try {
+      return await fn(...args);
+    } catch (err) {
+      if (onError) {
+        await onError(err);
+      } else {
+        console.error(err);
+      }
+
+      return;
+    }
+  };
+}
+
 export function useHooks<P extends any[], R>(
   fn: (...args: P) => R,
   name: Hooks.Names,
