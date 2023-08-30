@@ -19,9 +19,14 @@ export interface Push {
 }
 
 export interface PushResult extends NodeDestination.PushResult {
-  action?: string;
+  command?: Command;
   event?: Elbwalker.Event;
   status: Status;
+}
+
+export interface Command {
+  name: string;
+  data: unknown;
 }
 
 export interface Status {

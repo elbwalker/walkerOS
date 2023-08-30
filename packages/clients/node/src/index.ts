@@ -81,8 +81,8 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
 
   if (isSameType(eventOrAction, '' as string)) {
     // Walker command
-    handleCommand(instance, eventOrAction, data);
-    result.action = eventOrAction;
+    data = handleCommand(instance, eventOrAction, data);
+    result.command = { name: eventOrAction, data };
     result.status.ok = true;
   } else {
     // Regular event
@@ -200,8 +200,14 @@ function handleCommand(
   instance: NodeClient.Function,
   action: string,
   data?: Elbwalker.PushData,
-) {
-  console.log({ arguments });
+): Elbwalker.PushData | undefined {
+  // @TODO throw error if no action
+  switch (action) {
+    case Const.Commands.User:
+      return setUserIds(instance, data);
+  }
+
+  return;
 }
 
 async function pushToDestinations(
@@ -246,6 +252,19 @@ async function pushToDestinations(
   }
 
   return { successful, failed };
+}
+
+function setUserIds(instance: NodeClient.Function, data: unknown = {}) {
+  if (!isSameType(data, {} as Elbwalker.User)) return;
+
+  const user: Elbwalker.User = {};
+
+  if ('id' in data) user.id = data.id;
+  if ('device' in data) user.device = data.device;
+  if ('session' in data) user.session = data.session;
+
+  instance.config.user = user;
+  return user;
 }
 
 function run(
