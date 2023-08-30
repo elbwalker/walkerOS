@@ -203,11 +203,11 @@ async function pushToDestinations(
   destinations: NodeClient.Destinations,
   event: Elbwalker.Event,
 ): Promise<NodeDestination.PushResult> {
-  const results: {
+  const results: Array<{
     id: string;
     destination: NodeDestination.Function;
     error?: unknown;
-  }[] = await Promise.all(
+  }> = await Promise.all(
     Object.entries(destinations).map(async ([id, destination]) => {
       // @TODO use trycatch
       try {
