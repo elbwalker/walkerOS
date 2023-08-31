@@ -47,7 +47,7 @@ describe('Destination', () => {
     jest.resetModules();
   });
 
-  test('destination fail', async () => {
+  test('fail', async () => {
     const destinationFailure: NodeDestination.Function = {
       config: {},
       push: jest.fn().mockImplementation(() => {
@@ -69,6 +69,7 @@ describe('Destination', () => {
           destination: mockDestination,
         },
       ],
+      queued: [],
       failed: [
         {
           id: 'destinationFailure',
@@ -79,4 +80,6 @@ describe('Destination', () => {
     });
     expect(result.failed[0].error).toHaveProperty('message', 'kaputt');
   });
+
+  test.skip('consent', async () => {});
 });

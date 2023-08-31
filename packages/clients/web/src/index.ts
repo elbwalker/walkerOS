@@ -524,7 +524,7 @@ function webClient(
 
     if (runQueue) {
       Object.values(config.destinations).forEach((destination) => {
-        let queue = destination.queue || [];
+        const queue = destination.queue || [];
 
         // Try to push and remove successful ones from queue
         destination.queue = queue.filter((event) => {

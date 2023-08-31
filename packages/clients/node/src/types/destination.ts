@@ -8,11 +8,13 @@ export interface Function<Custom = unknown, EventCustom = unknown>
   setup?: (
     config: Partial<Config<Partial<Custom>, Partial<EventCustom>>>,
   ) => Promise<boolean>;
-  push: (events: PushEvents) => Promise<void>;
+  push: (events: PushEvents) => Promise<Push>;
 }
 
 export interface Config<Custom = unknown, EventCustom = unknown>
-  extends Elbdestination.Config<Custom, EventCustom> {}
+  extends Elbdestination.Config<Custom, EventCustom> {
+  // @TODO default retry option field how to deal with failed push events
+}
 
 export interface Mapping<EventCustom>
   extends Elbdestination.Mapping<EventCustom> {}
@@ -32,6 +34,11 @@ export type Ref = {
   destination: Function;
 };
 
+export type Push = {
+  queue?: Elbwalker.Events;
+  error?: unknown;
+};
+
 export type PushSuccess = Array<Ref>;
 
 export type PushFailure = Array<Ref & { error: PushError }>;
@@ -40,5 +47,6 @@ export type PushError = unknown;
 
 export type PushResult = {
   successful: PushSuccess;
+  queued: PushSuccess;
   failed: PushFailure;
 };

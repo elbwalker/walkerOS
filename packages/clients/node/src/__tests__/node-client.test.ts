@@ -72,6 +72,7 @@ describe('Client', () => {
       event: mockEvent,
       status: { ok: true },
       successful: [{ id: 'mock', destination: mockDestination }],
+      queued: [],
       failed: [],
     });
   });

@@ -14,9 +14,14 @@ export interface AddDestination {
 export interface Push {
   (
     nameOrEvent: string | Partial<Elbwalker.Event>,
-    data?: Elbwalker.PushData,
+    data?: PushData,
   ): Promise<PushResult>;
 }
+
+export type PushData =
+  | Elbwalker.PushData
+  | NodeDestination.Function
+  | NodeDestination.PushResult;
 
 export interface PushResult extends NodeDestination.PushResult {
   command?: Command;

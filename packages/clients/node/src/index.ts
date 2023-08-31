@@ -34,6 +34,7 @@ export function nodeClient(
     const defaultResult: NodeClient.PushResult = {
       status: { ok: false },
       successful: [],
+      queued: [],
       failed: [],
     };
 
@@ -63,6 +64,32 @@ const addDestinationFn: NodeClient.PrependInstance<
   instance.config.destinations[id] = destination;
 };
 
+function allowedToPush(
+  instance: NodeClient.Function,
+  destination: NodeDestination.Function,
+): boolean {
+  // Default without consent handling
+  let granted = true;
+
+  // Check for consent
+  const destinationConsent = destination.config.consent;
+
+  if (destinationConsent) {
+    // Let's be strict here
+    granted = false;
+
+    // Set the current consent states
+    const consentStates = instance.config.consent;
+
+    // Search for a required and granted consent
+    Object.keys(destinationConsent).forEach((consent) => {
+      if (consentStates[consent]) granted = true;
+    });
+  }
+
+  return granted;
+}
+
 const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
   instance,
   nameOrEvent,
@@ -71,6 +98,7 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
   const result: NodeClient.PushResult = {
     status: { ok: false },
     successful: [],
+    queued: [],
     failed: [],
   };
 
@@ -83,19 +111,20 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
 
   if (isSameType(eventOrAction, '' as string)) {
     // Walker command
-    data = handleCommand(instance, eventOrAction, data);
+    data = await handleCommand(instance, eventOrAction, data);
     result.command = { name: eventOrAction, data };
     result.status.ok = true;
   } else {
     // Regular event
-    const { successful, failed } = await pushToDestinations(
-      instance.config.destinations,
+    const { successful, queued, failed } = await pushToDestinations(
+      instance,
       eventOrAction,
     );
 
     result.event = eventOrAction;
     result.status.ok = failed.length === 0;
     result.successful = successful;
+    result.queued = queued;
     result.failed = failed;
   }
 
@@ -200,14 +229,16 @@ function getEventOrAction(
   };
 }
 
-function handleCommand(
+async function handleCommand(
   instance: NodeClient.Function,
   action: string,
-  data?: Elbwalker.PushData,
-): Elbwalker.PushData | undefined {
+  data?: NodeClient.PushData,
+): Promise<NodeClient.PushData | undefined> {
   switch (action) {
     case Const.Commands.Config:
       return setConfig(instance, data);
+    case Const.Commands.Consent:
+      return await setConsent(instance, data);
     case Const.Commands.Run:
       return run(instance, data);
     case Const.Commands.User:
@@ -218,47 +249,70 @@ function handleCommand(
 }
 
 async function pushToDestinations(
-  destinations: NodeClient.Destinations,
-  event: Elbwalker.Event,
+  instance: NodeClient.Function,
+  event?: Elbwalker.Event,
 ): Promise<NodeDestination.PushResult> {
+  const config = instance.config;
   const results: Array<{
     id: string;
     destination: NodeDestination.Function;
     error?: unknown;
+    queue?: Elbwalker.Events;
   }> = await Promise.all(
-    Object.entries(destinations).map(async ([id, destination]) => {
-      // @TODO use trycatch
-      try {
-        await destination.push([
-          {
-            event,
-            config: destination.config,
-            // @TODO mapping: destination.mapping
-          },
-        ]);
-        return { id, destination };
-      } catch (error) {
-        return { id, destination, error };
-      }
-    }),
+    Object.entries(instance.config.destinations).map(
+      async ([id, destination]) => {
+        let error: unknown;
+
+        destination.queue = destination.queue || [];
+        if (event) destination.queue.push(event); // Add event to queue
+
+        // Always check for required consent states before pushing
+        if (allowedToPush(instance, destination)) {
+          // Update previous values with the current state
+          let events: NodeDestination.PushEvents = destination.queue.map(
+            (event) => {
+              event.consent = config.consent;
+              event.globals = config.globals;
+              event.user = config.user;
+              return { event, config: destination.config }; // @TODO mapping
+            },
+          );
+
+          const result =
+            (await tryCatchAsync(destination.push, (error) => {
+              // Default error handling for failing destinations
+              return { error, queue: [] };
+            })(events)) || {};
+
+          destination.queue = result.queue; // Events that should be queued again
+          if (result.error) error = result.error; // Captured error from destination
+        }
+
+        return { id, destination, queue: destination.queue, error };
+      },
+    ),
   );
 
   const successful: NodeDestination.PushSuccess = [];
+  const queued: NodeDestination.PushSuccess = [];
   const failed: NodeDestination.PushFailure = [];
 
   for (const result of results) {
-    if (!result.error) {
-      successful.push({ id: result.id, destination: result.destination });
-    } else {
+    if (result.error) {
       failed.push({
         id: result.id,
         destination: result.destination,
         error: result.error,
       });
+    } else if (result.queue) {
+      queued.push({ id: result.id, destination: result.destination });
+    } else {
+      successful.push({ id: result.id, destination: result.destination });
     }
   }
 
-  return { successful, failed };
+  // @TODO add status check here
+  return { successful, queued, failed };
 }
 
 function setConfig(instance: NodeClient.Function, data: unknown = {}) {
@@ -267,6 +321,23 @@ function setConfig(instance: NodeClient.Function, data: unknown = {}) {
 
   instance.config = getConfig(data, instance.config);
   return instance.config;
+}
+
+async function setConsent(instance: NodeClient.Function, data: unknown = {}) {
+  if (!isSameType(data, {} as Elbwalker.Consent)) return;
+
+  const config = instance.config;
+  let runQueue = false;
+  Object.entries(data).forEach(([consent, granted]) => {
+    const state = !!granted;
+
+    config.consent[consent] = state;
+
+    // Only run queue if state was set to true
+    runQueue = runQueue || state;
+  });
+
+  if (runQueue) return await pushToDestinations(instance);
 }
 
 function setUser(instance: NodeClient.Function, data: unknown = {}) {
