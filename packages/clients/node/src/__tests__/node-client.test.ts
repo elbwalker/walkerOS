@@ -171,14 +171,16 @@ describe('Client', () => {
     const { elb } = getClient();
 
     jest.advanceTimersByTime(2500); // 2.5 sec load time
-
     let result = await elb(mockEvent);
     expect(result.event?.timing).toEqual(2.5);
 
     jest.advanceTimersByTime(1000); // 1 sec to new run
-    result = await elb('foo bar');
-    expect(result.event!.timing).toEqual(3.5);
+    await elb('walker run');
+    result = await elb(mockEvent);
+    expect(result.event?.timing).toEqual(0);
 
-    // @TODO test timing reset after walker run command
+    jest.advanceTimersByTime(5000); // wait 5 sec
+    result = await elb(mockEvent);
+    expect(result.event?.timing).toEqual(5);
   });
 });

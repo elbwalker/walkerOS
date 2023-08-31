@@ -12,9 +12,7 @@ export interface Function<Custom = unknown, EventCustom = unknown>
 }
 
 export interface Config<Custom = unknown, EventCustom = unknown>
-  extends Elbdestination.Config<Custom, EventCustom> {
-  // @TODO default retry option field how to deal with failed push events
-}
+  extends Elbdestination.Config<Custom, EventCustom> {}
 
 export interface Mapping<EventCustom>
   extends Elbdestination.Mapping<EventCustom> {}
