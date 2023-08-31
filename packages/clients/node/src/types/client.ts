@@ -2,7 +2,6 @@ import type { Elbwalker } from '@elbwalker/types';
 import type { NodeDestination } from '.';
 
 export interface Function {
-  addDestination: AddDestination;
   push: Push;
   config: Config;
 }
@@ -15,6 +14,7 @@ export interface Push {
   (
     nameOrEvent: string | Partial<Elbwalker.Event>,
     data?: PushData,
+    options?: PushOptions,
   ): Promise<PushResult>;
 }
 
@@ -22,6 +22,8 @@ export type PushData =
   | Elbwalker.PushData
   | NodeDestination.Function
   | NodeDestination.PushResult;
+
+export type PushOptions = Elbwalker.PushOptions | NodeDestination.Config;
 
 export interface PushResult extends NodeDestination.PushResult {
   command?: Command;

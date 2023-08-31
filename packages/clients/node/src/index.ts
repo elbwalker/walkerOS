@@ -24,10 +24,6 @@ export function nodeClient(
     globalsStatic: customConfig.globals, // Initial globals are static values
   });
 
-  const addDestination: NodeClient.AddDestination = (id, destination) => {
-    addDestinationFn(instance, id, destination);
-  };
-
   const push: NodeClient.Push = async (...args) => {
     const defaultResult: NodeClient.PushResult = {
       status: { ok: false },
@@ -45,7 +41,6 @@ export function nodeClient(
   };
 
   const instance: NodeClient.Function = {
-    addDestination,
     push,
     config,
   };
@@ -56,11 +51,42 @@ export function nodeClient(
   return instance;
 }
 
-const addDestinationFn: NodeClient.PrependInstance<
-  NodeClient.AddDestination
-> = (instance, id, destination) => {
+function addDestination(
+  instance: NodeClient.Function,
+  data: unknown = {},
+  options: unknown = {},
+) {
+  if (!isSameType(data, {} as NodeDestination.Function)) return;
+  if (!isSameType(options, {} as NodeDestination.Config)) return;
+
+  // Prefere explicit given config over default config
+  const config = options || data.config || { init: false };
+
+  const destination: NodeDestination.Function = {
+    init: data.init,
+    push: data.push,
+    config,
+    type: data.type,
+  };
+
+  // @TODO
+  // // Process previous events if not disabled
+  // if (config.queue !== false)
+  //   instance.config.queue.forEach((pushEvent) => {
+  //     pushToDestination(instance, destination, pushEvent);
+  //   });
+
+  let id = config.id; // Use given id
+  if (!id) {
+    // Generate a new id if none was given
+    do {
+      id = getId(4);
+    } while (instance.config.destinations[id]);
+  }
   instance.config.destinations[id] = destination;
-};
+
+  return instance.config;
+}
 
 function allowedToPush(
   instance: NodeClient.Function,
@@ -92,6 +118,7 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
   instance,
   nameOrEvent,
   data,
+  options,
 ) => {
   const result: NodeClient.PushResult = {
     status: { ok: false },
@@ -109,7 +136,7 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
 
   if (isSameType(eventOrAction, '' as string)) {
     // Walker command
-    const command = await handleCommand(instance, eventOrAction, data);
+    const command = await handleCommand(instance, eventOrAction, data, options);
     if (command.result) {
       if (isSameType(command.result, {} as NodeDestination.PushResult)) {
         if (command.result.successful)
@@ -245,6 +272,7 @@ async function handleCommand(
   instance: NodeClient.Function,
   action: string,
   data?: NodeClient.PushData,
+  options?: NodeClient.PushOptions,
 ): Promise<{ command: NodeClient.Command; result?: NodeClient.PushData }> {
   let command: NodeClient.Command = { name: action, data };
   let result: NodeClient.PushData | undefined;
@@ -255,6 +283,9 @@ async function handleCommand(
       break;
     case Const.Commands.Consent:
       result = await setConsent(instance, data);
+      break;
+    case Const.Commands.Destination:
+      result = await addDestination(instance, data, options);
       break;
     case Const.Commands.Run:
       result = run(instance, data);

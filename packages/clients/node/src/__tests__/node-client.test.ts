@@ -56,10 +56,15 @@ describe('Client', () => {
   });
 
   test('add destination', async () => {
-    const { instance } = getClient({});
+    const { elb, instance } = getClient({});
     expect(instance.config.destinations).toEqual({});
-    instance.addDestination('mock', mockDestination);
-    expect(instance.config.destinations).toEqual({ mock: mockDestination });
+    elb('walker destination', mockDestination, { id: 'mock' });
+    expect(instance.config.destinations).toEqual({
+      mock: {
+        config: { id: 'mock' },
+        push: mockDestinationPush,
+      },
+    });
   });
 
   test('push regular', async () => {
@@ -185,7 +190,7 @@ describe('Client', () => {
     expect(result.event?.timing).toEqual(5);
   });
 
-  test.only('source', async () => {
+  test('source', async () => {
     const { elb } = getClient({
       source: { type: 'node', id: '1d', previous_id: 'pr3v10us' },
     });
