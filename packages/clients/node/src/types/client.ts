@@ -44,7 +44,7 @@ export interface Config extends Elbwalker.Config {
   destinations: Destinations;
   globalsStatic: Elbwalker.Properties;
   queue: Elbwalker.Events;
-  // @TODO onError? (error: Error): void; // Custom error handler
+  source: Elbwalker.Source;
 }
 
 export interface Destinations {

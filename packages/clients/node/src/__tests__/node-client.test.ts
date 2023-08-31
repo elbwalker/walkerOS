@@ -25,14 +25,15 @@ describe('Client', () => {
     version,
     source: {
       type: 'node',
-      id: '@TODO',
-      previous_id: '@TODO',
+      id: '',
+      previous_id: '',
     },
   };
   const mockDestination: NodeDestination.Function = {
     config: {},
     push: mockDestinationPush,
   };
+  let result: NodeClient.PushResult;
 
   function getClient(custom?: Partial<NodeClient.Config>) {
     const config = custom || {
@@ -63,7 +64,7 @@ describe('Client', () => {
 
   test('push regular', async () => {
     const { elb } = getClient();
-    const result = await elb(mockEvent);
+    result = await elb(mockEvent);
     expect(mockDestinationPush).toHaveBeenCalledTimes(1);
     expect(mockDestinationPush).toHaveBeenCalledWith([
       { event: mockEvent, config: mockDestination.config },
@@ -108,8 +109,8 @@ describe('Client', () => {
       },
       source: {
         type: 'node',
-        id: '@TODO',
-        previous_id: '@TODO',
+        id: '',
+        previous_id: '',
       },
     };
 
@@ -125,7 +126,7 @@ describe('Client', () => {
 
   test('push failure', async () => {
     const { elb } = getClient();
-    let result = await (elb as Function)();
+    result = await (elb as Function)();
 
     expect(result.status).toHaveProperty('ok', false);
     expect(result.status).toHaveProperty('error', expect.any(Error));
@@ -182,5 +183,18 @@ describe('Client', () => {
     jest.advanceTimersByTime(5000); // wait 5 sec
     result = await elb(mockEvent);
     expect(result.event?.timing).toEqual(5);
+  });
+
+  test.only('source', async () => {
+    const { elb } = getClient({
+      source: { type: 'node', id: '1d', previous_id: 'pr3v10us' },
+    });
+
+    result = await elb(mockEvent);
+    expect(result.event).toHaveProperty('source', {
+      type: 'node',
+      id: '1d',
+      previous_id: 'pr3v10us',
+    });
   });
 });

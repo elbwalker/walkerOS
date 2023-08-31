@@ -25,8 +25,8 @@ describe('Destination', () => {
     version,
     source: {
       type: 'node',
-      id: '@TODO',
-      previous_id: '@TODO',
+      id: '',
+      previous_id: '',
     },
   };
   const mockDestination: NodeDestination.Function = {

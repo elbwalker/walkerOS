@@ -159,6 +159,11 @@ function getConfig(
     timing: 0, // Offset counter to calculate timing property
     user: {}, // Handles the user ids
     tagging: 0, // Helpful to differentiate the clients used setup version
+    source: {
+      type: 'node',
+      id: '',
+      previous_id: '',
+    },
   };
 
   const globals = assign(
@@ -208,11 +213,11 @@ function getEventOrAction(
     client: config.client,
     tagging: config.tagging,
   };
-  const source = {
-    type: 'node',
-    id: '@TODO',
-    previous_id: '@TODO',
-  };
+  const source = config.source;
+  if (props.source) {
+    if (props.source.id) source.id = props.source.id;
+    if (props.source.previous_id) source.previous_id = props.source.previous_id;
+  }
 
   return {
     event,
