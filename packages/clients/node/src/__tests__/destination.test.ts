@@ -1,6 +1,7 @@
 import type { NodeClient, NodeDestination } from '../types';
 import type { Elbwalker } from '@elbwalker/types';
 import { createNodeClient } from '../';
+import { assign } from '@elbwalker/utils';
 
 describe('Destination', () => {
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
@@ -50,6 +51,32 @@ describe('Destination', () => {
 
   test.skip('regular', async () => {});
 
+  test('add with queue', async () => {
+    const { elb, instance } = getClient({});
+
+    result = await elb(mockEvent);
+    expect(result.successful).toHaveProperty('length', 0);
+    expect(result.queued).toHaveProperty('length', 0);
+    expect(result.failed).toHaveProperty('length', 0);
+
+    // Update values after pushing the event
+    instance.config.consent = { demo: true };
+    instance.config.user = { id: 'us3r' };
+    instance.config.globals = { foo: 'bar' };
+
+    const updatedEvent = assign(mockEvent, {
+      consent: { demo: true },
+      user: { id: 'us3r' },
+      globals: { foo: 'bar' },
+    });
+    result = await elb('walker destination', mockDestination, { id: 'mock' });
+    expect(result.successful).toHaveProperty('length', 1);
+    expect(result.successful[0]).toHaveProperty('id', 'mock');
+    expect(mockDestinationPush).toHaveBeenCalledWith([
+      { event: updatedEvent, config: { id: 'mock' } },
+    ]);
+  });
+
   test('fail', async () => {
     const destinationFailure: NodeDestination.Function = {
       config: {},
@@ -93,7 +120,7 @@ describe('Destination', () => {
       push: mockPush,
     };
 
-    const { elb,instance } = getClient({
+    const { elb } = getClient({
       destinations: { mockDestination, destinationConsent },
     });
 
@@ -109,8 +136,6 @@ describe('Destination', () => {
     expect(result).toHaveProperty('failed', []);
 
     result = await elb('walker consent', { test: true });
-    // console.dir(instance, { depth: 3, colors: true });
-    // console.dir(result, { depth: 3, colors: true });
     expect(mockPush).toHaveBeenCalledWith([
       { event: mockEvent, config: expect.any(Object) },
     ]);

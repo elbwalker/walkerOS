@@ -62,6 +62,7 @@ describe('Client', () => {
     expect(instance.config.destinations).toEqual({
       mock: {
         config: { id: 'mock' },
+        queue: [],
         push: mockDestinationPush,
       },
     });

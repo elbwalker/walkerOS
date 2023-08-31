@@ -51,7 +51,7 @@ export function nodeClient(
   return instance;
 }
 
-function addDestination(
+async function addDestination(
   instance: NodeClient.Function,
   data: unknown = {},
   options: unknown = {},
@@ -69,13 +69,6 @@ function addDestination(
     type: data.type,
   };
 
-  // @TODO
-  // // Process previous events if not disabled
-  // if (config.queue !== false)
-  //   instance.config.queue.forEach((pushEvent) => {
-  //     pushToDestination(instance, destination, pushEvent);
-  //   });
-
   let id = config.id; // Use given id
   if (!id) {
     // Generate a new id if none was given
@@ -83,9 +76,12 @@ function addDestination(
       id = getId(4);
     } while (instance.config.destinations[id]);
   }
+
   instance.config.destinations[id] = destination;
 
-  return instance.config;
+  // Process previous events if not disabled
+  if (config.queue !== false) destination.queue = [...instance.config.queue];
+  return await pushToDestinations(instance, undefined, { [id]: destination });
 }
 
 function allowedToPush(
@@ -150,6 +146,10 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
     result.status.ok = true;
   } else {
     // Regular event
+
+    // Add event to internal queue
+    instance.config.queue.push(eventOrAction);
+
     const { successful, queued, failed } = await pushToDestinations(
       instance,
       eventOrAction,
@@ -301,7 +301,10 @@ async function handleCommand(
 async function pushToDestinations(
   instance: NodeClient.Function,
   event?: Elbwalker.Event,
+  destination?: NodeClient.Destinations,
 ): Promise<NodeDestination.PushResult> {
+  // Push to all destinations if no destination was given
+  const destinations = destination || instance.config.destinations;
   const config = instance.config;
   const results: Array<{
     id: string;
@@ -311,43 +314,43 @@ async function pushToDestinations(
     error?: unknown;
   }> = await Promise.all(
     // Process all destinations in parallel
-    Object.entries(instance.config.destinations).map(
-      async ([id, destination]) => {
-        let error: unknown;
+    Object.entries(destinations).map(async ([id, destination]) => {
+      let error: unknown;
 
-        destination.queue = destination.queue || [];
-        if (event) destination.queue.push(event); // Add event to queue
+      destination.queue = destination.queue || [];
+      if (event) destination.queue.push(event); // Add event to queue
 
-        if (!destination.queue.length)
-          // Nothing to do here
-          return { id, destination, skipped: true };
+      if (!destination.queue.length)
+        // Nothing to do here
+        return { id, destination, skipped: true };
 
-        // Always check for required consent states before pushing
-        if (allowedToPush(instance, destination)) {
-          // Update previous values with the current state
-          let events: NodeDestination.PushEvents = destination.queue.map(
-            (event) => {
-              event.consent = config.consent;
-              event.globals = config.globals;
-              event.user = config.user;
-              return { event, config: destination.config }; // @TODO mapping
-            },
-          );
+      // Always check for required consent states before pushing
+      if (allowedToPush(instance, destination)) {
+        // Update previous values with the current state
+        let events: NodeDestination.PushEvents = destination.queue.map(
+          (event) => {
+            event.consent = config.consent;
+            event.globals = config.globals;
+            event.user = config.user;
+            return { event, config: destination.config }; // @TODO mapping
+          },
+        );
 
-          const result =
-            (await tryCatchAsync(destination.push, (error) => {
-              // Default error handling for failing destinations
-              return { error, queue: undefined };
-            })(events)) || {};
+        // @TODO destination init
 
-          // Destinations can decide how to handle errors and queue
-          destination.queue = result.queue; // Events that should be queued again
-          error = result.error; // Captured error from destination
-        }
+        const result =
+          (await tryCatchAsync(destination.push, (error) => {
+            // Default error handling for failing destinations
+            return { error, queue: undefined };
+          })(events)) || {};
 
-        return { id, destination, queue: destination.queue, error };
-      },
-    ),
+        // Destinations can decide how to handle errors and queue
+        destination.queue = result.queue; // Events that should be queued again
+        error = result.error; // Captured error from destination
+      }
+
+      return { id, destination, queue: destination.queue, error };
+    }),
   );
 
   const successful: NodeDestination.PushSuccess = [];
@@ -356,17 +359,19 @@ async function pushToDestinations(
 
   for (const result of results) {
     if (result.skipped) continue;
+    const id = result.id;
+    const destination = result.destination;
 
     if (result.error) {
       failed.push({
-        id: result.id,
-        destination: result.destination,
+        id,
+        destination,
         error: result.error,
       });
     } else if (result.queue && result.queue.length) {
-      queued.push({ id: result.id, destination: result.destination });
+      queued.push({ id, destination });
     } else {
-      successful.push({ id: result.id, destination: result.destination });
+      successful.push({ id: id, destination });
     }
   }
 
