@@ -13,7 +13,7 @@ describe('Destination', () => {
     globals: {},
     user: {},
     nested: [],
-    consent: {},
+    consent: expect.any(Object),
     id: expect.any(String),
     trigger: '',
     entity: 'entity',
@@ -33,6 +33,7 @@ describe('Destination', () => {
     config: {},
     push: mockDestinationPush,
   };
+  let result: NodeClient.PushResult;
 
   function getClient(custom?: Partial<NodeClient.Config>) {
     const config = custom || {
@@ -47,6 +48,8 @@ describe('Destination', () => {
     jest.resetModules();
   });
 
+  test.skip('regular', async () => {});
+
   test('fail', async () => {
     const destinationFailure: NodeDestination.Function = {
       config: {},
@@ -58,7 +61,7 @@ describe('Destination', () => {
     const { elb } = getClient({
       destinations: { mockDestination, destinationFailure },
     });
-    const result = await elb('entity action');
+    result = await elb('entity action');
 
     expect(result).toEqual({
       event: mockEvent,
@@ -81,5 +84,39 @@ describe('Destination', () => {
     expect(result.failed[0].error).toHaveProperty('message', 'kaputt');
   });
 
-  test.skip('consent', async () => {});
+  test.skip('queue', async () => {});
+
+  test('consent', async () => {
+    const mockPush = jest.fn();
+    const destinationConsent: NodeDestination.Function = {
+      config: { consent: { test: true } },
+      push: mockPush,
+    };
+
+    const { elb,instance } = getClient({
+      destinations: { mockDestination, destinationConsent },
+    });
+
+    result = await elb(mockEvent);
+    expect(result.status).toHaveProperty('ok', true);
+    expect(result.successful[0]).toHaveProperty('id', 'mockDestination');
+    expect(result.queued[0]).toHaveProperty('id', 'destinationConsent');
+
+    result = await elb('walker consent', { test: false });
+    expect(result.status).toHaveProperty('ok', true);
+    expect(result).toHaveProperty('successful', []);
+    expect(result).toHaveProperty('queued', []);
+    expect(result).toHaveProperty('failed', []);
+
+    result = await elb('walker consent', { test: true });
+    // console.dir(instance, { depth: 3, colors: true });
+    // console.dir(result, { depth: 3, colors: true });
+    expect(mockPush).toHaveBeenCalledWith([
+      { event: mockEvent, config: expect.any(Object) },
+    ]);
+    expect(result.status).toHaveProperty('ok', true);
+    expect(result.successful[0]).toHaveProperty('id', 'destinationConsent');
+    expect(result).toHaveProperty('queued', []);
+    expect(result).toHaveProperty('failed', []);
+  });
 });

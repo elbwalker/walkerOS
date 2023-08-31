@@ -8,9 +8,7 @@ import {
   tryCatchAsync,
 } from '@elbwalker/utils';
 
-export function createNodeClient(
-  customConfig: Partial<NodeClient.Config> = {},
-) {
+export function createNodeClient(customConfig?: Partial<NodeClient.Config>) {
   const instance = nodeClient(customConfig);
   const elb = instance.push;
 
@@ -111,8 +109,17 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
 
   if (isSameType(eventOrAction, '' as string)) {
     // Walker command
-    data = await handleCommand(instance, eventOrAction, data);
-    result.command = { name: eventOrAction, data };
+    const command = await handleCommand(instance, eventOrAction, data);
+    if (command.result) {
+      if (isSameType(command.result, {} as NodeDestination.PushResult)) {
+        if (command.result.successful)
+          result.successful = command.result.successful;
+        if (command.result.queued) result.queued = command.result.queued;
+        if (command.result.failed) result.failed = command.result.failed;
+      }
+    }
+
+    result.command = command.command;
     result.status.ok = true;
   } else {
     // Regular event
@@ -233,19 +240,26 @@ async function handleCommand(
   instance: NodeClient.Function,
   action: string,
   data?: NodeClient.PushData,
-): Promise<NodeClient.PushData | undefined> {
+): Promise<{ command: NodeClient.Command; result?: NodeClient.PushData }> {
+  let command: NodeClient.Command = { name: action, data };
+  let result: NodeClient.PushData | undefined;
+
   switch (action) {
     case Const.Commands.Config:
-      return setConfig(instance, data);
+      command.data = setConfig(instance, data) || {};
+      break;
     case Const.Commands.Consent:
-      return await setConsent(instance, data);
+      result = await setConsent(instance, data);
+      break;
     case Const.Commands.Run:
-      return run(instance, data);
+      result = run(instance, data);
+      break;
     case Const.Commands.User:
-      return setUser(instance, data);
+      command.data = setUser(instance, data);
+      break;
   }
 
-  return;
+  return { command, result };
 }
 
 async function pushToDestinations(
@@ -256,15 +270,21 @@ async function pushToDestinations(
   const results: Array<{
     id: string;
     destination: NodeDestination.Function;
-    error?: unknown;
+    skipped?: boolean;
     queue?: Elbwalker.Events;
+    error?: unknown;
   }> = await Promise.all(
+    // Process all destinations in parallel
     Object.entries(instance.config.destinations).map(
       async ([id, destination]) => {
         let error: unknown;
 
         destination.queue = destination.queue || [];
         if (event) destination.queue.push(event); // Add event to queue
+
+        if (!destination.queue.length)
+          // Nothing to do here
+          return { id, destination, skipped: true };
 
         // Always check for required consent states before pushing
         if (allowedToPush(instance, destination)) {
@@ -281,11 +301,12 @@ async function pushToDestinations(
           const result =
             (await tryCatchAsync(destination.push, (error) => {
               // Default error handling for failing destinations
-              return { error, queue: [] };
+              return { error, queue: undefined };
             })(events)) || {};
 
+          // Destinations can decide how to handle errors and queue
           destination.queue = result.queue; // Events that should be queued again
-          if (result.error) error = result.error; // Captured error from destination
+          error = result.error; // Captured error from destination
         }
 
         return { id, destination, queue: destination.queue, error };
@@ -298,13 +319,15 @@ async function pushToDestinations(
   const failed: NodeDestination.PushFailure = [];
 
   for (const result of results) {
+    if (result.skipped) continue;
+
     if (result.error) {
       failed.push({
         id: result.id,
         destination: result.destination,
         error: result.error,
       });
-    } else if (result.queue) {
+    } else if (result.queue && result.queue.length) {
       queued.push({ id: result.id, destination: result.destination });
     } else {
       successful.push({ id: result.id, destination: result.destination });
@@ -326,12 +349,11 @@ function setConfig(instance: NodeClient.Function, data: unknown = {}) {
 async function setConsent(instance: NodeClient.Function, data: unknown = {}) {
   if (!isSameType(data, {} as Elbwalker.Consent)) return;
 
-  const config = instance.config;
   let runQueue = false;
   Object.entries(data).forEach(([consent, granted]) => {
     const state = !!granted;
 
-    config.consent[consent] = state;
+    instance.config.consent[consent] = state;
 
     // Only run queue if state was set to true
     runQueue = runQueue || state;
