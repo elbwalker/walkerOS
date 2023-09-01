@@ -336,7 +336,16 @@ async function pushToDestinations(
           },
         );
 
-        // @TODO destination init
+        // Destination initialization
+        // Check if the destination was initialized properly or try to do so
+        if (destination.init && !destination.config.init) {
+          const init = await destination.init(destination.config);
+
+          destination.config.init = init;
+
+          // don't push if init is false
+          if (!init) return { id, destination, skipped: true };
+        }
 
         const result =
           (await tryCatchAsync(destination.push, (error) => {

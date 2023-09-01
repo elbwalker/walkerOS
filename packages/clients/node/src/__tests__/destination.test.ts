@@ -4,7 +4,10 @@ import { createNodeClient } from '../';
 import { assign } from '@elbwalker/utils';
 
 describe('Destination', () => {
-  const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
+  const mockPush = jest.fn(); //.mockImplementation(console.log);
+  const mockInit = jest.fn().mockImplementation(() => {
+    return true;
+  });
   const version = { client: expect.any(String), tagging: expect.any(Number) };
   const mockEvent: Elbwalker.Event = {
     event: 'entity action',
@@ -32,7 +35,8 @@ describe('Destination', () => {
   };
   const mockDestination: NodeDestination.Function = {
     config: {},
-    push: mockDestinationPush,
+    init: mockInit,
+    push: mockPush,
   };
   let result: NodeClient.PushResult;
 
@@ -50,6 +54,57 @@ describe('Destination', () => {
   });
 
   test.skip('regular', async () => {});
+
+  test('init call', async () => {
+    const { elb } = getClient();
+
+    await elb(mockEvent);
+    expect(mockInit).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    // No init function
+    const mockPushNoInit = jest.fn();
+    await elb('walker destination', {
+      config: {},
+      push: mockPushNoInit,
+    });
+
+    jest.clearAllMocks();
+    await elb(mockEvent);
+    expect(mockPushNoInit).toHaveBeenCalledTimes(1);
+
+    // Init set to true and should not be called
+    const mockInitSkip = jest.fn();
+    await elb(
+      'walker destination',
+      {
+        config: { init: true },
+        init: mockInitSkip,
+        push: mockPush,
+      },
+      { init: true },
+    );
+    await elb(mockEvent);
+    expect(mockInitSkip).toHaveBeenCalledTimes(0);
+
+    // Always trigger init since it returns false
+    const mockInitFalse = jest.fn().mockImplementation(() => {
+      return false;
+    });
+    const mockPushFalse = jest.fn();
+    await elb('walker destination', {
+      config: {},
+      init: mockInitFalse,
+      push: mockPushFalse,
+    });
+
+    jest.clearAllMocks();
+    await elb(mockEvent);
+    expect(mockInitFalse).toHaveBeenCalledTimes(1);
+    await elb(mockEvent);
+    expect(mockInitFalse).toHaveBeenCalledTimes(2);
+    expect(mockPushFalse).not.toHaveBeenCalled();
+  });
 
   test('add with queue', async () => {
     const { elb, instance } = getClient({});
@@ -72,8 +127,8 @@ describe('Destination', () => {
     result = await elb('walker destination', mockDestination, { id: 'mock' });
     expect(result.successful).toHaveProperty('length', 1);
     expect(result.successful[0]).toHaveProperty('id', 'mock');
-    expect(mockDestinationPush).toHaveBeenCalledWith([
-      { event: updatedEvent, config: { id: 'mock' } },
+    expect(mockPush).toHaveBeenCalledWith([
+      { event: updatedEvent, config: { id: 'mock', init: true } },
     ]);
   });
 

@@ -2,9 +2,7 @@ import type { Elbdestination, Elbwalker } from '@elbwalker/types';
 
 export interface Function<Custom = unknown, EventCustom = unknown>
   extends Elbdestination.Function<Custom, EventCustom> {
-  init?: (
-    config: Partial<Config<Partial<Custom>, Partial<EventCustom>>>,
-  ) => Promise<boolean>;
+  init?: (config: Config<Custom, EventCustom>) => Promise<boolean>;
   setup?: (
     config: Partial<Config<Partial<Custom>, Partial<EventCustom>>>,
   ) => Promise<boolean>;
