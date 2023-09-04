@@ -1,5 +1,5 @@
 import webCLient from '../';
-import type * as WebClient from '../types';
+import type { WebClient } from '../types';
 
 describe('Init', () => {
   const w = window;
@@ -12,7 +12,7 @@ describe('Init', () => {
     jest.clearAllMocks();
 
     w.dataLayer = [];
-    w.dataLayer.push = mockFn;
+    (w.dataLayer as unknown[]).push = mockFn;
   });
 
   test('custom prefix', () => {

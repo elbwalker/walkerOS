@@ -1,13 +1,13 @@
 import webClient from '../';
 import { elb } from '../lib/trigger';
-import type * as WebClient from '../types';
-import type { Data, Hooks, WebDestination } from '@elbwalker/types';
+import type { WebClient, WebDestination } from '../types';
+import type { Data, Hooks } from '@elbwalker/types';
 import fs from 'fs';
 
 describe('Elbwalker', () => {
   const w = window;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
-  const version = { config: 0, walker: 1.6 };
+  const version = { client: expect.any(String), tagging: expect.any(Number) };
 
   let elbwalker: WebClient.Function;
 
@@ -17,7 +17,7 @@ describe('Elbwalker', () => {
     jest.clearAllMocks();
     jest.resetModules();
     w.dataLayer = [];
-    w.dataLayer!.push = mockFn;
+    (w.dataLayer as unknown[]).push = mockFn;
     w.elbLayer = undefined as unknown as WebClient.ElbLayer;
 
     elbwalker = webClient({
@@ -51,6 +51,7 @@ describe('Elbwalker', () => {
       event: 'entity action',
       data: expect.any(Object),
       context: {},
+      custom: {},
       globals: {},
       user: {},
       nested: [],
@@ -76,6 +77,7 @@ describe('Elbwalker', () => {
       event: 'entity action',
       data: { foo: 'bar' },
       context: {},
+      custom: {},
       globals: {},
       user: {},
       nested: [],
@@ -446,6 +448,7 @@ describe('Elbwalker', () => {
     );
   });
 
+  // @TODO move to somewhere else
   test('Contract', () => {
     const contract: Data.Contract = {
       version: '',

@@ -20,7 +20,7 @@ export const destinationGoogleAds: Function = {
     w.dataLayer = w.dataLayer || [];
     if (!w.gtag) {
       w.gtag = function gtag() {
-        w.dataLayer!.push(arguments);
+        (w.dataLayer as unknown[]).push(arguments);
       };
       w.gtag('js', new Date());
     }

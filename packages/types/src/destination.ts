@@ -1,15 +1,8 @@
 import type { Elbwalker } from '.';
 
 export interface Function<Custom = unknown, EventCustom = unknown> {
-  init?: (config: Config<Custom, EventCustom>) => boolean;
-  push: (
-    event: Elbwalker.Event,
-    config: Config<Custom, EventCustom>,
-    mapping?: EventConfig<EventCustom>,
-    runState?: Elbwalker.Config,
-  ) => void;
   config: Config<Custom, EventCustom>;
-  queue?: Array<Elbwalker.Event>; // Non processed events yet and resettet with each new run
+  queue?: Queue; // Non processed events yet and resettet with each new run
   type?: string; // The type of the destination
 }
 
@@ -33,3 +26,5 @@ export interface EventConfig<EventCustom = unknown> {
   ignore?: boolean; // Choose to no process an event when set to true
   name?: string; // Use a custom event name
 }
+
+export type Queue = Array<Elbwalker.Event>;

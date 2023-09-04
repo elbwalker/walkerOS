@@ -1,8 +1,7 @@
+import type { WebClient } from '../types';
 import webClient from '../';
-import { Const } from '@elbwalker/utils';
-import type * as WebClient from '../types';
+import { Trigger, elb } from '../lib/trigger';
 import fs from 'fs';
-import { elb } from '../lib/trigger';
 
 const w = window;
 let elbwalker: WebClient.Function;
@@ -27,7 +26,7 @@ describe('Trigger', () => {
     jest.spyOn(global, 'setTimeout');
     jest.spyOn(global, 'setInterval');
     w.dataLayer = [];
-    w.dataLayer.push = mockFn;
+    (w.dataLayer as unknown[]).push = mockFn;
     w.elbLayer = undefined as unknown as WebClient.ElbLayer;
 
     events = {};
@@ -52,11 +51,11 @@ describe('Trigger', () => {
 
   test('init global', () => {
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      Const.Trigger.Click,
+      Trigger.Click,
       expect.any(Function),
     );
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      Const.Trigger.Submit,
+      Trigger.Submit,
       expect.any(Function),
     );
   });
@@ -100,7 +99,7 @@ describe('Trigger', () => {
       expect.objectContaining({
         event: 'page view',
         data: { domain: 'localhost', id: '/', title: '', referrer: '' },
-        trigger: Const.Trigger.Load,
+        trigger: Trigger.Load,
       }),
     );
   });
@@ -135,7 +134,7 @@ describe('Trigger', () => {
           title: 'Title',
           referrer: 'https://docs.elbwalker.com',
         },
-        trigger: Const.Trigger.Load,
+        trigger: Trigger.Load,
       }),
     );
 
@@ -177,7 +176,7 @@ describe('Trigger', () => {
       1,
       expect.objectContaining({
         event: 'page view',
-        trigger: Const.Trigger.Load,
+        trigger: Trigger.Load,
       }),
     );
 
@@ -196,7 +195,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'e click',
-        trigger: Const.Trigger.Click,
+        trigger: Trigger.Click,
       }),
     );
   });
@@ -211,7 +210,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'form submit',
-        trigger: Const.Trigger.Submit,
+        trigger: Trigger.Submit,
       }),
     );
   });
@@ -237,7 +236,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'mouse hover',
-        trigger: Const.Trigger.Hover,
+        trigger: Trigger.Hover,
       }),
     );
 
@@ -252,7 +251,7 @@ describe('Trigger', () => {
 
     expect(mockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        trigger: Const.Trigger.Wait,
+        trigger: Trigger.Wait,
       }),
     );
 
@@ -269,7 +268,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'timer alarm',
-        trigger: Const.Trigger.Wait,
+        trigger: Trigger.Wait,
         data: { its: 'time' },
       }),
     );
@@ -280,7 +279,7 @@ describe('Trigger', () => {
 
     expect(mockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        trigger: Const.Trigger.Pulse,
+        trigger: Trigger.Pulse,
       }),
     );
 
@@ -295,7 +294,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'pulse beat',
-        trigger: Const.Trigger.Pulse,
+        trigger: Trigger.Pulse,
       }),
     );
 
@@ -306,7 +305,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'pulse beat',
-        trigger: Const.Trigger.Pulse,
+        trigger: Trigger.Pulse,
       }),
     );
 
@@ -340,7 +339,7 @@ describe('Trigger', () => {
     const elem = document.getElementById('scroll') as HTMLElement;
 
     expect(mockAddEventListener).toHaveBeenCalledWith(
-      Const.Trigger.Scroll,
+      Trigger.Scroll,
       expect.any(Function),
     );
 
@@ -384,7 +383,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'scoll 80percent',
-        trigger: Const.Trigger.Scroll,
+        trigger: Trigger.Scroll,
       }),
     );
 
@@ -461,7 +460,7 @@ describe('Trigger', () => {
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'visible impression',
-        trigger: Const.Trigger.Visible,
+        trigger: Trigger.Visible,
       }),
     );
 

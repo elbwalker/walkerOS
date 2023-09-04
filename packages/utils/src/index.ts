@@ -1,4 +1,4 @@
-import type { Hooks, Utils, Walker } from '@elbwalker/types';
+import type { Elbwalker, Hooks, Utils } from '@elbwalker/types';
 import Const from './constants';
 
 export function assign<T>(target: T, source: Object = {}): T {
@@ -21,7 +21,7 @@ export function assign<T>(target: T, source: Object = {}): T {
   return { ...target, ...source };
 }
 
-export function castValue(value: unknown): Walker.PropertyType {
+export function castValue(value: unknown): Elbwalker.PropertyType {
   if (value === 'true') return true;
   if (value === 'false') return false;
 
@@ -67,8 +67,8 @@ export function getId(length = 6): string {
 export function getMarketingParameters(
   url: URL,
   custom: Utils.MarketingParameters = {},
-): Walker.Properties {
-  const data: Walker.Properties = {};
+): Elbwalker.Properties {
+  const data: Elbwalker.Properties = {};
   const parameters = Object.assign(
     {
       utm_campaign: 'campaign',
@@ -109,6 +109,7 @@ export function getByStringDot(
 
   return value;
 }
+
 export function isSameType<T>(
   variable: unknown,
   type: T,
@@ -199,7 +200,7 @@ export function isVisible(element: HTMLElement): boolean {
 
 export function sessionStart(
   config: Utils.SessionStart = {},
-): Walker.Properties | false {
+): Elbwalker.Properties | false {
   // Force a new session or start checking if it's a regular new one
   let isNew = config.isNew || false;
 
@@ -216,7 +217,7 @@ export function sessionStart(
   const url = new URL(config.url || window.location.href);
   const ref = config.referrer || document.referrer;
   const referrer = ref && new URL(ref).hostname;
-  const session: Walker.Properties = {};
+  const session: Elbwalker.Properties = {};
 
   // Marketing
   const marketing = getMarketingParameters(url, config.parameters);
@@ -274,7 +275,7 @@ export function storageDelete(
 export function storageRead(
   key: string,
   storage: Utils.StorageType = Const.Utils.Storage.Session,
-): Walker.PropertyType {
+): Elbwalker.PropertyType {
   // Helper function for local and session storage to support expiration
   function parseItem(string: string | null): Utils.StorageValue {
     try {
@@ -326,11 +327,11 @@ export function storageRead(
 
 export function storageWrite(
   key: string,
-  value: Walker.PropertyType,
+  value: Elbwalker.PropertyType,
   maxAgeInMinutes = 30,
   storage: Utils.StorageType = Const.Utils.Storage.Session,
   domain?: string,
-): Walker.PropertyType {
+): Elbwalker.PropertyType {
   const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
   const item: Utils.StorageValue = { e, v: String(value) };
   const stringifiedItem = JSON.stringify(item);
@@ -382,16 +383,40 @@ export function trim(str: string): string {
   return str ? str.trim().replace(/^'|'$/g, '').trim() : '';
 }
 
-export function trycatch<P extends unknown[], R, S>(
+export function tryCatch<P extends unknown[], R, S>(
   fn: (...args: P) => R | undefined,
   onError?: (err: unknown) => S,
-): (...args: P) => R | undefined {
-  return function (...args: P): R | undefined {
+): (...args: P) => R | S | undefined {
+  return function (...args: P): R | S | undefined {
     try {
       return fn(...args);
     } catch (err) {
       // Call either the custom error handler or console.error
-      (onError && onError(err)) || console.error(err);
+      if (onError) {
+        return onError(err);
+      } else {
+        console.error(err);
+      }
+
+      return;
+    }
+  };
+}
+
+export function tryCatchAsync<P extends unknown[], R, S>(
+  fn: (...args: P) => R,
+  onError?: (err: unknown) => S,
+): (...args: P) => Promise<R | S | undefined> {
+  return async function (...args: P): Promise<R | S | undefined> {
+    try {
+      return await fn(...args);
+    } catch (err) {
+      if (onError) {
+        return await onError(err);
+      } else {
+        console.error(err);
+      }
+
       return;
     }
   };

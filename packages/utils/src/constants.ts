@@ -1,4 +1,4 @@
-import type { Elbwalker, Utils as TUtils, Walker } from '@elbwalker/types';
+import type { Elbwalker, Utils as TUtils } from '@elbwalker/types';
 
 const Commands: { [key: string]: Elbwalker.Commands } = {
   Action: 'action',
@@ -17,18 +17,6 @@ const Commands: { [key: string]: Elbwalker.Commands } = {
   Walker: 'walker',
 } as const;
 
-const Trigger: { [key: string]: Walker.Trigger } = {
-  Click: 'click',
-  Custom: 'custom',
-  Hover: 'hover',
-  Load: 'load',
-  Pulse: 'pulse',
-  Scroll: 'scroll',
-  Submit: 'submit',
-  Visible: 'visible',
-  Wait: 'wait',
-} as const;
-
 const UtilsStorage: { [key: string]: TUtils.StorageType } = {
   Cookie: 'cookie',
   Local: 'local',
@@ -39,4 +27,4 @@ const Utils = {
   Storage: UtilsStorage,
 };
 
-export default { Commands, Trigger, Utils };
+export default { Commands, Utils };

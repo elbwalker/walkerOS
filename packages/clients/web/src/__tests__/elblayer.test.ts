@@ -1,7 +1,7 @@
 import webClient from '../';
 import { elb } from '../lib/trigger';
-import type * as WebClient from '../types';
-import type { Elbwalker, Walker, WebDestination } from '@elbwalker/types';
+import type { WebClient, WebDestination } from '../types';
+import type { Elbwalker } from '@elbwalker/types';
 
 describe('ElbLayer', () => {
   const w = window;
@@ -20,7 +20,7 @@ describe('ElbLayer', () => {
     jest.resetModules();
     w.elbLayer = [];
     w.dataLayer = [];
-    w.dataLayer.push = mockPush;
+    (w.dataLayer as unknown[]).push = mockPush;
   });
 
   test('arguments and event pushes', () => {
@@ -186,6 +186,7 @@ describe('ElbLayer', () => {
       allowed: true,
       consent: {},
       count: expect.any(Number),
+      custom: {},
       destinations: expect.any(Object),
       elbLayer: w.elbLayer,
       globals: {},
@@ -197,7 +198,7 @@ describe('ElbLayer', () => {
       round: expect.any(Number),
       timing: expect.any(Number),
       user: {},
-      version: 0,
+      tagging: expect.any(Number),
     };
 
     elbwalker = webClient();
@@ -205,7 +206,7 @@ describe('ElbLayer', () => {
 
     expect(elbwalker.config).toStrictEqual(defaultConfig);
 
-    let update: Walker.Properties | Partial<Elbwalker.Config> = {
+    let update: Elbwalker.Properties | Partial<Elbwalker.Config> = {
       prefix: 'data-custom',
     };
     let config = { ...defaultConfig, ...update };
@@ -223,7 +224,7 @@ describe('ElbLayer', () => {
 
     // Reset with w.elbLayer = [] creates another array than in defaultConfig
     w.elbLayer.length = 0;
-    let globals: Walker.Properties = { static: 'value' };
+    let globals: Elbwalker.Properties = { static: 'value' };
     config = { ...defaultConfig, globals };
     elbwalker = webClient({ globals });
     elb('walker run');
@@ -256,6 +257,7 @@ describe('ElbLayer', () => {
 
   test('custom elbLayer', () => {
     w.dataLayer = [];
+    let dataLayer = w.dataLayer as unknown[];
     const customLayer1 = [] as WebClient.ElbLayer;
     const customLayer2 = [] as WebClient.ElbLayer;
     const instance1 = webClient({
@@ -299,13 +301,13 @@ describe('ElbLayer', () => {
     expect(mockDest1).not.toHaveBeenCalled();
     expect(mockDest2).toHaveBeenCalled();
 
-    const length = w.dataLayer.length;
-    expect(w.dataLayer[length - 1]).toEqual(
+    const length = dataLayer.length;
+    expect(dataLayer[length - 1]).toEqual(
       expect.objectContaining({
         event: 'bar foo',
       }),
     );
-    expect(w.dataLayer[length - 2]).toEqual(
+    expect(dataLayer[length - 2]).toEqual(
       expect.objectContaining({
         event: 'foo bar',
       }),

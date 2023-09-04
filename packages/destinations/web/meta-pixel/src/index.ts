@@ -1,4 +1,4 @@
-import type { Elbwalker, Walker } from '@elbwalker/types';
+import type { Elbwalker } from '@elbwalker/types';
 import type {
   ContentIds,
   Contents,
@@ -180,7 +180,7 @@ function getParameters(
 
 function getParam(param: PropertyMapping) {
   let key: string;
-  let defaultValue: Walker.PropertyType | undefined;
+  let defaultValue: Elbwalker.PropertyType | undefined;
 
   if (typeof param == 'string') {
     key = param;

@@ -1,8 +1,9 @@
-import { Walker, WebDestination } from '@elbwalker/types';
+import type { WebDestination } from '@elbwalker/walker.js';
+import type { Elbwalker } from '@elbwalker/types';
 
 declare global {
   interface Window {
-    dataLayer: Array<unknown>;
+    dataLayer: Array<unknown> | unknown;
     gtag: Gtag.Gtag;
   }
 }
@@ -39,7 +40,7 @@ export interface PropertyMapping {
 
 export interface PropertyMappingValue {
   key: string;
-  default?: Walker.PropertyType;
+  default?: Elbwalker.PropertyType;
 }
 
 export type Include = Array<

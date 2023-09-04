@@ -1,6 +1,5 @@
 import webClient from '../';
-import type * as WebClient from '../types';
-import type { WebDestination } from '@elbwalker/types';
+import type { WebClient, WebDestination } from '../types';
 
 describe('Destination', () => {
   const w = window;

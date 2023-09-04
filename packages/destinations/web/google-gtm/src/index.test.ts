@@ -9,7 +9,7 @@ describe('destination google-tag-manager', () => {
 
   const containerId = 'GTM-XXXXXXX';
   const event = 'entity action';
-  const version = { config: 0, walker: expect.any(Number) };
+  const version = { client: expect.any(String), tagging: expect.any(Number) };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -18,7 +18,7 @@ describe('destination google-tag-manager', () => {
 
     w.elbLayer = [];
     w.dataLayer = [];
-    w.dataLayer.push = mockFn;
+    (w.dataLayer as unknown[]).push = mockFn;
 
     elbwalker = webClient({ pageview: false });
     elbwalker.push('walker run');
@@ -76,6 +76,7 @@ describe('destination google-tag-manager', () => {
       event,
       data: { a: 1 },
       context: {},
+      custom: {},
       globals: {},
       user: {},
       nested: [],

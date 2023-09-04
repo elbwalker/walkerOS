@@ -1,10 +1,5 @@
-import type * as WebClient from './types';
-import type {
-  Elbwalker,
-  Hooks,
-  Walker,
-  WebDestination,
-} from '@elbwalker/types';
+import type { Walker, WebClient, WebDestination } from './types';
+import type { Elbwalker, Hooks } from '@elbwalker/types';
 import {
   initScopeTrigger,
   initGlobalTrigger,
@@ -16,17 +11,17 @@ import {
   assign,
   getId,
   isSameType,
-  trycatch,
+  tryCatch,
   useHooks,
 } from '@elbwalker/utils';
 import { getEntities, getGlobals } from './lib/walker';
 
-export { WebClient };
+export { Walker, WebClient, WebDestination };
 
 function webClient(
   customConfig: Partial<WebClient.Config> = {},
 ): WebClient.Function {
-  const version = 1.6;
+  const client = '2.0.0';
   const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
   const staticGlobals = customConfig.globals || {};
   const config = getConfig(customConfig);
@@ -45,7 +40,7 @@ function webClient(
     const destination: WebDestination.Function = {
       config: {},
       push: (event) => {
-        window.dataLayer.push({
+        (window.dataLayer as unknown[]).push({
           ...event,
           walker: true,
         });
@@ -178,8 +173,8 @@ function webClient(
       event?: IArguments | unknown,
       data?: WebClient.PushData,
       trigger?: string,
-      context?: Walker.OrderedProperties,
-      nested?: Walker.Entities,
+      context?: Elbwalker.OrderedProperties,
+      nested?: Elbwalker.Entities,
     ) {
       // Pushed as Arguments
       if (isArgument(event)) {
@@ -211,6 +206,7 @@ function webClient(
     const defaultConfig: WebClient.Config = {
       allowed: false, // Wait for explicit run command to start
       consent: {}, // Handle the consent states
+      custom: {}, // Custom state support
       count: 0, // Event counter for each run
       destinations: {}, // Destination list
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
@@ -223,7 +219,7 @@ function webClient(
       round: 0, // The first round is a special one due to state changes
       timing: 0, // Offset counter to calculate timing property
       user: {}, // Handles the user ids
-      version: 0, // Helpful to differentiate the clients used setup version
+      tagging: 0, // Helpful to differentiate the clients used setup version
     };
 
     // If 'pageview' is explicitly provided in values, use it; otherwise, use current or default
@@ -313,7 +309,7 @@ function webClient(
     data?: WebClient.PushData,
     options: WebClient.PushOptions = '',
     context: WebClient.PushContext = {},
-    nested: Walker.Entities = [],
+    nested: Elbwalker.Entities = [],
   ): void {
     if (!event || !isSameType(event, '')) return;
 
@@ -363,8 +359,8 @@ function webClient(
 
     // Special case for page entity to add the id by default
     if (entity === 'page') {
-      (data as Walker.Properties).id =
-        (data as Walker.Properties).id || window.location.pathname;
+      (data as Elbwalker.Properties).id =
+        (data as Elbwalker.Properties).id || window.location.pathname;
     }
 
     ++config.count;
@@ -379,8 +375,9 @@ function webClient(
 
     const pushEvent: Elbwalker.Event = {
       event,
-      data: data as Walker.Properties,
-      context: context as Walker.OrderedProperties,
+      data: data as Elbwalker.Properties,
+      context: context as Elbwalker.OrderedProperties,
+      custom: {},
       globals: config.globals,
       user: config.user,
       nested,
@@ -394,8 +391,8 @@ function webClient(
       group: config.group,
       count: config.count,
       version: {
-        config: config.version,
-        walker: version,
+        client,
+        tagging: config.tagging,
       },
       source,
     };
@@ -449,7 +446,7 @@ function webClient(
       if (!mappingEvent) return false;
     }
 
-    const pushed = !!trycatch(() => {
+    const pushed = !!tryCatch(() => {
       // Destination initialization
       // Check if the destination was initialized properly or try to do so
       if (destination.init && !destination.config.init) {
@@ -509,7 +506,7 @@ function webClient(
       instance.config.timing = performance.now();
     }
 
-    trycatch(load)(instance);
+    tryCatch(load)(instance);
   }
 
   function setConsent(instance: WebClient.Function, data: Elbwalker.Consent) {
@@ -527,7 +524,7 @@ function webClient(
 
     if (runQueue) {
       Object.values(config.destinations).forEach((destination) => {
-        let queue = destination.queue || [];
+        const queue = destination.queue || [];
 
         // Try to push and remove successful ones from queue
         destination.queue = queue.filter((event) => {

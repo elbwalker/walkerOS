@@ -7,7 +7,8 @@ import {
   storageWrite,
   throttle,
   getByStringDot,
-  trycatch,
+  tryCatch,
+  tryCatchAsync,
   sessionStart,
   Const,
 } from '../';
@@ -343,16 +344,31 @@ describe('Utils', () => {
     expect(getByStringDot(undefined, 'na')).toBe(undefined);
   });
 
-  test('trycatch', () => {
+  test('tryCatch', () => {
     // Default error on console
-    trycatch(() => {
+    tryCatch(() => {
       throw new Error('foo');
     })();
     expect(mockError).toHaveBeenCalledWith(expect.any(Error));
 
     // Custom error handler
     const onError = jest.fn();
-    trycatch(() => {
+    tryCatch(() => {
+      throw new Error('foo');
+    }, onError)();
+    expect(onError).toHaveBeenCalledWith(expect.any(Error));
+  });
+
+  test('tryCatchAsync', async () => {
+    // Default error on console
+    await tryCatchAsync(async () => {
+      throw new Error('foo');
+    })();
+    expect(mockError).toHaveBeenCalledWith(expect.any(Error));
+
+    // Custom error handler
+    const onError = jest.fn();
+    await tryCatchAsync(async () => {
       throw new Error('foo');
     }, onError)();
     expect(onError).toHaveBeenCalledWith(expect.any(Error));

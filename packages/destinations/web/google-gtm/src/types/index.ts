@@ -1,8 +1,8 @@
-import { WebDestination } from '@elbwalker/types';
+import type { WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
-    dataLayer: Array<unknown>;
+    dataLayer: Array<unknown> | unknown;
   }
 }
 
