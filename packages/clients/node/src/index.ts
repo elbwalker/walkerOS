@@ -8,6 +8,9 @@ import {
   tryCatchAsync,
 } from '@elbwalker/utils';
 
+// Types
+export * from './types';
+
 export function createNodeClient(customConfig?: Partial<NodeClient.Config>) {
   const instance = nodeClient(customConfig);
   const elb = instance.push;

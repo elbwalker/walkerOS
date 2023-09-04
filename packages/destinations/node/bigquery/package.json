@@ -1,0 +1,53 @@
+{
+  "name": "@elbwalker/destination-node-bigquery",
+  "description": "BigQuery node destination for walker.js",
+  "version": "2.0.0",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "npm run dev:build & npm run dev:test",
+    "dev:build": "tsup --watch --config tsup.dev.config.ts",
+    "dev:test": "jest --watchAll --colors",
+    "lint": "eslint \"**/*.ts*\"",
+    "publish": "npm run test && npm run build && npm publish --access public",
+    "test": "jest --colors --coverage"
+  },
+  "devDependencies": {
+    "@google-cloud/bigquery": "^6.2.1",
+    "@elbwalker/node-client": "*",
+    "@elbwalker/types": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elbwalker/walker.js",
+    "directory": "packages/destinations/server/bigquery"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walker.js#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walker.js/issues"
+  },
+  "keywords": [
+    "elb",
+    "elbwalker",
+    "walker",
+    "walkerjs",
+    "walker destination",
+    "analytics",
+    "tracking",
+    "bigquery"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

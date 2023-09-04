@@ -1,5 +1,5 @@
 import type { Elbwalker } from '@elbwalker/types';
-import type { NodeDestination } from '.';
+import type * as NodeDestination from './destination';
 
 export interface Function {
   push: Push;

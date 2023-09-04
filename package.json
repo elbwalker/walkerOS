@@ -3,8 +3,8 @@
     "packages/*",
     "packages/config/*",
     "packages/clients/*",
-    "packages/destinations/web/*",
-    "packages/destinations/server/*"
+    "packages/destinations/node/*",
+    "packages/destinations/web/*"
   ],
   "scripts": {
     "build": "turbo run build --filter=!@elbwalker/docs",

@@ -1,4 +1,4 @@
-import type { Walker, WebClient, WebDestination } from './types';
+import type { WebClient, WebDestination } from './types';
 import type { Elbwalker, Hooks } from '@elbwalker/types';
 import {
   initScopeTrigger,
@@ -16,7 +16,8 @@ import {
 } from '@elbwalker/utils';
 import { getEntities, getGlobals } from './lib/walker';
 
-export { Walker, WebClient, WebDestination };
+// Types
+export * from './types';
 
 function webClient(
   customConfig: Partial<WebClient.Config> = {},
