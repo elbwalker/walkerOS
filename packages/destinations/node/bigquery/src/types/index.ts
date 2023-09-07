@@ -4,6 +4,7 @@ import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Function
   extends NodeDestination.Function<CustomConfig, CustomEventConfig> {
+  init: (config: PartialConfig) => Promise<Config>;
   // @TODO init as static method
 }
 

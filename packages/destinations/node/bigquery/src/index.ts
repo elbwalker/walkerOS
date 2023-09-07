@@ -1,6 +1,6 @@
-import type { BigQueryOptions } from '@google-cloud/bigquery';
-import type { Function, Row } from './types';
-import { BigQuery } from '@google-cloud/bigquery';
+import type { Function } from './types';
+import { getCustomConfig } from './config';
+import { setup } from './setup';
 
 export const destinationBigQuery: Function = {
   // meta: {
@@ -10,46 +10,21 @@ export const destinationBigQuery: Function = {
 
   config: {},
 
-  async init(config) {
-    const { custom } = config;
-    if (!custom) error('Config custom missing');
+  async setup(config) {
+    // @TODO trycatch
+    return setup(getCustomConfig(config.custom));
+  },
 
-    let { client, projectId, location, datasetId, tableId, bigquery } = custom;
-    if (!projectId) error('Config custom projectId missing');
+  async init(partialConfig) {
+    const custom = getCustomConfig(partialConfig.custom);
 
-    location = location || 'EU';
-    datasetId = datasetId || 'eventpipe';
-    tableId = tableId || 'events';
-
-    const options: BigQueryOptions = bigquery || {};
-    if (projectId) options.projectId = projectId;
-
-    client = client || new BigQuery(options);
-
-    this.config = {
-      custom: {
-        client,
-        projectId,
-        location,
-        datasetId,
-        tableId,
-      },
-    };
-
-    return true;
+    return { ...partialConfig, custom };
   },
 
   async push(events) {
+    events; // @TODO do something
     return { queue: [] };
   },
 };
-
-function error(message: string): never {
-  throw new Error(message);
-}
-
-function log(message: string): void {
-  console.dir(message, { depth: 4 });
-}
 
 export default destinationBigQuery;

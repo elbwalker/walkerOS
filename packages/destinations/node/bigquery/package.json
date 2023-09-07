@@ -27,7 +27,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/elbwalker/walker.js",
-    "directory": "packages/destinations/server/bigquery"
+    "directory": "packages/destinations/node/bigquery"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walker.js#readme",
