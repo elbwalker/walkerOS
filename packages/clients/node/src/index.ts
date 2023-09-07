@@ -344,7 +344,11 @@ async function pushToDestinations(
         if (destination.init && !destination.config.init) {
           const init = await destination.init(destination.config);
 
-          destination.config.init = init;
+          if (isSameType(init, {} as NodeDestination.Config)) {
+            destination.config = init;
+          } else {
+            destination.config.init = init;
+          }
 
           // don't push if init is false
           if (!init) return { id, destination, skipped: true };

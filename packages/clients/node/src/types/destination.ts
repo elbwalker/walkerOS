@@ -2,11 +2,13 @@ import type { Elbdestination, Elbwalker } from '@elbwalker/types';
 
 export interface Function<Custom = unknown, EventCustom = unknown>
   extends Elbdestination.Function<Custom, EventCustom> {
-  init?: (config: Config<Custom, EventCustom>) => Promise<boolean>;
+  init?: (
+    config: Config<Custom, EventCustom>,
+  ) => Promise<boolean | Config<Custom, EventCustom>>;
   setup?: (
-    config: Partial<Config<Partial<Custom>, Partial<EventCustom>>>,
-  ) => Promise<boolean>;
-  push: (events: PushEvents) => Promise<Push>;
+    config: Config<Custom, EventCustom>,
+  ) => Promise<boolean | Config<Custom, EventCustom>>;
+  push: (events: PushEvents<Custom, EventCustom>) => Promise<Push>;
 }
 
 export interface Config<Custom = unknown, EventCustom = unknown>
@@ -18,10 +20,12 @@ export interface Mapping<EventCustom>
 export interface EventConfig<EventCustom = unknown>
   extends Elbdestination.EventConfig<EventCustom> {}
 
-export type PushEvents = Array<PushEvent>;
-export type PushEvent = {
+export type PushEvents<Custom = unknown, EventCustom = unknown> = Array<
+  PushEvent<Custom, EventCustom>
+>;
+export type PushEvent<Custom = unknown, EventCustom = unknown> = {
   event: Elbwalker.Event;
-  config?: Config;
+  config?: Config<Custom, EventCustom>;
   mapping?: EventConfig;
 };
 
