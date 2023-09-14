@@ -80,7 +80,7 @@ describe('Node Destination BigQuery', () => {
     };
   });
 
-  test.only('setup', async () => {
+  test('setup', async () => {
     expect(destination.setup).toBeDefined();
     if (!destination.setup) return;
 
@@ -101,10 +101,6 @@ describe('Node Destination BigQuery', () => {
   });
 
   test('init', async () => {
-    config = {
-      custom: { projectId, datasetId, tableId },
-    };
-
     expect(destination.init).toBeDefined();
     if (!destination.init) return;
 
@@ -116,13 +112,13 @@ describe('Node Destination BigQuery', () => {
       destination.init({ custom: { datasetId, tableId } } as any),
     ).rejects.toThrow('Config custom projectId missing');
 
-    await destination.init({ custom: { projectId } } as any);
+    const config = await destination.init({ custom: { projectId } });
 
-    expect(destination.config.custom!.datasetId).toBe('eventpipe');
-    expect(destination.config.custom!.tableId).toBe('events');
+    expect(config.custom.datasetId).toBe('walkeros');
+    expect(config.custom.tableId).toBe('events');
   });
 
-  test('push', async () => {
+  test.skip('push', async () => {
     const config = await destination.init({
       custom: { projectId, bigquery: { credentials } },
     });

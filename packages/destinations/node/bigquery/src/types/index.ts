@@ -12,7 +12,10 @@ export type InitFn = (config: PartialConfig) => Promise<Config>;
 export type SetupFn = NodeDestination.SetupFn<CustomConfig, CustomEventConfig>;
 export type PushFn = NodeDestination.PushFn<CustomConfig, CustomEventConfig>;
 
-export type Config = NodeDestination.Config<CustomConfig, CustomEventConfig>;
+export type Config = { custom: CustomConfig } & NodeDestination.Config<
+  CustomConfig,
+  CustomEventConfig
+>;
 export type PartialConfig = NodeDestination.Config<
   Partial<CustomConfig>,
   Partial<CustomEventConfig>
