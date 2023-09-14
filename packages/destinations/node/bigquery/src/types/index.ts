@@ -4,9 +4,13 @@ import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Function
   extends NodeDestination.Function<CustomConfig, CustomEventConfig> {
-  init: (config: PartialConfig) => Promise<Config>;
+  init: InitFn;
   // @TODO init as static method
 }
+
+export type InitFn = (config: PartialConfig) => Promise<Config>;
+export type SetupFn = NodeDestination.SetupFn<CustomConfig, CustomEventConfig>;
+export type PushFn = NodeDestination.PushFn<CustomConfig, CustomEventConfig>;
 
 export type Config = NodeDestination.Config<CustomConfig, CustomEventConfig>;
 export type PartialConfig = NodeDestination.Config<

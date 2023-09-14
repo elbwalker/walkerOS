@@ -21,7 +21,7 @@ export const destinationBigQuery: Function = {
     return { ...partialConfig, custom };
   },
 
-  async push(events) {
+  async push(events, config) {
     events; // @TODO do something
     return { queue: [] };
   },

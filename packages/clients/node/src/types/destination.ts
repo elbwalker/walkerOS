@@ -2,17 +2,23 @@ import type { Elbdestination, Elbwalker } from '@elbwalker/types';
 
 export interface Function<Custom = unknown, EventCustom = unknown>
   extends Elbdestination.Function<Custom, EventCustom> {
-  init?: (
-    config: Config<Custom, EventCustom>,
-  ) => Promise<boolean | Config<Custom, EventCustom>>;
-  setup?: (
-    config: Config<Custom, EventCustom>,
-  ) => Promise<boolean | Config<Custom, EventCustom>>;
-  push: (
-    events: PushEvents,
-    config: Config<Custom, EventCustom>,
-  ) => Promise<Push>;
+  init?: InitFn<Custom, EventCustom>;
+  setup?: SetupFn<Custom, EventCustom>;
+  push: PushFn<Custom, EventCustom>;
 }
+
+export type InitFn<Custom, EventCustom> = (
+  config: Config<Custom, EventCustom>,
+) => Promise<boolean | Config<Custom, EventCustom>>;
+
+export type SetupFn<Custom, EventCustom> = (
+  config: Config<Custom, EventCustom>,
+) => Promise<boolean | Config<Custom, EventCustom>>;
+
+export type PushFn<Custom, EventCustom> = (
+  events: PushEvents,
+  config: Config<Custom, EventCustom>,
+) => Promise<Push>;
 
 export interface Config<Custom = unknown, EventCustom = unknown>
   extends Elbdestination.Config<Custom, EventCustom> {}
