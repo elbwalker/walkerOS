@@ -1,6 +1,7 @@
 import type { Function } from './types';
 import { getCustomConfig } from './config';
 import { setup } from './setup';
+import { push } from './push';
 
 export const destinationBigQuery: Function = {
   // meta: {
@@ -22,8 +23,8 @@ export const destinationBigQuery: Function = {
   },
 
   async push(events, config) {
-    events; // @TODO do something
-    return { queue: [] };
+    // @TODO trycatch
+    return push(events, getCustomConfig(config.custom));
   },
 };
 
