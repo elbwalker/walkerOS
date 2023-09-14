@@ -39,5 +39,5 @@ export const mapEvent = (event: Elbwalker.Event) => {
   // if (event.additional_data)
   //   destinationEvent.additional_data = JSON.stringify(event.additional_data);
 
-  return event;
+  return destinationEvent;
 };

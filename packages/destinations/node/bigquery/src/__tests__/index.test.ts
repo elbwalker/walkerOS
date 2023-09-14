@@ -1,10 +1,11 @@
 import type { Function, PartialConfig } from '../types';
 import { Elbwalker } from '@elbwalker/types';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
-describe.skip('Node Destination BigQuery', () => {
-  const mockFn = jest.fn(); //.mockImplementation(console.log);
+describe('Node Destination BigQuery', () => {
+  const mockFn = jest.fn().mockImplementation(console.log);
+
+  // Mock the bigquery package with __mocks__ implementation
+  jest.mock('@google-cloud/bigquery');
 
   const event: Elbwalker.Event = {
     event: 'entity action',
@@ -52,17 +53,22 @@ describe.skip('Node Destination BigQuery', () => {
   let destination: Function, config: PartialConfig;
 
   // @TODO find another solution
-  let credentials: any; // @TODO
-  try {
-    credentials = JSON.parse(
-      readFileSync(join(__dirname, '../service_account.json'), 'utf-8'),
-    );
-  } catch (error) {}
+  let credentials: any = 'psst'; // @TODO
+  // try {
+  //   credentials = JSON.parse(
+  //     readFileSync(join(__dirname, '../service_account.json'), 'utf-8'),
+  //   );
+  // } catch (error) {}
+
+  function getMockFn(config: PartialConfig) {
+    return ((config.custom?.client as any) || {}).mockFn;
+  }
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
 
+    destination = require('../').default;
     destination.config = {};
     config = {
       custom: {
@@ -74,7 +80,7 @@ describe.skip('Node Destination BigQuery', () => {
     };
   });
 
-  test('setup', async () => {
+  test.only('setup', async () => {
     expect(destination.setup).toBeDefined();
     if (!destination.setup) return;
 
@@ -85,6 +91,13 @@ describe.skip('Node Destination BigQuery', () => {
     });
 
     expect(await destination.setup(config)).toBeTruthy();
+
+    const mockFn = getMockFn(config);
+    expect(mockFn).toBeCalledWith('dataset', 'walkeros');
+    expect(mockFn).toBeCalledWith('createDataset', 'walkeros', {
+      location: 'EU',
+    });
+    expect(mockFn).toBeCalledWith('createTable', 'events', expect.any(Object));
   });
 
   test('init', async () => {
@@ -96,7 +109,7 @@ describe.skip('Node Destination BigQuery', () => {
     if (!destination.init) return;
 
     await expect(destination.init({} as any)).rejects.toThrow(
-      'Config custom missing',
+      'Custom config missing',
     );
 
     await expect(
