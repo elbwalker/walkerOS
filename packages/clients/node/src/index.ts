@@ -335,7 +335,7 @@ async function pushToDestinations(
             event.consent = config.consent;
             event.globals = config.globals;
             event.user = config.user;
-            return { event, config: destination.config }; // @TODO mapping
+            return { event }; // @TODO mapping
           },
         );
 
@@ -358,7 +358,7 @@ async function pushToDestinations(
           (await tryCatchAsync(destination.push, (error) => {
             // Default error handling for failing destinations
             return { error, queue: undefined };
-          })(events)) || {};
+          })(events, destination.config)) || {};
 
         // Destinations can decide how to handle errors and queue
         destination.queue = result.queue; // Events that should be queued again

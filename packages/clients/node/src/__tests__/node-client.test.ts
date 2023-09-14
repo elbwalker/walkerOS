@@ -72,9 +72,10 @@ describe('Client', () => {
     const { elb } = getClient();
     result = await elb(mockEvent);
     expect(mockDestinationPush).toHaveBeenCalledTimes(1);
-    expect(mockDestinationPush).toHaveBeenCalledWith([
-      { event: mockEvent, config: mockDestination.config },
-    ]);
+    expect(mockDestinationPush).toHaveBeenCalledWith(
+      [{ event: mockEvent }],
+      mockDestination.config,
+    );
     expect(result).toEqual({
       event: mockEvent,
       status: { ok: true },
@@ -122,12 +123,14 @@ describe('Client', () => {
 
     await elb('e a');
     expect(mockDestinationPush).toHaveBeenCalledTimes(1);
-    expect(mockDestinationPush).toHaveBeenCalledWith([
-      {
-        event,
-        config: mockDestination.config,
-      },
-    ]);
+    expect(mockDestinationPush).toHaveBeenCalledWith(
+      [
+        {
+          event,
+        },
+      ],
+      mockDestination.config,
+    );
   });
 
   test('push failure', async () => {

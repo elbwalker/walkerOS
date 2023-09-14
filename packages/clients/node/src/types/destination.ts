@@ -8,7 +8,10 @@ export interface Function<Custom = unknown, EventCustom = unknown>
   setup?: (
     config: Config<Custom, EventCustom>,
   ) => Promise<boolean | Config<Custom, EventCustom>>;
-  push: (events: PushEvents<Custom, EventCustom>) => Promise<Push>;
+  push: (
+    events: PushEvents,
+    config: Config<Custom, EventCustom>,
+  ) => Promise<Push>;
 }
 
 export interface Config<Custom = unknown, EventCustom = unknown>
@@ -20,12 +23,10 @@ export interface Mapping<EventCustom>
 export interface EventConfig<EventCustom = unknown>
   extends Elbdestination.EventConfig<EventCustom> {}
 
-export type PushEvents<Custom = unknown, EventCustom = unknown> = Array<
-  PushEvent<Custom, EventCustom>
->;
-export type PushEvent<Custom = unknown, EventCustom = unknown> = {
+export type PushEvents = Array<PushEvent>;
+
+export type PushEvent = {
   event: Elbwalker.Event;
-  config?: Config<Custom, EventCustom>;
   mapping?: EventConfig;
 };
 
