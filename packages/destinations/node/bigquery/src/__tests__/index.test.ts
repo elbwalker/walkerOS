@@ -113,7 +113,7 @@ describe('Node Destination BigQuery', () => {
       destination.init({ custom: { datasetId, tableId } } as any),
     ).rejects.toThrow('Config custom projectId missing');
 
-    const config = await getConfig({ custom: { projectId } });
+    const config = await getConfig({ projectId });
 
     expect(config.custom.datasetId).toBe('walkeros');
     expect(config.custom.tableId).toBe('events');

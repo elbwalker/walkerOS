@@ -3,7 +3,7 @@ import { isSameType, tryCatchAsync } from '@elbwalker/utils';
 import { getCustomConfig } from './config';
 import { setup } from './setup';
 import { push } from './push';
-import { log } from './utils';
+import { throwError, log } from './utils';
 
 export const destinationBigQuery: Function = {
   // meta: {
@@ -17,7 +17,7 @@ export const destinationBigQuery: Function = {
     return (
       (await tryCatchAsync(setup, (error) => {
         log({ message: 'Destination BigQuery setup error', error });
-        return false;
+        throwError(error);
       })(getCustomConfig(config.custom))) || false
     );
   },
@@ -26,7 +26,7 @@ export const destinationBigQuery: Function = {
     const custom =
       (await tryCatchAsync(getCustomConfig, (error) => {
         log({ message: 'Destination BigQuery init error', error });
-        return false;
+        throwError(error);
       })(partialConfig.custom)) || false;
 
     if (!isSameType(custom, {} as CustomConfig)) return false;
@@ -35,8 +35,13 @@ export const destinationBigQuery: Function = {
   },
 
   async push(events, config) {
-    // @TODO trycatch
-    return push(events, getCustomConfig(config.custom));
+    return (
+      (await tryCatchAsync(push, (error) => {
+        log({ message: 'Destination BigQuery push error', error });
+        // @TODO queue handling
+        throwError(error);
+      })(events, getCustomConfig(config.custom))) || {}
+    );
   },
 };
 

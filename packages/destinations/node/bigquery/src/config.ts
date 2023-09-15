@@ -1,12 +1,12 @@
 import type { CustomConfig } from './types';
 import { BigQuery, type BigQueryOptions } from '@google-cloud/bigquery';
-import { error } from './utils';
+import { throwError } from './utils';
 
 export function getCustomConfig(custom?: Partial<CustomConfig>): CustomConfig {
-  if (!custom) error('Custom config missing');
+  if (!custom) throwError('Custom config missing');
 
   let { client, projectId, location, datasetId, tableId, bigquery } = custom;
-  if (!projectId) error('Config custom projectId missing');
+  if (!projectId) throwError('Config custom projectId missing');
 
   location = location || 'EU';
   datasetId = datasetId || 'walkeros';
