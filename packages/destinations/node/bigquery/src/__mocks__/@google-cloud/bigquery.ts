@@ -19,5 +19,16 @@ class BigQuery {
     mockFn('createTable', ...arguments);
     return this;
   }
+
+  table() {
+    mockFn('table', ...arguments);
+    return this;
+  }
+
+  insert() {
+    mockFn('insert', ...arguments);
+    return this;
+  }
 }
+
 export { BigQuery };

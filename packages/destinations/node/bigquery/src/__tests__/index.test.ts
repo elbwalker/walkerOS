@@ -118,11 +118,34 @@ describe('Node Destination BigQuery', () => {
     expect(config.custom.tableId).toBe('events');
   });
 
-  test.skip('push', async () => {
+  test('push', async () => {
     const config = await destination.init({
       custom: { projectId, bigquery: { credentials } },
     });
+    const mockFn = getMockFn(config);
 
-    await destination.push([{ event }], config);
+    const result = await destination.push([{ event }], config);
+    expect(mockFn).toBeCalledWith('insert', [
+      {
+        event: 'entity action',
+        consent: '{"debugging":true}',
+        id: '1-gr0up-1',
+        entity: 'entity',
+        action: 'action',
+        timestamp: expect.any(Date),
+        server_timestamp: expect.any(Date),
+        data: '{"foo":"bar"}',
+        context: '{"dev":["test",1]}',
+        globals: '{"lang":"ts"}',
+        user: expect.any(Object),
+        nested: expect.any(String),
+        trigger: 'test',
+        timing: 3.14,
+        group: 'gr0up',
+        count: 1,
+        version: expect.any(Object),
+        source: expect.any(Object),
+      },
+    ]);
   });
 });
