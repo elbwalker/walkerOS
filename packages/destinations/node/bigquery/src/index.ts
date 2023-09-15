@@ -14,20 +14,17 @@ export const destinationBigQuery: Function = {
   config: {},
 
   async setup(config) {
-    return (
-      (await tryCatchAsync(setup, (error) => {
-        log({ message: 'Destination BigQuery setup error', error });
-        throwError(error);
-      })(getCustomConfig(config.custom))) || false
-    );
+    return await tryCatchAsync(setup, (error) => {
+      log({ message: 'Destination BigQuery setup error', error });
+      throwError(error);
+    })(getCustomConfig(config.custom));
   },
 
   async init(partialConfig) {
-    const custom =
-      (await tryCatchAsync(getCustomConfig, (error) => {
-        log({ message: 'Destination BigQuery init error', error });
-        throwError(error);
-      })(partialConfig.custom)) || false;
+    const custom = await tryCatchAsync(getCustomConfig, (error) => {
+      log({ message: 'Destination BigQuery init error', error });
+      throwError(error);
+    })(partialConfig.custom);
 
     if (!isSameType(custom, {} as CustomConfig)) return false;
 
@@ -35,13 +32,11 @@ export const destinationBigQuery: Function = {
   },
 
   async push(events, config) {
-    return (
-      (await tryCatchAsync(push, (error) => {
-        log({ message: 'Destination BigQuery push error', error });
-        // @TODO queue handling
-        throwError(error);
-      })(events, getCustomConfig(config.custom))) || {}
-    );
+    return await tryCatchAsync(push, (error) => {
+      log({ message: 'Destination BigQuery push error', error });
+      // @TODO queue handling
+      throwError(error);
+    })(events, getCustomConfig(config.custom));
   },
 };
 

@@ -16,8 +16,6 @@ import {
 const w = window;
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
-const mockError = jest.fn();
-console.error = mockError;
 
 describe('Utils', () => {
   beforeEach(() => {
@@ -345,11 +343,11 @@ describe('Utils', () => {
   });
 
   test('tryCatch', () => {
-    // Default error on console
-    tryCatch(() => {
-      throw new Error('foo');
-    })();
-    expect(mockError).toHaveBeenCalledWith(expect.any(Error));
+    const result =
+      tryCatch(() => {
+        throw new Error('foo');
+      })() || 'backup';
+    expect(result).toBe('backup');
 
     // Custom error handler
     const onError = jest.fn();
@@ -360,11 +358,11 @@ describe('Utils', () => {
   });
 
   test('tryCatchAsync', async () => {
-    // Default error on console
-    await tryCatchAsync(async () => {
-      throw new Error('foo');
-    })();
-    expect(mockError).toHaveBeenCalledWith(expect.any(Error));
+    const result =
+      (await tryCatchAsync(async () => {
+        throw new Error('foo');
+      })()) || 'backup';
+    expect(result).toBe('backup');
 
     // Custom error handler
     const onError = jest.fn();

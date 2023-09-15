@@ -35,12 +35,10 @@ export function nodeClient(
       failed: [],
     };
 
-    return (
-      (await tryCatchAsync(pushFn, (error) => {
-        defaultResult.status.error = error;
-        return defaultResult;
-      })(instance, ...args)) || defaultResult
-    );
+    return await tryCatchAsync(pushFn, (error) => {
+      defaultResult.status.error = error;
+      return defaultResult;
+    })(instance, ...args);
   };
 
   const instance: NodeClient.Function = {
@@ -342,7 +340,9 @@ async function pushToDestinations(
         // Destination initialization
         // Check if the destination was initialized properly or try to do so
         if (destination.init && !destination.config.init) {
-          const init = await destination.init(destination.config);
+          const init =
+            (await tryCatchAsync(destination.init)(destination.config)) ||
+            false;
 
           if (isSameType(init, {} as NodeDestination.Config)) {
             destination.config = init;
@@ -358,7 +358,7 @@ async function pushToDestinations(
           (await tryCatchAsync(destination.push, (error) => {
             // Default error handling for failing destinations
             return { error, queue: undefined };
-          })(events, destination.config)) || {};
+          })(events, destination.config)) || {}; // everything is fine
 
         // Destinations can decide how to handle errors and queue
         destination.queue = result.queue; // Events that should be queued again

@@ -10,9 +10,6 @@ describe('Destination', () => {
     return true;
   });
 
-  const mockError = jest.fn();
-  console.error = mockError;
-
   let destination: WebDestination.Function;
   let config: WebDestination.Config;
 
@@ -192,7 +189,7 @@ describe('Destination', () => {
     elbwalker.push('walker destination', destination);
     elbwalker.push('entity action');
 
-    expect(mockError).toHaveBeenCalled(); // error catcher
+    // @TODO custom error handling
     expect(mockInit).toHaveBeenCalled(); // 2nd destination
   });
 
