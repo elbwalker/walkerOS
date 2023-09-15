@@ -1,4 +1,4 @@
-import type { Function, PartialConfig } from '../types';
+import type { Config, Function, PartialConfig } from '../types';
 import { Elbwalker } from '@elbwalker/types';
 
 describe('Node Destination BigQuery', () => {
@@ -61,6 +61,12 @@ describe('Node Destination BigQuery', () => {
     return ((config.custom?.client as any) || {}).mockFn;
   }
 
+  async function getConfig(custom = {}) {
+    return (await destination.init({
+      custom,
+    })) as Config;
+  }
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
@@ -83,9 +89,7 @@ describe('Node Destination BigQuery', () => {
 
     await expect(destination.setup({} as any)).rejects.toThrowError();
 
-    const config = await destination.init({
-      custom: { projectId, bigquery: { credentials } },
-    });
+    const config = await getConfig({ projectId, bigquery: { credentials } });
 
     expect(await destination.setup(config)).toBeTruthy();
 
@@ -109,16 +113,14 @@ describe('Node Destination BigQuery', () => {
       destination.init({ custom: { datasetId, tableId } } as any),
     ).rejects.toThrow('Config custom projectId missing');
 
-    const config = await destination.init({ custom: { projectId } });
+    const config = await getConfig({ custom: { projectId } });
 
     expect(config.custom.datasetId).toBe('walkeros');
     expect(config.custom.tableId).toBe('events');
   });
 
   test('push', async () => {
-    const config = await destination.init({
-      custom: { projectId, bigquery: { credentials } },
-    });
+    const config = await getConfig({ projectId, bigquery: { credentials } });
     const mockFn = getMockFn(config);
 
     const result = await destination.push([{ event }], config);
