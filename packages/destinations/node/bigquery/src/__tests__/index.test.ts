@@ -40,9 +40,6 @@ describe('Node Destination BigQuery', () => {
       id: 'https://localhost:80',
       previous_id: 'http://remotehost:9001',
     },
-    // additional_data: {
-    //   useragent: 'jest',
-    // },
   };
 
   const projectId = 'eventpipe-f9979'; //@TODO change to pr0j3ct1d
@@ -136,6 +133,7 @@ describe('Node Destination BigQuery', () => {
         server_timestamp: expect.any(Date),
         data: '{"foo":"bar"}',
         context: '{"dev":["test",1]}',
+        custom: '{"bar":"baz"}',
         globals: '{"lang":"ts"}',
         user: expect.any(Object),
         nested: expect.any(String),

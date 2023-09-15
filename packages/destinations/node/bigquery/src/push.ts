@@ -26,6 +26,7 @@ export const mapEvent = (event: Elbwalker.Event) => {
   // Optional properties
   if (event.data) destinationEvent.data = JSON.stringify(event.data);
   if (event.context) destinationEvent.context = JSON.stringify(event.context);
+  if (event.custom) destinationEvent.custom = JSON.stringify(event.custom);
   if (event.globals) destinationEvent.globals = JSON.stringify(event.globals);
   if (event.user) destinationEvent.user = event.user;
   if (event.nested) destinationEvent.nested = JSON.stringify(event.nested);
@@ -35,9 +36,6 @@ export const mapEvent = (event: Elbwalker.Event) => {
   if (event.count) destinationEvent.count = event.count;
   if (event.version) destinationEvent.version = event.version;
   if (event.source) destinationEvent.source = event.source;
-  // @TODO custom
-  // if (event.additional_data)
-  //   destinationEvent.additional_data = JSON.stringify(event.additional_data);
 
   return destinationEvent;
 };

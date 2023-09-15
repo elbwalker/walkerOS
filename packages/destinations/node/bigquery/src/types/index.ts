@@ -40,6 +40,7 @@ export interface Row {
   event: string;
   data?: string;
   context?: string;
+  custom?: string;
   globals?: string;
   user?: Elbwalker.User;
   nested?: string;
@@ -62,5 +63,4 @@ export interface Row {
     previous_id?: string;
   };
   server_timestamp: Date;
-  additional_data?: string; // @TODO move to custom
 }
