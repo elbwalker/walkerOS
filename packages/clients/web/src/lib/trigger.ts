@@ -72,7 +72,10 @@ export function initScopeTrigger(
 
   // Load the visible observer
   visibleObserver =
-    visibleObserver || tryCatch(observerVisible)(instance, 1000);
+    visibleObserver ||
+    tryCatch(observerVisible, () => {
+      return undefined;
+    })(instance, 1000);
 
   // default data-elbaction
   const selectorAction = getElbAttributeName(

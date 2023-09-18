@@ -127,9 +127,10 @@ describe('Destination', () => {
     result = await elb('walker destination', mockDestination, { id: 'mock' });
     expect(result.successful).toHaveProperty('length', 1);
     expect(result.successful[0]).toHaveProperty('id', 'mock');
-    expect(mockPush).toHaveBeenCalledWith([
-      { event: updatedEvent, config: { id: 'mock', init: true } },
-    ]);
+    expect(mockPush).toHaveBeenCalledWith([{ event: updatedEvent }], {
+      id: 'mock',
+      init: true,
+    });
   });
 
   test('fail', async () => {
@@ -191,9 +192,10 @@ describe('Destination', () => {
     expect(result).toHaveProperty('failed', []);
 
     result = await elb('walker consent', { test: true });
-    expect(mockPush).toHaveBeenCalledWith([
-      { event: mockEvent, config: expect.any(Object) },
-    ]);
+    expect(mockPush).toHaveBeenCalledWith(
+      [{ event: mockEvent }],
+      destinationConsent.config,
+    );
     expect(result.status).toHaveProperty('ok', true);
     expect(result.successful[0]).toHaveProperty('id', 'destinationConsent');
     expect(result).toHaveProperty('queued', []);

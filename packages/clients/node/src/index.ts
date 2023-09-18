@@ -8,6 +8,9 @@ import {
   tryCatchAsync,
 } from '@elbwalker/utils';
 
+// Types
+export * from './types';
+
 export function createNodeClient(customConfig?: Partial<NodeClient.Config>) {
   const instance = nodeClient(customConfig);
   const elb = instance.push;
@@ -32,12 +35,10 @@ export function nodeClient(
       failed: [],
     };
 
-    return (
-      (await tryCatchAsync(pushFn, (error) => {
-        defaultResult.status.error = error;
-        return defaultResult;
-      })(instance, ...args)) || defaultResult
-    );
+    return await tryCatchAsync(pushFn, (error) => {
+      defaultResult.status.error = error;
+      return defaultResult;
+    })(instance, ...args);
   };
 
   const instance: NodeClient.Function = {
@@ -332,16 +333,22 @@ async function pushToDestinations(
             event.consent = config.consent;
             event.globals = config.globals;
             event.user = config.user;
-            return { event, config: destination.config }; // @TODO mapping
+            return { event }; // @TODO mapping
           },
         );
 
         // Destination initialization
         // Check if the destination was initialized properly or try to do so
         if (destination.init && !destination.config.init) {
-          const init = await destination.init(destination.config);
+          const init =
+            (await tryCatchAsync(destination.init)(destination.config)) ||
+            false;
 
-          destination.config.init = init;
+          if (isSameType(init, {} as NodeDestination.Config)) {
+            destination.config = init;
+          } else {
+            destination.config.init = init;
+          }
 
           // don't push if init is false
           if (!init) return { id, destination, skipped: true };
@@ -351,7 +358,7 @@ async function pushToDestinations(
           (await tryCatchAsync(destination.push, (error) => {
             // Default error handling for failing destinations
             return { error, queue: undefined };
-          })(events)) || {};
+          })(events, destination.config)) || {}; // everything is fine
 
         // Destinations can decide how to handle errors and queue
         destination.queue = result.queue; // Events that should be queued again
