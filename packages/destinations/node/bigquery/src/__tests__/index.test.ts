@@ -49,13 +49,7 @@ describe('Node Destination BigQuery', () => {
 
   let destination: Function, config: PartialConfig;
 
-  // @TODO find another solution
-  let credentials: any = 'psst'; // @TODO
-  // try {
-  //   credentials = JSON.parse(
-  //     readFileSync(join(__dirname, '../service_account.json'), 'utf-8'),
-  //   );
-  // } catch (error) {}
+  let credentials: string = 'psst';
 
   function getMockFn(config: PartialConfig) {
     return ((config.custom?.client as any) || {}).mockFn;
