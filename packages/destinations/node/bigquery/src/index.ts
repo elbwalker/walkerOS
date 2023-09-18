@@ -5,12 +5,12 @@ import { setup } from './setup';
 import { push } from './push';
 import { throwError, log } from './utils';
 
-export const destinationBigQuery: Function = {
-  // meta: {
-  //   name: 'BigQuery',
-  //   version: '0.0.7',
-  // },
+const meta = {
+  name: 'BigQuery',
+  version: '0.0.7',
+};
 
+export const destinationBigQuery: Function = {
   config: {},
 
   async setup(config) {
@@ -28,7 +28,7 @@ export const destinationBigQuery: Function = {
 
     if (!isSameType(custom, {} as CustomConfig)) return false;
 
-    return { ...partialConfig, custom };
+    return { ...partialConfig, custom, meta };
   },
 
   async push(events, config) {

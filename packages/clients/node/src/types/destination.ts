@@ -6,6 +6,7 @@ export interface Function<Custom = unknown, EventCustom = unknown>
   init?: InitFn<Custom, EventCustom>;
   setup?: SetupFn<Custom, EventCustom>;
 }
+
 export type PushFn<Custom, EventCustom> = (
   events: PushEvents<EventCustom>,
   config: Config<Custom, EventCustom>,

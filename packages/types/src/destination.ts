@@ -13,12 +13,18 @@ export interface Config<Custom = unknown, EventCustom = unknown> {
   init?: boolean; // If the destination has been initialized by calling the init method
   loadScript?: boolean; // If an additional script to work should be loaded
   mapping?: Mapping<EventCustom>; // A map to handle events individually
+  meta?: Meta; // Additional meta information about the destination
   queue?: boolean; // Disable processing of previously pushed events
 }
 
 export interface Mapping<EventCustom> {
   [entity: string]: { [action: string]: EventConfig<EventCustom> };
 }
+
+export type Meta = {
+  name: string;
+  version: string;
+};
 
 export interface EventConfig<EventCustom = unknown> {
   consent?: Elbwalker.Consent; // Required consent states to init and push events
