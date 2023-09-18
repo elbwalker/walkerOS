@@ -125,9 +125,9 @@ export const schema: TableMetadata = {
           description: 'Version of the client configuration',
         },
         {
-          name: 'server',
-          type: 'STRING',
-          description: 'Version of the server configuration',
+          name: 'tagging',
+          type: 'NUMERIC',
+          description: 'Used version number of the tagging',
         },
       ],
     },
@@ -139,17 +139,17 @@ export const schema: TableMetadata = {
         {
           name: 'type',
           type: 'STRING',
-          description: 'Source type of the event',
+          description: 'Source type of the event (web, app, server, ...))',
         },
         {
           name: 'id',
           type: 'STRING',
-          description: "Source id of the event's origin (url)",
+          description: "Source id of the event's origin (like url)",
         },
         {
           name: 'previous_id',
           type: 'STRING',
-          description: 'Previous source id (referrer)',
+          description: 'Previous source id (like referrer)',
         },
       ],
     },
@@ -157,7 +157,7 @@ export const schema: TableMetadata = {
       name: 'server_timestamp',
       type: 'TIMESTAMP',
       mode: 'REQUIRED',
-      description: 'Timestamp when the sGTM processed the event in ms',
+      description: 'Timestamp when the destination processed the event',
     },
   ],
 };
