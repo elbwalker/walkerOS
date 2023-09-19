@@ -4,7 +4,8 @@
     "packages/config/*",
     "packages/clients/*",
     "packages/destinations/node/*",
-    "packages/destinations/web/*"
+    "packages/destinations/web/*",
+    "packages/stacks/*"
   ],
   "scripts": {
     "build": "turbo run build --filter=!@elbwalker/docs",
