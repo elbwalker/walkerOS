@@ -19,6 +19,9 @@
     "publish": "npm run test && npm run build && npm publish --access public",
     "test": "jest --colors --coverage"
   },
+  "dependencies": {
+    "firebase-admin": "^11.10.1"
+  },
   "devDependencies": {
     "@elbwalker/types": "*",
     "@elbwalker/utils": "*"
