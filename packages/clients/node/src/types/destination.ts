@@ -57,3 +57,8 @@ export type PushResult = {
   queued: PushSuccess;
   failed: PushFailure;
 };
+
+export type SetupResult = {
+  successful: PushSuccess;
+  failed: PushFailure;
+};

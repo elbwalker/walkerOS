@@ -42,8 +42,9 @@ export function nodeClient(
   };
 
   const instance: NodeClient.Function = {
-    push,
     config,
+    push,
+    // @TODO setup
   };
 
   // That's when the party starts

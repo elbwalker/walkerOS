@@ -1,8 +1,11 @@
-import { AppOptions } from 'firebase-admin';
+import type { NodeClient } from '@elbwalker/node-client';
+import type { AppOptions } from 'firebase-admin';
+import type { HttpsFunction, HttpsOptions } from 'firebase-functions/v2/https';
 
 export interface Function {
   config: Config;
   entry: Entry;
+  setup?: Setup;
 }
 
 export type PartialConfig = Partial<Config>;
@@ -11,5 +14,12 @@ export interface Config {
 }
 
 export interface Entry {
-  (event: string): Promise<unknown>;
+  (options?: HttpsOptions): HttpsFunction;
 }
+
+export interface Setup extends NodeClient.Setup {}
+
+export type PrependInstance<Fn extends (...args: any) => any> = (
+  instance: Function,
+  ...args: Parameters<Fn>
+) => ReturnType<Fn>;

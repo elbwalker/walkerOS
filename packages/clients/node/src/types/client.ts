@@ -2,8 +2,9 @@ import type { Elbwalker } from '@elbwalker/types';
 import type * as NodeDestination from './destination';
 
 export interface Function {
-  push: Push;
   config: Config;
+  push: Push;
+  setup?: Setup; // @TODO make this required
 }
 
 export interface AddDestination {
@@ -18,6 +19,10 @@ export interface Push {
   ): Promise<PushResult>;
 }
 
+export interface Setup {
+  (config: Config): Promise<SetupResult>;
+}
+
 export type PushData =
   | Elbwalker.PushData
   | NodeDestination.Function
@@ -28,6 +33,10 @@ export type PushOptions = Elbwalker.PushOptions | NodeDestination.Config;
 export interface PushResult extends NodeDestination.PushResult {
   command?: Command;
   event?: Elbwalker.Event;
+  status: Status;
+}
+
+export interface SetupResult extends NodeDestination.SetupResult {
   status: Status;
 }
 
