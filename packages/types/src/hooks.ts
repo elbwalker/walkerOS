@@ -1,4 +1,4 @@
-import type { Elbwalker, WebDestination } from '.';
+import type { Elbwalker } from '.';
 
 interface Parameter<T extends any[], R> {
   fn: (...args: T) => R;
@@ -15,19 +15,7 @@ export type Names = 'Push' | 'DestinationInit' | 'DestinationPush';
 export type Functions = {
   prePush?: PrePush;
   postPush?: PostPush;
-  preDestinationInit?: PreDestinationInit;
-  postDestinationInit?: PostDestinationInit;
-  preDestinationPush?: PreDestinationPush;
-  postDestinationPush?: PostDestinationPush;
 };
 
 export type PrePush = HookFn<Elbwalker.Elb>;
 export type PostPush = HookFn<Elbwalker.Elb>;
-export type PreDestinationInit = HookFn<
-  NonNullable<WebDestination.Function['init']>
->;
-export type PostDestinationInit = HookFn<
-  NonNullable<WebDestination.Function['init']>
->;
-export type PreDestinationPush = HookFn<WebDestination.Function['push']>;
-export type PostDestinationPush = HookFn<WebDestination.Function['push']>;
