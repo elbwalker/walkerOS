@@ -1,5 +1,5 @@
-export type * as Data from './data';
-export type * as Elbdestination from './destination';
-export type * as Elbwalker from './elbwalker';
-export type * as Hooks from './hooks';
-export type * as Utils from './utils';
+export * as Data from './data';
+export * as Elbdestination from './destination';
+export * as Elbwalker from './elbwalker';
+export * as Hooks from './hooks';
+export * as Utils from './utils';

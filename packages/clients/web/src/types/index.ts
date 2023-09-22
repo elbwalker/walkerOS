@@ -1,4 +1,4 @@
-export type * as Walker from './walker';
-export type * as WebClient from './client';
-export type * as WebDestination from './destination';
-export type * as WebHooks from './hooks';
+export * as Walker from './walker';
+export * as WebClient from './client';
+export * as WebDestination from './destination';
+export * as WebHooks from './hooks';

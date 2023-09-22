@@ -1,1 +1,1 @@
-export type * as FirebaseStack from './stack';
+export * as FirebaseStack from './stack';
