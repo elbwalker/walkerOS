@@ -50,6 +50,7 @@ export interface Status {
   error?: unknown;
 }
 
+export type PartialConfig = Partial<Config>;
 export interface Config extends Elbwalker.Config {
   client: string;
   destinations: Destinations;

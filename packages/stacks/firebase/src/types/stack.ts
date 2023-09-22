@@ -4,16 +4,17 @@ import type { HttpsFunction, HttpsOptions } from 'firebase-functions/v2/https';
 
 export interface Function {
   config: Config;
-  entry: Entry;
-  setup?: Setup;
+  push: Push;
+  setup?: Setup; // @TODO make this required
 }
 
 export type PartialConfig = Partial<Config>;
 export interface Config {
   firebase: AppOptions;
+  client: NodeClient.PartialConfig;
 }
 
-export interface Entry {
+export interface Push {
   (options?: HttpsOptions): HttpsFunction;
 }
 

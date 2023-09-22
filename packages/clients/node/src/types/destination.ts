@@ -10,7 +10,7 @@ export interface Function<Custom = unknown, EventCustom = unknown>
 export type PushFn<Custom, EventCustom> = (
   events: PushEvents<EventCustom>,
   config: Config<Custom, EventCustom>,
-) => Promise<Push>;
+) => Promise<Push> | void;
 
 export type InitFn<Custom, EventCustom> = (
   config: Config<Custom, EventCustom>,

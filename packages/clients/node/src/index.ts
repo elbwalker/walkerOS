@@ -11,7 +11,7 @@ import {
 // Types
 export * from './types';
 
-export function createNodeClient(customConfig?: Partial<NodeClient.Config>) {
+export function createNodeClient(customConfig?: NodeClient.PartialConfig) {
   const instance = nodeClient(customConfig);
   const elb = instance.push;
 
@@ -19,7 +19,7 @@ export function createNodeClient(customConfig?: Partial<NodeClient.Config>) {
 }
 
 export function nodeClient(
-  customConfig: Partial<NodeClient.Config> = {},
+  customConfig: NodeClient.PartialConfig = {},
 ): NodeClient.Function {
   const client = '2.0.0';
   const config = getConfig(customConfig, {
@@ -168,8 +168,8 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
 };
 
 function getConfig(
-  values: Partial<NodeClient.Config> = {},
-  current: Partial<NodeClient.Config> = {},
+  values: NodeClient.PartialConfig = {},
+  current: NodeClient.PartialConfig = {},
 ): NodeClient.Config {
   const globalsStatic = current.globalsStatic || {};
   const defaultConfig: NodeClient.Config = {
