@@ -50,7 +50,7 @@ export type PushSuccess = Array<Ref>;
 
 export type PushFailure = Array<Ref & { error: PushError }>;
 
-export type PushError = unknown;
+export type PushError = string;
 
 export type PushResult = {
   successful: PushSuccess;

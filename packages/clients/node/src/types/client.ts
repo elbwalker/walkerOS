@@ -25,7 +25,7 @@ export interface Setup {
 
 export type PushData =
   | Elbwalker.PushData
-  | NodeDestination.Function
+  | NodeDestination.Function<any, any>
   | NodeDestination.PushResult;
 
 export type PushOptions = Elbwalker.PushOptions | NodeDestination.Config;
@@ -47,7 +47,7 @@ export interface Command {
 
 export interface Status {
   ok: boolean;
-  error?: unknown;
+  error?: string;
 }
 
 export type PartialConfig = Partial<Config>;

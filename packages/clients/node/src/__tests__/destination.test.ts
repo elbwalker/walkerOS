@@ -160,11 +160,11 @@ describe('Destination', () => {
         {
           id: 'destinationFailure',
           destination: destinationFailure,
-          error: expect.any(Error),
+          error: expect.any(String),
         },
       ],
     });
-    expect(result.failed[0].error).toHaveProperty('message', 'kaputt');
+    expect(result.failed[0].error).toBe('Error: kaputt');
   });
 
   test.skip('queue', async () => {});

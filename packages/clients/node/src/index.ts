@@ -36,7 +36,7 @@ export function nodeClient(
     };
 
     return await tryCatchAsync(pushFn, (error) => {
-      defaultResult.status.error = error;
+      defaultResult.status.error = String(error);
       return defaultResult;
     })(instance, ...args);
   };
@@ -352,7 +352,7 @@ async function pushToDestinations(
           }
 
           // don't push if init is false
-          if (!init) return { id, destination, skipped: true };
+          if (!init) return { id, destination, queue: destination.queue };
         }
 
         const result =
@@ -376,6 +376,7 @@ async function pushToDestinations(
 
   for (const result of results) {
     if (result.skipped) continue;
+
     const id = result.id;
     const destination = result.destination;
 
@@ -383,12 +384,12 @@ async function pushToDestinations(
       failed.push({
         id,
         destination,
-        error: result.error,
+        error: String(result.error),
       });
     } else if (result.queue && result.queue.length) {
       queued.push({ id, destination });
     } else {
-      successful.push({ id: id, destination });
+      successful.push({ id, destination });
     }
   }
 
