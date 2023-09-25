@@ -4,6 +4,8 @@ import type { HttpsFunction, HttpsOptions } from 'firebase-functions/v2/https';
 
 export interface Function {
   config: Config;
+  instance: NodeClient.Function;
+  elb: NodeClient.Push;
   push: Push;
   setup?: Setup; // @TODO make this required
 }

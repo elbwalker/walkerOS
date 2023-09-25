@@ -1,4 +1,4 @@
-import { TableMetadata } from '@google-cloud/bigquery';
+import type { TableMetadata } from '@google-cloud/bigquery';
 
 export const schema: TableMetadata = {
   location: 'EU',
