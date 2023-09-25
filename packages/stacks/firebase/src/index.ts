@@ -83,7 +83,12 @@ const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
     };
 
     const result = await instance.push(event);
-    // @TODO handle errors and status codes
-    res.status(200).send({ params: req.params, result });
+
+    res.send({
+      status: result.status,
+      successfull: result.successful.length,
+      failed: result.failed.length,
+      queued: result.queued.length,
+    });
   });
 };
