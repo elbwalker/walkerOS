@@ -198,6 +198,41 @@ export function isVisible(element: HTMLElement): boolean {
   return false;
 }
 
+export function parseEvent(input: {
+  obj?: Elbwalker.AnyObject;
+  str?: string;
+}): false | Elbwalker.PartialEvent {
+  const { obj, str } = input;
+  if (!obj && !str) return false;
+
+  let result: Elbwalker.AnyObject = {};
+
+  if (str) {
+    const cleanedStr = str.startsWith('?') ? str.substring(1) : str;
+    const pairs = cleanedStr.split('&');
+
+    for (const pair of pairs) {
+      const [key, value] = pair.split('=');
+      const decodedValue = decodeURIComponent(value);
+      result[key] = tryCatch(
+        (value: string) => JSON.parse(value),
+        () => decodedValue,
+      )(decodedValue);
+    }
+  }
+
+  result = assign(obj || {}, result);
+
+  const event: Elbwalker.PartialEvent = result;
+
+  // TODO only map allowed properties
+
+  // Check for required property 'event'
+  if (!event.event) return false;
+
+  return event;
+}
+
 export function sessionStart(
   config: Utils.SessionStart = {},
 ): Elbwalker.Properties | false {

@@ -13,7 +13,7 @@ export interface AddDestination {
 
 export interface Push {
   (
-    nameOrEvent: string | Partial<Elbwalker.Event>,
+    nameOrEvent: string | Elbwalker.PartialEvent,
     data?: PushData,
     options?: PushOptions,
   ): Promise<PushResult>;
