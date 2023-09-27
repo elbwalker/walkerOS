@@ -1,3 +1,4 @@
+import { Elbwalker } from '@elbwalker/types';
 import {
   debounce,
   getMarketingParameters,
@@ -12,6 +13,7 @@ import {
   sessionStart,
   Const,
   parseEvent,
+  validateEvent,
 } from '../';
 
 const w = window;
@@ -406,5 +408,179 @@ describe('Utils', () => {
       throw new Error('foo');
     }, onError)();
     expect(onError).toHaveBeenCalledWith(expect.any(Error));
+  });
+
+  test('validateEvent', () => {
+    // should return valid event with missing properties filled
+    expect(
+      validateEvent({
+        event: 'e a',
+        data: { k: 'v' },
+      }),
+    ).toStrictEqual({
+      event: 'e a',
+      data: { k: 'v' },
+      context: {},
+      custom: {},
+      globals: {},
+      user: {},
+      nested: [],
+      consent: {},
+      id: '',
+      trigger: '',
+      entity: 'e',
+      action: 'a',
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
+      group: '',
+      count: 0,
+      version: { client: '', tagging: 0 },
+      source: { type: '', id: '', previous_id: '' },
+    });
+
+    // should throw error for invalid event name
+    expect(() =>
+      validateEvent({
+        event: 'e',
+      }),
+    ).toThrow('Invalid event name');
+
+    // should throw error for missing event name
+    expect(() =>
+      validateEvent({
+        data: { key: 'value' },
+      }),
+    ).toThrow('Missing or invalid event, entity, or action');
+
+    // long event names
+    expect(
+      validateEvent({
+        event: 'e ' + 'a'.repeat(256),
+      }).event,
+    ).toHaveLength(255);
+    expect(() =>
+      validateEvent(
+        {
+          event: 'e ' + 'a'.repeat(11),
+        },
+        [{ e: { '*': { event: { maxLength: 10, strict: true } } } }],
+      ),
+    ).toThrow('Value exceeds maxLength');
+
+    // should throw error for invalid type
+    expect(
+      validateEvent({
+        event: 'some event',
+        data: 'invalid type',
+      }),
+    ).toHaveProperty('data', {});
+
+    // should throw error for extra properties
+    expect(() =>
+      validateEvent({
+        event: 'some event',
+        extraProp: 'should not be here',
+      }),
+    ).not.toHaveProperty('extraProp');
+
+    // should validate against custom contract
+    const contract = [
+      {
+        e: {
+          a: { data: { allowedKeys: ['k'] } },
+          s: { data: { allowedKeys: ['k'], strict: true } },
+        },
+      },
+    ];
+    expect(
+      validateEvent(
+        {
+          event: 'e a',
+          data: { k: 'v', remove: 'me' },
+        },
+        contract,
+      ).data,
+    ).not.toHaveProperty('remove');
+    expect(
+      () =>
+        validateEvent(
+          {
+            event: 'e s',
+            data: { k: 'v', remove: 'me' },
+          },
+          contract,
+        ).data,
+    ).toThrow('Key not allowed');
+
+    // should remove optional invalid properties
+    expect(
+      validateEvent({
+        event: 'some event',
+        optionalProp: 123, // doesn't belong here
+      }),
+    ).not.toHaveProperty('optionalProp');
+
+    // should throw error for invalid number range
+    expect(
+      validateEvent({
+        event: 'e a',
+        count: -1, // should be >= 0
+      }),
+    ).toHaveProperty('count', 0);
+
+    // should apply custom validation logic
+    const customValidationContract = [
+      {
+        entity: {
+          throw: {
+            event: {
+              validate: (
+                value: unknown,
+                key: string,
+                obj: Elbwalker.AnyObject,
+              ) => {
+                expect(value).toBe(obj[key]);
+                throw new Error('Custom');
+              },
+            },
+          },
+          name: {
+            event: {
+              validate: () => {
+                // With great power comes great responsibility...
+                return 'invalideventname';
+              },
+            },
+          },
+          type: {
+            data: {
+              validate: () => {
+                return false; // Should trigger type error
+              },
+            },
+          },
+        },
+      },
+    ];
+    expect(() =>
+      validateEvent({ event: 'entity throw' }, customValidationContract),
+    ).toThrow('Custom');
+    expect(
+      validateEvent({ event: 'entity name' }, customValidationContract),
+    ).toHaveProperty('event', 'invalideventname'); // If one really wants
+    expect(
+      validateEvent(
+        { event: 'entity type', data: {} },
+        customValidationContract,
+      ),
+    ).toHaveProperty('data', {}); // If one really wants
+
+    // should validate wildcard rules
+    expect(
+      validateEvent({
+        event: 'product add',
+        data: { id: '123', price: 9.99 },
+      }),
+    ).toMatchObject({ event: 'product add', data: { id: '123', price: 9.99 } });
   });
 });

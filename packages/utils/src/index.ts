@@ -1,4 +1,4 @@
-import type { Elbwalker, Hooks, Utils } from '@elbwalker/types';
+import type { Elbwalker, Hooks, Schema, Utils } from '@elbwalker/types';
 import Const from './constants';
 
 export function assign<T>(target: T, source: Object = {}): T {
@@ -413,6 +413,10 @@ export function throttle<P extends unknown[], R>(
   };
 }
 
+export function throwError(error: string): never {
+  throw new Error(error);
+}
+
 export function trim(str: string): string {
   // Remove quotes and whitespaces
   return str ? str.trim().replace(/^'|'$/g, '').trim() : '';
@@ -493,4 +497,154 @@ export function useHooks<P extends any[], R, Names = Hooks.Names>(
 
     return result;
   };
+}
+
+export function validateEvent(
+  obj: unknown,
+  customSchemas: Array<Schema.Events> = [],
+): Elbwalker.Event {
+  if (!isSameType(obj, {} as Elbwalker.AnyObject)) throwError('Invalid object');
+
+  let event: string = '';
+  let entity: string = '';
+  let action: string = '';
+
+  // Check if event.event is available and it's a string
+  if (isSameType(obj.event, '')) {
+    event = obj.event;
+    [entity, action] = event.split(' ');
+    if (!entity || !action) throwError('Invalid event name');
+  } else if (isSameType(obj.entity, '') && isSameType(obj.action, '')) {
+    entity = obj.entity;
+    action = obj.action;
+    event = `${entity} ${action}`;
+  } else {
+    throwError('Missing or invalid event, entity, or action');
+  }
+
+  const basicContract: Schema.Events = {
+    '*': {
+      '*': {
+        event: { maxLength: 255 }, // @TODO as general rule?
+        user: { allowedKeys: ['id', 'device', 'session'] },
+        consent: { allowedValues: [true, false] },
+        timestamp: { min: 0 },
+        timing: { min: 0 },
+        count: { min: 0 },
+        version: { allowedKeys: ['client', 'tagging'] },
+        source: { allowedKeys: ['type', 'id', 'previous_id'] },
+      },
+    },
+  };
+
+  const basicEvent: Elbwalker.Event = {
+    event,
+    data: {},
+    context: {},
+    custom: {},
+    globals: {},
+    user: {},
+    nested: [],
+    consent: {},
+    id: '',
+    trigger: '',
+    entity,
+    action,
+    timestamp: 0,
+    timing: 0,
+    group: '',
+    count: 0,
+    version: { client: '', tagging: 0 },
+    source: { type: '', id: '', previous_id: '' },
+  };
+
+  // Collect all relevant schemas for the event
+  const schemas = [basicContract]
+    .concat(customSchemas)
+    .reduce((acc, contract) => {
+      return ['*', entity].reduce((entityAcc, e) => {
+        return ['*', action].reduce((actionAcc, a) => {
+          const schema = contract[e]?.[a];
+          return schema ? actionAcc.concat([schema]) : actionAcc;
+        }, entityAcc);
+      }, acc);
+    }, [] as Schema.Properties[]);
+
+  // Validate only ingested properties
+  const result = Object.entries(obj).reduce(
+    (acc, [key, value]) => {
+      const newValue = tryCatch(validateProperty, (err) => {
+        throwError(String(err));
+      })(acc, key, value, schemas);
+
+      if (isSameType(newValue, acc[key])) acc[key] = newValue;
+
+      return acc;
+    },
+    // Not that beautiful but it works, narrowing down the type is tricky here
+    // it's important that basicEvent is defined as an Elbwalker.Event
+    basicEvent as unknown as Elbwalker.AnyObject,
+  ) as unknown as Elbwalker.Event;
+
+  // @TODO Final check for result.event === event.entity + ' ' + event.action
+
+  return result;
+}
+
+function validateProperty(
+  obj: Elbwalker.AnyObject,
+  key: string,
+  value: unknown,
+  schemas: Schema.Properties[],
+): unknown | never {
+  // @TODO unknown to Elbwalker.Property
+
+  // Note regarding potentially malicious values
+  // Initial collection doesn't manipulate data
+  // Prefer context-specific checks in the destinations
+
+  for (const eventSchema of schemas) {
+    const schema = eventSchema[key];
+    if (!schema) continue;
+
+    // Custom validate function can change the value
+    if (schema.validate)
+      value = tryCatch(schema.validate, (err) => {
+        throwError(String(err));
+      })(value, key, obj);
+
+    // Strings
+    if (isSameType(value, '' as string)) {
+      if (schema.maxLength && value.length > schema.maxLength) {
+        if (schema.strict) throwError('Value exceeds maxLength');
+        value = value.substring(0, schema.maxLength);
+      }
+    }
+
+    // Numbers
+    else if (isSameType(value, 1 as number)) {
+      if (isSameType(schema.min, 1) && value < schema.min) {
+        if (schema.strict) throwError('Value below min');
+        value = schema.min;
+      } else if (isSameType(schema.max, 1) && value > schema.max) {
+        if (schema.strict) throwError('Value exceeds max');
+        value = schema.max;
+      }
+    }
+
+    // Objects
+    else if (isSameType(value, {} as Elbwalker.AnyObject)) {
+      // Recursive validation for nested objects
+      for (const [objKey, objValue] of Object.entries(value)) {
+        // Check for allowed keys if applicable
+        if (schema.allowedKeys && !schema.allowedKeys.includes(objKey)) {
+          if (schema.strict) throwError('Key not allowed');
+
+          delete value[objKey];
+        }
+      }
+    }
+  }
+
+  return value;
 }
