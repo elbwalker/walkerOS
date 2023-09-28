@@ -1,7 +1,7 @@
 import type { NodeClient } from '@elbwalker/node-client';
 import type { FirebaseStack } from './types';
-import type { Elbwalker } from '@elbwalker/types'; // @TODO tmp
 import createNodeClient from '@elbwalker/node-client';
+import { assign, tryCatch, validateEvent } from '@elbwalker/utils';
 import { onRequest } from 'firebase-functions/v2/https';
 
 // Types
@@ -45,50 +45,22 @@ const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
   return onRequest(options, async (req, res) => {
     // ATTENTION! Never process unknown data from the client
 
-    // @TODO validate req body
-    // @TODO const event = req.body
-    const event: Elbwalker.Event = {
-      event: 'foo bar',
-      data: { foo: 'bar' },
-      custom: { bar: 'baz' },
-      context: { dev: ['test', 1] },
-      globals: { lang: 'ts' },
-      user: { id: 'us3r', device: 'c00k13', session: 's3ss10n' },
-      nested: [
-        {
-          type: 'child',
-          data: { type: 'nested' },
-          nested: [],
-          context: { element: ['child', 0] },
-        },
-      ],
-      consent: { debugging: true },
-      id: '1-gr0up-1',
-      trigger: 'test',
-      entity: 'entity',
-      action: 'action',
-      timestamp: 1690561989523,
-      timing: 3.14,
-      group: 'gr0up',
-      count: 1,
-      version: {
-        client: '0.0.7',
-        tagging: 1,
-      },
-      source: {
-        type: 'jest',
-        id: 'https://localhost:80',
-        previous_id: 'http://remotehost:9001',
-      },
-    };
+    // @TODO move validation to the client
+    const event = tryCatch(validateEvent, (err) => {
+      console.log({ err, body: req.body });
+    })(assign(req.body, req.query));
 
-    const result = await instance.push(event);
+    if (!event) {
+      res.status(418).send({ error: 'Invalid event' });
+    } else {
+      const result = await instance.push(event);
 
-    res.send({
-      status: result.status,
-      successfull: result.successful.length,
-      failed: result.failed.length,
-      queued: result.queued.length,
-    });
+      res.send({
+        status: result.status,
+        successfull: result.successful.length,
+        failed: result.failed.length,
+        queued: result.queued.length,
+      });
+    }
   });
 };

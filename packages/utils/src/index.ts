@@ -505,9 +505,9 @@ export function validateEvent(
 ): Elbwalker.Event {
   if (!isSameType(obj, {} as Elbwalker.AnyObject)) throwError('Invalid object');
 
-  let event: string = '';
-  let entity: string = '';
-  let action: string = '';
+  let event: string;
+  let entity: string;
+  let action: string;
 
   // Check if event.event is available and it's a string
   if (isSameType(obj.event, '')) {

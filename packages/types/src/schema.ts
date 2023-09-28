@@ -13,6 +13,7 @@ export type Properties = {
 export type Property = {
   allowedKeys?: string[];
   allowedValues?: unknown[];
+  // @TODO minLength?: number;
   maxLength?: number;
   max?: number;
   min?: number;
