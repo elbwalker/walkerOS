@@ -1,7 +1,7 @@
 import type { NodeClient } from '@elbwalker/node-client';
 import type { FirebaseStack } from './types';
 import createNodeClient from '@elbwalker/node-client';
-import { assign, tryCatch, validateEvent } from '@elbwalker/utils';
+import { tryCatch, validateEvent } from '@elbwalker/utils';
 import { onRequest } from 'firebase-functions/v2/https';
 
 // Types
@@ -48,7 +48,7 @@ const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
     // @TODO move validation to the client
     const event = tryCatch(validateEvent, (err) => {
       console.log({ err, body: req.body });
-    })(assign(req.body, req.query));
+    })(req.body);
 
     if (!event) {
       res.status(418).send({ error: 'Invalid event' });
