@@ -1,0 +1,1671 @@
+<!doctype html>
+<html>
+  <head>
+    <title>walkerOS demo</title>
+    <style>
+      .elb-globals [data-elbglobals] {
+        outline: none;
+        border-color: #4fc3f7;
+        box-shadow: 0 0 60px #4fc3f7;
+      }
+      .elb-context [data-elbcontext] {
+        outline: none;
+        border-color: #ffbd44;
+        box-shadow: 0 0 50px #ffbd44;
+      }
+      .elb-entity [data-elb] {
+        outline: none;
+        border-color: #00ca4e;
+        box-shadow: 0 0 40px #00ca4e;
+      }
+      .data-elbproperty {
+        outline: none;
+        border-color: #ff605c;
+        box-shadow: 0 0 10px #ff605c;
+      }
+      .elb-action [data-elbaction] {
+        outline: none;
+        border-color: #9900ff;
+        box-shadow: 0 0 10px #9900ff;
+      }
+      [data-elbcontext='font:beautiful'] {
+        font-family: 'Comic Sans MS';
+        font-style: italic;
+      }
+      .virtual_page {
+        margin: 200px auto;
+      }
+    </style>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,aspect-ratio"></script>
+
+    <script
+      async
+      class="elbwalker"
+      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@latest/dist/walker.js"
+    ></script>
+
+    <script type="module">
+      function elb() {
+        (window.elbLayer = window.elbLayer || []).push(arguments);
+      }
+
+      // Start
+      elb('walker run');
+
+      // Destination Console
+      elb('walker destination', {
+        push: console.log,
+      });
+
+      // Destination GTM
+      const gtm = (
+        await import(
+          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-gtm@1.2.3/dist/index.mjs'
+        )
+      ).default;
+      elb('walker destination', gtm, {
+        loadScript: true,
+        custom: {
+          containerId: 'GTM-WCFR4W5',
+        },
+      });
+
+      // Destination Console Consent
+      elb(
+        'walker destination',
+        { push: (event) => console.log('CONSENT', event) },
+        { consent: { functional: true } },
+      );
+
+      // Destination API
+      const api = (
+        await import(
+          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api@1.1.3/dist/index.mjs'
+        )
+      ).default;
+      elb('walker destination', api, {
+        consent: { functional: true },
+        custom: {
+          // Server-side tagmanager
+          url: 'https://server-side-tagging-ybbfvkxhia-ey.a.run.app/quokka',
+          transport: 'beacon',
+        },
+      });
+      elb('walker destination', api, {
+        consent: { functional: true },
+        custom: {
+          // Local stack
+          url: 'http://127.0.0.1:5001/eventpipe-f9979/europe-west1/ingest',
+        },
+      });
+
+      // Destination GA4
+      const ga4 = (
+        await import(
+          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4@1.3.2/dist/index.mjs'
+        )
+      ).default;
+      elb('walker destination', ga4, {
+        consent: { marketing: true, ga4: true },
+        custom: { measurementId: 'G-4WP1Y3GPLW' },
+        loadScript: true,
+      });
+
+      // Consent
+      window.utils = await import(
+        'https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.6.5/dist/utils.js'
+      );
+
+      // Code snippets for consent choice
+      // Simulate the CMPs functionality
+      window.consentAccept = () => {
+        window.utils.storageWrite('consentState', 'accepted');
+        consentGranted();
+        consentRefresh();
+      };
+      window.consentDeny = () => {
+        window.utils.storageWrite('consentState', 'denied');
+        consentDenied();
+        consentRefresh();
+      };
+      window.consentReset = () => {
+        window.utils.storageDelete('consentState');
+        consentRefresh();
+      };
+
+      window.consentGranted = () => {
+        // Set session and device ids
+        elb('walker user', getUser());
+
+        // Allow sending events to functional and marketing destinations
+        elb('walker consent', { functional: true, marketing: true });
+      };
+
+      window.consentDenied = () => {
+        // Only set a random session id, but no persistant device id
+        elb('walker user', { id: 'anonymous' });
+
+        // Allow sending events to functional destinations at most
+        elb('walker consent', { functional: true });
+      };
+
+      function getUser() {
+        const idKey = 'elb_user_id';
+        const sessionKey = 'elb_user_session';
+        const deviceKey = 'elb_user_device';
+        var id = window.utils.storageRead(idKey);
+        var session = window.utils.storageRead(sessionKey);
+        var device = window.utils.storageRead(deviceKey);
+
+        if (!id) {
+          id = window.utils.getId(5);
+          window.utils.storageWrite(idKey, id);
+        }
+
+        if (!session) {
+          session = window.utils.getId(10);
+          window.utils.storageWrite(sessionKey, session);
+        }
+
+        if (!device) {
+          device = window.utils.getId(8);
+          window.utils.storageWrite(deviceKey, device);
+          elb('first visit', { device });
+        }
+
+        return {
+          id,
+          session,
+          device,
+        };
+      }
+
+      function consentRefresh() {
+        var consentStateElem = document.getElementById('consent_state');
+        var consentState =
+          window.utils.storageRead('consentState') || 'unknown';
+
+        if (consentState == 'accepted') consentGranted();
+        if (consentState == 'denied') consentDenied();
+
+        consentStateElem.innerText = consentState;
+      }
+
+      consentRefresh();
+    </script>
+  </head>
+  <body class="relative">
+    <header class="bg-white" data-elb="nav" data-elbaction="click">
+      <nav class="mx-auto max-w-7xl px-6 mb-12 lg:px-8" aria-label="Top">
+        <div
+          class="flex w-full items-center justify-between border-b border-blue-500 py-6 lg:border-none"
+        >
+          <div class="flex items-center">
+            <div class="ml-10 space-x-8">
+              <a
+                data-elb-nav="name:Solutions"
+                data-elbaction="click:asfjjlahfs"
+                href="#"
+                class="text-base font-medium text-gray-400 hover:text-gray-900"
+                >Solutions</a
+              >
+
+              <a
+                data-elb-nav="name:Pricing"
+                href="#"
+                class="text-base font-medium text-gray-400 hover:text-gray-900"
+                >Pricing</a
+              >
+
+              <a
+                data-elb-nav="name:Docs"
+                href="#"
+                class="text-base font-medium text-gray-400 hover:text-gray-900"
+                >Docs</a
+              >
+
+              <a
+                data-elb-nav="name:Company"
+                href="#"
+                class="text-base font-medium text-gray-400 hover:text-gray-900"
+                >Company</a
+              >
+            </div>
+          </div>
+          <div class="ml-10 space-x-4">
+            <a
+              data-elbglobals="language:de"
+              href="#"
+              class="inline-block rounded-md border border-transparent py-2 px-4 text-base font-medium text-white hover:bg-opacity-75"
+              >🇩🇪</a
+            >
+            <a
+              data-elbglobals="cart_value:249"
+              href="#"
+              class="inline-block rounded-md border border-transparent py-2 px-4 text-base font-medium text-white hover:bg-opacity-75"
+              >🛒</a
+            >
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <div id="home" class="bg-white">
+        <div
+          data-elbcontext="test:engagement;category:analytics"
+          class="mx-auto max-w-7xl py-8 sm:px-6 lg:px-8"
+        >
+          <div
+            data-elb="promotion"
+            data-elbaction="visible"
+            data-elb-promotion="category:analytics"
+            class="relative isolate overflow-hidden bg-gray-900 px-6 py-24 text-center shadow-2xl sm:rounded-3xl sm:px-16"
+          >
+            <h2
+              data-elb-promotion="name:#innerText"
+              class="mx-auto max-w-2xl text-4xl font-bold tracking-tight text-white"
+            >
+              Setting up tracking easily
+            </h2>
+            <p class="mx-auto mt-6 max-w-xl text-lg leading-8 text-gray-300">
+              Incididunt sint fugiat pariatur cupidatat consectetur sit cillum
+              anim id veniam aliqua proident excepteur commodo do ea.
+            </p>
+            <div class="mt-10 flex items-center justify-center gap-x-6">
+              <a
+                href="#"
+                data-elbaction="click:start"
+                class="rounded-md bg-white px-3.5 py-1.5 text-base font-semibold leading-7 text-gray-900 shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                >Get started</a
+              >
+              <a
+                href="#"
+                data-elbaction="click:more"
+                class="text-base font-semibold leading-7 text-white"
+                >Learn more <span aria-hidden="true">→</span></a
+              >
+            </div>
+            <svg
+              viewBox="0 0 1024 1024"
+              class="absolute top-1/2 left-1/2 -z-10 h-[64rem] w-[64rem] -translate-x-1/2 [mask-image:radial-gradient(closest-side,white,transparent)]"
+              aria-hidden="true"
+            >
+              <circle
+                cx="512"
+                cy="512"
+                r="512"
+                fill="url(#827591b1-ce8c-4110-b064-7cb85a0b1217)"
+                fill-opacity="0.7"
+              />
+              <defs>
+                <radialGradient id="827591b1-ce8c-4110-b064-7cb85a0b1217">
+                  <stop stop-color="#7775D6" />
+                  <stop offset="1" stop-color="#01b5e2" />
+                </radialGradient>
+              </defs>
+            </svg>
+          </div>
+        </div>
+
+        <div
+          data-elbcontext="module:recommendations"
+          class="mx-auto max-w-2xl py-16 px-4 sm:py-24 sm:px-6 lg:max-w-7xl lg:px-8"
+        >
+          <h2 class="text-xl font-bold text-gray-900">Recommendations</h2>
+
+          <div
+            data-elbcontext="shopping:inspo"
+            class="mt-8 grid grid-cols-1 gap-y-12 sm:grid-cols-2 sm:gap-x-6 lg:grid-cols-4 xl:gap-x-8"
+          >
+            <div
+              data-elb="product"
+              data-elbaction="visible"
+              class="p-2 rounded-md border"
+            >
+              <div data-elbaction="click" class="relative">
+                <div class="relative h-72 w-full overflow-hidden rounded-lg">
+                  <img
+                    src="https://dummyimage.com/300x300/fff/aaa.png?text=ruck+snack"
+                    alt="Front of zip tote bag with white canvas, black canvas straps and handle, and black zipper pulls."
+                    class="h-full w-full object-cover object-center"
+                  />
+                </div>
+                <div class="relative mt-4">
+                  <h3
+                    data-elb-product="name:Everyday Ruck Snack"
+                    class="text-sm font-medium text-gray-900"
+                  >
+                    Everyday Ruck Snack
+                  </h3>
+                </div>
+                <div
+                  class="absolute inset-x-0 top-0 flex h-72 items-end justify-end overflow-hidden rounded-lg p-4"
+                >
+                  <div
+                    aria-hidden="true"
+                    class="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black opacity-50"
+                  ></div>
+                  <p
+                    data-elb-product="price:140"
+                    class="relative text-lg font-semibold text-white"
+                  >
+                    €140
+                  </p>
+                </div>
+              </div>
+              <div class="mt-6">
+                <a
+                  href="#"
+                  data-elbaction="click:add"
+                  class="relative flex items-center justify-center rounded-md border border-transparent bg-gray-100 py-2 px-8 text-sm font-medium text-gray-900 hover:bg-gray-200"
+                  >Add to cart
+                </a>
+              </div>
+            </div>
+            <div
+              data-elb="product"
+              data-elbaction="visible"
+              class="p-2 rounded-md border"
+            >
+              <div data-elbaction="click" class="relative">
+                <div class="relative h-72 w-full overflow-hidden rounded-lg">
+                  <img
+                    src="https://dummyimage.com/300x300/fff/aaa.png?text=party+pants"
+                    alt="Front of zip tote bag with white canvas, black canvas straps and handle, and black zipper pulls."
+                    class="h-full w-full object-cover object-center"
+                  />
+                </div>
+                <div class="relative mt-4">
+                  <h3
+                    data-elb-product="name:Party pants"
+                    class="text-sm font-medium text-gray-900"
+                  >
+                    Party pants
+                  </h3>
+                </div>
+                <div
+                  class="absolute inset-x-0 top-0 flex h-72 items-end justify-end overflow-hidden rounded-lg p-4"
+                >
+                  <div
+                    aria-hidden="true"
+                    class="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black opacity-50"
+                  ></div>
+                  <p
+                    data-elb-product="price:217"
+                    class="relative text-lg font-semibold text-white"
+                  >
+                    €217
+                  </p>
+                </div>
+              </div>
+              <div class="mt-6">
+                <a
+                  href="#"
+                  data-elbaction="click:add"
+                  class="relative flex items-center justify-center rounded-md border border-transparent bg-gray-100 py-2 px-8 text-sm font-medium text-gray-900 hover:bg-gray-200"
+                  >Add to cart
+                </a>
+              </div>
+            </div>
+            <div
+              data-elb="product"
+              data-elbaction="visible"
+              class="p-2 rounded-md border"
+            >
+              <div data-elbaction="click" class="relative">
+                <div class="relative h-72 w-full overflow-hidden rounded-lg">
+                  <img
+                    src="https://dummyimage.com/300x300/fff/aaa.png?text=cool+cap"
+                    alt="Front of zip tote bag with white canvas, black canvas straps and handle, and black zipper pulls."
+                    class="h-full w-full object-cover object-center"
+                  />
+                </div>
+                <div class="relative mt-4">
+                  <h3
+                    data-elb-product="name:Cool Cap"
+                    class="text-sm font-medium text-gray-900"
+                  >
+                    Cool Cap
+                    <span
+                      data-elb-product="flag:schnapper"
+                      class="text-xs inline-block py-1 px-2.5 leading-none text-center whitespace-nowrap align-baseline font-bold bg-gray-800 text-white rounded-full"
+                      >Schnapper</span
+                    >
+                  </h3>
+                </div>
+                <div
+                  class="absolute inset-x-0 top-0 flex h-72 items-end justify-end overflow-hidden rounded-lg p-4"
+                >
+                  <div
+                    aria-hidden="true"
+                    class="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black opacity-50"
+                  ></div>
+                  <p
+                    data-elb-product="price:39"
+                    class="relative text-lg font-semibold text-white"
+                  >
+                    €39
+                  </p>
+                </div>
+              </div>
+              <div class="mt-6">
+                <a
+                  href="#"
+                  data-elbaction="click:add"
+                  class="relative flex items-center justify-center rounded-md border border-transparent bg-gray-100 py-2 px-8 text-sm font-medium text-gray-900 hover:bg-gray-200"
+                  >Add to cart
+                </a>
+              </div>
+            </div>
+            <div
+              data-elb="product"
+              data-elbaction="visible"
+              class="p-2 rounded-md border"
+            >
+              <div data-elbaction="click" class="relative">
+                <div class="relative h-72 w-full overflow-hidden rounded-lg">
+                  <img
+                    src="https://dummyimage.com/300x300/fff/aaa.png?text=hoodie"
+                    alt="Front of zip tote bag with white canvas, black canvas straps and handle, and black zipper pulls."
+                    class="h-full w-full object-cover object-center"
+                  />
+                </div>
+                <div class="relative mt-4">
+                  <h3
+                    data-elb-product="name:Hoodie"
+                    class="text-sm font-medium text-gray-900"
+                  >
+                    Hoodie
+                  </h3>
+                </div>
+                <div
+                  class="absolute inset-x-0 top-0 flex h-72 items-end justify-end overflow-hidden rounded-lg p-4"
+                >
+                  <div
+                    aria-hidden="true"
+                    class="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black opacity-50"
+                  ></div>
+                  <p
+                    data-elb-product="price:59"
+                    class="relative text-lg font-semibold text-white"
+                  >
+                    €59
+                  </p>
+                </div>
+              </div>
+              <div class="mt-6">
+                <a
+                  href="#"
+                  data-elbaction="click:add"
+                  class="relative flex items-center justify-center rounded-md border border-transparent bg-gray-100 py-2 px-8 text-sm font-medium text-gray-900 hover:bg-gray-200"
+                  >Add to cart
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="product_detail"
+        data-elbcontext="shopping:detail"
+        class="virtual_page bg-white"
+      >
+        <div class="bg-white">
+          <div
+            data-elb="product"
+            data-elbaction="visible:view"
+            data-elb-product="id:rcksnck"
+            class="max-w-2xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:max-w-7xl lg:px-8 lg:grid lg:grid-cols-2 lg:gap-x-8"
+          >
+            <div class="lg:max-w-lg lg:self-end">
+              <nav
+                data-elb-product="category:Travel/Bags"
+                aria-label="Breadcrumb"
+              >
+                <ol role="list" class="flex items-center space-x-2">
+                  <li>
+                    <div class="flex items-center text-sm">
+                      <a
+                        href="#"
+                        class="font-medium text-gray-500 hover:text-gray-900"
+                      >
+                        Travel
+                      </a>
+
+                      <svg
+                        viewBox="0 0 20 20"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        aria-hidden="true"
+                        class="ml-2 flex-shrink-0 h-5 w-5 text-gray-300"
+                      >
+                        <path d="M5.555 17.776l8-16 .894.448-8 16-.894-.448z" />
+                      </svg>
+                    </div>
+                  </li>
+
+                  <li>
+                    <div class="flex items-center text-sm">
+                      <a
+                        href="#"
+                        class="font-medium text-gray-500 hover:text-gray-900"
+                      >
+                        Bags
+                      </a>
+                    </div>
+                  </li>
+                </ol>
+              </nav>
+
+              <div class="mt-4">
+                <h1
+                  data-elb-product="name:Everyday Ruck Snack"
+                  class="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl"
+                >
+                  Everyday Ruck Snack
+                </h1>
+              </div>
+
+              <section aria-labelledby="information-heading" class="mt-4">
+                <h2 id="information-heading" class="sr-only">
+                  Product information
+                </h2>
+
+                <div class="flex items-center">
+                  <p
+                    data-elb-product="price:220;currency:EUR"
+                    class="text-lg text-gray-900 sm:text-xl"
+                  >
+                    &euro;220
+                  </p>
+
+                  <div class="ml-4 pl-4 border-l border-gray-300">
+                    <h2 class="sr-only">Reviews</h2>
+                    <div class="flex items-center">
+                      <div>
+                        <div class="flex items-center">
+                          <svg
+                            class="text-yellow-400 h-5 w-5 flex-shrink-0"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                            />
+                          </svg>
+
+                          <!-- Heroicon name: solid/star -->
+                          <svg
+                            class="text-yellow-400 h-5 w-5 flex-shrink-0"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                            />
+                          </svg>
+
+                          <!-- Heroicon name: solid/star -->
+                          <svg
+                            class="text-yellow-400 h-5 w-5 flex-shrink-0"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                            />
+                          </svg>
+
+                          <!-- Heroicon name: solid/star -->
+                          <svg
+                            class="text-yellow-400 h-5 w-5 flex-shrink-0"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                            />
+                          </svg>
+
+                          <!-- Heroicon name: solid/star -->
+                          <svg
+                            class="text-gray-300 h-5 w-5 flex-shrink-0"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                            />
+                          </svg>
+                        </div>
+                        <p data-elb-product="rating:4" class="sr-only">
+                          4 out of 5 stars
+                        </p>
+                      </div>
+                      <p
+                        data-elb-product="reviews:1624"
+                        class="ml-2 text-sm text-gray-500"
+                      >
+                        1624 reviews
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-4 space-y-6">
+                  <p class="text-base text-gray-500">
+                    Don&#039;t compromise on snack-carrying capacity with this
+                    lightweight and spacious bag. The drawstring top keeps all
+                    your favorite chips, crisps, fries, biscuits, crackers, and
+                    cookies secure.
+                  </p>
+                </div>
+
+                <div class="mt-6 flex items-center">
+                  <!-- Heroicon name: solid/check -->
+                  <svg
+                    class="flex-shrink-0 w-5 h-5 text-green-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                  <p
+                    data-elb-product="availability:in_stock"
+                    class="ml-2 text-sm text-gray-500"
+                  >
+                    In stock and ready to ship
+                  </p>
+                </div>
+              </section>
+            </div>
+
+            <!-- Product image -->
+            <div
+              class="mt-10 lg:mt-0 lg:col-start-2 lg:row-span-2 lg:self-center"
+            >
+              <div class="rounded-lg overflow-hidden">
+                <img
+                  src="https://dummyimage.com/640x360/fff/aaa.png?text=product+image"
+                  alt="Model wearing light green backpack with black canvas straps and front zipper pouch."
+                  class="w-full h-full object-center object-cover"
+                />
+              </div>
+            </div>
+
+            <div
+              class="mt-10 lg:max-w-lg lg:col-start-1 lg:row-start-2 lg:self-start"
+            >
+              <section aria-labelledby="options-heading">
+                <div class="mt-6 text-center">
+                  <div href="#" class="group inline-flex text-base font-medium">
+                    <svg
+                      class="flex-shrink-0 mr-2 h-6 w-6 text-gray-400 group-hover:text-gray-500"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
+                    </svg>
+                    <span class="text-gray-500 hover:text-gray-700"
+                      >Lifetime Guarantee</span
+                    >
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="checkout_view"
+        data-elbcontext="shopping:checkout"
+        class="virtual_page bg-white"
+      >
+        <div class="bg-white">
+          <div
+            class="max-w-2xl mx-auto pt-16 pb-24 px-4 sm:px-6 lg:max-w-7xl lg:px-8"
+          >
+            <h2 class="sr-only">Checkout</h2>
+
+            <form
+              data-elb="checkout"
+              data-elbaction="visible:view"
+              class="lg:grid lg:grid-cols-2 lg:gap-x-12 xl:gap-x-16"
+            >
+              <div>
+                <div>
+                  <h2 class="text-lg font-medium text-gray-900">
+                    Contact information
+                  </h2>
+
+                  <div class="mt-4">
+                    <label
+                      for="email-address"
+                      class="block text-sm font-medium text-gray-700"
+                      >Email address</label
+                    >
+                    <div class="mt-1">
+                      <input
+                        type="email"
+                        id="email-address"
+                        name="email-address"
+                        autocomplete="email"
+                        class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-10 border-t border-gray-200 pt-10">
+                  <h2 class="text-lg font-medium text-gray-900">
+                    Shipping information
+                  </h2>
+
+                  <div
+                    class="mt-4 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4"
+                  >
+                    <div>
+                      <label
+                        for="first-name"
+                        class="block text-sm font-medium text-gray-700"
+                        >First name</label
+                      >
+                      <div class="mt-1">
+                        <input
+                          type="text"
+                          id="first-name"
+                          name="first-name"
+                          autocomplete="given-name"
+                          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label
+                        for="last-name"
+                        class="block text-sm font-medium text-gray-700"
+                        >Last name</label
+                      >
+                      <div class="mt-1">
+                        <input
+                          type="text"
+                          id="last-name"
+                          name="last-name"
+                          autocomplete="family-name"
+                          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                      <label
+                        for="company"
+                        class="block text-sm font-medium text-gray-700"
+                        >Company</label
+                      >
+                      <div class="mt-1">
+                        <input
+                          type="text"
+                          name="company"
+                          id="company"
+                          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                      <label
+                        for="address"
+                        class="block text-sm font-medium text-gray-700"
+                        >Address</label
+                      >
+                      <div class="mt-1">
+                        <input
+                          type="text"
+                          name="address"
+                          id="address"
+                          autocomplete="street-address"
+                          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                      <label
+                        for="apartment"
+                        class="block text-sm font-medium text-gray-700"
+                        >Apartment, suite, etc.</label
+                      >
+                      <div class="mt-1">
+                        <input
+                          type="text"
+                          name="apartment"
+                          id="apartment"
+                          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label
+                        for="city"
+                        class="block text-sm font-medium text-gray-700"
+                        >City</label
+                      >
+                      <div class="mt-1">
+                        <input
+                          type="text"
+                          name="city"
+                          id="city"
+                          autocomplete="address-level2"
+                          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label
+                        for="country"
+                        class="block text-sm font-medium text-gray-700"
+                        >Country</label
+                      >
+                      <div class="mt-1">
+                        <select
+                          id="country"
+                          name="country"
+                          autocomplete="country-name"
+                          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                        >
+                          <option>United States</option>
+                          <option>Canada</option>
+                          <option>Mexico</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label
+                        for="region"
+                        class="block text-sm font-medium text-gray-700"
+                        >State / Province</label
+                      >
+                      <div class="mt-1">
+                        <input
+                          type="text"
+                          name="region"
+                          id="region"
+                          autocomplete="address-level1"
+                          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label
+                        for="postal-code"
+                        class="block text-sm font-medium text-gray-700"
+                        >Postal code</label
+                      >
+                      <div class="mt-1">
+                        <input
+                          type="text"
+                          name="postal-code"
+                          id="postal-code"
+                          autocomplete="postal-code"
+                          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                      <label
+                        for="phone"
+                        class="block text-sm font-medium text-gray-700"
+                        >Phone</label
+                      >
+                      <div class="mt-1">
+                        <input
+                          type="text"
+                          name="phone"
+                          id="phone"
+                          autocomplete="tel"
+                          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Order summary -->
+              <div class="mt-10 lg:mt-0">
+                <h2 class="text-lg font-medium text-gray-900">Order summary</h2>
+
+                <div
+                  class="mt-4 bg-white border border-gray-200 rounded-lg shadow-sm"
+                >
+                  <h3 class="sr-only">Items in your cart</h3>
+                  <ul role="list" class="divide-y divide-gray-200">
+                    <li data-elb="product" class="flex py-6 px-4 sm:px-6">
+                      <div class="flex-shrink-0">
+                        <img
+                          src="https://dummyimage.com/640x360/fff/aaa.png?text=product+image"
+                          alt="Front of men&#039;s Everyday Ruck Snack in black."
+                          class="w-20 rounded-md"
+                        />
+                      </div>
+
+                      <div class="ml-6 flex-1 flex flex-col">
+                        <div class="flex">
+                          <div class="min-w-0 flex-1">
+                            <h4 class="text-sm">
+                              <a
+                                data-elb-product="name:Everyday Ruck Snack"
+                                href="#"
+                                class="font-medium text-gray-700 hover:text-gray-800"
+                              >
+                                Everyday Ruck Snack
+                              </a>
+                            </h4>
+                            <p
+                              data-elb-product="color:black"
+                              class="mt-1 text-sm text-gray-500"
+                            >
+                              Black
+                            </p>
+                            <p
+                              data-elb-product="size:large"
+                              class="mt-1 text-sm text-gray-500"
+                            >
+                              Large
+                            </p>
+                          </div>
+
+                          <div class="ml-4 flex-shrink-0 flow-root">
+                            <button
+                              type="button"
+                              class="-m-2.5 bg-white p-2.5 flex items-center justify-center text-gray-400 hover:text-gray-500"
+                            >
+                              <span class="sr-only">Remove</span>
+                              <!-- Heroicon name: solid/trash -->
+                              <svg
+                                class="h-5 w-5"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  fill-rule="evenodd"
+                                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                  clip-rule="evenodd"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div class="flex-1 pt-2 flex items-end justify-between">
+                          <p
+                            data-elb-product="price:220;currency:EUR"
+                            class="mt-1 text-sm font-medium text-gray-900"
+                          >
+                            &euro;220.00
+                          </p>
+
+                          <div class="ml-4">
+                            <label for="quantity" class="sr-only"
+                              >Quantity</label
+                            >
+                            <select
+                              id="quantity"
+                              name="quantity"
+                              data-elb-product="quantity:#value"
+                              class="rounded-md border border-gray-300 text-base font-medium text-gray-700 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                            >
+                              <option value="1">1</option>
+                              <option value="2">2</option>
+                              <option value="3">3</option>
+                              <option value="4">4</option>
+                              <option value="5">5</option>
+                              <option value="6">6</option>
+                              <option value="7">7</option>
+                              <option value="8">8</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                    <li data-elb="product" class="flex py-6 px-4 sm:px-6">
+                      <div class="flex-shrink-0">
+                        <img
+                          src="https://dummyimage.com/640x360/fff/aaa.png?text=product+image"
+                          alt="Front of men&#039;s Cool Cap in green."
+                          class="w-20 rounded-md"
+                        />
+                      </div>
+
+                      <div class="ml-6 flex-1 flex flex-col">
+                        <div class="flex">
+                          <div class="min-w-0 flex-1">
+                            <h4 class="text-sm">
+                              <a
+                                data-elb-product="name:Cool Cap"
+                                href="#"
+                                class="font-medium text-gray-700 hover:text-gray-800"
+                              >
+                                Cool Cap
+                              </a>
+                            </h4>
+                            <p
+                              data-elb-product="color:green"
+                              class="mt-1 text-sm text-gray-500"
+                            >
+                              Green
+                            </p>
+                            <p
+                              data-elb-product="size:onesize"
+                              class="mt-1 text-sm text-gray-500"
+                            >
+                              One-Size
+                            </p>
+                          </div>
+
+                          <div class="ml-4 flex-shrink-0 flow-root">
+                            <button
+                              data-elbaction="click:remove"
+                              type="button"
+                              class="-m-2.5 bg-white p-2.5 flex items-center justify-center text-gray-400 hover:text-gray-500"
+                            >
+                              <span class="sr-only">Remove</span>
+                              <!-- Heroicon name: solid/trash -->
+                              <svg
+                                class="h-5 w-5"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  fill-rule="evenodd"
+                                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                  clip-rule="evenodd"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div class="flex-1 pt-2 flex items-end justify-between">
+                          <p
+                            data-elb-product="price:39;currency:EUR"
+                            class="mt-1 text-sm font-medium text-gray-900"
+                          >
+                            &euro;39.00
+                          </p>
+
+                          <div class="ml-4">
+                            <label for="quantity" class="sr-only"
+                              >Quantity</label
+                            >
+                            <select
+                              id="quantity"
+                              name="quantity"
+                              data-elb-product="quantity:#value"
+                              class="rounded-md border border-gray-300 text-base font-medium text-gray-700 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-elbwalker-500 focus:border-elbwalker-500 sm:text-sm"
+                            >
+                              <option value="1">1</option>
+                              <option value="2">2</option>
+                              <option value="3">3</option>
+                              <option value="4">4</option>
+                              <option value="5">5</option>
+                              <option value="6">6</option>
+                              <option value="7">7</option>
+                              <option value="8">8</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+
+                    <!-- More products... -->
+                  </ul>
+                  <dl
+                    class="border-t border-gray-200 py-6 px-4 space-y-6 sm:px-6"
+                  >
+                    <div class="flex items-center justify-between">
+                      <dt class="text-sm">Subtotal</dt>
+                      <dd
+                        data-elb-checkout="total:259;currency:EUR"
+                        class="text-sm font-medium text-gray-900"
+                      >
+                        &euro;259.00
+                      </dd>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <dt class="text-sm">Shipping</dt>
+                      <dd
+                        data-elb-checkout="shipping:5;currency:EUR"
+                        class="text-sm font-medium text-gray-900"
+                      >
+                        &euro;5.00
+                      </dd>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <dt class="text-sm">Taxes</dt>
+                      <dd
+                        data-elb-checkout="taxes:5.52;currency:EUR"
+                        class="text-sm font-medium text-gray-900"
+                      >
+                        &euro;5.52
+                      </dd>
+                    </div>
+                    <div
+                      class="flex items-center justify-between border-t border-gray-200 pt-6"
+                    >
+                      <dt class="text-base font-medium">Total</dt>
+                      <dd
+                        data-elb-checkout="total:269.52;currency:EUR"
+                        class="text-base font-medium text-gray-900"
+                      >
+                        &euro;269.52
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div class="border-t border-gray-200 py-6 px-4 sm:px-6">
+                    <button
+                      type="button"
+                      data-elbaction="click:confirm"
+                      class="w-full bg-elbwalker border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 focus:ring-elbwalker-500"
+                    >
+                      Confirm order
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div id="order_complete" class="virtual_page bg-white">
+        <div
+          class="max-w-2xl mx-auto py-16 px-4 sm:px-6 sm:py-24 lg:max-w-7xl lg:px-8 lg:py-32 lg:grid lg:grid-cols-2 lg:gap-x-8 xl:gap-x-24"
+        >
+          <div
+            class="lg:col-start-2"
+            data-elb="order"
+            data-elbaction="visible:complete"
+            data-elbcontext="shopping:complete"
+            data-elb-order="id:0rd3r1d"
+            class="max-w-2xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:max-w-7xl lg:px-8 lg:grid lg:grid-cols-2 lg:gap-x-8"
+          >
+            <h1 class="text-sm font-medium text-elbwalker-600">
+              Payment successful
+            </h1>
+            <p
+              class="mt-2 text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl"
+            >
+              Thanks for ordering
+            </p>
+            <p class="mt-2 text-base text-gray-500">
+              We appreciate your order, we're currently processing it. So hang
+              tight and we'll send you confirmation very soon!
+            </p>
+
+            <dl class="mt-16 text-sm font-medium">
+              <dt class="text-gray-900">Tracking number</dt>
+              <dd class="mt-2 text-elbwalker-600">51547878755545848512</dd>
+            </dl>
+
+            <ul
+              role="list"
+              class="mt-6 text-sm font-medium text-gray-500 border-t border-gray-200 divide-y divide-gray-200"
+            >
+              <li
+                data-elb="product"
+                data-elb-product="name:Everyday Ruck Snack"
+                class="flex py-6 space-x-6"
+              >
+                <img
+                  src="https://dummyimage.com/640x360/fff/aaa.png?text=product+image"
+                  alt="Model wearing men&#039;s charcoal basic tee in large."
+                  class="flex-none w-24 h-24 bg-gray-100 rounded-md object-center object-cover"
+                />
+                <div class="flex-auto space-y-1">
+                  <h3 class="text-gray-900">
+                    <a href="#">Everyday Ruck Snack</a>
+                  </h3>
+                  <p data-elb-product="color: black">Black</p>
+                  <p data-elb-product="size: l">L</p>
+                </div>
+                <p
+                  data-elb-product="prize: 220;currency:EUR"
+                  class="flex-none font-medium text-gray-900"
+                >
+                  &euro;220.00
+                </p>
+              </li>
+              <li
+                data-elb="product"
+                data-elb-product="name:Cool Cap"
+                class="flex py-6 space-x-6"
+              >
+                <img
+                  src="https://dummyimage.com/640x360/fff/aaa.png?text=product+image"
+                  alt="Model wearing men&#039;s charcoal basic tee in large."
+                  class="flex-none w-24 h-24 bg-gray-100 rounded-md object-center object-cover"
+                />
+                <div class="flex-auto space-y-1">
+                  <h3 class="text-gray-900">
+                    <a href="#">Cool Cap</a>
+                  </h3>
+                  <p data-elb-product="color: green">Green</p>
+                  <p data-elb-product="size: one size">One Size</p>
+                </div>
+                <p
+                  data-elb-product="prize: 39;currency:EUR"
+                  class="flex-none font-medium text-gray-900"
+                >
+                  &euro;39.00
+                </p>
+              </li>
+
+              <!-- More products... -->
+            </ul>
+
+            <dl
+              class="text-sm font-medium text-gray-500 space-y-6 border-t border-gray-200 pt-6"
+            >
+              <div class="flex justify-between">
+                <dt>Subtotal</dt>
+                <dd
+                  data-elb-order="subtotal: 72;currency:EUR"
+                  class="text-gray-900"
+                >
+                  &euro;72.00
+                </dd>
+              </div>
+
+              <div class="flex justify-between">
+                <dt>Shipping</dt>
+                <dd data-elb-order="shipping: 8" class="text-gray-900">
+                  &euro;8.00
+                </dd>
+              </div>
+
+              <div class="flex justify-between">
+                <dt>Taxes</dt>
+                <dd data-elb-order="taxes: 6.40" class="text-gray-900">
+                  &euro;6.40
+                </dd>
+              </div>
+
+              <div
+                class="flex items-center justify-between border-t border-gray-200 text-gray-900 pt-6"
+              >
+                <dt class="text-base">Total</dt>
+                <dd data-elb-order="total: 86.40" class="text-base">
+                  &euro;86.40
+                </dd>
+              </div>
+            </dl>
+
+            <dl class="mt-16 grid grid-cols-2 gap-x-4 text-sm text-gray-600">
+              <div>
+                <dt class="font-medium text-gray-900">Shipping Address</dt>
+                <dd class="mt-2">
+                  <address class="not-italic">
+                    <span class="block">elbwalker GmbH</span>
+                    <span class="block">Bernstorffstraße 118</span>
+                    <span
+                      data-elb-order="shipping-city: 22767 Hamburg"
+                      class="block"
+                      >22767 Hamburg</span
+                    >
+                    <span
+                      data-elb-order="shipping-country: Germany"
+                      class="block"
+                      >Germany</span
+                    >
+                  </address>
+                </dd>
+              </div>
+              <div>
+                <dt class="font-medium text-gray-900">Payment Information</dt>
+                <dd class="mt-2 space-y-2 sm:flex sm:space-y-0 sm:space-x-4">
+                  <div class="flex-none">
+                    <svg
+                      aria-hidden="true"
+                      width="36"
+                      height="24"
+                      viewBox="0 0 36 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-6 w-auto"
+                    >
+                      <rect width="36" height="24" rx="4" fill="#224DBA" />
+                      <path
+                        d="M10.925 15.673H8.874l-1.538-6c-.073-.276-.228-.52-.456-.635A6.575 6.575 0 005 8.403v-.231h3.304c.456 0 .798.347.855.75l.798 4.328 2.05-5.078h1.994l-3.076 7.5zm4.216 0h-1.937L14.8 8.172h1.937l-1.595 7.5zm4.101-5.422c.057-.404.399-.635.798-.635a3.54 3.54 0 011.88.346l.342-1.615A4.808 4.808 0 0020.496 8c-1.88 0-3.248 1.039-3.248 2.481 0 1.097.969 1.673 1.653 2.02.74.346 1.025.577.968.923 0 .519-.57.75-1.139.75a4.795 4.795 0 01-1.994-.462l-.342 1.616a5.48 5.48 0 002.108.404c2.108.057 3.418-.981 3.418-2.539 0-1.962-2.678-2.077-2.678-2.942zm9.457 5.422L27.16 8.172h-1.652a.858.858 0 00-.798.577l-2.848 6.924h1.994l.398-1.096h2.45l.228 1.096h1.766zm-2.905-5.482l.57 2.827h-1.596l1.026-2.827z"
+                        fill="#fff"
+                      />
+                    </svg>
+                    <p class="sr-only">Visa</p>
+                  </div>
+                  <div class="flex-auto">
+                    <p class="text-gray-900">Ending with 4242</p>
+                    <p>Expires 12 / 21</p>
+                  </div>
+                </dd>
+              </div>
+            </dl>
+
+            <div class="mt-16 border-t border-gray-200 py-6 text-right">
+              <a
+                href="#"
+                class="text-sm font-medium text-elbwalker-600 hover:text-elbwalker-500"
+                >Continue Shopping<span aria-hidden="true"> &rarr;</span></a
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer data-elbaction="visible:read" class="bg-white">
+      <div
+        class="mx-auto max-w-7xl overflow-hidden py-20 px-6 sm:py-24 lg:px-8"
+      >
+        <nav
+          class="-mb-6 columns-2 sm:flex sm:justify-center sm:space-x-12"
+          aria-label="Footer"
+        >
+          <div class="pb-6">
+            <a
+              href="#"
+              class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+              >About</a
+            >
+          </div>
+
+          <div class="pb-6">
+            <a
+              href="#"
+              class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+              >Blog</a
+            >
+          </div>
+
+          <div class="pb-6">
+            <a
+              href="#"
+              class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+              >Jobs</a
+            >
+          </div>
+
+          <div class="pb-6">
+            <a
+              href="#"
+              class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+              >Press</a
+            >
+          </div>
+
+          <div class="pb-6">
+            <a
+              href="#"
+              class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+              >Accessibility</a
+            >
+          </div>
+
+          <div class="pb-6">
+            <a
+              href="#"
+              class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+              >Partners</a
+            >
+          </div>
+        </nav>
+        <div class="mt-10 flex justify-center space-x-10">
+          <a href="#" class="text-gray-400 hover:text-gray-500">
+            <span class="sr-only">Facebook</span>
+            <svg
+              class="h-6 w-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </a>
+
+          <a href="#" class="text-gray-400 hover:text-gray-500">
+            <span class="sr-only">Instagram</span>
+            <svg
+              class="h-6 w-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </a>
+
+          <a href="#" class="text-gray-400 hover:text-gray-500">
+            <span class="sr-only">Twitter</span>
+            <svg
+              class="h-6 w-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"
+              />
+            </svg>
+          </a>
+
+          <a href="#" class="text-gray-400 hover:text-gray-500">
+            <span class="sr-only">GitHub</span>
+            <svg
+              class="h-6 w-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </a>
+
+          <a href="#" class="text-gray-400 hover:text-gray-500">
+            <span class="sr-only">YouTube</span>
+            <svg
+              class="h-6 w-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M19.812 5.418c.861.23 1.538.907 1.768 1.768C21.998 8.746 22 12 22 12s0 3.255-.418 4.814a2.504 2.504 0 0 1-1.768 1.768c-1.56.419-7.814.419-7.814.419s-6.255 0-7.814-.419a2.505 2.505 0 0 1-1.768-1.768C2 15.255 2 12 2 12s0-3.255.417-4.814a2.507 2.507 0 0 1 1.768-1.768C5.744 5 11.998 5 11.998 5s6.255 0 7.814.418ZM15.194 12 10 15V9l5.194 3Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </a>
+        </div>
+        <p class="mt-10 text-center text-xs leading-5 text-gray-500">
+          &copy; 2023 Your Company, Inc. All rights reserved.
+        </p>
+      </div>
+    </footer>
+
+    <div
+      class="pointer-events-none fixed inset-x-0 bottom-0 sm:flex sm:justify-center sm:px-6 sm:pb-5 lg:px-8"
+    >
+      <div
+        class="pointer-events-auto flex items-center justify-between gap-x-6 bg-gray-900 py-2.5 px-6 sm:rounded-xl sm:py-3 sm:pr-3.5 sm:pl-4"
+      >
+        <p class="text-sm leading-6 text-white">
+          <strong class="font-semibold">Consent?</strong>
+          Status: <span id="consent_state">unknown</span>
+        </p>
+        <p class="text-sm leading-6 text-white">
+          <a
+            class="rounded inline-flex items-center px-4 py-2 leading-none text-white bg-green-500 hover:bg-green-700"
+            onclick="consentAccept()"
+          >
+            Accept
+          </a>
+          <a
+            class="rounded inline-flex items-center px-4 py-2 my-2 leading-none text-white bg-gray-600 hover:bg-gray-800"
+            onclick="consentReset()"
+          >
+            Reset
+          </a>
+          <a
+            class="rounded inline-flex items-center px-4 py-2 my-2 leading-none text-white bg-red-600 hover:bg-red-800"
+            onclick="consentDeny()"
+          >
+            Decline
+          </a>
+        </p>
+        <p class="text-sm leading-6 text-white">
+          <script>
+            function toggleElbStyle(name) {
+              document.body.classList.toggle('elb-' + name);
+            }
+            function toggleElbProperties() {
+              document.querySelectorAll('[data-elb]').forEach((entity) => {
+                entity
+                  .querySelectorAll(
+                    `[data-elb-${entity.getAttribute('data-elb')}]`,
+                  )
+                  .forEach((prop) => {
+                    prop.classList.toggle('data-elbproperty');
+                  });
+              });
+            }
+            function toggleTest() {
+              document.querySelectorAll('main').forEach((elem) => {
+                elem.classList.toggle('test');
+
+                if (elem.classList.contains('test')) {
+                  elem.setAttribute('data-elbcontext', 'font:beautiful');
+                } else {
+                  elem.removeAttribute('data-elbcontext');
+                }
+              });
+            }
+          </script>
+          <span class="isolate inline-flex rounded-md shadow-sm">
+            <button
+              type="button"
+              onclick="toggleElbStyle('globals')"
+              class="elb-globals relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Globals
+            </button>
+            <button
+              type="button"
+              onclick="toggleElbStyle('context')"
+              class="elb-context relative -ml-px inline-flex items-center border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Context
+            </button>
+            <button
+              type="button"
+              onclick="toggleElbStyle('entity')"
+              class="elb-entity relative -ml-px inline-flex items-center border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Entity
+            </button>
+            <button
+              type="button"
+              onclick="toggleElbProperties()"
+              class="elb-property relative -ml-px inline-flex items-center border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Property
+            </button>
+            <button
+              type="button"
+              onclick="toggleElbStyle('action')"
+              class="elb-action relative -ml-px inline-flex items-center rounded-r-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Action
+            </button>
+          </span>
+          <span class="isolate inline-flex rounded-md shadow-sm">
+            <button
+              type="button"
+              onclick="toggleTest()"
+              class="elb-action relative -ml-px inline-flex items-center rounded-l-md rounded-r-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Test
+            </button>
+          </span>
+        </p>
+      </div>
+    </div>
+
+    <script>
+      // For beauty purposes only
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              blue: {
+                DEFAULT: '#01B5E2',
+                500: '#01B5E2',
+                600: '#01B5E2',
+                700: '#015372',
+              },
+            },
+          },
+        },
+      };
+    </script>
+  </body>
+</html>
