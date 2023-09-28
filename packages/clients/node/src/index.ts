@@ -331,9 +331,10 @@ async function pushToDestinations(
         // Update previous values with the current state
         let events: NodeDestination.PushEvents = destination.queue.map(
           (event) => {
-            event.consent = config.consent;
-            event.globals = config.globals;
-            event.user = config.user;
+            // @TODO check if this is correct, as a client might keeps running as a thread
+            event.consent = assign(config.consent, event.consent);
+            event.globals = assign(config.globals, event.globals);
+            event.user = assign(config.user, event.user);
             return { event }; // @TODO mapping
           },
         );
