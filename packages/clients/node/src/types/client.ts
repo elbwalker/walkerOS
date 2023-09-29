@@ -1,4 +1,4 @@
-import type { Elbwalker } from '@elbwalker/types';
+import type { Elbwalker, Schema } from '@elbwalker/types';
 import type * as NodeDestination from './destination';
 
 export interface Function {
@@ -56,6 +56,7 @@ export interface Config extends Elbwalker.Config {
   destinations: Destinations;
   globalsStatic: Elbwalker.Properties;
   queue: Elbwalker.Events;
+  contracts?: Schema.Contracts;
   source: Elbwalker.Source;
 }
 

@@ -584,9 +584,6 @@ export function validateEvent(
         let value = obj[key];
 
         if (propertySchema) {
-          if (propertySchema.required && value === undefined)
-            throwError('Missing required property');
-
           // Update the value
           value = tryCatch(validateProperty, (err) => {
             throwError(String(err));
@@ -614,7 +611,7 @@ function validateProperty(
   key: string,
   value: unknown,
   schema: Schema.Property,
-): unknown | never {
+): Elbwalker.Property | never {
   // @TODO unknown to Elbwalker.Property
 
   // Note regarding potentially malicious values
@@ -626,6 +623,9 @@ function validateProperty(
     value = tryCatch(schema.validate, (err) => {
       throwError(String(err));
     })(value, key, obj);
+
+  if (schema.required && value === undefined)
+    throwError('Missing required property');
 
   // Strings
   if (isSameType(value, '' as string)) {
@@ -646,9 +646,33 @@ function validateProperty(
     }
   }
 
+  // @TODO boolean
+
   // Objects
   else if (isSameType(value, {} as Elbwalker.AnyObject)) {
-    // Recursive validation for nested objects
+    if (schema.schema) {
+      const nestedSchema = schema.schema;
+
+      // @TODO handle return to update value as non unknown
+      Object.keys(nestedSchema).reduce((acc, key) => {
+        const propertySchema = nestedSchema[key];
+        let value = acc[key];
+
+        if (propertySchema) {
+          // Type check
+          if (propertySchema.type && typeof value !== propertySchema.type)
+            throwError("Type doesn't match");
+
+          // Update the value
+          value = tryCatch(validateProperty, (err) => {
+            throwError(String(err));
+          })(acc, key, value, propertySchema);
+        }
+
+        return value as Elbwalker.AnyObject;
+      }, value);
+    }
+
     for (const [objKey, objValue] of Object.entries(value)) {
       // Check for allowed keys if applicable
       if (schema.allowedKeys && !schema.allowedKeys.includes(objKey)) {
@@ -659,5 +683,5 @@ function validateProperty(
     }
   }
 
-  return value;
+  return value as Elbwalker.Property;
 }

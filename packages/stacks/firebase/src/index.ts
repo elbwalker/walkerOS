@@ -48,7 +48,7 @@ const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
     // @TODO move validation to the client
     const event = tryCatch(validateEvent, (err) => {
       console.log({ err, body: req.body });
-    })(req.body);
+    })(req.body, instance.config.contracts);
 
     if (!event) {
       res.status(418).send({ error: 'Invalid event' });

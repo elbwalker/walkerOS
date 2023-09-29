@@ -12,8 +12,8 @@ export interface Function {
 
 export type PartialConfig = Partial<Config>;
 export interface Config {
-  firebase: AppOptions;
   client: NodeClient.PartialConfig;
+  firebase: AppOptions;
 }
 
 export interface Push {

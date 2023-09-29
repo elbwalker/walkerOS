@@ -600,5 +600,41 @@ describe('Utils', () => {
         data: { id: '123', price: 9.99 },
       }),
     ).toMatchObject({ event: 'product add', data: { id: '123', price: 9.99 } });
+
+    const typeContract = {
+      e: {
+        a: {
+          globals: {
+            schema: {
+              n: { type: 'number' },
+            },
+          },
+        },
+      },
+    };
+
+    expect(() =>
+      validateEvent(
+        {
+          event: 'e a',
+          globals: {
+            n: 'no number',
+          },
+        },
+        [typeContract],
+      ),
+    ).toThrow("Type doesn't match");
+    expect(
+      validateEvent(
+        {
+          event: 'e a',
+          globals: {
+            n: 1,
+            k: 'v',
+          },
+        },
+        [typeContract],
+      ),
+    ).toMatchObject({ event: 'e a' });
   });
 });
