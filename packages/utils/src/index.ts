@@ -501,7 +501,7 @@ export function useHooks<P extends any[], R, Names = Hooks.Names>(
 
 export function validateEvent(
   obj: unknown,
-  customSchemas: Array<Schema.Events> = [],
+  customContracts: Schema.Contracts = [],
 ): Elbwalker.Event {
   if (!isSameType(obj, {} as Elbwalker.AnyObject)) throwError('Invalid object');
 
@@ -522,7 +522,7 @@ export function validateEvent(
     throwError('Missing or invalid event, entity, or action');
   }
 
-  const basicContract: Schema.Events = {
+  const basicContract: Schema.Contract = {
     '*': {
       '*': {
         event: { maxLength: 255 }, // @TODO as general rule?
@@ -560,7 +560,7 @@ export function validateEvent(
 
   // Collect all relevant schemas for the event
   const schemas = [basicContract]
-    .concat(customSchemas)
+    .concat(customContracts)
     .reduce((acc, contract) => {
       return ['*', entity].reduce((entityAcc, e) => {
         return ['*', action].reduce((actionAcc, a) => {
@@ -570,16 +570,34 @@ export function validateEvent(
       }, acc);
     }, [] as Schema.Properties[]);
 
-  // Validate only ingested properties
-  const result = Object.entries(obj).reduce(
-    (acc, [key, value]) => {
-      const newValue = tryCatch(validateProperty, (err) => {
-        throwError(String(err));
-      })(acc, key, value, schemas);
+  const result = schemas.reduce(
+    (acc, schema) => {
+      // Get all required properties
+      const requiredKeys = Object.keys(schema).filter((key) => {
+        const property = schema[key];
+        return property?.required === true;
+      });
 
-      if (isSameType(newValue, acc[key])) acc[key] = newValue;
+      // Validate both, ingested and required properties but only once
+      return [...Object.keys(obj), ...requiredKeys].reduce((acc, key) => {
+        const propertySchema = schema[key];
+        let value = obj[key];
 
-      return acc;
+        if (propertySchema) {
+          if (propertySchema.required && value === undefined)
+            throwError('Missing required property');
+
+          // Update the value
+          value = tryCatch(validateProperty, (err) => {
+            throwError(String(err));
+          })(acc, key, value, propertySchema);
+        }
+
+        // Same type check
+        if (isSameType(value, acc[key])) acc[key] = value;
+
+        return acc;
+      }, acc);
     },
     // Not that beautiful but it works, narrowing down the type is tricky here
     // it's important that basicEvent is defined as an Elbwalker.Event
@@ -595,7 +613,7 @@ function validateProperty(
   obj: Elbwalker.AnyObject,
   key: string,
   value: unknown,
-  schemas: Schema.Properties[],
+  schema: Schema.Property,
 ): unknown | never {
   // @TODO unknown to Elbwalker.Property
 
@@ -603,45 +621,40 @@ function validateProperty(
   // Initial collection doesn't manipulate data
   // Prefer context-specific checks in the destinations
 
-  for (const eventSchema of schemas) {
-    const schema = eventSchema[key];
-    if (!schema) continue;
+  // Custom validate function can change the value
+  if (schema.validate)
+    value = tryCatch(schema.validate, (err) => {
+      throwError(String(err));
+    })(value, key, obj);
 
-    // Custom validate function can change the value
-    if (schema.validate)
-      value = tryCatch(schema.validate, (err) => {
-        throwError(String(err));
-      })(value, key, obj);
-
-    // Strings
-    if (isSameType(value, '' as string)) {
-      if (schema.maxLength && value.length > schema.maxLength) {
-        if (schema.strict) throwError('Value exceeds maxLength');
-        value = value.substring(0, schema.maxLength);
-      }
+  // Strings
+  if (isSameType(value, '' as string)) {
+    if (schema.maxLength && value.length > schema.maxLength) {
+      if (schema.strict) throwError('Value exceeds maxLength');
+      value = value.substring(0, schema.maxLength);
     }
+  }
 
-    // Numbers
-    else if (isSameType(value, 1 as number)) {
-      if (isSameType(schema.min, 1) && value < schema.min) {
-        if (schema.strict) throwError('Value below min');
-        value = schema.min;
-      } else if (isSameType(schema.max, 1) && value > schema.max) {
-        if (schema.strict) throwError('Value exceeds max');
-        value = schema.max;
-      }
+  // Numbers
+  else if (isSameType(value, 1 as number)) {
+    if (isSameType(schema.min, 1) && value < schema.min) {
+      if (schema.strict) throwError('Value below min');
+      value = schema.min;
+    } else if (isSameType(schema.max, 1) && value > schema.max) {
+      if (schema.strict) throwError('Value exceeds max');
+      value = schema.max;
     }
+  }
 
-    // Objects
-    else if (isSameType(value, {} as Elbwalker.AnyObject)) {
-      // Recursive validation for nested objects
-      for (const [objKey, objValue] of Object.entries(value)) {
-        // Check for allowed keys if applicable
-        if (schema.allowedKeys && !schema.allowedKeys.includes(objKey)) {
-          if (schema.strict) throwError('Key not allowed');
+  // Objects
+  else if (isSameType(value, {} as Elbwalker.AnyObject)) {
+    // Recursive validation for nested objects
+    for (const [objKey, objValue] of Object.entries(value)) {
+      // Check for allowed keys if applicable
+      if (schema.allowedKeys && !schema.allowedKeys.includes(objKey)) {
+        if (schema.strict) throwError('Key not allowed');
 
-          delete value[objKey];
-        }
+        delete value[objKey];
       }
     }
   }

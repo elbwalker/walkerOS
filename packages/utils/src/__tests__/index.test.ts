@@ -501,24 +501,42 @@ describe('Utils', () => {
         contract,
       ).data,
     ).not.toHaveProperty('remove');
-    expect(
-      () =>
-        validateEvent(
-          {
-            event: 'e s',
-            data: { k: 'v', remove: 'me' },
-          },
-          contract,
-        ).data,
+    expect(() =>
+      validateEvent(
+        {
+          event: 'e s',
+          data: { k: 'v', remove: 'me' },
+        },
+        contract,
+      ),
     ).toThrow('Key not allowed');
 
-    // should remove optional invalid properties
+    const requireContract = [{ p: { '*': { price: { required: true } } } }];
+    expect(() =>
+      validateEvent(
+        {
+          event: 'p r',
+          data: {},
+        },
+        requireContract,
+      ),
+    ).toThrow('Missing required property');
+    expect(
+      validateEvent(
+        {
+          event: 'a n',
+        },
+        requireContract,
+      ),
+    ).toHaveProperty('data', {});
+
+    // should remove unknown properties
     expect(
       validateEvent({
         event: 'some event',
-        optionalProp: 123, // doesn't belong here
+        randomProp: 123, // doesn't belong here
       }),
-    ).not.toHaveProperty('optionalProp');
+    ).not.toHaveProperty('randomProp');
 
     // should throw error for invalid number range
     expect(

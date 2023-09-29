@@ -1,13 +1,15 @@
 import type { Elbwalker } from '.';
 
-export type Events = {
+export type Contracts = Array<Contract>;
+
+export type Contract = {
   [entity: string]: {
     [action: string]: Properties;
   };
 };
 
 export type Properties = {
-  [key: string]: Property;
+  [key: string]: Property | undefined;
 };
 
 export type Property = {
@@ -17,7 +19,7 @@ export type Property = {
   maxLength?: number;
   max?: number;
   min?: number;
-  optional?: boolean;
+  required?: boolean;
   schema?: Properties;
   strict?: boolean;
   type?: string;
