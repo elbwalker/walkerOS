@@ -502,7 +502,7 @@ export function useHooks<P extends any[], R, Names = Hooks.Names>(
 export function validateEvent(
   obj: unknown,
   customContracts: Schema.Contracts = [],
-): Elbwalker.Event {
+): Elbwalker.Event | never {
   if (!isSameType(obj, {} as Elbwalker.AnyObject)) throwError('Invalid object');
 
   let event: string;
@@ -654,6 +654,7 @@ function validateProperty(
       const nestedSchema = schema.schema;
 
       // @TODO handle return to update value as non unknown
+      // @TODO bug with multiple rules in property schema
       Object.keys(nestedSchema).reduce((acc, key) => {
         const propertySchema = nestedSchema[key];
         let value = acc[key];
@@ -661,7 +662,7 @@ function validateProperty(
         if (propertySchema) {
           // Type check
           if (propertySchema.type && typeof value !== propertySchema.type)
-            throwError("Type doesn't match");
+            throwError(`Type doesn't match (${key})`);
 
           // Update the value
           value = tryCatch(validateProperty, (err) => {
