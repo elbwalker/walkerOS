@@ -55,7 +55,7 @@ export interface Row {
   count?: number;
   version?: {
     client?: string;
-    server?: string;
+    tagging?: number;
   };
   source?: {
     type?: string;

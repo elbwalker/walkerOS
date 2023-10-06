@@ -49,6 +49,7 @@ export interface Config {
 }
 
 export type Events = Array<Event>;
+export type PartialEvent = Partial<Event>;
 export interface Event {
   event: string;
   data: Properties;

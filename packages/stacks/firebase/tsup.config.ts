@@ -6,7 +6,14 @@ const config: Options = {
   minify: 'terser',
   splitting: false,
   terserOptions: {
-    // Don't mangle here
+    mangle: {
+      properties: {
+        regex: /^[A-Z]/, // Only mangle capitalized properties
+        reserved: [
+          // Prevent mangle from renaming these properties
+        ],
+      },
+    },
   },
 };
 

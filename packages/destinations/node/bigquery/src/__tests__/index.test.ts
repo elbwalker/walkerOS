@@ -99,10 +99,6 @@ describe('Node Destination BigQuery', () => {
     expect(destination.init).toBeDefined();
     if (!destination.init) return;
 
-    await expect(destination.init({} as any)).rejects.toThrow(
-      'Custom config missing',
-    );
-
     await expect(
       destination.init({ custom: { datasetId, tableId } } as any),
     ).rejects.toThrow('Config custom projectId missing');

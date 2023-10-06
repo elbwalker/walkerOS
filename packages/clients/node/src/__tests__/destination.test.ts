@@ -8,30 +8,26 @@ describe('Destination', () => {
   const mockInit = jest.fn().mockImplementation(() => {
     return true;
   });
-  const version = { client: expect.any(String), tagging: expect.any(Number) };
+
   const mockEvent: Elbwalker.Event = {
     event: 'entity action',
-    data: expect.any(Object),
+    data: { k: 'v' },
     context: {},
     custom: {},
     globals: {},
     user: {},
     nested: [],
-    consent: expect.any(Object),
-    id: expect.any(String),
+    consent: {},
+    id: '1d',
     trigger: '',
     entity: 'entity',
     action: 'action',
-    timestamp: expect.any(Number),
-    timing: expect.any(Number),
-    group: expect.any(String),
-    count: expect.any(Number),
-    version,
-    source: {
-      type: 'node',
-      id: '',
-      previous_id: '',
-    },
+    timestamp: 1,
+    timing: 1,
+    group: 'g',
+    count: 1,
+    version: { client: 'c', tagging: 1 },
+    source: { type: 'node', id: '', previous_id: '' },
   };
   const mockDestination: NodeDestination.Function = {
     config: {},
@@ -113,24 +109,30 @@ describe('Destination', () => {
     expect(result.successful).toHaveProperty('length', 0);
     expect(result.queued).toHaveProperty('length', 0);
     expect(result.failed).toHaveProperty('length', 0);
+    expect(instance.config.queue[0]).toEqual(
+      expect.objectContaining({
+        consent: {},
+        user: {},
+        globals: {},
+      }),
+    );
 
     // Update values after pushing the event
     instance.config.consent = { demo: true };
     instance.config.user = { id: 'us3r' };
     instance.config.globals = { foo: 'bar' };
 
-    const updatedEvent = assign(mockEvent, {
-      consent: { demo: true },
-      user: { id: 'us3r' },
-      globals: { foo: 'bar' },
-    });
-    result = await elb('walker destination', mockDestination, { id: 'mock' });
+    result = await elb('walker destination', mockDestination, { id: 'later' });
     expect(result.successful).toHaveProperty('length', 1);
-    expect(result.successful[0]).toHaveProperty('id', 'mock');
-    expect(mockPush).toHaveBeenCalledWith([{ event: updatedEvent }], {
-      id: 'mock',
-      init: true,
-    });
+    expect(result.successful[0]).toHaveProperty('id', 'later');
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush.mock.calls[0][0][0].event).toEqual(
+      expect.objectContaining({
+        consent: { demo: true },
+        user: { id: 'us3r' },
+        globals: { foo: 'bar' },
+      }),
+    );
   });
 
   test('fail', async () => {
@@ -147,7 +149,7 @@ describe('Destination', () => {
     result = await elb('entity action');
 
     expect(result).toEqual({
-      event: mockEvent,
+      event: expect.any(Object),
       status: { ok: false },
       successful: [
         {
@@ -160,11 +162,11 @@ describe('Destination', () => {
         {
           id: 'destinationFailure',
           destination: destinationFailure,
-          error: expect.any(Error),
+          error: expect.any(String),
         },
       ],
     });
-    expect(result.failed[0].error).toHaveProperty('message', 'kaputt');
+    expect(result.failed[0].error).toBe('Error: kaputt');
   });
 
   test.skip('queue', async () => {});
@@ -192,9 +194,10 @@ describe('Destination', () => {
     expect(result).toHaveProperty('failed', []);
 
     result = await elb('walker consent', { test: true });
-    expect(mockPush).toHaveBeenCalledWith(
-      [{ event: mockEvent }],
-      destinationConsent.config,
+    expect(mockPush.mock.calls[0][0][0].event).toEqual(
+      expect.objectContaining({
+        consent: { test: true },
+      }),
     );
     expect(result.status).toHaveProperty('ok', true);
     expect(result.successful[0]).toHaveProperty('id', 'destinationConsent');

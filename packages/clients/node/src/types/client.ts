@@ -1,9 +1,10 @@
-import type { Elbwalker } from '@elbwalker/types';
+import type { Elbwalker, Schema } from '@elbwalker/types';
 import type * as NodeDestination from './destination';
 
 export interface Function {
-  push: Push;
   config: Config;
+  push: Push;
+  setup?: Setup; // @TODO make this required
 }
 
 export interface AddDestination {
@@ -12,15 +13,19 @@ export interface AddDestination {
 
 export interface Push {
   (
-    nameOrEvent: string | Partial<Elbwalker.Event>,
+    nameOrEvent: string | Elbwalker.PartialEvent,
     data?: PushData,
     options?: PushOptions,
   ): Promise<PushResult>;
 }
 
+export interface Setup {
+  (config: Config): Promise<SetupResult>;
+}
+
 export type PushData =
   | Elbwalker.PushData
-  | NodeDestination.Function
+  | NodeDestination.Function<any, any>
   | NodeDestination.PushResult;
 
 export type PushOptions = Elbwalker.PushOptions | NodeDestination.Config;
@@ -31,6 +36,10 @@ export interface PushResult extends NodeDestination.PushResult {
   status: Status;
 }
 
+export interface SetupResult extends NodeDestination.SetupResult {
+  status: Status;
+}
+
 export interface Command {
   name: string;
   data: unknown;
@@ -38,14 +47,16 @@ export interface Command {
 
 export interface Status {
   ok: boolean;
-  error?: unknown;
+  error?: string;
 }
 
+export type PartialConfig = Partial<Config>;
 export interface Config extends Elbwalker.Config {
   client: string;
   destinations: Destinations;
   globalsStatic: Elbwalker.Properties;
   queue: Elbwalker.Events;
+  contracts?: Schema.Contracts;
   source: Elbwalker.Source;
 }
 

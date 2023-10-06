@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "Server",
+  "display": "Node",
   "extends": "./base.json",
   "compilerOptions": {
     "lib": ["es2018"],

@@ -138,19 +138,11 @@ describe('Client', () => {
     result = await (elb as Function)();
 
     expect(result.status).toHaveProperty('ok', false);
-    expect(result.status).toHaveProperty('error', expect.any(Error));
-    expect(result.status.error).toHaveProperty(
-      'message',
-      'Event name is required',
-    );
+    expect(result.status.error).toBe('Error: Event name is required');
 
     result = await elb('foo');
     expect(result.status).toHaveProperty('ok', false);
-    expect(result.status).toHaveProperty('error', expect.any(Error));
-    expect(result.status.error).toHaveProperty(
-      'message',
-      'Event name is invalid',
-    );
+    expect(result.status.error).toBe('Error: Event name is invalid');
   });
 
   test('globals', async () => {

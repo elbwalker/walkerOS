@@ -11,7 +11,7 @@ import {
 // Types
 export * from './types';
 
-export function createNodeClient(customConfig?: Partial<NodeClient.Config>) {
+export function createNodeClient(customConfig?: NodeClient.PartialConfig) {
   const instance = nodeClient(customConfig);
   const elb = instance.push;
 
@@ -19,7 +19,7 @@ export function createNodeClient(customConfig?: Partial<NodeClient.Config>) {
 }
 
 export function nodeClient(
-  customConfig: Partial<NodeClient.Config> = {},
+  customConfig: NodeClient.PartialConfig = {},
 ): NodeClient.Function {
   const client = '2.0.0';
   const config = getConfig(customConfig, {
@@ -36,14 +36,15 @@ export function nodeClient(
     };
 
     return await tryCatchAsync(pushFn, (error) => {
-      defaultResult.status.error = error;
+      defaultResult.status.error = String(error);
       return defaultResult;
     })(instance, ...args);
   };
 
   const instance: NodeClient.Function = {
-    push,
     config,
+    push,
+    // @TODO setup
   };
 
   // That's when the party starts
@@ -167,8 +168,8 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
 };
 
 function getConfig(
-  values: Partial<NodeClient.Config> = {},
-  current: Partial<NodeClient.Config> = {},
+  values: NodeClient.PartialConfig = {},
+  current: NodeClient.PartialConfig = {},
 ): NodeClient.Config {
   const globalsStatic = current.globalsStatic || {};
   const defaultConfig: NodeClient.Config = {
@@ -330,9 +331,10 @@ async function pushToDestinations(
         // Update previous values with the current state
         let events: NodeDestination.PushEvents = destination.queue.map(
           (event) => {
-            event.consent = config.consent;
-            event.globals = config.globals;
-            event.user = config.user;
+            // @TODO check if this is correct, as a client might keeps running as a thread
+            event.consent = assign(config.consent, event.consent);
+            event.globals = assign(config.globals, event.globals);
+            event.user = assign(config.user, event.user);
             return { event }; // @TODO mapping
           },
         );
@@ -351,7 +353,7 @@ async function pushToDestinations(
           }
 
           // don't push if init is false
-          if (!init) return { id, destination, skipped: true };
+          if (!init) return { id, destination, queue: destination.queue };
         }
 
         const result =
@@ -375,6 +377,7 @@ async function pushToDestinations(
 
   for (const result of results) {
     if (result.skipped) continue;
+
     const id = result.id;
     const destination = result.destination;
 
@@ -382,12 +385,12 @@ async function pushToDestinations(
       failed.push({
         id,
         destination,
-        error: result.error,
+        error: String(result.error),
       });
     } else if (result.queue && result.queue.length) {
       queued.push({ id, destination });
     } else {
-      successful.push({ id: id, destination });
+      successful.push({ id, destination });
     }
   }
 
