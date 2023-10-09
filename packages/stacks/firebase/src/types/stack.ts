@@ -1,4 +1,4 @@
-import type { NodeClient } from '@elbwalker/node-client';
+import type { NodeClient } from '@elbwalker/client-node';
 import type { AppOptions } from 'firebase-admin';
 import type { HttpsFunction, HttpsOptions } from 'firebase-functions/v2/https';
 

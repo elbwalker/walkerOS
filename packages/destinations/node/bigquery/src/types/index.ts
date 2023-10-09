@@ -1,6 +1,5 @@
-import type { NodeDestination } from '@elbwalker/node-client';
-import type { Elbwalker } from '@elbwalker/types';
-import type { Meta } from '@elbwalker/types/src/destination';
+import type { NodeDestination } from '@elbwalker/client-node';
+import type { Elbdestination, Elbwalker } from '@elbwalker/types';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Function
@@ -14,7 +13,7 @@ export type SetupFn = NodeDestination.SetupFn<CustomConfig, CustomEventConfig>;
 
 export type Config = {
   custom: CustomConfig;
-  meta: Meta;
+  meta: Elbdestination.Meta;
 } & NodeDestination.Config<CustomConfig, CustomEventConfig>;
 export type PartialConfig = NodeDestination.Config<
   Partial<CustomConfig>,

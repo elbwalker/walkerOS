@@ -1,5 +1,5 @@
 {
-  "name": "@elbwalker/node-client",
+  "name": "@elbwalker/client-node",
   "description": "Node client for walker.js for sending events from the server-side",
   "version": "0.0.1",
   "license": "MIT",

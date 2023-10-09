@@ -24,7 +24,7 @@
     "firebase-functions": "^4.4.1"
   },
   "devDependencies": {
-    "@elbwalker/node-client": "*",
+    "@elbwalker/client-node": "*",
     "@elbwalker/types": "*",
     "@elbwalker/utils": "*"
   },

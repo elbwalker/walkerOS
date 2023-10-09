@@ -1,6 +1,6 @@
-import type { NodeClient } from '@elbwalker/node-client';
+import type { NodeClient } from '@elbwalker/client-node';
 import type { FirebaseStack } from './types';
-import { createNodeClient } from '@elbwalker/node-client';
+import { createNodeClient } from '@elbwalker/client-node';
 import { tryCatch, validateEvent } from '@elbwalker/utils';
 import { onRequest } from 'firebase-functions/v2/https';
 

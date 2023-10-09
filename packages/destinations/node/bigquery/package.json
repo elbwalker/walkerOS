@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@google-cloud/bigquery": "^6.2.1",
-    "@elbwalker/node-client": "*",
+    "@elbwalker/client-node": "*",
     "@elbwalker/types": "*"
   },
   "repository": {

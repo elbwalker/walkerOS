@@ -1,14 +1,10 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/elbwalker.png' width="300px"/>
+    <img title="elbwalker" src='https://www.elbwalker.com/elbwalker.png' width="256px"/>
   </a>
 </p>
 
-# walker.js
-
-Walker.js is a first-party event tracker for simplified and compliant data collection. Standardized, agnostic & flexible. With walker.js you can capture user events in the browser and send them to any destination - just by setting HTML attributes. Become independent from locked-in analytics systems and set up reliable tracking the moment you design your front end.
-
-[Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elb-alexander/30min)
+# @elbwalker/client-web (formerly walker.js)
 
 <div align="left">
   <img src="https://img.shields.io/github/license/elbwalker/walker.js" />
@@ -17,7 +13,9 @@ Walker.js is a first-party event tracker for simplified and compliant data colle
   <a href="https://docs.elbwalker.com/"><img src="https://img.shields.io/badge/docs-docs.elbwalker.com-yellow" alt="elbwalker Documentation"></a>
 </div>
 
-## 🤓 Usage
+Why you need it: Unify your data collection efforts across different departments with the web client, formerly known as walker.js. This package offers a vendor-agnostic approach to front-end user event tracking, enabling you to collect high-quality, consent-aware data for analytics, marketing, and more.
+
+## Usage
 
 You can implement all sorts of front-end user events. From product and UX events like "promotion view", or filter usage, etc. to e-commerce actions like product add to carts or order complete events. The walker.js handles all [trigger initializations](https://docs.elbwalker.com/tagging/available-triggers) and race conditions, builds the [events with context](https://docs.elbwalker.com/tagging/basics), and distributes them based on [consent states](https://docs.elbwalker.com/privacy/consent) and [mapping definitions](https://docs.elbwalker.com/destinations/basics#mapping) to any [destinations](https://docs.elbwalker.com/destinations/details).
 
@@ -28,9 +26,9 @@ To get started take a look at our detailed [documentation](https://docs.elbwalke
 3. [Destinations](https://docs.elbwalker.com/destinations/basics)
 4. [Consent](https://docs.elbwalker.com/privacy/consent)
 
-### Basic example
+## Basic Example
 
-Tagging a page with
+Here's a simple HTML example to demonstrate how tagging works:
 
 ```html
 <body data-elbglobals="language:en">
@@ -45,7 +43,7 @@ Tagging a page with
 </body>
 ```
 
-generates an event like
+This generates an event like:
 
 ```js
 {
@@ -59,7 +57,7 @@ generates an event like
     // Related properties defined with the data-elbcontext attribute
     test: ['engagement', 0] // Value and order
   },
-  custom: {}, // Additional custom data
+  custom: {}, // Additional custom data for individual setups
   globals: {
     // General Properties defined with the data-elbglobals attribute
     language: 'en'
@@ -82,8 +80,8 @@ generates an event like
   count: 2, // Incremental counter of the events on a page
   version: {
     // Helpful when working with raw data
-    client: "2.x.x", // Used web client version
-    tagging: 42, // Used version number of the tagging
+    client: '1.0.0', // Semantic version of the used client
+    tagging: 42, // A version number of the then used tagging status
   },
   source: {
     // Origins of the event
@@ -95,12 +93,22 @@ generates an event like
 }
 ```
 
-that [destinations](https://docs.elbwalker.com/destinations/details) automatically translates into proper implementations.
+## Who This Package is For
 
-## Contact
+This package is intended for companies, agencies, freelancers, and in-house teams who aim to work in a data-driven manner. It serves the needs of data engineers, product owners, analysts, marketers, and developers all at the same time.
 
-Send us an email if you have any questions or feedback at hello@elbwalker.com
+## Installation
 
-Want to send the data directly to your Google BigQuery instance? Check out our hosted version at https://www.elbwalker.com/
+TBD
 
-<p align="right">(<a href="#top">back to top</a>)</p>
+## Tagging
+
+TBD
+
+## Destinations
+
+TBD
+
+## Consent
+
+TBD
