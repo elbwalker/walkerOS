@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/types",
   "description": "Shared types for the whole walkerverse",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "license": "MIT",
   "main": "src/index.ts",
   "types": "src/index.ts",

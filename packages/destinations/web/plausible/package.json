@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-plausible",
   "description": "Plausible web destination for walkerOS",
-  "version": "2.0.0",
+  "version": "1.2.3",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

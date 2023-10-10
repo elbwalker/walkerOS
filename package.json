@@ -13,9 +13,11 @@
     "clean": "turbo run clean",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
+    "publish-packages": "turbo run build test && changeset version && changeset publish",
     "test": "turbo run test"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.26.2",
     "@elbwalker/jest": "*",
     "@elbwalker/tsconfig": "*",
     "@elbwalker/tsup": "*",
