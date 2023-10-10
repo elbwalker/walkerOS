@@ -1,7 +1,6 @@
 import type { NodeClient, NodeDestination } from '../types';
-import type { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import { createNodeClient } from '../';
-import { assign } from '@elbwalker/utils';
 
 describe('Destination', () => {
   const mockPush = jest.fn(); //.mockImplementation(console.log);
@@ -9,7 +8,7 @@ describe('Destination', () => {
     return true;
   });
 
-  const mockEvent: Elbwalker.Event = {
+  const mockEvent: WalkerOS.Event = {
     event: 'entity action',
     data: { k: 'v' },
     context: {},

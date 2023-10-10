@@ -1,4 +1,4 @@
-import type { Elbwalker } from '.';
+import type { WalkerOS } from '.';
 
 export type Contracts = Array<Contract>;
 
@@ -26,6 +26,6 @@ export type Property = {
   validate?: (
     value: unknown,
     key: string,
-    event: Elbwalker.AnyObject,
-  ) => Elbwalker.Property;
+    event: WalkerOS.AnyObject,
+  ) => WalkerOS.Property;
 };

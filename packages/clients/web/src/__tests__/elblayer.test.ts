@@ -1,7 +1,7 @@
+import type { WalkerOS } from '@elbwalker/types';
+import type { WebClient, WebDestination } from '../types';
 import webClient from '../';
 import { elb } from '../lib/trigger';
-import type { WebClient, WebDestination } from '../types';
-import type { Elbwalker } from '@elbwalker/types';
 
 describe('ElbLayer', () => {
   const w = window;
@@ -206,7 +206,7 @@ describe('ElbLayer', () => {
 
     expect(elbwalker.config).toStrictEqual(defaultConfig);
 
-    let update: Elbwalker.Properties | Partial<Elbwalker.Config> = {
+    let update: WalkerOS.Properties | Partial<WalkerOS.Config> = {
       prefix: 'data-custom',
     };
     let config = { ...defaultConfig, ...update };
@@ -224,7 +224,7 @@ describe('ElbLayer', () => {
 
     // Reset with w.elbLayer = [] creates another array than in defaultConfig
     w.elbLayer.length = 0;
-    let globals: Elbwalker.Properties = { static: 'value' };
+    let globals: WalkerOS.Properties = { static: 'value' };
     config = { ...defaultConfig, globals };
     elbwalker = webClient({ globals });
     elb('walker run');

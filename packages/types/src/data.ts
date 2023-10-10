@@ -1,4 +1,4 @@
-import type { Elbwalker } from '.';
+import type { WalkerOS } from '.';
 
 export interface Contract {
   version: string;
@@ -51,4 +51,4 @@ export interface Property {
 
 export type PropertyType = 'boolean' | 'string' | 'number';
 
-export type PropertyValues = Array<Elbwalker.Property>;
+export type PropertyValues = Array<WalkerOS.Property>;

@@ -1,14 +1,14 @@
-import type { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 
 export type Events = Event[];
 
 export interface Event {
   entity: string;
   action: string;
-  data?: Elbwalker.Properties;
-  context?: Elbwalker.OrderedProperties;
+  data?: WalkerOS.Properties;
+  context?: WalkerOS.OrderedProperties;
   trigger?: Trigger;
-  nested: Elbwalker.Entities;
+  nested: WalkerOS.Entities;
 }
 
 export type KeyVal = [string, string];

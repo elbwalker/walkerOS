@@ -1,4 +1,4 @@
-import type { Elbwalker, Hooks, Schema, Utils } from '@elbwalker/types';
+import type { WalkerOS, Hooks, Schema, Utils } from '@elbwalker/types';
 import Const from './constants';
 
 export function assign<T>(target: T, source: Object = {}): T {
@@ -21,7 +21,7 @@ export function assign<T>(target: T, source: Object = {}): T {
   return { ...target, ...source };
 }
 
-export function castValue(value: unknown): Elbwalker.PropertyType {
+export function castValue(value: unknown): WalkerOS.PropertyType {
   if (value === 'true') return true;
   if (value === 'false') return false;
 
@@ -67,8 +67,8 @@ export function getId(length = 6): string {
 export function getMarketingParameters(
   url: URL,
   custom: Utils.MarketingParameters = {},
-): Elbwalker.Properties {
-  const data: Elbwalker.Properties = {};
+): WalkerOS.Properties {
+  const data: WalkerOS.Properties = {};
   const parameters = Object.assign(
     {
       utm_campaign: 'campaign',
@@ -199,13 +199,13 @@ export function isVisible(element: HTMLElement): boolean {
 }
 
 export function parseEvent(input: {
-  obj?: Elbwalker.AnyObject;
+  obj?: WalkerOS.AnyObject;
   str?: string;
-}): false | Elbwalker.PartialEvent {
+}): false | WalkerOS.PartialEvent {
   const { obj, str } = input;
   if (!obj && !str) return false;
 
-  let result: Elbwalker.AnyObject = {};
+  let result: WalkerOS.AnyObject = {};
 
   if (str) {
     const cleanedStr = str.startsWith('?') ? str.substring(1) : str;
@@ -223,7 +223,7 @@ export function parseEvent(input: {
 
   result = assign(obj || {}, result);
 
-  const event: Elbwalker.PartialEvent = result;
+  const event: WalkerOS.PartialEvent = result;
 
   // TODO only map allowed properties
 
@@ -235,7 +235,7 @@ export function parseEvent(input: {
 
 export function sessionStart(
   config: Utils.SessionStart = {},
-): Elbwalker.Properties | false {
+): WalkerOS.Properties | false {
   // Force a new session or start checking if it's a regular new one
   let isNew = config.isNew || false;
 
@@ -252,7 +252,7 @@ export function sessionStart(
   const url = new URL(config.url || window.location.href);
   const ref = config.referrer || document.referrer;
   const referrer = ref && new URL(ref).hostname;
-  const session: Elbwalker.Properties = {};
+  const session: WalkerOS.Properties = {};
 
   // Marketing
   const marketing = getMarketingParameters(url, config.parameters);
@@ -310,7 +310,7 @@ export function storageDelete(
 export function storageRead(
   key: string,
   storage: Utils.StorageType = Const.Utils.Storage.Session,
-): Elbwalker.PropertyType {
+): WalkerOS.PropertyType {
   // Helper function for local and session storage to support expiration
   function parseItem(string: string | null): Utils.StorageValue {
     try {
@@ -362,11 +362,11 @@ export function storageRead(
 
 export function storageWrite(
   key: string,
-  value: Elbwalker.PropertyType,
+  value: WalkerOS.PropertyType,
   maxAgeInMinutes = 30,
   storage: Utils.StorageType = Const.Utils.Storage.Session,
   domain?: string,
-): Elbwalker.PropertyType {
+): WalkerOS.PropertyType {
   const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
   const item: Utils.StorageValue = { e, v: String(value) };
   const stringifiedItem = JSON.stringify(item);
@@ -502,8 +502,8 @@ export function useHooks<P extends any[], R, Names = Hooks.Names>(
 export function validateEvent(
   obj: unknown,
   customContracts: Schema.Contracts = [],
-): Elbwalker.Event | never {
-  if (!isSameType(obj, {} as Elbwalker.AnyObject)) throwError('Invalid object');
+): WalkerOS.Event | never {
+  if (!isSameType(obj, {} as WalkerOS.AnyObject)) throwError('Invalid object');
 
   let event: string;
   let entity: string;
@@ -537,7 +537,7 @@ export function validateEvent(
     },
   };
 
-  const basicEvent: Elbwalker.Event = {
+  const basicEvent: WalkerOS.Event = {
     event,
     data: {},
     context: {},
@@ -597,9 +597,9 @@ export function validateEvent(
       }, acc);
     },
     // Not that beautiful but it works, narrowing down the type is tricky here
-    // it's important that basicEvent is defined as an Elbwalker.Event
-    basicEvent as unknown as Elbwalker.AnyObject,
-  ) as unknown as Elbwalker.Event;
+    // it's important that basicEvent is defined as an WalkerOS.Event
+    basicEvent as unknown as WalkerOS.AnyObject,
+  ) as unknown as WalkerOS.Event;
 
   // @TODO Final check for result.event === event.entity + ' ' + event.action
 
@@ -607,12 +607,12 @@ export function validateEvent(
 }
 
 function validateProperty(
-  obj: Elbwalker.AnyObject,
+  obj: WalkerOS.AnyObject,
   key: string,
   value: unknown,
   schema: Schema.Property,
-): Elbwalker.Property | never {
-  // @TODO unknown to Elbwalker.Property
+): WalkerOS.Property | never {
+  // @TODO unknown to WalkerOS.Property
 
   // Note regarding potentially malicious values
   // Initial collection doesn't manipulate data
@@ -649,7 +649,7 @@ function validateProperty(
   // @TODO boolean
 
   // Objects
-  else if (isSameType(value, {} as Elbwalker.AnyObject)) {
+  else if (isSameType(value, {} as WalkerOS.AnyObject)) {
     if (schema.schema) {
       const nestedSchema = schema.schema;
 
@@ -670,7 +670,7 @@ function validateProperty(
           })(acc, key, value, propertySchema);
         }
 
-        return value as Elbwalker.AnyObject;
+        return value as WalkerOS.AnyObject;
       }, value);
     }
 
@@ -684,5 +684,5 @@ function validateProperty(
     }
   }
 
-  return value as Elbwalker.Property;
+  return value as WalkerOS.Property;
 }

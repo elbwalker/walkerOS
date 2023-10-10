@@ -21,10 +21,10 @@ Creating your own destinations is easy. Use [XXX Boilerplate](./xxx_boilerplate/
 interface Function {
   init?: (config: Config<Custom, EventCustom>) => boolean;
   push: (
-    event: IElbwalker.Event,
+    event: WalkerOS.Event,
     config: Config<Custom, EventCustom>,
     mapping?: EventConfig<EventCustom>,
-    runState?: IElbwalker.Config,
+    runState?: WalkerOS.Config,
   ) => void;
   config: Config<Custom, EventCustom>;
 }

@@ -1,5 +1,5 @@
 import type { Walker, WebClient } from '../types';
-import type { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import { getElbAttributeName, getEvents, getTriggerActions } from './walker';
 import {
   Const,
@@ -270,7 +270,7 @@ function scroll(instance: WebClient.Function) {
 function pageView(instance: WebClient.Function) {
   // static page view
   const loc = window.location;
-  const data: Elbwalker.Properties = {
+  const data: WalkerOS.Properties = {
     domain: loc.hostname,
     title: document.title,
     referrer: document.referrer,

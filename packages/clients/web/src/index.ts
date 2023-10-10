@@ -1,5 +1,5 @@
 import type { WebClient, WebDestination } from './types';
-import type { Elbwalker, Hooks } from '@elbwalker/types';
+import type { Hooks, WalkerOS } from '@elbwalker/types';
 import {
   initScopeTrigger,
   initGlobalTrigger,
@@ -174,8 +174,8 @@ function webClient(
       event?: IArguments | unknown,
       data?: WebClient.PushData,
       trigger?: string,
-      context?: Elbwalker.OrderedProperties,
-      nested?: Elbwalker.Entities,
+      context?: WalkerOS.OrderedProperties,
+      nested?: WalkerOS.Entities,
     ) {
       // Pushed as Arguments
       if (isArgument(event)) {
@@ -259,7 +259,7 @@ function webClient(
           );
         break;
       case Const.Commands.Consent:
-        isObject(data) && setConsent(instance, data as Elbwalker.Consent);
+        isObject(data) && setConsent(instance, data as WalkerOS.Consent);
         break;
       case Const.Commands.Destination:
         isObject(data) &&
@@ -286,7 +286,7 @@ function webClient(
         ready(run, instance);
         break;
       case Const.Commands.User:
-        isObject(data) && setUserIds(instance, data as Elbwalker.User);
+        isObject(data) && setUserIds(instance, data as WalkerOS.User);
         break;
       default:
         break;
@@ -310,7 +310,7 @@ function webClient(
     data?: WebClient.PushData,
     options: WebClient.PushOptions = '',
     context: WebClient.PushContext = {},
-    nested: Elbwalker.Entities = [],
+    nested: WalkerOS.Entities = [],
   ): void {
     if (!event || !isSameType(event, '')) return;
 
@@ -360,8 +360,8 @@ function webClient(
 
     // Special case for page entity to add the id by default
     if (entity === 'page') {
-      (data as Elbwalker.Properties).id =
-        (data as Elbwalker.Properties).id || window.location.pathname;
+      (data as WalkerOS.Properties).id =
+        (data as WalkerOS.Properties).id || window.location.pathname;
     }
 
     ++config.count;
@@ -374,10 +374,10 @@ function webClient(
       previous_id: document.referrer,
     };
 
-    const pushEvent: Elbwalker.Event = {
+    const pushEvent: WalkerOS.Event = {
       event,
-      data: data as Elbwalker.Properties,
-      context: context as Elbwalker.OrderedProperties,
+      data: data as WalkerOS.Properties,
+      context: context as WalkerOS.OrderedProperties,
       custom: {},
       globals: config.globals,
       user: config.user,
@@ -409,7 +409,7 @@ function webClient(
   function pushToDestination(
     instance: WebClient.Function,
     destination: WebDestination.Function,
-    event: Elbwalker.Event,
+    event: WalkerOS.Event,
     useQueue = true,
   ): boolean {
     // Deep copy event to prevent a pointer mess
@@ -510,7 +510,7 @@ function webClient(
     tryCatch(load)(instance);
   }
 
-  function setConsent(instance: WebClient.Function, data: Elbwalker.Consent) {
+  function setConsent(instance: WebClient.Function, data: WalkerOS.Consent) {
     const config = instance.config;
 
     let runQueue = false;
@@ -540,7 +540,7 @@ function webClient(
     }
   }
 
-  function setUserIds(instance: WebClient.Function, data: Elbwalker.User) {
+  function setUserIds(instance: WebClient.Function, data: WalkerOS.User) {
     const user = instance.config.user;
     // user ids can't be set to undefined
     if (data.id) user.id = data.id;

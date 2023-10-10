@@ -4,6 +4,4 @@
 $ npm run serve
 ```
 
-@TODO
-
-- Update dependencies @elbwalker/stack-firebase and @elbwalker/destination-node-bigquery to use real preview builds
+From the `functions` folder run `firebase deploy --project Y0UR_PR0J3CT1D` to deploy the function.

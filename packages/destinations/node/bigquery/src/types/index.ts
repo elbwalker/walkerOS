@@ -1,5 +1,5 @@
 import type { NodeDestination } from '@elbwalker/client-node';
-import type { Elbdestination, Elbwalker } from '@elbwalker/types';
+import type { Elbdestination, WalkerOS } from '@elbwalker/types';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Function
@@ -41,7 +41,7 @@ export interface Row {
   context?: string;
   custom?: string;
   globals?: string;
-  user?: Elbwalker.User;
+  user?: WalkerOS.User;
   nested?: string;
   consent: string;
   id: string;

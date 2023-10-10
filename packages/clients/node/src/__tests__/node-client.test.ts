@@ -1,11 +1,11 @@
 import type { NodeClient, NodeDestination } from '../types';
-import type { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import { createNodeClient } from '../';
 
 describe('Client', () => {
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
   const version = { client: expect.any(String), tagging: expect.any(Number) };
-  const mockEvent: Elbwalker.Event = {
+  const mockEvent: WalkerOS.Event = {
     event: 'entity action',
     data: expect.any(Object),
     context: {},

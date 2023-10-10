@@ -1,5 +1,5 @@
 import type { WebDestination } from '@elbwalker/client-web';
-import type { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 
 declare global {
   interface Window {
@@ -40,7 +40,7 @@ export interface PropertyMapping {
 
 export interface PropertyMappingValue {
   key: string;
-  default?: Elbwalker.PropertyType;
+  default?: WalkerOS.PropertyType;
 }
 
 export type Include = Array<

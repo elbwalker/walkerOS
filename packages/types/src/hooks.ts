@@ -1,4 +1,4 @@
-import type { Elbwalker } from '.';
+import type { WalkerOS } from '.';
 
 interface Parameter<T extends any[], R> {
   fn: (...args: T) => R;
@@ -17,5 +17,5 @@ export type Functions = {
   postPush?: PostPush;
 };
 
-export type PrePush = HookFn<Elbwalker.Elb>;
-export type PostPush = HookFn<Elbwalker.Elb>;
+export type PrePush = HookFn<WalkerOS.Elb>;
+export type PostPush = HookFn<WalkerOS.Elb>;

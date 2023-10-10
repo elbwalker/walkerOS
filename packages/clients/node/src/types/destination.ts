@@ -1,4 +1,4 @@
-import type { Elbdestination, Elbwalker } from '@elbwalker/types';
+import type { Elbdestination, WalkerOS } from '@elbwalker/types';
 
 export interface Function<Custom = unknown, EventCustom = unknown>
   extends Elbdestination.Function<Custom, EventCustom> {
@@ -32,7 +32,7 @@ export interface EventConfig<EventCustom = unknown>
 export type PushEvents<EventCustom = unknown> = Array<PushEvent<EventCustom>>;
 
 export type PushEvent<EventCustom = unknown> = {
-  event: Elbwalker.Event;
+  event: WalkerOS.Event;
   mapping?: EventConfig<EventCustom>;
 };
 
@@ -42,7 +42,7 @@ export type Ref = {
 };
 
 export type Push = {
-  queue?: Elbwalker.Events;
+  queue?: WalkerOS.Events;
   error?: unknown;
 };
 

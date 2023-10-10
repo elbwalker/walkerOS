@@ -1,5 +1,5 @@
 import type { Config, Function, PartialConfig } from '../types';
-import { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 
 describe('Node Destination BigQuery', () => {
   const mockFn = jest.fn().mockImplementation(console.log);
@@ -7,7 +7,7 @@ describe('Node Destination BigQuery', () => {
   // Mock the bigquery package with __mocks__ implementation
   jest.mock('@google-cloud/bigquery');
 
-  const event: Elbwalker.Event = {
+  const event: WalkerOS.Event = {
     event: 'entity action',
     data: { foo: 'bar' },
     custom: { bar: 'baz' },

@@ -1,13 +1,13 @@
-import type { Elbdestination, Elbwalker } from '@elbwalker/types';
+import type { Elbdestination, WalkerOS } from '@elbwalker/types';
 
 export interface Function<Custom = unknown, EventCustom = unknown>
   extends Elbdestination.Function<Custom, EventCustom> {
   init?: (config: Config<Custom, EventCustom>) => boolean;
   push: (
-    event: Elbwalker.Event,
+    event: WalkerOS.Event,
     config: Config<Custom, EventCustom>,
     mapping?: EventConfig<EventCustom>,
-    runState?: Elbwalker.Config,
+    runState?: WalkerOS.Config,
   ) => void;
 }
 

@@ -1,4 +1,4 @@
-import type { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import type { ITagger } from './types';
 
 function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
@@ -22,7 +22,7 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
   function actionMethod(
     triggerActions: ITagger.Trigger | ITagger.KevVal,
     action?: string,
-  ): Elbwalker.Properties {
+  ): WalkerOS.Properties {
     if (typeof triggerActions === 'string')
       triggerActions = { [triggerActions]: action || triggerActions };
 
@@ -35,8 +35,8 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
   function propertyMethod(
     entity: string,
     properties: string | ITagger.KevVal,
-    value?: Elbwalker.Property,
-  ): Elbwalker.Properties {
+    value?: WalkerOS.Property,
+  ): WalkerOS.Properties {
     if (typeof properties === 'string')
       properties = { [properties]: value || '' };
 
@@ -46,8 +46,8 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
   // data-elbcontext="key:val"
   function contextMethod(
     context: string | ITagger.KevVal,
-    value?: Elbwalker.Property,
-  ): Elbwalker.Properties {
+    value?: WalkerOS.Property,
+  ): WalkerOS.Properties {
     if (typeof context === 'string') context = { [context]: value || '' };
 
     return { [attrName('context', false)]: getStr(context) };
@@ -56,8 +56,8 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
   // data-elbglobals="key:val"
   function globalsMethod(
     globals: string | ITagger.KevVal,
-    value?: Elbwalker.Property,
-  ): Elbwalker.Properties {
+    value?: WalkerOS.Property,
+  ): WalkerOS.Properties {
     if (typeof globals === 'string') globals = { [globals]: value || '' };
 
     return { [attrName('globals', false)]: getStr(globals) };

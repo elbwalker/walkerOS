@@ -1,4 +1,4 @@
-import type { Elbwalker } from '.';
+import type { WalkerOS } from '.';
 
 export type StorageType = 'cookie' | 'local' | 'session';
 
@@ -8,7 +8,7 @@ export interface StorageValue {
 }
 
 export interface SessionStart {
-  data?: Elbwalker.Properties;
+  data?: WalkerOS.Properties;
   domains?: string[];
   isNew?: boolean;
   parameters?: MarketingParameters;

@@ -1,4 +1,4 @@
-import type { Elbwalker, Schema } from '@elbwalker/types';
+import type { WalkerOS, Schema } from '@elbwalker/types';
 import type * as NodeDestination from './destination';
 
 export interface Function {
@@ -13,7 +13,7 @@ export interface AddDestination {
 
 export interface Push {
   (
-    nameOrEvent: string | Elbwalker.PartialEvent,
+    nameOrEvent: string | WalkerOS.PartialEvent,
     data?: PushData,
     options?: PushOptions,
   ): Promise<PushResult>;
@@ -24,15 +24,15 @@ export interface Setup {
 }
 
 export type PushData =
-  | Elbwalker.PushData
+  | WalkerOS.PushData
   | NodeDestination.Function<any, any>
   | NodeDestination.PushResult;
 
-export type PushOptions = Elbwalker.PushOptions | NodeDestination.Config;
+export type PushOptions = WalkerOS.PushOptions | NodeDestination.Config;
 
 export interface PushResult extends NodeDestination.PushResult {
   command?: Command;
-  event?: Elbwalker.Event;
+  event?: WalkerOS.Event;
   status: Status;
 }
 
@@ -51,13 +51,13 @@ export interface Status {
 }
 
 export type PartialConfig = Partial<Config>;
-export interface Config extends Elbwalker.Config {
+export interface Config extends WalkerOS.Config {
   client: string;
   destinations: Destinations;
-  globalsStatic: Elbwalker.Properties;
-  queue: Elbwalker.Events;
+  globalsStatic: WalkerOS.Properties;
+  queue: WalkerOS.Events;
   contracts?: Schema.Contracts;
-  source: Elbwalker.Source;
+  source: WalkerOS.Source;
 }
 
 export interface Destinations {
