@@ -38,14 +38,14 @@ export function getElbValues(
       val = val.substring(1); // Remove # symbol
       try {
         // Read property value from element
-        let dynamicValue = (element as any)[val];
+        let dynamicValue = (element as Element)[val as keyof Element];
         if (!dynamicValue && val === 'selected') {
           // Try to read selected value with chance of error
           dynamicValue = (element as HTMLSelectElement).options[
             (element as HTMLSelectElement).selectedIndex
           ].text;
         }
-        if (dynamicValue) val = dynamicValue;
+        if (dynamicValue) val = String(dynamicValue);
       } catch (error) {
         val = '';
       }

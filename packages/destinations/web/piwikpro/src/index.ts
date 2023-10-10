@@ -8,6 +8,9 @@ import { getByStringDot } from '@elbwalker/utils';
 // - duspport for dimensions
 // - testing
 
+// Types
+export * as DestinationPiwikPro from './types';
+
 export const destinationPiwikPro: Function = {
   type: 'piwikpro',
 

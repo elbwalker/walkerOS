@@ -18,8 +18,9 @@ import { getEntities, getGlobals } from './lib/walker';
 
 // Types
 export * from './types';
+export { elb } from './lib/trigger';
 
-function webClient(
+export function webClient(
   customConfig: Partial<WebClient.Config> = {},
 ): WebClient.Function {
   const client = '2.0.0';

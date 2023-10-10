@@ -7,6 +7,9 @@ import type {
   PropertyMapping,
 } from './types';
 
+// Types
+export * as DestinationGoogleGA4 from './types';
+
 const destinationGoogleGA4: Function = {
   type: 'google-ga4',
 

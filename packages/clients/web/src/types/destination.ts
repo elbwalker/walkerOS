@@ -1,6 +1,6 @@
 import type { Destination, WalkerOS } from '@elbwalker/types';
 
-export interface Function<Custom = unknown, EventCustom = unknown>
+export interface Function<Custom = any, EventCustom = any>
   extends Destination.Function<Custom, EventCustom> {
   init?: (config: Config<Custom, EventCustom>) => boolean;
   push: (
@@ -11,11 +11,11 @@ export interface Function<Custom = unknown, EventCustom = unknown>
   ) => void;
 }
 
-export interface Config<Custom = unknown, EventCustom = unknown>
+export interface Config<Custom = any, EventCustom = any>
   extends Destination.Config<Custom, EventCustom> {}
 
 export interface Mapping<EventCustom>
   extends Destination.Mapping<EventCustom> {}
 
-export interface EventConfig<EventCustom = unknown>
+export interface EventConfig<EventCustom = any>
   extends Destination.EventConfig<EventCustom> {}

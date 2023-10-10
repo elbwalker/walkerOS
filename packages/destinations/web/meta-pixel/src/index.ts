@@ -10,6 +10,9 @@ import type {
 
 // https://developers.facebook.com/docs/meta-pixel/
 
+// Types
+export * as DestinationMetaPixel from './types';
+
 export const destinationMetaPixel: Function = {
   type: 'meta-pixel',
 

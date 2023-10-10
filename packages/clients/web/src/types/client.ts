@@ -25,7 +25,7 @@ export interface Function {
 export interface Elb extends WalkerOS.Elb {
   (
     event: 'walker destination',
-    destination: WebDestination.Function<any, any>,
+    destination: WebDestination.Function,
     config?: WebDestination.Config,
   ): void;
   (event: 'walker init', scope: Scope | Scope[]): void;

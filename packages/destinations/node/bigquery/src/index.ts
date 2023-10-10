@@ -10,6 +10,9 @@ const meta = {
   version: '0.0.7',
 };
 
+// Types
+export * as DestinationBigQuery from './types';
+
 export const destinationBigQuery: Function = {
   config: {},
 
