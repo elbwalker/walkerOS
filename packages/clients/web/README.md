@@ -7,17 +7,16 @@
 # @elbwalker/client-web (formerly walker.js)
 
 <div align="left">
-  <img src="https://img.shields.io/github/license/elbwalker/walker.js" />
-  <img src="https://img.shields.io/github/languages/top/elbwalker/walker.js" />
-  <img src="https://img.shields.io/github/size/elbwalker/walker.js/dist/walker.js" />
+  <img src="https://img.shields.io/github/license/elbwalker/walkerOS" />
+  <img src="https://img.shields.io/github/languages/top/elbwalker/walkerOS" />
   <a href="https://docs.elbwalker.com/"><img src="https://img.shields.io/badge/docs-docs.elbwalker.com-yellow" alt="elbwalker Documentation"></a>
 </div>
 
-Why you need it: Unify your data collection efforts across different departments with the web client, formerly known as walker.js. This package offers a vendor-agnostic approach to front-end user event tracking, enabling you to collect high-quality, consent-aware data for analytics, marketing, and more.
+Why you need it: Unify your data collection efforts across different departments with the web client, formerly known as walkerOS. This package offers a vendor-agnostic approach to front-end user event tracking, enabling you to collect high-quality, consent-aware data for analytics, marketing, and more.
 
 ## Usage
 
-You can implement all sorts of front-end user events. From product and UX events like "promotion view", or filter usage, etc. to e-commerce actions like product add to carts or order complete events. The walker.js handles all [trigger initializations](https://docs.elbwalker.com/tagging/available-triggers) and race conditions, builds the [events with context](https://docs.elbwalker.com/tagging/basics), and distributes them based on [consent states](https://docs.elbwalker.com/privacy/consent) and [mapping definitions](https://docs.elbwalker.com/destinations/basics#mapping) to any [destinations](https://docs.elbwalker.com/destinations/details).
+You can implement all sorts of front-end user events. From product and UX events like "promotion view", or filter usage, etc. to e-commerce actions like product add to carts or order complete events. The walkerOS handles all [trigger initializations](https://docs.elbwalker.com/tagging/available-triggers) and race conditions, builds the [events with context](https://docs.elbwalker.com/tagging/basics), and distributes them based on [consent states](https://docs.elbwalker.com/privacy/consent) and [mapping definitions](https://docs.elbwalker.com/destinations/basics#mapping) to any [destinations](https://docs.elbwalker.com/destinations/details).
 
 To get started take a look at our detailed [documentation](https://docs.elbwalker.com/).
 
@@ -86,7 +85,7 @@ This generates an event like:
   source: {
     // Origins of the event
     type: 'web', // Source type of the event
-    id: 'https://github.com/elbwalker/walker.js', // Source id of the event's origin (url)
+    id: 'https://github.com/elbwalker/walkerOS', // Source id of the event's origin (url)
     previous_id: 'https://www.elbwalker.com/' // Previous source id (referrer)
   },
   walker: true, // Flag to filter events

@@ -1,4 +1,4 @@
-import type { WebDestination } from '@elbwalker/walker.js';
+import type { WebDestination } from '@elbwalker/client-web';
 import type { Elbwalker } from '@elbwalker/types';
 
 declare global {

@@ -6,12 +6,11 @@
 
 # walkerOS: Your Unified Data Collection Solution
 
-[Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elb-alexander/30min)
+[Request Feature](https://github.com/elbwalker/walkerOS/issues/new) · [Report Bug](https://github.com/elbwalker/walkerOS/issues/new) · [Say hello](https://calendly.com/elb-alexander/30min)
 
 <div align="left">
-  <img src="https://img.shields.io/github/license/elbwalker/walker.js" />
-  <img src="https://img.shields.io/github/languages/top/elbwalker/walker.js" />
-  <img src="https://img.shields.io/github/size/elbwalker/walker.js/dist/walker.js" />
+  <img src="https://img.shields.io/github/license/elbwalker/walkerOS" />
+  <img src="https://img.shields.io/github/languages/top/elbwalker/walkerOS" />
   <a href="https://docs.elbwalker.com/"><img src="https://img.shields.io/badge/docs-docs.elbwalker.com-yellow" alt="elbwalker Documentation"></a>
 </div>
 

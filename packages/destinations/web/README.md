@@ -1,4 +1,4 @@
-# walker.js web destinations
+# walkerOS web destinations
 
 Understand the concept of destinations, learn how to use them, and how to write you own.
 
@@ -10,7 +10,7 @@ Understand the concept of destinations, learn how to use them, and how to write 
 - [Meta Pixel (Facebook Pixel)](./meta-pixel/)
 - [Plausible](./plausible/)
 
-Couldn't find what you were looking for? [Request a destination](https://github.com/elbwalker/walker.js/issues/new).
+Couldn't find what you were looking for? [Request a destination](https://github.com/elbwalker/walkerOS/issues/new).
 If you want your destination to be added feel free to create an issue.
 
 ## 🤓 Write your own
@@ -40,7 +40,7 @@ The default interface the walker uses to deliver events to each destination.
 
 ### Init
 
-This function is optional. It has to return a boolean if initialization has worked out properly. As long as init doesn't return `true` no events will get pushed but each time an event occurs walker.js tries to init again.
+This function is optional. It has to return a boolean if initialization has worked out properly. As long as init doesn't return `true` no events will get pushed but each time an event occurs the walkerOS web client tries to init again.
 
 The walker checks the `config.init` value to see if a destination has been initialized, or not. This way you can add a destination that has already been initialized.
 
@@ -48,4 +48,4 @@ The walker checks the `config.init` value to see if a destination has been initi
 
 We highly recommend writing a corresponding test. We plan to enhance the `Config` continuously. To prevent overriding or naming conflicts use the `custom` object.
 
-Feel free to [contribute](https://github.com/elbwalker/walker.js#-contributing) you destinations.
+Feel free to [contribute](https://github.com/elbwalker/walkerOS#-contributing) you destinations.

@@ -1,4 +1,4 @@
-# walker.js tagging examples
+# walkerOS examples
 
 - [Basic](./basic)
 - [Advanced](./advanced)

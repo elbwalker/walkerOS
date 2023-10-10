@@ -1,6 +1,6 @@
-# walker.js docs
+# walkerOS docs
 
-You found the source for the official [walker.js documentation](https://docs.elbwalker.com/).
+You found the source for the official [walkerOS documentation](https://docs.elbwalker.com/).
 Feel free to make contributions and help the project to grow 🌱.
 The docs are build on top of the [Starlight’s docs](https://starlight.astro.build/).
 

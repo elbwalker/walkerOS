@@ -13,7 +13,7 @@ Usually, events get pushed to the `window.elbLayer`. You can take a look at the 
 Add a custom destination where push points to console.log to list all events in the console:
 
 ```js
-import { elb } from '@elbwalker/walker.js';
+import { elb } from '@elbwalker/client-web';
 elb('walker destination', {
   push: console.log,
 });

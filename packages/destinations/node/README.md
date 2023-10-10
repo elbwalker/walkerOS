@@ -37,4 +37,4 @@ The node client calls `await destination.push([{ event, mapping }], config);` to
 
 - [BigQuery](./bigquery/)
 
-Feel free to [request a destination](https://github.com/elbwalker/walker.js/issues/new).
+Feel free to [request a destination](https://github.com/elbwalker/walkerOS/issues/new).

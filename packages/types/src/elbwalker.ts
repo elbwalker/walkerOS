@@ -104,7 +104,7 @@ export interface Version {
 
 export interface Source {
   type: SourceType;
-  id: string; // https://github.com/elbwalker/walker.js
+  id: string; // https://github.com/elbwalker/walkerOS
   previous_id: string; // https://www.elbwalker.com/
 }
 

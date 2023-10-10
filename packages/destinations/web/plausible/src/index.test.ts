@@ -1,5 +1,5 @@
-import webClient from '@elbwalker/walker.js';
-import type { WebClient } from '@elbwalker/walker.js';
+import webClient from '@elbwalker/client-web';
+import type { WebClient } from '@elbwalker/client-web';
 import type { Config, Function } from './types';
 
 describe('destination plausible', () => {
@@ -15,7 +15,7 @@ describe('destination plausible', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    elbwalker = require('@elbwalker/walker.js').default;
+    elbwalker = require('@elbwalker/client-web').default;
     destination = require('.').default;
 
     w.elbLayer = [];

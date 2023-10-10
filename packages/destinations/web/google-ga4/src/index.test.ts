@@ -1,5 +1,5 @@
-import webClient from '@elbwalker/walker.js';
-import type { WebClient } from '@elbwalker/walker.js';
+import webClient from '@elbwalker/client-web';
+import type { WebClient } from '@elbwalker/client-web';
 import type { Config, Function } from './types';
 
 describe('Destination Google GA4', () => {
