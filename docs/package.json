@@ -10,8 +10,9 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.4.1",
-    "astro": "2.7.0",
-    "sharp": "^0.32.1"
+    "@astrojs/starlight": "^0.11.0",
+    "@elbwalker/client-web": "^0.0.1",
+    "astro": "3.2.4",
+    "sharp": "^0.32.6"
   }
 }

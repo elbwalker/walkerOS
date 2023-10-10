@@ -1,4 +1,4 @@
 # walkerOS demos
 
-[Tagging Website](./tagging/)
-[Firebase Stack](./stacks/firebase/)
+- [Tagging Website](./tagging/)
+- [Firebase Stack](./stacks/firebase/)
