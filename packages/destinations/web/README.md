@@ -3,11 +3,11 @@
 Understand the concept of destinations, learn how to use them, and how to write you own.
 
 - [API](./api/)
-- [event pipe](./event-pipe/)
 - [Google Ads](./google-ads/)
 - [Google GA4](./google-ga4/)
 - [Google Tag Manager](./google-gtm/)
 - [Meta Pixel (Facebook Pixel)](./meta-pixel/)
+- [Piwik PRO](./piwikpro/)
 - [Plausible](./plausible/)
 
 Couldn't find what you were looking for? [Request a destination](https://github.com/elbwalker/walkerOS/issues/new).
@@ -15,10 +15,12 @@ If you want your destination to be added feel free to create an issue.
 
 ## 🤓 Write your own
 
-Creating your own destinations is easy. Use [XXX Boilerplate](./xxx_boilerplate/) to get started. A valid `WebDestination.Function` consists of a `config` object, and the two methods:
+A valid `WebDestination.Function` consists of a `config` object and a `push` method. In addition a `type` helps to specify the destination while the `init` function configures the environment by maybe loading additional scripts and setting required variables.
 
 ```ts
 interface Function {
+  config: Config<Custom, EventCustom>;
+  type?: string;
   init?: (config: Config<Custom, EventCustom>) => boolean;
   push: (
     event: WalkerOS.Event,
@@ -26,7 +28,6 @@ interface Function {
     mapping?: EventConfig<EventCustom>,
     runState?: WalkerOS.Config,
   ) => void;
-  config: Config<Custom, EventCustom>;
 }
 ```
 
