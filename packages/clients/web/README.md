@@ -4,7 +4,7 @@
   </a>
 </p>
 
-# @elbwalker/client-web (formerly walker.js)
+# walkerOS web client (formerly walker.js)
 
 <div align="left">
   <img src="https://img.shields.io/github/license/elbwalker/walkerOS" />
@@ -12,7 +12,7 @@
   <a href="https://docs.elbwalker.com/"><img src="https://img.shields.io/badge/docs-docs.elbwalker.com-yellow" alt="elbwalker Documentation"></a>
 </div>
 
-Why you need it: Unify your data collection efforts across different departments with the web client, formerly known as walkerOS. This package offers a vendor-agnostic approach to front-end user event tracking, enabling you to collect high-quality, consent-aware data for analytics, marketing, and more.
+Why you need it: Unify your data collection across various departments with the walkerOS web client, previously known as walker.js. This package offers a vendor-agnostic approach to front-end user event tracking, enabling you to collect high-quality, consent-aware data for analytics, marketing, and beyond.
 
 ## Usage
 
@@ -98,16 +98,79 @@ This package is intended for companies, agencies, freelancers, and in-house team
 
 ## Installation
 
-TBD
+This is a node example. Make sure to also check the alternative ways:
+
+- [Installation via Google Tag Manager](XXX)
+- [Implementation as a script](XXX)
+
+```sh
+$ npm i --save @elbwalker/client-web
+```
+
+```ts
+import { elb, webClient } from '@elbwalker/client-web';
+
+// Initialize the walkerOS web client
+window.elbwalker = webClient({
+  // custom configuration of type WebClient.Config
+});
+
+// Start the web client (for SPAs on route changes)
+elb('walker run');
+
+// Optionally add a destination to log to the console
+elb('walker destination', {
+  push: console.log,
+});
+```
+
+> For a complete and more detailled usage guide look a the [installation documentation](XXX).
 
 ## Tagging
 
-TBD
+It's possible to set up a whole event using just the five HTML-attributes:
+
+- `data-elb="entity"` for setting the scope of the entity
+- `data-elbaction="trigger:action"` for initializing th trigger to fire the action
+- `data-elb-entity="key:value` for setting data-properties of an entity
+- `data-elbcontext="key:value` for to add a more specific context to the entity
+- `data-elbglobals="key:value` for adding data to every single event on a page
+
+> Learn more about all [tagging possibilities](XXX).
 
 ## Destinations
 
-TBD
+Destinations are of the type `WebDestination.Function` and can be added dynamically.
+
+```ts
+import type { WebDestination } from '@elbwalker/client-web';
+
+const destinationLog: WebDestination.Function = {
+  config: {}, // Preset configuration
+  type: 'log', // Optional specification
+  init: () => {
+    // Initializes all required steps before processing events
+    return true;
+  },
+  push: console.log, // Function that processes events
+};
+
+elb('walker destination', destinationLog, {
+  // Override the default settings
+  // consent: { functional: true }, // Require functional consent state
+});
+```
+
+> Learn more about [destinations](XXX).
 
 ## Consent
 
-TBD
+```ts
+import { elb } from '@elbwalker/client-web';
+
+// Sets all granted consent states.
+// Only destinations with matching states set to true will receive events
+elb('walker consent', { functional: true, marketing: false });
+```
+
+> Learn more about how to [work with consent](XXX).

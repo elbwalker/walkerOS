@@ -1,13 +1,10 @@
-import {
-  destinationGoogleGTM,
-  type DestinationGoogleGTM,
-} from '@elbwalker/destination-web-google-gtm';
+import { destinationGoogleGTM } from '@elbwalker/destination-web-google-gtm';
 
-import { elb, webClient } from '@elbwalker/client-web';
+import { elb, webClient, type WebDestination } from '@elbwalker/client-web';
 
 export function setupAnalytics() {
   // Dummy destination to log events to the console
-  const destinationLog: DestinationGoogleGTM.Function = {
+  const destinationLog: WebDestination.Function = {
     config: {},
     type: 'log',
     push: console.log,
@@ -26,7 +23,7 @@ export function setupAnalytics() {
 
   elb('walker run');
 
-  // Google Tag Manager
+  // Google Tag Manager Destination
   elb('walker destination', destinationGoogleGTM, {
     consent: { functional: true },
     mapping: { '*': { '*': {} } },
