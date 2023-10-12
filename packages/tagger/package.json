@@ -1,0 +1,48 @@
+{
+  "name": "@elbwalker/tagger",
+  "description": "A helper to set up tracking based on walkerOS",
+  "version": "1.0.2",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "npm run dev:build & npm run dev:test",
+    "dev:build": "tsup --watch --config tsup.dev.config.ts",
+    "dev:test": "jest --watchAll --colors",
+    "publish": "npm i && npm run test && npm run build && npm publish --access public",
+    "test": "jest --colors --coverage"
+  },
+  "dependencies": {
+    "@elbwalker/types": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elbwalker/walkerOS",
+    "directory": "packages/tagger"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "keywords": [
+    "elb",
+    "elbwalker",
+    "walker",
+    "walkerOS",
+    "tagger",
+    "tracking"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

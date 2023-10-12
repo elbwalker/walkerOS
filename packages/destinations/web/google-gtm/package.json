@@ -1,0 +1,53 @@
+{
+  "name": "@elbwalker/destination-web-google-gtm",
+  "description": "Google Tag Manager (GTM) web destination for walkerOS",
+  "version": "1.2.3",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "npm run dev:build & npm run dev:test",
+    "dev:build": "tsup --watch --config tsup.dev.config.ts",
+    "dev:test": "jest --watchAll --colors",
+    "lint": "eslint \"**/*.ts*\"",
+    "publish": "npm run test && npm run build && npm publish --access public",
+    "test": "jest --colors --coverage"
+  },
+  "devDependencies": {
+    "@elbwalker/types": "*",
+    "@elbwalker/client-web": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elbwalker/walkerOS",
+    "directory": "packages/destinations/web/google-gtm"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "keywords": [
+    "elb",
+    "elbwalker",
+    "walker",
+    "walkerOS",
+    "walker destination",
+    "analytics",
+    "tracking",
+    "google tag manager",
+    "gtm"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}
