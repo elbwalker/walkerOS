@@ -3,6 +3,9 @@ import { Function } from './types';
 const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
 
+// Types
+export * as DestinationGoogleGTM from './types';
+
 export const destinationGoogleGTM: Function = {
   type: 'google-gtm',
 

@@ -1,4 +1,4 @@
-import type { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import type {
   CustomConfig,
   Function,
@@ -6,6 +6,9 @@ import type {
   Parameters,
   PropertyMapping,
 } from './types';
+
+// Types
+export * as DestinationGoogleGA4 from './types';
 
 const destinationGoogleGA4: Function = {
   type: 'google-ga4',
@@ -15,7 +18,7 @@ const destinationGoogleGA4: Function = {
   init(config) {
     const w = window;
     const custom: Partial<CustomConfig> = config.custom || {};
-    const settings: Elbwalker.AnyObject = {};
+    const settings: WalkerOS.AnyObject = {};
     // required measuremt id
     if (!custom.measurementId) return false;
 
@@ -68,7 +71,7 @@ const destinationGoogleGA4: Function = {
       ];
 
     include.forEach((groupName) => {
-      let group = event[groupName as keyof Omit<Elbwalker.Event, 'all'>];
+      let group = event[groupName as keyof Omit<WalkerOS.Event, 'all'>];
 
       // Create a fake group for event properties
       if (groupName == 'event')
@@ -85,7 +88,7 @@ const destinationGoogleGA4: Function = {
       Object.entries(group).forEach(([key, val]) => {
         // Different value access for context
         if (groupName == 'context')
-          val = (val as Elbwalker.OrderedProperties)[0];
+          val = (val as WalkerOS.OrderedProperties)[0];
 
         eventParams[`${groupName}_${key}`] = val;
       });
@@ -148,14 +151,14 @@ function addScript(
 
 function getMappedParams(
   mapping: PropertyMapping,
-  event: Elbwalker.Event,
+  event: WalkerOS.Event,
   i: number = 0,
 ) {
   let params: Parameters = {};
 
   Object.entries(mapping).forEach(([prop, keyRef]) => {
     let key: string;
-    let defaultValue: Elbwalker.PropertyType | undefined;
+    let defaultValue: WalkerOS.PropertyType | undefined;
 
     if (typeof keyRef == 'string') {
       key = keyRef;

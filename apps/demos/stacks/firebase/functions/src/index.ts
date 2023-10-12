@@ -1,5 +1,5 @@
 import { destinationBigQuery } from '@elbwalker/destination-node-bigquery';
-import { NodeDestination } from '@elbwalker/node-client';
+import { NodeDestination } from '@elbwalker/client-node';
 import { firebaseStack } from '@elbwalker/stack-firebase';
 import { Schema } from '@elbwalker/types';
 

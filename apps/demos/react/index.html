@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" class="bg-gray-50">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Web site created using create-react-app"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,aspect-ratio"></script>
+    <title>walkerOS web client react example</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+
+    <script>
+      // For beauty purposes only
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              elbwalker: {
+                DEFAULT: '#01B5E2',
+                50: '#FFFFFF',
+                400: '#27DBFE',
+                500: '#27DBFE',
+                600: '#01B5E2',
+                700: '#015372',
+              },
+            },
+          },
+        },
+      };
+    </script>
+  </body>
+</html>

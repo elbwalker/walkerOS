@@ -1,5 +1,8 @@
 import { Function } from './types';
 
+// Types
+export * as DestinationGoogleAds from './types';
+
 export const destinationGoogleAds: Function = {
   type: 'google-ads',
 

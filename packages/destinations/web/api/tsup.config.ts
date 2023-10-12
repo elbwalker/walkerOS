@@ -28,7 +28,7 @@ export default defineConfig([
     ...config,
     entry: ['src/index.ts'],
     format: ['iife'],
-    globalName: 'Elbdestination',
+    globalName: 'Destination',
     minify: true,
     outExtension() {
       return { js: `.es5.js` };

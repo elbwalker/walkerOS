@@ -1,123 +1,78 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/elbwalker.png' width="300px"/>
+    <img title="elbwalker" src='https://www.elbwalker.com/elbwalker.png' width="256px"/>
   </a>
 </p>
 
-# @TODO
+# walkerOS: Your Unified Data Collection Solution
 
-- clients
-  - node/server
-- server destinations
-  - add type
-  - bigquery
-  - aws sns
-- stacks
-  - firebase
-  - aws
-- update examples
-  - simplify
-  - data contracts
-- merge docs
-- update READMEs
-
-# walker.js
-
-Walker.js is a first-party event tracker for simplified and compliant data collection. Standardized, agnostic & flexible. With walker.js you can capture user events in the browser and send them to any destination - just by setting HTML attributes. Become independent from locked-in analytics systems and set up reliable tracking the moment you design your front end.
-
-[Request Feature](https://github.com/elbwalker/walker.js/issues/new) · [Report Bug](https://github.com/elbwalker/walker.js/issues/new) · [Say hello](https://calendly.com/elb-alexander/30min)
+[Request Feature](https://github.com/elbwalker/walkerOS/issues/new) · [Report Bug](https://github.com/elbwalker/walkerOS/issues/new) · [Say hello](https://calendly.com/elb-alexander/30min)
 
 <div align="left">
-  <img src="https://img.shields.io/github/license/elbwalker/walker.js" />
-  <img src="https://img.shields.io/github/languages/top/elbwalker/walker.js" />
-  <img src="https://img.shields.io/github/size/elbwalker/walker.js/dist/walker.js" />
-  <a href="https://docs.elbwalker.com/"><img src="https://img.shields.io/badge/docs-docs.elbwalker.com-yellow" alt="elbwalker Documentation"></a>
+  <img src="https://img.shields.io/github/license/elbwalker/walkerOS" />
+  <img src="https://img.shields.io/github/languages/top/elbwalker/walkerOS" />
+  <a href="https://docs.elbwalker.com/"><img src="https://img.shields.io/badge/docs-docs.elbwalker.com-yellow" alt="walkerOS Documentation"></a>
 </div>
 
-## 🤓 Usage
+## Why walkerOS?
 
-You can implement all sorts of front-end user events. From product and UX events like "promotion view", or filter usage, etc. to e-commerce actions like product add to carts or order complete events. The walker.js handles all [trigger initializations](https://docs.elbwalker.com/tagging/available-triggers) and race conditions, builds the [events with context](https://docs.elbwalker.com/tagging/basics), and distributes them based on [consent states](https://docs.elbwalker.com/privacy/consent) and [mapping definitions](https://docs.elbwalker.com/destinations/basics#mapping) to any [destinations](https://docs.elbwalker.com/destinations/details).
+In an ever-changing data landscape, **walkerOS provides a unified, reliable, and privacy-centric data collection platform that you control**. It serves as a single **source of truth** for your data needs, **integrating seamlessly with any tool** you use for data analysis or storage.
 
-To get started take a look at our detailed [documentation](https://docs.elbwalker.com/).
+## Project Description
 
-1. [Installation](https://docs.elbwalker.com/getting-started/installation)
-2. [Tagging](https://docs.elbwalker.com/tagging/basics)
-3. [Destinations](https://docs.elbwalker.com/destinations/basics)
-4. [Consent](https://docs.elbwalker.com/privacy/consent)
+walkerOS is a comprehensive **data collection infrastructure** designed to empower organizations to capture **first-party events** in a **reliable and privacy-friendly** manner. Its **vendor-agnostic** approach allows for seamless integration with any tool, giving you complete control over your data.
 
-### Basic example
+### Features
 
-Tagging a page with
+- **Unified Approach**: Meet the needs of data engineers, product owners, analysts, marketers, and developers.
+- **Data Quality**: Enforce data contracts and validation for high-quality data collection.
+- **Privacy**: Built-in consent management, data redaction capabilities, and first-party data collection in your **own infrastructure**.
+- **Flexibility**: Supports both server-side and client-side event tracking.
 
-```html
-<body data-elbglobals="language:en">
-  <div data-elbcontext="test:engagement">
-    <div data-elb="promotion" data-elbaction="visible:view">
-      <h1 data-elb-promotion="name:Setting up tracking easily">
-        Setting up tracking easily
-      </h1>
-      <p data-elb-promotion="category:analytics">Analytics</p>
-    </div>
-  </div>
-</body>
-```
+## Target Audience
 
-generates an event like
+walkerOS is designed for enterprises, agencies, freelancers, and anyone invested in data-driven decision-making. Achieve quick results with the **flexibility to iterate without breaking your existing setup**.
 
-```js
-{
-  event: 'promotion view', // Combination of entity and action
-  data: {
-    // Arbitrary set properties with the data-elb-promotion attribute
-    name: 'Setting up tracking easily',
-    category: 'analytics',
-  },
-  context: {
-    // Related properties defined with the data-elbcontext attribute
-    test: ['engagement', 0] // Value and order
-  },
-  custom: {}, // Additional custom data
-  globals: {
-    // General Properties defined with the data-elbglobals attribute
-    language: 'en'
-  },
-  user: {
-    // Stored user ids (manually added once)
-    id: 'userid',
-    device: 'cookieid',
-    session: 'sessionid',
-  },
-  nested: [], // All nested entities within the promotion
-  consent: { functional: true }, // Status of the consent state(s)
-  id: '1647261462000-01b5e2-5', // Timestamp, group & count of the event
-  trigger: 'visible', // Name of the trigger that fired
-  entity: 'promotion', // Entity name
-  action: 'view', // Entity action
-  timestamp: 1647261462000, // Time when the event fired
-  timing: 3.14, // How long it took from the page load to trigger the event
-  group: '01b5e2', // Random group id for all events on a page
-  count: 2, // Incremental counter of the events on a page
-  version: {
-    // Helpful when working with raw data
-    walker: 1.6, // Used walker.js version
-    config: 42, // A custom configuration version number
-  },
-  source: {
-    // Origins of the event
-    type: 'web', // Source type of the event
-    id: 'https://github.com/elbwalker/walker.js', // Source id of the event's origin (url)
-    previous_id: 'https://www.elbwalker.com/' // Previous source id (referrer)
-  },
-  walker: true, // Flag to filter events
-}
-```
+## Pre-requisites
 
-that [destinations](https://docs.elbwalker.com/destinations/details) automatically translates into proper implementations.
+Before diving into walkerOS, you should:
 
-## Contact
+- Identify your primary focus: Are you more concerned with data quality or advanced event collection?
+- Understand the [walkerOS event model](XXX).
+- Explore a complete [demo infrastructure](XXX).
 
-Send us an email if you have any questions or feedback at hello@elbwalker.com
+## Package Overview
 
-Want to send the data directly to your Google BigQuery instance? Check out our hosted version at https://www.elbwalker.com/
+- [Clients](./packages/clients/): For data creation and state management.
+- [Destinations](./packages/destinations/): Tools for data activation.
+- [Stacks](./packages/stacks/): Pre-built APIs for event ingestion and server-side processing.
+- [Utils](./packages/utils/): Shared utilities across walkerOS packages.
+- [Demos](./apps/demos/): Demonstrations on how to utilize walkerOS.
+- [Docs](./docs/): The official walkerOS documentation.
 
-<p align="right">(<a href="#top">back to top</a>)</p>
+## Getting Started
+
+walkerOS is modular and adaptable to your specific data needs. Think of it as building with Lego bricks. As your requirements evolve, so can your data collection strategy. Follow our [Quick Start Guide](XXX) for a quick start.
+
+## Installation
+
+- Use the clients for web or server-side data collection.
+- Manage your endpoints with stacks for data validation, redaction, or enrichment.
+- Leverage utilities to customize your setup further.
+
+## Contributing
+
+walkerOS is a community-driven project that addresses real-world challenges. Please refer to our [Contributing Guidelines](XXX) to contribute.
+
+## Support
+
+Need help? You can:
+
+- [Start a discussion](https://github.com/elbwalker/walkerOS/discussions) for questions, feedback, and thoughts.
+- Contact us via email at [hello@elbwalker.com](mailto:hello@elbwalker.com?subject=walkerOS).
+
+For more insights, visit our [talks repository](https://github.com/elbwalker/talks) featuring presentations and podcast episodes about walkerOS.
+
+## License
+
+walkerOS is licensed under the [MIT License](./LICENSE).

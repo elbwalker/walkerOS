@@ -1,3 +1,3 @@
-# walker.js types
+# walkerOS types
 
 TBD

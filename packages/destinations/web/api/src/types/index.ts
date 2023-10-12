@@ -1,4 +1,4 @@
-import type { WebDestination } from '@elbwalker/walker.js';
+import type { WebDestination } from '@elbwalker/client-web';
 
 export interface Function
   extends WebDestination.Function<CustomConfig, CustomEventConfig> {}

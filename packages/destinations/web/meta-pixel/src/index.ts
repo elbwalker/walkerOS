@@ -1,4 +1,4 @@
-import type { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import type {
   ContentIds,
   Contents,
@@ -9,6 +9,9 @@ import type {
 } from './types';
 
 // https://developers.facebook.com/docs/meta-pixel/
+
+// Types
+export * as DestinationMetaPixel from './types';
 
 export const destinationMetaPixel: Function = {
   type: 'meta-pixel',
@@ -67,7 +70,7 @@ function setup() {
 }
 
 function getParameters(
-  event: Elbwalker.Event,
+  event: WalkerOS.Event,
   mapping: CustomEventConfig,
   currency: string = 'EUR',
 ) {
@@ -180,7 +183,7 @@ function getParameters(
 
 function getParam(param: PropertyMapping) {
   let key: string;
-  let defaultValue: Elbwalker.PropertyType | undefined;
+  let defaultValue: WalkerOS.PropertyType | undefined;
 
   if (typeof param == 'string') {
     key = param;
@@ -193,7 +196,7 @@ function getParam(param: PropertyMapping) {
 }
 
 function getParameterContentIds(
-  event: Elbwalker.Event,
+  event: WalkerOS.Event,
   mapping: CustomEventConfig,
 ): ContentIds | undefined {
   const contentsMapping = mapping.contents;
@@ -219,7 +222,7 @@ function getParameterContentIds(
 }
 
 function getParameterContents(
-  event: Elbwalker.Event,
+  event: WalkerOS.Event,
   mapping: CustomEventConfig,
 ): Contents | undefined {
   const contentsMapping = mapping.contents;

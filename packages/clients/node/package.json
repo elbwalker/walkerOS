@@ -1,6 +1,6 @@
 {
-  "name": "@elbwalker/node-client",
-  "description": "Node client for walker.js for sending events from the server-side",
+  "name": "@elbwalker/client-node",
+  "description": "Node client for walkerOS for sending events from the server-side",
   "version": "0.0.1",
   "license": "MIT",
   "main": "dist/index.js",
@@ -25,18 +25,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/elbwalker/walker.js",
+    "url": "https://github.com/elbwalker/walkerOS",
     "directory": "packages/clients/node"
   },
   "author": "elbwalker <hello@elbwalker.com>",
-  "homepage": "https://github.com/elbwalker/walker.js#readme",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
   "bugs": {
-    "url": "https://github.com/elbwalker/walker.js/issues"
+    "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "keywords": [
     "walker",
-    "walkerjs",
-    "walker.js",
+    "walkerOS",
     "analytics",
     "tracking",
     "data collection",

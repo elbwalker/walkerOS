@@ -1,4 +1,4 @@
-import type { WebDestination } from '@elbwalker/walker.js';
+import type { WebDestination } from '@elbwalker/client-web';
 
 declare global {
   interface Window {

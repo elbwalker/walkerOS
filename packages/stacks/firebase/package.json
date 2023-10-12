@@ -24,19 +24,19 @@
     "firebase-functions": "^4.4.1"
   },
   "devDependencies": {
-    "@elbwalker/node-client": "*",
+    "@elbwalker/client-node": "*",
     "@elbwalker/types": "*",
     "@elbwalker/utils": "*"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/elbwalker/walker.js",
+    "url": "https://github.com/elbwalker/walkerOS",
     "directory": "packages/stacks/firebase"
   },
   "author": "elbwalker <hello@elbwalker.com>",
-  "homepage": "https://github.com/elbwalker/walker.js#readme",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
   "bugs": {
-    "url": "https://github.com/elbwalker/walker.js/issues"
+    "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "keywords": [
     "walker",

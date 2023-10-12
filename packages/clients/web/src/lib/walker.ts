@@ -1,5 +1,5 @@
 import type { Walker } from '../types';
-import type { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import { Const, assign, castValue, getAttribute, trim } from '@elbwalker/utils';
 
 export function getElbAttributeName(
@@ -18,7 +18,7 @@ export function getElbValues(
   element: Element,
   name: string,
   isProperty = true,
-): Elbwalker.Properties {
+): WalkerOS.Properties {
   const values = splitAttribute(
     getAttribute(element, getElbAttributeName(prefix, name, isProperty)) || '',
   ).reduce((values, str) => {
@@ -38,14 +38,14 @@ export function getElbValues(
       val = val.substring(1); // Remove # symbol
       try {
         // Read property value from element
-        let dynamicValue = (element as any)[val];
+        let dynamicValue = (element as Element)[val as keyof Element];
         if (!dynamicValue && val === 'selected') {
           // Try to read selected value with chance of error
           dynamicValue = (element as HTMLSelectElement).options[
             (element as HTMLSelectElement).selectedIndex
           ].text;
         }
-        if (dynamicValue) val = dynamicValue;
+        if (dynamicValue) val = String(dynamicValue);
       } catch (error) {
         val = '';
       }
@@ -56,13 +56,13 @@ export function getElbValues(
       key = key.slice(0, -2); // Remove [] symbol
 
       if (!Array.isArray(values[key])) values[key] = [];
-      (values[key] as Elbwalker.PropertyType[]).push(castValue(val));
+      (values[key] as WalkerOS.PropertyType[]).push(castValue(val));
     } else {
       values[key] = castValue(val);
     }
 
     return values;
-  }, {} as Elbwalker.Properties);
+  }, {} as WalkerOS.Properties);
 
   return values;
 }
@@ -130,7 +130,7 @@ export function getEvents(
   return events;
 }
 
-export function getGlobals(prefix: string): Elbwalker.Properties {
+export function getGlobals(prefix: string): WalkerOS.Properties {
   const globalsName = getElbAttributeName(
     prefix,
     Const.Commands.Globals,
@@ -177,8 +177,8 @@ export function getEntities(
   prefix: string,
   target: Element,
   filter?: Walker.Filter,
-): Elbwalker.Entities {
-  const entities: Elbwalker.Entities = [];
+): WalkerOS.Entities {
+  const entities: WalkerOS.Entities = [];
   let element = target as Node['parentElement'];
 
   // Unset empty filter object
@@ -199,7 +199,7 @@ function getEntity(
   prefix: string,
   element: Element,
   origin?: Element,
-): Elbwalker.Entity | null {
+): WalkerOS.Entity | null {
   const type = getAttribute(element, getElbAttributeName(prefix));
 
   if (!type) return null; // It's not a (valid) entity element
@@ -243,8 +243,8 @@ function getEntity(
   });
 
   // Get properties
-  let data: Elbwalker.Properties = {};
-  let genericProps: Elbwalker.Properties = {};
+  let data: WalkerOS.Properties = {};
+  let genericProps: WalkerOS.Properties = {};
   propertyElems.forEach((child) => {
     // Eventually override closer peroperties
     genericProps = assign(genericProps, getElbValues(prefix, child, ''));
@@ -255,7 +255,7 @@ function getEntity(
   data = assign(parentProps, assign(genericProps, data));
 
   // Get nested entities
-  const nested: Elbwalker.Entities = [];
+  const nested: WalkerOS.Entities = [];
   element
     .querySelectorAll(`[${getElbAttributeName(prefix)}]`)
     .forEach((nestedEntityElement) => {
@@ -286,9 +286,9 @@ function getThisAndParentProperties(
   entitySelector: string,
   prefix: string,
   type: string,
-): [data: Elbwalker.Properties, context: Elbwalker.OrderedProperties] {
-  let data: Elbwalker.Properties = {};
-  let context: Elbwalker.OrderedProperties = {};
+): [data: WalkerOS.Properties, context: WalkerOS.OrderedProperties] {
+  let data: WalkerOS.Properties = {};
+  let context: WalkerOS.OrderedProperties = {};
   let parent = element as Node['parentElement'];
   const contextSelector = `[${getElbAttributeName(
     prefix,

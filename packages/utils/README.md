@@ -1,3 +1,3 @@
-# walker.js utils
+# walkerOS utils
 
 TBD

@@ -1,4 +1,4 @@
-import type { Elbwalker } from '.';
+import type { WalkerOS } from '.';
 
 export interface Function<Custom = unknown, EventCustom = unknown> {
   config: Config<Custom, EventCustom>;
@@ -7,7 +7,7 @@ export interface Function<Custom = unknown, EventCustom = unknown> {
 }
 
 export interface Config<Custom = unknown, EventCustom = unknown> {
-  consent?: Elbwalker.Consent; // Required consent states to init and push events
+  consent?: WalkerOS.Consent; // Required consent states to init and push events
   custom?: Custom; // Arbitrary but protected configurations for custom enhancements
   id?: string; // A unique key for the destination
   init?: boolean; // If the destination has been initialized by calling the init method
@@ -27,10 +27,10 @@ export type Meta = {
 };
 
 export interface EventConfig<EventCustom = unknown> {
-  consent?: Elbwalker.Consent; // Required consent states to init and push events
+  consent?: WalkerOS.Consent; // Required consent states to init and push events
   custom?: EventCustom; // Arbitrary but protected configurations for custom event config
   ignore?: boolean; // Choose to no process an event when set to true
   name?: string; // Use a custom event name
 }
 
-export type Queue = Array<Elbwalker.Event>;
+export type Queue = Array<WalkerOS.Event>;

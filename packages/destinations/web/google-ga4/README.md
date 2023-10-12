@@ -1,6 +1,6 @@
-# Google Analytics 4 (GA4) web destination for walker.js
+# Google Analytics 4 (GA4) web destination for walkerOS
 
-Made to be used with [@elbwalker/walker.js](https://github.com/elbwalker/walker.js).
+Made to be used with [@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the [documentation](https://docs.elbwalker.com/).
 
@@ -97,7 +97,7 @@ npm i --save @elbwalker/destination-web-google-ga4
 ```
 
 ```ts
-import { elb } from '@elbwalker/walker.js';
+import { elb } from '@elbwalker/client-web';
 import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
 
 elb('walker destination', destinationGoogleGA4, config);
@@ -127,4 +127,4 @@ Loading the destination via dynamic import
 
 ## Contribute
 
-Feel free to contribute by submitting an [issue](https://github.com/elbwalker/walker.js/issues), starting a [discussion](https://github.com/elbwalker/walker.js/discussions) or getting in [contact](https://calendly.com/elb-alexander/30min).
+Feel free to contribute by submitting an [issue](https://github.com/elbwalker/walkerOS/issues), starting a [discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in [contact](https://calendly.com/elb-alexander/30min).

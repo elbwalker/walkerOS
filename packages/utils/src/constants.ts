@@ -1,6 +1,6 @@
-import type { Elbwalker, Utils as TUtils } from '@elbwalker/types';
+import type { Utils as TUtils, WalkerOS } from '@elbwalker/types';
 
-const Commands: { [key: string]: Elbwalker.Commands } = {
+const Commands: { [key: string]: WalkerOS.Commands } = {
   Action: 'action',
   Config: 'config',
   Consent: 'consent',

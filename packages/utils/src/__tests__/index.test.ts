@@ -1,4 +1,4 @@
-import { Elbwalker } from '@elbwalker/types';
+import { WalkerOS } from '@elbwalker/types';
 import {
   debounce,
   getMarketingParameters,
@@ -555,7 +555,7 @@ describe('Utils', () => {
               validate: (
                 value: unknown,
                 key: string,
-                obj: Elbwalker.AnyObject,
+                obj: WalkerOS.AnyObject,
               ) => {
                 expect(value).toBe(obj[key]);
                 throw new Error('Custom');

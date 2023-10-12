@@ -1,5 +1,8 @@
 import type { Function } from './types';
 
+// Types
+export * as DestinationWebAPI from './types';
+
 export const destinationWebAPI: Function = {
   type: 'api',
 

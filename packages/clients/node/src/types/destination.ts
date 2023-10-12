@@ -1,7 +1,7 @@
-import type { Elbdestination, Elbwalker } from '@elbwalker/types';
+import type { Destination, WalkerOS } from '@elbwalker/types';
 
 export interface Function<Custom = unknown, EventCustom = unknown>
-  extends Elbdestination.Function<Custom, EventCustom> {
+  extends Destination.Function<Custom, EventCustom> {
   push: PushFn<Custom, EventCustom>;
   init?: InitFn<Custom, EventCustom>;
   setup?: SetupFn<Custom, EventCustom>;
@@ -21,18 +21,18 @@ export type SetupFn<Custom, EventCustom> = (
 ) => Promise<boolean | Config<Custom, EventCustom>>;
 
 export interface Config<Custom = unknown, EventCustom = unknown>
-  extends Elbdestination.Config<Custom, EventCustom> {}
+  extends Destination.Config<Custom, EventCustom> {}
 
 export interface Mapping<EventCustom>
-  extends Elbdestination.Mapping<EventCustom> {}
+  extends Destination.Mapping<EventCustom> {}
 
 export interface EventConfig<EventCustom = unknown>
-  extends Elbdestination.EventConfig<EventCustom> {}
+  extends Destination.EventConfig<EventCustom> {}
 
 export type PushEvents<EventCustom = unknown> = Array<PushEvent<EventCustom>>;
 
 export type PushEvent<EventCustom = unknown> = {
-  event: Elbwalker.Event;
+  event: WalkerOS.Event;
   mapping?: EventConfig<EventCustom>;
 };
 
@@ -42,7 +42,7 @@ export type Ref = {
 };
 
 export type Push = {
-  queue?: Elbwalker.Events;
+  queue?: WalkerOS.Events;
   error?: unknown;
 };
 

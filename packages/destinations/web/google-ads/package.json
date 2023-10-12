@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-google-ads",
-  "description": "Google Ads web destination for walker.js",
-  "version": "2.0.0",
+  "description": "Google Ads web destination for walkerOS",
+  "version": "1.1.2",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -21,24 +21,24 @@
   },
   "devDependencies": {
     "@elbwalker/types": "*",
-    "@elbwalker/walker.js": "*",
+    "@elbwalker/client-web": "*",
     "@types/gtag.js": "^0.0.12"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/elbwalker/walker.js",
+    "url": "https://github.com/elbwalker/walkerOS",
     "directory": "packages/destinations/web/google-ads"
   },
   "author": "elbwalker <hello@elbwalker.com>",
-  "homepage": "https://github.com/elbwalker/walker.js#readme",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
   "bugs": {
-    "url": "https://github.com/elbwalker/walker.js/issues"
+    "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "keywords": [
     "elb",
     "elbwalker",
     "walker",
-    "walkerjs",
+    "walkerOS",
     "walker destination",
     "analytics",
     "tracking",

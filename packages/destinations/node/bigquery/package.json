@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-node-bigquery",
-  "description": "BigQuery node destination for walker.js",
-  "version": "2.0.0",
+  "description": "BigQuery node destination for walkerOS",
+  "version": "0.0.1",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -21,25 +21,24 @@
   },
   "devDependencies": {
     "@google-cloud/bigquery": "^6.2.1",
-    "@elbwalker/node-client": "*",
+    "@elbwalker/client-node": "*",
     "@elbwalker/types": "*"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/elbwalker/walker.js",
+    "url": "https://github.com/elbwalker/walkerOS",
     "directory": "packages/destinations/node/bigquery"
   },
   "author": "elbwalker <hello@elbwalker.com>",
-  "homepage": "https://github.com/elbwalker/walker.js#readme",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
   "bugs": {
-    "url": "https://github.com/elbwalker/walker.js/issues"
+    "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "keywords": [
     "elb",
     "elbwalker",
     "walker",
-    "walkerjs",
-    "walker destination",
+    "walkerOS destination",
     "analytics",
     "tracking",
     "bigquery"

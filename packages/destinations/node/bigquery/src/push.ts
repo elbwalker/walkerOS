@@ -1,4 +1,4 @@
-import type { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import type { CustomConfig, PushEvents, Row } from './types';
 
 export const push = async function (events: PushEvents, custom: CustomConfig) {
@@ -11,7 +11,7 @@ export const push = async function (events: PushEvents, custom: CustomConfig) {
   return { queue: [] };
 };
 
-export const mapEvent = (event: Elbwalker.Event) => {
+export const mapEvent = (event: WalkerOS.Event) => {
   // Required properties
   const destinationEvent: Row = {
     event: event.event,

@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/utils",
-  "description": "Shared utils for walker.js packages",
-  "version": "1.6.5",
+  "description": "Shared utils for walkerOS packages",
+  "version": "2.0.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -24,18 +24,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/elbwalker/walker.js",
+    "url": "https://github.com/elbwalker/walkerOS",
     "directory": "packages/utils"
   },
   "author": "elbwalker <hello@elbwalker.com>",
-  "homepage": "https://github.com/elbwalker/walker.js#readme",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
   "bugs": {
-    "url": "https://github.com/elbwalker/walker.js/issues"
+    "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "keywords": [
     "walker",
-    "walkerjs",
-    "walker.js",
+    "walkerOS",
+    "walkerOS",
     "analytics",
     "tracking",
     "data collection",

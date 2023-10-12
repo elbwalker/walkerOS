@@ -13,16 +13,18 @@
     "clean": "turbo run clean",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
+    "publish-packages": "turbo run build test && changeset version && changeset publish",
     "test": "turbo run test"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.26.2",
     "@elbwalker/jest": "*",
     "@elbwalker/tsconfig": "*",
     "@elbwalker/tsup": "*",
     "@elbwalker/types": "*",
     "@elbwalker/utils": "*",
     "eslint-config-custom": "*",
-    "turbo": "^1.10.12",
+    "turbo": "^1.10.15",
     "typescript": "^5.1.6"
   },
   "packageManager": "npm@9.6.7",

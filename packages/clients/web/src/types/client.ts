@@ -1,4 +1,4 @@
-import type { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import type * as WebDestination from './destination';
 import type * as Walker from './walker';
 
@@ -12,7 +12,7 @@ declare global {
 }
 
 type WalkerEvent = Array<
-  Elbwalker.Event & {
+  WalkerOS.Event & {
     walker: true;
   }
 >;
@@ -22,10 +22,10 @@ export interface Function {
   config: Config;
 }
 
-export interface Elb extends Elbwalker.Elb {
+export interface Elb extends WalkerOS.Elb {
   (
     event: 'walker destination',
-    destination: WebDestination.Function<any, any>,
+    destination: WebDestination.Function,
     config?: WebDestination.Config,
   ): void;
   (event: 'walker init', scope: Scope | Scope[]): void;
@@ -34,7 +34,7 @@ export interface Elb extends Elbwalker.Elb {
     data?: PushData,
     options?: PushOptions,
     context?: PushContext,
-    nested?: Elbwalker.Entities,
+    nested?: WalkerOS.Entities,
   ): void;
 }
 
@@ -42,28 +42,28 @@ export type ElbLayer = [
   (IArguments | string)?,
   PushData?,
   PushOptions?,
-  Elbwalker.OrderedProperties?,
-  Elbwalker.Entities?,
+  WalkerOS.OrderedProperties?,
+  WalkerOS.Entities?,
 ];
 
-export type PushData = Elbwalker.PushData | WebDestination.Function | ScopeType;
+export type PushData = WalkerOS.PushData | WebDestination.Function | ScopeType;
 
 export type PushOptions =
-  | Elbwalker.PushOptions
+  | WalkerOS.PushOptions
   | Walker.Trigger
   | WebDestination.Config;
 
-export type PushContext = Elbwalker.PushContext | Element;
+export type PushContext = WalkerOS.PushContext | Element;
 
 export type Scope = Document | Element | HTMLElement;
 export type ScopeType = Scope | Scope[];
 
-export interface Config extends Elbwalker.Config {
+export interface Config extends WalkerOS.Config {
   destinations: Destinations;
   elbLayer: ElbLayer;
   pageview: boolean;
   prefix: string;
-  queue: Elbwalker.Events;
+  queue: WalkerOS.Events;
 }
 
 export interface Destinations {

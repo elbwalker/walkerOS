@@ -1,4 +1,4 @@
-import type { Elbwalker } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import type { NodeClient, NodeDestination } from './types';
 import {
   Const,
@@ -212,8 +212,8 @@ function getConfig(
 
 function getEventOrAction(
   instance: NodeClient.Function,
-  props: Partial<Elbwalker.Event> = {},
-): Elbwalker.Event | string {
+  props: Partial<WalkerOS.Event> = {},
+): WalkerOS.Event | string {
   if (!props.event) throw new Error('Event name is required');
 
   const [entity, action] = props.event.split(' ');
@@ -302,7 +302,7 @@ async function handleCommand(
 
 async function pushToDestinations(
   instance: NodeClient.Function,
-  event?: Elbwalker.Event,
+  event?: WalkerOS.Event,
   destination?: NodeClient.Destinations,
 ): Promise<NodeDestination.PushResult> {
   // Push to all destinations if no destination was given
@@ -312,7 +312,7 @@ async function pushToDestinations(
     id: string;
     destination: NodeDestination.Function;
     skipped?: boolean;
-    queue?: Elbwalker.Events;
+    queue?: WalkerOS.Events;
     error?: unknown;
   }> = await Promise.all(
     // Process all destinations in parallel
@@ -399,7 +399,7 @@ async function pushToDestinations(
 }
 
 function setConfig(instance: NodeClient.Function, data: unknown = {}) {
-  if (!isSameType(data, {} as Elbwalker.Config)) return;
+  if (!isSameType(data, {} as WalkerOS.Config)) return;
   //@TODO strict type checking
 
   instance.config = getConfig(data, instance.config);
@@ -407,7 +407,7 @@ function setConfig(instance: NodeClient.Function, data: unknown = {}) {
 }
 
 async function setConsent(instance: NodeClient.Function, data: unknown = {}) {
-  if (!isSameType(data, {} as Elbwalker.Consent)) return;
+  if (!isSameType(data, {} as WalkerOS.Consent)) return;
 
   let runQueue = false;
   Object.entries(data).forEach(([consent, granted]) => {
@@ -423,9 +423,9 @@ async function setConsent(instance: NodeClient.Function, data: unknown = {}) {
 }
 
 function setUser(instance: NodeClient.Function, data: unknown = {}) {
-  if (!isSameType(data, {} as Elbwalker.User)) return;
+  if (!isSameType(data, {} as WalkerOS.User)) return;
 
-  const user: Elbwalker.User = {};
+  const user: WalkerOS.User = {};
 
   if ('id' in data) user.id = data.id;
   if ('device' in data) user.device = data.device;
@@ -436,7 +436,7 @@ function setUser(instance: NodeClient.Function, data: unknown = {}) {
 }
 
 function run(instance: NodeClient.Function, data: unknown = {}) {
-  if (!isSameType(data, {} as Elbwalker.Properties)) return;
+  if (!isSameType(data, {} as WalkerOS.Properties)) return;
 
   instance.config = assign(instance.config, {
     allowed: true, // Free the client

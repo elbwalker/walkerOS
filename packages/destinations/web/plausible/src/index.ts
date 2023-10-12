@@ -1,5 +1,8 @@
 import type { Config, Function } from './types';
 
+// Types
+export * as DestinationPlausible from './types';
+
 export const destinationPlausible: Function = {
   type: 'plausible',
 
