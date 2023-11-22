@@ -1,6 +1,7 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="utf-8">
     <title>walkerOS tagging demo</title>
     <style>
       .elb-globals [data-elbglobals] {
@@ -50,8 +51,17 @@
         (window.elbLayer = window.elbLayer || []).push(arguments);
       }
 
+      // Utils
+      window.utils = await import(
+        'https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@latest/dist/utils.js'
+      );
+
       // Start
       elb('walker run');
+
+      // Session handling
+      const session = utils.startSession();
+      if (session) elb('session start', session);
 
       // Destination Console
       elb('walker destination', {
@@ -111,11 +121,6 @@
         custom: { measurementId: 'G-4WP1Y3GPLW' },
         loadScript: true,
       });
-
-      // Consent
-      window.utils = await import(
-        'https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.6.5/dist/utils.js'
-      );
 
       // Code snippets for consent choice
       // Simulate the CMPs functionality
@@ -196,7 +201,7 @@
     </script>
   </head>
   <body class="relative">
-    <header class="bg-white" data-elb="nav" data-elbaction="click">
+    <header class="bg-white">
       <nav class="mx-auto max-w-7xl px-6 mb-12 lg:px-8" aria-label="Top">
         <div
           class="flex w-full items-center justify-between border-b border-blue-500 py-6 lg:border-none"
@@ -204,29 +209,24 @@
           <div class="flex items-center">
             <div class="ml-10 space-x-8">
               <a
-                data-elb-nav="name:Solutions"
-                data-elbaction="click:asfjjlahfs"
                 href="#"
                 class="text-base font-medium text-gray-400 hover:text-gray-900"
                 >Solutions</a
               >
 
               <a
-                data-elb-nav="name:Pricing"
                 href="#"
                 class="text-base font-medium text-gray-400 hover:text-gray-900"
                 >Pricing</a
               >
 
               <a
-                data-elb-nav="name:Docs"
                 href="#"
                 class="text-base font-medium text-gray-400 hover:text-gray-900"
                 >Docs</a
               >
 
               <a
-                data-elb-nav="name:Company"
                 href="#"
                 class="text-base font-medium text-gray-400 hover:text-gray-900"
                 >Company</a
