@@ -121,7 +121,7 @@ const config: Config = {
             },
             {
               label: 'Imprint',
-              to: '/lagal/imprint',
+              to: '/legal/imprint',
             },
           ],
         },

@@ -1,13 +1,13 @@
 import React from 'react';
 import { ChevronDownIcon } from '@heroicons/react/24/solid';
 
-export default function LegalPrivacyHeader({ changeLanguage }) {
+export default function LegalTermsHeader({ changeLanguage }) {
   return (
     <div className="">
       <div className="mx-auto max-w-7xl py-16 px-4 sm:py-24 sm:px-6 lg:flex lg:justify-around lg:px-8">
         <div className="max-w-xl">
           <h2 className="text-4xl font-extrabold text-white sm:text-5xl sm:tracking-tight lg:text-6xl">
-            Privacy Policy
+            Terms of Services
           </h2>
         </div>
         <div className="mt-10 w-full max-w-xs">
