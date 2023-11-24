@@ -33,7 +33,13 @@ a {
 svg {
   display: inline;
 }
+
 article h2 {
   font-size: 1.5rem;
+  color: theme('colors.elbwalker.DEFAULT');
+}
+
+article h3 {
+  font-size: 1.2rem;
   color: theme('colors.elbwalker.DEFAULT');
 }

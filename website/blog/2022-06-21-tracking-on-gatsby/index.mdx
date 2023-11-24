@@ -1,0 +1,204 @@
+---
+path: tracking-on-gatsby
+title: How to set up tracking on Gatsby with walker.js
+description:
+  Implementation and tagging of the walker.js shown on a single-page-application
+  using gatsby.
+authors:
+  name: nicolas
+  image_url: /img/author/nicolas.jpeg
+category: How-to Guide
+tags:
+  - frontend event data
+  - Gatsby
+---
+
+This guide will explain how you can implement and use walker.js on single-page
+applications. We will demonstrate the implementation on our own website that
+uses gatsby.js without using plugins. 🤓
+
+## Getting started
+
+First, make a plan of what events you want to measure. Those can be
+business-related conversion goals or usage events you want to keep track of.
+Secondly, add the walker to your website.
+
+To set up the walker.js for a project using gatsby.js you have to do the
+following steps:
+
+### 1. In gatsby-ssr.js:
+
+We want to load the walker.js on every page by default. Use the
+[gatsby-ssr.js](https://www.gatsbyjs.com/docs/reference/config-files/gatsby-ssr/)
+to add it to the head of your page statically.
+
+We also want the small helper function walker that can be used to configure the
+walker.js. We'll use it to push new events to the elbLayer, on a new page view
+e.g.
+
+```js
+export const onRenderBody = ({ setHeadComponents }) => {
+  setHeadComponents([
+    <script key="walker" async className="elbwalker" src="walker.js" />
+  ],
+  [
+    <script
+      key="walker_function"
+      dangerouslySetInnerHTML={{
+        __html:
+        function elb(...args: unknown[]) {
+          (window.elbLayer = window.elbLayer || []).push(...args);}
+        ,
+      }}
+    />
+  ]);
+};
+```
+
+### 2. In gatsby-browser.js:
+
+Triggering a new page load each time the route changes is necessary. Pushing the
+"walker run" event will tell the walker.js to reinitialize and trigger all
+load-actions on a page.
+
+```js
+export function walker(...args) {
+  (window.elbLayer = window.elbLayer || []).push(...args);
+}
+
+export const onRouteUpdate = () => {
+  walker('walker run');
+};
+```
+
+### Is the walker.js working?
+
+You can quickly check whether the setup is working or not by typing “elbLayer”
+in the browser console once you have opened your site.
+
+### Tagging your site
+
+In this example we keep it simple and only want to tag some basic click events
+on our homepage:
+
+1. Clicks on our Github repo
+2. Clicks on our Login button
+3. Clicks on our “schedule call” button (hero, cta)
+
+### Tagging GitHub repo buttons
+
+First, we want to tag some outbound-clicks to the walker.js GitHub repository.
+There are multiple ways how users are getting redirected to the repository.. for
+example, through a banner, hero, navigation, cta, and footer. In the following
+example, the `banner`, as well as the hero banner, is getting tagged.
+
+It makes sense to tag all these different positions and pages where the click
+event could be fired. Afterwards, it is possible to see precisely which button
+was used and how many times. This leads to a clean data output.
+
+### position: banner
+
+As seen in the picture you only have to set three HTML attributes to collect the
+banner click triggered by a user. Check out our
+[docs](https://github.com/elbwalker/walker.js/blob/main/README.md) if you are
+not too familiar with how the walker.js works.
+
+```JSX
+<Banner
+  data-elb="github"
+  data-elb-github="position: banner"
+  className="font-medium text-white"
+>
+  Big news! The walker is now open-source.
+  <a
+    href="https://github.com/elbwalker/walkerOS"
+    data-elbaction="click"
+  >
+    Open GitHub
+  </a>
+</Banner>
+```
+
+### position: cta
+
+The entity and the trigger stay the same.
+
+Using "cta" instead of "banner" as position on the `data-elb`-attribute will
+lead to an event with a respective property (banner or hero) in the analytics
+tool since we can now differ between a GitHub redirect clicked through either
+the banner or hero section
+
+```html
+<div data-elb="github" data-elb-github="position:cta">
+  <a href="https://github.com/elbwalker/walkerOS" data-elbaction="click">
+    Go to GitHub
+  </a>
+</div>
+```
+
+### Tagging Login button
+
+Tagging the login button used on our homepage is as easy as tagging the GitHub
+click. Since there is only one login button on the entire page, it is not
+necessary to specify the position.
+
+```html
+<button data-elb="login" data-elbaction="click">Log in</button>
+```
+
+### Tagging schedule call button
+
+```html
+<div data-elb="call" data-elb-call="position: hero">
+  <a href="https://calendly.com/elbwalker-demo/30min" data-elbaction="click">
+    Schedule a free discovery call
+  </a>
+</div>
+```
+
+### elbglobals
+
+Summing up the used tagging delivers information of three click events incl.
+position property (e.g. banner, cta, footer).
+
+But we are still missing important information: On which page the event was
+fired. That's what `elbglobals` are used for!
+
+elbglobals can be defined anywhere on a page and will be collected once, right
+before the first event is fired.
+
+```js
+export default function Layout({ children, pagetype }) {
+  return (
+    <div data-elbglobals={ pagetype } >
+  )}
+```
+
+### dataLayer
+
+We can now exactly track where our event was fired. In this example, the
+`gitHub click` event was fired on the **company** page.
+
+```js
+{
+  "action": "click",
+  "count": 2,
+  "data": { "position": "banner" },
+  "entity": "github",
+  "event": "github click",
+  "globals": { "pagetype": "company" },
+  "group": "01b5e2",
+  "id": "1647968113641-b4b9h9-5",
+  "nested": [],
+  "timestamp": 1647968113641,
+  "timing": 13.37,
+  "trigger": "click",
+  "user": {},
+  "version": { "walker": 1.3, "config": 1 },
+  "walker": true
+}
+```
+
+elbglobals are an excellent way to specify the context of an event flexibly
+without limitation. They are so powerful that we will dedicate another single
+blog post to them.
