@@ -9,7 +9,7 @@ const vars = {
 const config: Config = {
   title: 'walkerOS',
   tagline: 'Open data collection platform',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/favicon.png',
 
   // Set the production url of your site here
   url: 'https://your-docusaurus-site.example.com',
@@ -58,7 +58,7 @@ const config: Config = {
 
   themeConfig: {
     // Replace with your project's social card
-    image: 'img/docusaurus-social-card.jpg',
+    image: 'img/docusaurus-social-card.jpg', // @TODO
     navbar: {
       logo: {
         alt: 'elbwalker logo',
@@ -111,6 +111,10 @@ const config: Config = {
         {
           title: 'Company',
           items: [
+            {
+              label: 'About us',
+              to: '/company',
+            },
             {
               label: 'Privacy Policy',
               to: '/legal/privacy',
