@@ -67,7 +67,7 @@ const config: Config = {
       items: [
         {
           type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
+          sidebarId: 'docsSidebar',
           position: 'left',
           label: 'Docs',
         },
@@ -83,11 +83,27 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Learn',
           items: [
             {
-              label: 'Tutorial',
+              label: 'Documentation',
               to: '/docs',
+            },
+            {
+              label: 'walker.js',
+              to: '/docs/clients/walkerjs',
+            },
+            {
+              label: 'Destinations',
+              to: '/docs/destinations',
+            },
+            {
+              label: 'Stacks',
+              to: '/docs/stacks',
+            },
+            {
+              label: 'Guides',
+              to: '/docs/guides',
             },
           ],
         },
