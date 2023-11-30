@@ -20,16 +20,16 @@ function elb() {
 elb('walker consent', { marketing: true });
 ```
 
-The walker handles the <b>race conditions</b>: Previously pushed events during a
+The walker handles the **race conditions**: Previously pushed events during a
 run get processed in the right order after granting the consent state with the
 destinations as well as new ones.
 
-:::note[Info] The queue events properties <b>consent, globals, user will be
-updated</b> to the current state before processing them. :::
+:::note[Info] The queue events properties **consent, globals, user will be
+updated** to the current state before processing them. :::
 
-You are free to define consent keys (typically known as <i>functional,
-statistics,</i> and <i>marketing</i>). But you can also use individual names for
-each vendor. The key has to match with the key used in each
+You are free to define consent keys (typically known as _functional,
+statistics,_ and _marketing_). But you can also use individual names for each
+vendor. The key has to match with the key used in each
 `destination.config.consent`.
 
 :::note[Info] A destination only requires one granted consent state to process

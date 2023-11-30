@@ -4,17 +4,20 @@ title: Meta Pixel
 
 ##### How to send events to Meta Pixel (former Facebook Pixel) via walker.js
 
-| Destination                                                | Source Code                                                                                                                                                 |
-|------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Destination                                                               | Source Code                                                                                                                                                         |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [Meta Pixel)](https://docs.elbwalker.com/destinations/details/meta-pixel) | [Source Code](https://github.com/elbwalker/walker.js/tree/main/destinations/meta-pixel), [NPM](https://www.npmjs.com/package/@elbwalker/destination-web-meta-pixel) |
 
 ## What is Meta Pixel?
 
-[Meta Pixel](https://developers.facebook.com/docs/meta-pixel/) allows tracking visitor activity on a website and tracking conversions that appear in the Meta Ads Manager.
+[Meta Pixel](https://developers.facebook.com/docs/meta-pixel/) allows tracking
+visitor activity on a website and tracking conversions that appear in the Meta
+Ads Manager.
 
 ## Configuration
 
-Start by setting up the config for the destination. Optional fields as comments. Destinations can be used via node or directly in the browser.
+Start by setting up the config for the destination. Optional fields as comments.
+Destinations can be used via node or directly in the browser.
 
 ```js
 import { DestinationMeta } from '@elbwalker/destination-web-meta-pixel';
@@ -46,6 +49,7 @@ const config /* : DestinationMeta.Config */ = {
 ```
 
 ### Node usage
+
 ```js
 npm i --save @elbwalker/destination-web-meta-pixel
 ```

@@ -132,8 +132,9 @@ If the trigger and action values are equal, e.g. for click events, you can just
 shorten the implementation:
 
 ```html
-<b data-elbaction="click">short</b> is equal to
-<s data-elbaction="click:click">long</s>
+<b data-elbaction="click"
+  >short** is equal to <s data-elbaction="click:click">long</s></b
+>
 ```
 
 ### Parameters
@@ -315,9 +316,9 @@ The walker.js will generate de-duplicated data properties.
 
 ### Generic properties
 
-Leave the entity name empty (`data-elb-`) to add the property to any related
-entity. Explicitly named properties are preferred over generic ones. It's
-suggested to <b> HIER FEHLT TEXT!!!!</b>
+Leave the entity name empty (only `data-elb-`) to add the property to any
+related entity. Explicitly named properties are preferred over generic ones.
+It's suggested to prefer explicit properties over generic ones.
 
 ```html
 <div data-elb-="p:v">
@@ -346,10 +347,10 @@ suggested to <b> HIER FEHLT TEXT!!!!</b>
 
 What global properties are, when to use them and how
 
-There might be properties that don't belong to just one event but to <b>all
-events on a page</b>. Those properties are called the globals and will be
+There might be properties that don't belong to just one event but to **all
+events on a page**. Those properties are called the globals and will be
 
-<b>collected once</b>, right before the first event got fired. The globals are
+**collected once**, right before the first event got fired. The globals are
 arbitrary like the data property. What is special about them is that you can
 define them anywhere on a page by using the `data-elbglobals` attribute.
 
@@ -414,8 +415,8 @@ closest parent (`[value, index]`). Access them via `event.context.key[0]`.
 
 How to implement nested entities
 
-A `data-elb` entity within another `data-elb` entity is called a <b>nested
-entity</b>.
+A `data-elb` entity within another `data-elb` entity is called a **nested
+entity**.
 
 The walker runs through the nested entities and treats them like regular
 entities by gathering all related information. Nested entities are accessible in

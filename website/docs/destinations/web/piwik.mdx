@@ -4,17 +4,24 @@ title: Piwik PRO
 
 ##### How to send events to Piwik PRO via walker.js
 
-| Destination                                                | Source Code                                                                                                                                                 |
-|------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Destination                                                             | Source Code                                                                                                                                                      |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [Piwik PRO)](https://docs.elbwalker.com/destinations/details/piwik-pro) | [Source Code](https://github.com/elbwalker/walker.js/tree/main/destinations/piwik-pro), [NPM](https://www.npmjs.com/package/@elbwalker/destination-web-piwikpro) |
 
 ## What is Piwik PRO?
 
-[Piwik PRO](https://piwik.pro/) is a web analytics and marketing platform that helps businesses track website traffic, user behavior, and conversion rates. It offers advanced analytics features, audience segmentation, and targeted marketing tools. Piwik PRO prioritizes data privacy and security, complying with GDPR and other data protection regulations. Businesses can use Piwik PRO to improve their website's user experience and drive conversions while keeping customer data safe.
+[Piwik PRO](https://piwik.pro/) is a web analytics and marketing platform that
+helps businesses track website traffic, user behavior, and conversion rates. It
+offers advanced analytics features, audience segmentation, and targeted
+marketing tools. Piwik PRO prioritizes data privacy and security, complying with
+GDPR and other data protection regulations. Businesses can use Piwik PRO to
+improve their website's user experience and drive conversions while keeping
+customer data safe.
 
 ## Configuration
 
-Start by setting up the config for the destination. Optional fields as comments. Destinations can be used via node or directly in the browser.
+Start by setting up the config for the destination. Optional fields as comments.
+Destinations can be used via node or directly in the browser.
 
 ```js
 import { DestinationPiwikPro } from '@elbwalker/destination-web-piwikpro';
@@ -45,7 +52,8 @@ const config /* : DestinationPiwikPro.Config */ = {
 };
 ```
 
-Use the `string-dot` notation (`data.id`, `user.id`, `group`, `context.position.0`) to access all values of an event.
+Use the `string-dot` notation (`data.id`, `user.id`, `group`,
+`context.position.0`) to access all values of an event.
 
 ### Node usage
 
