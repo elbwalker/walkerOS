@@ -1,0 +1,52 @@
+---
+title: Storage
+---
+
+# Storage
+
+To persist data on a device there are three common ways to write, read and
+delete values. Use cookies as a stage location when values should also be
+transmitted with each request. The localStorage can be used to persist data for
+a longer period and across all the browser's tabs. As a volatile memory for one
+specific task, the sessionStorage can be a good choice in terms of short-term
+persistence, where data is only available in one tab.
+
+Following a privacy-by-design approach, the storage utils have an in-build
+max-age functionality, to specify the maximum lifetime of a value. The default
+is set to 30 minutes. While cookies get deleted automatically by a browser, this
+doesn't apply to localStorage and sessionStorage.
+
+:::note[Info] Not all data will be deleted automatically. But using the
+[storageRead](###storageRead) function will do a check and eventually removes a
+value if it's no longer valid. :::
+
+### storageWrite
+
+```js
+import { storageWrite } from '@elbwalker/walker.js';
+
+// storageWrite(key, value, maxAgeInMinutes, storage, domain): void
+// Write elbUserId to localStorage, valid for 60 min
+// and returns the value using storageRead
+storageWrite('elbUserId', 'us3r1d', 60, 2);
+```
+
+### storageRead
+
+```js
+import { storageRead } from '@elbwalker/walker.js';
+
+// storageRead(key, storage): Walker.PropertyType
+// Read the elbUserId from localStorage, returns '' if not available or invalid
+storageRead('elbUserId', 2);
+```
+
+### storageDelete
+
+```js
+import { storageDelete } from '@elbwalker/walker.js';
+
+// storageDelete(key, storage): void
+// Delete the elbUserId from localStorage
+storageDelete('elbUserId', 2);
+```

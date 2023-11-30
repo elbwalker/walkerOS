@@ -1,0 +1,35 @@
+---
+title: Session
+---
+
+# Session
+
+Detect session client-side. There is no storage required, it's cookieless by
+default.
+
+Rules to start a new session:
+
+1. (Optional) Read storage for an existing sessionId, if it's not existing, it's
+   a `New Session`
+2. If the `Entry Type` is a reload of a page, it's no new session
+3. If there are any `Marketing parameters` in the URL, it's a new session
+4. If the `Referrer` is different from the current domain, it's a new session
+
+![Some file I don't know](https://91951938-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F-MNYSefehQWgpbcQJFEb%2Fuploads%2FZEGsFYuEjmX0S36e9E1x%2Fimage.png?alt=media&token=a66c3c6d-fcd6-4e0d-987c-bfa073559de4)
+
+`Marketing Parameters` can be extended (default: utm_campaign, utm_content,
+dclid, fbclid, gclid, utm_medium, msclkid, utm_source, utm_term)
+
+`Referrer` domains can be extended, e.g. internal sub-domains. `Data` can be
+pre-defined, e.g. to use your own id.
+
+```js
+startSession({
+  data?: Walker.Properties;
+  domains?: string[];
+  isNew?: boolean;
+  parameters?: MarketingParameters;
+  referrer?: string;
+  url?: string;
+}) => Walker.Properties | false;
+```

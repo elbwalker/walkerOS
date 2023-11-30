@@ -1,0 +1,62 @@
+---
+title: Helper
+---
+
+A collection of helpful functions for easier and privacy-friendly tracking
+setups
+
+All util-functions are available through the npm package (@elbwalker/walker.js).
+They are not bundled for direct access in the browser version of walker.js to
+reduce file size. To use them you can import them.
+
+## Invocations
+
+To optimize the number of executions for e.g. performance optimizations or cost
+reduction, these functions could help.
+
+### debounce
+
+Grouping multiple calls in a single invocation after a specific wait time.
+
+```js
+import { debounce } from '@elbwalker/walker.js';
+
+// debounce(fn, wait=1000)
+debounce(console.log)('called');
+```
+
+### throttle
+
+Limit the number of invocations within a delay time.
+
+```js
+import { throttle } from '@elbwalker/walker.js';
+
+// throttle(fn, delay=1000)
+throttle(console.log)('called');
+```
+
+## Stuff
+
+Why not? They might be useful in any way.
+
+### getByStringDot(event, key, i)
+
+Access values from event by using the string-dot notation. Use the key
+`"data.id"` on `event: { data: { id: "wow" } }` to get the value `wow`.
+
+Use the wildcard character _ and i for dynamic access, like `"nested._.id"`on`{
+nested: [ 1, 2, { id: "impressive" } ] }`to get`impressive`.
+
+The return type is unknown and will be `undefined` if the key doesn't exist.
+
+### isVisible(element)
+
+Used to check if an element is visible to the user.
+
+```js
+import { isVisible } from '@elbwalker/walker.js';
+
+// isVisible(element: HTMLElement): boolean
+isVisible(document.body) === true;
+```

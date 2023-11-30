@@ -1,0 +1,54 @@
+---
+title: NPM
+---
+
+To integrate walker.js with your website, you can use this
+[NPM module](https://www.npmjs.com/package/@elbwalker/walker.js) to package the
+walker directly into your project. To get started with the installation, run:
+
+```js
+npm i --save @elbwalker/walker.js
+```
+
+:::caution[Caution] This NPM module is only meant to be used for a browser
+installation. ::: As a next step run the following code snippet once:
+
+```js
+import Elbwalker from '@elbwalker/walker.js';
+window.elbwalker = Elbwalker({
+  // custom config
+});
+```
+
+To configure and communicate with the walker you can use the elb-helper
+function:
+
+```js
+import { elb } from '@elbwalker/walker.js';
+elb('entity action', data, trigger, context, nested); // push events
+elb('walker <command>', data); // configure walker, see Commands
+```
+
+When using a Single Page Application like React, tell the walker to run on each
+location change in your app, like a real pageview:
+
+```js
+import React from 'react';
+import { Route, Routes, useLocation } from 'react-router-dom';
+import Elbwalker, { elb } from '@elbwalker/walker.js';
+
+window.elbwalker = Elbwalker({ default: true });
+
+export default function App() {
+  const location = useLocation();
+  React.useEffect(() => {
+    elb('walker run'); // party hard!
+  }, [location]);
+
+  return <Routes>// ...</Routes>;
+}
+```
+
+Refer to the following folders on GitHub for a detailed example
+
+- [Sample React project](https://github.com/elbwalker/walker.js/tree/main/examples/react)
