@@ -33,6 +33,8 @@ const config: Config = {
     locales: ['en'],
   },
 
+  themes: ['@docusaurus/theme-live-codeblock'],
+
   presets: [
     [
       'classic',
@@ -149,8 +151,8 @@ const config: Config = {
       copyright: `Copyright © ${new Date().getFullYear()} elbwalker GmbH, Hamburg`,
     },
     prism: {
-      theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      theme: prismThemes.oneLight,
+      darkTheme: prismThemes.oneDark,
     },
   } satisfies Preset.ThemeConfig,
 

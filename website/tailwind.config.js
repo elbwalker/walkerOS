@@ -5,6 +5,8 @@ const defaultTheme = require('tailwindcss/defaultTheme');
 module.exports = {
   content: ['./{docs,src}/**/*.{js,jsx,mdx,ts,tsx}'],
   darkMode: ['class', '[data-theme="dark"]'], // hooks into docusaurus' dark mode settigns
+  corePlugins: { preflight: false },
+  blocklist: ['container'],
   theme: {
     extend: {
       colors: {
