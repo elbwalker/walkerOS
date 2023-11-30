@@ -123,8 +123,12 @@ event at the right moment.
 | custom    | calling elbLayer.push(), see [using JavaScript](https://docs.elbwalker.com/tagging/using-javascript)                      |
 | scroll(y) | fires when min. y percent of the element's height is above the bottom of the window, e.g. scroll(80) for an 80% threshold |
 
-:::caution[Caution] Trigger names are predefined and need to be selected from
-the list while the `action` can be an arbitrarily defined name. :::
+:::caution
+
+Trigger names are predefined and need to be selected from the list while the
+`action` can be an arbitrarily defined name.
+
+:::
 
 ### Abbreviation
 
@@ -182,8 +186,12 @@ you.
 </button>
 ```
 
-:::caution[Caution] The click trigger uses the bubbling-up process. It will not
-work with stopPropagation or preventDefault. :::
+:::caution
+
+The click trigger uses the bubbling-up process. It will not work with
+stopPropagation or preventDefault.
+
+:::
 
 ## Linking elements {#data-elblink}
 
@@ -202,16 +210,29 @@ The second element is the parent, triggering the visible action for the
 `info visible` event. There can be multiple children, but only one parent
 element per id.
 
-:::note[Info] data-elb, data-elbaction data-elbcontext, data-elbglobals, and
-data-elblink are reserved attributes whereas data-elb-\* attributes may be
-arbitrary combinations based on the related entity name. Actions and properties
-can be set anywhere inside an elb scope. ::: :::caution[Caution] Spaces in
-entities, e.g. "shopping cart" or actions, e.g. "add to cart" will be replaced
-by underscores to "shopping_cart" and "add_to_cart". :::
+:::note
 
-:::tip[Tip] Spaces in property values are no problem, e.g. "**category: 'summer
-sale'**" works fine. But better set them in quotes when doing so or when using
-symbols, especially : or ; :::
+`data-elb`, `data-elbaction`, `data-elbcontext`, `data-elbglobals`, and
+`data-elblink` are reserved attributes whereas `data-elb-*` attributes may be
+arbitrary combinations based on the related entity name. Actions and properties
+can be set anywhere inside an elb scope.
+
+:::
+
+:::caution
+
+Spaces in entities, e.g. "shopping cart" or actions, e.g. "add to cart" will be
+replaced by underscores to "shopping_cart" and "add_to_cart".
+
+:::
+
+:::tip
+
+Spaces in property values are no problem, e.g. `"category: 'summer sale'"` works
+fine. But better set them in quotes when doing so or when using symbols,
+especially `:` or `;`
+
+:::
 
 ## Properties
 
@@ -371,8 +392,11 @@ This example will lead to the following event:
 }
 ```
 
-:::note[Info] For reasons of performance, the globals are only collected once
-per run. :::
+:::note
+
+For reasons of performance, the globals are only collected once per run.
+
+:::
 
 ## Context {#data-elbcontext}
 
@@ -457,5 +481,8 @@ This example will lead to the following event on load:
 Nested entities that are nested inside another entity will be captured on both
 levels.
 
-:::caution[Caution] Nested entities are not available for auto-captured page
-view events. :::
+:::caution
+
+Nested entities are not available for auto-captured page view events.
+
+:::

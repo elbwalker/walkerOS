@@ -4,8 +4,11 @@ title: Tagger
 
 The Tagger is a helper to generate the `data-elb` attributes.
 
-:::note[Info]
-The Tagger will support tagging validation and other features soon. It's worth using it.
+:::note
+
+The Tagger will support tagging validation and other features soon. It's worth
+using it.
+
 :::
 
 Start by installing the tagger with npm:
@@ -27,7 +30,8 @@ tagger.context('test', 'engagement'); // { "data-elbcontext": "test:engagement" 
 tagger.globals('language', 'en'); // { "data-elbglobals": "language:en" }
 ```
 
-You can use the return values to add them directly to your HTML. Use the spread operator in React:
+You can use the return values to add them directly to your HTML. Use the spread
+operator in React:
 
 ```html
 <div
