@@ -154,6 +154,9 @@ const config: Config = {
       ],
       copyright: `Copyright © ${new Date().getFullYear()} elbwalker GmbH, Hamburg`,
     },
+    mermaid: {
+      theme: { light: 'neutral', dark: 'dark' },
+    },
     prism: {
       theme: prismThemes.oneLight,
       darkTheme: prismThemes.oneDark,
