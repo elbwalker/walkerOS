@@ -7,8 +7,8 @@ description: walker.js web client
 ## What is walker.js?
 
 Walker.js is an open library to capture user events and send them to any
-analytics tool. It was created to enable data ownership, improve web data
-quality, and scale tracking implementation processes.
+analytics tool. It is created to enable data ownership, improve web data
+quality, and scale tracking implementation processes in a reliable way.
 
 ## Basic idea
 
@@ -33,50 +33,39 @@ Your web event is built on the fly
 
 ```js
 {
-  event: 'promotion view', // combination of entity and action
+  event: 'promotion view',
   data: {
-    // arbitrary set properties with the data-elb-promotion attribute
     name: 'Setting up tracking easily',
     category: 'analytics',
   },
-  context: {
-    // Related properties defined with the data-elbcontext attribute
-    test: ['engagement', 0] // Value and order
-  },
-  globals: {
-    // General Properties defined with the data-elbglobals attribute
-    language: 'en'
-  },
-  user: {
-    // stored user ids (manually added once)
-    id: 'userid',
-    device: 'cookieid',
-    session: 'sessionid',
-  },
-  nested: [], // all nested entities within the promotion
-  consent: { functional: true }, // status of the consent state(s)
-  id: '1647968113641-01b5e2-5', // timestamp, group & count of the event
-  trigger: 'visible', // name of the trigger that fired
-  entity: 'promotion', // entity name
-  action: 'view', // entity action
-  timestamp: 1647968113641, // time when the event fired
-  timing: 3.14, // how long it took from the page load to trigger the event
-  group: '01b5e2', // random group id for all events on a page
-  count: 2, // incremental counter of the events on a page
-  version: {
-    // Helpful when working with raw data
-    walker: 1.5, // used walker.js version
-    config: 42, // a custom configuration version number
-  },
+  context: { test: ['engagement', 0] },
+  custom: {},
+  globals: { language: 'en' },
+  user: {},
+  nested: [],
+  consent: {},
+  id: '1647261462000-01b5e2-5',
+  trigger: 'visible',
+  entity: 'promotion',
+  action: 'view',
+  timestamp: 1647261462000,
+  timing: 3.14,
+  group: '01b5e2',
+  count: 2,
+  version: { client: '1.0.0', tagging: 0 },
   source: {
-    // Origins of the event
-    type: 1, // Source type of the event (1=Web)
-    id: 'https://github.com/elbwalker/walker.js', // Source id of the event's origin (url)
-    previous_id: 'https://www.elbwalker.com/' // Previous source id of the event's origin (referrer)
-  },
-  walker: true, // flag to filter events
+    type: 'web',
+    id: 'https://www.elbwalker.com/docs/clients/walkerjs',
+    previous_id: 'https://github.com/elbwalker/walkerOS'
+  }
 }
 ```
+
+:::tip
+
+Learn more about the [event model](/docs/walkeros/event-model).
+
+:::
 
 ### Introducing
 
@@ -86,13 +75,13 @@ implementation.
 
 If you...
 
-- take the users' privacy seriously and want to track **first-party**
+- take the users' **privacy** seriously and want to track **first-party**
 - **regularly ship new features** and landing pages and constantly need to make
   sure you added the tracking correctly
 - have a continuously growing user interface and you find measuring **in-depth
   behavioral data** on the usage difficult to implement
 
-... **walker.js** might be just what you're looking for.
+... walker.js might be just what you're looking for.
 
 ### Coupled with markup (like CSS)
 
@@ -110,7 +99,7 @@ Somebody will at least ask what they are and do.
 
 ### Entity-action event model
 
-One of the great things about elbwalker is the full **flexibility** of event
+One of the great things about walkerOS is the full **flexibility** of event
 definitions. You can build your tracking based on your **business logic**
 instead of trying to press your business logic into analytics specs.
 
@@ -120,7 +109,7 @@ it. Only when everyone understands what is being measured, there will be **fewer
 misunderstandings, higher data quality**, and more actionable data in the
 organization at the end of the day.
 
-An elbwalker event consists of three components: a **trigger** (e.g. load), an
+A walkerOS event consists of three components: a **trigger** (e.g. load), an
 **entity** (e.g. page), and an **action** (e.g. view).
 
 ### Vendor-agnostic
