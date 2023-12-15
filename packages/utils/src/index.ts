@@ -198,6 +198,10 @@ export function isVisible(element: HTMLElement): boolean {
   return false;
 }
 
+export function onLog(message: unknown, verbose = false): void {
+  if (verbose) console.dir(message, { depth: 4 });
+}
+
 export function parseEvent(input: {
   obj?: WalkerOS.AnyObject;
   str?: string;
@@ -413,8 +417,8 @@ export function throttle<P extends unknown[], R>(
   };
 }
 
-export function throwError(error: string): never {
-  throw new Error(error);
+export function throwError(error: unknown): never {
+  throw new Error(String(error));
 }
 
 export function trim(str: string): string {

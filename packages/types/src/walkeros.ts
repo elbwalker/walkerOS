@@ -46,6 +46,7 @@ export interface Config {
   user: User;
   tagging: number;
   default?: boolean;
+  verbose?: boolean; // Enable verbose logging
 }
 
 export type Events = Array<Event>;

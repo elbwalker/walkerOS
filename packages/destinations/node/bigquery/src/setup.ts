@@ -1,21 +1,20 @@
-import type { CustomConfig } from './types';
+import type { Config } from './types';
 import { schema } from './schema';
-import { log } from './utils';
 
-export const setup = async function (custom: CustomConfig) {
-  if (await existsDatasetAndTable(custom)) {
-    log('Dataset and table already exists');
+export const setup = async function (config: Config) {
+  if (await existsDatasetAndTable(config)) {
+    config.onLog('Dataset and table already exists');
     return true;
   } else {
-    log('Creating dataset and/or table');
-    await createDatasetAndTable(custom);
-    log('Dataset and table created');
+    config.onLog('Creating dataset and/or table');
+    await createDatasetAndTable(config);
+    config.onLog('Dataset and table created');
     return true;
   }
 };
 
-export const createDatasetAndTable = async function (custom: CustomConfig) {
-  const { client, datasetId, location, tableId } = custom;
+export const createDatasetAndTable = async function (config: Config) {
+  const { client, datasetId, location, tableId } = config.custom;
 
   try {
     await client.createDataset(datasetId, { location });
@@ -39,9 +38,9 @@ export const createDatasetAndTable = async function (custom: CustomConfig) {
 };
 
 export const existsDatasetAndTable = async function (
-  custom: CustomConfig,
+  config: Config,
 ): Promise<boolean> {
-  const { client, datasetId, tableId } = custom;
+  const { client, datasetId, tableId } = config.custom;
 
   const dataset = client.dataset(datasetId);
 

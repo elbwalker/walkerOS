@@ -1,14 +1,8 @@
 import type { CustomConfig, Function } from './types';
-import { isSameType, tryCatchAsync } from '@elbwalker/utils';
-import { getCustomConfig } from './config';
-import { setup } from './setup';
+import { isSameType, throwError, tryCatchAsync } from '@elbwalker/utils';
+import { getConfig, log } from './config';
 import { push } from './push';
-import { throwError, log } from './utils';
-
-const meta = {
-  name: 'BigQuery',
-  version: '0.0.7',
-};
+import { setup } from './setup';
 
 // Types
 export * as DestinationBigQuery from './types';
@@ -18,28 +12,31 @@ export const destinationBigQuery: Function = {
 
   async setup(config) {
     return await tryCatchAsync(setup, (error) => {
-      log({ message: 'Destination BigQuery setup error', error });
+      if (config.onLog) config.onLog('Setup error');
+      if (config.onError) config.onError(error);
+
       throwError(error);
-    })(getCustomConfig(config.custom));
+    })(getConfig(config));
   },
 
   async init(partialConfig) {
-    const custom = await tryCatchAsync(getCustomConfig, (error) => {
-      log({ message: 'Destination BigQuery init error', error });
+    const config = await tryCatchAsync(getConfig, (error) => {
+      log('Init error', partialConfig.verbose);
+
       throwError(error);
-    })(partialConfig.custom);
+    })(partialConfig);
 
-    if (!isSameType(custom, {} as CustomConfig)) return false;
+    if (!isSameType(config.custom, {} as CustomConfig)) return false;
 
-    return { ...partialConfig, custom, meta };
+    return config;
   },
 
   async push(events, config) {
     return await tryCatchAsync(push, (error) => {
-      log({ message: 'Destination BigQuery push error', error });
+      if (config.onLog) config.onLog('Push error');
       // @TODO queue handling
       throwError(error);
-    })(events, getCustomConfig(config.custom));
+    })(events, getConfig(config));
   },
 };
 

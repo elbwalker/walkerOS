@@ -5,6 +5,7 @@ import {
   assign,
   getId,
   isSameType,
+  onLog,
   tryCatchAsync,
 } from '@elbwalker/utils';
 
@@ -36,6 +37,9 @@ export function nodeClient(
     };
 
     return await tryCatchAsync(pushFn, (error) => {
+      // Call custom error handling
+      if (config.onError) config.onError(error, instance);
+
       defaultResult.status.error = String(error);
       return defaultResult;
     })(instance, ...args);
@@ -193,6 +197,13 @@ function getConfig(
       id: '',
       previous_id: '',
     },
+    verbose: false, // Disable verbose logging
+  };
+
+  const config = {
+    ...defaultConfig,
+    ...current,
+    ...values,
   };
 
   const globals = assign(
@@ -200,13 +211,17 @@ function getConfig(
     assign(current.globals || {}, values.globals || {}),
   );
 
+  // Log with default verbose level
+  function log(message: string, verbose?: boolean) {
+    onLog({ message }, verbose || config.verbose);
+  }
+
   // Value hierarchy: values > current > default
   return {
-    ...defaultConfig,
-    ...current,
-    ...values,
+    ...config,
     globals,
     globalsStatic,
+    onLog: log,
   };
 }
 
@@ -343,8 +358,10 @@ async function pushToDestinations(
         // Check if the destination was initialized properly or try to do so
         if (destination.init && !destination.config.init) {
           const init =
-            (await tryCatchAsync(destination.init)(destination.config)) ||
-            false;
+            (await tryCatchAsync(destination.init, (error) => {
+              // Call custom error handling
+              if (config.onError) config.onError(error, instance);
+            })(destination.config)) || false;
 
           if (isSameType(init, {} as NodeDestination.Config)) {
             destination.config = init;
@@ -358,6 +375,9 @@ async function pushToDestinations(
 
         const result =
           (await tryCatchAsync(destination.push, (error) => {
+            // Call custom error handling
+            if (config.onError) config.onError(error, instance);
+
             // Default error handling for failing destinations
             return { error, queue: undefined };
           })(events, destination.config)) || {}; // everything is fine

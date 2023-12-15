@@ -1,4 +1,4 @@
-import type { WalkerOS } from '.';
+import type { Handler, WalkerOS } from '.';
 
 export interface Function<Custom = unknown, EventCustom = unknown> {
   config: Config<Custom, EventCustom>;
@@ -15,6 +15,9 @@ export interface Config<Custom = unknown, EventCustom = unknown> {
   mapping?: Mapping<EventCustom>; // A map to handle events individually
   meta?: Meta; // Additional meta information about the destination
   queue?: boolean; // Disable processing of previously pushed events
+  verbose?: boolean; // Enable verbose logging
+  onError?: Handler.Error;
+  onLog?: Handler.Log;
 }
 
 export interface Mapping<EventCustom> {
