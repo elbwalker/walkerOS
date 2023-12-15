@@ -11,6 +11,8 @@ export const destinationBigQuery: Function = {
   config: {},
 
   async setup(config) {
+    if (config.onLog) config.onLog('Run setup');
+
     return await tryCatchAsync(setup, (error) => {
       if (config.onLog) config.onLog('Setup error');
       if (config.onError) config.onError(error);
@@ -25,6 +27,10 @@ export const destinationBigQuery: Function = {
 
       throwError(error);
     })(partialConfig);
+
+    // Only run setup if enabled
+    // This checks if the dataset and table exists and creates them if not
+    if (config.custom.runSetup) await setup(config);
 
     if (!isSameType(config.custom, {} as CustomConfig)) return false;
 

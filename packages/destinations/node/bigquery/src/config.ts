@@ -27,6 +27,7 @@ export function getConfig(partialConfig: PartialConfig = {}): Config {
   client = client || new BigQuery(options);
 
   const customConfig: CustomConfig = {
+    ...custom,
     client,
     projectId,
     location,

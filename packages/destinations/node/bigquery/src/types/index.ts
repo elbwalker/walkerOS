@@ -30,6 +30,7 @@ export interface CustomConfig {
   tableId: string;
   location?: string;
   bigquery?: BigQueryOptions;
+  runSetup?: boolean;
 }
 
 export interface CustomEventConfig {

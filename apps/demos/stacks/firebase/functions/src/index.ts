@@ -23,6 +23,7 @@ elb('walker destination', destinationBigQuery, {
       // Use your own credentials or authenticate in other ways
       keyFilename: './credentials/service-account.json',
     },
+    // runSetup: true, // Enable once to create dataset and table
   },
   verbose: true, // Enable logging
 });

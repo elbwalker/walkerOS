@@ -17,10 +17,6 @@ The BigQuery destination allows you to send server-side events from walkerOS to
 Google BigQuery. It handles the data transformation and ensures that your events
 are correctly formatted for BigQuery tables.
 
-For more details, refer to the following documentation sections:
-
-[Setup]() (required to create the table) [Configuration]() [Data Mapping]()
-
 ## Basic example
 
 Here's a simple example to demonstrate how to configure the BigQuery
@@ -33,10 +29,11 @@ elb('walker destination', destinationBigQuery, {
   custom: {
     projectId: 'PR0J3CT1D', // Required
     // client: BigQuery; // A BigQuery instance from @google-cloud/bigquery
-    // location: string; // 'EU' as default
-    // datasetId: string; // 'walkeros' as default
+    // datasetId: string; // 'walkerOS' as default
     // tableId: string; // 'events' as default
+    // location: string; // 'EU' as default
     // bigquery?: BigQueryOptions; // BigQueryOptions from @google-cloud/bigquery
+    // runSetup?: boolean; // Check for existence on init and eventually create
   },
 });
 ```
@@ -56,7 +53,31 @@ using the custom `bigquery` options.
 }
 ```
 
-Take a look at the events [table schema](./src/schema.ts).
+## Setup
+
+This destination requires an existing table (see [schema](./src/schema.ts)).
+
+@TODO `config.custom.runSetup`
+
+## Permissions
+
+When using Service Accounts (SAs) for Google Cloud BigQuery, it's recommended to
+follow the principle of _least privilege_. Never grant more permissions than
+what it needs to perform its intended functions.
+
+During initial setup, the SA may require broader permissions to create necessary
+datasets. Typically, this involves assigning a role like
+`roles/bigquery.dataOwner` to the service account. This role can be granted
+through Google Cloud IAM.
+
+For production environments, it is recommended to **revoke broader IAM roles**
+granted during the setup phase. Assign explicit permissions directly to datasets
+within BigQuery (using the share option). This ensures that the service account
+only has access to what is necessary for operation. The service account may hold
+owner permissions after creating the dataset.
+
+For more detailed information, refer to the official
+[Google Cloud IAM documentation](https://cloud.google.com/iam/docs).
 
 ## Who this package is for
 
