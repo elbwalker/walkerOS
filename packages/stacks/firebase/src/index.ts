@@ -31,7 +31,6 @@ function getConfig(
   customConfig: FirebaseStack.PartialConfig = {},
 ): FirebaseStack.Config {
   const defaultConfig: FirebaseStack.Config = {
-    firebase: {},
     client: {},
   };
 
@@ -49,6 +48,7 @@ const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
     // @TODO move validation to the client
     let error = 'Invalid event';
     const event = tryCatch(validateEvent, (err) => {
+      // @TODO add a dead letter queue
       error = String(err);
       console.log({ err, body: req.body });
     })(req.body, instance.config.contracts);
