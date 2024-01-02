@@ -1,7 +1,7 @@
 {
   "name": "demo-stack-firebase",
   "scripts": {
-    "build": "tsc",
+    "build": "rollup -c",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",
@@ -14,19 +14,24 @@
   },
   "main": "dist/index.js",
   "dependencies": {
-    "@elbwalker/stack-firebase": "*",
     "@elbwalker/destination-node-bigquery": "*",
+    "@elbwalker/stack-firebase": "*",
     "firebase-admin": "^11.8.0",
-    "firebase-functions": "^4.3.1"
+    "firebase-functions": "^4.5.0"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
     "@typescript-eslint/eslint-plugin": "^5.12.0",
     "@typescript-eslint/parser": "^5.12.0",
     "eslint": "^8.9.0",
     "eslint-config-google": "^0.14.0",
     "eslint-plugin-import": "^2.25.4",
     "firebase-functions-test": "^3.1.0",
-    "typescript": "^4.9.0"
+    "rollup": "^4.9.2",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^4.9.5"
   },
   "private": true
 }

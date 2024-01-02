@@ -1,7 +1,7 @@
 import type { NodeClient } from '@elbwalker/client-node';
 import type { FirebaseStack } from './types';
 import { createNodeClient } from '@elbwalker/client-node';
-import { tryCatch, validateEvent } from '@elbwalker/utils';
+import { tryCatchAsync, validateEvent } from '@elbwalker/utils';
 import { onRequest } from 'firebase-functions/v2/https';
 
 // Types
@@ -46,24 +46,30 @@ const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
 
     // @TODO add a custom response handler
     // @TODO move validation to the client
-    let error = 'Invalid event';
-    const event = tryCatch(validateEvent, (err) => {
-      // @TODO add a dead letter queue
-      error = String(err);
-      console.log({ err, body: req.body });
-    })(req.body, instance.config.contracts);
+    await tryCatchAsync(
+      async (body: string, config: NodeClient.Config) => {
+        let event = validateEvent(JSON.parse(body), config.contracts);
 
-    if (!event) {
-      res.status(418).send({ error });
-    } else {
-      const result = await instance.push(event);
+        const result = await instance.push(event);
 
-      res.send({
-        status: result.status,
-        successfull: result.successful.length,
-        failed: result.failed.length,
-        queued: result.queued.length,
-      });
-    }
+        res.send({
+          status: result.status,
+          successfull: result.successful.length,
+          failed: result.failed.length,
+          queued: result.queued.length,
+        });
+      },
+      (error) => {
+        // Error handling
+
+        error = String(error);
+        const onError = instance.config.onError || console.error;
+        onError({ a: error, body: req.body });
+
+        // @TODO add a dead letter queue
+
+        res.status(418).send({ error });
+      },
+    )(req.body, instance.config);
   });
 };
