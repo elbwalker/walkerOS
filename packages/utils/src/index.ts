@@ -474,9 +474,9 @@ export function tryCatchAsync<P extends unknown[], R, S>(
   };
 }
 
-export function useHooks<P extends any[], R, Names = Hooks.Names>(
+export function useHooks<P extends any[], R>(
   fn: (...args: P) => R,
-  name: Names,
+  name: string,
   hooks: Hooks.Functions,
 ): (...args: P) => R {
   return function (...args: P): R {
