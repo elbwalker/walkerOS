@@ -165,23 +165,23 @@ describe('Elbwalker', () => {
       params.fn(...args); // Regular call
       return 'foo'; // Updated response
     });
-    const postPush: Hooks.PostPush = jest.fn();
-    const preDestinationInit: Hooks.PreDestinationInit = jest
-      .fn()
-      .mockImplementation(function (params, ...args) {
-        return params.fn(...args);
-      });
-    const postDestinationInit: Hooks.PostDestinationInit = jest
-      .fn()
-      .mockImplementation(function (params) {
-        return params.result; // Return result from previous call
-      });
-    const preDestinationPush: Hooks.PreDestinationPush = jest.fn();
-    const postDestinationPush: Hooks.PostDestinationPush = jest
-      .fn()
-      .mockImplementation(function (params, ...args) {
-        return params.fn(...args);
-      });
+    const postPush: Hooks.Function = jest.fn();
+    const preDestinationInit = jest.fn().mockImplementation(function (
+      params,
+      ...args
+    ) {
+      return params.fn(...args);
+    });
+    const postDestinationInit = jest.fn().mockImplementation(function (params) {
+      return params.result; // Return result from previous call
+    });
+    const preDestinationPush = jest.fn();
+    const postDestinationPush = jest.fn().mockImplementation(function (
+      params,
+      ...args
+    ) {
+      return params.fn(...args);
+    });
 
     elbwalker = webClient({
       pageview: false,
