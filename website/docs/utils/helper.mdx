@@ -2,12 +2,46 @@
 title: Helper
 ---
 
-A collection of helpful functions for easier and privacy-friendly tracking
-setups
+import Link from '@docusaurus/Link';
 
-All util-functions are available through the npm package (@elbwalker/walker.js).
-They are not bundled for direct access in the browser version of walker.js to
-reduce file size. To use them you can import them.
+These helper utils are a collection of useful functions used by walkerOS. They
+can be used as standardtized building blocks for custom setups.
+
+Learn how to install and use them in the <Link to="./#installation">
+Utils/Installation </Link> section.
+
+## getByStringDot
+
+Access values from an event by using the string-dot notation. Use the key
+`"data.id"` on `event: { data: { id: "wow" } }` to get the value `wow`.
+
+```js
+// getByStringDot(event, key, i=0): unknown
+getByStringDot({ data: { id: 'wow' } }, 'data.id');
+
+// returns "wow"
+```
+
+Use the wildcard character `_` and `i` for dynamic access, like `"nested._.id"`
+on `{ nested: [ 1, 2, { id: "impressive" } ] }` to get `impressive`.
+
+If the key doesn't exist the the function returns `undefined`.
+
+## getMarketingParameters
+
+```js
+// getMarketingParameters(url: string, custom={}): WalkerOS.Properties
+getMarketingParameters("https://localhost/?utm_source=docs&gclid=xxx");
+
+// returns
+{
+  source: "docs",
+  clickId: "xxx"
+}
+```
+
+Add `custom` parameters to parse more values from the url like `?utm_custom=123`
+with `{ utm_custom: "custom" }` to get `{ custom: "123" }`.
 
 ## Invocations
 
@@ -19,9 +53,7 @@ reduction, these functions could help.
 Grouping multiple calls in a single invocation after a specific wait time.
 
 ```js
-import { debounce } from '@elbwalker/walker.js';
-
-// debounce(fn, wait=1000)
+// debounce(fn: Function, wait=1000)
 debounce(console.log)('called');
 ```
 
@@ -30,33 +62,15 @@ debounce(console.log)('called');
 Limit the number of invocations within a delay time.
 
 ```js
-import { throttle } from '@elbwalker/walker.js';
-
-// throttle(fn, delay=1000)
+// throttle(fn: Function, delay=1000)
 throttle(console.log)('called');
 ```
 
-## Stuff
+## isVisible
 
-Why not? They might be useful in any way.
-
-### getByStringDot(event, key, i)
-
-Access values from event by using the string-dot notation. Use the key
-`"data.id"` on `event: { data: { id: "wow" } }` to get the value `wow`.
-
-Use the wildcard character _ and i for dynamic access, like `"nested._.id"`on`{
-nested: [ 1, 2, { id: "impressive" } ] }`to get`impressive`.
-
-The return type is unknown and will be `undefined` if the key doesn't exist.
-
-### isVisible(element)
-
-Used to check if an element is visible to the user.
+Used to check if an element is visible to the user. It follows the standard
 
 ```js
-import { isVisible } from '@elbwalker/walker.js';
-
 // isVisible(element: HTMLElement): boolean
 isVisible(document.body) === true;
 ```
