@@ -9,10 +9,11 @@ const config: Options = {
     mangle: {
       properties: {
         regex: /^[A-Z]/, // Only mangle capitalized properties
-        reserved: [
-          // Prevent mangle from renaming these properties
-        ],
       },
+      reserved: [
+        // Prevent mangle from renaming these properties
+        'WebClient',
+      ],
     },
   },
 };
@@ -39,7 +40,7 @@ export default defineConfig([
     ...config,
     entry: ['src/index.ts'],
     format: ['iife'],
-    globalName: 'Elbwalker',
+    globalName: 'WebClient',
     outExtension() {
       return { js: `.es5.js` };
     },
