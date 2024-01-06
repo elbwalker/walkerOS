@@ -5,6 +5,8 @@ description: Your Unified Data Collection Solution
 sidebar_position: 1
 ---
 
+import Link from '@docusaurus/Link';
+
 # walkerOS
 
 Every business is individual, and so are their data needs. Standard setups are
@@ -38,7 +40,8 @@ disrupting existing setups.
 
 ## How walkerOS operates
 
-walkerOS functions through a streamlined framework:
+walkerOS functions through a streamlined framework with one standardized event
+message.
 
 ```mermaid
 ---
@@ -52,18 +55,23 @@ flowchart LR
     Stacks
   end
   subgraph Activation
-    Tools
+    Destinations
   end
-  Clients --> Tools
+  Clients --> Destinations
   Clients --> Stacks
-  Stacks --> Tools
+  Stacks --> Destinations
+  click Clients "/docs/clients"
+  click Stacks "/docs/stacks"
+  click Destinations "/docs/destinations"
 ```
 
-- **Clients**: Manage data creation and state with ease.
-- **Stacks**: Robust server-side processing and data integrity checks.
-- **Tools**: Third-party vendors for effective data activation and analysis.
-- **Destinations**: The connection in-between to integrate various data
-  components.
-- **Utils**: Little helpers to enhance data collection and processing.
+- <Link to="clients">**Clients**</Link>: Manage data creation and state with
+  ease.
+- <Link to="stacks">**Stacks**</Link>: Server-side processing and data integrity
+  checks.
+- <Link to="destinations">**Destinations**</Link>: Third-party vendors for
+  effective data activation and analysis.
+- <Link to="utils">**Utils**</Link>: Little helpers to enhance data collection
+  and processing.
 
 Discover and enable the full potential of your data setp-by-step with walkerOS.

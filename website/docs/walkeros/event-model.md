@@ -2,6 +2,9 @@
 title: Event model
 ---
 
+One single event model to support analytics, marketing, privacy and data science
+needs.
+
 ## Entity-Action Approach
 
 The Entity-Action approach forms the core of the walkerOS event model. It's a
@@ -10,7 +13,7 @@ Two primary components define each event: the 'entity' (what the interaction
 involves) and the 'action' (what is done with the entity). This method provides
 a comprehensive and clear understanding of user behaviors and interactions.
 
-## Example Event
+## Event Structure
 
 Here's an example illustrating the structure and components of an event in
 walkerOS. While keys are static, their content can be defined dynamically with
