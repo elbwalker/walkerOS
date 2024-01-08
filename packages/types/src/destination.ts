@@ -16,8 +16,8 @@ export interface Config<Custom = unknown, EventCustom = unknown> {
   meta?: Meta; // Additional meta information about the destination
   queue?: boolean; // Disable processing of previously pushed events
   verbose?: boolean; // Enable verbose logging
-  onError?: Handler.Error;
-  onLog?: Handler.Log;
+  onError?: Handler.Error; // Custom error handler
+  onLog?: Handler.Log; // Custom log handler
 }
 
 export interface Mapping<EventCustom> {
