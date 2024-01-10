@@ -161,8 +161,10 @@ function getEventOrAction(
 
   ++config.count;
 
-  const timestamp = Date.now();
-  const timing = Math.round((timestamp - config.timing) / 10) / 100;
+  const timestamp = props.timestamp || Date.now();
+  const timing =
+    props.timing ||
+    Math.round((timestamp - (props.timing || config.timing)) / 10) / 100;
   const group = props.group || config.group;
   const count = props.count || config.count;
   const source = props.source || config.source;
