@@ -48,12 +48,8 @@ export async function pushToDestinations(
       let error: unknown;
 
       // Setup queue of events to be processed
-      // const queuea: WalkerOS.Events = assign([], destination.queue); // Copy queue
-      const queue: Destination.Queue = [];
-      if (destination.queue) {
-        queue.concat(destination.queue);
-        destination.queue = []; // Reset original queue while processing
-      }
+      const queue = ([] as Destination.Queue).concat(destination.queue || []);
+      destination.queue = []; // Reset original queue while processing
 
       if (event)
         // Add event to queue
@@ -95,8 +91,6 @@ export async function pushToDestinations(
         // don't push if init is false
         if (!init) return { id, destination, queue };
       }
-
-      console.info('nodepush', JSON.stringify(events));
 
       const result =
         (await tryCatchAsync(destination.push, (error) => {

@@ -4,35 +4,11 @@ import { createNodeClient } from '../';
 
 describe('Client', () => {
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
-  const version = { client: expect.any(String), tagging: expect.any(Number) };
-  const mockEvent: WalkerOS.Event = {
-    event: 'entity action',
-    data: expect.any(Object),
-    context: {},
-    custom: {},
-    globals: {},
-    user: {},
-    nested: [],
-    consent: {},
-    id: expect.any(String),
-    trigger: '',
-    entity: 'entity',
-    action: 'action',
-    timestamp: expect.any(Number),
-    timing: expect.any(Number),
-    group: expect.any(String),
-    count: expect.any(Number),
-    version,
-    source: {
-      type: 'node',
-      id: '',
-      previous_id: '',
-    },
-  };
   const mockDestination: NodeDestination.Function = {
     config: {},
     push: mockDestinationPush,
   };
+  let mockEvent: WalkerOS.Event;
   let result: NodeClient.PushResult;
 
   function getClient(custom?: Partial<NodeClient.Config>) {
@@ -46,6 +22,31 @@ describe('Client', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
+
+    mockEvent = {
+      event: 'entity action',
+      data: expect.any(Object),
+      context: {},
+      custom: {},
+      globals: {},
+      user: {},
+      nested: [],
+      consent: {},
+      id: expect.any(String),
+      trigger: '',
+      entity: 'entity',
+      action: 'action',
+      timestamp: expect.any(Number),
+      timing: expect.any(Number),
+      group: expect.any(String),
+      count: expect.any(Number),
+      version: { client: expect.any(String), tagging: expect.any(Number) },
+      source: {
+        type: 'node',
+        id: '',
+        previous_id: '',
+      },
+    };
   });
 
   test('create', () => {
@@ -187,11 +188,11 @@ describe('Client', () => {
   });
 
   test('source', async () => {
-    const { elb } = getClient({
-      source: { type: 'node', id: '1d', previous_id: 'pr3v10us' },
-    });
+    const { elb } = getClient();
 
+    mockEvent.source = { type: 'node', id: '1d', previous_id: 'pr3v10us' };
     result = await elb(mockEvent);
+
     expect(result.event).toHaveProperty('source', {
       type: 'node',
       id: '1d',
