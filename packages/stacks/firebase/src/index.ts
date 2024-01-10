@@ -64,7 +64,7 @@ const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
 
         error = String(error);
         const onError = instance.config.onError || console.error;
-        onError({ a: error, body: req.body });
+        onError({ error, body: req.body });
 
         // @TODO add a dead letter queue
 
