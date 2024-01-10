@@ -109,11 +109,11 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
     nameOrEvent = { event: nameOrEvent };
 
   // Create the event
-  const eventOrAction = getEventOrAction(instance, nameOrEvent);
+  const { event, action } = getEventOrAction(instance, nameOrEvent);
 
-  if (isSameType(eventOrAction, '' as string)) {
+  if (action) {
     // Walker command
-    const command = await handleCommand(instance, eventOrAction, data, options);
+    const command = await handleCommand(instance, action, data, options);
     if (command.result) {
       if (isSameType(command.result, {} as NodeDestination.PushResult)) {
         if (command.result.successful)
@@ -125,18 +125,20 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
 
     result.command = command.command;
     result.status.ok = true;
-  } else {
+  }
+
+  if (event) {
     // Regular event
 
     // Add event to internal queue
-    instance.config.queue.push(eventOrAction);
+    instance.config.queue.push(event);
 
     const { successful, queued, failed } = await pushToDestinations(
       instance,
-      eventOrAction,
+      event,
     );
 
-    result.event = eventOrAction;
+    result.event = event;
     result.status.ok = failed.length === 0;
     result.successful = successful;
     result.queued = queued;
@@ -149,61 +151,52 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
 function getEventOrAction(
   instance: NodeClient.Function,
   props: Partial<WalkerOS.Event> = {},
-): WalkerOS.Event | string {
+): { event?: WalkerOS.Event; action?: string } {
   if (!props.event) throw new Error('Event name is required');
 
   const [entity, action] = props.event.split(' ');
   if (!entity || !action) throw new Error('Event name is invalid');
 
-  if (entity === Const.Commands.Walker) return action;
+  if (entity === Const.Commands.Walker) return { action };
 
   const config = instance.config;
 
   ++config.count;
-  const event = props.event;
-  const data = props.data || {};
-  const context = props.context || {};
-  const custom = props.custom || {};
-  const globals = props.globals || config.globals;
-  const user = props.user || config.user;
-  const nested = props.nested || [];
-  const consent = props.consent || config.consent;
-  const trigger = props.trigger || '';
+
   const timestamp = Date.now();
-  const timing = Math.round((timestamp - config.timing) / 10) / 100;
   const group = config.group;
   const count = config.count;
-  const id = `${timestamp}-${group}-${count}`;
-  const version = {
-    client: config.client,
-    tagging: config.tagging,
-  };
   const source = config.source;
   if (props.source) {
     if (props.source.id) source.id = props.source.id;
     if (props.source.previous_id) source.previous_id = props.source.previous_id;
   }
 
-  return {
-    event,
-    data,
-    context,
-    custom,
-    globals,
-    user,
-    nested,
-    consent,
-    id,
-    trigger,
+  const event = {
+    event: props.event,
+    data: props.data || {},
+    context: props.context || {},
+    custom: props.custom || {},
+    globals: props.globals || config.globals,
+    user: props.user || config.user,
+    nested: props.nested || [],
+    consent: props.consent || config.consent,
+    trigger: props.trigger || '',
     entity,
     action,
     timestamp,
-    timing,
+    timing: Math.round((timestamp - config.timing) / 10) / 100,
     group,
     count,
-    version,
+    id: `${timestamp}-${group}-${count}`,
+    version: {
+      client: config.client,
+      tagging: config.tagging,
+    },
     source,
   };
+
+  return { event };
 }
 
 async function handleCommand(
