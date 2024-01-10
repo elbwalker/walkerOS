@@ -5,7 +5,6 @@ import {
   assign,
   getId,
   isSameType,
-  onLog,
   tryCatchAsync,
 } from '@elbwalker/utils';
 import { pushToDestinations } from './push';

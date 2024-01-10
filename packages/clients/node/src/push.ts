@@ -1,4 +1,4 @@
-import { WalkerOS } from '@elbwalker/types';
+import { Destination, WalkerOS } from '@elbwalker/types';
 import { NodeClient, NodeDestination } from './types';
 import { assign, isSameType, tryCatchAsync } from '@elbwalker/utils';
 
@@ -47,60 +47,69 @@ export async function pushToDestinations(
     Object.entries(destinations).map(async ([id, destination]) => {
       let error: unknown;
 
-      destination.queue = destination.queue || [];
-      if (event) destination.queue.push(event); // Add event to queue
+      // Setup queue of events to be processed
+      // const queuea: WalkerOS.Events = assign([], destination.queue); // Copy queue
+      const queue: Destination.Queue = [];
+      if (destination.queue) {
+        queue.concat(destination.queue);
+        destination.queue = []; // Reset original queue while processing
+      }
 
-      if (!destination.queue.length)
+      if (event)
+        // Add event to queue
+        queue.push(event);
+
+      if (!queue.length)
         // Nothing to do here
         return { id, destination, skipped: true };
 
       // Always check for required consent states before pushing
-      if (allowedToPush(instance, destination)) {
-        // Update previous values with the current state
-        let events: NodeDestination.PushEvents = destination.queue.map(
-          (event) => {
-            // @TODO check if this is correct, as a client might keeps running as a thread
-            event.consent = assign(config.consent, event.consent);
-            event.globals = assign(config.globals, event.globals);
-            event.user = assign(config.user, event.user);
-            return { event }; // @TODO mapping
-          },
-        );
+      if (!allowedToPush(instance, destination))
+        // Not allowed to continue
+        return { id, destination, queue };
 
-        // Destination initialization
-        // Check if the destination was initialized properly or try to do so
-        if (destination.init && !destination.config.init) {
-          const init =
-            (await tryCatchAsync(destination.init, (error) => {
-              // Call custom error handling
-              if (config.onError) config.onError(error, instance);
-            })(destination.config)) || false;
+      // Update previous values with the current state
+      let events: NodeDestination.PushEvents = queue.map((event) => {
+        // @TODO check if this is correct, as a client might keeps running as a thread
+        event.consent = assign(config.consent, event.consent);
+        event.globals = assign(config.globals, event.globals);
+        event.user = assign(config.user, event.user);
+        return { event }; // @TODO mapping
+      });
 
-          if (isSameType(init, {} as NodeDestination.Config)) {
-            destination.config = init;
-          } else {
-            destination.config.init = init;
-          }
-
-          // don't push if init is false
-          if (!init) return { id, destination, queue: destination.queue };
-        }
-
-        const result =
-          (await tryCatchAsync(destination.push, (error) => {
+      // Destination initialization
+      // Check if the destination was initialized properly or try to do so
+      if (destination.init && !destination.config.init) {
+        const init =
+          (await tryCatchAsync(destination.init, (error) => {
             // Call custom error handling
             if (config.onError) config.onError(error, instance);
+          })(destination.config)) || false;
 
-            // Default error handling for failing destinations
-            return { error, queue: undefined };
-          })(events, destination.config)) || {}; // everything is fine
+        if (isSameType(init, {} as NodeDestination.Config)) {
+          destination.config = init;
+        } else {
+          destination.config.init = init;
+        }
 
-        // Destinations can decide how to handle errors and queue
-        destination.queue = result.queue; // Events that should be queued again
-        error = result.error; // Captured error from destination
+        // don't push if init is false
+        if (!init) return { id, destination, queue };
       }
 
-      return { id, destination, queue: destination.queue, error };
+      console.info('nodepush', JSON.stringify(events));
+
+      const result =
+        (await tryCatchAsync(destination.push, (error) => {
+          // Call custom error handling
+          if (config.onError) config.onError(error, instance);
+
+          // Default error handling for failing destinations
+          return { error, queue: undefined };
+        })(events, destination.config)) || {}; // everything is fine
+
+      error = result.error; // Captured error from destination
+
+      return { id, destination, queue: [], error };
     }),
   );
 
@@ -121,6 +130,8 @@ export async function pushToDestinations(
         error: String(result.error),
       });
     } else if (result.queue && result.queue.length) {
+      // Merge queue with existing queue
+      destination.queue = assign(destination.queue, result.queue);
       queued.push({ id, destination });
     } else {
       successful.push({ id, destination });
