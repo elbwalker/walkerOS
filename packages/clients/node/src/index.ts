@@ -111,8 +111,8 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
   // Create the event
   const { event, action } = getEventOrAction(instance, nameOrEvent);
 
+  // Walker command
   if (action) {
-    // Walker command
     const command = await handleCommand(instance, action, data, options);
     if (command.result) {
       if (isSameType(command.result, {} as NodeDestination.PushResult)) {
@@ -127,9 +127,8 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
     result.status.ok = true;
   }
 
+  // Regular event
   if (event) {
-    // Regular event
-
     // Add event to internal queue
     instance.config.queue.push(event);
 
@@ -164,9 +163,10 @@ function getEventOrAction(
   ++config.count;
 
   const timestamp = Date.now();
-  const group = config.group;
-  const count = config.count;
-  const source = config.source;
+  const timing = Math.round((timestamp - config.timing) / 10) / 100;
+  const group = props.group || config.group;
+  const count = props.count || config.count;
+  const source = props.source || config.source;
   if (props.source) {
     if (props.source.id) source.id = props.source.id;
     if (props.source.previous_id) source.previous_id = props.source.previous_id;
@@ -185,7 +185,7 @@ function getEventOrAction(
     entity,
     action,
     timestamp,
-    timing: Math.round((timestamp - config.timing) / 10) / 100,
+    timing,
     group,
     count,
     id: `${timestamp}-${group}-${count}`,
