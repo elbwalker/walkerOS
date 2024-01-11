@@ -4,10 +4,74 @@ description: Learn how to contribute to walkerOS
 position: 10
 ---
 
+import Link from '@docusaurus/Link';
+
 walkerOS is an open-source project, and we welcome contributions of all kinds.
+There are multiple ways to contribute, and we appreciate them all. If you have
+any questions, feel free to reach out:
 
-# @TODOS
+- <Link to="https://github.com/elbwalker/walkerOS/issues">open an issue</Link>
+- <Link to="mailto:hello@elbwalker.com">send an email</Link>
+- <Link to="https://calendly.com/elb-alexander/30min">schedule a call</Link>
+- <Link to="https://www.linkedin.com/in/alexanderkirtzel/">
+    write on LinkedIn
+  </Link>
 
+## Development workflow
+
+The main language is TypeScript, but others are welcome as well. We use a
+test-driven development approach and write tests using
+[Jest](https://jestjs.io/). Since the docs are also part of the repository, they
+can be directly updated as well. Pushing code to the repository will trigger a
+test-pipeline that runs all tests and checks the code style.
+
+## Packages
+
+walkerOS is separated into multiple packages and developed in a monorepo. The
+latest version is under the `develop` branch, while `main` contains the latest
+stable and released versions. The whole project can be tested and build using
+[TurboRepo](https://turbo.build/repo/). Run all commands from the root
+directory.
+
+```bash
+# Make sure to install all dependencies first
+npm i
+
+# To start a local development server
+turbo run dev
+
+# To run all tests
+turbo run test
+
+# To build the whole project
+turbo run build
+
+# To develop or build a specific package use --filter option
+turbo run dev --filter=client-web
+turbo run build --filter=client-web --filter=utils
+```
+
+The `filter` option can be used to only run one or multiple packages. To filter
+use the `packages name` field in the `package.json` file.
+
+## Documentation
+
+The documentation is also included in the repository under the `/website/docs`
+folder. It is built using [Docusaurus](https://docusaurus.io/). To start a local
+server with live reload go to the directory and call:
+
+```bash
+npm run start
+```
+
+## Work-in-progress
+
+@TODOS
+
+- Stacks
+  - Firebase
+  - Google Tag Manager
+- Installation guide
 - update all links
 - check all links and images
 - use components for code blocks (e.g. event)
@@ -16,6 +80,6 @@ walkerOS is an open-source project, and we welcome contributions of all kinds.
 - write contributing guide
 - general styling (weird class names)
 - update walker.js npm package
-- utils startSession update and example
 - create landing page
 - deploy the website & docs
+- Sync READMEs with docs
