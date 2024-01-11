@@ -75,7 +75,7 @@ referrer -- internal --> false
 isReload -- reload --> false
 ```
 
-:::note
+:::info
 
 Be aware of potential multiple unintended events for the same user due to
 referrer hiding. For more details, learn about
@@ -129,7 +129,7 @@ const session = sessionStart({
 A user coming from `subdomain.elbwalker.com` or `example.com` to e.b.
 `www.elbwalker.com`, will no longer trigger a new session.
 
-### Manual New Session Controll
+### Manual New Session Control
 
 Determine if it's a new session using the `isNew` parameter. This might require
 consent for storage access and therefore isn't impletement by default.
