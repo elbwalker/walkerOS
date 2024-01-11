@@ -5,6 +5,7 @@ import type * as Walker from './walker';
 declare global {
   interface Window {
     elbwalker: Function;
+    walkerjs: Function;
     elbLayer: ElbLayer;
     dataLayer: WalkerEvent | unknown;
     elb: Elb;
