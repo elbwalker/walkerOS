@@ -42,13 +42,16 @@
     <script
       async
       class="elbwalker"
-      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@latest/dist/walker.js"
+      src="https://cdn.jsdelivr.net/npm/@elbwalker/client-web@latest/dist/walker.js"
     ></script>
 
     <script type="module">
-      function elb() {
-        (window.elbLayer = window.elbLayer || []).push(arguments);
-      }
+      window.elb = (...args) => {
+        (window.elbLayer = window.elbLayer || []).push(...args);
+      };
+
+      // Configuration
+      elb('walker config', { tagging: 2 });
 
       // Start
       elb('walker run');
@@ -61,7 +64,7 @@
       // Destination GTM
       const gtm = (
         await import(
-          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-gtm@1.2.3/dist/index.mjs'
+          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-gtm@latest/dist/index.mjs'
         )
       ).default;
       elb('walker destination', gtm, {
@@ -81,7 +84,7 @@
       // Destination API
       const api = (
         await import(
-          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api@1.1.3/dist/index.mjs'
+          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api@latest/dist/index.mjs'
         )
       ).default;
       elb('walker destination', api, {
@@ -92,18 +95,11 @@
           transport: 'beacon',
         },
       });
-      elb('walker destination', api, {
-        consent: { functional: true },
-        custom: {
-          // Local stack
-          url: 'http://127.0.0.1:5001/eventpipe-f9979/europe-west1/ingest',
-        },
-      });
 
       // Destination GA4
       const ga4 = (
         await import(
-          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4@1.3.2/dist/index.mjs'
+          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4@latest/dist/index.mjs'
         )
       ).default;
       elb('walker destination', ga4, {
@@ -114,7 +110,7 @@
 
       // Consent
       window.utils = await import(
-        'https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@1.6.5/dist/utils.js'
+        'https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/index.mjs'
       );
 
       // Code snippets for consent choice
@@ -144,7 +140,7 @@
 
       window.consentDenied = () => {
         // Only set a random session id, but no persistant device id
-        elb('walker user', { id: 'anonymous' });
+        elb('walker user', { id: 'anonymous', device: undefined });
 
         // Allow sending events to functional destinations at most
         elb('walker consent', { functional: true });
@@ -196,7 +192,7 @@
     </script>
   </head>
   <body class="relative">
-    <header class="bg-white" data-elb="nav" data-elbaction="click">
+    <header class="bg-white">
       <nav class="mx-auto max-w-7xl px-6 mb-12 lg:px-8" aria-label="Top">
         <div
           class="flex w-full items-center justify-between border-b border-blue-500 py-6 lg:border-none"
@@ -204,29 +200,23 @@
           <div class="flex items-center">
             <div class="ml-10 space-x-8">
               <a
-                data-elb-nav="name:Solutions"
-                data-elbaction="click:asfjjlahfs"
                 href="#"
                 class="text-base font-medium text-gray-400 hover:text-gray-900"
                 >Solutions</a
               >
 
-              <a
-                data-elb-nav="name:Pricing"
                 href="#"
                 class="text-base font-medium text-gray-400 hover:text-gray-900"
                 >Pricing</a
               >
 
               <a
-                data-elb-nav="name:Docs"
                 href="#"
                 class="text-base font-medium text-gray-400 hover:text-gray-900"
                 >Docs</a
               >
 
               <a
-                data-elb-nav="name:Company"
                 href="#"
                 class="text-base font-medium text-gray-400 hover:text-gray-900"
                 >Company</a
@@ -358,6 +348,7 @@
               <div class="mt-6">
                 <a
                   href="#"
+                  data-elbcontext="shopping:cart"
                   data-elbaction="click:add"
                   class="relative flex items-center justify-center rounded-md border border-transparent bg-gray-100 py-2 px-8 text-sm font-medium text-gray-900 hover:bg-gray-200"
                   >Add to cart
@@ -403,6 +394,7 @@
               <div class="mt-6">
                 <a
                   href="#"
+                  data-elbcontext="shopping:cart"
                   data-elbaction="click:add"
                   class="relative flex items-center justify-center rounded-md border border-transparent bg-gray-100 py-2 px-8 text-sm font-medium text-gray-900 hover:bg-gray-200"
                   >Add to cart
@@ -453,6 +445,7 @@
               <div class="mt-6">
                 <a
                   href="#"
+                  data-elbcontext="shopping:cart"
                   data-elbaction="click:add"
                   class="relative flex items-center justify-center rounded-md border border-transparent bg-gray-100 py-2 px-8 text-sm font-medium text-gray-900 hover:bg-gray-200"
                   >Add to cart
@@ -498,6 +491,7 @@
               <div class="mt-6">
                 <a
                   href="#"
+                  data-elbcontext="shopping:cart"
                   data-elbaction="click:add"
                   class="relative flex items-center justify-center rounded-md border border-transparent bg-gray-100 py-2 px-8 text-sm font-medium text-gray-900 hover:bg-gray-200"
                   >Add to cart

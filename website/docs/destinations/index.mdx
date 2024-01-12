@@ -1,31 +1,29 @@
 ---
 title: Destinations
-description: XXX
+description: Initialize and send events to any tool or service.
 sidebar_position: 1
 ---
 
 import Link from '@docusaurus/Link';
 
-# Destinations
-
-while clients create events, destinations are used to manage how events are
-processed and sent to various analytics or data storage tools. The purpose of
-using destinations in walkerOS is to ensure that data captured from your website
-or application is best-organized to easily integrated with different tools if
-proper consent was granted. This helps in maintaining data quality and
-simplifying the setup of new tools by simply mapping the events to the desired
-format.
+WalkerOS is meant to be **vendor-agnostic**. While clients create events,
+destinations are used to manage how events are processed and sent to various
+analytics or data storage tools. The purpose of using destinations in walkerOS
+is to ensure that data captured from your website or application is
+best-organized to easily integrated with different tools if proper consent was
+granted. This helps in maintaining data quality and simplifying the setup of new
+tools by simply mapping the events to the desired format.
 
 :::info
 
-Destinations initialize or process events **only if a user granted consent**.
+Destinations initialize and process events **only if a user granted consent**.
 
 :::
 
 ## How to use
 
 Destinations are added to a client
-(see&nbsp;<Link to="../clients/walkerjs/commands#destination">web</Link>
+(see&nbsp;<Link to="../clients/walkerjs/commands#destinations">web</Link>
 or&nbsp;<Link to="../clients/node#adding-destinations">node</Link>). Before
 receiving events from the client, the proper consent states are checked each
 time automatically. Destinations receive events through the [`push`](#push)
@@ -160,6 +158,10 @@ The `init` method is optional and gets called before pushing events. It's used
 to eventually load additional scripts or set up the environment. The init method
 must `return true` upon successful initialization for the events to be
 processed. Otherwise no events will be processed.
+
+The walker.js checks the `config.init` value to see if a destination has been
+initialized, or not. This way you can add a destination that has already been
+initialized.
 
 ```js
 // Optional init function
