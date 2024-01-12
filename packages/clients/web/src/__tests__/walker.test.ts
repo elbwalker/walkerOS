@@ -92,7 +92,7 @@ describe('Walker', () => {
     ]);
   });
 
-  test('No elbwalker attribute at clicked element', () => {
+  test('No walkerjs attribute at clicked element', () => {
     expect(getEvents(getElem('click_test'), Trigger.Click)).toMatchObject([
       {
         entity: 'click',

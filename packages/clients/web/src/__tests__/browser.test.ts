@@ -26,13 +26,13 @@ describe('Browser', () => {
     document.getElementsByTagName('html')[0].innerHTML = '';
   });
 
-  test('initialize elbwalker on window', () => {
-    w.elbwalker = undefined as unknown as WebClient.Function;
-    expect(w.elbwalker).toBeUndefined();
+  test('initialize walkerjs on window', () => {
+    w.walkerjs = undefined as unknown as WebClient.Function;
+    expect(w.walkerjs).toBeUndefined();
     jest.resetModules();
     jest.requireActual('../browser');
-    const elbwalker = require('../').default;
-    expect(w.elbwalker).toEqual(elbwalker);
+    const walkerjs = require('../').default;
+    expect(w.walkerjs).toEqual(walkerjs);
   });
 
   test('no script tag', () => {

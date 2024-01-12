@@ -3,7 +3,7 @@ import type { WebClient, WebDestination } from '../types';
 
 describe('Destination', () => {
   const w = window;
-  let elbwalker: WebClient.Function;
+  let walkerjs: WebClient.Function;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn().mockImplementation(() => {
@@ -17,7 +17,7 @@ describe('Destination', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    elbwalker = webClient({ pageview: false });
+    walkerjs = webClient({ pageview: false });
     config = { init: false };
 
     destination = {
@@ -28,12 +28,12 @@ describe('Destination', () => {
   });
 
   test('basic usage', () => {
-    elbwalker.push('walker run');
+    walkerjs.push('walker run');
 
     expect(mockInit).toHaveBeenCalledTimes(0);
     expect(mockPush).toHaveBeenCalledTimes(0);
-    elbwalker.push('walker destination', destination);
-    elbwalker.push('entity action');
+    walkerjs.push('walker destination', destination);
+    walkerjs.push('entity action');
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith(
@@ -47,24 +47,24 @@ describe('Destination', () => {
   });
 
   test('init call', () => {
-    elbwalker.push('walker run');
+    walkerjs.push('walker run');
 
     // No init function
-    elbwalker.push('walker destination', {
+    walkerjs.push('walker destination', {
       config: {},
       push: mockPush,
     });
-    elbwalker.push('entity action');
+    walkerjs.push('entity action');
     expect(mockInit).toHaveBeenCalledTimes(0);
     expect(mockPush).toHaveBeenCalledTimes(1);
 
     // Init set to true and should not be called
-    elbwalker.push('walker destination', {
+    walkerjs.push('walker destination', {
       init: mockInit,
       push: mockPush,
       config: { init: true },
     });
-    elbwalker.push('entity action');
+    walkerjs.push('entity action');
     expect(mockInit).toHaveBeenCalledTimes(0);
 
     // Always trigger init since it returns false
@@ -72,25 +72,25 @@ describe('Destination', () => {
       return false;
     });
     const mockPushFalse = jest.fn();
-    elbwalker.push('walker destination', {
+    walkerjs.push('walker destination', {
       config: {},
       init: mockInitFalse,
       push: mockPushFalse,
     });
 
     jest.clearAllMocks();
-    elbwalker.push('entity action');
+    walkerjs.push('entity action');
     expect(mockInitFalse).toHaveBeenCalledTimes(1);
-    elbwalker.push('entity action');
+    walkerjs.push('entity action');
     expect(mockInitFalse).toHaveBeenCalledTimes(2);
     expect(mockPushFalse).not.toHaveBeenCalled();
   });
 
   test('run call', () => {
-    elbwalker.push('walker run');
-    elbwalker.push('run one');
+    walkerjs.push('walker run');
+    walkerjs.push('run one');
 
-    elbwalker.push('walker destination', {
+    walkerjs.push('walker destination', {
       config: {},
       push: mockPush,
     });
@@ -106,8 +106,8 @@ describe('Destination', () => {
       }),
     );
 
-    elbwalker.push('walker run');
-    elbwalker.push('run two');
+    walkerjs.push('walker run');
+    walkerjs.push('run two');
 
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -122,17 +122,17 @@ describe('Destination', () => {
   });
 
   test('multiple destinations', () => {
-    elbwalker.push('walker run');
+    walkerjs.push('walker run');
 
     const configA = { init: false };
     const configB = { init: false };
 
     destination.config = configA;
-    elbwalker.push('walker destination', destination);
+    walkerjs.push('walker destination', destination);
     destination.config = configB;
-    elbwalker.push('walker destination', destination);
+    walkerjs.push('walker destination', destination);
 
-    elbwalker.push('entity action');
+    walkerjs.push('entity action');
     expect(mockInit).toHaveBeenCalledTimes(2);
     expect(mockPush).toHaveBeenCalledTimes(2);
     expect(mockPush).toHaveBeenCalledWith(
@@ -157,10 +157,10 @@ describe('Destination', () => {
       config: {},
     };
 
-    elbwalker.push('walker run');
-    elbwalker.push('walker destination', destinationUpdate);
-    elbwalker.push('walker destination', destination);
-    elbwalker.push('entity action', data);
+    walkerjs.push('walker run');
+    walkerjs.push('walker destination', destinationUpdate);
+    walkerjs.push('walker destination', destination);
+    walkerjs.push('entity action', data);
     expect(mockPushUpdate).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith(
@@ -175,19 +175,19 @@ describe('Destination', () => {
   });
 
   test('broken destination', () => {
-    elbwalker.push('walker run');
+    walkerjs.push('walker run');
 
     // create invalid breaking destinations
-    elbwalker.push('walker destination');
-    elbwalker.push('walker destination', {
+    walkerjs.push('walker destination');
+    walkerjs.push('walker destination', {
       config: {},
       init: () => {
         throw new Error();
       },
       push: mockPush,
     });
-    elbwalker.push('walker destination', destination);
-    elbwalker.push('entity action');
+    walkerjs.push('walker destination', destination);
+    walkerjs.push('entity action');
 
     // @TODO custom error handling
     expect(mockInit).toHaveBeenCalled(); // 2nd destination
@@ -195,8 +195,8 @@ describe('Destination', () => {
 
   test('mapping', () => {
     jest.clearAllMocks();
-    elbwalker = webClient({ elbLayer: [], pageview: false });
-    elbwalker.push('walker run');
+    walkerjs = webClient({ elbLayer: [], pageview: false });
+    walkerjs.push('walker run');
 
     const mockPushA = jest.fn();
     const mockPushB = jest.fn();
@@ -224,11 +224,11 @@ describe('Destination', () => {
       config: { mapping: { entity: { '*': {} } } },
     };
 
-    elbwalker.push('walker destination', destinationA);
-    elbwalker.push('walker destination', destinationB);
-    elbwalker.push('walker destination', destinationC);
+    walkerjs.push('walker destination', destinationA);
+    walkerjs.push('walker destination', destinationB);
+    walkerjs.push('walker destination', destinationC);
 
-    elbwalker.push('entity action');
+    walkerjs.push('entity action');
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
@@ -258,7 +258,7 @@ describe('Destination', () => {
     );
 
     jest.clearAllMocks();
-    elbwalker.push('foo bar');
+    walkerjs.push('foo bar');
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(0);
@@ -272,7 +272,7 @@ describe('Destination', () => {
     );
 
     jest.clearAllMocks();
-    elbwalker.push('random action');
+    walkerjs.push('random action');
     expect(mockPushA).toHaveBeenCalledTimes(0);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(0);
@@ -286,7 +286,7 @@ describe('Destination', () => {
     );
 
     jest.clearAllMocks();
-    elbwalker.push('entity random');
+    walkerjs.push('entity random');
     expect(mockPushA).toHaveBeenCalledTimes(0);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(1);
@@ -300,7 +300,7 @@ describe('Destination', () => {
     );
 
     jest.clearAllMocks();
-    elbwalker.push('absolutely unacceptable');
+    walkerjs.push('absolutely unacceptable');
     expect(mockPushA).toHaveBeenCalledTimes(0);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(0);
@@ -308,11 +308,11 @@ describe('Destination', () => {
 
   test('consent', () => {
     jest.clearAllMocks();
-    elbwalker = webClient({
+    walkerjs = webClient({
       consent: { functional: true, marketing: false },
       pageview: false,
     });
-    elbwalker.push('walker run');
+    walkerjs.push('walker run');
 
     const mockPushA = jest.fn();
     const mockPushB = jest.fn();
@@ -333,44 +333,44 @@ describe('Destination', () => {
       config: { consent: { marketing: true } },
     };
 
-    elbwalker.push('walker destination', destinationA);
-    elbwalker.push('walker destination', destinationB);
-    elbwalker.push('walker destination', destinationC);
+    walkerjs.push('walker destination', destinationA);
+    walkerjs.push('walker destination', destinationB);
+    walkerjs.push('walker destination', destinationC);
 
     // Init consent state
     jest.clearAllMocks();
-    elbwalker.push('e a');
+    walkerjs.push('e a');
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(0);
 
     // Accepted consent
     jest.clearAllMocks();
-    elbwalker.push('walker consent', { marketing: true });
+    walkerjs.push('walker consent', { marketing: true });
     expect(mockPushC).toHaveBeenCalledTimes(1); // retroactively pushed
 
     // Regular push to all now
     jest.clearAllMocks();
-    elbwalker.push('e a');
+    walkerjs.push('e a');
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
 
     // Revoked consent
     jest.clearAllMocks();
-    elbwalker.push('walker consent', { functional: false, marketing: false });
-    elbwalker.push('e a');
+    walkerjs.push('walker consent', { functional: false, marketing: false });
+    walkerjs.push('e a');
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(0);
   });
 
   test('queue', () => {
-    elbwalker = webClient({
+    walkerjs = webClient({
       consent: { functional: true },
       pageview: false,
     });
-    elbwalker.push('walker run');
+    walkerjs.push('walker run');
 
     const mockPushA = jest.fn();
     const mockPushB = jest.fn();
@@ -391,22 +391,22 @@ describe('Destination', () => {
       config: { consent: { marketing: true } },
     };
 
-    elbwalker.push('walker destination', destinationA);
-    elbwalker.push('walker destination', destinationB);
-    elbwalker.push('walker destination', destinationC);
+    walkerjs.push('walker destination', destinationA);
+    walkerjs.push('walker destination', destinationB);
+    walkerjs.push('walker destination', destinationC);
 
     // Init consent state
     jest.clearAllMocks();
-    elbwalker.push('p v');
+    walkerjs.push('p v');
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(0);
 
-    elbwalker.push('e a');
+    walkerjs.push('e a');
     expect(mockPushC).toHaveBeenCalledTimes(0);
 
     // Accepted consent
-    elbwalker.push('walker consent', { marketing: true });
+    walkerjs.push('walker consent', { marketing: true });
 
     expect(mockPushC).toHaveBeenNthCalledWith(
       1,
@@ -428,7 +428,7 @@ describe('Destination', () => {
       expect.anything(),
     );
 
-    elbwalker.push('f b');
+    walkerjs.push('f b');
     expect(mockPushC).toHaveBeenNthCalledWith(
       3,
       expect.objectContaining({
@@ -441,24 +441,24 @@ describe('Destination', () => {
 
     // Revoked consent
     jest.clearAllMocks();
-    elbwalker.push('walker consent', { functional: false, marketing: false });
-    elbwalker.push('no pe');
+    walkerjs.push('walker consent', { functional: false, marketing: false });
+    walkerjs.push('no pe');
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(0);
 
     // New run without previous events
     jest.clearAllMocks();
-    elbwalker.push('walker run');
-    elbwalker.push('walker consent', { functional: true, marketing: true });
-    elbwalker.push('only one');
+    walkerjs.push('walker run');
+    walkerjs.push('walker consent', { functional: true, marketing: true });
+    walkerjs.push('only one');
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
   });
 
   test('ignoring events', () => {
-    elbwalker.push('walker run');
+    walkerjs.push('walker run');
 
     const mockPushA = jest.fn();
 
@@ -470,20 +470,20 @@ describe('Destination', () => {
         },
       },
     };
-    elbwalker.push('walker destination', destinationIgnore);
+    walkerjs.push('walker destination', destinationIgnore);
 
-    elbwalker.push('foo bar');
+    walkerjs.push('foo bar');
     expect(mockPushA).toHaveBeenCalledTimes(1);
 
     jest.clearAllMocks();
 
     destinationIgnore.config.mapping!.foo.bar.ignore = true;
-    elbwalker.push('foo bar');
+    walkerjs.push('foo bar');
     expect(mockPushA).toHaveBeenCalledTimes(0);
   });
 
   test('custom event name', () => {
-    elbwalker.push('walker run');
+    walkerjs.push('walker run');
 
     const mockPushA = jest.fn();
     config = {
@@ -496,9 +496,9 @@ describe('Destination', () => {
       push: mockPushA,
       config,
     };
-    elbwalker.push('walker destination', destination);
+    walkerjs.push('walker destination', destination);
 
-    elbwalker.push('page view');
+    walkerjs.push('page view');
     expect(mockPushA).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page_view',
@@ -510,8 +510,8 @@ describe('Destination', () => {
   });
 
   test('set config on init', () => {
-    elbwalker = webClient({ elbLayer: [], pageview: false });
-    elbwalker.push('walker run');
+    walkerjs = webClient({ elbLayer: [], pageview: false });
+    walkerjs.push('walker run');
 
     const mockInitA = jest.fn();
     const mockPushA = jest.fn();
@@ -535,14 +535,14 @@ describe('Destination', () => {
       config,
     };
 
-    elbwalker.push('walker destination', destinationA);
-    elbwalker.push('walker destination', destinationB, {
+    walkerjs.push('walker destination', destinationA);
+    walkerjs.push('walker destination', destinationB, {
       init: false,
       mapping: { p: { v: { name: 'different' } } },
     });
 
     jest.clearAllMocks();
-    elbwalker.push('p v');
+    walkerjs.push('p v');
 
     expect(mockInitA).not.toHaveBeenCalled();
     expect(mockPushA).toHaveBeenCalledWith(
@@ -561,11 +561,11 @@ describe('Destination', () => {
   });
 
   test('temp async queue', () => {
-    elbwalker = webClient({ elbLayer: [], pageview: false });
-    elbwalker.push('walker run');
-    elbwalker.push('walker destination', destination);
+    walkerjs = webClient({ elbLayer: [], pageview: false });
+    walkerjs.push('walker run');
+    walkerjs.push('walker destination', destination);
 
-    elbwalker.push('p v');
+    walkerjs.push('p v');
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'p v',
@@ -583,7 +583,7 @@ describe('Destination', () => {
       push: mockPushLate,
       config,
     };
-    elbwalker.push('walker destination', destinationLate);
+    walkerjs.push('walker destination', destinationLate);
     expect(mockPushLate).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'p v',
@@ -594,10 +594,10 @@ describe('Destination', () => {
     );
 
     // Expect to only process current events
-    elbwalker.push('walker run');
+    walkerjs.push('walker run');
     jest.clearAllMocks();
 
-    elbwalker.push('p v2');
+    walkerjs.push('p v2');
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'p v2',
@@ -611,7 +611,7 @@ describe('Destination', () => {
       push: mockPushLater,
       config,
     };
-    elbwalker.push('walker destination', destinationLater);
+    walkerjs.push('walker destination', destinationLater);
     expect(mockPushLater).toHaveBeenCalledTimes(1);
 
     // Disable processing previous events
@@ -620,42 +620,42 @@ describe('Destination', () => {
       push: mockPushLatest,
       config,
     };
-    elbwalker.push('walker destination', destinationLatest, {
+    walkerjs.push('walker destination', destinationLatest, {
       queue: false,
     });
     expect(mockPushLatest).toHaveBeenCalledTimes(0);
   });
 
   test('id namings', () => {
-    elbwalker.push('walker run');
-    elbwalker.push('walker destination', destination, { id: 'foo' });
-    elbwalker.push('walker destination', destination, { id: 'foo' }); // Override
-    elbwalker.push('walker destination', destination, { id: 'bar' });
+    walkerjs.push('walker run');
+    walkerjs.push('walker destination', destination, { id: 'foo' });
+    walkerjs.push('walker destination', destination, { id: 'foo' }); // Override
+    walkerjs.push('walker destination', destination, { id: 'bar' });
 
-    expect(elbwalker.config.destinations).toHaveProperty('foo');
-    expect(Object.keys(elbwalker.config.destinations)).toHaveLength(2);
+    expect(walkerjs.config.destinations).toHaveProperty('foo');
+    expect(Object.keys(walkerjs.config.destinations)).toHaveLength(2);
 
-    elbwalker.push('e a');
+    walkerjs.push('e a');
     expect(mockPush).toHaveBeenCalledTimes(2);
     mockPush.mockClear();
-    delete elbwalker.config.destinations['foo']; // Delete destination
-    expect(elbwalker.config.destinations).not.toHaveProperty('foo');
-    expect(Object.keys(elbwalker.config.destinations)).toHaveLength(1);
+    delete walkerjs.config.destinations['foo']; // Delete destination
+    expect(walkerjs.config.destinations).not.toHaveProperty('foo');
+    expect(Object.keys(walkerjs.config.destinations)).toHaveLength(1);
 
-    elbwalker.push('e a');
+    walkerjs.push('e a');
     expect(mockPush).toHaveBeenCalledTimes(1);
 
-    elbwalker.push('walker destination', destination);
-    expect(Object.keys(elbwalker.config.destinations)).toHaveLength(2);
+    walkerjs.push('walker destination', destination);
+    expect(Object.keys(walkerjs.config.destinations)).toHaveLength(2);
   });
 
   test.skip('TODO investigate this', () => {
-    elbwalker.push('walker destination', destination, { id: 'foo' });
-    elbwalker.push('walker run');
+    walkerjs.push('walker destination', destination, { id: 'foo' });
+    walkerjs.push('walker run');
 
     // @TODO
     // the walker destination command is not processed
     // only if walker run was called before
-    expect(elbwalker.config.destinations['foo']).toBe(destination);
+    expect(walkerjs.config.destinations['foo']).toBe(destination);
   });
 });

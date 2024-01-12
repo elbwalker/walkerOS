@@ -111,7 +111,7 @@ $ npm i --save @elbwalker/client-web
 import { elb, webClient } from '@elbwalker/client-web';
 
 // Initialize the walkerOS web client
-window.elbwalker = webClient({
+window.walkerjs = webClient({
   // custom configuration of type WebClient.Config
 });
 

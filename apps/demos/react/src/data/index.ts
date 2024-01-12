@@ -15,7 +15,7 @@ export function setupAnalytics() {
   window.elb = elb;
 
   // Initialize the walkerOS web client
-  window.elbwalker = webClient({
+  window.walkerjs = webClient({
     destinations: {
       log: destinationLog,
     },

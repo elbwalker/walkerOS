@@ -5,7 +5,7 @@ import { elb } from '../lib/trigger';
 
 describe('ElbLayer', () => {
   const w = window;
-  let elbwalker: WebClient.Function;
+  let walkerjs: WebClient.Function;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn(); //.mockImplementation(console.log);
@@ -24,7 +24,7 @@ describe('ElbLayer', () => {
   });
 
   test('arguments and event pushes', () => {
-    elbwalker = webClient({ default: true });
+    walkerjs = webClient({ default: true });
     elb('ingest argument', { a: 1 }, 'a', {}); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
@@ -47,7 +47,7 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack without run', () => {
-    elbwalker = webClient();
+    walkerjs = webClient();
     elb('walker destination', destination);
     elb('entity action');
 
@@ -58,7 +58,7 @@ describe('ElbLayer', () => {
     elb('e 1');
     elb('walker destination', destination);
 
-    elbwalker = webClient();
+    walkerjs = webClient();
     elb('e 2');
     elb('walker run');
     // auto call: elb('page view');
@@ -106,7 +106,7 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack with run', () => {
-    elbwalker = webClient();
+    walkerjs = webClient();
 
     elb('walker destination', destination);
     elb('ingest argument', { a: 1 }, 'a'); // Push as arguments
@@ -132,7 +132,7 @@ describe('ElbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    elbwalker = webClient();
+    walkerjs = webClient();
 
     (elb as Function)();
     elb('event postponed');
@@ -176,7 +176,7 @@ describe('ElbLayer', () => {
   test('elbLayer initialization', () => {
     w.elbLayer = undefined as any;
 
-    elbwalker = webClient();
+    walkerjs = webClient();
 
     expect(w.elbLayer).toBeDefined();
   });
@@ -201,40 +201,40 @@ describe('ElbLayer', () => {
       tagging: expect.any(Number),
     };
 
-    elbwalker = webClient();
+    walkerjs = webClient();
     elb('walker run');
 
-    expect(elbwalker.config).toStrictEqual(defaultConfig);
+    expect(walkerjs.config).toStrictEqual(defaultConfig);
 
     let update: WalkerOS.Properties | Partial<WalkerOS.Config> = {
       prefix: 'data-custom',
     };
     let config = { ...defaultConfig, ...update };
     elb('walker config', update);
-    expect(elbwalker.config).toStrictEqual(expect.objectContaining(update)); // Partial test
-    expect(elbwalker.config).toStrictEqual(config); // Full test
+    expect(walkerjs.config).toStrictEqual(expect.objectContaining(update)); // Partial test
+    expect(walkerjs.config).toStrictEqual(config); // Full test
 
     update = { version: 2 };
     elb('walker config', update);
-    expect(elbwalker.config).toStrictEqual(expect.objectContaining(update));
+    expect(walkerjs.config).toStrictEqual(expect.objectContaining(update));
 
     update = { pageview: false };
     elb('walker config', update);
-    expect(elbwalker.config).toStrictEqual(expect.objectContaining(update));
+    expect(walkerjs.config).toStrictEqual(expect.objectContaining(update));
 
     // Reset with w.elbLayer = [] creates another array than in defaultConfig
     w.elbLayer.length = 0;
     let globals: WalkerOS.Properties = { static: 'value' };
     config = { ...defaultConfig, globals };
-    elbwalker = webClient({ globals });
+    walkerjs = webClient({ globals });
     elb('walker run');
-    expect(elbwalker.config).toStrictEqual(config);
+    expect(walkerjs.config).toStrictEqual(config);
 
     update = { foo: 'bar' };
     elb('walker config', { globals: update });
     globals = { ...globals, ...update };
 
-    expect(elbwalker.config).toStrictEqual(
+    expect(walkerjs.config).toStrictEqual(
       expect.objectContaining({ globals }),
     );
 
@@ -242,7 +242,7 @@ describe('ElbLayer', () => {
     elb('walker config', { globals: update });
     globals = { ...globals, ...update };
 
-    expect(elbwalker.config).toStrictEqual(
+    expect(walkerjs.config).toStrictEqual(
       expect.objectContaining({ globals }),
     );
 
@@ -250,7 +250,7 @@ describe('ElbLayer', () => {
     elb('walker config', { globals: update });
     globals = { ...globals, ...update };
 
-    expect(elbwalker.config).toStrictEqual(
+    expect(walkerjs.config).toStrictEqual(
       expect.objectContaining({ globals }),
     );
   });
@@ -338,7 +338,7 @@ describe('ElbLayer', () => {
   test('elbLayer push override', () => {
     const layer: WebClient.ElbLayer = [];
 
-    elbwalker = webClient({ elbLayer: layer, pageview: false });
+    walkerjs = webClient({ elbLayer: layer, pageview: false });
     layer.push('walker run'); // Overrites push function
     layer.push('walker destination', destination, {
       init: true,
@@ -357,7 +357,7 @@ describe('ElbLayer', () => {
   });
 
   test('command order', () => {
-    elbwalker = webClient();
+    walkerjs = webClient();
     elb('walker run');
 
     // Arguments
