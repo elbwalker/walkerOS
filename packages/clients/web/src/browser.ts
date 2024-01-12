@@ -6,7 +6,7 @@ import { elb } from './lib/trigger';
 let defaultMode, tagging;
 
 // walker script
-const elem = document.querySelector('script.elbwalker');
+const elem = document.querySelector('script.walkerjs');
 
 if (elem) {
   defaultMode = !!getAttribute(elem, 'data-default'); // default mode
@@ -16,7 +16,7 @@ if (elem) {
 const instance = webClient({ default: defaultMode, tagging });
 
 // Global object
-window.elbwalker = instance;
+window.walkerjs = instance;
 window.elb = elb;
 
 export default instance;

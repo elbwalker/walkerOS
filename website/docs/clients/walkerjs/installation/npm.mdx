@@ -1,38 +1,41 @@
 ---
 title: NPM
+description: Install walker.js as an NPM package.
 ---
 
-To integrate walker.js with your website, you can use this
-[NPM module](https://www.npmjs.com/package/@elbwalker/walker.js) to package the
-walker directly into your project. To get started with the installation, run:
+import Link from '@docusaurus/Link';
+
+To integrate walker.js with your website, you can use
+the&nbsp;<Link to="https://www.npmjs.com/package/@elbwalker/walker.js">@elbwalker/walker.js</Link>
+package to integrate it directly into your project. To get started with the
+installation, run:
 
 ```js
 npm i --save @elbwalker/walker.js
 ```
 
-:::caution
-
-This NPM module is only meant to be used for a browser installation.
-
-:::
-
-As a next step run the following code snippet once:
+As a next step run the following code snippet once to create an instance.
 
 ```js
-import Elbwalker from '@elbwalker/walker.js';
-window.elbwalker = Elbwalker({
-  // custom config
+import { webClient } from '@elbwalker/walker.js';
+
+window.walkerjs = webClient({
+  /* custom config */
 });
 ```
 
-To configure and communicate with the walker you can use the elb-helper
-function:
+To configure and communicate with the walker.js isntance you can use the
+`elb`-helper function:
 
 ```js
 import { elb } from '@elbwalker/walker.js';
+
+window.elb = elb;
 elb('entity action', data, trigger, context, nested); // push events
 elb('walker <command>', data); // configure walker, see Commands
 ```
+
+## Single Page Applications
 
 When using a Single Page Application like React, tell the walker to run on each
 location change in your app, like a real pageview:
@@ -42,7 +45,7 @@ import React from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import Elbwalker, { elb } from '@elbwalker/walker.js';
 
-window.elbwalker = Elbwalker({ default: true });
+window.walkerjs = Elbwalker({ default: true });
 
 export default function App() {
   const location = useLocation();
