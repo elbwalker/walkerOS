@@ -4,7 +4,7 @@ title: Tagger
 
 The Tagger is a helper to generate the `data-elb` attributes.
 
-:::note
+:::info
 
 The Tagger will support tagging validation and other features soon. It's worth
 using it.
@@ -13,9 +13,11 @@ using it.
 
 Start by installing the tagger with npm:
 
-```js
+```bash
 npm i --save @elbwalker/tagger
 ```
+
+## Usage
 
 Import, instantiate and use the tagger
 
@@ -30,10 +32,20 @@ tagger.context('test', 'engagement'); // { "data-elbcontext": "test:engagement" 
 tagger.globals('language', 'en'); // { "data-elbglobals": "language:en" }
 ```
 
+To set multiple data-properties at once pass an object to the `property` method:
+
+```js
+tagger.property('promotion', {
+  name: 'Setting up tracking easily',
+  category: 'analytics',
+  type: 'overlay',
+});
+```
+
 You can use the return values to add them directly to your HTML. Use the spread
 operator in React:
 
-```html
+```jsx
 <div
   {...tagger.entity('promotion')}
   {...tagger.action('visible', 'view')}

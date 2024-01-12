@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { elb, webClient } from '@elbwalker/client-web';
+import Tagger from '@elbwalker/tagger';
 
-const Walkerjs = () => {
+export const Walkerjs = () => {
   const location = useLocation();
 
   useEffect(() => {
@@ -20,4 +21,4 @@ const Walkerjs = () => {
   return null;
 };
 
-export default Walkerjs;
+export const tagger = Tagger();

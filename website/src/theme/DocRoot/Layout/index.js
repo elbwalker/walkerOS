@@ -1,13 +1,11 @@
 import React from 'react';
-import Layout from '@theme-original/Layout';
-import { Walkerjs } from '@site/src/components/walkerjs';
+import Layout from '@theme-original/DocRoot/Layout';
 import { tagger } from '@site/src/components/walkerjs';
 
 export default function LayoutWrapper(props) {
   return (
     <>
-      <Walkerjs />
-      <span {...tagger.globals('pagegroup', 'content')}>
+      <span {...tagger.globals('pagegroup', 'docs')}>
         <Layout {...props} />
       </span>
     </>

@@ -714,11 +714,9 @@ export default function LegalPrivacyContentEN() {
               </p>
             </div>
           </div>
-          <p>
-            <h4 className="text-gray-50">
-              <b>Status February 2022</b>
-            </h4>
-          </p>
+          <h4 className="text-gray-50">
+            <b>Status February 2022</b>
+          </h4>
         </div>
       </div>
     </div>
