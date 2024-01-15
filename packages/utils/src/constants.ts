@@ -27,4 +27,9 @@ const Utils = {
   Storage: UtilsStorage,
 };
 
-export default { Commands, Utils };
+export const Const = {
+  Commands,
+  Utils,
+};
+
+export default Const;
