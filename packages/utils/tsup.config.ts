@@ -36,10 +36,9 @@ export default defineConfig([
   // Web ES5 files
   {
     ...config,
-    entry: ['src/web/*'],
+    entry: ['src/core/*', 'src/web/*'],
     format: ['iife'],
     globalName,
-    outDir: 'dist/web',
     outExtension() {
       return { js: `.es5.js` };
     },
