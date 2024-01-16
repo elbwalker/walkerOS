@@ -1,5 +1,5 @@
 ---
-title: Privacy
+title: Consent Management
 ---
 
 You can define required consent states for each destination individually. With
@@ -14,9 +14,6 @@ condition applies, consent is granted. Updating only one value won't override
 others.
 
 ```js
-function elb() {
-  (window.elbLayer = window.elbLayer || []).push(arguments);
-}
 elb('walker consent', { marketing: true });
 ```
 

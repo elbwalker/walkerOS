@@ -1,7 +1,7 @@
 ---
 title: Commands
-description: XXX
-position: 3
+sidebar_position: 2
+description: Ways to configure the walker.js
 ---
 
 import Link from '@docusaurus/Link';
@@ -120,9 +120,29 @@ elb('walker user', { id: 'us3r', device: 'c00k13', session: 's3ss10n' });
 The new user ids are now added to each event. Make sure to only use hashed or
 anonymous ids.
 
+```js
+{
+  "event": "entity action",
+  "user": {
+    "id": "us3r",
+    "device": "c00k13",
+    "hash": "s3ss10n"
+  }
+  // other properties omitted
+}
+```
+
 :::info
 
 Learn more about identification and <Link to="../../guides/user_stitching">user
 stitching</Link> in the guides.
+
+:::
+
+:::caution
+
+We highly recommend only using fully anonymized & arbitrary ids by default and
+checking your options with persistent user IDs with your data protection
+officer.
 
 :::
