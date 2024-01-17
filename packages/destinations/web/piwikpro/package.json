@@ -22,7 +22,7 @@
   "devDependencies": {
     "@elbwalker/types": "*",
     "@elbwalker/utils": "*",
-    "@elbwalker/client-web": "*"
+    "@elbwalker/walker.js": "*"
   },
   "repository": {
     "type": "git",

@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@elbwalker/client-web": "*",
+    "@elbwalker/walker.js": "*",
     "@elbwalker/destination-web-google-gtm": "*",
     "@elbwalker/utils": "*",
     "@heroicons/react": "^2.0.18",

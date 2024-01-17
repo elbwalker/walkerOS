@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { elb, webClient } from '@elbwalker/client-web';
+import { elb, webClient } from '@elbwalker/walker.js';
 import Tagger from '@elbwalker/tagger';
 
 export const Walkerjs = () => {

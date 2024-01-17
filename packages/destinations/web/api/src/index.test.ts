@@ -1,5 +1,4 @@
-import webClient from '@elbwalker/client-web';
-import type { WebClient } from '@elbwalker/client-web';
+import webClient, { type WebClient } from '@elbwalker/walker.js';
 import type { Function, Config } from './types';
 
 describe('Destination API', () => {

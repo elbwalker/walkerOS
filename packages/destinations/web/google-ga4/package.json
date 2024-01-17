@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@elbwalker/types": "*",
-    "@elbwalker/client-web": "*"
+    "@elbwalker/walker.js": "*"
   },
   "repository": {
     "type": "git",

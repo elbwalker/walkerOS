@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@elbwalker/types": "*",
-    "@elbwalker/client-web": "*",
+    "@elbwalker/walker.js": "*",
     "@types/gtag.js": "^0.0.12"
   },
   "repository": {

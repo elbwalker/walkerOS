@@ -1,8 +1,10 @@
 # Google Analytics 4 (GA4) web destination for walkerOS
 
-Made to be used with [@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
+Made to be used with
+[@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
 
-More detailed information and examples can be found in the [documentation](https://docs.elbwalker.com/).
+More detailed information and examples can be found in the
+[documentation](https://docs.elbwalker.com/).
 
 ## 🤓 Usage
 
@@ -78,17 +80,29 @@ const config /* : DestinationGoogleGA4.Config */ = {
 };
 ```
 
-`params`, `items`, and `include` are available at the config and event levels. Settings on the event level will override the general ones.
+`params`, `items`, and `include` are available at the config and event levels.
+Settings on the event level will override the general ones.
 
-Use the `string-dot` notation (`data.id`, `user.id`, `group`, `context.position.0`) to access all values of an event.
+Use the `string-dot` notation (`data.id`, `user.id`, `group`,
+`context.position.0`) to access all values of an event.
 
-Nested entities will be looped if available. Use `items` and the wildcard (\*) to access and add them dynamically (for `order complete` events with multiple nested `product` entities for example).
+Nested entities will be looped if available. Use `items` and the wildcard (\*)
+to access and add them dynamically (for `order complete` events with multiple
+nested `product` entities for example).
 
-Use the `include` option to bulk-add event properties without explicitly mapping custom event parameters. This adds all available properties of the specified group. Available groups are `event` (for basic event properties like trigger, timing, etc.), `data`, `context`, `globals`, `nested`, `source`, `user`, `version`, or just `all`. All `data` properties are added automatically by default. If you don't want this add `include: []`.
+Use the `include` option to bulk-add event properties without explicitly mapping
+custom event parameters. This adds all available properties of the specified
+group. Available groups are `event` (for basic event properties like trigger,
+timing, etc.), `data`, `context`, `globals`, `nested`, `source`, `user`,
+`version`, or just `all`. All `data` properties are added automatically by
+default. If you don't want this add `include: []`.
 
-> Note: `consent` and `nested` are not available via `include`, but you can add them explicitly using `params` or `items`.
+> Note: `consent` and `nested` are not available via `include`, but you can add
+> them explicitly using `params` or `items`.
 
-The properties get prefixed with the group's name and underscore (like `globals_lang` for `{ globals: { lang: 'de' } }`). Custom parameters will override `include` values with the same key.
+The properties get prefixed with the group's name and underscore (like
+`globals_lang` for `{ globals: { lang: 'de' } }`). Custom parameters will
+override `include` values with the same key.
 
 ### Node usage
 
@@ -97,7 +111,7 @@ npm i --save @elbwalker/destination-web-google-ga4
 ```
 
 ```ts
-import { elb } from '@elbwalker/client-web';
+import { elb } from '@elbwalker/walker.js';
 import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
 
 elb('walker destination', destinationGoogleGA4, config);
@@ -127,4 +141,7 @@ Loading the destination via dynamic import
 
 ## Contribute
 
-Feel free to contribute by submitting an [issue](https://github.com/elbwalker/walkerOS/issues), starting a [discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in [contact](https://calendly.com/elb-alexander/30min).
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in
+[contact](https://calendly.com/elb-alexander/30min).
