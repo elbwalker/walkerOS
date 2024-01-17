@@ -2,16 +2,30 @@
 title: Event model
 ---
 
-One single event model to support analytics, marketing, privacy and data science
+A single event model to support analytics, marketing, privacy and data science
 needs.
 
 ## Entity-Action Approach
 
-The Entity-Action approach forms the core of the walkerOS event model. It's a
+The Entity-Action approach is the core of the walkerOS event model. It's a
 framework designed to capture interactions in a structured yet flexible manner.
-Two primary components define each event: the 'entity' (what the interaction
-involves) and the 'action' (what is done with the entity). This method provides
-a comprehensive and clear understanding of user behaviors and interactions.
+Two primary components define each event: the 'entity' (what is involved within
+an interaction) and the 'action' (what is done with the entity). This method
+provides a comprehensive and clear understanding of user behaviors and
+interactions.
+
+One of the great things about walkerOS is the full **flexibility** of event
+definitions. You can build your tracking based on your **business logic**
+instead of trying to press your business logic into analytics specs.
+
+We believe that tracking shouldn't sound like some abstract technical concept.
+It should feel **natural** and everyone involved should immediately understand
+it. Only when everyone understands what is being measured, there will be **fewer
+misunderstandings, higher data quality**, and more actionable data in the
+organization at the end of the day.
+
+A walkerOS event consists of three components: a **trigger** (e.g. load), an
+**entity** (e.g. page), and an **action** (e.g. view).
 
 ## Event Structure
 
@@ -71,73 +85,72 @@ different value types.
 }
 ```
 
-This structure remains consistent across all interactions, whether a
-`page view`, `page read`, `product add`, or `session start` and
+This structure remains consistent across all interactions, whether the event is
+a `page view`, `page read`, `product add`, or `session start` and
 `order complete`. Event names are a combination of the entities involved
 (_promotion_) and the action performed (_view_).
 
 ### Data Properties
 
-These properties describe the entity in more detail. Depending on the entity
-(e.g., _product_, _order_, _article_), these can vary and provide specific
-insights relevant to the interaction.
+Data properties describe the entity in more detail. Depending on the entity
+(e.g. _product_, _order_, _article_) they can vary and provide specific insights
+relevant to the interaction.
 
 ### Context
 
 Context refers to the state or environment in which the event was triggered. It
 could be as simple as a page position or as complex as the logical stage in a
-user journey, like a shopping process from inspiration to checkout.
+user journey, like a shopping journey from inspiration to checkout stage.
 
 ### Globals
 
 Globals describe the overall state influencing events or user behavior. These
-might include the theme used, page type for the web, or general cart value.
+might include the theme used, page type for web, or cart value.
 
 ### User
 
-Three identifiers are used for stitching together user journeys: id, device, and
-session. This enables cross-device tracking or link sessions for a cohesive user
-journey.
+There are three identifiers are used for stitching together user journeys: id,
+device, and session. This enables cross-device tracking or linking sessions for
+a cohesive user journey.
 
 ### Consent
 
-Keeps the permissions granted by the user, which is crucial for subsequent data
-processing and helpful to compliance with privacy regulations.
+Consent captures the permissions granted by the user, which is crucial for
+subsequent data processing and helpful to comply with privacy regulations.
 
 ### Source
 
-The source details the origin of the event, including type (web, app, server),
+The source is the origin of the event, including type (web, app, server),
 specific site or component, and referrer information for basic journey
 attribution.
 
 ## Principles
 
-### Structured Flexibility
+### Structured flexibility
 
-The event model is tailored to fit a company's requirements while maintaining a
-structured approach for easy data access and interpretation.
+The event model is made to fit every company's requirements while maintaining a
+structured approach for easy access and interpretation.
 
 ### First-Party
 
-Data With walkerOS, data is collected directly and built into your code. This
-ensures control over what, when, and where data is measured, enhancing data
-management and privacy.
+With walkerOS data is collected directly and built into your code. This ensures
+control over what, when, and where data is measured, enhancing data management
+and privacy.
 
 ### Source of Truth
 
 A single source of truth for data ensures comparability, manageability, and
 minimizes implementation efforts, preventing data leaks or inaccuracies.
 
-### Vendor Agnostic
+### Vendor-agnostic
 
-The event model is designed to be resilient, flexible, and business-focused,
-allowing for adaptability to future legal or internal requirements without
-vendor lock-in.
+The event model is designed to be resilient and flexible, allowing adaptability
+to future legal or internal requirements without vendor lock-in.
 
-### Industry Independent
+### Industry-agnostic
 
-The model supports diverse use cases beyond e-commerce, including publishers,
-career sites, travel blogs, and more, ensuring versatility and comparability.
+The model supports diverse use cases beyond e-commerce, including media, (B2B)
+SaaS, and more, ensuring versatility and comparability.
 
 ### Mapping
 

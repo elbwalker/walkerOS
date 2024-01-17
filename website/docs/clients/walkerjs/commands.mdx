@@ -69,7 +69,7 @@ elb('walker run');
 
 (Re-)initializes event listeners on one or multiple target elements. Can be used
 for e.g. asynchronously loaded content like newly added products in a category
-list or a wizard.
+list or a wizzard.
 
 ```js
 elb('walker init', element); // or an array of elements
@@ -93,11 +93,10 @@ elb('walker destination', destinationGTM, {
 
 ## Consent Management
 
-Handles the consent states for specific groups or tools. Those names can be
-defined arbitrarily, but common groups are functional, analytics, and marketing.
-Values are booleans and once a value is set to `true` it's treated as consent
-being granted. Previously pushed events during the run are shared now with
-destinations as well as new ones.
+Those names can be defined arbitrarily, but common groups are functional,
+analytics, and marketing. Values are booleans and once a value is set to `true`
+it's treated as consent being granted. Previously pushed events during the run
+are shared now with destinations as well as new ones.
 
 ```js
 elb("walker consent" { marketing: true, randomTool: true });

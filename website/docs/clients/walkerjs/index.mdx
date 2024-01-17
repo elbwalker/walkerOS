@@ -5,18 +5,17 @@ description: walker.js web client
 
 import Link from '@docusaurus/Link';
 
-Web Client walker.js
-
 Walker.js is an open library to capture user events and send them to
 any&nbsp;<Link to="../destinations/web/">web destination</Link>. It is created
-to enable data ownership, improve data quality and enable tracking and
-implementation in a reliable yet understandable way.
+to improve data richness and make tracking implementation robust and scalable.
 
 ## Basic idea
 
-Setting up a complete tracking with HTML attributes. Use the elb-attributes
-`data-elb`, `data-elbaction`, `data-elb-*`, `data-elbcontext`, and
-`data-elbglobals` for tagging.
+The basic idea of walker.js is to set up a complete tracking with HTML
+attributes. Use the elb-attributes `data-elb`, `data-elbaction`, `data-elb-*`,
+`data-elbcontext`, and `data-elbglobals` for tagging.
+
+Add some tags in your HTML...
 
 ```html
 <body data-elbglobals="language:en">
@@ -31,7 +30,7 @@ Setting up a complete tracking with HTML attributes. Use the elb-attributes
 </body>
 ```
 
-Your web event is built on the fly
+... and your web event is built on the fly:
 
 ```js
 {
@@ -68,56 +67,3 @@ Your web event is built on the fly
 Learn more about the [event model](/docs/walkeros/event-model).
 
 :::
-
-### Introducing
-
-Walker.js is an implementation layer that creates reliable event data with
-context. It adds maximum **ownership** and **scalability** to your web-tracking
-implementation.
-
-If you...
-
-- take the users' **privacy** seriously and want to track **first-party**
-- **regularly ship new features** and landing pages and constantly need to make
-  sure you added the tracking correctly
-- have a continuously growing user interface and you find measuring **in-depth
-  behavioral data** on the usage difficult to implement
-
-... walker.js might be just what you're looking for.
-
-### Coupled with markup (like CSS)
-
-We're building upon **data attributes** instead of writing manual code. Yes,
-this means that in general, you can **only measure what your users really see,
-click, and do** on your website or within your web app. What's not in your
-markup can't be measured with the walker.js.
-
-This is because in most of the cases where tracking code breaks it happens when
-the **UI is being changed** or further developed and nobody thought about the
-tracking. It's often too far away from the core product development. It's much
-
-**less likely to remove** attributes that are used throughout the whole markup.
-Somebody will at least ask what they are and do.
-
-### Entity-action event model
-
-One of the great things about walkerOS is the full **flexibility** of event
-definitions. You can build your tracking based on your **business logic**
-instead of trying to press your business logic into analytics specs.
-
-We believe that tracking shouldn't sound like some abstract technical concept.
-It should feel **natural** and everyone involved should immediately understand
-it. Only when everyone understands what is being measured, there will be **fewer
-misunderstandings, higher data quality**, and more actionable data in the
-organization at the end of the day.
-
-A walkerOS event consists of three components: a **trigger** (e.g. load), an
-**entity** (e.g. page), and an **action** (e.g. view).
-
-### Vendor-agnostic
-
-Walker.js is generally not made to replace any of your tools, but to **deliver
-them better data**. One event captured with walker.js can be sent to **many
-destinations** at the same time. However, if you want to replace analytic tools
-like Google Analytics you can do this by using walker.js and the event pipe
-destination.

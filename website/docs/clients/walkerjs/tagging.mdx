@@ -6,14 +6,14 @@ description: How to tag a page with walker.js
 
 # General usage
 
-You can implement all sorts of **front-end** user **events** easily with
-walker.js. From product and UX events like promotion view, filter usage, etc. to
-e-commerce actions like product add to carts or order complete events. The
-walker.js handles all **trigger initializations** and **race conditions**,
-builds the **events with context**, and distributes them based on **consent
-states** and **mapping definitions** to any destinations.
+You can implement all sorts of front-end user events easily with walker.js. From
+product and UX events like promotion view, filter usage, etc. to e-commerce
+actions like product add to carts or order complete events. The walker.js
+handles all trigger initializations and race conditions, builds the events with
+context, and distributes them based on consent states and mapping definitions to
+any destinations.
 
-Tagging a page with
+Tag a page with...
 
 ```html
 <!-- Generic usage -->
@@ -38,7 +38,7 @@ Tagging a page with
 </div>
 ```
 
-Get a full event like the following as a result for instance:
+...get a full event like the following as a result:
 
 ```js
 {
@@ -89,8 +89,8 @@ Get a full event like the following as a result for instance:
 
 You are completely **free to define naming conventions**. All you need to get
 started are the **entity, action & trigger** attributes. Learn more about the
-[elbwalker event modell](https://www.elbwalker.com/blog/elbwalker-event-concept/)in
-our blog.
+[event modell](https://www.elbwalker.com/blog/elbwalker-event-concept) in our
+blog.
 
 1. You define the **entity scope** by setting the data-elb attribute with the
    name of an entity to an element, e.g. `data-elb="promotion"`. The default
@@ -105,11 +105,8 @@ our blog.
 
 ## Trigger
 
-Walker.js comes with a bunch of pre-built triggers.
-
-You don't have to deal with event listener or mutation observer initialization
-anymore. Walker.js comes with a bunch of integrated triggers that will fire your
-event at the right moment.
+Walker.js comes with a bunch of pre-built triggers. You don't have to deal with
+event listener or mutation observer initialization anymore.
 
 | **Event** | **Definition**                                                                                                            |
 | --------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -366,11 +363,8 @@ It's suggested to prefer explicit properties over generic ones.
 
 ## Globals
 
-What global properties are, when to use them and how
-
 There might be properties that don't belong to just one event but to **all
 events on a page**. Those properties are called the globals and will be
-
 **collected once**, right before the first event got fired. The globals are
 arbitrary like the data property. What is special about them is that you can
 define them anywhere on a page by using the `data-elbglobals` attribute.
@@ -402,7 +396,7 @@ For reasons of performance, the globals are only collected once per run.
 
 All entities inside a defined context want to know about their context. Those
 are not as relevant as globals for every event, but helpful information for
-every framing context of an event it's embedded in. A context could be a
+every framing context of an event it is embedded in. A context could be a
 position or test for example.
 
 ```html
@@ -436,8 +430,6 @@ closest parent (`[value, index]`). Access them via `event.context.key[0]`.
 ```
 
 ## Nested entities
-
-How to implement nested entities
 
 A `data-elb` entity within another `data-elb` entity is called a **nested
 entity**.
