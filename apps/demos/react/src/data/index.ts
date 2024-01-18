@@ -1,6 +1,6 @@
 import { destinationGoogleGTM } from '@elbwalker/destination-web-google-gtm';
 
-import { elb, webClient, type WebDestination } from '@elbwalker/client-web';
+import { elb, webClient, type WebDestination } from '@elbwalker/walker.js';
 
 export function setupAnalytics() {
   // Dummy destination to log events to the console

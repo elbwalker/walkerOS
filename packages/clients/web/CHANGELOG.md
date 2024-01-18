@@ -1,4 +1,4 @@
-# @elbwalker/client-web
+# @elbwalker/walker.js
 
 ## 0.0.1
 

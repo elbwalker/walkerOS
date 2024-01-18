@@ -12,13 +12,26 @@
   <a href="https://docs.elbwalker.com/"><img src="https://img.shields.io/badge/docs-docs.elbwalker.com-yellow" alt="elbwalker Documentation"></a>
 </div>
 
-Why you need it: Unify your data collection across various departments with the walkerOS web client, previously known as walker.js. This package offers a vendor-agnostic approach to front-end user event tracking, enabling you to collect high-quality, consent-aware data for analytics, marketing, and beyond.
+Why you need it: Unify your data collection across various departments with the
+walkerOS web client, previously known as walker.js. This package offers a
+vendor-agnostic approach to front-end user event tracking, enabling you to
+collect high-quality, consent-aware data for analytics, marketing, and beyond.
 
 ## Usage
 
-You can implement all sorts of front-end user events. From product and UX events like "promotion view", or filter usage, etc. to e-commerce actions like product add to carts or order complete events. The walkerOS handles all [trigger initializations](https://docs.elbwalker.com/tagging/available-triggers) and race conditions, builds the [events with context](https://docs.elbwalker.com/tagging/basics), and distributes them based on [consent states](https://docs.elbwalker.com/privacy/consent) and [mapping definitions](https://docs.elbwalker.com/destinations/basics#mapping) to any [destinations](https://docs.elbwalker.com/destinations/details).
+You can implement all sorts of front-end user events. From product and UX events
+like "promotion view", or filter usage, etc. to e-commerce actions like product
+add to carts or order complete events. The walkerOS handles all
+[trigger initializations](https://docs.elbwalker.com/tagging/available-triggers)
+and race conditions, builds the
+[events with context](https://docs.elbwalker.com/tagging/basics), and
+distributes them based on
+[consent states](https://docs.elbwalker.com/privacy/consent) and
+[mapping definitions](https://docs.elbwalker.com/destinations/basics#mapping) to
+any [destinations](https://docs.elbwalker.com/destinations/details).
 
-To get started take a look at our detailed [documentation](https://docs.elbwalker.com/).
+To get started take a look at our detailed
+[documentation](https://docs.elbwalker.com/).
 
 1. [Installation](https://docs.elbwalker.com/getting-started/installation)
 2. [Tagging](https://docs.elbwalker.com/tagging/basics)
@@ -94,7 +107,10 @@ This generates an event like:
 
 ## Who This Package is For
 
-This package is intended for companies, agencies, freelancers, and in-house teams who aim to work in a data-driven manner. It serves the needs of data engineers, product owners, analysts, marketers, and developers all at the same time.
+This package is intended for companies, agencies, freelancers, and in-house
+teams who aim to work in a data-driven manner. It serves the needs of data
+engineers, product owners, analysts, marketers, and developers all at the same
+time.
 
 ## Installation
 
@@ -104,11 +120,11 @@ This is a node example. Make sure to also check the alternative ways:
 - [Implementation as a script](XXX)
 
 ```sh
-$ npm i --save @elbwalker/client-web
+$ npm i --save @elbwalker/walker.js
 ```
 
 ```ts
-import { elb, webClient } from '@elbwalker/client-web';
+import { elb, webClient } from '@elbwalker/walker.js';
 
 // Initialize the walkerOS web client
 window.walkerjs = webClient({
@@ -124,14 +140,16 @@ elb('walker destination', {
 });
 ```
 
-> For a complete and more detailled usage guide look a the [installation documentation](XXX).
+> For a complete and more detailled usage guide look a the
+> [installation documentation](XXX).
 
 ## Tagging
 
 It's possible to set up a whole event using just the five HTML-attributes:
 
 - `data-elb="entity"` for setting the scope of the entity
-- `data-elbaction="trigger:action"` for initializing th trigger to fire the action
+- `data-elbaction="trigger:action"` for initializing th trigger to fire the
+  action
 - `data-elb-entity="key:value` for setting data-properties of an entity
 - `data-elbcontext="key:value` for to add a more specific context to the entity
 - `data-elbglobals="key:value` for adding data to every single event on a page
@@ -140,10 +158,11 @@ It's possible to set up a whole event using just the five HTML-attributes:
 
 ## Destinations
 
-Destinations are of the type `WebDestination.Function` and can be added dynamically.
+Destinations are of the type `WebDestination.Function` and can be added
+dynamically.
 
 ```ts
-import type { WebDestination } from '@elbwalker/client-web';
+import type { WebDestination } from '@elbwalker/walker.js';
 
 const destinationLog: WebDestination.Function = {
   config: {}, // Preset configuration
@@ -166,7 +185,7 @@ elb('walker destination', destinationLog, {
 ## Consent
 
 ```ts
-import { elb } from '@elbwalker/client-web';
+import { elb } from '@elbwalker/walker.js';
 
 // Sets all granted consent states.
 // Only destinations with matching states set to true will receive events
