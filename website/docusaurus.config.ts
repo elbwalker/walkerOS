@@ -63,12 +63,11 @@ const config: Config = {
   ],
 
   themeConfig: {
-    // Replace with your project's social card
-    image: 'img/docusaurus-social-card.jpg', // @TODO
+    image: 'img/elbwalker_socialcard.png',
     navbar: {
       logo: {
         alt: 'elbwalker logo',
-        src: 'img/logo.png',
+        src: 'img/elbwalker_logo.png',
       },
       items: [
         {
