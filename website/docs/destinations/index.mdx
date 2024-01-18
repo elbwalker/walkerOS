@@ -40,20 +40,20 @@ title: Eventflow
 ---
 flowchart LR
   subgraph frontend["Frontend <small>(client-side)</small>"]
-    webC["walker.js<br>web client"]
-    webD["<b>Web<br>Destinations</b>"]
-    webC -- consent<br>check --> webD
+    webC["walker.js\nweb client"]
+    webD["<b>Web\nDestinations</b>"]
+    webC -- consent\ncheck --> webD
   end
   subgraph backend["Backend <small>(server-side)</small>"]
-    nodeC["Node<br>client"]
-    nodeD["<b>Node<br>Destinations</b>"]
-    nodeC -- consent<br>check --> nodeD
+    nodeC["Node\nclient"]
+    nodeD["<b>Node\nDestinations</b>"]
+    nodeC -- consent\ncheck --> nodeD
   end
   subgraph tools["Tools"]
-  direction LR
-    analytics["Analytics"]
+    direction LR
+    tag["Tag Manager"]
     marketing["Marketing"]
-    monitoring["Monitoring"]
+    analytics["Analytics"]
   end
 
   webD & nodeD --> tools

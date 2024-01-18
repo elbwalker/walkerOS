@@ -48,6 +48,7 @@ const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
     // @TODO move validation to the client
     await tryCatchAsync(
       async (body: string, config: NodeClient.Config) => {
+        // @TODO what if it's a command?
         let event = validateEvent(JSON.parse(body), config.contracts);
 
         const result = await instance.push(event);
