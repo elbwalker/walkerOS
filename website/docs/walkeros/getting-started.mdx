@@ -1,0 +1,47 @@
+---
+title: Getting started
+sidebar_position: 1
+---
+
+import Link from '@docusaurus/Link';
+
+walkerOS is a modular and composable data infrastructure for complete control of
+how to collect and process data. It can be used in many ways, using only a few
+Utils or building an extensive setup. There is more than one way to work with
+walkerOS. It's like playing with bricks built step-by-step as you like and need
+it. The ultimate goal is to send data to any tool you reliably.
+
+To get started, learn about the principles behind creating tracking setups in
+general and look at the event model. It's based on an entity action approach.
+The project started as a single web library called walker.js and has evolved
+into a complete first-party tracking system.
+
+## Tracking a website with walker.js
+
+To measure user interaction on a website start by installing walker.js on your
+site. By default, all collected events are send to the `dataLayer`. That's it,
+you're done. Form now on, all events are now available in Google Tag Manager.
+
+Next step is to start&nbsp;<Link to="../clients/web/tagging/">tagging</Link> a
+website by adding data-attributes to the HTML. The `data-elb` attributes defines
+an **entity** and sets the scope, like `data-elb="promotion"`. Within that
+scope, we can define an **action** that gets triggered by user interaction, like
+`data-elbaction="click"`. Once a users clicks on that element, a
+`promotion click` event will be send to the `dataLayer`. Learn more about
+the&nbsp;<Link to="../clients/walkerjs/#basic-idea">basic idea</Link> of
+tagging.
+
+To&nbsp;<Link to="../clients/walkerjs/commands#destinations">add a
+destination</Link> other than the GTM, we can for example log all events also to
+the console.
+
+```js
+function elb() {
+  (window.elbLayer = window.elbLayer || []).push(arguments);
+}
+elb('walker destination', { push: console.log });
+```
+
+There are&nbsp;<Link to="../destinations/web/">pre-built web destinations</Link>
+available, but you can
+also&nbsp;<Link to="../destinations/web/#create-your-own">build your own</Link>.
