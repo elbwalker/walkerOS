@@ -135,13 +135,13 @@ export function webClient(
 
     // At that time the elbLayer was not yet initialized
     instance.config.elbLayer.map((pushedEvent) => {
-      let [event, data, trigger, context, nested] = [
+      let [event, data, trigger, context, nested, custom] = [
         ...Array.from(pushedEvent as IArguments),
       ] as WebClient.ElbLayer;
 
       // Pushed as Arguments
       if ({}.hasOwnProperty.call(event, 'callee')) {
-        [event, data, trigger, context, nested] = [
+        [event, data, trigger, context, nested, custom] = [
           ...Array.from(event as IArguments),
         ];
       }
@@ -157,14 +157,14 @@ export function webClient(
 
       // check if event is a walker commend
       event.startsWith(walkerCommand)
-        ? walkerEvents.push([event, data, trigger, context, nested]) // stack it to the walker Const.Commands
-        : customEvents.push([event, data, trigger, context, nested]); // stack it to the custom events
+        ? walkerEvents.push([event, data, trigger, context]) // stack it to the walker Const.Commands
+        : customEvents.push([event, data, trigger, context, nested, custom]); // stack it to the custom events
     });
 
     // Prefere all walker Const.Commands before events during processing the predefined ones
     walkerEvents.concat(customEvents).map((item) => {
-      const [event, data, trigger, context, nested] = item;
-      instance.push(String(event), data, trigger, context, nested);
+      const [event, data, trigger, context, nested, custom] = item;
+      instance.push(String(event), data, trigger, context, nested, custom);
     });
   }
 
@@ -177,16 +177,17 @@ export function webClient(
       trigger?: string,
       context?: WalkerOS.OrderedProperties,
       nested?: WalkerOS.Entities,
+      custom?: WalkerOS.Properties,
     ) {
       // Pushed as Arguments
       if (isArgument(event)) {
-        [event, data, trigger, context, nested] = [
+        [event, data, trigger, context, nested, custom] = [
           ...Array.from(event as IArguments),
         ];
       }
 
       let i = Array.prototype.push.apply(this, [arguments]);
-      instance.push(String(event), data, trigger, context, nested);
+      instance.push(String(event), data, trigger, context, nested, custom);
 
       return i;
     };
@@ -312,6 +313,7 @@ export function webClient(
     options: WebClient.PushOptions = '',
     context: WebClient.PushContext = {},
     nested: WalkerOS.Entities = [],
+    custom: WalkerOS.Properties = {},
   ): void {
     if (!event || !isSameType(event, '')) return;
 
@@ -379,7 +381,7 @@ export function webClient(
       event,
       data: data as WalkerOS.Properties,
       context: context as WalkerOS.OrderedProperties,
-      custom: {},
+      custom,
       globals: config.globals,
       user: config.user,
       nested,

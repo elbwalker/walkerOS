@@ -210,6 +210,7 @@ describe('Elbwalker', () => {
       expect.any(Function),
       undefined,
       undefined,
+      undefined,
     );
 
     expect(walkerjs.config.hooks).toEqual(

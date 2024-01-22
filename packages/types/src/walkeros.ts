@@ -24,6 +24,7 @@ export interface Elb {
     options?: PushOptions,
     context?: PushContext,
     nested?: Entities,
+    custom?: Properties,
   ): void;
 }
 

@@ -36,6 +36,7 @@ export interface Elb extends WalkerOS.Elb {
     options?: PushOptions,
     context?: PushContext,
     nested?: WalkerOS.Entities,
+    custom?: WalkerOS.Properties,
   ): void;
 }
 
@@ -45,6 +46,7 @@ export type ElbLayer = [
   PushOptions?,
   WalkerOS.OrderedProperties?,
   WalkerOS.Entities?,
+  WalkerOS.Properties?,
 ];
 
 export type PushData = WalkerOS.PushData | WebDestination.Function | ScopeType;

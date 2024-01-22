@@ -234,25 +234,19 @@ describe('ElbLayer', () => {
     elb('walker config', { globals: update });
     globals = { ...globals, ...update };
 
-    expect(walkerjs.config).toStrictEqual(
-      expect.objectContaining({ globals }),
-    );
+    expect(walkerjs.config).toStrictEqual(expect.objectContaining({ globals }));
 
     update = { another: 'value' };
     elb('walker config', { globals: update });
     globals = { ...globals, ...update };
 
-    expect(walkerjs.config).toStrictEqual(
-      expect.objectContaining({ globals }),
-    );
+    expect(walkerjs.config).toStrictEqual(expect.objectContaining({ globals }));
 
     update = { static: 'override' };
     elb('walker config', { globals: update });
     globals = { ...globals, ...update };
 
-    expect(walkerjs.config).toStrictEqual(
-      expect.objectContaining({ globals }),
-    );
+    expect(walkerjs.config).toStrictEqual(expect.objectContaining({ globals }));
   });
 
   test('custom elbLayer', () => {
@@ -367,5 +361,41 @@ describe('ElbLayer', () => {
 
     // Parameters
     expect((w.elbLayer[1] as any)[0]).toBe('page view');
+  });
+
+  test('arguments and event pushes', () => {
+    // @TODO why does only elb and not w.elbLayer.push work here?!
+    elb(
+      'e 1', // event
+      {}, // data
+      '', // trigger
+      {}, // context
+      [], // nested
+      { any: 'thing' }, // custom
+    );
+
+    walkerjs = webClient({ default: true, pageview: false });
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e 1',
+        custom: { any: 'thing' },
+      }),
+    );
+
+    elb(
+      'e 2', // event
+      {}, // data
+      '', // trigger
+      {}, // context
+      [], // nested
+      { any: 'thing' }, // custom
+    );
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'e 2',
+        custom: { any: 'thing' },
+      }),
+    );
   });
 });
