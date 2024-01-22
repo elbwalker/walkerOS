@@ -55,8 +55,8 @@ export interface Event {
   event: string;
   data: Properties;
   context: OrderedProperties;
-  custom: Properties;
   globals: Properties;
+  custom: Properties;
   user: User;
   nested: Entities;
   consent: Consent;

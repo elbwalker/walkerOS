@@ -33,7 +33,7 @@ elbLayer["elbLayer[]"]
 walker["walker.js"]
 
 elb --> elbLayer
-walker --> elbLayer
+walker <--> elbLayer
 ```
 
 ## Configuration
@@ -50,7 +50,7 @@ elb('walker config', {
   pageview: true, // Trigger a page view event by default
   prefix: 'data-elb', // Attributes prefix used by the walker
   user: { id: '', device: '', session: '' }, // Setting the user ids
-  version: 0, // Current version of the tracking setup
+  tagging: 0, // Current version of the tracking setup
 });
 ```
 
