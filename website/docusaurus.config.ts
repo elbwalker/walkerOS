@@ -63,6 +63,10 @@ const config: Config = {
   ],
 
   themeConfig: {
+    colorMode: {
+      defaultMode: 'dark',
+      disableSwitch: false,
+    },
     image: 'img/elbwalker_socialcard.png',
     navbar: {
       logo: {
