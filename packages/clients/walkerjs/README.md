@@ -26,7 +26,7 @@ ensuring:
   with data protection regulations.
 
 > Learn more about walker.js and its capabilities in the
-> [walker.js documentation](https://www.elbwalker.com/docs/clients/web/)
+> [walker.js documentation](https://www.elbwalker.com/docs/clients/walkerjs/)
 
 A **previous step** is understanding the
 [walkerOS event model](https://www.elbwalker.com/docs/walkeros/event-model/) and
