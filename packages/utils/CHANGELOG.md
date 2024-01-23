@@ -1,7 +1,7 @@
 # @elbwalker/utils
 
-## 2.0.0
+## 3.0.0-next.0
 
 ### Major Changes
 
-- walkerOS utils
+- walkerOS
