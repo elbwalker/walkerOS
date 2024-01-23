@@ -2,7 +2,7 @@ import React from 'react';
 import Link from '@docusaurus/Link';
 
 const classBasics =
-  'mx-2 flex w-full items-center justify-center rounded-md border border-transparent px-6 py-2 text-base text-white hover:text-white font-medium md:text-lg hover:no-underline ';
+  'mx-2 my-4 flex items-center justify-center rounded-md border border-transparent px-6 py-2 text-base text-white hover:text-white font-medium md:text-lg hover:no-underline ';
 type ButtonProps = {
   children: React.ReactNode;
   link?: string;

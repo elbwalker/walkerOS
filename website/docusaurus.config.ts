@@ -47,13 +47,13 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl: `${vars.github}tree/develop/website/`,
+          editUrl: `${vars.github}edit/main/website/`,
         },
         blog: {
           showReadingTime: true,
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl: `${vars.github}tree/develop/website/`,
+          editUrl: `${vars.github}edit/main/website/`,
         },
         theme: {
           customCss: './src/css/custom.css',
