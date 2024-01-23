@@ -65,6 +65,58 @@ directory and call:
 npm run start
 ```
 
+## Making Changes and Creating a Changeset
+
+How to update a package, create a changeset, and publish a (pre-)release.
+
+1. Implement Changes: Make the necessary updates or additions to your packages.
+
+2. Create a Changeset: From the root of your monorepo, run:
+
+```bash
+$ npx changeset
+```
+
+Select the packages that should be updated and describe the changes.
+
+## Preparing for (Pre-)Release
+
+1. (Optional) Enter pre-release process:
+
+```bash
+$ npx changeset pre enter next
+```
+
+2. Bump Version for (Pre-)Release: Now, run:
+
+```bash
+$ npx changeset version
+```
+
+## Publishing the Pre-Release
+
+1. Login to npm: Ensure you're logged into npm with `npm login`.
+
+2. To publish with the current tag (`latest` by default or `next` for a
+   pre-release): From the root of the monorepo, run:
+
+```bash
+$ npm run publish-packages
+```
+
+## (Optional) Exiting Pre-Release Mode
+
+After a pre-release is done and it's ready to be released as a stable version:
+
+1. Exit Pre-Release Mode: Run:
+
+```bash
+$ npx changeset pre exit
+```
+
+2. Follow the release process again: Create a new changeset for the stable
+   release, version, and then publish normally.
+
 ## Work-in-progress
 
 @TODOS
@@ -74,11 +126,7 @@ npm run start
   - Google Tag Manager
 - Installation guides
   - destinations
-- create redirects for old docs
-- create landing page
-- deploy the website & docs
 - Sync READMEs with docs
-- Update packages
 
 ### About walkerOS
 
