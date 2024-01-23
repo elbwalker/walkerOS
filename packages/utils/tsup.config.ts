@@ -7,17 +7,38 @@ const config: Options = {
   splitting: false,
 };
 
+const globalName = 'Utils';
+
 export default defineConfig([
+  // Full index bundle with definitions
   {
     ...config,
     dts: true,
     format: ['cjs', 'esm'],
     sourcemap: true,
   },
+  // Core and Web files
+  {
+    ...config,
+    entry: ['src/core/*', 'src/web/*'],
+    format: ['cjs', 'esm'],
+  },
+  // Full index ES5 bundle
   {
     ...config,
     format: ['iife'],
-    globalName: 'Elbutils',
+    globalName,
+    outExtension() {
+      return { js: `.es5.js` };
+    },
+    target: 'es5',
+  },
+  // Web ES5 files
+  {
+    ...config,
+    entry: ['src/core/*', 'src/web/*'],
+    format: ['iife'],
+    globalName,
     outExtension() {
       return { js: `.es5.js` };
     },

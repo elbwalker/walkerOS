@@ -1,0 +1,70 @@
+---
+title: walker.js web client
+description: walker.js web client
+---
+
+import Link from '@docusaurus/Link';
+
+Walker.js is an open library to capture user events and send them to
+any&nbsp;<Link to="../../destinations/web/">web destination</Link>. It is
+created to improve data richness and make tracking implementation robust and
+scalable.
+
+## Basic idea
+
+The basic idea of walker.js is to set up a complete tracking with HTML
+attributes. Use the elb-attributes `data-elb`, `data-elbaction`, `data-elb-*`,
+`data-elbcontext`, and `data-elbglobals` for tagging.
+
+Add some tags in your HTML...
+
+```html
+<body data-elbglobals="language:en">
+  <div data-elbcontext="test:engagement">
+    <div data-elb="promotion" data-elbaction="visible:view">
+      <h1 data-elb-promotion="name:Setting up tracking easily">
+        Setting up tracking easily
+      </h1>
+      <p data-elb-promotion="category:analytics">Analytics</p>
+    </div>
+  </div>
+</body>
+```
+
+... and your web event is built on the fly:
+
+```js
+{
+  event: 'promotion view',
+  data: {
+    name: 'Setting up tracking easily',
+    category: 'analytics',
+  },
+  context: { test: ['engagement', 0] },
+  custom: {},
+  globals: { language: 'en' },
+  user: {},
+  nested: [],
+  consent: {},
+  id: '1647261462000-01b5e2-5',
+  trigger: 'visible',
+  entity: 'promotion',
+  action: 'view',
+  timestamp: 1647261462000,
+  timing: 3.14,
+  group: '01b5e2',
+  count: 2,
+  version: { client: '1.0.0', tagging: 0 },
+  source: {
+    type: 'web',
+    id: 'https://www.elbwalker.com/docs/clients/walkerjs',
+    previous_id: 'https://github.com/elbwalker/walkerOS'
+  }
+}
+```
+
+:::info
+
+Learn more about the [event model](/docs/walkeros/event-model).
+
+:::

@@ -1,0 +1,76 @@
+---
+path: globals
+title: Why context matters in event tracking
+description:
+  Why context matters in event tracking and how global attributes can help.
+authors: alexander
+category: Product
+tags:
+  - frontend event data
+  - event tracking
+  - user behavior
+  - product analytics
+---
+
+How context can help to better segment users
+
+{/* truncate */}
+
+It's commonly known that user journeys differ from each other and lead to
+different user actions and goals, depending on different types of traffic, the
+marketing campaigns we run etc. Based on common analytics software we're also
+used to segment traffic maybe by its marketing source or demographic differences
+of the users etc.
+
+In short, we use context to better understand user behavior.
+
+> One page view event may seem like the other but they can differ significantly
+> from each other once you look at the page path.
+
+- Captain Obvious
+
+How about we go one step further and specify even more context to our events.
+Are there differences between users with different language settings? It is
+likely that someone who already has a product in their cart adds another
+complimentary product as well. Is there a relation between the type of a page
+and an overlay's performance?
+
+**Context is the foundation of actionable analytics data.**
+
+In most cases, the specifying information is somewhere visible to the user.
+Whether it's a small badge number next to the cart icon or the used template
+file. Then why don't we use the given context in analytics? What is obvious to a
+user is completely missing in the database to be considered in the analysis
+later. Getting this relevant information later is hard, it's much easier to be
+measured right from the start. We can guess or train models to predict relations
+and context. But why should we, when there is an easier way? Let's give the
+context right at the beginning, which is right where the data is being captured.
+
+## Launching elbglobals
+
+We just released a new elb-attribute type, the `data-elbglobals`. Before the
+first event gets triggered the walker collects all global properties that have
+been defined with data-elbglobals. These properties will be added to all
+following events available under the globals property of each event. If you want
+to segment events by the login state of a user set
+`data-elbglobals="user:loggedin"`.
+
+```js
+{
+  "event": "product add",
+  "globals": {
+    "user": "loggedin",
+    "pagetype": "product_detail"
+  },
+  ...
+}
+```
+
+Another great information would be to specify the pagetype with
+`data-elbglobals="pagetype:content"` or
+`data-elbglobals="pagetype:product_detail"` to e.g. separate transactional shop
+traffic from visitors who only want to get inspired. Or to understand their
+relations. The possibilities are almost endless. Global attributes are different
+from properties because as the name already says they apply to all events that
+are being measured and they enrich all events regardless of the scope with
+actionable context.

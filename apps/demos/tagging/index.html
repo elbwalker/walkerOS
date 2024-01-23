@@ -47,13 +47,16 @@
     ></script>
 
     <script type="module">
-      function elb() {
-        (window.elbLayer = window.elbLayer || []).push(arguments);
-      }
+      window.elb = (...args) => {
+        (window.elbLayer = window.elbLayer || []).push(...args);
+      };
+
+      // Configuration
+      elb('walker config', { tagging: 2 });
 
       // Utils
       window.utils = await import(
-        'https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@latest/dist/utils.js'
+        'https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/index.mjs'
       );
 
       // Start
@@ -71,7 +74,7 @@
       // Destination GTM
       const gtm = (
         await import(
-          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-gtm@1.2.3/dist/index.mjs'
+          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-gtm@latest/dist/index.mjs'
         )
       ).default;
       elb('walker destination', gtm, {
@@ -91,7 +94,7 @@
       // Destination API
       const api = (
         await import(
-          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api@1.1.3/dist/index.mjs'
+          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api@latest/dist/index.mjs'
         )
       ).default;
       elb('walker destination', api, {
@@ -102,18 +105,11 @@
           transport: 'beacon',
         },
       });
-      elb('walker destination', api, {
-        consent: { functional: true },
-        custom: {
-          // Local stack
-          url: 'http://127.0.0.1:5001/eventpipe-f9979/europe-west1/ingest',
-        },
-      });
 
       // Destination GA4
       const ga4 = (
         await import(
-          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4@1.3.2/dist/index.mjs'
+          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4@latest/dist/index.mjs'
         )
       ).default;
       elb('walker destination', ga4, {
@@ -122,6 +118,7 @@
         loadScript: true,
       });
 
+      // Consent
       // Code snippets for consent choice
       // Simulate the CMPs functionality
       window.consentAccept = () => {
@@ -149,7 +146,7 @@
 
       window.consentDenied = () => {
         // Only set a random session id, but no persistant device id
-        elb('walker user', { id: 'anonymous' });
+        elb('walker user', { id: 'anonymous', device: undefined });
 
         // Allow sending events to functional destinations at most
         elb('walker consent', { functional: true });
@@ -213,7 +210,6 @@
                 class="text-base font-medium text-gray-400 hover:text-gray-900"
                 >Solutions</a
               >
-
               <a
                 href="#"
                 class="text-base font-medium text-gray-400 hover:text-gray-900"
@@ -358,6 +354,7 @@
               <div class="mt-6">
                 <a
                   href="#"
+                  data-elbcontext="shopping:cart"
                   data-elbaction="click:add"
                   class="relative flex items-center justify-center rounded-md border border-transparent bg-gray-100 py-2 px-8 text-sm font-medium text-gray-900 hover:bg-gray-200"
                   >Add to cart
@@ -403,6 +400,7 @@
               <div class="mt-6">
                 <a
                   href="#"
+                  data-elbcontext="shopping:cart"
                   data-elbaction="click:add"
                   class="relative flex items-center justify-center rounded-md border border-transparent bg-gray-100 py-2 px-8 text-sm font-medium text-gray-900 hover:bg-gray-200"
                   >Add to cart
@@ -453,6 +451,7 @@
               <div class="mt-6">
                 <a
                   href="#"
+                  data-elbcontext="shopping:cart"
                   data-elbaction="click:add"
                   class="relative flex items-center justify-center rounded-md border border-transparent bg-gray-100 py-2 px-8 text-sm font-medium text-gray-900 hover:bg-gray-200"
                   >Add to cart
@@ -498,6 +497,7 @@
               <div class="mt-6">
                 <a
                   href="#"
+                  data-elbcontext="shopping:cart"
                   data-elbaction="click:add"
                   class="relative flex items-center justify-center rounded-md border border-transparent bg-gray-100 py-2 px-8 text-sm font-medium text-gray-900 hover:bg-gray-200"
                   >Add to cart

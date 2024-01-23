@@ -1,8 +1,8 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { CustomConfig, PushEvents, Row } from './types';
+import type { Config, PushEvents, Row } from './types';
 
-export const push = async function (events: PushEvents, custom: CustomConfig) {
-  const { client, datasetId, tableId } = custom;
+export const push = async function (events: PushEvents, config: Config) {
+  const { client, datasetId, tableId } = config.custom;
 
   const rows = events.map((event) => mapEvent(event.event));
 

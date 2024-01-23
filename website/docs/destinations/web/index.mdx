@@ -1,0 +1,150 @@
+---
+title: Web destinations
+description: Send events client-side to any tool
+---
+
+import Link from '@docusaurus/Link';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Like the&nbsp;<Link to="../../clients/walkerjs">web client walker.js</Link>, the
+web destinations run in a users browser directly. It's purpose is to initialize
+a destination, <Link to="../#mapping">map event</Link> data to the destination's
+requirements, and send them.
+
+A destination receives events through the `push` interface. Configurations can
+be made in the `config` object. The optional `init` function gets called before
+actually pushing events and has to return true on proper initialization to
+enable event processing.
+
+:::info
+
+See how to&nbsp;<Link to="../../clients/walkerjs/commands#destinations">add a
+destination to walker.js</Link>.
+
+:::
+
+## Create your own
+
+Instead of using the pre-built destinations, you can also create your own. A
+valid `WebDestination.Function` consists of a `config` object, and the two
+methods `init` and `push`. The following examples shows how to create a
+destination for the web.
+
+A very basic console destination:
+
+```js
+elb('walker destination', { push: console.log });
+```
+
+<Tabs>
+  <TabItem value="js" label="JavaScript" default>
+    A basic destination setup looks like this.
+
+    ```js
+    var destination = {
+      config: {},
+      init: function (config) {
+        // Do something initializing
+        // window.xxx = console.log;
+        return true;
+      },
+      push: function (event, config, mapping) {
+        // Do something magical
+        // window.xxx({ event, config, mapping });
+      },
+    };
+    ```
+
+  </TabItem>
+  <TabItem value="ts" label="TypeScript" default>
+    Import and extend the default `WebDestination` interface.
+    To customize the destinations config use the generic types `CustomConfig`
+    and `CustomEventConfig`.
+
+    ```ts
+    import type { WebDestination } from '@elbwalker/walker.js';
+
+    interface Function
+      extends WebDestination.Function<CustomConfig, CustomEventConfig> {
+        // Add additional methods
+    }
+
+    type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
+
+    interface CustomConfig {
+      // Destination related configuration settings in config.custom
+    }
+
+    interface CustomEventConfig {
+      // Event related configuration settings in event.mapping.custom
+    }
+    ```
+
+    Optionally, add global variables to the global namespace.
+
+    ```ts
+    declare global {
+      interface Window {
+        xxx?: Function; // global window objects
+      }
+    }
+    ```
+
+    Create the actual destination.
+
+    ```ts
+    export const destination: Destination.Function = {
+      config: {},
+
+      init(config) {
+        if (config.loadScript) addScript();
+
+        // Do something initializing
+        // window.dataLayer = window.dataLayer || [];
+
+        return true;
+      },
+
+      push(event, config, mapping = {}) {
+        // Do something magical
+        // window.dataLayer.push({ event, config, mapping });
+      },
+    };
+
+    function addScript(src = 'https://DOMAIN/SCRIPT.js') {
+      const script = document.createElement('script');
+      script.src = src;
+      document.head.appendChild(script);
+    }
+
+    export default destination;
+    ```
+
+  </TabItem>
+</Tabs>
+
+```js
+// Add the destination to walker.js
+elb('walker destination', destination, config);
+```
+
+### Configuration
+
+Each destination requires its own configuration. While there are common settings
+like `consent`, `init`, or `loadScript` there are also individual settings only
+available for a specific destination in the `custom` object and `mapping`.
+
+A destination has a `Config` for general settings and `EventConfig` in the
+mapping used for event specifications. All settings, definitions, and examples
+are available in each destination's detail page.
+
+:::
+
+import DocCardList from '@theme/DocCardList';
+
+<DocCardList />
+
+If you can't find your desired destination, you
+can&nbsp;<Link to="https://github.com/elbwalker/walkerOS/issues/new?assignees=&labels=&template=feature_request.md&title=">request
+it</Link>.

@@ -1,0 +1,15 @@
+alexander:
+  name: Alexander
+  title: Creator of walkerOS
+  url: https://www.linkedin.com/in/alexander-kirtzel
+  image_url: /img/author/alexander.png
+
+ayla:
+  name: Ayla
+  title: Co-founder of elbwalker
+  url: https://www.linkedin.com/in/ayla-prinz
+  image_url: /img/author/ayla.png
+
+nicolas:
+  name: Nicolas
+  image_url: /img/author/nicolas.jpeg

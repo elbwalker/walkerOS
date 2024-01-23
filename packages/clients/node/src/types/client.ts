@@ -1,4 +1,4 @@
-import type { WalkerOS, Schema } from '@elbwalker/types';
+import type { WalkerOS, Schema, Handler } from '@elbwalker/types';
 import type * as NodeDestination from './destination';
 
 export interface Function {
@@ -58,6 +58,8 @@ export interface Config extends WalkerOS.Config {
   queue: WalkerOS.Events;
   contracts?: Schema.Contracts;
   source: WalkerOS.Source;
+  onError?: Handler.Error;
+  onLog?: Handler.Log;
 }
 
 export interface Destinations {

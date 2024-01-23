@@ -1,5 +1,4 @@
 import type { NodeClient } from '@elbwalker/client-node';
-import type { AppOptions } from 'firebase-admin';
 import type { HttpsFunction, HttpsOptions } from 'firebase-functions/v2/https';
 
 export interface Function {
@@ -13,7 +12,6 @@ export interface Function {
 export type PartialConfig = Partial<Config>;
 export interface Config {
   client: NodeClient.PartialConfig;
-  firebase: AppOptions;
 }
 
 export interface Push {

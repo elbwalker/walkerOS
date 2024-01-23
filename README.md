@@ -1,78 +1,99 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/elbwalker.png' width="256px"/>
+    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
   </a>
 </p>
 
 # walkerOS: Your Unified Data Collection Solution
 
-[Request Feature](https://github.com/elbwalker/walkerOS/issues/new) · [Report Bug](https://github.com/elbwalker/walkerOS/issues/new) · [Say hello](https://calendly.com/elb-alexander/30min)
+[Request Feature](https://github.com/elbwalker/walkerOS/issues/new) ·
+[Report Bug](https://github.com/elbwalker/walkerOS/issues/new) ·
+[Say hello](https://calendly.com/elb-alexander/30min)
 
 <div align="left">
   <img src="https://img.shields.io/github/license/elbwalker/walkerOS" />
   <img src="https://img.shields.io/github/languages/top/elbwalker/walkerOS" />
-  <a href="https://docs.elbwalker.com/"><img src="https://img.shields.io/badge/docs-docs.elbwalker.com-yellow" alt="walkerOS Documentation"></a>
+  <a href="https://www.elbwalker.com/docs/"><img src="https://img.shields.io/badge/docs-www.elbwalker.com/docs/-yellow" alt="walkerOS Documentation"></a>
 </div>
 
 ## Why walkerOS?
 
-In an ever-changing data landscape, **walkerOS provides a unified, reliable, and privacy-centric data collection platform that you control**. It serves as a single **source of truth** for your data needs, **integrating seamlessly with any tool** you use for data analysis or storage.
+walkerOS offers a unified, flexible, and privacy-centric data collection
+platform, adaptable to your evolving data needs. It integrates seamlessly with
+any analytical or storage tool, providing a reliable source of truth for data
+teams.
 
-## Project Description
+It is a modular data collection infrastructure, ideal for capturing first-party
+events reliably and with privacy in mind. Its vendor-agnostic design ensures
+seamless integration, giving you complete control over your data.
 
-walkerOS is a comprehensive **data collection infrastructure** designed to empower organizations to capture **first-party events** in a **reliable and privacy-friendly** manner. Its **vendor-agnostic** approach allows for seamless integration with any tool, giving you complete control over your data.
+### Key Features
 
-### Features
+- **Modular Design**: Customize your data collection strategy like building with
+  Lego bricks.
+- **Data Quality and Privacy**: Prioritize data integrity and user privacy with
+  built-in consent management.
+- **Flexibility**: Tailored for both server-side and client-side tracking,
+  adaptable to your evolving needs.
 
-- **Unified Approach**: Meet the needs of data engineers, product owners, analysts, marketers, and developers.
-- **Data Quality**: Enforce data contracts and validation for high-quality data collection.
-- **Privacy**: Built-in consent management, data redaction capabilities, and first-party data collection in your **own infrastructure**.
-- **Flexibility**: Supports both server-side and client-side event tracking.
+### Target Audience
 
-## Target Audience
+Designed for enterprises, agencies, freelancers, and data-driven
+decision-makers, walkerOS enables quick, adaptable solutions without disrupting
+your current setup.
 
-walkerOS is designed for enterprises, agencies, freelancers, and anyone invested in data-driven decision-making. Achieve quick results with the **flexibility to iterate without breaking your existing setup**.
+### Pre-requisites
 
-## Pre-requisites
-
-Before diving into walkerOS, you should:
-
-- Identify your primary focus: Are you more concerned with data quality or advanced event collection?
-- Understand the [walkerOS event model](XXX).
-- Explore a complete [demo infrastructure](XXX).
+Familiarize yourself with the
+[walkerOS event model](https://www.elbwalker.com/docs/walkeros/event-model) and,
+learn
+[how walkerOS operates](https://www.elbwalker.com/docs/#how-walkeros-operates)
+explore a complete
+[demo infrastructure](https://www.elbwalker.com/docs/#complete-infrastructure)
+to understand its capabilities fully.
 
 ## Package Overview
 
-- [Clients](./packages/clients/): For data creation and state management.
-- [Destinations](./packages/destinations/): Tools for data activation.
-- [Stacks](./packages/stacks/): Pre-built APIs for event ingestion and server-side processing.
-- [Utils](./packages/utils/): Shared utilities across walkerOS packages.
-- [Demos](./apps/demos/): Demonstrations on how to utilize walkerOS.
-- [Docs](./docs/): The official walkerOS documentation.
+- **Clients** ([docs](https://www.elbwalker.com/docs/clients/),
+  [code](./packages/clients/)): For data creation and state management.
+- **Destinations** ([docs](https://www.elbwalker.com/docs/destinations/),
+  [code](./packages/destinations/)): Activating data by initializing, mapping
+  and finally sharing events to third-party tools.
+- **Stacks** ([docs](https://www.elbwalker.com/docs/stacks/),
+  [code](./packages/stacks/)): APIs for event ingestion and processing.
+- **Utils** ([docs](https://www.elbwalker.com/docs/utils/),
+  [code](./packages/utils/)): Enhance data collection with shared utilities.
+- **Docs** ([docs](https://www.elbwalker.com/docs/), [code](./website/docs/)):
+  Deep dive into the official documentation.
+- **Demos** ([docs](https://www.elbwalker.com/docs/), [code](./apps/demos/)):
+  See walkerOS in action.
 
 ## Getting Started
 
-walkerOS is modular and adaptable to your specific data needs. Think of it as building with Lego bricks. As your requirements evolve, so can your data collection strategy. Follow our [Quick Start Guide](XXX) for a quick start.
+Start building your data collection strategy with walkerOS. Follow the
+[Quick Start Guide](https://www.elbwalker.com/docs/walkeros/getting-started/)
+for an easy setup.
 
 ## Installation
 
-- Use the clients for web or server-side data collection.
-- Manage your endpoints with stacks for data validation, redaction, or enrichment.
-- Leverage utilities to customize your setup further.
+Implement clients for data collection, manage endpoints with stacks, and
+leverage utilities for custom setups.
 
 ## Contributing
 
-walkerOS is a community-driven project that addresses real-world challenges. Please refer to our [Contributing Guidelines](XXX) to contribute.
+Join our community-driven project to address real-world data challenges. See our
+[Contributing Guidelines](https://www.elbwalker.com/docs/contributing) to get
+involved.
 
 ## Support
 
-Need help? You can:
+Need help? Start a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or reach out
+via [email](mailto:hello@elbwalker.com).
 
-- [Start a discussion](https://github.com/elbwalker/walkerOS/discussions) for questions, feedback, and thoughts.
-- Contact us via email at [hello@elbwalker.com](mailto:hello@elbwalker.com?subject=walkerOS).
-
-For more insights, visit our [talks repository](https://github.com/elbwalker/talks) featuring presentations and podcast episodes about walkerOS.
+For more insights, visit the
+[talks repository](https://github.com/elbwalker/talks).
 
 ## License
 
-walkerOS is licensed under the [MIT License](./LICENSE).
+Licensed under the [MIT License](./LICENSE).

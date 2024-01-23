@@ -24,12 +24,13 @@ export interface Elb {
     options?: PushOptions,
     context?: PushContext,
     nested?: Entities,
+    custom?: Properties,
   ): void;
 }
 
 export type PushData = Partial<Config> | Consent | String | User | Properties;
 
-export type PushOptions = Hooks.Functions;
+export type PushOptions = Hooks.Function;
 
 export type PushContext = OrderedProperties;
 
@@ -46,6 +47,7 @@ export interface Config {
   user: User;
   tagging: number;
   default?: boolean;
+  verbose?: boolean; // Enable verbose logging
 }
 
 export type Events = Array<Event>;
@@ -54,8 +56,8 @@ export interface Event {
   event: string;
   data: Properties;
   context: OrderedProperties;
-  custom: Properties;
   globals: Properties;
+  custom: Properties;
   user: User;
   nested: Entities;
   consent: Consent;

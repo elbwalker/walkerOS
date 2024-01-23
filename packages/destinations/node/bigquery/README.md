@@ -1,26 +1,26 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/elbwalker.png' width="256px"/>
+    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
   </a>
 </p>
 
 # BigQuery destination for walkerOS
 
-Why You Need this: Streamline your data collection and analysis by directly sending events from walkerOS to Google BigQuery. This destination package makes it easy to integrate your data pipeline with one of the most powerful data warehouses available.
+Why You Need this: Streamline your data collection and analysis by directly
+sending events from walkerOS to Google BigQuery. This destination package makes
+it easy to integrate your data pipeline with one of the most powerful data
+warehouses available.
 
 ## Usage
 
-The BigQuery destination allows you to send server-side events from walkerOS to Google BigQuery. It handles the data transformation and ensures that your events are correctly formatted for BigQuery tables.
-
-For more details, refer to the following documentation sections:
-
-[Setup]() (required to create the table)
-[Configuration]()
-[Data Mapping]()
+The BigQuery destination allows you to send server-side events from walkerOS to
+Google BigQuery. It handles the data transformation and ensures that your events
+are correctly formatted for BigQuery tables.
 
 ## Basic example
 
-Here's a simple example to demonstrate how to configure the BigQuery destination:
+Here's a simple example to demonstrate how to configure the BigQuery
+destination:
 
 ```ts
 import { destinationBigQuery } from '@elbwalker/destination-node-bigquery';
@@ -29,20 +29,59 @@ elb('walker destination', destinationBigQuery, {
   custom: {
     projectId: 'PR0J3CT1D', // Required
     // client: BigQuery; // A BigQuery instance from @google-cloud/bigquery
-    // location: string; // 'EU' as default
-    // datasetId: string; // 'walkeros' as default
+    // datasetId: string; // 'walkerOS' as default
     // tableId: string; // 'events' as default
+    // location: string; // 'EU' as default
     // bigquery?: BigQueryOptions; // BigQueryOptions from @google-cloud/bigquery
+    // runSetup?: boolean; // Check for existence on init and eventually create
   },
 });
 ```
 
-Learn more how to [authenticate with a service account key file](https://cloud.google.com/bigquery/docs/authentication/service-account-file) using the custom `bigquery` options.
-Take a look at the events [table schema](./src/schema.ts).
+Learn more how to
+[authenticate with a service account key file](https://cloud.google.com/bigquery/docs/authentication/service-account-file)
+using the custom `bigquery` options.
+
+```ts
+{
+  custom: {
+    projectId: 'PR0J3CT1D', // Required
+    bigquery: {
+
+    }
+  }
+}
+```
+
+## Setup
+
+This destination requires an existing table (see [schema](./src/schema.ts)).
+
+## Permissions
+
+When using Service Accounts (SAs) for Google Cloud BigQuery, it's recommended to
+follow the principle of _least privilege_. Never grant more permissions than
+what it needs to perform its intended functions.
+
+During initial setup, the SA may require broader permissions to create necessary
+datasets. Typically, this involves assigning a role like
+`roles/bigquery.dataOwner` to the service account. This role can be granted
+through Google Cloud IAM.
+
+For production environments, it is recommended to **revoke broader IAM roles**
+granted during the setup phase. Assign explicit permissions directly to datasets
+within BigQuery (using the share option). This ensures that the service account
+only has access to what is necessary for operation. The service account may hold
+owner permissions after creating the dataset.
+
+For more detailed information, refer to the official
+[Google Cloud IAM documentation](https://cloud.google.com/iam/docs).
 
 ## Who this package is for
 
-This destination is ideal for data engineers and analysts who are already using Google BigQuery or plan to integrate it into their data stack. It's also useful for companies looking to centralize their data collection and analysis efforts.
+This destination is ideal for data engineers and analysts who are already using
+Google BigQuery or plan to integrate it into their data stack. It's also useful
+for companies looking to centralize their data collection and analysis efforts.
 
 ## Dependencies
 

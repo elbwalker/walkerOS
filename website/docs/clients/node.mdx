@@ -1,0 +1,86 @@
+---
+title: Node
+description: walker.js web client
+---
+
+# Node Client
+
+The walkerOS Node Client is designed for efficient event tracking and data
+collection in Node.js environments, offering seamless integration for event
+handling, destination management, and consent protocol compliance.
+
+## Installation
+
+To install the walkerOS Node Client in your project, use the following command:
+
+```sh
+npm install @elbwalker/client-node
+```
+
+## Configuration
+
+Start by configuring the client with the `createNodeClient` function.
+Optionally, you can pass a `customConfig` object for initial settings.
+
+```ts
+import { createNodeClient } from '@elbwalker/client-node';
+const { elb, instance } = createNodeClient(customConfig);
+```
+
+Configuration options include:
+
+- `consent`: An object representing the consent states.
+- `custom`: Custom state support for individual setups.
+- `destinations`: An object containing all destinations.
+- `globals`: Global properties that are added to each event by default.
+
+## Core Functions
+
+### init
+
+Before pushing events to a destination, the client checks for an init function
+in the destination. If available, it's called asynchronously. The function
+should return false on error, which will prevent any events from being
+processed. Alternatively, it can return a complete destination config that will
+be used for pushing events.
+
+### push
+
+The push function is the core of the node client. It can either process commands
+or handle events. Commands are processed when the function is called with a
+string starting with "walker", like `elb("walker config", configData);`. Events
+are processed otherwise.
+
+The function performs consent checks before pushing events to destinations.
+Events are pushed in parallel and support batching.
+
+```ts
+const result = await elb('entity action', eventData);
+```
+
+## Event Lifecycle
+
+1. **Run Initialization**: Similar to a web page view, each run reinitializes
+   the client's state.
+2. **Event Creation**: Events are formulated and queued internally.
+3. **Consent Verification**: Consent is checked before pushing events.
+4. **Destination Management**: Events are sent to destinations based on consent
+   and configuration settings.
+
+## Adding Destinations
+
+You can add destinations dynamically using the destination command.
+
+```ts
+elb('walker destination', destination, config);
+```
+
+This is useful for handling events that were pushed before the destination was
+added or if consent was granted afterward.
+
+:::note
+
+The client stores events for each run. If a destination is added later or if
+consent changes, these previous events are also processed.
+
+:::

@@ -1,8 +1,10 @@
 # Piwik PRO web destination for walkerOS
 
-Made to be used with [@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
+Made to be used with
+[@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
 
-More detailed information and examples can be found in the [documentation](https://docs.elbwalker.com/).
+More detailed information and examples can be found in the
+[documentation](https://docs.elbwalker.com/).
 
 ## 🤓 Usage
 
@@ -40,7 +42,8 @@ const config /* : DestinationPiwikPro.Config */ = {
 };
 ```
 
-> Note: Both `setSiteId` and `setTrackerUrl` are only set with `loadScript = true`.
+> Note: Both `setSiteId` and `setTrackerUrl` are only set with
+> `loadScript = true`.
 
 ### Node usage
 
@@ -49,7 +52,7 @@ npm i --save @elbwalker/destination-web-piwikpro
 ```
 
 ```ts
-import { elb } from '@elbwalker/client-web';
+import { elb } from '@elbwalker/walker.js';
 import destinationPiwikPro from '@elbwalker/destination-web-piwikpro';
 
 elb('walker destination', destinationPiwikPro, config);
@@ -79,7 +82,8 @@ Loading the destination via dynamic import
 
 ## Debugging
 
-Learn how to [check your tracking](https://help.piwik.pro/support/collecting-data/tracker-debugger/#check-your-tracking)
+Learn how to
+[check your tracking](https://help.piwik.pro/support/collecting-data/tracker-debugger/#check-your-tracking)
 
 ```js
 _paq.push([
@@ -91,4 +95,7 @@ _paq.push([
 
 ## Contribute
 
-Feel free to contribute by submitting an [issue](https://github.com/elbwalker/walkerOS/issues), starting a [discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in [contact](https://calendly.com/elb-alexander/30min).
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in
+[contact](https://calendly.com/elb-alexander/30min).

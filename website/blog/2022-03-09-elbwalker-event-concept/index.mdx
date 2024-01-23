@@ -1,0 +1,94 @@
+---
+slug: elbwalker-event-concept
+title: The elbwalker event concept
+description:
+  The reason why we split events and generally rethought the concept of an
+  event.
+authors: alexander
+category: Product
+tags:
+  - event model
+  - website events
+---
+
+We, as well as many other data professionals out there, grew up with still the
+most common event out there: **the pageview** - the mother of all tracking
+events for over a decade. Over the years new events, mostly to track online
+shopping behavior, became the new normal and the concept of the traditional
+purchase conversion was born. With the rising importance of mobile apps (where
+there is no such thing as a pageview), event tracking evolved immensely. And
+today it's not only about online shopping anymore.
+
+{/* truncate */}
+
+**But events and event-based tracking came to stay.**
+
+We believe that tracking shouldn't sound like some abstract techy abbreviation
+concept. It should feel natural and **everyone in an organization should
+immediately understand it** no matter if they implemented the tracking or not.
+Only when everyone understands what is being measured, there will be fewer
+misunderstandings, higher data quality, and more actionable data in the
+organization at the end of the day.
+
+## Our approach to the concept of an event
+
+A lot of languages are based on some kind of **subject, predicate, object
+structure**. It is the general rule for understanding this sentence right here
+(which may drove some of us insane at school). At elbwalker, we asked ourselves
+how we can evolve a simple pageview to a more natural concept.
+
+Let us introduce: **the page view** (notice the space!). A small change with a
+huuuge impact.
+
+Doesn't look very different to you? Well, let us explain why it is.
+
+Tracking starts with a user interaction that triggers something. Whether it is
+something implicit, e.g. loading, scrolling, waiting, or something explicit,
+e.g. clicking a specific button right at this moment. We treat the user, who
+e.g. is loading something, as the subject. The page (context) is the object and
+the action "view" is basically the predicate.
+
+**A user views a page by loading it &rarr; page view.**
+
+Since we want to evolve the classic, static concept of an event **we split the
+action (view) from the object (page)** .Just because there are so many more
+possibilities that can be done with the same object.
+
+To sum up: **an elbwalker event consists of three components: a trigger (load),
+an entity (page) and an action (view)** . Now we're free to do a lot of great
+things! So let's get started.
+
+## How this concept makes your life in measurement much easier
+
+It's nice to know that a page view has happened, but we also want to know which
+page exactly had that view. Also, the information “click” isn't worth a lot, if
+we don't know what exactly has been clicked by someone. We need to **know the
+context** to know that it was the add to cart button of a specific product in a
+specific size. Most of the time, the more context, the better.
+
+**Context creates meaning. Context is everything**
+
+An elbwalker entity is defining the scope to create a specific context. Inside
+this entity scope, all actions are to be defined. As a data person, I want to
+know which product someone added to the cart. As a data person, I want to know
+which page someone viewed. And so on. To capture this information you can add
+properties to an elbwalker event. You will likely know this from e.g.
+[Google Analytics 4](https://developers.google.com/analytics/devguides/collection/ga4)
+implementations.
+
+There are endless possibilities of what someone can do on a page. There is no
+need to just focus on the view, and create weird concepts like bounce rates.
+Let's move on and measure the read action in addition to the view action of a
+page. And how about measuring the user's feedback like the like action or share
+action? Imagine all the new possibilities we can now analyze and report and how
+we can personalize and optimize based on the context of a page.
+
+| Entity  | Actions                             |
+| ------- | ----------------------------------- |
+| page    | view<br />read<br />like<br />share |
+| product | view<br />add<br />save<br />like   |
+
+We've built the [walker](https://docs.elbwalker.com/sources/web) to support this
+new approach of event tracking. The combination of an attributed-based tracker
+and the new event concept makes tracking implementation with elbwalker so
+**easy, fast and natural** .
