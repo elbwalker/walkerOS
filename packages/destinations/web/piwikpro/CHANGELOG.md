@@ -1,4 +1,4 @@
-# @elbwalker/client-node
+# @elbwalker/destination-web-piwikpro
 
 ## 1.0.0
 

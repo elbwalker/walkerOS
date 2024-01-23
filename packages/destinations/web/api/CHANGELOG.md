@@ -1,4 +1,4 @@
-# @elbwalker/walker.js
+# @elbwalker/destination-web-api
 
 ## 2.0.0
 

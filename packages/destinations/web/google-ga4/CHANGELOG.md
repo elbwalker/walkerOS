@@ -1,4 +1,4 @@
-# @elbwalker/walker.js
+# @elbwalker/destination-web-google-ga4
 
 ## 2.0.0
 

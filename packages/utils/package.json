@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/utils",
   "description": "Shared utils for walkerOS packages",
-  "version": "3.0.0-next.0",
+  "version": "3.0.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -17,15 +17,13 @@
     "dev:build": "tsup --watch --config tsup.dev.config.ts",
     "dev:test": "jest --watchAll --colors",
     "lint": "eslint \"**/*.ts*\"",
-    "publish": "npm run test && npm run build && npm publish --access public",
     "test": "jest --colors --coverage"
   },
   "devDependencies": {
     "@elbwalker/types": "*"
   },
   "repository": {
-    "type": "git",
-    "url": "https://github.com/elbwalker/walkerOS",
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/utils"
   },
   "author": "elbwalker <hello@elbwalker.com>",

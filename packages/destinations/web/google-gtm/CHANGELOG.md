@@ -1,4 +1,4 @@
-# @elbwalker/walker.js
+# @elbwalker/destination-web-google-gtm
 
 ## 2.0.0
 

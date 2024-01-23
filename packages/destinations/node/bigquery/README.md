@@ -1,6 +1,6 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/elbwalker.png' width="256px"/>
+    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
   </a>
 </p>
 
@@ -56,8 +56,6 @@ using the custom `bigquery` options.
 ## Setup
 
 This destination requires an existing table (see [schema](./src/schema.ts)).
-
-@TODO `config.custom.runSetup`
 
 ## Permissions
 

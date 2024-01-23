@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/stack-firebase",
   "description": "Firebase stack for walkerOS",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -17,7 +17,6 @@
     "dev:build": "tsup --watch --config tsup.dev.config.ts",
     "dev:test": "jest --watchAll --colors",
     "lint": "eslint \"**/*.ts*\"",
-    "publish": "npm run test && npm run build && npm publish --access public",
     "test": "jest --colors --coverage"
   },
   "dependencies": {
@@ -29,8 +28,7 @@
     "@elbwalker/utils": "*"
   },
   "repository": {
-    "type": "git",
-    "url": "https://github.com/elbwalker/walkerOS",
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/stacks/firebase"
   },
   "author": "elbwalker <hello@elbwalker.com>",

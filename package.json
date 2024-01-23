@@ -1,4 +1,7 @@
 {
+  "name": "@elbwalker/walkeros",
+  "version": "0.0.0",
+  "private": true,
   "workspaces": [
     "packages/*",
     "packages/config/*",

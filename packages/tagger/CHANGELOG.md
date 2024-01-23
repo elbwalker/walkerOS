@@ -1,4 +1,4 @@
-# @elbwalker/walker.js
+# @elbwalker/tagger
 
 ## 2.0.0
 
