@@ -1,6 +1,7 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="utf-8">
     <title>walkerOS tagging demo</title>
     <style>
       .elb-globals [data-elbglobals] {
@@ -53,8 +54,17 @@
       // Configuration
       elb('walker config', { tagging: 2 });
 
+      // Utils
+      window.utils = await import(
+        'https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/index.mjs'
+      );
+
       // Start
       elb('walker run');
+
+      // Session handling
+      const session = utils.startSession();
+      if (session) elb('session start', session);
 
       // Destination Console
       elb('walker destination', {
@@ -109,10 +119,6 @@
       });
 
       // Consent
-      window.utils = await import(
-        'https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/index.mjs'
-      );
-
       // Code snippets for consent choice
       // Simulate the CMPs functionality
       window.consentAccept = () => {
