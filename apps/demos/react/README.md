@@ -20,7 +20,7 @@ Update your Routes file with a `useEffect` on the `useLocation` (./src/app.js he
 ```ts
 import { useEffect } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
-import { elb } from '@elbwalker/client-web';
+import { elb } from '@elbwalker/walker.js';
 
 const location = useLocation();
 useEffect(() => {

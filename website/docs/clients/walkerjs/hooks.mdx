@@ -1,0 +1,52 @@
+---
+title: Hooks
+sidebar_position: 4
+---
+
+import Link from '@docusaurus/Link';
+
+Hooks can be used to customize the default behavior of the walker.js. There are
+three hooks available, `Push`, `DestinationInit` and `DestinationPush`. Hooks
+allows to eventually validate, manipulate or even cancel the default behavior.
+
+:::note
+
+To learn more about hooks, visit the<Link to="../../utils/hooks">
+Utils/Hooks</Link> section.
+
+:::
+
+The overall function execution order is as follows:
+
+1. prePush
+2. preDestinationInit
+3. postDestinationInit
+4. preDestinationPush
+5. postDestinationPush
+6. postPush
+
+## Adding a hook
+
+To add a hook either call the `hook` command or use the `hooks` option:
+
+```js
+const walker = webClient({
+  hooks: {
+    // Add hooks on init
+    prePush: (params, ...args) => {
+      window.elbTimer = Date.now();
+      return params.fn(...args);
+    },
+  },
+});
+
+// Add hooks via command
+walker.push('walker hook', 'postPush', function (params, ...args) {
+  console.log('walker exec time', Date.now() - window.elbTimer);
+});
+
+walker.push('entity action');
+
+// Output:
+// walker exec time 1
+```

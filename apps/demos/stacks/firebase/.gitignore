@@ -67,3 +67,6 @@ node_modules/
 
 # Compiled JavaScript files
 lib
+
+# No credentials for you!
+functions/credentials/*.json

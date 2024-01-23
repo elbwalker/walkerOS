@@ -10,5 +10,6 @@
         "parser": "typescript"
       }
     }
-  ]
+  ],
+  "proseWrap": "always"
 }

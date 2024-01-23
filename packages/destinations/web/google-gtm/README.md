@@ -33,7 +33,7 @@ npm i --save @elbwalker/destination-web-google-gtm
 ```
 
 ```ts
-import { elb } from '@elbwalker/client-web';
+import { elb } from '@elbwalker/walker.js';
 import destinationGoogleGTM from '@elbwalker/destination-web-google-gtm';
 
 elb('walker destination', destinationGoogleGTM, config);

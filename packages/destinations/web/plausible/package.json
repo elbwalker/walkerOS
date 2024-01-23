@@ -1,13 +1,14 @@
 {
   "name": "@elbwalker/destination-web-plausible",
   "description": "Plausible web destination for walkerOS",
-  "version": "1.2.3",
+  "version": "2.0.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "files": [
-    "dist/**"
+    "dist/**",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup",
@@ -16,16 +17,14 @@
     "dev:build": "tsup --watch --config tsup.dev.config.ts",
     "dev:test": "jest --watchAll --colors",
     "lint": "eslint \"**/*.ts*\"",
-    "publish": "npm run test && npm run build && npm publish --access public",
     "test": "jest --colors --coverage"
   },
   "devDependencies": {
     "@elbwalker/types": "*",
-    "@elbwalker/client-web": "*"
+    "@elbwalker/walker.js": "2.0.0"
   },
   "repository": {
-    "type": "git",
-    "url": "https://github.com/elbwalker/walkerOS",
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/destinations/web/plausible"
   },
   "author": "elbwalker <hello@elbwalker.com>",

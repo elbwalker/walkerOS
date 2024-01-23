@@ -1,55 +1,39 @@
-import type { CustomConfig } from './types';
+import type { Config } from './types';
 import { schema } from './schema';
-import { log } from './utils';
+import { Dataset } from '@google-cloud/bigquery';
 
-export const setup = async function (custom: CustomConfig) {
-  if (await existsDatasetAndTable(custom)) {
-    log('Dataset and table already exists');
-    return true;
-  } else {
-    log('Creating dataset and/or table');
-    await createDatasetAndTable(custom);
-    log('Dataset and table created');
-    return true;
-  }
-};
-
-export const createDatasetAndTable = async function (custom: CustomConfig) {
-  const { client, datasetId, location, tableId } = custom;
-
+async function checkDataset(dataset: Dataset): Promise<boolean> {
   try {
+    return (await dataset.exists())[0];
+  } catch {
+    return false;
+  }
+}
+
+async function checkTable(dataset: Dataset, tableId: string): Promise<boolean> {
+  try {
+    await dataset.table(tableId).get();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const setup = async function (config: Config) {
+  const { client, datasetId, location, tableId } = config.custom;
+  const dataset = client.dataset(datasetId);
+
+  // Check if dataset exists
+  if (!(await checkDataset(dataset))) {
+    config.onLog(`Creating dataset ${datasetId}`);
     await client.createDataset(datasetId, { location });
-  } catch (e) {
-    if (!(e as Error).message.includes('Already Exists')) {
-      throw e;
-    }
   }
 
-  try {
-    if (location) schema.location = location;
-
-    await client.dataset(datasetId).createTable(tableId, schema);
-  } catch (e) {
-    if (!(e as Error).message.includes('Already Exists')) {
-      throw e;
-    }
+  // Check if table exists
+  if (!(await checkTable(dataset, tableId))) {
+    config.onLog(`Creating table ${datasetId}.${tableId}`);
+    await dataset.createTable(tableId, schema);
   }
 
   return true;
-};
-
-export const existsDatasetAndTable = async function (
-  custom: CustomConfig,
-): Promise<boolean> {
-  const { client, datasetId, tableId } = custom;
-
-  const dataset = client.dataset(datasetId);
-
-  try {
-    await dataset.exists();
-    await dataset.table(tableId).get();
-    return true;
-  } catch (e) {
-    return false;
-  }
 };

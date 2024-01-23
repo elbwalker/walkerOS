@@ -7,6 +7,8 @@ import {
   isSameType,
   tryCatchAsync,
 } from '@elbwalker/utils';
+import { pushToDestinations } from './push';
+import { getConfig } from './config';
 
 // Types
 export * from './types';
@@ -36,6 +38,9 @@ export function nodeClient(
     };
 
     return await tryCatchAsync(pushFn, (error) => {
+      // Call custom error handling
+      if (config.onError) config.onError(error, instance);
+
       defaultResult.status.error = String(error);
       return defaultResult;
     })(instance, ...args);
@@ -44,7 +49,6 @@ export function nodeClient(
   const instance: NodeClient.Function = {
     config,
     push,
-    // @TODO setup
   };
 
   // That's when the party starts
@@ -86,32 +90,6 @@ async function addDestination(
   return await pushToDestinations(instance, undefined, { [id]: destination });
 }
 
-function allowedToPush(
-  instance: NodeClient.Function,
-  destination: NodeDestination.Function,
-): boolean {
-  // Default without consent handling
-  let granted = true;
-
-  // Check for consent
-  const destinationConsent = destination.config.consent;
-
-  if (destinationConsent) {
-    // Let's be strict here
-    granted = false;
-
-    // Set the current consent states
-    const consentStates = instance.config.consent;
-
-    // Search for a required and granted consent
-    Object.keys(destinationConsent).forEach((consent) => {
-      if (consentStates[consent]) granted = true;
-    });
-  }
-
-  return granted;
-}
-
 const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
   instance,
   nameOrEvent,
@@ -130,11 +108,11 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
     nameOrEvent = { event: nameOrEvent };
 
   // Create the event
-  const eventOrAction = getEventOrAction(instance, nameOrEvent);
+  const { event, action } = getEventOrAction(instance, nameOrEvent);
 
-  if (isSameType(eventOrAction, '' as string)) {
-    // Walker command
-    const command = await handleCommand(instance, eventOrAction, data, options);
+  // Walker command
+  if (action) {
+    const command = await handleCommand(instance, action, data, options);
     if (command.result) {
       if (isSameType(command.result, {} as NodeDestination.PushResult)) {
         if (command.result.successful)
@@ -146,18 +124,19 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
 
     result.command = command.command;
     result.status.ok = true;
-  } else {
-    // Regular event
+  }
 
+  // Regular event
+  if (event) {
     // Add event to internal queue
-    instance.config.queue.push(eventOrAction);
+    instance.config.queue.push(event);
 
     const { successful, queued, failed } = await pushToDestinations(
       instance,
-      eventOrAction,
+      event,
     );
 
-    result.event = eventOrAction;
+    result.event = event;
     result.status.ok = failed.length === 0;
     result.successful = successful;
     result.queued = queued;
@@ -167,107 +146,58 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
   return result;
 };
 
-function getConfig(
-  values: NodeClient.PartialConfig = {},
-  current: NodeClient.PartialConfig = {},
-): NodeClient.Config {
-  const globalsStatic = current.globalsStatic || {};
-  const defaultConfig: NodeClient.Config = {
-    allowed: false, // Wait for explicit run command to start
-    client: '0.0.0', // Client version
-    consent: {}, // Handle the consent states
-    custom: {}, // Custom state support
-    count: 0, // Event counter for each run
-    destinations: {}, // Destination list
-    globals: {}, // To be overwritten
-    globalsStatic, // Basic values from initial config
-    group: '', // Random id to group events of a run
-    hooks: {}, // Manage the hook functions
-    queue: [], // Temporary event queue for all events of a run
-    round: 0, // The first round is a special one due to state changes
-    timing: 0, // Offset counter to calculate timing property
-    user: {}, // Handles the user ids
-    tagging: 0, // Helpful to differentiate the clients used setup version
-    source: {
-      type: 'node',
-      id: '',
-      previous_id: '',
-    },
-  };
-
-  const globals = assign(
-    globalsStatic,
-    assign(current.globals || {}, values.globals || {}),
-  );
-
-  // Value hierarchy: values > current > default
-  return {
-    ...defaultConfig,
-    ...current,
-    ...values,
-    globals,
-    globalsStatic,
-  };
-}
-
 function getEventOrAction(
   instance: NodeClient.Function,
   props: Partial<WalkerOS.Event> = {},
-): WalkerOS.Event | string {
+): { event?: WalkerOS.Event; action?: string } {
   if (!props.event) throw new Error('Event name is required');
 
   const [entity, action] = props.event.split(' ');
   if (!entity || !action) throw new Error('Event name is invalid');
 
-  if (entity === Const.Commands.Walker) return action;
+  if (entity === Const.Commands.Walker) return { action };
 
   const config = instance.config;
 
   ++config.count;
-  const event = props.event;
-  const data = props.data || {};
-  const context = props.context || {};
-  const custom = props.custom || {};
-  const globals = props.globals || config.globals;
-  const user = props.user || config.user;
-  const nested = props.nested || [];
-  const consent = props.consent || config.consent;
-  const trigger = props.trigger || '';
-  const timestamp = Date.now();
-  const timing = Math.round((timestamp - config.timing) / 10) / 100;
-  const group = config.group;
-  const count = config.count;
-  const id = `${timestamp}-${group}-${count}`;
-  const version = {
-    client: config.client,
-    tagging: config.tagging,
-  };
-  const source = config.source;
+
+  const timestamp = props.timestamp || Date.now();
+  const timing =
+    props.timing ||
+    Math.round((timestamp - (props.timing || config.timing)) / 10) / 100;
+  const group = props.group || config.group;
+  const count = props.count || config.count;
+  const source = props.source || config.source;
   if (props.source) {
     if (props.source.id) source.id = props.source.id;
     if (props.source.previous_id) source.previous_id = props.source.previous_id;
   }
 
-  return {
-    event,
-    data,
-    context,
-    custom,
-    globals,
-    user,
-    nested,
-    consent,
-    id,
-    trigger,
+  const event = {
+    event: props.event,
+    data: props.data || {},
+    context: props.context || {},
+    custom: props.custom || {},
+    globals: props.globals || config.globals,
+    user: props.user || config.user,
+    nested: props.nested || [],
+    consent: props.consent || config.consent,
+    trigger: props.trigger || '',
     entity,
     action,
     timestamp,
     timing,
     group,
     count,
-    version,
+    id: `${timestamp}-${group}-${count}`,
+    version: {
+      client: config.client,
+      tagging: config.tagging,
+    },
     source,
   };
+
+  return { event };
 }
 
 async function handleCommand(
@@ -298,104 +228,6 @@ async function handleCommand(
   }
 
   return { command, result };
-}
-
-async function pushToDestinations(
-  instance: NodeClient.Function,
-  event?: WalkerOS.Event,
-  destination?: NodeClient.Destinations,
-): Promise<NodeDestination.PushResult> {
-  // Push to all destinations if no destination was given
-  const destinations = destination || instance.config.destinations;
-  const config = instance.config;
-  const results: Array<{
-    id: string;
-    destination: NodeDestination.Function;
-    skipped?: boolean;
-    queue?: WalkerOS.Events;
-    error?: unknown;
-  }> = await Promise.all(
-    // Process all destinations in parallel
-    Object.entries(destinations).map(async ([id, destination]) => {
-      let error: unknown;
-
-      destination.queue = destination.queue || [];
-      if (event) destination.queue.push(event); // Add event to queue
-
-      if (!destination.queue.length)
-        // Nothing to do here
-        return { id, destination, skipped: true };
-
-      // Always check for required consent states before pushing
-      if (allowedToPush(instance, destination)) {
-        // Update previous values with the current state
-        let events: NodeDestination.PushEvents = destination.queue.map(
-          (event) => {
-            // @TODO check if this is correct, as a client might keeps running as a thread
-            event.consent = assign(config.consent, event.consent);
-            event.globals = assign(config.globals, event.globals);
-            event.user = assign(config.user, event.user);
-            return { event }; // @TODO mapping
-          },
-        );
-
-        // Destination initialization
-        // Check if the destination was initialized properly or try to do so
-        if (destination.init && !destination.config.init) {
-          const init =
-            (await tryCatchAsync(destination.init)(destination.config)) ||
-            false;
-
-          if (isSameType(init, {} as NodeDestination.Config)) {
-            destination.config = init;
-          } else {
-            destination.config.init = init;
-          }
-
-          // don't push if init is false
-          if (!init) return { id, destination, queue: destination.queue };
-        }
-
-        const result =
-          (await tryCatchAsync(destination.push, (error) => {
-            // Default error handling for failing destinations
-            return { error, queue: undefined };
-          })(events, destination.config)) || {}; // everything is fine
-
-        // Destinations can decide how to handle errors and queue
-        destination.queue = result.queue; // Events that should be queued again
-        error = result.error; // Captured error from destination
-      }
-
-      return { id, destination, queue: destination.queue, error };
-    }),
-  );
-
-  const successful: NodeDestination.PushSuccess = [];
-  const queued: NodeDestination.PushSuccess = [];
-  const failed: NodeDestination.PushFailure = [];
-
-  for (const result of results) {
-    if (result.skipped) continue;
-
-    const id = result.id;
-    const destination = result.destination;
-
-    if (result.error) {
-      failed.push({
-        id,
-        destination,
-        error: String(result.error),
-      });
-    } else if (result.queue && result.queue.length) {
-      queued.push({ id, destination });
-    } else {
-      successful.push({ id, destination });
-    }
-  }
-
-  // @TODO add status check here
-  return { successful, queued, failed };
 }
 
 function setConfig(instance: NodeClient.Function, data: unknown = {}) {

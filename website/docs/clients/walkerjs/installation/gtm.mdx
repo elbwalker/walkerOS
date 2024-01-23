@@ -1,0 +1,123 @@
+---
+title: Google Tag Manager
+---
+
+How to install walker.js with Google Tag Manager (GTM)
+
+The Google Tag Manager only supports ES5 JavaScript from 2009. But there are
+pre-build versions for walker.js, the destinations and utils available. This is
+an example configuration. Just follow the instructions and copy the code.
+
+## walker.js
+
+Add a new **User-Defined Variable** and select the **Custom JavaScript type**.
+The pre-built script creates the Elbwalker variable we want to return. Insert
+the following code
+
+```js
+function () {
+  // Copy walker.es5.js code here
+
+  return Elbwalker;
+}
+```
+
+Get the latest code directly from the GitHub repository
+[elbwalker/walker.js](https://github.com/elbwalker/walker.js). Go to the
+[dist/walker.es5.js](https://github.com/elbwalker/walker.js/blob/main/dist/walker.es5.js)
+file and copy the whole script. Insert it in the GTM variable as shown in the
+screenshot
+
+![test](https://91951938-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F-MNYSefehQWgpbcQJFEb%2Fuploads%2FHgM86IXpqbnZFRUDT13z%2FScreenshot%202023-05-06%20at%208.52.01%20PM.png?alt=media&token=41d56e69-9638-456c-bf29-f4ac19d6d990)
+
+Now create a new **Custom HTML Tag** where we first define the `elb` function
+and create the elbwalker. See [Configuration](#Configuration) if you want to use
+a custom config.
+
+```js
+<script>
+  var elb = function(){ window.elbLayer.push(arguments)};
+  var elbwalker = {{walker.js}}({
+    // config
+  });
+  elb('walker run');
+  elb('walker destination', { push: console.log }); // Optional
+</script>
+```
+
+We import the **User-Defined Variable** `{{walker.js}}`, manually call the run
+command, and add an optional `destination` to log all events to the console.
+
+Because of the initialization of the `elb` function, we want this Tag to fire
+before other related tags, where we might want to call `elb()`. Open the
+**Advanced Settings** and set a number above the default of 0 into the **Tag
+firing priority** field.
+
+Use "**All Pages**" as the **Firing Trigger**
+
+![test](https://91951938-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F-MNYSefehQWgpbcQJFEb%2Fuploads%2FLAqX7Hbi9HZfXtfakpaS%2FScreenshot%202023-05-06%20at%209.33.22%20PM.png?alt=media&token=6cce9b80-f059-40a7-bef6-2956a54a1ca2)
+
+## Destinations
+
+To add a destination we can again create a new **User-Defined Variable** and
+select the **Custom JavaScript** type. Insert the following code
+
+```js
+function () {
+  // Copy index.es5.js code here
+
+  return destination;
+}
+```
+
+The pre-built `destinations` creates the destination variable we want to return.
+
+Go to the `dist` folder of the destination (e.g.
+[API destination](https://github.com/elbwalker/walker.js/blob/main/destinations/api/dist/es5.js))
+file and copy the whole script from the `es5.js` file. Insert it in the GTM
+variable as shown in the screenshot
+
+![test](https://91951938-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F-MNYSefehQWgpbcQJFEb%2Fuploads%2F4tkEFKkHHADKJetsPjIU%2FScreenshot%202023-05-06%20at%208.45.46%20PM.png?alt=media&token=97e12b5a-c0de-4b4d-bcc8-40be00f4201b)
+
+Now create a new **Custom HTML Tag** where we configure and add the
+`destination`. Check the destinations configuration for individual settings.
+
+```html
+<script>
+  elb("walker destination", {{walker.js destination NAME}}, {
+    // custom config
+  })
+</script>
+```
+
+We import the **User-Defined Variable** `{{walker.js destination NAME}}`, and
+add a `custom config`.
+
+Add a **Trigger** for any page where the destination should be available, e.g.
+**All Pages**.
+
+## Utils
+
+To use the [Utils](https://docs.elbwalker.com/coding/utils) get the latest code
+directly from the GitHub repository
+[elbwalker/walker.js](https://github.com/elbwalker/walker.js). Go to the
+[dist/utils.es5.js](https://github.com/elbwalker/walker.js/blob/main/dist/utils.es5.js)
+file and copy the whole script. Insert it in the GTM variable as shown in the
+screenshot
+
+```js
+function () {
+  // Copy utils.es5.js code here
+
+  return Elbutils;
+}
+```
+
+Import the **Variable** to call the functions
+
+![test](https://91951938-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F-MNYSefehQWgpbcQJFEb%2Fuploads%2FlWnJJbX2BR7XFmMzNMik%2FScreenshot%202023-05-06%20at%209.50.02%20PM.png?alt=media&token=bc96fb6c-5833-47c6-b16d-ec4ef1755c44)
+
+## Updating
+
+To update the walker.js, destinations and utils edit the **Variables** with the
+latest ES5 code.

@@ -1,0 +1,280 @@
+---
+title: Helper
+---
+
+import Link from '@docusaurus/Link';
+
+These helper utils are a collection of useful functions used by walkerOS. They
+can be used as standardtized building blocks for custom setups. Learn how to
+install and use them in the&nbsp;<Link to="../utils/#installation">Utils
+installation</Link> section.
+
+Utils are grouped into&nbsp;<Link to="#core">Core</Link> and
+&nbsp;<Link to="#web">Web</Link> functions. While the core-helpers can be used
+in any environment, the web-helpers are are made for the browser.
+
+## Core
+
+### assign
+
+`assign<T>(target: T, source: Object = {}): T` function merges two objects into
+a single one. It has a special behavior for array properties: when merging, it
+concatenates arrays from both the source and target objects, removing duplicate
+items in the process. This function is particularly useful for combining objects
+with complex structures, including nested arrays, ensuring that array data is
+effectively integrated without redundancy.
+
+```js
+const obj1 = { a: 1, b: [1, 2] };
+const obj2 = { b: [2, 3], c: 3 };
+assign(obj1, obj2); // Returns { a: 1, b: [1, 2, 3], c: 3 }
+```
+
+Use `assign` to merge configurations or state-objects or events, particularly
+when dealing with array properties that should be concatenated without
+duplicates.
+
+### castValue
+
+`castValue(value: unknown): WalkerOS.PropertyType` function converts string
+values to their respective data types like number or boolean. This is useful
+when dealing with values that are inherently strings, such as those from query
+parameters or data-attributes, and need to be utilized in their correct data
+type.
+
+```js
+const num = castValue('123'); // Converts to 123 (number)
+const bool = castValue('true'); // Converts to true (boolean)
+```
+
+The function simplifies the process of data type conversion, ensuring that
+string inputs are appropriately processed for further use in various logic
+flows.
+
+### getByStringDot
+
+`getByStringDot(event: unknown, key: string, i=0): unknown` allows accessing
+properties in an object with a string path. It supports using a wildcard `_` to
+iterate through array elements. If the specified path does not exist, the
+function returns undefined, ensuring safe access to nested properties.
+
+```js
+getByStringDot({ data: { id: 'wow' } }, 'data.id');
+// Returns "wow"
+```
+
+Use the wildcard character `_` and `i` for dynamic access on arrays, like
+`"nested._.id"`
+
+```js
+getByStringDot({ nested: [1, 2, { id: 'impressive' }] }, 'nested._.id', 2);
+// Returns 'impressive'
+```
+
+It's created to access values from an event by using the string-dot notation.
+
+### getId
+
+`getId(length=6): string` function generates a random alphanumeric string of a
+specified length.
+
+```js
+getId(); // Returns a random string, e.g., 'a1b2c3'
+getId(10); // Returns a random string of 10 characters, e.g., 'a1b2c3d4e5'
+```
+
+This function is particularly useful for scenarios where unique identifiers are
+needed, such as dynamically generated element IDs, unique keys for list items in
+rendering, or temporary identifiers.
+
+### getMarketingParameters
+
+`getMarketingParameters(url: string, custom={}): WalkerOS.Properties` extracts
+marketing-related parameters, such as UTM parameters, from URLs. This is useful
+in scenarios where you need to analyze the effectiveness of marketing campaigns
+by identifying sources, mediums, campaigns, etc., from the URL query parameters.
+
+```js
+getMarketingParameters('https://localhost/?utm_source=docs&gclid=xxx');
+// Returns { source: "docs", clickId: "xxx" }
+
+getMarketingParameters('https://example.com/?utm_custom=value', {
+  utm_custom: 'custom',
+});
+// Returns { custom: 'value' }
+```
+
+Add `custom` parameters to parse more values from the url like `?utm_custom=123`
+with `{ utm_custom: "custom" }` to get `{ custom: "123" }`.
+
+This function facilitates the easy retrieval of marketing data, aiding in
+campaign tracking and analysis.
+
+### Invocations
+
+The `debounce` and `throttle` functions are both ways to batch invocations,
+designed to optimize function execution frequency. They're used for performance
+optimizations or cost reduction, these functions create batches of previously
+individual calls in two different ways.
+
+#### debounce
+
+`debounce(fn: Function, wait=1000)` delays a function's execution until a
+specified time has elapsed since the last time it was invoked. This is ideal for
+use cases like search input handling, where you don't want the function to fire
+on every keystroke.
+
+```js
+debounce(console.log)('called'); // Executes only after 1000ms of inactivity
+
+const debouncedLog = debounce(() => console.log('Debounced'), 500);
+debouncedLog(); // Executes only after 500ms of inactivity
+```
+
+#### throttle
+
+Limits the execution of a function to no more than once every specified number
+of milliseconds. It's beneficial for situations like scroll events where you
+want to limit how often an event handler is called.
+
+```js
+const throttledLog = throttle(() => console.log('Throttled'), 500);
+throttledLog(); // Executes at most every 500ms
+```
+
+### isSameType
+
+`isSameType<T>(variable: unknown, type: T): variable is typeof type` checks if
+two provided values are of the same data type. This function is essential in
+scenarios requiring type validation, ensuring consistency and preventing errors
+due to type mismatches.
+
+```js
+isSameType(10, 20); // Returns true (both are numbers)
+isSameType('hello', 5); // Returns false (different types)
+```
+
+This function helps in validating inputs, comparing variables, and ensuring data
+integrity by verifying that operations are performed on matching data types.
+
+### onLog
+
+`onLog(message: string, level: string)` is a function designed for consistent
+and customizable logging across your application. It allows you to log messages
+with with a verbose option, aiding in better monitoring and debugging of your
+code.
+
+```js
+onLog('Silent'); // Won't log anything
+onLog('Curious', true); // Logs a message
+```
+
+This function is for maintaining a standardized logging format is crucial. I
+
+### sessionStart
+
+As this is a more complex util learn more about it on
+the&nbsp;<Link to="./session">Session</Link> page.
+
+### Storage
+
+As this is are more complex utils learn more about them on
+the&nbsp;<Link to="./storage">Storage</Link> page.
+
+### throwError
+
+`throwError(message: string)` is used to throw custom errors with a specific
+message. It's particularly useful in scenarios where standard error handling
+needs to be customized or more descriptive error messages are required for
+debugging.
+
+```js
+throwError('Broken'); // Throws an error with the message 'Broken'
+```
+
+This function enhances error management by allowing you to provide clear,
+context-specific error messages, aiding in the debugging process and improving
+code maintainability.
+
+### trim
+
+`trim(str: string): string` is designed to remove whitespace from both ends of a
+string. This is useful for cleaning up user input or values from
+data-attributes.
+
+```js
+trim('  Moin  '); // Returns 'Moin' without leading or trailing spaces
+```
+
+Using trim ensures that strings are processed in a consistent format, which is
+essential for accurate data handling and user input validation.
+
+### try-catch
+
+These functions are ideal to ensure that the application remains robust and
+error-free, especially when dealing with uncertain or risky operations. By
+providing a fallback mechanism, `tryCatch` and `tryCatchAsync` enhances the
+stability and reliability of code.
+
+#### tryCatch
+
+`tryCatch(tryFn: Function, catchFn: Function)` is a higher-order function
+designed to handle errors gracefully in JavaScript. It takes two functions as
+arguments: tryFn, which is the function to be executed, and catchFn, which is
+the function to be executed if tryFn throws an error.
+
+```js
+const safeParse = tryCatch(JSON.parse, () => ({}));
+safeParse('{"valid": "json"}'); // Successfully parses JSON
+safeParse('invalid json'); // Returns {} instead of throwing an error
+```
+
+#### tryCatchAsync
+
+`tryCatchAsync(tryFn: Function, catchFn: Function)` is similar to tryCatch but
+tailored for asynchronous operations. It wraps an async function (tryFn) and a
+fallback (catchFn) for handling errors in async processes.
+
+```js
+const safeCall = tryCatchAsync(
+  () => asyncFnThatMightFail(),
+  () => ({ error: 'Bad luck' }),
+);
+safeCall().then(console.log);
+```
+
+This function ensures your async operations are robust, providing a way to
+handle errors gracefully without disrupting the application flow.
+
+### useHooks
+
+As this is a more complex util learn more about it on
+the&nbsp;<Link to="./hooks">Hooks</Link> page.
+
+## Web
+
+### getAttribute
+
+`getAttribute(element: HTMLElement, attribute: string): string` is designed for
+retrieving the value of a specified attribute from a given DOM element. This
+utility is especially handy when you need to extract data dynamically from
+elements on a webpage, such as reading data attributes, class names, or IDs.
+
+```js
+const element = document.body;
+const value = getAttribute(element, 'data-elb');
+// Retrieves the value of 'data-elb' from the documents body
+```
+
+This function simplifies the process of interacting with the DOM by providing an
+easy and direct way to access element attributes.
+
+### isVisible
+
+`isVisible(element: HTMLElement): boolean` checks if a given HTML element is
+visible on the page from a users perspective.
+
+```js
+isVisible(document.getElementById('promotion'));
+// Returns true if 'promotion' is visible
+```

@@ -1,16 +1,37 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/elbwalker.png' width="256px"/>
+    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
   </a>
 </p>
 
-# walkerOS Destinations: Sharing events
+# walkerOS Destinations - Data Activation and Sharing
 
-## Overview
+walkerOS Destinations are integral for activating and sharing your collected
+data with various analysis and marketing tools. These destinations bridge your
+data collection with the actual integration of external tools.
 
-Destinations in walkerOS serve as the final endpoints where your data gets mapped and shared with other tools. They are designed to work seamlessly with their respective clients (node or web).
+## What Are Destinations?
+
+Destinations in walkerOS act as connections, channeling data to appropriate
+tools and platforms. They ensure data is mapped and shared effectively,
+functioning in tandem with walkerOS clients.
 
 ## Types of Destinations
 
-- [**Node Destinations**](./node/): Specifically designed for server-side applications. These destinations can handle batch processing, data enrichment, validation, and more.
-- [**Web Destinations**](./web/): Tailored for client-side applications, these destinations are optimized for real-time data tracking and measuring user interaction in the browser.
+- **Node Destinations**: Designed for server-side environments, these
+  destinations handle complex tasks like batch processing, data enrichment, and
+  validation. They are ideal for scenarios requiring robust backend data
+  processing.
+
+  > Explore
+  > [Node Destinations](https://www.elbwalker.com/docs/destinations/node/)
+
+- **Web Destinations**: Tailored for client-side implementations, these
+  destinations excel in real-time tracking and user interaction analytics within
+  web applications.
+
+  > Discover
+  > [Web Destinations](https://www.elbwalker.com/docs/destinations/web/)
+
+walkerOS Destinations ensures that your data journey, from collection to
+activation is seamless, reliable, and efficient.

@@ -1,4 +1,7 @@
 {
+  "name": "@elbwalker/walkeros",
+  "version": "0.0.0",
+  "private": true,
   "workspaces": [
     "packages/*",
     "packages/config/*",
@@ -8,8 +11,8 @@
     "packages/stacks/*"
   ],
   "scripts": {
-    "build": "turbo run build --filter=!@elbwalker/docs",
-    "build:docs": "turbo run build --filter=@elbwalker/docs",
+    "build": "turbo run build --filter=!@elbwalker/website",
+    "build:website": "turbo run build --filter=@elbwalker/website",
     "clean": "turbo run clean",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
@@ -17,15 +20,15 @@
     "test": "turbo run test"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.26.2",
+    "@changesets/cli": "^2.27.1",
     "@elbwalker/jest": "*",
     "@elbwalker/tsconfig": "*",
     "@elbwalker/tsup": "*",
     "@elbwalker/types": "*",
     "@elbwalker/utils": "*",
     "eslint-config-custom": "*",
-    "turbo": "^1.10.15",
-    "typescript": "^5.1.6"
+    "turbo": "^1.11.3",
+    "typescript": "^5.3.3"
   },
   "packageManager": "npm@9.6.7",
   "browserslist": [

@@ -1,0 +1,160 @@
+---
+title: Contributing
+description: Learn how to contribute to walkerOS
+position: 7
+---
+
+import Link from '@docusaurus/Link';
+
+walkerOS is an open-source project, and we welcome contributions of all kinds.
+There are multiple ways to contribute, and we appreciate them all. If you have
+any questions, feel free to reach out:
+
+- <Link to="https://github.com/elbwalker/walkerOS/issues">open an issue</Link>
+- <Link to="mailto:hello@elbwalker.com">send an email</Link>
+- <Link to="https://calendly.com/elb-alexander/30min">schedule a call</Link>
+- <Link to="https://www.linkedin.com/in/alexanderkirtzel/">
+    write on LinkedIn
+  </Link>
+
+## Development workflow
+
+The main language is TypeScript, but others are welcome as well. We use a
+test-driven development approach and write tests using
+[Jest](https://jestjs.io/). Since the docs are also part of the repository, they
+can directly be updated as well. Pushing code to the repository will trigger a
+test-pipeline that runs all tests and checks the code style.
+
+## Packages
+
+walkerOS is separated into multiple packages and developed in a monorepo. The
+latest version is under the `develop` branch, while `main` contains the latest
+stable and released versions. The whole project can be tested and build using
+[TurboRepo](https://turbo.build/repo/). Run all commands from the root
+directory.
+
+```bash
+# Make sure to install all dependencies first
+npm i
+
+# To start a local development server
+turbo run dev
+
+# To run all tests
+turbo run test
+
+# To build the whole project
+turbo run build
+
+# To develop or build a specific package use --filter option
+turbo run dev --filter=walker.js
+turbo run build --filter=walker.js --filter=utils
+```
+
+The `filter` option can be used to only run one or multiple packages. To filter
+use the `packages name` field in the `package.json` file.
+
+## Documentation
+
+The documentation is also included in the repository under the `website/docs`
+folder. It is built using [Docusaurus](https://docusaurus.io/). To start a local
+server with live reload make sure to run `npm i` first, go to the `website/`
+directory and call:
+
+```bash
+npm run start
+```
+
+## Making Changes and Creating a Changeset
+
+How to update a package, create a changeset, and publish a (pre-)release.
+
+1. Implement Changes: Make the necessary updates or additions to your packages.
+
+2. Create a Changeset: From the root of your monorepo, run:
+
+```bash
+$ npx changeset
+```
+
+Select the packages that should be updated and describe the changes.
+
+## Preparing for (Pre-)Release
+
+1. (Optional) Enter pre-release process:
+
+```bash
+$ npx changeset pre enter next
+```
+
+2. Bump Version for (Pre-)Release: Now, run:
+
+```bash
+$ npx changeset version
+```
+
+## Publishing the Pre-Release
+
+1. Login to npm: Ensure you're logged into npm with `npm login`.
+
+2. To publish with the current tag (`latest` by default or `next` for a
+   pre-release): From the root of the monorepo, run:
+
+```bash
+$ npm run publish-packages
+```
+
+## (Optional) Exiting Pre-Release Mode
+
+After a pre-release is done and it's ready to be released as a stable version:
+
+1. Exit Pre-Release Mode: Run:
+
+```bash
+$ npx changeset pre exit
+```
+
+2. Follow the release process again: Create a new changeset for the stable
+   release, version, and then publish normally.
+
+## Work-in-progress
+
+@TODOS
+
+- Stacks
+  - Firebase
+  - Google Tag Manager
+- Installation guides
+  - destinations
+- Sync READMEs with docs
+- Package links
+
+### About walkerOS
+
+## Getting started
+
+Creating a server-side setup with Stacks
+
+## Principles
+
+## Live demo
+
+### Guides
+
+#### Data contract
+
+- what is a data contract
+- Describing data structure
+- validating events
+- utils/validate page
+
+#### Fingerprinting
+
+- hashing
+- (dis-)advantages
+
+#### Attribution
+
+- different attribution strategies
+- building an independent attribution model
+- custom analysis

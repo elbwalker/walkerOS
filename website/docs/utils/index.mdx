@@ -1,0 +1,72 @@
+---
+title: Utils
+description:
+  A collection of helpful functions for easier and privacy-friendly tracking
+  setups
+---
+
+import Link from '@docusaurus/Link';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Utils are re-usable functions to standardize and simplify tracking setups. They
+vary from simple functions like&nbsp;<Link to="helper">`getId`</Link> to
+more complex ones like&nbsp;<Link to="session">`sessionStart`</Link>. They are
+used in walkerOS itself and can be used in custom tracking setups as well.
+
+Simple functions are grouped on the&nbsp;<Link to="helper">Helper</Link> page,
+more complex ones have their own pages.
+
+## Installation
+
+There are multiple ways to install and use the utils.
+
+### NPM
+
+```bash
+npm install @elbwalker/utils
+```
+
+### CDN
+
+There are multiple build files available. Bundled with all functions, grouped
+only for the core or web, and separated into individual files. The `es5` files
+can be used in older browsers as well as the GTM.
+
+<Tabs>
+  <TabItem value="script" label="Scripts" default>
+    ```html
+    <script src="https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/index.js"></script>
+    ```
+  </TabItem>
+  <TabItem value="module" label="Module">
+    
+    Load the `.mjs` module-file directly from the CDN or your own server.
+    
+    ```html
+    <script type="module">
+      const Utils = (
+        await import(
+          'https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/index.mjs'
+        )
+      );
+      
+      console.log('id', Utils.getId())
+    </script>
+    ```
+</TabItem>
+</Tabs>
+:::info
+
+Be aware of the `latest` version in the URL, better use a specific version like
+2.0.0
+
+:::
+
+### Google Tag Manager
+
+:::note
+
+Coming soon
+
+:::

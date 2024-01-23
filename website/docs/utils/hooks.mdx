@@ -1,0 +1,79 @@
+---
+title: Hooks
+---
+
+Hooks can be used to enable custom behavior. They are called at specific points
+either before (`pre`) or after (`post`) a specific action is performed. This
+offers the ability to eventually manipulate data before being processed or to
+perform additional actions after a specific action has been performed.
+
+The `useHooks` function acts as a wrapper and allows to register optional pre-
+or post-hook functions. It returns a function that can be called as usual, but
+will eventually call the registered hooks before and after the actual function
+is called.
+
+```js
+// useHooks(fn, name, hooks)(arguments));
+const hooks = {
+  preLog: (params, ...args) => {
+    console.log('preLog', { params, args });
+    params.fn(...args); // call the actual function
+    return 'lol';
+  },
+  postLog: (params, ...args) => {
+    console.log('postLog', { params, args });
+  },
+};
+
+const log = useHooks(console.log, 'Log', hooks); // Wrap the function
+log('foo', 'bar');
+
+// Outputs:
+// preLog { params: { fn: [Function: log] }, args: [ 'foo', 'bar' ] }
+// foo bar
+// postLog { params: { fn: [Function: log], result: 'lol' }, args: [ 'foo', 'bar' ] }
+```
+
+:::note
+
+`pre` and `post` are prepended to the case-sensitive hooks name (preLog, not
+prelog).
+
+:::
+
+The pre- and post-hook functions get called with the `params` object, containing
+the actual function `fn` and the optional `result`.
+
+```ts
+type HookFn<T extends (...args: any[]) => any> = (
+  params: Parameter<Parameters<T>, ReturnType<T>>,
+  ...args: Parameters<T>
+) => ReturnType<T>;
+```
+
+## preHookFn
+
+The preHookFn gets called before the actual function is called. The first
+parameter is the `params` object, containing the actual function `fn`.
+
+`params.fn` has to be called manually to execute the actual function.
+
+```js
+function preHookFn(params, ...args) {
+  // do something before the actual function is called
+  return params.fn(...args); // call the actual function
+}
+```
+
+## postHookFn
+
+The postHookFn gets called after the actual function is called. The first
+parameter is the `params` object, containing the actual function `fn` and the
+`result` from the eventually calles `fn`.
+
+```js
+function postHookFn(params, ...args) {
+  // do something after the actual function is called
+  return params.result; // return the result from the previous call
+}
+```

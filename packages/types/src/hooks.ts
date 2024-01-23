@@ -10,12 +10,7 @@ export type HookFn<T extends (...args: any[]) => any> = (
   ...args: Parameters<T>
 ) => ReturnType<T>;
 
-export type Names = 'Push' | 'DestinationInit' | 'DestinationPush';
-
+export type Function = (...args: any[]) => any;
 export type Functions = {
-  prePush?: PrePush;
-  postPush?: PostPush;
+  [key: string]: Function;
 };
-
-export type PrePush = HookFn<WalkerOS.Elb>;
-export type PostPush = HookFn<WalkerOS.Elb>;
