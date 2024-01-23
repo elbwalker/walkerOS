@@ -8,7 +8,6 @@ export default function ContentWrapper(props) {
       <span
         {...tagger.entity('404')}
         {...tagger.action('load', 'view')}
-        {...tagger.property('404', 'id', document.location.pathname)}
       >
         <Content {...props} />
       </span>
