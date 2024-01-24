@@ -20,6 +20,7 @@
     "test": "jest --colors --coverage"
   },
   "devDependencies": {
+    "@elbwalker/tsup": "*",
     "@elbwalker/types": "*",
     "@elbwalker/utils": "*",
     "@elbwalker/walker.js": "2.0.0"
