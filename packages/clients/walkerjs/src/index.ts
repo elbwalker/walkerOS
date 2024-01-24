@@ -23,7 +23,7 @@ export { elb } from './lib/trigger';
 export function webClient(
   customConfig: Partial<WebClient.Config> = {},
 ): WebClient.Function {
-  const client = '2.0.1';
+  const client = '2.0.0';
   const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
   const staticGlobals = customConfig.globals || {};
   const config = getConfig(customConfig);
