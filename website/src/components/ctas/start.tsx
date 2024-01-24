@@ -7,7 +7,7 @@ export default function CTAStart() {
       <div className="mx-auto max-w-7xl py-12 px-4 text-center sm:px-6 lg:py-16 lg:px-8">
         <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
           <span
-            data-elb-cta={`title:#innerHTML`}
+            data-elb-cta={`title:start your trial`}
             className="block text-black dark:text-white"
           >
             Start your trial run of
