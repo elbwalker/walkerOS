@@ -18,8 +18,8 @@ export const Walkerjs = () => {
       // Destination API
       window.walkerjs.push('walker destination', destinationWebAPI, {
         custom: {
-          url: 'https://moin.p.elbwalkerapis.com/lama',
-          transport: 'xhr',
+          url: 'https://europe-west1-walkeros-firebase-stack.cloudfunctions.net/ingest',
+          transport: 'beacon',
         },
       });
     } else {
