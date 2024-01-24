@@ -166,22 +166,20 @@ describe('Elbwalker', () => {
       return 'foo'; // Updated response
     });
     const postPush: Hooks.Function = jest.fn();
-    const preDestinationInit = jest.fn().mockImplementation(function (
-      params,
-      ...args
-    ) {
-      return params.fn(...args);
-    });
+    const preDestinationInit = jest
+      .fn()
+      .mockImplementation(function (params, ...args) {
+        return params.fn(...args);
+      });
     const postDestinationInit = jest.fn().mockImplementation(function (params) {
       return params.result; // Return result from previous call
     });
     const preDestinationPush = jest.fn();
-    const postDestinationPush = jest.fn().mockImplementation(function (
-      params,
-      ...args
-    ) {
-      return params.fn(...args);
-    });
+    const postDestinationPush = jest
+      .fn()
+      .mockImplementation(function (params, ...args) {
+        return params.fn(...args);
+      });
 
     walkerjs = webClient({
       pageview: false,
@@ -273,7 +271,7 @@ describe('Elbwalker', () => {
     const referrer = document.referrer;
 
     const newPageId = 'https://www.elbwalker.com/source_id';
-    const newPageReferrer = 'https://docs.elbwalker.com';
+    const newPageReferrer = 'https://another.elbwalker.com';
     Object.defineProperty(window, 'location', {
       value: new URL(newPageId),
       writable: true,

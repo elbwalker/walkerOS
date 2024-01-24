@@ -414,7 +414,7 @@ export default function LegalTermsContentEN() {
             11.1 Information on data collection by elbwalker can be found in the
             data protection notice at www.elbwalker.com/privacy and the scheme
             for collecting anonymized application data at
-            docs.elbwalker.com/data-model/data-schema.
+            www.elbwalker.com/docs/walkeros/event-model.
           </p>
           <p>
             11.2 The user declares that all personal data made available for

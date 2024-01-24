@@ -4,7 +4,7 @@ Made to be used with
 [@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the
-[documentation](https://docs.elbwalker.com/).
+[documentation](https://www.elbwalker.com/docs/).
 
 ## 🤓 Usage
 

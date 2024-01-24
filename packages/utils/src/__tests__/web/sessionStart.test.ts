@@ -68,8 +68,8 @@ describe('Utils sessionStart', () => {
     expect(
       sessionStart({
         url: 'https://www.elbwalker.com',
-        referrer: 'https://docs.elbwalker.com',
-        domains: ['docs.elbwalker.com'],
+        referrer: 'https://another.elbwalker.com',
+        domains: ['another.elbwalker.com'],
       }),
     ).toBeFalsy();
     expect(

@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from '@docusaurus/Link';
 
 export default function CompanyMission() {
   return (
@@ -87,14 +88,13 @@ export default function CompanyMission() {
                 decision.
               </p>
               <p>
-                <a
-                  href="https://docs.elbwalker.com/"
-                  target="_blank"
+                <Link
+                  to="/docs/"
                   className="text-base font-medium text-elbwalker-600"
                 >
                   Learn more about our software
                   <span aria-hidden="true">&rarr;</span>
-                </a>
+                </Link>
               </p>
             </div>
           </div>

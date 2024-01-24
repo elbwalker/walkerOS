@@ -1,8 +1,10 @@
 # Google Tag Manager (GTM) web destination for walkerOS
 
-Made to be used with [@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
+Made to be used with
+[@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
 
-More detailed information and examples can be found in the [documentation](https://docs.elbwalker.com/).
+More detailed information and examples can be found in the
+[documentation](https://www.elbwalker.com/docs/).
 
 ## 🤓 Usage
 
@@ -63,4 +65,7 @@ Loading the destination via dynamic import
 
 ## Contribute
 
-Feel free to contribute by submitting an [issue](https://github.com/elbwalker/walkerOS/issues), starting a [discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in [contact](https://calendly.com/elb-alexander/30min).
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in
+[contact](https://calendly.com/elb-alexander/30min).
