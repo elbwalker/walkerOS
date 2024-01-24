@@ -11,20 +11,17 @@ export default defineConfig([
   // Browser
   {
     ...config,
-    entry: ['src/browser.ts'],
     format: ['iife'],
     globalName: 'Destination',
     outExtension() {
-      return { js: `.js` };
+      return { js: `.browser.js` };
     },
   },
   // ES5
   {
     ...config,
-    entry: ['src/browser.ts'],
     format: ['iife'],
     globalName: 'Destination',
-    minify: true,
     outExtension() {
       return { js: `.es5.js` };
     },
