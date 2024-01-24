@@ -30,14 +30,14 @@ describe('Browser', () => {
     w.walkerjs = undefined as unknown as WebClient.Function;
     expect(w.walkerjs).toBeUndefined();
     jest.resetModules();
-    jest.requireActual('../browser');
+    jest.requireActual('../walkerjs');
     const walkerjs = require('../').default;
     expect(w.walkerjs).toEqual(walkerjs);
   });
 
   test('no script tag', () => {
     document.body.innerHTML = '';
-    jest.requireActual('../browser');
+    jest.requireActual('../walkerjs');
 
     expect(mockFn).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledWith({});
@@ -47,7 +47,7 @@ describe('Browser', () => {
     const elem = document.getElementsByTagName('script')[0];
     elem.removeAttribute('data-project');
 
-    jest.requireActual('../browser');
+    jest.requireActual('../walkerjs');
     expect(mockFn).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledWith({
       default: false,
@@ -60,7 +60,7 @@ describe('Browser', () => {
     const elem = document.getElementsByTagName('script')[0];
     elem.setAttribute('data-default', 'true');
 
-    jest.requireActual('../browser');
+    jest.requireActual('../walkerjs');
     expect(mockFn).toHaveBeenCalledWith({
       default: true,
       tagging: 1,
@@ -71,7 +71,7 @@ describe('Browser', () => {
     const elem = document.getElementsByTagName('script')[0];
     elem.setAttribute('data-version', '42');
 
-    jest.requireActual('../browser');
+    jest.requireActual('../walkerjs');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         tagging: 42,
