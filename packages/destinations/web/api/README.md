@@ -14,20 +14,22 @@ Destinations can be used via node or directly in the browser.
 
 ## Configuration
 
+Learn more about the
+[destinations](https://www.elbwalker.com/docs/destinations/) in general.
+
 ```js
-const custom = {
-  url: 'https://httpbin.org/anything', // Required
-  transform: (event, config, mapping) => {
-    return JSON.stringify(event);
+const config = {
+  custom: {
+    url: 'https://httpbin.org/anything', // Required
+    transform: (event, config, mapping) => {
+      return JSON.stringify(event);
+    },
+    transport: 'fetch',
   },
-  transport: 'fetch',
 };
 ```
 
 ### Node usage
-
-Learn more about the
-[destinations](https://www.elbwalker.com/docs/destinations/) in general.
 
 ```sh
 npm i --save @elbwalker/destination-web-api
@@ -37,7 +39,7 @@ npm i --save @elbwalker/destination-web-api
 import { elb } from '@elbwalker/walker.js';
 import destinationAPI from '@elbwalker/destination-web-api';
 
-elb('walker destination', destinationAPI, { custom });
+elb('walker destination', destinationAPI, config);
 ```
 
 ## Contribute

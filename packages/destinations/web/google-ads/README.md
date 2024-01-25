@@ -1,10 +1,11 @@
 # Google Ads web destination for walkerOS
 
 Made to be used with
-[@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
+[walker.js](https://www.npmjs.com/package/@elbwalker/walker.js) from
+[walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the
-[documentation](https://www.elbwalker.com/docs/).
+[documentation](https://www.elbwalker.com/docs/destinations/web/google-ads).
 
 ## 🤓 Usage
 
@@ -16,15 +17,12 @@ Destinations can be used via node or directly in the browser.
 ```ts
 import { DestinationGoogleAds } from '@elbwalker/destination-web-google-ads';
 
-const config /* : DestinationGoogleAds.Config */ = {
-  // consent: { marketing: true }, // Neccessary consent states
+const config = {
   custom: {
     conversionId: 'AW-123456789', // Ads accounts id used for every conversion
-    // currency: 'EUR', // Default currency is EUR
-    // defaultValue: 1, // Used default value for conversions
+    currency: 'EUR', // Default currency is EUR
+    defaultValue: 1, // Used default value for conversions
   },
-  // init: true, // Skip the initialisation
-  // loadScript: true, // Load additional required scripts on init
   mapping: {
     // e.g. order
     entity: {

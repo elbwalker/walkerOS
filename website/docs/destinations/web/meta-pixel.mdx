@@ -5,6 +5,9 @@ description:
 ---
 
 import PackageLink from '/src/components/docs/package-link';
+import Link from '@docusaurus/Link';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 <PackageLink
   github="packages/destinations/web/meta-pixel"
@@ -17,8 +20,8 @@ Ads Manager.
 
 ## Configuration
 
-Start by setting up the config for the destination. Optional fields as comments.
-Destinations can be used via node or directly in the browser.
+Start by setting up the config for the destination. Destinations can be used via
+node or directly in the browser.
 
 ```js
 import { DestinationMeta } from '@elbwalker/destination-web-meta-pixel';

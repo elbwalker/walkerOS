@@ -24,18 +24,20 @@ Start by setting up the config for the destination. Destinations can be used via
 node or directly in the browser.
 
 ```js
-const custom = {
-  url: 'https://httpbin.org/anything', // Required
-  transform: (event, config, mapping) => {
-    return JSON.stringify(event);
+const config = {
+  custom: {
+    url: 'https://httpbin.org/anything', // Required
+    transform: (event, config, mapping) => {
+      return JSON.stringify(event);
+    },
+    transport: 'fetch',
   },
-  transport: 'fetch',
 };
 ```
 
 Overview of all properties:
 
-| Property  | Value                                  | Description                                                        |
+| Property  | Type                                   | Description                                                        |
 | --------- | -------------------------------------- | ------------------------------------------------------------------ |
 | url\*     | string                                 | The URL to send the events to.                                     |
 | transform | function                               | A function to transform the events before sending them to the URL. |
@@ -80,11 +82,6 @@ Loading the destination via dynamic import
 
 ```html
 <script>
-  // Make sure to initialize the elb function once.
-  function elb() {
-    (window.elbLayer = window.elbLayer || []).push(arguments);
-  }
-
   // Upload the dist/index.mjs on your own server
   const destination = (
     await import(

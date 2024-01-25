@@ -1,10 +1,17 @@
 # Google Analytics 4 (GA4) web destination for walkerOS
 
 Made to be used with
-[@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
+[walker.js](https://www.npmjs.com/package/@elbwalker/walker.js) from
+[walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the
-[documentation](https://www.elbwalker.com/docs/).
+[documentation](https://www.elbwalker.com/docs/destinations/web/api).
+
+[Google Analytics 4](https://marketingplatform.google.com/about/analytics) is
+the current version of Google's marketing measurement software. It's widely used
+for tracking conversions and user behavior on websites. The walker.js GA4
+destination allows for seamless integration of your web application with Google
+Analytics 4, providing advanced analytics capabilities.
 
 ## 🤓 Usage
 
@@ -13,96 +20,69 @@ Destinations can be used via node or directly in the browser.
 
 ## Configuration
 
-```ts
-import { DestinationGoogleGA4 } from '@elbwalker/destination-web-google-ga4';
+Learn more about [destinations](https://www.elbwalker.com/docs/destinations/) in
+general and read the detailled
+[Google GA4 configuration](https://www.elbwalker.com/docs/destinations/web/ga4#configuration).
 
-const config /* : DestinationGoogleGA4.Config */ = {
-  // consent: { marketing: true }, // Neccessary consent states
+```js
+const config = {
   custom: {
-    // debug: true, // Enable debug mode
-    // include: ['globals'], // Add globals to parameters
-    // items: {}, // Set item properties for every event
-    measurementId: 'G-XXXXXX-1', // Required
-    // pageview: false, // Disable the default pageview event
-    // params: {
-    //   // Set event parameters for every event
-    //   currency: {
-    //     default: 'EUR', // Default value if key is undefined or non-existent
-    //     key: 'data.currency', // Access value from event.data.currency
-    //   },
-    //   user_id: 'user.id', // Set a custom user id
-    // },
-    // snakeCase: false, // disable the auto snake_case renaming
-    // transport_url: '', // Endpoint where to send data to
+    measurementId: 'G-XXXXXXXXXX', // Required
+    debug: false,
+    include: ['globals'],
+    items: {},
+    pageview: false,
+    params: {
+      currency: {
+        default: 'EUR',
+        key: 'data.currency',
+      },
+      user_id: 'user.id',
+    },
+    snakeCase: true,
+    transport_url: 'https://www.google-analytics.com/j/collect',
   },
-  // init: true, // Skip the initialisation
-  // loadScript: true, // Load additional required scripts on init
-  // mapping: {
-  //   // Only defined events get processed if mapping is used
-  //   '*': { '*': {} }, // Process all events
-  //   // entity: { action: { name: 'custom_name' } },
-  //   page: { view: { ignore: true } }, // Ignore page view events
-  //   product: {
-  //     add: {
-  //       name: 'add_to_cart', // Rename the product add event to add_to_cart
-  //       custom: {
-  //         // Set parameters for items array
-  //         include: ['all'], // Add all properties to parameters
-  //         items: {
-  //           params: {
-  //             item_id: 'data.id',
-  //             item_category: 'context.category.0', // Value is an array
-  //             quantity: { default: 1, key: 'data.quantity' },
-  //           },
-  //         },
-  //         // Set event parameters
-  //         params: { value: 'data.price' },
-  //       },
-  //     },
-  //     // Add view and other product-related actions
-  //   },
-  //   order: {
-  //     complete: {
-  //       name: 'purchase',
-  //       custom: {
-  //         items: {
-  //           params: {
-  //             // Nested entities are looped and can be used with a wildcard
-  //             // This will add multiple items to the event
-  //             item_id: 'nested.*.data.id',
-  //           },
-  //         },
-  //         params: { transaction_id: 'data.id', value: 'data.revenue' },
-  //       },
-  //     },
-  //   },
-  // },
+  mapping: {
+    '*': { '*': {} }, // Process all events
+    // entity: { action: { name: 'custom_name' } },
+    page: { view: { ignore: true } }, // Ignore page view events, same as pageview: false
+    product: {
+      add: {
+        name: 'add_to_cart', // Rename the product add event to add_to_cart
+        custom: {
+          // Set parameters for items array
+          include: ['all'], // Add all properties to parameters
+          items: {
+            params: {
+              item_id: 'data.id',
+              item_category: 'context.category.0', // Value is an array
+              quantity: { default: 1, key: 'data.quantity' },
+            },
+          },
+          // Set event parameters
+          params: { value: 'data.price' },
+        },
+      },
+      // Add view and other product-related actions
+    },
+    order: {
+      complete: {
+        name: 'purchase',
+        custom: {
+          items: {
+            params: {
+              // Nested entities are looped and can be used with a wildcard
+              // This will add multiple items to the event
+              item_id: 'nested.*.data.id',
+            },
+          },
+          params: { transaction_id: 'data.id', value: 'data.revenue' },
+        },
+      },
+    },
+  },
 };
 ```
-
-`params`, `items`, and `include` are available at the config and event levels.
-Settings on the event level will override the general ones.
-
-Use the `string-dot` notation (`data.id`, `user.id`, `group`,
-`context.position.0`) to access all values of an event.
-
-Nested entities will be looped if available. Use `items` and the wildcard (\*)
-to access and add them dynamically (for `order complete` events with multiple
-nested `product` entities for example).
-
-Use the `include` option to bulk-add event properties without explicitly mapping
-custom event parameters. This adds all available properties of the specified
-group. Available groups are `event` (for basic event properties like trigger,
-timing, etc.), `data`, `context`, `globals`, `nested`, `source`, `user`,
-`version`, or just `all`. All `data` properties are added automatically by
-default. If you don't want this add `include: []`.
-
-> Note: `consent` and `nested` are not available via `include`, but you can add
-> them explicitly using `params` or `items`.
-
-The properties get prefixed with the group's name and underscore (like
-`globals_lang` for `{ globals: { lang: 'de' } }`). Custom parameters will
-override `include` values with the same key.
 
 ### Node usage
 
@@ -115,28 +95,6 @@ import { elb } from '@elbwalker/walker.js';
 import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
 
 elb('walker destination', destinationGoogleGA4, config);
-```
-
-### Browser usage
-
-Loading the destination via dynamic import
-
-```html
-<script>
-  // Make sure to initialize the elb function once.
-  function elb() {
-    (window.elbLayer = window.elbLayer || []).push(arguments);
-  }
-
-  // Upload the dist/index.mjs on your own server
-  const destination = (
-    await import(
-      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4/dist/index.mjs'
-    )
-  ).default;
-
-  elb('walker destination', destination, config);
-</script>
 ```
 
 ## Contribute
