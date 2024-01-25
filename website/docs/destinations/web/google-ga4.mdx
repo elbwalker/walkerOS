@@ -82,21 +82,32 @@ const config = {
 };
 ```
 
-| Property        | Type    | Description                                                   |
-| --------------- | ------- | ------------------------------------------------------------- |
-| measurementId\* | string  | The GA4 measurement ID.                                       |
-| debug           | boolean | Enables debug mode for additional logging.                    |
-| include         | array   | Defines groups of properties to be included in all events.    |
-| items           | object  | Sets parameters for item-level data in events.                |
-| pageview        | boolean | Enables or disables automatic pageview tracking.              |
-| params          | object  | Custom parameters for event-level data.                       |
-| snakeCase       | boolean | Converts parameter names to snake_case for GA4 compatibility. |
-| transport_url   | string  | The URL used for sending events to GA4.                       |
+### CustomConfig
+
+| Property        | Type    | Description                                                  |
+| --------------- | ------- | ------------------------------------------------------------ |
+| measurementId\* | string  | The GA4 measurement ID                                       |
+| debug           | boolean | Enables debug mode for additional logging                    |
+| include         | array   | Defines groups of properties to be included in all events    |
+| items           | object  | Sets parameters for item-level data in events                |
+| pageview        | boolean | Enables or disables automatic pageview tracking              |
+| params          | object  | Custom parameters for event-level data                       |
+| snakeCase       | boolean | Converts parameter names to snake_case for GA4 compatibility |
+| transport_url   | string  | The URL used for sending events to GA4                       |
 
 Properties with a `*` are required.
 
-`params`, `items`, and `include` are available at the config and event levels.
-Settings on the event level will override the general ones.
+### CustomEventConfig
+
+| Property     | Type   | Description                                                                                 |
+| ------------ | ------ | ------------------------------------------------------------------------------------------- |
+| params       | object | Custom parameters for the event. Includes data properties like `value`, `item_id`, etc.     |
+| include      | array  | Specifies which groups of properties to include, e.g., ['all'], ['data'], ['context'], etc. |
+| items        | object | Defines parameters for item-level data in events, like 'quantity', 'item_id'                |
+| items.params | object | Parameters for items array, specifying data property keys and defaults for quantities, etc. |
+
+`params`, `items`, and `include` are available at both, the config and event
+level. Settings on the event level will override the general ones.
 
 Use the&nbsp;<Link to="../../utils/helper#getbystringdot">string-dot
 notation</Link> (`data.id`, `user.id`, `group`, `context.position.0`) to access
@@ -134,6 +145,14 @@ override `include` values with the same key.
 ## How to use
 
 Choose one of the installation options below to start using the GA4 destination:
+
+```js
+const config = {
+  custom: {
+    measurementId: 'G-XXXXXXXXXX',
+  },
+};
+```
 
 <Tabs>
   <TabItem value="ts" label="TypeScript" default>
