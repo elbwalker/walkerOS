@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-piwikpro",
   "description": "Piwik PRO destination for walkerOS",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -23,7 +23,7 @@
     "@elbwalker/tsup": "*",
     "@elbwalker/types": "*",
     "@elbwalker/utils": "*",
-    "@elbwalker/walker.js": "2.0.0"
+    "@elbwalker/walker.js": "2.0.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
