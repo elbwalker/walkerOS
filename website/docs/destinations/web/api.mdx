@@ -20,15 +20,17 @@ processing or any external service.
 
 ## Configuration
 
-Start by setting up the config for the destination. Optional fields as comments.
-Destinations can be used via node or directly in the browser.
+Start by setting up the config for the destination. Destinations can be used via
+node or directly in the browser.
 
 ```js
-const custom: {
+const custom = {
   url: 'https://httpbin.org/anything', // Required
-  transform: (event, config, mapping) => { return event },
-  transport: 'fetch'
-}
+  transform: (event, config, mapping) => {
+    return JSON.stringify(event);
+  },
+  transport: 'fetch',
+};
 ```
 
 Overview of all properties:
