@@ -15,12 +15,14 @@ Destinations can be used via node or directly in the browser.
 ## Configuration
 
 Learn more about the
-[destinations](https://www.elbwalker.com/docs/destinations/) in general.
+[destinations](https://www.elbwalker.com/docs/destinations/) in general and read
+the detailled
+[API configuration](https://www.elbwalker.com/docs/destinations/web/api#configuration).
 
 ```js
 const config = {
   custom: {
-    url: 'https://httpbin.org/anything', // Required
+    url: 'https://httpbin.org/anything',
     transform: (event, config, mapping) => {
       return JSON.stringify(event);
     },

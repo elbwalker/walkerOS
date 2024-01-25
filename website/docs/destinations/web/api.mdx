@@ -26,7 +26,7 @@ node or directly in the browser.
 ```js
 const config = {
   custom: {
-    url: 'https://httpbin.org/anything', // Required
+    url: 'https://httpbin.org/anything',
     transform: (event, config, mapping) => {
       return JSON.stringify(event);
     },

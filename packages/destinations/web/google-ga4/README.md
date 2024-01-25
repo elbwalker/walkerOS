@@ -5,13 +5,7 @@ Made to be used with
 [walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the
-[documentation](https://www.elbwalker.com/docs/destinations/web/api).
-
-[Google Analytics 4](https://marketingplatform.google.com/about/analytics) is
-the current version of Google's marketing measurement software. It's widely used
-for tracking conversions and user behavior on websites. The walker.js GA4
-destination allows for seamless integration of your web application with Google
-Analytics 4, providing advanced analytics capabilities.
+[documentation](https://www.elbwalker.com/docs/destinations/web/google-ga4).
 
 ## 🤓 Usage
 
