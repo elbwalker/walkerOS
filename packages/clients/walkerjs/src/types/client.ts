@@ -62,6 +62,7 @@ export type Scope = Document | Element | HTMLElement;
 export type ScopeType = Scope | Scope[];
 
 export interface Config extends WalkerOS.Config {
+  client: string;
   destinations: Destinations;
   elbLayer: ElbLayer;
   pageview: boolean;

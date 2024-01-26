@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { elb, webClient } from '@elbwalker/walker.js';
 import { destinationWebAPI } from '@elbwalker/destination-web-api';
 import Tagger from '@elbwalker/tagger';
+import { sessionStart } from '@elbwalker/utils';
 
 export const Walkerjs = () => {
   const location = useLocation();
@@ -13,6 +14,26 @@ export const Walkerjs = () => {
       window.elb = elb;
       window.walkerjs = webClient({
         default: true,
+      });
+
+      // Session
+      const session = sessionStart();
+      if (session) elb('session start', session);
+
+      // Destination Lama
+      window.walkerjs.push('walker destination', destinationWebAPI, {
+        custom: {
+          url: 'https://moin.p.elbwalkerapis.com/lama',
+          transform: (event) => {
+            return JSON.stringify({
+              ...event,
+              ...{
+                projectId: 'RQGM6XJ',
+              },
+            });
+          },
+          transport: 'xhr',
+        },
       });
 
       // Destination API

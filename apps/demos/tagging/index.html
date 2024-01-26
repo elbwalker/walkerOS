@@ -1,7 +1,7 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>walkerOS tagging demo</title>
     <style>
       .elb-globals [data-elbglobals] {
@@ -63,7 +63,7 @@
       elb('walker run');
 
       // Session handling
-      const session = utils.startSession();
+      const session = utils.sessionStart();
       if (session) elb('session start', session);
 
       // Destination Console
@@ -1537,7 +1537,7 @@
           </a>
         </div>
         <p class="mt-10 text-center text-xs leading-5 text-gray-500">
-          &copy; 2023 Your Company, Inc. All rights reserved.
+          &copy; 2024 Your Company, Inc. All rights reserved.
         </p>
       </div>
     </footer>
@@ -1555,19 +1555,19 @@
         <p class="text-sm leading-6 text-white">
           <a
             class="rounded inline-flex items-center px-4 py-2 leading-none text-white bg-green-500 hover:bg-green-700"
-            onclick="consentAccept()"
+            onclick="window.consentAccept()"
           >
             Accept
           </a>
           <a
             class="rounded inline-flex items-center px-4 py-2 my-2 leading-none text-white bg-gray-600 hover:bg-gray-800"
-            onclick="consentReset()"
+            onclick="window.consentReset()"
           >
             Reset
           </a>
           <a
             class="rounded inline-flex items-center px-4 py-2 my-2 leading-none text-white bg-red-600 hover:bg-red-800"
-            onclick="consentDeny()"
+            onclick="window.consentDeny()"
           >
             Decline
           </a>

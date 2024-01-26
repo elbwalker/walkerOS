@@ -1,10 +1,11 @@
 # API web destination for walkerOS
 
 Made to be used with
-[@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
+[walker.js](https://www.npmjs.com/package/@elbwalker/walker.js) from
+[walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the
-[documentation](https://docs.elbwalker.com/).
+[documentation](https://www.elbwalker.com/docs/destinations/web/api).
 
 ## 🤓 Usage
 
@@ -13,19 +14,20 @@ Destinations can be used via node or directly in the browser.
 
 ## Configuration
 
-```ts
-import { DestinationAPI } from '@elbwalker/destination-web-api';
+Learn more about the
+[destinations](https://www.elbwalker.com/docs/destinations/) in general and read
+the detailled
+[API configuration](https://www.elbwalker.com/docs/destinations/web/api#configuration).
 
-const config /* : DestinationAPI.Config */ = {
-  // consent: { marketing: true }, // Neccessary consent states
+```js
+const config = {
   custom: {
-    url: 'https://httpbin.org/anything', // Required
-    // transport: 'fetch' // fetch (default), xhr or beacon
+    url: 'https://httpbin.org/anything',
+    transform: (event, config, mapping) => {
+      return JSON.stringify(event);
+    },
+    transport: 'fetch',
   },
-  // init: true, // Skip the initialisation
-  // mapping: {
-  //   '*': { '*': {} }, // Process all events
-  // },
 };
 ```
 
@@ -40,28 +42,6 @@ import { elb } from '@elbwalker/walker.js';
 import destinationAPI from '@elbwalker/destination-web-api';
 
 elb('walker destination', destinationAPI, config);
-```
-
-### Browser usage
-
-Loading the destination via dynamic import
-
-```html
-<script>
-  // Make sure to initialize the elb function once.
-  function elb() {
-    (window.elbLayer = window.elbLayer || []).push(arguments);
-  }
-
-  // Upload the dist/index.mjs on your own server
-  const destination = (
-    await import(
-      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api/dist/index.mjs'
-    )
-  ).default;
-
-  elb('walker destination', destination, config);
-</script>
 ```
 
 ## Contribute

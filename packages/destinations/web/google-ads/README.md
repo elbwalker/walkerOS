@@ -1,10 +1,11 @@
 # Google Ads web destination for walkerOS
 
 Made to be used with
-[@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
+[walker.js](https://www.npmjs.com/package/@elbwalker/walker.js) from
+[walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the
-[documentation](https://docs.elbwalker.com/).
+[documentation](https://www.elbwalker.com/docs/destinations/web/google-ads).
 
 ## 🤓 Usage
 
@@ -13,27 +14,27 @@ Destinations can be used via node or directly in the browser.
 
 ## Configuration
 
-```ts
-import { DestinationGoogleAds } from '@elbwalker/destination-web-google-ads';
+Learn more about the
+[destinations](https://www.elbwalker.com/docs/destinations/) in general and read
+the detailled
+[Google Ads configuration](https://www.elbwalker.com/docs/destinations/web/google-ads#configuration).
 
-const config /* : DestinationGoogleAds.Config */ = {
-  // consent: { marketing: true }, // Neccessary consent states
+```js
+const config = {
   custom: {
-    conversionId: 'AW-123456789', // Ads accounts id used for every conversion
-    // currency: 'EUR', // Default currency is EUR
-    // defaultValue: 1, // Used default value for conversions
+    conversionId: 'AW-123456789',
+    currency: 'EUR',
+    defaultValue: 1,
   },
-  // init: true, // Skip the initialisation
-  // loadScript: true, // Load additional required scripts on init
   mapping: {
     // e.g. order
     entity: {
       // e.g. complete
       action: {
         custom: {
-          id: 'order_id', // Property key to use as transaction id
-          label: 'abc', // Conversion label
-          value: 'revenue', // Name of data property key to use for value
+          label: 'abc',
+          id: 'order_id',
+          value: 'revenue',
         },
       },
     },
@@ -52,28 +53,6 @@ import { elb } from '@elbwalker/walker.js';
 import destinationGoogleAds from '@elbwalker/destination-web-google-ads';
 
 elb('walker destination', destinationGoogleAds, config);
-```
-
-### Browser usage
-
-Loading the destination via dynamic import
-
-```html
-<script>
-  // Make sure to initialize the elb function once.
-  function elb() {
-    (window.elbLayer = window.elbLayer || []).push(arguments);
-  }
-
-  // Upload the dist/index.mjs on your own server
-  const destination = (
-    await import(
-      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ads/dist/index.mjs'
-    )
-  ).default;
-
-  elb('walker destination', destination, config);
-</script>
 ```
 
 ## Contribute

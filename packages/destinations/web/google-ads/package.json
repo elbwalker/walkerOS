@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-google-ads",
   "description": "Google Ads web destination for walkerOS",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,8 +20,9 @@
     "test": "jest --colors --coverage"
   },
   "devDependencies": {
+    "@elbwalker/tsup": "*",
     "@elbwalker/types": "*",
-    "@elbwalker/walker.js": "2.0.0",
+    "@elbwalker/walker.js": "2.0.1",
     "@types/gtag.js": "^0.0.12"
   },
   "repository": {

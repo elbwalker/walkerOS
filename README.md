@@ -12,7 +12,6 @@
 
 <div align="left">
   <img src="https://img.shields.io/github/license/elbwalker/walkerOS" />
-  <img src="https://img.shields.io/github/languages/top/elbwalker/walkerOS" />
   <a href="https://www.elbwalker.com/docs/"><img src="https://img.shields.io/badge/docs-www.elbwalker.com/docs/-yellow" alt="walkerOS Documentation"></a>
 </div>
 

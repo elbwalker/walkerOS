@@ -1,6 +1,6 @@
-import { Options } from 'tsup';
+const { defineConfig } = require('tsup');
 
-const config: Options = {
+const config = {
   // clean: true, // Not yet supported for multiple entry points
   entry: ['src/index.ts'],
   minify: 'terser',
@@ -17,5 +17,4 @@ const config: Options = {
   },
 };
 
-// @TODO dynamic imports are not supported yet
-export default config;
+module.exports = { config, defineConfig };

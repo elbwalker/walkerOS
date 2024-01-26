@@ -23,20 +23,20 @@ export default defineConfig([
     entry: ['src/core/*', 'src/web/*'],
     format: ['cjs', 'esm'],
   },
-  // Full index ES5 bundle
+  // Browser
   {
     ...config,
+    entry: ['src/index.ts', 'src/core/*', 'src/web/*'],
     format: ['iife'],
     globalName,
     outExtension() {
-      return { js: `.es5.js` };
+      return { js: `.browser.js` };
     },
-    target: 'es5',
   },
   // Web ES5 files
   {
     ...config,
-    entry: ['src/core/*', 'src/web/*'],
+    entry: ['src/index.ts', 'src/core/*', 'src/web/*'],
     format: ['iife'],
     globalName,
     outExtension() {

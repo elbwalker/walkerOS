@@ -439,7 +439,7 @@ export default function LegalTermsContentDE() {
             11.1 Informationen zur Datenerhebung durch elbwalker können dem
             Datenschutzhinweis unter www.elbwalker.com/datenschutz und dem
             Schema zur Erhebung von anonymisierten Anwendungsdaten unter
-            docs.elbwalker.com/data-model/data-schema entnommen werden.
+            www.elbwalker.com/docs/walkeros/event-model entnommen werden.
           </p>
           <p>
             11.2 Der Nutzer erklärt, dass sämtliche für die Verarbeitung im

@@ -65,27 +65,11 @@ flowchart LR
 
 ## Configuration
 
-The configuration of a destination is set up in the `config` object. It might be
-slightly different for each client. All properties are optional.
-
-| Property       | Value    | Description                                                        |
-| -------------- | -------- | ------------------------------------------------------------------ |
-| **id**         | string   | A unique key for the destination                                   |
-| **consent**    | object   | Required consent states to init and push events                    |
-| **custom**     | any      | Arbitrary but protected configurations for custom enhancements     |
-| **init**       | boolean  | If the destination has been initialized by calling the init method |
-| **loadScript** | boolean  | If an additional script to work should be loaded                   |
-| **mapping**    | object   | A map to handle events individually                                |
-| **meta**       | object   | Additional meta information about the destination                  |
-| **queue**      | boolean  | Disable processing of previously pushed events                     |
-| **verbose**    | boolean  | Enable verbose logging                                             |
-| **onError**    | function | Custom error handler                                               |
-| **onLog**      | function | Custom log handler                                                 |
-
-A complete destination configuration might look like this:
+The configuration of a destination is set up in the `config`. All properties are
+optional. A complete destination configuration might look like this:
 
 ```js
-const config = {
+{
   id: 'demo',
   custom: { foo: 'bar' },
   consent: { demo: true },
@@ -103,12 +87,28 @@ const config = {
 };
 ```
 
+Overview of all properties:
+
+| Property       | Value    | Description                                                        |
+| -------------- | -------- | ------------------------------------------------------------------ |
+| **id**         | string   | A unique key for the destination                                   |
+| **consent**    | object   | Required consent states to init and push events                    |
+| **custom**     | any      | Used for a destinations individual settings                        |
+| **init**       | boolean  | If the destination has been initialized by calling the init method |
+| **loadScript** | boolean  | If an additional script to work should be loaded                   |
+| **mapping**    | object   | A map to handle events individually                                |
+| **meta**       | object   | Additional meta information about the destination                  |
+| **queue**      | boolean  | Disable processing of previously pushed events                     |
+| **verbose**    | boolean  | Enable verbose logging                                             |
+| **onError**    | function | Custom error handler                                               |
+| **onLog**      | function | Custom log handler                                                 |
+
 Call `elb('walker destination', { push: console.log }, config);` to add the
 destination to a client. The destination will log all events straight to the
 console. Edit a destinations configuration at runtime by accessing
 `<client>.config.destinations.<id>`.
 
-To grant required consent call `elb('walker consent', { demo: true });`.
+> To grant required consent call `elb('walker consent', { demo: true });`.
 
 ## Mapping
 
@@ -142,7 +142,7 @@ to not list duplicate keys in the mapping.
 
 :::info
 
-Use <Link to="../utils/hooks">Utils/Hooks</Link> to modify events before
+Use&nbsp;<Link to="../utils/hooks">Utils/Hooks</Link> to modify events before
 processing.
 
 :::

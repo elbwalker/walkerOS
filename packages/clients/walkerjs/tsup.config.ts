@@ -25,10 +25,11 @@ export default defineConfig([
     format: ['cjs', 'esm'],
     sourcemap: true,
   },
+  // walker.js
   {
     ...config,
     entry: {
-      walker: 'src/browser.ts',
+      walker: 'src/walkerjs.ts',
     },
     format: ['iife'],
     outExtension() {
@@ -36,6 +37,17 @@ export default defineConfig([
     },
     platform: 'browser',
   },
+  // Browser
+  {
+    ...config,
+    entry: ['src/index.ts'],
+    format: ['iife'],
+    globalName: 'WebClient',
+    outExtension() {
+      return { js: `.browser.js` };
+    },
+  },
+  // ES5
   {
     ...config,
     entry: ['src/index.ts'],

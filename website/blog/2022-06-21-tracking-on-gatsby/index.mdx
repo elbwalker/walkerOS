@@ -38,20 +38,19 @@ e.g.
 
 ```js
 export const onRenderBody = ({ setHeadComponents }) => {
-  setHeadComponents([
-    <script key="walker" async className="elbwalker" src="walker.js" />
-  ],
-  [
-    <script
-      key="walker_function"
-      dangerouslySetInnerHTML={{
-        __html:
-        function elb(...args: unknown[]) {
-          (window.elbLayer = window.elbLayer || []).push(...args);}
-        ,
-      }}
-    />
-  ]);
+  setHeadComponents(
+    [<script key="walker" async className="elbwalker" src="walker.js" />],
+    [
+      <script
+        key="walker_function"
+        dangerouslySetInnerHTML={{
+          __html: function elb(...args: unknown[]) {
+            (window.elbLayer = window.elbLayer || []).push(...args);
+          },
+        }}
+      />,
+    ],
+  );
 };
 ```
 
@@ -99,9 +98,8 @@ was used and how many times. This leads to a clean data output.
 ### position: banner
 
 As seen in the picture you only have to set three HTML attributes to collect the
-banner click triggered by a user. Check out our
-[docs](https://github.com/elbwalker/walker.js/blob/main/README.md) if you are
-not too familiar with how the walker.js works.
+banner click triggered by a user. Check out our [docs](/docs/) if you are not
+too familiar with how the walker.js works.
 
 ```JSX
 <Banner

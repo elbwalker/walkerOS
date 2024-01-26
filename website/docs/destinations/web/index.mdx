@@ -9,8 +9,8 @@ import TabItem from '@theme/TabItem';
 
 Like the&nbsp;<Link to="../../clients/walkerjs">web client walker.js</Link>, the
 web destinations run in a users browser directly. It's purpose is to initialize
-a destination, <Link to="../#mapping">map event</Link> data to the destination's
-requirements, and send them.
+a destination, <Link to="../destinations/#mapping">map event</Link> data to the
+destination's requirements, and send them.
 
 A destination receives events through the `push` interface. Configurations can
 be made in the `config` object. The optional `init` function gets called before
@@ -23,6 +23,33 @@ See how to&nbsp;<Link to="../../clients/walkerjs/commands#destinations">add a
 destination to walker.js</Link>.
 
 :::
+
+## Installation
+
+There are different ways to install a web destination:
+
+- **TypeScript**: Install the destination package and `import` it in your code.
+- **Script**: Load the destination `mjs module` with a script tag.
+- **Code**: Download/copy the `browser` file and include it directly in your
+  code. This will create a `Destination` object in the global namespace.
+
+## Configuration
+
+Each destination requires its own configuration. All settings are optional and
+can be omitted. Besides common settings like `consent`, `id`, and others, there
+are also individual settings only available for a specific destination in the
+`custom` object and `mapping`.
+
+:::info
+
+Learn about&nbsp;<Link to="../../destinations/#configuration">general
+destination configuration</Link>.
+
+:::
+
+The individual `Custom` settings and `EventConfig` in the mapping used for event
+specifications. All configuration definitions, and examples are available in
+each destination's detail page.
 
 ## Create your own
 
@@ -79,11 +106,8 @@ elb('walker destination', { push: console.log });
     interface CustomEventConfig {
       // Event related configuration settings in event.mapping.custom
     }
-    ```
 
-    Optionally, add global variables to the global namespace.
-
-    ```ts
+    // Optionally, add global variables to the global namespace.
     declare global {
       interface Window {
         xxx?: Function; // global window objects
@@ -129,22 +153,12 @@ elb('walker destination', { push: console.log });
 elb('walker destination', destination, config);
 ```
 
-### Configuration
-
-Each destination requires its own configuration. While there are common settings
-like `consent`, `init`, or `loadScript` there are also individual settings only
-available for a specific destination in the `custom` object and `mapping`.
-
-A destination has a `Config` for general settings and `EventConfig` in the
-mapping used for event specifications. All settings, definitions, and examples
-are available in each destination's detail page.
-
-:::
-
-import DocCardList from '@theme/DocCardList';
-
-<DocCardList />
+## Available destinations
 
 If you can't find your desired destination, you
 can&nbsp;<Link to="https://github.com/elbwalker/walkerOS/issues/new?assignees=&labels=&template=feature_request.md&title=">request
 it</Link>.
+
+import DocCardList from '@theme/DocCardList';
+
+<DocCardList />

@@ -1,10 +1,11 @@
 # Meta Pixel (former Facebook Pixel) web destination for walkerOS
 
 Made to be used with
-[@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
+[walker.js](https://www.npmjs.com/package/@elbwalker/walker.js) from
+[walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the
-[documentation](https://docs.elbwalker.com/).
+[documentation](https://www.elbwalker.com/docs/destinations/web/meta-pixel).
 
 ## 🤓 Usage
 
@@ -13,33 +14,28 @@ Destinations can be used via node or directly in the browser.
 
 ## Configuration
 
-```ts
-import { DestinationMeta } from '@elbwalker/destination-web-meta-pixel';
+Learn more about the
+[destinations](https://www.elbwalker.com/docs/destinations/) in general and read
+the detailled
+[Meta Pixel configuration](https://www.elbwalker.com/docs/destinations/web/meta-pixel#configuration).
 
-const config /* : DestinationMeta.Config */ = {
-  // consent: { marketing: true }, // Neccessary consent states
+```js
+const config = {
   custom: {
-    pixelId: '1234567890', // The ads accounts id used for every conversion
-    // currency: 'EUR', // Default currency is EUR
-    // pageview: true, // Send the PageView event (default yes, deactivate actively)
+    pixelId: '1234567890',
+    currency: 'EUR',
+    pageview: true,
   },
-  // init: true, // Skip the initialisation
-  // loadScript: true, // Load additional required scripts on init
   mapping: {
     // e.g. order
     entity: {
       // e.g. complete
       action: {
         custom: {
-          track: 'Purchase', // Name of a standard event to track
-          // id: 'data.order_id', // For content_ids, use * for arrays like "nested.*.quantity"
-          // name: 'data.title', // Key to use as content_name
-          contents: {
-            // Both, id and quantity are required
-            id: "data.id", // { key: "data.id", default: "unknown" }
-            quantity: "data.quantity", // or { key: "nested.0.quantity", default: 1 }
-          }
-          value: 'revenue', // Key to use for value
+          id: 'data.id',
+          name: 'data.title',
+          track: 'Purchase',
+          value: 'data.revenue',
         },
       },
     },
@@ -58,28 +54,6 @@ import { elb } from '@elbwalker/walker.js';
 import destinationMetaPixel from '@elbwalker/destination-web-meta-pixel';
 
 elb('walker destination', destinationMetaPixel, config);
-```
-
-### Browser usage
-
-Loading the destination via dynamic import
-
-```html
-<script>
-  // Make sure to initialize the elb function once.
-  function elb() {
-    (window.elbLayer = window.elbLayer || []).push(arguments);
-  }
-
-  // Upload the dist/index.mjs on your own server
-  const destination = (
-    await import(
-      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-meta-pixel/dist/index.mjs'
-    )
-  ).default;
-
-  elb('walker destination', destination, config);
-</script>
 ```
 
 ## Contribute

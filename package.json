@@ -25,7 +25,6 @@
     "@elbwalker/tsconfig": "*",
     "@elbwalker/tsup": "*",
     "@elbwalker/types": "*",
-    "@elbwalker/utils": "*",
     "eslint-config-custom": "*",
     "turbo": "^1.11.3",
     "typescript": "^5.3.3"

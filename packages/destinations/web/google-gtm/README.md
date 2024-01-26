@@ -1,8 +1,11 @@
 # Google Tag Manager (GTM) web destination for walkerOS
 
-Made to be used with [@elbwalker/walkerOS](https://github.com/elbwalker/walkerOS).
+Made to be used with
+[walker.js](https://www.npmjs.com/package/@elbwalker/walker.js) from
+[walkerOS](https://github.com/elbwalker/walkerOS).
 
-More detailed information and examples can be found in the [documentation](https://docs.elbwalker.com/).
+More detailed information and examples can be found in the
+[documentation](https://www.elbwalker.com/docs/destinations/web/google-gtm).
 
 ## 🤓 Usage
 
@@ -11,18 +14,18 @@ Destinations can be used via node or directly in the browser.
 
 ## Configuration
 
-```ts
-import { DestinationGoogleGTM } from '@elbwalker/destination-web-google-gtm';
+Learn more about the
+[destinations](https://www.elbwalker.com/docs/destinations/) in general and read
+the detailled
+[Google Tag Manager configuration](https://www.elbwalker.com/docs/destinations/web/google-gtm#configuration).
 
-const config /* : DestinationGoogleGTM.Config */ = {
-  // consent: { functional: true }, // Neccessary consent states
-  // custom: {
-  //   containerId: "GTM-XXXXXXX", // The published container id
-  //   dataLayer: "dataLayer", // Name of the dataLayer array
-  //   domain: "https://www.googletagmanager.com/gtm.js?id="; // Source domain
-  // },
-  // init: true, // Skip the initialisation
-  // mapping: { '*': { '*': {} } }, // Process all events
+```js
+const config = {
+  custom: {
+    containerId: "GTM-XXXXXXX",
+    dataLayer: "dataLayer",
+    domain: "https://www.googletagmanager.com/gtm.js?id=";
+  },
 };
 ```
 
@@ -39,28 +42,9 @@ import destinationGoogleGTM from '@elbwalker/destination-web-google-gtm';
 elb('walker destination', destinationGoogleGTM, config);
 ```
 
-### Browser usage
-
-Loading the destination via dynamic import
-
-```html
-<script>
-  // Make sure to initialize the elb function once.
-  function elb() {
-    (window.elbLayer = window.elbLayer || []).push(arguments);
-  }
-
-  // Upload the dist/index.mjs on your own server
-  const destination = (
-    await import(
-      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-gtm/dist/index.mjs'
-    )
-  ).default;
-
-  elb('walker destination', destination, config);
-</script>
-```
-
 ## Contribute
 
-Feel free to contribute by submitting an [issue](https://github.com/elbwalker/walkerOS/issues), starting a [discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in [contact](https://calendly.com/elb-alexander/30min).
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in
+[contact](https://calendly.com/elb-alexander/30min).

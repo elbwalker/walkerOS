@@ -8,11 +8,14 @@ description:
 import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import PackageLink from '/src/components/docs/package-link';
+
+<PackageLink github="packages/utils" npm="@elbwalker/utils" />
 
 Utils are re-usable functions to standardize and simplify tracking setups. They
-vary from simple functions like&nbsp;<Link to="helper">`getId`</Link> to
-more complex ones like&nbsp;<Link to="session">`sessionStart`</Link>. They are
-used in walkerOS itself and can be used in custom tracking setups as well.
+vary from simple functions like&nbsp;<Link to="helper">`getId`</Link> to more
+complex ones like&nbsp;<Link to="session">`sessionStart`</Link>. They are used
+in walkerOS itself and can be used in custom tracking setups as well.
 
 Simple functions are grouped on the&nbsp;<Link to="helper">Helper</Link> page,
 more complex ones have their own pages.
@@ -40,21 +43,15 @@ can be used in older browsers as well as the GTM.
     ```
   </TabItem>
   <TabItem value="module" label="Module">
-    
     Load the `.mjs` module-file directly from the CDN or your own server.
-    
     ```html
     <script type="module">
-      const Utils = (
-        await import(
-          'https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/index.mjs'
-        )
-      );
-      
+      const Utils = ( await import(
+      'https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/index.mjs' ) );
       console.log('id', Utils.getId())
     </script>
     ```
-</TabItem>
+  </TabItem>
 </Tabs>
 :::info
 

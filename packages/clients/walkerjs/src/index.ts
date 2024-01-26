@@ -23,7 +23,7 @@ export { elb } from './lib/trigger';
 export function webClient(
   customConfig: Partial<WebClient.Config> = {},
 ): WebClient.Function {
-  const client = '2.0.0';
+  const client = '2.0.1';
   const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
   const staticGlobals = customConfig.globals || {};
   const config = getConfig(customConfig);
@@ -208,6 +208,7 @@ export function webClient(
   ): WebClient.Config {
     const defaultConfig: WebClient.Config = {
       allowed: false, // Wait for explicit run command to start
+      client, // Client version
       consent: {}, // Handle the consent states
       custom: {}, // Custom state support
       count: 0, // Event counter for each run

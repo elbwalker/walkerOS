@@ -1,12 +1,11 @@
 import webClient, { type WebClient } from '@elbwalker/walker.js';
-import type { Function, Config } from './types';
+import type { Function, Config, Transform } from './types';
 
 describe('Destination API', () => {
   const w = window;
   let elbwalker: WebClient.Function, destination: Function, config: Config;
 
-  const mockFn = jest.fn(); //.mockImplementation(console.log);
-  const mockFetch = jest.fn();
+  const mockFetch = jest.fn(); //.mockImplementation(console.log);
   const mockBeacon = jest.fn();
   const mockXHROpen = jest.fn();
   const mockXHRSend = jest.fn();
@@ -109,5 +108,33 @@ describe('Destination API', () => {
 
     const sentPayload = JSON.parse(mockXHRSend.mock.calls[0][0]);
     expect(sentPayload).toEqual(expect.objectContaining({ event }));
+  });
+
+  test('transform event', () => {
+    const eventName = 'event update';
+
+    // Define a custom transform function
+    const transform: Transform = jest.fn((event) => {
+      return `${event.entity},transformed`;
+    });
+
+    elbwalker.push('walker destination', destination, {
+      custom: { url, transform },
+    });
+
+    elbwalker.push(eventName);
+
+    // Verify that the transform function is called with the correct event
+    expect(transform).toHaveBeenCalledWith(
+      expect.objectContaining({ event: eventName }),
+      expect.any(Object),
+      undefined,
+    );
+
+    // Verify that fetch is called with the updated body
+    expect(mockFetch).toHaveBeenCalledWith(
+      url,
+      expect.objectContaining({ body: 'event,transformed' }),
+    );
   });
 });

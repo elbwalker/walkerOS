@@ -4,6 +4,9 @@ description: How to send events to Plausible Analytics with walker.js
 ---
 
 import PackageLink from '/src/components/docs/package-link';
+import Link from '@docusaurus/Link';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 <PackageLink
   github="packages/destinations/web/plausible"
@@ -15,29 +18,43 @@ Google Analytics Alternative.
 
 ## Configuration
 
-Start by setting up the config for the destination. Optional fields as comments.
-Destinations can be used via node or directly in the browser.
+Start by setting up the config for the destination. Destinations can be used via
+node or directly in the browser.
 
 ```js
-import { DestinationPlausible } from '@elbwalker/destination-web-plausible';
-
-const config: DestinationPlausible.Config = {
-  // consent: { marketing: true }, // Neccessary consent states
-  // custom: {
-  //   domain: 'elbwalker.com'; // Name of the domain to be tracked
-  // },
-  // init: true, // Skip the initialisation
-  // loadScript: true, // Load additional required scripts on init
-  // mapping: {
-  //   '*': { '*': {} }, // Process all events
-  //   page: { view: { name: 'pageview' } }, // Set up pageview event
-  // },
+const config = {
+  custom: {
+    domain: 'elbwalker.com', // Optional, domain of your site as registered
+  },
 };
 ```
 
-### Node usage
+### CustomConfig
+
+| Property | Type   | Description                                        |
+| -------- | ------ | -------------------------------------------------- |
+| domain   | string | The domain of your site as registered in Plausible |
+
+## How to use
+
+Define the configuration for your Plausible Analytics destination:
 
 ```js
+const config = {
+  custom: {
+    domain: 'yourdomain.com',
+  },
+};
+```
+
+Choose one of the following&nbsp;<Link to="../web#installation">installation
+options</Link> to use the destination:
+
+<Tabs>
+  <TabItem value="ts" label="TypeScript" default>
+Install the destination via npm
+
+```shell
 npm i --save @elbwalker/destination-web-plausible
 ```
 
@@ -48,17 +65,13 @@ import destinationPlausible from '@elbwalker/destination-web-plausible';
 elb('walker destination', destinationPlausible, config);
 ```
 
-### Browser usage
+  </TabItem>
+  <TabItem value="script" label="Script">
 
 Loading the destination via dynamic import
 
 ```html
 <script>
-  // Make sure to initialize the elb function once.
-  function elb() {
-    (window.elbLayer = window.elbLayer || []).push(arguments);
-  }
-
   // Upload the dist/index.mjs on your own server
   const destination = (
     await import(
@@ -69,3 +82,19 @@ Loading the destination via dynamic import
   elb('walker destination', destination, config);
 </script>
 ```
+
+  </TabItem>
+  <TabItem value="code" label="Code">
+Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-plausible@latest/dist/index.browser.js">index.browser.js</Link> file
+
+```js
+(function () {
+  'use strict';
+  var Destination = (() => {})(); // This is the copied code
+
+  elb('walker destination', Destination.default, config);
+})();
+```
+
+  </TabItem>
+</Tabs>

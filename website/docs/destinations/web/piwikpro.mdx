@@ -4,6 +4,9 @@ description: How to send events to Piwik PRO with walker.js
 ---
 
 import PackageLink from '/src/components/docs/package-link';
+import Link from '@docusaurus/Link';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 <PackageLink
   github="packages/destinations/web/piwikpro"
@@ -20,25 +23,20 @@ customer data safe.
 
 ## Configuration
 
-Start by setting up the config for the destination. Optional fields as comments.
-Destinations can be used via node or directly in the browser.
+Start by setting up the config for the destination. Destinations can be used via
+node or directly in the browser.
 
 ```js
-import { DestinationPiwikPro } from '@elbwalker/destination-web-piwikpro';
-
-const config /* : DestinationPiwikPro.Config */ = {
-  // consent: { marketing: true }, // Neccessary consent states
+const config = {
   custom: {
     appId: 'XXX-XXX-XXX-XXX-XXX', // Id of the site
     // linkTracking: false, // Disable download and outlink tracking
     // pageview: false, // Disable default pageview events
     url: 'https://your_account_name.piwik.pro/', // Same address as the login
   },
-  // init: true, // Skip the initialisation
-  // loadScript: true, // Load additional required scripts on init
   mapping: {
-    '*': {
-      '*': {
+    entity: {
+      action: {
         custom: {
           // CustomEventConfig
           goalId: 'xxx-xxx-...', // Count the event as a goal
@@ -52,12 +50,49 @@ const config /* : DestinationPiwikPro.Config */ = {
 };
 ```
 
-Use the `string-dot` notation (`data.id`, `user.id`, `group`,
-`context.position.0`) to access all values of an event.
+### CustomConfig
 
-### Node usage
+| Property     | Type    | Description                                    |
+| ------------ | ------- | ---------------------------------------------- |
+| appId\*      | string  | ID of the Piwik PRO site                       |
+| url\*        | string  | The URL of your Piwik PRO account              |
+| linkTracking | boolean | Enables/Disables download and outlink tracking |
+| pageview     | boolean | Enables/Disables default pageview events       |
+
+Properties with a `*` are required.
+
+### CustomEventConfig
+
+For custom event mapping (`mapping.entity.action.custom`):
+
+| Property  | Type   | Description                             |
+| --------- | ------ | --------------------------------------- |
+| goalId    | string | ID to count the event as a goal         |
+| goalValue | string | Property to be used as the goal value   |
+| name      | string | Custom name for the event               |
+| value     | string | Property to be used for the event value |
+
+## How to use
+
+Define the config for your Piwik PRO destination:
 
 ```js
+const config = {
+  custom: {
+    appId: 'XXX-XXX-XXX-XXX-XXX',
+    url: 'https://your_account_name.piwik.pro/',
+  },
+};
+```
+
+Choose one of the following&nbsp;<Link to="../web#installation">installation
+options</Link> to use the destination:
+
+<Tabs>
+  <TabItem value="ts" label="TypeScript" default>
+Install the destination via npm
+
+```shell
 npm i --save @elbwalker/destination-web-piwikpro
 ```
 
@@ -68,17 +103,13 @@ import destinationPiwikPro from '@elbwalker/destination-web-piwikpro';
 elb('walker destination', destinationPiwikPro, config);
 ```
 
-### Browser usage
+  </TabItem>
+  <TabItem value="script" label="Script">
 
 Loading the destination via dynamic import
 
 ```html
 <script>
-  // Make sure to initialize the elb function once.
-  function elb() {
-    (window.elbLayer = window.elbLayer || []).push(arguments);
-  }
-
   // Upload the dist/index.mjs on your own server
   const destination = (
     await import(
@@ -89,3 +120,19 @@ Loading the destination via dynamic import
   elb('walker destination', destination, config);
 </script>
 ```
+
+  </TabItem>
+  <TabItem value="code" label="Code">
+Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-piwikpro@latest/dist/index.browser.js">index.browser.js</Link> file
+
+```js
+(function () {
+  'use strict';
+  var Destination = (() => {})(); // This is the copied code
+
+  elb('walker destination', Destination.default, config);
+})();
+```
+
+  </TabItem>
+</Tabs>
