@@ -12,6 +12,10 @@ export interface SessionStart {
   url?: string;
 }
 
+export interface SessionStorage extends SessionStart {
+  length?: number;
+}
+
 export function sessionStart(config: SessionStart = {}) {
   return sessionStartOrg(config, {
     getId,
