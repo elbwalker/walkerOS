@@ -20,13 +20,13 @@ export default defineConfig([
   // Core and Web files
   {
     ...config,
-    entry: ['src/core/*', 'src/web/*'],
+    entry: ['src/core/*', 'src/web/**/*.ts'],
     format: ['cjs', 'esm'],
   },
   // Browser
   {
     ...config,
-    entry: ['src/index.ts', 'src/core/*', 'src/web/*'],
+    entry: ['src/index.ts', 'src/core/*', 'src/web/**/*.ts'],
     format: ['iife'],
     globalName,
     outExtension() {
@@ -36,7 +36,7 @@ export default defineConfig([
   // Web ES5 files
   {
     ...config,
-    entry: ['src/index.ts', 'src/core/*', 'src/web/*'],
+    entry: ['src/index.ts', 'src/core/*', 'src/web/**/*.ts'],
     format: ['iife'],
     globalName,
     outExtension() {

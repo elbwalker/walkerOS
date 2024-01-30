@@ -1,6 +1,6 @@
 import { sessionStart } from '../..';
 
-describe('Utils sessionStart', () => {
+describe('Utils Session', () => {
   const w = window;
 
   beforeEach(() => {

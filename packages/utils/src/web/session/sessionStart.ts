@@ -1,8 +1,13 @@
-import { Utils, WalkerOS } from '@elbwalker/types';
-import { getId, getMarketingParameters } from '..';
+import { getId, getMarketingParameters } from '../../';
+import type { SessionStart } from '.';
+import type { WalkerOS } from '@elbwalker/types';
 
-export function sessionStart(
-  config: Utils.SessionStart = {},
+export default function sessionStart(
+  config: SessionStart = {},
+  utils: {
+    getId: typeof getId;
+    getMarketingParameters: typeof getMarketingParameters;
+  },
 ): WalkerOS.Properties | false {
   // Force a new session or start checking if it's a regular new one
   let isNew = config.isNew || false;
@@ -23,7 +28,7 @@ export function sessionStart(
   const session: WalkerOS.Properties = {};
 
   // Marketing
-  const marketing = getMarketingParameters(url, config.parameters);
+  const marketing = utils.getMarketingParameters(url, config.parameters);
   if (Object.keys(marketing).length) {
     // Check for marketing parameters like UTM and add existing
     session.marketing = true; // Flag as a marketing session
@@ -48,7 +53,7 @@ export function sessionStart(
   Object.assign(
     session,
     {
-      id: session.id || getId(12),
+      id: session.id || utils.getId(12),
     },
     marketing,
     config.data,
