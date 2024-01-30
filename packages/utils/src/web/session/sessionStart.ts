@@ -1,14 +1,13 @@
 import { getId, getMarketingParameters } from '../../';
-import type { SessionStart } from '.';
-import type { WalkerOS } from '@elbwalker/types';
+import type { SessionData, SessionStartConfig } from '.';
 
 export default function sessionStart(
-  config: SessionStart = {},
+  config: SessionStartConfig = {},
   utils: {
     getId: typeof getId;
     getMarketingParameters: typeof getMarketingParameters;
   },
-): WalkerOS.Properties | false {
+): SessionData | false {
   // Force a new session or start checking if it's a regular new one
   let isNew = config.isNew || false;
 
@@ -25,13 +24,15 @@ export default function sessionStart(
   const url = new URL(config.url || window.location.href);
   const ref = config.referrer || document.referrer;
   const referrer = ref && new URL(ref).hostname;
-  const session: WalkerOS.Properties = {};
 
   // Marketing
   const marketing = utils.getMarketingParameters(url, config.parameters);
   if (Object.keys(marketing).length) {
     // Check for marketing parameters like UTM and add existing
-    session.marketing = true; // Flag as a marketing session
+    if (!marketing.marketing)
+      // Flag as a marketing session without overwriting
+      marketing.marketing = true;
+
     isNew = true;
   }
 
@@ -46,19 +47,17 @@ export default function sessionStart(
     isNew = !domains.includes(referrer);
   }
 
-  // No new session
-  if (!isNew) return false;
-
-  if (referrer) session.referrer = referrer;
-  Object.assign(
-    session,
-    {
-      id: session.id || utils.getId(12),
-    },
-    marketing,
-    config.data,
-  );
-
-  // It's a new session, moin
-  return session;
+  return isNew
+    ? // It's a new session, moin
+      Object.assign(
+        {
+          start: Date.now(),
+          id: utils.getId(12),
+          referrer,
+        },
+        marketing,
+        config.data,
+      )
+    : // No new session
+      false;
 }
