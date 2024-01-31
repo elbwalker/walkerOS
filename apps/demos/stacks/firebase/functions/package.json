@@ -14,6 +14,7 @@
   },
   "main": "dist/index.js",
   "dependencies": {
+    "@elbwalker/client-node": "*",
     "@elbwalker/destination-node-bigquery": "*",
     "@elbwalker/stack-firebase": "*",
     "firebase-admin": "^11.8.0",
@@ -29,6 +30,7 @@
     "eslint-config-google": "^0.14.0",
     "eslint-plugin-import": "^2.25.4",
     "firebase-functions-test": "^3.1.0",
+    "firebase-tools": "^13.1.0",
     "rollup": "^4.9.2",
     "rollup-plugin-typescript2": "^0.36.0",
     "typescript": "^4.9.5"
