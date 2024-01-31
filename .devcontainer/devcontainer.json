@@ -30,6 +30,12 @@
 	"portsAttributes": {
 		"3000": {
 			"label": "3000 - website"
+		},
+		"5173": {
+			"label": "8080 - apps/demo/tagging"
+		},
+		"8080": {
+			"label": "5173 - apps/demo/react"
 		}
 	}
 
