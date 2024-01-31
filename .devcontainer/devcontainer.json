@@ -6,7 +6,8 @@
 	"image": "mcr.microsoft.com/devcontainers/typescript-node:latest",
 	"features": {
 		"ghcr.io/devcontainers-contrib/features/jest:2": {},
-		"ghcr.io/devcontainers-contrib/features/turborepo-npm:1": {}
+		"ghcr.io/devcontainers-contrib/features/turborepo-npm:1": {},
+		"ghcr.io/devcontainers-contrib/features/http-server:1": {}
 	},
 	"customizations": {
 		"vscode": {
@@ -25,7 +26,12 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "npm install"
+	"postCreateCommand": "npm install",
+	"portsAttributes": {
+		"3000": {
+			"label": "3000 - website"
+		}
+	}
 
 	// Configure tool-specific properties.
 	// "customizations": {},
