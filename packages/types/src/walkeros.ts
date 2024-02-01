@@ -28,7 +28,7 @@ export interface Elb {
   ): void;
 }
 
-export type PushData = Partial<Config> | Consent | String | User | Properties;
+export type PushData = string | Partial<Config> | Consent | User | Properties;
 
 export type PushOptions = Hooks.Function;
 

@@ -38,7 +38,7 @@ export default function sessionStart(
 
   // Referrer
   if (!isNew) {
-    // Small chance of multiple unintendet events for same users
+    // Small chance of multiple unintended events for same users
     // https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding
     // Use domains: [''] to disable direct or hidden referrer
 
