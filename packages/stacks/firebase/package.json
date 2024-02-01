@@ -20,10 +20,10 @@
     "test": "jest --colors --coverage"
   },
   "dependencies": {
+    "@elbwalker/client-node": "*",
     "firebase-functions": "^4.4.1"
   },
   "devDependencies": {
-    "@elbwalker/client-node": "*",
     "@elbwalker/types": "*",
     "@elbwalker/utils": "*"
   },
