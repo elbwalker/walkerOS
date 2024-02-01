@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import type { WebClient } from '../types';
 import webClient from '../';
 import { Trigger, elb } from '../lib/trigger';
@@ -40,13 +41,13 @@ describe('Trigger', () => {
   });
 
   test('elb', () => {
-    w.elbLayer = undefined as any;
+    w.elbLayer = undefined as never;
     elb('e a');
-    expect(w.elbLayer).toBeDefined;
+    expect(w.elbLayer).toBeDefined();
 
     w.elbLayer.push = mockFn;
     elb('e a');
-    expect(mockFn).toBeCalledWith(expect.objectContaining(['e a']));
+    expect(mockFn).toHaveBeenCalledWith(expect.objectContaining(['e a']));
   });
 
   test('init global', () => {
@@ -330,7 +331,7 @@ describe('Trigger', () => {
   });
 
   test('scroll', () => {
-    // New instance without cached scrollIstener
+    // New instance without cached scroll listener
     w.elbLayer = [];
     const webClient = jest.requireActual('../').default;
     walkerjs = webClient({ default: true });
@@ -382,7 +383,7 @@ describe('Trigger', () => {
 
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'scoll 80percent',
+        event: 'scroll 80percent',
         trigger: Trigger.Scroll,
       }),
     );
@@ -401,7 +402,7 @@ describe('Trigger', () => {
           observe: mockObserve,
           unobserve: mockUnobserve,
           disconnect: mockDisconnect,
-        }) as unknown as IntersectionObserver,
+        } as unknown as IntersectionObserver),
     );
 
     // mock isVisible to return true
@@ -422,7 +423,7 @@ describe('Trigger', () => {
     const [observer] = (window.IntersectionObserver as jest.Mock).mock.calls[0];
 
     // Check for disconnection to prevent double listens
-    expect(mockDisconnect).toBeCalled();
+    expect(mockDisconnect).toHaveBeenCalledWith();
 
     jest.clearAllMocks();
     expect(setTimeout).toHaveBeenCalledTimes(0);
