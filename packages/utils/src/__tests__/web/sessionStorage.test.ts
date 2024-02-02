@@ -160,5 +160,24 @@ describe('SessionStorage', () => {
     );
   });
 
-  test('Session update options', () => {});
+  test('Session update options', () => {
+    sessionStorage({}, utils);
+    expect(mockStorageWrite).toHaveBeenCalledWith(
+      'elbSessionId',
+      expect.any(String),
+      30,
+      'local',
+    );
+
+    sessionStorage(
+      { sessionAge: 5, sessionKey: 'foo', sessionStorage: 'session' },
+      utils,
+    );
+    expect(mockStorageWrite).toHaveBeenCalledWith(
+      'foo',
+      expect.any(String),
+      5,
+      'session',
+    );
+  });
 });
