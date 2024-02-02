@@ -22,7 +22,8 @@ export default function sessionStorage(
   const now = Date.now();
   const length = config.length || 30; // Default session length in minutes
   const sessionKey = config.sessionKey || 'elbSessionId';
-  const sessionStorage = config.sessionStorage;
+  const sessionStorage = config.sessionStorage || 'local';
+  // const sessionAge = config.sessionAge || 30; // Default session age in days
 
   // Check for an existing session
   const existingSession: Partial<SessionStorageData> | undefined =
