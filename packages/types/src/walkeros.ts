@@ -116,10 +116,10 @@ export type PropertyType = boolean | string | number;
 
 export type Property = PropertyType | Array<PropertyType>;
 export interface Properties {
-  [key: string]: Property;
+  [key: string]: Property | undefined;
 }
 export interface OrderedProperties {
-  [key: string]: [Property, number];
+  [key: string]: [Property, number] | undefined;
 }
 
 export type Entities = Array<Entity>;
