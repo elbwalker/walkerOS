@@ -26,6 +26,7 @@ export default function sessionStorage(
       const existingSession = JSON.parse(String(utils.storageRead(key)));
 
       // By default it's not a new session anymore
+      existingSession.firstVisit = false;
       existingSession.isNew = false;
       existingSession.runs++;
 
@@ -50,7 +51,7 @@ export default function sessionStorage(
       start,
       updated: start,
       isNew: true,
-      firstVisit: false,
+      firstVisit: true,
       count: 1,
       runs: 1,
     },
