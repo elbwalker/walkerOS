@@ -180,4 +180,18 @@ describe('SessionStorage', () => {
       'session',
     );
   });
+
+  test('Session default data', () => {
+    const session = sessionStorage(
+      { data: { foo: 'bar', count: 9001 } },
+      utils,
+    );
+
+    expect(session).toStrictEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        count: 9001,
+      }),
+    );
+  });
 });
