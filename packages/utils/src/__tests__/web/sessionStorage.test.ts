@@ -101,4 +101,26 @@ describe('SessionStorage', () => {
     // Id should be different to previous session
     expect(newSession.id).toHaveLength(12);
   });
+
+  test('Storage Session Key', () => {
+    sessionStorage({}, utils);
+    expect(mockStorageRead).toHaveBeenCalledWith('elbSessionId', undefined);
+
+    sessionStorage({ sessionKey: 'customKey' }, utils);
+    expect(mockStorageRead).toHaveBeenCalledWith('customKey', undefined);
+  });
+
+  test('Storage error', () => {
+    mockStorageRead.mockReturnValue('invalid');
+    expect(sessionStorage({}, utils)).toStrictEqual({
+      id: expect.any(String),
+      start: expect.any(Number),
+      updated: expect.any(Number),
+      isNew: true,
+      firstVisit: true,
+      referrer: '',
+      count: 1,
+      runs: 1,
+    });
+  });
 });

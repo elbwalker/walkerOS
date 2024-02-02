@@ -1,4 +1,5 @@
 import {
+  StorageType,
   getId,
   getMarketingParameters,
   storageRead,
@@ -20,11 +21,15 @@ export default function sessionStorage(
 ): SessionStorageData {
   const now = Date.now();
   const length = config.length || 30; // Default session length in minutes
+  const sessionKey = config.sessionKey || 'elbSessionId';
+  const sessionStorage = config.sessionStorage;
 
   // Check for an existing session
   const existingSession: Partial<SessionStorageData> | undefined =
-    utils.tryCatch((key: string) => {
-      const existingSession = JSON.parse(String(utils.storageRead(key)));
+    utils.tryCatch((key: string, storage?: StorageType) => {
+      const existingSession = JSON.parse(
+        String(utils.storageRead(key, storage)),
+      );
 
       // By default it's not a new session anymore
       existingSession.firstVisit = false;
@@ -46,7 +51,7 @@ export default function sessionStorage(
       existingSession.updated = now; // Update session timestamp
 
       return existingSession;
-    })('session');
+    })(sessionKey, sessionStorage);
 
   // Default session data
   let session: SessionStorageData = {

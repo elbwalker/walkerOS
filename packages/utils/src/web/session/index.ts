@@ -7,7 +7,7 @@ import {
   storageWrite,
   tryCatch,
 } from '../../';
-import type { MarketingParameters } from '../../';
+import type { MarketingParameters, StorageType } from '../../';
 import type { WalkerOS } from '@elbwalker/types';
 
 export interface SessionData extends WalkerOS.Properties {
@@ -34,7 +34,10 @@ export interface SessionStartConfig {
 }
 
 export interface SessionStorageConfig extends SessionStartConfig {
-  // @TODO add storage keys
+  sessionKey?: string;
+  sessionStorage?: StorageType; // @TODO
+  deviceKey?: string;
+  deviceStorage?: StorageType; // @TODO
   length?: number; // Minutes after last update to consider session as expired (default: 30)
 }
 
@@ -50,7 +53,7 @@ export function sessionStart(config: SessionStartConfig = {}) {
   });
 }
 
-export function sessionStorage(config: SessionStorageConfig = {}) {
+export function sessionStorage(config?: SessionStorageConfig) {
   return sessionStorageOrg(config, {
     getId,
     getMarketingParameters,
