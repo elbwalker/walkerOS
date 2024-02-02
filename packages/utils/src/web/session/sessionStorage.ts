@@ -26,6 +26,7 @@ export default function sessionStorage(
       const existingSession = JSON.parse(String(utils.storageRead(key)));
 
       // By default it's not a new session anymore
+      existingSession.updated = start;
       existingSession.firstVisit = false;
       existingSession.isNew = false;
       existingSession.runs++;
@@ -62,7 +63,7 @@ export default function sessionStorage(
   config.isNew = session.isNew;
 
   // Eventually add id, referrer and marketing parameters
-  session = Object.assign(session, sessionStart(config, utils) || {});
+  session = Object.assign(sessionStart(config, utils) || {}, session);
 
   // @TODO Write (updated) session to storage
 

@@ -1,13 +1,11 @@
 import { sessionStart } from '../..';
 
-describe.skip('SessionStart', () => {
+describe('SessionStart', () => {
   const w = window;
   const url = 'https://www.elbwalker.com/';
   const referrer = 'https://www.example.com/';
 
   beforeEach(() => {
-    // reset DOM with event listeners etc.
-    document.body = document.body.cloneNode() as HTMLElement;
     Object.defineProperty(w, 'performance', {
       value: {
         getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
