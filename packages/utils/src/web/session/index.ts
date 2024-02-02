@@ -35,8 +35,8 @@ export interface SessionStartConfig {
 
 export interface SessionStorageConfig extends SessionStartConfig {
   sessionKey?: string;
-  sessionStorage?: StorageType; // @TODO
-  deviceKey?: string;
+  sessionStorage?: StorageType;
+  deviceKey?: string; // @TODO
   deviceStorage?: StorageType; // @TODO
   length?: number; // Minutes after last update to consider session as expired (default: 30)
 }

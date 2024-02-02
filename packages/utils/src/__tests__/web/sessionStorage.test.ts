@@ -102,12 +102,15 @@ describe('SessionStorage', () => {
     expect(newSession.id).toHaveLength(12);
   });
 
-  test('Storage Session Key', () => {
+  test('Storage Session Options', () => {
     sessionStorage({}, utils);
     expect(mockStorageRead).toHaveBeenCalledWith('elbSessionId', undefined);
 
     sessionStorage({ sessionKey: 'customKey' }, utils);
     expect(mockStorageRead).toHaveBeenCalledWith('customKey', undefined);
+
+    sessionStorage({ sessionStorage: 'local' }, utils);
+    expect(mockStorageRead).toHaveBeenCalledWith('elbSessionId', 'local');
   });
 
   test('Storage error', () => {
