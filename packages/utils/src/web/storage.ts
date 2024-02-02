@@ -90,7 +90,7 @@ export function storageWrite(
   const stringifiedItem = JSON.stringify(item);
 
   switch (storage) {
-    case Const.Utils.Storage.Cookie:
+    case Const.Utils.Storage.Cookie: {
       let cookie = `${key}=${encodeURIComponent(value)}; max-age=${
         maxAgeInMinutes * 60
       }; path=/; SameSite=Lax; secure`;
@@ -99,6 +99,7 @@ export function storageWrite(
 
       document.cookie = cookie;
       break;
+    }
     case Const.Utils.Storage.Local:
       window.localStorage.setItem(key, stringifiedItem);
       break;
