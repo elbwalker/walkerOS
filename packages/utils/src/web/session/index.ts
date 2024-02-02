@@ -10,11 +10,10 @@ import {
 import type { MarketingParameters } from '../../';
 import type { WalkerOS } from '@elbwalker/types';
 
-export interface SessionData {
+export interface SessionData extends WalkerOS.Properties {
   id: string; // Session ID
   start: number; // Timestamp of session start
   marketing?: true; // If the session was started by a marketing parameters
-  // [key: string]: WalkerOS.Property // @TODO (custom) campaign parameters?
 }
 
 export interface SessionStorageData extends SessionData {
@@ -36,7 +35,7 @@ export interface SessionStartConfig {
 
 export interface SessionStorageConfig extends SessionStartConfig {
   // @TODO add storage keys
-  length?: number; // Minutes after last update to consider session as expired
+  length?: number; // Minutes after last update to consider session as expired (default: 30)
 }
 
 export interface SessionStorage extends SessionStorageData {

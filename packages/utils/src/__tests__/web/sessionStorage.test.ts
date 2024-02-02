@@ -40,7 +40,7 @@ describe('SessionStorage', () => {
     });
   });
 
-  test('Existing session', () => {
+  test('Existing active session', () => {
     const start = Date.now();
     const session = {
       id: 'sessionId',
@@ -65,5 +65,40 @@ describe('SessionStorage', () => {
       firstVisit: false,
       runs: 2,
     });
+  });
+
+  test('Existing expired session', () => {
+    let now = Date.now();
+    const yesterday = now - 1000 * 60 * 60 * 24; // 24 hours ago
+    const session = {
+      id: 'sessionId',
+      start: yesterday,
+      referrer: 'org',
+      updated: yesterday,
+      isNew: false,
+      firstVisit: true,
+      count: 1,
+      runs: 1,
+    };
+
+    mockStorageRead.mockReturnValue(JSON.stringify(session));
+    jest.advanceTimersByTime(1000);
+    now += 1000;
+
+    const newSession = sessionStorage({ length: 1 }, utils);
+
+    expect(newSession).toStrictEqual(
+      expect.objectContaining({
+        start: now,
+        updated: now,
+        isNew: true,
+        firstVisit: false,
+        count: 2,
+        runs: 1,
+      }),
+    );
+
+    // Id should be different to previous session
+    expect(newSession.id).toHaveLength(12);
   });
 });
