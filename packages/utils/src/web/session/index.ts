@@ -28,6 +28,7 @@ export interface SessionStartConfig {
   data?: WalkerOS.Properties;
   domains?: string[];
   isNew?: boolean;
+  // firstVisit?
   parameters?: MarketingParameters;
   referrer?: string;
   url?: string;
