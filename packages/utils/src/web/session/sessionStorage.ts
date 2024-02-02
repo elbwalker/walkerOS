@@ -23,7 +23,7 @@ export default function sessionStorage(
   const length = config.length || 30; // Default session length in minutes
   const sessionKey = config.sessionKey || 'elbSessionId';
   const sessionStorage = config.sessionStorage || 'local';
-  // const sessionAge = config.sessionAge || 30; // Default session age in days
+  const sessionAge = config.sessionAge || 30; // Default session age in minutes
 
   // Check for an existing session
   const existingSession: Partial<SessionStorageData> | undefined =
@@ -71,7 +71,13 @@ export default function sessionStorage(
   // Eventually update session with id, referrer and marketing parameters
   session = Object.assign(session, sessionStart(config, utils));
 
-  // @TODO Write (updated) session to storage
+  // Write (updated) session to storage
+  utils.storageWrite(
+    sessionKey,
+    JSON.stringify(session),
+    sessionAge,
+    sessionStorage,
+  );
 
   return session;
 }

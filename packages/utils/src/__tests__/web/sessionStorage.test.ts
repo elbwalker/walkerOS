@@ -126,4 +126,39 @@ describe('SessionStorage', () => {
       runs: 1,
     });
   });
+
+  test('Session write to storage', () => {
+    const session = {
+      id: 'sessionId',
+      start: Date.now(),
+      referrer: 'org',
+      updated: Date.now(),
+      isNew: false,
+      firstVisit: true,
+      count: 1,
+      runs: 1,
+    };
+
+    jest.advanceTimersByTime(1000);
+    mockStorageRead.mockReturnValue(JSON.stringify(session));
+
+    sessionStorage({}, utils);
+    expect(mockStorageWrite).toHaveBeenCalledWith(
+      'elbSessionId',
+      expect.any(String),
+      30,
+      'local',
+    );
+    const obj = JSON.parse(mockStorageWrite.mock.calls[0][1]);
+    expect(obj).toStrictEqual(
+      expect.objectContaining({
+        start: session.start, // Still the same
+        updated: session.updated + 1000, // Updated timestamp
+        firstVisit: false, // Not longer first visit
+        runs: 2, // Increased number of runs
+      }),
+    );
+  });
+
+  test('Session update options', () => {});
 });
