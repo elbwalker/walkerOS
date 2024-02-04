@@ -99,7 +99,7 @@ export function getEvents(
       const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
 
       // Get matching properties from the element and its parents
-      let [data, context] = getThisAndParentProperties(
+      const [data, context] = getThisAndParentProperties(
         target,
         entitySelector,
         prefix,
@@ -155,11 +155,12 @@ export function getTriggerActions(str: string): Walker.TriggersActionGroups {
   const attributes = splitAttribute(str);
 
   attributes.forEach((str) => {
-    let [triggerAttr, actionAttr] = splitKeyVal(str);
+    const [triggerAttr, actionAttr] = splitKeyVal(str);
     const [trigger, triggerParams] = parseAttribute(triggerAttr);
 
     if (!trigger) return;
 
+    // eslint-disable-next-line prefer-const
     let [action, actionParams] = parseAttribute(actionAttr || '');
 
     // Shortcut if trigger and action are the same (click:click)
@@ -211,7 +212,7 @@ function getEntity(
   )}],[${getElbAttributeName(prefix, '')}]`; // [data-elb-entity,data-elb-]
   const linkName = getElbAttributeName(prefix, Const.Commands.Link, false); // data-elblink
 
-  let [parentProps, context] = getThisAndParentProperties(
+  const [parentProps, context] = getThisAndParentProperties(
     origin || element,
     entitySelector,
     prefix,
@@ -220,7 +221,7 @@ function getEntity(
 
   // Add linked elements (data-elblink)
   element.querySelectorAll(`[${linkName}]`).forEach((link) => {
-    let [linkId, linkState] = splitKeyVal(getAttribute(link, linkName));
+    const [linkId, linkState] = splitKeyVal(getAttribute(link, linkName));
 
     // Get all linked child elements if link is a parent
     if (linkState === 'parent')
@@ -233,7 +234,7 @@ function getEntity(
   });
 
   // Get all property elements including linked elements
-  let propertyElems: Array<Element> = [];
+  const propertyElems: Array<Element> = [];
   scopeElems.forEach((elem) => {
     // Also check for property on same level
     if (elem.matches(entitySelector)) propertyElems.push(elem);
@@ -271,7 +272,7 @@ function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
 
   // Link
   if (elem.matches(`[${linkName}]`)) {
-    let [linkId, linkState] = splitKeyVal(getAttribute(elem, linkName));
+    const [linkId, linkState] = splitKeyVal(getAttribute(elem, linkName));
     if (linkState === 'child') {
       // If current element is a child-link jump to the parent
       return document.querySelector(`[${linkName}="${linkId}:parent"]`);
@@ -288,7 +289,7 @@ function getThisAndParentProperties(
   type: string,
 ): [data: WalkerOS.Properties, context: WalkerOS.OrderedProperties] {
   let data: WalkerOS.Properties = {};
-  let context: WalkerOS.OrderedProperties = {};
+  const context: WalkerOS.OrderedProperties = {};
   let parent = element as Node['parentElement'];
   const contextSelector = `[${getElbAttributeName(
     prefix,
@@ -312,7 +313,7 @@ function getThisAndParentProperties(
         getElbValues(prefix, parent, Const.Commands.Context, false),
       ).forEach(([key, val]) => {
         // Don't override context with same but higher key
-        if (!context[key]) context[key] = [val, contextI];
+        if (val && !context[key]) context[key] = [val, contextI];
       });
 
       // Increase context counter with each parent level

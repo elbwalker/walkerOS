@@ -1,4 +1,5 @@
-import type { Utils as TUtils, WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
+import type { StorageType } from '..';
 
 const Commands: { [key: string]: WalkerOS.Commands } = {
   Action: 'action',
@@ -17,7 +18,7 @@ const Commands: { [key: string]: WalkerOS.Commands } = {
   Walker: 'walker',
 } as const;
 
-const UtilsStorage: { [key: string]: TUtils.StorageType } = {
+const UtilsStorage: { [key: string]: StorageType } = {
   Cookie: 'cookie',
   Local: 'local',
   Session: 'session',

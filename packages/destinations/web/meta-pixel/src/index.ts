@@ -97,7 +97,7 @@ function getParameters(
   }
 
   // content_type
-  let content_type = mapping.content_type ? mapping.content_type : '';
+  const content_type = mapping.content_type ? mapping.content_type : '';
 
   // content_ids
   const content_ids = getParameterContentIds(event, mapping);

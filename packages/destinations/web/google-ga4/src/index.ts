@@ -19,7 +19,7 @@ const destinationGoogleGA4: Function = {
     const w = window;
     const custom: Partial<CustomConfig> = config.custom || {};
     const settings: WalkerOS.AnyObject = {};
-    // required measuremt id
+    // required measurement id
     if (!custom.measurementId) return false;
 
     // custom transport url
@@ -53,7 +53,7 @@ const destinationGoogleGA4: Function = {
 
     if (!custom.measurementId) return;
 
-    let eventParams: Parameters = {};
+    const eventParams: Parameters = {};
 
     // Add data to include by default
     let include = customEvent.include || custom.include || ['data'];
@@ -110,7 +110,7 @@ const destinationGoogleGA4: Function = {
     // Item parameters
     const items: Items = [];
     // Loop for each nested entity but at least one time
-    for (var i = 0, l = event.nested.length || 1; i < l; i++) {
+    for (let i = 0, l = event.nested.length || 1; i < l; i++) {
       const item = getMappedParams(
         {
           // Prefer event item mapping over general item mapping
@@ -154,7 +154,7 @@ function getMappedParams(
   event: WalkerOS.Event,
   i: number = 0,
 ) {
-  let params: Parameters = {};
+  const params: Parameters = {};
 
   Object.entries(mapping).forEach(([prop, keyRef]) => {
     let key: string;

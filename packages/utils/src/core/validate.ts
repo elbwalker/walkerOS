@@ -178,7 +178,7 @@ export function validateProperty(
       }, value);
     }
 
-    for (const [objKey, objValue] of Object.entries(value)) {
+    for (const objKey of Object.keys(value)) {
       // Check for allowed keys if applicable
       if (schema.allowedKeys && !schema.allowedKeys.includes(objKey)) {
         if (schema.strict) throwError('Key not allowed');

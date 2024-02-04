@@ -1,5 +1,11 @@
 # @elbwalker/utils
 
+## 3.1.0
+
+### Minor Changes
+
+- Create a sessionStorage util #307
+
 ## 3.0.1
 
 ### Patch Changes

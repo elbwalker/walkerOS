@@ -12,7 +12,11 @@
   },
   "customizations": {
     "vscode": {
-      "extensions": ["unifiedjs.vscode-mdx", "esbenp.prettier-vscode"],
+      "extensions": [
+        "unifiedjs.vscode-mdx",
+        "esbenp.prettier-vscode",
+        "streetsidesoftware.code-spell-checker"
+      ],
       "settings": {
         "[typescript]": {
           "editor.defaultFormatter": "esbenp.prettier-vscode",

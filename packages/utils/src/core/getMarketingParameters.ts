@@ -1,8 +1,12 @@
-import { Utils, WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
+
+export interface MarketingParameters {
+  [key: string]: string;
+}
 
 export function getMarketingParameters(
   url: URL,
-  custom: Utils.MarketingParameters = {},
+  custom: MarketingParameters = {},
 ): WalkerOS.Properties {
   const data: WalkerOS.Properties = {};
   const parameters = Object.assign(

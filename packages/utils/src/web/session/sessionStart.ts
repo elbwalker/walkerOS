@@ -1,9 +1,13 @@
-import { Utils, WalkerOS } from '@elbwalker/types';
-import { getId, getMarketingParameters } from '..';
+import { getId, getMarketingParameters } from '../../';
+import type { SessionData, SessionStartConfig } from '.';
 
-export function sessionStart(
-  config: Utils.SessionStart = {},
-): WalkerOS.Properties | false {
+export default function sessionStart(
+  config: SessionStartConfig = {},
+  utils: {
+    getId: typeof getId;
+    getMarketingParameters: typeof getMarketingParameters;
+  },
+): SessionData | false {
   // Force a new session or start checking if it's a regular new one
   let isNew = config.isNew || false;
 
@@ -20,19 +24,21 @@ export function sessionStart(
   const url = new URL(config.url || window.location.href);
   const ref = config.referrer || document.referrer;
   const referrer = ref && new URL(ref).hostname;
-  const session: WalkerOS.Properties = {};
 
   // Marketing
-  const marketing = getMarketingParameters(url, config.parameters);
+  const marketing = utils.getMarketingParameters(url, config.parameters);
   if (Object.keys(marketing).length) {
     // Check for marketing parameters like UTM and add existing
-    session.marketing = true; // Flag as a marketing session
+    if (!marketing.marketing)
+      // Flag as a marketing session without overwriting
+      marketing.marketing = true;
+
     isNew = true;
   }
 
   // Referrer
   if (!isNew) {
-    // Small chance of multiple unintendet events for same users
+    // Small chance of multiple unintended events for same users
     // https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding
     // Use domains: [''] to disable direct or hidden referrer
 
@@ -41,19 +47,17 @@ export function sessionStart(
     isNew = !domains.includes(referrer);
   }
 
-  // No new session
-  if (!isNew) return false;
-
-  if (referrer) session.referrer = referrer;
-  Object.assign(
-    session,
-    {
-      id: session.id || getId(12),
-    },
-    marketing,
-    config.data,
-  );
-
-  // It's a new session, moin
-  return session;
+  return isNew
+    ? // It's a new session, moin
+      Object.assign(
+        {
+          start: Date.now(),
+          id: utils.getId(12),
+          referrer,
+        },
+        marketing,
+        config.data,
+      )
+    : // No new session
+      false;
 }
