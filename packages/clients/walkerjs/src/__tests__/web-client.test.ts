@@ -35,7 +35,7 @@ describe('Elbwalker', () => {
   });
 
   test('empty push', () => {
-    (walkerjs as any).push();
+    (walkerjs as unknown as string[]).push();
     walkerjs.push('');
     walkerjs.push('entity');
     expect(mockFn).toHaveBeenCalledTimes(0);
@@ -149,7 +149,7 @@ describe('Elbwalker', () => {
 
   test('hooks', () => {
     // Destination mocks
-    const mockInit = jest.fn().mockImplementation((...a) => {
+    const mockInit = jest.fn().mockImplementation(() => {
       return true;
     });
     const mockPush = jest.fn();

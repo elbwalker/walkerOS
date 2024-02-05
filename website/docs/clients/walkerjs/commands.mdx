@@ -99,11 +99,21 @@ it's treated as consent being granted. Previously pushed events during the run
 are shared now with destinations as well as new ones.
 
 ```js
-elb("walker consent", { marketing: true, randomTool: true });
+elb('walker consent', { marketing: true, randomTool: true });
 ```
 
 Setting a consent state to `false` will immediately stop a destination from
 processing any events.
+
+## On-Events
+
+The `on` command is used to add event listeners to the walker.js. If a type
+(like `consent`) changes, the rules-matching function(s) will be called.
+
+```js
+//   command      type         rules                function
+elb('walker on', 'consent', { 'groupA,toolB,toolC': console.log });
+```
 
 ## User
 
