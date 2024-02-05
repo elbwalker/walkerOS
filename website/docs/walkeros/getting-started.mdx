@@ -6,19 +6,21 @@ sidebar_position: 1
 import Link from '@docusaurus/Link';
 
 walkerOS is a modular and composable data infrastructure for complete control
-of&nbsp;<Link to="event-model">how to collect</Link> and process data. It can be
-used in many ways, using only a few&nbsp;<Link to="../utils/">Utils</Link> or
-building an&nbsp;<Link to="../#complete-infrastructure">extensive setup</Link>.
-There is more than one way to work with walkerOS. It's like playing with bricks
-built step-by-step as you like and need it. The ultimate goal is to send data to
-any tool reliably.
+of&nbsp;<Link to="/docs/walkeros/event-model">how to collect</Link> and process
+data. It can be used in many ways, using only a
+few&nbsp;<Link to="/docs/utils/">Utils</Link> or building
+an&nbsp;<Link to="/docs/#complete-infrastructure">extensive setup</Link>. There
+is more than one way to work with walkerOS. It's like playing with building
+blocks that you build up step by step as you want and need them. The ultimate
+goal is to send data to any tool reliably.
 
 To get started, learn about the principles behind creating tracking setups in
-general and look at the&nbsp;<Link to="event-model">event model</Link>. It's
-based on an&nbsp;<Link to="event-model#entity-action-approach">entity
+general and look at the&nbsp;<Link to="/docs/walkeros/event-model">event
+model</Link>. It's based on
+an&nbsp;<Link to="/docs/walkeros/event-model#entity-action-approach">entity
 action</Link> approach. The project started as a single web library
-called&nbsp;<Link to="../clients/walkerjs/">walker.js</Link> and has evolved into
-a complete first-party tracking system.
+called&nbsp;<Link to="/docs/clients/walkerjs/">walker.js</Link> and has evolved
+into a complete first-party tracking system.
 
 ## Collection
 
@@ -28,16 +30,17 @@ To measure user interaction on a website start by installing walker.js on your
 site. By default, all collected events are send to the `dataLayer`. That's it,
 you're done. Form now on, all events are now available in Google Tag Manager.
 
-Next step is to start&nbsp;<Link to="../clients/walkerjs/tagging/">tagging</Link> a
-website by adding data-attributes to the HTML. The `data-elb` attributes defines
-an **entity** and sets the scope, like `data-elb="promotion"`. Within that
-scope, we can define an **action** that gets triggered by user interaction, like
+Next step is to
+start&nbsp;<Link to="/docs/clients/walkerjs/tagging/">tagging</Link> a website
+by adding data-attributes to the HTML. The `data-elb` attributes defines an
+**entity** and sets the scope, like `data-elb="promotion"`. Within that scope,
+we can define an **action** that gets triggered by user interaction, like
 `data-elbaction="click"`. Once a users clicks on that element, a
 `promotion click` event will be send to the `dataLayer`. Learn more about
-the&nbsp;<Link to="../clients/walkerjs/#basic-idea">basic idea</Link> of
+the&nbsp;<Link to="/docs/clients/walkerjs/#basic-idea">basic idea</Link> of
 tagging.
 
-To&nbsp;<Link to="../clients/walkerjs/commands/#destinations">add a
+To&nbsp;<Link to="/docs/clients/walkerjs/commands#destinations">add a
 destination</Link> other than the GTM, we can for example log all events also to
 the console.
 
@@ -48,9 +51,10 @@ function elb() {
 elb('walker destination', { push: console.log });
 ```
 
-There are&nbsp;<Link to="../destinations/web/">pre-built web destinations</Link>
-available, but you can
-also&nbsp;<Link to="../destinations/web/#create-your-own">build your own</Link>.
+There are&nbsp;<Link to="/docs/destinations/web/">pre-built web
+destinations</Link> available, but you can
+also&nbsp;<Link to="/docs/destinations/web/#create-your-own">build your
+own</Link>.
 
 ## Processing
 

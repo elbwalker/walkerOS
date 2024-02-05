@@ -1,10 +1,17 @@
 {
   "cSpell.words": [
+    "cookieless",
     "elbaction",
+    "elbcontext",
+    "elbglobals",
     "elbwalker",
+    "Eventflow",
+    "fbclid",
+    "gclid",
     "moin",
     "pageview",
     "pageviews",
-    "walkerjs"
+    "walkerjs",
+    "walkeros"
   ]
 }

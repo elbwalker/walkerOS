@@ -45,8 +45,9 @@ disrupting existing setups.
 ## How walkerOS operates
 
 walkerOS functions through a streamlined framework with one
-standardized&nbsp;<Link to="walkeros/event-model">Event model</Link>. Components
-are designed to always be extensible for a steadily growing data journey.
+standardized&nbsp;<Link to="/docs/walkeros/event-model">Event model</Link>.
+Components are designed to always be extensible for a steadily growing data
+journey.
 
 ```mermaid
 ---
@@ -76,9 +77,9 @@ flowchart LR
   Clients --> Stacks
   Stacks --> Destinations
   Destinations --> Tools
-  click Clients "/docs/clients"
-  click Stacks "/docs/stacks"
-  click Destinations "/docs/destinations"
+  click Clients "/docs/clients/"
+  click Stacks "/docs/stacks/"
+  click Destinations "/docs/destinations/"
 ```
 
 - <Link to="clients">**Clients**</Link>: Collecting events, state management and
@@ -90,7 +91,7 @@ flowchart LR
 - <Link to="utils">**Utils**</Link>: Supporting helper function to standardize
   and improve data collection.
 
-<Link to="walkeros/getting-started">**Get started**</Link> with walkerOS step-by-step
+<Link to="/docs/walkeros/getting-started">**Get started**</Link> with walkerOS step-by-step
 to enable the full potential of your data.
 
 ## Complete infrastructure
@@ -137,42 +138,43 @@ flowchart LR
   Stacks -- e --> Node
   Node -- f --> DestinationsS
   DestinationsS -- g --> Tools
-  click Utils "/docs/utils"
+  click Utils "/docs/utils/"
   click walker.js "/docs/clients/walkerjs"
   click Node "/docs/clients/node"
-  click Stacks "/docs/stacks"
-  click DestinationsC "/docs/destinations/web"
-  click DestinationsS "/docs/destinations/node"
+  click Stacks "/docs/stacks/"
+  click DestinationsC "/docs/destinations/web/"
+  click DestinationsS "/docs/destinations/node/"
 ```
 
-- **a**: The&nbsp;<Link to="clients/walkerjs/">walker.js</Link> integrates with
-  the
-  website,&nbsp;<Link to="clients/walkerjs/commands#initialization">initializes</Link>
+- **a**: The&nbsp;<Link to="/docs/clients/walkerjs/">walker.js</Link> integrates
+  with the
+  website,&nbsp;<Link to="/docs/clients/walkerjs/commands#initialization">initializes</Link>
   event listeners and interprets
-  the&nbsp;<Link to="clients/walkerjs/tagging/">tagging</Link> on the page.
+  the&nbsp;<Link to="/docs/clients/walkerjs/tagging">tagging</Link> on the page.
 - **b**: Ensures a
-  user&nbsp;<Link to="clients/walkerjs/commands#consent-management">granted
+  user&nbsp;<Link to="/docs/clients/walkerjs/commands#consent-management">granted
   consent</Link>,
-  eventually&nbsp;<Link to="destinations/#init">initializes</Link> and
-  &nbsp;<Link to="destinations/#mapping">maps</Link>
-  events&nbsp;<Link to="destinations/#configuration">appropriately</Link>
-  before&nbsp;<Link to="destinations/#push">pushing</Link> them
-  to&nbsp;<Link to="destinations/web/">destinations</Link>.
-- **c**: Events are&nbsp;<Link to="destinations/web/#create-your-own">formatted
+  eventually&nbsp;<Link to="/docs/destinations/#init">initializes</Link> and
+  &nbsp;<Link to="/docs/destinations/#mapping">maps</Link>
+  events&nbsp;<Link to="/docs/destinations/#configuration">appropriately</Link>
+  before&nbsp;<Link to="/docs/destinations/#push">pushing</Link> them
+  to&nbsp;<Link to="/docs/destinations/web/">destinations</Link>.
+- **c**: Events
+  are&nbsp;<Link to="/docs/destinations/web/#create-your-own">formatted
   correctly</Link> and get sent directly to the respective tools from the
   client.
 
 ### Server-side setups
 
-- **d**: Events can be sent to a&nbsp;<Link to="">Stacks</Link> (public)
-  endpoint from various sources.
-- **e**: Within&nbsp;<Link to="">Stacks</Link>, events are processed using
-  the&nbsp;<Link to="">Node Client</Link>, validating and enhancing them before
-  forwarding.
+- **d**: Events can be sent to a&nbsp;<Link to="/docs/stacks/">Stacks</Link>
+  (public) endpoint from various sources.
+- **e**: Within&nbsp;<Link to="/docs/stacks/">Stacks</Link>, events are
+  processed using the&nbsp;<Link to="/docs/clients/node/">Node Client</Link>,
+  validating and enhancing them before forwarding.
 - **f**: Similar to client-side operations, consent gets verified, a
-  &nbsp;<Link to="destinations/node/">destination</Link>
-  eventually&nbsp;<Link to="destinations/node/#init">initialized</Link>, and
-  event&nbsp;<Link to="destinations/node/#custom-configuration">preparation</Link>
+  &nbsp;<Link to="/docs/destinations/node/">destination</Link>
+  eventually&nbsp;<Link to="/docs/destinations/node/#init">initialized</Link>,
+  and
+  event&nbsp;<Link to="/docs/destinations/node/#custom-configuration">preparation</Link>
   are processed server-side.
 - **g**: Events are formatted correctly and sent to tools from the server.
-  destinations/web/#create-your-own

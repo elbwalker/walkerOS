@@ -35,9 +35,7 @@ export default function Hero() {
           analytics
         </p>
         <div className="mx-auto mt-5 max-w-md sm:flex sm:justify-center md:mt-8">
-          <Button link="docs/walkerOS/getting-started/">
-            Get started
-          </Button>
+          <Button link="/docs/walkeros/getting-started/">Get started</Button>
           <Button link="https://tagging.demo.elbwalker.com/" isSecondary>
             Live Demo
           </Button>

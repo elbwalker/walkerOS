@@ -23,8 +23,8 @@ Destinations initialize and process events **only if a user granted consent**.
 ## How to use
 
 Destinations are added to a client
-(see&nbsp;<Link to="../clients/walkerjs/commands#destinations">web</Link>
-or&nbsp;<Link to="../clients/node#adding-destinations">node</Link>). Before
+(see&nbsp;<Link to="/docs/clients/walkerjs/commands#destinations">web</Link>
+or&nbsp;<Link to="/docs/clients/node#adding-destinations">node</Link>). Before
 receiving events from the client, the proper consent states are checked each
 time automatically. Destinations receive events through the [`push`](#push)
 interface. Each destination can have its own configuration, which is set up in
@@ -120,7 +120,7 @@ configured in the `custom` section of the mapping.
 
 ```js
 const mapping = {
-  entity: { action: {} }, // Basic sctructure
+  entity: { action: {} }, // Basic structure
   page: {
     view: { name: 'pageview' }, // Rename the event name
     scroll: { ignore: true }, // Ignore all other page actions
@@ -142,7 +142,7 @@ to not list duplicate keys in the mapping.
 
 :::info
 
-Use&nbsp;<Link to="../utils/hooks">Utils/Hooks</Link> to modify events before
+Use&nbsp;<Link to="/docs/utils/hooks">Utils/Hooks</Link> to modify events before
 processing.
 
 :::

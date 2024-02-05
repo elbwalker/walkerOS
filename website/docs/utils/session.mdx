@@ -11,7 +11,7 @@ represent a period when a user is actively engaged with a website, often used
 for attribution and conversion tracking. Different tools may define and detect
 sessions in varying ways.
 
-The `sessionStart` util helps to detect a new session indipendently, and can be
+The `sessionStart` util helps to detect a new session independently, and can be
 used to trigger a custom event. It works client-side and is cookieless by
 default. If a new session is detected, it returns the sessions `data`, otherwise
 `false`. There are `config` parameters to customize the session handling.
@@ -132,7 +132,7 @@ A user coming from `subdomain.elbwalker.com` or `example.com` to e.b.
 ### Manual New Session Control
 
 Determine if it's a new session using the `isNew` parameter. This might require
-consent for storage access and therefore isn't impletement by default.
+consent for storage access and therefore isn't implement by default.
 
 Usually, the `sessionId` written to the storage is set up to expire and should
 be updated with each page view. If the `sessionId` is missing, it's maybe an
@@ -145,12 +145,12 @@ if (!storageRead('sessionId')) {
 }
 ```
 
-> For more information on stoage and expiration, see <Link to="storage">
-> Utils/Storage </Link>
+> For more information on storage and expiration,
+> see&nbsp;<Link to="/docs/utils/storage">Utils/Storage</Link>
 
 ### Marketing Parameters
 
-The helper util <Link to="helper#getmarketingparameters">
+The helper util <Link to="/docs/utils/helper#getmarketingparameters">
 getMarketingParameters</Link> is used to extract common parameters like all
 `utm variants`, typical clickIds like `fbclid`, `gclid`, and others.
 

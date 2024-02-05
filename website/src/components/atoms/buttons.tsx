@@ -14,10 +14,10 @@ export function Button({
   link,
   isSecondary,
 }: ButtonProps): JSX.Element {
-  let classColor = !isSecondary
+  const classColor = !isSecondary
     ? 'bg-elbwalker hover:bg-elbwalker-400'
     : 'bg-gray-800 hover:bg-gray-700 ';
-  let className = classBasics + classColor;
+  const className = classBasics + classColor;
   return link ? (
     <Link className={className} to={link}>
       {children}
