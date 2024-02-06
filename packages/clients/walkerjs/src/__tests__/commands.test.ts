@@ -21,7 +21,7 @@ describe('Commands on', () => {
     });
   });
 
-  test('consent', () => {
+  test('basics', () => {
     const mockFn = jest.fn();
 
     // Don't call on default
@@ -82,24 +82,13 @@ describe('Commands on', () => {
     });
   });
 
-  test.skip('consent group', () => {
-    const mockFn = jest.fn();
-    elb('walker consent', { foo: true, bar: true });
-    elb('walker on', 'consent', { 'foo,bar': mockFn });
+  // test for normal behavior if error is thrown
+  test('consent error', () => {
+    const mockFn = jest.fn(() => {
+      throw new Error('kaputt');
+    });
+    elb('walker on', 'consent', { automatically: mockFn });
     expect(mockFn).toHaveBeenCalledTimes(1);
-  });
-
-  test.skip('consent multiple', () => {
-    const mockA = jest.fn();
-    const mockB = jest.fn();
-    elb('walker on', 'consent', { 'automatically,foo': mockA });
-    elb('walker on', 'consent', { 'foo,bar': mockB });
-    expect(mockA).toHaveBeenCalledTimes(1);
-    expect(mockB).toHaveBeenCalledTimes(0);
-
-    jest.clearAllMocks();
-    elb('walker consent', { foo: true });
-    expect(mockA).toHaveBeenCalledTimes(1);
-    expect(mockB).toHaveBeenCalledTimes(1);
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
   });
 });

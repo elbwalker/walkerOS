@@ -339,20 +339,16 @@ export function webClient(
 
     // Consent events
     if (type === Const.Commands.Consent) {
-      const states = options;
+      // const functions: Array<On.OnConsentFn> = [];
 
-      const consentKeys = Object.keys(states);
-      const ruleKeys = Object.keys(rules);
-      const functions: Array<On.OnConsentFn> = [];
-      console.log({ consentKeys, ruleKeys });
-
-      Object.keys(states).forEach((consent) => {
-        const rule = rules[consent];
-        if (rule) rule(instance, type, states);
-      });
-
-      // Call all on event functions
-      functions.forEach((fn) => fn(instance, type, states));
+      // Collect functions whose consent keys match the rule keys directly
+      // Directly execute functions whose consent keys match the rule keys
+      Object.keys(options) // consent keys
+        .filter((consent) => consent in rules) // check for matching rule keys
+        .forEach((consent) => {
+          // Execute the function
+          tryCatch(rules[consent])(instance, type, options);
+        });
     }
   }
 
