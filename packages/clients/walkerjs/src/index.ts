@@ -1,5 +1,5 @@
 import type { WebClient, WebDestination } from './types';
-import type { Hooks, WalkerOS } from '@elbwalker/types';
+import type { Hooks, On, WalkerOS } from '@elbwalker/types';
 import {
   initScopeTrigger,
   initGlobalTrigger,
@@ -218,6 +218,7 @@ export function webClient(
       globals: assign(staticGlobals), // Globals enhanced with the static globals from init and previous values
       group: '', // Random id to group events of a run
       hooks: {}, // Manage the hook functions
+      on: {}, // On events listener rules
       pageview: true, // Trigger a page view event by default
       prefix: Const.Commands.Prefix, // HTML prefix attribute
       queue: [], // Temporary event queue for all events of a run
@@ -287,6 +288,9 @@ export function webClient(
         });
         break;
       }
+      case Const.Commands.On:
+        on(instance, data as On.Type, options as On.Rules);
+        break;
       case Const.Commands.Run:
         ready(run, instance);
         break;
@@ -308,6 +312,34 @@ export function webClient(
 
   function isObject(obj: unknown) {
     return isSameType(obj, {}) && !Array.isArray(obj) && obj !== null;
+  }
+
+  function on(
+    instance: WebClient.Function,
+    type: On.Type,
+    rules: On.Rules = {},
+  ) {
+    instance.config.on[type] = assign(instance.config.on[type] || {}, rules);
+  }
+
+  function onApply(
+    instance: WebClient.Function,
+    type: On.Type,
+    options: On.Options,
+  ) {
+    const rules = instance.config.on[type];
+
+    if (!rules) return; // No on-events registered, nothing to do
+
+    // Consent events
+    if (type === Const.Commands.Consent) {
+      const state = options as WalkerOS.Consent;
+      console.log({ rules, state });
+      Object.keys(state).forEach((consent) => {
+        const rule = rules[consent];
+        if (rule) rule(instance, type, state);
+      });
+    }
   }
 
   function push(
@@ -528,6 +560,9 @@ export function webClient(
       // Only run queue if state was set to true
       runQueue = runQueue || state;
     });
+
+    // Run on consent events
+    onApply(instance, 'consent', data);
 
     if (runQueue) {
       Object.values(config.destinations).forEach((destination) => {

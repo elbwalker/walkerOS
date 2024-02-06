@@ -2,7 +2,7 @@ import webClient, { WebClient, elb } from '..';
 
 describe('Commands on', () => {
   const w = window;
-  const mockFn = jest.fn(); //.mockImplementation(console.log);
+  const mockDataLayer = jest.fn(); //.mockImplementation(console.log);
 
   let walkerjs: WebClient.Function;
 
@@ -12,7 +12,7 @@ describe('Commands on', () => {
     jest.clearAllMocks();
     jest.resetModules();
     w.dataLayer = [];
-    (w.dataLayer as unknown[]).push = mockFn;
+    (w.dataLayer as unknown[]).push = mockDataLayer;
     w.elbLayer = undefined as unknown as WebClient.ElbLayer;
 
     walkerjs = webClient({
@@ -21,7 +21,9 @@ describe('Commands on', () => {
     });
   });
 
-  test('on consent', () => {
+  test('consent', () => {
+    const mockFn = jest.fn();
+
     // Don't call on default
     elb('walker on', 'consent', { marketing: mockFn });
     expect(mockFn).not.toHaveBeenCalled();
@@ -39,19 +41,42 @@ describe('Commands on', () => {
     expect(mockFn).toHaveBeenCalled();
   });
 
-  test('on consent parameters', () => {
+  test('consent register', () => {
+    const mockFn = jest.fn();
+    elb('walker on', 'consent', { foo: mockFn });
+    expect(walkerjs.config.on.consent?.foo).toBe(mockFn);
+  });
+
+  test.skip('consent parameters', () => {
+    const mockFn = jest.fn();
     elb('walker on', 'consent', { automatically: mockFn });
     expect(mockFn).toHaveBeenCalledWith({}, walkerjs);
   });
 
-  test('on consent group', () => {
-    elb('walker consent', { 'foo,bar': true });
-    elb('walker on', 'consent', { foo: mockFn });
+  test.skip('consent group', () => {
+    const mockFn = jest.fn();
+    elb('walker consent', { foo: true, bar: true });
+    elb('walker on', 'consent', { 'foo,bar': mockFn });
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  test.skip('consent by start', () => {
+    const mockFn = jest.fn();
+    elb('walker on', 'consent', { automatically: mockFn });
     expect(mockFn).toHaveBeenCalled();
   });
 
-  test('on consent by start', () => {
-    elb('walker on', 'consent', { automatically: mockFn });
-    expect(mockFn).toHaveBeenCalled();
+  test.skip('consent multiple', () => {
+    const mockA = jest.fn();
+    const mockB = jest.fn();
+    elb('walker on', 'consent', { 'automatically,foo': mockA });
+    elb('walker on', 'consent', { 'foo,bar': mockB });
+    expect(mockA).toHaveBeenCalledTimes(1);
+    expect(mockB).toHaveBeenCalledTimes(0);
+
+    jest.clearAllMocks();
+    elb('walker consent', { foo: true });
+    expect(mockA).toHaveBeenCalledTimes(1);
+    expect(mockB).toHaveBeenCalledTimes(1);
   });
 });

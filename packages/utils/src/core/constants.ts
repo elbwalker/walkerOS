@@ -12,6 +12,7 @@ const Commands: { [key: string]: WalkerOS.Commands } = {
   Hook: 'hook',
   Init: 'init',
   Link: 'link',
+  On: 'on',
   Prefix: 'data-elb',
   Run: 'run',
   User: 'user',
