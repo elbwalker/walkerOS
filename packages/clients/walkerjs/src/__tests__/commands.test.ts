@@ -34,11 +34,11 @@ describe('Commands on', () => {
 
     // Granted
     elb('walker consent', { marketing: true });
-    expect(mockFn).toHaveBeenCalled();
+    expect(mockFn).toHaveBeenCalledTimes(1);
 
     // Denied
     elb('walker consent', { marketing: false });
-    expect(mockFn).toHaveBeenCalled();
+    expect(mockFn).toHaveBeenCalledTimes(2);
   });
 
   test('consent register', () => {
@@ -50,8 +50,8 @@ describe('Commands on', () => {
   test('consent by start', () => {
     const mockFn = jest.fn();
     webClient({
-      consent: { automatically: true, foo: false },
-      on: { consent: { automatically: mockFn } },
+      consent: { foo: false },
+      on: { consent: { foo: mockFn } },
       default: true,
     });
     expect(mockFn).toHaveBeenCalledTimes(1);
@@ -60,20 +60,26 @@ describe('Commands on', () => {
   test('consent already granted', () => {
     const mockFn = jest.fn();
     webClient({
-      consent: { automatically: true, foo: false },
-      on: { consent: { automatically: mockFn } },
+      consent: { foo: false },
+      on: { consent: { foo: mockFn } },
       default: true,
     });
     expect(mockFn).toHaveBeenCalledTimes(1);
-
-    elb('walker on', 'consent', { automatically: mockFn });
-    expect(mockFn).toHaveBeenCalled();
   });
 
-  test.skip('consent parameters', () => {
+  test('consent call on register', () => {
     const mockFn = jest.fn();
     elb('walker on', 'consent', { automatically: mockFn });
-    expect(mockFn).toHaveBeenCalledWith({}, walkerjs);
+
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  test('consent parameters', () => {
+    const mockFn = jest.fn();
+    elb('walker on', 'consent', { automatically: mockFn });
+    expect(mockFn).toHaveBeenCalledWith(walkerjs, 'consent', {
+      automatically: true,
+    });
   });
 
   test.skip('consent group', () => {

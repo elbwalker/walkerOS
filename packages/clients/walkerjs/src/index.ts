@@ -36,7 +36,7 @@ export function webClient(
   elbLayerInit(instance);
 
   // Run on events for default consent states
-  onApply(instance, 'consent', config.consent);
+  onApply(instance, 'consent');
 
   // Use the default init mode for auto run and dataLayer destination
   if (customConfig.default) {
@@ -323,12 +323,15 @@ export function webClient(
     rules: On.Rules = {},
   ) {
     instance.config.on[type] = assign(instance.config.on[type] || {}, rules);
+
+    // Run on events for default consent states
+    onApply(instance, 'consent');
   }
 
   function onApply(
     instance: WebClient.Function,
     type: On.Type,
-    options: On.Options,
+    // @TODO options?: On.Options,
   ) {
     const rules = instance.config.on[type];
 
@@ -336,7 +339,7 @@ export function webClient(
 
     // Consent events
     if (type === Const.Commands.Consent) {
-      const state = options as WalkerOS.Consent;
+      const state = instance.config.consent;
       Object.keys(state).forEach((consent) => {
         const rule = rules[consent];
         if (rule) rule(instance, type, state);
@@ -564,7 +567,7 @@ export function webClient(
     });
 
     // Run on consent events
-    onApply(instance, 'consent', data);
+    onApply(instance, 'consent');
 
     if (runQueue) {
       Object.values(config.destinations).forEach((destination) => {
