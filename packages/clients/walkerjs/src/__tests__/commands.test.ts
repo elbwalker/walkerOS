@@ -47,6 +47,29 @@ describe('Commands on', () => {
     expect(walkerjs.config.on.consent?.foo).toBe(mockFn);
   });
 
+  test('consent by start', () => {
+    const mockFn = jest.fn();
+    webClient({
+      consent: { automatically: true, foo: false },
+      on: { consent: { automatically: mockFn } },
+      default: true,
+    });
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  test('consent already granted', () => {
+    const mockFn = jest.fn();
+    webClient({
+      consent: { automatically: true, foo: false },
+      on: { consent: { automatically: mockFn } },
+      default: true,
+    });
+    expect(mockFn).toHaveBeenCalledTimes(1);
+
+    elb('walker on', 'consent', { automatically: mockFn });
+    expect(mockFn).toHaveBeenCalled();
+  });
+
   test.skip('consent parameters', () => {
     const mockFn = jest.fn();
     elb('walker on', 'consent', { automatically: mockFn });
@@ -58,12 +81,6 @@ describe('Commands on', () => {
     elb('walker consent', { foo: true, bar: true });
     elb('walker on', 'consent', { 'foo,bar': mockFn });
     expect(mockFn).toHaveBeenCalledTimes(1);
-  });
-
-  test.skip('consent by start', () => {
-    const mockFn = jest.fn();
-    elb('walker on', 'consent', { automatically: mockFn });
-    expect(mockFn).toHaveBeenCalled();
   });
 
   test.skip('consent multiple', () => {

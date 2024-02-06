@@ -32,8 +32,11 @@ export function webClient(
     config,
   };
 
-  // Setup pushes for elbwalker via elbLayer
+  // Setup pushes via elbLayer
   elbLayerInit(instance);
+
+  // Run on events for default consent states
+  onApply(instance, 'consent', config.consent);
 
   // Use the default init mode for auto run and dataLayer destination
   if (customConfig.default) {
@@ -334,7 +337,6 @@ export function webClient(
     // Consent events
     if (type === Const.Commands.Consent) {
       const state = options as WalkerOS.Consent;
-      console.log({ rules, state });
       Object.keys(state).forEach((consent) => {
         const rule = rules[consent];
         if (rule) rule(instance, type, state);
