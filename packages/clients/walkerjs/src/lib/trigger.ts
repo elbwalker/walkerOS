@@ -14,6 +14,7 @@ let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
 
 export const elb: WebClient.Elb = function () {
+  // eslint-disable-next-line prefer-rest-params
   (window.elbLayer = window.elbLayer || []).push(arguments);
 };
 
@@ -131,7 +132,7 @@ function handleActionElem(
   Object.values(getTriggerActions(actionAttr)).forEach((triggerActions) =>
     // TriggerActions (Array<TriggerAction>)
     triggerActions.forEach((triggerAction) => {
-      // TriggerAction ({ trigger, triggerParams, action, actionparams })
+      // TriggerAction ({ trigger, triggerParams, action, actionParams })
       switch (triggerAction.trigger) {
         case Trigger.Hover:
           triggerHover(instance, elem);
@@ -179,18 +180,15 @@ function triggerPulse(
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
-  setInterval(
-    () => {
-      // Only trigger when tab is active
-      if (!document.hidden) handleTrigger(instance, elem, Trigger.Pulse);
-    },
-    parseInt(triggerParams || '') || 15000,
-  );
+  setInterval(() => {
+    // Only trigger when tab is active
+    if (!document.hidden) handleTrigger(instance, elem, Trigger.Pulse);
+  }, parseInt(triggerParams || '') || 15000);
 }
 
 function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
   // Scroll depth in percent, default 50%
-  let depth = parseInt(triggerParams || '') || 50;
+  const depth = parseInt(triggerParams || '') || 50;
 
   // Ignore invalid parameters
   if (depth < 0 || depth > 100) return;
@@ -231,7 +229,7 @@ function scroll(instance: WebClient.Function) {
       // Distance from top to the elements relevant content
       const elemTop = element.offsetTop;
 
-      // Skip calulations if not in viewport yet
+      // Skip calculations if not in viewport yet
       if (windowBottom < elemTop) return true;
 
       // Height of the elements box as 100 percent base

@@ -63,7 +63,7 @@ export function webClient(
     // Basic validation
     if (!data.push) return;
 
-    // Prefere explicit given config over default config
+    // Prefer explicit given config over default config
     const config = options || data.config || { init: false };
 
     const destination: WebDestination.Function = {
@@ -127,7 +127,7 @@ export function webClient(
   function callPredefined(instance: WebClient.Function) {
     // there is a special execution order for all predefined events
     // walker events gets prioritized before others
-    // this garantees a fully configuration before the first run
+    // this guarantees a fully configuration before the first run
     const walkerCommand = `${Const.Commands.Walker} `; // Space on purpose
     const walkerEvents: Array<WebClient.ElbLayer> = [];
     const customEvents: Array<WebClient.ElbLayer> = [];
@@ -140,7 +140,7 @@ export function webClient(
       ] as WebClient.ElbLayer;
 
       // Pushed as Arguments
-      if ({}.hasOwnProperty.call(event, 'callee')) {
+      if (isArgument(event)) {
         [event, data, trigger, context, nested, custom] = [
           ...Array.from(event as IArguments),
         ];
@@ -161,7 +161,7 @@ export function webClient(
         : customEvents.push([event, data, trigger, context, nested, custom]); // stack it to the custom events
     });
 
-    // Prefere all walker Const.Commands before events during processing the predefined ones
+    // Prefer all walker Const.Commands before events during processing the predefined ones
     walkerEvents.concat(customEvents).map((item) => {
       const [event, data, trigger, context, nested, custom] = item;
       instance.push(String(event), data, trigger, context, nested, custom);
@@ -186,7 +186,8 @@ export function webClient(
         ];
       }
 
-      let i = Array.prototype.push.apply(this, [arguments]);
+      // eslint-disable-next-line prefer-rest-params
+      const i = Array.prototype.push.apply(this, [arguments]);
       instance.push(String(event), data, trigger, context, nested, custom);
 
       return i;
@@ -276,7 +277,7 @@ export function webClient(
         if (isSameType(data, '') && isSameType(options, isSameType))
           addHook(instance.config, data as keyof Hooks.Functions, options);
         break;
-      case Const.Commands.Init:
+      case Const.Commands.Init: {
         const elems: unknown[] = Array.isArray(data)
           ? data
           : [data || document];
@@ -285,6 +286,7 @@ export function webClient(
             initScopeTrigger(instance, elem as WebClient.Scope);
         });
         break;
+      }
       case Const.Commands.Run:
         ready(run, instance);
         break;
@@ -296,7 +298,7 @@ export function webClient(
     }
   }
 
-  function isArgument(event: unknown) {
+  function isArgument(event: unknown): event is IArguments {
     return {}.hasOwnProperty.call(event, 'callee');
   }
 
@@ -487,7 +489,7 @@ export function webClient(
       count: 0, // Reset the run counter
       globals: assign(
         // Load globals properties
-        // Use the default globals set by initalization
+        // Use the default globals set by initialization
         // Due to site performance only once every run
         staticGlobals,
         getGlobals(instance.config.prefix),
