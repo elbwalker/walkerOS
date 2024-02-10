@@ -1,5 +1,3 @@
-import type { WalkerOS } from '.';
-
 interface Parameter<T extends any[], R> {
   fn: (...args: T) => R;
   result?: R;

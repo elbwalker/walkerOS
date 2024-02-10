@@ -1,4 +1,4 @@
-import type { Hooks } from '.';
+import type { Hooks, On } from '.';
 
 export type AnyObject = Record<string, unknown>;
 
@@ -16,6 +16,7 @@ export interface Elb {
     name: K,
     hookFn: Hooks.Functions[K],
   ): void;
+  (event: 'walker on', type: On.Type, rules: On.Rules): void;
   (event: 'walker run'): void;
   (event: 'walker user', user: User): void;
   (
@@ -42,6 +43,7 @@ export interface Config {
   globals: Properties;
   group: string;
   hooks: Hooks.Functions;
+  on: On.Config;
   round: number;
   timing: number;
   user: User;

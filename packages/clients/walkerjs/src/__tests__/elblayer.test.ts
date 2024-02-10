@@ -200,6 +200,7 @@ describe('ElbLayer', () => {
       globals: {},
       group: expect.any(String),
       hooks: {},
+      on: {},
       pageview: true,
       prefix: 'data-elb',
       queue: expect.any(Array),
@@ -259,7 +260,7 @@ describe('ElbLayer', () => {
 
   test('custom elbLayer', () => {
     w.dataLayer = [];
-    let dataLayer = w.dataLayer as unknown[];
+    const dataLayer = w.dataLayer as unknown[];
     const customLayer1 = [] as WebClient.ElbLayer;
     const customLayer2 = [] as WebClient.ElbLayer;
     const instance1 = webClient({
@@ -371,7 +372,7 @@ describe('ElbLayer', () => {
     expect((w.elbLayer[1] as any)[0]).toBe('page view');
   });
 
-  test('arguments and event pushes', () => {
+  test('custom push', () => {
     // @TODO why does only elb and not w.elbLayer.push work here?!
     elb(
       'e 1', // event

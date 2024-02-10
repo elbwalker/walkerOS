@@ -1,5 +1,5 @@
 import type { WebClient, WebDestination } from './types';
-import type { Hooks, WalkerOS } from '@elbwalker/types';
+import type { Hooks, On, WalkerOS } from '@elbwalker/types';
 import {
   initScopeTrigger,
   initGlobalTrigger,
@@ -32,8 +32,11 @@ export function webClient(
     config,
   };
 
-  // Setup pushes for elbwalker via elbLayer
+  // Setup pushes via elbLayer
   elbLayerInit(instance);
+
+  // Run on events for default consent states
+  onApply(instance, 'consent', instance.config.consent);
 
   // Use the default init mode for auto run and dataLayer destination
   if (customConfig.default) {
@@ -63,7 +66,7 @@ export function webClient(
     // Basic validation
     if (!data.push) return;
 
-    // Prefere explicit given config over default config
+    // Prefer explicit given config over default config
     const config = options || data.config || { init: false };
 
     const destination: WebDestination.Function = {
@@ -127,7 +130,7 @@ export function webClient(
   function callPredefined(instance: WebClient.Function) {
     // there is a special execution order for all predefined events
     // walker events gets prioritized before others
-    // this garantees a fully configuration before the first run
+    // this guarantees a fully configuration before the first run
     const walkerCommand = `${Const.Commands.Walker} `; // Space on purpose
     const walkerEvents: Array<WebClient.ElbLayer> = [];
     const customEvents: Array<WebClient.ElbLayer> = [];
@@ -140,7 +143,7 @@ export function webClient(
       ] as WebClient.ElbLayer;
 
       // Pushed as Arguments
-      if ({}.hasOwnProperty.call(event, 'callee')) {
+      if (isArgument(event)) {
         [event, data, trigger, context, nested, custom] = [
           ...Array.from(event as IArguments),
         ];
@@ -161,7 +164,7 @@ export function webClient(
         : customEvents.push([event, data, trigger, context, nested, custom]); // stack it to the custom events
     });
 
-    // Prefere all walker Const.Commands before events during processing the predefined ones
+    // Prefer all walker Const.Commands before events during processing the predefined ones
     walkerEvents.concat(customEvents).map((item) => {
       const [event, data, trigger, context, nested, custom] = item;
       instance.push(String(event), data, trigger, context, nested, custom);
@@ -186,7 +189,8 @@ export function webClient(
         ];
       }
 
-      let i = Array.prototype.push.apply(this, [arguments]);
+      // eslint-disable-next-line prefer-rest-params
+      const i = Array.prototype.push.apply(this, [arguments]);
       instance.push(String(event), data, trigger, context, nested, custom);
 
       return i;
@@ -217,6 +221,7 @@ export function webClient(
       globals: assign(staticGlobals), // Globals enhanced with the static globals from init and previous values
       group: '', // Random id to group events of a run
       hooks: {}, // Manage the hook functions
+      on: {}, // On events listener rules
       pageview: true, // Trigger a page view event by default
       prefix: Const.Commands.Prefix, // HTML prefix attribute
       queue: [], // Temporary event queue for all events of a run
@@ -276,7 +281,7 @@ export function webClient(
         if (isSameType(data, '') && isSameType(options, isSameType))
           addHook(instance.config, data as keyof Hooks.Functions, options);
         break;
-      case Const.Commands.Init:
+      case Const.Commands.Init: {
         const elems: unknown[] = Array.isArray(data)
           ? data
           : [data || document];
@@ -284,6 +289,10 @@ export function webClient(
           isElementOrDocument(elem) &&
             initScopeTrigger(instance, elem as WebClient.Scope);
         });
+        break;
+      }
+      case Const.Commands.On:
+        on(instance, data as On.Type, options as On.Rules);
         break;
       case Const.Commands.Run:
         ready(run, instance);
@@ -296,7 +305,7 @@ export function webClient(
     }
   }
 
-  function isArgument(event: unknown) {
+  function isArgument(event: unknown): event is IArguments {
     return {}.hasOwnProperty.call(event, 'callee');
   }
 
@@ -306,6 +315,41 @@ export function webClient(
 
   function isObject(obj: unknown) {
     return isSameType(obj, {}) && !Array.isArray(obj) && obj !== null;
+  }
+
+  function on(
+    instance: WebClient.Function,
+    type: On.Type,
+    rules: On.Rules = {},
+  ) {
+    instance.config.on[type] = assign(instance.config.on[type] || {}, rules);
+
+    // Run on events for default consent states
+    onApply(instance, 'consent', instance.config.consent);
+  }
+
+  function onApply(
+    instance: WebClient.Function,
+    type: On.Type,
+    options: On.Options,
+  ) {
+    const rules = instance.config.on[type];
+
+    if (!rules) return; // No on-events registered, nothing to do
+
+    // Consent events
+    if (type === Const.Commands.Consent) {
+      // const functions: Array<On.OnConsentFn> = [];
+
+      // Collect functions whose consent keys match the rule keys directly
+      // Directly execute functions whose consent keys match the rule keys
+      Object.keys(options) // consent keys
+        .filter((consent) => consent in rules) // check for matching rule keys
+        .forEach((consent) => {
+          // Execute the function
+          tryCatch(rules[consent])(instance, type, options);
+        });
+    }
   }
 
   function push(
@@ -487,7 +531,7 @@ export function webClient(
       count: 0, // Reset the run counter
       globals: assign(
         // Load globals properties
-        // Use the default globals set by initalization
+        // Use the default globals set by initialization
         // Due to site performance only once every run
         staticGlobals,
         getGlobals(instance.config.prefix),
@@ -526,6 +570,9 @@ export function webClient(
       // Only run queue if state was set to true
       runQueue = runQueue || state;
     });
+
+    // Run on consent events
+    onApply(instance, 'consent', data);
 
     if (runQueue) {
       Object.values(config.destinations).forEach((destination) => {
