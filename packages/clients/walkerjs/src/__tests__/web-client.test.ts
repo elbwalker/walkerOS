@@ -9,7 +9,7 @@ describe('Elbwalker', () => {
   const mockFn = jest.fn(); //.mockImplementation(console.log);
   const version = { client: expect.any(String), tagging: expect.any(Number) };
 
-  let walkerjs: WebClient.Function;
+  let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
     // reset DOM with event listeners etc.
@@ -111,7 +111,7 @@ describe('Elbwalker', () => {
     walkerjs = webClient({
       default: true,
       pageview: false,
-      globals: { outof: 'override', static: 'value' },
+      globals: { out_of: 'override', static: 'value' },
     });
 
     expect(mockFn).toHaveBeenNthCalledWith(
@@ -119,7 +119,7 @@ describe('Elbwalker', () => {
       expect.objectContaining({
         event: 'entity action',
         data: { foo: 'bar' },
-        globals: { outof: 'scope', static: 'value' },
+        globals: { out_of: 'scope', static: 'value' },
       }),
     );
 
@@ -130,7 +130,7 @@ describe('Elbwalker', () => {
       expect.objectContaining({
         event: 'entity action',
         data: { foo: 'bar' },
-        globals: { outof: 'scope', static: 'value' },
+        globals: { out_of: 'scope', static: 'value' },
       }),
     );
   });
@@ -321,21 +321,21 @@ describe('Elbwalker', () => {
       }),
     );
 
-    walkerjs.push('walker user', { id: 'userid' });
+    walkerjs.push('walker user', { id: 'userId' });
     walkerjs.push('entity action');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
-        user: { id: 'userid' },
+        user: { id: 'userId' },
       }),
     );
 
-    walkerjs.push('walker user', { device: 'userid' });
+    walkerjs.push('walker user', { device: 'userId' });
     walkerjs.push('entity action');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
-        user: { id: 'userid', device: 'userid' },
+        user: { id: 'userId', device: 'userId' },
       }),
     );
 
@@ -344,7 +344,7 @@ describe('Elbwalker', () => {
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
-        user: { id: 'userid', device: 'userid', session: 'sessionid' },
+        user: { id: 'userId', device: 'userId', session: 'sessionid' },
       }),
     );
   });

@@ -22,12 +22,12 @@ export { elb } from './lib/trigger';
 
 export function webClient(
   customConfig: Partial<WebClient.Config> = {},
-): WebClient.Function {
+): WebClient.Instance {
   const client = '2.0.1';
   const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
   const staticGlobals = customConfig.globals || {};
   const config = getConfig(customConfig);
-  const instance: WebClient.Function = {
+  const instance: WebClient.Instance = {
     push: useHooks(push, 'Push', config.hooks),
     config,
   };
@@ -59,7 +59,7 @@ export function webClient(
   initGlobalTrigger(instance);
 
   function addDestination(
-    instance: WebClient.Function,
+    instance: WebClient.Instance,
     data: WebDestination.Function,
     options?: WebDestination.Config,
   ) {
@@ -101,7 +101,7 @@ export function webClient(
   }
 
   function allowedToPush(
-    instance: WebClient.Function,
+    instance: WebClient.Instance,
     destination: WebDestination.Function,
   ): boolean {
     // Default without consent handling
@@ -127,7 +127,7 @@ export function webClient(
   }
 
   // Handle existing events in the elbLayer on first run
-  function callPredefined(instance: WebClient.Function) {
+  function callPredefined(instance: WebClient.Instance) {
     // there is a special execution order for all predefined events
     // walker events gets prioritized before others
     // this guarantees a fully configuration before the first run
@@ -171,7 +171,7 @@ export function webClient(
     });
   }
 
-  function elbLayerInit(instance: WebClient.Function) {
+  function elbLayerInit(instance: WebClient.Instance) {
     const elbLayer = instance.config.elbLayer;
 
     elbLayer.push = function (
@@ -253,7 +253,7 @@ export function webClient(
   }
 
   function handleCommand(
-    instance: WebClient.Function,
+    instance: WebClient.Instance,
     action: string,
     data?: WebClient.PushData,
     options?: WebClient.PushOptions,
@@ -318,7 +318,7 @@ export function webClient(
   }
 
   function on(
-    instance: WebClient.Function,
+    instance: WebClient.Instance,
     type: On.Type,
     rules: On.Rules = {},
   ) {
@@ -329,7 +329,7 @@ export function webClient(
   }
 
   function onApply(
-    instance: WebClient.Function,
+    instance: WebClient.Instance,
     type: On.Type,
     options: On.Options,
   ) {
@@ -455,7 +455,7 @@ export function webClient(
   }
 
   function pushToDestination(
-    instance: WebClient.Function,
+    instance: WebClient.Instance,
     destination: WebDestination.Function,
     event: WalkerOS.Event,
     useQueue = true,
@@ -525,7 +525,7 @@ export function webClient(
     return pushed;
   }
 
-  function run(instance: WebClient.Function) {
+  function run(instance: WebClient.Instance) {
     instance.config = assign(instance.config, {
       allowed: true, // When run is called, the walker may start running
       count: 0, // Reset the run counter
@@ -558,7 +558,7 @@ export function webClient(
     tryCatch(load)(instance);
   }
 
-  function setConsent(instance: WebClient.Function, data: WalkerOS.Consent) {
+  function setConsent(instance: WebClient.Instance, data: WalkerOS.Consent) {
     const config = instance.config;
 
     let runQueue = false;
@@ -591,7 +591,7 @@ export function webClient(
     }
   }
 
-  function setUserIds(instance: WebClient.Function, data: WalkerOS.User) {
+  function setUserIds(instance: WebClient.Instance, data: WalkerOS.User) {
     const user = instance.config.user;
     // user ids can't be set to undefined
     if (data.id) user.id = data.id;

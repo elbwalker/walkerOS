@@ -5,7 +5,7 @@ describe('Init', () => {
   const w = window;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  let walkerjs: WebClient.Function;
+  let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
     jest.resetModules();
