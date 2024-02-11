@@ -2,7 +2,7 @@ import Tagger from '.';
 import { ITagger } from './types';
 
 describe('Tagger', () => {
-  let tagger: ITagger.Function;
+  let tagger: ITagger.Instance;
 
   beforeEach(() => {
     jest.clearAllMocks();

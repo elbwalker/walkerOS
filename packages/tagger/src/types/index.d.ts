@@ -5,7 +5,7 @@ export namespace ITagger {
     prefix: string;
   }
 
-  interface Function {
+  export interface Instance {
     config: Config;
     entity: (name: string) => Walker.Properties;
     action: ActionMethod;
