@@ -30,7 +30,10 @@ export const Trigger: { [key: string]: Walker.Trigger } = {
   Wait: 'wait',
 } as const;
 
-export function ready(run: Function, instance: WebClient.Instance) {
+export function ready(
+  run: (instance: WebClient.Instance) => void,
+  instance: WebClient.Instance,
+) {
   const fn = () => {
     run(instance);
   };
