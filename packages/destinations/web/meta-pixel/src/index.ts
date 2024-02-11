@@ -57,11 +57,12 @@ export const destinationMetaPixel: Destination = {
 
 function setup() {
   const w = window;
-  if (w.fbq as any) return;
+  if (w.fbq as unknown) return;
 
   const n = (w.fbq = function (): void {
     // eslint-disable-next-line prefer-spread, prefer-rest-params
     n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }) as any;
   if (!w._fbq) w._fbq = n;
   n.push = n;

@@ -15,8 +15,10 @@ export const destinationGoogleGTM: Destination = {
     const custom = config.custom || {};
     const dataLayer = custom.dataLayer || defaultDataLayer;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     window[dataLayer as any] = window[dataLayer as any] || [];
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any)[dataLayer].push({
       'gtm.start': new Date().getTime(),
       event: 'gtm.js',
