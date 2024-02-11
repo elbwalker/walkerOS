@@ -2,8 +2,7 @@ import webClient from '../';
 import type { WebClient, WebDestination } from '../types';
 
 describe('Destination', () => {
-  const w = window;
-  let walkerjs: WebClient.Function;
+  let walkerjs: WebClient.Instance;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn().mockImplementation(() => {

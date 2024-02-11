@@ -3,7 +3,7 @@ import type { Function, Config, Transform } from './types';
 
 describe('Destination API', () => {
   const w = window;
-  let elbwalker: WebClient.Function, destination: Function, config: Config;
+  let walkerjs: WebClient.Instance, destination: Function, config: Config;
 
   const mockFetch = jest.fn(); //.mockImplementation(console.log);
   const mockBeacon = jest.fn();
@@ -28,12 +28,13 @@ describe('Destination API', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     destination = require('.').default;
 
     w.elbLayer = [];
 
-    elbwalker = webClient({ pageview: false });
-    elbwalker.push('walker run');
+    walkerjs = webClient({ pageview: false });
+    walkerjs.push('walker run');
 
     window.fetch = mockFetch;
     navigator.sendBeacon = mockBeacon;
@@ -51,8 +52,8 @@ describe('Destination API', () => {
   });
 
   test('init', () => {
-    elbwalker.push('walker destination', destination);
-    elbwalker.push(event);
+    walkerjs.push('walker destination', destination);
+    walkerjs.push(event);
 
     expect(mockFetch).not.toHaveBeenCalled();
   });
@@ -61,18 +62,18 @@ describe('Destination API', () => {
     config = {
       custom: { url }, // fetch as default
     };
-    elbwalker.push('walker destination', destination, config);
-    elbwalker.push(event);
+    walkerjs.push('walker destination', destination, config);
+    walkerjs.push(event);
 
     expect(mockFetch).toHaveBeenCalledWith(
       url,
       expect.objectContaining({ keepalive: true }),
     );
 
-    elbwalker.push('walker destination', destination, {
+    walkerjs.push('walker destination', destination, {
       custom: { url, transport: 'fetch' },
     });
-    elbwalker.push(event);
+    walkerjs.push(event);
 
     expect(mockFetch).toHaveBeenCalledWith(
       url,
@@ -84,8 +85,8 @@ describe('Destination API', () => {
     config = {
       custom: { url, transport: 'beacon' },
     };
-    elbwalker.push('walker destination', destination, config);
-    elbwalker.push(event);
+    walkerjs.push('walker destination', destination, config);
+    walkerjs.push(event);
 
     expect(mockBeacon).toHaveBeenCalledWith(url, expect.any(String));
 
@@ -97,8 +98,8 @@ describe('Destination API', () => {
     config = {
       custom: { url, transport: 'xhr' },
     };
-    elbwalker.push('walker destination', destination, config);
-    elbwalker.push(event);
+    walkerjs.push('walker destination', destination, config);
+    walkerjs.push(event);
 
     expect(mockXHROpen).toHaveBeenCalledWith('POST', expect.any(String), true);
     expect(mockXHRHeader).toHaveBeenCalledWith(
@@ -118,11 +119,11 @@ describe('Destination API', () => {
       return `${event.entity},transformed`;
     });
 
-    elbwalker.push('walker destination', destination, {
+    walkerjs.push('walker destination', destination, {
       custom: { url, transform },
     });
 
-    elbwalker.push(eventName);
+    walkerjs.push(eventName);
 
     // Verify that the transform function is called with the correct event
     expect(transform).toHaveBeenCalledWith(

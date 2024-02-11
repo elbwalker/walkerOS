@@ -4,8 +4,8 @@ import type * as Walker from './walker';
 
 declare global {
   interface Window {
-    elbwalker: Function;
-    walkerjs: Function;
+    elbwalker: Instance;
+    walkerjs: Instance;
     elbLayer: ElbLayer;
     dataLayer: WalkerEvent | unknown;
     elb: Elb;
@@ -18,7 +18,7 @@ type WalkerEvent = Array<
   }
 >;
 
-export interface Function {
+export interface Instance {
   push: Elb;
   config: Config;
 }
@@ -68,6 +68,8 @@ export interface Config extends WalkerOS.Config {
   pageview: boolean;
   prefix: string;
   queue: WalkerOS.Events;
+  elb?: string;
+  instance?: string;
 }
 
 export interface Destinations {

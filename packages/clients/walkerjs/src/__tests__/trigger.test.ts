@@ -5,7 +5,7 @@ import { Trigger, elb } from '../lib/trigger';
 import fs from 'fs';
 
 const w = window;
-let walkerjs: WebClient.Function;
+let walkerjs: WebClient.Instance;
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);

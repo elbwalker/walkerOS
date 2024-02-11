@@ -3,7 +3,7 @@ import type { Config, Function } from './types';
 
 describe('Destination Google GA4', () => {
   const w = window;
-  let elbwalker: WebClient.Function, destination: Function, config: Config;
+  let walkerjs: WebClient.Instance, destination: Function, config: Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const event = 'Entity Action';
@@ -21,53 +21,54 @@ describe('Destination Google GA4', () => {
       custom: { measurementId },
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     destination = require('.').default;
     destination.config = config;
 
     w.elbLayer = [];
     w.dataLayer = [];
 
-    elbwalker = webClient({ pageview: false, tagging: 2 });
-    elbwalker.push('walker run');
+    walkerjs = webClient({ pageview: false, tagging: 2 });
+    walkerjs.push('walker run');
     w.gtag = mockFn;
   });
 
   test('Init', () => {
-    (w.dataLayer as any) = undefined;
-    (w.gtag as any) = undefined;
+    (w.dataLayer as unknown) = undefined;
+    (w.gtag as unknown) = undefined;
 
     expect(w.dataLayer).not.toBeDefined();
     expect(w.gtag).not.toBeDefined();
 
     destination.config = config;
-    elbwalker.push('walker destination', destination);
+    walkerjs.push('walker destination', destination);
     expect(w.dataLayer).not.toBeDefined();
     expect(w.gtag).not.toBeDefined();
 
-    elbwalker.push(event);
+    walkerjs.push(event);
     expect(w.dataLayer).toBeDefined();
     expect(w.gtag).toBeDefined();
 
-    expect((w.dataLayer as any).length).toBe(3);
+    expect((w.dataLayer as unknown[]).length).toBe(3);
   });
 
   test('Init calls', () => {
     destination.config = config;
 
     // Bad configs
-    elbwalker.push('walker destination', destination, {});
-    elbwalker.push('walker destination', destination, { custom: {} });
-    elbwalker.push('walker destination', destination, { custom: {} });
-    elbwalker.push('walker destination', destination, { init: true });
-    elbwalker.push('walker destination', destination, {
+    walkerjs.push('walker destination', destination, {});
+    walkerjs.push('walker destination', destination, { custom: {} });
+    walkerjs.push('walker destination', destination, { custom: {} });
+    walkerjs.push('walker destination', destination, { init: true });
+    walkerjs.push('walker destination', destination, {
       custom: {},
       init: true,
     });
 
     // Regular config
-    elbwalker.push('walker destination', destination);
+    walkerjs.push('walker destination', destination);
 
-    elbwalker.push(event);
+    walkerjs.push(event);
 
     expect(mockFn).toHaveBeenCalledTimes(2);
     expect(mockFn).toHaveBeenNthCalledWith(1, 'config', measurementId, {});
@@ -75,14 +76,14 @@ describe('Destination Google GA4', () => {
 
   test('Init with load script', () => {
     destination.config.loadScript = true;
-    elbwalker.push('walker destination', destination);
+    walkerjs.push('walker destination', destination);
 
     const scriptSelector = `script[src="https://www.googletagmanager.com/gtag/js?id=${measurementId}"]`;
 
     let elem = document.querySelector(scriptSelector);
     expect(elem).not.toBeTruthy();
 
-    elbwalker.push(event);
+    walkerjs.push(event);
 
     elem = document.querySelector(scriptSelector);
     expect(elem).toBeTruthy();
@@ -91,8 +92,8 @@ describe('Destination Google GA4', () => {
   test('Debug mode', () => {
     config.custom!.debug = true;
     destination.config = config;
-    elbwalker.push('walker destination', destination);
-    elbwalker.push(event);
+    walkerjs.push('walker destination', destination);
+    walkerjs.push(event);
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
@@ -104,8 +105,8 @@ describe('Destination Google GA4', () => {
   test('Disable pageview', () => {
     config.custom!.pageview = false;
     destination.config = config;
-    elbwalker.push('walker destination', destination);
-    elbwalker.push(event);
+    walkerjs.push('walker destination', destination);
+    walkerjs.push(event);
 
     expect(mockFn).toHaveBeenCalledWith(
       'config',
@@ -115,8 +116,8 @@ describe('Destination Google GA4', () => {
   });
 
   test('Push', () => {
-    elbwalker.push('walker destination', destination);
-    elbwalker.push(event, data, trigger);
+    walkerjs.push('walker destination', destination);
+    walkerjs.push(event, data, trigger);
 
     expect(mockFn).toHaveBeenCalledWith('event', eventName, {
       data_foo: 'bar',
@@ -128,8 +129,8 @@ describe('Destination Google GA4', () => {
     config.custom!.transport_url = transport_url;
     destination.config = config;
 
-    elbwalker.push('walker destination', destination);
-    elbwalker.push(event, data, trigger);
+    walkerjs.push('walker destination', destination);
+    walkerjs.push(event, data, trigger);
 
     Object.assign(data, { send_to: measurementId });
 
@@ -170,13 +171,13 @@ describe('Destination Google GA4', () => {
         },
       },
     };
-    elbwalker.push('walker destination', destination, config);
-    elbwalker.push('walker config', {
+    walkerjs.push('walker destination', destination, config);
+    walkerjs.push('walker config', {
       globals: { lang: 'de' },
       user: { id: 'us3r1d' },
     });
 
-    elbwalker.push(
+    walkerjs.push(
       'ga4 params',
       { old: false, override: 'important' },
       trigger,
@@ -199,7 +200,7 @@ describe('Destination Google GA4', () => {
   });
 
   test('Parameters include', () => {
-    elbwalker.push('walker config', {
+    walkerjs.push('walker config', {
       globals: { lang: 'de' },
       user: { id: 'us3r1d' },
     });
@@ -225,9 +226,9 @@ describe('Destination Google GA4', () => {
         },
       },
     };
-    elbwalker.push('walker destination', destination, config);
+    walkerjs.push('walker destination', destination, config);
 
-    elbwalker.push('entity action', { foo: 'bar', override: 'foo' });
+    walkerjs.push('entity action', { foo: 'bar', override: 'foo' });
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
@@ -238,7 +239,7 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    elbwalker.push('entity event', {}, trigger);
+    walkerjs.push('entity event', {}, trigger);
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'entity_event',
@@ -253,7 +254,7 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    elbwalker.push(
+    walkerjs.push(
       'entity all',
       { foo: 'bar' },
       trigger,
@@ -279,7 +280,7 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    elbwalker.push('entity none', { foo: 'bar' });
+    walkerjs.push('entity none', { foo: 'bar' });
     expect(mockFn).toHaveBeenCalledWith('event', 'entity_none', {
       send_to: measurementId,
     });
@@ -327,9 +328,9 @@ describe('Destination Google GA4', () => {
         },
       },
     };
-    elbwalker.push('walker destination', destination, config);
+    walkerjs.push('walker destination', destination, config);
 
-    elbwalker.push('product add', {
+    walkerjs.push('product add', {
       id: 'sku',
       category: 'Examples',
       currency: 'USD', // override default
@@ -352,7 +353,7 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    elbwalker.push(
+    walkerjs.push(
       'order complete',
       { id: 'orderid', revenue: 25.42 },
       trigger,
@@ -380,9 +381,9 @@ describe('Destination Google GA4', () => {
       custom: { measurementId, snakeCase: false },
       init: true,
     };
-    elbwalker.push('walker destination', destination, config);
+    walkerjs.push('walker destination', destination, config);
 
-    elbwalker.push('Original Case');
+    walkerjs.push('Original Case');
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',

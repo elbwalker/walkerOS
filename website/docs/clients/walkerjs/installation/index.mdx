@@ -13,3 +13,28 @@ There are multiple ways to install and use the web client walker.js:
   walker.js as an NPM package.
 - **<Link to="/docs/clients/walkerjs/installation/script">Code</Link>**:
   Directly include walker.js in the browser.
+
+## Configuration
+
+There a few configuration options that you can set when creating a walker.js
+instance:
+
+| Option   | Type    | Description                                             |
+| -------- | ------- | ------------------------------------------------------- |
+| consent  | object  | Initial consent states, learn more under consent.       |
+| default  | boolean | Add a dataLayer destination and run automatically.      |
+| elb      | string  | Name of assign the elb function to the window           |
+| elbLayer | object  | Public elbwalker API for async communication.           |
+| globals  | object  | Static attributes added to each event.                  |
+| instance | string  | Name of the walkerjs instance to assign to the window   |
+| pageview | boolean | Trigger a page view event by default.                   |
+| prefix   | string  | Attributes prefix used by the walker.                   |
+| user     | object  | Setting the user ids including id, device, and session. |
+| tagging  | number  | Current version of the tracking setup.                  |
+
+```ts
+const walkerjs = Walkerjs(config);
+```
+
+During a run you can still use `globals` and `tagging` to update the
+configuration.

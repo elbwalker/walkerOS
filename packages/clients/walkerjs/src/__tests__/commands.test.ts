@@ -4,7 +4,7 @@ describe('Commands on', () => {
   const w = window;
   const mockDataLayer = jest.fn(); //.mockImplementation(console.log);
 
-  let walkerjs: WebClient.Function;
+  let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
     // reset DOM with event listeners etc.

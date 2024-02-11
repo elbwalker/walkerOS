@@ -38,21 +38,25 @@ walker <--> elbLayer
 
 ## Configuration
 
-To configure elbwalker use the walker prefix (like an entity) to call a command.
-Setting the general configuration. Almost identical to the settings at the
-installation, except for default.
+To&nbsp;<Link to="/docs/clients/walkerjs/installation#configuration">configure
+walker.js</Link> either do it while creating an instance or use the
+`walker config` command. There are options available before a `run` is called:
 
 ```js
 elb('walker config', {
   consent: { functional: true }, // Initial consent states, learn more under consent
+  elb: 'elb', // Name of assign the elb function to the window
   elbLayer: window.elbLayer, // Public elbwalker API for async communication (only prior run)
   globals: {}, // Static attributes added to each event
+  instance: 'walkerjs', // Name of the walkerjs instance to assign to the window
   pageview: true, // Trigger a page view event by default
   prefix: 'data-elb', // Attributes prefix used by the walker
   user: { id: '', device: '', session: '' }, // Setting the user ids
   tagging: 0, // Current version of the tracking setup
 });
 ```
+
+And after the `run` command only `globals` and `tagging` can be updated.
 
 ## Run
 
@@ -69,7 +73,7 @@ elb('walker run');
 
 (Re-)initializes event listeners on one or multiple target elements. Can be used
 for e.g. asynchronously loaded content like newly added products in a category
-list or a wizzard.
+list or a wizard.
 
 ```js
 elb('walker init', element); // or an array of elements

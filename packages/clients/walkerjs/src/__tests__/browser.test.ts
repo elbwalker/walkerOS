@@ -27,10 +27,11 @@ describe('Browser', () => {
   });
 
   test('initialize walkerjs on window', () => {
-    w.walkerjs = undefined as unknown as WebClient.Function;
+    w.walkerjs = undefined as unknown as WebClient.Instance;
     expect(w.walkerjs).toBeUndefined();
     jest.resetModules();
     jest.requireActual('../walkerjs');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const walkerjs = require('../').default;
     expect(w.walkerjs).toEqual(walkerjs);
   });
@@ -43,7 +44,7 @@ describe('Browser', () => {
     expect(mockFn).toHaveBeenCalledWith({});
   });
 
-  test('default init mode', () => {
+  test('default init mode default', () => {
     const elem = document.getElementsByTagName('script')[0];
     elem.removeAttribute('data-project');
 
@@ -56,7 +57,7 @@ describe('Browser', () => {
     expect(window.document.scripts.length).toBe(1);
   });
 
-  test('default init mode', () => {
+  test('default init mode non-default', () => {
     const elem = document.getElementsByTagName('script')[0];
     elem.setAttribute('data-default', 'true');
 

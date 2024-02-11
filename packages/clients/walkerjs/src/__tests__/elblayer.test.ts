@@ -5,7 +5,7 @@ import { elb } from '../lib/trigger';
 
 describe('ElbLayer', () => {
   const w = window;
-  let walkerjs: WebClient.Function;
+  let walkerjs: WebClient.Instance;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn(); //.mockImplementation(console.log);
@@ -134,10 +134,10 @@ describe('ElbLayer', () => {
   test('prioritize walker commands before run', () => {
     walkerjs = webClient();
 
-    (elb as Function)();
+    (elb as () => void)();
     elb('event postponed');
     elb('walker destination', destination);
-    elb('walker user', { id: 'userid' });
+    elb('walker user', { id: 'userId' });
     elb('walker run');
     elb('event later');
 
@@ -145,7 +145,7 @@ describe('ElbLayer', () => {
       1,
       expect.objectContaining({
         event: 'event postponed',
-        user: { id: 'userid' },
+        user: { id: 'userId' },
       }),
       expect.anything(),
       undefined,
@@ -155,7 +155,7 @@ describe('ElbLayer', () => {
       2,
       expect.objectContaining({
         event: 'page view',
-        user: { id: 'userid' },
+        user: { id: 'userId' },
       }),
       expect.anything(),
       undefined,
@@ -165,7 +165,7 @@ describe('ElbLayer', () => {
       3,
       expect.objectContaining({
         event: 'event later',
-        user: { id: 'userid' },
+        user: { id: 'userId' },
       }),
       expect.anything(),
       undefined,
@@ -174,7 +174,7 @@ describe('ElbLayer', () => {
   });
 
   test('elbLayer initialization', () => {
-    w.elbLayer = undefined as any;
+    w.elbLayer = undefined as unknown as WebClient.ElbLayer;
 
     walkerjs = webClient();
 
@@ -182,6 +182,7 @@ describe('ElbLayer', () => {
   });
 
   test('client version equals package.json version', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const packageJsonVersion = require('../../package.json').version;
 
     walkerjs = webClient();
@@ -342,7 +343,7 @@ describe('ElbLayer', () => {
     const layer: WebClient.ElbLayer = [];
 
     walkerjs = webClient({ elbLayer: layer, pageview: false });
-    layer.push('walker run'); // Overrites push function
+    layer.push('walker run'); // Overwrites push function
     layer.push('walker destination', destination, {
       init: true,
       custom: { a: 1 },
@@ -369,7 +370,7 @@ describe('ElbLayer', () => {
     );
 
     // Parameters
-    expect((w.elbLayer[1] as any)[0]).toBe('page view');
+    expect((w.elbLayer[1] as unknown[])[0]).toBe('page view');
   });
 
   test('custom push', () => {

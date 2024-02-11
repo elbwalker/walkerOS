@@ -30,7 +30,7 @@ export const Trigger: { [key: string]: Walker.Trigger } = {
   Wait: 'wait',
 } as const;
 
-export function ready(run: Function, instance: WebClient.Function) {
+export function ready(run: Function, instance: WebClient.Instance) {
   const fn = () => {
     run(instance);
   };
@@ -42,14 +42,14 @@ export function ready(run: Function, instance: WebClient.Function) {
 }
 
 // Called for each new run to setup triggers
-export function load(instance: WebClient.Function) {
+export function load(instance: WebClient.Instance) {
   // Trigger static page view if enabled
   if (instance.config.pageview) pageView(instance);
 
   initScopeTrigger(instance);
 }
 
-export function initGlobalTrigger(instance: WebClient.Function): void {
+export function initGlobalTrigger(instance: WebClient.Instance): void {
   document.addEventListener(
     'click',
     tryCatch(function (this: Document, ev: MouseEvent) {
@@ -65,7 +65,7 @@ export function initGlobalTrigger(instance: WebClient.Function): void {
 }
 
 export function initScopeTrigger(
-  instance: WebClient.Function,
+  instance: WebClient.Instance,
   scope: WebClient.Scope = document,
 ) {
   // Reset all scroll events @TODO check if it's right here
@@ -102,7 +102,7 @@ export function initScopeTrigger(
 }
 
 function handleTrigger(
-  instance: WebClient.Function,
+  instance: WebClient.Instance,
   element: Element,
   trigger: Walker.Trigger,
   // @TODO add triggerParams to filter for specific trigger
@@ -120,7 +120,7 @@ function handleTrigger(
 }
 
 function handleActionElem(
-  instance: WebClient.Function,
+  instance: WebClient.Instance,
   elem: HTMLElement,
   selectorAction: string,
 ) {
@@ -157,11 +157,11 @@ function handleActionElem(
   );
 }
 
-function triggerClick(instance: WebClient.Function, ev: MouseEvent) {
+function triggerClick(instance: WebClient.Instance, ev: MouseEvent) {
   handleTrigger(instance, ev.target as Element, Trigger.Click);
 }
 
-function triggerHover(instance: WebClient.Function, elem: HTMLElement) {
+function triggerHover(instance: WebClient.Instance, elem: HTMLElement) {
   elem.addEventListener(
     'mouseenter',
     tryCatch(function (this: Document, ev: MouseEvent) {
@@ -171,12 +171,12 @@ function triggerHover(instance: WebClient.Function, elem: HTMLElement) {
   );
 }
 
-function triggerLoad(instance: WebClient.Function, elem: HTMLElement) {
+function triggerLoad(instance: WebClient.Instance, elem: HTMLElement) {
   handleTrigger(instance, elem, Trigger.Load);
 }
 
 function triggerPulse(
-  instance: WebClient.Function,
+  instance: WebClient.Instance,
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
@@ -196,7 +196,7 @@ function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
   scrollElements.push([elem, depth]);
 }
 
-function triggerSubmit(instance: WebClient.Function, ev: Event) {
+function triggerSubmit(instance: WebClient.Instance, ev: Event) {
   handleTrigger(instance, ev.target as Element, Trigger.Submit);
 }
 
@@ -208,7 +208,7 @@ function triggerVisible(
 }
 
 function triggerWait(
-  instance: WebClient.Function,
+  instance: WebClient.Instance,
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
@@ -218,10 +218,10 @@ function triggerWait(
   );
 }
 
-function scroll(instance: WebClient.Function) {
+function scroll(instance: WebClient.Instance) {
   const scrolling = (
     scrollElements: Walker.ScrollElements,
-    instance: WebClient.Function,
+    instance: WebClient.Instance,
   ) => {
     return scrollElements.filter(([element, depth]) => {
       // Distance from top to the bottom of the visible screen
@@ -265,7 +265,7 @@ function scroll(instance: WebClient.Function) {
   }
 }
 
-function pageView(instance: WebClient.Function) {
+function pageView(instance: WebClient.Instance) {
   // static page view
   const loc = window.location;
   const data: WalkerOS.Properties = {
@@ -281,7 +281,7 @@ function pageView(instance: WebClient.Function) {
 }
 
 function observerVisible(
-  instance: WebClient.Function,
+  instance: WebClient.Instance,
   duration = 1000,
 ): IntersectionObserver | undefined {
   if (!window.IntersectionObserver) return;
