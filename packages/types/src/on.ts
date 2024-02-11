@@ -13,7 +13,7 @@ export interface Rules {
 export type Functions = OnConsentFn;
 
 export type OnConsentFn = (
-  instance: WalkerOS.Function,
+  instance: WalkerOS.Instance,
   type: 'consent',
   options: Options,
 ) => void;

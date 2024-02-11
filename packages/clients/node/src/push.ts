@@ -3,7 +3,7 @@ import { NodeClient, NodeDestination } from './types';
 import { assign, isSameType, tryCatchAsync } from '@elbwalker/utils';
 
 export function allowedToPush(
-  instance: NodeClient.Function,
+  instance: NodeClient.Instance,
   destination: NodeDestination.Destination,
 ): boolean {
   // Default without consent handling
@@ -29,7 +29,7 @@ export function allowedToPush(
 }
 
 export async function pushToDestinations(
-  instance: NodeClient.Function,
+  instance: NodeClient.Instance,
   event?: WalkerOS.Event,
   destination?: NodeClient.Destinations,
 ): Promise<NodeDestination.PushResult> {

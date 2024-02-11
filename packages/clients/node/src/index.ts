@@ -22,7 +22,7 @@ export function createNodeClient(customConfig?: NodeClient.PartialConfig) {
 
 export function nodeClient(
   customConfig: NodeClient.PartialConfig = {},
-): NodeClient.Function {
+): NodeClient.Instance {
   const client = '2.0.0';
   const config = getConfig(customConfig, {
     client,
@@ -46,7 +46,7 @@ export function nodeClient(
     })(instance, ...args);
   };
 
-  const instance: NodeClient.Function = {
+  const instance: NodeClient.Instance = {
     config,
     push,
   };
@@ -58,7 +58,7 @@ export function nodeClient(
 }
 
 async function addDestination(
-  instance: NodeClient.Function,
+  instance: NodeClient.Instance,
   data: unknown = {},
   options: unknown = {},
 ) {
@@ -147,7 +147,7 @@ const pushFn: NodeClient.PrependInstance<NodeClient.Push> = async (
 };
 
 function getEventOrAction(
-  instance: NodeClient.Function,
+  instance: NodeClient.Instance,
   props: Partial<WalkerOS.Event> = {},
 ): { event?: WalkerOS.Event; action?: string } {
   if (!props.event) throw new Error('Event name is required');
@@ -201,7 +201,7 @@ function getEventOrAction(
 }
 
 async function handleCommand(
-  instance: NodeClient.Function,
+  instance: NodeClient.Instance,
   action: string,
   data?: NodeClient.PushData,
   options?: NodeClient.PushOptions,
@@ -230,7 +230,7 @@ async function handleCommand(
   return { command, result };
 }
 
-function setConfig(instance: NodeClient.Function, data: unknown = {}) {
+function setConfig(instance: NodeClient.Instance, data: unknown = {}) {
   if (!isSameType(data, {} as WalkerOS.Config)) return;
   //@TODO strict type checking
 
@@ -238,7 +238,7 @@ function setConfig(instance: NodeClient.Function, data: unknown = {}) {
   return instance.config;
 }
 
-async function setConsent(instance: NodeClient.Function, data: unknown = {}) {
+async function setConsent(instance: NodeClient.Instance, data: unknown = {}) {
   if (!isSameType(data, {} as WalkerOS.Consent)) return;
 
   let runQueue = false;
@@ -254,7 +254,7 @@ async function setConsent(instance: NodeClient.Function, data: unknown = {}) {
   if (runQueue) return await pushToDestinations(instance);
 }
 
-function setUser(instance: NodeClient.Function, data: unknown = {}) {
+function setUser(instance: NodeClient.Instance, data: unknown = {}) {
   if (!isSameType(data, {} as WalkerOS.User)) return;
 
   const user: WalkerOS.User = {};
@@ -267,7 +267,7 @@ function setUser(instance: NodeClient.Function, data: unknown = {}) {
   return user;
 }
 
-function run(instance: NodeClient.Function, data: unknown = {}) {
+function run(instance: NodeClient.Instance, data: unknown = {}) {
   if (!isSameType(data, {} as WalkerOS.Properties)) return;
 
   instance.config = assign(instance.config, {

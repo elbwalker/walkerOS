@@ -1,13 +1,14 @@
 import type { WalkerOS, Schema, Handler } from '@elbwalker/types';
 import type * as NodeDestination from './destination';
 
-export interface Function {
+export interface Instance {
   config: Config;
   push: Push;
   setup?: Setup; // @TODO make this required
 }
 
 export interface AddDestination {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (id: string, destination: NodeDestination.Destination<any, any>): void;
 }
 
@@ -25,6 +26,7 @@ export interface Setup {
 
 export type PushData =
   | WalkerOS.PushData
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   | NodeDestination.Destination<any, any>
   | NodeDestination.PushResult;
 
@@ -66,7 +68,8 @@ export interface Destinations {
   [key: string]: NodeDestination.Destination;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type PrependInstance<Fn extends (...args: any) => any> = (
-  instance: Function,
+  instance: Instance,
   ...args: Parameters<Fn>
 ) => ReturnType<Fn>;

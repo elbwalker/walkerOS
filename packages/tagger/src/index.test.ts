@@ -2,7 +2,6 @@ import Tagger from '.';
 import { ITagger } from './types';
 
 describe('Tagger', () => {
-  const w = window;
   let tagger: ITagger.Function;
 
   beforeEach(() => {

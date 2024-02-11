@@ -9,7 +9,7 @@ export * from './types';
 
 export function firebaseStack(
   customConfig: FirebaseStack.PartialConfig = {},
-): FirebaseStack.Function {
+): FirebaseStack.Instance {
   const config = getConfig(customConfig);
   const { elb, instance } = createNodeClient(config.client);
 
@@ -17,7 +17,7 @@ export function firebaseStack(
     return pushFn(instance, options);
   };
 
-  const stack: FirebaseStack.Function = {
+  const stack: FirebaseStack.Instance = {
     config,
     instance,
     elb,
@@ -49,7 +49,7 @@ const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
     await tryCatchAsync(
       async (body: string, config: NodeClient.Config) => {
         // @TODO what if it's a command?
-        let event = validateEvent(JSON.parse(body), config.contracts);
+        const event = validateEvent(JSON.parse(body), config.contracts);
 
         const result = await instance.push(event);
 
