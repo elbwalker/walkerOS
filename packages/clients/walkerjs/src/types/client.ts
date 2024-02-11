@@ -68,6 +68,8 @@ export interface Config extends WalkerOS.Config {
   pageview: boolean;
   prefix: string;
   queue: WalkerOS.Events;
+  elb?: string;
+  instance?: string;
 }
 
 export interface Destinations {

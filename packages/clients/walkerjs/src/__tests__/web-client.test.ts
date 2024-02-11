@@ -34,6 +34,18 @@ describe('Elbwalker', () => {
     expect(instance.config.elbLayer).toBeDefined();
   });
 
+  test('assign to window', () => {
+    const w = window as unknown as Record<string, unknown>;
+    expect(window.elb).toBeUndefined();
+    expect(window.walkerjs).toBeUndefined();
+    const instance = webClient({
+      elb: 'foo',
+      instance: 'bar',
+    });
+    expect(w.foo).toBe(elb);
+    expect(w.bar).toBe(instance);
+  });
+
   test('empty push', () => {
     (walkerjs as unknown as string[]).push();
     walkerjs.push('');

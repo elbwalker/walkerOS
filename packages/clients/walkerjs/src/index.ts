@@ -5,6 +5,7 @@ import {
   initGlobalTrigger,
   ready,
   load,
+  elb,
 } from './lib/trigger';
 import {
   Const,
@@ -16,9 +17,9 @@ import {
 } from '@elbwalker/utils';
 import { getEntities, getGlobals } from './lib/walker';
 
-// Types
+// Export types and elb
 export * from './types';
-export { elb } from './lib/trigger';
+export { elb };
 
 export function webClient(
   customConfig: Partial<WebClient.Config> = {},
@@ -34,6 +35,13 @@ export function webClient(
 
   // Setup pushes via elbLayer
   elbLayerInit(instance);
+
+  // Assign instance and/or elb to the window object
+  if (customConfig.elb)
+    (window as unknown as Record<string, unknown>)[customConfig.elb] = elb;
+  if (customConfig.instance)
+    (window as unknown as Record<string, unknown>)[customConfig.instance] =
+      instance;
 
   // Run on events for default consent states
   onApply(instance, 'consent', instance.config.consent);
