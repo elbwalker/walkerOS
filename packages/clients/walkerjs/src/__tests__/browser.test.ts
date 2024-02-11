@@ -30,9 +30,7 @@ describe('Browser', () => {
     w.walkerjs = undefined as unknown as WebClient.Instance;
     expect(w.walkerjs).toBeUndefined();
     jest.resetModules();
-    jest.requireActual('../walkerjs');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const walkerjs = require('../').default;
+    const walkerjs = jest.requireActual('../walkerjs').default;
     expect(w.walkerjs).toEqual(walkerjs);
   });
 

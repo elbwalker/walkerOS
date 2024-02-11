@@ -181,8 +181,7 @@ describe('ElbLayer', () => {
   });
 
   test('client version equals package.json version', () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const packageJsonVersion = require('../../package.json').version;
+    const packageJsonVersion = jest.requireActual('../../package.json').version;
 
     walkerjs = Walkerjs();
     expect(walkerjs.config.client).toStrictEqual(packageJsonVersion);

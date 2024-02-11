@@ -20,8 +20,7 @@ describe('destination Google Ads', () => {
       custom: { conversionId },
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    destination = require('.').default;
+    destination = jest.requireActual('.').default;
     destination.config = config;
 
     w.elbLayer = [];

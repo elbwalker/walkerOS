@@ -15,8 +15,7 @@ describe('Destination PiwikPro', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    destination = require('.').default;
+    destination = jest.requireActual('.').default;
 
     w.elbLayer = [];
     w._paq = [];

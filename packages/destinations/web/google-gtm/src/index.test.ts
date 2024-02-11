@@ -13,8 +13,7 @@ describe('destination google-tag-manager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    destination = require('./index').default;
+    destination = jest.requireActual('./index').default;
 
     w.elbLayer = [];
     w.dataLayer = [];

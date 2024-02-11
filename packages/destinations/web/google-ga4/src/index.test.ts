@@ -22,8 +22,7 @@ describe('Destination Google GA4', () => {
       custom: { measurementId },
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    destination = require('.').default;
+    destination = jest.requireActual('.').default;
     destination.config = config;
 
     w.elbLayer = [];
