@@ -1,9 +1,9 @@
-import type { Function } from './types';
+import type { Destination } from './types';
 
 // Types
 export * as DestinationWebAPI from './types';
 
-export const destinationWebAPI: Function = {
+export const destinationWebAPI: Destination = {
   type: 'api',
 
   config: {},

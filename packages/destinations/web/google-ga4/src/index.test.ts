@@ -1,9 +1,9 @@
 import { elb, Walkerjs } from '@elbwalker/walker.js';
-import type { DestinationGoogleGA4 } from '..';
+import type { DestinationGoogleGA4 } from '.';
 
 describe('Destination Google GA4', () => {
   const w = window;
-  let destination: DestinationGoogleGA4.Function,
+  let destination: DestinationGoogleGA4.Destination,
     config: DestinationGoogleGA4.Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 

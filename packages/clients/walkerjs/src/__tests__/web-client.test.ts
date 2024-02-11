@@ -164,7 +164,7 @@ describe('Elbwalker', () => {
       return true;
     });
     const mockPush = jest.fn();
-    const destination: WebDestination.Function = {
+    const destination: WebDestination.Destination = {
       config: {},
       init: mockInit,
       push: mockPush,

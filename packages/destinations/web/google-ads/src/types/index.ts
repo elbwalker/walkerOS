@@ -7,8 +7,8 @@ declare global {
   }
 }
 
-export interface Function
-  extends WebDestination.Function<CustomConfig, CustomEventConfig> {}
+export interface Destination
+  extends WebDestination.Destination<CustomConfig, CustomEventConfig> {}
 
 export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 

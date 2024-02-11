@@ -9,7 +9,7 @@ describe('Destination', () => {
     return true;
   });
 
-  let destination: WebDestination.Function;
+  let destination: WebDestination.Destination;
   let config: WebDestination.Config;
 
   beforeEach(() => {
@@ -202,7 +202,7 @@ describe('Destination', () => {
     const mockPushB = jest.fn();
     const mockPushC = jest.fn();
 
-    const destinationA: WebDestination.Function = {
+    const destinationA: WebDestination.Destination = {
       push: mockPushA,
       config: {
         mapping: {
@@ -212,14 +212,14 @@ describe('Destination', () => {
       },
     };
 
-    const destinationB: WebDestination.Function = {
+    const destinationB: WebDestination.Destination = {
       push: mockPushB,
       config: {
         mapping: { '*': { action: {} } },
       },
     };
 
-    const destinationC: WebDestination.Function = {
+    const destinationC: WebDestination.Destination = {
       push: mockPushC,
       config: { mapping: { entity: { '*': {} } } },
     };
@@ -318,17 +318,17 @@ describe('Destination', () => {
     const mockPushB = jest.fn();
     const mockPushC = jest.fn();
 
-    const destinationA: WebDestination.Function = {
+    const destinationA: WebDestination.Destination = {
       push: mockPushA,
       config: {}, // No consent settings
     };
 
-    const destinationB: WebDestination.Function = {
+    const destinationB: WebDestination.Destination = {
       push: mockPushB,
       config: { consent: { functional: true } },
     };
 
-    const destinationC: WebDestination.Function = {
+    const destinationC: WebDestination.Destination = {
       push: mockPushC,
       config: { consent: { marketing: true } },
     };
@@ -376,17 +376,17 @@ describe('Destination', () => {
     const mockPushB = jest.fn();
     const mockPushC = jest.fn();
 
-    const destinationA: WebDestination.Function = {
+    const destinationA: WebDestination.Destination = {
       push: mockPushA,
       config: {}, // No consent settings
     };
 
-    const destinationB: WebDestination.Function = {
+    const destinationB: WebDestination.Destination = {
       push: mockPushB,
       config: { consent: { functional: true } },
     };
 
-    const destinationC: WebDestination.Function = {
+    const destinationC: WebDestination.Destination = {
       push: mockPushC,
       config: { consent: { marketing: true } },
     };
@@ -462,7 +462,7 @@ describe('Destination', () => {
 
     const mockPushA = jest.fn();
 
-    const destinationIgnore: WebDestination.Function = {
+    const destinationIgnore: WebDestination.Destination = {
       push: mockPushA,
       config: {
         mapping: {
@@ -492,7 +492,7 @@ describe('Destination', () => {
       },
     };
 
-    const destination: WebDestination.Function = {
+    const destination: WebDestination.Destination = {
       push: mockPushA,
       config,
     };
@@ -523,13 +523,13 @@ describe('Destination', () => {
     const name = 'foo';
     const config = { init: true, mapping: { p: { v: { name } } } };
 
-    const destinationA: WebDestination.Function = {
+    const destinationA: WebDestination.Destination = {
       init: mockInitA,
       push: mockPushA,
       config,
     };
 
-    const destinationB: WebDestination.Function = {
+    const destinationB: WebDestination.Destination = {
       init: mockInitB,
       push: mockPushB,
       config,
@@ -579,7 +579,7 @@ describe('Destination', () => {
 
     // Expect previous events
     const mockPushLate = jest.fn();
-    const destinationLate: WebDestination.Function = {
+    const destinationLate: WebDestination.Destination = {
       push: mockPushLate,
       config,
     };
@@ -607,7 +607,7 @@ describe('Destination', () => {
       expect.anything(),
     );
     const mockPushLater = jest.fn();
-    const destinationLater: WebDestination.Function = {
+    const destinationLater: WebDestination.Destination = {
       push: mockPushLater,
       config,
     };
@@ -616,7 +616,7 @@ describe('Destination', () => {
 
     // Disable processing previous events
     const mockPushLatest = jest.fn();
-    const destinationLatest: WebDestination.Function = {
+    const destinationLatest: WebDestination.Destination = {
       push: mockPushLatest,
       config,
     };

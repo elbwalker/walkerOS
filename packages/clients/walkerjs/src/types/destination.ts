@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { Destination, WalkerOS } from '@elbwalker/types';
+import type {
+  Destination as WalkerOSDestination,
+  WalkerOS,
+} from '@elbwalker/types';
 
-export interface Function<Custom = any, EventCustom = any>
-  extends Destination.Destination<Custom, EventCustom> {
+export interface Destination<Custom = any, EventCustom = any>
+  extends WalkerOSDestination.Destination<Custom, EventCustom> {
   init?: (config: Config<Custom, EventCustom>) => boolean;
   push: (
     event: WalkerOS.Event,
@@ -13,10 +16,10 @@ export interface Function<Custom = any, EventCustom = any>
 }
 
 export interface Config<Custom = any, EventCustom = any>
-  extends Destination.Config<Custom, EventCustom> {}
+  extends WalkerOSDestination.Config<Custom, EventCustom> {}
 
 export interface Mapping<EventCustom>
-  extends Destination.Mapping<EventCustom> {}
+  extends WalkerOSDestination.Mapping<EventCustom> {}
 
 export interface EventConfig<EventCustom = any>
-  extends Destination.EventConfig<EventCustom> {}
+  extends WalkerOSDestination.EventConfig<EventCustom> {}

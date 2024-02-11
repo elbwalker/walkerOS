@@ -1,9 +1,9 @@
 import { elb, Walkerjs } from '@elbwalker/walker.js';
-import type { DestinationPiwikPro } from '..';
+import type { DestinationPiwikPro } from '.';
 
 describe('Destination PiwikPro', () => {
   const w = window;
-  let destination: DestinationPiwikPro.Function;
+  let destination: DestinationPiwikPro.Destination;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 

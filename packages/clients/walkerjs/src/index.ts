@@ -50,7 +50,7 @@ export function Walkerjs(
   if (customConfig.default) {
     // use dataLayer as default destination
     window.dataLayer = window.dataLayer || [];
-    const destination: WebDestination.Function = {
+    const destination: WebDestination.Destination = {
       config: {},
       push: (event) => {
         (window.dataLayer as unknown[]).push({
@@ -68,7 +68,7 @@ export function Walkerjs(
 
   function addDestination(
     instance: WebClient.Instance,
-    data: WebDestination.Function,
+    data: WebDestination.Destination,
     options?: WebDestination.Config,
   ) {
     // Basic validation
@@ -77,7 +77,7 @@ export function Walkerjs(
     // Prefer explicit given config over default config
     const config = options || data.config || { init: false };
 
-    const destination: WebDestination.Function = {
+    const destination: WebDestination.Destination = {
       init: data.init,
       push: data.push,
       config,
@@ -110,7 +110,7 @@ export function Walkerjs(
 
   function allowedToPush(
     instance: WebClient.Instance,
-    destination: WebDestination.Function,
+    destination: WebDestination.Destination,
   ): boolean {
     // Default without consent handling
     let granted = true;
@@ -281,7 +281,7 @@ export function Walkerjs(
         isObject(data) &&
           addDestination(
             instance,
-            data as WebDestination.Function,
+            data as WebDestination.Destination,
             options as WebDestination.Config,
           );
         break;
@@ -464,7 +464,7 @@ export function Walkerjs(
 
   function pushToDestination(
     instance: WebClient.Instance,
-    destination: WebDestination.Function,
+    destination: WebDestination.Destination,
     event: WalkerOS.Event,
     useQueue = true,
   ): boolean {

@@ -1,9 +1,9 @@
 import { elb, Walkerjs } from '@elbwalker/walker.js';
-import type { DestinationPlausible } from '..';
+import type { DestinationPlausible } from '.';
 
 describe('destination plausible', () => {
   const w = window;
-  let destination: DestinationPlausible.Function;
+  let destination: DestinationPlausible.Destination;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 

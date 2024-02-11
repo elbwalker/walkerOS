@@ -8,7 +8,7 @@ describe('ElbLayer', () => {
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn(); //.mockImplementation(console.log);
-  const destination: WebDestination.Function = {
+  const destination: WebDestination.Destination = {
     init: mockInit,
     push: mockPush,
     config: { init: true },

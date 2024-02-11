@@ -1,5 +1,5 @@
-import type { WebDestination } from '@elbwalker/walker.js';
 import type { WalkerOS } from '@elbwalker/types';
+import type { WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
@@ -8,8 +8,8 @@ declare global {
   }
 }
 
-export interface Function
-  extends WebDestination.Function<CustomConfig, CustomEventConfig> {}
+export interface Destination
+  extends WebDestination.Destination<CustomConfig, CustomEventConfig> {}
 
 export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 

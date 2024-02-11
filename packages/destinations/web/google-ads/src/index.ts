@@ -1,9 +1,9 @@
-import { Function } from './types';
+import { Destination } from './types';
 
 // Types
 export * as DestinationGoogleAds from './types';
 
-export const destinationGoogleAds: Function = {
+export const destinationGoogleAds: Destination = {
   type: 'google-ads',
 
   config: {},
@@ -12,7 +12,7 @@ export const destinationGoogleAds: Function = {
     const custom = config.custom || {};
     const w = window;
 
-    // required measuremt id
+    // required measurement id
     if (!custom.conversionId) return false;
 
     // Default currency value
@@ -23,6 +23,7 @@ export const destinationGoogleAds: Function = {
     w.dataLayer = w.dataLayer || [];
     if (!w.gtag) {
       w.gtag = function gtag() {
+        // eslint-disable-next-line prefer-rest-params
         (w.dataLayer as unknown[]).push(arguments);
       };
       w.gtag('js', new Date());

@@ -1,9 +1,9 @@
 import { elb, Walkerjs } from '@elbwalker/walker.js';
-import type { DestinationGoogleAds } from '..';
+import type { DestinationGoogleAds } from '.';
 
 describe('destination Google Ads', () => {
   const w = window;
-  let destination: DestinationGoogleAds.Function,
+  let destination: DestinationGoogleAds.Destination,
     config: DestinationGoogleAds.Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);

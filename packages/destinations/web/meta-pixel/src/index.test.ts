@@ -1,9 +1,9 @@
 import { elb, Walkerjs } from '@elbwalker/walker.js';
-import type { DestinationMetaPixel } from '..';
+import type { DestinationMetaPixel } from '.';
 
 describe('Destination Meta Pixel', () => {
   const w = window;
-  let destination: DestinationMetaPixel.Function,
+  let destination: DestinationMetaPixel.Destination,
     config: DestinationMetaPixel.Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);

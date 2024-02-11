@@ -65,7 +65,7 @@ async function addDestination(
   if (!isSameType(data, {} as NodeDestination.Function)) return;
   if (!isSameType(options, {} as NodeDestination.Config)) return;
 
-  // Prefere explicit given config over default config
+  // Prefer explicit given config over default config
   const config = options || data.config || { init: false };
 
   const destination: NodeDestination.Function = {
@@ -206,7 +206,7 @@ async function handleCommand(
   data?: NodeClient.PushData,
   options?: NodeClient.PushOptions,
 ): Promise<{ command: NodeClient.Command; result?: NodeClient.PushData }> {
-  let command: NodeClient.Command = { name: action, data };
+  const command: NodeClient.Command = { name: action, data };
   let result: NodeClient.PushData | undefined;
 
   switch (action) {

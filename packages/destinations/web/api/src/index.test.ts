@@ -1,9 +1,10 @@
 import { elb, Walkerjs } from '@elbwalker/walker.js';
-import type { DestinationWebAPI } from '..';
+import type { DestinationWebAPI } from '.';
 
 describe('Destination API', () => {
   const w = window;
-  let destination: DestinationWebAPI.Function, config: DestinationWebAPI.Config;
+  let destination: DestinationWebAPI.Destination,
+    config: DestinationWebAPI.Config;
 
   const mockFetch = jest.fn(); //.mockImplementation(console.log);
   const mockBeacon = jest.fn();

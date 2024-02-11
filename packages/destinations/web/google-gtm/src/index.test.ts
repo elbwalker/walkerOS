@@ -1,9 +1,9 @@
 import { elb, Walkerjs } from '@elbwalker/walker.js';
-import type { DestinationGoogleGTM } from '..';
+import type { DestinationGoogleGTM } from '.';
 
 describe('destination google-tag-manager', () => {
   const w = window;
-  let destination: DestinationGoogleGTM.Function;
+  let destination: DestinationGoogleGTM.Destination;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const containerId = 'GTM-XXXXXXX';
