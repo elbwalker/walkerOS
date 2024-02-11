@@ -21,7 +21,7 @@ import { getEntities, getGlobals } from './lib/walker';
 export * from './types';
 export { elb };
 
-export function webClient(
+export function Walkerjs(
   customConfig: Partial<WebClient.Config> = {},
 ): WebClient.Instance {
   const client = '2.0.1';
@@ -193,7 +193,7 @@ export function webClient(
       // Pushed as Arguments
       if (isArgument(event)) {
         [event, data, trigger, context, nested, custom] = [
-          ...Array.from(event as IArguments),
+          ...Array.from(event),
         ];
       }
 
@@ -207,7 +207,7 @@ export function webClient(
     // Look if the run command is stacked
     const containsRun = elbLayer.find((element) => {
       // Differentiate between the two types of possible event pushes
-      element = isArgument(element) ? (element as IArguments)[0] : element;
+      element = isArgument(element) ? element[0] : element;
       return element == runCommand;
     });
 
@@ -610,4 +610,4 @@ export function webClient(
   return instance;
 }
 
-export default webClient;
+export default Walkerjs;

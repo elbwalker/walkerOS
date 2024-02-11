@@ -1,5 +1,8 @@
 import { Options, defineConfig } from 'tsup';
 
+const globalName = 'Walkerjs';
+
+// @TODO use config from tsup
 const config: Options = {
   // clean: true, // Not yet supported for multiple entry points
   entry: ['src/index.ts'],
@@ -12,7 +15,7 @@ const config: Options = {
       },
       reserved: [
         // Prevent mangle from renaming these properties
-        'WebClient',
+        globalName,
       ],
     },
   },
@@ -42,7 +45,7 @@ export default defineConfig([
     ...config,
     entry: ['src/index.ts'],
     format: ['iife'],
-    globalName: 'WebClient',
+    globalName,
     outExtension() {
       return { js: `.browser.js` };
     },
@@ -52,7 +55,7 @@ export default defineConfig([
     ...config,
     entry: ['src/index.ts'],
     format: ['iife'],
-    globalName: 'WebClient',
+    globalName,
     outExtension() {
       return { js: `.es5.js` };
     },
