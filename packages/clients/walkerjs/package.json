@@ -19,10 +19,8 @@
     "lint": "eslint \"**/*.ts*\"",
     "test": "jest --colors --coverage"
   },
-  "dependencies": {
-    "@elbwalker/utils": "*"
-  },
   "devDependencies": {
+    "@elbwalker/utils": "*",
     "@elbwalker/types": "*"
   },
   "repository": {
