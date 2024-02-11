@@ -19,9 +19,11 @@
     "lint": "eslint \"**/*.ts*\"",
     "test": "jest --colors --coverage"
   },
+  "dependencies": {
+    "@elbwalker/client-node": "*"
+  },
   "devDependencies": {
     "@google-cloud/bigquery": "^6.2.1",
-    "@elbwalker/client-node": "*",
     "@elbwalker/types": "*"
   },
   "repository": {

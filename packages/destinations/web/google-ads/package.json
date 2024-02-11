@@ -19,10 +19,12 @@
     "lint": "eslint \"**/*.ts*\"",
     "test": "jest --colors --coverage"
   },
+  "dependencies": {
+    "@elbwalker/walker.js": "*"
+  },
   "devDependencies": {
     "@elbwalker/tsup": "*",
     "@elbwalker/types": "*",
-    "@elbwalker/walker.js": "2.0.1",
     "@types/gtag.js": "^0.0.12"
   },
   "repository": {

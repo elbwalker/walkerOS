@@ -19,9 +19,11 @@
     "lint": "eslint \"**/*.ts*\"",
     "test": "jest --colors --coverage"
   },
-  "devDependencies": {
-    "@elbwalker/types": "*",
+  "dependencies": {
     "@elbwalker/utils": "*"
+  },
+  "devDependencies": {
+    "@elbwalker/types": "*"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

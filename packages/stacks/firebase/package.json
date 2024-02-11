@@ -21,11 +21,11 @@
   },
   "dependencies": {
     "@elbwalker/client-node": "*",
+    "@elbwalker/utils": "*",
     "firebase-functions": "^4.4.1"
   },
   "devDependencies": {
-    "@elbwalker/types": "*",
-    "@elbwalker/utils": "*"
+    "@elbwalker/types": "*"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
