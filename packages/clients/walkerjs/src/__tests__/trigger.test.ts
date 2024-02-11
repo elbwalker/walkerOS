@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/ban-types */
-import type { WebClient } from '../types';
-import webClient from '../';
-import { Trigger, elb } from '../lib/trigger';
+import { elb, Walkerjs } from '..';
+import type { WebClient } from '..';
+import { Trigger } from '../lib/trigger';
 import fs from 'fs';
 
 const w = window;
@@ -37,7 +36,7 @@ describe('Trigger', () => {
       },
     );
 
-    walkerjs = webClient({ default: true });
+    walkerjs = Walkerjs({ default: true });
   });
 
   test('elb', () => {
@@ -171,7 +170,7 @@ describe('Trigger', () => {
 
     expect(mockFn).toHaveBeenCalledTimes(0);
 
-    (events.DOMContentLoaded as Function)();
+    (events.DOMContentLoaded as () => void)();
 
     expect(mockFn).toHaveBeenNthCalledWith(
       1,
@@ -191,7 +190,7 @@ describe('Trigger', () => {
     const elem = document.getElementById('click');
 
     // Simulate submit event
-    (events.click as Function)({ target: elem } as Event);
+    (events.click as (e: unknown) => void)({ target: elem } as Event);
 
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -206,7 +205,7 @@ describe('Trigger', () => {
     const form = document.getElementById('form');
 
     // Simulate submit event
-    (events.submit as Function)({ target: form } as Event);
+    (events.submit as (e: unknown) => void)({ target: form } as Event);
 
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -333,8 +332,8 @@ describe('Trigger', () => {
   test('scroll', () => {
     // New instance without cached scroll listener
     w.elbLayer = [];
-    const webClient = jest.requireActual('../').default;
-    walkerjs = webClient({ default: true });
+    const Walkerjs = jest.requireActual('../').default;
+    walkerjs = Walkerjs({ default: true });
 
     const innerHeight = window.innerHeight;
     const elem = document.getElementById('scroll') as HTMLElement;
@@ -359,8 +358,9 @@ describe('Trigger', () => {
       writable: true,
     });
 
+    const scrollFn = events.scroll as (e: unknown) => void;
     // Simulate scroll event
-    (events.scroll as Function)({} as Event);
+    scrollFn({});
 
     expect(mockFn).not.toHaveBeenCalled();
 
@@ -369,7 +369,7 @@ describe('Trigger', () => {
 
     // Skip throttling timer
     jest.advanceTimersByTime(1000);
-    (events.scroll as Function)({} as Event);
+    scrollFn({});
 
     // Not 80% in viewport yet
     expect(mockFn).not.toHaveBeenCalled();
@@ -379,7 +379,7 @@ describe('Trigger', () => {
 
     // Skip throttling timer
     jest.advanceTimersByTime(1000);
-    (events.scroll as Function)({} as Event);
+    scrollFn({});
 
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({

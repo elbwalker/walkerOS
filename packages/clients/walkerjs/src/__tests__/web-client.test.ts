@@ -1,6 +1,5 @@
-import webClient from '../';
-import { elb } from '../lib/trigger';
-import type { WebClient, WebDestination } from '../types';
+import { elb, Walkerjs } from '..';
+import type { WebClient, WebDestination } from '..';
 import type { Data, Hooks } from '@elbwalker/types';
 import fs from 'fs';
 
@@ -20,7 +19,7 @@ describe('Elbwalker', () => {
     (w.dataLayer as unknown[]).push = mockFn;
     w.elbLayer = undefined as unknown as WebClient.ElbLayer;
 
-    walkerjs = webClient({
+    walkerjs = Walkerjs({
       default: true,
       consent: { test: true },
       pageview: false,
@@ -30,7 +29,7 @@ describe('Elbwalker', () => {
   test('go', () => {
     w.elbLayer = undefined as unknown as WebClient.ElbLayer;
     expect(window.elbLayer).toBeUndefined();
-    const instance = webClient();
+    const instance = Walkerjs();
     expect(instance.config.elbLayer).toBeDefined();
   });
 
@@ -38,7 +37,7 @@ describe('Elbwalker', () => {
     const w = window as unknown as Record<string, unknown>;
     expect(window.elb).toBeUndefined();
     expect(window.walkerjs).toBeUndefined();
-    const instance = webClient({
+    const instance = Walkerjs({
       elb: 'foo',
       instance: 'bar',
     });
@@ -120,7 +119,7 @@ describe('Elbwalker', () => {
 
     jest.clearAllMocks(); // skip previous init
     w.elbLayer = [];
-    walkerjs = webClient({
+    walkerjs = Walkerjs({
       default: true,
       pageview: false,
       globals: { out_of: 'override', static: 'value' },
@@ -193,7 +192,7 @@ describe('Elbwalker', () => {
         return params.fn(...args);
       });
 
-    walkerjs = webClient({
+    walkerjs = Walkerjs({
       pageview: false,
       hooks: {
         prePush,
@@ -363,7 +362,7 @@ describe('Elbwalker', () => {
 
   test('walker consent', () => {
     jest.clearAllMocks();
-    walkerjs = webClient({
+    walkerjs = Walkerjs({
       consent: { functional: true },
       default: true,
       pageview: false,
@@ -413,7 +412,7 @@ describe('Elbwalker', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.advanceTimersByTime(2500); // 2.5 sec load time
-    walkerjs = webClient({ elbLayer: [], default: true });
+    walkerjs = Walkerjs({ elbLayer: [], default: true });
 
     expect(mockFn.mock.calls[0][0].timing).toEqual(2.5);
 

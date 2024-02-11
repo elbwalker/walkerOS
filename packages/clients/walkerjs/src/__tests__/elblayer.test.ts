@@ -1,7 +1,6 @@
+import { elb, Walkerjs } from '..';
+import type { WebClient, WebDestination } from '..';
 import type { WalkerOS } from '@elbwalker/types';
-import type { WebClient, WebDestination } from '../types';
-import webClient from '../';
-import { elb } from '../lib/trigger';
 
 describe('ElbLayer', () => {
   const w = window;
@@ -24,7 +23,7 @@ describe('ElbLayer', () => {
   });
 
   test('arguments and event pushes', () => {
-    walkerjs = webClient({ default: true });
+    walkerjs = Walkerjs({ default: true });
     elb('ingest argument', { a: 1 }, 'a', {}); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
@@ -47,7 +46,7 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack without run', () => {
-    walkerjs = webClient();
+    walkerjs = Walkerjs();
     elb('walker destination', destination);
     elb('entity action');
 
@@ -58,7 +57,7 @@ describe('ElbLayer', () => {
     elb('e 1');
     elb('walker destination', destination);
 
-    walkerjs = webClient();
+    walkerjs = Walkerjs();
     elb('e 2');
     elb('walker run');
     // auto call: elb('page view');
@@ -106,7 +105,7 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack with run', () => {
-    walkerjs = webClient();
+    walkerjs = Walkerjs();
 
     elb('walker destination', destination);
     elb('ingest argument', { a: 1 }, 'a'); // Push as arguments
@@ -132,7 +131,7 @@ describe('ElbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    walkerjs = webClient();
+    walkerjs = Walkerjs();
 
     (elb as () => void)();
     elb('event postponed');
@@ -176,7 +175,7 @@ describe('ElbLayer', () => {
   test('elbLayer initialization', () => {
     w.elbLayer = undefined as unknown as WebClient.ElbLayer;
 
-    walkerjs = webClient();
+    walkerjs = Walkerjs();
 
     expect(w.elbLayer).toBeDefined();
   });
@@ -185,7 +184,7 @@ describe('ElbLayer', () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const packageJsonVersion = require('../../package.json').version;
 
-    walkerjs = webClient();
+    walkerjs = Walkerjs();
     expect(walkerjs.config.client).toStrictEqual(packageJsonVersion);
   });
 
@@ -211,12 +210,12 @@ describe('ElbLayer', () => {
       tagging: expect.any(Number),
     };
 
-    walkerjs = webClient();
+    walkerjs = Walkerjs();
     elb('walker run');
 
     expect(walkerjs.config).toStrictEqual(defaultConfig);
 
-    let update: WalkerOS.Properties | Partial<WalkerOS.Config> = {
+    let update: WalkerOS.Properties | Partial<WebClient.Config> = {
       prefix: 'data-custom',
     };
     let config = { ...defaultConfig, ...update };
@@ -236,7 +235,7 @@ describe('ElbLayer', () => {
     w.elbLayer.length = 0;
     let globals: WalkerOS.Properties = { static: 'value' };
     config = { ...defaultConfig, globals };
-    walkerjs = webClient({ globals });
+    walkerjs = Walkerjs({ globals });
     elb('walker run');
     expect(walkerjs.config).toStrictEqual(config);
 
@@ -264,12 +263,12 @@ describe('ElbLayer', () => {
     const dataLayer = w.dataLayer as unknown[];
     const customLayer1 = [] as WebClient.ElbLayer;
     const customLayer2 = [] as WebClient.ElbLayer;
-    const instance1 = webClient({
+    const instance1 = Walkerjs({
       elbLayer: customLayer1,
       default: true,
       pageview: false,
     });
-    const instance2 = webClient({
+    const instance2 = Walkerjs({
       elbLayer: customLayer2,
       default: true,
       pageview: false,
@@ -342,7 +341,7 @@ describe('ElbLayer', () => {
   test('elbLayer push override', () => {
     const layer: WebClient.ElbLayer = [];
 
-    walkerjs = webClient({ elbLayer: layer, pageview: false });
+    walkerjs = Walkerjs({ elbLayer: layer, pageview: false });
     layer.push('walker run'); // Overwrites push function
     layer.push('walker destination', destination, {
       init: true,
@@ -361,7 +360,7 @@ describe('ElbLayer', () => {
   });
 
   test('command order', () => {
-    walkerjs = webClient();
+    walkerjs = Walkerjs();
     elb('walker run');
 
     // Arguments
@@ -384,7 +383,7 @@ describe('ElbLayer', () => {
       { any: 'thing' }, // custom
     );
 
-    walkerjs = webClient({ default: true, pageview: false });
+    walkerjs = Walkerjs({ default: true, pageview: false });
 
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({

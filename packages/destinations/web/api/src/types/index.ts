@@ -1,4 +1,4 @@
-import { Destination, WalkerOS } from '@elbwalker/types';
+import type { Destination, WalkerOS } from '@elbwalker/types';
 import type { WebDestination } from '@elbwalker/walker.js';
 
 export interface Function

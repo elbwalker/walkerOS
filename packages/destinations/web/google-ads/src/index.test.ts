@@ -1,9 +1,10 @@
-import webClient, { type WebClient } from '@elbwalker/walker.js';
-import type { Config, Function } from './types';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
+import type { DestinationGoogleAds } from '..';
 
 describe('destination Google Ads', () => {
   const w = window;
-  let walkerjs: WebClient.Instance, destination: Function, config: Config;
+  let destination: DestinationGoogleAds.Function,
+    config: DestinationGoogleAds.Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
@@ -27,8 +28,8 @@ describe('destination Google Ads', () => {
     w.dataLayer = [];
     w.gtag = mockFn;
 
-    walkerjs = webClient({ pageview: false });
-    walkerjs.push('walker run');
+    Walkerjs({ pageview: false });
+    elb('walker run');
   });
 
   afterEach(() => {
@@ -42,34 +43,34 @@ describe('destination Google Ads', () => {
     expect(w.dataLayer).not.toBeDefined();
     expect(w.gtag).not.toBeDefined();
 
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
 
     expect(w.dataLayer).not.toBeDefined();
     expect(w.gtag).not.toBeDefined();
 
-    walkerjs.push(event);
+    elb(event);
     expect(w.dataLayer).toBeDefined();
     expect(w.gtag).toBeDefined();
   });
 
   test('Init calls', () => {
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
 
-    walkerjs.push(event);
+    elb(event);
 
     expect(mockFn).toHaveBeenNthCalledWith(1, 'config', conversionId);
   });
 
   test('init with load script', () => {
     destination.config.loadScript = true;
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
 
     const scriptSelector = `script[src="https://www.googletagmanager.com/gtag/js?id=${conversionId}"]`;
 
     let elem = document.querySelector(scriptSelector);
     expect(elem).not.toBeTruthy();
 
-    walkerjs.push(event);
+    elb(event);
 
     elem = document.querySelector(scriptSelector);
     expect(elem).toBeTruthy();
@@ -77,15 +78,15 @@ describe('destination Google Ads', () => {
 
   test('push', () => {
     // Missing mapping
-    walkerjs.push('walker destination', destination);
-    walkerjs.push(event);
+    elb('walker destination', destination);
+    elb(event);
     expect(mockFn).not.toHaveBeenCalledWith('event', 'conversion', {
       send_to: `${conversionId}/${label}`,
     });
 
     // Correct mapping
     destination.config.mapping = { entity: { action: { custom: { label } } } };
-    walkerjs.push(event);
+    elb(event);
     expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
       send_to: `${conversionId}/${label}`,
       currency: 'EUR',
@@ -95,7 +96,7 @@ describe('destination Google Ads', () => {
     const currency = 'USD';
     destination.config.custom!.currency = currency;
 
-    walkerjs.push(event);
+    elb(event);
     expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
       send_to: `${conversionId}/${label}`,
       currency,
@@ -103,13 +104,13 @@ describe('destination Google Ads', () => {
   });
 
   test('push with value', () => {
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
     destination.config.mapping = {
       entity: { action: { custom: { label, value: 'revenue' } } },
     };
 
     // Missing value property
-    walkerjs.push(event, {});
+    elb(event, {});
     expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
       send_to: `${conversionId}/${label}`,
       currency: 'EUR',
@@ -117,7 +118,7 @@ describe('destination Google Ads', () => {
 
     // Use a default conversion value
     destination.config.custom!.defaultValue = 3.14;
-    walkerjs.push(event, {});
+    elb(event, {});
     expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
       send_to: `${conversionId}/${label}`,
       currency: 'EUR',
@@ -125,7 +126,7 @@ describe('destination Google Ads', () => {
     });
 
     // With value property
-    walkerjs.push(event, { revenue: 42 });
+    elb(event, { revenue: 42 });
     expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
       send_to: `${conversionId}/${label}`,
       currency: 'EUR',
@@ -134,13 +135,13 @@ describe('destination Google Ads', () => {
   });
 
   test('push with transaction_id', () => {
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
     const transaction_id = '0rd3r1d';
     destination.config.mapping = {
       entity: { action: { custom: { label, id: 'order_id' } } },
     };
 
-    walkerjs.push(event, { order_id: transaction_id });
+    elb(event, { order_id: transaction_id });
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'conversion',

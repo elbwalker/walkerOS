@@ -5,7 +5,7 @@ import { getByStringDot } from '@elbwalker/utils';
 // - static values besides dynamic data values
 // - site search
 // - e-commerce support
-// - duspport for dimensions
+// - support for dimensions
 // - testing
 
 // Types

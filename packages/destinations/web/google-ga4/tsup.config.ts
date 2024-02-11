@@ -1,5 +1,7 @@
 import { config, defineConfig } from '@elbwalker/tsup';
 
+const globalName = 'Destination';
+
 export default defineConfig([
   // Modules
   {
@@ -12,7 +14,7 @@ export default defineConfig([
   {
     ...config,
     format: ['iife'],
-    globalName: 'Destination',
+    globalName,
     outExtension() {
       return { js: `.browser.js` };
     },
@@ -21,7 +23,7 @@ export default defineConfig([
   {
     ...config,
     format: ['iife'],
-    globalName: 'Destination',
+    globalName,
     outExtension() {
       return { js: `.es5.js` };
     },
