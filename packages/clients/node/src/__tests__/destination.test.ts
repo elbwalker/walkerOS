@@ -28,7 +28,7 @@ describe('Destination', () => {
     version: { client: 'c', tagging: 1 },
     source: { type: 'node', id: '', previous_id: '' },
   };
-  const mockDestination: NodeDestination.Function = {
+  const mockDestination: NodeDestination.Destination = {
     config: {},
     init: mockInit,
     push: mockPush,
@@ -135,7 +135,7 @@ describe('Destination', () => {
   });
 
   test('fail', async () => {
-    const destinationFailure: NodeDestination.Function = {
+    const destinationFailure: NodeDestination.Destination = {
       config: {},
       push: jest.fn().mockImplementation(() => {
         throw new Error('kaputt');
@@ -172,7 +172,7 @@ describe('Destination', () => {
 
   test('consent', async () => {
     const mockPush = jest.fn();
-    const destinationConsent: NodeDestination.Function = {
+    const destinationConsent: NodeDestination.Destination = {
       config: { consent: { test: true } },
       push: mockPush,
     };

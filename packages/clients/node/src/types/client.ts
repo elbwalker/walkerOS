@@ -8,7 +8,7 @@ export interface Function {
 }
 
 export interface AddDestination {
-  (id: string, destination: NodeDestination.Function<any, any>): void;
+  (id: string, destination: NodeDestination.Destination<any, any>): void;
 }
 
 export interface Push {
@@ -25,7 +25,7 @@ export interface Setup {
 
 export type PushData =
   | WalkerOS.PushData
-  | NodeDestination.Function<any, any>
+  | NodeDestination.Destination<any, any>
   | NodeDestination.PushResult;
 
 export type PushOptions = WalkerOS.PushOptions | NodeDestination.Config;
@@ -63,7 +63,7 @@ export interface Config extends WalkerOS.Config {
 }
 
 export interface Destinations {
-  [key: string]: NodeDestination.Function;
+  [key: string]: NodeDestination.Destination;
 }
 
 export type PrependInstance<Fn extends (...args: any) => any> = (

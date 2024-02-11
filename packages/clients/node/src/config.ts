@@ -17,6 +17,7 @@ export function getConfig(
     globalsStatic, // Basic values from initial config
     group: '', // Random id to group events of a run
     hooks: {}, // Manage the hook functions
+    on: {}, // Manage the hook functions
     queue: [], // Temporary event queue for all events of a run
     round: 0, // The first round is a special one due to state changes
     timing: 0, // Offset counter to calculate timing property

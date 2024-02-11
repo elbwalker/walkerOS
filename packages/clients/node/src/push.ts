@@ -4,7 +4,7 @@ import { assign, isSameType, tryCatchAsync } from '@elbwalker/utils';
 
 export function allowedToPush(
   instance: NodeClient.Function,
-  destination: NodeDestination.Function,
+  destination: NodeDestination.Destination,
 ): boolean {
   // Default without consent handling
   let granted = true;
@@ -38,7 +38,7 @@ export async function pushToDestinations(
   const config = instance.config;
   const results: Array<{
     id: string;
-    destination: NodeDestination.Function;
+    destination: NodeDestination.Destination;
     skipped?: boolean;
     queue?: WalkerOS.Events;
     error?: unknown;

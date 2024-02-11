@@ -62,13 +62,13 @@ async function addDestination(
   data: unknown = {},
   options: unknown = {},
 ) {
-  if (!isSameType(data, {} as NodeDestination.Function)) return;
+  if (!isSameType(data, {} as NodeDestination.Destination)) return;
   if (!isSameType(options, {} as NodeDestination.Config)) return;
 
   // Prefer explicit given config over default config
   const config = options || data.config || { init: false };
 
-  const destination: NodeDestination.Function = {
+  const destination: NodeDestination.Destination = {
     init: data.init,
     push: data.push,
     config,
