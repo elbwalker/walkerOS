@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Destination, WalkerOS } from '@elbwalker/types';
 
 export interface Function<Custom = any, EventCustom = any>
-  extends Destination.Function<Custom, EventCustom> {
+  extends Destination.Destination<Custom, EventCustom> {
   init?: (config: Config<Custom, EventCustom>) => boolean;
   push: (
     event: WalkerOS.Event,

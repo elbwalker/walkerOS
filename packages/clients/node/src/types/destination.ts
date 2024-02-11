@@ -1,7 +1,7 @@
 import type { Destination, WalkerOS } from '@elbwalker/types';
 
 export interface Function<Custom = unknown, EventCustom = unknown>
-  extends Destination.Function<Custom, EventCustom> {
+  extends Destination.Destination<Custom, EventCustom> {
   push: PushFn<Custom, EventCustom>;
   init?: InitFn<Custom, EventCustom>;
   setup?: SetupFn<Custom, EventCustom>;

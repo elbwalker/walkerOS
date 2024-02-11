@@ -1,8 +1,8 @@
 import type { Handler, WalkerOS } from '.';
 
-export interface Function<Custom = unknown, EventCustom = unknown> {
+export interface Destination<Custom = unknown, EventCustom = unknown> {
   config: Config<Custom, EventCustom>;
-  queue?: Queue; // Non processed events yet and resettet with each new run
+  queue?: Queue; // Non processed events yet and reset with each new run
   type?: string; // The type of the destination
 }
 
