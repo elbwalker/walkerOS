@@ -4,7 +4,7 @@ import { createNodeClient } from '../';
 
 describe('Client', () => {
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
-  const mockDestination: NodeDestination.Function = {
+  const mockDestination: NodeDestination.Destination = {
     config: {},
     push: mockDestinationPush,
   };
@@ -136,7 +136,10 @@ describe('Client', () => {
 
   test('push failure', async () => {
     const { elb } = getClient();
-    result = await (elb as Function)();
+    const elbWithZeroParams =
+      elb as unknown as () => Promise<NodeClient.PushResult>;
+
+    result = await elbWithZeroParams();
 
     expect(result.status).toHaveProperty('ok', false);
     expect(result.status.error).toBe('Error: Event name is required');

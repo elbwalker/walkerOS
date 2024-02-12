@@ -21,7 +21,7 @@ import { getEntities, getGlobals } from './lib/walker';
 export * from './types';
 export { elb };
 
-export function webClient(
+export function Walkerjs(
   customConfig: Partial<WebClient.Config> = {},
 ): WebClient.Instance {
   const client = '2.0.1';
@@ -50,7 +50,7 @@ export function webClient(
   if (customConfig.default) {
     // use dataLayer as default destination
     window.dataLayer = window.dataLayer || [];
-    const destination: WebDestination.Function = {
+    const destination: WebDestination.Destination = {
       config: {},
       push: (event) => {
         (window.dataLayer as unknown[]).push({
@@ -68,7 +68,7 @@ export function webClient(
 
   function addDestination(
     instance: WebClient.Instance,
-    data: WebDestination.Function,
+    data: WebDestination.Destination,
     options?: WebDestination.Config,
   ) {
     // Basic validation
@@ -77,7 +77,7 @@ export function webClient(
     // Prefer explicit given config over default config
     const config = options || data.config || { init: false };
 
-    const destination: WebDestination.Function = {
+    const destination: WebDestination.Destination = {
       init: data.init,
       push: data.push,
       config,
@@ -110,7 +110,7 @@ export function webClient(
 
   function allowedToPush(
     instance: WebClient.Instance,
-    destination: WebDestination.Function,
+    destination: WebDestination.Destination,
   ): boolean {
     // Default without consent handling
     let granted = true;
@@ -193,7 +193,7 @@ export function webClient(
       // Pushed as Arguments
       if (isArgument(event)) {
         [event, data, trigger, context, nested, custom] = [
-          ...Array.from(event as IArguments),
+          ...Array.from(event),
         ];
       }
 
@@ -207,7 +207,7 @@ export function webClient(
     // Look if the run command is stacked
     const containsRun = elbLayer.find((element) => {
       // Differentiate between the two types of possible event pushes
-      element = isArgument(element) ? (element as IArguments)[0] : element;
+      element = isArgument(element) ? element[0] : element;
       return element == runCommand;
     });
 
@@ -281,7 +281,7 @@ export function webClient(
         isObject(data) &&
           addDestination(
             instance,
-            data as WebDestination.Function,
+            data as WebDestination.Destination,
             options as WebDestination.Config,
           );
         break;
@@ -464,7 +464,7 @@ export function webClient(
 
   function pushToDestination(
     instance: WebClient.Instance,
-    destination: WebDestination.Function,
+    destination: WebDestination.Destination,
     event: WalkerOS.Event,
     useQueue = true,
   ): boolean {
@@ -610,4 +610,4 @@ export function webClient(
   return instance;
 }
 
-export default webClient;
+export default Walkerjs;

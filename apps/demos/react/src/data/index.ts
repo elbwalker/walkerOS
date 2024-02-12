@@ -4,7 +4,7 @@ import { elb, webClient, type WebDestination } from '@elbwalker/walker.js';
 
 export function setupAnalytics() {
   // Dummy destination to log events to the console
-  const destinationLog: WebDestination.Function = {
+  const destinationLog: WebDestination.Destination = {
     config: {},
     type: 'log',
     push: console.log,

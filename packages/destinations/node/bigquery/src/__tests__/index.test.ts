@@ -1,9 +1,7 @@
-import type { Config, Function, PartialConfig } from '../types';
+import type { Config, Destination, PartialConfig } from '../types';
 import type { WalkerOS } from '@elbwalker/types';
 
 describe('Node Destination BigQuery', () => {
-  const mockFn = jest.fn().mockImplementation(console.log);
-
   // Mock the bigquery package with __mocks__ implementation
   jest.mock('@google-cloud/bigquery');
 
@@ -42,17 +40,18 @@ describe('Node Destination BigQuery', () => {
     },
   };
 
-  const projectId = 'eventpipe-f9979'; //@TODO change to pr0j3ct1d
-  const location = 'EU';
+  const projectId = 'pr0j3ct1d';
+  // const location = 'EU';
   const datasetId = 'd4t4s3t1d';
   const tableId = 't4bl31d';
 
-  let destination: Function, config: PartialConfig;
+  let destination: Destination, config: Config;
 
-  let credentials: string = 'psst';
+  const credentials: string = 'psst';
 
   function getMockFn(config: PartialConfig) {
-    return ((config.custom?.client as any) || {}).mockFn;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (config.custom?.client || ({} as any)).mockFn;
   }
 
   async function getConfig(custom = {}) {
@@ -65,34 +64,38 @@ describe('Node Destination BigQuery', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    destination = require('../').default;
+    destination = jest.requireActual('../').default;
     destination.config = {};
-    config = {
-      custom: {
-        projectId,
-        location,
-        datasetId,
-        tableId,
-      },
-    };
+    // config = {
+    //   custom: {
+    //     projectId,
+    //     location,
+    //     datasetId,
+    //     tableId,
+    //   },
+    // };
   });
 
   test('setup', async () => {
     expect(destination.setup).toBeDefined();
     if (!destination.setup) return;
 
-    await expect(destination.setup({} as any)).rejects.toThrowError();
+    await expect(destination.setup({})).rejects.toThrow(Error);
 
     const config = await getConfig({ projectId, bigquery: { credentials } });
 
     expect(await destination.setup(config)).toBeTruthy();
 
     const mockFn = getMockFn(config);
-    expect(mockFn).toBeCalledWith('dataset', 'walkeros');
-    expect(mockFn).toBeCalledWith('createDataset', 'walkeros', {
+    expect(mockFn).toHaveBeenCalledWith('dataset', 'walkeros');
+    expect(mockFn).toHaveBeenCalledWith('createDataset', 'walkeros', {
       location: 'EU',
     });
-    expect(mockFn).toBeCalledWith('createTable', 'events', expect.any(Object));
+    expect(mockFn).toHaveBeenCalledWith(
+      'createTable',
+      'events',
+      expect.any(Object),
+    );
   });
 
   test('init', async () => {
@@ -100,10 +103,10 @@ describe('Node Destination BigQuery', () => {
     if (!destination.init) return;
 
     await expect(
-      destination.init({ custom: { datasetId, tableId } } as any),
+      destination.init({ custom: { datasetId, tableId } }),
     ).rejects.toThrow('Config custom projectId missing');
 
-    const config = await getConfig({ projectId });
+    config = await getConfig({ projectId });
 
     expect(config.meta.name).toEqual('BigQuery');
     expect(config.meta.version).toEqual(expect.any(String));
@@ -115,8 +118,8 @@ describe('Node Destination BigQuery', () => {
     const config = await getConfig({ projectId, bigquery: { credentials } });
     const mockFn = getMockFn(config);
 
-    const result = await destination.push([{ event }], config);
-    expect(mockFn).toBeCalledWith('insert', [
+    await destination.push([{ event }], config);
+    expect(mockFn).toHaveBeenCalledWith('insert', [
       {
         event: 'entity action',
         consent: '{"debugging":true}',

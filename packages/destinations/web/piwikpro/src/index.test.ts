@@ -1,9 +1,9 @@
-import webClient, { type WebClient } from '@elbwalker/walker.js';
-import type { Function } from './types';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
+import type { DestinationPiwikPro } from '.';
 
 describe('Destination PiwikPro', () => {
   const w = window;
-  let walkerjs: WebClient.Instance, destination: Function;
+  let destination: DestinationPiwikPro.Destination;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
@@ -15,15 +15,14 @@ describe('Destination PiwikPro', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    destination = require('.').default;
+    destination = jest.requireActual('.').default;
 
     w.elbLayer = [];
     w._paq = [];
     w._paq.push = mockFn;
 
-    walkerjs = webClient();
-    walkerjs.push('walker run');
+    Walkerjs();
+    elb('walker run');
   });
 
   afterEach(() => {
@@ -34,14 +33,14 @@ describe('Destination PiwikPro', () => {
     destination.config = {
       custom: { appId, url },
     };
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
 
     expect(true).toBeTruthy();
   });
 
   test.skip('push', () => {
-    walkerjs.push('walker destination', destination);
-    walkerjs.push(event);
+    elb('walker destination', destination);
+    elb(event);
     // expect(mockFn).toHaveBeenNthCalledWith(1, event);
   });
 });

@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type {
   CustomConfig,
-  Function,
+  Destination,
   Items,
   Parameters,
   PropertyMapping,
@@ -10,7 +10,7 @@ import type {
 // Types
 export * as DestinationGoogleGA4 from './types';
 
-const destinationGoogleGA4: Function = {
+const destinationGoogleGA4: Destination = {
   type: 'google-ga4',
 
   config: { custom: { measurementId: '' } },
@@ -35,6 +35,7 @@ const destinationGoogleGA4: Function = {
     w.dataLayer = w.dataLayer || [];
     if (!w.gtag) {
       w.gtag = function gtag() {
+        // eslint-disable-next-line prefer-rest-params
         (w.dataLayer as unknown[]).push(arguments);
       };
       w.gtag('js', new Date());

@@ -1,9 +1,9 @@
-import webClient, { type WebClient } from '@elbwalker/walker.js';
-import type { Function } from './types';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
+import type { DestinationGoogleGTM } from '.';
 
 describe('destination google-tag-manager', () => {
   const w = window;
-  let walkerjs: WebClient.Instance, destination: Function;
+  let destination: DestinationGoogleGTM.Destination;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const containerId = 'GTM-XXXXXXX';
@@ -13,24 +13,23 @@ describe('destination google-tag-manager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    destination = require('./index').default;
+    destination = jest.requireActual('./index').default;
 
     w.elbLayer = [];
     w.dataLayer = [];
     (w.dataLayer as unknown[]).push = mockFn;
 
-    walkerjs = webClient({ pageview: false });
-    walkerjs.push('walker run');
+    Walkerjs({ pageview: false });
+    elb('walker run');
   });
 
   test('init', () => {
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
 
     w.dataLayer = undefined as unknown;
     expect(w.dataLayer).toBeUndefined();
 
-    walkerjs.push(event);
+    elb(event);
     expect(w.dataLayer).toBeDefined();
   });
 
@@ -40,14 +39,14 @@ describe('destination google-tag-manager', () => {
       custom: { containerId },
     };
 
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
 
     const scriptSelector = `script[src="https://www.googletagmanager.com/gtm.js?id=${containerId}"]`;
 
     let elem = document.querySelector(scriptSelector);
     expect(elem).not.toBeTruthy();
 
-    walkerjs.push(event);
+    elb(event);
 
     elem = document.querySelector(scriptSelector);
     expect(elem).toBeTruthy();
@@ -57,20 +56,20 @@ describe('destination google-tag-manager', () => {
     const w = window as Window;
     const customLayer = 'customLayer';
 
-    walkerjs.push('walker destination', destination, {
+    elb('walker destination', destination, {
       custom: { dataLayer: customLayer },
     });
 
     expect(w[customLayer]).toBeFalsy();
 
-    walkerjs.push(event);
+    elb(event);
 
     expect(w[customLayer]).toBeTruthy();
   });
 
   test('push', () => {
-    walkerjs.push('walker destination', destination);
-    walkerjs.push(event, { a: 1 }, 'manual');
+    elb('walker destination', destination);
+    elb(event, { a: 1 }, 'manual');
     expect(w.dataLayer).toBeDefined();
     expect(mockFn).toHaveBeenLastCalledWith({
       event,

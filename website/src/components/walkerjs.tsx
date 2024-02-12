@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { elb, webClient } from '@elbwalker/walker.js';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { destinationWebAPI } from '@elbwalker/destination-web-api';
 import Tagger from '@elbwalker/tagger';
 import { sessionStart } from '@elbwalker/utils';
@@ -12,7 +12,7 @@ export const Walkerjs = () => {
     if (!window.walkerjs) {
       // Setup walkerjs
       window.elb = elb;
-      window.walkerjs = webClient({
+      window.walkerjs = Walkerjs({
         default: true,
       });
 

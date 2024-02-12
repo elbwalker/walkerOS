@@ -1,9 +1,10 @@
-import webClient, { type WebClient } from '@elbwalker/walker.js';
-import type { Config, Function } from './types';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
+import type { DestinationMetaPixel } from '.';
 
 describe('Destination Meta Pixel', () => {
   const w = window;
-  let walkerjs: WebClient.Instance, destination: Function, config: Config;
+  let destination: DestinationMetaPixel.Destination,
+    config: DestinationMetaPixel.Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
@@ -18,15 +19,14 @@ describe('Destination Meta Pixel', () => {
       custom: { pixelId },
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    destination = require('.').default;
+    destination = jest.requireActual('.').default;
     destination.config = config;
 
     w.elbLayer = [];
     w.fbq = mockFn;
 
-    walkerjs = webClient({ pageview: false });
-    walkerjs.push('walker run');
+    Walkerjs({ pageview: false });
+    elb('walker run');
   });
 
   afterEach(() => {
@@ -38,50 +38,50 @@ describe('Destination Meta Pixel', () => {
 
     expect(w.fbq).not.toBeDefined();
 
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
 
-    walkerjs.push(event);
+    elb(event);
     expect(w.fbq).toBeDefined();
   });
 
   test('Init calls', () => {
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
 
-    walkerjs.push(event);
+    elb(event);
 
     expect(mockFn).toHaveBeenNthCalledWith(1, 'init', pixelId);
   });
 
   test('init with load script', () => {
     destination.config.loadScript = true;
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
 
     const scriptSelector = `script[src="https://connect.facebook.net/en_US/fbevents.js"]`;
 
     let elem = document.querySelector(scriptSelector);
     expect(elem).not.toBeTruthy();
 
-    walkerjs.push(event);
+    elb(event);
 
     elem = document.querySelector(scriptSelector);
     expect(elem).toBeTruthy();
   });
 
   test('push', () => {
-    walkerjs.push('walker destination', destination);
-    walkerjs.push(event);
+    elb('walker destination', destination);
+    elb(event);
     expect(mockFn).toHaveBeenCalledWith('trackCustom', event);
   });
 
   test('pageview', () => {
-    walkerjs.push('walker destination', destination);
-    walkerjs.push(event);
+    elb('walker destination', destination);
+    elb(event);
     expect(mockFn).toHaveBeenCalledWith('track', 'PageView');
 
     jest.clearAllMocks();
     destination.config.custom!.pageview = false;
     destination.config.init = false;
-    walkerjs.push(event);
+    elb(event);
     expect(mockFn).not.toHaveBeenCalledWith('track', 'PageView');
   });
 
@@ -90,8 +90,8 @@ describe('Destination Meta Pixel', () => {
       entity: { action: { custom: { track: 'Contact' } } },
     };
 
-    walkerjs.push('walker destination', destination);
-    walkerjs.push(event);
+    elb('walker destination', destination);
+    elb(event);
     expect(mockFn).toHaveBeenCalledWith('track', 'Contact', {});
   });
 
@@ -107,9 +107,9 @@ describe('Destination Meta Pixel', () => {
         },
       },
     };
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
 
-    walkerjs.push(event, { title: 'Shirt', revenue: 42 });
+    elb(event, { title: 'Shirt', revenue: 42 });
     expect(mockFn).toHaveBeenCalledWith(
       'track',
       'Purchase',
@@ -120,7 +120,7 @@ describe('Destination Meta Pixel', () => {
       }),
     );
 
-    walkerjs.push(event);
+    elb(event);
     expect(mockFn).toHaveBeenCalledWith(
       'track',
       'Purchase',
@@ -142,8 +142,8 @@ describe('Destination Meta Pixel', () => {
       },
     };
 
-    walkerjs.push('walker destination', destination);
-    walkerjs.push(event, { title: 'Shirt', price: 3.14 });
+    elb('walker destination', destination);
+    elb(event, { title: 'Shirt', price: 3.14 });
     expect(mockFn).toHaveBeenCalledWith(
       'track',
       'AddToCart',
@@ -182,9 +182,9 @@ describe('Destination Meta Pixel', () => {
       },
     };
 
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
 
-    walkerjs.push('use data', { id: 'sku', quantity: 5 });
+    elb('use data', { id: 'sku', quantity: 5 });
     expect(mockFn).toHaveBeenCalledWith(
       'track',
       'Purchase',
@@ -193,7 +193,7 @@ describe('Destination Meta Pixel', () => {
       }),
     );
 
-    walkerjs.push('use nested', {}, 'custom', { quantity: [2, 0] }, [
+    elb('use nested', {}, 'custom', { quantity: [2, 0] }, [
       {
         type: 'product',
         data: { id: 'a', quantity: 3 },

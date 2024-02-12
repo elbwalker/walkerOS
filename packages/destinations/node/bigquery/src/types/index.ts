@@ -2,8 +2,8 @@ import type { NodeDestination } from '@elbwalker/client-node';
 import type { Destination, Handler, WalkerOS } from '@elbwalker/types';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
-export interface Function
-  extends NodeDestination.Function<CustomConfig, CustomEventConfig> {
+export interface Destination
+  extends NodeDestination.Destination<CustomConfig, CustomEventConfig> {
   init: InitFn;
 }
 

@@ -1,7 +1,10 @@
-import type { Destination, WalkerOS } from '@elbwalker/types';
+import type {
+  Destination as WalkerOSDestination,
+  WalkerOS,
+} from '@elbwalker/types';
 
-export interface Function<Custom = unknown, EventCustom = unknown>
-  extends Destination.Function<Custom, EventCustom> {
+export interface Destination<Custom = unknown, EventCustom = unknown>
+  extends WalkerOSDestination.Destination<Custom, EventCustom> {
   push: PushFn<Custom, EventCustom>;
   init?: InitFn<Custom, EventCustom>;
   setup?: SetupFn<Custom, EventCustom>;
@@ -21,13 +24,13 @@ export type SetupFn<Custom, EventCustom> = (
 ) => Promise<boolean | Config<Custom, EventCustom>>;
 
 export interface Config<Custom = unknown, EventCustom = unknown>
-  extends Destination.Config<Custom, EventCustom> {}
+  extends WalkerOSDestination.Config<Custom, EventCustom> {}
 
 export interface Mapping<EventCustom>
-  extends Destination.Mapping<EventCustom> {}
+  extends WalkerOSDestination.Mapping<EventCustom> {}
 
 export interface EventConfig<EventCustom = unknown>
-  extends Destination.EventConfig<EventCustom> {}
+  extends WalkerOSDestination.EventConfig<EventCustom> {}
 
 export type PushEvents<EventCustom = unknown> = Array<PushEvent<EventCustom>>;
 
@@ -38,7 +41,7 @@ export type PushEvent<EventCustom = unknown> = {
 
 export type Ref = {
   id: string;
-  destination: Function;
+  destination: Destination;
 };
 
 export type Push = {

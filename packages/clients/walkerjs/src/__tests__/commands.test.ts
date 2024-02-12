@@ -1,4 +1,5 @@
-import webClient, { WebClient, elb } from '..';
+import { elb, Walkerjs } from '..';
+import type { WebClient } from '..';
 
 describe('Commands on', () => {
   const w = window;
@@ -15,7 +16,7 @@ describe('Commands on', () => {
     (w.dataLayer as unknown[]).push = mockDataLayer;
     w.elbLayer = undefined as unknown as WebClient.ElbLayer;
 
-    walkerjs = webClient({
+    walkerjs = Walkerjs({
       consent: { automatically: true },
       default: true,
     });
@@ -49,7 +50,7 @@ describe('Commands on', () => {
 
   test('consent by start', () => {
     const mockFn = jest.fn();
-    webClient({
+    Walkerjs({
       consent: { foo: false },
       on: { consent: { foo: mockFn } },
       default: true,
@@ -59,7 +60,7 @@ describe('Commands on', () => {
 
   test('consent already granted', () => {
     const mockFn = jest.fn();
-    webClient({
+    Walkerjs({
       consent: { foo: false },
       on: { consent: { foo: mockFn } },
       default: true,

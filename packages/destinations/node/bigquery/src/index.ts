@@ -1,4 +1,4 @@
-import type { CustomConfig, Function } from './types';
+import type { CustomConfig, Destination } from './types';
 import { isSameType, throwError, tryCatchAsync } from '@elbwalker/utils';
 import { getConfig, log } from './config';
 import { push } from './push';
@@ -7,7 +7,7 @@ import { setup } from './setup';
 // Types
 export * as DestinationBigQuery from './types';
 
-export const destinationBigQuery: Function = {
+export const destinationBigQuery: Destination = {
   config: {},
 
   async setup(config) {

@@ -1,9 +1,9 @@
-import webClient, { type WebClient } from '@elbwalker/walker.js';
-import type { Function } from './types';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
+import type { DestinationPlausible } from '.';
 
 describe('destination plausible', () => {
   const w = window;
-  let walkerjs: WebClient.Instance, destination: Function;
+  let destination: DestinationPlausible.Destination;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
@@ -14,16 +14,13 @@ describe('destination plausible', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    walkerjs = require('@elbwalker/walker.js').default;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    destination = require('.').default;
+    destination = jest.requireActual('.').default;
 
     w.elbLayer = [];
     w.plausible = mockFn;
 
-    walkerjs = webClient({ pageview: false });
-    walkerjs.push('walker run');
+    Walkerjs({ pageview: false });
+    elb('walker run');
   });
 
   afterEach(() => {
@@ -31,24 +28,23 @@ describe('destination plausible', () => {
   });
 
   test('init', () => {
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
 
     w.plausible = undefined;
     expect(w.plausible).toBeUndefined();
 
-    walkerjs.push(event);
+    elb(event);
     expect(w.plausible).toBeDefined();
   });
 
   test('init with script load', () => {
-    destination.config.loadScript = true;
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination, { loadScript: true });
 
     const scriptSelector = `script[src="${script}"]`;
 
     let elem = document.querySelector(scriptSelector);
     expect(elem === null).toBe(true);
-    walkerjs.push(event);
+    elb(event);
 
     elem = document.querySelector(scriptSelector);
     expect(elem !== null).toBe(true);
@@ -56,24 +52,23 @@ describe('destination plausible', () => {
 
   test('init with domain', () => {
     const domain = 'elbwalker.com';
-    destination.config = {
+    elb('walker destination', destination, {
       loadScript: true,
       custom: { domain },
-    };
-    walkerjs.push('walker destination', destination);
+    });
 
     const scriptSelector = `script[src="${script}"]`;
 
-    walkerjs.push(event);
+    elb(event);
 
     const elem = document.querySelector(scriptSelector) as HTMLScriptElement;
     expect(elem.dataset.domain).toBe(domain);
   });
 
   test('push', () => {
-    walkerjs.push('walker destination', destination);
+    elb('walker destination', destination);
     const data = { a: 1 };
-    walkerjs.push(event, data, 'manual');
+    elb(event, data, 'manual');
 
     expect(w.plausible).toBeDefined();
     expect(mockFn).toHaveBeenNthCalledWith(1, event, { props: data });

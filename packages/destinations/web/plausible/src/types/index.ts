@@ -2,12 +2,13 @@ import type { WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     plausible?: any;
   }
 }
 
-export interface Function
-  extends WebDestination.Function<CustomConfig, CustomEventConfig> {}
+export interface Destination
+  extends WebDestination.Destination<CustomConfig, CustomEventConfig> {}
 
 export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 

@@ -3,8 +3,8 @@ import { NodeClient, NodeDestination } from './types';
 import { assign, isSameType, tryCatchAsync } from '@elbwalker/utils';
 
 export function allowedToPush(
-  instance: NodeClient.Function,
-  destination: NodeDestination.Function,
+  instance: NodeClient.Instance,
+  destination: NodeDestination.Destination,
 ): boolean {
   // Default without consent handling
   let granted = true;
@@ -29,7 +29,7 @@ export function allowedToPush(
 }
 
 export async function pushToDestinations(
-  instance: NodeClient.Function,
+  instance: NodeClient.Instance,
   event?: WalkerOS.Event,
   destination?: NodeClient.Destinations,
 ): Promise<NodeDestination.PushResult> {
@@ -38,15 +38,13 @@ export async function pushToDestinations(
   const config = instance.config;
   const results: Array<{
     id: string;
-    destination: NodeDestination.Function;
+    destination: NodeDestination.Destination;
     skipped?: boolean;
     queue?: WalkerOS.Events;
     error?: unknown;
   }> = await Promise.all(
     // Process all destinations in parallel
     Object.entries(destinations).map(async ([id, destination]) => {
-      let error: unknown;
-
       // Setup queue of events to be processed
       const queue = ([] as Destination.Queue).concat(destination.queue || []);
       destination.queue = []; // Reset original queue while processing
@@ -65,7 +63,7 @@ export async function pushToDestinations(
         return { id, destination, queue };
 
       // Update previous values with the current state
-      let events: NodeDestination.PushEvents = queue.map((event) => {
+      const events: NodeDestination.PushEvents = queue.map((event) => {
         // @TODO check if this is correct, as a client might keeps running as a thread
         event.consent = assign(config.consent, event.consent);
         event.globals = assign(config.globals, event.globals);
@@ -101,7 +99,7 @@ export async function pushToDestinations(
           return { error, queue: undefined };
         })(events, destination.config)) || {}; // everything is fine
 
-      error = result.error; // Captured error from destination
+      const error = result.error; // Captured error from destination
 
       return { id, destination, queue: [], error };
     }),

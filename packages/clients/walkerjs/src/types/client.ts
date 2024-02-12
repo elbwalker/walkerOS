@@ -26,7 +26,7 @@ export interface Instance {
 export interface Elb extends WalkerOS.Elb {
   (
     event: 'walker destination',
-    destination: WebDestination.Function,
+    destination: WebDestination.Destination,
     config?: WebDestination.Config,
   ): void;
   (event: 'walker init', scope: Scope | Scope[]): void;
@@ -49,7 +49,10 @@ export type ElbLayer = [
   WalkerOS.Properties?,
 ];
 
-export type PushData = WalkerOS.PushData | WebDestination.Function | ScopeType;
+export type PushData =
+  | WalkerOS.PushData
+  | WebDestination.Destination
+  | ScopeType;
 
 export type PushOptions =
   | WalkerOS.PushOptions
@@ -73,5 +76,5 @@ export interface Config extends WalkerOS.Config {
 }
 
 export interface Destinations {
-  [name: string]: WebDestination.Function;
+  [name: string]: WebDestination.Destination;
 }

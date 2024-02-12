@@ -9,10 +9,14 @@ export type Functions = Hooks.Functions & {
 };
 
 export type PreDestinationInit = Hooks.HookFn<
-  NonNullable<WebDestination.Function['init']>
+  NonNullable<WebDestination.Destination['init']>
 >;
 export type PostDestinationInit = Hooks.HookFn<
-  NonNullable<WebDestination.Function['init']>
+  NonNullable<WebDestination.Destination['init']>
 >;
-export type PreDestinationPush = Hooks.HookFn<WebDestination.Function['push']>;
-export type PostDestinationPush = Hooks.HookFn<WebDestination.Function['push']>;
+export type PreDestinationPush = Hooks.HookFn<
+  WebDestination.Destination['push']
+>;
+export type PostDestinationPush = Hooks.HookFn<
+  WebDestination.Destination['push']
+>;

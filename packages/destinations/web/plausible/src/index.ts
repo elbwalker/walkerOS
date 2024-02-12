@@ -1,9 +1,9 @@
-import type { Config, Function } from './types';
+import type { Config, Destination } from './types';
 
 // Types
 export * as DestinationPlausible from './types';
 
-export const destinationPlausible: Function = {
+export const destinationPlausible: Destination = {
   type: 'plausible',
 
   config: {},
@@ -17,6 +17,7 @@ export const destinationPlausible: Function = {
     w.plausible =
       w.plausible ||
       function () {
+        // eslint-disable-next-line prefer-rest-params
         (w.plausible!.q = w.plausible!.q || []).push(arguments);
       };
 

@@ -54,7 +54,7 @@ each destination's detail page.
 ## Create your own
 
 Instead of using the pre-built destinations, you can also create your own. A
-valid `WebDestination.Function` consists of a `config` object, and the two
+valid `WebDestination.Destination` consists of a `config` object, and the two
 methods `init` and `push`. The following examples shows how to create a
 destination for the web.
 
@@ -92,8 +92,8 @@ elb('walker destination', { push: console.log });
     ```ts
     import type { WebDestination } from '@elbwalker/walker.js';
 
-    interface Function
-      extends WebDestination.Function<CustomConfig, CustomEventConfig> {
+    interface Destination
+      extends WebDestination.Destination<CustomConfig, CustomEventConfig> {
         // Add additional methods
     }
 
@@ -118,7 +118,7 @@ elb('walker destination', { push: console.log });
     Create the actual destination.
 
     ```ts
-    export const destination: Destination.Function = {
+    export const destination: Destination.Destination = {
       config: {},
 
       init(config) {

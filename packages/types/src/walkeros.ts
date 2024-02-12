@@ -2,7 +2,7 @@ import type { Hooks, On } from '.';
 
 export type AnyObject = Record<string, unknown>;
 
-export interface Function {
+export interface Instance {
   push: Elb;
   config: Config;
 }

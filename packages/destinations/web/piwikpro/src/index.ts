@@ -1,17 +1,17 @@
-import type { CustomConfig, CustomEventConfig, Function } from './types';
 import { getByStringDot } from '@elbwalker/utils';
+import type { CustomConfig, CustomEventConfig, Destination } from './types';
 
 // @TODOs
 // - static values besides dynamic data values
 // - site search
 // - e-commerce support
-// - duspport for dimensions
+// - support for dimensions
 // - testing
 
 // Types
 export * as DestinationPiwikPro from './types';
 
-export const destinationPiwikPro: Function = {
+export const destinationPiwikPro: Destination = {
   type: 'piwikpro',
 
   config: {},

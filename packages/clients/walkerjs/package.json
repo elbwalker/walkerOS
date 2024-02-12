@@ -20,8 +20,8 @@
     "test": "jest --colors --coverage"
   },
   "devDependencies": {
-    "@elbwalker/types": "*",
-    "@elbwalker/utils": "*"
+    "@elbwalker/utils": "*",
+    "@elbwalker/types": "*"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

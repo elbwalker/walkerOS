@@ -1,5 +1,5 @@
 // browser version
-import webClient from '.';
+import Walkerjs from '.';
 import { getAttribute } from '@elbwalker/utils';
 import { elb } from './lib/trigger';
 
@@ -13,7 +13,7 @@ if (elem) {
   tagging = parseInt(getAttribute(elem, 'data-version') || '1'); // tagging version
 }
 
-const instance = webClient({ default: defaultMode, tagging });
+const instance = Walkerjs({ default: defaultMode, tagging });
 
 // Global object
 window.walkerjs = instance;

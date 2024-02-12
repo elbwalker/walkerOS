@@ -1,22 +1,6 @@
-import { Options, defineConfig } from 'tsup';
+import { config, defineConfig } from '@elbwalker/tsup';
 
-const config: Options = {
-  // clean: true, // Not yet supported for multiple entry points
-  entry: ['src/index.ts'],
-  minify: 'terser',
-  splitting: false,
-  terserOptions: {
-    mangle: {
-      properties: {
-        regex: /^[A-Z]/, // Only mangle capitalized properties
-      },
-      reserved: [
-        // Prevent mangle from renaming these properties
-        'WebClient',
-      ],
-    },
-  },
-};
+const globalName = 'Walkerjs';
 
 export default defineConfig([
   {
@@ -40,9 +24,8 @@ export default defineConfig([
   // Browser
   {
     ...config,
-    entry: ['src/index.ts'],
     format: ['iife'],
-    globalName: 'WebClient',
+    globalName,
     outExtension() {
       return { js: `.browser.js` };
     },
@@ -50,9 +33,8 @@ export default defineConfig([
   // ES5
   {
     ...config,
-    entry: ['src/index.ts'],
     format: ['iife'],
-    globalName: 'WebClient',
+    globalName,
     outExtension() {
       return { js: `.es5.js` };
     },

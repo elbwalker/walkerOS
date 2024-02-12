@@ -9,10 +9,9 @@ const config = {
     mangle: {
       properties: {
         regex: /^[A-Z]/, // Only mangle capitalized properties
-        reserved: [
-          // Prevent mangle from renaming these properties
-        ],
+        reserved: ['Destination', 'Utils', 'Walkerjs'],
       },
+      reserved: ['Destination', 'Utils', 'Walkerjs'],
     },
   },
 };

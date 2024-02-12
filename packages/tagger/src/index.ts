@@ -1,8 +1,8 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { ITagger } from './types';
 
-function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Function {
-  const instance: ITagger.Function = {
+function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Instance {
+  const instance: ITagger.Instance = {
     config: {
       prefix: config.prefix || 'data-elb',
     },

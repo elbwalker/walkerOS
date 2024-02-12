@@ -1,4 +1,4 @@
-import { Function } from './types';
+import { Destination } from './types';
 
 const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
@@ -6,7 +6,7 @@ const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
 // Types
 export * as DestinationGoogleGTM from './types';
 
-export const destinationGoogleGTM: Function = {
+export const destinationGoogleGTM: Destination = {
   type: 'google-gtm',
 
   config: {},
@@ -15,8 +15,10 @@ export const destinationGoogleGTM: Function = {
     const custom = config.custom || {};
     const dataLayer = custom.dataLayer || defaultDataLayer;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     window[dataLayer as any] = window[dataLayer as any] || [];
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any)[dataLayer].push({
       'gtm.start': new Date().getTime(),
       event: 'gtm.js',
