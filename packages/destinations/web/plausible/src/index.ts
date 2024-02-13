@@ -20,8 +20,6 @@ export const destinationPlausible: Destination = {
         // eslint-disable-next-line prefer-rest-params
         (w.plausible!.q = w.plausible!.q || []).push(arguments);
       };
-
-    return true;
   },
 
   push(event) {

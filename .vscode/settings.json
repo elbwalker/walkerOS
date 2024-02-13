@@ -4,6 +4,7 @@
     "elbaction",
     "elbcontext",
     "elbglobals",
+    "elblink",
     "elbwalker",
     "elems",
     "Eventflow",

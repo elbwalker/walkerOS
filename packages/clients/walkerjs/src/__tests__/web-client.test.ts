@@ -47,16 +47,16 @@ describe('Elbwalker', () => {
 
   test('empty push', () => {
     (walkerjs as unknown as string[]).push();
-    walkerjs.push('');
-    walkerjs.push('entity');
+    elb('');
+    elb('entity');
     expect(mockFn).toHaveBeenCalledTimes(0);
   });
 
   test('regular push', () => {
-    walkerjs.push('walker run');
+    elb('walker run');
 
-    walkerjs.push('entity action');
-    walkerjs.push('entity action', { foo: 'bar' });
+    elb('entity action');
+    elb('entity action', { foo: 'bar' });
 
     expect(mockFn).toHaveBeenNthCalledWith(1, {
       event: 'entity action',
@@ -135,7 +135,7 @@ describe('Elbwalker', () => {
     );
 
     jest.clearAllMocks(); // skip previous init
-    walkerjs.push('walker run');
+    elb('walker run');
     expect(mockFn).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
@@ -147,14 +147,14 @@ describe('Elbwalker', () => {
   });
 
   test('group ids', () => {
-    walkerjs.push('entity action');
-    walkerjs.push('entity action');
+    elb('entity action');
+    elb('entity action');
     const groupId = mockFn.mock.calls[0][0].group;
     expect(mockFn.mock.calls[1][0].group).toEqual(groupId);
 
     // Start a new initialization with a new group ip
-    walkerjs.push('walker run');
-    walkerjs.push('entity action');
+    elb('walker run');
+    elb('entity action');
     expect(mockFn.mock.calls[2][0].group).not.toEqual(groupId); // page view
   });
 
@@ -237,7 +237,7 @@ describe('Elbwalker', () => {
     (postPush as jest.Mock).mockClear();
     (preDestinationPush as jest.Mock).mockClear();
 
-    walkerjs.push('e a', { a: 1 }, 't', { c: ['v', 0] }, []);
+    elb('e a', { a: 1 }, 't', { c: ['v', 0] }, []);
 
     // Destination calls
     expect(mockInit).toHaveBeenCalledTimes(1);
@@ -251,6 +251,7 @@ describe('Elbwalker', () => {
       't',
       { c: ['v', 0] },
       [],
+      undefined,
     );
 
     expect(preDestinationPush).toHaveBeenNthCalledWith(
@@ -274,6 +275,7 @@ describe('Elbwalker', () => {
       't',
       { c: ['v', 0] },
       [],
+      undefined,
     );
   });
 
@@ -292,7 +294,7 @@ describe('Elbwalker', () => {
       writable: true,
     });
 
-    walkerjs.push('entity source');
+    elb('entity source');
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'entity source',
@@ -313,18 +315,18 @@ describe('Elbwalker', () => {
 
   test('walker commands', () => {
     mockFn.mockClear();
-    walkerjs.push('walker action');
+    elb('walker action');
 
     // don't push walker commands to destinations
     expect(mockFn).not.toHaveBeenCalled();
   });
 
   test('walker user', () => {
-    walkerjs.push('walker run');
+    elb('walker run');
 
     // Missing argument
-    walkerjs.push('walker user');
-    walkerjs.push('entity action');
+    elb('walker user');
+    elb('entity action');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
@@ -332,8 +334,8 @@ describe('Elbwalker', () => {
       }),
     );
 
-    walkerjs.push('walker user', { id: 'userId' });
-    walkerjs.push('entity action');
+    elb('walker user', { id: 'userId' });
+    elb('entity action');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
@@ -341,8 +343,8 @@ describe('Elbwalker', () => {
       }),
     );
 
-    walkerjs.push('walker user', { device: 'userId' });
-    walkerjs.push('entity action');
+    elb('walker user', { device: 'userId' });
+    elb('entity action');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
@@ -350,8 +352,8 @@ describe('Elbwalker', () => {
       }),
     );
 
-    walkerjs.push('walker user', { session: 'sessionid' });
-    walkerjs.push('entity action');
+    elb('walker user', { session: 'sessionid' });
+    elb('entity action');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
@@ -368,11 +370,11 @@ describe('Elbwalker', () => {
       pageview: false,
     });
 
-    walkerjs.push('walker run');
+    elb('walker run');
 
     expect(walkerjs.config.consent.functional).toBeTruthy();
     expect(walkerjs.config.consent.marketing).not.toBeTruthy();
-    walkerjs.push('consent check');
+    elb('consent check');
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'consent check',
@@ -381,14 +383,14 @@ describe('Elbwalker', () => {
     );
 
     // Missing argument
-    walkerjs.push('walker consent');
+    elb('walker consent');
     expect(walkerjs.config.consent.functional).toBeTruthy();
     expect(walkerjs.config.consent.marketing).not.toBeTruthy();
 
     // Grant permissions
-    walkerjs.push('walker consent', { marketing: true });
+    elb('walker consent', { marketing: true });
     expect(walkerjs.config.consent.marketing).toBeTruthy();
-    walkerjs.push('consent check');
+    elb('consent check');
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'consent check',
@@ -397,9 +399,9 @@ describe('Elbwalker', () => {
     );
 
     // Revoke permissions
-    walkerjs.push('walker consent', { marketing: false });
+    elb('walker consent', { marketing: false });
     expect(walkerjs.config.consent.marketing).not.toBeTruthy();
-    walkerjs.push('consent check');
+    elb('consent check');
     expect(mockFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'consent check',
@@ -412,17 +414,25 @@ describe('Elbwalker', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.advanceTimersByTime(2500); // 2.5 sec load time
-    walkerjs = Walkerjs({ elbLayer: [], default: true });
+    walkerjs = Walkerjs({ default: true });
 
     expect(mockFn.mock.calls[0][0].timing).toEqual(2.5);
 
     jest.advanceTimersByTime(1000); // 1 sec to new run
-    walkerjs.push('walker run');
-    expect(mockFn.mock.calls[1][0].timing).toEqual(0); // Start from 0 not 3.5
+    elb('walker run');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        timing: 0,
+      }),
+    ); // Start from 0 not 3.5
 
     jest.advanceTimersByTime(5000); // wait 5 sec
-    walkerjs.push('e a');
-    expect(mockFn.mock.calls[2][0].timing).toEqual(5);
+    elb('e a');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        timing: 5,
+      }),
+    );
   });
 
   test('Element parameter', () => {
@@ -435,7 +445,7 @@ describe('Elbwalker', () => {
     `;
     const elem = document.getElementById('e') as HTMLElement;
 
-    walkerjs.push('e custom', elem, 'custom');
+    elb('e custom', elem, 'custom');
 
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -446,7 +456,7 @@ describe('Elbwalker', () => {
       }),
     );
 
-    walkerjs.push('e context', { a: 1 }, 'custom', elem);
+    elb('e context', { a: 1 }, 'custom', elem);
 
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({

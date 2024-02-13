@@ -6,7 +6,7 @@ import type {
 
 export interface Destination<Custom = any, EventCustom = any>
   extends WalkerOSDestination.Destination<Custom, EventCustom> {
-  init?: (config: Config<Custom, EventCustom>) => boolean;
+  init?: (config: Config<Custom, EventCustom>) => void | boolean;
   push: (
     event: WalkerOS.Event,
     config: Config<Custom, EventCustom>,

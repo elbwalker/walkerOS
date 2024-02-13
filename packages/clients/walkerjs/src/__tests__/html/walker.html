@@ -27,7 +27,7 @@
       id="baby"
       data-elb="baby"
       data-elb-baby="status:infant"
-      data-elbaction="load:play(baby,mother)"
+      data-elbaction="load:play(baby, mother)"
     ></div>
   </div>
 </div>
@@ -66,12 +66,12 @@
 <div data-elb-property="not_in:scope"></div>
 <div data-elb-property="parent:property">
   <div
-    id="propert_priority"
+    id="property_priority"
     data-elb="property"
-    data-elb-property="prefere:higher"
+    data-elb-property="prefer:higher"
     data-elbaction="click:priority"
   >
-    <div data-elb-property="prefere:deeper"></div>
+    <div data-elb-property="prefer:deeper"></div>
   </div>
 </div>
 
@@ -81,7 +81,7 @@
   <div data-elb-dynamic="id:#id;static:value" id="id_value">inner</div>
   <select data-elb-dynamic="option:#selected">
     <option value="a">foo</option>
-    <option value="b" selected="selected">choosen</option>
+    <option value="b" selected="selected">chosen</option>
     <option value="c">bar</option>
   </select>
 </div>
@@ -89,7 +89,7 @@
 <div id="prefix" elb="entity" elb-entity="k:v" elbaction="load:action"></div>
 
 <div data-elbcontext="test:engagement">
-  <div data-elbcontext="recommendation:smart_ai;same:level;inside:overritten">
+  <div data-elbcontext="recommendation:smart_ai;same:level;inside:overwritten">
     <p data-elbcontext="not:included"></p>
     <div data-elb="e">
       <p id="context" data-elbcontext="inside:entity" data-elbaction="click">

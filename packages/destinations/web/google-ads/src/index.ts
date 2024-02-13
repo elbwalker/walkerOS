@@ -31,8 +31,6 @@ export const destinationGoogleAds: Destination = {
 
     // gtag init call
     w.gtag('config', custom.conversionId);
-
-    return true;
   },
 
   push(event, config, mapping = {}): void {

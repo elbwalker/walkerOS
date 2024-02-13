@@ -513,11 +513,12 @@ export function Walkerjs(
       // Destination initialization
       // Check if the destination was initialized properly or try to do so
       if (destination.init && !destination.config.init) {
-        const init = useHooks(
-          destination.init,
-          'DestinationInit',
-          config.hooks,
-        )(destination.config);
+        const init =
+          useHooks(
+            destination.init,
+            'DestinationInit',
+            config.hooks,
+          )(destination.config) !== false; // Actively check for errors
 
         destination.config.init = init;
 
