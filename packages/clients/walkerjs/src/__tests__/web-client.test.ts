@@ -414,17 +414,25 @@ describe('Elbwalker', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.advanceTimersByTime(2500); // 2.5 sec load time
-    walkerjs = Walkerjs({ elbLayer: [], default: true });
+    walkerjs = Walkerjs({ default: true });
 
     expect(mockFn.mock.calls[0][0].timing).toEqual(2.5);
 
     jest.advanceTimersByTime(1000); // 1 sec to new run
-    walkerjs.push('walker run');
-    expect(mockFn.mock.calls[1][0].timing).toEqual(0); // Start from 0 not 3.5
+    elb('walker run');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        timing: 0,
+      }),
+    ); // Start from 0 not 3.5
 
     jest.advanceTimersByTime(5000); // wait 5 sec
-    walkerjs.push('e a');
-    expect(mockFn.mock.calls[2][0].timing).toEqual(5);
+    elb('e a');
+    expect(mockFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        timing: 5,
+      }),
+    );
   });
 
   test('Element parameter', () => {
