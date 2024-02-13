@@ -355,7 +355,7 @@ export function Walkerjs(
         .filter((consent) => consent in rules) // check for matching rule keys
         .forEach((consent) => {
           // Execute the function
-          tryCatch(rules[consent])(instance, type, options);
+          tryCatch(rules[consent])(instance, options);
         });
     }
   }

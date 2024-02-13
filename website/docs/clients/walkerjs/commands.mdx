@@ -112,11 +112,16 @@ processing any events.
 ## On-Events
 
 The `on` command is used to add event listeners to the walker.js. If a type
-(like `consent`) changes, the rules-matching function(s) will be called.
+(like `consent`) changes, the rules-matching function(s) will be called with the
+parameters `instance`, `type`, and `options` (the current consent state).
 
 ```js
-//   command      type         rules                function
-elb('walker on', 'consent', { 'groupA,toolB,toolC': console.log });
+function marketingConsent(instance, options) {
+  if (options.marketing) elb('walker user', readFromStorage());
+}
+
+//   command      type        rule       function
+elb('walker on', 'consent', { marketing: marketingConsent });
 ```
 
 ## User

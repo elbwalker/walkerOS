@@ -78,7 +78,7 @@ describe('Commands on', () => {
   test('consent parameters', () => {
     const mockFn = jest.fn();
     elb('walker on', 'consent', { automatically: mockFn });
-    expect(mockFn).toHaveBeenCalledWith(walkerjs, 'consent', {
+    expect(mockFn).toHaveBeenCalledWith(walkerjs, {
       automatically: true,
     });
   });

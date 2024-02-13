@@ -16,7 +16,7 @@ export interface Elb {
     name: K,
     hookFn: Hooks.Functions[K],
   ): void;
-  (event: 'walker on', type: On.Type, rules: On.Rules): void;
+  (event: 'walker on', type: 'consent', rules: On.Rules<On.OnConsentFn>): void;
   (event: 'walker run'): void;
   (event: 'walker user', user: User): void;
   (
