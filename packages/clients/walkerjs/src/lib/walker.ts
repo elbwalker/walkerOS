@@ -83,7 +83,7 @@ export function getEvents(
   actions.forEach((triggerAction) => {
     const filter = splitAttribute(triggerAction.actionParams || '', ',').reduce(
       (filter, param) => {
-        filter[param] = true;
+        filter[trim(param)] = true;
         return filter;
       },
       {} as Walker.Filter,
