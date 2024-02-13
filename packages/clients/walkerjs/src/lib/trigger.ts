@@ -1,6 +1,10 @@
 import type { Walker, WebClient } from '../types';
-import type { WalkerOS } from '@elbwalker/types';
-import { getElbAttributeName, getEvents, getTriggerActions } from './walker';
+import {
+  getElbAttributeName,
+  getEvents,
+  getPageViewData,
+  getTriggerActions,
+} from './walker';
 import {
   Const,
   getAttribute,
@@ -46,8 +50,13 @@ export function ready(
 
 // Called for each new run to setup triggers
 export function load(instance: WebClient.Instance) {
+  const { pageview, prefix } = instance.config;
   // Trigger static page view if enabled
-  if (instance.config.pageview) pageView(instance);
+  if (pageview) {
+    const [data, context] = getPageViewData(prefix);
+    instance.config.elbLayer.push('page view', data, Trigger.Load, context);
+    // elb('page view', data, Trigger.Load, context);
+  }
 
   initScopeTrigger(instance);
 }
@@ -266,21 +275,6 @@ function scroll(instance: WebClient.Instance) {
 
     document.addEventListener('scroll', scrollListener);
   }
-}
-
-function pageView(instance: WebClient.Instance) {
-  // static page view
-  const loc = window.location;
-  const data: WalkerOS.Properties = {
-    domain: loc.hostname,
-    title: document.title,
-    referrer: document.referrer,
-  };
-  if (loc.search) data.search = loc.search;
-  if (loc.hash) data.hash = loc.hash;
-
-  // @TODO get all nested entities
-  instance.config.elbLayer.push('page view', data, Trigger.Load);
 }
 
 function observerVisible(

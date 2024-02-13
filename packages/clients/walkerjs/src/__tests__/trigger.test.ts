@@ -4,7 +4,6 @@ import { Trigger } from '../lib/trigger';
 import fs from 'fs';
 
 const w = window;
-let walkerjs: WebClient.Instance;
 
 const mockFn = jest.fn(); //.mockImplementation(console.log);
 const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
@@ -36,7 +35,7 @@ describe('Trigger', () => {
       },
     );
 
-    walkerjs = Walkerjs({ default: true });
+    Walkerjs({ default: true });
   });
 
   test('elb', () => {
@@ -64,7 +63,7 @@ describe('Trigger', () => {
     jest.clearAllMocks();
 
     // Both e load events should be triggered
-    walkerjs.push('walker init');
+    elb('walker init');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e all',
@@ -80,7 +79,7 @@ describe('Trigger', () => {
     const elem = document.querySelector('#init div')!;
 
     // Only the e init event should be triggered
-    walkerjs.push('walker init', elem);
+    elb('walker init', elem);
     expect(mockFn).not.toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e all',
@@ -95,13 +94,25 @@ describe('Trigger', () => {
   });
 
   test('load page view', () => {
+    document.body.setAttribute('data-elb-page', 'foo:bar');
+    document.body.setAttribute('data-elbcontext', 'baz:qux');
+    elb('walker run');
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page view',
-        data: { domain: 'localhost', id: '/', title: '', referrer: '' },
+        data: {
+          foo: 'bar',
+          domain: 'localhost',
+          id: '/',
+          title: '',
+          referrer: '',
+        },
+        context: { baz: ['qux', 0] },
         trigger: Trigger.Load,
       }),
     );
+    document.body.removeAttribute('data-elb-page');
+    document.body.removeAttribute('data-elbcontext');
   });
 
   test('load view location and referrer', () => {
@@ -121,7 +132,7 @@ describe('Trigger', () => {
 
     // New page run on new page
     jest.clearAllMocks();
-    walkerjs.push('walker run');
+    elb('walker run');
 
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -138,7 +149,7 @@ describe('Trigger', () => {
       }),
     );
 
-    walkerjs.push('page click', { foo: 'bar' });
+    elb('page click', { foo: 'bar' });
     expect(mockFn).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page click',
@@ -166,7 +177,7 @@ describe('Trigger', () => {
 
     // New page run in loading state
     jest.clearAllMocks();
-    walkerjs.push('walker run');
+    elb('walker run');
 
     expect(mockFn).toHaveBeenCalledTimes(0);
 
@@ -333,7 +344,7 @@ describe('Trigger', () => {
     // New instance without cached scroll listener
     w.elbLayer = [];
     const Walkerjs = jest.requireActual('../').default;
-    walkerjs = Walkerjs({ default: true });
+    Walkerjs({ default: true });
 
     const innerHeight = window.innerHeight;
     const elem = document.getElementById('scroll') as HTMLElement;
@@ -417,7 +428,7 @@ describe('Trigger', () => {
 
     w.elbLayer = [];
     const Elbwalker = jest.requireActual('../').default;
-    walkerjs = Elbwalker({ default: true });
+    Elbwalker({ default: true });
 
     const target = document.getElementById('visible');
     const [observer] = (window.IntersectionObserver as jest.Mock).mock.calls[0];

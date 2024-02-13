@@ -149,6 +149,29 @@ export function getGlobals(prefix: string): WalkerOS.Properties {
   return values;
 }
 
+export function getPageViewData(
+  prefix: string,
+): [WalkerOS.Properties, WalkerOS.OrderedProperties] {
+  // static page view
+  const loc = window.location;
+  const page = 'page';
+  const [data, context] = getThisAndParentProperties(
+    document.body,
+    `[${getElbAttributeName(prefix, page)}]`,
+    prefix,
+    page,
+  );
+  data.domain = loc.hostname;
+  data.title = document.title;
+  data.referrer = document.referrer;
+
+  if (loc.search) data.search = loc.search;
+  if (loc.hash) data.hash = loc.hash;
+
+  // @TODO get all nested entities
+  return [data, context];
+}
+
 export function getTriggerActions(str: string): Walker.TriggersActionGroups {
   const values: Walker.TriggersActionGroups = {};
 
@@ -247,12 +270,12 @@ function getEntity(
   let data: WalkerOS.Properties = {};
   let genericProps: WalkerOS.Properties = {};
   propertyElems.forEach((child) => {
-    // Eventually override closer peroperties
+    // Eventually override closer properties
     genericProps = assign(genericProps, getElbValues(prefix, child, ''));
     data = assign(data, getElbValues(prefix, child, type));
   });
 
-  // Merge properties with the hirarchy data > generic > parent
+  // Merge properties with the hierarchy data > generic > parent
   data = assign(parentProps, assign(genericProps, data));
 
   // Get nested entities
