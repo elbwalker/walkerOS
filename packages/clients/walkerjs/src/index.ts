@@ -330,18 +330,22 @@ export function Walkerjs(
     type: On.Type,
     rules: On.Rules = {},
   ) {
-    instance.config.on[type] = assign(instance.config.on[type] || {}, rules);
+    instance.config.on[type] = assign(
+      instance.config.on[type] || {},
+      assign({}, rules), // Create a duplicate
+    );
 
     // Run on events for default consent states
-    onApply(instance, 'consent', instance.config.consent);
+    onApply(instance, 'consent', instance.config.consent, rules);
   }
 
   function onApply(
     instance: WebClient.Instance,
     type: On.Type,
     options: On.Options,
+    scope?: On.Rules,
   ) {
-    const rules = instance.config.on[type];
+    const rules = scope || instance.config.on[type];
 
     if (!rules) return; // No on-events registered, nothing to do
 
@@ -354,8 +358,10 @@ export function Walkerjs(
       Object.keys(options) // consent keys
         .filter((consent) => consent in rules) // check for matching rule keys
         .forEach((consent) => {
-          // Execute the function
-          tryCatch(rules[consent])(instance, type, options);
+          rules[consent].forEach((fn) => {
+            // Execute the function
+            tryCatch(fn)(instance, options);
+          });
         });
     }
   }

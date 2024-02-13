@@ -1,21 +1,20 @@
 import { WalkerOS } from './';
 
 export type Config = Partial<{
-  [key in Type]: Rules;
+  consent?: Rules<OnConsentFn>;
 }>;
 
 export type Type = 'consent';
 
-export interface Rules {
-  [key: string]: Functions;
+export interface Rules<T = Functions> {
+  [key: string]: Array<T>;
 }
 
 export type Functions = OnConsentFn;
 
 export type OnConsentFn = (
   instance: WalkerOS.Instance,
-  type: 'consent',
-  options: Options,
+  options: WalkerOS.Consent,
 ) => void;
 
 export type Options = WalkerOS.Consent;
