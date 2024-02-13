@@ -1,7 +1,6 @@
 import fs from 'fs';
 import { getEvents } from '../lib/walker';
 import { Trigger } from '../lib/trigger';
-const mockFn = jest.fn(); //.mockImplementation(console.log);
 
 const html: string = fs
   .readFileSync(__dirname + '/html/walker.html')
@@ -25,7 +24,7 @@ describe('Walker', () => {
     ]);
   });
 
-  test('Nested entites', () => {
+  test('Nested entities', () => {
     expect(getEvents(getElem('nested'), Trigger.Load)).toMatchObject([
       {
         entity: 'mother',
@@ -54,7 +53,7 @@ describe('Walker', () => {
     ]);
   });
 
-  test('Nested entites filtered', () => {
+  test('Nested entities filtered', () => {
     expect(getEvents(getElem('daughter'), Trigger.Load)).toMatchObject([
       {
         entity: 'daughter',
@@ -64,7 +63,7 @@ describe('Walker', () => {
     ]);
   });
 
-  test('Nested entites filtered multiple', () => {
+  test('Nested entities filtered multiple', () => {
     expect(getEvents(getElem('baby'), Trigger.Load)).toMatchObject([
       {
         entity: 'baby',
@@ -131,11 +130,11 @@ describe('Walker', () => {
   });
 
   test('Get nested child data properties with higher priority', () => {
-    expect(getEvents(getElem('propert_priority'), Trigger.Click)).toEqual([
+    expect(getEvents(getElem('property_priority'), Trigger.Click)).toEqual([
       expect.objectContaining({
         entity: 'property',
         action: 'priority',
-        data: { parent: 'property', prefere: 'deeper' },
+        data: { parent: 'property', prefer: 'deeper' },
       }),
     ]);
   });
@@ -150,7 +149,7 @@ describe('Walker', () => {
           html: 'inner',
           id: 'id_value',
           static: 'value',
-          option: 'choosen',
+          option: 'chosen',
         },
       }),
     ]);
