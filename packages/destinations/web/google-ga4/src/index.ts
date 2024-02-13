@@ -43,8 +43,6 @@ const destinationGoogleGA4: Destination = {
 
     // gtag init call
     w.gtag('config', custom.measurementId, settings);
-
-    return true;
   },
 
   push(event, config, mapping = {}) {

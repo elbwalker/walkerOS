@@ -27,8 +27,6 @@ export const destinationGoogleGTM: Destination = {
     // Load the gtm script and container
     if (config.loadScript && custom.containerId)
       addScript(custom.containerId, custom.domain || defaultDomain, dataLayer);
-
-    return true;
   },
 
   push(event) {

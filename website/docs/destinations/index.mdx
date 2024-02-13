@@ -155,9 +155,8 @@ clients job to check for proper consent and call the `init` or `setup` methods.
 ### init
 
 The `init` method is optional and gets called before pushing events. It's used
-to eventually load additional scripts or set up the environment. The init method
-must `return true` upon successful initialization for the events to be
-processed. Otherwise no events will be processed.
+to eventually load additional scripts or set up the environment. To interrupt
+further processing, the method must return `false`.
 
 The walker.js checks the `config.init` value to see if a destination has been
 initialized, or not. This way you can add a destination that has already been
@@ -168,7 +167,6 @@ initialized.
 const init = (config) => {
   if (config.verbose) config.onLog(config.custom.foo);
   config.custom.count = 0;
-  return true; // no error occured, ready to work properly
 };
 ```
 

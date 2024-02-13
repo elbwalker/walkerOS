@@ -34,8 +34,6 @@ export const destinationMetaPixel: Destination = {
 
     // PageView event (deactivate actively)
     if (custom.pageview !== false) window.fbq('track', 'PageView');
-
-    return true;
   },
 
   push(event, config, mapping = {}) {
