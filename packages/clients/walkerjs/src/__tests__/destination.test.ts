@@ -5,9 +5,7 @@ describe('Destination', () => {
   let walkerjs: WebClient.Instance;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
-  const mockInit = jest.fn().mockImplementation(() => {
-    return true;
-  });
+  const mockInit = jest.fn();
 
   let destination: WebDestination.Destination;
   let config: WebDestination.Config;
