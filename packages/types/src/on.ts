@@ -7,7 +7,7 @@ export type Config = Partial<{
 export type Type = 'consent';
 
 export interface Rules<T = Functions> {
-  [key: string]: T;
+  [key: string]: Array<T>;
 }
 
 export type Functions = OnConsentFn;
