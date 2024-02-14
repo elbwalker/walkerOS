@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { elb, Walkerjs } from '@elbwalker/walker.js';
+import WebClient, { elb } from '@elbwalker/walker.js';
 import { destinationWebAPI } from '@elbwalker/destination-web-api';
 import Tagger from '@elbwalker/tagger';
 import { sessionStart } from '@elbwalker/utils';
@@ -12,7 +12,7 @@ export const Walkerjs = () => {
     if (!window.walkerjs) {
       // Setup walkerjs
       window.elb = elb;
-      window.walkerjs = Walkerjs({
+      window.walkerjs = WebClient({
         default: true,
       });
 
@@ -21,7 +21,7 @@ export const Walkerjs = () => {
       if (session) elb('session start', session);
 
       // Destination Lama
-      window.walkerjs.push('walker destination', destinationWebAPI, {
+      elb('walker destination', destinationWebAPI, {
         custom: {
           url: 'https://moin.p.elbwalkerapis.com/lama',
           transform: (event) => {
@@ -37,7 +37,7 @@ export const Walkerjs = () => {
       });
 
       // Destination API
-      window.walkerjs.push('walker destination', destinationWebAPI, {
+      elb('walker destination', destinationWebAPI, {
         custom: {
           url: 'https://europe-west1-walkeros-firebase-stack.cloudfunctions.net/ingest',
           transport: 'beacon',
