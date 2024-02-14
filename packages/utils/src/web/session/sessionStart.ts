@@ -51,6 +51,7 @@ export default function sessionStart(
     ? // It's a new session, moin
       Object.assign(
         {
+          isNew,
           start: Date.now(),
           id: utils.getId(12),
           referrer,

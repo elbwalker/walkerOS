@@ -35,7 +35,7 @@ export default function sessionStorage(
         );
 
         // By default it's not a new session anymore
-        existingSession.firstVisit = false;
+        existingSession.isFirst = false;
 
         // Check if session is still active
         if (isNew || existingSession.updated + length * 60 * 1000 < now) {
@@ -69,7 +69,7 @@ export default function sessionStorage(
     start: now,
     updated: now,
     isNew,
-    firstVisit: true,
+    isFirst: true,
     count: 1,
     runs: 1,
   };

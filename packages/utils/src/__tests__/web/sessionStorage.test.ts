@@ -34,7 +34,7 @@ describe('SessionStorage', () => {
       referrer: expect.any(String),
       updated: expect.any(Number),
       isNew: true,
-      firstVisit: true,
+      isFirst: true,
       count: 1,
       runs: 1,
     });
@@ -48,7 +48,7 @@ describe('SessionStorage', () => {
       referrer: 'org',
       updated: start,
       isNew: false,
-      firstVisit: true,
+      isFirst: true,
       count: 1,
       runs: 1,
     };
@@ -62,7 +62,7 @@ describe('SessionStorage', () => {
       ...session,
       updated: start + 1000,
       isNew: false,
-      firstVisit: false,
+      isFirst: false,
       runs: 2,
     });
   });
@@ -76,7 +76,7 @@ describe('SessionStorage', () => {
       referrer: 'org',
       updated: yesterday,
       isNew: false,
-      firstVisit: true,
+      isFirst: true,
       count: 1,
       runs: 1,
     };
@@ -92,7 +92,7 @@ describe('SessionStorage', () => {
         start: now,
         updated: now,
         isNew: true,
-        firstVisit: false,
+        isFirst: false,
         count: 2,
         runs: 1,
       }),
@@ -120,7 +120,7 @@ describe('SessionStorage', () => {
       start: expect.any(Number),
       updated: expect.any(Number),
       isNew: true,
-      firstVisit: true,
+      isFirst: true,
       referrer: '',
       count: 1,
       runs: 1,
@@ -134,7 +134,7 @@ describe('SessionStorage', () => {
       referrer: 'org',
       updated: Date.now(),
       isNew: false,
-      firstVisit: true,
+      isFirst: true,
       count: 1,
       runs: 1,
     };
@@ -154,7 +154,7 @@ describe('SessionStorage', () => {
       expect.objectContaining({
         start: session.start, // Still the same
         updated: session.updated + 1000, // Updated timestamp
-        firstVisit: false, // Not longer first visit
+        isFirst: false, // Not longer first visit
         runs: 2, // Increased number of runs
       }),
     );

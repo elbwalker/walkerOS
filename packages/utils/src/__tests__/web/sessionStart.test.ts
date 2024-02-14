@@ -20,7 +20,7 @@ describe('SessionStart', () => {
   test('sessionStart', () => {
     // Is new
     expect(sessionStart({ url, referrer: url, isNew: true })).toStrictEqual(
-      expect.objectContaining({ id: expect.any(String) }),
+      expect.objectContaining({ id: expect.any(String), isNew: true }),
     );
 
     // Referral

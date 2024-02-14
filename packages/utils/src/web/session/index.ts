@@ -19,7 +19,7 @@ export interface SessionData extends WalkerOS.Properties {
 export interface SessionStorageData extends SessionData {
   updated: number; // Timestamp of last update
   isNew: boolean; // If a new session has started
-  firstVisit: boolean; // If this is the first visit on a device
+  isFirst: boolean; // If this is the first visit on a device
   count: number; // Total number of sessions
   runs: number; // Total number of runs (like page views)
 }
@@ -28,7 +28,6 @@ export interface SessionStartConfig {
   data?: WalkerOS.Properties;
   domains?: string[];
   isNew?: boolean;
-  // firstVisit?
   parameters?: MarketingParameters;
   referrer?: string;
   url?: string;
