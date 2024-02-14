@@ -1,13 +1,25 @@
 import { getId, getMarketingParameters } from '../../';
-import type { SessionData, SessionStartConfig } from '.';
+import type { MarketingParameters } from '../../';
+import type { WalkerOS } from '@elbwalker/types';
 
-export default function sessionStart(
+export interface SessionStartData extends WalkerOS.Properties {
+  id: string; // Session ID
+  start: number; // Timestamp of session start
+  marketing?: true; // If the session was started by a marketing parameters
+}
+
+export interface SessionStartConfig {
+  data?: WalkerOS.Properties;
+  domains?: string[];
+  isNew?: boolean;
+  parameters?: MarketingParameters;
+  referrer?: string;
+  url?: string;
+}
+
+export function sessionStart(
   config: SessionStartConfig = {},
-  utils: {
-    getId: typeof getId;
-    getMarketingParameters: typeof getMarketingParameters;
-  },
-): SessionData | false {
+): SessionStartData | false {
   // Force a new session or start checking if it's a regular new one
   let isNew = config.isNew || false;
 
@@ -26,7 +38,7 @@ export default function sessionStart(
   const referrer = ref && new URL(ref).hostname;
 
   // Marketing
-  const marketing = utils.getMarketingParameters(url, config.parameters);
+  const marketing = getMarketingParameters(url, config.parameters);
   if (Object.keys(marketing).length) {
     // Check for marketing parameters like UTM and add existing
     if (!marketing.marketing)
@@ -53,7 +65,7 @@ export default function sessionStart(
         {
           isNew,
           start: Date.now(),
-          id: utils.getId(12),
+          id: getId(12),
           referrer,
         },
         marketing,

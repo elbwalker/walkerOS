@@ -6,10 +6,30 @@ import {
   storageWrite,
   tryCatch,
 } from '../../';
-import sessionStart from './sessionStart';
-import type { SessionStorageConfig, SessionStorageData } from '.';
+import type { SessionStartConfig, SessionStartData } from './';
+import { sessionStart } from './';
 
-export default function sessionStorage(
+export interface SessionStorageConfig extends SessionStartConfig {
+  sessionKey?: string;
+  sessionStorage?: StorageType;
+  sessionAge?: number;
+  length?: number; // Minutes after last update to consider session as expired (default: 30)
+}
+
+export interface SessionStorage extends SessionStorageData {
+  isNew: boolean;
+}
+
+export interface SessionStorageData extends SessionStartData {
+  updated: number; // Timestamp of last update
+  isNew: boolean; // If a new session has started
+  isFirst: boolean; // If this is the first visit on a device
+  count: number; // Total number of sessions
+  runs: number; // Total number of runs (like page views)
+  // storage: boolean; // If the storage was used to determine the session
+}
+
+export function sessionStorage(
   config: SessionStorageConfig = {},
   utils: {
     getId: typeof getId;
@@ -21,6 +41,8 @@ export default function sessionStorage(
 ): SessionStorageData {
   const now = Date.now();
   const length = config.length || 30; // Session length in minutes
+  // const deviceKey = config.deviceKey || 'elbDeviceId';
+  // Also as parameter possible like the isNew for sessionStart
   const sessionKey = config.sessionKey || 'elbSessionId';
   const sessionStorage = config.sessionStorage || 'local';
   const sessionAge = config.sessionAge || 30; // Session age in minutes

@@ -1,5 +1,5 @@
 import { getId, getMarketingParameters, tryCatch } from '../..';
-import sessionStorage from '../../web/session/sessionStorage';
+import { sessionStorage } from '../../web/session/';
 
 describe('SessionStorage', () => {
   const w = window;
