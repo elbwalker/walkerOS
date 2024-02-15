@@ -14,14 +14,19 @@ export interface SessionData extends SessionStorageData {
   storage: boolean; // If the storage was used to determine the session
 }
 
-export function sessionStart(config: SessionConfig = {}): SessionData | void {
+export type SessionCallback = (data: SessionData) => void;
+
+export function sessionStart(
+  config: SessionConfig = {},
+  cb?: SessionCallback,
+): SessionData | void {
   const func = config.storage ? sessionStorage : sessionWindow;
 
   // Consent
   if (config.consent) {
     // require consent
     elb('walker on', 'consent', {
-      [config.consent]: [getOnConsentFunc(config)],
+      [config.consent]: [getOnConsentFunc(config, cb)],
     });
   } else {
     // just do it
@@ -31,7 +36,7 @@ export function sessionStart(config: SessionConfig = {}): SessionData | void {
   return;
 }
 
-function getOnConsentFunc(config: SessionConfig) {
+function getOnConsentFunc(config: SessionConfig, cb?: SessionCallback) {
   const onFunc: On.OnConsentFn = (instance, consent) => {
     let func;
     if (config.consent && consent[config.consent]) {
@@ -40,7 +45,8 @@ function getOnConsentFunc(config: SessionConfig) {
       func = () => sessionWindow(config);
     }
 
-    func();
+    const session = func();
+    if (cb) cb({ ...{ storage: config.storage }, ...(session as SessionData) });
   };
 
   return onFunc;

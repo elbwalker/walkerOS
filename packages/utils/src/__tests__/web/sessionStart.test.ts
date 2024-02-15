@@ -11,9 +11,12 @@ jest.mock('../../web', () => ({
       consent = options;
     }
   }),
-  // elb: jest.fn(),
-  sessionStorage: jest.fn(),
-  sessionWindow: jest.fn(),
+  sessionStorage: jest.fn().mockImplementation(() => {
+    return { session: true };
+  }),
+  sessionWindow: jest.fn().mockImplementation(() => {
+    return { session: false };
+  }),
 }));
 
 describe('sessionStart', () => {
@@ -70,5 +73,26 @@ describe('sessionStart', () => {
       [consentName]: false,
     });
     expect(mockSessionWindow).toHaveBeenCalledWith(config);
+  });
+
+  test('Consent callback', () => {
+    const consentName = 'foo';
+    const config = { consent: consentName, storage: true };
+    const mockCb = jest.fn();
+    sessionStart(config, mockCb);
+
+    // Granted, use sessionStorage
+    consent[consentName][0]({} as unknown as WalkerOS.Instance, {
+      [consentName]: true,
+    });
+    expect(mockCb).toHaveBeenCalledTimes(1);
+    expect(mockCb).toHaveBeenCalledWith({ storage: true, session: true });
+
+    // Denied, use sessionWindow
+    consent[consentName][0]({} as unknown as WalkerOS.Instance, {
+      [consentName]: false,
+    });
+    expect(mockCb).toHaveBeenCalledTimes(2);
+    expect(mockCb).toHaveBeenCalledWith({ storage: true, session: false });
   });
 });
