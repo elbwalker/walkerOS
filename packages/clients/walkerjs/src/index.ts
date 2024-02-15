@@ -1,11 +1,11 @@
 import type { WebClient, WebDestination } from './types';
 import type { Hooks, On, WalkerOS } from '@elbwalker/types';
 import {
+  elb,
   initScopeTrigger,
   initGlobalTrigger,
   ready,
   load,
-  elb,
 } from './lib/trigger';
 import {
   Const,

@@ -6,6 +6,7 @@ import {
   getTriggerActions,
 } from './walker';
 import {
+  elb as elbOrg,
   Const,
   getAttribute,
   isVisible,
@@ -17,10 +18,8 @@ let visibleObserver: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
 
-export const elb: WebClient.Elb = function () {
-  // eslint-disable-next-line prefer-rest-params
-  (window.elbLayer = window.elbLayer || []).push(arguments);
-};
+const elb = elbOrg as WebClient.Elb;
+export { elb };
 
 export const Trigger: { [key: string]: Walker.Trigger } = {
   Click: 'click',

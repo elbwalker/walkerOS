@@ -5,9 +5,10 @@ describe('Browser', () => {
   const w = window;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  jest.mock('../', () => {
-    return mockFn;
-  });
+  jest.mock('../', () => ({
+    Walkerjs: mockFn,
+    default: mockFn,
+  }));
 
   const html: string = fs
     .readFileSync(__dirname + '/html/index.html')
