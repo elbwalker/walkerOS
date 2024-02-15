@@ -1,9 +1,9 @@
 // const deviceKey = config.deviceKey || 'elbDeviceId';
 // Also as parameter possible like the isNew for sessionStart
 
-import { On } from '@elbwalker/types';
 import { elb, sessionStorage, sessionWindow } from '../../';
 import type { SessionStorageConfig, SessionStorageData } from './';
+import type { On } from '@elbwalker/types';
 
 export interface SessionConfig extends SessionStorageConfig {
   consent?: string;
@@ -17,12 +17,14 @@ export interface SessionData extends SessionStorageData {
 export function sessionStart(config: SessionConfig = {}): SessionData | void {
   const func = config.storage ? sessionStorage : sessionWindow;
 
-  // Start detection based on consent settings
+  // Consent
   if (config.consent) {
+    // require consent
     elb('walker on', 'consent', {
       [config.consent]: [getOnConsentFunc(config)],
     });
   } else {
+    // just do it
     func(config);
   }
 
