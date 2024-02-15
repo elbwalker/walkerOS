@@ -23,8 +23,6 @@ export function sessionStorage(
 ): SessionStorageData {
   const now = Date.now();
   const length = config.length || 30; // Session length in minutes
-  // const deviceKey = config.deviceKey || 'elbDeviceId';
-  // Also as parameter possible like the isNew for sessionStart
   const sessionKey = config.sessionKey || 'elbSessionId';
   const sessionStorage = config.sessionStorage || 'local';
   const sessionAge = config.sessionAge || 30; // Session age in minutes
