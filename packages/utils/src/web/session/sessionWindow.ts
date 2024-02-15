@@ -1,5 +1,5 @@
 import { getId, getMarketingParameters } from '../../';
-import type { MarketingParameters } from '../../';
+import type { MarketingParameters, SessionData } from '../../';
 import type { WalkerOS } from '@elbwalker/types';
 
 export interface SessionWindowConfig {
@@ -11,17 +11,8 @@ export interface SessionWindowConfig {
   url?: string;
 }
 
-export interface SessionWindowData extends WalkerOS.Properties {
-  isNew: boolean; // If this is a new session or a known one
-  id?: string; // Session ID
-  start?: number; // Timestamp of session start
-  marketing?: true; // If the session was started by a marketing parameters
-}
-
-export function sessionWindow(
-  config: SessionWindowConfig = {},
-): SessionWindowData {
-  const known = { isNew: false };
+export function sessionWindow(config: SessionWindowConfig = {}): SessionData {
+  const known = { isNew: false, storage: false };
   // Force a new session or start checking if it's a regular new one
   let isNew = config.isNew || false;
 
@@ -66,6 +57,7 @@ export function sessionWindow(
       Object.assign(
         {
           isNew,
+          storage: false,
           start: Date.now(),
           id: getId(12),
           referrer,
