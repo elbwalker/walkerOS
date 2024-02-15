@@ -76,10 +76,10 @@ describe('sessionStart', () => {
   });
 
   test('Callback without consent', () => {
-    const config = { storage: false };
     const instance = {} as unknown as WalkerOS.Instance;
     const mockCb = jest.fn();
-    sessionStart(config, mockCb, instance);
+    const config = { cb: mockCb, instance, storage: false };
+    sessionStart(config);
 
     expect(mockCb).toHaveBeenCalledTimes(1);
     expect(mockCb).toHaveBeenCalledWith(
@@ -92,10 +92,10 @@ describe('sessionStart', () => {
 
   test('Callback with consent', () => {
     const consentName = 'foo';
-    const config = { consent: consentName, storage: true };
     const instance = {} as unknown as WalkerOS.Instance;
     const mockCb = jest.fn();
-    sessionStart(config, mockCb);
+    const config = { cb: mockCb, consent: consentName, storage: true };
+    sessionStart(config);
 
     // Granted, use sessionStorage
     consent[consentName][0](instance, {
@@ -120,5 +120,17 @@ describe('sessionStart', () => {
       },
       instance,
     );
+  });
+
+  test('Callback default', () => {
+    // No elb calls if no session is started
+    sessionStart();
+    expect(mockElb).toHaveBeenCalledTimes(0);
+  });
+
+  test.skip('Callback disabled', () => {
+    // No elb calls if no session is started
+    sessionStart({});
+    expect(mockElb).toHaveBeenCalledTimes(0);
   });
 });

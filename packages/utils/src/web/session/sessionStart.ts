@@ -8,6 +8,8 @@ import type { On, WalkerOS } from '@elbwalker/types';
 export interface SessionConfig extends SessionStorageConfig {
   consent?: string;
   storage?: boolean;
+  cb?: SessionCallback | false;
+  instance?: WalkerOS.Instance;
 }
 
 export interface SessionData {
@@ -29,27 +31,20 @@ export type SessionCallback = (
   instance?: WalkerOS.Instance,
 ) => void;
 
-export function sessionStart(
-  config: SessionConfig = {},
-  cb?: SessionCallback | false,
-  instance?: WalkerOS.Instance,
-): SessionData | void {
-  const sessionFn: SessionFunction = config.storage
-    ? sessionStorage
-    : sessionWindow;
+export function sessionStart(config: SessionConfig = {}): SessionData | void {
+  const { cb, consent, instance, storage } = config;
+  const sessionFn: SessionFunction = storage ? sessionStorage : sessionWindow;
 
   // Consent
-  if (config.consent) {
+  if (consent) {
     // require consent
     elb('walker on', 'consent', {
-      [config.consent]: [onConsentFn(config, cb)],
+      [consent]: [onConsentFn(config, cb)],
     });
   } else {
     // just do it
-    callFuncAndCb(sessionFn(config), cb, instance);
+    return callFuncAndCb(sessionFn(config), cb, instance);
   }
-
-  return;
 }
 
 function callFuncAndCb(
@@ -57,20 +52,18 @@ function callFuncAndCb(
   cb?: SessionCallback | false,
   instance?: WalkerOS.Instance,
 ) {
-  if (cb === false) return;
-  if (!cb) cb = defaultCb;
-  cb(session, instance);
+  if (cb === false) return session; // Callback is disabled
+  if (!cb) cb = defaultCb; // Default callback if none is provided
+  return cb(session, instance);
 }
 
 function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
   const func: On.OnConsentFn = (instance, consent) => {
-    let sessionFn: SessionFunction;
+    let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
 
-    if (config.consent && consent[config.consent]) {
+    if (config.consent && consent[config.consent])
+      // Use storage if consent is granted
       sessionFn = () => sessionStorage(config);
-    } else {
-      sessionFn = () => sessionWindow(config);
-    }
 
     return callFuncAndCb(sessionFn(), cb, instance);
   };
@@ -87,12 +80,8 @@ const defaultCb: SessionCallback = (session): SessionData => {
     elb('walker user', user);
   }
 
-  if (session.isNew) {
-    elb('session new', session);
-  }
-  if (session.isStart) {
-    elb('session start', session);
-  }
+  if (session.isNew) elb('session new', session);
+  if (session.isStart) elb('session start', session);
 
   return session;
 };
