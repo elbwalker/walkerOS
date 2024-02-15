@@ -11,11 +11,11 @@ jest.mock('../../web', () => ({
       consent = options;
     }
   }),
-  sessionStorage: jest.fn().mockImplementation(() => {
-    return { mock: 'storage' };
+  sessionStorage: jest.fn().mockImplementation((config) => {
+    return { ...config.data, mock: 'storage' };
   }),
-  sessionWindow: jest.fn().mockImplementation(() => {
-    return { mock: 'window' };
+  sessionWindow: jest.fn().mockImplementation((config) => {
+    return { ...config.data, mock: 'window' };
   }),
 }));
 
@@ -126,11 +126,13 @@ describe('sessionStart', () => {
     // No elb calls if no session is started
     sessionStart();
     expect(mockElb).toHaveBeenCalledTimes(0);
+    sessionStart({ data: { isNew: true } });
+    expect(mockElb).toHaveBeenCalledTimes(1); // session new
   });
 
-  test.skip('Callback disabled', () => {
+  test('Callback disabled', () => {
     // No elb calls if no session is started
-    sessionStart({});
-    expect(mockElb).toHaveBeenCalledTimes(0);
+    sessionStart({ cb: false, data: { isNew: true } });
+    expect(mockElb).toHaveBeenCalledTimes(0); // session new
   });
 });
