@@ -11,27 +11,27 @@ export interface SessionConfig extends SessionStorageConfig {
 }
 
 export interface SessionData {
-  isNew: boolean; // If this is a new session or a known one
+  isStart: boolean; // If this is a new session or a known one
   storage: boolean; // If the storage was used to determine the session
   id?: string; // Session ID
   start?: number; // Timestamp of session start
   marketing?: true; // If the session was started by a marketing parameters
   // Storage data
   updated?: number; // Timestamp of last update
-  isFirst?: boolean; // If this is the first visit on a device
+  isNew?: boolean; // If this is the first visit on a device
   count?: number; // Total number of sessions
   runs?: number; // Total number of runs (like page views)
 }
 
 export type SessionFunction = typeof sessionStorage | typeof sessionWindow;
 export type SessionCallback = (
-  data: SessionData,
+  session: SessionData,
   instance?: WalkerOS.Instance,
 ) => void;
 
 export function sessionStart(
   config: SessionConfig = {},
-  cb?: SessionCallback,
+  cb?: SessionCallback | false,
   instance?: WalkerOS.Instance,
 ): SessionData | void {
   const sessionFn: SessionFunction = config.storage
@@ -54,13 +54,15 @@ export function sessionStart(
 
 function callFuncAndCb(
   session: SessionData,
-  cb?: SessionCallback,
+  cb?: SessionCallback | false,
   instance?: WalkerOS.Instance,
 ) {
-  if (cb) cb(session, instance);
+  if (cb === false) return;
+  if (!cb) cb = defaultCb;
+  cb(session, instance);
 }
 
-function onConsentFn(config: SessionConfig, cb?: SessionCallback) {
+function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
   const func: On.OnConsentFn = (instance, consent) => {
     let sessionFn: SessionFunction;
 
@@ -76,7 +78,21 @@ function onConsentFn(config: SessionConfig, cb?: SessionCallback) {
   return func;
 }
 
-// function defaultCb(instance: WalkerOS.Instance, session: SessionData) {
-//   // Set user IDs
-//   elb('walker user', { session: session.id, device: session.device });
-// }
+const defaultCb: SessionCallback = (session): SessionData => {
+  if (session.storage) {
+    // Set user IDs
+    const user: WalkerOS.User = {};
+    if (session.id) user.session = session.id;
+    // @TODO device
+    elb('walker user', user);
+  }
+
+  if (session.isNew) {
+    elb('session new', session);
+  }
+  if (session.isStart) {
+    elb('session start', session);
+  }
+
+  return session;
+};

@@ -29,13 +29,13 @@ describe('SessionStorage', () => {
   test('Regular first session', () => {
     // Reload with marketing parameter
     expect(sessionStorage({})).toStrictEqual({
-      isNew: true,
+      isStart: true,
       storage: true,
       id: expect.any(String),
       start: expect.any(Number),
       referrer: expect.any(String),
       updated: expect.any(Number),
-      isFirst: true,
+      isNew: true,
       count: 1,
       runs: 1,
     });
@@ -44,13 +44,13 @@ describe('SessionStorage', () => {
   test('Existing active session', () => {
     const start = Date.now();
     const session = {
-      isNew: false,
+      isStart: false,
       storage: true,
       id: 'sessionId',
       start,
       referrer: 'org',
       updated: start,
-      isFirst: true,
+      isNew: true,
       count: 1,
       runs: 1,
     };
@@ -63,8 +63,8 @@ describe('SessionStorage', () => {
     expect(newSession).toStrictEqual({
       ...session,
       updated: start + 1000,
+      isStart: false,
       isNew: false,
-      isFirst: false,
       runs: 2,
     });
   });
@@ -77,8 +77,8 @@ describe('SessionStorage', () => {
       start: yesterday,
       referrer: 'org',
       updated: yesterday,
-      isNew: false,
-      isFirst: true,
+      isStart: false,
+      isNew: true,
       count: 1,
       runs: 1,
     };
@@ -93,8 +93,8 @@ describe('SessionStorage', () => {
       expect.objectContaining({
         start: now,
         updated: now,
-        isNew: true,
-        isFirst: false,
+        isStart: true,
+        isNew: false,
         count: 2,
         runs: 1,
       }),
@@ -118,12 +118,12 @@ describe('SessionStorage', () => {
   test('Storage error', () => {
     mockStorageRead.mockReturnValue('invalid');
     expect(sessionStorage({})).toStrictEqual({
-      isNew: true,
+      isStart: true,
       storage: true,
       id: expect.any(String),
       start: expect.any(Number),
       updated: expect.any(Number),
-      isFirst: true,
+      isNew: true,
       referrer: '',
       count: 1,
       runs: 1,
@@ -136,8 +136,8 @@ describe('SessionStorage', () => {
       start: Date.now(),
       referrer: 'org',
       updated: Date.now(),
-      isNew: false,
-      isFirst: true,
+      isStart: false,
+      isNew: true,
       count: 1,
       runs: 1,
     };
@@ -157,7 +157,7 @@ describe('SessionStorage', () => {
       expect.objectContaining({
         start: session.start, // Still the same
         updated: session.updated + 1000, // Updated timestamp
-        isFirst: false, // Not longer first visit
+        isNew: false, // Not longer first visit
         runs: 2, // Increased number of runs
       }),
     );

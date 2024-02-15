@@ -19,8 +19,8 @@ describe('SessionStart', () => {
 
   test('sessionWindow', () => {
     // Is new
-    expect(sessionWindow({ url, referrer: url, isNew: true })).toStrictEqual(
-      expect.objectContaining({ id: expect.any(String), isNew: true }),
+    expect(sessionWindow({ url, referrer: url, isStart: true })).toStrictEqual(
+      expect.objectContaining({ id: expect.any(String), isStart: true }),
     );
 
     // Referral
@@ -71,14 +71,14 @@ describe('SessionStart', () => {
         referrer: 'https://another.elbwalker.com',
         domains: ['another.elbwalker.com'],
       }),
-    ).toStrictEqual({ isNew: false, storage: false });
+    ).toStrictEqual({ isStart: false, storage: false });
     expect(
       sessionWindow({
         url: 'https://www.elbwalker.com',
         referrer: '',
         domains: [''], // Hack to disable direct or hidden referrer
       }),
-    ).toStrictEqual({ isNew: false, storage: false });
+    ).toStrictEqual({ isStart: false, storage: false });
 
     // Default url and referrer
     Object.defineProperty(document, 'referrer', {
@@ -97,11 +97,11 @@ describe('SessionStart', () => {
       .fn()
       .mockReturnValue([{ type: 'reload' }]);
 
-    expect(sessionWindow()).toStrictEqual({ isNew: false, storage: false });
+    expect(sessionWindow()).toStrictEqual({ isStart: false, storage: false });
 
     // Reload with marketing parameter
     expect(sessionWindow({ url: url + '?utm_campaign=foo' })).toStrictEqual({
-      isNew: false,
+      isStart: false,
       storage: false,
     });
   });

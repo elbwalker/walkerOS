@@ -5,19 +5,18 @@ import type { WalkerOS } from '@elbwalker/types';
 export interface SessionWindowConfig {
   data?: WalkerOS.Properties;
   domains?: string[];
-  isNew?: boolean;
+  isStart?: boolean;
   parameters?: MarketingParameters;
   referrer?: string;
   url?: string;
 }
 
 export function sessionWindow(config: SessionWindowConfig = {}): SessionData {
-  const known = { isNew: false, storage: false };
-  // Force a new session or start checking if it's a regular new one
-  let isNew = config.isNew || false;
+  const known = { isStart: false, storage: false };
+  let isStart = config.isStart || false;
 
   // Entry type
-  if (!isNew) {
+  if (!isStart) {
     // Only focus on linked or direct navigation types
     // and ignore reloads and all others
     const [perf] = performance.getEntriesByType(
@@ -38,25 +37,25 @@ export function sessionWindow(config: SessionWindowConfig = {}): SessionData {
       // Flag as a marketing session without overwriting
       marketing.marketing = true;
 
-    isNew = true;
+    isStart = true;
   }
 
   // Referrer
-  if (!isNew) {
+  if (!isStart) {
     // Small chance of multiple unintended events for same users
     // https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding
     // Use domains: [''] to disable direct or hidden referrer
 
     const domains = config.domains || [];
     domains.push(url.hostname);
-    isNew = !domains.includes(referrer);
+    isStart = !domains.includes(referrer);
   }
 
-  return isNew
-    ? // It's a new session, moin
+  return isStart
+    ? // It's a session start, moin
       Object.assign(
         {
-          isNew,
+          isStart,
           storage: false,
           start: Date.now(),
           id: getId(12),
@@ -65,6 +64,6 @@ export function sessionWindow(config: SessionWindowConfig = {}): SessionData {
         marketing,
         config.data,
       )
-    : // No new session
+    : // No session start
       known;
 }
