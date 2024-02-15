@@ -71,14 +71,14 @@ describe('SessionStart', () => {
         referrer: 'https://another.elbwalker.com',
         domains: ['another.elbwalker.com'],
       }),
-    ).toStrictEqual({ isNew: false });
+    ).toStrictEqual({ isNew: false, storage: false });
     expect(
       sessionWindow({
         url: 'https://www.elbwalker.com',
         referrer: '',
         domains: [''], // Hack to disable direct or hidden referrer
       }),
-    ).toStrictEqual({ isNew: false });
+    ).toStrictEqual({ isNew: false, storage: false });
 
     // Default url and referrer
     Object.defineProperty(document, 'referrer', {
@@ -97,11 +97,12 @@ describe('SessionStart', () => {
       .fn()
       .mockReturnValue([{ type: 'reload' }]);
 
-    expect(sessionWindow()).toStrictEqual({ isNew: false });
+    expect(sessionWindow()).toStrictEqual({ isNew: false, storage: false });
 
     // Reload with marketing parameter
     expect(sessionWindow({ url: url + '?utm_campaign=foo' })).toStrictEqual({
       isNew: false,
+      storage: false,
     });
   });
 });

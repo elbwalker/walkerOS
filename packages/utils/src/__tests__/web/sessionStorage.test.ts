@@ -29,11 +29,12 @@ describe('SessionStorage', () => {
   test('Regular first session', () => {
     // Reload with marketing parameter
     expect(sessionStorage({})).toStrictEqual({
+      isNew: true,
+      storage: true,
       id: expect.any(String),
       start: expect.any(Number),
       referrer: expect.any(String),
       updated: expect.any(Number),
-      isNew: true,
       isFirst: true,
       count: 1,
       runs: 1,
@@ -43,11 +44,12 @@ describe('SessionStorage', () => {
   test('Existing active session', () => {
     const start = Date.now();
     const session = {
+      isNew: false,
+      storage: true,
       id: 'sessionId',
       start,
       referrer: 'org',
       updated: start,
-      isNew: false,
       isFirst: true,
       count: 1,
       runs: 1,
@@ -116,10 +118,11 @@ describe('SessionStorage', () => {
   test('Storage error', () => {
     mockStorageRead.mockReturnValue('invalid');
     expect(sessionStorage({})).toStrictEqual({
+      isNew: true,
+      storage: true,
       id: expect.any(String),
       start: expect.any(Number),
       updated: expect.any(Number),
-      isNew: true,
       isFirst: true,
       referrer: '',
       count: 1,
