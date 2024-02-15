@@ -33,12 +33,14 @@ export function sessionStart(config: SessionConfig = {}): SessionData | void {
 
 function getOnConsentFunc(config: SessionConfig) {
   const onFunc: On.OnConsentFn = (instance, consent) => {
-    // consent value is set by definition
-    if (consent[config.consent!]) {
-      return () => sessionStorage(config);
+    let func;
+    if (config.consent && consent[config.consent]) {
+      func = () => sessionStorage(config);
     } else {
-      return () => sessionWindow(config);
+      func = () => sessionWindow(config);
     }
+
+    func();
   };
 
   return onFunc;
