@@ -1,17 +1,9 @@
-import { getId, getMarketingParameters, tryCatch } from '../..';
-import { sessionStorage } from '../../web/session/';
+import { sessionStorage } from '../../';
 
 describe('SessionStorage', () => {
   const w = window;
   const mockStorageRead = jest.fn();
   const mockStorageWrite = jest.fn();
-  const utils = {
-    getId,
-    getMarketingParameters,
-    storageRead: mockStorageRead,
-    storageWrite: mockStorageWrite,
-    tryCatch,
-  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -28,7 +20,7 @@ describe('SessionStorage', () => {
 
   test('Regular first session', () => {
     // Reload with marketing parameter
-    expect(sessionStorage({}, utils)).toStrictEqual({
+    expect(sessionStorage({})).toStrictEqual({
       id: expect.any(String),
       start: expect.any(Number),
       referrer: expect.any(String),
@@ -56,7 +48,7 @@ describe('SessionStorage', () => {
     mockStorageRead.mockReturnValue(JSON.stringify(session));
     jest.advanceTimersByTime(1000);
 
-    const newSession = sessionStorage({}, utils);
+    const newSession = sessionStorage({});
 
     expect(newSession).toStrictEqual({
       ...session,
@@ -85,7 +77,7 @@ describe('SessionStorage', () => {
     jest.advanceTimersByTime(1000);
     now += 1000;
 
-    const newSession = sessionStorage({ length: 1 }, utils);
+    const newSession = sessionStorage({ length: 1 });
 
     expect(newSession).toStrictEqual(
       expect.objectContaining({
@@ -103,19 +95,19 @@ describe('SessionStorage', () => {
   });
 
   test('Storage Session Options', () => {
-    sessionStorage({}, utils);
+    sessionStorage({});
     expect(mockStorageRead).toHaveBeenCalledWith('elbSessionId', 'local');
 
-    sessionStorage({ sessionKey: 'customKey' }, utils);
+    sessionStorage({ sessionKey: 'customKey' });
     expect(mockStorageRead).toHaveBeenCalledWith('customKey', 'local');
 
-    sessionStorage({ sessionStorage: 'session' }, utils);
+    sessionStorage({ sessionStorage: 'session' });
     expect(mockStorageRead).toHaveBeenCalledWith('elbSessionId', 'session');
   });
 
   test('Storage error', () => {
     mockStorageRead.mockReturnValue('invalid');
-    expect(sessionStorage({}, utils)).toStrictEqual({
+    expect(sessionStorage({})).toStrictEqual({
       id: expect.any(String),
       start: expect.any(Number),
       updated: expect.any(Number),
@@ -142,7 +134,7 @@ describe('SessionStorage', () => {
     jest.advanceTimersByTime(1000);
     mockStorageRead.mockReturnValue(JSON.stringify(session));
 
-    sessionStorage({}, utils);
+    sessionStorage({});
     expect(mockStorageWrite).toHaveBeenCalledWith(
       'elbSessionId',
       expect.any(String),
@@ -161,7 +153,7 @@ describe('SessionStorage', () => {
   });
 
   test('Session update options', () => {
-    sessionStorage({}, utils);
+    sessionStorage({});
     expect(mockStorageWrite).toHaveBeenCalledWith(
       'elbSessionId',
       expect.any(String),
@@ -169,10 +161,11 @@ describe('SessionStorage', () => {
       'local',
     );
 
-    sessionStorage(
-      { sessionAge: 5, sessionKey: 'foo', sessionStorage: 'session' },
-      utils,
-    );
+    sessionStorage({
+      sessionAge: 5,
+      sessionKey: 'foo',
+      sessionStorage: 'session',
+    });
     expect(mockStorageWrite).toHaveBeenCalledWith(
       'foo',
       expect.any(String),
@@ -182,10 +175,7 @@ describe('SessionStorage', () => {
   });
 
   test('Session default data', () => {
-    const session = sessionStorage(
-      { data: { foo: 'bar', count: 9001 } },
-      utils,
-    );
+    const session = sessionStorage({ data: { foo: 'bar', count: 9001 } });
 
     expect(session).toStrictEqual(
       expect.objectContaining({

@@ -1,4 +1,4 @@
-import { sessionStart } from '../..';
+import { sessionStart } from '../../';
 
 describe('SessionStart', () => {
   const w = window;
