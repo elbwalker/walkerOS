@@ -3,7 +3,7 @@
 
 import { elb, sessionStorage, sessionWindow } from '../../';
 import type { SessionStorageConfig, SessionStorageData } from './';
-import type { On } from '@elbwalker/types';
+import type { On, WalkerOS } from '@elbwalker/types';
 
 export interface SessionConfig extends SessionStorageConfig {
   consent?: string;
@@ -14,7 +14,10 @@ export interface SessionData extends SessionStorageData {
   storage: boolean; // If the storage was used to determine the session
 }
 
-export type SessionCallback = (data: SessionData) => void;
+export type SessionCallback = (
+  instance: WalkerOS.Instance,
+  data: SessionData,
+) => void;
 
 export function sessionStart(
   config: SessionConfig = {},
@@ -38,7 +41,8 @@ export function sessionStart(
 
 function getOnConsentFunc(config: SessionConfig, cb?: SessionCallback) {
   const onFunc: On.OnConsentFn = (instance, consent) => {
-    let func;
+    let func: typeof sessionStorage | typeof sessionWindow;
+
     if (config.consent && consent[config.consent]) {
       func = () => sessionStorage(config);
     } else {
@@ -46,7 +50,11 @@ function getOnConsentFunc(config: SessionConfig, cb?: SessionCallback) {
     }
 
     const session = func();
-    if (cb) cb({ ...{ storage: config.storage }, ...(session as SessionData) });
+    if (cb)
+      cb(instance, {
+        ...{ storage: config.storage },
+        ...(session as SessionData),
+      });
   };
 
   return onFunc;
