@@ -1,4 +1,4 @@
-import { sessionStart } from '../../';
+import { sessionWindow } from '../../';
 
 describe('SessionStart', () => {
   const w = window;
@@ -17,30 +17,30 @@ describe('SessionStart', () => {
     jest.resetModules();
   });
 
-  test('sessionStart', () => {
+  test('sessionWindow', () => {
     // Is new
-    expect(sessionStart({ url, referrer: url, isNew: true })).toStrictEqual(
+    expect(sessionWindow({ url, referrer: url, isNew: true })).toStrictEqual(
       expect.objectContaining({ id: expect.any(String), isNew: true }),
     );
 
     // Referral
-    expect(sessionStart({ url, referrer })).toStrictEqual(
+    expect(sessionWindow({ url, referrer })).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
 
     // Direct
-    expect(sessionStart({ url, referrer: '' })).toStrictEqual(
+    expect(sessionWindow({ url, referrer: '' })).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
 
     // Predefined data
     expect(
-      sessionStart({ url, referrer, data: { id: 'sessionId' } }),
+      sessionWindow({ url, referrer, data: { id: 'sessionId' } }),
     ).toStrictEqual(expect.objectContaining({ id: 'sessionId' }));
   });
 
   test('Marketing', () => {
-    expect(sessionStart({ url: url + '?utm_campaign=foo' })).toStrictEqual(
+    expect(sessionWindow({ url: url + '?utm_campaign=foo' })).toStrictEqual(
       expect.objectContaining({
         id: expect.any(String),
         campaign: 'foo',
@@ -50,7 +50,7 @@ describe('SessionStart', () => {
 
     // Marketing with custom marketing parameter
     expect(
-      sessionStart({
+      sessionWindow({
         url: url + '?affiliate=parameter',
         parameters: { affiliate: 'custom' },
       }),
@@ -66,14 +66,14 @@ describe('SessionStart', () => {
   test('Referrer', () => {
     // Custom domains
     expect(
-      sessionStart({
+      sessionWindow({
         url: 'https://www.elbwalker.com',
         referrer: 'https://another.elbwalker.com',
         domains: ['another.elbwalker.com'],
       }),
     ).toStrictEqual({ isNew: false });
     expect(
-      sessionStart({
+      sessionWindow({
         url: 'https://www.elbwalker.com',
         referrer: '',
         domains: [''], // Hack to disable direct or hidden referrer
@@ -87,7 +87,7 @@ describe('SessionStart', () => {
     Object.defineProperty(window, 'location', {
       value: new URL(url),
     });
-    expect(sessionStart()).toStrictEqual(
+    expect(sessionWindow()).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
   });
@@ -97,10 +97,10 @@ describe('SessionStart', () => {
       .fn()
       .mockReturnValue([{ type: 'reload' }]);
 
-    expect(sessionStart()).toStrictEqual({ isNew: false });
+    expect(sessionWindow()).toStrictEqual({ isNew: false });
 
     // Reload with marketing parameter
-    expect(sessionStart({ url: url + '?utm_campaign=foo' })).toStrictEqual({
+    expect(sessionWindow({ url: url + '?utm_campaign=foo' })).toStrictEqual({
       isNew: false,
     });
   });

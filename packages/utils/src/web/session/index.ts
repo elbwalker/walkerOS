@@ -1,3 +1,3 @@
 export * from './getSession';
-export * from './sessionStart';
 export * from './sessionStorage';
+export * from './sessionWindow';

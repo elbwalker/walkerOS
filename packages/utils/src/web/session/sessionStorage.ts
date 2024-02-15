@@ -1,8 +1,8 @@
 import { StorageType, storageRead, storageWrite, tryCatch } from '../../';
-import type { SessionStartConfig, SessionStartData } from './';
-import { sessionStart } from './';
+import type { SessionWindowConfig, SessionWindowData } from './';
+import { sessionWindow } from './';
 
-export interface SessionStorageData extends SessionStartData {
+export interface SessionStorageData extends SessionWindowData {
   id: string; // Session ID (required)
   start: number; // Timestamp of session start (required)
   updated: number; // Timestamp of last update
@@ -12,7 +12,7 @@ export interface SessionStorageData extends SessionStartData {
   runs: number; // Total number of runs (like page views)
 }
 
-export interface SessionStorageConfig extends SessionStartConfig {
+export interface SessionStorageConfig extends SessionWindowConfig {
   sessionKey?: string;
   sessionStorage?: StorageType;
   sessionAge?: number;
@@ -79,7 +79,7 @@ export function sessionStorage(
   // Eventually update session with id, referrer and marketing parameters
   session = Object.assign(
     session, // Default session values
-    sessionStart(config), // Basic session data
+    sessionWindow(config), // Basic session data
     existingSession, // (Updated) existing session
     { isNew: config.isNew }, // Status of the session
     config.data, // Given data has the highest priority
