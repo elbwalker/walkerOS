@@ -14,7 +14,7 @@ export type Functions = OnConsentFn;
 
 export type OnConsentFn = (
   instance: WalkerOS.Instance,
-  options: WalkerOS.Consent,
+  consent: WalkerOS.Consent,
 ) => void;
 
 export type Options = WalkerOS.Consent;

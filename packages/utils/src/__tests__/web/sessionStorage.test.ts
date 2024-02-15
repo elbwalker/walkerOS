@@ -4,7 +4,7 @@ import * as storage from '../../web/storage';
 // Automatically mock the storage module
 jest.mock('../../web/storage', () => ({
   storageRead: jest.fn(),
-  storageWrite: jest.fn(), // Provide a mock implementation
+  storageWrite: jest.fn(),
 }));
 
 describe('SessionStorage', () => {

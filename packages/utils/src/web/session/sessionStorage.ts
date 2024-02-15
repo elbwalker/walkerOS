@@ -2,6 +2,13 @@ import { StorageType, storageRead, storageWrite, tryCatch } from '../../';
 import type { SessionWindowConfig, SessionWindowData } from './';
 import { sessionWindow } from './';
 
+export interface SessionStorageConfig extends SessionWindowConfig {
+  sessionKey?: string;
+  sessionStorage?: StorageType;
+  sessionAge?: number;
+  length?: number; // Minutes after last update to consider session as expired (default: 30)
+}
+
 export interface SessionStorageData extends SessionWindowData {
   id: string; // Session ID (required)
   start: number; // Timestamp of session start (required)
@@ -10,13 +17,6 @@ export interface SessionStorageData extends SessionWindowData {
   isFirst: boolean; // If this is the first visit on a device
   count: number; // Total number of sessions
   runs: number; // Total number of runs (like page views)
-}
-
-export interface SessionStorageConfig extends SessionWindowConfig {
-  sessionKey?: string;
-  sessionStorage?: StorageType;
-  sessionAge?: number;
-  length?: number; // Minutes after last update to consider session as expired (default: 30)
 }
 
 export function sessionStorage(

@@ -351,8 +351,6 @@ export function Walkerjs(
 
     // Consent events
     if (type === Const.Commands.Consent) {
-      // const functions: Array<On.OnConsentFn> = [];
-
       // Collect functions whose consent keys match the rule keys directly
       // Directly execute functions whose consent keys match the rule keys
       Object.keys(options) // consent keys
