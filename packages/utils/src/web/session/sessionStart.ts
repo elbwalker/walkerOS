@@ -3,8 +3,9 @@ import type { MarketingParameters } from '../../';
 import type { WalkerOS } from '@elbwalker/types';
 
 export interface SessionStartData extends WalkerOS.Properties {
-  id: string; // Session ID
-  start: number; // Timestamp of session start
+  isNew: boolean; // If this is a new session or a known one
+  id?: string; // Session ID
+  start?: number; // Timestamp of session start
   marketing?: true; // If the session was started by a marketing parameters
 }
 
@@ -19,7 +20,8 @@ export interface SessionStartConfig {
 
 export function sessionStart(
   config: SessionStartConfig = {},
-): SessionStartData | false {
+): SessionStartData {
+  const known = { isNew: false };
   // Force a new session or start checking if it's a regular new one
   let isNew = config.isNew || false;
 
@@ -30,7 +32,7 @@ export function sessionStart(
     const [perf] = performance.getEntriesByType(
       'navigation',
     ) as PerformanceNavigationTiming[];
-    if (perf.type !== 'navigate') return false;
+    if (perf.type !== 'navigate') return known;
   }
 
   const url = new URL(config.url || window.location.href);
@@ -72,5 +74,5 @@ export function sessionStart(
         config.data,
       )
     : // No new session
-      false;
+      known;
 }

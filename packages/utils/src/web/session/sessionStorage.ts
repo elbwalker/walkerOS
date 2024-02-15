@@ -3,12 +3,13 @@ import type { SessionStartConfig, SessionStartData } from './';
 import { sessionStart } from './';
 
 export interface SessionStorageData extends SessionStartData {
+  id: string; // Session ID (required)
+  start: number; // Timestamp of session start (required)
   updated: number; // Timestamp of last update
   isNew: boolean; // If a new session has started
   isFirst: boolean; // If this is the first visit on a device
   count: number; // Total number of sessions
   runs: number; // Total number of runs (like page views)
-  // storage: boolean; // If the storage was used to determine the session
 }
 
 export interface SessionStorageConfig extends SessionStartConfig {
