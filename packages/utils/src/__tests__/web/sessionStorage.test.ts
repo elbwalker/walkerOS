@@ -9,6 +9,7 @@ jest.mock('../../web/storage', () => ({
 
 describe('SessionStorage', () => {
   const w = window;
+  const device = 'd3v1c3';
 
   const mockStorageWrite = storage.storageWrite as jest.Mock;
   const mockStorageRead = storage.storageRead as jest.Mock;
@@ -36,6 +37,7 @@ describe('SessionStorage', () => {
       referrer: expect.any(String),
       updated: expect.any(Number),
       isNew: true,
+      device: expect.any(String),
       count: 1,
       runs: 1,
     });
@@ -55,13 +57,20 @@ describe('SessionStorage', () => {
       runs: 1,
     };
 
-    mockStorageRead.mockReturnValue(JSON.stringify(session));
+    mockStorageRead.mockImplementation((config) => {
+      return { ...config.data, mock: 'window' };
+    });
+
+    mockStorageRead
+      .mockReturnValue(JSON.stringify(session))
+      .mockReturnValueOnce(device);
     jest.advanceTimersByTime(1000);
 
     const newSession = sessionStorage({});
 
     expect(newSession).toStrictEqual({
       ...session,
+      device,
       updated: start + 1000,
       isStart: false,
       isNew: false,
@@ -83,7 +92,9 @@ describe('SessionStorage', () => {
       runs: 1,
     };
 
-    mockStorageRead.mockReturnValue(JSON.stringify(session));
+    mockStorageRead
+      .mockReturnValue(JSON.stringify(session))
+      .mockReturnValueOnce(device);
     jest.advanceTimersByTime(1000);
     now += 1000;
 
@@ -95,6 +106,7 @@ describe('SessionStorage', () => {
         updated: now,
         isStart: true,
         isNew: false,
+        device,
         count: 2,
         runs: 1,
       }),
@@ -106,17 +118,20 @@ describe('SessionStorage', () => {
 
   test('Storage Session Options', () => {
     sessionStorage({});
+    expect(mockStorageRead).toHaveBeenCalledWith('elbDeviceId', 'local');
     expect(mockStorageRead).toHaveBeenCalledWith('elbSessionId', 'local');
 
-    sessionStorage({ sessionKey: 'customKey' });
-    expect(mockStorageRead).toHaveBeenCalledWith('customKey', 'local');
+    sessionStorage({ deviceKey: 'dKey', sessionKey: 'sKey' });
+    expect(mockStorageRead).toHaveBeenCalledWith('dKey', 'local');
+    expect(mockStorageRead).toHaveBeenCalledWith('sKey', 'local');
 
-    sessionStorage({ sessionStorage: 'session' });
+    sessionStorage({ deviceStorage: 'session', sessionStorage: 'session' });
+    expect(mockStorageRead).toHaveBeenCalledWith('elbDeviceId', 'session');
     expect(mockStorageRead).toHaveBeenCalledWith('elbSessionId', 'session');
   });
 
   test('Storage error', () => {
-    mockStorageRead.mockReturnValue('invalid');
+    mockStorageRead.mockReturnValue('invalid').mockReturnValueOnce('');
     expect(sessionStorage({})).toStrictEqual({
       isStart: true,
       storage: true,
@@ -124,6 +139,7 @@ describe('SessionStorage', () => {
       start: expect.any(Number),
       updated: expect.any(Number),
       isNew: true,
+      device: expect.any(String),
       referrer: '',
       count: 1,
       runs: 1,

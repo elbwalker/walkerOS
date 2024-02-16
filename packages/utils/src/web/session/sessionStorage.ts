@@ -1,8 +1,17 @@
-import { StorageType, storageRead, storageWrite, tryCatch } from '../../';
+import {
+  StorageType,
+  getId,
+  storageRead,
+  storageWrite,
+  tryCatch,
+} from '../../';
 import { sessionWindow } from './';
 import type { SessionData, SessionWindowConfig } from './';
 
 export interface SessionStorageConfig extends SessionWindowConfig {
+  deviceKey?: string;
+  deviceStorage?: StorageType;
+  deviceAge?: number;
   sessionKey?: string;
   sessionStorage?: StorageType;
   sessionAge?: number;
@@ -12,10 +21,28 @@ export interface SessionStorageConfig extends SessionWindowConfig {
 export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
   const now = Date.now();
   const length = config.length || 30; // Session length in minutes
+  const deviceKey = config.deviceKey || 'elbDeviceId';
+  const deviceStorage = config.deviceStorage || 'local';
+  const deviceAge = config.deviceAge || 30; // Session age in days
   const sessionKey = config.sessionKey || 'elbSessionId';
   const sessionStorage = config.sessionStorage || 'local';
   const sessionAge = config.sessionAge || 30; // Session age in minutes
   let isStart = !!config.isStart;
+
+  // Check for an existing session
+  const device: string | undefined = tryCatch(
+    (key: string, age: number, storage: StorageType) => {
+      // Get existing device Id
+      let id = String(storageRead(key, storage));
+
+      if (!id) {
+        id = getId(8); // Create a new device Id
+        storageWrite(key, id, age, storage); // Write device Id to storage
+      }
+
+      return id;
+    },
+  )(deviceKey, deviceAge, deviceStorage);
 
   // Check for an existing session
   const existingSession: SessionData | undefined = tryCatch(
@@ -70,6 +97,7 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
     session, // Default session values
     sessionWindow(config), // Basic session data
     existingSession, // (Updated) existing session
+    { device }, // Device Id
     { isStart: config.isStart, storage: true }, // Status of the session
     config.data, // Given data has the highest priority
   );

@@ -21,6 +21,7 @@ export interface SessionData {
   // Storage data
   updated?: number; // Timestamp of last update
   isNew?: boolean; // If this is the first visit on a device
+  device?: string; // Device ID
   count?: number; // Total number of sessions
   runs?: number; // Total number of runs (like page views)
 }

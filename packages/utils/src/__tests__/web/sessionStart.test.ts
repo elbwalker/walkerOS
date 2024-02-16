@@ -135,4 +135,10 @@ describe('sessionStart', () => {
     sessionStart({ cb: false, data: { isNew: true } });
     expect(mockElb).toHaveBeenCalledTimes(0); // session new
   });
+
+  test('Callback default elb calls', () => {
+    const session = sessionStart({ data: { isNew: true, isStart: true } });
+    expect(mockElb).toHaveBeenCalledWith('session new', session);
+    expect(mockElb).toHaveBeenCalledWith('session start', session);
+  });
 });
