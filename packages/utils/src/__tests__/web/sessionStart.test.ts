@@ -130,6 +130,16 @@ describe('sessionStart', () => {
     expect(mockElb).toHaveBeenCalledTimes(1); // session new
   });
 
+  test('Callback default storage', () => {
+    sessionStart({
+      data: { storage: true, isNew: true, device: 'd3v1c3', id: 's3ss10n' },
+    });
+    expect(mockElb).toHaveBeenCalledWith('walker user', {
+      device: 'd3v1c3',
+      session: 's3ss10n',
+    });
+  });
+
   test('Callback disabled', () => {
     // No elb calls if no session is started
     sessionStart({ cb: false, data: { isNew: true } });

@@ -77,7 +77,8 @@ const defaultCb: SessionCallback = (session): SessionData => {
     // Set user IDs
     const user: WalkerOS.User = {};
     if (session.id) user.session = session.id;
-    // @TODO device
+    if (session.device) user.device = session.device;
+
     elb('walker user', user);
   }
 
