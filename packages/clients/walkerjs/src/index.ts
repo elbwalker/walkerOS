@@ -44,7 +44,7 @@ export function Walkerjs(
       instance;
 
   // Run on events for default consent states
-  onApply(instance, 'consent', instance.config.consent);
+  onApply(instance, 'consent', config.on.consent);
 
   // Use the default init mode for auto run and dataLayer destination
   if (customConfig.default) {
@@ -300,7 +300,7 @@ export function Walkerjs(
         break;
       }
       case Const.Commands.On:
-        on(instance, data as On.Type, options as On.Rules);
+        on(instance, data as On.Types, options as On.Options);
         break;
       case Const.Commands.Run:
         ready(run, instance);
@@ -327,40 +327,46 @@ export function Walkerjs(
 
   function on(
     instance: WebClient.Instance,
-    type: On.Type,
-    rules: On.Rules = {},
+    type: On.Types,
+    option: WalkerOS.SingleOrArray<On.Options>,
   ) {
-    instance.config.on[type] = assign(
-      instance.config.on[type] || {},
-      assign({}, rules), // Create a duplicate
-    );
+    const on = instance.config.on;
+    const onType: Array<On.Options> = on[type] || [];
+    const options = Array.isArray(option) ? option : [option];
+
+    options.forEach((option) => {
+      onType.push(option);
+    });
+
+    (on[type] as typeof onType) = onType;
 
     // Run on events for default consent states
-    onApply(instance, 'consent', instance.config.consent, rules);
+    onApply(instance, 'consent', options);
   }
 
   function onApply(
     instance: WebClient.Instance,
-    type: On.Type,
-    options: On.Options,
-    scope?: On.Rules,
+    type: On.Types,
+    options?: Array<On.Options>,
   ) {
-    const rules = scope || instance.config.on[type];
+    const onConfig = options || instance.config.on[type];
 
-    if (!rules) return; // No on-events registered, nothing to do
+    if (!onConfig) return; // No on-events registered, nothing to do
 
     // Consent events
     if (type === Const.Commands.Consent) {
-      // Collect functions whose consent keys match the rule keys directly
-      // Directly execute functions whose consent keys match the rule keys
-      Object.keys(options) // consent keys
-        .filter((consent) => consent in rules) // check for matching rule keys
-        .forEach((consent) => {
-          rules[consent].forEach((fn) => {
+      const consentState = instance.config.consent;
+
+      (onConfig as On.ConsentConfig[]).forEach((consentConfig) => {
+        // Collect functions whose consent keys match the rule keys directly
+        // Directly execute functions whose consent keys match the rule keys
+        Object.keys(consentState) // consent keys
+          .filter((consent) => consent in consentConfig) // check for matching rule keys
+          .forEach((consent) => {
             // Execute the function
-            tryCatch(fn)(instance, options);
+            tryCatch(consentConfig[consent])(instance, consentState);
           });
-        });
+      });
     }
   }
 
@@ -585,7 +591,7 @@ export function Walkerjs(
     });
 
     // Run on consent events
-    onApply(instance, 'consent', data);
+    onApply(instance, 'consent', config.on.consent);
 
     if (runQueue) {
       Object.values(config.destinations).forEach((destination) => {

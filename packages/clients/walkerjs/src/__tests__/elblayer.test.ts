@@ -372,7 +372,6 @@ describe('ElbLayer', () => {
   });
 
   test('custom push', () => {
-    // @TODO why does only elb and not w.elbLayer.push work here?!
     elb(
       'e 1', // event
       {}, // data

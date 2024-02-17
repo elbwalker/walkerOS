@@ -646,14 +646,4 @@ describe('Destination', () => {
     elb('walker destination', destination);
     expect(Object.keys(walkerjs.config.destinations)).toHaveLength(2);
   });
-
-  test.skip('TODO investigate this', () => {
-    elb('walker destination', destination, { id: 'foo' });
-    elb('walker run');
-
-    // @TODO
-    // the walker destination command is not processed
-    // only if walker run was called before
-    expect(walkerjs.config.destinations['foo']).toBe(destination);
-  });
 });

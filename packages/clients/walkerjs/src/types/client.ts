@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { On, WalkerOS } from '@elbwalker/types';
 import type * as WebDestination from './destination';
 import type * as Walker from './walker';
 
@@ -57,7 +57,8 @@ export type PushData =
 export type PushOptions =
   | WalkerOS.PushOptions
   | Walker.Trigger
-  | WebDestination.Config;
+  | WebDestination.Config
+  | WalkerOS.SingleOrArray<On.Options>;
 
 export type PushContext = WalkerOS.PushContext | Element;
 
