@@ -121,3 +121,77 @@ describe('Commands on', () => {
     expect(mockFnC).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('Commands run', () => {
+  const w = window;
+
+  let walkerjs: WebClient.Instance;
+
+  beforeEach(() => {
+    // reset DOM with event listeners etc.
+    document.body = document.body.cloneNode() as HTMLElement;
+    jest.clearAllMocks();
+    jest.resetModules();
+    w.elbLayer = undefined as unknown as WebClient.ElbLayer;
+
+    walkerjs = Walkerjs();
+  });
+
+  test('basics', () => {
+    const mockFn = jest.fn();
+
+    // Don't call on default
+    elb('walker on', 'run', mockFn);
+    expect(mockFn).not.toHaveBeenCalled();
+
+    elb('walker run');
+    expect(mockFn).toHaveBeenCalled();
+  });
+
+  test('run register', () => {
+    const mockFn = jest.fn();
+    elb('walker on', 'run', mockFn);
+    elb('walker run');
+    expect(walkerjs.config.on.run![0]).toBe(mockFn);
+  });
+
+  test('run register init', () => {
+    const mockFn = jest.fn();
+    Walkerjs({
+      on: { run: [mockFn] },
+      default: true,
+    });
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  test('run register elbLayer', () => {
+    const mockFn = jest.fn();
+    Walkerjs({
+      on: { run: [mockFn] },
+      default: true,
+    });
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  test('consent error', () => {
+    const mockFn = jest.fn();
+    const mockBrokenFn = jest.fn(() => {
+      throw new Error('kaputt');
+    });
+    Walkerjs({
+      on: { run: [mockBrokenFn, mockFn] },
+      default: true,
+    });
+    expect(mockBrokenFn).toHaveBeenCalledTimes(1);
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  test('run multiple', () => {
+    const mockFn = jest.fn();
+    elb('walker on', 'run', mockFn);
+    elb('walker run');
+    elb('walker run');
+    elb('walker run');
+    expect(mockFn).toHaveBeenCalledTimes(3);
+  });
+});

@@ -16,7 +16,7 @@ export function onApply(
       onConsent(instance, onConfig as Array<On.ConsentConfig>);
       break;
     case Const.Commands.Run:
-      // @TODO
+      onRun(instance, onConfig as Array<On.RunConfig>);
       break;
     default:
       break;
@@ -38,5 +38,14 @@ function onConsent(
         // Execute the function
         tryCatch(consentConfig[consent])(instance, consentState);
       });
+  });
+}
+
+function onRun(
+  instance: WebClient.Instance,
+  onConfig: Array<On.RunConfig>,
+): void {
+  onConfig.forEach((func) => {
+    tryCatch(func)(instance);
   });
 }

@@ -26,4 +26,4 @@ export type ConsentFn = (
 
 // Run
 export type RunConfig = RunFn;
-export type RunFn = (instance: WalkerOS.Instance) => void; // @TODO return custom config?
+export type RunFn = (instance: WalkerOS.Instance) => void;
