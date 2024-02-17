@@ -339,10 +339,10 @@ export function Walkerjs(
       onType.push(option);
     });
 
+    // Update instance on state
     (on[type] as typeof onType) = onType;
 
-    // Run on events for default consent states
-    onApply(instance, 'consent', options);
+    onApply(instance, type, options);
   }
 
   function push(
@@ -540,6 +540,9 @@ export function Walkerjs(
       destination.queue = [];
     });
 
+    // Call the predefined run events
+    onApply(instance, 'run');
+
     // Increase round counter and check if this is the first run
     if (++instance.config.round == 1) {
       // Run predefined elbLayer stack once
@@ -548,8 +551,6 @@ export function Walkerjs(
       // Reset timing with each new run
       instance.config.timing = performance.now();
     }
-
-    onApply(instance, 'run');
 
     tryCatch(load)(instance);
   }

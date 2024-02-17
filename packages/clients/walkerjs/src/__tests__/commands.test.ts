@@ -164,6 +164,21 @@ describe('Commands run', () => {
     expect(mockFn).toHaveBeenCalledTimes(1);
   });
 
+  test('run register after run', () => {
+    const mockFnPre = jest.fn();
+    const mockFnPost = jest.fn();
+    elb('walker on', 'run', mockFnPre);
+    expect(mockFnPre).toHaveBeenCalledTimes(0);
+    walkerjs = Walkerjs();
+    expect(mockFnPre).toHaveBeenCalledTimes(0);
+    elb('walker run');
+    expect(mockFnPre).toHaveBeenCalledTimes(1);
+
+    expect(mockFnPost).toHaveBeenCalledTimes(0);
+    elb('walker on', 'run', mockFnPost);
+    expect(mockFnPost).toHaveBeenCalledTimes(1);
+  });
+
   test('run register elbLayer', () => {
     const mockFn = jest.fn();
     Walkerjs({
