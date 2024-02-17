@@ -2,7 +2,7 @@ import { On } from '@elbwalker/types';
 import { elb, sessionStart, sessionStorage, sessionWindow } from '../../';
 import type { WalkerOS } from '@elbwalker/types';
 
-let consent: On.Rules;
+let consent: On.ConsentConfig;
 
 jest.mock('../../web', () => ({
   ...jest.requireActual('../../web'), // Keep original
@@ -56,20 +56,20 @@ describe('sessionStart', () => {
     sessionStart(config);
     expect(mockElb).toHaveBeenCalledTimes(1);
     expect(mockElb).toHaveBeenCalledWith('walker on', 'consent', {
-      foo: [expect.any(Function)],
+      foo: expect.any(Function),
     });
 
     // Simulate granted consent call from walker.js instance
     // Granted
     expect(mockSessionStorage).toHaveBeenCalledTimes(0);
-    consent[consentName][0]({} as unknown as WalkerOS.Instance, {
+    consent[consentName]({} as unknown as WalkerOS.Instance, {
       [consentName]: true,
     });
     expect(mockSessionStorage).toHaveBeenCalledWith(config);
 
     // Denied
     expect(mockSessionWindow).toHaveBeenCalledTimes(0);
-    consent[consentName][0]({} as unknown as WalkerOS.Instance, {
+    consent[consentName]({} as unknown as WalkerOS.Instance, {
       [consentName]: false,
     });
     expect(mockSessionWindow).toHaveBeenCalledWith(config);
@@ -98,7 +98,7 @@ describe('sessionStart', () => {
     sessionStart(config);
 
     // Granted, use sessionStorage
-    consent[consentName][0](instance, {
+    consent[consentName](instance, {
       [consentName]: true,
     });
     expect(mockCb).toHaveBeenCalledTimes(1);
@@ -110,7 +110,7 @@ describe('sessionStart', () => {
     );
 
     // Denied, use sessionWindow
-    consent[consentName][0](instance, {
+    consent[consentName](instance, {
       [consentName]: false,
     });
     expect(mockCb).toHaveBeenCalledTimes(2);

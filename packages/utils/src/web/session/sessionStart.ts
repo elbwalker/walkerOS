@@ -40,7 +40,7 @@ export function sessionStart(config: SessionConfig = {}): SessionData | void {
   if (consent) {
     // require consent
     elb('walker on', 'consent', {
-      [consent]: [onConsentFn(config, cb)],
+      [consent]: onConsentFn(config, cb),
     });
   } else {
     // just do it
@@ -59,7 +59,7 @@ function callFuncAndCb(
 }
 
 function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
-  const func: On.OnConsentFn = (instance, consent) => {
+  const func: On.ConsentFn = (instance, consent) => {
     let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
 
     if (config.consent && consent[config.consent])
