@@ -126,8 +126,8 @@ describe('sessionStart', () => {
     // No elb calls if no session is started
     sessionStart();
     expect(mockElb).toHaveBeenCalledTimes(0);
-    sessionStart({ data: { isNew: true } });
-    expect(mockElb).toHaveBeenCalledTimes(1); // session new
+    sessionStart({ data: { isStart: true } });
+    expect(mockElb).toHaveBeenCalledTimes(1);
   });
 
   test('Callback default storage', () => {
@@ -142,13 +142,12 @@ describe('sessionStart', () => {
 
   test('Callback disabled', () => {
     // No elb calls if no session is started
-    sessionStart({ cb: false, data: { isNew: true } });
-    expect(mockElb).toHaveBeenCalledTimes(0); // session new
+    sessionStart({ cb: false, data: { isStart: true } });
+    expect(mockElb).toHaveBeenCalledTimes(0);
   });
 
   test('Callback default elb calls', () => {
     const session = sessionStart({ data: { isNew: true, isStart: true } });
-    expect(mockElb).toHaveBeenCalledWith('session new', session);
     expect(mockElb).toHaveBeenCalledWith('session start', session);
   });
 });

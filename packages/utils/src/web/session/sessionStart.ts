@@ -82,7 +82,6 @@ const defaultCb: SessionCallback = (session): SessionData => {
     elb('walker user', user);
   }
 
-  if (session.isNew) elb('session new', session);
   if (session.isStart) elb('session start', session);
 
   return session;
