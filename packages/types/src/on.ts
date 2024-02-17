@@ -3,17 +3,17 @@ import { WalkerOS } from './';
 // Instance state for the on actions
 export type Config = {
   consent?: Array<ConsentConfig>;
-  load?: Array<LoadConfig>;
+  run?: Array<RunConfig>;
 };
 
 // On types
 export type Types = keyof Config;
 
 // Function definitions for the on actions
-export type Functions = ConsentFn | LoadFn;
+export type Functions = ConsentFn | RunFn;
 
 // Parameters for the onAction function calls
-export type Options = ConsentConfig | LoadConfig;
+export type Options = ConsentConfig | RunConfig;
 
 // Consent
 export interface ConsentConfig {
@@ -24,6 +24,6 @@ export type ConsentFn = (
   consent: WalkerOS.Consent,
 ) => void;
 
-// Load
-export type LoadConfig = LoadFn;
-export type LoadFn = (instance: WalkerOS.Instance) => void; // @TODO return custom config?
+// Run
+export type RunConfig = RunFn;
+export type RunFn = (instance: WalkerOS.Instance) => void; // @TODO return custom config?

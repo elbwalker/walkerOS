@@ -16,6 +16,7 @@ import {
   useHooks,
 } from '@elbwalker/utils';
 import { getEntities, getGlobals } from './lib/walker';
+import { onApply } from './lib/on';
 
 // Export types and elb
 export * from './types';
@@ -344,32 +345,6 @@ export function Walkerjs(
     onApply(instance, 'consent', options);
   }
 
-  function onApply(
-    instance: WebClient.Instance,
-    type: On.Types,
-    options?: Array<On.Options>,
-  ) {
-    const onConfig = options || instance.config.on[type];
-
-    if (!onConfig) return; // No on-events registered, nothing to do
-
-    // Consent events
-    if (type === Const.Commands.Consent) {
-      const consentState = instance.config.consent;
-
-      (onConfig as On.ConsentConfig[]).forEach((consentConfig) => {
-        // Collect functions whose consent keys match the rule keys directly
-        // Directly execute functions whose consent keys match the rule keys
-        Object.keys(consentState) // consent keys
-          .filter((consent) => consent in consentConfig) // check for matching rule keys
-          .forEach((consent) => {
-            // Execute the function
-            tryCatch(consentConfig[consent])(instance, consentState);
-          });
-      });
-    }
-  }
-
   function push(
     event?: unknown,
     data?: WebClient.PushData,
@@ -573,6 +548,8 @@ export function Walkerjs(
       // Reset timing with each new run
       instance.config.timing = performance.now();
     }
+
+    onApply(instance, 'run');
 
     tryCatch(load)(instance);
   }
