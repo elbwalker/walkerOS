@@ -217,9 +217,6 @@ describe('Elbwalker', () => {
       'walker hook',
       'postPush',
       expect.any(Function),
-      undefined,
-      undefined,
-      undefined,
     );
 
     expect(walkerjs.config.hooks).toEqual(
@@ -251,7 +248,6 @@ describe('Elbwalker', () => {
       't',
       { c: ['v', 0] },
       [],
-      undefined,
     );
 
     expect(preDestinationPush).toHaveBeenNthCalledWith(
@@ -275,7 +271,6 @@ describe('Elbwalker', () => {
       't',
       { c: ['v', 0] },
       [],
-      undefined,
     );
   });
 

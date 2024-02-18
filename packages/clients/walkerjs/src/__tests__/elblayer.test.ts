@@ -195,7 +195,7 @@ describe('ElbLayer', () => {
       count: expect.any(Number),
       custom: {},
       destinations: expect.any(Object),
-      elbLayer: w.elbLayer,
+      elbLayer: expect.any(Array),
       globals: {},
       group: expect.any(String),
       hooks: {},

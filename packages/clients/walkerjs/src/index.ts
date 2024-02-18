@@ -183,24 +183,15 @@ export function Walkerjs(
   function elbLayerInit(instance: WebClient.Instance) {
     const elbLayer = instance.config.elbLayer;
 
-    elbLayer.push = function (
-      event?: IArguments | unknown,
-      data?: WebClient.PushData,
-      trigger?: string,
-      context?: WalkerOS.OrderedProperties,
-      nested?: WalkerOS.Entities,
-      custom?: WalkerOS.Properties,
-    ) {
+    elbLayer.push = function (...args: WebClient.ElbLayer) {
       // Pushed as Arguments
-      if (isArgument(event)) {
-        [event, data, trigger, context, nested, custom] = [
-          ...Array.from(event),
-        ];
+      if (isArgument(args[0])) {
+        args = args[0] as unknown as WebClient.ElbLayer;
       }
 
       // eslint-disable-next-line prefer-rest-params
       const i = Array.prototype.push.apply(this, [arguments]);
-      instance.push(String(event), data, trigger, context, nested, custom);
+      instance.push(...args);
 
       return i;
     };
@@ -314,7 +305,8 @@ export function Walkerjs(
     }
   }
 
-  function isArgument(event: unknown): event is IArguments {
+  function isArgument(event?: unknown): event is IArguments {
+    if (!event) return false;
     return {}.hasOwnProperty.call(event, 'callee');
   }
 

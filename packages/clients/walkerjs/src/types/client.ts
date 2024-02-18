@@ -31,7 +31,7 @@ export interface Elb extends WalkerOS.Elb {
   ): void;
   (event: 'walker init', scope: Scope | Scope[]): void;
   (
-    event: string,
+    event: unknown,
     data?: PushData,
     options?: PushOptions,
     context?: PushContext,
@@ -41,7 +41,7 @@ export interface Elb extends WalkerOS.Elb {
 }
 
 export type ElbLayer = [
-  (IArguments | string)?,
+  string?,
   PushData?,
   PushOptions?,
   WalkerOS.OrderedProperties?,
