@@ -189,8 +189,7 @@ export function Walkerjs(
         args = args[0] as unknown as WebClient.ElbLayer;
       }
 
-      // eslint-disable-next-line prefer-rest-params
-      const i = Array.prototype.push.apply(this, [arguments]);
+      const i = Array.prototype.push.apply(this, [args]);
       instance.push(...args);
 
       return i;

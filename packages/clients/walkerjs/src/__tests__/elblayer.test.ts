@@ -364,7 +364,7 @@ describe('ElbLayer', () => {
 
     // Arguments
     expect(JSON.stringify(w.elbLayer[0])).toEqual(
-      JSON.stringify({ '0': { '0': 'walker run' } }),
+      JSON.stringify({ '0': 'walker run' }),
     );
 
     // Parameters
