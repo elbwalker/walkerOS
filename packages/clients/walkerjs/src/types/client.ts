@@ -31,7 +31,7 @@ export interface Elb extends WalkerOS.Elb {
   ): void;
   (event: 'walker init', scope: Scope | Scope[]): void;
   (
-    event: unknown,
+    event: string | unknown,
     data?: PushData,
     options?: PushOptions,
     context?: PushContext,

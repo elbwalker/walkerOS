@@ -344,7 +344,7 @@ export function Walkerjs(
     nested: WalkerOS.Entities = [],
     custom: WalkerOS.Properties = {},
   ): void {
-    if (!event || !isSameType(event, '')) return;
+    if (!event || !isSameType(event, '' as string)) return;
 
     const config = instance.config;
 
