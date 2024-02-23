@@ -53,7 +53,6 @@ describe('destination google-tag-manager', () => {
   });
 
   test('custom dataLayer name', () => {
-    const w = window as Window;
     const customLayer = 'customLayer';
 
     elb('walker destination', destination, {

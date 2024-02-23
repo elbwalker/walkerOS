@@ -1,15 +1,9 @@
 import type { WalkerOS } from '@elbwalker/types';
 
-declare global {
-  interface Window {
-    elbLayer: ElbLayer;
-    elb: WalkerOS.Elb;
-  }
-}
-
 export type ElbLayer = Array<IArguments>;
 
 export const elb: WalkerOS.Elb = function () {
+  const w = window as unknown as Record<string, unknown[]>;
   // eslint-disable-next-line prefer-rest-params
-  (window.elbLayer = window.elbLayer || []).push(arguments);
+  (w.elbLayer = w.elbLayer || []).push(arguments);
 };
