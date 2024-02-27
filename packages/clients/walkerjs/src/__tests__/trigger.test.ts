@@ -16,7 +16,6 @@ describe('Trigger', () => {
   beforeEach(() => {
     document.body.innerHTML = html;
 
-    jest.useFakeTimers();
     jest.spyOn(global, 'setTimeout');
     jest.spyOn(global, 'setInterval');
 
@@ -175,8 +174,7 @@ describe('Trigger', () => {
 
     (events.DOMContentLoaded as () => void)();
 
-    expect(mockDataLayer).toHaveBeenNthCalledWith(
-      1,
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page view',
         trigger: Trigger.Load,

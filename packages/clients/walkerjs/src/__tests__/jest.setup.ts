@@ -2,11 +2,12 @@ import { WebClient } from '..';
 
 const mockDataLayer = jest.fn(); //.mockImplementation(console.log);
 
-const originalPerformance = global.performance;
+let originalPerformance: Performance;
 
 global.beforeEach(() => {
   jest.clearAllMocks();
   jest.resetModules();
+  jest.useFakeTimers();
 
   // reset DOM with event listeners etc.
   document.body = document.body.cloneNode() as HTMLElement;
@@ -17,11 +18,11 @@ global.beforeEach(() => {
   window.elbLayer = undefined as unknown as WebClient.ElbLayer;
 
   // Performance
-  const boundOriginalNow = originalPerformance.now.bind(originalPerformance);
+  originalPerformance = global.performance;
   Object.defineProperty(global, 'performance', {
     value: {
+      ...originalPerformance,
       getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
-      now: boundOriginalNow,
     },
     writable: true,
     configurable: true,

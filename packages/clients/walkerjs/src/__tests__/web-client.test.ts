@@ -400,8 +400,8 @@ describe('Elbwalker', () => {
     );
   });
 
-  test.skip('timing', () => {
-    jest.useFakeTimers();
+  test('timing', () => {
+    jest.clearAllMocks();
     jest.advanceTimersByTime(2500); // 2.5 sec load time
     walkerjs = Walkerjs({ default: true });
 
