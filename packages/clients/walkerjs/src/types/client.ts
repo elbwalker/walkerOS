@@ -1,4 +1,5 @@
 import type { On, WalkerOS } from '@elbwalker/types';
+import type { SessionConfig } from '@elbwalker/utils';
 import type * as WebDestination from './destination';
 import type * as Walker from './walker';
 
@@ -72,6 +73,7 @@ export interface Config extends WalkerOS.Config {
   pageview: boolean;
   prefix: string;
   queue: WalkerOS.Events;
+  session: boolean | SessionConfig;
   elb?: string;
   instance?: string;
 }

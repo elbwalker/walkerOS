@@ -12,6 +12,7 @@ import {
   assign,
   getId,
   isSameType,
+  sessionStart,
   tryCatch,
   useHooks,
 } from '@elbwalker/utils';
@@ -225,6 +226,7 @@ export function Walkerjs(
       prefix: Const.Commands.Prefix, // HTML prefix attribute
       queue: [], // Temporary event queue for all events of a run
       round: 0, // The first round is a special one due to state changes
+      session: false, // Configuration for session handling
       timing: 0, // Offset counter to calculate timing property
       user: {}, // Handles the user ids
       tagging: 0, // Helpful to differentiate the clients used setup version
@@ -541,6 +543,14 @@ export function Walkerjs(
     } else {
       // Reset timing with each new run
       instance.config.timing = performance.now();
+    }
+
+    // Session handling
+    if (instance.config.session) {
+      const sessionConfig =
+        instance.config.session === true ? {} : instance.config.session;
+      sessionConfig.instance = instance;
+      sessionStart(sessionConfig);
     }
 
     tryCatch(load)(instance);
