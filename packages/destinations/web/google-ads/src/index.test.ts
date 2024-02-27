@@ -13,9 +13,6 @@ describe('destination Google Ads', () => {
   const label = 'abc';
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-
     config = {
       custom: { conversionId },
     };
@@ -23,17 +20,13 @@ describe('destination Google Ads', () => {
     destination = jest.requireActual('.').default;
     destination.config = config;
 
-    w.elbLayer = [];
-    w.dataLayer = [];
     w.gtag = mockFn;
 
-    Walkerjs({ pageview: false });
+    Walkerjs({ pageview: false, session: false });
     elb('walker run');
   });
 
-  afterEach(() => {
-    document.getElementsByTagName('html')[0].innerHTML = '';
-  });
+  afterEach(() => {});
 
   test('init', () => {
     (w.dataLayer as unknown) = undefined;

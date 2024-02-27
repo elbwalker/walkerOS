@@ -1,5 +1,5 @@
 import { elb, Walkerjs } from '..';
-import { mockDataLayer } from './jest.setup';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { WebClient, WebDestination } from '..';
 import type { Data, Hooks } from '@elbwalker/types';
 import fs from 'fs';
@@ -11,6 +11,11 @@ describe('Elbwalker', () => {
   let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
+    jest.useFakeTimers();
+    global.performance.getEntriesByType = jest
+      .fn()
+      .mockReturnValue([{ type: 'navigate' }]);
+
     walkerjs = Walkerjs({
       default: true,
       consent: { test: true },

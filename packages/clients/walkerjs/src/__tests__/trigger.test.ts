@@ -1,5 +1,5 @@
 import { elb, Walkerjs } from '..';
-import { mockDataLayer } from './jest.setup';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import { Trigger } from '../lib/trigger';
 import fs from 'fs';
 
@@ -16,8 +16,12 @@ describe('Trigger', () => {
   beforeEach(() => {
     document.body.innerHTML = html;
 
+    jest.useFakeTimers();
     jest.spyOn(global, 'setTimeout');
     jest.spyOn(global, 'setInterval');
+    global.performance.getEntriesByType = jest
+      .fn()
+      .mockReturnValue([{ type: 'navigate' }]);
 
     events = {};
     document.addEventListener = mockAddEventListener.mockImplementation(

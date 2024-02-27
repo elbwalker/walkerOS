@@ -11,21 +11,15 @@ describe('destination plausible', () => {
   const script = 'https://plausible.io/js/script.manual.js';
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-
     destination = jest.requireActual('.').default;
 
-    w.elbLayer = [];
     w.plausible = mockFn;
 
-    Walkerjs({ pageview: false });
+    Walkerjs({ pageview: false, session: false });
     elb('walker run');
   });
 
-  afterEach(() => {
-    document.getElementsByTagName('html')[0].innerHTML = '';
-  });
+  afterEach(() => {});
 
   test('init', () => {
     elb('walker destination', destination);
@@ -71,6 +65,6 @@ describe('destination plausible', () => {
     elb(event, data, 'manual');
 
     expect(w.plausible).toBeDefined();
-    expect(mockFn).toHaveBeenNthCalledWith(1, event, { props: data });
+    expect(mockFn).toHaveBeenCalledWith(event, { props: data });
   });
 });

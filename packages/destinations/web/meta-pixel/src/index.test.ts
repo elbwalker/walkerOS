@@ -12,9 +12,6 @@ describe('Destination Meta Pixel', () => {
   const pixelId = '1234567890';
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-
     config = {
       custom: { pixelId },
     };
@@ -22,16 +19,13 @@ describe('Destination Meta Pixel', () => {
     destination = jest.requireActual('.').default;
     destination.config = config;
 
-    w.elbLayer = [];
     w.fbq = mockFn;
 
-    Walkerjs({ pageview: false });
+    Walkerjs({ pageview: false, session: false });
     elb('walker run');
   });
 
-  afterEach(() => {
-    document.getElementsByTagName('html')[0].innerHTML = '';
-  });
+  afterEach(() => {});
 
   test('init', () => {
     (w.fbq as unknown) = undefined;

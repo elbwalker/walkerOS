@@ -1,5 +1,5 @@
 import { Walkerjs } from '..';
-import { mockDataLayer } from './jest.setup';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { WebClient } from '..';
 
 describe('Init', () => {

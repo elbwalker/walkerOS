@@ -1,25 +1,19 @@
 import { elb, Walkerjs } from '@elbwalker/walker.js';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { DestinationGoogleGTM } from '.';
 
 describe('destination google-tag-manager', () => {
   const w = window;
   let destination: DestinationGoogleGTM.Destination;
-  const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const containerId = 'GTM-XXXXXXX';
   const event = 'entity action';
   const version = { client: expect.any(String), tagging: expect.any(Number) };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
     destination = jest.requireActual('./index').default;
 
-    w.elbLayer = [];
-    w.dataLayer = [];
-    (w.dataLayer as unknown[]).push = mockFn;
-
-    Walkerjs({ pageview: false });
+    Walkerjs({ pageview: false, session: false });
     elb('walker run');
   });
 
@@ -70,7 +64,7 @@ describe('destination google-tag-manager', () => {
     elb('walker destination', destination);
     elb(event, { a: 1 }, 'manual');
     expect(w.dataLayer).toBeDefined();
-    expect(mockFn).toHaveBeenLastCalledWith({
+    expect(mockDataLayer).toHaveBeenLastCalledWith({
       event,
       data: { a: 1 },
       context: {},

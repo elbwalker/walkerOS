@@ -1,7 +1,5 @@
-const commonConfig = require('@elbwalker/jest');
+const commonConfig = require('@elbwalker/jest/web.config');
 
-const config = {
-  testEnvironment: 'jsdom',
-};
+const config = {};
 
 module.exports = { ...commonConfig, ...config };

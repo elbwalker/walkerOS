@@ -12,12 +12,8 @@ describe('Destination PiwikPro', () => {
   const url = 'https://your_account_name.piwik.pro/';
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-
     destination = jest.requireActual('.').default;
 
-    w.elbLayer = [];
     w._paq = [];
     w._paq.push = mockFn;
 
@@ -25,9 +21,7 @@ describe('Destination PiwikPro', () => {
     elb('walker run');
   });
 
-  afterEach(() => {
-    document.getElementsByTagName('html')[0].innerHTML = '';
-  });
+  afterEach(() => {});
 
   test('init', () => {
     destination.config = {
