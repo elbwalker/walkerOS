@@ -9,6 +9,7 @@ module.exports = {
       },
     ],
   },
+  testMatch: ['**/__tests__/**/*.test.(ts|tsx|js|jsx)'],
   moduleFileExtensions: ['js', 'ts', 'd.ts'],
   rootDir: 'src',
   moduleDirectories: ['node_modules', 'src'],
