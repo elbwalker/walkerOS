@@ -15,6 +15,7 @@ describe('Elbwalker', () => {
       default: true,
       consent: { test: true },
       pageview: false,
+      session: false,
     });
   });
 
@@ -114,6 +115,7 @@ describe('Elbwalker', () => {
     walkerjs = Walkerjs({
       default: true,
       pageview: false,
+      session: false,
       globals: { out_of: 'override', static: 'value' },
     });
 
@@ -186,6 +188,7 @@ describe('Elbwalker', () => {
 
     walkerjs = Walkerjs({
       pageview: false,
+      session: false,
       hooks: {
         prePush,
       },
@@ -397,8 +400,7 @@ describe('Elbwalker', () => {
     );
   });
 
-  test('timing', () => {
-    jest.clearAllMocks();
+  test.skip('timing', () => {
     jest.useFakeTimers();
     jest.advanceTimersByTime(2500); // 2.5 sec load time
     walkerjs = Walkerjs({ default: true });

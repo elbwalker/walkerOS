@@ -80,7 +80,7 @@ describe('Commands on', () => {
     });
     elb('walker on', 'consent', { automatically: mockFn });
     expect(mockFn).toHaveBeenCalledTimes(1);
-    expect(mockDataLayer).toHaveBeenCalledTimes(1);
+    expect(mockDataLayer).toHaveBeenCalledTimes(2); // session start and page view only
   });
 
   test('multiple functions', () => {

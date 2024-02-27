@@ -11,7 +11,7 @@ describe('Destination', () => {
   let config: WebDestination.Config;
 
   beforeEach(() => {
-    walkerjs = Walkerjs({ pageview: false });
+    walkerjs = Walkerjs({ pageview: false, session: false });
     config = { init: false };
 
     destination = {
@@ -305,6 +305,7 @@ describe('Destination', () => {
     walkerjs = Walkerjs({
       consent: { functional: true, marketing: false },
       pageview: false,
+      session: false,
     });
     elb('walker run');
 
@@ -363,6 +364,7 @@ describe('Destination', () => {
     walkerjs = Walkerjs({
       consent: { functional: true },
       pageview: false,
+      session: false,
     });
     elb('walker run');
 

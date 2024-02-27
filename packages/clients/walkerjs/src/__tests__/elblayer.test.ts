@@ -52,7 +52,7 @@ describe('ElbLayer', () => {
     elb('e 1');
     elb('walker destination', destination);
 
-    walkerjs = Walkerjs();
+    walkerjs = Walkerjs({ session: false });
     elb('e 2');
     elb('walker run');
     // auto call: elb('page view');
@@ -126,7 +126,7 @@ describe('ElbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    walkerjs = Walkerjs();
+    walkerjs = Walkerjs({ session: false });
 
     (elb as () => void)();
     elb('event postponed');
@@ -199,7 +199,7 @@ describe('ElbLayer', () => {
       prefix: 'data-elb',
       queue: expect.any(Array),
       round: expect.any(Number),
-      session: false,
+      session: { storage: false, instance: expect.any(Object) },
       timing: expect.any(Number),
       user: {},
       tagging: expect.any(Number),
@@ -364,7 +364,7 @@ describe('ElbLayer', () => {
     );
 
     // Parameters
-    expect((w.elbLayer[1] as unknown[])[0]).toBe('page view');
+    expect((w.elbLayer[1] as unknown[])[0]).toBe('session start');
   });
 
   test('custom push', () => {
