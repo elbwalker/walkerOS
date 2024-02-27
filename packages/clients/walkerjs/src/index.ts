@@ -137,13 +137,12 @@ export function Walkerjs(
   }
 
   // Handle existing events in the elbLayer on first run
-  function callPredefined(instance: WebClient.Instance) {
+  function callPredefined(instance: WebClient.Instance, commandsOnly: boolean) {
     // there is a special execution order for all predefined events
     // walker events gets prioritized before others
     // this guarantees a fully configuration before the first run
     const walkerCommand = `${Const.Commands.Walker} `; // Space on purpose
-    const walkerEvents: Array<WebClient.ElbLayer> = [];
-    const customEvents: Array<WebClient.ElbLayer> = [];
+    const events: Array<WebClient.ElbLayer> = [];
     let isFirstRunEvent = true;
 
     // At that time the elbLayer was not yet initialized
@@ -168,14 +167,15 @@ export function Walkerjs(
         return;
       }
 
-      // check if event is a walker commend
-      event.startsWith(walkerCommand)
-        ? walkerEvents.push([event, data, trigger, context]) // stack it to the walker Const.Commands
-        : customEvents.push([event, data, trigger, context, nested, custom]); // stack it to the custom events
+      // only handle commands or events
+      if (
+        (commandsOnly && event.startsWith(walkerCommand)) ||
+        (!commandsOnly && !event.startsWith(walkerCommand))
+      )
+        events.push([event, data, trigger, context, nested, custom]);
     });
 
-    // Prefer all walker Const.Commands before events during processing the predefined ones
-    walkerEvents.concat(customEvents).map((item) => {
+    events.map((item) => {
       const [event, data, trigger, context, nested, custom] = item;
       instance.push(String(event), data, trigger, context, nested, custom);
     });
@@ -196,14 +196,8 @@ export function Walkerjs(
       return i;
     };
 
-    // Look if the run command is stacked
-    const containsRun = elbLayer.find((element) => {
-      // Differentiate between the two types of possible event pushes
-      element = isArgument(element) ? element[0] : element;
-      return element == runCommand;
-    });
-
-    if (containsRun) ready(run, instance); // Run walker run
+    // Call all predefined commands
+    callPredefined(instance, true);
   }
 
   function getConfig(
@@ -351,24 +345,20 @@ export function Walkerjs(
   ): void {
     if (!event || !isSameType(event, '' as string)) return;
 
-    const config = instance.config;
-
-    // Check if walker is allowed to run
-    if (!config.allowed) {
-      // If not yet allowed check if this is the time
-      // If it's not that time do not process events yet
-      if (event != runCommand) return;
-    }
-
     // Check for valid entity and action event format
     const [entity, action] = event.split(' ');
     if (!entity || !action) return;
 
     // Handle internal walker command events
     if (entity === Const.Commands.Walker) {
-      handleCommand(instance, action, data, options as WebDestination.Config);
+      handleCommand(instance, action, data, options);
       return;
     }
+
+    const config = instance.config;
+
+    // Check if walker is allowed to run
+    if (!config.allowed) return;
 
     // Get data and context from element parameter
     let elemParameter: undefined | Element;
@@ -539,10 +529,10 @@ export function Walkerjs(
     // Call the predefined run events
     onApply(instance, 'run');
 
-    // Increase round counter and check if this is the first run
+    // Increase round counter
     if (++instance.config.round == 1) {
-      // Run predefined elbLayer stack once
-      callPredefined(instance);
+      // Run predefined elbLayer stack once for all non-command events
+      callPredefined(instance, false);
     } else {
       // Reset timing with each new run
       instance.config.timing = performance.now();

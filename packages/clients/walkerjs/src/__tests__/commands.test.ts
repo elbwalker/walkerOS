@@ -132,10 +132,10 @@ describe('Commands run', () => {
 
     // Don't call on default
     elb('walker on', 'run', mockFn);
-    expect(mockFn).not.toHaveBeenCalled();
+    expect(mockFn).toHaveBeenCalledTimes(0);
 
     elb('walker run');
-    expect(mockFn).toHaveBeenCalled();
+    expect(mockFn).toHaveBeenCalledTimes(1); // only once
   });
 
   test('run register', () => {
