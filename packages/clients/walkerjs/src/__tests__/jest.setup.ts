@@ -33,6 +33,8 @@ global.afterEach(() => {
     value: originalPerformance,
     writable: true,
   });
+
+  document.getElementsByTagName('html')[0].innerHTML = '';
 });
 
 export { mockDataLayer };

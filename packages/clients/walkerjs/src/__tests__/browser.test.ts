@@ -15,16 +15,7 @@ describe('Browser', () => {
     .toString();
 
   beforeEach(() => {
-    // reset DOM with event listeners etc.
-    document.body = document.body.cloneNode() as HTMLElement;
     document.body.innerHTML = html;
-
-    jest.resetModules();
-    jest.clearAllMocks();
-  });
-
-  afterEach(() => {
-    document.getElementsByTagName('html')[0].innerHTML = '';
   });
 
   test('initialize walkerjs on window', () => {

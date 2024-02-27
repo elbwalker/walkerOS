@@ -1,21 +1,11 @@
 import { elb, Walkerjs } from '..';
+import { mockDataLayer } from './jest.setup';
 import type { WebClient } from '..';
 
 describe('Commands on', () => {
-  const w = window;
-  const mockDataLayer = jest.fn(); //.mockImplementation(console.log);
-
   let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
-    // reset DOM with event listeners etc.
-    document.body = document.body.cloneNode() as HTMLElement;
-    jest.clearAllMocks();
-    jest.resetModules();
-    w.dataLayer = [];
-    (w.dataLayer as unknown[]).push = mockDataLayer;
-    w.elbLayer = undefined as unknown as WebClient.ElbLayer;
-
     walkerjs = Walkerjs({
       consent: { automatically: true },
       default: true,

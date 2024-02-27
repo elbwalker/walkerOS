@@ -11,10 +11,6 @@ describe('Destination', () => {
   let config: WebDestination.Config;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-
-    window.elbLayer = undefined as unknown as WebClient.ElbLayer;
     walkerjs = Walkerjs({ pageview: false });
     config = { init: false };
 
