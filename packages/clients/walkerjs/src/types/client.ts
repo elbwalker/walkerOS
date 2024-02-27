@@ -73,7 +73,7 @@ export interface Config extends WalkerOS.Config {
   pageview: boolean;
   prefix: string;
   queue: WalkerOS.Events;
-  session: boolean | SessionConfig;
+  session: false | SessionConfig;
   elb?: string;
   instance?: string;
 }

@@ -226,7 +226,10 @@ export function Walkerjs(
       prefix: Const.Commands.Prefix, // HTML prefix attribute
       queue: [], // Temporary event queue for all events of a run
       round: 0, // The first round is a special one due to state changes
-      session: false, // Configuration for session handling
+      session: {
+        // Configuration for session handling
+        storage: false, // Do not use storage by default
+      },
       timing: 0, // Offset counter to calculate timing property
       user: {}, // Handles the user ids
       tagging: 0, // Helpful to differentiate the clients used setup version
@@ -547,10 +550,8 @@ export function Walkerjs(
 
     // Session handling
     if (instance.config.session) {
-      const sessionConfig =
-        instance.config.session === true ? {} : instance.config.session;
-      sessionConfig.instance = instance;
-      sessionStart(sessionConfig);
+      instance.config.session.instance = instance;
+      sessionStart(instance.config.session);
     }
 
     tryCatch(load)(instance);

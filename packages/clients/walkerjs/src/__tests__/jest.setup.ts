@@ -1,6 +1,6 @@
 import { WebClient } from '..';
 
-const mockDataLayer = jest.fn();
+const mockDataLayer = jest.fn(); //.mockImplementation(console.log);
 
 const originalPerformance = global.performance;
 
