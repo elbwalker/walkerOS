@@ -68,11 +68,13 @@ export type ScopeType = Scope | Scope[];
 
 export interface Config extends WalkerOS.Config {
   client: string;
+  dataLayer: boolean;
   destinations: Destinations;
   elbLayer: ElbLayer;
   pageview: boolean;
   prefix: string;
   queue: WalkerOS.Events;
+  run: boolean;
   session: false | SessionConfig;
   elb?: string;
   instance?: string;

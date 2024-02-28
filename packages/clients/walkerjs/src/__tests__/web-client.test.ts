@@ -109,6 +109,34 @@ describe('Elbwalker', () => {
     });
   });
 
+  test('run option', () => {
+    walkerjs = Walkerjs({ run: false });
+    expect(walkerjs.config.allowed).toBeFalsy();
+
+    walkerjs = Walkerjs({ run: true });
+    expect(walkerjs.config.allowed).toBeTruthy();
+  });
+
+  test('dataLayer option', () => {
+    window.dataLayer = undefined;
+    walkerjs = Walkerjs({ dataLayer: false });
+    expect(window.dataLayer).toBeUndefined();
+
+    walkerjs = Walkerjs({ dataLayer: true });
+    expect(window.dataLayer).toBeDefined();
+  });
+
+  test('default option', () => {
+    window.dataLayer = undefined;
+    walkerjs = Walkerjs({ default: false });
+    expect(window.dataLayer).toBeUndefined();
+    expect(walkerjs.config.allowed).toBeFalsy();
+
+    walkerjs = Walkerjs({ default: true });
+    expect(window.dataLayer).toBeDefined();
+    expect(walkerjs.config.allowed).toBeTruthy();
+  });
+
   test('globals properties', () => {
     const html: string = fs
       .readFileSync(__dirname + '/html/globals.html')

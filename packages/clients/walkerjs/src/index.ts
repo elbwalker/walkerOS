@@ -48,9 +48,8 @@ export function Walkerjs(
   // Run on events for default consent states
   onApply(instance, 'consent', config.on.consent);
 
-  // Use the default init mode for auto run and dataLayer destination
-  if (customConfig.default) {
-    // use dataLayer as default destination
+  if (customConfig.dataLayer) {
+    // Add a dataLayer destination
     window.dataLayer = window.dataLayer || [];
     const destination: WebDestination.Destination = {
       config: {},
@@ -63,6 +62,10 @@ export function Walkerjs(
       type: 'dataLayer',
     };
     addDestination(instance, destination);
+  }
+
+  // Automatically start running
+  if (customConfig.run) {
     ready(run, instance);
   }
 
@@ -202,6 +205,7 @@ export function Walkerjs(
       consent: {}, // Handle the consent states
       custom: {}, // Custom state support
       count: 0, // Event counter for each run
+      dataLayer: false, // Do not use dataLayer by default
       destinations: {}, // Destination list
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
       globals: assign(staticGlobals), // Globals enhanced with the static globals from init and previous values
@@ -211,6 +215,7 @@ export function Walkerjs(
       pageview: true, // Trigger a page view event by default
       prefix: Const.Commands.Prefix, // HTML prefix attribute
       queue: [], // Temporary event queue for all events of a run
+      run: false, // Run the walker by default
       round: 0, // The first round is a special one due to state changes
       session: {
         // Configuration for session handling
@@ -231,6 +236,12 @@ export function Walkerjs(
       staticGlobals,
       assign(current.globals || {}, values.globals || {}),
     );
+
+    // Default mode enables both, auto run and dataLayer destination
+    if (values.default) {
+      values.run = true;
+      values.dataLayer = true;
+    }
 
     // Value hierarchy: values > current > default
     return {
