@@ -147,37 +147,29 @@ export function Walkerjs(
 
     // At that time the elbLayer was not yet initialized
     instance.config.elbLayer.map((pushedEvent) => {
-      let [event, data, trigger, context, nested, custom] = [
+      const event = [
         ...Array.from(pushedEvent as IArguments),
       ] as WebClient.ElbLayer;
 
-      // Pushed as Arguments
-      if (isArgument(event)) {
-        [event, data, trigger, context, nested, custom] = [
-          ...Array.from(event as IArguments),
-        ];
-      }
-
-      if (!isSameType(event, '')) return;
+      if (!isSameType(event[0], '')) return;
 
       // Skip the first stacked run event since it's the reason we're here
       // and to prevent duplicate execution which we don't want
-      if (isFirstRunEvent && event == runCommand) {
+      if (isFirstRunEvent && event[0] == runCommand) {
         isFirstRunEvent = false; // Next time it's on
         return;
       }
 
-      // only handle commands or events
+      // Handle commands and events separately
       if (
-        (commandsOnly && event.startsWith(walkerCommand)) ||
-        (!commandsOnly && !event.startsWith(walkerCommand))
+        (commandsOnly && event[0].startsWith(walkerCommand)) || // Only commands
+        (!commandsOnly && !event[0].startsWith(walkerCommand)) // Only events
       )
-        events.push([event, data, trigger, context, nested, custom]);
+        events.push(event);
     });
 
     events.map((item) => {
-      const [event, data, trigger, context, nested, custom] = item;
-      instance.push(String(event), data, trigger, context, nested, custom);
+      instance.push(...item);
     });
   }
 
