@@ -1,8 +1,7 @@
 const mockDataLayer = jest.fn(); //.mockImplementation(console.log);
 
-// let originalPerformance: Performance;
-
 global.beforeEach(() => {
+  // Mocks
   jest.clearAllMocks();
   jest.resetModules();
 
@@ -11,30 +10,17 @@ global.beforeEach(() => {
   document.body = document.body.cloneNode() as HTMLElement;
 
   // elbLayer and dataLayer
-  window.elbLayer = undefined;
-  window.dataLayer = [];
-  (window.dataLayer as unknown[]).push = mockDataLayer;
+  const w = window as unknown as Record<string, unknown | unknown[]>;
+  w.elbLayer = undefined;
+  w.dataLayer = [];
+  (w.dataLayer as unknown[]).push = mockDataLayer;
 
   // Performance
-  // const originalPerformance = global.performance;
-  // Object.defineProperty(global, 'performance', {
-  //   // value: {
-  //   //   ...originalPerformance,
-  //   //   getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
-  //   // },
-  //   writable: true,
-  //   configurable: true,
-  // });
   global.performance.getEntriesByType = jest
     .fn()
     .mockReturnValue([{ type: 'navigate' }]);
 });
 
-global.afterEach(() => {
-  // Object.defineProperty(global, 'performance', {
-  //   value: originalPerformance,
-  //   writable: true,
-  // });
-});
+global.afterEach(() => {});
 
 export { mockDataLayer };
