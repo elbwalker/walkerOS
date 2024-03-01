@@ -26,7 +26,7 @@ export { elb };
 export function Walkerjs(
   customConfig: Partial<WebClient.Config> = {},
 ): WebClient.Instance {
-  const client = '2.0.1';
+  const client = '2.1.0-next.0';
   const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
   const staticGlobals = customConfig.globals || {};
   const config = getConfig(customConfig);

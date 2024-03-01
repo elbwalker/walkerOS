@@ -8,5 +8,5 @@
 '@elbwalker/walker.js': minor
 ---
 
-https://don't require return on destination init
-[#320](github.com/elbwalker/walkerOS/issues/320)
+don't require return on destination init
+[#320](https://github.com/elbwalker/walkerOS/issues/320)

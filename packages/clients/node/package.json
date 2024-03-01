@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/client-node",
   "description": "Node client for walkerOS for sending events from the server-side",
-  "version": "1.0.0",
+  "version": "1.0.1-next.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,10 +20,10 @@
     "test": "jest --colors --coverage"
   },
   "dependencies": {
-    "@elbwalker/utils": "*"
+    "@elbwalker/utils": "3.1.0-next.0"
   },
   "devDependencies": {
-    "@elbwalker/types": "*"
+    "@elbwalker/types": "1.1.0-next.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

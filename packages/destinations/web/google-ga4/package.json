@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-google-ga4",
   "description": "Google GA4 web destination for walkerOS",
-  "version": "2.0.1",
+  "version": "2.1.0-next.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,11 +20,11 @@
     "test": "jest --colors --coverage"
   },
   "dependencies": {
-    "@elbwalker/walker.js": "*"
+    "@elbwalker/walker.js": "2.1.0-next.0"
   },
   "devDependencies": {
     "@elbwalker/tsup": "*",
-    "@elbwalker/types": "*"
+    "@elbwalker/types": "1.1.0-next.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

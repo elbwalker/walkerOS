@@ -8,14 +8,10 @@ export function log(message: string, verbose?: boolean) {
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {
   const custom = partialConfig.custom || ({} as CustomConfig);
-  let { client, projectId, location, datasetId, tableId, bigquery } = custom;
+  const { projectId, bigquery } = custom;
+  let { client, location, datasetId, tableId } = custom;
 
   if (!projectId) throwError('Config custom projectId missing');
-
-  const meta = {
-    name: 'BigQuery',
-    version: '1.0.0',
-  };
 
   location = location || 'EU';
   datasetId = datasetId || 'walkeros';
@@ -38,5 +34,5 @@ export function getConfig(partialConfig: PartialConfig = {}): Config {
   // Log Handler
   const onLog = (message: string) => log(message, partialConfig.verbose);
 
-  return { ...partialConfig, custom: customConfig, meta, onLog };
+  return { ...partialConfig, custom: customConfig, onLog };
 }

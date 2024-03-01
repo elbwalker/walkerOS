@@ -107,9 +107,6 @@ describe('Node Destination BigQuery', () => {
     ).rejects.toThrow('Config custom projectId missing');
 
     config = await getConfig({ projectId });
-
-    expect(config.meta.name).toEqual('BigQuery');
-    expect(config.meta.version).toEqual(expect.any(String));
     expect(config.custom.datasetId).toBe('walkeros');
     expect(config.custom.tableId).toBe('events');
   });
