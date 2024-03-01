@@ -1,21 +1,23 @@
 import type { WebClient, WebDestination } from './types';
 import type { Hooks, On, WalkerOS } from '@elbwalker/types';
 import {
+  elb,
   initScopeTrigger,
   initGlobalTrigger,
   ready,
   load,
-  elb,
 } from './lib/trigger';
 import {
   Const,
   assign,
   getId,
   isSameType,
+  sessionStart,
   tryCatch,
   useHooks,
 } from '@elbwalker/utils';
 import { getEntities, getGlobals } from './lib/walker';
+import { onApply } from './lib/on';
 
 // Export types and elb
 export * from './types';
@@ -44,11 +46,10 @@ export function Walkerjs(
       instance;
 
   // Run on events for default consent states
-  onApply(instance, 'consent', instance.config.consent);
+  onApply(instance, 'consent', config.on.consent);
 
-  // Use the default init mode for auto run and dataLayer destination
-  if (customConfig.default) {
-    // use dataLayer as default destination
+  if (customConfig.dataLayer) {
+    // Add a dataLayer destination
     window.dataLayer = window.dataLayer || [];
     const destination: WebDestination.Destination = {
       config: {},
@@ -61,6 +62,10 @@ export function Walkerjs(
       type: 'dataLayer',
     };
     addDestination(instance, destination);
+  }
+
+  // Automatically start running
+  if (customConfig.run) {
     ready(run, instance);
   }
 
@@ -135,83 +140,59 @@ export function Walkerjs(
   }
 
   // Handle existing events in the elbLayer on first run
-  function callPredefined(instance: WebClient.Instance) {
+  function callPredefined(instance: WebClient.Instance, commandsOnly: boolean) {
     // there is a special execution order for all predefined events
     // walker events gets prioritized before others
     // this guarantees a fully configuration before the first run
     const walkerCommand = `${Const.Commands.Walker} `; // Space on purpose
-    const walkerEvents: Array<WebClient.ElbLayer> = [];
-    const customEvents: Array<WebClient.ElbLayer> = [];
+    const events: Array<WebClient.ElbLayer> = [];
     let isFirstRunEvent = true;
 
     // At that time the elbLayer was not yet initialized
     instance.config.elbLayer.map((pushedEvent) => {
-      let [event, data, trigger, context, nested, custom] = [
+      const event = [
         ...Array.from(pushedEvent as IArguments),
       ] as WebClient.ElbLayer;
 
-      // Pushed as Arguments
-      if (isArgument(event)) {
-        [event, data, trigger, context, nested, custom] = [
-          ...Array.from(event as IArguments),
-        ];
-      }
-
-      if (!isSameType(event, '')) return;
+      if (!isSameType(event[0], '')) return;
 
       // Skip the first stacked run event since it's the reason we're here
       // and to prevent duplicate execution which we don't want
-      if (isFirstRunEvent && event == runCommand) {
+      if (isFirstRunEvent && event[0] == runCommand) {
         isFirstRunEvent = false; // Next time it's on
         return;
       }
 
-      // check if event is a walker commend
-      event.startsWith(walkerCommand)
-        ? walkerEvents.push([event, data, trigger, context]) // stack it to the walker Const.Commands
-        : customEvents.push([event, data, trigger, context, nested, custom]); // stack it to the custom events
+      // Handle commands and events separately
+      if (
+        (commandsOnly && event[0].startsWith(walkerCommand)) || // Only commands
+        (!commandsOnly && !event[0].startsWith(walkerCommand)) // Only events
+      )
+        events.push(event);
     });
 
-    // Prefer all walker Const.Commands before events during processing the predefined ones
-    walkerEvents.concat(customEvents).map((item) => {
-      const [event, data, trigger, context, nested, custom] = item;
-      instance.push(String(event), data, trigger, context, nested, custom);
+    events.map((item) => {
+      instance.push(...item);
     });
   }
 
   function elbLayerInit(instance: WebClient.Instance) {
     const elbLayer = instance.config.elbLayer;
 
-    elbLayer.push = function (
-      event?: IArguments | unknown,
-      data?: WebClient.PushData,
-      trigger?: string,
-      context?: WalkerOS.OrderedProperties,
-      nested?: WalkerOS.Entities,
-      custom?: WalkerOS.Properties,
-    ) {
+    elbLayer.push = function (...args: WebClient.ElbLayer) {
       // Pushed as Arguments
-      if (isArgument(event)) {
-        [event, data, trigger, context, nested, custom] = [
-          ...Array.from(event),
-        ];
+      if (isArgument(args[0])) {
+        args = args[0] as unknown as WebClient.ElbLayer;
       }
 
-      // eslint-disable-next-line prefer-rest-params
-      const i = Array.prototype.push.apply(this, [arguments]);
-      instance.push(String(event), data, trigger, context, nested, custom);
+      const i = Array.prototype.push.apply(this, [args]);
+      instance.push(...args);
 
       return i;
     };
 
-    // Look if the run command is stacked
-    const containsRun = elbLayer.find((element) => {
-      // Differentiate between the two types of possible event pushes
-      element = isArgument(element) ? element[0] : element;
-      return element == runCommand;
-    });
-
-    if (containsRun) ready(run, instance); // Run walker run
+    // Call all predefined commands
+    callPredefined(instance, true);
   }
 
   function getConfig(
@@ -224,6 +205,7 @@ export function Walkerjs(
       consent: {}, // Handle the consent states
       custom: {}, // Custom state support
       count: 0, // Event counter for each run
+      dataLayer: false, // Do not use dataLayer by default
       destinations: {}, // Destination list
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
       globals: assign(staticGlobals), // Globals enhanced with the static globals from init and previous values
@@ -233,7 +215,12 @@ export function Walkerjs(
       pageview: true, // Trigger a page view event by default
       prefix: Const.Commands.Prefix, // HTML prefix attribute
       queue: [], // Temporary event queue for all events of a run
+      run: false, // Run the walker by default
       round: 0, // The first round is a special one due to state changes
+      session: {
+        // Configuration for session handling
+        storage: false, // Do not use storage by default
+      },
       timing: 0, // Offset counter to calculate timing property
       user: {}, // Handles the user ids
       tagging: 0, // Helpful to differentiate the clients used setup version
@@ -249,6 +236,12 @@ export function Walkerjs(
       staticGlobals,
       assign(current.globals || {}, values.globals || {}),
     );
+
+    // Default mode enables both, auto run and dataLayer destination
+    if (values.default) {
+      values.run = true;
+      values.dataLayer = true;
+    }
 
     // Value hierarchy: values > current > default
     return {
@@ -300,7 +293,7 @@ export function Walkerjs(
         break;
       }
       case Const.Commands.On:
-        on(instance, data as On.Type, options as On.Rules);
+        on(instance, data as On.Types, options as On.Options);
         break;
       case Const.Commands.Run:
         ready(run, instance);
@@ -313,7 +306,8 @@ export function Walkerjs(
     }
   }
 
-  function isArgument(event: unknown): event is IArguments {
+  function isArgument(event?: unknown): event is IArguments {
+    if (!event) return false;
     return {}.hasOwnProperty.call(event, 'callee');
   }
 
@@ -327,43 +321,21 @@ export function Walkerjs(
 
   function on(
     instance: WebClient.Instance,
-    type: On.Type,
-    rules: On.Rules = {},
+    type: On.Types,
+    option: WalkerOS.SingleOrArray<On.Options>,
   ) {
-    instance.config.on[type] = assign(
-      instance.config.on[type] || {},
-      assign({}, rules), // Create a duplicate
-    );
+    const on = instance.config.on;
+    const onType: Array<On.Options> = on[type] || [];
+    const options = Array.isArray(option) ? option : [option];
 
-    // Run on events for default consent states
-    onApply(instance, 'consent', instance.config.consent, rules);
-  }
+    options.forEach((option) => {
+      onType.push(option);
+    });
 
-  function onApply(
-    instance: WebClient.Instance,
-    type: On.Type,
-    options: On.Options,
-    scope?: On.Rules,
-  ) {
-    const rules = scope || instance.config.on[type];
+    // Update instance on state
+    (on[type] as typeof onType) = onType;
 
-    if (!rules) return; // No on-events registered, nothing to do
-
-    // Consent events
-    if (type === Const.Commands.Consent) {
-      // const functions: Array<On.OnConsentFn> = [];
-
-      // Collect functions whose consent keys match the rule keys directly
-      // Directly execute functions whose consent keys match the rule keys
-      Object.keys(options) // consent keys
-        .filter((consent) => consent in rules) // check for matching rule keys
-        .forEach((consent) => {
-          rules[consent].forEach((fn) => {
-            // Execute the function
-            tryCatch(fn)(instance, options);
-          });
-        });
-    }
+    onApply(instance, type, options);
   }
 
   function push(
@@ -374,16 +346,7 @@ export function Walkerjs(
     nested: WalkerOS.Entities = [],
     custom: WalkerOS.Properties = {},
   ): void {
-    if (!event || !isSameType(event, '')) return;
-
-    const config = instance.config;
-
-    // Check if walker is allowed to run
-    if (!config.allowed) {
-      // If not yet allowed check if this is the time
-      // If it's not that time do not process events yet
-      if (event != runCommand) return;
-    }
+    if (!event || !isSameType(event, '' as string)) return;
 
     // Check for valid entity and action event format
     const [entity, action] = event.split(' ');
@@ -391,9 +354,14 @@ export function Walkerjs(
 
     // Handle internal walker command events
     if (entity === Const.Commands.Walker) {
-      handleCommand(instance, action, data, options as WebDestination.Config);
+      handleCommand(instance, action, data, options);
       return;
     }
+
+    const config = instance.config;
+
+    // Check if walker is allowed to run
+    if (!config.allowed) return;
 
     // Get data and context from element parameter
     let elemParameter: undefined | Element;
@@ -561,13 +529,22 @@ export function Walkerjs(
       destination.queue = [];
     });
 
-    // Increase round counter and check if this is the first run
+    // Call the predefined run events
+    onApply(instance, 'run');
+
+    // Increase round counter
     if (++instance.config.round == 1) {
-      // Run predefined elbLayer stack once
-      callPredefined(instance);
+      // Run predefined elbLayer stack once for all non-command events
+      callPredefined(instance, false);
     } else {
       // Reset timing with each new run
       instance.config.timing = performance.now();
+    }
+
+    // Session handling
+    if (instance.config.session) {
+      instance.config.session.instance = instance;
+      sessionStart(instance.config.session);
     }
 
     tryCatch(load)(instance);
@@ -587,7 +564,7 @@ export function Walkerjs(
     });
 
     // Run on consent events
-    onApply(instance, 'consent', data);
+    onApply(instance, 'consent', config.on.consent);
 
     if (runQueue) {
       Object.values(config.destinations).forEach((destination) => {

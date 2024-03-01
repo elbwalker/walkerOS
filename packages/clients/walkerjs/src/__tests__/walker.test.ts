@@ -1,19 +1,16 @@
-import fs from 'fs';
 import { getEvents } from '../lib/walker';
 import { Trigger } from '../lib/trigger';
-
-const html: string = fs
-  .readFileSync(__dirname + '/html/walker.html')
-  .toString();
-
-beforeEach(() => {
-  // reset DOM with event listeners etc.
-  document.body = document.body.cloneNode() as HTMLElement;
-  document.body.innerHTML = html;
-  jest.clearAllMocks();
-});
+import fs from 'fs';
 
 describe('Walker', () => {
+  const html: string = fs
+    .readFileSync(__dirname + '/html/walker.html')
+    .toString();
+
+  beforeEach(() => {
+    document.body.innerHTML = html;
+  });
+
   test('Basic collection', () => {
     expect(getEvents(getElem('basic'), Trigger.Load)).toMatchObject([
       {

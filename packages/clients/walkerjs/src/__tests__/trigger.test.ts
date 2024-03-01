@@ -1,32 +1,27 @@
 import { elb, Walkerjs } from '..';
-import type { WebClient } from '..';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import { Trigger } from '../lib/trigger';
 import fs from 'fs';
 
-const w = window;
-
-const mockFn = jest.fn(); //.mockImplementation(console.log);
-const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
-
-let events: Record<string, EventListenerOrEventListenerObject> = {};
-const html: string = fs
-  .readFileSync(__dirname + '/html/trigger.html')
-  .toString();
-
 describe('Trigger', () => {
+  const w = window;
+
+  const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
+
+  let events: Record<string, EventListenerOrEventListenerObject> = {};
+  const html: string = fs
+    .readFileSync(__dirname + '/html/trigger.html')
+    .toString();
+
   beforeEach(() => {
-    // reset DOM with event listeners etc.
-    document.body = document.body.cloneNode() as HTMLElement;
     document.body.innerHTML = html;
 
-    jest.clearAllMocks();
-    jest.resetModules();
     jest.useFakeTimers();
     jest.spyOn(global, 'setTimeout');
     jest.spyOn(global, 'setInterval');
-    w.dataLayer = [];
-    (w.dataLayer as unknown[]).push = mockFn;
-    w.elbLayer = undefined as unknown as WebClient.ElbLayer;
+    global.performance.getEntriesByType = jest
+      .fn()
+      .mockReturnValue([{ type: 'navigate' }]);
 
     events = {};
     document.addEventListener = mockAddEventListener.mockImplementation(
@@ -43,9 +38,11 @@ describe('Trigger', () => {
     elb('e a');
     expect(w.elbLayer).toBeDefined();
 
-    w.elbLayer.push = mockFn;
+    w.elbLayer.push = mockDataLayer;
     elb('e a');
-    expect(mockFn).toHaveBeenCalledWith(expect.objectContaining(['e a']));
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining(['e a']),
+    );
   });
 
   test('init global', () => {
@@ -60,16 +57,14 @@ describe('Trigger', () => {
   });
 
   test('init scope', () => {
-    jest.clearAllMocks();
-
     // Both e load events should be triggered
     elb('walker init');
-    expect(mockFn).toHaveBeenCalledWith(
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e all',
       }),
     );
-    expect(mockFn).toHaveBeenCalledWith(
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e init',
       }),
@@ -80,13 +75,13 @@ describe('Trigger', () => {
 
     // Only the e init event should be triggered
     elb('walker init', elem);
-    expect(mockFn).not.toHaveBeenCalledWith(
+    expect(mockDataLayer).not.toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e all',
       }),
     );
 
-    expect(mockFn).toHaveBeenCalledWith(
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e init',
       }),
@@ -97,7 +92,7 @@ describe('Trigger', () => {
     document.body.setAttribute('data-elb-page', 'foo:bar');
     document.body.setAttribute('data-elbcontext', 'baz:qux');
     elb('walker run');
-    expect(mockFn).toHaveBeenCalledWith(
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page view',
         data: {
@@ -134,7 +129,7 @@ describe('Trigger', () => {
     jest.clearAllMocks();
     elb('walker run');
 
-    expect(mockFn).toHaveBeenCalledWith(
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page view',
         data: {
@@ -150,7 +145,7 @@ describe('Trigger', () => {
     );
 
     elb('page click', { foo: 'bar' });
-    expect(mockFn).toHaveBeenCalledWith(
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page click',
         data: {
@@ -179,12 +174,11 @@ describe('Trigger', () => {
     jest.clearAllMocks();
     elb('walker run');
 
-    expect(mockFn).toHaveBeenCalledTimes(0);
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
 
     (events.DOMContentLoaded as () => void)();
 
-    expect(mockFn).toHaveBeenNthCalledWith(
-      1,
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page view',
         trigger: Trigger.Load,
@@ -203,7 +197,7 @@ describe('Trigger', () => {
     // Simulate submit event
     (events.click as (e: unknown) => void)({ target: elem } as Event);
 
-    expect(mockFn).toHaveBeenLastCalledWith(
+    expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'e click',
         trigger: Trigger.Click,
@@ -218,7 +212,7 @@ describe('Trigger', () => {
     // Simulate submit event
     (events.submit as (e: unknown) => void)({ target: form } as Event);
 
-    expect(mockFn).toHaveBeenLastCalledWith(
+    expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'form submit',
         trigger: Trigger.Submit,
@@ -237,14 +231,14 @@ describe('Trigger', () => {
     });
 
     // jest.clearAllMocks();
-    expect(mockFn).not.toHaveBeenCalled();
-    expect(mockFn).toHaveBeenCalledTimes(0);
+    expect(mockDataLayer).not.toHaveBeenCalled();
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
 
     // Simulate hover event
     elem.dispatchEvent(hoverEvent);
-    expect(mockFn).toHaveBeenCalledTimes(1);
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
 
-    expect(mockFn).toHaveBeenLastCalledWith(
+    expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'mouse hover',
         trigger: Trigger.Hover,
@@ -254,13 +248,13 @@ describe('Trigger', () => {
     // Fire multiple hover event
     elem.dispatchEvent(hoverEvent);
     elem.dispatchEvent(hoverEvent);
-    expect(mockFn).toHaveBeenCalledTimes(3);
+    expect(mockDataLayer).toHaveBeenCalledTimes(3);
   });
 
   test('wait', () => {
     expect(setTimeout).toHaveBeenLastCalledWith(expect.any(Function), 4000);
 
-    expect(mockFn).not.toHaveBeenCalledWith(
+    expect(mockDataLayer).not.toHaveBeenCalledWith(
       expect.objectContaining({
         trigger: Trigger.Wait,
       }),
@@ -271,12 +265,12 @@ describe('Trigger', () => {
     // Simulate timer, expected a 4sec wait
     jest.advanceTimersByTime(2000);
 
-    expect(mockFn).not.toHaveBeenCalled();
+    expect(mockDataLayer).not.toHaveBeenCalled();
 
     // Simulate timer to total waiting time of 4000ms
     jest.advanceTimersByTime(2000);
 
-    expect(mockFn).toHaveBeenLastCalledWith(
+    expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'timer alarm',
         trigger: Trigger.Wait,
@@ -288,7 +282,7 @@ describe('Trigger', () => {
   test('pulse', () => {
     expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 5000);
 
-    expect(mockFn).not.toHaveBeenCalledWith(
+    expect(mockDataLayer).not.toHaveBeenCalledWith(
       expect.objectContaining({
         trigger: Trigger.Pulse,
       }),
@@ -298,11 +292,11 @@ describe('Trigger', () => {
 
     jest.advanceTimersByTime(2500);
 
-    expect(mockFn).not.toHaveBeenCalled();
+    expect(mockDataLayer).not.toHaveBeenCalled();
 
     jest.advanceTimersByTime(2500);
 
-    expect(mockFn).toHaveBeenLastCalledWith(
+    expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'pulse beat',
         trigger: Trigger.Pulse,
@@ -310,10 +304,10 @@ describe('Trigger', () => {
     );
 
     jest.clearAllMocks();
-    expect(mockFn).not.toHaveBeenCalled();
+    expect(mockDataLayer).not.toHaveBeenCalled();
     jest.advanceTimersByTime(5000);
 
-    expect(mockFn).toHaveBeenLastCalledWith(
+    expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'pulse beat',
         trigger: Trigger.Pulse,
@@ -328,7 +322,7 @@ describe('Trigger', () => {
 
     jest.clearAllMocks();
     jest.advanceTimersByTime(10000);
-    expect(mockFn).not.toHaveBeenCalled();
+    expect(mockDataLayer).not.toHaveBeenCalled();
 
     Object.defineProperty(document, 'hidden', {
       value: false,
@@ -337,7 +331,7 @@ describe('Trigger', () => {
 
     jest.clearAllMocks();
     jest.advanceTimersByTime(5000);
-    expect(mockFn).toHaveBeenCalled();
+    expect(mockDataLayer).toHaveBeenCalled();
   });
 
   test('scroll', () => {
@@ -373,7 +367,7 @@ describe('Trigger', () => {
     // Simulate scroll event
     scrollFn({});
 
-    expect(mockFn).not.toHaveBeenCalled();
+    expect(mockDataLayer).not.toHaveBeenCalled();
 
     // Scroll to 50% of elem in viewport
     window.scrollY = 115;
@@ -383,7 +377,7 @@ describe('Trigger', () => {
     scrollFn({});
 
     // Not 80% in viewport yet
-    expect(mockFn).not.toHaveBeenCalled();
+    expect(mockDataLayer).not.toHaveBeenCalled();
 
     // Scroll to 50% of elem in viewport
     window.scrollY = 170;
@@ -392,7 +386,7 @@ describe('Trigger', () => {
     jest.advanceTimersByTime(1000);
     scrollFn({});
 
-    expect(mockFn).toHaveBeenCalledWith(
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'scroll 80percent',
         trigger: Trigger.Scroll,
@@ -469,7 +463,7 @@ describe('Trigger', () => {
 
     jest.advanceTimersByTime(1000);
 
-    expect(mockFn).toHaveBeenCalledWith(
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'visible impression',
         trigger: Trigger.Visible,

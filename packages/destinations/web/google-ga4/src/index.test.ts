@@ -15,9 +15,6 @@ describe('Destination Google GA4', () => {
   const transport_url = 'https://collect.example.com';
 
   beforeEach(async () => {
-    jest.clearAllMocks();
-    jest.resetModules();
-
     config = {
       custom: { measurementId },
     };
@@ -25,10 +22,7 @@ describe('Destination Google GA4', () => {
     destination = jest.requireActual('.').default;
     destination.config = config;
 
-    w.elbLayer = [];
-    w.dataLayer = [];
-
-    Walkerjs({ pageview: false, tagging: 2 });
+    Walkerjs({ pageview: false, session: false, tagging: 2 });
     elb('walker run');
     w.gtag = mockFn;
   });

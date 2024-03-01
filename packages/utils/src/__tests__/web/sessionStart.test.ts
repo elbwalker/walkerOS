@@ -1,9 +1,30 @@
-import { sessionStart } from '../..';
+import { On } from '@elbwalker/types';
+import { elb, sessionStart, sessionStorage, sessionWindow } from '../../';
+import type { WalkerOS } from '@elbwalker/types';
 
-describe('SessionStart', () => {
+let consent: On.ConsentConfig;
+
+jest.mock('../../web', () => ({
+  ...jest.requireActual('../../web'), // Keep original
+  elb: jest.fn().mockImplementation((event, data, options) => {
+    if (event === 'walker on' && data == 'consent') {
+      consent = options;
+    }
+  }),
+  sessionStorage: jest.fn().mockImplementation((config) => {
+    return { ...config.data, mock: 'storage' };
+  }),
+  sessionWindow: jest.fn().mockImplementation((config) => {
+    return { ...config.data, mock: 'window' };
+  }),
+}));
+
+describe('sessionStart', () => {
   const w = window;
-  const url = 'https://www.elbwalker.com/';
-  const referrer = 'https://www.example.com/';
+
+  const mockElb = elb as jest.Mock;
+  const mockSessionStorage = sessionStorage as jest.Mock;
+  const mockSessionWindow = sessionWindow as jest.Mock;
 
   beforeEach(() => {
     Object.defineProperty(w, 'performance', {
@@ -15,91 +36,118 @@ describe('SessionStart', () => {
 
     jest.clearAllMocks();
     jest.resetModules();
+
+    consent = {};
   });
 
-  test('sessionStart', () => {
-    // Is new
-    expect(sessionStart({ url, referrer: url, isNew: true })).toStrictEqual(
-      expect.objectContaining({ id: expect.any(String), isNew: true }),
-    );
-
-    // Referral
-    expect(sessionStart({ url, referrer })).toStrictEqual(
-      expect.objectContaining({ id: expect.any(String) }),
-    );
-
-    // Direct
-    expect(sessionStart({ url, referrer: '' })).toStrictEqual(
-      expect.objectContaining({ id: expect.any(String) }),
-    );
-
-    // Predefined data
-    expect(
-      sessionStart({ url, referrer, data: { id: 'sessionId' } }),
-    ).toStrictEqual(expect.objectContaining({ id: 'sessionId' }));
+  test('Default', () => {
+    sessionStart();
+    expect(mockSessionWindow).toHaveBeenCalledWith({});
   });
 
-  test('Marketing', () => {
-    expect(sessionStart({ url: url + '?utm_campaign=foo' })).toStrictEqual(
-      expect.objectContaining({
-        id: expect.any(String),
-        campaign: 'foo',
-        marketing: true,
-      }),
-    );
-
-    // Marketing with custom marketing parameter
-    expect(
-      sessionStart({
-        url: url + '?affiliate=parameter',
-        parameters: { affiliate: 'custom' },
-      }),
-    ).toStrictEqual(
-      expect.objectContaining({
-        id: expect.any(String),
-        custom: 'parameter',
-        marketing: true,
-      }),
-    );
+  test('Storage', () => {
+    sessionStart({ storage: true });
+    expect(mockSessionStorage).toHaveBeenCalledWith({ storage: true });
   });
 
-  test('Referrer', () => {
-    // Custom domains
-    expect(
-      sessionStart({
-        url: 'https://www.elbwalker.com',
-        referrer: 'https://another.elbwalker.com',
-        domains: ['another.elbwalker.com'],
-      }),
-    ).toBeFalsy();
-    expect(
-      sessionStart({
-        url: 'https://www.elbwalker.com',
-        referrer: '',
-        domains: [''], // Hack to disable direct or hidden referrer
-      }),
-    ).toBeFalsy();
-
-    // Default url and referrer
-    Object.defineProperty(document, 'referrer', {
-      value: referrer,
+  test('Consent', () => {
+    const consentName = 'foo';
+    const config = { consent: consentName };
+    sessionStart(config);
+    expect(mockElb).toHaveBeenCalledTimes(1);
+    expect(mockElb).toHaveBeenCalledWith('walker on', 'consent', {
+      foo: expect.any(Function),
     });
-    Object.defineProperty(window, 'location', {
-      value: new URL(url),
+
+    // Simulate granted consent call from walker.js instance
+    // Granted
+    expect(mockSessionStorage).toHaveBeenCalledTimes(0);
+    consent[consentName]({} as unknown as WalkerOS.Instance, {
+      [consentName]: true,
     });
-    expect(sessionStart()).toStrictEqual(
-      expect.objectContaining({ id: expect.any(String) }),
+    expect(mockSessionStorage).toHaveBeenCalledWith(config);
+
+    // Denied
+    expect(mockSessionWindow).toHaveBeenCalledTimes(0);
+    consent[consentName]({} as unknown as WalkerOS.Instance, {
+      [consentName]: false,
+    });
+    expect(mockSessionWindow).toHaveBeenCalledWith(config);
+  });
+
+  test('Callback without consent', () => {
+    const instance = {} as unknown as WalkerOS.Instance;
+    const mockCb = jest.fn();
+    const config = { cb: mockCb, instance, storage: false };
+    sessionStart(config);
+
+    expect(mockCb).toHaveBeenCalledTimes(1);
+    expect(mockCb).toHaveBeenCalledWith(
+      {
+        mock: 'window',
+      },
+      instance,
     );
   });
 
-  test('Reload', () => {
-    window.performance.getEntriesByType = jest
-      .fn()
-      .mockReturnValue([{ type: 'reload' }]);
+  test('Callback with consent', () => {
+    const consentName = 'foo';
+    const instance = {} as unknown as WalkerOS.Instance;
+    const mockCb = jest.fn();
+    const config = { cb: mockCb, consent: consentName, storage: true };
+    sessionStart(config);
 
-    expect(sessionStart()).toBeFalsy();
+    // Granted, use sessionStorage
+    consent[consentName](instance, {
+      [consentName]: true,
+    });
+    expect(mockCb).toHaveBeenCalledTimes(1);
+    expect(mockCb).toHaveBeenCalledWith(
+      {
+        mock: 'storage',
+      },
+      instance,
+    );
 
-    // Reload with marketing parameter
-    expect(sessionStart({ url: url + '?utm_campaign=foo' })).toBeFalsy();
+    // Denied, use sessionWindow
+    consent[consentName](instance, {
+      [consentName]: false,
+    });
+    expect(mockCb).toHaveBeenCalledTimes(2);
+    expect(mockCb).toHaveBeenCalledWith(
+      {
+        mock: 'window',
+      },
+      instance,
+    );
+  });
+
+  test('Callback default', () => {
+    // No elb calls if no session is started
+    sessionStart();
+    expect(mockElb).toHaveBeenCalledTimes(0);
+    sessionStart({ data: { isStart: true } });
+    expect(mockElb).toHaveBeenCalledTimes(1);
+  });
+
+  test('Callback default storage', () => {
+    sessionStart({
+      data: { storage: true, isNew: true, device: 'd3v1c3', id: 's3ss10n' },
+    });
+    expect(mockElb).toHaveBeenCalledWith('walker user', {
+      device: 'd3v1c3',
+      session: 's3ss10n',
+    });
+  });
+
+  test('Callback disabled', () => {
+    // No elb calls if no session is started
+    sessionStart({ cb: false, data: { isStart: true } });
+    expect(mockElb).toHaveBeenCalledTimes(0);
+  });
+
+  test('Callback default elb calls', () => {
+    const session = sessionStart({ data: { isNew: true, isStart: true } });
+    expect(mockElb).toHaveBeenCalledWith('session start', session);
   });
 });

@@ -5,25 +5,17 @@ describe('Browser', () => {
   const w = window;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  jest.mock('../', () => {
-    return mockFn;
-  });
+  jest.mock('../', () => ({
+    Walkerjs: mockFn,
+    default: mockFn,
+  }));
 
   const html: string = fs
     .readFileSync(__dirname + '/html/index.html')
     .toString();
 
   beforeEach(() => {
-    // reset DOM with event listeners etc.
-    document.body = document.body.cloneNode() as HTMLElement;
     document.body.innerHTML = html;
-
-    jest.resetModules();
-    jest.clearAllMocks();
-  });
-
-  afterEach(() => {
-    document.getElementsByTagName('html')[0].innerHTML = '';
   });
 
   test('initialize walkerjs on window', () => {

@@ -1,4 +1,5 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { On, WalkerOS } from '@elbwalker/types';
+import type { SessionConfig } from '@elbwalker/utils';
 import type * as WebDestination from './destination';
 import type * as Walker from './walker';
 
@@ -31,7 +32,7 @@ export interface Elb extends WalkerOS.Elb {
   ): void;
   (event: 'walker init', scope: Scope | Scope[]): void;
   (
-    event: string,
+    event: string | unknown,
     data?: PushData,
     options?: PushOptions,
     context?: PushContext,
@@ -41,7 +42,7 @@ export interface Elb extends WalkerOS.Elb {
 }
 
 export type ElbLayer = [
-  (IArguments | string)?,
+  string?,
   PushData?,
   PushOptions?,
   WalkerOS.OrderedProperties?,
@@ -57,7 +58,8 @@ export type PushData =
 export type PushOptions =
   | WalkerOS.PushOptions
   | Walker.Trigger
-  | WebDestination.Config;
+  | WebDestination.Config
+  | WalkerOS.SingleOrArray<On.Options>;
 
 export type PushContext = WalkerOS.PushContext | Element;
 
@@ -66,11 +68,14 @@ export type ScopeType = Scope | Scope[];
 
 export interface Config extends WalkerOS.Config {
   client: string;
+  dataLayer: boolean;
   destinations: Destinations;
   elbLayer: ElbLayer;
   pageview: boolean;
   prefix: string;
   queue: WalkerOS.Events;
+  run: boolean;
+  session: false | SessionConfig;
   elb?: string;
   instance?: string;
 }

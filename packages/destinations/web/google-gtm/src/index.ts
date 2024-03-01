@@ -12,14 +12,13 @@ export const destinationGoogleGTM: Destination = {
   config: {},
 
   init(config) {
+    const w = window as unknown as Record<string, unknown[]>;
     const custom = config.custom || {};
     const dataLayer = custom.dataLayer || defaultDataLayer;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    window[dataLayer as any] = window[dataLayer as any] || [];
+    w[dataLayer] = w[dataLayer] || [];
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any)[dataLayer].push({
+    w[dataLayer].push({
       'gtm.start': new Date().getTime(),
       event: 'gtm.js',
     });

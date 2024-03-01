@@ -1,64 +1,88 @@
-import { getId, getMarketingParameters } from '../../';
-import type { SessionData, SessionStartConfig } from '.';
+// const deviceKey = config.deviceKey || 'elbDeviceId';
+// Also as parameter possible like the isNew for sessionStart
 
-export default function sessionStart(
-  config: SessionStartConfig = {},
-  utils: {
-    getId: typeof getId;
-    getMarketingParameters: typeof getMarketingParameters;
-  },
-): SessionData | false {
-  // Force a new session or start checking if it's a regular new one
-  let isNew = config.isNew || false;
+import { elb, sessionStorage, sessionWindow } from '../../';
+import type { SessionStorageConfig } from './';
+import type { On, WalkerOS } from '@elbwalker/types';
 
-  // Entry type
-  if (!isNew) {
-    // Only focus on linked or direct navigation types
-    // and ignore reloads and all others
-    const [perf] = performance.getEntriesByType(
-      'navigation',
-    ) as PerformanceNavigationTiming[];
-    if (perf.type !== 'navigate') return false;
-  }
-
-  const url = new URL(config.url || window.location.href);
-  const ref = config.referrer || document.referrer;
-  const referrer = ref && new URL(ref).hostname;
-
-  // Marketing
-  const marketing = utils.getMarketingParameters(url, config.parameters);
-  if (Object.keys(marketing).length) {
-    // Check for marketing parameters like UTM and add existing
-    if (!marketing.marketing)
-      // Flag as a marketing session without overwriting
-      marketing.marketing = true;
-
-    isNew = true;
-  }
-
-  // Referrer
-  if (!isNew) {
-    // Small chance of multiple unintended events for same users
-    // https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding
-    // Use domains: [''] to disable direct or hidden referrer
-
-    const domains = config.domains || [];
-    domains.push(url.hostname);
-    isNew = !domains.includes(referrer);
-  }
-
-  return isNew
-    ? // It's a new session, moin
-      Object.assign(
-        {
-          isNew,
-          start: Date.now(),
-          id: utils.getId(12),
-          referrer,
-        },
-        marketing,
-        config.data,
-      )
-    : // No new session
-      false;
+export interface SessionConfig extends SessionStorageConfig {
+  consent?: string;
+  storage?: boolean;
+  cb?: SessionCallback | false;
+  instance?: WalkerOS.Instance;
 }
+
+export interface SessionData {
+  isStart: boolean; // If this is a new session or a known one
+  storage: boolean; // If the storage was used to determine the session
+  id?: string; // Session ID
+  start?: number; // Timestamp of session start
+  marketing?: true; // If the session was started by a marketing parameters
+  // Storage data
+  updated?: number; // Timestamp of last update
+  isNew?: boolean; // If this is the first visit on a device
+  device?: string; // Device ID
+  count?: number; // Total number of sessions
+  runs?: number; // Total number of runs (like page views)
+}
+
+export type SessionFunction = typeof sessionStorage | typeof sessionWindow;
+export type SessionCallback = (
+  session: SessionData,
+  instance?: WalkerOS.Instance,
+) => void;
+
+export function sessionStart(config: SessionConfig = {}): SessionData | void {
+  const { cb, consent, instance, storage } = config;
+  const sessionFn: SessionFunction = storage ? sessionStorage : sessionWindow;
+
+  // Consent
+  if (consent) {
+    // require consent
+    elb('walker on', 'consent', {
+      [consent]: onConsentFn(config, cb),
+    });
+  } else {
+    // just do it
+    return callFuncAndCb(sessionFn(config), cb, instance);
+  }
+}
+
+function callFuncAndCb(
+  session: SessionData,
+  cb?: SessionCallback | false,
+  instance?: WalkerOS.Instance,
+) {
+  if (cb === false) return session; // Callback is disabled
+  if (!cb) cb = defaultCb; // Default callback if none is provided
+  return cb(session, instance);
+}
+
+function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
+  const func: On.ConsentFn = (instance, consent) => {
+    let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
+
+    if (config.consent && consent[config.consent])
+      // Use storage if consent is granted
+      sessionFn = () => sessionStorage(config);
+
+    return callFuncAndCb(sessionFn(), cb, instance);
+  };
+
+  return func;
+}
+
+const defaultCb: SessionCallback = (session): SessionData => {
+  if (session.storage) {
+    // Set user IDs
+    const user: WalkerOS.User = {};
+    if (session.id) user.session = session.id;
+    if (session.device) user.device = session.device;
+
+    elb('walker user', user);
+  }
+
+  if (session.isStart) elb('session start', session);
+
+  return session;
+};

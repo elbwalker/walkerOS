@@ -26,14 +26,9 @@ describe('Destination API', () => {
   const url = 'https://api.elbwalker.com/';
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-
     destination = jest.requireActual('.').default;
 
-    w.elbLayer = [];
-
-    Walkerjs({ pageview: false });
+    Walkerjs({ pageview: false, session: false });
     elb('walker run');
 
     window.fetch = mockFetch;
@@ -45,7 +40,6 @@ describe('Destination API', () => {
   });
 
   afterEach(() => {
-    document.getElementsByTagName('html')[0].innerHTML = '';
     window.fetch = oldFetch;
     navigator.sendBeacon = oldBeacon;
     window.XMLHttpRequest = oldXMLHttpRequest;

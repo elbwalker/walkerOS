@@ -1,7 +1,6 @@
 // browser version
-import Walkerjs from '.';
+import { elb, Walkerjs } from './';
 import { getAttribute } from '@elbwalker/utils';
-import { elb } from './lib/trigger';
 
 let defaultMode, tagging;
 

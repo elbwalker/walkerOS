@@ -11,11 +11,7 @@ describe('Destination', () => {
   let config: WebDestination.Config;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-
-    window.elbLayer = undefined as unknown as WebClient.ElbLayer;
-    walkerjs = Walkerjs({ pageview: false });
+    walkerjs = Walkerjs({ pageview: false, session: false });
     config = { init: false };
 
     destination = {
@@ -309,6 +305,7 @@ describe('Destination', () => {
     walkerjs = Walkerjs({
       consent: { functional: true, marketing: false },
       pageview: false,
+      session: false,
     });
     elb('walker run');
 
@@ -367,6 +364,7 @@ describe('Destination', () => {
     walkerjs = Walkerjs({
       consent: { functional: true },
       pageview: false,
+      session: false,
     });
     elb('walker run');
 
@@ -645,15 +643,5 @@ describe('Destination', () => {
 
     elb('walker destination', destination);
     expect(Object.keys(walkerjs.config.destinations)).toHaveLength(2);
-  });
-
-  test.skip('TODO investigate this', () => {
-    elb('walker destination', destination, { id: 'foo' });
-    elb('walker run');
-
-    // @TODO
-    // the walker destination command is not processed
-    // only if walker run was called before
-    expect(walkerjs.config.destinations['foo']).toBe(destination);
   });
 });

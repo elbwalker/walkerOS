@@ -1,6 +1,7 @@
 import type { Hooks, On } from '.';
 
 export type AnyObject = Record<string, unknown>;
+export type SingleOrArray<T> = T | Array<T>;
 
 export interface Instance {
   push: Elb;
@@ -16,7 +17,11 @@ export interface Elb {
     name: K,
     hookFn: Hooks.Functions[K],
   ): void;
-  (event: 'walker on', type: 'consent', rules: On.Rules<On.OnConsentFn>): void;
+  (
+    event: 'walker on',
+    type: 'consent',
+    rules: SingleOrArray<On.ConsentConfig>,
+  ): void;
   (event: 'walker run'): void;
   (event: 'walker user', user: User): void;
   (

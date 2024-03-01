@@ -1,20 +1,29 @@
 import { WalkerOS } from './';
 
-export type Config = Partial<{
-  consent?: Rules<OnConsentFn>;
-}>;
+// Instance state for the on actions
+export type Config = {
+  consent?: Array<ConsentConfig>;
+  run?: Array<RunConfig>;
+};
 
-export type Type = 'consent';
+// On types
+export type Types = keyof Config;
 
-export interface Rules<T = Functions> {
-  [key: string]: Array<T>;
+// Function definitions for the on actions
+export type Functions = ConsentFn | RunFn;
+
+// Parameters for the onAction function calls
+export type Options = ConsentConfig | RunConfig;
+
+// Consent
+export interface ConsentConfig {
+  [key: string]: ConsentFn;
 }
-
-export type Functions = OnConsentFn;
-
-export type OnConsentFn = (
+export type ConsentFn = (
   instance: WalkerOS.Instance,
-  options: WalkerOS.Consent,
+  consent: WalkerOS.Consent,
 ) => void;
 
-export type Options = WalkerOS.Consent;
+// Run
+export type RunConfig = RunFn;
+export type RunFn = (instance: WalkerOS.Instance) => void;

@@ -1,5 +1,5 @@
-import Tagger from '.';
-import { ITagger } from './types';
+import Tagger from '..';
+import type { ITagger } from '../types';
 
 describe('Tagger', () => {
   let tagger: ITagger.Instance;

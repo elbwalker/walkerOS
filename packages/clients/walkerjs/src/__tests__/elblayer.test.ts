@@ -1,4 +1,5 @@
 import { elb, Walkerjs } from '..';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { WebClient, WebDestination } from '..';
 import type { WalkerOS } from '@elbwalker/types';
 
@@ -6,28 +7,22 @@ describe('ElbLayer', () => {
   const w = window;
   let walkerjs: WebClient.Instance;
 
-  const mockPush = jest.fn(); //.mockImplementation(console.log);
-  const mockInit = jest.fn(); //.mockImplementation(console.log);
+  const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
+  const mockDestinationInit = jest.fn(); //.mockImplementation(console.log);
   const destination: WebDestination.Destination = {
-    init: mockInit,
-    push: mockPush,
+    init: mockDestinationInit,
+    push: mockDestinationPush,
     config: { init: true },
   };
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-    w.elbLayer = [];
-    w.dataLayer = [];
-    (w.dataLayer as unknown[]).push = mockPush;
-  });
+  beforeEach(() => {});
 
   test('arguments and event pushes', () => {
     walkerjs = Walkerjs({ default: true });
     elb('ingest argument', { a: 1 }, 'a', {}); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'ingest argument',
         data: { a: 1 },
@@ -35,7 +30,7 @@ describe('ElbLayer', () => {
         nested: [],
       }),
     );
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'ingest event',
         data: { b: 2 },
@@ -50,20 +45,20 @@ describe('ElbLayer', () => {
     elb('walker destination', destination);
     elb('entity action');
 
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockDestinationPush).not.toHaveBeenCalled();
   });
 
   test('walker push pre and post go', () => {
     elb('e 1');
     elb('walker destination', destination);
 
-    walkerjs = Walkerjs();
+    walkerjs = Walkerjs({ session: false });
     elb('e 2');
     elb('walker run');
     // auto call: elb('page view');
     elb('e 4');
 
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockDestinationPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e 1',
         count: 1,
@@ -73,7 +68,7 @@ describe('ElbLayer', () => {
       expect.anything(),
     );
 
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockDestinationPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e 2',
         count: 2,
@@ -83,7 +78,7 @@ describe('ElbLayer', () => {
       expect.anything(),
     );
 
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockDestinationPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page view',
         count: 3,
@@ -93,7 +88,7 @@ describe('ElbLayer', () => {
       expect.anything(),
     );
 
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockDestinationPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e 4',
         count: 4,
@@ -112,7 +107,7 @@ describe('ElbLayer', () => {
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
     elb('walker run');
 
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockDestinationPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'ingest argument',
       }),
@@ -120,7 +115,7 @@ describe('ElbLayer', () => {
       undefined,
       expect.anything(),
     );
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockDestinationPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'ingest event',
       }),
@@ -131,7 +126,7 @@ describe('ElbLayer', () => {
   });
 
   test('prioritize walker commands before run', () => {
-    walkerjs = Walkerjs();
+    walkerjs = Walkerjs({ session: false });
 
     (elb as () => void)();
     elb('event postponed');
@@ -140,7 +135,7 @@ describe('ElbLayer', () => {
     elb('walker run');
     elb('event later');
 
-    expect(mockPush).toHaveBeenNthCalledWith(
+    expect(mockDestinationPush).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
         event: 'event postponed',
@@ -150,7 +145,7 @@ describe('ElbLayer', () => {
       undefined,
       expect.anything(),
     );
-    expect(mockPush).toHaveBeenNthCalledWith(
+    expect(mockDestinationPush).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         event: 'page view',
@@ -160,7 +155,7 @@ describe('ElbLayer', () => {
       undefined,
       expect.anything(),
     );
-    expect(mockPush).toHaveBeenNthCalledWith(
+    expect(mockDestinationPush).toHaveBeenNthCalledWith(
       3,
       expect.objectContaining({
         event: 'event later',
@@ -194,8 +189,9 @@ describe('ElbLayer', () => {
       consent: {},
       count: expect.any(Number),
       custom: {},
+      dataLayer: false,
       destinations: expect.any(Object),
-      elbLayer: w.elbLayer,
+      elbLayer: expect.any(Array),
       globals: {},
       group: expect.any(String),
       hooks: {},
@@ -203,7 +199,9 @@ describe('ElbLayer', () => {
       pageview: true,
       prefix: 'data-elb',
       queue: expect.any(Array),
+      run: false,
       round: expect.any(Number),
+      session: { storage: false, instance: expect.any(Object) },
       timing: expect.any(Number),
       user: {},
       tagging: expect.any(Number),
@@ -348,7 +346,7 @@ describe('ElbLayer', () => {
     });
     layer.push('e a');
 
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockDestinationPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e a',
       }),
@@ -364,15 +362,14 @@ describe('ElbLayer', () => {
 
     // Arguments
     expect(JSON.stringify(w.elbLayer[0])).toEqual(
-      JSON.stringify({ '0': { '0': 'walker run' } }),
+      JSON.stringify({ '0': 'walker run' }),
     );
 
     // Parameters
-    expect((w.elbLayer[1] as unknown[])[0]).toBe('page view');
+    expect((w.elbLayer[1] as unknown[])[0]).toBe('session start');
   });
 
   test('custom push', () => {
-    // @TODO why does only elb and not w.elbLayer.push work here?!
     elb(
       'e 1', // event
       {}, // data
@@ -384,7 +381,7 @@ describe('ElbLayer', () => {
 
     walkerjs = Walkerjs({ default: true, pageview: false });
 
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e 1',
         custom: { any: 'thing' },
@@ -399,7 +396,7 @@ describe('ElbLayer', () => {
       [], // nested
       { any: 'thing' }, // custom
     );
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e 2',
         custom: { any: 'thing' },
