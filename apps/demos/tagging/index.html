@@ -40,161 +40,175 @@
 
     <script src="https://cdn.tailwindcss.com?plugins=forms,aspect-ratio"></script>
 
-    <script
-      async
-      class="elbwalker"
-      src="https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@latest/dist/walker.js"
-    ></script>
-
     <script type="module">
-      window.elb = (...args) => {
-        (window.elbLayer = window.elbLayer || []).push(...args);
-      };
+      // Consent management
+      // This code simulates a CMPs functionality
 
-      // Configuration
-      elb('walker config', { tagging: 2 });
-
-      // Utils
-      window.utils = await import(
+      const consentKey = 'consentState';
+      const utils = await import(
         'https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/index.mjs'
       );
 
-      // Start
-      elb('walker run');
+      window.consentAccept = () => {
+        // Save granted choice
+        utils.storageWrite(consentKey, 'accepted');
+        consentRefresh(true);
+      };
+      window.consentDeny = () => {
+        // Save denied choice
+        utils.storageWrite(consentKey, 'denied');
+        consentRefresh();
+      };
+      window.consentReset = () => {
+        // Reset choice
+        utils.storageDelete(consentKey);
+        consentRefresh();
+      };
 
-      // Session handling
-      const session = utils.sessionStart();
-      if (session) elb('session start', session);
+      // Code that gets called after a consent choice was made
+      function consentCode(granted = false) {
+        const functional = true;
+        var marketing = false;
 
-      // Destination Console
+        if (granted) {
+          // User granted consent
+
+          // Set a user id (device and session ids are set by walker.js automatically)
+          const key = 'elbUserId';
+          const id =
+            // Read existing id or generate and save a new one
+            utils.storageRead(key) || utils.storageWrite(key, utils.getId(5));
+          elb('walker user', { id });
+
+          marketing = true; // Granted marketing stage
+        } else {
+          // User declined consent
+
+          // Use an anonymous user id and reset others
+          elb('walker user', {
+            id: 'anonymous',
+            device: undefined,
+            session: undefined,
+          });
+        }
+
+        // Update walkers consent state
+        elb('walker consent', { functional, marketing });
+      }
+
+      // Update the consent state
+      function consentRefresh() {
+        // Look for a stored consent choice
+        const consentState = utils.storageRead(consentKey);
+
+        // If a choice was made execute the code
+        if (consentState) consentCode(consentState == 'accepted');
+
+        // Display the status
+        document.getElementById('consent_state').innerText =
+          consentState || 'unknown';
+      }
+
+      // Check consent state initially
+      consentRefresh();
+
+      // Make Utils globally available
+      window.utils = utils;
+    </script>
+
+    <script type="module">
+      // elb
+      window.elb = function () {
+        (window.elbLayer = window.elbLayer || []).push(arguments);
+      };
+
+      // Add a destination that logs events in the console
       elb('walker destination', {
         push: console.log,
       });
 
-      // Destination GTM
-      const gtm = (
-        await import(
-          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-gtm@latest/dist/index.mjs'
-        )
-      ).default;
-      elb('walker destination', gtm, {
-        loadScript: true,
-        custom: {
-          containerId: 'GTM-WCFR4W5',
-        },
-      });
+      // Demo with GTM setup
+      let gtm = new URL(document.location).searchParams.get('gtm'); // Option for custom Container
+      if (gtm === '') gtm = 'GTM-WCFR4W5'; // Demo container
+      if (gtm) {
+        // Typical GTM install script
+        (function (w, d, s, l, i) {
+          w[l] = w[l] || [];
+          w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+          var f = d.getElementsByTagName(s)[0],
+            j = d.createElement(s),
+            dl = l != 'dataLayer' ? '&l=' + l : '';
+          j.async = true;
+          j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+          f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', gtm);
+      } else {
+        // Demo with custom code setup
 
-      // Destination Console Consent
-      elb(
-        'walker destination',
-        { push: (event) => console.log('CONSENT', event) },
-        { consent: { functional: true } },
-      );
+        // Load walker.js
+        const Walkerjs = await import(
+          'https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@2.1.0-next.0/dist/index.mjs'
+        );
 
-      // Destination API
-      const api = (
-        await import(
-          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api@latest/dist/index.mjs'
-        )
-      ).default;
-      elb('walker destination', api, {
-        consent: { functional: true },
-        custom: {
-          // Server-side tagmanager
-          url: 'https://server-side-tagging-ybbfvkxhia-ey.a.run.app/quokka',
-          transport: 'beacon',
-        },
-      });
+        // Create a walker.js instance with custom config
+        window.walkerjs = Walkerjs.default({
+          run: true, // Automatically start running
+          session: {
+            // Enable session detection and the usage of user ids
+            consent: 'marketing', // Require marketing consent for storage access
+          },
+        });
 
-      // Destination GA4
-      const ga4 = (
-        await import(
-          'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4@latest/dist/index.mjs'
-        )
-      ).default;
-      elb('walker destination', ga4, {
-        consent: { marketing: true, ga4: true },
-        custom: { measurementId: 'G-4WP1Y3GPLW' },
-        loadScript: true,
-      });
+        // Change configuration via elb command
+        elb('walker config', { tagging: 2 });
 
-      // Consent
-      // Code snippets for consent choice
-      // Simulate the CMPs functionality
-      window.consentAccept = () => {
-        window.utils.storageWrite('consentState', 'accepted');
-        consentGranted();
-        consentRefresh();
-      };
-      window.consentDeny = () => {
-        window.utils.storageWrite('consentState', 'denied');
-        consentDenied();
-        consentRefresh();
-      };
-      window.consentReset = () => {
-        window.utils.storageDelete('consentState');
-        consentRefresh();
-      };
+        // Add a Console destination that requires functional consent
+        elb(
+          'walker destination',
+          { push: (event) => console.log('CONSENT', event) },
+          { consent: { functional: true } },
+        );
 
-      window.consentGranted = () => {
-        // Set session and device ids
-        elb('walker user', getUser());
+        // Disabled GTM destination
+        // const destinationGTM = (
+        //   await import(
+        //     'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-gtm@latest/dist/index.mjs'
+        //   )
+        // ).default;
+        // elb('walker destination', destinationGTM, {
+        //   loadScript: true,
+        //   custom: {
+        //     containerId: 'GTM-WCFR4W5',
+        //   },
+        // });
 
-        // Allow sending events to functional and marketing destinations
-        elb('walker consent', { functional: true, marketing: true });
-      };
+        // Destination API
+        const api = (
+          await import(
+            'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api@latest/dist/index.mjs'
+          )
+        ).default;
+        elb('walker destination', api, {
+          consent: { functional: true },
+          custom: {
+            // Server-side Tag Manager
+            url: 'https://server-side-tagging-ybbfvkxhia-ey.a.run.app/quokka',
+            transport: 'beacon',
+          },
+        });
 
-      window.consentDenied = () => {
-        // Only set a random session id, but no persistant device id
-        elb('walker user', { id: 'anonymous', device: undefined });
-
-        // Allow sending events to functional destinations at most
-        elb('walker consent', { functional: true });
-      };
-
-      function getUser() {
-        const idKey = 'elb_user_id';
-        const sessionKey = 'elb_user_session';
-        const deviceKey = 'elb_user_device';
-        var id = window.utils.storageRead(idKey);
-        var session = window.utils.storageRead(sessionKey);
-        var device = window.utils.storageRead(deviceKey);
-
-        if (!id) {
-          id = window.utils.getId(5);
-          window.utils.storageWrite(idKey, id);
-        }
-
-        if (!session) {
-          session = window.utils.getId(10);
-          window.utils.storageWrite(sessionKey, session);
-        }
-
-        if (!device) {
-          device = window.utils.getId(8);
-          window.utils.storageWrite(deviceKey, device);
-          elb('first visit', { device });
-        }
-
-        return {
-          id,
-          session,
-          device,
-        };
+        // Destination GA4
+        const ga4 = (
+          await import(
+            'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4@latest/dist/index.mjs'
+          )
+        ).default;
+        elb('walker destination', ga4, {
+          consent: { marketing: true, ga4: true }, // Require consent
+          custom: { measurementId: 'G-4WP1Y3GPLW' },
+          loadScript: true,
+        });
       }
-
-      function consentRefresh() {
-        var consentStateElem = document.getElementById('consent_state');
-        var consentState =
-          window.utils.storageRead('consentState') || 'unknown';
-
-        if (consentState == 'accepted') consentGranted();
-        if (consentState == 'denied') consentDenied();
-
-        consentStateElem.innerText = consentState;
-      }
-
-      consentRefresh();
     </script>
   </head>
   <body class="relative">

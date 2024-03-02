@@ -91,3 +91,5 @@ typings/
 
 # Turbobuild
 .turbo
+
+.DS_Store
