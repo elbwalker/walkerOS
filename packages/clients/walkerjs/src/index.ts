@@ -543,8 +543,7 @@ export function Walkerjs(
 
     // Session handling
     if (instance.config.session) {
-      instance.config.session.instance = instance;
-      sessionStart(instance.config.session);
+      sessionStart({ ...instance.config.session, instance });
     }
 
     tryCatch(load)(instance);
