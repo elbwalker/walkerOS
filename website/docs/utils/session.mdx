@@ -11,12 +11,12 @@ import PackageLink from '/src/components/docs/package-link';
 <PackageLink github="packages/clients/walkerjs" npm="@elbwalker/walker.js" />
 <PackageLink github="packages/utils/src/web/session" npm="@elbwalker/utils" />
 
-There are multiple ways about how to define and measure a session. Sessions
-represent a period when a user is actively engaged with a website, often used
+There are multiple ways to define and measure a session. Sessions
+represent a period when a user actively engages with a website, often used
 for attribution and conversion tracking. Different tools may define and detect
 sessions in varying ways.
 
-The `sessionStart` util helps to detect a new session independently, and
+The `sessionStart` util helps to detect a new session independently and
 triggers a `session start` event or [executes custom code](#callback). It works
 client-side and is cookieless by default. The Util returns
 [Session Data](#session-data) information. There are
@@ -48,7 +48,7 @@ returns an object with several properties. If a new session is detected,
 | start     | number  | Timestamp of session start                          |
 | marketing | true    | If the session was started by a marketing parameter |
 
-With `storage: true` and eventually granted `consent` the returning object will
+With `storage: true` and eventually granted `consent`, the returning object will
 be extended with the following:
 
 | Property | Type    | Description                                       |
@@ -61,7 +61,7 @@ be extended with the following:
 
 ## sessionStart
 
-Example of calling `sessionStart` on a users first visit:
+Example of calling `sessionStart` on a user's first visit:
 
 ```js
 // On page https://www.elbwalker.com/docs/session?utm_campaign=docs
@@ -115,9 +115,44 @@ There are additional config parameters [for storage](#sessionstorage) and
 
 #### Consent
 
+Setting a consent state to wait for before detecting a new session is used to
+decide if storage access is allowed or not. If set, it registers an
+[on consent event](/docs/clients/walkerjs/commands#on-events) and won't start
+until that consent choice is available. If permission was granted, the
+`sessionStorage` detects a new session; otherwise, the `sessionWindow`.
+
+```js
+sessionStart({ consent: 'marketing' }); // Won't start automatically
+// User makes a consent choice and CMP calls:
+elb('walker consent', { marketing: true }); // Triggers the session detection
+// Returns a session with storage access
+```
+
 #### Storage
 
+Option to enable enable [sessionStorage](#sessionstorage) util to detect a new
+session with more accuracy and enhanced data.
+
+```js
+sessionStart({ storage: true });
+```
+
 #### Callback
+
+The `cb` parameter can be used to disable the default callback or to define a
+custom one. The default callback triggers a `session start` event if `isStart`
+is `true`. And additionally, with `storage: true`, the user's `session` and
+`device` ids are also set via `elb('walker user', user);`.
+
+```js
+const session = sessionStart({ cb: false }); // Disables the default callback
+
+sessionStart({
+  cb: (session, instance) => {
+    console.log(session);
+  },
+});
+```
 
 ### Detection process
 
@@ -129,24 +164,32 @@ detection gets scheduled via an
 
 ```mermaid
 ---
-title: sessionWindow detection process
+title: sessionStart detection process
 ---
 flowchart LR
-  sessionStart(["sessionStart<br>(<i>config</i>)"])
+  sessionStart(["<b>sessionStart</b><br>(<i>config</i>)"])
   useStorage{{"is <b>storage</b><br>enabled?"}}
   fnStorage["Use <b>sessionStorage</b><br>as function"]
   fnWindow["Use <b>sessionWindow</b><br>as function"]
   useConsent{{"is <b>consent</b><br>required?"}}
-  callOnConsent(["use <b>on-consent</b><br>command"])
-  callDirectly(["<b>call function</b><br>directly"])
+  callOnConsent["use <b>on-consent</b><br>command"]
+  callDirectly["<b>call function</b><br>directly"]
+  hasCallback{{"has a<br><b>callback</b>?"}}
+  callback["Call <b>callback</b><br>function"]
+  returnSession(["Return<br><b>session</b>"])
 
 sessionStart --> useStorage
 useStorage -- true --> fnStorage
 useStorage -- false --> fnWindow
-fnStorage --> useConsent
+fnStorage --> fnWindow
 fnWindow --> useConsent
 useConsent -- true --> callOnConsent
 useConsent -- false --> callDirectly
+callOnConsent -.-> hasCallback
+callDirectly --> hasCallback
+hasCallback -- true --> callback
+hasCallback -- false --> returnSession
+callback --> returnSession
 
 ```
 
@@ -158,13 +201,13 @@ Additional config parameters, based on the [Storage](/docs/utils/storage) util:
 
 | Property       | Type   | Description                                              | Default      |
 | -------------- | ------ | -------------------------------------------------------- | ------------ |
-| deviceKey      | string | The key to store the device id in the storage            | elbDeviceId  |
+| deviceKey      | string | The key to store the device ID in the storage            | elbDeviceId  |
 | deviceStorage  | string | The storage type to use for the device id                | local        |
-| deviceAge      | number | The age in days to consider the device id as expired     | 30           |
-| sessionKey     | string | The key to store the session id in the storage           | elbSessionId |
+| deviceAge      | number | The age in days to consider the device ID as expired     | 30           |
+| sessionKey     | string | The key to store the session ID in the storage           | elbSessionId |
 | sessionStorage | string | The storage type to use for the session id               | local        |
-| sessionAge     | number | The age in days to consider the session id as expired    | 30           |
-| length         | number | Minutes after last update to consider session as expired | 30           |
+| sessionAge     | number | The age in days to consider the session ID as expired    | 30           |
+| length         | number | Minutes after the last update to consider session as expired | 30           |
 
 :::info
 
@@ -176,6 +219,37 @@ available.
 ### Detection process
 
 Basic rules to detect a new session:
+
+```mermaid
+---
+title: sessionStorage detection process
+---
+flowchart LR
+  sessionStorage(["<b>sessionStorage</b><br>(<i>config</i>)"])
+  getDevice{{"get<br><b>device id</b>"}}
+  createDevice["Create and save<br>new <b>device id</b>"]
+  getSession{{"check for<br><b>existing session</b>"}}
+  isStart{{"session<br><b>isStart</b>"}}
+  checkAge{{"check<br>session<b>age</b>"}}
+  updateSession["Update<br><b>details</b>"]
+  sessionWindow["call <b>sessionWindow</b><br>with current details"]
+  saveSession["Save<br><b>session</b>"]
+  returnSession(["Return<br><b>session</b>"])
+
+sessionStorage --> getDevice
+getDevice -- not found --> createDevice
+getDevice -- exists --> getSession
+createDevice --> getSession
+getSession -- not found --> isStart
+getSession -- exists --> checkAge
+isStart --> sessionWindow
+checkAge -- expired --> isStart
+checkAge -- active --> updateSession
+updateSession --> sessionWindow
+sessionWindow --> saveSession
+saveSession --> returnSession
+
+```
 
 ## sessionWindow
 
@@ -219,10 +293,10 @@ A user coming from `subdomain.elbwalker.com` or `example.com` to e.b.
 #### Manual New Session Control
 
 Determine if it's a new session using the `isStart` parameter. This might
-require consent for storage access and therefore isn't implement by default.
+require consent for storage access, which isn't implemented by default.
 
 Usually, the `sessionId` written to the storage is set up to expire and should
-be updated with each page view. If the `sessionId` is missing, it's maybe an
+be updated with each page view. If the `sessionId` is missing, it may be an
 expired but at least a new session.
 
 ```js
@@ -245,7 +319,7 @@ To enhance the default and support custom ones add `parameters`, like
 `{ elb_campaign: 'campaign' }` to add `campaign: "docs"` to `data` for a url
 with `?elb_campaign=docs`.
 
-A session with marketing parameter will be flagged with `data.marketing = true`
+A session with marketing parameters will be flagged with `data.marketing = true`
 automatically.
 
 ```ts
@@ -267,12 +341,12 @@ By default the `document.referrer` is used, but it can be overwritten with the
 sessionStart({ referrer: 'https://example.com' });
 ```
 
-domains can be extended, e.g. internal sub-domains. `Data` can be pre-defined,
-e.g. to use your own id.
+domains can be extended, e.g., internal sub-domains. `Data` can be pre-defined,
+e.g., to use your ID.
 
 #### URL Customization
 
-By default the `window.location.href` is used, but it can be overwritten with
+By default, the `window.location.href` is used, but it can be overwritten with
 the `url` parameter.
 
 ```js
@@ -297,25 +371,25 @@ Basic rules to detect a new session:
 title: sessionWindow detection process
 ---
 flowchart LR
-  sessionWindow(["sessionWindow<br>(<i>config</i>)"])
+  sessionWindow(["<b>sessionWindow</b><br>(<i>config</i>)"])
   isNewSession{{"check <b>isStart</b><br>parameter"}}
   getMarketing["Extract<br>Marketing"]
-  session([New<br>Session])
+  newSession([<b>new</b><br>session])
   isReload{{"is page<br><b>reload</b>?"}}
   hasMarketing{{"has <b>marketing</b><br>parameters?"}}
   referrer{{"check<br><b>referrer</b>"}}
-  false(["false"])
+  existingSession(["<b>existing</b><br>session"])
 
 sessionWindow --> isNewSession
 isNewSession -- true --> getMarketing
-getMarketing --> session
+getMarketing --> newSession
 isNewSession -- false --> isReload
 isReload -- false --> hasMarketing
 hasMarketing -- false --> referrer
 hasMarketing -- true --> getMarketing
-referrer -- external --> session
-referrer -- internal --> false
-isReload -- reload --> false
+referrer -- external --> newSession
+referrer -- internal --> existingSession
+isReload -- reload --> existingSession
 ```
 
 :::info
