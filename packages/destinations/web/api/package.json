@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-api",
   "description": "API web destination for walkerOS",
-  "version": "2.2.0-next.0",
+  "version": "2.2.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,11 +20,11 @@
     "test": "jest --colors --coverage"
   },
   "dependencies": {
-    "@elbwalker/walker.js": "2.1.0-next.0"
+    "@elbwalker/walker.js": "2.1.0"
   },
   "devDependencies": {
     "@elbwalker/tsup": "*",
-    "@elbwalker/types": "1.1.0-next.0"
+    "@elbwalker/types": "1.1.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
