@@ -2,7 +2,7 @@ import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { WebClient } from '..';
 
-describe('Commands on', () => {
+describe('Commands on consent', () => {
   let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
@@ -133,18 +133,10 @@ describe('Commands on', () => {
   });
 });
 
-describe('Commands run', () => {
-  const w = window;
-
+describe('Commands on run', () => {
   let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
-    // reset DOM with event listeners etc.
-    document.body = document.body.cloneNode() as HTMLElement;
-    jest.clearAllMocks();
-    jest.resetModules();
-    w.elbLayer = undefined as unknown as WebClient.ElbLayer;
-
     walkerjs = Walkerjs();
   });
 

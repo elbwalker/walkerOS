@@ -7,7 +7,7 @@ description: Ways to configure the walker.js
 import Link from '@docusaurus/Link';
 
 The walker is designed to support asynchronous communication through the
-elbLayer array. With the creation of the Elbwalker() the elbLayer items are
+elbLayer array. With the creation of the Walkerjs(), the elbLayer items are
 scanned. The walker will process each push. Use the elb helper function as a
 handy helper.
 
@@ -22,9 +22,8 @@ function elb() {
 }
 ```
 
-The communication works completely asynchronously. The `elb` functions job is to
-push events to the `elbLayer`. The `walker.js` will process the stack and each
-push.
+The communication works completely asynchronously. The `elb` function pushes
+events to the `elbLayer`. The `walker.js` will process the stack and each push.
 
 ```mermaid
 flowchart
@@ -61,9 +60,9 @@ And after the `run` command only `globals` and `tagging` can be updated.
 ## Run
 
 A `run` can be seen like a regular page view. It will start the walker.js and
-(re-)Initialize the handler, resets counters, clears queues, and updates the
-globals. By default a `page view` event is triggered, the tagging is checked for
-`load` actions and the `elbLayer` stack is processed.
+(re-)Initialize the handler, reset counters, clear queues, and update the
+globals. A `page view` event is triggered by default, the tagging is checked for
+`load` actions, and the `elbLayer` stack is processed.
 
 ```js
 elb('walker run');
@@ -72,8 +71,8 @@ elb('walker run');
 ## Initialization
 
 (Re-)initializes event listeners on one or multiple target elements. Can be used
-for e.g. asynchronously loaded content like newly added products in a category
-list or a wizard.
+e.g. asynchronously loaded content like newly added products in a category list
+or a wizard.
 
 ```js
 elb('walker init', element); // or an array of elements
@@ -81,7 +80,7 @@ elb('walker init', element); // or an array of elements
 
 ## Destinations
 
-To add a destination to the walker.js run the `walker destination` command.
+Run the `walker destination` command to add a destination to the walker.js.
 Individual destination configurations can be made by using the
 destination.config property.
 
@@ -98,9 +97,9 @@ elb('walker destination', destinationGTM, {
 ## Consent Management
 
 Those names can be defined arbitrarily, but common groups are functional,
-analytics, and marketing. Values are booleans and once a value is set to `true`
+analytics, and marketing. Values are booleans, and once a value is set to `true`
 it's treated as consent being granted. Previously pushed events during the run
-are shared now with destinations as well as new ones.
+are now shared with destinations and new ones.
 
 ```js
 elb('walker consent', { marketing: true, randomTool: true });
@@ -111,31 +110,71 @@ processing any events.
 
 ## On-Events
 
-The `on` command is used to add event listeners to the walker.js. If a type
-(like `consent`) changes, the rules-matching function(s) will be called with the
-parameters `instance`, `type`, and `options` (the current consent state).
+The `on` command adds event-listeners to the walker.js. They get called when the
+type like `run` or `consent` changes.
 
 ```js
-function marketingConsent(instance, options) {
-  if (options.marketing) elb('walker user', readFromStorage());
+elb('walker on', type, options);
+```
+
+`Options` depend on the `type` and can also be an array for multiple listeners
+at once.
+
+### Run
+
+With each `run`, the on-event will be called with `instance` as a parameter.
+
+```js
+elb('walker on', 'run', function (instance) {
+  console.log('run with', { instance });
+});
+```
+
+Every time the `run` command is called, the function will be executed:
+
+```js
+const walkerjs = Walkerjs({ run: true });
+// Output: run with { instance: { ... } }
+elb('walker run');
+// Output: run with { instance: { ... } }
+```
+
+### Consent
+
+Every time the `consent` changes, the rules-matching function(s) will be called
+with the parameters `instance`, and `consent`, which is the current consent
+state.
+
+```js
+function onConsent(instance, consent) {
+  console.log('consent with', { instance, consent });
+  if (consent.marketing) elb('walker user', readFromStorage());
 }
 
 //   command      type        rule       function
-elb('walker on', 'consent', { marketing: marketingConsent });
+elb('walker on', 'consent', { marketing: onConsent });
+```
+
+The `onConsent` function will only be called when the `marketing` consent
+changes:
+
+```js
+elb('walker consent', { functional: true }); // Won't trigger the onConsent function
+elb('walker consent', { marketing: true }); // Will trigger the onConsent function
 ```
 
 ## User
 
-Setting the user ids. There are three levels for user identification. Typically
-the user is a company's internal id. In contrast, the device id can be treated
-as a value stored in a cookie for a longer time period and the session can be
-used for temporary identification.
+Setting the user IDs. There are three levels for user identification. Typically,
+the user is a company's internal ID. In contrast, the device id can be treated
+as a value stored in a cookie for a longer period and the session can be used
+for temporary identification.
 
 ```js
 elb('walker user', { id: 'us3r', device: 'c00k13', session: 's3ss10n' });
 ```
 
-The new user ids are now added to each event. Make sure to only use hashed or
+The new user IDs have been added to each event. Make sure only to use hashed or
 anonymous ids.
 
 ```js
@@ -159,7 +198,7 @@ stitching</Link> in the guides.
 
 :::caution
 
-We highly recommend only using fully anonymized & arbitrary ids by default and
+We highly recommend only using fully anonymized & arbitrary IDs by default and
 checking your options with persistent user IDs with your data protection
 officer.
 
