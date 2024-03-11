@@ -1,5 +1,16 @@
 # @elbwalker/utils
 
+## 3.1.0
+
+### Minor Changes
+
+- d17e25a: sessionStorage
+  [#307](https://github.com/elbwalker/walkerOS/issues/307)
+- 451e1ae: Add a getSession function
+  [#324](https://github.com/elbwalker/walkerOS/issues/324)
+- 06a0599: on start command
+  [#325](https://github.com/elbwalker/walkerOS/issues/325)
+
 ## 3.1.0-next.0
 
 ### Minor Changes

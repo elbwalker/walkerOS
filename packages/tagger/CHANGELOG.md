@@ -1,5 +1,13 @@
 # @elbwalker/tagger
 
+## 2.0.2
+
+### Patch Changes
+
+- Updated dependencies [d17e25a]
+- Updated dependencies [06a0599]
+  - @elbwalker/types@1.1.0
+
 ## 2.0.2-next.0
 
 ### Patch Changes

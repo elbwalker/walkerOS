@@ -2,7 +2,7 @@ import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { WebClient } from '..';
 
-describe('Commands on', () => {
+describe('Commands on consent', () => {
   let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
@@ -110,20 +110,33 @@ describe('Commands on', () => {
     expect(mockFnB).toHaveBeenCalledTimes(1);
     expect(mockFnC).toHaveBeenCalledTimes(1);
   });
+
+  test('update', () => {
+    const mockFnA = jest.fn();
+    const mockFnB = jest.fn();
+
+    elb('walker on', 'consent', [{ a: mockFnA }, { b: mockFnB }]);
+
+    elb('walker consent', { a: true });
+    expect(mockFnA).toHaveBeenCalledTimes(1);
+    expect(mockFnB).toHaveBeenCalledTimes(0);
+
+    jest.clearAllMocks();
+    elb('walker consent', { b: true });
+    expect(mockFnA).toHaveBeenCalledTimes(0);
+    expect(mockFnB).toHaveBeenCalledTimes(1);
+
+    jest.clearAllMocks();
+    elb('walker consent', { c: true });
+    expect(mockFnA).toHaveBeenCalledTimes(0);
+    expect(mockFnB).toHaveBeenCalledTimes(0);
+  });
 });
 
-describe('Commands run', () => {
-  const w = window;
-
+describe('Commands on run', () => {
   let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
-    // reset DOM with event listeners etc.
-    document.body = document.body.cloneNode() as HTMLElement;
-    jest.clearAllMocks();
-    jest.resetModules();
-    w.elbLayer = undefined as unknown as WebClient.ElbLayer;
-
     walkerjs = Walkerjs();
   });
 

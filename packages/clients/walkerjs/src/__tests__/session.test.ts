@@ -25,7 +25,6 @@ describe('Session', () => {
       default: true,
     });
     expect(walkerjs.config.session).toEqual({
-      instance: expect.any(Object),
       storage: false,
     });
     expect(sessionStart).toHaveBeenCalledTimes(1);

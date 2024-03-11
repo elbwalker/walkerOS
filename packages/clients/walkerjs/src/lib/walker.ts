@@ -228,7 +228,7 @@ function getEntity(
 
   if (!type) return null; // It's not a (valid) entity element
 
-  const scopeElems = [element]; // Alle related elements
+  const scopeElems = [element]; // All related elements
   const entitySelector = `[${getElbAttributeName(
     prefix,
     type,
@@ -280,12 +280,14 @@ function getEntity(
 
   // Get nested entities
   const nested: WalkerOS.Entities = [];
-  element
-    .querySelectorAll(`[${getElbAttributeName(prefix)}]`)
-    .forEach((nestedEntityElement) => {
-      const nestedEntity = getEntity(prefix, nestedEntityElement);
-      if (nestedEntity) nested.push(nestedEntity);
-    });
+  scopeElems.forEach((elem) => {
+    elem
+      .querySelectorAll(`[${getElbAttributeName(prefix)}]`)
+      .forEach((nestedEntityElement) => {
+        const nestedEntity = getEntity(prefix, nestedEntityElement);
+        if (nestedEntity) nested.push(nestedEntity);
+      });
+  });
 
   return { type, data, context, nested };
 }

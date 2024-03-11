@@ -1,4 +1,4 @@
-import type { On } from '@elbwalker/types';
+import type { On, WalkerOS } from '@elbwalker/types';
 import type { WebClient } from '../';
 import { Const, tryCatch } from '@elbwalker/utils';
 
@@ -6,6 +6,7 @@ export function onApply(
   instance: WebClient.Instance,
   type: On.Types,
   options?: Array<On.Options>,
+  config?: WalkerOS.Consent,
 ) {
   const onConfig = options || instance.config.on[type];
 
@@ -13,7 +14,7 @@ export function onApply(
 
   switch (type) {
     case Const.Commands.Consent:
-      onConsent(instance, onConfig as Array<On.ConsentConfig>);
+      onConsent(instance, onConfig as Array<On.ConsentConfig>, config);
       break;
     case Const.Commands.Run:
       onRun(instance, onConfig as Array<On.RunConfig>);
@@ -26,8 +27,9 @@ export function onApply(
 function onConsent(
   instance: WebClient.Instance,
   onConfig: Array<On.ConsentConfig>,
+  currentConsent?: WalkerOS.Consent,
 ): void {
-  const consentState = instance.config.consent;
+  const consentState = currentConsent || instance.config.consent;
 
   onConfig.forEach((consentConfig) => {
     // Collect functions whose consent keys match the rule keys directly

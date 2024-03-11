@@ -26,7 +26,7 @@ export { elb };
 export function Walkerjs(
   customConfig: Partial<WebClient.Config> = {},
 ): WebClient.Instance {
-  const client = '2.1.0-next.0';
+  const client = '2.1.0';
   const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
   const staticGlobals = customConfig.globals || {};
   const config = getConfig(customConfig);
@@ -46,7 +46,7 @@ export function Walkerjs(
       instance;
 
   // Run on events for default consent states
-  onApply(instance, 'consent', config.on.consent);
+  onApply(instance, 'consent');
 
   if (customConfig.dataLayer) {
     // Add a dataLayer destination
@@ -335,6 +335,7 @@ export function Walkerjs(
     // Update instance on state
     (on[type] as typeof onType) = onType;
 
+    // Execute the on function directly
     onApply(instance, type, options);
   }
 
@@ -543,8 +544,7 @@ export function Walkerjs(
 
     // Session handling
     if (instance.config.session) {
-      instance.config.session.instance = instance;
-      sessionStart(instance.config.session);
+      sessionStart({ ...instance.config.session, instance });
     }
 
     tryCatch(load)(instance);
@@ -554,17 +554,21 @@ export function Walkerjs(
     const config = instance.config;
 
     let runQueue = false;
-    Object.entries(data).forEach(([consent, granted]) => {
+    const update: WalkerOS.Consent = {};
+    Object.entries(data).forEach(([name, granted]) => {
       const state = !!granted;
 
-      config.consent[consent] = state;
+      update[name] = state;
 
       // Only run queue if state was set to true
       runQueue = runQueue || state;
     });
 
+    // Update consent state
+    config.consent = assign(config.consent, update);
+
     // Run on consent events
-    onApply(instance, 'consent', config.on.consent);
+    onApply(instance, 'consent', undefined, update);
 
     if (runQueue) {
       Object.values(config.destinations).forEach((destination) => {
