@@ -7,20 +7,9 @@ description: Ways to configure the walker.js
 import Link from '@docusaurus/Link';
 
 The walker is designed to support asynchronous communication through the
-elbLayer array. With the creation of the Walkerjs(), the elbLayer items are
-scanned. The walker will process each push. Use the elb helper function as a
-handy helper.
-
-```js
-// Import
-import { elb } from '@elbwalker/walker.js';
-window.elb = elb;
-
-// Or define the elb function manually in the browser as an alternative
-function elb() {
-  (window.elbLayer = window.elbLayer || []).push(arguments);
-}
-```
+elbLayer array. With the creation of the `Walkerjs`, the `elbLayer` items are
+scanned. The walker will process each push. Use the `elb` function as a handy
+helper.
 
 The communication works completely asynchronously. The `elb` function pushes
 events to the `elbLayer`. The `walker.js` will process the stack and each push.
@@ -33,6 +22,19 @@ walker["walker.js"]
 
 elb --> elbLayer
 walker <--> elbLayer
+```
+
+### elb
+
+```js
+// Import
+import { elb } from '@elbwalker/walker.js';
+window.elb = elb;
+
+// Or define the elb function manually in the browser as an alternative
+function elb() {
+  (window.elbLayer = window.elbLayer || []).push(arguments);
+}
 ```
 
 ## Configuration
