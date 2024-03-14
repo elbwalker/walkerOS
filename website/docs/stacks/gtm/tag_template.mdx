@@ -223,3 +223,55 @@ This will return a simple config-object.
 
 ### On Events
 
+On events are used to listen to specific **Trigger** to execute **Code**. Use a
+**User-Defined Variable** with the **Custom JavaScript** type to create a
+**Code** function.
+
+![walkerOS GTM Tag Template on events](on-events.png)
+
+Read more how to use
+the&nbsp;<Link to="/docs/clients/walkerjs/commands#on-events">on events</Link>
+in general.
+
+<Tabs>
+  <TabItem value="consent" label="On consent" default>
+    Get's called when a `walker consent` command changes a matching state.
+
+    The code has to be an `object` with the **consent state as key** and the **function as value**.
+
+```js
+function() {
+  return {
+    functional: console.log,
+    marketing: function (instance, consent) {
+      console.log('Marketing', consent);
+    }
+  }
+}
+```
+
+Only if `functional` or `marketing` stages change, the corresponding function
+will be called.
+
+```js
+elb('walker consent', { foo: true }); // Won't trigger any function
+elb('walker consent', { functional: true, marketing: false }); // Calls both functions
+```
+
+Typically, a&nbsp;<Link to="/docs/guides/consent_management/">Consent Management
+Platform</Link> will call the `walker consent` command with the consent state.
+
+  </TabItem>
+  <TabItem value="run" label="On run" default>
+    Get's called with each `walker run` command:
+
+```js
+function() {
+  return function (instance) {
+    console.log('On run');
+  }
+}
+```
+
+  </TabItem>
+</Tabs>
