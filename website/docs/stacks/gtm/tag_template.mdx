@@ -2,9 +2,17 @@
 title: GTM Tag Template
 ---
 
+import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import { Button } from '/src/components/atoms/buttons';
+import { PackageButton } from '/src/components/docs/package-link';
+
+The walkerOS tag template is part of the GTM stack. It allows an easy
+integration of walker.js on a website. Once set up, a single `walkerOS` tag can
+be used to load walker.js on all pages of a website via GTM. Besides it's own
+[configuration](#options), [destinations](#destination) and
+[on-events](#on-events) can be registered.
 
 ### Setup
 
@@ -45,7 +53,7 @@ To install the walkerOS tag template, follow these steps:
 
 ### Installation
 
-There are multiple ways to load walker.js
+There are multiple ways to load walker.js on a site.
 
 #### Load walker.js
 
@@ -79,20 +87,139 @@ There are multiple ways to load walker.js
   </TabItem>
 </Tabs>
 
-#### CDN
+#### Mode
 
-#### Self hosted
+There are three modes to start walker.js:
 
-#### Window
+1. **Auto run**: starts automatically when the tag fires.
+2. **Require consent**: waits until the consent state is granted before calling
+   `walker run`. This uses the `walker on` command internally.
+3. **Manual**: won't do anything - it's up to you.
 
-#### Permissions
+#### Names
+
+To prevent eventual conflicts with other scripts or existing variables, the
+default names can be changed. Make sure to update the templates Permissions to
+enable read/write access to the new names.
 
 ### Options
 
+#### Tagging version
+
+Specifying a tagging `version` helps managing and debugging a setup by knowing
+which version was used during measurement. After changing the setup, increase
+the version number.
+
+### User ID
+
+This will set the `user.id` value based on a `variable`. Both device and session
+IDs will be set in the Session section or via a custom on event.
+
+### Globals
+
+Add static `globals` that will be added to every single event.
+
+### Logging
+
+Enabling the `preview` adds a destination that simply logs all events to the
+console.
+
 ### Session
 
-### Destination
+Session detection, user identification, consent management and race conditions
+are closely connected. Learn more about how
+to&nbsp;<Link to="/docs/utils/session">detect a session</Link>.
+
+Enabling session detection will use the **sessionWindow** Util as a cookie-less
+version to eventually trigger a `session start` event.
+
+Additionally enabling the **Storage** uses the **sessionStorage** Util to
+persist data and enhance session information and user identification. As this
+might require consent it's possible to add a **Required consent for storage
+access**.
+
+This uses `elbDeviceId` and `elbSessionId` in the localStorage. There is a
+virtual rule to limit the age to 30 days for the device ID and 30 minutes for a
+session ID, which updates with each new run.
+
+### Destinations
+
+Destinations are used to send events to other systems. Using **dataLayer** will
+automatically send all events to the GTM `dataLayer` with `walkerjs: true` to
+filter.
+
+To **add a destination** the **Code** is required, while **Config** is optional.
+
+![walkerOS GTM Tag Template destinations](destinations-overview.png)
+
+<Tabs>
+  <TabItem value="add" label="Add destination" default>
+    Both, **Code** and **Config** are **User-Defined Variables**. A destinations code can be some **custom** JavaScript or a **pre-build** version.
+    The **config** is a simple object that can be used to configure the destination.
+  </TabItem>
+  <TabItem value="code-custom" label="Code (Custom)">
+    Create a new or load a **User-Defined Variable** with the **Custom JavaScript** type and add the following code:
+
+```js
+function(){
+  return {
+    type: 'my-destination',
+    init: function(config) {
+      console.log('Setting up my destination', config);
+    },
+    push: function(event, config, mapping) {
+      console.log('My destination', event, config, mapping);
+    }
+  }
+}
+```
+
+Write your own code instead of the `console.log` statements.
+
+  </TabItem>
+  <TabItem value="code-pre-build" label="Code (Pre-build)">
+Available&nbsp;<Link to="/docs/destinations/web/">web destinations</Link> have a special ES5-build that can be used in the GTM.
+
+1. Go to the destinations page and click
+   the&nbsp;<PackageButton icon="mdi:file-code-outline" to='#' text="ES5" style="mr-0 mb-0"/>
+   button at the top to get the pre-build code.
+2. Copy the whole code and create a new **User-Defined Variable** with the
+   **Custom JavaScript** type.
+3. Paste the code in within the following code block:
+
+```js
+function(){
+  // Paste the pre-build code here
+
+  return Destination.default;
+}
+```
+
+![walkerOS GTM Tag Template destination code](destinations-code.png)
+
+The `return Destination.default;` is case-sensitive and must be added at the
+end.
+
+  </TabItem>
+  <TabItem value="config" label="Config">
+  Create a new or load a **User-Defined Variable** with the **Custom JavaScript** type and add the following code:
+```js
+function(){
+  return {
+    // Common config like
+    // loadScript: true,
+    custom: {
+      // Destination specific config like
+      // measurementId: 'G-XXXXXXXXXX'
+    }
+  }
+}
+```
+
+This will return a simple config-object.
+
+  </TabItem>
+</Tabs>
 
 ### On Events
 
-20k character limit
