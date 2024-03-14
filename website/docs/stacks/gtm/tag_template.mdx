@@ -8,16 +8,16 @@ import TabItem from '@theme/TabItem';
 import { Button } from '/src/components/atoms/buttons';
 import { PackageButton } from '/src/components/docs/package-link';
 
-The walkerOS tag template is part of the GTM stack. It allows an easy
-integration of walker.js on a website. Once set up, a single `walkerOS` tag can
-be used to load walker.js on all pages of a website via GTM. Besides it's own
+The walkerOS tag template is part of the GTM stack. It allows easy integration
+of walker.js into a website. Once set up, a single `walkerOS` tag can load
+walker.js on all website pages via GTM. Besides it's own
 [configuration](#options), [destinations](#destination) and
 [on-events](#on-events) can be registered.
 
 ### Setup
 
 The walkerOS tag template creates a new tag type in Google Tag Manager (GTM)
-that allows you to easily load walker.js on your website. Download and import it
+that allows you to load walker.js on your website easily. Download and import it
 once:
 
 <div class="mx-auto mt-5 max-w-md sm:flex sm:justify-center md:mt-8">
@@ -35,7 +35,7 @@ To install the walkerOS tag template, follow these steps:
 
 <Tabs>
   <TabItem value="step1" label="Step 1" default>
-    In Google Tag Manager, navigate to **Templates** in the left and click on
+    In Google Tag Manager, navigate to **Templates** on the left and click on
     **New** in the **Tag Template** section. ![walkerOS GTM Tag Template setup
     step 1](setup-1.png)
   </TabItem>
@@ -60,26 +60,26 @@ There are multiple ways to load walker.js on a site.
 <Tabs>
   <TabItem value="cdn" label="CDN" default>
     This option loads the walker.js script from an external source (jsDelivr).
-    It's good for quick testing, but refers to an external domain. A version can
+    It's good for quick testing but refers to an external domain. A version can
     be specified. It's recommended to use a specific version starting from
     `2.1.0` ![walkerOS GTM Tag Template load CDN](load-cdn.png)
   </TabItem>
   <TabItem value="self-hosted" label="Self-hosted">
     Save and upload the
     [index.browser.js](https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@latest/dist/index.browser.js)
-    to your own server for first-party context and minimize requests to external
+    to your server for first-party context and minimize requests to external
     domains.
      ![walkerOS GTM Tag Template load Self-hosted](load-self_hosted.png)
 
-     The GTM is very restrictive when it comes to loading third-party scripts. To load walker.js from a custom domain update the **Tag Template Permissions** and add `YOUR_DOMAIN` to the **Injects scripts** section.
+     The GTM is very restrictive about loading third-party scripts. To load walker.js from a custom domain, update the **Tag Template Permissions** and add `YOUR_DOMAIN` to the **Injects scripts** section.
 
      ![walkerOS GTM Tag Template load Self-hosted Permissions](load-self_hosted-permissions.png)
 
   </TabItem>
   <TabItem value="window" label="Window (recommended)">
-    A more advanced but **recommended approach** is to fully integrate walker.js without the need to load another file. This reduces the total file-size and the requests for a better performance. ![walkerOS
+    A more advanced but **recommended approach** is to integrate walker.js without fully loading another file. This reduces the total file size and the number of requests for better performance. ![walkerOS
     GTM Tag Template load Window](load-window.png)
-    The Tag template uses the in the browsers window available factory to create an instance.
+    The Tag template creates an instance using the available factory in the browser window.
     ```js
     import { Walkerjs } from '@elbwalker/walker.js';
     window.Walkerjs = Walkerjs; // Make it globally available
@@ -98,22 +98,22 @@ There are three modes to start walker.js:
 
 #### Names
 
-To prevent eventual conflicts with other scripts or existing variables, the
-default names can be changed. Make sure to update the templates Permissions to
-enable read/write access to the new names.
+The default names can be changed to prevent eventual conflicts with other
+scripts or existing variables. Ensure the template's **Permissions** are updated
+to enable read/write access to the new names.
 
 ### Options
 
 #### Tagging version
 
-Specifying a tagging `version` helps managing and debugging a setup by knowing
-which version was used during measurement. After changing the setup, increase
-the version number.
+Specifying a tagging `version` helps manage and debug a setup by knowing the
+version used during measurement. After changing the setup, increase the version
+number.
 
 ### User ID
 
 This will set the `user.id` value based on a `variable`. Both device and session
-IDs will be set in the Session section or via a custom on event.
+IDs will be set in the Session section or via a custom on-event.
 
 ### Globals
 
@@ -121,21 +121,20 @@ Add static `globals` that will be added to every single event.
 
 ### Logging
 
-Enabling the `preview` adds a destination that simply logs all events to the
-console.
+Enabling the `preview` adds a destination that logs all events to the console.
 
 ### Session
 
-Session detection, user identification, consent management and race conditions
+Session detection, user identification, consent management, and race conditions
 are closely connected. Learn more about how
 to&nbsp;<Link to="/docs/utils/session">detect a session</Link>.
 
 Enabling session detection will use the **sessionWindow** Util as a cookie-less
 version to eventually trigger a `session start` event.
 
-Additionally enabling the **Storage** uses the **sessionStorage** Util to
+Additionally, enabling the **Storage** uses the **sessionStorage** Util to
 persist data and enhance session information and user identification. As this
-might require consent it's possible to add a **Required consent for storage
+might require consent, it's possible to add a **Required consent for storage
 access**.
 
 This uses `elbDeviceId` and `elbSessionId` in the localStorage. There is a
@@ -148,13 +147,14 @@ Destinations are used to send events to other systems. Using **dataLayer** will
 automatically send all events to the GTM `dataLayer` with `walkerjs: true` to
 filter.
 
-To **add a destination** the **Code** is required, while **Config** is optional.
+To **add a destination**, the **Code** is required, while **Config** is
+optional.
 
 ![walkerOS GTM Tag Template destinations](destinations-overview.png)
 
 <Tabs>
   <TabItem value="add" label="Add destination" default>
-    Both, **Code** and **Config** are **User-Defined Variables**. A destinations code can be some **custom** JavaScript or a **pre-build** version.
+    Both **Code** and **Config** are **User-Defined Variables**. A destination code can be some **custom** JavaScript or a **pre-build** version.
     The **config** is a simple object that can be used to configure the destination.
   </TabItem>
   <TabItem value="code-custom" label="Code (Custom)">
@@ -174,7 +174,7 @@ function(){
 }
 ```
 
-Write your own code instead of the `console.log` statements.
+Write your code instead of the `console.log` statements.
 
   </TabItem>
   <TabItem value="code-pre-build" label="Code (Pre-build)">
@@ -185,7 +185,7 @@ Available&nbsp;<Link to="/docs/destinations/web/">web destinations</Link> have a
    button at the top to get the pre-build code.
 2. Copy the whole code and create a new **User-Defined Variable** with the
    **Custom JavaScript** type.
-3. Paste the code in within the following code block:
+3. Paste the code within the following code block:
 
 ```js
 function(){
@@ -216,20 +216,20 @@ function(){
 }
 ```
 
-This will return a simple config-object.
+This will return a simple config object.
 
   </TabItem>
 </Tabs>
 
 ### On Events
 
-On events are used to listen to specific **Trigger** to execute **Code**. Use a
+On-events, listen to specific **Trigger** to execute **Code**. Use a
 **User-Defined Variable** with the **Custom JavaScript** type to create a
 **Code** function.
 
 ![walkerOS GTM Tag Template on events](on-events.png)
 
-Read more how to use
+Read more about how to use
 the&nbsp;<Link to="/docs/clients/walkerjs/commands#on-events">on events</Link>
 in general.
 
@@ -237,7 +237,7 @@ in general.
   <TabItem value="consent" label="On consent" default>
     Get's called when a `walker consent` command changes a matching state.
 
-    The code has to be an `object` with the **consent state as key** and the **function as value**.
+    The code has to be an `object` with the **consent state as the key** and the **function as the value**.
 
 ```js
 function() {
