@@ -1,4 +1,4 @@
-import { onLog } from '@elbwalker/utils';
+import { onLog, throwError } from '@elbwalker/utils';
 import { FirehoseClient } from '@aws-sdk/client-firehose';
 import type { FirehoseClientConfig } from '@aws-sdk/client-firehose';
 import type { Config, CustomConfig, PartialConfig } from './types';
@@ -9,8 +9,10 @@ export function log(message: string, verbose?: boolean) {
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {
   const custom = partialConfig.custom || ({} as CustomConfig);
-  const { firehose } = custom;
+  const { firehose, streamName } = custom;
   let { client } = custom;
+
+  if (!streamName) throwError('Config custom projectId missing');
 
   const options: FirehoseClientConfig = firehose || {};
 
@@ -19,6 +21,7 @@ export function getConfig(partialConfig: PartialConfig = {}): Config {
   const customConfig: CustomConfig = {
     ...custom,
     client,
+    streamName,
   };
 
   // Log Handler

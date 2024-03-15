@@ -27,6 +27,7 @@ export type PushEvents = NodeDestination.PushEvents<CustomEventConfig>;
 
 export interface CustomConfig {
   client: FirehoseClient;
+  streamName: string;
   firehose?: FirehoseClientConfig;
 }
 
