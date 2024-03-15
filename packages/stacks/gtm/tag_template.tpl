@@ -555,7 +555,6 @@ function installation() {
     : "Walkerjs.default";
 
   // Let's go
-  log("callInWindow", factory, config);
   callInWindow(factory, config);
 
   data.gtmOnSuccess();
@@ -601,7 +600,7 @@ if (data.walkerjsOptionsLog) {
 
 // Load
 if (data.walkerjsLoad) {
-  var url = data.walkerjsLoadURL; // Load self-hoster
+  var url = data.walkerjsLoadURL; // Load self-hosted
 
   // Load from CDN
   if (data.walkerjsLoadCDN) {
@@ -611,10 +610,9 @@ if (data.walkerjsLoad) {
       "/dist/index.browser.js";
   }
 
-  if (url){
-    log("url", url);
+  if (url) {
     injectScript(url, installation, data.gtmOnFailure, "walkerjs");
-  } else {  
+  } else {
     installation();
   }
 } else {
@@ -919,11 +917,12 @@ scenarios:
 - name: Load CDN
   code: |
     runCode(assign(
+      data,
       {
         walkerjsLoad: true,
         walkerjsLoadType: 'CDN',
         walkerjsLoadCDN: 'version',
-      }, data)
+      })
     );
 
     assertApi('injectScript').wasCalledWith("https://cdn.jsdelivr.net/npm/@elbwalker/walker.js@version/dist/index.browser.js", success, failure, 'walkerjs');
@@ -938,6 +937,7 @@ scenarios:
 - name: Load self-hosted
   code: |
     runCode(assign(
+      data,
       {
         walkerjsLoad: true,
         walkerjsLoadType: 'hosted',
@@ -954,13 +954,53 @@ scenarios:
     });
 
     assertApi("gtmOnSuccess").wasCalled();
+- name: Mode Auto run
+  code: |
+    runCode(assign(
+      dataWalkerjsLoad,
+      { walkerjsMode: 'run' }
+    ));
+
+    assertApi("callInWindow").wasCalledWith("Walkerjs", {
+      instance: data.walkerjsWindowInstance,
+      elb: data.walkerjsWindowElb,
+      session: false,
+      run: true
+    });
+
+    assertApi("gtmOnSuccess").wasCalled();
+- name: Mode Require consent
+  code: |
+    runCode(assign(
+      dataWalkerjsLoad,
+      { walkerjsMode: 'consent' }
+    ));
+
+    assertApi("callInWindow").wasCalledWith("Walkerjs", {
+      instance: data.walkerjsWindowInstance,
+      elb: data.walkerjsWindowElb,
+      session: false,
+    });
+
+    assertApi("gtmOnSuccess").wasCalled();
 setup: |
-  let log = require('logToConsole');
+  let log = require("logToConsole");
   const copyFromWindow = require("copyFromWindow");
   const setInWindow = require("setInWindow");
-  // A little bit hacky but helpful
-  const mockElb = require("makeNumber"); // mock elb
-  const mockWalkerjs = require("getTimestamp"); // mock Walkerjs
+
+  // Required fields with default values
+  data.walkerjsWindowElbLayer = "elbLayer";
+  data.walkerjsWindowInstance = "walkerjs";
+  data.walkerjsWindowElb = "elb";
+
+  const dataWalkerjsLoad = assign(
+    {
+      walkerjsLoad: true,
+      walkerjsLoadType: "window",
+      walkerjsLoadWindow: "Walkerjs",
+    },
+    data
+  );
 
   // Miss you, Object.assign
   function assign(o1, o2) {
@@ -972,33 +1012,23 @@ setup: |
     return o1;
   }
 
+  // Mocks
   let success, failure;
-  mock('injectScript', (url, onsuccess, onfailure)   => {
+  mock("injectScript", (url, onsuccess, onfailure) => {
     success = onsuccess;
     failure = onfailure;
     onsuccess();
   });
 
-  // Required fields with default values
-  data.walkerjsWindowElbLayer = "elbLayer";
-  data.walkerjsWindowInstance = "walkerjs";
-  data.walkerjsWindowElb = "elb";
-
-  // walker.js installation via script
-  const mockWalkerjsFactory = {
-    // misuse functions to use assertApi
-    elb: mockElb, // window.elb
-    default: mockWalkerjs,
-  };
-  const dataWalkerjsLoad = assign({
-    walkerjsLoad: true,
-    walkerjsLoadType: 'window',
-    walkerjsLoadWindow: 'Walkerjs'
-  }, data);
+  const elbCalls = [];
+  function mockElb(a, b, c) {
+    elbCalls.push(a, b, c);
+  }
+  setInWindow(data.walkerjsWindowElb, mockElb);
 
 
 ___NOTES___
 
-Created on 3/14/2024, 8:09:38 PM
+Created on 3/15/2024, 3:08:28 PM
 
 
