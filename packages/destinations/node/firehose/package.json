@@ -1,0 +1,53 @@
+{
+  "name": "@elbwalker/destination-node-firehose",
+  "description": "AWS Data Firehose node destination for walkerOS",
+  "version": "0.0.7",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "npm run dev:build & npm run dev:test",
+    "dev:build": "tsup --watch --config tsup.dev.config.ts",
+    "dev:test": "jest --watchAll --colors",
+    "lint": "eslint \"**/*.ts*\"",
+    "test": "jest --colors --coverage"
+  },
+  "dependencies": {
+    "@elbwalker/client-node": "1.0.1"
+  },
+  "devDependencies": {
+    "@elbwalker/types": "1.1.0"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/destinations/node/firehose"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "keywords": [
+    "elb",
+    "elbwalker",
+    "walker",
+    "walkerOS destination",
+    "analytics",
+    "tracking",
+    "AWS",
+    "firehose"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}
