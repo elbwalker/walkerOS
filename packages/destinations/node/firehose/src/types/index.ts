@@ -1,5 +1,9 @@
 import type { NodeDestination } from '@elbwalker/client-node';
 import type { Handler } from '@elbwalker/types';
+import type {
+  FirehoseClient,
+  FirehoseClientConfig,
+} from '@aws-sdk/client-firehose';
 
 export interface Destination
   extends NodeDestination.Destination<CustomConfig, CustomEventConfig> {
@@ -21,7 +25,10 @@ export type PartialConfig = NodeDestination.Config<
 
 export type PushEvents = NodeDestination.PushEvents<CustomEventConfig>;
 
-export interface CustomConfig {}
+export interface CustomConfig {
+  client: FirehoseClient;
+  firehose?: FirehoseClientConfig;
+}
 
 export interface CustomEventConfig {
   // Custom destination event mapping properties
