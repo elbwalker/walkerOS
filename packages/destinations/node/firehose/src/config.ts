@@ -10,17 +10,20 @@ export function log(message: string, verbose?: boolean) {
 export function getConfig(partialConfig: PartialConfig = {}): Config {
   const custom = partialConfig.custom || ({} as CustomConfig);
   const { firehose, streamName } = custom;
-  let { client } = custom;
+  let { client, region } = custom;
 
-  if (!streamName) throwError('Config custom projectId missing');
+  if (!streamName) throwError('Config custom streamName missing');
+  region = region || 'eu-central-1';
 
   const options: FirehoseClientConfig = firehose || {};
+  if (!options.region) options.region = region;
 
   client = client || new FirehoseClient(options);
 
   const customConfig: CustomConfig = {
     ...custom,
     client,
+    region,
     streamName,
   };
 

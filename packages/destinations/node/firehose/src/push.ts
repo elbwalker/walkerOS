@@ -2,6 +2,7 @@ import { PutRecordCommand } from '@aws-sdk/client-firehose';
 import type { Config, PushEvents } from './types';
 
 export const push = async function (events: PushEvents, config: Config) {
+  // TODO forEach events
   const { client, streamName } = config.custom;
   const record = {
     DeliveryStreamName: streamName,
