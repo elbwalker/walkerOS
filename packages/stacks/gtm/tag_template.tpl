@@ -32,7 +32,7 @@ ___TEMPLATE_PARAMETERS___
   {
     "type": "LABEL",
     "name": "intro",
-    "displayName": "This is the \u003cb\u003ewalkerOS Tag template\u003c/b\u003e (v1) for installing and configuring walker.js the walker.js on a website. Learn more in the \u003ca href\u003d\"https://www.elbwalker.com/docs/stacks/gtm/tag_template\"\u003edocumentation at elbwalker.com\u003c/a\u003e."
+    "displayName": "This is the \u003cb\u003ewalkerOS Tag template\u003c/b\u003e (v1) for installing and configuring walker.js on a website. Learn more in the \u003ca href\u003d\"https://www.elbwalker.com/docs/stacks/gtm/tag_template\"\u003edocumentation at elbwalker.com\u003c/a\u003e."
   },
   {
     "type": "GROUP",
