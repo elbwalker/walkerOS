@@ -10,7 +10,7 @@ import type {
 // Types
 export * as DestinationGoogleGA4 from './types';
 
-const destinationGoogleGA4: Destination = {
+export const destinationGoogleGA4: Destination = {
   type: 'google-ga4',
 
   config: { custom: { measurementId: '' } },

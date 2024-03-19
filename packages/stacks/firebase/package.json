@@ -24,9 +24,6 @@
     "@elbwalker/utils": "3.1.0",
     "firebase-functions": "^4.4.1"
   },
-  "devDependencies": {
-    "@elbwalker/types": "1.1.0"
-  },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/stacks/firebase"
