@@ -237,6 +237,18 @@ describe('Walker', () => {
 
     expect(getEvents(getElem('link-child'), Trigger.Click)).toMatchObject([
       {
+        entity: 'n',
+        action: 'click',
+        data: { k: 'v' },
+        trigger: 'click',
+        context: {
+          child: ['link', 0],
+          parent: ['link', 1],
+          entity: ['link', 2],
+        },
+        nested: [],
+      },
+      {
         entity: 'l',
         data,
         context: {

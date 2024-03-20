@@ -235,6 +235,8 @@ function getEntity(
   )}],[${getElbAttributeName(prefix, '')}]`; // [data-elb-entity,data-elb-]
   const linkName = getElbAttributeName(prefix, Const.Commands.Link, false); // data-elblink
 
+  let data: WalkerOS.Properties = {};
+  const nested: WalkerOS.Entities = [];
   const [parentProps, context] = getThisAndParentProperties(
     origin || element,
     entitySelector,
@@ -251,8 +253,11 @@ function getEntity(
       document
         .querySelectorAll(`[${linkName}="${linkId}:child"]`)
         .forEach((wormhole) => {
-          // Skip original elblink element and add only new ones
-          if (wormhole !== link) scopeElems.push(wormhole);
+          scopeElems.push(wormhole);
+
+          // A linked child can also be an entity
+          const nestedEntity = getEntity(prefix, wormhole);
+          if (nestedEntity) nested.push(nestedEntity);
         });
   });
 
@@ -267,7 +272,6 @@ function getEntity(
   });
 
   // Get properties
-  let data: WalkerOS.Properties = {};
   let genericProps: WalkerOS.Properties = {};
   propertyElems.forEach((child) => {
     // Eventually override closer properties
@@ -279,7 +283,6 @@ function getEntity(
   data = assign(parentProps, assign(genericProps, data));
 
   // Get nested entities
-  const nested: WalkerOS.Entities = [];
   scopeElems.forEach((elem) => {
     elem
       .querySelectorAll(`[${getElbAttributeName(prefix)}]`)
