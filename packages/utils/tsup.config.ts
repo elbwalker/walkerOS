@@ -1,11 +1,4 @@
-import { Options, defineConfig } from 'tsup';
-
-const config: Options = {
-  // clean: true, // Not yet supported for multiple entry points
-  entry: ['src/index.ts'],
-  minify: true, // Don't use terser to minify to preserve Const
-  splitting: false,
-};
+import { config, defineConfig } from '@elbwalker/tsup';
 
 const globalName = 'Utils';
 

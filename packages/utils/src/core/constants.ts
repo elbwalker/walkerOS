@@ -1,7 +1,25 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { StorageType } from '..';
 
-const Commands: { [key: string]: WalkerOS.Commands } = {
+export type CommandTypes =
+  | 'Action'
+  | 'Config'
+  | 'Consent'
+  | 'Context'
+  | 'Destination'
+  | 'Elb'
+  | 'Globals'
+  | 'Hook'
+  | 'Init'
+  | 'Link'
+  | 'On'
+  | 'Prefix'
+  | 'Run'
+  | 'User'
+  | 'Walker';
+
+// Define Commands with keys as CommandTypes
+export const Commands: Record<CommandTypes, WalkerOS.Commands> = {
   Action: 'action',
   Config: 'config',
   Consent: 'consent',
