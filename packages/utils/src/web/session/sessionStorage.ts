@@ -27,6 +27,7 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
   const sessionKey = config.sessionKey || 'elbSessionId';
   const sessionStorage = config.sessionStorage || 'local';
   const sessionAge = config.sessionAge || 30; // Session age in minutes
+  const windowSession = sessionWindow(config); // Status based on window only
   let isStart = !!config.isStart;
 
   // Check for an existing session
@@ -51,6 +52,12 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
 
       // By default it's not a new session anymore
       existingSession.isNew = false;
+
+      // A new marketing entry
+      if (windowSession.marketing) {
+        Object.assign(existingSession, windowSession); // Overwrite existing session with marketing data
+        isStart = true; // This is a session start
+      }
 
       // Check if session is still active
       if (isStart || existingSession.updated + length * 60 * 1000 < now) {
@@ -95,7 +102,7 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
   // Eventually update session with id, referrer and marketing parameters
   session = Object.assign(
     session, // Default session values
-    sessionWindow(config), // Basic session data
+    windowSession, // Basic session data based on window
     existingSession, // (Updated) existing session
     { device }, // Device Id
     { isStart: config.isStart, storage: true }, // Status of the session

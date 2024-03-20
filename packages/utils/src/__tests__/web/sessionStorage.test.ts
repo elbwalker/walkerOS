@@ -211,4 +211,50 @@ describe('SessionStorage', () => {
       }),
     );
   });
+
+  test('Existing active session with new UTM entry', () => {
+    const start = Date.now();
+    const session = {
+      isStart: false,
+      storage: true,
+      id: 'sessionId',
+      start,
+      referrer: 'org',
+      updated: start,
+      marketing: true,
+      campaign: 'old',
+      isNew: true,
+      count: 1,
+      runs: 5,
+    };
+
+    mockStorageRead.mockImplementation((config) => {
+      return { ...config.data, mock: 'window' };
+    });
+
+    mockStorageRead
+      .mockReturnValue(JSON.stringify(session))
+      .mockReturnValueOnce(device);
+    jest.advanceTimersByTime(1000);
+
+    const newSession = sessionStorage({
+      url: 'https://www.elbwalker.com/?utm_campaign=new',
+    });
+
+    expect(newSession.id).not.toBe(session.id); // Expect a new session id
+    expect(newSession).toStrictEqual({
+      storage: true,
+      device,
+      start: start + 1000,
+      updated: start + 1000,
+      isStart: true,
+      marketing: true,
+      referrer: '',
+      campaign: 'new',
+      id: expect.any(String),
+      isNew: false,
+      count: 2,
+      runs: 1,
+    });
+  });
 });
