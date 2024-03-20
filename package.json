@@ -26,8 +26,8 @@
     "@elbwalker/tsup": "*",
     "@elbwalker/types": "*",
     "eslint-config-custom": "*",
-    "turbo": "^1.11.3",
-    "typescript": "^5.3.3"
+    "turbo": "^1.12.5",
+    "typescript": "^5.4.2"
   },
   "packageManager": "npm@9.6.7",
   "browserslist": [
