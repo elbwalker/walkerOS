@@ -7,4 +7,4 @@
 '@elbwalker/utils': patch
 ---
 
-[devDeps to deps #340](https://github.com/elbwalker/walkerOS/issues/340)
+devDeps to deps [#340](https://github.com/elbwalker/walkerOS/issues/340)
