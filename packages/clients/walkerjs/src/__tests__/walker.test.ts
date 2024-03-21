@@ -126,13 +126,36 @@ describe('Walker', () => {
     expect(getEvents(getElem('just_entity'), Trigger.Click)).toEqual([]);
   });
 
-  test('Get nested child data properties with higher priority', () => {
-    expect(getEvents(getElem('property_priority'), Trigger.Click)).toEqual([
-      expect.objectContaining({
-        entity: 'property',
-        action: 'priority',
-        data: { parent: 'property', prefer: 'deeper' },
-      }),
+  test('Data hierarchy', () => {
+    const entity = 'e';
+    const action = 'click';
+    expect(getEvents(getElem('data_family'), Trigger.Click)).toMatchObject([
+      {
+        entity,
+        action,
+        data: { key: 'baz', scope: 'high' },
+      },
+    ]);
+    expect(getEvents(getElem('data_parent'), Trigger.Click)).toMatchObject([
+      {
+        entity,
+        action,
+        data: { key: 'foo', scope: 'high' },
+      },
+    ]);
+    expect(getEvents(getElem('data_child'), Trigger.Click)).toMatchObject([
+      {
+        entity,
+        action,
+        data: { key: 'bar', scope: 'low' },
+      },
+    ]);
+    expect(getEvents(getElem('data_sibling'), Trigger.Click)).toMatchObject([
+      {
+        entity,
+        action,
+        data: { key: 'foo', scope: 'high' },
+      },
     ]);
   });
 
