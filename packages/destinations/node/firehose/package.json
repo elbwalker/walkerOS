@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-node-firehose",
   "description": "AWS Data Firehose node destination for walkerOS",
-  "version": "0.0.7",
+  "version": "0.0.6",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
