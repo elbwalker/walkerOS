@@ -63,15 +63,18 @@
 
 <div id="just_entity" data-elb="entity"></div>
 
-<div data-elb-property="not_in:scope"></div>
-<div data-elb-property="parent:property">
-  <div
-    id="property_priority"
-    data-elb="property"
-    data-elb-property="prefer:higher"
-    data-elbaction="click:priority"
-  >
-    <div data-elb-property="prefer:deeper"></div>
+<div data-elb-e="not_in:scope"></div>
+<div data-elb-e="scope:high">
+  <div data-elb="e" id="data_family" data-elbaction="click">
+    <div id="data_parent" data-elb-e="key:foo" data-elbaction="click">
+      <p
+        id="data_child"
+        data-elb-e="key:bar;scope:low"
+        data-elbaction="click"
+      ></p>
+      <b id="data_sibling" data-elbaction="click"></b>
+    </div>
+    <b data-elb-e="key:baz"></b>
   </div>
 </div>
 
@@ -143,7 +146,12 @@
     </div>
   </div>
   <div data-elblink="wh:child"><div data-elb-l="l1:1"></div></div>
-  <div data-elblink="wh:child" data-elb="n" data-elb-l="l2:2" data-elbcontext="child:link">
+  <div
+    data-elblink="wh:child"
+    data-elb="n"
+    data-elb-l="l2:2"
+    data-elbcontext="child:link"
+  >
     <div id="link-child" data-elb-l="l3:3" data-elbaction="click"></div>
     <div data-elb-n="k:v"></div>
   </div>

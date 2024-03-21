@@ -229,7 +229,7 @@ function getEntity(
   if (!type) return null; // It's not a (valid) entity element
 
   const scopeElems = [element]; // All related elements
-  const entitySelector = `[${getElbAttributeName(
+  const dataSelector = `[${getElbAttributeName(
     prefix,
     type,
   )}],[${getElbAttributeName(prefix, '')}]`; // [data-elb-entity,data-elb-]
@@ -237,9 +237,9 @@ function getEntity(
 
   let data: WalkerOS.Properties = {};
   const nested: WalkerOS.Entities = [];
-  const [parentProps, context] = getThisAndParentProperties(
+  const [parentData, context] = getThisAndParentProperties(
     origin || element,
-    entitySelector,
+    dataSelector,
     prefix,
     type,
   );
@@ -265,22 +265,22 @@ function getEntity(
   const propertyElems: Array<Element> = [];
   scopeElems.forEach((elem) => {
     // Also check for property on same level
-    if (elem.matches(entitySelector)) propertyElems.push(elem);
-    elem.querySelectorAll(entitySelector).forEach((elem) => {
+    if (elem.matches(dataSelector)) propertyElems.push(elem);
+    elem.querySelectorAll(dataSelector).forEach((elem) => {
       propertyElems.push(elem);
     });
   });
 
   // Get properties
-  let genericProps: WalkerOS.Properties = {};
+  let genericData: WalkerOS.Properties = {};
   propertyElems.forEach((child) => {
     // Eventually override closer properties
-    genericProps = assign(genericProps, getElbValues(prefix, child, ''));
+    genericData = assign(genericData, getElbValues(prefix, child, ''));
     data = assign(data, getElbValues(prefix, child, type));
   });
 
-  // Merge properties with the hierarchy data > generic > parent
-  data = assign(parentProps, assign(genericProps, data));
+  // Merge properties with the hierarchy generic > data > parent
+  data = assign(assign(genericData, data), parentData);
 
   // Get nested entities
   scopeElems.forEach((elem) => {
