@@ -5,13 +5,13 @@ title: GTM Tag Template
 import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import { Button } from '/src/components/atoms/buttons';
+import { ButtonCentered } from '/src/components/atoms/buttons';
 import { PackageButton } from '/src/components/docs/package-link';
 
 The walkerOS tag template is part of the GTM stack. It allows easy integration
 of walker.js into a website. Once set up, a single `walkerOS` tag can load
 walker.js on all website pages via GTM. Besides it's own
-[configuration](#options), [destinations](#destination) and
+[configuration](#options), [destinations](#destinations) and
 [on-events](#on-events) can be registered.
 
 ### Setup
@@ -20,11 +20,10 @@ The walkerOS tag template creates a new tag type in Google Tag Manager (GTM)
 that allows you to load walker.js on your website easily. Download and import it
 once:
 
-<div class="mx-auto mt-5 max-w-md sm:flex sm:justify-center md:mt-8">
-  <Button link="https://github.com/elbwalker/walkerOS/blob/main/packages/stacks/gtm/tag_template.tpl">
-    Download GTM Tag Template
-  </Button>
-</div>
+<ButtonCentered
+  text="Download GTM Tag Template"
+  link="https://raw.githubusercontent.com/elbwalker/walkerOS/main/packages/stacks/gtm/tag_template.tpl"
+/>
 
 :::info
 
