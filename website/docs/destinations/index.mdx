@@ -24,7 +24,7 @@ Destinations initialize and process events **only if a user granted consent**.
 
 Destinations are added to a client
 (see&nbsp;<Link to="/docs/clients/walkerjs/commands#destinations">web</Link>
-or&nbsp;<Link to="/docs/clients/node#adding-destinations">node</Link>). Before
+or&nbsp;<Link to="/docs/clients/node/commands#destinations">node</Link>). Before
 receiving events from the client, the proper consent states are checked each
 time automatically. Destinations receive events through the [`push`](#push)
 interface. Each destination can have its own configuration, which is set up in
@@ -57,10 +57,10 @@ flowchart LR
   end
 
   webD & nodeD --> tools
-  click webC "/docs/clients/walkerjs"
-  click nodeC "/docs/clients/node"
-  click webD "/docs/destinations/web"
-  click nodeD "/docs/destinations/node"
+  click webC "/docs/clients/walkerjs/"
+  click nodeC "/docs/clients/node/"
+  click webD "/docs/destinations/web/"
+  click nodeD "/docs/destinations/node/"
 ```
 
 ## Configuration
