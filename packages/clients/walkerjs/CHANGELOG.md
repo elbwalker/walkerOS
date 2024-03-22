@@ -1,5 +1,33 @@
 # @elbwalker/walker.js
 
+## 2.1.1
+
+### Patch Changes
+
+- c85eaff: sessionStorage with new UTM entry
+  [#342](https://github.com/elbwalker/walkerOS/issues/342)
+- da698d9: devDeps to deps
+  [#340](https://github.com/elbwalker/walkerOS/issues/340)
+- dc3dea8: Data properties hierarchy
+  [#346](https://github.com/elbwalker/walkerOS/issues/346)
+- Updated dependencies [c85eaff]
+- Updated dependencies [da698d9]
+  - @elbwalker/utils@3.1.1
+
+## 2.1.1-next.0
+
+### Patch Changes
+
+- c85eaff: sessionStorage with new UTM entry
+  [#342](https://github.com/elbwalker/walkerOS/issues/342)
+- da698d9: devDeps to deps
+  [#340](https://github.com/elbwalker/walkerOS/issues/340)
+- dc3dea8: Data properties hierarchy
+  [#346](https://github.com/elbwalker/walkerOS/issues/346)
+- Updated dependencies [c85eaff]
+- Updated dependencies [da698d9]
+  - @elbwalker/utils@3.1.1-next.0
+
 ## 2.1.0
 
 ### Minor Changes

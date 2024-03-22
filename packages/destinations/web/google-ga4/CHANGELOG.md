@@ -1,5 +1,27 @@
 # @elbwalker/destination-web-google-ga4
 
+## 2.1.1
+
+### Patch Changes
+
+- da698d9: devDeps to deps
+  [#340](https://github.com/elbwalker/walkerOS/issues/340)
+- Updated dependencies [c85eaff]
+- Updated dependencies [da698d9]
+- Updated dependencies [dc3dea8]
+  - @elbwalker/walker.js@2.1.1
+
+## 2.1.1-next.0
+
+### Patch Changes
+
+- da698d9: devDeps to deps
+  [#340](https://github.com/elbwalker/walkerOS/issues/340)
+- Updated dependencies [c85eaff]
+- Updated dependencies [da698d9]
+- Updated dependencies [dc3dea8]
+  - @elbwalker/walker.js@2.1.1-next.0
+
 ## 2.1.0
 
 ### Minor Changes

@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-plausible",
   "description": "Plausible web destination for walkerOS",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,10 +20,10 @@
     "test": "jest --colors --coverage"
   },
   "dependencies": {
-    "@elbwalker/walker.js": "2.1.0"
+    "@elbwalker/walker.js": "2.1.1"
   },
   "devDependencies": {
-    "@elbwalker/tsup": "*",
+    "@elbwalker/tsup": "0.0.1",
     "@elbwalker/types": "1.1.0"
   },
   "repository": {

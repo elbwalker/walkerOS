@@ -1,5 +1,27 @@
 # @elbwalker/stack-firebase
 
+## 1.0.2
+
+### Patch Changes
+
+- da698d9: devDeps to deps
+  [#340](https://github.com/elbwalker/walkerOS/issues/340)
+- Updated dependencies [c85eaff]
+- Updated dependencies [da698d9]
+  - @elbwalker/utils@3.1.1
+  - @elbwalker/client-node@1.0.2
+
+## 1.0.2-next.0
+
+### Patch Changes
+
+- da698d9: devDeps to deps
+  [#340](https://github.com/elbwalker/walkerOS/issues/340)
+- Updated dependencies [c85eaff]
+- Updated dependencies [da698d9]
+  - @elbwalker/utils@3.1.1-next.0
+  - @elbwalker/client-node@1.0.2-next.0
+
 ## 1.0.1
 
 ### Patch Changes
