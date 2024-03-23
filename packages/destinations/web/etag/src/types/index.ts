@@ -5,6 +5,20 @@ export interface Destination
 
 export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 
-export interface CustomConfig {}
+export interface CustomConfig {
+  url: string; // URL to send the request to
+  measurementId: string; // Measurement ID
+  clientId?: string; // Fallback client ID
+}
 
 export interface CustomEventConfig {}
+
+export interface Parameters {
+  v: string;
+  tid: string;
+  gcs: string;
+  gcd: string;
+  _p: string;
+  cid: string;
+  [key: string]: string;
+}

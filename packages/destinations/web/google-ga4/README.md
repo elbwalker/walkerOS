@@ -34,7 +34,7 @@ const config = {
       user_id: 'user.id',
     },
     snakeCase: true,
-    transport_url: 'https://www.google-analytics.com/j/collect',
+    transport_url: 'https://www.google-analytics.com/g/collect',
   },
   mapping: {
     '*': { '*': {} }, // Process all events
