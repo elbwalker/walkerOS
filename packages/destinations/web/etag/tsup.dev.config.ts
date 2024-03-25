@@ -1,4 +1,6 @@
-import { defineConfig } from 'tsup';
+import { config, defineConfig } from '@elbwalker/tsup';
+
+const globalName = 'Destination';
 
 export default defineConfig([
   {
@@ -7,5 +9,13 @@ export default defineConfig([
     dts: true,
     format: ['cjs', 'esm'],
     sourcemap: false,
+  },
+  {
+    ...config,
+    format: ['iife'],
+    globalName,
+    outExtension() {
+      return { js: `.browser.js` };
+    },
   },
 ]);
