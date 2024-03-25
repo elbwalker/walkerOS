@@ -1,5 +1,14 @@
 # @elbwalker/destination-web-piwikpro
 
+## 1.1.2
+
+### Patch Changes
+
+- 710798d: include dependencies in esm build
+  [#350](https://github.com/elbwalker/walkerOS/issues/350)
+- Updated dependencies [710798d]
+  - @elbwalker/walker.js@2.1.2
+
 ## 1.1.1
 
 ### Patch Changes

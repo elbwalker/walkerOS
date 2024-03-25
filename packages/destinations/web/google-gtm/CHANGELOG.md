@@ -1,5 +1,12 @@
 # @elbwalker/destination-web-google-gtm
 
+## 2.1.2
+
+### Patch Changes
+
+- Updated dependencies [710798d]
+  - @elbwalker/walker.js@2.1.2
+
 ## 2.1.1
 
 ### Patch Changes
