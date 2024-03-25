@@ -1,5 +1,12 @@
 # @elbwalker/walker.js
 
+## 2.1.2
+
+### Patch Changes
+
+- 710798d: include dependencies in esm build
+  [#350](https://github.com/elbwalker/walkerOS/issues/350)
+
 ## 2.1.1
 
 ### Patch Changes
