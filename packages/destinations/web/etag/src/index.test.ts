@@ -50,7 +50,7 @@ describe('Destination etag', () => {
   });
 
   test('custom params', () => {
-    config.custom.params = { gcs: 'G222', tid: 'cust0m' };
+    config.custom!.params = { gcs: 'G222', tid: 'cust0m' };
     elb('walker destination', destination, config);
     elb('foo bar');
 

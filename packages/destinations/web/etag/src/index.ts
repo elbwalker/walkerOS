@@ -27,12 +27,12 @@ export const destinationEtag: Destination = {
       gcd: '11t1t1t1t5', // Consent mode v2, granted by default
       _p: getId(), // Cache buster
       cid: getClientId(event, custom), // Client ID
+      ...custom.params, // Custom parameters override defaults
     };
 
-    tryCatch(sendRequest, (e) => console.error(e))(url, {
-      ...params,
-      ...custom.params,
-    });
+    // const customParams: Parameters = custom.params || {};
+
+    tryCatch(sendRequest, (e) => console.error(e))(url, params);
   },
 };
 
