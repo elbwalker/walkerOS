@@ -1,4 +1,4 @@
-import { getId } from '@elbwalker/utils';
+import { getId, tryCatch } from '@elbwalker/utils';
 import type { CustomConfig, Destination, Parameters } from './types';
 import { WalkerOS } from '@elbwalker/types';
 
@@ -11,20 +11,14 @@ export const destinationEtag: Destination = {
   config: {},
 
   init(config) {
-    const { custom } = config;
-    if (!custom) return;
-
-    // required measurement id
-    if (!custom.measurementId) return;
-
-    if (!custom.url) custom.url = 'https://www.google-analytics.com/g/collect';
-
-    this.config.custom = custom;
+    if (!config.custom || !config.custom.measurementId) return;
   },
 
   push(event, config) {
     const { custom } = config;
     if (!custom) return;
+
+    const url = custom.url || 'https://www.google-analytics.com/g/collect';
 
     const params: Parameters = {
       v: '2', // Protocol version, always 2 for GA4
@@ -35,7 +29,7 @@ export const destinationEtag: Destination = {
       cid: getClientId(event, custom), // Client ID
     };
 
-    sendRequest(custom.url, params);
+    tryCatch(sendRequest, (e) => console.error(e))(url, params);
   },
 };
 
@@ -45,29 +39,13 @@ function getClientId(event: WalkerOS.Event, custom: CustomConfig) {
 
 function sendRequest(url: string, params: Parameters) {
   // Construct query string from params object
-  const queryString = new URLSearchParams(params).toString();
+  const data = new URLSearchParams(params).toString();
 
-  // Complete URL with query string
-  const fullUrl = `${url}?${queryString}`;
+  // Serialize data
+  const payload = new Blob([data], { type: 'text/plain' });
 
-  // Use the Fetch API to send the request
-  fetch(fullUrl, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'text/plain;charset=UTF-8',
-    },
-  })
-    .then((response) => {
-      if (!response.ok) console.error('failed:', response.statusText);
-
-      return response.json();
-    })
-    .then((text) => {
-      console.log('success:', text);
-    })
-    .catch((error) => {
-      console.error('error:', error);
-    });
+  // Fire and forget
+  navigator.sendBeacon(url, payload);
 }
 
 export default destinationEtag;
