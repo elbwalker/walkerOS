@@ -14,7 +14,7 @@ export const destinationEtag: Destination = {
     if (!config.custom || !config.custom.measurementId) return false;
   },
 
-  push(event, config) {
+  push(event, config, mapping = {}) {
     const { custom } = config;
     if (!custom) return;
 
@@ -27,10 +27,9 @@ export const destinationEtag: Destination = {
       gcd: '11t1t1t1t5', // Consent mode v2, granted by default
       _p: getId(), // Cache buster
       cid: getClientId(event, custom), // Client ID
+      en: mapping.name || `${event.entity}_${event.action}`.toLowerCase(), // Event name
       ...custom.params, // Custom parameters override defaults
     };
-
-    // const customParams: Parameters = custom.params || {};
 
     tryCatch(sendRequest, (e) => console.error(e))(url, params);
   },
@@ -42,13 +41,21 @@ function getClientId(event: WalkerOS.Event, custom: CustomConfig) {
 
 function sendRequest(url: string, params: Parameters) {
   // Construct query string from params object
-  const data = new URLSearchParams(params).toString();
+  const data = new URLSearchParams(paramsToString(params)).toString();
 
   // Serialize data
   const payload = new Blob([data], { type: 'text/plain' });
 
   // Fire and forget
   navigator.sendBeacon(url, payload);
+}
+
+function paramsToString(params: Parameters): Record<string, string> {
+  // Convert all non-undefined values to strings
+  return Object.entries(params).reduce((acc, [key, value]) => {
+    if (value) acc[key] = String(value);
+    return acc;
+  }, {} as Record<string, string>);
 }
 
 export default destinationEtag;
