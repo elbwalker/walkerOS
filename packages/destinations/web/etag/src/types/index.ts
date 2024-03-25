@@ -6,8 +6,9 @@ export interface Destination
 export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 
 export interface CustomConfig {
-  url: string; // URL to send the request to
   measurementId: string; // Measurement ID
+  url?: string; // URL to send the request to
+  params?: Partial<Parameters>; // Customize the parameters
   clientId?: string; // Fallback client ID
 }
 
