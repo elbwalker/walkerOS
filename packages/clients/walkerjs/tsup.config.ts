@@ -3,11 +3,18 @@ import { config, defineConfig } from '@elbwalker/tsup';
 const globalName = 'Walkerjs';
 
 export default defineConfig([
+  // CJS
   {
     ...config,
     dts: true,
-    format: ['cjs', 'esm'],
+    format: ['cjs'],
     sourcemap: true,
+  },
+  // Module mjs
+  {
+    ...config,
+    noExternal: [/(.*)/],
+    format: ['esm'],
   },
   // walker.js
   {

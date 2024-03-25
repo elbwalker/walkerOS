@@ -3,12 +3,18 @@ import { config, defineConfig } from '@elbwalker/tsup';
 const globalName = 'Destination';
 
 export default defineConfig([
-  // Modules
+  // CJS
   {
     ...config,
     dts: true,
-    format: ['cjs', 'esm'],
+    format: ['cjs'],
     sourcemap: true,
+  },
+  // Module mjs
+  {
+    ...config,
+    noExternal: [/(.*)/],
+    format: ['esm'],
   },
   // Browser
   {
