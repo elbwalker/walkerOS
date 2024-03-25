@@ -11,7 +11,7 @@ export const destinationEtag: Destination = {
   config: {},
 
   init(config) {
-    if (!config.custom || !config.custom.measurementId) return;
+    if (!config.custom || !config.custom.measurementId) return false;
   },
 
   push(event, config) {
@@ -29,12 +29,15 @@ export const destinationEtag: Destination = {
       cid: getClientId(event, custom), // Client ID
     };
 
-    tryCatch(sendRequest, (e) => console.error(e))(url, params);
+    tryCatch(sendRequest, (e) => console.error(e))(url, {
+      ...params,
+      ...custom.params,
+    });
   },
 };
 
 function getClientId(event: WalkerOS.Event, custom: CustomConfig) {
-  return event.user.device || custom.clientId || '';
+  return custom.clientId || event.user.device || '';
 }
 
 function sendRequest(url: string, params: Parameters) {
