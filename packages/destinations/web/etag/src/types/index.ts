@@ -14,12 +14,21 @@ export interface CustomConfig {
 
 export interface CustomEventConfig {}
 
-export interface Parameters {
+export interface Parameters extends Partial<ParametersOptional> {
   v: string;
   tid: string;
   gcs: string;
   gcd: string;
   _p: string;
   cid: string;
-  [key: string]: string;
+  en: string;
+  [key: string]: string | number | undefined;
+}
+
+export interface ParametersOptional {
+  _et?: number;
+  dl?: string;
+  dt?: string;
+  dr?: string;
+  ul?: string;
 }

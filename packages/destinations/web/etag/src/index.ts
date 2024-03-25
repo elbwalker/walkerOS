@@ -19,6 +19,8 @@ export const destinationEtag: Destination = {
     if (!custom) return;
 
     const url = custom.url || 'https://www.google-analytics.com/g/collect';
+    const eventName =
+      mapping.name || `${event.entity}_${event.action}`.toLowerCase();
 
     const params: Parameters = {
       v: '2', // Protocol version, always 2 for GA4
@@ -27,7 +29,11 @@ export const destinationEtag: Destination = {
       gcd: '11t1t1t1t5', // Consent mode v2, granted by default
       _p: getId(), // Cache buster
       cid: getClientId(event, custom), // Client ID
-      en: mapping.name || `${event.entity}_${event.action}`.toLowerCase(), // Event name
+      en: eventName, // Event name
+      // Optional parameters
+      _et: event.timing * 1000, // Engagement time
+      dl: event.source.id, // Document location
+      dr: event.source.previous_id, // Document referrer
       ...custom.params, // Custom parameters override defaults
     };
 
