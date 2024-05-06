@@ -32,7 +32,7 @@ ___TEMPLATE_PARAMETERS___
   {
     "type": "LABEL",
     "name": "intro",
-    "displayName": "This is the \u003cb\u003ewalkerOS Tag template\u003c/b\u003e (v1) for installing and configuring walker.js on a website. Learn more in the \u003ca href\u003d\"https://www.elbwalker.com/docs/stacks/gtm/tag_template\"\u003edocumentation at elbwalker.com\u003c/a\u003e."
+    "displayName": "This is the \u003cb\u003ewalkerOS Tag template\u003c/b\u003e (v1.1) for installing and configuring walker.js on a website. Learn more in the \u003ca href\u003d\"https://www.elbwalker.com/docs/stacks/gtm/tag_template\"\u003edocumentation at elbwalker.com\u003c/a\u003e."
   },
   {
     "type": "GROUP",
@@ -465,6 +465,71 @@ ___TEMPLATE_PARAMETERS___
         "newRowButtonText": "Add event"
       }
     ]
+  },
+  {
+    "type": "GROUP",
+    "name": "hooksGroup",
+    "displayName": "Hooks",
+    "groupStyle": "ZIPPY_OPEN",
+    "subParams": [
+      {
+        "type": "SIMPLE_TABLE",
+        "name": "hooks",
+        "displayName": "Update default behavior with custom hooks",
+        "simpleTableColumns": [
+          {
+            "defaultValue": "",
+            "displayName": "Hook",
+            "name": "hookName",
+            "type": "SELECT",
+            "selectItems": [
+              {
+                "value": "prePush",
+                "displayValue": "prePush"
+              },
+              {
+                "value": "preDestinationInit",
+                "displayValue": "preDestinationInit"
+              },
+              {
+                "value": "postDestinationInit",
+                "displayValue": "postDestinationInit"
+              },
+              {
+                "value": "preDestinationPush",
+                "displayValue": "preDestinationPush"
+              },
+              {
+                "value": "postDestinationPush",
+                "displayValue": "postDestinationPush"
+              },
+              {
+                "value": "postPush",
+                "displayValue": "postPush"
+              }
+            ],
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
+          },
+          {
+            "defaultValue": "",
+            "displayName": "Code",
+            "name": "hookCode",
+            "type": "TEXT",
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
+          }
+        ],
+        "newRowButtonText": "Add Hook",
+        "help": "Hooks can be used to customize the default behavior of the walker.js. Three hooks are available: Push, DestinationInit, and DestinationPush. Hooks allows for validation, manipulation, or even eventual cancellation of default behavior. \u003ca href\u003d\"https://www.elbwalker.com/docs/clients/walkerjs/commands#hooks\"\u003eRead more about hooks\u003c/a\u003e."
+      }
+    ]
   }
 ]
 
@@ -583,6 +648,13 @@ if (data.on) {
 
   if (onConsent.length) elb("walker on", "consent", onConsent);
   if (onRun.length) elb("walker on", "run", onRun);
+}
+
+// Hooks
+if (data.hooks) {
+  data.hooks.forEach(function (hook) {
+    elb("walker hook", hook.hookName, hook.hookCode);
+  });
 }
 
 // Debug mode preview destination
@@ -983,7 +1055,7 @@ scenarios:
     });
 
     assertApi("gtmOnSuccess").wasCalled();
-setup: |
+setup: |-
   let log = require("logToConsole");
   const copyFromWindow = require("copyFromWindow");
   const setInWindow = require("setInWindow");

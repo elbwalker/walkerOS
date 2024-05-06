@@ -282,3 +282,36 @@ function() {
 
   </TabItem>
 </Tabs>
+
+### Hooks
+
+<Link to="/docs/utils/hooks">Hooks</Link> can be used to customize the default behavior
+of walker.js. A hook can be called before (<Link to="/docs/utils/hooks#prehookfn">
+  preHook
+</Link>) or after&nbsp;(<Link to="/docs/utils/hooks#posthookfn">postHook</Link>)
+a specific event and runs a custom function defined in a **User-Defined Variable**.
+Each call signature is the same as the original function, see the&nbsp;<Link to="/docs/clients/walkerjs/commands#hooks">
+  walker commands
+</Link>.
+
+![walkerOS GTM Tag Template hooks](hooks.png)
+
+Create a new **User-Defined Variable** with the **Custom JavaScript** type and
+return the function within a js-code block:
+
+```js
+// Code for the preHook function
+function () {
+  return function(params, event, data, options, context, nested) {
+    /// custom code
+  }
+}
+```
+
+:::info
+
+Learn more about the individual
+&nbsp;<Link to="/docs/clients/walkerjs/commands#function-signatures">function
+signatures</Link>.
+
+:::

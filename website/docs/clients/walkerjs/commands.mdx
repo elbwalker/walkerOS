@@ -239,6 +239,42 @@ The overall function execution order is as follows:
 5. postDestinationPush
 6. postPush
 
+#### Function signatures
+
+In general, `params` will be prefixed as a parameter, containing `fn` which is
+the original function and `result` for the post-hooks. Use the following
+function signatures:
+
+```js
+// Push
+function prePush(params, event, data, options, context, nested) {
+  return params.fn(event, data, options, context, nested);
+}
+function postPush(params, event, data, trigger, context, nested) {
+  console.log('default return result', params.result);
+  return;
+}
+
+// DestinationInit
+function preDestinationInit(params, config) {
+  return params.fn(config);
+}
+function postDestinationInit(params, config) {
+  console.log('default return result', params.result);
+  return params.result;
+}
+
+// DestinationPush
+function preDestinationPush(params, event, config, mapping, runState) {
+  console.log('default return result', params.result);
+  return params.fn(event, config, mapping, runState);
+}
+function postDestinationPush(params) {
+  // Custom code with a void return
+  return;
+}
+```
+
 #### Adding a hook
 
 To add a hook, either add the `hooks` during initialization or call the `hook`
