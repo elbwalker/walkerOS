@@ -19,6 +19,9 @@ describe('SessionStorage', () => {
     jest.resetModules();
     jest.useFakeTimers();
 
+    mockStorageWrite.mockReset();
+    mockStorageRead.mockReset();
+
     Object.defineProperty(w, 'performance', {
       value: {
         getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
