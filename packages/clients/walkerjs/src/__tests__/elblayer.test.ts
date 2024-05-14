@@ -210,6 +210,7 @@ describe('ElbLayer', () => {
       client: expect.any(String),
       config: defaultConfig,
       queue: expect.any(Array),
+      session: expect.objectContaining({ storage: false }),
     };
 
     walkerjs = Walkerjs();

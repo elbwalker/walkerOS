@@ -1,5 +1,5 @@
 import type { On, WalkerOS } from '@elbwalker/types';
-import type { SessionConfig } from '@elbwalker/utils';
+import type { SessionConfig, SessionData } from '@elbwalker/utils';
 import type * as WebDestination from './destination';
 import type * as Walker from './walker';
 
@@ -24,6 +24,7 @@ export interface Instance {
   client: string;
   config: Config;
   queue: WalkerOS.Events;
+  session: undefined | SessionData;
 }
 
 export interface Elb extends WalkerOS.Elb {

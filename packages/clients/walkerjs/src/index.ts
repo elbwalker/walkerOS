@@ -35,6 +35,7 @@ export function Walkerjs(
     client, // Client version
     config, // General configuration
     queue: [], // Temporary event queue for all events of a run
+    session: undefined, // Session data
   };
 
   // Setup pushes via elbLayer
@@ -545,7 +546,12 @@ export function Walkerjs(
 
     // Session handling
     if (instance.config.session) {
-      sessionStart({ ...instance.config.session, instance });
+      const session = sessionStart({ ...instance.config.session, instance });
+      if (session) {
+        instance.session = session;
+      }
+
+      // @TODO on-event for session
     }
 
     tryCatch(load)(instance);
