@@ -23,6 +23,7 @@ export interface Instance extends WalkerOS.Instance {
   push: Elb;
   client: string;
   config: Config;
+  destinations: Destinations;
   queue: WalkerOS.Events;
   session: undefined | SessionData;
 }
@@ -71,7 +72,6 @@ export type ScopeType = Scope | Scope[];
 
 export interface Config extends WalkerOS.Config {
   dataLayer: boolean;
-  destinations: Destinations;
   elbLayer: ElbLayer;
   pageview: boolean;
   prefix: string;
@@ -84,6 +84,7 @@ export interface Config extends WalkerOS.Config {
 
 export interface State {
   config: Config;
+  destinations: Destinations;
   globals: WalkerOS.Properties;
   // queue: WalkerOS.Events;
 }

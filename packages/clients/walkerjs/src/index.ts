@@ -27,16 +27,13 @@ export function Walkerjs(
   customConfig: Partial<WebClient.Config> = {},
 ): WebClient.Instance {
   const client = '2.1.3';
-  const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
-  const globalsStatic = customConfig.globalsStatic || {};
-  const { config } = getState(customConfig);
+  const state = getState(customConfig);
   const instance: WebClient.Instance = {
-    push: useHooks(push, 'Push', config.hooks),
+    push: useHooks(push, 'Push', state.config.hooks),
     client, // Client version
-    config, // General configuration
-    globals: assign(globalsStatic), // Globals enhanced with the static globals from init and previous values
     queue: [], // Temporary event queue for all events of a run
     session: undefined, // Session data
+    ...state,
   };
 
   // Setup pushes via elbLayer
@@ -104,9 +101,9 @@ export function Walkerjs(
       // Generate a new id if none was given
       do {
         id = getId(4);
-      } while (instance.config.destinations[id]);
+      } while (instance.destinations[id]);
     }
-    instance.config.destinations[id] = destination;
+    instance.destinations[id] = destination;
   }
 
   function addHook<Hook extends keyof Hooks.Functions>(
@@ -162,6 +159,7 @@ export function Walkerjs(
 
       // Skip the first stacked run event since it's the reason we're here
       // and to prevent duplicate execution which we don't want
+      const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
       if (isFirstRunEvent && event[0] == runCommand) {
         isFirstRunEvent = false; // Next time it's on
         return;
@@ -211,7 +209,6 @@ export function Walkerjs(
       custom: {}, // Custom state support
       count: 0, // Event counter for each run
       dataLayer: false, // Do not use dataLayer by default
-      destinations: {}, // Destination list
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
       group: '', // Random id to group events of a run
       hooks: {}, // Manage the hook functions
@@ -224,7 +221,7 @@ export function Walkerjs(
         // Configuration for session handling
         storage: false, // Do not use storage by default
       },
-      globalsStatic: assign(globalsStatic), // Static global properties
+      globalsStatic: assign(values.globalsStatic || {}), // Static global properties
       timing: 0, // Offset counter to calculate timing property
       user: {}, // Handles the user ids
       tagging: 0, // Helpful to differentiate the clients used setup version
@@ -245,10 +242,14 @@ export function Walkerjs(
     // Value hierarchy: values > current > default
     const config = { ...defaultConfig, ...currentConfig, ...values, pageview };
 
-    const globals = assign(globalsStatic, assign(config.globalsStatic));
+    const destinations = instance.destinations || {}; // Destination list
+
+    // Globals enhanced with the static globals from init and previous values
+    const globals = assign(config.globalsStatic);
 
     return {
       config,
+      destinations,
       globals,
     };
   }
@@ -363,7 +364,7 @@ export function Walkerjs(
       return;
     }
 
-    const { config, globals, queue } = instance;
+    const { config, destinations, globals, queue } = instance;
 
     // Check if walker is allowed to run
     if (!config.allowed) return;
@@ -436,7 +437,7 @@ export function Walkerjs(
     // Add event to internal queue
     queue.push(pushEvent);
 
-    Object.values(config.destinations).forEach((destination) => {
+    Object.values(destinations).forEach((destination) => {
       pushToDestination(instance, destination, pushEvent);
     });
   }
@@ -490,7 +491,7 @@ export function Walkerjs(
           useHooks(
             destination.init,
             'DestinationInit',
-            config.hooks,
+            instance.config.hooks,
           )(destination.config) !== false; // Actively check for errors
 
         destination.config.init = init;
@@ -500,7 +501,7 @@ export function Walkerjs(
       }
 
       // It's time to go to the destination's side now
-      useHooks(destination.push, 'DestinationPush', config.hooks)(
+      useHooks(destination.push, 'DestinationPush', instance.config.hooks)(
         event,
         destination.config,
         mappingEvent,
@@ -514,7 +515,7 @@ export function Walkerjs(
   }
 
   function run(instance: WebClient.Instance) {
-    const { config } = instance;
+    const { config, destinations } = instance;
     instance.config = assign(config, {
       allowed: true, // When run is called, the walker may start running
       count: 0, // Reset the run counter
@@ -525,14 +526,14 @@ export function Walkerjs(
       // Load globals properties
       // Use the default globals set by initialization
       // Due to site performance only once every run
-      globalsStatic,
+      config.globalsStatic,
       getGlobals(config.prefix),
     )),
       // Reset the queue for each run without merging
       (instance.queue = []);
 
     // Reset all destination queues
-    Object.values(config.destinations).forEach((destination) => {
+    Object.values(destinations).forEach((destination) => {
       destination.queue = [];
     });
 
@@ -562,7 +563,7 @@ export function Walkerjs(
   }
 
   function setConsent(instance: WebClient.Instance, data: WalkerOS.Consent) {
-    const { config, globals } = instance;
+    const { config, destinations, globals } = instance;
 
     let runQueue = false;
     const update: WalkerOS.Consent = {};
@@ -582,7 +583,7 @@ export function Walkerjs(
     onApply(instance, 'consent', undefined, update);
 
     if (runQueue) {
-      Object.values(config.destinations).forEach((destination) => {
+      Object.values(destinations).forEach((destination) => {
         const queue = destination.queue || [];
 
         // Try to push and remove successful ones from queue

@@ -1,4 +1,4 @@
-import type { Hooks, On } from '.';
+import type { Destination, Hooks, On } from '.';
 
 export type AnyObject = Record<string, unknown>;
 export type SingleOrArray<T> = T | Array<T>;
@@ -6,6 +6,7 @@ export type SingleOrArray<T> = T | Array<T>;
 export interface Instance {
   push: Elb;
   config: Config;
+  destinations: Destinations;
   globals: Properties;
 }
 
@@ -55,6 +56,10 @@ export interface Config {
   tagging: number;
   default?: boolean;
   verbose?: boolean; // Enable verbose logging
+}
+
+export interface Destinations {
+  [name: string]: Destination.Destination;
 }
 
 export type Events = Array<Event>;
