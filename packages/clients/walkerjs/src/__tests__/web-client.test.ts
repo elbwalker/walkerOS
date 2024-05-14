@@ -149,7 +149,7 @@ describe('Elbwalker', () => {
       default: true,
       pageview: false,
       session: false,
-      staticGlobals: { out_of: 'override', static: 'value' },
+      globalsStatic: { out_of: 'override', static: 'value' },
     });
 
     expect(mockDataLayer).toHaveBeenNthCalledWith(

@@ -78,7 +78,7 @@ export interface Config extends WalkerOS.Config {
   prefix: string;
   run: boolean;
   session: false | SessionConfig;
-  staticGlobals: WalkerOS.Properties;
+  globalsStatic: WalkerOS.Properties;
   elb?: string;
   instance?: string;
 }

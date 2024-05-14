@@ -191,7 +191,7 @@ describe('ElbLayer', () => {
       dataLayer: false,
       destinations: expect.any(Object),
       elbLayer: expect.any(Array),
-      staticGlobals: {},
+      globalsStatic: {},
       group: expect.any(String),
       hooks: {},
       on: {},

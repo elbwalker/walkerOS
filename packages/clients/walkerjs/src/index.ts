@@ -28,13 +28,13 @@ export function Walkerjs(
 ): WebClient.Instance {
   const client = '2.1.3';
   const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
-  const staticGlobals = customConfig.staticGlobals || {};
+  const globalsStatic = customConfig.globalsStatic || {};
   const { config } = getState(customConfig);
   const instance: WebClient.Instance = {
     push: useHooks(push, 'Push', config.hooks),
     client, // Client version
     config, // General configuration
-    globals: assign(staticGlobals), // Globals enhanced with the static globals from init and previous values
+    globals: assign(globalsStatic), // Globals enhanced with the static globals from init and previous values
     queue: [], // Temporary event queue for all events of a run
     session: undefined, // Session data
   };
@@ -224,7 +224,7 @@ export function Walkerjs(
         // Configuration for session handling
         storage: false, // Do not use storage by default
       },
-      staticGlobals: assign(staticGlobals), // Static global properties
+      globalsStatic: assign(globalsStatic), // Static global properties
       timing: 0, // Offset counter to calculate timing property
       user: {}, // Handles the user ids
       tagging: 0, // Helpful to differentiate the clients used setup version
@@ -245,7 +245,7 @@ export function Walkerjs(
     // Value hierarchy: values > current > default
     const config = { ...defaultConfig, ...currentConfig, ...values, pageview };
 
-    const globals = assign(staticGlobals, assign(config.staticGlobals));
+    const globals = assign(globalsStatic, assign(config.globalsStatic));
 
     return {
       config,
@@ -524,7 +524,7 @@ export function Walkerjs(
       // Load globals properties
       // Use the default globals set by initialization
       // Due to site performance only once every run
-      staticGlobals,
+      globalsStatic,
       getGlobals(instance.config.prefix),
     )),
       // Reset the queue for each run without merging

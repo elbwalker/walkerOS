@@ -214,7 +214,7 @@ describe('Commands on run', () => {
   });
 
   test('globals update', () => {
-    walkerjs = Walkerjs({ default: true, staticGlobals: { static: 'value' } });
+    walkerjs = Walkerjs({ default: true, globalsStatic: { static: 'value' } });
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         globals: { static: 'value' },
