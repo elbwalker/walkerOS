@@ -82,11 +82,16 @@ export interface Config extends WalkerOS.Config {
   instance?: string;
 }
 
-export interface State {
+export interface CustomConfig extends Partial<Config> {
+  consent?: WalkerOS.Consent;
+  destinations?: Destinations;
+  globals?: WalkerOS.Properties;
+  user?: WalkerOS.User;
+}
+
+export interface State extends WalkerOS.State {
   config: Config;
   destinations: Destinations;
-  globals: WalkerOS.Properties;
-  user: WalkerOS.User;
   // queue: WalkerOS.Events;
 }
 

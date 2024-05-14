@@ -3,9 +3,13 @@ import type { Destination, Hooks, On } from '.';
 export type AnyObject = Record<string, unknown>;
 export type SingleOrArray<T> = T | Array<T>;
 
-export interface Instance {
+export interface Instance extends State {
   push: Elb;
+}
+
+export interface State {
   config: Config;
+  consent: Consent;
   destinations: Destinations;
   globals: Properties;
   user: User;
@@ -45,7 +49,6 @@ export type PushContext = OrderedProperties;
 
 export interface Config {
   allowed: boolean;
-  consent: Consent;
   count: number;
   custom: Properties;
   group: string;

@@ -395,8 +395,8 @@ describe('Elbwalker', () => {
 
     elb('walker run');
 
-    expect(walkerjs.config.consent.functional).toBeTruthy();
-    expect(walkerjs.config.consent.marketing).not.toBeTruthy();
+    expect(walkerjs.consent.functional).toBeTruthy();
+    expect(walkerjs.consent.marketing).not.toBeTruthy();
     elb('consent check');
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -407,12 +407,12 @@ describe('Elbwalker', () => {
 
     // Missing argument
     elb('walker consent');
-    expect(walkerjs.config.consent.functional).toBeTruthy();
-    expect(walkerjs.config.consent.marketing).not.toBeTruthy();
+    expect(walkerjs.consent.functional).toBeTruthy();
+    expect(walkerjs.consent.marketing).not.toBeTruthy();
 
     // Grant permissions
     elb('walker consent', { marketing: true });
-    expect(walkerjs.config.consent.marketing).toBeTruthy();
+    expect(walkerjs.consent.marketing).toBeTruthy();
     elb('consent check');
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -423,7 +423,7 @@ describe('Elbwalker', () => {
 
     // Revoke permissions
     elb('walker consent', { marketing: false });
-    expect(walkerjs.config.consent.marketing).not.toBeTruthy();
+    expect(walkerjs.consent.marketing).not.toBeTruthy();
     elb('consent check');
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({

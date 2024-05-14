@@ -185,7 +185,6 @@ describe('ElbLayer', () => {
   test('config update', () => {
     const defaultConfig: WebClient.Config = {
       allowed: true,
-      consent: {},
       count: expect.any(Number),
       custom: {},
       dataLayer: false,
@@ -205,8 +204,9 @@ describe('ElbLayer', () => {
 
     const defaultInterface: WebClient.Instance = {
       push: expect.any(Function),
-      client: expect.any(String),
       config: defaultConfig,
+      consent: {},
+      client: expect.any(String),
       destinations: expect.any(Object),
       globals: expect.any(Object),
       queue: expect.any(Array),

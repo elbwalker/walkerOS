@@ -24,7 +24,7 @@ export * from './types';
 export { elb };
 
 export function Walkerjs(
-  customConfig: Partial<WebClient.Config> = {},
+  customConfig: WebClient.CustomConfig = {},
 ): WebClient.Instance {
   const client = '2.1.3';
   const state = getState(customConfig);
@@ -129,7 +129,7 @@ export function Walkerjs(
       granted = false;
 
       // Set the current consent states
-      const consentStates = instance.config.consent;
+      const consentStates = instance.consent;
 
       // Search for a required and granted consent
       Object.keys(destinationConsent).forEach((consent) => {
@@ -198,14 +198,13 @@ export function Walkerjs(
   }
 
   function getState(
-    values: Partial<WebClient.Config>,
+    values: WebClient.CustomConfig,
     instance: Partial<WebClient.Instance> = {},
   ): WebClient.State {
     const currentConfig: Partial<WebClient.Config> = instance.config || {};
 
     const defaultConfig: WebClient.Config = {
       allowed: false, // Wait for explicit run command to start
-      consent: {}, // Handle the consent states
       custom: {}, // Custom state support
       count: 0, // Event counter for each run
       dataLayer: false, // Do not use dataLayer by default
@@ -241,15 +240,18 @@ export function Walkerjs(
     // Value hierarchy: values > current > default
     const config = { ...defaultConfig, ...currentConfig, ...values, pageview };
 
-    const destinations = instance.destinations || {}; // Destination list
+    const consent = values.consent || {}; // Handle the consent states
+
+    const destinations = values.destinations || {}; // Destination list
 
     // Globals enhanced with the static globals from init and previous values
-    const globals = assign(config.globalsStatic);
+    const globals = assign(values.globals || {}, config.globalsStatic);
 
-    const user = {}; // Handles the user ids
+    const user = values.user || {}; // Handles the user ids
 
     return {
       config,
+      consent,
       destinations,
       globals,
       user,
@@ -366,7 +368,7 @@ export function Walkerjs(
       return;
     }
 
-    const { config, destinations, globals, queue, user } = instance;
+    const { config, consent, destinations, globals, queue, user } = instance;
 
     // Check if walker is allowed to run
     if (!config.allowed) return;
@@ -420,7 +422,7 @@ export function Walkerjs(
       globals,
       user,
       nested,
-      consent: config.consent,
+      consent,
       id,
       trigger: options as string,
       entity,
@@ -565,7 +567,7 @@ export function Walkerjs(
   }
 
   function setConsent(instance: WebClient.Instance, data: WalkerOS.Consent) {
-    const { config, destinations, globals, user } = instance;
+    const { consent, destinations, globals, user } = instance;
 
     let runQueue = false;
     const update: WalkerOS.Consent = {};
@@ -579,7 +581,7 @@ export function Walkerjs(
     });
 
     // Update consent state
-    config.consent = assign(config.consent, update);
+    instance.consent = assign(consent, update);
 
     // Run on consent events
     onApply(instance, 'consent', undefined, update);
@@ -591,7 +593,7 @@ export function Walkerjs(
         // Try to push and remove successful ones from queue
         destination.queue = queue.filter((event) => {
           // Update previous values with the current state
-          event.consent = config.consent;
+          event.consent = instance.consent;
           event.globals = globals;
           event.user = user;
 
