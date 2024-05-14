@@ -1,5 +1,11 @@
 # @elbwalker/utils
 
+## 3.1.2
+
+### Patch Changes
+
+- 0c4d649: Missing session id #357
+
 ## 3.1.1
 
 ### Patch Changes

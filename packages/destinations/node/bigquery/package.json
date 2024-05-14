@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-node-bigquery",
   "description": "BigQuery node destination for walkerOS",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,7 +20,7 @@
     "test": "jest --colors --coverage"
   },
   "dependencies": {
-    "@elbwalker/client-node": "1.0.2"
+    "@elbwalker/client-node": "1.0.3"
   },
   "devDependencies": {
     "@google-cloud/bigquery": "^6.2.1",
