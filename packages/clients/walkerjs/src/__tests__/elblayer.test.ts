@@ -179,13 +179,12 @@ describe('ElbLayer', () => {
     const packageJsonVersion = jest.requireActual('../../package.json').version;
 
     walkerjs = Walkerjs();
-    expect(walkerjs.config.client).toStrictEqual(packageJsonVersion);
+    expect(walkerjs.client).toStrictEqual(packageJsonVersion);
   });
 
   test('config update', () => {
     const defaultConfig: WebClient.Config = {
       allowed: true,
-      client: expect.any(String),
       consent: {},
       count: expect.any(Number),
       custom: {},
@@ -207,10 +206,16 @@ describe('ElbLayer', () => {
       tagging: expect.any(Number),
     };
 
+    const defaultInterface: WebClient.Instance = {
+      push: expect.any(Function),
+      client: expect.any(String),
+      config: defaultConfig,
+    };
+
     walkerjs = Walkerjs();
     elb('walker run');
 
-    expect(walkerjs.config).toStrictEqual(defaultConfig);
+    expect(walkerjs).toStrictEqual(defaultInterface);
 
     let update: WalkerOS.Properties | Partial<WebClient.Config> = {
       prefix: 'data-custom',

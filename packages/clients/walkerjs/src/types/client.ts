@@ -21,6 +21,7 @@ type WalkerEvent = Array<
 
 export interface Instance {
   push: Elb;
+  client: string;
   config: Config;
 }
 
@@ -67,7 +68,6 @@ export type Scope = Document | Element | HTMLElement;
 export type ScopeType = Scope | Scope[];
 
 export interface Config extends WalkerOS.Config {
-  client: string;
   dataLayer: boolean;
   destinations: Destinations;
   elbLayer: ElbLayer;

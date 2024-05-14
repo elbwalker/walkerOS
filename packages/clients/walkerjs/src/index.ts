@@ -32,6 +32,7 @@ export function Walkerjs(
   const config = getConfig(customConfig);
   const instance: WebClient.Instance = {
     push: useHooks(push, 'Push', config.hooks),
+    client, // Client version
     config,
   };
 
@@ -201,7 +202,6 @@ export function Walkerjs(
   ): WebClient.Config {
     const defaultConfig: WebClient.Config = {
       allowed: false, // Wait for explicit run command to start
-      client, // Client version
       consent: {}, // Handle the consent states
       custom: {}, // Custom state support
       count: 0, // Event counter for each run
