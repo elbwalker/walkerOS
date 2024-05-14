@@ -8,6 +8,7 @@ export interface Instance {
   config: Config;
   destinations: Destinations;
   globals: Properties;
+  user: User;
 }
 
 export interface Elb {
@@ -52,7 +53,6 @@ export interface Config {
   on: On.Config;
   round: number;
   timing: number;
-  user: User;
   tagging: number;
   default?: boolean;
   verbose?: boolean; // Enable verbose logging

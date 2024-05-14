@@ -223,7 +223,6 @@ export function Walkerjs(
       },
       globalsStatic: assign(values.globalsStatic || {}), // Static global properties
       timing: 0, // Offset counter to calculate timing property
-      user: {}, // Handles the user ids
       tagging: 0, // Helpful to differentiate the clients used setup version
     };
 
@@ -247,10 +246,13 @@ export function Walkerjs(
     // Globals enhanced with the static globals from init and previous values
     const globals = assign(config.globalsStatic);
 
+    const user = {}; // Handles the user ids
+
     return {
       config,
       destinations,
       globals,
+      user,
     };
   }
 
@@ -364,7 +366,7 @@ export function Walkerjs(
       return;
     }
 
-    const { config, destinations, globals, queue } = instance;
+    const { config, destinations, globals, queue, user } = instance;
 
     // Check if walker is allowed to run
     if (!config.allowed) return;
@@ -416,7 +418,7 @@ export function Walkerjs(
       context: context as WalkerOS.OrderedProperties,
       custom,
       globals,
-      user: config.user,
+      user,
       nested,
       consent: config.consent,
       id,
@@ -563,7 +565,7 @@ export function Walkerjs(
   }
 
   function setConsent(instance: WebClient.Instance, data: WalkerOS.Consent) {
-    const { config, destinations, globals } = instance;
+    const { config, destinations, globals, user } = instance;
 
     let runQueue = false;
     const update: WalkerOS.Consent = {};
@@ -591,7 +593,7 @@ export function Walkerjs(
           // Update previous values with the current state
           event.consent = config.consent;
           event.globals = globals;
-          event.user = config.user;
+          event.user = user;
 
           return !pushToDestination(instance, destination, event, false);
         });
@@ -600,7 +602,7 @@ export function Walkerjs(
   }
 
   function setUserIds(instance: WebClient.Instance, data: WalkerOS.User) {
-    const user = instance.config.user;
+    const user = instance.user;
     // user ids can't be set to undefined
     if (data.id) user.id = data.id;
     if (data.device) user.device = data.device;

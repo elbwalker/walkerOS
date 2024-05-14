@@ -86,6 +86,7 @@ export interface State {
   config: Config;
   destinations: Destinations;
   globals: WalkerOS.Properties;
+  user: WalkerOS.User;
   // queue: WalkerOS.Events;
 }
 

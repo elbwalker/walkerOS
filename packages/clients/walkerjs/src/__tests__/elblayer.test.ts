@@ -200,7 +200,6 @@ describe('ElbLayer', () => {
       round: expect.any(Number),
       session: { storage: false },
       timing: expect.any(Number),
-      user: {},
       tagging: expect.any(Number),
     };
 
@@ -212,6 +211,7 @@ describe('ElbLayer', () => {
       globals: expect.any(Object),
       queue: expect.any(Array),
       session: expect.objectContaining({ storage: false }),
+      user: {},
     };
 
     walkerjs = Walkerjs();
