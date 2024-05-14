@@ -212,4 +212,27 @@ describe('Commands on run', () => {
     elb('walker run');
     expect(mockFn).toHaveBeenCalledTimes(3);
   });
+
+  test('globals update', () => {
+    walkerjs = Walkerjs({ default: true, staticGlobals: { static: 'value' } });
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        globals: { static: 'value' },
+      }),
+    );
+
+    elb('walker globals', { foo: 'bar' });
+    elb('walker globals', { another: 'value' });
+    elb('walker globals', { static: 'override' });
+    elb('foo bar');
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        globals: {
+          static: 'override',
+          foo: 'bar',
+          another: 'value',
+        },
+      }),
+    );
+  });
 });

@@ -28,12 +28,13 @@ export function Walkerjs(
 ): WebClient.Instance {
   const client = '2.1.3';
   const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
-  const staticGlobals = customConfig.globals || {};
-  const config = getConfig(customConfig);
+  const staticGlobals = customConfig.staticGlobals || {};
+  const { config } = getState(customConfig);
   const instance: WebClient.Instance = {
     push: useHooks(push, 'Push', config.hooks),
     client, // Client version
     config, // General configuration
+    globals: assign(staticGlobals), // Globals enhanced with the static globals from init and previous values
     queue: [], // Temporary event queue for all events of a run
     session: undefined, // Session data
   };
@@ -198,10 +199,12 @@ export function Walkerjs(
     callPredefined(instance, true);
   }
 
-  function getConfig(
+  function getState(
     values: Partial<WebClient.Config>,
-    current: Partial<WebClient.Config> = {},
-  ): WebClient.Config {
+    instance: Partial<WebClient.Instance> = {},
+  ): WebClient.State {
+    const currentConfig: Partial<WebClient.Config> = instance.config || {};
+
     const defaultConfig: WebClient.Config = {
       allowed: false, // Wait for explicit run command to start
       consent: {}, // Handle the consent states
@@ -210,7 +213,6 @@ export function Walkerjs(
       dataLayer: false, // Do not use dataLayer by default
       destinations: {}, // Destination list
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
-      globals: assign(staticGlobals), // Globals enhanced with the static globals from init and previous values
       group: '', // Random id to group events of a run
       hooks: {}, // Manage the hook functions
       on: {}, // On events listener rules
@@ -222,6 +224,7 @@ export function Walkerjs(
         // Configuration for session handling
         storage: false, // Do not use storage by default
       },
+      staticGlobals: assign(staticGlobals), // Static global properties
       timing: 0, // Offset counter to calculate timing property
       user: {}, // Handles the user ids
       tagging: 0, // Helpful to differentiate the clients used setup version
@@ -231,12 +234,7 @@ export function Walkerjs(
     const pageview =
       'pageview' in values
         ? !!values.pageview
-        : current.pageview || defaultConfig.pageview;
-
-    const globals = assign(
-      staticGlobals,
-      assign(current.globals || {}, values.globals || {}),
-    );
+        : currentConfig.pageview || defaultConfig.pageview;
 
     // Default mode enables both, auto run and dataLayer destination
     if (values.default) {
@@ -245,11 +243,12 @@ export function Walkerjs(
     }
 
     // Value hierarchy: values > current > default
+    const config = { ...defaultConfig, ...currentConfig, ...values, pageview };
+
+    const globals = assign(staticGlobals, assign(config.staticGlobals));
+
     return {
-      ...defaultConfig,
-      ...current,
-      ...values,
-      pageview,
+      config,
       globals,
     };
   }
@@ -263,10 +262,7 @@ export function Walkerjs(
     switch (action) {
       case Const.Commands.Config:
         if (isObject(data))
-          instance.config = getConfig(
-            data as WebClient.Config,
-            instance.config,
-          );
+          instance.config = getState(data as WebClient.Config, instance).config;
         break;
       case Const.Commands.Consent:
         isObject(data) && setConsent(instance, data as WalkerOS.Consent);
@@ -277,6 +273,13 @@ export function Walkerjs(
             instance,
             data as WebDestination.Destination,
             options as WebDestination.Config,
+          );
+        break;
+      case Const.Commands.Globals:
+        if (isObject(data))
+          instance.globals = assign(
+            instance.globals,
+            data as WalkerOS.Properties,
           );
         break;
       case Const.Commands.Hook:
@@ -360,7 +363,7 @@ export function Walkerjs(
       return;
     }
 
-    const { config, queue } = instance;
+    const { config, globals, queue } = instance;
 
     // Check if walker is allowed to run
     if (!config.allowed) return;
@@ -411,7 +414,7 @@ export function Walkerjs(
       data: data as WalkerOS.Properties,
       context: context as WalkerOS.OrderedProperties,
       custom,
-      globals: config.globals,
+      globals,
       user: config.user,
       nested,
       consent: config.consent,
@@ -514,18 +517,18 @@ export function Walkerjs(
     instance.config = assign(instance.config, {
       allowed: true, // When run is called, the walker may start running
       count: 0, // Reset the run counter
-      globals: assign(
-        // Load globals properties
-        // Use the default globals set by initialization
-        // Due to site performance only once every run
-        staticGlobals,
-        getGlobals(instance.config.prefix),
-      ),
       group: getId(), // Generate a new group id for each run
     });
 
-    // Reset the queue for each run without merging
-    instance.queue = [];
+    (instance.globals = assign(
+      // Load globals properties
+      // Use the default globals set by initialization
+      // Due to site performance only once every run
+      staticGlobals,
+      getGlobals(instance.config.prefix),
+    )),
+      // Reset the queue for each run without merging
+      (instance.queue = []);
 
     // Reset all destination queues
     Object.values(instance.config.destinations).forEach((destination) => {
@@ -558,7 +561,7 @@ export function Walkerjs(
   }
 
   function setConsent(instance: WebClient.Instance, data: WalkerOS.Consent) {
-    const config = instance.config;
+    const { config, globals } = instance;
 
     let runQueue = false;
     const update: WalkerOS.Consent = {};
@@ -585,7 +588,7 @@ export function Walkerjs(
         destination.queue = queue.filter((event) => {
           // Update previous values with the current state
           event.consent = config.consent;
-          event.globals = config.globals;
+          event.globals = globals;
           event.user = config.user;
 
           return !pushToDestination(instance, destination, event, false);

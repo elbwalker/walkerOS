@@ -19,7 +19,7 @@ type WalkerEvent = Array<
   }
 >;
 
-export interface Instance {
+export interface Instance extends WalkerOS.Instance {
   push: Elb;
   client: string;
   config: Config;
@@ -28,6 +28,7 @@ export interface Instance {
 }
 
 export interface Elb extends WalkerOS.Elb {
+  (event: 'walker config', config: Partial<Config>): void;
   (
     event: 'walker destination',
     destination: WebDestination.Destination,
@@ -77,8 +78,15 @@ export interface Config extends WalkerOS.Config {
   prefix: string;
   run: boolean;
   session: false | SessionConfig;
+  staticGlobals: WalkerOS.Properties;
   elb?: string;
   instance?: string;
+}
+
+export interface State {
+  config: Config;
+  globals: WalkerOS.Properties;
+  // queue: WalkerOS.Events;
 }
 
 export interface Destinations {

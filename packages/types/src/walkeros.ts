@@ -6,6 +6,7 @@ export type SingleOrArray<T> = T | Array<T>;
 export interface Instance {
   push: Elb;
   config: Config;
+  globals: Properties;
 }
 
 export interface Elb {
@@ -45,7 +46,6 @@ export interface Config {
   consent: Consent;
   count: number;
   custom: Properties;
-  globals: Properties;
   group: string;
   hooks: Hooks.Functions;
   on: On.Config;

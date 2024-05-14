@@ -191,7 +191,7 @@ describe('ElbLayer', () => {
       dataLayer: false,
       destinations: expect.any(Object),
       elbLayer: expect.any(Array),
-      globals: {},
+      staticGlobals: {},
       group: expect.any(String),
       hooks: {},
       on: {},
@@ -209,6 +209,7 @@ describe('ElbLayer', () => {
       push: expect.any(Function),
       client: expect.any(String),
       config: defaultConfig,
+      globals: expect.any(Object),
       queue: expect.any(Array),
       session: expect.objectContaining({ storage: false }),
     };
@@ -221,7 +222,7 @@ describe('ElbLayer', () => {
     let update: WalkerOS.Properties | Partial<WebClient.Config> = {
       prefix: 'data-custom',
     };
-    let config = { ...defaultConfig, ...update };
+    const config = { ...defaultConfig, ...update };
     elb('walker config', update);
     expect(walkerjs.config).toStrictEqual(expect.objectContaining(update)); // Partial test
     expect(walkerjs.config).toStrictEqual(config); // Full test
@@ -233,32 +234,6 @@ describe('ElbLayer', () => {
     update = { pageview: false };
     elb('walker config', update);
     expect(walkerjs.config).toStrictEqual(expect.objectContaining(update));
-
-    // Reset with w.elbLayer = [] creates another array than in defaultConfig
-    w.elbLayer.length = 0;
-    let globals: WalkerOS.Properties = { static: 'value' };
-    config = { ...defaultConfig, globals };
-    walkerjs = Walkerjs({ globals });
-    elb('walker run');
-    expect(walkerjs.config).toStrictEqual(config);
-
-    update = { foo: 'bar' };
-    elb('walker config', { globals: update });
-    globals = { ...globals, ...update };
-
-    expect(walkerjs.config).toStrictEqual(expect.objectContaining({ globals }));
-
-    update = { another: 'value' };
-    elb('walker config', { globals: update });
-    globals = { ...globals, ...update };
-
-    expect(walkerjs.config).toStrictEqual(expect.objectContaining({ globals }));
-
-    update = { static: 'override' };
-    elb('walker config', { globals: update });
-    globals = { ...globals, ...update };
-
-    expect(walkerjs.config).toStrictEqual(expect.objectContaining({ globals }));
   });
 
   test('custom elbLayer', () => {
