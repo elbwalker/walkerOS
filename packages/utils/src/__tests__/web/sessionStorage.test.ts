@@ -19,6 +19,9 @@ describe('SessionStorage', () => {
     jest.resetModules();
     jest.useFakeTimers();
 
+    mockStorageWrite.mockReset();
+    mockStorageRead.mockReset();
+
     Object.defineProperty(w, 'performance', {
       value: {
         getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
@@ -29,7 +32,7 @@ describe('SessionStorage', () => {
 
   test('Regular first session', () => {
     // Reload with marketing parameter
-    expect(sessionStorage({})).toStrictEqual({
+    expect(sessionStorage()).toStrictEqual({
       isStart: true,
       storage: true,
       id: expect.any(String),
@@ -76,6 +79,25 @@ describe('SessionStorage', () => {
       isNew: false,
       runs: 2,
     });
+  });
+
+  test('New storage session only', () => {
+    // Using window only wouldn't detect a new session
+    window.performance.getEntriesByType = jest
+      .fn()
+      .mockReturnValue([{ type: 'reload' }]);
+
+    const session = sessionStorage();
+    expect(session).toStrictEqual(
+      expect.objectContaining({
+        isStart: true,
+        id: expect.any(String),
+        device: expect.any(String),
+      }),
+    );
+
+    expect(session.device).toHaveLength(8);
+    expect(session.id).toHaveLength(12);
   });
 
   test('Existing expired session', () => {
