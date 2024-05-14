@@ -33,7 +33,8 @@ export function Walkerjs(
   const instance: WebClient.Instance = {
     push: useHooks(push, 'Push', config.hooks),
     client, // Client version
-    config,
+    config, // General configuration
+    queue: [], // Temporary event queue for all events of a run
   };
 
   // Setup pushes via elbLayer
@@ -92,7 +93,7 @@ export function Walkerjs(
 
     // Process previous events if not disabled
     if (config.queue !== false)
-      instance.config.queue.forEach((pushEvent) => {
+      instance.queue.forEach((pushEvent) => {
         pushToDestination(instance, destination, pushEvent);
       });
 
@@ -214,7 +215,6 @@ export function Walkerjs(
       on: {}, // On events listener rules
       pageview: true, // Trigger a page view event by default
       prefix: Const.Commands.Prefix, // HTML prefix attribute
-      queue: [], // Temporary event queue for all events of a run
       run: false, // Run the walker by default
       round: 0, // The first round is a special one due to state changes
       session: {
@@ -359,7 +359,7 @@ export function Walkerjs(
       return;
     }
 
-    const config = instance.config;
+    const { config, queue } = instance;
 
     // Check if walker is allowed to run
     if (!config.allowed) return;
@@ -430,7 +430,7 @@ export function Walkerjs(
     };
 
     // Add event to internal queue
-    config.queue.push(pushEvent);
+    queue.push(pushEvent);
 
     Object.values(config.destinations).forEach((destination) => {
       pushToDestination(instance, destination, pushEvent);
@@ -522,8 +522,9 @@ export function Walkerjs(
       ),
       group: getId(), // Generate a new group id for each run
     });
+
     // Reset the queue for each run without merging
-    instance.config.queue = [];
+    instance.queue = [];
 
     // Reset all destination queues
     Object.values(instance.config.destinations).forEach((destination) => {

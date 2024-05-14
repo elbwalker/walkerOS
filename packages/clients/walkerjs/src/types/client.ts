@@ -23,6 +23,7 @@ export interface Instance {
   push: Elb;
   client: string;
   config: Config;
+  queue: WalkerOS.Events;
 }
 
 export interface Elb extends WalkerOS.Elb {
@@ -73,7 +74,6 @@ export interface Config extends WalkerOS.Config {
   elbLayer: ElbLayer;
   pageview: boolean;
   prefix: string;
-  queue: WalkerOS.Events;
   run: boolean;
   session: false | SessionConfig;
   elb?: string;

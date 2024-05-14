@@ -197,7 +197,6 @@ describe('ElbLayer', () => {
       on: {},
       pageview: true,
       prefix: 'data-elb',
-      queue: expect.any(Array),
       run: false,
       round: expect.any(Number),
       session: { storage: false },
@@ -210,6 +209,7 @@ describe('ElbLayer', () => {
       push: expect.any(Function),
       client: expect.any(String),
       config: defaultConfig,
+      queue: expect.any(Array),
     };
 
     walkerjs = Walkerjs();
