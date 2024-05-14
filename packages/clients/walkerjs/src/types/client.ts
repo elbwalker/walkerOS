@@ -28,7 +28,6 @@ export interface Instance extends WalkerOS.Instance {
 }
 
 export interface Elb extends WalkerOS.Elb {
-  (event: 'walker config', config: Partial<Config>): void;
   (
     event: 'walker destination',
     destination: WebDestination.Destination,

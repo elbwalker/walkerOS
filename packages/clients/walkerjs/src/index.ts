@@ -514,7 +514,8 @@ export function Walkerjs(
   }
 
   function run(instance: WebClient.Instance) {
-    instance.config = assign(instance.config, {
+    const { config } = instance;
+    instance.config = assign(config, {
       allowed: true, // When run is called, the walker may start running
       count: 0, // Reset the run counter
       group: getId(), // Generate a new group id for each run
@@ -525,13 +526,13 @@ export function Walkerjs(
       // Use the default globals set by initialization
       // Due to site performance only once every run
       globalsStatic,
-      getGlobals(instance.config.prefix),
+      getGlobals(config.prefix),
     )),
       // Reset the queue for each run without merging
       (instance.queue = []);
 
     // Reset all destination queues
-    Object.values(instance.config.destinations).forEach((destination) => {
+    Object.values(config.destinations).forEach((destination) => {
       destination.queue = [];
     });
 
@@ -548,8 +549,8 @@ export function Walkerjs(
     }
 
     // Session handling
-    if (instance.config.session) {
-      const session = sessionStart({ ...instance.config.session, instance });
+    if (config.session) {
+      const session = sessionStart({ ...config.session, instance });
       if (session) {
         instance.session = session;
       }
