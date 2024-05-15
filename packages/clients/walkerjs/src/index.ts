@@ -31,7 +31,6 @@ export function Walkerjs(
   const instance: WebClient.Instance = {
     push: useHooks(push, 'Push', state.config.hooks),
     client, // Client version
-    queue: [], // Temporary event queue for all events of a run
     session: undefined, // Session data
     ...state,
   };
@@ -247,6 +246,8 @@ export function Walkerjs(
     // Globals enhanced with the static globals from init and previous values
     const globals = assign(values.globals || {}, config.globalsStatic);
 
+    const queue = values.queue || []; // Temporary event queue for all events of a run
+
     const user = values.user || {}; // Handles the user ids
 
     return {
@@ -254,6 +255,7 @@ export function Walkerjs(
       consent,
       destinations,
       globals,
+      queue,
       user,
     };
   }

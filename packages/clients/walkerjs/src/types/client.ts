@@ -19,13 +19,37 @@ type WalkerEvent = Array<
   }
 >;
 
-export interface Instance extends WalkerOS.Instance {
+export interface Instance extends State, WalkerOS.Instance {
   push: Elb;
   client: string;
   config: Config;
   destinations: Destinations;
-  queue: WalkerOS.Events;
   session: undefined | SessionData;
+}
+
+export interface State extends WalkerOS.State {
+  config: Config;
+  destinations: Destinations;
+}
+
+export interface Config extends WalkerOS.Config {
+  dataLayer: boolean;
+  elbLayer: ElbLayer;
+  pageview: boolean;
+  prefix: string;
+  run: boolean;
+  session: false | SessionConfig;
+  globalsStatic: WalkerOS.Properties;
+  elb?: string;
+  instance?: string;
+}
+
+export interface CustomConfig extends Partial<Config> {
+  consent?: WalkerOS.Consent;
+  destinations?: Destinations;
+  globals?: WalkerOS.Properties;
+  queue?: WalkerOS.Events;
+  user?: WalkerOS.User;
 }
 
 export interface Elb extends WalkerOS.Elb {
@@ -69,31 +93,6 @@ export type PushContext = WalkerOS.PushContext | Element;
 
 export type Scope = Document | Element | HTMLElement;
 export type ScopeType = Scope | Scope[];
-
-export interface Config extends WalkerOS.Config {
-  dataLayer: boolean;
-  elbLayer: ElbLayer;
-  pageview: boolean;
-  prefix: string;
-  run: boolean;
-  session: false | SessionConfig;
-  globalsStatic: WalkerOS.Properties;
-  elb?: string;
-  instance?: string;
-}
-
-export interface CustomConfig extends Partial<Config> {
-  consent?: WalkerOS.Consent;
-  destinations?: Destinations;
-  globals?: WalkerOS.Properties;
-  user?: WalkerOS.User;
-}
-
-export interface State extends WalkerOS.State {
-  config: Config;
-  destinations: Destinations;
-  // queue: WalkerOS.Events;
-}
 
 export interface Destinations {
   [name: string]: WebDestination.Destination;

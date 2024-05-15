@@ -12,7 +12,22 @@ export interface State {
   consent: Consent;
   destinations: Destinations;
   globals: Properties;
+  queue: Events;
   user: User;
+}
+
+export interface Config {
+  allowed: boolean;
+  count: number;
+  custom: Properties;
+  group: string;
+  hooks: Hooks.Functions;
+  on: On.Config;
+  round: number;
+  timing: number;
+  tagging: number;
+  default?: boolean;
+  verbose?: boolean; // Enable verbose logging
 }
 
 export interface Elb {
@@ -46,20 +61,6 @@ export type PushData = string | Partial<Config> | Consent | User | Properties;
 export type PushOptions = Hooks.Function;
 
 export type PushContext = OrderedProperties;
-
-export interface Config {
-  allowed: boolean;
-  count: number;
-  custom: Properties;
-  group: string;
-  hooks: Hooks.Functions;
-  on: On.Config;
-  round: number;
-  timing: number;
-  tagging: number;
-  default?: boolean;
-  verbose?: boolean; // Enable verbose logging
-}
 
 export interface Destinations {
   [name: string]: Destination.Destination;
