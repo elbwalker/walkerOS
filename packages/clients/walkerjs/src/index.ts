@@ -208,7 +208,6 @@ export function Walkerjs(
       count: 0, // Event counter for each run
       dataLayer: false, // Do not use dataLayer by default
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
-      on: {}, // On events listener rules
       pageview: true, // Trigger a page view event by default
       prefix: Const.Commands.Prefix, // HTML prefix attribute
       run: false, // Run the walker by default
@@ -249,7 +248,11 @@ export function Walkerjs(
     // Manage the hook functions
     const hooks = values.hooks || {};
 
-    const queue = values.queue || []; // Temporary event queue for all events of a run
+    // On events listener rules
+    const on = values.on || {};
+
+    // Temporary event queue for all events of a run
+    const queue = values.queue || [];
 
     // Offset counter to calculate timing property
     const timing = 0;
@@ -263,6 +266,7 @@ export function Walkerjs(
       globals,
       group,
       hooks,
+      on,
       queue,
       timing,
       user,
@@ -344,7 +348,7 @@ export function Walkerjs(
     type: On.Types,
     option: WalkerOS.SingleOrArray<On.Options>,
   ) {
-    const on = instance.config.on;
+    const on = instance.on;
     const onType: Array<On.Options> = on[type] || [];
     const options = Array.isArray(option) ? option : [option];
 

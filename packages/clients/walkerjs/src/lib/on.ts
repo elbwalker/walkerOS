@@ -8,7 +8,7 @@ export function onApply(
   options?: Array<On.Options>,
   config?: WalkerOS.Consent,
 ) {
-  const onConfig = options || instance.config.on[type];
+  const onConfig = options || instance.on[type];
 
   if (!onConfig) return; // No on-events registered, nothing to do
 
@@ -29,7 +29,7 @@ function onConsent(
   onConfig: Array<On.ConsentConfig>,
   currentConsent?: WalkerOS.Consent,
 ): void {
-  const consentState = currentConsent || instance.config.consent;
+  const consentState = currentConsent || instance.consent;
 
   onConfig.forEach((consentConfig) => {
     // Collect functions whose consent keys match the rule keys directly

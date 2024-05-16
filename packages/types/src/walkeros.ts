@@ -14,6 +14,7 @@ export interface State {
   globals: Properties;
   group: string;
   hooks: Hooks.Functions;
+  on: On.Config;
   queue: Events;
   user: User;
 }
@@ -22,7 +23,6 @@ export interface Config {
   allowed: boolean;
   count: number;
   custom: Properties;
-  on: On.Config;
   round: number;
   tagging: number;
   default?: boolean;

@@ -35,7 +35,7 @@ describe('Commands on consent', () => {
   test('consent register', () => {
     const mockFn = jest.fn();
     elb('walker on', 'consent', { foo: mockFn });
-    expect(walkerjs.config.on.consent![0].foo).toBe(mockFn);
+    expect(walkerjs.on.consent![0].foo).toBe(mockFn);
   });
 
   test('consent by start', () => {
@@ -92,13 +92,13 @@ describe('Commands on consent', () => {
       { automatically: mockFnB },
     ]);
 
-    expect(walkerjs.config.on.consent).toHaveLength(2);
+    expect(walkerjs.on.consent).toHaveLength(2);
     expect(mockFnA).toHaveBeenCalledTimes(1);
     expect(mockFnB).toHaveBeenCalledTimes(1);
     // Add a new function
     jest.clearAllMocks();
     elb('walker on', 'consent', { automatically: mockFnC });
-    expect(walkerjs.config.on.consent).toHaveLength(3);
+    expect(walkerjs.on.consent).toHaveLength(3);
     expect(mockFnA).toHaveBeenCalledTimes(0);
     expect(mockFnB).toHaveBeenCalledTimes(0);
     expect(mockFnC).toHaveBeenCalledTimes(1);
@@ -155,7 +155,7 @@ describe('Commands on run', () => {
     const mockFn = jest.fn();
     elb('walker on', 'run', mockFn);
     elb('walker run');
-    expect(walkerjs.config.on.run![0]).toBe(mockFn);
+    expect(walkerjs.on.run![0]).toBe(mockFn);
   });
 
   test('run register init', () => {
