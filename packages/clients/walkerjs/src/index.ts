@@ -218,7 +218,6 @@ export function Walkerjs(
         storage: false, // Do not use storage by default
       },
       globalsStatic: assign(values.globalsStatic || {}), // Static global properties
-      timing: 0, // Offset counter to calculate timing property
       tagging: 0, // Helpful to differentiate the clients used setup version
     };
 
@@ -252,6 +251,9 @@ export function Walkerjs(
 
     const queue = values.queue || []; // Temporary event queue for all events of a run
 
+    // Offset counter to calculate timing property
+    const timing = 0;
+
     const user = values.user || {}; // Handles the user ids
 
     return {
@@ -262,6 +264,7 @@ export function Walkerjs(
       group,
       hooks,
       queue,
+      timing,
       user,
     };
   }
@@ -376,8 +379,16 @@ export function Walkerjs(
       return;
     }
 
-    const { config, consent, destinations, globals, group, queue, user } =
-      instance;
+    const {
+      config,
+      consent,
+      destinations,
+      globals,
+      group,
+      timing,
+      queue,
+      user,
+    } = instance;
 
     // Check if walker is allowed to run
     if (!config.allowed) return;
@@ -415,7 +426,6 @@ export function Walkerjs(
 
     ++config.count;
     const timestamp = Date.now();
-    const timing = Math.round((performance.now() - config.timing) / 10) / 100;
     const id = `${timestamp}-${group}-${config.count}`;
     const source = {
       type: 'web',
@@ -437,7 +447,7 @@ export function Walkerjs(
       entity,
       action,
       timestamp,
-      timing,
+      timing: Math.round((performance.now() - timing) / 10) / 100,
       group,
       count: config.count,
       version: {
@@ -561,7 +571,7 @@ export function Walkerjs(
       callPredefined(instance, false);
     } else {
       // Reset timing with each new run
-      instance.config.timing = performance.now();
+      instance.timing = performance.now();
     }
 
     // Session handling

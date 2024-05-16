@@ -30,6 +30,7 @@ export interface Instance extends State, WalkerOS.Instance {
 export interface State extends WalkerOS.State {
   config: Config;
   destinations: Destinations;
+  timing: number;
 }
 
 export interface Config extends WalkerOS.Config {

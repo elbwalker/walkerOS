@@ -196,7 +196,6 @@ describe('ElbLayer', () => {
       run: false,
       round: expect.any(Number),
       session: { storage: false },
-      timing: expect.any(Number),
       tagging: expect.any(Number),
     };
 
@@ -211,6 +210,7 @@ describe('ElbLayer', () => {
       hooks: {},
       queue: expect.any(Array),
       session: expect.objectContaining({ storage: false }),
+      timing: expect.any(Number),
       user: {},
     };
 

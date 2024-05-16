@@ -24,7 +24,6 @@ export interface Config {
   custom: Properties;
   on: On.Config;
   round: number;
-  timing: number;
   tagging: number;
   default?: boolean;
   verbose?: boolean; // Enable verbose logging
