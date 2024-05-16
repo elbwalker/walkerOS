@@ -29,7 +29,7 @@ export function Walkerjs(
   const client = '2.1.3';
   const state = getState(customConfig);
   const instance: WebClient.Instance = {
-    push: useHooks(push, 'Push', state.config.hooks),
+    push: useHooks(push, 'Push', state.hooks),
     client, // Client version
     session: undefined, // Session data
     ...state,
@@ -106,11 +106,11 @@ export function Walkerjs(
   }
 
   function addHook<Hook extends keyof Hooks.Functions>(
-    config: WebClient.Config,
+    instance: WebClient.Instance,
     name: Hook,
     hookFn: Hooks.Functions[Hook],
   ) {
-    config.hooks[name] = hookFn;
+    instance.hooks[name] = hookFn;
   }
 
   function allowedToPush(
@@ -209,7 +209,6 @@ export function Walkerjs(
       dataLayer: false, // Do not use dataLayer by default
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
       group: '', // Random id to group events of a run
-      hooks: {}, // Manage the hook functions
       on: {}, // On events listener rules
       pageview: true, // Trigger a page view event by default
       prefix: Const.Commands.Prefix, // HTML prefix attribute
@@ -246,6 +245,9 @@ export function Walkerjs(
     // Globals enhanced with the static globals from init and previous values
     const globals = assign(values.globals || {}, config.globalsStatic);
 
+    // Manage the hook functions
+    const hooks = values.hooks || {};
+
     const queue = values.queue || []; // Temporary event queue for all events of a run
 
     const user = values.user || {}; // Handles the user ids
@@ -255,6 +257,7 @@ export function Walkerjs(
       consent,
       destinations,
       globals,
+      hooks,
       queue,
       user,
     };
@@ -291,7 +294,7 @@ export function Walkerjs(
         break;
       case Const.Commands.Hook:
         if (isSameType(data, '') && isSameType(options, isSameType))
-          addHook(instance.config, data as keyof Hooks.Functions, options);
+          addHook(instance, data as keyof Hooks.Functions, options);
         break;
       case Const.Commands.Init: {
         const elems: unknown[] = Array.isArray(data)
@@ -497,7 +500,7 @@ export function Walkerjs(
           useHooks(
             destination.init,
             'DestinationInit',
-            instance.config.hooks,
+            instance.hooks,
           )(destination.config) !== false; // Actively check for errors
 
         destination.config.init = init;
@@ -507,7 +510,7 @@ export function Walkerjs(
       }
 
       // It's time to go to the destination's side now
-      useHooks(destination.push, 'DestinationPush', instance.config.hooks)(
+      useHooks(destination.push, 'DestinationPush', instance.hooks)(
         event,
         destination.config,
         mappingEvent,

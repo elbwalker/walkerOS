@@ -12,6 +12,7 @@ export interface State {
   consent: Consent;
   destinations: Destinations;
   globals: Properties;
+  hooks: Hooks.Functions;
   queue: Events;
   user: User;
 }
@@ -21,7 +22,6 @@ export interface Config {
   count: number;
   custom: Properties;
   group: string;
-  hooks: Hooks.Functions;
   on: On.Config;
   round: number;
   timing: number;

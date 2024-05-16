@@ -247,7 +247,7 @@ describe('Elbwalker', () => {
       expect.any(Function),
     );
 
-    expect(walkerjs.config.hooks).toEqual(
+    expect(walkerjs.hooks).toEqual(
       expect.objectContaining({
         prePush: expect.any(Function),
         postPush: expect.any(Function),

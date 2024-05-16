@@ -1,4 +1,4 @@
-import type { On, WalkerOS } from '@elbwalker/types';
+import type { Hooks, On, WalkerOS } from '@elbwalker/types';
 import type { SessionConfig, SessionData } from '@elbwalker/utils';
 import type * as WebDestination from './destination';
 import type * as Walker from './walker';
@@ -48,6 +48,7 @@ export interface CustomConfig extends Partial<Config> {
   consent?: WalkerOS.Consent;
   destinations?: Destinations;
   globals?: WalkerOS.Properties;
+  hooks?: Hooks.Functions;
   queue?: WalkerOS.Events;
   user?: WalkerOS.User;
 }
