@@ -208,7 +208,6 @@ export function Walkerjs(
       count: 0, // Event counter for each run
       dataLayer: false, // Do not use dataLayer by default
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
-      group: '', // Random id to group events of a run
       on: {}, // On events listener rules
       pageview: true, // Trigger a page view event by default
       prefix: Const.Commands.Prefix, // HTML prefix attribute
@@ -245,6 +244,9 @@ export function Walkerjs(
     // Globals enhanced with the static globals from init and previous values
     const globals = assign(values.globals || {}, config.globalsStatic);
 
+    // Random id to group events of a run
+    const group = values.group || '';
+
     // Manage the hook functions
     const hooks = values.hooks || {};
 
@@ -257,6 +259,7 @@ export function Walkerjs(
       consent,
       destinations,
       globals,
+      group,
       hooks,
       queue,
       user,
@@ -373,7 +376,8 @@ export function Walkerjs(
       return;
     }
 
-    const { config, consent, destinations, globals, queue, user } = instance;
+    const { config, consent, destinations, globals, group, queue, user } =
+      instance;
 
     // Check if walker is allowed to run
     if (!config.allowed) return;
@@ -412,7 +416,7 @@ export function Walkerjs(
     ++config.count;
     const timestamp = Date.now();
     const timing = Math.round((performance.now() - config.timing) / 10) / 100;
-    const id = `${timestamp}-${config.group}-${config.count}`;
+    const id = `${timestamp}-${group}-${config.count}`;
     const source = {
       type: 'web',
       id: window.location.href,
@@ -434,7 +438,7 @@ export function Walkerjs(
       action,
       timestamp,
       timing,
-      group: config.group,
+      group,
       count: config.count,
       version: {
         client,
@@ -528,7 +532,6 @@ export function Walkerjs(
     instance.config = assign(config, {
       allowed: true, // When run is called, the walker may start running
       count: 0, // Reset the run counter
-      group: getId(), // Generate a new group id for each run
     });
 
     (instance.globals = assign(
@@ -540,6 +543,9 @@ export function Walkerjs(
     )),
       // Reset the queue for each run without merging
       (instance.queue = []);
+
+    // Generate a new group id for each run
+    instance.group = getId();
 
     // Reset all destination queues
     Object.values(destinations).forEach((destination) => {
