@@ -196,7 +196,7 @@ export function Walkerjs(
   }
 
   function getState(
-    values: WebClient.CustomConfig,
+    customConfig: WebClient.CustomConfig,
     instance: Partial<WebClient.Instance> = {},
   ): WebClient.State {
     const currentConfig: Partial<WebClient.Config> = instance.config || {};
@@ -212,54 +212,35 @@ export function Walkerjs(
         storage: false, // Do not use storage by default
       },
       sessionStatic: {}, // Static session data
-      tagging: values.tagging || 0, // Helpful to differentiate the clients used setup version
-      globalsStatic: assign(values.globalsStatic || {}), // Static global properties
+      tagging: customConfig.tagging || 0, // Helpful to differentiate the clients used setup version
+      globalsStatic: customConfig.globalsStatic || {}, // Static global properties
+    };
+
+    // If 'pageview' is explicitly provided in values, use it; otherwise, use current or default
+    const pageview =
+      'pageview' in customConfig
+        ? !!customConfig.pageview
+        : currentConfig.pageview || defaultConfig.pageview;
+
+    // Value hierarchy: values > current > default
+    const config = {
+      ...defaultConfig,
+      ...currentConfig,
+      ...customConfig,
+      pageview,
     };
 
     // Wait for explicit run command to start
     const allowed = false;
 
-    // If 'pageview' is explicitly provided in values, use it; otherwise, use current or default
-    const pageview =
-      'pageview' in values
-        ? !!values.pageview
-        : currentConfig.pageview || defaultConfig.pageview;
-
-    // Default mode enables both, auto run and dataLayer destination
-    if (values.default) {
-      values.run = true;
-      values.dataLayer = true;
-    }
-
-    // Value hierarchy: values > current > default
-    const config = { ...defaultConfig, ...currentConfig, ...values, pageview };
-
-    // Handle the consent states
-    const consent = values.consent || {};
-
     // Event counter for each run
     const count = 0;
 
-    // Custom state support
-    const custom = values.custom || {};
-
-    // Destination list
-    const destinations = values.destinations || {};
-
-    // Globals enhanced with the static globals from init and previous values
-    const globals = assign(values.globals || {}, config.globalsStatic);
-
-    // Random id to group events of a run
-    const group = values.group || '';
-
-    // Manage the hook functions
-    const hooks = values.hooks || {};
-
-    // On events listener rules
-    const on = values.on || {};
-
-    // Temporary event queue for all events of a run
-    const queue = values.queue || [];
+    // Default mode enables both, auto run and dataLayer destination
+    if (customConfig.default) {
+      customConfig.run = true;
+      customConfig.dataLayer = true;
+    }
 
     // The first round is a special one due to state changes
     const round = 0;
@@ -270,8 +251,20 @@ export function Walkerjs(
     // Offset counter to calculate timing property
     const timing = 0;
 
-    // Handles the user ids
-    const user = values.user || {};
+    // Configurational values
+    const {
+      consent = {}, // Handle the consent states
+      custom = {}, // Custom state support
+      destinations = {}, // Destination list
+      group = '', // Random id to group events of a run
+      hooks = {}, // Manage the hook functions
+      on = {}, // On events listener rules
+      queue = [], // Temporary event queue for all events of a run
+      user = {}, // Handles the user ids
+    } = customConfig;
+
+    // Globals enhanced with the static globals from init and previous values
+    const globals = assign(customConfig.globals || {}, config.globalsStatic);
 
     return {
       allowed,
