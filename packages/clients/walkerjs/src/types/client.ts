@@ -24,12 +24,12 @@ export interface Instance extends State, WalkerOS.Instance {
   client: string;
   config: Config;
   destinations: Destinations;
-  session: undefined | SessionData;
 }
 
 export interface State extends WalkerOS.State {
   config: Config;
   destinations: Destinations;
+  session: undefined | SessionData;
   timing: number;
 }
 

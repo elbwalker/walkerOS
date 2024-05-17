@@ -194,14 +194,12 @@ describe('ElbLayer', () => {
       tagging: expect.any(Number),
     };
 
-    const defaultInterface: WebClient.Instance = {
-      push: expect.any(Function),
+    const defaultState: WebClient.State = {
       allowed: true,
-      client: expect.any(String),
-      config: defaultConfig,
       consent: {},
-      count: expect.any(Number),
+      config: defaultConfig,
       custom: {},
+      count: expect.any(Number),
       destinations: expect.any(Object),
       globals: expect.any(Object),
       group: expect.any(String),
@@ -212,6 +210,12 @@ describe('ElbLayer', () => {
       session: expect.objectContaining({ storage: false }),
       timing: expect.any(Number),
       user: {},
+    };
+
+    const defaultInterface: WebClient.Instance = {
+      push: expect.any(Function),
+      client: expect.any(String),
+      ...defaultState,
     };
 
     walkerjs = Walkerjs();
