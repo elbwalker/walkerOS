@@ -205,7 +205,6 @@ export function Walkerjs(
     const defaultConfig: WebClient.Config = {
       allowed: false, // Wait for explicit run command to start
       custom: {}, // Custom state support
-      count: 0, // Event counter for each run
       dataLayer: false, // Do not use dataLayer by default
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
       pageview: true, // Trigger a page view event by default
@@ -236,6 +235,9 @@ export function Walkerjs(
 
     const consent = values.consent || {}; // Handle the consent states
 
+    // Event counter for each run
+    const count = 0;
+
     const destinations = values.destinations || {}; // Destination list
 
     // Globals enhanced with the static globals from init and previous values
@@ -264,6 +266,7 @@ export function Walkerjs(
     return {
       config,
       consent,
+      count,
       destinations,
       globals,
       group,
@@ -431,9 +434,11 @@ export function Walkerjs(
         (data as WalkerOS.Properties).id || window.location.pathname;
     }
 
-    ++config.count;
+    // Increase event counter
+    ++instance.count;
+
     const timestamp = Date.now();
-    const id = `${timestamp}-${group}-${config.count}`;
+    const id = `${timestamp}-${group}-${instance.count}`;
     const source = {
       type: 'web',
       id: window.location.href,
@@ -456,7 +461,7 @@ export function Walkerjs(
       timestamp,
       timing: Math.round((performance.now() - timing) / 10) / 100,
       group,
-      count: config.count,
+      count: instance.count,
       version: {
         client,
         tagging: config.tagging,
@@ -548,8 +553,10 @@ export function Walkerjs(
     const { config, destinations } = instance;
     instance.config = assign(config, {
       allowed: true, // When run is called, the walker may start running
-      count: 0, // Reset the run counter
     });
+
+    // Reset the run counter
+    instance.count = 0;
 
     (instance.globals = assign(
       // Load globals properties
