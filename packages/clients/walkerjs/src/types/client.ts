@@ -54,6 +54,7 @@ export interface CustomConfig extends Partial<Config> {
   hooks?: Hooks.Functions;
   on?: On.Config;
   queue?: WalkerOS.Events;
+  tagging?: number;
   user?: WalkerOS.User;
 }
 

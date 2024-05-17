@@ -20,11 +20,11 @@ export interface State {
   on: On.Config;
   queue: Events;
   round: number;
+  tagging: number;
   user: User;
 }
 
 export interface Config {
-  tagging: number;
   default?: boolean;
   verbose?: boolean; // Enable verbose logging
 }

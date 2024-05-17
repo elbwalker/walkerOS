@@ -213,7 +213,6 @@ export function Walkerjs(
         storage: false, // Do not use storage by default
       },
       globalsStatic: assign(values.globalsStatic || {}), // Static global properties
-      tagging: 0, // Helpful to differentiate the clients used setup version
     };
 
     // Wait for explicit run command to start
@@ -264,6 +263,9 @@ export function Walkerjs(
     // The first round is a special one due to state changes
     const round = 0;
 
+    // Helpful to differentiate the clients used setup version
+    const tagging = values.tagging || 0;
+
     // Offset counter to calculate timing property
     const timing = 0;
 
@@ -283,6 +285,7 @@ export function Walkerjs(
       on,
       queue,
       round,
+      tagging,
       timing,
       user,
     };
@@ -398,13 +401,18 @@ export function Walkerjs(
       return;
     }
 
+    // Increase event counter
+    ++instance.count;
+
     const {
       allowed,
       config,
       consent,
+      count,
       destinations,
       globals,
       group,
+      tagging,
       timing,
       queue,
       user,
@@ -444,11 +452,8 @@ export function Walkerjs(
         (data as WalkerOS.Properties).id || window.location.pathname;
     }
 
-    // Increase event counter
-    ++instance.count;
-
     const timestamp = Date.now();
-    const id = `${timestamp}-${group}-${instance.count}`;
+    const id = `${timestamp}-${group}-${count}`;
     const source = {
       type: 'web',
       id: window.location.href,
@@ -471,10 +476,10 @@ export function Walkerjs(
       timestamp,
       timing: Math.round((performance.now() - timing) / 10) / 100,
       group,
-      count: instance.count,
+      count,
       version: {
         client,
-        tagging: config.tagging,
+        tagging,
       },
       source,
     };

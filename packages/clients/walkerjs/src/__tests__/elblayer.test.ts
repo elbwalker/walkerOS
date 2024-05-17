@@ -191,7 +191,6 @@ describe('ElbLayer', () => {
       prefix: 'data-elb',
       run: false,
       session: { storage: false },
-      tagging: expect.any(Number),
     };
 
     const defaultInterface: WebClient.Instance = {
@@ -210,6 +209,7 @@ describe('ElbLayer', () => {
       queue: expect.any(Array),
       round: expect.any(Number),
       session: expect.objectContaining({ storage: false }),
+      tagging: expect.any(Number),
       timing: expect.any(Number),
       user: {},
     };
