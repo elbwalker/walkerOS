@@ -191,6 +191,7 @@ describe('ElbLayer', () => {
       prefix: 'data-elb',
       run: false,
       session: { storage: false },
+      sessionStatic: {},
       tagging: expect.any(Number),
     };
 

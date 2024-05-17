@@ -31,7 +31,6 @@ export function Walkerjs(
   const instance: WebClient.Instance = {
     push: useHooks(push, 'Push', state.hooks),
     client, // Client version
-    session: undefined, // Session data
     ...state,
   };
 
@@ -212,6 +211,7 @@ export function Walkerjs(
         // Configuration for session handling
         storage: false, // Do not use storage by default
       },
+      sessionStatic: {}, // Static session data
       tagging: values.tagging || 0, // Helpful to differentiate the clients used setup version
       globalsStatic: assign(values.globalsStatic || {}), // Static global properties
     };
@@ -264,6 +264,9 @@ export function Walkerjs(
     // The first round is a special one due to state changes
     const round = 0;
 
+    // Session data
+    const session = undefined;
+
     // Offset counter to calculate timing property
     const timing = 0;
 
@@ -283,6 +286,7 @@ export function Walkerjs(
       on,
       queue,
       round,
+      session,
       timing,
       user,
     };
@@ -602,7 +606,11 @@ export function Walkerjs(
 
     // Session handling
     if (config.session) {
-      const session = sessionStart({ ...config.session, instance });
+      const session = sessionStart({
+        ...config.session, // Session detection configuration
+        data: config.sessionStatic, // Static default session data
+        instance,
+      });
       if (session) {
         instance.session = session;
       }
