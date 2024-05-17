@@ -8,6 +8,7 @@ export interface Instance extends State {
 }
 
 export interface State {
+  allowed: boolean;
   config: Config;
   consent: Consent;
   count: number;
@@ -22,7 +23,6 @@ export interface State {
 }
 
 export interface Config {
-  allowed: boolean;
   custom: Properties;
   tagging: number;
   default?: boolean;

@@ -47,7 +47,7 @@ function onRun(
   instance: WebClient.Instance,
   onConfig: Array<On.RunConfig>,
 ): void {
-  if (instance.config.allowed)
+  if (instance.allowed)
     onConfig.forEach((func) => {
       tryCatch(func)(instance);
     });

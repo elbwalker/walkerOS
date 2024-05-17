@@ -203,7 +203,6 @@ export function Walkerjs(
     const currentConfig: Partial<WebClient.Config> = instance.config || {};
 
     const defaultConfig: WebClient.Config = {
-      allowed: false, // Wait for explicit run command to start
       custom: {}, // Custom state support
       dataLayer: false, // Do not use dataLayer by default
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
@@ -217,6 +216,9 @@ export function Walkerjs(
       globalsStatic: assign(values.globalsStatic || {}), // Static global properties
       tagging: 0, // Helpful to differentiate the clients used setup version
     };
+
+    // Wait for explicit run command to start
+    const allowed = false;
 
     // If 'pageview' is explicitly provided in values, use it; otherwise, use current or default
     const pageview =
@@ -264,6 +266,7 @@ export function Walkerjs(
     const user = values.user || {}; // Handles the user ids
 
     return {
+      allowed,
       config,
       consent,
       count,
@@ -390,6 +393,7 @@ export function Walkerjs(
     }
 
     const {
+      allowed,
       config,
       consent,
       destinations,
@@ -401,7 +405,7 @@ export function Walkerjs(
     } = instance;
 
     // Check if walker is allowed to run
-    if (!config.allowed) return;
+    if (!allowed) return;
 
     // Get data and context from element parameter
     let elemParameter: undefined | Element;
@@ -551,9 +555,10 @@ export function Walkerjs(
 
   function run(instance: WebClient.Instance) {
     const { config, destinations } = instance;
-    instance.config = assign(config, {
-      allowed: true, // When run is called, the walker may start running
-    });
+    instance.config = assign(config, {});
+
+    // When run is called, the walker may start running
+    instance.allowed = true;
 
     // Reset the run counter
     instance.count = 0;

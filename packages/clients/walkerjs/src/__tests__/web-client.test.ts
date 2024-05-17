@@ -111,10 +111,10 @@ describe('Elbwalker', () => {
 
   test('run option', () => {
     walkerjs = Walkerjs({ run: false });
-    expect(walkerjs.config.allowed).toBeFalsy();
+    expect(walkerjs.allowed).toBeFalsy();
 
     walkerjs = Walkerjs({ run: true });
-    expect(walkerjs.config.allowed).toBeTruthy();
+    expect(walkerjs.allowed).toBeTruthy();
   });
 
   test('dataLayer option', () => {
@@ -130,11 +130,11 @@ describe('Elbwalker', () => {
     window.dataLayer = undefined;
     walkerjs = Walkerjs({ default: false });
     expect(window.dataLayer).toBeUndefined();
-    expect(walkerjs.config.allowed).toBeFalsy();
+    expect(walkerjs.allowed).toBeFalsy();
 
     walkerjs = Walkerjs({ default: true });
     expect(window.dataLayer).toBeDefined();
-    expect(walkerjs.config.allowed).toBeTruthy();
+    expect(walkerjs.allowed).toBeTruthy();
   });
 
   test('globals properties', () => {
@@ -287,9 +287,7 @@ describe('Elbwalker', () => {
       expect.objectContaining({ event: 'e a' }), // event
       { init: true }, // destination config
       undefined, // custom event mapping
-      expect.objectContaining({
-        config: expect.objectContaining({ allowed: true }),
-      }), // walkerjs instance
+      expect.objectContaining({ allowed: true }), // walkerjs instance
     );
 
     expect(postPush).toHaveBeenCalledTimes(1);
