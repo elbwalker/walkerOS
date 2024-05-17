@@ -12,6 +12,7 @@ export interface State {
   config: Config;
   consent: Consent;
   count: number;
+  custom: Properties;
   destinations: Destinations;
   globals: Properties;
   group: string;
@@ -23,7 +24,6 @@ export interface State {
 }
 
 export interface Config {
-  custom: Properties;
   tagging: number;
   default?: boolean;
   verbose?: boolean; // Enable verbose logging

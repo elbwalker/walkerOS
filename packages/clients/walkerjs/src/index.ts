@@ -203,7 +203,6 @@ export function Walkerjs(
     const currentConfig: Partial<WebClient.Config> = instance.config || {};
 
     const defaultConfig: WebClient.Config = {
-      custom: {}, // Custom state support
       dataLayer: false, // Do not use dataLayer by default
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
       pageview: true, // Trigger a page view event by default
@@ -235,12 +234,17 @@ export function Walkerjs(
     // Value hierarchy: values > current > default
     const config = { ...defaultConfig, ...currentConfig, ...values, pageview };
 
-    const consent = values.consent || {}; // Handle the consent states
+    // Handle the consent states
+    const consent = values.consent || {};
 
     // Event counter for each run
     const count = 0;
 
-    const destinations = values.destinations || {}; // Destination list
+    // Custom state support
+    const custom = values.custom || {};
+
+    // Destination list
+    const destinations = values.destinations || {};
 
     // Globals enhanced with the static globals from init and previous values
     const globals = assign(values.globals || {}, config.globalsStatic);
@@ -263,13 +267,15 @@ export function Walkerjs(
     // Offset counter to calculate timing property
     const timing = 0;
 
-    const user = values.user || {}; // Handles the user ids
+    // Handles the user ids
+    const user = values.user || {};
 
     return {
       allowed,
       config,
       consent,
       count,
+      custom,
       destinations,
       globals,
       group,

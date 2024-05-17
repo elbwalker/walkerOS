@@ -47,6 +47,7 @@ export interface Config extends WalkerOS.Config {
 
 export interface CustomConfig extends Partial<Config> {
   consent?: WalkerOS.Consent;
+  custom?: WalkerOS.Properties;
   destinations?: Destinations;
   globals?: WalkerOS.Properties;
   group?: string;
