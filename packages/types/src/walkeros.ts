@@ -16,6 +16,7 @@ export interface State {
   hooks: Hooks.Functions;
   on: On.Config;
   queue: Events;
+  round: number;
   user: User;
 }
 
@@ -23,7 +24,6 @@ export interface Config {
   allowed: boolean;
   count: number;
   custom: Properties;
-  round: number;
   tagging: number;
   default?: boolean;
   verbose?: boolean; // Enable verbose logging

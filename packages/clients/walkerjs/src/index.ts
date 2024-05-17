@@ -211,7 +211,6 @@ export function Walkerjs(
       pageview: true, // Trigger a page view event by default
       prefix: Const.Commands.Prefix, // HTML prefix attribute
       run: false, // Run the walker by default
-      round: 0, // The first round is a special one due to state changes
       session: {
         // Configuration for session handling
         storage: false, // Do not use storage by default
@@ -254,6 +253,9 @@ export function Walkerjs(
     // Temporary event queue for all events of a run
     const queue = values.queue || [];
 
+    // The first round is a special one due to state changes
+    const round = 0;
+
     // Offset counter to calculate timing property
     const timing = 0;
 
@@ -268,6 +270,7 @@ export function Walkerjs(
       hooks,
       on,
       queue,
+      round,
       timing,
       user,
     };
@@ -532,7 +535,7 @@ export function Walkerjs(
         event,
         destination.config,
         mappingEvent,
-        instance.config,
+        instance,
       );
 
       return true;
@@ -570,7 +573,7 @@ export function Walkerjs(
     onApply(instance, 'run');
 
     // Increase round counter
-    if (++instance.config.round == 1) {
+    if (++instance.round == 1) {
       // Run predefined elbLayer stack once for all non-command events
       callPredefined(instance, false);
     } else {

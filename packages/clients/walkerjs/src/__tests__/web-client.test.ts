@@ -287,7 +287,9 @@ describe('Elbwalker', () => {
       expect.objectContaining({ event: 'e a' }), // event
       { init: true }, // destination config
       undefined, // custom event mapping
-      expect.objectContaining({ allowed: true }), // walkerjs instance
+      expect.objectContaining({
+        config: expect.objectContaining({ allowed: true }),
+      }), // walkerjs instance
     );
 
     expect(postPush).toHaveBeenCalledTimes(1);

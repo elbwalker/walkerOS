@@ -7,13 +7,15 @@ import type {
 export interface Destination<Custom = any, EventCustom = any>
   extends WalkerOSDestination.Destination<Custom, EventCustom> {
   init?: (config: Config<Custom, EventCustom>) => void | boolean;
-  push: (
-    event: WalkerOS.Event,
-    config: Config<Custom, EventCustom>,
-    mapping?: EventConfig<EventCustom>,
-    runState?: WalkerOS.Config,
-  ) => void;
+  push: Push<Custom, EventCustom>;
 }
+
+export type Push<Custom, EventCustom> = (
+  event: WalkerOS.Event,
+  config: Config<Custom, EventCustom>,
+  mapping?: EventConfig<EventCustom>,
+  instance?: WalkerOS.Instance,
+) => void;
 
 export interface Config<Custom = any, EventCustom = any>
   extends WalkerOSDestination.Config<Custom, EventCustom> {}
