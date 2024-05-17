@@ -176,6 +176,85 @@ export function Walkerjs(
     });
   }
 
+  function createEvent(
+    entity: string,
+    action: string,
+    pushData: WebClient.PushData,
+    pushContext: WebClient.PushContext,
+    nested: WalkerOS.Entities,
+    custom: WalkerOS.Properties,
+    trigger: string = '',
+  ): WalkerOS.Event {
+    const timestamp = Date.now();
+    const { group, count } = instance;
+    const id = `${timestamp}-${group}-${count}`;
+    const source = {
+      type: 'web',
+      id: window.location.href,
+      previous_id: document.referrer,
+    };
+
+    // Get data and context either from elements or parameters
+    let data: WalkerOS.Properties = {};
+    let context: WalkerOS.OrderedProperties = {};
+
+    let elemParameter: undefined | Element;
+    let dataIsElem = false;
+    if (isElementOrDocument(pushData)) {
+      elemParameter = pushData;
+      dataIsElem = true;
+    } else if (isSameType(pushData, {} as WalkerOS.Properties)) {
+      data = pushData;
+    }
+
+    if (isElementOrDocument(pushContext)) {
+      elemParameter = pushContext;
+    } else if (isSameType(pushContext, {} as WalkerOS.OrderedProperties)) {
+      context = pushContext;
+    }
+
+    if (elemParameter) {
+      // Filter for the entity type from the events name
+      const entityObj = getEntities(instance.config.prefix, elemParameter).find(
+        (obj) => obj.type == entity,
+      );
+
+      if (entityObj) {
+        if (dataIsElem) data = entityObj.data;
+        context = entityObj.context;
+      }
+    }
+
+    // Special case for page entity to add the id by default
+    if (entity === 'page') {
+      data.id = data.id || window.location.pathname;
+    }
+
+    return {
+      event: `${entity} ${action}`,
+      data,
+      context,
+      custom: custom || {},
+      globals: instance.globals,
+      user: instance.user,
+      nested: nested || [],
+      consent: instance.consent,
+      id,
+      trigger,
+      entity,
+      action,
+      timestamp,
+      timing: Math.round((performance.now() - instance.timing) / 10) / 100,
+      group,
+      count,
+      version: {
+        client,
+        tagging: instance.config.tagging,
+      },
+      source,
+    };
+  }
+
   function elbLayerInit(instance: WebClient.Instance) {
     const elbLayer = instance.config.elbLayer;
 
@@ -323,8 +402,7 @@ export function Walkerjs(
           ? data
           : [data || document];
         elems.forEach((elem) => {
-          isElementOrDocument(elem) &&
-            initScopeTrigger(instance, elem as WebClient.Scope);
+          isElementOrDocument(elem) && initScopeTrigger(instance, elem);
         });
         break;
       }
@@ -347,7 +425,7 @@ export function Walkerjs(
     return {}.hasOwnProperty.call(event, 'callee');
   }
 
-  function isElementOrDocument(elem: unknown) {
+  function isElementOrDocument(elem: unknown): elem is HTMLElement {
     return elem === document || elem instanceof HTMLElement;
   }
 
@@ -377,7 +455,7 @@ export function Walkerjs(
 
   function push(
     event?: unknown,
-    data?: WebClient.PushData,
+    data: WebClient.PushData = {},
     options: WebClient.PushOptions = '',
     context: WebClient.PushContext = {},
     nested: WalkerOS.Entities = [],
@@ -395,92 +473,26 @@ export function Walkerjs(
       return;
     }
 
+    // Check if walker is allowed to run
+    if (!instance.allowed) return;
+
     // Increase event counter
     ++instance.count;
 
-    const {
-      allowed,
-      config,
-      consent,
-      count,
-      destinations,
-      globals,
-      group,
-      timing,
-      queue,
-      user,
-    } = instance;
-
-    // Check if walker is allowed to run
-    if (!allowed) return;
-
-    // Get data and context from element parameter
-    let elemParameter: undefined | Element;
-    let dataIsElem = false;
-    if (isElementOrDocument(data)) {
-      elemParameter = data as Element;
-      dataIsElem = true;
-    } else if (isElementOrDocument(context)) {
-      elemParameter = context as Element;
-    }
-
-    if (elemParameter) {
-      // Filter for the entity type from the events name
-      const entityObj = getEntities(config.prefix, elemParameter).find(
-        (obj) => obj.type == entity,
-      );
-
-      if (entityObj) {
-        data = dataIsElem ? entityObj.data : data;
-        context = entityObj.context;
-      }
-    }
-
-    // Set default value if undefined
-    data = data || {};
-
-    // Special case for page entity to add the id by default
-    if (entity === 'page') {
-      (data as WalkerOS.Properties).id =
-        (data as WalkerOS.Properties).id || window.location.pathname;
-    }
-
-    const timestamp = Date.now();
-    const id = `${timestamp}-${group}-${count}`;
-    const source = {
-      type: 'web',
-      id: window.location.href,
-      previous_id: document.referrer,
-    };
-
-    const pushEvent: WalkerOS.Event = {
-      event,
-      data: data as WalkerOS.Properties,
-      context: context as WalkerOS.OrderedProperties,
-      custom,
-      globals,
-      user,
-      nested,
-      consent,
-      id,
-      trigger: options as string,
+    const pushEvent = createEvent(
       entity,
       action,
-      timestamp,
-      timing: Math.round((performance.now() - timing) / 10) / 100,
-      group,
-      count,
-      version: {
-        client,
-        tagging: config.tagging,
-      },
-      source,
-    };
+      data,
+      context,
+      nested,
+      custom,
+      options as string,
+    );
 
     // Add event to internal queue
-    queue.push(pushEvent);
+    instance.queue.push(pushEvent);
 
-    Object.values(destinations).forEach((destination) => {
+    Object.values(instance.destinations).forEach((destination) => {
       pushToDestination(instance, destination, pushEvent);
     });
   }
