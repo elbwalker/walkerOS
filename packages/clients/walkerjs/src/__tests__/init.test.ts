@@ -15,9 +15,9 @@ describe('Init', () => {
       destinations: {
         lol: { config: {}, push: jest.fn() },
       },
-      // hooks: {
-      //   prePush: jest.fn(),
-      // },
+      hooks: {
+        postPush: jest.fn(),
+      },
       session: { storage: true },
       globalsStatic: { static: 'global' },
       on: {
@@ -50,9 +50,9 @@ describe('Init', () => {
           lol: expect.any(Object),
         }),
         globals: { static: 'global' },
-        // hooks: {
-        //   prePush: expect.any(Function),
-        // },
+        hooks: {
+          postPush: expect.any(Function),
+        },
         on: {
           run: [expect.any(Function)],
         },
