@@ -38,6 +38,7 @@ describe('Init', () => {
         consent: { functional: true },
         custom: { private: 'space' },
         config: expect.objectContaining({
+          dataLayer: true,
           globalsStatic: { static: 'global' },
           pageview: true,
           prefix: 'data-prefix',

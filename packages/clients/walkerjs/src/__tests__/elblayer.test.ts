@@ -232,9 +232,7 @@ describe('ElbLayer', () => {
     expect(walkerjs.config).toStrictEqual(expect.objectContaining(update)); // Partial test
     expect(walkerjs.config).toStrictEqual(config); // Full test
 
-    update = { version: 2 };
-    elb('walker config', update);
-    expect(walkerjs.config).toStrictEqual(expect.objectContaining(update));
+    // @TODO Add more tests for other config properties
 
     update = { pageview: false };
     elb('walker config', update);

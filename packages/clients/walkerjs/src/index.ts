@@ -38,16 +38,16 @@ export function Walkerjs(
   elbLayerInit(instance);
 
   // Assign instance and/or elb to the window object
-  if (customConfig.elb)
-    (window as unknown as Record<string, unknown>)[customConfig.elb] = elb;
-  if (customConfig.instance)
-    (window as unknown as Record<string, unknown>)[customConfig.instance] =
+  if (instance.config.elb)
+    (window as unknown as Record<string, unknown>)[instance.config.elb] = elb;
+  if (instance.config.instance)
+    (window as unknown as Record<string, unknown>)[instance.config.instance] =
       instance;
 
   // Run on events for default consent states
   onApply(instance, 'consent');
 
-  if (customConfig.dataLayer) {
+  if (instance.config.dataLayer) {
     // Add a dataLayer destination
     window.dataLayer = window.dataLayer || [];
     const destination: WebDestination.Destination = {
@@ -64,7 +64,7 @@ export function Walkerjs(
   }
 
   // Automatically start running
-  if (customConfig.run) {
+  if (instance.config.run) {
     ready(run, instance);
   }
 
@@ -278,8 +278,6 @@ export function Walkerjs(
     initConfig: WebClient.InitConfig,
     instance: Partial<WebClient.Instance> = {},
   ): WebClient.State {
-    const currentConfig: Partial<WebClient.Config> = instance.config || {};
-
     const defaultConfig: WebClient.Config = {
       dataLayer: false, // Do not use dataLayer by default
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
@@ -291,52 +289,30 @@ export function Walkerjs(
         storage: false, // Do not use storage by default
       },
       sessionStatic: {}, // Static session data
-      tagging: initConfig.tagging || 0, // Helpful to differentiate the clients used setup version
-      globalsStatic: initConfig.globalsStatic || {}, // Static global properties
+      tagging: 0, // Helpful to differentiate the clients used setup version
+      globalsStatic: {}, // Static global properties
     };
 
-    // If 'pageview' is explicitly provided in values, use it; otherwise, use current or default
-    const pageview =
-      'pageview' in initConfig
-        ? !!initConfig.pageview
-        : currentConfig.pageview || defaultConfig.pageview;
+    const config: WebClient.Config = assign(
+      defaultConfig,
+      {
+        ...(instance.config || {}), // current config
+        ...initConfig, // new config
+      },
+      { merge: false },
+    );
 
-    // Value hierarchy: values > current > default
-    const config = {
-      ...defaultConfig,
-      ...currentConfig,
-      ...initConfig,
-      pageview,
-    };
+    // Optional values
+    if (initConfig.elb) config.elb = initConfig.elb;
+    if (initConfig.instance) config.instance = initConfig.instance;
 
-    // Wait for explicit run command to start
-    const allowed = false;
-
-    // Event counter for each run
-    const count = 0;
-
-    // Default mode enables both, auto run and dataLayer destination
+    // Process default mode to enable both auto-run and dataLayer destination
     if (initConfig.default) {
-      initConfig.run = true;
-      initConfig.dataLayer = true;
+      config.run = true;
+      config.dataLayer = true;
     }
 
-    // Random id to group events of a run
-    const group = '';
-
-    // Temporary event queue for all events of a run
-    const queue: WalkerOS.Events = [];
-
-    // The first round is a special one due to state changes
-    const round = 0;
-
-    // Session data
-    const session = undefined;
-
-    // Offset counter to calculate timing property
-    const timing = 0;
-
-    // Configurational values
+    // Extract remaining values from initConfig
     const {
       consent = {}, // Handle the consent states
       custom = {}, // Custom state support
@@ -347,23 +323,23 @@ export function Walkerjs(
     } = initConfig;
 
     // Globals enhanced with the static globals from init and previous values
-    const globals = assign({}, config.globalsStatic);
+    const globals = { ...config.globalsStatic };
 
     return {
-      allowed,
+      allowed: false, // Wait for explicit run command to start
       config,
       consent,
-      count,
+      count: 0, // Event counter for each run
       custom,
       destinations,
       globals,
-      group,
+      group: '', // Random id to group events of a run
       hooks,
       on,
-      queue,
-      round,
-      session,
-      timing,
+      queue: [], // Temporary event queue for all events of a run
+      round: 0, // The first round is a special one due to state changes
+      session: undefined, // Session data
+      timing: 0, // Offset counter to calculate timing property
       user,
     };
   }
