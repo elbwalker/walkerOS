@@ -46,11 +46,10 @@ export interface Config extends WalkerOS.Config {
   instance?: string;
 }
 
-export interface CustomConfig extends Partial<Config> {
+export interface InitConfig extends Partial<Config> {
   consent?: WalkerOS.Consent;
   custom?: WalkerOS.Properties;
   destinations?: Destinations;
-  globals?: WalkerOS.Properties;
   group?: string;
   hooks?: Hooks.Functions;
   on?: On.Config;

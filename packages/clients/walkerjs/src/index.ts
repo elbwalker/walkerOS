@@ -24,7 +24,7 @@ export * from './types';
 export { elb };
 
 export function Walkerjs(
-  customConfig: WebClient.CustomConfig = {},
+  customConfig: WebClient.InitConfig = {},
 ): WebClient.Instance {
   const client = '2.1.3';
   const state = getState(customConfig);
@@ -275,7 +275,7 @@ export function Walkerjs(
   }
 
   function getState(
-    customConfig: WebClient.CustomConfig,
+    customConfig: WebClient.InitConfig,
     instance: Partial<WebClient.Instance> = {},
   ): WebClient.State {
     const currentConfig: Partial<WebClient.Config> = instance.config || {};
@@ -343,7 +343,7 @@ export function Walkerjs(
     } = customConfig;
 
     // Globals enhanced with the static globals from init and previous values
-    const globals = assign(customConfig.globals || {}, config.globalsStatic);
+    const globals = assign({}, config.globalsStatic);
 
     return {
       allowed,
