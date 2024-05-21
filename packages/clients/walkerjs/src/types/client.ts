@@ -53,7 +53,6 @@ export interface InitConfig extends Partial<Config> {
   group?: string;
   hooks?: Hooks.Functions;
   on?: On.Config;
-  queue?: WalkerOS.Events;
   tagging?: number;
   user?: WalkerOS.User;
 }

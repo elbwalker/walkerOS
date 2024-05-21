@@ -21,6 +21,7 @@ describe('Init', () => {
       prefix: 'data-prefix',
       run: true,
       sessionStatic: { id: 's3ss10n', device: 'd3v1c3' },
+      tagging: 42,
       user: { id: '1d', device: 'overruled' },
     };
 
@@ -36,6 +37,7 @@ describe('Init', () => {
           prefix: 'data-prefix',
           run: true,
           session: { storage: true },
+          tagging: 42,
         }),
         destinations: expect.objectContaining({
           lol: expect.any(Object),

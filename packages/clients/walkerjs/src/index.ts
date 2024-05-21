@@ -275,7 +275,7 @@ export function Walkerjs(
   }
 
   function getState(
-    customConfig: WebClient.InitConfig,
+    initConfig: WebClient.InitConfig,
     instance: Partial<WebClient.Instance> = {},
   ): WebClient.State {
     const currentConfig: Partial<WebClient.Config> = instance.config || {};
@@ -291,21 +291,21 @@ export function Walkerjs(
         storage: false, // Do not use storage by default
       },
       sessionStatic: {}, // Static session data
-      tagging: customConfig.tagging || 0, // Helpful to differentiate the clients used setup version
-      globalsStatic: customConfig.globalsStatic || {}, // Static global properties
+      tagging: initConfig.tagging || 0, // Helpful to differentiate the clients used setup version
+      globalsStatic: initConfig.globalsStatic || {}, // Static global properties
     };
 
     // If 'pageview' is explicitly provided in values, use it; otherwise, use current or default
     const pageview =
-      'pageview' in customConfig
-        ? !!customConfig.pageview
+      'pageview' in initConfig
+        ? !!initConfig.pageview
         : currentConfig.pageview || defaultConfig.pageview;
 
     // Value hierarchy: values > current > default
     const config = {
       ...defaultConfig,
       ...currentConfig,
-      ...customConfig,
+      ...initConfig,
       pageview,
     };
 
@@ -316,10 +316,13 @@ export function Walkerjs(
     const count = 0;
 
     // Default mode enables both, auto run and dataLayer destination
-    if (customConfig.default) {
-      customConfig.run = true;
-      customConfig.dataLayer = true;
+    if (initConfig.default) {
+      initConfig.run = true;
+      initConfig.dataLayer = true;
     }
+
+    // Temporary event queue for all events of a run
+    const queue: WalkerOS.Events = [];
 
     // The first round is a special one due to state changes
     const round = 0;
@@ -338,9 +341,8 @@ export function Walkerjs(
       group = '', // Random id to group events of a run
       hooks = {}, // Manage the hook functions
       on = {}, // On events listener rules
-      queue = [], // Temporary event queue for all events of a run
       user = {}, // Handles the user ids
-    } = customConfig;
+    } = initConfig;
 
     // Globals enhanced with the static globals from init and previous values
     const globals = assign({}, config.globalsStatic);
