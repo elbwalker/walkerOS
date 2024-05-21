@@ -321,6 +321,9 @@ export function Walkerjs(
       initConfig.dataLayer = true;
     }
 
+    // Random id to group events of a run
+    const group = '';
+
     // Temporary event queue for all events of a run
     const queue: WalkerOS.Events = [];
 
@@ -338,7 +341,6 @@ export function Walkerjs(
       consent = {}, // Handle the consent states
       custom = {}, // Custom state support
       destinations = {}, // Destination list
-      group = '', // Random id to group events of a run
       hooks = {}, // Manage the hook functions
       on = {}, // On events listener rules
       user = {}, // Handles the user ids

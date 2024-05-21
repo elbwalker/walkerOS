@@ -50,7 +50,6 @@ export interface InitConfig extends Partial<Config> {
   consent?: WalkerOS.Consent;
   custom?: WalkerOS.Properties;
   destinations?: Destinations;
-  group?: string;
   hooks?: Hooks.Functions;
   on?: On.Config;
   tagging?: number;

@@ -15,8 +15,14 @@ describe('Init', () => {
       destinations: {
         lol: { config: {}, push: jest.fn() },
       },
+      // hooks: {
+      //   prePush: jest.fn(),
+      // },
       session: { storage: true },
       globalsStatic: { static: 'global' },
+      on: {
+        run: [jest.fn()],
+      },
       pageview: true,
       prefix: 'data-prefix',
       run: true,
@@ -42,6 +48,13 @@ describe('Init', () => {
         destinations: expect.objectContaining({
           lol: expect.any(Object),
         }),
+        globals: { static: 'global' },
+        // hooks: {
+        //   prePush: expect.any(Function),
+        // },
+        on: {
+          run: [expect.any(Function)],
+        },
         user: { id: '1d', session: 's3ss10n', device: 'd3v1c3' },
       }),
     );
