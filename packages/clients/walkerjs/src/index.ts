@@ -548,28 +548,29 @@ export function Walkerjs(
     return pushed;
   }
 
-  function run(instance: WebClient.Instance) {
+  function run(instance: WebClient.Instance, state: WebClient.InitConfig = {}) {
     const { config, destinations } = instance;
     instance.config = assign(config, {});
 
-    // When run is called, the walker may start running
-    instance.allowed = true;
+    const newState = assign(
+      {
+        allowed: true, // When run is called, the walker may start running
+        count: 0, // Reset the run counter
+        queue: [], // Reset the queue for each run without merging
+        group: getId(), // Generate a new group id for each run
+        globals: assign(
+          // Load globals properties
+          // Use the static globals and search for tagged ones
+          // Due to site performance only once every run
+          config.globalsStatic,
+          getGlobals(config.prefix),
+        ),
+      },
+      { ...state },
+    );
 
-    // Reset the run counter
-    instance.count = 0;
-
-    (instance.globals = assign(
-      // Load globals properties
-      // Use the default globals set by initialization
-      // Due to site performance only once every run
-      config.globalsStatic,
-      getGlobals(config.prefix),
-    )),
-      // Reset the queue for each run without merging
-      (instance.queue = []);
-
-    // Generate a new group id for each run
-    instance.group = getId();
+    // Update the instance reference with the updated state
+    Object.assign(instance, newState);
 
     // Reset all destination queues
     Object.values(destinations).forEach((destination) => {
