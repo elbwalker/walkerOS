@@ -19,6 +19,9 @@ export function onApply(
     case Const.Commands.Run:
       onRun(instance, onConfig as Array<On.RunConfig>);
       break;
+    case Const.Commands.Session:
+      onSession(instance, onConfig as Array<On.SessionConfig>);
+      break;
     default:
       break;
   }
@@ -50,5 +53,17 @@ function onRun(
   if (instance.allowed)
     onConfig.forEach((func) => {
       tryCatch(func)(instance);
+    });
+}
+
+function onSession(
+  instance: WebClient.Instance,
+  onConfig: Array<On.SessionConfig>,
+): void {
+  const { session } = instance;
+
+  if (session)
+    onConfig.forEach((func) => {
+      tryCatch(func)(instance, session);
     });
 }

@@ -599,11 +599,11 @@ export function Walkerjs(
         data: config.sessionStatic, // Static default session data
         instance,
       });
+
       if (session) {
         instance.session = session;
+        onApply(instance, 'session');
       }
-
-      // @TODO on-event for session
     }
 
     tryCatch(load)(instance);

@@ -2,7 +2,7 @@ import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { WebClient } from '..';
 
-describe('Commands on consent', () => {
+describe('On Consent', () => {
   let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
@@ -133,7 +133,7 @@ describe('Commands on consent', () => {
   });
 });
 
-describe('Commands on run', () => {
+describe('On Run', () => {
   let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
@@ -268,5 +268,37 @@ describe('Commands on run', () => {
         },
       }),
     );
+  });
+});
+
+describe('On Session', () => {
+  let walkerjs: WebClient.Instance;
+  const mockFn = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    walkerjs = Walkerjs({ run: true });
+  });
+
+  test('register', () => {
+    walkerjs = Walkerjs({ run: true, on: { session: [mockFn] } });
+    const mockFnOn = jest.fn();
+    elb('walker on', 'session', mockFnOn);
+
+    expect(walkerjs.on.session![0]).toBe(mockFn);
+    expect(walkerjs.on.session![1]).toBe(mockFnOn);
+  });
+
+  test('session disabled', () => {
+    jest.clearAllMocks();
+    walkerjs = Walkerjs({ run: true, session: false });
+
+    elb('walker on', 'session', mockFn);
+    expect(mockFn).toHaveBeenCalledTimes(0);
+  });
+
+  test('basics', () => {
+    elb('walker on', 'session', mockFn);
+    expect(mockFn).toHaveBeenCalledTimes(1);
   });
 });
