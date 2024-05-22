@@ -1,6 +1,16 @@
 import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { WebClient } from '..';
+import { sessionStart } from '@elbwalker/utils';
+
+jest.mock('@elbwalker/utils', () => {
+  const utilsOrg = jest.requireActual('@elbwalker/utils');
+
+  return {
+    ...utilsOrg,
+    sessionStart: jest.fn().mockImplementation(utilsOrg.sessionStart),
+  };
+});
 
 describe('On Consent', () => {
   let walkerjs: WebClient.Instance;
@@ -299,6 +309,11 @@ describe('On Session', () => {
 
   test('basics', () => {
     elb('walker on', 'session', mockFn);
+    expect(sessionStart).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  test('async storage session', () => {
+    // @TODO
   });
 });

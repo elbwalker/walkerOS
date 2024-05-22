@@ -215,6 +215,7 @@ describe('ElbLayer', () => {
 
     const defaultInterface: WebClient.Instance = {
       push: expect.any(Function),
+      sessionStart: expect.any(Function),
       client: expect.any(String),
       ...defaultState,
     };

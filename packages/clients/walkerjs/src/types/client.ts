@@ -21,6 +21,7 @@ type WalkerEvent = Array<
 
 export interface Instance extends State, WalkerOS.Instance {
   push: Elb;
+  sessionStart: (options?: SessionStartOptions) => void | SessionData;
   client: string;
   config: Config;
   destinations: Destinations;
@@ -99,6 +100,11 @@ export type PushContext = WalkerOS.PushContext | Element;
 
 export type Scope = Document | Element | HTMLElement;
 export type ScopeType = Scope | Scope[];
+
+export interface SessionStartOptions {
+  config?: SessionConfig;
+  data?: Partial<SessionData>;
+}
 
 export interface Destinations {
   [name: string]: WebDestination.Destination;

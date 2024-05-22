@@ -1,5 +1,6 @@
 import type { WebClient, WebDestination } from './types';
 import type { Hooks, On, WalkerOS } from '@elbwalker/types';
+import type { SessionData } from '@elbwalker/utils';
 import {
   elb,
   initScopeTrigger,
@@ -12,12 +13,13 @@ import {
   assign,
   getId,
   isSameType,
-  sessionStart,
+  sessionStart as sessionStartOrg,
   tryCatch,
   useHooks,
 } from '@elbwalker/utils';
 import { getEntities, getGlobals } from './lib/walker';
 import { onApply } from './lib/on';
+import { SessionStartOptions } from './types/client';
 
 // Export types and elb
 export * from './types';
@@ -30,6 +32,7 @@ export function Walkerjs(
   const state = getState(customConfig);
   const instance: WebClient.Instance = {
     push: useHooks(push, 'Push', state.hooks),
+    sessionStart: useHooks(sessionStart, 'SessionStart', state.hooks),
     client, // Client version
     ...state,
   };
@@ -594,19 +597,31 @@ export function Walkerjs(
 
     // Session handling
     if (config.session) {
-      const session = sessionStart({
+      sessionStart({
         ...config.session, // Session detection configuration
         data: config.sessionStatic, // Static default session data
-        instance,
       });
-
-      if (session) {
-        instance.session = session;
-        onApply(instance, 'session');
-      }
     }
 
     tryCatch(load)(instance);
+  }
+
+  function sessionStart(options: SessionStartOptions = {}): void | SessionData {
+    const sessionConfig = assign(instance.config.session || {}, options.config);
+    const sessionData = assign(instance.config.sessionStatic, options.data);
+
+    const session = sessionStartOrg({
+      ...sessionConfig, // Session detection configuration
+      data: sessionData, // Static default session data
+      instance,
+    });
+
+    if (session) {
+      instance.session = session;
+      onApply(instance, 'session');
+    }
+
+    return session;
   }
 
   function setConsent(instance: WebClient.Instance, data: WalkerOS.Consent) {

@@ -14,8 +14,11 @@ jest.mock('@elbwalker/utils', () => {
 
 describe('Session', () => {
   let walkerjs: WebClient.Instance;
+  const mockFn = jest.fn();
 
-  beforeEach(() => {});
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   test('default state', () => {
     walkerjs = Walkerjs();
@@ -48,5 +51,31 @@ describe('Session', () => {
     });
     expect(walkerjs.config.session).toEqual(false);
     expect(sessionStart).toHaveBeenCalledTimes(0);
+  });
+
+  test('on call', () => {
+    walkerjs = Walkerjs({
+      session: { storage: false },
+      sessionStatic: { device: 'd3v1c3' },
+      on: { session: [mockFn] },
+      run: true,
+    });
+
+    expect(mockFn).toHaveBeenCalledTimes(1);
+
+    expect(
+      walkerjs.sessionStart({
+        config: { storage: false },
+        data: { id: 's3ss10n' },
+      }),
+    ).toStrictEqual(
+      expect.objectContaining({
+        id: 's3ss10n', // @TODO Different in window.session
+        device: 'd3v1c3',
+        storage: false,
+      }),
+    );
+
+    expect(mockFn).toHaveBeenCalledTimes(2);
   });
 });
