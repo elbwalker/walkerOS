@@ -299,7 +299,7 @@ export function Walkerjs(
         ...(instance.config || {}), // current config
         ...initConfig, // new config
       },
-      { merge: false },
+      { merge: false, extend: false },
     );
 
     // Optional values
@@ -573,7 +573,7 @@ export function Walkerjs(
     );
 
     // Update the instance reference with the updated state
-    Object.assign(instance, newState);
+    assign(instance, newState, { merge: false, shallow: false, extend: false });
 
     // Reset all destination queues
     Object.values(destinations).forEach((destination) => {
