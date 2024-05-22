@@ -71,6 +71,7 @@ export interface Elb extends WalkerOS.Elb {
     nested?: WalkerOS.Entities,
     custom?: WalkerOS.Properties,
   ): void;
+  (event: 'walker run', state?: Partial<State>): void;
 }
 
 export type ElbLayer = [
@@ -85,6 +86,7 @@ export type ElbLayer = [
 export type PushData =
   | WalkerOS.PushData
   | WebDestination.Destination
+  | Partial<State>
   | ScopeType;
 
 export type PushOptions =

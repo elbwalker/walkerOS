@@ -151,6 +151,17 @@ describe('Commands on run', () => {
     expect(mockFn).toHaveBeenCalledTimes(1); // only once
   });
 
+  test('run with state', () => {
+    elb('walker run', { group: 'gr0up1d', round: 5 });
+
+    expect(walkerjs).toStrictEqual(
+      expect.objectContaining({
+        group: 'gr0up1d',
+        round: 6,
+      }),
+    );
+  });
+
   test('run register', () => {
     const mockFn = jest.fn();
     elb('walker on', 'run', mockFn);

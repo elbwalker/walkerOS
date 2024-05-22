@@ -389,7 +389,7 @@ export function Walkerjs(
         on(instance, data as On.Types, options as On.Options);
         break;
       case Const.Commands.Run:
-        ready(run, instance);
+        ready(run, instance, data as Partial<WebClient.State>);
         break;
       case Const.Commands.User:
         isObject(data) && setUserIds(instance, data as WalkerOS.User);
@@ -548,7 +548,10 @@ export function Walkerjs(
     return pushed;
   }
 
-  function run(instance: WebClient.Instance, state: WebClient.InitConfig = {}) {
+  function run(
+    instance: WebClient.Instance,
+    state: Partial<WebClient.State> = {},
+  ) {
     const { config, destinations } = instance;
     instance.config = assign(config, {});
 
