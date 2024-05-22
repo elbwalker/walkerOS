@@ -1,6 +1,6 @@
 import { Hooks } from '@elbwalker/types';
 
-export function useHooks<P extends any[], R>(
+export function useHooks<P extends unknown[], R>(
   fn: (...args: P) => R,
   name: string,
   hooks: Hooks.Functions,
