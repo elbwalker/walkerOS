@@ -6,6 +6,7 @@ export type CommandTypes =
   | 'Config'
   | 'Consent'
   | 'Context'
+  | 'Custom'
   | 'Destination'
   | 'Elb'
   | 'Globals'
@@ -24,6 +25,7 @@ export const Commands: Record<CommandTypes, WalkerOS.Commands> = {
   Config: 'config',
   Consent: 'consent',
   Context: 'context',
+  Custom: 'custom',
   Destination: 'destination',
   Elb: 'elb',
   Globals: 'globals',

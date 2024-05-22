@@ -358,6 +358,9 @@ export function Walkerjs(
       case Const.Commands.Consent:
         isObject(data) && setConsent(instance, data as WalkerOS.Consent);
         break;
+      case Const.Commands.Custom:
+        if (isObject(data)) instance.custom = assign(instance.custom, data);
+        break;
       case Const.Commands.Destination:
         isObject(data) &&
           addDestination(
@@ -367,11 +370,7 @@ export function Walkerjs(
           );
         break;
       case Const.Commands.Globals:
-        if (isObject(data))
-          instance.globals = assign(
-            instance.globals,
-            data as WalkerOS.Properties,
-          );
+        if (isObject(data)) instance.globals = assign(instance.globals, data);
         break;
       case Const.Commands.Hook:
         if (isSameType(data, '') && isSameType(options, isSameType))
@@ -409,7 +408,7 @@ export function Walkerjs(
     return elem === document || elem instanceof HTMLElement;
   }
 
-  function isObject(obj: unknown) {
+  function isObject(obj: unknown): obj is WalkerOS.AnyObject {
     return isSameType(obj, {}) && !Array.isArray(obj) && obj !== null;
   }
 

@@ -235,4 +235,27 @@ describe('Commands on run', () => {
       }),
     );
   });
+
+  test('custom', () => {
+    walkerjs = Walkerjs({ default: true, custom: { static: 'value' } });
+    expect(walkerjs).toStrictEqual(
+      expect.objectContaining({
+        custom: { static: 'value' },
+      }),
+    );
+
+    elb('walker custom', { foo: 'bar' });
+    elb('walker custom', { another: 'value' });
+    elb('walker custom', { static: 'override' });
+    elb('foo bar');
+    expect(walkerjs).toStrictEqual(
+      expect.objectContaining({
+        custom: {
+          static: 'override',
+          foo: 'bar',
+          another: 'value',
+        },
+      }),
+    );
+  });
 });
