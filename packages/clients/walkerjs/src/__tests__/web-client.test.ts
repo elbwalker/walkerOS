@@ -203,7 +203,7 @@ describe('Elbwalker', () => {
       params.fn(...args); // Regular call
       return 'foo'; // Updated response
     });
-    const postPush: Hooks.Function = jest.fn();
+    const postPush: Hooks.AnyFunction = jest.fn();
     const preDestinationInit = jest
       .fn()
       .mockImplementation(function (params, ...args) {

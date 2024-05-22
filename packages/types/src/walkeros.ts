@@ -57,7 +57,7 @@ export interface Elb {
 
 export type PushData = string | Partial<Config> | Consent | User | Properties;
 
-export type PushOptions = Hooks.Function;
+export type PushOptions = Hooks.AnyFunction;
 
 export type PushContext = OrderedProperties;
 
