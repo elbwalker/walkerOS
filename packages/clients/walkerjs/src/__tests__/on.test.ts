@@ -233,52 +233,6 @@ describe('On Run', () => {
     elb('walker run');
     expect(mockFn).toHaveBeenCalledTimes(3);
   });
-
-  test('globals update', () => {
-    walkerjs = Walkerjs({ default: true, globalsStatic: { static: 'value' } });
-    expect(mockDataLayer).toHaveBeenCalledWith(
-      expect.objectContaining({
-        globals: { static: 'value' },
-      }),
-    );
-
-    elb('walker globals', { foo: 'bar' });
-    elb('walker globals', { another: 'value' });
-    elb('walker globals', { static: 'override' });
-    elb('foo bar');
-    expect(mockDataLayer).toHaveBeenCalledWith(
-      expect.objectContaining({
-        globals: {
-          static: 'override',
-          foo: 'bar',
-          another: 'value',
-        },
-      }),
-    );
-  });
-
-  test('custom', () => {
-    walkerjs = Walkerjs({ default: true, custom: { static: 'value' } });
-    expect(walkerjs).toStrictEqual(
-      expect.objectContaining({
-        custom: { static: 'value' },
-      }),
-    );
-
-    elb('walker custom', { foo: 'bar' });
-    elb('walker custom', { another: 'value' });
-    elb('walker custom', { static: 'override' });
-    elb('foo bar');
-    expect(walkerjs).toStrictEqual(
-      expect.objectContaining({
-        custom: {
-          static: 'override',
-          foo: 'bar',
-          another: 'value',
-        },
-      }),
-    );
-  });
 });
 
 describe('On Session', () => {

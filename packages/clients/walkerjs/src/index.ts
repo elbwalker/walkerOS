@@ -571,7 +571,6 @@ export function Walkerjs(
     state: Partial<WebClient.State> = {},
   ) {
     const { config, destinations } = instance;
-    instance.config = assign(config, {});
 
     const newState = assign(
       {
@@ -589,6 +588,8 @@ export function Walkerjs(
       },
       { ...state },
     );
+
+    // @TODO state and globals should be merged with the current state
 
     // Update the instance reference with the updated state
     assign(instance, newState, { merge: false, shallow: false, extend: false });
