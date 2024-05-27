@@ -29,22 +29,22 @@ export interface Config {
   verbose?: boolean; // Enable verbose logging
 }
 
-export interface Elb {
-  (event: 'walker config', config: Partial<Config>): void;
-  (event: 'walker consent', consent: Consent): void;
+export interface Elb<R = void> {
+  (event: 'walker config', config: Partial<Config>): R;
+  (event: 'walker consent', consent: Consent): R;
 
   <K extends keyof Hooks.Functions>(
     event: 'walker hook',
     name: K,
     hookFn: Hooks.Functions[K],
-  ): void;
+  ): R;
   (
     event: 'walker on',
     type: 'consent',
     rules: SingleOrArray<On.ConsentConfig>,
-  ): void;
-  (event: 'walker run'): void;
-  (event: 'walker user', user: User): void;
+  ): R;
+  (event: 'walker run'): R;
+  (event: 'walker user', user: User): R;
   (
     event: string,
     data?: PushData,
@@ -52,12 +52,12 @@ export interface Elb {
     context?: PushContext,
     nested?: Entities,
     custom?: Properties,
-  ): void;
+  ): R;
 }
 
 export type PushData = string | Partial<Config> | Consent | User | Properties;
 
-export type PushOptions = Hooks.AnyFunction;
+export type PushOptions = Hooks.AnyFunction | SingleOrArray<On.Options>;
 
 export type PushContext = OrderedProperties;
 

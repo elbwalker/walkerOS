@@ -14,7 +14,6 @@ describe('Commands', () => {
     const { elb, instance } = getClient();
     expect(instance.config).toHaveProperty('user', {});
 
-    let config = instance.config;
     let result = await elb('walker config');
 
     expect(result.command).toHaveProperty('name', 'config');

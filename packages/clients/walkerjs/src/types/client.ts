@@ -93,8 +93,7 @@ export type PushData =
 export type PushOptions =
   | WalkerOS.PushOptions
   | Walker.Trigger
-  | WebDestination.Config
-  | WalkerOS.SingleOrArray<On.Options>;
+  | WebDestination.Config;
 
 export type PushContext = WalkerOS.PushContext | Element;
 

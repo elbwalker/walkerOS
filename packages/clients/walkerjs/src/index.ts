@@ -28,12 +28,12 @@ export { elb };
 export function Walkerjs(
   customConfig: WebClient.InitConfig = {},
 ): WebClient.Instance {
-  const client = '2.1.3';
+  const client = '2.1.3'; // Client version
   const state = getState(customConfig);
   const instance: WebClient.Instance = {
     push: useHooks(push, 'Push', state.hooks),
     sessionStart: useHooks(sessionStart, 'SessionStart', state.hooks),
-    client, // Client version
+    client,
     ...state,
   };
 
@@ -266,7 +266,7 @@ export function Walkerjs(
         group,
         count,
         version: {
-          client,
+          client: instance.client,
           tagging: instance.config.tagging,
         },
         source,
