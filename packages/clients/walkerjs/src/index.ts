@@ -179,15 +179,29 @@ export function Walkerjs(
     });
   }
 
-  function createEvent(
-    entity: string,
-    action: string,
+  function createEventOrCommand(
+    instance: WebClient.Instance,
+    nameOrEvent: unknown,
     pushData: WebClient.PushData,
     pushContext: WebClient.PushContext,
     nested: WalkerOS.Entities,
     custom: WalkerOS.Properties,
-    trigger: string = '',
-  ): WalkerOS.Event {
+    trigger: WebClient.PushOptions = '',
+  ): { event?: WalkerOS.Event; command?: string } {
+    if (!nameOrEvent || !isSameType(nameOrEvent, '' as string)) return {};
+
+    // Check for valid entity and action event format
+    const [entity, action] = nameOrEvent.split(' ');
+    if (!entity || !action) return {};
+
+    // It's a walker command
+    if (isCommand(entity)) return { command: action };
+
+    // Regular event
+
+    // Increase event counter
+    ++instance.count;
+
     const timestamp = Date.now();
     const { group, count } = instance;
     const id = `${timestamp}-${group}-${count}`;
@@ -234,27 +248,29 @@ export function Walkerjs(
     }
 
     return {
-      event: `${entity} ${action}`,
-      data,
-      context,
-      custom: custom || {},
-      globals: instance.globals,
-      user: instance.user,
-      nested: nested || [],
-      consent: instance.consent,
-      id,
-      trigger,
-      entity,
-      action,
-      timestamp,
-      timing: Math.round((performance.now() - instance.timing) / 10) / 100,
-      group,
-      count,
-      version: {
-        client,
-        tagging: instance.config.tagging,
+      event: {
+        event: `${entity} ${action}`,
+        data,
+        context,
+        custom: custom || {},
+        globals: instance.globals,
+        user: instance.user,
+        nested: nested || [],
+        consent: instance.consent,
+        id,
+        trigger: isSameType(trigger, '') ? trigger : '',
+        entity,
+        action,
+        timestamp,
+        timing: Math.round((performance.now() - instance.timing) / 10) / 100,
+        group,
+        count,
+        version: {
+          client,
+          tagging: instance.config.tagging,
+        },
+        source,
       },
-      source,
     };
   }
 
@@ -284,6 +300,7 @@ export function Walkerjs(
     const defaultConfig: WebClient.Config = {
       dataLayer: false, // Do not use dataLayer by default
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
+      globalsStatic: {}, // Static global properties
       pageview: true, // Trigger a page view event by default
       prefix: Const.Commands.Prefix, // HTML prefix attribute
       run: false, // Run the walker by default
@@ -293,7 +310,6 @@ export function Walkerjs(
       },
       sessionStatic: {}, // Static session data
       tagging: 0, // Helpful to differentiate the clients used setup version
-      globalsStatic: {}, // Static global properties
     };
 
     const config: WebClient.Config = assign(
@@ -402,9 +418,25 @@ export function Walkerjs(
     }
   }
 
+  function handleEvent(instance: WebClient.Instance, event: WalkerOS.Event) {
+    // Check if walker is allowed to run
+    if (!instance.allowed) return;
+
+    // Add event to internal queue
+    instance.queue.push(event);
+
+    Object.values(instance.destinations).forEach((destination) => {
+      pushToDestination(instance, destination, event);
+    });
+  }
+
   function isArgument(event?: unknown): event is IArguments {
     if (!event) return false;
     return {}.hasOwnProperty.call(event, 'callee');
+  }
+
+  function isCommand(entity: string) {
+    return entity === Const.Commands.Walker;
   }
 
   function isElementOrDocument(elem: unknown): elem is HTMLElement {
@@ -436,47 +468,30 @@ export function Walkerjs(
   }
 
   function push(
-    event?: unknown,
-    data: WebClient.PushData = {},
+    nameOrEvent?: unknown, // @TODO can also be an event object
+    pushData: WebClient.PushData = {},
     options: WebClient.PushOptions = '',
-    context: WebClient.PushContext = {},
+    pushContext: WebClient.PushContext = {},
     nested: WalkerOS.Entities = [],
     custom: WalkerOS.Properties = {},
   ): void {
-    if (!event || !isSameType(event, '' as string)) return;
-
-    // Check for valid entity and action event format
-    const [entity, action] = event.split(' ');
-    if (!entity || !action) return;
-
-    // Handle internal walker command events
-    if (entity === Const.Commands.Walker) {
-      handleCommand(instance, action, data, options);
-      return;
-    }
-
-    // Check if walker is allowed to run
-    if (!instance.allowed) return;
-
-    // Increase event counter
-    ++instance.count;
-
-    const pushEvent = createEvent(
-      entity,
-      action,
-      data,
-      context,
+    const { event, command } = createEventOrCommand(
+      instance,
+      nameOrEvent,
+      pushData,
+      pushContext,
       nested,
       custom,
-      options as string,
+      options,
     );
 
-    // Add event to internal queue
-    instance.queue.push(pushEvent);
-
-    Object.values(instance.destinations).forEach((destination) => {
-      pushToDestination(instance, destination, pushEvent);
-    });
+    if (command) {
+      // Command event
+      handleCommand(instance, command, pushData, options);
+    } else if (event) {
+      // Regular event
+      handleEvent(instance, event);
+    }
   }
 
   function pushToDestination(
