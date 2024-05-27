@@ -37,7 +37,7 @@ function createEventOrCommand(
   if (isSameType(nameOrEvent, '' as string))
     partialEvent = { event: nameOrEvent };
   else {
-    partialEvent = nameOrEvent;
+    partialEvent = nameOrEvent || {};
   }
 
   if (!partialEvent.event) throw new Error('Event name is required');
@@ -140,9 +140,10 @@ export function createPush(
           // Regular event
           const eventResult = await handleEvent(instance, event);
           result = assign(result, eventResult);
+          result.event = event;
         }
 
-        return assign(result, { status: { ok: true } });
+        return assign({ status: { ok: true } }, result);
       },
       (error) => {
         // Call custom error handling

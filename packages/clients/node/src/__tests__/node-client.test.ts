@@ -151,21 +151,21 @@ describe('Client', () => {
 
   test('globals', async () => {
     let { instance } = getClient({});
-    expect(instance.config).toHaveProperty('globals', {});
+    expect(instance).toHaveProperty('globals', {});
     expect(instance.config).toHaveProperty('globalsStatic', {});
 
     ({ instance } = getClient({ globalsStatic: { foo: 'bar' } }));
-    expect(instance.config).toHaveProperty('globals', { foo: 'bar' });
+    expect(instance).toHaveProperty('globals', { foo: 'bar' });
     expect(instance.config).toHaveProperty('globalsStatic', { foo: 'bar' });
 
     ({ instance } = getClient({ globalsStatic: { foo: 'bar' } }));
     instance.globals.a = 1;
-    await instance.push('walker config', { globals: { b: 2 } });
+    await instance.push('walker globals', { b: 2 });
     let result = await instance.push('e a');
     expect(result.event).toHaveProperty('count', 1);
     expect(result.event).toHaveProperty('globals', { foo: 'bar', a: 1, b: 2 });
 
-    await instance.push('walker run', { c: 3 });
+    await instance.push('walker run', { globals: { c: 3 } });
     result = await instance.push('e a');
     expect(result.event).toHaveProperty('count', 1);
     expect(result.event).toHaveProperty('globals', { foo: 'bar', c: 3 });

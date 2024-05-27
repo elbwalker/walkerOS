@@ -21,14 +21,13 @@ export function nodeClient(
   const client = '2.0.0'; // Client version
   const state = getState(customConfig);
   const instance: NodeClient.Instance = {
-    push: getPushFn(), // @TODO useHooks
     client,
     ...state,
+    push: (() => {}) as unknown as NodeClient.Elb, // Placeholder for the actual push function
   };
 
-  function getPushFn(): NodeClient.Elb {
-    return createPush(instance, handleCommand, handleEvent);
-  }
+  // Overwrite the push function with the instance-reference
+  instance.push = createPush(instance, handleCommand, handleEvent);
 
   // That's when the party starts
   run(instance);
@@ -76,26 +75,35 @@ const handleCommand: NodeClient.HandleCommand = async (
   options?,
 ) => {
   const command: NodeClient.Command = { name: action, data };
+  let result: NodeClient.PushResult | NodeDestination.PushResult | undefined;
 
   switch (action) {
     case Const.Commands.Config:
       command.data = setConfig(instance, data) || {};
       break;
     case Const.Commands.Consent:
-      await setConsent(instance, data);
+      result = await setConsent(instance, data);
+      break;
+    case Const.Commands.Custom:
+      if (isSameType(data, {} as WalkerOS.Properties))
+        instance.custom = assign(instance.custom, data);
       break;
     case Const.Commands.Destination:
-      await addDestination(instance, data, options);
+      result = await addDestination(instance, data, options);
+      break;
+    case Const.Commands.Globals:
+      if (isSameType(data, {} as WalkerOS.Properties))
+        instance.globals = assign(instance.globals, data);
       break;
     case Const.Commands.Run:
-      run(instance, data);
+      run(instance, data as Partial<NodeClient.State>);
       break;
     case Const.Commands.User:
       command.data = setUser(instance, data);
       break;
   }
 
-  return createResult({ command });
+  return createResult({ command, ...result });
 };
 
 const handleEvent: NodeClient.HandleEvent = async (instance, event) => {
@@ -145,26 +153,34 @@ function setUser(instance: NodeClient.Instance, data: unknown = {}) {
   return user;
 }
 
-function run(instance: NodeClient.Instance, data: unknown = {}) {
-  if (!isSameType(data, {} as WalkerOS.Properties)) return;
+function run(
+  instance: NodeClient.Instance,
+  state: Partial<NodeClient.State> = {},
+) {
+  const { config, destinations } = instance;
 
-  instance.config = assign(instance.config, {
-    allowed: true, // Free the client
-    count: 0, // Reset the run counter
-    globals: assign(data, instance.config.globalsStatic),
-    timing: Date.now(), // Set the timing offset
-    group: getId(), // Generate a new group id for each run
-  });
+  const newState = assign(
+    {
+      allowed: true, // When run is called, the walker may start running
+      count: 0, // Reset the run counter
+      queue: [], // Reset the queue for each run without merging
+      group: getId(), // Generate a new group id for each run
+      timing: Date.now(), // Set the timing offset
+    },
+    { ...state },
+  );
 
-  // Reset the queue for each run without merging
-  instance.queue = [];
+  newState.globals = assign(config.globalsStatic, state.globals);
+
+  // Update the instance reference with the updated state
+  assign(instance, newState, { merge: false, shallow: false, extend: false });
+
+  ++instance.round; // Increase the round counter
 
   // Reset all destination queues
-  Object.values(instance.destinations).forEach((destination) => {
+  Object.values(destinations).forEach((destination) => {
     destination.queue = [];
   });
-
-  return instance.config;
 }
 
 export default createNodeClient;

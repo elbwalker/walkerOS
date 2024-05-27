@@ -4,12 +4,18 @@ import type { NodeClient } from './types';
 export function createResult(
   partialResult: Partial<NodeClient.PushResult>,
 ): NodeClient.PushResult {
-  const defaultResult: NodeClient.PushResult = {
-    successful: [],
-    queued: [],
-    failed: [],
-    status: { ok: false },
-  };
+  const result: NodeClient.PushResult = assign(
+    {
+      successful: [],
+      queued: [],
+      failed: [],
+      status: { ok: false },
+    },
+    partialResult,
+  );
 
-  return assign(defaultResult, partialResult);
+  // Check if some destinations failed
+  result.status.ok = result.failed.length === 0;
+
+  return result;
 }
