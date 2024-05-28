@@ -53,8 +53,7 @@ export function Walkerjs(
   if (instance.config.dataLayer) {
     // Add a dataLayer destination
     window.dataLayer = window.dataLayer || [];
-    const destination: WebDestination.Destination = {
-      config: {},
+    const destination: WebDestination.DestinationInit = {
       push: (event) => {
         (window.dataLayer as unknown[]).push({
           ...event,
@@ -75,7 +74,7 @@ export function Walkerjs(
 
   function addDestination(
     instance: WebClient.Instance,
-    data: WebDestination.Destination,
+    data: Partial<WebDestination.DestinationInit>,
     options?: WebDestination.Config,
   ) {
     // Basic validation

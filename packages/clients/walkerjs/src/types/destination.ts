@@ -10,6 +10,9 @@ export interface Destination<Custom = any, EventCustom = any>
   push: Push<Custom, EventCustom>;
 }
 
+export type DestinationInit = Partial<Omit<Destination, 'push'>> &
+  Pick<Destination, 'push'>;
+
 export type Push<Custom, EventCustom> = (
   event: WalkerOS.Event,
   config: Config<Custom, EventCustom>,

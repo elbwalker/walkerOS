@@ -644,4 +644,12 @@ describe('Destination', () => {
     elb('walker destination', destination);
     expect(Object.keys(walkerjs.destinations)).toHaveLength(2);
   });
+
+  test('minimal init type', () => {
+    elb('walker destination', { push: mockPush });
+    elb('walker run');
+    elb('e a');
+
+    expect(mockPush).toHaveBeenCalledTimes(1);
+  });
 });

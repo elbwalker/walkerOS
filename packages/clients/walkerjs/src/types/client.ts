@@ -60,7 +60,7 @@ export interface InitConfig extends Partial<Config> {
 export interface Elb extends WalkerOS.Elb {
   (
     event: 'walker destination',
-    destination: WebDestination.Destination,
+    destination: WebDestination.Destination | WebDestination.DestinationInit,
     config?: WebDestination.Config,
   ): void;
   (event: 'walker init', scope: Scope | Scope[]): void;
@@ -87,6 +87,7 @@ export type ElbLayer = [
 export type PushData =
   | WalkerOS.PushData
   | WebDestination.Destination
+  | WebDestination.DestinationInit
   | Partial<State>
   | ScopeType;
 
