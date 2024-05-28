@@ -1,6 +1,5 @@
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 import type { DestinationGoogleGA4 } from '.';
-import { getByStringDot } from '@elbwalker/utils';
 
 describe('Destination Google GA4', () => {
   const w = window;

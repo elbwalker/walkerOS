@@ -64,6 +64,7 @@ const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
         // Error handling
 
         error = String(error);
+        // eslint-disable-next-line no-console
         const onError = instance.config.onError || console.error;
         onError({ error, body: req.body });
 

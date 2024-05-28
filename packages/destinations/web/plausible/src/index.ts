@@ -23,7 +23,7 @@ export const destinationPlausible: Destination = {
   },
 
   push(event) {
-    window.plausible(`${event.event}`, { props: event.data });
+    window.plausible!(`${event.event}`, { props: event.data });
   },
 };
 

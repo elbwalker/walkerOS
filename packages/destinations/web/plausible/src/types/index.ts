@@ -1,11 +1,16 @@
+import type { WalkerOS } from '@elbwalker/types';
 import type { WebDestination } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    plausible?: any;
+    plausible?: Plausible & { q?: IArguments[] };
   }
 }
+
+export type Plausible = (
+  event: string,
+  options?: { props?: WalkerOS.AnyObject },
+) => void;
 
 export interface Destination
   extends WebDestination.Destination<CustomConfig, CustomEventConfig> {}

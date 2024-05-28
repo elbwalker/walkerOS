@@ -4,6 +4,12 @@ module.exports = {
     jest: true,
     node: true,
   },
+  ignorePatterns: [
+    '**/coverage/**',
+    '**/dist/**',
+    '**/node_modules/**',
+    '**/__mocks__/**',
+  ],
   parser: '@typescript-eslint/parser',
   plugins: ['@typescript-eslint', 'jest'],
   extends: [
