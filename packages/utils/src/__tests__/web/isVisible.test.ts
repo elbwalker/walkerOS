@@ -7,7 +7,7 @@ describe('Utils isVisible', () => {
     const innerHeight = w.innerHeight;
     w.innerHeight = 100; // Create a small window
 
-    let x = 25,
+    const x = 25,
       y = 25,
       width = 50,
       height = 50,
@@ -41,7 +41,7 @@ describe('Utils isVisible', () => {
       left,
       toJSON: jest.fn,
     }));
-    document.elementFromPoint = (x: number, y: number) => {
+    document.elementFromPoint = () => {
       return elem;
     };
     document.body.appendChild(elem);

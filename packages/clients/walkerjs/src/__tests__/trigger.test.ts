@@ -421,8 +421,8 @@ describe('Trigger', () => {
     jest.spyOn(global, 'clearTimeout');
 
     w.elbLayer = [];
-    const Elbwalker = jest.requireActual('../').default;
-    Elbwalker({ default: true });
+    const Walkerjs = jest.requireActual('../').default;
+    Walkerjs({ default: true });
 
     const target = document.getElementById('visible');
     const [observer] = (window.IntersectionObserver as jest.Mock).mock.calls[0];

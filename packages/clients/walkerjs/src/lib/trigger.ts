@@ -33,17 +33,19 @@ export const Trigger: { [key: string]: Walker.Trigger } = {
   Wait: 'wait',
 } as const;
 
-export function ready(
-  run: (instance: WebClient.Instance) => void,
-  instance: WebClient.Instance,
-) {
-  const fn = () => {
-    run(instance);
+export function ready<T extends (...args: never[]) => R, R>(
+  fn: T,
+  ...args: Parameters<T>
+): void {
+  const readyFn = () => {
+    fn(...args);
   };
+
   if (document.readyState !== 'loading') {
-    fn();
+    readyFn();
   } else {
-    document.addEventListener('DOMContentLoaded', fn);
+    document.addEventListener('DOMContentLoaded', readyFn);
+    return;
   }
 }
 

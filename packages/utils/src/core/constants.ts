@@ -6,6 +6,7 @@ export type CommandTypes =
   | 'Config'
   | 'Consent'
   | 'Context'
+  | 'Custom'
   | 'Destination'
   | 'Elb'
   | 'Globals'
@@ -15,6 +16,7 @@ export type CommandTypes =
   | 'On'
   | 'Prefix'
   | 'Run'
+  | 'Session'
   | 'User'
   | 'Walker';
 
@@ -24,6 +26,7 @@ export const Commands: Record<CommandTypes, WalkerOS.Commands> = {
   Config: 'config',
   Consent: 'consent',
   Context: 'context',
+  Custom: 'custom',
   Destination: 'destination',
   Elb: 'elb',
   Globals: 'globals',
@@ -33,6 +36,7 @@ export const Commands: Record<CommandTypes, WalkerOS.Commands> = {
   On: 'on',
   Prefix: 'data-elb',
   Run: 'run',
+  Session: 'session',
   User: 'user',
   Walker: 'walker',
 } as const;

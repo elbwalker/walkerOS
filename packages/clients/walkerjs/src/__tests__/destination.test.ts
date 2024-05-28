@@ -628,20 +628,20 @@ describe('Destination', () => {
     elb('walker destination', destination, { id: 'foo' }); // Override
     elb('walker destination', destination, { id: 'bar' });
 
-    expect(walkerjs.config.destinations).toHaveProperty('foo');
-    expect(Object.keys(walkerjs.config.destinations)).toHaveLength(2);
+    expect(walkerjs.destinations).toHaveProperty('foo');
+    expect(Object.keys(walkerjs.destinations)).toHaveLength(2);
 
     elb('e a');
     expect(mockPush).toHaveBeenCalledTimes(2);
     mockPush.mockClear();
-    delete walkerjs.config.destinations['foo']; // Delete destination
-    expect(walkerjs.config.destinations).not.toHaveProperty('foo');
-    expect(Object.keys(walkerjs.config.destinations)).toHaveLength(1);
+    delete walkerjs.destinations['foo']; // Delete destination
+    expect(walkerjs.destinations).not.toHaveProperty('foo');
+    expect(Object.keys(walkerjs.destinations)).toHaveLength(1);
 
     elb('e a');
     expect(mockPush).toHaveBeenCalledTimes(1);
 
     elb('walker destination', destination);
-    expect(Object.keys(walkerjs.config.destinations)).toHaveLength(2);
+    expect(Object.keys(walkerjs.destinations)).toHaveLength(2);
   });
 });

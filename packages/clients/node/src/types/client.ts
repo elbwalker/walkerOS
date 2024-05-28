@@ -1,44 +1,71 @@
-import type { WalkerOS, Schema, Handler } from '@elbwalker/types';
+import type { WalkerOS, Schema, Handler, Hooks, On } from '@elbwalker/types';
+import type { SessionData } from '@elbwalker/utils';
 import type * as NodeDestination from './destination';
 
-export interface Instance {
+export interface Instance extends State, WalkerOS.Instance {
+  push: Elb<Promise<PushResult>>;
+  client: string;
   config: Config;
-  push: Push;
-  setup?: Setup; // @TODO make this required
+  destinations: Destinations;
+}
+
+export interface State extends WalkerOS.State {
+  config: Config;
+  destinations: Destinations;
+  session: undefined | SessionData;
+  timing: number;
+}
+
+export interface Config extends WalkerOS.Config {
+  contracts?: Schema.Contracts;
+  globalsStatic: WalkerOS.Properties;
+  sessionStatic: Partial<SessionData>;
+  onError?: Handler.Error;
+  onLog?: Handler.Log;
+}
+export type PartialConfig = Partial<Config>;
+
+export interface InitConfig extends Partial<Config> {
+  consent?: WalkerOS.Consent;
+  custom?: WalkerOS.Properties;
+  destinations?: Destinations;
+  hooks?: Hooks.Functions;
+  on?: On.Config;
+  tagging?: number;
+  user?: WalkerOS.User;
 }
 
 export interface AddDestination {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (id: string, destination: NodeDestination.Destination<any, any>): void;
+  (id: string, destination: NodeDestination.Destination): void;
 }
 
-export interface Push {
-  (
-    nameOrEvent: string | WalkerOS.PartialEvent,
-    data?: PushData,
-    options?: PushOptions,
-  ): Promise<PushResult>;
+export interface Elb<R = Promise<PushResult>> extends WalkerOS.Elb<R> {
+  (name: string, data?: PushData, options?: PushOptions): R;
+  (event: WalkerOS.PartialEvent, data?: PushData, options?: PushOptions): R;
 }
 
-export interface Setup {
-  (config: Config): Promise<SetupResult>;
-}
+export type HandleCommand = (
+  instance: Instance,
+  action: string,
+  data?: PushData,
+  options?: PushOptions,
+) => Promise<PushResult>;
+
+export type HandleEvent = (
+  instance: Instance,
+  event: WalkerOS.Event,
+) => Promise<PushResult>;
 
 export type PushData =
   | WalkerOS.PushData
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  | NodeDestination.Destination<any, any>
-  | NodeDestination.PushResult;
+  | NodeDestination.Destination
+  | Partial<State>;
 
 export type PushOptions = WalkerOS.PushOptions | NodeDestination.Config;
 
 export interface PushResult extends NodeDestination.PushResult {
   command?: Command;
   event?: WalkerOS.Event;
-  status: Status;
-}
-
-export interface SetupResult extends NodeDestination.SetupResult {
   status: Status;
 }
 
@@ -52,24 +79,11 @@ export interface Status {
   error?: string;
 }
 
-export type PartialConfig = Partial<Config>;
-export interface Config extends WalkerOS.Config {
-  client: string;
-  destinations: Destinations;
-  globalsStatic: WalkerOS.Properties;
-  queue: WalkerOS.Events;
-  contracts?: Schema.Contracts;
-  source: WalkerOS.Source;
-  onError?: Handler.Error;
-  onLog?: Handler.Log;
-}
-
 export interface Destinations {
   [key: string]: NodeDestination.Destination;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type PrependInstance<Fn extends (...args: any) => any> = (
+export type PrependInstance<Fn extends (...args: never) => ReturnType<Fn>> = (
   instance: Instance,
   ...args: Parameters<Fn>
 ) => ReturnType<Fn>;

@@ -11,7 +11,7 @@ describe('Client', () => {
   let mockEvent: WalkerOS.Event;
   let result: NodeClient.PushResult;
 
-  function getClient(custom?: Partial<NodeClient.Config>) {
+  function getClient(custom?: Partial<NodeClient.InitConfig>) {
     const config = custom || {
       destinations: { mock: mockDestination },
     };
@@ -58,9 +58,9 @@ describe('Client', () => {
 
   test('add destination', async () => {
     const { elb, instance } = getClient({});
-    expect(instance.config.destinations).toEqual({});
+    expect(instance.destinations).toEqual({});
     elb('walker destination', mockDestination, { id: 'mock' });
-    expect(instance.config.destinations).toEqual({
+    expect(instance.destinations).toEqual({
       mock: {
         config: { id: 'mock' },
         queue: [],
@@ -89,7 +89,7 @@ describe('Client', () => {
   test('push event', async () => {
     const { elb } = getClient({
       destinations: { mock: mockDestination },
-      globals: { glow: 'balls' },
+      globalsStatic: { glow: 'balls' },
       user: { id: 'us3r1d' },
       consent: { test: true },
       tagging: 42,
@@ -151,21 +151,21 @@ describe('Client', () => {
 
   test('globals', async () => {
     let { instance } = getClient({});
-    expect(instance.config).toHaveProperty('globals', {});
+    expect(instance).toHaveProperty('globals', {});
     expect(instance.config).toHaveProperty('globalsStatic', {});
 
-    ({ instance } = getClient({ globals: { foo: 'bar' } }));
-    expect(instance.config).toHaveProperty('globals', { foo: 'bar' });
+    ({ instance } = getClient({ globalsStatic: { foo: 'bar' } }));
+    expect(instance).toHaveProperty('globals', { foo: 'bar' });
     expect(instance.config).toHaveProperty('globalsStatic', { foo: 'bar' });
 
-    ({ instance } = getClient({ globals: { foo: 'bar' } }));
-    instance.config.globals.a = 1;
-    await instance.push('walker config', { globals: { b: 2 } });
+    ({ instance } = getClient({ globalsStatic: { foo: 'bar' } }));
+    instance.globals.a = 1;
+    await instance.push('walker globals', { b: 2 });
     let result = await instance.push('e a');
     expect(result.event).toHaveProperty('count', 1);
     expect(result.event).toHaveProperty('globals', { foo: 'bar', a: 1, b: 2 });
 
-    await instance.push('walker run', { c: 3 });
+    await instance.push('walker run', { globals: { c: 3 } });
     result = await instance.push('e a');
     expect(result.event).toHaveProperty('count', 1);
     expect(result.event).toHaveProperty('globals', { foo: 'bar', c: 3 });

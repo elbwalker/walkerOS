@@ -1,5 +1,6 @@
 import type { WebClient, WebDestination } from './types';
 import type { Hooks, On, WalkerOS } from '@elbwalker/types';
+import type { SessionData } from '@elbwalker/utils';
 import {
   elb,
   initScopeTrigger,
@@ -12,43 +13,44 @@ import {
   assign,
   getId,
   isSameType,
-  sessionStart,
+  sessionStart as sessionStartOrg,
   tryCatch,
   useHooks,
 } from '@elbwalker/utils';
 import { getEntities, getGlobals } from './lib/walker';
 import { onApply } from './lib/on';
+import { SessionStartOptions } from './types/client';
 
 // Export types and elb
 export * from './types';
 export { elb };
 
 export function Walkerjs(
-  customConfig: Partial<WebClient.Config> = {},
+  customConfig: WebClient.InitConfig = {},
 ): WebClient.Instance {
-  const client = '2.1.3';
-  const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
-  const staticGlobals = customConfig.globals || {};
-  const config = getConfig(customConfig);
+  const client = '2.1.3'; // Client version
+  const state = getState(customConfig);
   const instance: WebClient.Instance = {
-    push: useHooks(push, 'Push', config.hooks),
-    config,
+    push: useHooks(push, 'Push', state.hooks),
+    sessionStart: useHooks(sessionStart, 'SessionStart', state.hooks),
+    client,
+    ...state,
   };
 
   // Setup pushes via elbLayer
   elbLayerInit(instance);
 
   // Assign instance and/or elb to the window object
-  if (customConfig.elb)
-    (window as unknown as Record<string, unknown>)[customConfig.elb] = elb;
-  if (customConfig.instance)
-    (window as unknown as Record<string, unknown>)[customConfig.instance] =
+  if (instance.config.elb)
+    (window as unknown as Record<string, unknown>)[instance.config.elb] = elb;
+  if (instance.config.instance)
+    (window as unknown as Record<string, unknown>)[instance.config.instance] =
       instance;
 
   // Run on events for default consent states
   onApply(instance, 'consent');
 
-  if (customConfig.dataLayer) {
+  if (instance.config.dataLayer) {
     // Add a dataLayer destination
     window.dataLayer = window.dataLayer || [];
     const destination: WebDestination.Destination = {
@@ -65,7 +67,7 @@ export function Walkerjs(
   }
 
   // Automatically start running
-  if (customConfig.run) {
+  if (instance.config.run) {
     ready(run, instance);
   }
 
@@ -91,7 +93,7 @@ export function Walkerjs(
 
     // Process previous events if not disabled
     if (config.queue !== false)
-      instance.config.queue.forEach((pushEvent) => {
+      instance.queue.forEach((pushEvent) => {
         pushToDestination(instance, destination, pushEvent);
       });
 
@@ -100,17 +102,17 @@ export function Walkerjs(
       // Generate a new id if none was given
       do {
         id = getId(4);
-      } while (instance.config.destinations[id]);
+      } while (instance.destinations[id]);
     }
-    instance.config.destinations[id] = destination;
+    instance.destinations[id] = destination;
   }
 
   function addHook<Hook extends keyof Hooks.Functions>(
-    config: WebClient.Config,
+    instance: WebClient.Instance,
     name: Hook,
     hookFn: Hooks.Functions[Hook],
   ) {
-    config.hooks[name] = hookFn;
+    instance.hooks[name] = hookFn;
   }
 
   function allowedToPush(
@@ -128,7 +130,7 @@ export function Walkerjs(
       granted = false;
 
       // Set the current consent states
-      const consentStates = instance.config.consent;
+      const consentStates = instance.consent;
 
       // Search for a required and granted consent
       Object.keys(destinationConsent).forEach((consent) => {
@@ -158,6 +160,7 @@ export function Walkerjs(
 
       // Skip the first stacked run event since it's the reason we're here
       // and to prevent duplicate execution which we don't want
+      const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
       if (isFirstRunEvent && event[0] == runCommand) {
         isFirstRunEvent = false; // Next time it's on
         return;
@@ -174,6 +177,101 @@ export function Walkerjs(
     events.map((item) => {
       instance.push(...item);
     });
+  }
+
+  function createEventOrCommand(
+    instance: WebClient.Instance,
+    nameOrEvent: unknown,
+    pushData: WebClient.PushData,
+    pushContext: WebClient.PushContext,
+    nested: WalkerOS.Entities,
+    custom: WalkerOS.Properties,
+    trigger: WebClient.PushOptions = '',
+  ): { event?: WalkerOS.Event; command?: string } {
+    if (!nameOrEvent || !isSameType(nameOrEvent, '' as string)) return {};
+
+    // Check for valid entity and action event format
+    const [entity, action] = nameOrEvent.split(' ');
+    if (!entity || !action) return {};
+
+    // It's a walker command
+    if (isCommand(entity)) return { command: action };
+
+    // Regular event
+
+    // Increase event counter
+    ++instance.count;
+
+    const timestamp = Date.now();
+    const { group, count } = instance;
+    const id = `${timestamp}-${group}-${count}`;
+    const source = {
+      type: 'web',
+      id: window.location.href,
+      previous_id: document.referrer,
+    };
+
+    // Get data and context either from elements or parameters
+    let data: WalkerOS.Properties = {};
+    let context: WalkerOS.OrderedProperties = {};
+
+    let elemParameter: undefined | Element;
+    let dataIsElem = false;
+    if (isElementOrDocument(pushData)) {
+      elemParameter = pushData;
+      dataIsElem = true;
+    } else if (isSameType(pushData, {} as WalkerOS.Properties)) {
+      data = pushData;
+    }
+
+    if (isElementOrDocument(pushContext)) {
+      elemParameter = pushContext;
+    } else if (isSameType(pushContext, {} as WalkerOS.OrderedProperties)) {
+      context = pushContext;
+    }
+
+    if (elemParameter) {
+      // Filter for the entity type from the events name
+      const entityObj = getEntities(instance.config.prefix, elemParameter).find(
+        (obj) => obj.type == entity,
+      );
+
+      if (entityObj) {
+        if (dataIsElem) data = entityObj.data;
+        context = entityObj.context;
+      }
+    }
+
+    // Special case for page entity to add the id by default
+    if (entity === 'page') {
+      data.id = data.id || window.location.pathname;
+    }
+
+    return {
+      event: {
+        event: `${entity} ${action}`,
+        data,
+        context,
+        custom: custom || {},
+        globals: instance.globals,
+        user: instance.user,
+        nested: nested || [],
+        consent: instance.consent,
+        id,
+        trigger: isSameType(trigger, '') ? trigger : '',
+        entity,
+        action,
+        timestamp,
+        timing: Math.round((performance.now() - instance.timing) / 10) / 100,
+        group,
+        count,
+        version: {
+          client: instance.client,
+          tagging: instance.config.tagging,
+        },
+        source,
+      },
+    };
   }
 
   function elbLayerInit(instance: WebClient.Instance) {
@@ -195,61 +293,73 @@ export function Walkerjs(
     callPredefined(instance, true);
   }
 
-  function getConfig(
-    values: Partial<WebClient.Config>,
-    current: Partial<WebClient.Config> = {},
-  ): WebClient.Config {
+  function getState(
+    initConfig: WebClient.InitConfig,
+    instance: Partial<WebClient.Instance> = {},
+  ): WebClient.State {
     const defaultConfig: WebClient.Config = {
-      allowed: false, // Wait for explicit run command to start
-      client, // Client version
-      consent: {}, // Handle the consent states
-      custom: {}, // Custom state support
-      count: 0, // Event counter for each run
       dataLayer: false, // Do not use dataLayer by default
-      destinations: {}, // Destination list
       elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
-      globals: assign(staticGlobals), // Globals enhanced with the static globals from init and previous values
-      group: '', // Random id to group events of a run
-      hooks: {}, // Manage the hook functions
-      on: {}, // On events listener rules
+      globalsStatic: {}, // Static global properties
       pageview: true, // Trigger a page view event by default
       prefix: Const.Commands.Prefix, // HTML prefix attribute
-      queue: [], // Temporary event queue for all events of a run
       run: false, // Run the walker by default
-      round: 0, // The first round is a special one due to state changes
       session: {
         // Configuration for session handling
         storage: false, // Do not use storage by default
       },
-      timing: 0, // Offset counter to calculate timing property
-      user: {}, // Handles the user ids
+      sessionStatic: {}, // Static session data
       tagging: 0, // Helpful to differentiate the clients used setup version
     };
 
-    // If 'pageview' is explicitly provided in values, use it; otherwise, use current or default
-    const pageview =
-      'pageview' in values
-        ? !!values.pageview
-        : current.pageview || defaultConfig.pageview;
-
-    const globals = assign(
-      staticGlobals,
-      assign(current.globals || {}, values.globals || {}),
+    const config: WebClient.Config = assign(
+      defaultConfig,
+      {
+        ...(instance.config || {}), // current config
+        ...initConfig, // new config
+      },
+      { merge: false, extend: false },
     );
 
-    // Default mode enables both, auto run and dataLayer destination
-    if (values.default) {
-      values.run = true;
-      values.dataLayer = true;
+    // Optional values
+    if (initConfig.elb) config.elb = initConfig.elb;
+    if (initConfig.instance) config.instance = initConfig.instance;
+
+    // Process default mode to enable both auto-run and dataLayer destination
+    if (initConfig.default) {
+      config.run = true;
+      config.dataLayer = true;
     }
 
-    // Value hierarchy: values > current > default
+    // Extract remaining values from initConfig
+    const {
+      consent = {}, // Handle the consent states
+      custom = {}, // Custom state support
+      destinations = {}, // Destination list
+      hooks = {}, // Manage the hook functions
+      on = {}, // On events listener rules
+      user = {}, // Handles the user ids
+    } = initConfig;
+
+    // Globals enhanced with the static globals from init and previous values
+    const globals = { ...config.globalsStatic };
+
     return {
-      ...defaultConfig,
-      ...current,
-      ...values,
-      pageview,
+      allowed: false, // Wait for explicit run command to start
+      config,
+      consent,
+      count: 0, // Event counter for each run
+      custom,
+      destinations,
       globals,
+      group: '', // Random id to group events of a run
+      hooks,
+      on,
+      queue: [], // Temporary event queue for all events of a run
+      round: 0, // The first round is a special one due to state changes
+      session: undefined, // Session data
+      timing: 0, // Offset counter to calculate timing property
+      user,
     };
   }
 
@@ -262,13 +372,13 @@ export function Walkerjs(
     switch (action) {
       case Const.Commands.Config:
         if (isObject(data))
-          instance.config = getConfig(
-            data as WebClient.Config,
-            instance.config,
-          );
+          instance.config = getState(data as WebClient.Config, instance).config;
         break;
       case Const.Commands.Consent:
         isObject(data) && setConsent(instance, data as WalkerOS.Consent);
+        break;
+      case Const.Commands.Custom:
+        if (isObject(data)) instance.custom = assign(instance.custom, data);
         break;
       case Const.Commands.Destination:
         isObject(data) &&
@@ -278,17 +388,19 @@ export function Walkerjs(
             options as WebDestination.Config,
           );
         break;
+      case Const.Commands.Globals:
+        if (isObject(data)) instance.globals = assign(instance.globals, data);
+        break;
       case Const.Commands.Hook:
         if (isSameType(data, '') && isSameType(options, isSameType))
-          addHook(instance.config, data as keyof Hooks.Functions, options);
+          addHook(instance, data as keyof Hooks.Functions, options);
         break;
       case Const.Commands.Init: {
         const elems: unknown[] = Array.isArray(data)
           ? data
           : [data || document];
         elems.forEach((elem) => {
-          isElementOrDocument(elem) &&
-            initScopeTrigger(instance, elem as WebClient.Scope);
+          isElementOrDocument(elem) && initScopeTrigger(instance, elem);
         });
         break;
       }
@@ -296,7 +408,7 @@ export function Walkerjs(
         on(instance, data as On.Types, options as On.Options);
         break;
       case Const.Commands.Run:
-        ready(run, instance);
+        ready(run, instance, data as Partial<WebClient.State>);
         break;
       case Const.Commands.User:
         isObject(data) && setUserIds(instance, data as WalkerOS.User);
@@ -306,16 +418,32 @@ export function Walkerjs(
     }
   }
 
+  function handleEvent(instance: WebClient.Instance, event: WalkerOS.Event) {
+    // Check if walker is allowed to run
+    if (!instance.allowed) return;
+
+    // Add event to internal queue
+    instance.queue.push(event);
+
+    Object.values(instance.destinations).forEach((destination) => {
+      pushToDestination(instance, destination, event);
+    });
+  }
+
   function isArgument(event?: unknown): event is IArguments {
     if (!event) return false;
     return {}.hasOwnProperty.call(event, 'callee');
   }
 
-  function isElementOrDocument(elem: unknown) {
+  function isCommand(entity: string) {
+    return entity === Const.Commands.Walker;
+  }
+
+  function isElementOrDocument(elem: unknown): elem is HTMLElement {
     return elem === document || elem instanceof HTMLElement;
   }
 
-  function isObject(obj: unknown) {
+  function isObject(obj: unknown): obj is WalkerOS.AnyObject {
     return isSameType(obj, {}) && !Array.isArray(obj) && obj !== null;
   }
 
@@ -324,7 +452,7 @@ export function Walkerjs(
     type: On.Types,
     option: WalkerOS.SingleOrArray<On.Options>,
   ) {
-    const on = instance.config.on;
+    const on = instance.on;
     const onType: Array<On.Options> = on[type] || [];
     const options = Array.isArray(option) ? option : [option];
 
@@ -340,101 +468,30 @@ export function Walkerjs(
   }
 
   function push(
-    event?: unknown,
-    data?: WebClient.PushData,
+    nameOrEvent?: unknown, // @TODO can also be an event object
+    pushData: WebClient.PushData = {},
     options: WebClient.PushOptions = '',
-    context: WebClient.PushContext = {},
+    pushContext: WebClient.PushContext = {},
     nested: WalkerOS.Entities = [],
     custom: WalkerOS.Properties = {},
   ): void {
-    if (!event || !isSameType(event, '' as string)) return;
-
-    // Check for valid entity and action event format
-    const [entity, action] = event.split(' ');
-    if (!entity || !action) return;
-
-    // Handle internal walker command events
-    if (entity === Const.Commands.Walker) {
-      handleCommand(instance, action, data, options);
-      return;
-    }
-
-    const config = instance.config;
-
-    // Check if walker is allowed to run
-    if (!config.allowed) return;
-
-    // Get data and context from element parameter
-    let elemParameter: undefined | Element;
-    let dataIsElem = false;
-    if (isElementOrDocument(data)) {
-      elemParameter = data as Element;
-      dataIsElem = true;
-    } else if (isElementOrDocument(context)) {
-      elemParameter = context as Element;
-    }
-
-    if (elemParameter) {
-      // Filter for the entity type from the events name
-      const entityObj = getEntities(config.prefix, elemParameter).find(
-        (obj) => obj.type == entity,
-      );
-
-      if (entityObj) {
-        data = dataIsElem ? entityObj.data : data;
-        context = entityObj.context;
-      }
-    }
-
-    // Set default value if undefined
-    data = data || {};
-
-    // Special case for page entity to add the id by default
-    if (entity === 'page') {
-      (data as WalkerOS.Properties).id =
-        (data as WalkerOS.Properties).id || window.location.pathname;
-    }
-
-    ++config.count;
-    const timestamp = Date.now();
-    const timing = Math.round((performance.now() - config.timing) / 10) / 100;
-    const id = `${timestamp}-${config.group}-${config.count}`;
-    const source = {
-      type: 'web',
-      id: window.location.href,
-      previous_id: document.referrer,
-    };
-
-    const pushEvent: WalkerOS.Event = {
-      event,
-      data: data as WalkerOS.Properties,
-      context: context as WalkerOS.OrderedProperties,
-      custom,
-      globals: config.globals,
-      user: config.user,
+    const { event, command } = createEventOrCommand(
+      instance,
+      nameOrEvent,
+      pushData,
+      pushContext,
       nested,
-      consent: config.consent,
-      id,
-      trigger: options as string,
-      entity,
-      action,
-      timestamp,
-      timing,
-      group: config.group,
-      count: config.count,
-      version: {
-        client,
-        tagging: config.tagging,
-      },
-      source,
-    };
+      custom,
+      options,
+    );
 
-    // Add event to internal queue
-    config.queue.push(pushEvent);
-
-    Object.values(config.destinations).forEach((destination) => {
-      pushToDestination(instance, destination, pushEvent);
-    });
+    if (command) {
+      // Command event
+      handleCommand(instance, command, pushData, options);
+    } else if (event) {
+      // Regular event
+      handleEvent(instance, event);
+    }
   }
 
   function pushToDestination(
@@ -486,7 +543,7 @@ export function Walkerjs(
           useHooks(
             destination.init,
             'DestinationInit',
-            config.hooks,
+            instance.hooks,
           )(destination.config) !== false; // Actively check for errors
 
         destination.config.init = init;
@@ -496,11 +553,11 @@ export function Walkerjs(
       }
 
       // It's time to go to the destination's side now
-      useHooks(destination.push, 'DestinationPush', config.hooks)(
+      useHooks(destination.push, 'DestinationPush', instance.hooks)(
         event,
         destination.config,
         mappingEvent,
-        instance.config,
+        instance,
       );
 
       return true;
@@ -509,24 +566,36 @@ export function Walkerjs(
     return pushed;
   }
 
-  function run(instance: WebClient.Instance) {
-    instance.config = assign(instance.config, {
-      allowed: true, // When run is called, the walker may start running
-      count: 0, // Reset the run counter
-      globals: assign(
-        // Load globals properties
-        // Use the default globals set by initialization
-        // Due to site performance only once every run
-        staticGlobals,
-        getGlobals(instance.config.prefix),
-      ),
-      group: getId(), // Generate a new group id for each run
-    });
-    // Reset the queue for each run without merging
-    instance.config.queue = [];
+  function run(
+    instance: WebClient.Instance,
+    state: Partial<WebClient.State> = {},
+  ) {
+    const { config, destinations } = instance;
+
+    const newState = assign(
+      {
+        allowed: true, // When run is called, the walker may start running
+        count: 0, // Reset the run counter
+        queue: [], // Reset the queue for each run without merging
+        group: getId(), // Generate a new group id for each run
+        globals: assign(
+          // Load globals properties
+          // Use the static globals and search for tagged ones
+          // Due to site performance only once every run
+          config.globalsStatic,
+          getGlobals(config.prefix),
+        ),
+      },
+      { ...state },
+    );
+
+    // @TODO state and globals should be merged with the current state
+
+    // Update the instance reference with the updated state
+    assign(instance, newState, { merge: false, shallow: false, extend: false });
 
     // Reset all destination queues
-    Object.values(instance.config.destinations).forEach((destination) => {
+    Object.values(destinations).forEach((destination) => {
       destination.queue = [];
     });
 
@@ -534,24 +603,45 @@ export function Walkerjs(
     onApply(instance, 'run');
 
     // Increase round counter
-    if (++instance.config.round == 1) {
+    if (++instance.round == 1) {
       // Run predefined elbLayer stack once for all non-command events
       callPredefined(instance, false);
     } else {
       // Reset timing with each new run
-      instance.config.timing = performance.now();
+      instance.timing = performance.now();
     }
 
     // Session handling
-    if (instance.config.session) {
-      sessionStart({ ...instance.config.session, instance });
+    if (config.session) {
+      sessionStart({
+        ...config.session, // Session detection configuration
+        data: config.sessionStatic, // Static default session data
+      });
     }
 
     tryCatch(load)(instance);
   }
 
+  function sessionStart(options: SessionStartOptions = {}): void | SessionData {
+    const sessionConfig = assign(instance.config.session || {}, options.config);
+    const sessionData = assign(instance.config.sessionStatic, options.data);
+
+    const session = sessionStartOrg({
+      ...sessionConfig, // Session detection configuration
+      data: sessionData, // Static default session data
+      instance,
+    });
+
+    if (session) {
+      instance.session = session;
+      onApply(instance, 'session');
+    }
+
+    return session;
+  }
+
   function setConsent(instance: WebClient.Instance, data: WalkerOS.Consent) {
-    const config = instance.config;
+    const { consent, destinations, globals, user } = instance;
 
     let runQueue = false;
     const update: WalkerOS.Consent = {};
@@ -565,21 +655,21 @@ export function Walkerjs(
     });
 
     // Update consent state
-    config.consent = assign(config.consent, update);
+    instance.consent = assign(consent, update);
 
     // Run on consent events
     onApply(instance, 'consent', undefined, update);
 
     if (runQueue) {
-      Object.values(config.destinations).forEach((destination) => {
+      Object.values(destinations).forEach((destination) => {
         const queue = destination.queue || [];
 
         // Try to push and remove successful ones from queue
         destination.queue = queue.filter((event) => {
           // Update previous values with the current state
-          event.consent = config.consent;
-          event.globals = config.globals;
-          event.user = config.user;
+          event.consent = instance.consent;
+          event.globals = globals;
+          event.user = user;
 
           return !pushToDestination(instance, destination, event, false);
         });
@@ -588,7 +678,7 @@ export function Walkerjs(
   }
 
   function setUserIds(instance: WebClient.Instance, data: WalkerOS.User) {
-    const user = instance.config.user;
+    const user = instance.user;
     // user ids can't be set to undefined
     if (data.id) user.id = data.id;
     if (data.device) user.device = data.device;
