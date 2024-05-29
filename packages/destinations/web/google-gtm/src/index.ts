@@ -31,7 +31,7 @@ export const destinationGoogleGTM: Destination = {
   push(event) {
     (window.dataLayer as unknown[]).push({
       ...event,
-      walker: true,
+      walkerjs: true,
     });
   },
 };

@@ -79,7 +79,7 @@ describe('Walkerjs', () => {
         id: 'http://localhost/',
         previous_id: '',
       },
-      walker: true,
+      walkerjs: true,
     });
 
     expect(mockDataLayer).toHaveBeenNthCalledWith(2, {
@@ -105,7 +105,7 @@ describe('Walkerjs', () => {
         id: 'http://localhost/',
         previous_id: '',
       },
-      walker: true,
+      walkerjs: true,
     });
   });
 
