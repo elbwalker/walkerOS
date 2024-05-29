@@ -12,11 +12,8 @@ export type Config = {
 // On types
 export type Types = keyof Config;
 
-// Function definitions for the on actions
-export type Functions = ConsentFn | RunFn | SessionFn;
-
 // Parameters for the onAction function calls
-export type Options = ConsentConfig | RunConfig | SessionConfig;
+export type Options = ConsentConfig | ReadyConfig | RunConfig | SessionConfig;
 
 // Consent
 export interface ConsentConfig {

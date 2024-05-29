@@ -40,8 +40,8 @@ export function ready<T extends (...args: never[]) => R, R>(
   ...args: Parameters<T>
 ): void {
   const readyFn = () => {
-    onApply(instance, 'ready');
     fn(...args);
+    onApply(instance, 'ready');
   };
 
   if (document.readyState !== 'loading') {
