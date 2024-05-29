@@ -36,5 +36,5 @@ export type RunFn = (instance: WalkerOS.Instance) => void;
 export type SessionConfig = SessionFn;
 export type SessionFn = (
   instance: WalkerOS.Instance,
-  session: SessionData,
+  session?: SessionData,
 ) => void;

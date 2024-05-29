@@ -63,10 +63,9 @@ function onSession(
   instance: WebClient.Instance,
   onConfig: Array<On.SessionConfig>,
 ): void {
-  const { session } = instance;
+  if (!instance.config.session) return; // Session handling is disabled
 
-  if (session)
-    onConfig.forEach((func) => {
-      tryCatch(func)(instance, session);
-    });
+  onConfig.forEach((func) => {
+    tryCatch(func)(instance, instance.session);
+  });
 }

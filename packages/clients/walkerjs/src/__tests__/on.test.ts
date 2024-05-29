@@ -294,7 +294,6 @@ describe('On Session', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    walkerjs = Walkerjs({ run: true });
   });
 
   test('register', () => {
@@ -307,7 +306,6 @@ describe('On Session', () => {
   });
 
   test('session disabled', () => {
-    jest.clearAllMocks();
     walkerjs = Walkerjs({ run: true, session: false });
 
     elb('walker on', 'session', mockFn);
@@ -315,12 +313,39 @@ describe('On Session', () => {
   });
 
   test('basics', () => {
+    walkerjs = Walkerjs({ run: true });
     elb('walker on', 'session', mockFn);
     expect(sessionStart).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledTimes(1);
   });
 
-  test('async storage session', () => {
-    // @TODO
+  test('async with storage', () => {
+    jest.clearAllMocks();
+    walkerjs = Walkerjs({
+      run: true,
+      session: { consent: 'marketing', storage: true },
+      on: { session: [mockFn] },
+    });
+
+    expect(sessionStart).toHaveBeenCalledTimes(1);
+    expect(mockFn).toHaveBeenCalledTimes(0);
+
+    elb('walker consent', { marketing: true });
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  test.skip('async with custom cb', () => {
+    jest.clearAllMocks();
+    walkerjs = Walkerjs({
+      run: true,
+      session: { consent: 'marketing', storage: true }, // @TODO cb
+      on: { session: [mockFn] },
+    });
+
+    expect(sessionStart).toHaveBeenCalledTimes(1);
+    expect(mockFn).toHaveBeenCalledTimes(0);
+
+    elb('walker consent', { marketing: true });
+    expect(mockFn).toHaveBeenCalledTimes(1);
   });
 });

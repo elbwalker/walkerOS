@@ -29,8 +29,8 @@ export interface SessionData {
 export type SessionFunction = typeof sessionStorage | typeof sessionWindow;
 export type SessionCallback = (
   session: SessionData,
-  instance?: WalkerOS.Instance,
-  defaultCb?: SessionCallback,
+  instance: WalkerOS.Instance | undefined,
+  defaultCb: SessionCallback,
 ) => void;
 
 export function sessionStart(config: SessionConfig = {}): SessionData | void {
@@ -45,14 +45,14 @@ export function sessionStart(config: SessionConfig = {}): SessionData | void {
     });
   } else {
     // just do it
-    return callFuncAndCb(sessionFn(config), cb, instance);
+    return callFuncAndCb(sessionFn(config), instance, cb);
   }
 }
 
 function callFuncAndCb(
   session: SessionData,
-  cb?: SessionCallback | false,
   instance?: WalkerOS.Instance,
+  cb?: SessionCallback | false,
 ) {
   if (cb === false) return session; // Callback is disabled
   if (!cb) cb = defaultCb; // Default callback if none is provided
@@ -67,7 +67,7 @@ function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
       // Use storage if consent is granted
       sessionFn = () => sessionStorage(config);
 
-    return callFuncAndCb(sessionFn(), cb, instance);
+    return callFuncAndCb(sessionFn(), instance, cb);
   };
 
   return func;

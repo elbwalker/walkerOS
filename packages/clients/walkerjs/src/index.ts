@@ -1,6 +1,6 @@
 import type { WebClient, WebDestination } from './types';
 import type { Hooks, On, WalkerOS } from '@elbwalker/types';
-import type { SessionData } from '@elbwalker/utils';
+import type { SessionCallback, SessionData } from '@elbwalker/utils';
 import {
   elb,
   initScopeTrigger,
@@ -642,16 +642,30 @@ export function Walkerjs(
     const sessionConfig = assign(instance.config.session || {}, options.config);
     const sessionData = assign(instance.config.sessionStatic, options.data);
 
+    // A wrapper for the callback
+    const cb: SessionCallback = (session, instance, defaultCb) => {
+      let result: void | undefined | SessionData;
+      if (sessionConfig.cb !== false)
+        // Run either the default callback or the provided one
+        result = (sessionConfig.cb || defaultCb)(session, instance, defaultCb);
+
+      if (isSameType(instance, {} as WebClient.Instance)) {
+        // Assign the session
+        instance.session = session;
+
+        // Run on session events
+        onApply(instance as WebClient.Instance, 'session');
+      }
+
+      return result;
+    };
+
     const session = sessionStartOrg({
       ...sessionConfig, // Session detection configuration
+      cb, // Custom wrapper callback
       data: sessionData, // Static default session data
       instance,
     });
-
-    if (session) {
-      instance.session = session;
-      onApply(instance, 'session');
-    }
 
     return session;
   }
