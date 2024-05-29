@@ -43,14 +43,14 @@ describe('Walkerjs', () => {
     expect(w.bar).toBe(instance);
   });
 
-  test('empty push', () => {
+  test('push empty', () => {
     (walkerjs as unknown as string[]).push();
     elb('');
     elb('entity');
     expect(mockDataLayer).toHaveBeenCalledTimes(0);
   });
 
-  test('regular push', () => {
+  test('push regular', () => {
     elb('walker run');
 
     elb('entity action');
@@ -107,6 +107,14 @@ describe('Walkerjs', () => {
       },
       walker: true,
     });
+  });
+
+  test('push event', () => {
+    (walkerjs as unknown as string[]).push();
+    elb({ event: 'e a', timing: 42 });
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'e a', timing: 42, data: {} }),
+    );
   });
 
   test('run option', () => {

@@ -53,6 +53,7 @@ export interface Elb<R = void> {
     nested?: Entities,
     custom?: Properties,
   ): R;
+  (partialEvent: PartialEvent): R;
 }
 
 export type PushData = string | Partial<Config> | Consent | User | Properties;

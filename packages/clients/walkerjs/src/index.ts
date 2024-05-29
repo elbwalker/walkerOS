@@ -183,94 +183,111 @@ export function Walkerjs(
     nameOrEvent: unknown,
     pushData: WebClient.PushData,
     pushContext: WebClient.PushContext,
-    nested: WalkerOS.Entities,
-    custom: WalkerOS.Properties,
-    trigger: WebClient.PushOptions = '',
+    initialNested: WalkerOS.Entities,
+    initialCustom: WalkerOS.Properties,
+    initialTrigger: WebClient.PushOptions = '',
   ): { event?: WalkerOS.Event; command?: string } {
-    if (!nameOrEvent || !isSameType(nameOrEvent, '' as string)) return {};
+    // Determine the partial event
+    const partialEvent: WalkerOS.PartialEvent = isSameType(
+      nameOrEvent,
+      '' as string,
+    )
+      ? { event: nameOrEvent }
+      : ((nameOrEvent || {}) as WalkerOS.PartialEvent);
+
+    if (!partialEvent.event) return {};
 
     // Check for valid entity and action event format
-    const [entity, action] = nameOrEvent.split(' ');
+    const [entity, action] = partialEvent.event.split(' ');
     if (!entity || !action) return {};
 
     // It's a walker command
     if (isCommand(entity)) return { command: action };
 
     // Regular event
-
     // Increase event counter
     ++instance.count;
 
-    const timestamp = Date.now();
-    const { group, count } = instance;
-    const id = `${timestamp}-${group}-${count}`;
-    const source = {
-      type: 'web',
-      id: window.location.href,
-      previous_id: document.referrer,
-    };
+    // Extract properties with default fallbacks
+    const {
+      timestamp = Date.now(),
+      group = instance.group,
+      count = instance.count,
+      source = {
+        type: 'web',
+        id: window.location.href,
+        previous_id: document.referrer,
+      },
+      context = partialEvent.context || {},
+      globals = instance.globals,
+      user = instance.user,
+      nested = partialEvent.nested || initialNested || [],
+      consent = instance.consent,
+      trigger = isSameType(initialTrigger, '') ? initialTrigger : '',
+      version = { tagging: instance.config.tagging },
+    } = partialEvent;
 
     // Get data and context either from elements or parameters
-    let data: WalkerOS.Properties = {};
-    let context: WalkerOS.OrderedProperties = {};
+    let data: WalkerOS.Properties =
+      partialEvent.data ||
+      (isSameType(pushData, {} as WalkerOS.Properties) ? pushData : {});
+
+    let eventContext: WalkerOS.OrderedProperties = context;
 
     let elemParameter: undefined | Element;
     let dataIsElem = false;
     if (isElementOrDocument(pushData)) {
       elemParameter = pushData;
       dataIsElem = true;
-    } else if (isSameType(pushData, {} as WalkerOS.Properties)) {
-      data = pushData;
     }
 
     if (isElementOrDocument(pushContext)) {
       elemParameter = pushContext;
     } else if (isSameType(pushContext, {} as WalkerOS.OrderedProperties)) {
-      context = pushContext;
+      eventContext = pushContext;
     }
 
     if (elemParameter) {
-      // Filter for the entity type from the events name
       const entityObj = getEntities(instance.config.prefix, elemParameter).find(
         (obj) => obj.type == entity,
       );
-
       if (entityObj) {
         if (dataIsElem) data = entityObj.data;
-        context = entityObj.context;
+        eventContext = entityObj.context;
       }
     }
 
-    // Special case for page entity to add the id by default
     if (entity === 'page') {
       data.id = data.id || window.location.pathname;
     }
 
-    return {
-      event: {
-        event: `${entity} ${action}`,
-        data,
-        context,
-        custom: custom || {},
-        globals: instance.globals,
-        user: instance.user,
-        nested: nested || [],
-        consent: instance.consent,
-        id,
-        trigger: isSameType(trigger, '') ? trigger : '',
-        entity,
-        action,
-        timestamp,
-        timing: Math.round((performance.now() - instance.timing) / 10) / 100,
-        group,
-        count,
-        version: {
-          client: instance.client,
-          tagging: instance.config.tagging,
-        },
-        source,
+    const event: WalkerOS.Event = {
+      event: `${entity} ${action}`,
+      data,
+      context: eventContext,
+      custom: partialEvent.custom || initialCustom || {},
+      globals,
+      user,
+      nested,
+      consent,
+      trigger,
+      entity,
+      action,
+      timestamp,
+      timing:
+        partialEvent.timing ||
+        Math.round((performance.now() - instance.timing) / 10) / 100,
+      group,
+      count,
+      id: `${timestamp}-${group}-${count}`,
+      version: {
+        client: instance.client,
+        tagging: version.tagging,
       },
+      source,
     };
+
+    return { event };
   }
 
   function elbLayerInit(instance: WebClient.Instance) {
@@ -467,7 +484,7 @@ export function Walkerjs(
   }
 
   function push(
-    nameOrEvent?: unknown, // @TODO can also be an event object
+    nameOrEvent?: unknown,
     pushData: WebClient.PushData = {},
     options: WebClient.PushOptions = '',
     pushContext: WebClient.PushContext = {},
