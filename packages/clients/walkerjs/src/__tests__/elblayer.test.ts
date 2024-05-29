@@ -210,7 +210,7 @@ describe('ElbLayer', () => {
       round: expect.any(Number),
       session: expect.objectContaining({ storage: false }),
       timing: expect.any(Number),
-      user: {},
+      user: { session: expect.any(String) },
     };
 
     const defaultInterface: WebClient.Instance = {
@@ -351,7 +351,8 @@ describe('ElbLayer', () => {
     );
 
     // Parameters
-    expect((w.elbLayer[1] as unknown[])[0]).toBe('session start');
+    expect((w.elbLayer[1] as unknown[])[0]).toBe('walker user');
+    expect((w.elbLayer[2] as unknown[])[0]).toBe('session start');
   });
 
   test('custom push', () => {
