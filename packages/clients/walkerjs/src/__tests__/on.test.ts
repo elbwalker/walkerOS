@@ -12,6 +12,8 @@ jest.mock('@elbwalker/utils', () => {
   };
 });
 
+let walkerjs: WebClient.Instance;
+
 describe('On Consent', () => {
   let walkerjs: WebClient.Instance;
 
@@ -144,8 +146,6 @@ describe('On Consent', () => {
 });
 
 describe('On Run', () => {
-  let walkerjs: WebClient.Instance;
-
   beforeEach(() => {
     walkerjs = Walkerjs();
   });
@@ -235,8 +235,50 @@ describe('On Run', () => {
   });
 });
 
+describe('On Ready', () => {
+  const mockFn = jest.fn();
+  const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
+  let events: Record<string, EventListenerOrEventListenerObject> = {};
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    events = {};
+    document.addEventListener = mockAddEventListener.mockImplementation(
+      (event, callback) => {
+        events[event] = callback;
+      },
+    );
+  });
+
+  test('ready on load', () => {
+    walkerjs = Walkerjs({ run: true, on: { ready: [mockFn] } });
+    const mockFnOn = jest.fn();
+    elb('walker on', 'ready', mockFnOn);
+
+    expect(mockFn).toHaveBeenCalledTimes(1);
+    expect(mockFnOn).toHaveBeenCalledTimes(1);
+  });
+
+  test('ready later', () => {
+    // const readyState = document.readyState;
+    Object.defineProperty(document, 'readyState', {
+      value: 'loading',
+      writable: true,
+    });
+    walkerjs = Walkerjs({ run: true, on: { ready: [mockFn] } });
+    const mockFnOn = jest.fn();
+    elb('walker on', 'ready', mockFnOn);
+
+    expect(mockFn).toHaveBeenCalledTimes(0);
+    expect(mockFnOn).toHaveBeenCalledTimes(0);
+
+    (events.DOMContentLoaded as () => void)();
+    expect(mockFn).toHaveBeenCalledTimes(1);
+    expect(mockFnOn).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('On Session', () => {
-  let walkerjs: WebClient.Instance;
   const mockFn = jest.fn();
 
   beforeEach(() => {

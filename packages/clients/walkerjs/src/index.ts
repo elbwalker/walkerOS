@@ -67,7 +67,7 @@ export function Walkerjs(
 
   // Automatically start running
   if (instance.config.run) {
-    ready(run, instance);
+    ready(instance, run, instance);
   }
 
   initGlobalTrigger(instance);
@@ -424,7 +424,7 @@ export function Walkerjs(
         on(instance, data as On.Types, options as On.Options);
         break;
       case Const.Commands.Run:
-        ready(run, instance, data as Partial<WebClient.State>);
+        ready(instance, run, instance, data as Partial<WebClient.State>);
         break;
       case Const.Commands.User:
         isObject(data) && setUserIds(instance, data as WalkerOS.User);

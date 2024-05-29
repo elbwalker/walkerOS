@@ -16,6 +16,9 @@ export function onApply(
     case Const.Commands.Consent:
       onConsent(instance, onConfig as Array<On.ConsentConfig>, config);
       break;
+    case Const.Commands.Ready:
+      onRun(instance, onConfig as Array<On.RunConfig>);
+      break;
     case Const.Commands.Run:
       onRun(instance, onConfig as Array<On.RunConfig>);
       break;

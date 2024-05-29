@@ -15,6 +15,7 @@ export type CommandTypes =
   | 'Link'
   | 'On'
   | 'Prefix'
+  | 'Ready'
   | 'Run'
   | 'Session'
   | 'User'
@@ -35,6 +36,7 @@ export const Commands: Record<CommandTypes, WalkerOS.Commands> = {
   Link: 'link',
   On: 'on',
   Prefix: 'data-elb',
+  Ready: 'ready',
   Run: 'run',
   Session: 'session',
   User: 'user',

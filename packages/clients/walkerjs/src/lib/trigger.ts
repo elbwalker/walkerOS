@@ -1,4 +1,5 @@
 import type { Walker, WebClient } from '../types';
+import { onApply } from './on';
 import {
   getElbAttributeName,
   getEvents,
@@ -34,10 +35,12 @@ export const Trigger: { [key: string]: Walker.Trigger } = {
 } as const;
 
 export function ready<T extends (...args: never[]) => R, R>(
+  instance: WebClient.Instance,
   fn: T,
   ...args: Parameters<T>
 ): void {
   const readyFn = () => {
+    onApply(instance, 'ready');
     fn(...args);
   };
 
