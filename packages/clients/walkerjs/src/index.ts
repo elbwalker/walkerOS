@@ -187,10 +187,16 @@ export function Walkerjs(
     custom: WalkerOS.Properties,
     trigger: WebClient.PushOptions = '',
   ): { event?: WalkerOS.Event; command?: string } {
-    if (!nameOrEvent || !isSameType(nameOrEvent, '' as string)) return {};
+    const partialEvent: WalkerOS.PartialEvent = isSameType(
+      nameOrEvent,
+      '' as string,
+    )
+      ? { event: nameOrEvent }
+      : ((nameOrEvent || {}) as WalkerOS.PartialEvent);
 
-    // Check for valid entity and action event format
-    const [entity, action] = nameOrEvent.split(' ');
+    if (!partialEvent.event) return {};
+
+    const [entity, action] = partialEvent.event.split(' ');
     if (!entity || !action) return {};
 
     // It's a walker command
@@ -202,7 +208,14 @@ export function Walkerjs(
     ++instance.count;
 
     const timestamp = Date.now();
-    const { group, count } = instance;
+    const {
+      group,
+      count,
+      globals,
+      user,
+      consent,
+      config: { prefix, tagging },
+    } = instance;
     const id = `${timestamp}-${group}-${count}`;
     const source = {
       type: 'web',
@@ -213,9 +226,9 @@ export function Walkerjs(
     // Get data and context either from elements or parameters
     let data: WalkerOS.Properties = {};
     let context: WalkerOS.OrderedProperties = {};
-
     let elemParameter: undefined | Element;
     let dataIsElem = false;
+
     if (isElementOrDocument(pushData)) {
       elemParameter = pushData;
       dataIsElem = true;
@@ -230,11 +243,9 @@ export function Walkerjs(
     }
 
     if (elemParameter) {
-      // Filter for the entity type from the events name
-      const entityObj = getEntities(instance.config.prefix, elemParameter).find(
+      const entityObj = getEntities(prefix, elemParameter).find(
         (obj) => obj.type == entity,
       );
-
       if (entityObj) {
         if (dataIsElem) data = entityObj.data;
         context = entityObj.context;
@@ -252,10 +263,10 @@ export function Walkerjs(
         data,
         context,
         custom: custom || {},
-        globals: instance.globals,
-        user: instance.user,
+        globals,
+        user,
         nested: nested || [],
-        consent: instance.consent,
+        consent,
         id,
         trigger: isSameType(trigger, '') ? trigger : '',
         entity,
@@ -264,10 +275,7 @@ export function Walkerjs(
         timing: Math.round((performance.now() - instance.timing) / 10) / 100,
         group,
         count,
-        version: {
-          client: instance.client,
-          tagging: instance.config.tagging,
-        },
+        version: { client: instance.client, tagging },
         source,
       },
     };
@@ -467,7 +475,7 @@ export function Walkerjs(
   }
 
   function push(
-    nameOrEvent?: unknown, // @TODO can also be an event object
+    nameOrEvent?: unknown,
     pushData: WebClient.PushData = {},
     options: WebClient.PushOptions = '',
     pushContext: WebClient.PushContext = {},
