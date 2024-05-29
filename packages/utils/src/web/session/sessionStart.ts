@@ -30,6 +30,7 @@ export type SessionFunction = typeof sessionStorage | typeof sessionWindow;
 export type SessionCallback = (
   session: SessionData,
   instance?: WalkerOS.Instance,
+  defaultCb?: SessionCallback,
 ) => void;
 
 export function sessionStart(config: SessionConfig = {}): SessionData | void {
@@ -55,7 +56,7 @@ function callFuncAndCb(
 ) {
   if (cb === false) return session; // Callback is disabled
   if (!cb) cb = defaultCb; // Default callback if none is provided
-  return cb(session, instance);
+  return cb(session, instance, defaultCb);
 }
 
 function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
@@ -73,14 +74,16 @@ function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
 }
 
 const defaultCb: SessionCallback = (session): SessionData => {
-  if (session.storage) {
-    // Set user IDs
-    const user: WalkerOS.User = {};
-    if (session.id) user.session = session.id;
-    if (session.device) user.device = session.device;
+  const user: WalkerOS.User = {};
 
-    elb('walker user', user);
-  }
+  // User.session is the session ID
+  if (session.id) user.session = session.id;
+
+  // Set device ID only in storage mode
+  if (session.storage && session.device) user.device = session.device;
+
+  // Set user IDs
+  elb('walker user', user);
 
   if (session.isStart) elb('session start', session);
 
