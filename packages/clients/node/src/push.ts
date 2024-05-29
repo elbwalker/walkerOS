@@ -33,12 +33,13 @@ function createEventOrCommand(
   nameOrEvent: string | WalkerOS.PartialEvent,
   pushData: unknown,
 ): { event?: WalkerOS.Event; command?: string } {
-  let partialEvent: WalkerOS.PartialEvent;
-  if (isSameType(nameOrEvent, '' as string))
-    partialEvent = { event: nameOrEvent };
-  else {
-    partialEvent = nameOrEvent || {};
-  }
+  // Determine the partial event
+  const partialEvent: WalkerOS.PartialEvent = isSameType(
+    nameOrEvent,
+    '' as string,
+  )
+    ? { event: nameOrEvent }
+    : ((nameOrEvent || {}) as WalkerOS.PartialEvent);
 
   if (!partialEvent.event) throw new Error('Event name is required');
 
@@ -54,16 +55,23 @@ function createEventOrCommand(
   // Increase event counter
   ++instance.count;
 
-  const timestamp = partialEvent.timestamp || Date.now();
-  const group = partialEvent.group || instance.group;
-  const count = partialEvent.count || instance.count;
-  const source = partialEvent.source || {
-    type: 'node',
-    id: '',
-    previous_id: '',
-  };
+  // Extract properties with default fallbacks
+  const {
+    timestamp = Date.now(),
+    group = instance.group,
+    count = instance.count,
+    source = { type: 'node', id: '', previous_id: '' },
+    context = {},
+    custom = {},
+    globals = instance.globals,
+    user = instance.user,
+    nested = [],
+    consent = instance.consent,
+    trigger = '',
+    version = { tagging: instance.config.tagging },
+  } = partialEvent;
 
-  const data =
+  const data: WalkerOS.Properties =
     partialEvent.data ||
     (isSameType(pushData, {} as WalkerOS.Properties) ? pushData : {});
 
@@ -74,13 +82,13 @@ function createEventOrCommand(
   const event: WalkerOS.Event = {
     event: `${entity} ${action}`,
     data,
-    context: partialEvent.context || {},
-    custom: partialEvent.custom || {},
-    globals: partialEvent.globals || instance.globals,
-    user: partialEvent.user || instance.user,
-    nested: partialEvent.nested || [],
-    consent: partialEvent.consent || instance.consent,
-    trigger: partialEvent.trigger || '',
+    context,
+    custom,
+    globals,
+    user,
+    nested,
+    consent,
+    trigger,
     entity,
     action,
     timestamp,
@@ -90,7 +98,7 @@ function createEventOrCommand(
     id: `${timestamp}-${group}-${count}`,
     version: {
       client: instance.client,
-      tagging: partialEvent.version?.tagging || instance.config.tagging,
+      tagging: version.tagging,
     },
     source,
   };
