@@ -57,7 +57,7 @@ export function Walkerjs(
       push: (event) => {
         (window.dataLayer as unknown[]).push({
           ...event,
-          walker: true,
+          walkerjs: true,
         });
       },
       type: 'dataLayer',

@@ -15,7 +15,7 @@ declare global {
 
 type WalkerEvent = Array<
   WalkerOS.Event & {
-    walker: true;
+    walkerjs: true;
   }
 >;
 
