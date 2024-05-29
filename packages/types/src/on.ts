@@ -4,6 +4,7 @@ import type { SessionData } from '@elbwalker/utils';
 // Instance state for the on actions
 export type Config = {
   consent?: Array<ConsentConfig>;
+  ready?: Array<ReadyConfig>;
   run?: Array<RunConfig>;
   session?: Array<SessionConfig>;
 };
@@ -11,11 +12,8 @@ export type Config = {
 // On types
 export type Types = keyof Config;
 
-// Function definitions for the on actions
-export type Functions = ConsentFn | RunFn | SessionFn;
-
 // Parameters for the onAction function calls
-export type Options = ConsentConfig | RunConfig | SessionConfig;
+export type Options = ConsentConfig | ReadyConfig | RunConfig | SessionConfig;
 
 // Consent
 export interface ConsentConfig {
@@ -25,6 +23,10 @@ export type ConsentFn = (
   instance: WalkerOS.Instance,
   consent: WalkerOS.Consent,
 ) => void;
+
+// Ready
+export type ReadyConfig = ReadyFn;
+export type ReadyFn = (instance: WalkerOS.Instance) => void;
 
 // Run
 export type RunConfig = RunFn;
