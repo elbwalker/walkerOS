@@ -8,6 +8,9 @@ describe('Hooks', () => {
 
   beforeEach(() => {
     jest.useFakeTimers();
+    global.performance.getEntriesByType = jest
+      .fn()
+      .mockReturnValue([{ type: 'navigate' }]);
   });
 
   test('Destinations', () => {
@@ -63,8 +66,7 @@ describe('Hooks', () => {
     // Destination calls
     expect(mockInit).toHaveBeenCalledTimes(1);
 
-    expect(preDestinationPush).toHaveBeenNthCalledWith(
-      1,
+    expect(preDestinationPush).toHaveBeenCalledWith(
       {
         fn: expect.any(Function),
         result: undefined,
@@ -137,6 +139,52 @@ describe('Hooks', () => {
       't',
       { c: ['v', 0] },
       [],
+    );
+  });
+
+  test('SessionStart', () => {
+    // Hook mocks
+    const preSessionStart = jest
+      .fn()
+      .mockImplementation(function (params, ...args) {
+        return params.fn(...args); // Regular call
+      });
+    const postSessionStart: Hooks.AnyFunction = jest.fn();
+
+    walkerjs = Walkerjs({
+      dataLayer: true,
+      pageview: false,
+      run: true,
+      session: { storage: true },
+      sessionStatic: { id: '1d' },
+      hooks: {
+        preSessionStart,
+        postSessionStart,
+      },
+    });
+
+    expect(preSessionStart).toHaveBeenCalledTimes(1);
+    expect(preSessionStart).toHaveBeenCalledWith(
+      {
+        fn: expect.any(Function),
+        result: undefined,
+      },
+      expect.objectContaining({ storage: true, data: { id: '1d' } }),
+    );
+
+    expect(postSessionStart).toHaveBeenCalledTimes(1);
+    expect(postSessionStart).toHaveBeenCalledWith(
+      {
+        fn: expect.any(Function),
+        result: expect.objectContaining({ storage: true, id: '1d' }),
+      },
+      expect.objectContaining({
+        storage: true,
+        isStart: true,
+        instance: expect.any(Object),
+        data: expect.any(Object),
+        cb: expect.any(Function),
+      }),
     );
   });
 });

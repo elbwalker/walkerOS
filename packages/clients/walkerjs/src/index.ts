@@ -659,8 +659,11 @@ export function Walkerjs(
 
       return result;
     };
-
-    const session = sessionStartOrg({
+    const session = useHooks(
+      sessionStartOrg,
+      'SessionStart',
+      instance.hooks,
+    )({
       ...sessionConfig, // Session detection configuration
       cb, // Custom wrapper callback
       data: sessionData, // Static default session data
