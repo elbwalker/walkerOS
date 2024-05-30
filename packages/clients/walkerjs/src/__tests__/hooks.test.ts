@@ -8,37 +8,19 @@ describe('Hooks', () => {
 
   beforeEach(() => {
     jest.useFakeTimers();
-    global.performance.getEntriesByType = jest
-      .fn()
-      .mockReturnValue([{ type: 'navigate' }]);
-
-    walkerjs = Walkerjs({
-      default: true,
-      consent: { test: true },
-      pageview: false,
-      session: false,
-    });
   });
 
-  test('hooks', () => {
+  test('Destinations', () => {
     // Destination mocks
     const mockInit = jest.fn().mockImplementation(() => {
       return true;
     });
     const mockPush = jest.fn();
-    const destination: WebDestination.Destination = {
-      config: {},
+    const destination: WebDestination.DestinationInit = {
       init: mockInit,
       push: mockPush,
     };
 
-    // Hook mocks
-    const prePush = jest.fn().mockImplementation(function (params, ...args) {
-      mockDataLayer(...args); // Custom code
-      params.fn(...args); // Regular call
-      return 'foo'; // Updated response
-    });
-    const postPush: Hooks.AnyFunction = jest.fn();
     const preDestinationInit = jest
       .fn()
       .mockImplementation(function (params, ...args) {
@@ -57,35 +39,18 @@ describe('Hooks', () => {
     walkerjs = Walkerjs({
       pageview: false,
       session: false,
-      hooks: {
-        prePush,
-      },
     });
 
     elb('walker destination', destination);
     elb('walker run');
 
-    (prePush as jest.Mock).mockClear();
-
-    elb('walker hook', 'postPush', postPush);
     elb('walker hook', 'preDestinationInit', preDestinationInit);
     elb('walker hook', 'postDestinationInit', postDestinationInit);
     elb('walker hook', 'preDestinationPush', preDestinationPush);
     elb('walker hook', 'postDestinationPush', postDestinationPush);
 
-    expect(prePush).toHaveBeenCalledTimes(5); // 5 hook pushes
-    expect(prePush).toHaveBeenNthCalledWith(
-      1,
-      { fn: expect.any(Function) },
-      'walker hook',
-      'postPush',
-      expect.any(Function),
-    );
-
     expect(walkerjs.hooks).toEqual(
       expect.objectContaining({
-        prePush: expect.any(Function),
-        postPush: expect.any(Function),
         preDestinationInit: expect.any(Function),
         postDestinationInit: expect.any(Function),
         preDestinationPush: expect.any(Function),
@@ -93,25 +58,10 @@ describe('Hooks', () => {
       }),
     );
 
-    (prePush as jest.Mock).mockClear();
-    (postPush as jest.Mock).mockClear();
-    (preDestinationPush as jest.Mock).mockClear();
-
     elb('e a', { a: 1 }, 't', { c: ['v', 0] }, []);
 
     // Destination calls
     expect(mockInit).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledTimes(1);
-
-    expect(prePush).toHaveBeenNthCalledWith(
-      1,
-      { fn: expect.any(Function), result: undefined },
-      'e a',
-      { a: 1 },
-      't',
-      { c: ['v', 0] },
-      [],
-    );
 
     expect(preDestinationPush).toHaveBeenNthCalledWith(
       1,
@@ -124,6 +74,59 @@ describe('Hooks', () => {
       undefined, // custom event mapping
       expect.objectContaining({ allowed: true }), // walkerjs instance
     );
+  });
+
+  test('Push', () => {
+    // Hook mocks
+    const prePush = jest.fn().mockImplementation(function (params, ...args) {
+      params.fn(...args); // Regular call
+      return 'foo'; // Updated response
+    });
+    const postPush: Hooks.AnyFunction = jest.fn();
+
+    walkerjs = Walkerjs({
+      dataLayer: true,
+      pageview: false,
+      session: false,
+      hooks: {
+        prePush,
+      },
+    });
+
+    elb('walker run');
+
+    expect(prePush).toHaveBeenCalledTimes(1);
+    elb('walker hook', 'postPush', postPush);
+    expect(prePush).toHaveBeenCalledTimes(2);
+    expect(prePush).toHaveBeenNthCalledWith(
+      2,
+      { fn: expect.any(Function) },
+      'walker hook',
+      'postPush',
+      expect.any(Function),
+    );
+
+    expect(walkerjs.hooks).toEqual(
+      expect.objectContaining({
+        prePush: expect.any(Function),
+        postPush: expect.any(Function),
+      }),
+    );
+
+    (prePush as jest.Mock).mockClear();
+    (postPush as jest.Mock).mockClear();
+
+    elb('e a', { a: 1 }, 't', { c: ['v', 0] }, []);
+    expect(prePush).toHaveBeenNthCalledWith(
+      1,
+      { fn: expect.any(Function), result: undefined },
+      'e a',
+      { a: 1 },
+      't',
+      { c: ['v', 0] },
+      [],
+    );
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
 
     expect(postPush).toHaveBeenCalledTimes(1);
     expect(postPush).toHaveBeenNthCalledWith(
