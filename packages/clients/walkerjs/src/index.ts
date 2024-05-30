@@ -32,7 +32,7 @@ export function Walkerjs(
   const state = getState(customConfig);
   const instance: WebClient.Instance = {
     push: useHooks(push, 'Push', state.hooks),
-    sessionStart: useHooks(sessionStart, 'SessionStart', state.hooks),
+    sessionStart,
     client,
     ...state,
   };

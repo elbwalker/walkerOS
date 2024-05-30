@@ -186,5 +186,13 @@ describe('Hooks', () => {
         cb: expect.any(Function),
       }),
     );
+
+    (preSessionStart as jest.Mock).mockClear();
+    (postSessionStart as jest.Mock).mockClear();
+
+    walkerjs.sessionStart();
+
+    expect(preSessionStart).toHaveBeenCalledTimes(1);
+    expect(postSessionStart).toHaveBeenCalledTimes(1);
   });
 });
