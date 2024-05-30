@@ -1,6 +1,6 @@
+import type { WebClient } from '..';
 import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import type { WebClient } from '..';
 import { sessionStart } from '@elbwalker/utils';
 
 jest.mock('@elbwalker/utils', () => {
@@ -306,9 +306,11 @@ describe('On Session', () => {
   });
 
   test('session disabled', () => {
-    walkerjs = Walkerjs({ run: true, session: false });
-
-    elb('walker on', 'session', mockFn);
+    walkerjs = Walkerjs({
+      run: true,
+      session: false,
+      on: { session: [mockFn] },
+    });
     expect(mockFn).toHaveBeenCalledTimes(0);
   });
 
@@ -334,11 +336,26 @@ describe('On Session', () => {
     expect(mockFn).toHaveBeenCalledTimes(1);
   });
 
-  test.skip('async with custom cb', () => {
-    jest.clearAllMocks();
+  test('async with custom cb', () => {
+    const mockCb = jest.fn();
     walkerjs = Walkerjs({
       run: true,
-      session: { consent: 'marketing', storage: true }, // @TODO cb
+      session: { cb: mockCb, consent: 'marketing', storage: true },
+      on: { session: [mockFn] },
+    });
+
+    expect(sessionStart).toHaveBeenCalledTimes(1);
+    expect(mockFn).toHaveBeenCalledTimes(0);
+
+    elb('walker consent', { marketing: true });
+    expect(mockFn).toHaveBeenCalledTimes(1);
+    expect(mockCb).toHaveBeenCalledTimes(1);
+  });
+
+  test('async with disabled cb', () => {
+    walkerjs = Walkerjs({
+      run: true,
+      session: { cb: false, consent: 'marketing', storage: true },
       on: { session: [mockFn] },
     });
 
