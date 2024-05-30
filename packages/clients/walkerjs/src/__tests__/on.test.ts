@@ -1,6 +1,6 @@
+import type { WebClient } from '..';
 import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import type { WebClient } from '..';
 import { sessionStart } from '@elbwalker/utils';
 
 jest.mock('@elbwalker/utils', () => {
@@ -294,7 +294,6 @@ describe('On Session', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    walkerjs = Walkerjs({ run: true });
   });
 
   test('register', () => {
@@ -307,20 +306,63 @@ describe('On Session', () => {
   });
 
   test('session disabled', () => {
-    jest.clearAllMocks();
-    walkerjs = Walkerjs({ run: true, session: false });
-
-    elb('walker on', 'session', mockFn);
+    walkerjs = Walkerjs({
+      run: true,
+      session: false,
+      on: { session: [mockFn] },
+    });
     expect(mockFn).toHaveBeenCalledTimes(0);
   });
 
   test('basics', () => {
+    walkerjs = Walkerjs({ run: true });
     elb('walker on', 'session', mockFn);
     expect(sessionStart).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledTimes(1);
   });
 
-  test('async storage session', () => {
-    // @TODO
+  test('async with storage', () => {
+    jest.clearAllMocks();
+    walkerjs = Walkerjs({
+      run: true,
+      session: { consent: 'marketing', storage: true },
+      on: { session: [mockFn] },
+    });
+
+    expect(sessionStart).toHaveBeenCalledTimes(1);
+    expect(mockFn).toHaveBeenCalledTimes(0);
+
+    elb('walker consent', { marketing: true });
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  test('async with custom cb', () => {
+    const mockCb = jest.fn();
+    walkerjs = Walkerjs({
+      run: true,
+      session: { cb: mockCb, consent: 'marketing', storage: true },
+      on: { session: [mockFn] },
+    });
+
+    expect(sessionStart).toHaveBeenCalledTimes(1);
+    expect(mockFn).toHaveBeenCalledTimes(0);
+
+    elb('walker consent', { marketing: true });
+    expect(mockFn).toHaveBeenCalledTimes(1);
+    expect(mockCb).toHaveBeenCalledTimes(1);
+  });
+
+  test('async with disabled cb', () => {
+    walkerjs = Walkerjs({
+      run: true,
+      session: { cb: false, consent: 'marketing', storage: true },
+      on: { session: [mockFn] },
+    });
+
+    expect(sessionStart).toHaveBeenCalledTimes(1);
+    expect(mockFn).toHaveBeenCalledTimes(0);
+
+    elb('walker consent', { marketing: true });
+    expect(mockFn).toHaveBeenCalledTimes(1);
   });
 });

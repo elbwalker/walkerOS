@@ -87,6 +87,7 @@ describe('sessionStart', () => {
         mock: 'window',
       },
       instance,
+      expect.any(Function),
     );
   });
 
@@ -107,6 +108,7 @@ describe('sessionStart', () => {
         mock: 'storage',
       },
       instance,
+      expect.any(Function),
     );
 
     // Denied, use sessionWindow
@@ -119,15 +121,29 @@ describe('sessionStart', () => {
         mock: 'window',
       },
       instance,
+      expect.any(Function),
     );
   });
 
   test('Callback default', () => {
     // No elb calls if no session is started
     sessionStart();
-    expect(mockElb).toHaveBeenCalledTimes(0);
-    sessionStart({ data: { isStart: true } });
     expect(mockElb).toHaveBeenCalledTimes(1);
+    expect(mockElb).toHaveBeenCalledWith('walker user', expect.any(Object));
+
+    jest.clearAllMocks();
+    sessionStart({ data: { isStart: true } });
+    expect(mockElb).toHaveBeenCalledTimes(2);
+    expect(mockElb).toHaveBeenNthCalledWith(
+      1,
+      'walker user',
+      expect.any(Object),
+    );
+    expect(mockElb).toHaveBeenNthCalledWith(
+      2,
+      'session start',
+      expect.any(Object),
+    );
   });
 
   test('Callback default storage', () => {

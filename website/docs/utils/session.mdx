@@ -11,13 +11,13 @@ import PackageLink from '/src/components/docs/package-link';
 <PackageLink github="packages/clients/walkerjs" npm="@elbwalker/walker.js" />
 <PackageLink github="packages/utils/src/web/session" npm="@elbwalker/utils" />
 
-There are multiple ways to define and measure a session. Sessions
-represent a period when a user actively engages with a website, often used
-for attribution and conversion tracking. Different tools may define and detect
-sessions in varying ways.
+There are multiple ways to define and measure a session. Sessions represent a
+period when a user actively engages with a website, often used for attribution
+and conversion tracking. Different tools may define and detect sessions in
+varying ways.
 
-The `sessionStart` util helps to detect a new session independently and
-triggers a `session start` event or [executes custom code](#callback). It works
+The `sessionStart` util helps to detect a new session independently and triggers
+a `session start` event or [executes custom code](#callback). It works
 client-side and is cookieless by default. The Util returns
 [Session Data](#session-data) information. There are
 [Config Parameters](#config-parameters) to customize the session detection.
@@ -142,14 +142,16 @@ sessionStart({ storage: true });
 The `cb` parameter can be used to disable the default callback or to define a
 custom one. The default callback triggers a `session start` event if `isStart`
 is `true`. And additionally, with `storage: true`, the user's `session` and
-`device` ids are also set via `elb('walker user', user);`.
+`device` ids are also set via `elb('walker user', user);`. The default callback
+function is passed as the third parameter.
 
 ```js
 const session = sessionStart({ cb: false }); // Disables the default callback
 
 sessionStart({
-  cb: (session, instance) => {
+  cb: (session, instance, defaultCb) => {
     console.log(session);
+    defaultCb(session, instance); // Call the default callback
   },
 });
 ```
@@ -199,14 +201,14 @@ callback --> returnSession
 
 Additional config parameters, based on the [Storage](/docs/utils/storage) util:
 
-| Property       | Type   | Description                                              | Default      |
-| -------------- | ------ | -------------------------------------------------------- | ------------ |
-| deviceKey      | string | The key to store the device ID in the storage            | elbDeviceId  |
-| deviceStorage  | string | The storage type to use for the device id                | local        |
-| deviceAge      | number | The age in days to consider the device ID as expired     | 30           |
-| sessionKey     | string | The key to store the session ID in the storage           | elbSessionId |
-| sessionStorage | string | The storage type to use for the session id               | local        |
-| sessionAge     | number | The age in days to consider the session ID as expired    | 30           |
+| Property       | Type   | Description                                                  | Default      |
+| -------------- | ------ | ------------------------------------------------------------ | ------------ |
+| deviceKey      | string | The key to store the device ID in the storage                | elbDeviceId  |
+| deviceStorage  | string | The storage type to use for the device id                    | local        |
+| deviceAge      | number | The age in days to consider the device ID as expired         | 30           |
+| sessionKey     | string | The key to store the session ID in the storage               | elbSessionId |
+| sessionStorage | string | The storage type to use for the session id                   | local        |
+| sessionAge     | number | The age in days to consider the session ID as expired        | 30           |
 | length         | number | Minutes after the last update to consider session as expired | 30           |
 
 :::info
