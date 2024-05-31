@@ -21,16 +21,18 @@ export interface SessionStorageConfig extends SessionWindowConfig {
 
 export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
   const now = Date.now();
-  const length = config.length || 30; // Session length in minutes
-  const deviceKey = config.deviceKey || 'elbDeviceId';
-  const deviceStorage = config.deviceStorage || 'local';
-  const deviceAge = config.deviceAge || 30; // Session age in days
-  const sessionKey = config.sessionKey || 'elbSessionId';
-  const sessionStorage = config.sessionStorage || 'local';
-  const sessionAge = config.sessionAge || 30; // Session age in minutes
-  const pulse = 'pulse' in config ? config.pulse : false; // Handle the counting
+  const {
+    length = 30, // Session length in minutes
+    deviceKey = 'elbDeviceId',
+    deviceStorage = 'local',
+    deviceAge = 30, // Session age in days
+    sessionKey = 'elbSessionId',
+    sessionStorage = 'local',
+    sessionAge = 30, // Session age in minutes
+    pulse = false, // Handle the counting
+  } = config;
   const windowSession = sessionWindow(config); // Status based on window only
-  let isStart = !!config.isStart;
+  let isStart = true;
 
   // Check for an existing session
   const device: string | undefined = tryCatch(
@@ -52,6 +54,7 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
     tryCatch(
       (key: string, storage?: StorageType) => {
         const existingSession = JSON.parse(String(storageRead(key, storage)));
+        isStart = existingSession.isStart;
 
         // Only update session if it's not a pulse check
         if (pulse) return existingSession;
@@ -80,9 +83,6 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
           isStart = false;
         }
 
-        // Update session status
-        existingSession.isStart = isStart;
-
         return existingSession;
       },
       () => {
@@ -91,36 +91,24 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
       },
     )(sessionKey, sessionStorage) || {};
 
-  // Update session timestamp
-  existingSession.updated = now;
+  // Default session data
+  const defaultSession: Partial<SessionData> = {
+    id: getId(12),
+    start: now,
+    isNew: true,
+    count: 1,
+    runs: 1,
+  };
 
-  let session: SessionData = existingSession;
-
-  if (!pulse) {
-    // Default session data
-    session = {
-      isStart: isStart,
-      storage: true,
-      id: getId(12),
-      start: now,
-      updated: now,
-      isNew: true,
-      count: 1,
-      runs: 1,
-    };
-
-    config.isStart = config.isStart || isStart;
-
-    // Eventually update session with id, referrer and marketing parameters
-    session = Object.assign(
-      session, // Default session values
-      windowSession, // Basic session data based on window
-      existingSession, // (Updated) existing session
-      { device }, // Device Id
-      { isStart: config.isStart, storage: true }, // Status of the session
-      config.data, // Given data has the highest priority
-    );
-  }
+  // Eventually update session with id, referrer and marketing parameters
+  const session = Object.assign(
+    defaultSession, // Default session values
+    windowSession, // Basic session data based on window
+    existingSession, // (Updated) existing session
+    { device }, // Device Id
+    { isStart, storage: true, updated: now }, // Status of the session
+    config.data, // Given data has the highest priority
+  );
 
   // Write (updated) session to storage
   storageWrite(sessionKey, JSON.stringify(session), sessionAge, sessionStorage);

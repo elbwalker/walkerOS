@@ -276,7 +276,7 @@ describe('SessionStorage', () => {
     });
   });
 
-  test('Pulsea', () => {
+  test('Pulse', () => {
     const start = Date.now();
     const session = {
       device,
