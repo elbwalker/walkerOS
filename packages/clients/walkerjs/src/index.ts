@@ -32,7 +32,7 @@ export function Walkerjs(
   const state = getState(customConfig);
   const instance: WebClient.Instance = {
     push: useHooks(push, 'Push', state.hooks),
-    sessionStart,
+    sessionStart: sessionStartExport,
     client,
     ...state,
   };
@@ -671,6 +671,13 @@ export function Walkerjs(
     });
 
     return session;
+  }
+
+  function sessionStartExport({
+    config = {},
+    ...options
+  }: SessionStartOptions = {}): void | SessionData {
+    sessionStart({ config: { pulse: true, ...config }, ...options });
   }
 
   function setConsent(instance: WebClient.Instance, data: WalkerOS.Consent) {
