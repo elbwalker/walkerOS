@@ -35,16 +35,14 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
   let isStart = true;
 
   // Retrieve or create device ID
-  const device: string | undefined = tryCatch(
-    (key: string, age: number, storage: StorageType) => {
-      let id = storageRead(key, storage);
-      if (!id) {
-        id = getId(8); // Create a new device ID
-        storageWrite(key, id, age, storage); // Write device ID to storage
-      }
-      return String(id);
-    },
-  )(deviceKey, deviceAge, deviceStorage);
+  const device = tryCatch((key: string, age: number, storage: StorageType) => {
+    let id = storageRead(key, storage);
+    if (!id) {
+      id = getId(8); // Create a new device ID
+      storageWrite(key, id, age, storage); // Write device ID to storage
+    }
+    return String(id);
+  })(deviceKey, deviceAge, deviceStorage);
 
   // Retrieve or initialize session data
   const existingSession: SessionData =

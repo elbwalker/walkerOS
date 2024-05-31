@@ -677,7 +677,7 @@ export function Walkerjs(
     config = {},
     ...options
   }: SessionStartOptions = {}): void | SessionData {
-    sessionStart({ config: { pulse: true, ...config }, ...options });
+    return sessionStart({ config: { pulse: true, ...config }, ...options });
   }
 
   function setConsent(instance: WebClient.Instance, data: WalkerOS.Consent) {
