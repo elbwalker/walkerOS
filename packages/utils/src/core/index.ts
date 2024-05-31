@@ -1,10 +1,10 @@
 export * from './assign';
 export * from './castValue';
 export * from './constants';
-// export { fingerprint } from './fingerprint';
 export * from './getByStringDot';
 export * from './getId';
 export * from './getMarketingParameters';
+export * from './hash';
 export * from './invocations';
 export * from './isSameType';
 export * from './onLog';
