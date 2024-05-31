@@ -11,34 +11,19 @@ describe('Hooks', () => {
     global.performance.getEntriesByType = jest
       .fn()
       .mockReturnValue([{ type: 'navigate' }]);
-
-    walkerjs = Walkerjs({
-      default: true,
-      consent: { test: true },
-      pageview: false,
-      session: false,
-    });
   });
 
-  test('hooks', () => {
+  test('Destinations', () => {
     // Destination mocks
     const mockInit = jest.fn().mockImplementation(() => {
       return true;
     });
     const mockPush = jest.fn();
-    const destination: WebDestination.Destination = {
-      config: {},
+    const destination: WebDestination.DestinationInit = {
       init: mockInit,
       push: mockPush,
     };
 
-    // Hook mocks
-    const prePush = jest.fn().mockImplementation(function (params, ...args) {
-      mockDataLayer(...args); // Custom code
-      params.fn(...args); // Regular call
-      return 'foo'; // Updated response
-    });
-    const postPush: Hooks.AnyFunction = jest.fn();
     const preDestinationInit = jest
       .fn()
       .mockImplementation(function (params, ...args) {
@@ -57,25 +42,66 @@ describe('Hooks', () => {
     walkerjs = Walkerjs({
       pageview: false,
       session: false,
-      hooks: {
-        prePush,
-      },
     });
 
     elb('walker destination', destination);
     elb('walker run');
 
-    (prePush as jest.Mock).mockClear();
-
-    elb('walker hook', 'postPush', postPush);
     elb('walker hook', 'preDestinationInit', preDestinationInit);
     elb('walker hook', 'postDestinationInit', postDestinationInit);
     elb('walker hook', 'preDestinationPush', preDestinationPush);
     elb('walker hook', 'postDestinationPush', postDestinationPush);
 
-    expect(prePush).toHaveBeenCalledTimes(5); // 5 hook pushes
+    expect(walkerjs.hooks).toEqual(
+      expect.objectContaining({
+        preDestinationInit: expect.any(Function),
+        postDestinationInit: expect.any(Function),
+        preDestinationPush: expect.any(Function),
+        postDestinationPush: expect.any(Function),
+      }),
+    );
+
+    elb('e a', { a: 1 }, 't', { c: ['v', 0] }, []);
+
+    // Destination calls
+    expect(mockInit).toHaveBeenCalledTimes(1);
+
+    expect(preDestinationPush).toHaveBeenCalledWith(
+      {
+        fn: expect.any(Function),
+        result: undefined,
+      },
+      expect.objectContaining({ event: 'e a' }), // event
+      { init: true }, // destination config
+      undefined, // custom event mapping
+      expect.objectContaining({ allowed: true }), // walkerjs instance
+    );
+  });
+
+  test('Push', () => {
+    // Hook mocks
+    const prePush = jest.fn().mockImplementation(function (params, ...args) {
+      params.fn(...args); // Regular call
+      return 'foo'; // Updated response
+    });
+    const postPush: Hooks.AnyFunction = jest.fn();
+
+    walkerjs = Walkerjs({
+      dataLayer: true,
+      pageview: false,
+      session: false,
+      hooks: {
+        prePush,
+      },
+    });
+
+    elb('walker run');
+
+    expect(prePush).toHaveBeenCalledTimes(1);
+    elb('walker hook', 'postPush', postPush);
+    expect(prePush).toHaveBeenCalledTimes(2);
     expect(prePush).toHaveBeenNthCalledWith(
-      1,
+      2,
       { fn: expect.any(Function) },
       'walker hook',
       'postPush',
@@ -86,23 +112,13 @@ describe('Hooks', () => {
       expect.objectContaining({
         prePush: expect.any(Function),
         postPush: expect.any(Function),
-        preDestinationInit: expect.any(Function),
-        postDestinationInit: expect.any(Function),
-        preDestinationPush: expect.any(Function),
-        postDestinationPush: expect.any(Function),
       }),
     );
 
     (prePush as jest.Mock).mockClear();
     (postPush as jest.Mock).mockClear();
-    (preDestinationPush as jest.Mock).mockClear();
 
     elb('e a', { a: 1 }, 't', { c: ['v', 0] }, []);
-
-    // Destination calls
-    expect(mockInit).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledTimes(1);
-
     expect(prePush).toHaveBeenNthCalledWith(
       1,
       { fn: expect.any(Function), result: undefined },
@@ -112,18 +128,7 @@ describe('Hooks', () => {
       { c: ['v', 0] },
       [],
     );
-
-    expect(preDestinationPush).toHaveBeenNthCalledWith(
-      1,
-      {
-        fn: expect.any(Function),
-        result: undefined,
-      },
-      expect.objectContaining({ event: 'e a' }), // event
-      { init: true }, // destination config
-      undefined, // custom event mapping
-      expect.objectContaining({ allowed: true }), // walkerjs instance
-    );
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
 
     expect(postPush).toHaveBeenCalledTimes(1);
     expect(postPush).toHaveBeenNthCalledWith(
@@ -135,5 +140,59 @@ describe('Hooks', () => {
       { c: ['v', 0] },
       [],
     );
+  });
+
+  test('SessionStart', () => {
+    // Hook mocks
+    const preSessionStart = jest
+      .fn()
+      .mockImplementation(function (params, ...args) {
+        return params.fn(...args); // Regular call
+      });
+    const postSessionStart: Hooks.AnyFunction = jest.fn();
+
+    walkerjs = Walkerjs({
+      dataLayer: true,
+      pageview: false,
+      run: true,
+      session: { storage: true },
+      sessionStatic: { id: '1d' },
+      hooks: {
+        preSessionStart,
+        postSessionStart,
+      },
+    });
+
+    expect(preSessionStart).toHaveBeenCalledTimes(1);
+    expect(preSessionStart).toHaveBeenCalledWith(
+      {
+        fn: expect.any(Function),
+        result: undefined,
+      },
+      expect.objectContaining({ storage: true, data: { id: '1d' } }),
+    );
+
+    expect(postSessionStart).toHaveBeenCalledTimes(1);
+    expect(postSessionStart).toHaveBeenCalledWith(
+      {
+        fn: expect.any(Function),
+        result: expect.objectContaining({ storage: true, id: '1d' }),
+      },
+      expect.objectContaining({
+        storage: true,
+        isStart: true,
+        instance: expect.any(Object),
+        data: expect.any(Object),
+        cb: expect.any(Function),
+      }),
+    );
+
+    (preSessionStart as jest.Mock).mockClear();
+    (postSessionStart as jest.Mock).mockClear();
+
+    walkerjs.sessionStart();
+
+    expect(preSessionStart).toHaveBeenCalledTimes(1);
+    expect(postSessionStart).toHaveBeenCalledTimes(1);
   });
 });

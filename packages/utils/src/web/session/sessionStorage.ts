@@ -16,96 +16,92 @@ export interface SessionStorageConfig extends SessionWindowConfig {
   sessionStorage?: StorageType;
   sessionAge?: number;
   length?: number; // Minutes after last update to consider session as expired (default: 30)
+  pulse?: boolean;
 }
 
 export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
   const now = Date.now();
-  const length = config.length || 30; // Session length in minutes
-  const deviceKey = config.deviceKey || 'elbDeviceId';
-  const deviceStorage = config.deviceStorage || 'local';
-  const deviceAge = config.deviceAge || 30; // Session age in days
-  const sessionKey = config.sessionKey || 'elbSessionId';
-  const sessionStorage = config.sessionStorage || 'local';
-  const sessionAge = config.sessionAge || 30; // Session age in minutes
+  const {
+    length = 30, // Session length in minutes
+    deviceKey = 'elbDeviceId',
+    deviceStorage = 'local',
+    deviceAge = 30, // Device ID age in days
+    sessionKey = 'elbSessionId',
+    sessionStorage = 'local',
+    sessionAge = 30, // Session age in minutes
+    pulse = false, // Handle the counting
+  } = config;
   const windowSession = sessionWindow(config); // Status based on window only
-  let isStart = !!config.isStart;
+  let isStart = true;
 
-  // Check for an existing session
-  const device: string | undefined = tryCatch(
-    (key: string, age: number, storage: StorageType) => {
-      // Get existing device Id
-      let id = storageRead(key, storage);
+  // Retrieve or create device ID
+  const device = tryCatch((key: string, age: number, storage: StorageType) => {
+    let id = storageRead(key, storage);
+    if (!id) {
+      id = getId(8); // Create a new device ID
+      storageWrite(key, id, age, storage); // Write device ID to storage
+    }
+    return String(id);
+  })(deviceKey, deviceAge, deviceStorage);
 
-      if (!id) {
-        id = getId(8); // Create a new device Id
-        storageWrite(key, id, age, storage); // Write device Id to storage
-      }
+  // Retrieve or initialize session data
+  const existingSession: SessionData =
+    tryCatch(
+      (key: string, storage?: StorageType) => {
+        const session = JSON.parse(String(storageRead(key, storage)));
+        isStart = session.isStart;
 
-      return String(id);
-    },
-  )(deviceKey, deviceAge, deviceStorage);
+        // Only update session if it's not a pulse check
+        if (pulse) return session;
 
-  // Check for an existing session
-  const existingSession: SessionData | undefined = tryCatch(
-    (key: string, storage?: StorageType) => {
-      const existingSession = JSON.parse(String(storageRead(key, storage)));
+        // Mark session as not new by default
+        session.isNew = false;
 
-      // By default it's not a new session anymore
-      existingSession.isNew = false;
+        // Handle new marketing entry
+        if (windowSession.marketing) {
+          Object.assign(session, windowSession); // Overwrite existing session with marketing data
+          isStart = true; // This is a session start
+        }
 
-      // A new marketing entry
-      if (windowSession.marketing) {
-        Object.assign(existingSession, windowSession); // Overwrite existing session with marketing data
-        isStart = true; // This is a session start
-      }
+        // Check if session is still active
+        if (isStart || session.updated + length * 60 * 1000 < now) {
+          // Session has expired
+          delete session.id; // Unset session ID
+          delete session.referrer; // Unset referrer
+          session.start = now; // Set new session start
+          session.count++; // Increase session count
+          session.runs = 1; // Reset runs
+          isStart = true; // Mark expired session as a new one
+        } else {
+          // Session is still active
+          session.runs++;
+          isStart = false;
+        }
 
-      // Check if session is still active
-      if (isStart || existingSession.updated + length * 60 * 1000 < now) {
-        // Session has expired
-        delete existingSession.id; // Unset session ID
-        delete existingSession.referrer; // Unset referrer
-        existingSession.start = now; // Set new session start
-        existingSession.count++; // Increase session count
-        existingSession.runs = 1; // Reset runs
-        isStart = true; // Mark expired session a as new one
-      } else {
-        // Session is still active
-        existingSession.runs++;
-        isStart = false;
-      }
-
-      existingSession.isStart = isStart; // Update session status
-      existingSession.updated = now; // Update session timestamp
-
-      return existingSession;
-    },
-    () => {
-      // Something went wrong, start a new session
-      config.isStart = true;
-    },
-  )(sessionKey, sessionStorage);
+        return session;
+      },
+      () => {
+        // Something went wrong, start a new session
+        config.isStart = true;
+      },
+    )(sessionKey, sessionStorage) || {};
 
   // Default session data
-  let session: SessionData = {
-    isStart: isStart,
-    storage: true,
+  const defaultSession: Partial<SessionData> = {
     id: getId(12),
     start: now,
-    updated: now,
     isNew: true,
     count: 1,
     runs: 1,
   };
 
-  config.isStart = config.isStart || isStart;
-
-  // Eventually update session with id, referrer and marketing parameters
-  session = Object.assign(
-    session, // Default session values
+  // Merge session data
+  const session = Object.assign(
+    defaultSession, // Default session values
     windowSession, // Basic session data based on window
     existingSession, // (Updated) existing session
-    { device }, // Device Id
-    { isStart: config.isStart, storage: true }, // Status of the session
+    { device }, // Device ID
+    { isStart, storage: true, updated: now }, // Status of the session
     config.data, // Given data has the highest priority
   );
 

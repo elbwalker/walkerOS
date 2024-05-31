@@ -60,10 +60,6 @@ describe('SessionStorage', () => {
       runs: 1,
     };
 
-    mockStorageRead.mockImplementation((config) => {
-      return { ...config.data, mock: 'window' };
-    });
-
     mockStorageRead
       .mockReturnValue(JSON.stringify(session))
       .mockReturnValueOnce(device);
@@ -276,6 +272,39 @@ describe('SessionStorage', () => {
       id: expect.any(String),
       isNew: false,
       count: 2,
+      runs: 1,
+    });
+  });
+
+  test('Pulse', () => {
+    const start = Date.now();
+    const session = {
+      device,
+      isStart: true,
+      storage: true,
+      id: 'sessionId',
+      start,
+      referrer: 'org',
+      updated: start,
+      isNew: true,
+      count: 1,
+      runs: 1,
+    };
+
+    mockStorageRead.mockImplementation((key) => {
+      if (key == 'elbDeviceId') return device;
+      return JSON.stringify(session);
+    });
+    jest.advanceTimersByTime(1000);
+
+    const newSession = sessionStorage({ pulse: true });
+
+    expect(newSession).toStrictEqual({
+      ...session,
+      device,
+      updated: start + 1000,
+      isStart: true,
+      isNew: true,
       runs: 1,
     });
   });
