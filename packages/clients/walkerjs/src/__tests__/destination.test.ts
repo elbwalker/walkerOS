@@ -11,6 +11,10 @@ describe('Destination', () => {
   let config: WebDestination.Config;
 
   beforeEach(() => {
+    jest.useFakeTimers();
+    global.performance.getEntriesByType = jest
+      .fn()
+      .mockReturnValue([{ type: 'navigate' }]);
     walkerjs = Walkerjs({ pageview: false, session: false });
     config = { init: false };
 
@@ -651,5 +655,30 @@ describe('Destination', () => {
     elb('e a');
 
     expect(mockPush).toHaveBeenCalledTimes(1);
+  });
+
+  test.skip('await async init', async () => {
+    walkerjs = Walkerjs({ pageview: false, session: false });
+
+    elb('walker destination', {
+      init: async () => {
+        return new Promise(() => {
+          setTimeout(() => {
+            return true;
+          }, 1000);
+        });
+      },
+      push: mockPush,
+    });
+    elb('walker run');
+
+    elb('a 1');
+    jest.advanceTimersByTime(2000);
+
+    elb('a 2');
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(2000);
+    expect(mockPush).toHaveBeenCalledTimes(2);
   });
 });

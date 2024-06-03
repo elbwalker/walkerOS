@@ -1,12 +1,12 @@
-import { Hooks } from '@elbwalker/types';
+import { Hooks, WalkerOS } from '@elbwalker/types';
 
 export function useHooks<P extends unknown[], R>(
-  fn: (...args: P) => R,
+  fn: (...args: P) => WalkerOS.MaybePromise<R>,
   name: string,
   hooks: Hooks.Functions,
-): (...args: P) => R {
-  return function (...args: P): R {
-    let result: R;
+): (...args: P) => WalkerOS.MaybePromise<R> {
+  return function (...args: P) {
+    let result: WalkerOS.MaybePromise<R>;
     const preHook = ('pre' + name) as keyof Hooks.Functions;
     const postHook = ('post' + name) as keyof Hooks.Functions;
     const preHookFn = hooks[preHook] as unknown as Hooks.HookFn<typeof fn>;

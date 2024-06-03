@@ -1,6 +1,7 @@
 import type { Destination, Hooks, On } from '.';
 
 export type AnyObject = Record<string, unknown>;
+export type MaybePromise<T> = T | Promise<T>;
 export type SingleOrArray<T> = T | Array<T>;
 
 export interface Instance extends State {
@@ -29,7 +30,7 @@ export interface Config {
   verbose?: boolean; // Enable verbose logging
 }
 
-export interface Elb<R = void> {
+export interface Elb<R = MaybePromise<void>> {
   (event: 'walker config', config: Partial<Config>): R;
   (event: 'walker consent', consent: Consent): R;
 
@@ -54,6 +55,7 @@ export interface Elb<R = void> {
     custom?: Properties,
   ): R;
   (partialEvent: PartialEvent): R;
+  (asyncPush: Promise<unknown[]>): R;
 }
 
 export type PushData = string | Partial<Config> | Consent | User | Properties;

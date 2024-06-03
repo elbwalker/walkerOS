@@ -21,7 +21,9 @@ type WalkerEvent = Array<
 
 export interface Instance extends State, WalkerOS.Instance {
   push: Elb;
-  sessionStart: (options?: SessionStartOptions) => void | SessionData;
+  sessionStart: (
+    options?: SessionStartOptions,
+  ) => WalkerOS.MaybePromise<void | SessionData>;
   client: string;
   config: Config;
   destinations: Destinations;
@@ -62,8 +64,8 @@ export interface Elb extends WalkerOS.Elb {
     event: 'walker destination',
     destination: WebDestination.Destination | WebDestination.DestinationInit,
     config?: WebDestination.Config,
-  ): void;
-  (event: 'walker init', scope: Scope | Scope[]): void;
+  ): WalkerOS.MaybePromise<void>;
+  (event: 'walker init', scope: Scope | Scope[]): WalkerOS.MaybePromise<void>;
   (
     event: string | unknown,
     data?: PushData,
@@ -71,8 +73,8 @@ export interface Elb extends WalkerOS.Elb {
     context?: PushContext,
     nested?: WalkerOS.Entities,
     custom?: WalkerOS.Properties,
-  ): void;
-  (event: 'walker run', state?: Partial<State>): void;
+  ): WalkerOS.MaybePromise<void>;
+  (event: 'walker run', state?: Partial<State>): WalkerOS.MaybePromise<void>;
 }
 
 export type ElbLayer = [

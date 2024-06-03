@@ -15,6 +15,7 @@ import {
   isSameType,
   sessionStart as sessionStartOrg,
   tryCatch,
+  tryCatchAsync,
   useHooks,
 } from '@elbwalker/utils';
 import { getEntities, getGlobals } from './lib/walker';
@@ -24,6 +25,13 @@ import { SessionStartOptions } from './types/client';
 // Export types and elb
 export * from './types';
 export { elb };
+// @TODO export elbAsync
+// @TODO timeouts for async pushes
+// @TODO destination queue with async
+// @TODO callPredefined push await
+// @TODO handleCommand as async
+
+const isAsync = false; // @TODO parameterize
 
 export function Walkerjs(
   customConfig: WebClient.InitConfig = {},
@@ -72,11 +80,11 @@ export function Walkerjs(
 
   initGlobalTrigger(instance);
 
-  function addDestination(
+  async function addDestination(
     instance: WebClient.Instance,
     data: Partial<WebDestination.DestinationInit>,
     options?: WebDestination.Config,
-  ) {
+  ): Promise<void> {
     // Basic validation
     if (!data.push) return;
 
@@ -90,11 +98,13 @@ export function Walkerjs(
       type: data.type,
     };
 
-    // Process previous events if not disabled
-    if (config.queue !== false)
-      instance.queue.forEach((pushEvent) => {
-        pushToDestination(instance, destination, pushEvent);
-      });
+    if (config.queue !== false) {
+      const promises = Object.values(instance.queue).map((pushEvent) =>
+        pushToDestination(instance, destination, pushEvent),
+      );
+
+      if (isAsync) await Promise.all(promises);
+    }
 
     let id = config.id; // Use given id
     if (!id) {
@@ -294,6 +304,10 @@ export function Walkerjs(
     const elbLayer = instance.config.elbLayer;
 
     elbLayer.push = function (...args: WebClient.ElbLayer) {
+      // if (typeof args[0] === 'object' && 'then' in args[0]) {
+      //   console.log('PROMISE');
+      // }
+
       // Pushed as Arguments
       if (isArgument(args[0])) {
         args = args[0] as unknown as WebClient.ElbLayer;
@@ -434,16 +448,24 @@ export function Walkerjs(
     }
   }
 
-  function handleEvent(instance: WebClient.Instance, event: WalkerOS.Event) {
+  async function handleEvent(
+    instance: WebClient.Instance,
+    event: WalkerOS.Event,
+  ) {
     // Check if walker is allowed to run
     if (!instance.allowed) return;
 
     // Add event to internal queue
     instance.queue.push(event);
 
-    Object.values(instance.destinations).forEach((destination) => {
-      pushToDestination(instance, destination, event);
-    });
+    const promises = Object.values(instance.destinations).map((destination) =>
+      pushToDestination(instance, destination, event),
+    );
+
+    // If isAsync is true, wait for all promises to resolve
+    if (isAsync) {
+      return await Promise.all(promises);
+    }
   }
 
   function isArgument(event?: unknown): event is IArguments {
@@ -483,14 +505,14 @@ export function Walkerjs(
     onApply(instance, type, options);
   }
 
-  function push(
+  async function push(
     nameOrEvent?: unknown,
     pushData: WebClient.PushData = {},
     options: WebClient.PushOptions = '',
     pushContext: WebClient.PushContext = {},
     nested: WalkerOS.Entities = [],
     custom: WalkerOS.Properties = {},
-  ): void {
+  ) {
     const { event, command } = createEventOrCommand(
       instance,
       nameOrEvent,
@@ -501,24 +523,32 @@ export function Walkerjs(
       options,
     );
 
+    let promise;
     if (command) {
       // Command event
-      handleCommand(instance, command, pushData, options);
+      promise = handleCommand(instance, command, pushData, options);
     } else if (event) {
       // Regular event
-      handleEvent(instance, event);
+      promise = handleEvent(instance, event);
     }
+
+    if (isAsync) {
+      await promise;
+    }
+
+    return;
   }
 
-  function pushToDestination(
+  async function pushToDestination(
     instance: WebClient.Instance,
     destination: WebDestination.Destination,
     event: WalkerOS.Event,
     useQueue = true,
-  ): boolean {
+  ): Promise<boolean> {
+    // @TODO ): WalkerOS.MaybePromise<boolean> {
     // Deep copy event to prevent a pointer mess
     // Update to structuredClone if support > 95%
-    event = JSON.parse(JSON.stringify(event));
+    event = JSON.parse(JSON.stringify(event)); // @TODO use assign
 
     // Always check for required consent states before pushing
     if (!allowedToPush(instance, destination)) {
@@ -551,7 +581,7 @@ export function Walkerjs(
       if (!mappingEvent) return false;
     }
 
-    const pushed = !!tryCatch(() => {
+    const pushed = !!(await tryCatchAsync(async () => {
       // Destination initialization
       // Check if the destination was initialized properly or try to do so
       if (destination.init && !destination.config.init) {
@@ -569,7 +599,7 @@ export function Walkerjs(
       }
 
       // It's time to go to the destination's side now
-      useHooks(destination.push, 'DestinationPush', instance.hooks)(
+      await useHooks(destination.push, 'DestinationPush', instance.hooks)(
         event,
         destination.config,
         mappingEvent,
@@ -577,7 +607,7 @@ export function Walkerjs(
       );
 
       return true;
-    })();
+    })());
 
     return pushed;
   }
@@ -638,7 +668,9 @@ export function Walkerjs(
     tryCatch(load)(instance);
   }
 
-  function sessionStart(options: SessionStartOptions = {}): void | SessionData {
+  function sessionStart(
+    options: SessionStartOptions = {},
+  ): WalkerOS.MaybePromise<void | SessionData> {
     const sessionConfig = assign(instance.config.session || {}, options.config);
     const sessionData = assign(instance.config.sessionStatic, options.data);
 
@@ -659,6 +691,7 @@ export function Walkerjs(
 
       return result;
     };
+
     const session = useHooks(
       sessionStartOrg,
       'SessionStart',
@@ -676,7 +709,7 @@ export function Walkerjs(
   function sessionStartExport({
     config = {},
     ...options
-  }: SessionStartOptions = {}): void | SessionData {
+  }: SessionStartOptions = {}) {
     return sessionStart({
       config: { pulse: true, ...config },
       data: { ...instance.session, updated: Date.now() },
