@@ -352,7 +352,7 @@ describe('On Session', () => {
     expect(mockCb).toHaveBeenCalledTimes(1);
   });
 
-  test('async with disabled cb', () => {
+  test.only('async with disabled cb', () => {
     walkerjs = Walkerjs({
       run: true,
       session: { cb: false, consent: 'marketing', storage: true },

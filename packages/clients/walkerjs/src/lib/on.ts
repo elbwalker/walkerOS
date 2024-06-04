@@ -2,6 +2,26 @@ import type { On, WalkerOS } from '@elbwalker/types';
 import type { WebClient } from '../';
 import { Const, tryCatch } from '@elbwalker/utils';
 
+export function on(
+  instance: WebClient.Instance,
+  type: On.Types,
+  option: WalkerOS.SingleOrArray<On.Options>,
+) {
+  const on = instance.on;
+  const onType: Array<On.Options> = on[type] || [];
+  const options = Array.isArray(option) ? option : [option];
+
+  options.forEach((option) => {
+    onType.push(option);
+  });
+
+  // Update instance on state
+  (on[type] as typeof onType) = onType;
+
+  // Execute the on function directly
+  onApply(instance, type, options);
+}
+
 export function onApply(
   instance: WebClient.Instance,
   type: On.Types,
