@@ -20,6 +20,7 @@ import {
 import { getEntities, getGlobals } from './lib/walker';
 import { onApply } from './lib/on';
 import { SessionStartOptions } from './types/client';
+import { isArgument, isCommand, isElementOrDocument, isObject } from './lib/is';
 
 // Export types and elb
 export * from './types';
@@ -444,23 +445,6 @@ export function Walkerjs(
     Object.values(instance.destinations).forEach((destination) => {
       pushToDestination(instance, destination, event);
     });
-  }
-
-  function isArgument(event?: unknown): event is IArguments {
-    if (!event) return false;
-    return {}.hasOwnProperty.call(event, 'callee');
-  }
-
-  function isCommand(entity: string) {
-    return entity === Const.Commands.Walker;
-  }
-
-  function isElementOrDocument(elem: unknown): elem is HTMLElement {
-    return elem === document || elem instanceof HTMLElement;
-  }
-
-  function isObject(obj: unknown): obj is WalkerOS.AnyObject {
-    return isSameType(obj, {}) && !Array.isArray(obj) && obj !== null;
   }
 
   function on(
