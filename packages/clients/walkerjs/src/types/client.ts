@@ -59,13 +59,14 @@ export interface InitConfig extends Partial<Config> {
   user?: WalkerOS.User;
 }
 
-export interface Elb extends WalkerOS.Elb {
+export interface Elb<R = WalkerOS.MaybePromise<number>>
+  extends WalkerOS.Elb<R> {
   (
     event: 'walker destination',
     destination: WebDestination.Destination | WebDestination.DestinationInit,
     config?: WebDestination.Config,
-  ): WalkerOS.MaybePromise<void>;
-  (event: 'walker init', scope: Scope | Scope[]): WalkerOS.MaybePromise<void>;
+  ): R;
+  (event: 'walker init', scope: Scope | Scope[]): R;
   (
     event: string | unknown,
     data?: PushData,
@@ -73,8 +74,9 @@ export interface Elb extends WalkerOS.Elb {
     context?: PushContext,
     nested?: WalkerOS.Entities,
     custom?: WalkerOS.Properties,
-  ): WalkerOS.MaybePromise<void>;
-  (event: 'walker run', state?: Partial<State>): WalkerOS.MaybePromise<void>;
+  ): R;
+  (event: 'walker run', state?: Partial<State>): R;
+  (promise: Promise<unknown[]>): R;
 }
 
 export type ElbLayer = [

@@ -13,6 +13,7 @@ import {
   assign,
   getId,
   isSameType,
+  maybeAwait,
   sessionStart as sessionStartOrg,
   tryCatch,
   tryCatchAsync,
@@ -30,8 +31,6 @@ export { elb };
 // @TODO destination queue with async
 // @TODO callPredefined push await
 // @TODO handleCommand as async
-
-const isAsync = false; // @TODO parameterize
 
 export function Walkerjs(
   customConfig: WebClient.InitConfig = {},
@@ -102,8 +101,9 @@ export function Walkerjs(
       const promises = Object.values(instance.queue).map((pushEvent) =>
         pushToDestination(instance, destination, pushEvent),
       );
+      promises; // @TODO
 
-      if (isAsync) await Promise.all(promises);
+      // if (isAsync) await Promise.all(promises);
     }
 
     let id = config.id; // Use given id
@@ -304,10 +304,6 @@ export function Walkerjs(
     const elbLayer = instance.config.elbLayer;
 
     elbLayer.push = function (...args: WebClient.ElbLayer) {
-      // if (typeof args[0] === 'object' && 'then' in args[0]) {
-      //   console.log('PROMISE');
-      // }
-
       // Pushed as Arguments
       if (isArgument(args[0])) {
         args = args[0] as unknown as WebClient.ElbLayer;
@@ -451,6 +447,7 @@ export function Walkerjs(
   async function handleEvent(
     instance: WebClient.Instance,
     event: WalkerOS.Event,
+    isAsync = false,
   ) {
     // Check if walker is allowed to run
     if (!instance.allowed) return;
@@ -459,13 +456,12 @@ export function Walkerjs(
     instance.queue.push(event);
 
     const promises = Object.values(instance.destinations).map((destination) =>
-      pushToDestination(instance, destination, event),
+      pushToDestination(instance, destination, event, {
+        isAsync,
+      }),
     );
 
-    // If isAsync is true, wait for all promises to resolve
-    if (isAsync) {
-      return await Promise.all(promises);
-    }
+    return promises;
   }
 
   function isArgument(event?: unknown): event is IArguments {
@@ -513,6 +509,12 @@ export function Walkerjs(
     nested: WalkerOS.Entities = [],
     custom: WalkerOS.Properties = {},
   ) {
+    let isAsync = false;
+    if (nameOrEvent instanceof Promise) {
+      isAsync = true;
+      nameOrEvent = await nameOrEvent;
+    }
+
     const { event, command } = createEventOrCommand(
       instance,
       nameOrEvent,
@@ -529,26 +531,27 @@ export function Walkerjs(
       promise = handleCommand(instance, command, pushData, options);
     } else if (event) {
       // Regular event
-      promise = handleEvent(instance, event);
+      promise = handleEvent(instance, event, isAsync);
     }
 
     if (isAsync) {
-      await promise;
+      return await promise;
+      // await promise;
     }
 
-    return;
+    return 1;
   }
 
-  async function pushToDestination(
+  function pushToDestination(
     instance: WebClient.Instance,
     destination: WebDestination.Destination,
     event: WalkerOS.Event,
-    useQueue = true,
-  ): Promise<boolean> {
-    // @TODO ): WalkerOS.MaybePromise<boolean> {
-    // Deep copy event to prevent a pointer mess
-    // Update to structuredClone if support > 95%
-    event = JSON.parse(JSON.stringify(event)); // @TODO use assign
+    options: { isAsync?: boolean; useQueue?: boolean } = {},
+  ): boolean {
+    const { isAsync, useQueue = true } = options;
+
+    // Copy the event to prevent mutation
+    event = assign({}, event);
 
     // Always check for required consent states before pushing
     if (!allowedToPush(instance, destination)) {
@@ -562,7 +565,7 @@ export function Walkerjs(
     }
 
     // Check for an active mapping for proper event handling
-    let mappingEvent: WebDestination.EventConfig;
+    let mappingEvent: WebDestination.EventConfig | undefined;
     const mapping = destination.config.mapping;
     if (mapping) {
       const mappingEntity = mapping[event.entity] || mapping['*'] || {};
@@ -581,35 +584,38 @@ export function Walkerjs(
       if (!mappingEvent) return false;
     }
 
-    const pushed = !!(await tryCatchAsync(async () => {
-      // Destination initialization
-      // Check if the destination was initialized properly or try to do so
-      if (destination.init && !destination.config.init) {
-        const init =
-          useHooks(
-            destination.init,
+    const pushCall = tryCatchAsync(
+      async () => {
+        // Destination initialization
+        // Check if the destination was initialized properly or try to do so
+        if (destination.init && !destination.config.init) {
+          const init = useHooks(
+            maybeAwait(destination.init, isAsync),
             'DestinationInit',
             instance.hooks,
-          )(destination.config) !== false; // Actively check for errors
+          )(destination.config); // Actively check for errors
 
-        destination.config.init = init;
+          destination.config.init = init !== false; // @TODO check for promise
 
-        // don't push if init is false
-        if (!init) return false;
-      }
+          // don't push if init is false
+          if (!init) return false;
+        }
 
-      // It's time to go to the destination's side now
-      await useHooks(destination.push, 'DestinationPush', instance.hooks)(
-        event,
-        destination.config,
-        mappingEvent,
-        instance,
-      );
+        // It's time to go to the destination's side now
+        maybeAwait(
+          useHooks(destination.push, 'DestinationPush', instance.hooks),
+          isAsync,
+        )(event, destination.config, mappingEvent, instance);
 
-      return true;
-    })());
+        return true;
+      },
+      () => {
+        return false;
+      },
+    )();
 
-    return pushed;
+    pushCall; // @TODO as return
+    return true;
   }
 
   function run(
@@ -748,7 +754,9 @@ export function Walkerjs(
           event.globals = globals;
           event.user = user;
 
-          return !pushToDestination(instance, destination, event, false);
+          return !pushToDestination(instance, destination, event, {
+            useQueue: false,
+          });
         });
       });
     }

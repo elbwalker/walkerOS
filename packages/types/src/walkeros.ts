@@ -30,7 +30,7 @@ export interface Config {
   verbose?: boolean; // Enable verbose logging
 }
 
-export interface Elb<R = MaybePromise<void>> {
+export interface Elb<R = MaybePromise<number>> {
   (event: 'walker config', config: Partial<Config>): R;
   (event: 'walker consent', consent: Consent): R;
 

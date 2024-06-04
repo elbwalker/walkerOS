@@ -5,5 +5,9 @@ export type ElbLayer = Array<IArguments>;
 export const elb: WalkerOS.Elb = function () {
   const w = window as unknown as Record<string, unknown[]>;
   // eslint-disable-next-line prefer-rest-params
-  (w.elbLayer = w.elbLayer || []).push(arguments);
+  return (w.elbLayer = w.elbLayer || []).push(arguments);
+};
+
+export const elbAsync: WalkerOS.Elb = async function (...args: unknown[]) {
+  return elb(Promise.resolve(args));
 };

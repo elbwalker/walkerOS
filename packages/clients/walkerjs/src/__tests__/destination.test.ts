@@ -657,28 +657,33 @@ describe('Destination', () => {
     expect(mockPush).toHaveBeenCalledTimes(1);
   });
 
-  test.skip('await async init', async () => {
+  test('await async init', async () => {
     walkerjs = Walkerjs({ pageview: false, session: false });
 
     elb('walker destination', {
       init: async () => {
+        // return true;
         return new Promise(() => {
-          setTimeout(() => {
-            return true;
+          setTimeout((resolve) => {
+            console.log('Timer');
+            resolve(true);
           }, 1000);
         });
       },
-      push: mockPush,
+      push: mockPush.mockImplementation(() => {
+        console.log('push called');
+      }),
     });
     elb('walker run');
 
-    elb('a 1');
-    jest.advanceTimersByTime(2000);
+    // const foo = elbAsync('a 1');
+    // const bar = walkerjs.push('a 1');
+    const result = walkerjs.push(Promise.resolve('a 1'));
+    expect(mockPush).toHaveBeenCalledTimes(0);
 
-    elb('a 2');
+    jest.runAllTimers();
+    await result;
+
     expect(mockPush).toHaveBeenCalledTimes(1);
-
-    jest.advanceTimersByTime(2000);
-    expect(mockPush).toHaveBeenCalledTimes(2);
   });
 });

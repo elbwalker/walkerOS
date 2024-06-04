@@ -7,6 +7,7 @@ export * from './getMarketingParameters';
 export * from './hash';
 export * from './invocations';
 export * from './isSameType';
+export * from './maybeAwait';
 export * from './onLog';
 export * from './throwError';
 export * from './trim';
