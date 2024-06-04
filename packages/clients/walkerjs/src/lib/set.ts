@@ -45,9 +45,5 @@ export function setConsent(
 }
 
 export function setUserIds(instance: WebClient.Instance, data: WalkerOS.User) {
-  const user = instance.user;
-  // user ids can't be set to undefined
-  if (data.id) user.id = data.id;
-  if (data.device) user.device = data.device;
-  if (data.session) user.session = data.session;
+  assign(instance.user, data, { shallow: false });
 }
