@@ -28,9 +28,21 @@ export function onApply(
   options?: Array<On.Options>,
   config?: WalkerOS.Consent,
 ) {
-  const onConfig = options || instance.on[type];
+  // Use the optionally provided options
+  let onConfig = options || [];
 
-  if (!onConfig) return; // No on-events registered, nothing to do
+  if (!options) {
+    // Get the instance on events
+    onConfig = instance.on[type] || [];
+
+    // Add all available on events from the destinations
+    Object.values(instance.destinations).forEach((destination) => {
+      const onTypeConfig = destination.config.on?.[type];
+      if (onTypeConfig) onConfig = onConfig.concat(onTypeConfig);
+    });
+  }
+
+  if (!onConfig.length) return; // No on-events registered, nothing to do
 
   switch (type) {
     case Const.Commands.Consent:

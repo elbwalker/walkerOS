@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type {
   Destination as WalkerOSDestination,
   WalkerOS,
 } from '@elbwalker/types';
 
-export interface Destination<Custom = any, EventCustom = any>
+export interface Destination<Custom = never, EventCustom = never>
   extends WalkerOSDestination.Destination<Custom, EventCustom> {
   init?: (config: Config<Custom, EventCustom>) => void | boolean;
   push: Push<Custom, EventCustom>;
@@ -20,11 +19,11 @@ export type Push<Custom, EventCustom> = (
   instance?: WalkerOS.Instance,
 ) => void;
 
-export interface Config<Custom = any, EventCustom = any>
+export interface Config<Custom = never, EventCustom = never>
   extends WalkerOSDestination.Config<Custom, EventCustom> {}
 
 export interface Mapping<EventCustom>
   extends WalkerOSDestination.Mapping<EventCustom> {}
 
-export interface EventConfig<EventCustom = any>
+export interface EventConfig<EventCustom = never>
   extends WalkerOSDestination.EventConfig<EventCustom> {}
