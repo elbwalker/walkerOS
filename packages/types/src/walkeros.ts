@@ -113,6 +113,7 @@ export interface User {
   id?: string;
   device?: string;
   session?: string;
+  hash?: string;
 }
 
 export interface Version {

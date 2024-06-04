@@ -66,6 +66,20 @@ describe('Commands', () => {
         user: { id: 'userId', device: 'userId', session: 'sessionid' },
       }),
     );
+
+    elb('walker user', { hash: 'h4sh' });
+    elb('entity action');
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: {
+          id: 'userId',
+          device: 'userId',
+          session: 'sessionid',
+          hash: 'h4sh',
+        },
+      }),
+    );
   });
 
   test('walker consent', () => {
