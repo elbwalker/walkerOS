@@ -161,4 +161,15 @@ describe('Commands', () => {
       }),
     );
   });
+
+  test('run with state', () => {
+    elb('walker run', { group: 'gr0up1d', round: 5 });
+
+    expect(walkerjs).toStrictEqual(
+      expect.objectContaining({
+        group: 'gr0up1d',
+        round: 6,
+      }),
+    );
+  });
 });

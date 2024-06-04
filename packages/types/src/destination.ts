@@ -1,4 +1,4 @@
-import type { Handler, WalkerOS } from '.';
+import type { Handler, On, WalkerOS } from '.';
 
 export interface Destination<Custom = unknown, EventCustom = unknown> {
   config: Config<Custom, EventCustom>;
@@ -14,6 +14,7 @@ export interface Config<Custom = unknown, EventCustom = unknown> {
   loadScript?: boolean; // If an additional script to work should be loaded
   mapping?: Mapping<EventCustom>; // A map to handle events individually
   meta?: Meta; // Additional meta information about the destination
+  on?: On.Config; //On events listener rules
   queue?: boolean; // Disable processing of previously pushed events
   verbose?: boolean; // Enable verbose logging
   onError?: Handler.Error; // Custom error handler
