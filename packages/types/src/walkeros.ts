@@ -56,7 +56,13 @@ export interface Elb<R = void> {
   (partialEvent: PartialEvent): R;
 }
 
-export type PushData = string | Partial<Config> | Consent | User | Properties;
+export type PushData =
+  | string
+  | object
+  | Partial<Config>
+  | Consent
+  | User
+  | Properties;
 
 export type PushOptions = Hooks.AnyFunction | SingleOrArray<On.Options>;
 
