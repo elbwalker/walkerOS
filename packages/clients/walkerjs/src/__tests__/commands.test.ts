@@ -1,6 +1,7 @@
+import type { WebClient } from '..';
+import type { WalkerOS } from '@elbwalker/types';
 import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import type { WebClient } from '..';
 
 describe('Commands', () => {
   let walkerjs: WebClient.Instance;
@@ -79,6 +80,28 @@ describe('Commands', () => {
           hash: 'h4sh',
         },
       }),
+    );
+
+    const user: WalkerOS.User = {
+      userAgent: 'Mozilla...',
+      browser: 'Chrome',
+      browserVersion: '90',
+      deviceType: 'desktop',
+      language: 'de-DE',
+      country: 'DE',
+      region: 'HH',
+      city: 'Hamburg',
+      timezone: 'Berlin',
+      os: 'walkerOS',
+      osVersion: '1.0',
+      screenSize: '1337x420',
+      ip: 'xxx',
+      internal: true,
+      custom: 'value',
+    };
+    elb('walker user', user);
+    expect(walkerjs.user).toStrictEqual(
+      expect.objectContaining({ ...user, id: 'userId' }),
     );
   });
 
