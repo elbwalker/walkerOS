@@ -103,6 +103,11 @@ describe('Commands', () => {
     expect(walkerjs.user).toStrictEqual(
       expect.objectContaining({ ...user, id: 'userId' }),
     );
+
+    elb('walker user', { ip: undefined });
+    expect(walkerjs.user).toStrictEqual(
+      expect.objectContaining({ ip: undefined }),
+    );
   });
 
   test('walker consent', () => {
