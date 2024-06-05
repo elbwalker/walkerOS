@@ -56,7 +56,13 @@ export interface Elb<R = void> {
   (partialEvent: PartialEvent): R;
 }
 
-export type PushData = string | Partial<Config> | Consent | User | Properties;
+export type PushData =
+  | string
+  | object
+  | Partial<Config>
+  | Consent
+  | User
+  | Properties;
 
 export type PushOptions = Hooks.AnyFunction | SingleOrArray<On.Options>;
 
@@ -109,11 +115,27 @@ export type Commands =
   | 'walker'
   | string;
 
-export interface User {
+export interface User extends Properties {
+  // IDs
   id?: string;
   device?: string;
   session?: string;
   hash?: string;
+  // User related
+  userAgent?: string;
+  browser?: string;
+  browserVersion?: string;
+  deviceType?: string;
+  language?: string;
+  country?: string;
+  region?: string;
+  city?: string;
+  timezone?: string;
+  os?: string;
+  osVersion?: string;
+  screenSize?: string;
+  ip?: string;
+  internal?: boolean;
 }
 
 export interface Version {
