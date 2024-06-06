@@ -165,8 +165,8 @@ export function pushToDestination(
       destination.batch = destination.batch || [];
       destination.batch.push({ event, mapping: mappingEvent });
 
-      mappingEvent.batchFn =
-        mappingEvent.batchFn ||
+      destination.batchFn =
+        destination.batchFn ||
         debounce((destination, instance) => {
           useHooks(destination.pushBatch!, 'DestinationPush', instance.hooks)(
             destination.batch || [],
@@ -175,7 +175,7 @@ export function pushToDestination(
           );
         }, batch);
 
-      mappingEvent.batchFn!(destination, instance);
+      destination.batchFn!(destination, instance);
     } else {
       // It's time to go to the destination's side now
       useHooks(destination.push, 'DestinationPush', instance.hooks)(

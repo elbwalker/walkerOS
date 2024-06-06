@@ -8,6 +8,7 @@ export interface Destination<Custom = never, EventCustom = never>
   init?: (config: Config<Custom, EventCustom>) => void | boolean;
   push: Push<Custom, EventCustom>;
   pushBatch?: PushBatch<Custom, EventCustom>;
+  batchFn?: (destination: Destination, instance: WalkerOS.Instance) => void;
 }
 
 export type DestinationInit = Partial<Omit<Destination, 'push'>> &
@@ -33,6 +34,4 @@ export interface Mapping<EventCustom>
   extends WalkerOSDestination.Mapping<EventCustom> {}
 
 export interface EventConfig<EventCustom = never>
-  extends WalkerOSDestination.EventConfig<EventCustom> {
-  batchFn?: (destination: Destination, instance: WalkerOS.Instance) => void;
-}
+  extends WalkerOSDestination.EventConfig<EventCustom> {}

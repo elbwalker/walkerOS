@@ -680,7 +680,7 @@ describe('Destination', () => {
     expect(mockPush).toHaveBeenCalledTimes(1); // Push important immediately
     expect(mockBatch).toHaveBeenCalledTimes(0);
     jest.runAllTimers();
-    expect(mockBatch).toHaveBeenCalledTimes(2);
+    expect(mockBatch).toHaveBeenCalledTimes(1);
     expect(mockBatch).toHaveBeenNthCalledWith(
       1,
       [
