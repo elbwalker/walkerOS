@@ -74,15 +74,13 @@ export function getAllEvents(
   let events: Walker.Events = [];
   const action = Const.Commands.Action;
 
-  scope
-    .querySelectorAll(`[${getElbAttributeName(prefix, action, false)}]`)
-    .forEach((elem) => {
-      Object.keys(getElbValues(prefix, elem, action, false)).forEach(
-        (trigger) => {
-          events = events.concat(getEvents(elem, trigger, prefix));
-        },
-      );
-    });
+  queryAll(scope, `[${getElbAttributeName(prefix, action, false)}]`, (elem) => {
+    Object.keys(getElbValues(prefix, elem, action, false)).forEach(
+      (trigger) => {
+        events = events.concat(getEvents(elem, trigger, prefix));
+      },
+    );
+  });
 
   return events;
 }
@@ -159,7 +157,7 @@ export function getGlobals(prefix: string): WalkerOS.Properties {
   const globalSelector = `[${globalsName}]`;
   let values = {};
 
-  document.querySelectorAll(globalSelector).forEach((element) => {
+  queryAll(document.body, globalSelector, (element) => {
     values = assign(
       values,
       getElbValues(prefix, element, Const.Commands.Globals, false),
@@ -266,20 +264,18 @@ function getEntity(
   );
 
   // Add linked elements (data-elblink)
-  element.querySelectorAll(`[${linkName}]`).forEach((link) => {
+  queryAll(element, `[${linkName}]`, (link) => {
     const [linkId, linkState] = splitKeyVal(getAttribute(link, linkName));
 
     // Get all linked child elements if link is a parent
     if (linkState === 'parent')
-      document
-        .querySelectorAll(`[${linkName}="${linkId}:child"]`)
-        .forEach((wormhole) => {
-          scopeElems.push(wormhole);
+      queryAll(document.body, `[${linkName}="${linkId}:child"]`, (wormhole) => {
+        scopeElems.push(wormhole);
 
-          // A linked child can also be an entity
-          const nestedEntity = getEntity(prefix, wormhole);
-          if (nestedEntity) nested.push(nestedEntity);
-        });
+        // A linked child can also be an entity
+        const nestedEntity = getEntity(prefix, wormhole);
+        if (nestedEntity) nested.push(nestedEntity);
+      });
   });
 
   // Get all property elements including linked elements
@@ -287,9 +283,8 @@ function getEntity(
   scopeElems.forEach((elem) => {
     // Also check for property on same level
     if (elem.matches(dataSelector)) propertyElems.push(elem);
-    elem.querySelectorAll(dataSelector).forEach((elem) => {
-      propertyElems.push(elem);
-    });
+
+    queryAll(elem, dataSelector, (elem) => propertyElems.push(elem));
   });
 
   // Get properties
@@ -305,12 +300,14 @@ function getEntity(
 
   // Get nested entities
   scopeElems.forEach((elem) => {
-    elem
-      .querySelectorAll(`[${getElbAttributeName(prefix)}]`)
-      .forEach((nestedEntityElement) => {
+    queryAll(
+      elem,
+      `[${getElbAttributeName(prefix)}]`,
+      (nestedEntityElement) => {
         const nestedEntity = getEntity(prefix, nestedEntityElement);
         if (nestedEntity) nested.push(nestedEntity);
-      });
+      },
+    );
   });
 
   return { type, data, context, nested };
@@ -373,6 +370,15 @@ function getThisAndParentProperties(
   }
 
   return [data, context];
+}
+
+function queryAll(
+  scope: Element,
+  selector: string,
+  fn: (element: Element) => void,
+): void {
+  const elements = Array.from(scope.querySelectorAll(selector));
+  elements.forEach(fn);
 }
 
 function resolveAttributes(
