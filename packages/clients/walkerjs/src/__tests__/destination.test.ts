@@ -209,13 +209,15 @@ describe('Destination', () => {
     const destinationB: WebDestination.Destination = {
       push: mockPushB,
       config: {
-        mapping: { '*': { action: {} } },
+        mapping: { '*': { action: {}, '*': { ignore: true } } },
       },
     };
 
     const destinationC: WebDestination.Destination = {
       push: mockPushC,
-      config: { mapping: { entity: { '*': {} } } },
+      config: {
+        mapping: { entity: { '*': {} }, '*': { '*': { ignore: true } } },
+      },
     };
 
     elb('walker destination', destinationA);
@@ -267,7 +269,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
     elb('random action');
-    expect(mockPushA).toHaveBeenCalledTimes(0);
+    expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(0);
     expect(mockPushB).toHaveBeenCalledWith(
@@ -281,7 +283,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
     elb('entity random');
-    expect(mockPushA).toHaveBeenCalledTimes(0);
+    expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledWith(
@@ -295,7 +297,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
     elb('absolutely unacceptable');
-    expect(mockPushA).toHaveBeenCalledTimes(0);
+    expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(0);
   });
@@ -665,7 +667,6 @@ describe('Destination', () => {
           '*': {
             visible: { batch: 2000 },
             click: { batch: 2000 },
-            important: {},
           },
         },
       },
