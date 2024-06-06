@@ -20,20 +20,15 @@ export function addDataLayerDestination(instance: WebClient.Instance) {
 
 export function addDestination(
   instance: WebClient.Instance,
-  data: Partial<WebDestination.DestinationInit>,
+  data: WebDestination.DestinationInit,
   options?: WebDestination.Config,
 ) {
-  // Basic validation
-  if (!data.push) return;
-
   // Prefer explicit given config over default config
   const config = options || data.config || { init: false };
 
   const destination: WebDestination.Destination = {
-    init: data.init,
-    push: data.push,
+    ...data,
     config,
-    type: data.type,
   };
 
   // Process previous events if not disabled

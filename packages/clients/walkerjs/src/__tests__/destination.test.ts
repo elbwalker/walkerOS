@@ -652,4 +652,32 @@ describe('Destination', () => {
 
     expect(mockPush).toHaveBeenCalledTimes(1);
   });
+
+  test('batch', () => {
+    jest.useFakeTimers();
+    const mockBatch = jest.fn();
+
+    elb('walker destination', {
+      push: mockPush,
+      pushBatch: mockBatch,
+      config: { mapping: { '*': { visible: { batch: 2000 } } } },
+    });
+    elb('walker run');
+
+    elb('foo visible');
+    elb('bar visible');
+
+    expect(mockBatch).toHaveBeenCalledTimes(0);
+    jest.runAllTimers();
+    expect(mockBatch).toHaveBeenCalledTimes(1);
+    expect(mockBatch).toHaveBeenNthCalledWith(
+      1,
+      [
+        { event: expect.objectContaining({ event: 'foo visible' }) },
+        { event: expect.objectContaining({ event: 'bar visible' }) },
+      ],
+      expect.anything(),
+      expect.anything(),
+    );
+  });
 });

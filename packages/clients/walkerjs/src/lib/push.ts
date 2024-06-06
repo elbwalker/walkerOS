@@ -2,7 +2,14 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { WebClient, WebDestination } from '../types';
 import { allowedToPush, createEventOrCommand, isArgument } from './helper';
 import { handleCommand, handleEvent } from './handle';
-import { Const, isSameType, tryCatch, useHooks } from '@elbwalker/utils';
+import {
+  Const,
+  assign,
+  debounce,
+  isSameType,
+  tryCatch,
+  useHooks,
+} from '@elbwalker/utils';
 
 export function createPush(instance: WebClient.Instance): WebClient.Elb {
   const push = (
@@ -101,9 +108,8 @@ export function pushToDestination(
   event: WalkerOS.Event,
   useQueue = true,
 ): boolean {
-  // Deep copy event to prevent a pointer mess
-  // Update to structuredClone if support > 95%
-  event = JSON.parse(JSON.stringify(event));
+  // Copy the event to prevent mutation
+  event = assign({}, event);
 
   // Always check for required consent states before pushing
   if (!allowedToPush(instance, destination)) {
@@ -153,13 +159,32 @@ export function pushToDestination(
       if (!init) return false;
     }
 
-    // It's time to go to the destination's side now
-    useHooks(destination.push, 'DestinationPush', instance.hooks)(
-      event,
-      destination.config,
-      mappingEvent,
-      instance,
-    );
+    // Debounce the event if needed
+    const batch = mappingEvent?.batch;
+    if (batch && destination.pushBatch) {
+      destination.batch = destination.batch || [];
+      destination.batch.push({ event }); // @TODO , mapping: mappingEvent });
+
+      mappingEvent.batchFn =
+        mappingEvent.batchFn ||
+        debounce((destination, instance) => {
+          useHooks(destination.pushBatch!, 'DestinationPush', instance.hooks)(
+            destination.batch || [],
+            destination.config,
+            instance,
+          );
+        }, batch);
+
+      mappingEvent.batchFn!(destination, instance);
+    } else {
+      // It's time to go to the destination's side now
+      useHooks(destination.push, 'DestinationPush', instance.hooks)(
+        event,
+        destination.config,
+        mappingEvent,
+        instance,
+      );
+    }
 
     return true;
   })();
