@@ -19,9 +19,10 @@ export function getElbValues(
   name: string,
   isProperty = true,
 ): WalkerOS.Properties {
-  const values = splitAttribute(
-    getAttribute(element, getElbAttributeName(prefix, name, isProperty)) || '',
-  ).reduce((values, str) => {
+  const attributeValue =
+    getAttribute(element, getElbAttributeName(prefix, name, isProperty)) || '';
+
+  const elbValues = splitAttribute(attributeValue).reduce((values, str) => {
     let [key, val] = splitKeyVal(str);
 
     if (!key) return values;
@@ -29,13 +30,13 @@ export function getElbValues(
     // Handle keys without value
     if (!val) {
       // Manually remove the : from key on empty values
-      if (key.charAt(key.length - 1) === ':') key = key.slice(0, -1);
+      if (key.endsWith(':')) key = key.slice(0, -1);
       val = '';
     }
 
     // Dynamic values
-    if (val.charAt(0) === '#') {
-      val = val.substring(1); // Remove # symbol
+    if (val.startsWith('#')) {
+      val = val.slice(1); // Remove # symbol
       try {
         // Read property value from element
         let dynamicValue = (element as Element)[val as keyof Element];
@@ -51,10 +52,8 @@ export function getElbValues(
       }
     }
 
-    // Array property
-    if (key.slice(-2) === '[]') {
+    if (key.endsWith('[]')) {
       key = key.slice(0, -2); // Remove [] symbol
-
       if (!Array.isArray(values[key])) values[key] = [];
       (values[key] as WalkerOS.PropertyType[]).push(castValue(val));
     } else {
@@ -64,7 +63,7 @@ export function getElbValues(
     return values;
   }, {} as WalkerOS.Properties);
 
-  return values;
+  return elbValues;
 }
 
 export function getAllEvents(
@@ -377,7 +376,7 @@ function queryAll(
   selector: string,
   fn: (element: Element) => void,
 ): void {
-  const elements = Array.from(scope.querySelectorAll(selector));
+  const elements = scope.querySelectorAll(selector);
   elements.forEach(fn);
 }
 
