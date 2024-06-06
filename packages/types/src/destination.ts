@@ -28,7 +28,7 @@ export interface Mapping<EventCustom> {
 
 export type Batch<EventCustom> = Array<{
   event: WalkerOS.Event;
-  mapping?: EventCustom;
+  mapping?: EventConfig<EventCustom>;
 }>;
 
 export type Meta = {

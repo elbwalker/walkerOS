@@ -163,7 +163,7 @@ export function pushToDestination(
     const batch = mappingEvent?.batch;
     if (batch && destination.pushBatch) {
       destination.batch = destination.batch || [];
-      destination.batch.push({ event }); // @TODO , mapping: mappingEvent });
+      destination.batch.push({ event, mapping: mappingEvent });
 
       mappingEvent.batchFn =
         mappingEvent.batchFn ||

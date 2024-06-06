@@ -660,21 +660,47 @@ describe('Destination', () => {
     elb('walker destination', {
       push: mockPush,
       pushBatch: mockBatch,
-      config: { mapping: { '*': { visible: { batch: 2000 } } } },
+      config: {
+        mapping: {
+          '*': {
+            visible: { batch: 2000 },
+            click: { batch: 2000 },
+            important: {},
+          },
+        },
+      },
     });
     elb('walker run');
 
     elb('foo visible');
     elb('bar visible');
+    elb('foo click');
+    elb('foo important');
 
+    expect(mockPush).toHaveBeenCalledTimes(1); // Push important immediately
     expect(mockBatch).toHaveBeenCalledTimes(0);
     jest.runAllTimers();
-    expect(mockBatch).toHaveBeenCalledTimes(1);
+    expect(mockBatch).toHaveBeenCalledTimes(2);
     expect(mockBatch).toHaveBeenNthCalledWith(
       1,
       [
-        { event: expect.objectContaining({ event: 'foo visible' }) },
-        { event: expect.objectContaining({ event: 'bar visible' }) },
+        {
+          event: expect.objectContaining({
+            event: 'foo visible',
+          }),
+          mapping: expect.objectContaining({ batch: 2000 }),
+        },
+        {
+          event: expect.objectContaining({
+            event: 'bar visible',
+          }),
+          mapping: expect.objectContaining({ batch: 2000 }),
+        },
+        expect.objectContaining({
+          event: expect.objectContaining({
+            event: 'foo click',
+          }),
+        }),
       ],
       expect.anything(),
       expect.anything(),
