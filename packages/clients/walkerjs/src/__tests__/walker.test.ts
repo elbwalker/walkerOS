@@ -1,4 +1,4 @@
-import { getEvents } from '../lib/walker';
+import { getAllEvents, getEvents } from '../lib/walker';
 import { Trigger } from '../lib/trigger';
 import fs from 'fs';
 
@@ -9,6 +9,16 @@ describe('Walker', () => {
 
   beforeEach(() => {
     document.body.innerHTML = html;
+  });
+
+  test('getAllEvents', () => {
+    const events = getAllEvents();
+    expect(events.length).toBeGreaterThan(0);
+    expect(events[0]).toMatchObject({
+      entity: expect.any(String),
+      action: expect.any(String),
+      data: expect.any(Object),
+    });
   });
 
   test('Basic collection', () => {

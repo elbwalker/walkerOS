@@ -67,6 +67,26 @@ export function getElbValues(
   return values;
 }
 
+export function getAllEvents(
+  scope: Element = document.body,
+  prefix: string = Const.Commands.Prefix,
+): Walker.Events {
+  let events: Walker.Events = [];
+  const action = Const.Commands.Action;
+
+  scope
+    .querySelectorAll(`[${getElbAttributeName(prefix, action, false)}]`)
+    .forEach((elem) => {
+      Object.keys(getElbValues(prefix, elem, action, false)).forEach(
+        (trigger) => {
+          events = events.concat(getEvents(elem, trigger, prefix));
+        },
+      );
+    });
+
+  return events;
+}
+
 export function getEvents(
   target: Element,
   trigger: Walker.Trigger,
