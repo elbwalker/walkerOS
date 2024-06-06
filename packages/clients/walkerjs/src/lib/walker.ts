@@ -229,9 +229,8 @@ export function getEntities(
   filter = Object.keys(filter || {}).length !== 0 ? filter : undefined;
 
   while (element) {
-    const entity = getEntity(prefix, element, target);
-
-    if (entity && (!filter || filter[entity.type])) entities.push(entity);
+    const entity = getEntity(prefix, element, target, filter);
+    if (entity) entities.push(entity);
 
     element = getParent(prefix, element);
   }
@@ -243,10 +242,12 @@ function getEntity(
   prefix: string,
   element: Element,
   origin?: Element,
+  filter?: Walker.Filter,
 ): WalkerOS.Entity | null {
   const type = getAttribute(element, getElbAttributeName(prefix));
 
-  if (!type) return null; // It's not a (valid) entity element
+  // It's not a (valid) entity element or should be filtered
+  if (!type || (filter && !filter[type])) return null;
 
   const scopeElems = [element]; // All related elements
   const dataSelector = `[${getElbAttributeName(
