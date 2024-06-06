@@ -137,9 +137,6 @@ export function pushToDestination(
       // Check to use specific event names
       if (mappingEvent.name) event.event = mappingEvent.name;
     }
-
-    // don't push if there's no matching mapping
-    if (!mappingEvent) return false;
   }
 
   const pushed = !!tryCatch(() => {
