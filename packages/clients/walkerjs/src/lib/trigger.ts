@@ -58,8 +58,7 @@ export function load(instance: WebClient.Instance) {
   // Trigger static page view if enabled
   if (pageview) {
     const [data, context] = getPageViewData(prefix);
-    instance.config.elbLayer.push('page view', data, Trigger.Load, context);
-    // elb('page view', data, Trigger.Load, context);
+    elb('page view', data, Trigger.Load, context);
   }
 
   initScopeTrigger(instance);

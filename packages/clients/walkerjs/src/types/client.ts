@@ -20,11 +20,17 @@ type WalkerEvent = Array<
 >;
 
 export interface Instance extends State, WalkerOS.Instance {
-  push: Elb;
-  sessionStart: (options?: SessionStartOptions) => void | SessionData;
   client: string;
   config: Config;
   destinations: Destinations;
+  push: Elb;
+  getAllEvents: (scope: Element, prefix: string) => Walker.Events;
+  getEvents: (
+    target: Element,
+    trigger: Walker.Trigger,
+    prefix: string,
+  ) => Walker.Events;
+  sessionStart: (options?: SessionStartOptions) => void | SessionData;
 }
 
 export interface State extends WalkerOS.State {

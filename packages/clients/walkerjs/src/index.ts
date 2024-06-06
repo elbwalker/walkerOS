@@ -7,6 +7,7 @@ import { run } from './lib/run';
 import { createSessionStart } from './lib/session';
 import { getState } from './lib/state';
 import { elb, initGlobalTrigger, ready } from './lib/trigger';
+import { getAllEvents, getEvents } from './lib/walker';
 
 // Export types and elb
 export * from './types';
@@ -22,6 +23,8 @@ export function Walkerjs(
     ...state,
     // Placeholder functions to be overwritten with instance-reference
     push: (() => {}) as unknown as WebClient.Elb,
+    getAllEvents,
+    getEvents,
     sessionStart: (() => {}) as unknown as typeof sessionStart,
   };
 
