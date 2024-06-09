@@ -1,3 +1,4 @@
+export * from './browser';
 export * from './elb';
 export * from './getAttribute';
 export * from './userAgent';

@@ -64,7 +64,10 @@ export type PushData =
   | User
   | Properties;
 
-export type PushOptions = Hooks.AnyFunction | SingleOrArray<On.Options>;
+export type PushOptions =
+  | Hooks.AnyFunction
+  | SingleOrArray<On.Options>
+  | object;
 
 export type PushContext = OrderedProperties;
 
