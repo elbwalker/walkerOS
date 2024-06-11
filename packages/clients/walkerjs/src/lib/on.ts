@@ -49,7 +49,7 @@ export function onApply(
       onConsent(instance, onConfig as Array<On.ConsentConfig>, config);
       break;
     case Const.Commands.Ready:
-      onRun(instance, onConfig as Array<On.ReadyConfig>);
+      onReady(instance, onConfig as Array<On.ReadyConfig>);
       break;
     case Const.Commands.Run:
       onRun(instance, onConfig as Array<On.RunConfig>);
@@ -79,6 +79,16 @@ function onConsent(
         tryCatch(consentConfig[consent])(instance, consentState);
       });
   });
+}
+
+function onReady(
+  instance: WebClient.Instance,
+  onConfig: Array<On.ReadyConfig>,
+): void {
+  if (instance.allowed)
+    onConfig.forEach((func) => {
+      tryCatch(func)(instance);
+    });
 }
 
 function onRun(
