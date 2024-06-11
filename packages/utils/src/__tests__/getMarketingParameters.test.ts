@@ -1,6 +1,6 @@
 import { getMarketingParameters } from '..';
 
-describe('Utils getMarketingParameters', () => {
+describe('getMarketingParameters', () => {
   test('marketing parameters', () => {
     const url = 'https://www.elbwalker.com/?';
     expect(getMarketingParameters(new URL(url))).toStrictEqual({});

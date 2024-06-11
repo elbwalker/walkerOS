@@ -1,6 +1,6 @@
 import { isVisible } from '../..';
 
-describe('Utils isVisible', () => {
+describe('isVisible', () => {
   const w = window;
 
   test('isVisible', () => {

@@ -1,7 +1,7 @@
 import { WalkerOS } from '@elbwalker/types';
 import { validateEvent } from '..';
 
-describe('Utils validate', () => {
+describe('validate', () => {
   test('validateEvent', () => {
     // should return valid event with missing properties filled
     expect(

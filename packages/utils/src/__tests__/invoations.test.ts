@@ -1,6 +1,6 @@
 import { debounce, throttle } from '..';
 
-describe('Utils Invocations', () => {
+describe('Invocations', () => {
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   beforeEach(() => {

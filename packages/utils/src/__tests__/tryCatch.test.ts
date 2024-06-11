@@ -1,6 +1,6 @@
 import { tryCatch, tryCatchAsync } from '..';
 
-describe('Utils tryCatch', () => {
+describe('tryCatch', () => {
   test('tryCatch', () => {
     const result =
       tryCatch(() => {

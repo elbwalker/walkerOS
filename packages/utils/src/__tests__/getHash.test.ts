@@ -1,6 +1,6 @@
 import { getHash } from '..';
 
-describe('Hash', () => {
+describe('getHash', () => {
   beforeEach(() => {});
 
   test('regular', async () => {
@@ -20,7 +20,7 @@ describe('Hash', () => {
       writable: true,
     });
 
-    expect(await getHash('foo', 1, true)).toBe('01');
+    expect(await getHash('foo' + 1 + true)).toBe('01');
 
     Object.defineProperty(global, 'crypto', {
       value: {},
@@ -31,6 +31,10 @@ describe('Hash', () => {
   });
 
   test('undefined', async () => {
-    expect(await getHash('foo', 1, true)).toBeUndefined();
+    expect(await getHash('foo' + 1 + true)).toBe('');
+  });
+
+  test('length', async () => {
+    expect(await getHash('foo', 3)).toHaveLength(3);
   });
 });

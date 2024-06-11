@@ -17,10 +17,6 @@ async function sha256(message: string): Promise<string | undefined> {
   return hashHex;
 }
 
-export async function getHash(
-  ...params: (string | number | boolean)[]
-): Promise<string | undefined> {
-  // Convert all parameters to strings and join them
-  const concatenatedString = params.map((param) => param.toString()).join('');
-  return await sha256(concatenatedString);
+export async function getHash(str: string, length?: number): Promise<string> {
+  return ((await sha256(str)) || '').slice(length);
 }

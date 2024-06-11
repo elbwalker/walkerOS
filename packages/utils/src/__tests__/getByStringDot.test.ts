@@ -1,6 +1,6 @@
 import { getByStringDot } from '..';
 
-describe('Utils getByStringDot', () => {
+describe('getByStringDot', () => {
   test('getByStringDot', () => {
     const obj = {
       foo: 'bar',

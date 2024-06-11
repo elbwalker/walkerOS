@@ -1,7 +1,7 @@
 import { Const } from '../..';
 import { storageDelete, storageRead, storageWrite } from '../../';
 
-describe('Utils Storage', () => {
+describe('Storage', () => {
   const w = window;
 
   beforeEach(() => {
