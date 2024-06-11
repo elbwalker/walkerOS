@@ -1,6 +1,8 @@
 import type { WalkerOS } from '@elbwalker/types';
 
-export function parseUserAgent(userAgent: string): WalkerOS.User {
+export function parseUserAgent(userAgent?: string): WalkerOS.User {
+  if (!userAgent) return {};
+
   return {
     userAgent,
     browser: getBrowser(userAgent),

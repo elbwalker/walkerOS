@@ -97,7 +97,7 @@ function createEventOrCommand(
     count,
     id: `${timestamp}-${group}-${count}`,
     version: {
-      client: instance.client,
+      client: instance.client, // @TODO check if this is correct
       tagging: version.tagging,
     },
     source,
