@@ -180,6 +180,8 @@ describe('Walker', () => {
           id: 'id_value',
           static: 'value',
           option: 'chosen',
+          checked: true,
+          unchecked: false,
         },
       }),
     ]);
