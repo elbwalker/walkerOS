@@ -1,6 +1,10 @@
 async function sha256(message: string): Promise<string | undefined> {
   const crypto: Crypto | undefined =
-    window && window.crypto ? window.crypto : global.crypto;
+    typeof window !== 'undefined' && window.crypto
+      ? window.crypto
+      : typeof global !== 'undefined' && global.crypto
+      ? global.crypto
+      : undefined;
 
   if (!crypto || !crypto.subtle || !TextEncoder) return; // Web Crypto API not available
 
