@@ -49,6 +49,6 @@ describe('getHash', () => {
   });
 
   test('length', async () => {
-    expect(await getHash('foo', 3)).toHaveLength(3);
+    expect(await getHash('foo', 2)).toHaveLength(2);
   });
 });

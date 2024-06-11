@@ -19,5 +19,5 @@ async function sha256(message: string): Promise<string | undefined> {
 }
 
 export async function getHash(str: string, length?: number): Promise<string> {
-  return ((await sha256(str)) || '').slice(length);
+  return ((await sha256(str)) || '').slice(0, length);
 }
