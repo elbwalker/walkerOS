@@ -1,13 +1,16 @@
 import { getHash } from '..';
 
 describe('getHash', () => {
-  beforeEach(() => {});
+  const orgCrypto = global.crypto;
+  const orgTextEncoder = global.TextEncoder;
 
-  test('regular', async () => {
+  beforeEach(() => {
     Object.defineProperty(global, 'crypto', {
       value: {
         subtle: {
-          digest: jest.fn().mockResolvedValue(new Uint8Array([1]).buffer),
+          digest: (algorithm, data) => {
+            return new Uint8Array(data);
+          },
         },
       },
     });
@@ -19,18 +22,29 @@ describe('getHash', () => {
       },
       writable: true,
     });
+  });
 
-    expect(await getHash('foo' + 1 + true)).toBe('01');
+  afterEach(() => {
+    Object.defineProperty(global, 'crypto', {
+      value: orgCrypto,
+    });
+    Object.defineProperty(global, 'TextEncoder', {
+      value: orgTextEncoder,
+    });
+  });
 
+  test('regular', async () => {
+    expect(await getHash('foo' + 1 + true)).toBe('666f6f3174727565');
+  });
+
+  test('undefined', async () => {
     Object.defineProperty(global, 'crypto', {
       value: {},
     });
     Object.defineProperty(global, 'TextEncoder', {
       value: undefined,
     });
-  });
 
-  test('undefined', async () => {
     expect(await getHash('foo' + 1 + true)).toBe('');
   });
 

@@ -6,7 +6,8 @@ async function sha256(message: string): Promise<string | undefined> {
       ? global.crypto
       : undefined;
 
-  if (!crypto || !crypto.subtle || !TextEncoder) return; // Web Crypto API not available
+  // Crypto API not available
+  if (!crypto || !crypto.subtle || !TextEncoder) return;
 
   const msgBuffer = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
