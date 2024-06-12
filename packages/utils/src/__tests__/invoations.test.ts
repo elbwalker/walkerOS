@@ -1,4 +1,4 @@
-import { debounce, throttle } from '..';
+import { debounce, throttle } from '../core';
 
 describe('Invocations', () => {
   const mockFn = jest.fn(); //.mockImplementation(console.log);

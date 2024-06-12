@@ -8,7 +8,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 export * from './types';
 
 export function firebaseStack(
-  customConfig: FirebaseStack.PartialConfig = {},
+  customConfig: FirebaseStack.PartialConfig = {}, // @TODO InitConfig
 ): FirebaseStack.Instance {
   const config = getConfig(customConfig);
   const { elb, instance } = createNodeClient(config.client);
@@ -48,8 +48,10 @@ const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
     // @TODO move validation to the client
     await tryCatchAsync(
       async (body: string, config: NodeClient.Config) => {
-        // @TODO what if it's a command?
         const event = validateEvent(JSON.parse(body), config.contracts);
+
+        // @TODO what if it's a command?
+        if (event.entity === 'walker') return res.send({ status: 'bad boy' });
 
         const result = await instance.push(event);
 

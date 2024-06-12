@@ -1,8 +1,8 @@
-import { sessionStorage } from '../../';
-import * as storage from '../../web/storage';
+import { sessionStorage, storageRead, storageWrite } from '../../web';
 
 // Automatically mock the storage module
 jest.mock('../../web/storage', () => ({
+  ...jest.requireActual('../../web/storage'),
   storageRead: jest.fn(),
   storageWrite: jest.fn(),
 }));
@@ -11,8 +11,8 @@ describe('SessionStorage', () => {
   const w = window;
   const device = 'd3v1c3';
 
-  const mockStorageWrite = storage.storageWrite as jest.Mock;
-  const mockStorageRead = storage.storageRead as jest.Mock;
+  const mockStorageWrite = storageWrite as jest.Mock;
+  const mockStorageRead = storageRead as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();

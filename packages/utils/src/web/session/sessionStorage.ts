@@ -1,12 +1,8 @@
-import {
-  StorageType,
-  getId,
-  storageRead,
-  storageWrite,
-  tryCatch,
-} from '../../';
-import { sessionWindow } from './';
-import type { SessionData, SessionWindowConfig } from './';
+import type { SessionData, StorageType, SessionWindowConfig } from '../../web';
+import { storageRead, storageWrite } from '../../web/storage';
+import { sessionWindow } from '../../web/session/sessionWindow';
+import { tryCatch } from '../../core/tryCatch';
+import { getId } from '../../core/getId';
 
 export interface SessionStorageConfig extends SessionWindowConfig {
   deviceKey?: string;

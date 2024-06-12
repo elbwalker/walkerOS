@@ -1,4 +1,4 @@
-import { Const } from '../..';
+import { Const } from '../../core';
 import { storageDelete, storageRead, storageWrite } from '../../';
 
 describe('Storage', () => {

@@ -2,7 +2,6 @@ export * from './assign';
 export * from './castValue';
 export * from './constants';
 export * from './getByStringDot';
-export * from './getHash';
 export * from './getId';
 export * from './getMarketingParameters';
 export * from './invocations';

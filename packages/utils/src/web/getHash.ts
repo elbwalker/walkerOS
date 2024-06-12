@@ -1,10 +1,6 @@
 async function sha256(message: string): Promise<string | undefined> {
   const crypto: Crypto | undefined =
-    typeof window !== 'undefined' && window.crypto
-      ? window.crypto
-      : typeof global !== 'undefined' && global.crypto
-      ? global.crypto
-      : undefined;
+    typeof window !== 'undefined' && window.crypto ? window.crypto : undefined;
 
   // Crypto API not available
   if (!crypto || !crypto.subtle || !TextEncoder) return;
@@ -18,6 +14,9 @@ async function sha256(message: string): Promise<string | undefined> {
   return hashHex;
 }
 
-export async function getHash(str: string, length?: number): Promise<string> {
+export async function getHashWeb(
+  str: string,
+  length?: number,
+): Promise<string> {
   return ((await sha256(str)) || '').slice(0, length);
 }

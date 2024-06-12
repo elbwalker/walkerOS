@@ -1,4 +1,4 @@
-import { getByStringDot } from '..';
+import { getByStringDot } from '../core';
 
 describe('getByStringDot', () => {
   test('getByStringDot', () => {

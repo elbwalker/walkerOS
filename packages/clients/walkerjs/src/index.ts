@@ -16,7 +16,7 @@ export { elb };
 export function Walkerjs(
   customConfig: WebClient.InitConfig = {},
 ): WebClient.Instance {
-  const client = '2.1.3'; // Client version
+  const client = '3.0.0-next.1'; // Client version
   const state = getState(customConfig);
   const instance: WebClient.Instance = {
     client,
@@ -30,7 +30,7 @@ export function Walkerjs(
 
   // Overwrite the push function with the instance-reference
   instance.push = createPush(instance);
-  instance.sessionStart = createSessionStart(instance);
+  instance.sessionStart = createSessionStart(instance); // @TODO starts a new session on reload
 
   // Setup pushes via elbLayer
   elbLayerInit(instance);

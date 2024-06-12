@@ -1,4 +1,4 @@
-import { assign } from '..';
+import { assign } from '../core';
 import type { WalkerOS } from '@elbwalker/types';
 
 describe('assign', () => {

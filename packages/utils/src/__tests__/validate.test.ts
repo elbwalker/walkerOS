@@ -1,5 +1,5 @@
-import { WalkerOS } from '@elbwalker/types';
-import { validateEvent } from '..';
+import type { WalkerOS } from '@elbwalker/types';
+import { validateEvent } from '../core';
 
 describe('validate', () => {
   test('validateEvent', () => {

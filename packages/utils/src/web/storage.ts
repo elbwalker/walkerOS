@@ -1,5 +1,6 @@
-import { Const, castValue } from '..';
 import type { WalkerOS } from '@elbwalker/types';
+import { castValue } from '../core/castValue';
+import { Const } from '../core/constants';
 
 export type StorageType = 'cookie' | 'local' | 'session';
 

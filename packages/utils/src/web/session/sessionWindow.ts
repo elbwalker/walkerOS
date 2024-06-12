@@ -1,6 +1,8 @@
-import { getId, getMarketingParameters } from '../../';
-import type { MarketingParameters, SessionData } from '../../';
 import type { WalkerOS } from '@elbwalker/types';
+import type { MarketingParameters } from '../../core';
+import type { SessionData } from '../../web';
+import { getMarketingParameters } from '../../core/getMarketingParameters';
+import { getId } from '../../core/getId';
 
 export interface SessionWindowConfig {
   data?: WalkerOS.Properties;

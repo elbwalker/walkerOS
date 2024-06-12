@@ -1,9 +1,8 @@
-// const deviceKey = config.deviceKey || 'elbDeviceId';
-// Also as parameter possible like the isNew for sessionStart
-
-import { elb, sessionStorage, sessionWindow } from '../../';
-import type { SessionStorageConfig } from './';
 import type { On, WalkerOS } from '@elbwalker/types';
+import type { SessionStorageConfig } from './';
+import { sessionStorage } from './sessionStorage';
+import { sessionWindow } from './sessionWindow';
+import { elb } from '../elb';
 
 export interface SessionConfig extends SessionStorageConfig {
   consent?: string;
