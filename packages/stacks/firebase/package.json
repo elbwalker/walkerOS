@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/stack-firebase",
   "description": "Firebase stack for walkerOS",
-  "version": "1.0.3",
+  "version": "2.0.0-next.1",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,8 +20,8 @@
     "test": "jest --colors --coverage"
   },
   "dependencies": {
-    "@elbwalker/client-node": "1.0.3",
-    "@elbwalker/utils": "3.1.2",
+    "@elbwalker/client-node": "2.0.0-next.1",
+    "@elbwalker/utils": "4.0.0-next.1",
     "firebase-functions": "^4.4.1"
   },
   "repository": {

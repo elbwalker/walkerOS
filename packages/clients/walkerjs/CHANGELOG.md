@@ -1,5 +1,68 @@
 # @elbwalker/walker.js
 
+## 3.0.0-next.1
+
+### Minor Changes
+
+- Hash ready dynamic value
+
+### Patch Changes
+
+- Updated dependencies
+  - @elbwalker/utils@4.0.0-next.1
+
+## 3.0.0-next.0
+
+### Major Changes
+
+- 8092770: Enable event processing without matching mapping
+  (#391)[https://github.com/elbwalker/walkerOS/issues/391]
+- 1b0b469: Add hash key to user object
+  (#362)[https://github.com/elbwalker/walkerOS/issues/362]
+- 5b5bfce: Add a DestinationInit type
+  (#374)[https://github.com/elbwalker/walkerOS/issues/374]
+- 4427d33: On events for destinations
+  (#363)[https://github.com/elbwalker/walkerOS/issues/363]
+- 4badbb3: Enhance event model
+  (#365)[https://github.com/elbwalker/walkerOS/issues/365]
+- 9f93511: Bundle event pushes to destinations
+  (#367)[https://github.com/elbwalker/walkerOS/issues/367]
+- cc91d5d: config to state
+  (#349)[https://github.com/elbwalker/walkerOS/issues/349]
+
+### Minor Changes
+
+- 8c0b444: on ready event
+  (#368)[https://github.com/elbwalker/walkerOS/issues/368]
+- 228bf1b: Unnecessary walking even if action filter is set
+  (#334)[https://github.com/elbwalker/walkerOS/issues/334]
+- 615fa8c: dataLayer destination with walkerjs key
+  (#375)[https://github.com/elbwalker/walkerOS/issues/375]
+- 2602942: Push events via elb
+  (#372)[https://github.com/elbwalker/walkerOS/issues/372]
+- 5aa8342: sessionStart cb with defaultCb parameter
+  (#380)[https://github.com/elbwalker/walkerOS/issues/380]
+- a799069: Export more core functions with a client
+  (#364)[https://github.com/elbwalker/walkerOS/issues/364]
+- 927dc26: separate code
+  (#384)[https://github.com/elbwalker/walkerOS/issues/384]
+- eaaa5e9: Pulse and update support for sessionStart
+  (#370)[https://github.com/elbwalker/walkerOS/issues/370]
+
+### Patch Changes
+
+- Updated dependencies [1b0b469]
+- Updated dependencies [cab6106]
+- Updated dependencies [4427d33]
+- Updated dependencies [4badbb3]
+- Updated dependencies [5aa8342]
+- Updated dependencies [a799069]
+- Updated dependencies [9f93511]
+- Updated dependencies [927dc26]
+- Updated dependencies [cc91d5d]
+- Updated dependencies [eaaa5e9]
+  - @elbwalker/utils@4.0.0-next.0
+
 ## 2.1.3
 
 ### Patch Changes
