@@ -46,7 +46,8 @@ export function getElbValues(
             (element as HTMLSelectElement).selectedIndex
           ].text;
         }
-        if (dynamicValue) val = String(dynamicValue);
+
+        val = String(dynamicValue);
       } catch (error) {
         val = '';
       }
