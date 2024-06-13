@@ -1,6 +1,6 @@
 import type { WebClient } from './types';
 import { sessionStart } from '@elbwalker/utils';
-import { addDataLayerDestination } from './lib/add';
+import { addDestination } from './lib/add';
 import { onApply } from './lib/on';
 import { createPush, elbLayerInit } from './lib/push';
 import { run } from './lib/run';
@@ -8,6 +8,7 @@ import { createSessionStart } from './lib/session';
 import { getState } from './lib/state';
 import { elb, initGlobalTrigger, ready } from './lib/trigger';
 import { getAllEvents, getEvents } from './lib/walker';
+import { dataLayerDestination } from './lib/destination';
 
 // Export types and elb
 export * from './types';
@@ -46,7 +47,12 @@ export function Walkerjs(
   onApply(instance, 'consent');
 
   // Add default destination to push events to dataLayer
-  if (instance.config.dataLayer) addDataLayerDestination(instance);
+  if (instance.config.dataLayer)
+    addDestination(
+      instance,
+      dataLayerDestination(),
+      instance.config.dataLayerConfig,
+    );
 
   // Automatically start running
   if (instance.config.run) ready(instance, run, instance);
