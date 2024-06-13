@@ -158,21 +158,30 @@ export function pushToDestination(
 
     // Debounce the event if needed
     const batch = mappingEvent?.batch;
-    if (batch && destination.pushBatch) {
-      destination.batch = destination.batch || [];
-      destination.batch.push({ event, mapping: mappingEvent });
+    if (mappingEvent && batch && destination.pushBatch) {
+      mappingEvent.name;
+      mappingEvent.events = mappingEvent.events || [];
+      mappingEvent.events.push({ event, mapping: mappingEvent });
 
-      destination.batchFn =
-        destination.batchFn ||
+      mappingEvent.batchFn =
+        mappingEvent.batchFn ||
         debounce((destination, instance) => {
-          useHooks(destination.pushBatch!, 'DestinationPush', instance.hooks)(
-            destination.batch || [],
-            destination.config,
-            instance,
-          );
+          // Create a copy of the events to prevent mutation
+          const events = [...(mappingEvent.events || [])];
+
+          if (events.length) {
+            // Reset the batched events queue
+            mappingEvent.events = [];
+
+            useHooks(destination.pushBatch!, 'DestinationPush', instance.hooks)(
+              events,
+              destination.config,
+              instance,
+            );
+          }
         }, batch);
 
-      destination.batchFn!(destination, instance);
+      mappingEvent.batchFn(destination, instance);
     } else {
       // It's time to go to the destination's side now
       useHooks(destination.push, 'DestinationPush', instance.hooks)(

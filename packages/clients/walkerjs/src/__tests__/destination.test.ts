@@ -660,49 +660,83 @@ describe('Destination', () => {
     jest.useFakeTimers();
     const mockBatch = jest.fn();
 
+    elb('walker run');
     elb('walker destination', {
       push: mockPush,
       pushBatch: mockBatch,
       config: {
         mapping: {
-          '*': {
+          // @TODO
+          product: {
+            click: { batch: 50 },
             visible: { batch: 2000 },
-            click: { batch: 2000 },
+          },
+          promotion: {
+            click: { batch: 50 },
+            visible: { batch: 2000 },
+          },
+          '*': {
+            click: { batch: 50 },
+            visible: { batch: 2000 },
           },
         },
       },
     });
-    elb('walker run');
 
-    elb('foo visible');
-    elb('bar visible');
-    elb('foo click');
-    elb('foo important');
+    elb('product visible', { id: 1 });
+    elb('product visible', { id: 2 });
+    elb('promotion visible', { id: 3 });
+    elb('rage click', { id: 4 });
+    elb('rage click', { id: 5 });
+    elb('rage click', { id: 6 });
+    elb('product important', { id: 7 });
 
-    expect(mockPush).toHaveBeenCalledTimes(1); // Push important immediately
+    // Push important immediately
+    expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockBatch).toHaveBeenCalledTimes(0);
-    jest.runAllTimers();
+
+    // Rage clicks
+    jest.advanceTimersByTime(50);
     expect(mockBatch).toHaveBeenCalledTimes(1);
+
+    jest.clearAllMocks();
+    jest.advanceTimersByTime(2000);
+
+    expect(mockBatch).toHaveBeenCalledTimes(2);
+
+    // product visible
     expect(mockBatch).toHaveBeenNthCalledWith(
       1,
       [
         {
           event: expect.objectContaining({
-            event: 'foo visible',
+            event: 'product visible',
+            data: { id: 1 },
           }),
           mapping: expect.objectContaining({ batch: 2000 }),
         },
         {
           event: expect.objectContaining({
-            event: 'bar visible',
+            event: 'product visible',
+            data: { id: 2 },
           }),
           mapping: expect.objectContaining({ batch: 2000 }),
         },
-        expect.objectContaining({
+      ],
+      expect.anything(),
+      expect.anything(),
+    );
+
+    // promotion visible
+    expect(mockBatch).toHaveBeenNthCalledWith(
+      2,
+      [
+        {
           event: expect.objectContaining({
-            event: 'foo click',
+            event: 'promotion visible',
           }),
-        }),
+          mapping: expect.objectContaining({ batch: 2000 }),
+        },
       ],
       expect.anything(),
       expect.anything(),
