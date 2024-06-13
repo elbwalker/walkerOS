@@ -1,5 +1,6 @@
-import { elb, Walkerjs } from '..';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { WebClient, WebDestination } from '..';
+import { elb, Walkerjs } from '..';
 
 describe('Destination', () => {
   let walkerjs: WebClient.Instance;
@@ -706,5 +707,54 @@ describe('Destination', () => {
       expect.anything(),
       expect.anything(),
     );
+  });
+
+  test('dataLayer config', () => {
+    jest.useFakeTimers();
+    walkerjs = Walkerjs({
+      default: true,
+      pageview: false,
+      session: false,
+      dataLayerConfig: {
+        consent: { functional: true },
+        mapping: {
+          '*': {
+            visible: { batch: 2000 },
+          },
+        },
+      },
+    });
+
+    elb('entity action');
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
+    elb('walker consent', { functional: true });
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
+
+    elb('product visible');
+    elb('product visible');
+
+    jest.clearAllMocks();
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
+
+    jest.runAllTimers();
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
+    expect(mockDataLayer).toHaveBeenCalledWith({
+      event: 'batch',
+      batched_event: 'product visible',
+      events: [
+        {
+          event: expect.objectContaining({
+            event: 'product visible',
+          }),
+          mapping: expect.objectContaining({ batch: 2000 }),
+        },
+        {
+          event: expect.objectContaining({
+            event: 'product visible',
+          }),
+          mapping: expect.objectContaining({ batch: 2000 }),
+        },
+      ],
+    });
   });
 });

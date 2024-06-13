@@ -6,16 +6,25 @@ import { pushToDestination } from './push';
 export function addDataLayerDestination(instance: WebClient.Instance) {
   // Add a dataLayer destination
   window.dataLayer = window.dataLayer || [];
+  const dataLayerPush = (event: unknown) => {
+    (window.dataLayer as unknown[]).push(event);
+  };
   const destination: WebDestination.DestinationInit = {
     push: (event) => {
-      (window.dataLayer as unknown[]).push({
+      dataLayerPush({
         ...event,
-        walkerjs: true,
+      });
+    },
+    pushBatch: (events) => {
+      dataLayerPush({
+        event: 'batch',
+        batched_event: events[0].event.event, // Similar event names
+        events,
       });
     },
     type: 'dataLayer',
   };
-  addDestination(instance, destination);
+  addDestination(instance, destination, instance.config.dataLayerConfig);
 }
 
 export function addDestination(

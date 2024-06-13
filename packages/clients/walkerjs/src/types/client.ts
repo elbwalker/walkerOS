@@ -42,6 +42,7 @@ export interface State extends WalkerOS.State {
 
 export interface Config extends WalkerOS.Config {
   dataLayer: boolean;
+  dataLayerConfig: WebDestination.Config;
   elbLayer: ElbLayer;
   pageview: boolean;
   prefix: string;

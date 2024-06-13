@@ -185,6 +185,7 @@ describe('ElbLayer', () => {
   test('config update', () => {
     const defaultConfig: WebClient.Config = {
       dataLayer: false,
+      dataLayerConfig: {},
       elbLayer: expect.any(Array),
       globalsStatic: {},
       pageview: true,

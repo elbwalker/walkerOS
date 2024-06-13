@@ -30,7 +30,7 @@ export type PushBatch<Custom, EventCustom> = (
 export interface Config<Custom = never, EventCustom = never>
   extends WalkerOSDestination.Config<Custom, EventCustom> {}
 
-export interface Mapping<EventCustom>
+export interface Mapping<EventCustom = unknown>
   extends WalkerOSDestination.Mapping<EventCustom> {}
 
 export interface EventConfig<EventCustom = never>
