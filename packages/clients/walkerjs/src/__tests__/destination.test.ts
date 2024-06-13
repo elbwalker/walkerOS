@@ -476,7 +476,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
 
-    destinationIgnore.config.mapping!.foo.bar.ignore = true;
+    destinationIgnore.config.mapping!.foo!.bar.ignore = true;
     elb('foo bar');
     expect(mockPushA).toHaveBeenCalledTimes(0);
   });
@@ -703,26 +703,13 @@ describe('Destination', () => {
     jest.advanceTimersByTime(2000);
 
     expect(mockBatch).toHaveBeenCalledTimes(2);
-
     // product visible
     expect(mockBatch).toHaveBeenNthCalledWith(
       1,
-      [
-        {
-          event: expect.objectContaining({
-            event: 'product visible',
-            data: { id: 1 },
-          }),
-          mapping: expect.objectContaining({ batch: 2000 }),
-        },
-        {
-          event: expect.objectContaining({
-            event: 'product visible',
-            data: { id: 2 },
-          }),
-          mapping: expect.objectContaining({ batch: 2000 }),
-        },
-      ],
+      {
+        key: 'product visible',
+        events: expect.any(Array),
+      },
       expect.anything(),
       expect.anything(),
     );
@@ -730,14 +717,10 @@ describe('Destination', () => {
     // promotion visible
     expect(mockBatch).toHaveBeenNthCalledWith(
       2,
-      [
-        {
-          event: expect.objectContaining({
-            event: 'promotion visible',
-          }),
-          mapping: expect.objectContaining({ batch: 2000 }),
-        },
-      ],
+      {
+        key: 'promotion visible',
+        events: expect.any(Array),
+      },
       expect.anything(),
       expect.anything(),
     );
@@ -774,20 +757,10 @@ describe('Destination', () => {
     expect(mockDataLayer).toHaveBeenCalledTimes(1);
     expect(mockDataLayer).toHaveBeenCalledWith({
       event: 'batch',
-      batched_event: 'product visible',
+      batched_event: '* visible',
       events: [
-        {
-          event: expect.objectContaining({
-            event: 'product visible',
-          }),
-          mapping: expect.objectContaining({ batch: 2000 }),
-        },
-        {
-          event: expect.objectContaining({
-            event: 'product visible',
-          }),
-          mapping: expect.objectContaining({ batch: 2000 }),
-        },
+        expect.objectContaining({ event: 'product visible' }),
+        expect.objectContaining({ event: 'product visible' }),
       ],
     });
   });

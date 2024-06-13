@@ -11,11 +11,11 @@ export function dataLayerDestination() {
         ...event,
       });
     },
-    pushBatch: (events) => {
+    pushBatch: (batch) => {
       dataLayerPush({
         event: 'batch',
-        batched_event: events[0].event.event, // Similar event names
-        events,
+        batched_event: batch.key,
+        events: batch.events,
       });
     },
     type: 'dataLayer',

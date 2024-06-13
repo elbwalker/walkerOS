@@ -125,17 +125,39 @@ export function pushToDestination(
   // Check for an active mapping for proper event handling
   let mappingEvent: WebDestination.EventConfig;
   const mapping = destination.config.mapping;
+  let mappingKey = '';
+
   if (mapping) {
-    const mappingEntity = mapping[event.entity] || mapping['*'] || {};
-    mappingEvent = mappingEntity[event.action] || mappingEntity['*'];
+    let mappingEntityKey = event.entity; // Default key is the entity name
+    let mappingEntity = mapping[mappingEntityKey];
 
-    // Handle individual event settings
-    if (mappingEvent) {
-      // Check if event should be processed or ignored
-      if (mappingEvent.ignore) return false;
+    if (!mappingEntity) {
+      // Fallback to the wildcard key
+      mappingEntityKey = '*';
+      mappingEntity = mapping[mappingEntityKey];
+    }
 
-      // Check to use specific event names
-      if (mappingEvent.name) event.event = mappingEvent.name;
+    if (mappingEntity) {
+      let mappingActionKey = event.action; // Default action is the event action
+      mappingEvent = mappingEntity[mappingActionKey];
+
+      if (!mappingEvent) {
+        // Fallback to the wildcard action
+        mappingActionKey = '*';
+        mappingEvent = mappingEntity[mappingActionKey];
+      }
+
+      // Handle individual event settings
+      if (mappingEvent) {
+        // Check if event should be processed or ignored
+        if (mappingEvent.ignore) return false;
+
+        // Check to use specific event names
+        if (mappingEvent.name) event.event = mappingEvent.name;
+
+        // Save the mapping key for later use
+        mappingKey = `${mappingEntityKey} ${mappingActionKey}`;
+      }
     }
   }
 
@@ -159,28 +181,26 @@ export function pushToDestination(
     // Debounce the event if needed
     const batch = mappingEvent?.batch;
     if (mappingEvent && batch && destination.pushBatch) {
-      mappingEvent.name;
-      mappingEvent.events = mappingEvent.events || [];
-      mappingEvent.events.push({ event, mapping: mappingEvent });
+      const batched = mappingEvent.batched || {
+        key: mappingKey,
+        events: [],
+      };
+      batched.events.push(event);
 
       mappingEvent.batchFn =
         mappingEvent.batchFn ||
         debounce((destination, instance) => {
-          // Create a copy of the events to prevent mutation
-          const events = [...(mappingEvent.events || [])];
+          useHooks(destination.pushBatch!, 'DestinationPush', instance.hooks)(
+            batched,
+            destination.config,
+            instance,
+          );
 
-          if (events.length) {
-            // Reset the batched events queue
-            mappingEvent.events = [];
-
-            useHooks(destination.pushBatch!, 'DestinationPush', instance.hooks)(
-              events,
-              destination.config,
-              instance,
-            );
-          }
+          // Reset the batched events queue
+          batched.events = [];
         }, batch);
 
+      mappingEvent.batched = batched;
       mappingEvent.batchFn(destination, instance);
     } else {
       // It's time to go to the destination's side now
