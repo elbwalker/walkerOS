@@ -30,6 +30,7 @@ export interface Instance extends State, WalkerOS.Instance {
     trigger: Walker.Trigger,
     prefix: string,
   ) => Walker.Events;
+  getGlobals: () => WalkerOS.Properties;
   sessionStart: (options?: SessionStartOptions) => void | SessionData;
 }
 

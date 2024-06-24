@@ -148,7 +148,9 @@ export function getEvents(
   return events;
 }
 
-export function getGlobals(prefix: string): WalkerOS.Properties {
+export function getGlobals(
+  prefix: string = Const.Commands.Prefix,
+): WalkerOS.Properties {
   const globalsName = getElbAttributeName(
     prefix,
     Const.Commands.Globals,
