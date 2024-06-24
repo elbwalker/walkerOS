@@ -51,17 +51,17 @@
 
       window.consentAccept = () => {
         // Save granted choice
-        utils.storageWrite(consentKey, 'accepted');
+        utils.storageWrite(consentKey, 'accepted', 60, 'local');
         consentRefresh(true);
       };
       window.consentDeny = () => {
         // Save denied choice
-        utils.storageWrite(consentKey, 'denied');
+        utils.storageWrite(consentKey, 'denied', 60, 'local');
         consentRefresh();
       };
       window.consentReset = () => {
         // Reset choice
-        utils.storageDelete(consentKey);
+        utils.storageDelete(consentKey, 'local');
         consentRefresh();
       };
 
@@ -99,7 +99,7 @@
       // Update the consent state
       function consentRefresh() {
         // Look for a stored consent choice
-        const consentState = utils.storageRead(consentKey);
+        const consentState = utils.storageRead(consentKey, 'local');
 
         // If a choice was made execute the code
         if (consentState) consentCode(consentState == 'accepted');

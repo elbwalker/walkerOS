@@ -28,7 +28,7 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
     pulse = false, // Handle the counting
   } = config;
   const windowSession = sessionWindow(config); // Status based on window only
-  let isStart = true;
+  let isStart = false;
 
   // Retrieve or create device ID
   const device = tryCatch((key: string, age: number, storage: StorageType) => {
@@ -45,7 +45,6 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
     tryCatch(
       (key: string, storage?: StorageType) => {
         const session = JSON.parse(String(storageRead(key, storage)));
-        isStart = session.isStart;
 
         // Only update session if it's not a pulse check
         if (pulse) return session;
@@ -67,18 +66,17 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
           session.start = now; // Set new session start
           session.count++; // Increase session count
           session.runs = 1; // Reset runs
-          isStart = true; // Mark expired session as a new one
+          isStart = true; // It's a new session
         } else {
           // Session is still active
-          session.runs++;
-          isStart = false;
+          session.runs++; // Increase number of runs
         }
 
         return session;
       },
       () => {
-        // Something went wrong, start a new session
-        config.isStart = true;
+        // No existing session or something went wrong
+        isStart = true; // Start a new session
       },
     )(sessionKey, sessionStorage) || {};
 
