@@ -14,8 +14,11 @@ export interface SessionWindowConfig {
 }
 
 export function sessionWindow(config: SessionWindowConfig = {}): SessionData {
-  const known = { isStart: false, storage: false };
-  let isStart = config.isStart || false;
+  let isStart = false;
+  const known = { isStart, storage: false };
+
+  // If session has explicitly started, return known
+  if (config.isStart === false) return known;
 
   // Entry type
   if (!isStart) {

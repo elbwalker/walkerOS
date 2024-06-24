@@ -52,9 +52,14 @@ export function run(
   }
 
   // Session handling
-  if (config.session) {
+  const sessionConfig = config.session;
+  if (sessionConfig) {
+    // Disable session start for window after first round (for SPAs)
+    if (!sessionConfig.storage && instance.round > 1)
+      sessionConfig.isStart = false;
+
     sessionStart(instance, {
-      ...config.session, // Session detection configuration
+      ...sessionConfig, // Session detection configuration
       data: config.sessionStatic, // Static default session data
     });
   }
