@@ -31,7 +31,7 @@ export function Walkerjs(
 
   // Overwrite the push function with the instance-reference
   instance.push = createPush(instance);
-  instance.sessionStart = createSessionStart(instance); // @TODO starts a new session on reload
+  instance.sessionStart = createSessionStart(instance);
 
   // Setup pushes via elbLayer
   elbLayerInit(instance);

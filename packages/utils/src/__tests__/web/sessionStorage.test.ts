@@ -303,7 +303,7 @@ describe('SessionStorage', () => {
       ...session,
       device,
       updated: start + 1000,
-      isStart: true,
+      isStart: false,
       isNew: true,
       runs: 1,
     });
