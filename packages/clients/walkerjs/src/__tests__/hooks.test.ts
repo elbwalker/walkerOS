@@ -180,7 +180,6 @@ describe('Hooks', () => {
       },
       expect.objectContaining({
         storage: true,
-        isStart: true,
         instance: expect.any(Object),
         data: expect.any(Object),
         cb: expect.any(Function),

@@ -1,5 +1,12 @@
 # @elbwalker/walker.js
 
+## 3.0.0-next.2
+
+### Minor Changes
+
+- 2325e8e: Config for default dataLayer
+  (#399)[https://github.com/elbwalker/walkerOS/issues/399]
+
 ## 3.0.0-next.1
 
 ### Minor Changes
