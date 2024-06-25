@@ -1,4 +1,4 @@
-import type { WalkerOS } from './';
+import type { WalkerOS } from '@elbwalker/types';
 import type { SessionData } from '@elbwalker/utils';
 
 // Instance state for the on actions

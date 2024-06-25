@@ -1,4 +1,4 @@
-import type { On, WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import type { SessionStorageConfig } from './';
 import { sessionStorage } from './sessionStorage';
 import { sessionWindow } from './sessionWindow';
@@ -59,7 +59,7 @@ function callFuncAndCb(
 }
 
 function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
-  const func: On.ConsentFn = (instance, consent) => {
+  const func = (instance: WalkerOS.Instance, consent: WalkerOS.Consent) => {
     let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
 
     if (config.consent && consent[config.consent])

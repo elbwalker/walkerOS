@@ -1,5 +1,5 @@
-import type { On, WalkerOS } from '@elbwalker/types';
-import type { WebClient } from '../';
+import type { WalkerOS } from '@elbwalker/types';
+import type { On, WebClient } from '../';
 import { Const, tryCatch } from '@elbwalker/utils';
 
 export function on(
