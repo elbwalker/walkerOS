@@ -24,6 +24,7 @@
     "test": {
       "dependsOn": ["build"],
       "outputs": ["coverage/**"]
-    }
+    },
+    "update": {}
   }
 }

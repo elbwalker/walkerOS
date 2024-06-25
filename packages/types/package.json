@@ -1,6 +1,6 @@
 {
   "name": "@elbwalker/types",
-  "description": "Shared types for the whole walkerverse",
+  "description": "Shared types for walkerOS",
   "version": "2.0.0-next.0",
   "license": "MIT",
   "main": "src/index.ts",
