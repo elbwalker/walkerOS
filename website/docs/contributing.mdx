@@ -64,6 +64,14 @@ turbo run build --filter=walker.js --filter=utils
 The `filter` option can be used to only run one or multiple packages. To filter
 use the `packages name` field in the `package.json` file.
 
+### Updates
+
+To update all npm packages to the latest version, run:
+
+```bash
+npx npm-check-updates -u && npm update && npm install
+```
+
 ## Documentation
 
 The documentation is also included in the repository under the `website/docs`

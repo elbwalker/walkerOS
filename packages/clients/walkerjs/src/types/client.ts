@@ -1,5 +1,6 @@
-import type { Hooks, On, WalkerOS } from '@elbwalker/types';
+import type { Hooks, WalkerOS } from '@elbwalker/types';
 import type { SessionConfig, SessionData } from '@elbwalker/utils';
+import type * as On from './on';
 import type * as WebDestination from './destination';
 import type * as Walker from './walker';
 
