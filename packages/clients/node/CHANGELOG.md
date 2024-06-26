@@ -16,12 +16,12 @@
 ### Major Changes
 
 - cc91d5d: config to state
-  (#349)[https://github.com/elbwalker/walkerOS/issues/349]
+  [#349)[https://github.com/elbwalker/walkerOS/issues/349)
 
 ### Minor Changes
 
 - 2602942: Push events via elb
-  (#372)[https://github.com/elbwalker/walkerOS/issues/372]
+  [#372)[https://github.com/elbwalker/walkerOS/issues/372)
 
 ### Patch Changes
 

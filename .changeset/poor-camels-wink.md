@@ -4,4 +4,4 @@
 '@elbwalker/utils': major
 ---
 
-Enhance event model (#365)[https://github.com/elbwalker/walkerOS/issues/365]
+Enhance event model [#365](https://github.com/elbwalker/walkerOS/issues/365)

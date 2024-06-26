@@ -5,4 +5,4 @@
 ---
 
 Add hash key to user object
-(#362)[https://github.com/elbwalker/walkerOS/issues/362]
+[#362](https://github.com/elbwalker/walkerOS/issues/362)

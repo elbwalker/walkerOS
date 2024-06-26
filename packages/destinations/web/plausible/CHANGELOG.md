@@ -19,7 +19,7 @@
 ### Major Changes
 
 - cc91d5d: config to state
-  (#349)[https://github.com/elbwalker/walkerOS/issues/349]
+  [#349](https://github.com/elbwalker/walkerOS/issues/349)
 
 ### Patch Changes
 

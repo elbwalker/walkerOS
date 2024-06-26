@@ -5,4 +5,4 @@
 ---
 
 On events for destinations
-(#363)[https://github.com/elbwalker/walkerOS/issues/363]
+[#363](https://github.com/elbwalker/walkerOS/issues/363)

@@ -19,7 +19,7 @@
 ### Minor Changes
 
 - 615fa8c: dataLayer destination with walkerjs key
-  (#375)[https://github.com/elbwalker/walkerOS/issues/375]
+  [#375](https://github.com/elbwalker/walkerOS/issues/375)
 
 ### Patch Changes
 

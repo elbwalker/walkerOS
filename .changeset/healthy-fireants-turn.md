@@ -3,4 +3,4 @@
 ---
 
 Config for default dataLayer
-(#399)[https://github.com/elbwalker/walkerOS/issues/399]
+[#399](https://github.com/elbwalker/walkerOS/issues/399)

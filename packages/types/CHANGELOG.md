@@ -5,25 +5,25 @@
 ### Major Changes
 
 - 1b0b469: Add hash key to user object
-  (#362)[https://github.com/elbwalker/walkerOS/issues/362]
+  [#362](https://github.com/elbwalker/walkerOS/issues/362)
 - 4427d33: On events for destinations
-  (#363)[https://github.com/elbwalker/walkerOS/issues/363]
+  [#363](https://github.com/elbwalker/walkerOS/issues/363)
 - 4badbb3: Enhance event model
-  (#365)[https://github.com/elbwalker/walkerOS/issues/365]
+  [#365](https://github.com/elbwalker/walkerOS/issues/365)
 - 9f93511: Bundle event pushes to destinations
-  (#367)[https://github.com/elbwalker/walkerOS/issues/367]
+  [#367](https://github.com/elbwalker/walkerOS/issues/367)
 - cc91d5d: config to state
-  (#349)[https://github.com/elbwalker/walkerOS/issues/349]
+  [#349](https://github.com/elbwalker/walkerOS/issues/349)
 
 ### Minor Changes
 
 - 8c0b444: on ready event
-  (#368)[https://github.com/elbwalker/walkerOS/issues/368]
-- cab6106: browser info (#395)[https://github.com/elbwalker/walkerOS/issues/395]
+  [#368](https://github.com/elbwalker/walkerOS/issues/368)
+- cab6106: browser info [#395](https://github.com/elbwalker/walkerOS/issues/395)
 - 2602942: Push events via elb
-  (#372)[https://github.com/elbwalker/walkerOS/issues/372]
+  [#372](https://github.com/elbwalker/walkerOS/issues/372)
 - 5aa8342: sessionStart cb with defaultCb parameter
-  (#380)[https://github.com/elbwalker/walkerOS/issues/380]
+  [#380](https://github.com/elbwalker/walkerOS/issues/380)
 
 ## 1.1.0
 

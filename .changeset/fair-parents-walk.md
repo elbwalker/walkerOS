@@ -3,4 +3,4 @@
 ---
 
 Add a DestinationInit type
-(#374)[https://github.com/elbwalker/walkerOS/issues/374]
+[#374](https://github.com/elbwalker/walkerOS/issues/374)

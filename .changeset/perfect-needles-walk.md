@@ -4,4 +4,4 @@
 '@elbwalker/types': minor
 ---
 
-Push events via elb (#372)[https://github.com/elbwalker/walkerOS/issues/372]
+Push events via elb [#372](https://github.com/elbwalker/walkerOS/issues/372)

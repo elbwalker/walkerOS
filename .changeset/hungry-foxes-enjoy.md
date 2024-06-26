@@ -3,4 +3,4 @@
 '@elbwalker/utils': minor
 ---
 
-browser info (#395)[https://github.com/elbwalker/walkerOS/issues/395]
+browser info [#395](https://github.com/elbwalker/walkerOS/issues/395)

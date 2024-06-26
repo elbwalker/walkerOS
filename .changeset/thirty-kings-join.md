@@ -8,4 +8,4 @@
 '@elbwalker/utils': minor
 ---
 
-config to state (#349)[https://github.com/elbwalker/walkerOS/issues/349]
+config to state [#349](https://github.com/elbwalker/walkerOS/issues/349)
