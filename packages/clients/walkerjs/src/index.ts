@@ -1,6 +1,6 @@
 import type { WebClient } from './types';
 import { sessionStart } from '@elbwalker/utils';
-import { addDestination } from './lib/add';
+import { addDestination } from './lib/destination';
 import { onApply } from './lib/on';
 import { createPush, elbLayerInit } from './lib/push';
 import { run } from './lib/run';
