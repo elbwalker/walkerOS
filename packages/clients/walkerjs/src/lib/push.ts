@@ -247,6 +247,7 @@ function createEventOrCommand(
   if (isCommand(entity)) return { command: action };
 
   // Regular event
+
   // Increase event counter
   ++instance.count;
 
@@ -260,10 +261,10 @@ function createEventOrCommand(
       id: window.location.href,
       previous_id: document.referrer,
     },
-    context = partialEvent.context || {},
+    context = {},
     globals = instance.globals,
     user = instance.user,
-    nested = partialEvent.nested || initialNested || [],
+    nested = initialNested || [],
     consent = instance.consent,
     trigger = isSameType(initialTrigger, '') ? initialTrigger : '',
     version = { tagging: instance.config.tagging },
@@ -303,6 +304,10 @@ function createEventOrCommand(
     data.id = data.id || window.location.pathname;
   }
 
+  const timing =
+    partialEvent.timing ||
+    Math.round((performance.now() - instance.timing) / 10) / 100;
+
   const event: WalkerOS.Event = {
     event: `${entity} ${action}`,
     data,
@@ -316,9 +321,7 @@ function createEventOrCommand(
     entity,
     action,
     timestamp,
-    timing:
-      partialEvent.timing ||
-      Math.round((performance.now() - instance.timing) / 10) / 100,
+    timing,
     group,
     count,
     id: `${timestamp}-${group}-${count}`,

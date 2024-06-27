@@ -197,8 +197,6 @@ function createEventOrCommand(
   // Increase event counter
   ++instance.count;
 
-  // @TODO update this
-
   // Extract properties with default fallbacks
   const {
     timestamp = Date.now(),
@@ -212,7 +210,10 @@ function createEventOrCommand(
     nested = [],
     consent = instance.consent,
     trigger = '',
-    version = { tagging: instance.config.tagging },
+    version = {
+      client: instance.client,
+      tagging: instance.config.tagging,
+    },
   } = partialEvent;
 
   const data: WalkerOS.Properties =
@@ -240,10 +241,7 @@ function createEventOrCommand(
     group,
     count,
     id: `${timestamp}-${group}-${count}`,
-    version: {
-      client: instance.client, // @TODO check if this is correct
-      tagging: version.tagging,
-    },
+    version,
     source,
   };
 

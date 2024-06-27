@@ -209,4 +209,20 @@ describe('Client', () => {
       previous_id: 'pr3v10us',
     });
   });
+
+  test('version', async () => {
+    const { elb } = getClient();
+
+    mockEvent.version = { client: 'cl13nt', tagging: 42 };
+    result = await elb(mockEvent);
+
+    expect(result.event).toEqual(
+      expect.objectContaining({
+        version: {
+          client: 'cl13nt',
+          tagging: 42,
+        },
+      }),
+    );
+  });
 });
