@@ -1,0 +1,65 @@
+---
+title: Installation
+description: How to install walker.js.
+---
+
+import Outdated from '/src/components/atoms/outdated';
+
+<Outdated />
+
+import Link from '@docusaurus/Link';
+
+There are multiple ways to install and use the web client walker.js:
+
+- **<Link to="/docs/clients/walkerjs/installation/gtm">Google Tag
+  Manager</Link>**: Use the GTM to load walker.js.
+- **<Link to="/docs/clients/walkerjs/installation/npm">NPM</Link>**: Install
+  walker.js as an NPM package.
+- **<Link to="/docs/clients/walkerjs/installation/script">Code</Link>**:
+  Directly include walker.js in the browser.
+
+## Configuration
+
+There a few configuration options when creating a walker.js instance:
+
+| Option    | Type                        | Description                                             |
+| --------- | --------------------------- | ------------------------------------------------------- |
+| consent   | object                      | Initial consent states, learn more under consent.       |
+| dataLayer | boolean                     | Adds a dataLayer destination if enabled.                |
+| default   | boolean                     | Add a dataLayer destination and run automatically.      |
+| elb       | string                      | Name of assign the elb function to the window           |
+| elbLayer  | object                      | Public elbwalker API for async communication.           |
+| globals   | object                      | Static attributes added to each event.                  |
+| instance  | string                      | Name of the walkerjs instance to assign to the window   |
+| pageview  | boolean                     | Trigger a page view event by default.                   |
+| prefix    | string                      | Attributes prefix used by the walker.                   |
+| run       | boolean                     | Automatically start running.                            |
+| session   | false or<br />SessionConfig | Configuration for session detection.                    |
+| tagging   | number                      | Current version of the tracking setup.                  |
+| user      | object                      | Setting the user ids including id, device, and session. |
+
+```ts
+const walkerjs = Walkerjs({
+  consent: {
+    functional: true,
+  },
+  dataLayer: true,
+  elb: 'elb',
+  elbLayer: window.elbLayer,
+  globals: {
+    tagged: false,
+  },
+  instance: 'walkerjs',
+  pageview: true,
+  run: true,
+  session: {
+    storage: true,
+    consent: 'marketing',
+    length: 60,
+  },
+  tagging: 1,
+});
+```
+
+During a run you can still use `globals` and `tagging` to update the
+configuration.

@@ -67,6 +67,12 @@ const config: Config = {
       defaultMode: 'dark',
       disableSwitch: false,
     },
+    autoCollapsedSidebar: true,
+    docs: {
+      sidebar: {
+        hideable: true,
+      },
+    },
     image: 'img/elbwalker_socialcard.png',
     navbar: {
       logo: {
