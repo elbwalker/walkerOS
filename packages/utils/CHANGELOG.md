@@ -1,5 +1,16 @@
 # @elbwalker/utils
 
+## 4.0.0-next.2
+
+### Minor Changes
+
+- v3
+
+### Patch Changes
+
+- Updated dependencies
+  - @elbwalker/types@2.0.0-next.1
+
 ## 4.0.0-next.1
 
 ### Minor Changes

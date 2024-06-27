@@ -1,5 +1,17 @@
 # @elbwalker/stack-firebase
 
+## 2.0.0-next.2
+
+### Minor Changes
+
+- v3
+
+### Patch Changes
+
+- Updated dependencies
+  - @elbwalker/client-node@2.0.0-next.2
+  - @elbwalker/utils@4.0.0-next.2
+
 ## 2.0.0-next.1
 
 ### Minor Changes

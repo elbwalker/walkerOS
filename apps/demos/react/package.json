@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "start": "vite",
+    "start": "vite --host",
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {

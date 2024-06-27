@@ -1,5 +1,16 @@
 # @elbwalker/walker.js
 
+## 3.0.0-next.3
+
+### Minor Changes
+
+- v3
+
+### Patch Changes
+
+- Updated dependencies
+  - @elbwalker/utils@4.0.0-next.2
+
 ## 3.0.0-next.2
 
 ### Minor Changes

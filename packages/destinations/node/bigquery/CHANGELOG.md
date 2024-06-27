@@ -1,5 +1,16 @@
 # @elbwalker/destination-node-bigquery
 
+## 1.1.0-next.2
+
+### Minor Changes
+
+- v3
+
+### Patch Changes
+
+- Updated dependencies
+  - @elbwalker/client-node@2.0.0-next.2
+
 ## 1.0.4-next.1
 
 ### Patch Changes
