@@ -1,33 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { WebClient, WebDestination } from '../types';
+import type { WebClient } from '../types';
 import { Const, isSameType } from '@elbwalker/utils';
 import { getEntities } from './walker';
-
-export function allowedToPush(
-  instance: WebClient.Instance,
-  destination: WebDestination.Destination,
-): boolean {
-  // Default without consent handling
-  let granted = true;
-
-  // Check for consent
-  const destinationConsent = destination.config.consent;
-
-  if (destinationConsent) {
-    // Let's be strict here
-    granted = false;
-
-    // Set the current consent states
-    const consentStates = instance.consent;
-
-    // Search for a required and granted consent
-    Object.keys(destinationConsent).forEach((consent) => {
-      if (consentStates[consent]) granted = true;
-    });
-  }
-
-  return granted;
-}
 
 export function createEventOrCommand(
   instance: WebClient.Instance,

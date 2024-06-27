@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { WebClient, WebDestination } from '../types';
-import { allowedToPush, createEventOrCommand, isArgument } from './helper';
+import { createEventOrCommand, isArgument } from './helper';
 import { handleCommand, handleEvent } from './handle';
 import {
   Const,
@@ -10,6 +10,7 @@ import {
   tryCatch,
   useHooks,
 } from '@elbwalker/utils';
+import { allowedToPush } from './consent';
 
 export function createPush(instance: WebClient.Instance): WebClient.Elb {
   const push = (

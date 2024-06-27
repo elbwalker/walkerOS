@@ -4,12 +4,12 @@ import { isElementOrDocument, isObject } from './helper';
 import { Hooks, WalkerOS } from '@elbwalker/types';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';
-import { setConsent, setUserIds } from './set';
 import { addDestination } from './destination';
 import { on } from './on';
 import { run } from './run';
 import { pushToDestination } from './push';
 import { addHook } from './hooks';
+import { setConsent } from './consent';
 
 export function handleCommand(
   instance: WebClient.Instance,
@@ -57,7 +57,7 @@ export function handleCommand(
       ready(instance, run, instance, data as Partial<WebClient.State>);
       break;
     case Const.Commands.User:
-      isObject(data) && setUserIds(instance, data as WalkerOS.User);
+      if (isObject(data)) assign(instance.user, data, { shallow: false });
       break;
     default:
       break;
