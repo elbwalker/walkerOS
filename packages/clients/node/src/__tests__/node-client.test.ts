@@ -49,6 +49,13 @@ describe('Client', () => {
     };
   });
 
+  test('client version equals package.json version', () => {
+    const packageJsonVersion = jest.requireActual('../../package.json').version;
+
+    const { instance } = getClient({});
+    expect(instance.client).toStrictEqual(packageJsonVersion);
+  });
+
   test('create', () => {
     const { elb, instance } = getClient();
     expect(elb).toBeDefined();

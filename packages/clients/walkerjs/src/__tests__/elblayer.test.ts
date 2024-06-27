@@ -175,13 +175,6 @@ describe('ElbLayer', () => {
     expect(w.elbLayer).toBeDefined();
   });
 
-  test('client version equals package.json version', () => {
-    const packageJsonVersion = jest.requireActual('../../package.json').version;
-
-    walkerjs = Walkerjs();
-    expect(walkerjs.client).toStrictEqual(packageJsonVersion);
-  });
-
   test('config update', () => {
     const defaultConfig: WebClient.Config = {
       dataLayer: false,

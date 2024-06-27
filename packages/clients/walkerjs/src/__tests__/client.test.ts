@@ -24,6 +24,13 @@ describe('Walkerjs', () => {
     });
   });
 
+  test('client version equals package.json version', () => {
+    const packageJsonVersion = jest.requireActual('../../package.json').version;
+
+    walkerjs = Walkerjs();
+    expect(walkerjs.client).toStrictEqual(packageJsonVersion);
+  });
+
   test('go', () => {
     w.elbLayer = undefined as unknown as WebClient.ElbLayer;
     expect(window.elbLayer).toBeUndefined();
