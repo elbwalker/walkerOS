@@ -22,17 +22,6 @@ export default defineConfig([
     entry: filesCoreWeb,
     format: ['cjs', 'esm'],
   },
-  // Node-specific bundle
-  {
-    ...config,
-    entry: ['src/index.node.ts'],
-    format: ['cjs', 'esm'],
-    sourcemap: true,
-    minify: false,
-    outExtension() {
-      return { js: `.node.js` };
-    },
-  },
   // Browser
   {
     ...config,
