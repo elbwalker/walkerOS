@@ -87,7 +87,6 @@ describe('destination google-tag-manager', () => {
         id: expect.any(String),
         previous_id: expect.any(String),
       },
-      walkerjs: true,
     });
   });
 });
