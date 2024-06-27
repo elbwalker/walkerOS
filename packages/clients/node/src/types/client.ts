@@ -65,7 +65,6 @@ export type PushData =
 export type PushOptions = WalkerOS.PushOptions | NodeDestination.Config;
 
 export interface PushResult extends NodeDestination.PushResult {
-  command?: Command;
   event?: WalkerOS.Event;
   status: Status;
 }

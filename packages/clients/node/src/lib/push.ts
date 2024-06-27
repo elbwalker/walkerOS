@@ -1,110 +1,8 @@
-import { Destination, WalkerOS } from '@elbwalker/types';
-import { NodeClient, NodeDestination } from './types';
-import { Const, assign, isSameType, tryCatchAsync } from '@elbwalker/utils';
-
-export function allowedToPush(
-  instance: NodeClient.Instance,
-  destination: NodeDestination.Destination,
-): boolean {
-  // Default without consent handling
-  let granted = true;
-
-  // Check for consent
-  const destinationConsent = destination.config.consent;
-
-  if (destinationConsent) {
-    // Let's be strict here
-    granted = false;
-
-    // Set the current consent states
-    const consentStates = instance.consent;
-
-    // Search for a required and granted consent
-    Object.keys(destinationConsent).forEach((consent) => {
-      if (consentStates[consent]) granted = true;
-    });
-  }
-
-  return granted;
-}
-
-function createEventOrCommand(
-  instance: NodeClient.Instance,
-  nameOrEvent: string | WalkerOS.PartialEvent,
-  pushData: unknown,
-): { event?: WalkerOS.Event; command?: string } {
-  // Determine the partial event
-  const partialEvent: WalkerOS.PartialEvent = isSameType(
-    nameOrEvent,
-    '' as string,
-  )
-    ? { event: nameOrEvent }
-    : ((nameOrEvent || {}) as WalkerOS.PartialEvent);
-
-  if (!partialEvent.event) throw new Error('Event name is required');
-
-  // Check for valid entity and action event format
-  const [entity, action] = partialEvent.event.split(' ');
-  if (!entity || !action) throw new Error('Event name is invalid');
-
-  // It's a walker command
-  if (isCommand(entity)) return { command: action };
-
-  // Regular event
-
-  // Increase event counter
-  ++instance.count;
-
-  // Extract properties with default fallbacks
-  const {
-    timestamp = Date.now(),
-    group = instance.group,
-    count = instance.count,
-    source = { type: 'node', id: '', previous_id: '' },
-    context = {},
-    custom = {},
-    globals = instance.globals,
-    user = instance.user,
-    nested = [],
-    consent = instance.consent,
-    trigger = '',
-    version = { tagging: instance.config.tagging },
-  } = partialEvent;
-
-  const data: WalkerOS.Properties =
-    partialEvent.data ||
-    (isSameType(pushData, {} as WalkerOS.Properties) ? pushData : {});
-
-  const timing =
-    partialEvent.timing ||
-    Math.round((Date.now() - instance.timing) / 10) / 100;
-
-  const event: WalkerOS.Event = {
-    event: `${entity} ${action}`,
-    data,
-    context,
-    custom,
-    globals,
-    user,
-    nested,
-    consent,
-    trigger,
-    entity,
-    action,
-    timestamp,
-    timing,
-    group,
-    count,
-    id: `${timestamp}-${group}-${count}`,
-    version: {
-      client: instance.client, // @TODO check if this is correct
-      tagging: version.tagging,
-    },
-    source,
-  };
-
-  return { event };
-}
+import type { Destination, WalkerOS } from '@elbwalker/types';
+import type { NodeClient, NodeDestination } from '../types';
+import { assign, isSameType, tryCatchAsync } from '@elbwalker/utils';
+import { allowedToPush } from './consent';
+import { isCommand } from './helper';
 
 export function createPush(
   instance: NodeClient.Instance,
@@ -272,6 +170,82 @@ export async function pushToDestinations(
   return { successful, queued, failed };
 }
 
-function isCommand(entity: string) {
-  return entity === Const.Commands.Walker;
+function createEventOrCommand(
+  instance: NodeClient.Instance,
+  nameOrEvent: string | WalkerOS.PartialEvent,
+  pushData: unknown,
+): { event?: WalkerOS.Event; command?: string } {
+  // Determine the partial event
+  const partialEvent: WalkerOS.PartialEvent = isSameType(
+    nameOrEvent,
+    '' as string,
+  )
+    ? { event: nameOrEvent }
+    : ((nameOrEvent || {}) as WalkerOS.PartialEvent);
+
+  if (!partialEvent.event) throw new Error('Event name is required');
+
+  // Check for valid entity and action event format
+  const [entity, action] = partialEvent.event.split(' ');
+  if (!entity || !action) throw new Error('Event name is invalid');
+
+  // It's a walker command
+  if (isCommand(entity)) return { command: action };
+
+  // Regular event
+
+  // Increase event counter
+  ++instance.count;
+
+  // @TODO update this
+
+  // Extract properties with default fallbacks
+  const {
+    timestamp = Date.now(),
+    group = instance.group,
+    count = instance.count,
+    source = { type: 'node', id: '', previous_id: '' },
+    context = {},
+    custom = {},
+    globals = instance.globals,
+    user = instance.user,
+    nested = [],
+    consent = instance.consent,
+    trigger = '',
+    version = { tagging: instance.config.tagging },
+  } = partialEvent;
+
+  const data: WalkerOS.Properties =
+    partialEvent.data ||
+    (isSameType(pushData, {} as WalkerOS.Properties) ? pushData : {});
+
+  const timing =
+    partialEvent.timing ||
+    Math.round((Date.now() - instance.timing) / 10) / 100;
+
+  const event: WalkerOS.Event = {
+    event: `${entity} ${action}`,
+    data,
+    context,
+    custom,
+    globals,
+    user,
+    nested,
+    consent,
+    trigger,
+    entity,
+    action,
+    timestamp,
+    timing,
+    group,
+    count,
+    id: `${timestamp}-${group}-${count}`,
+    version: {
+      client: instance.client, // @TODO check if this is correct
+      tagging: version.tagging,
+    },
+    source,
+  };
+
+  return { event };
 }

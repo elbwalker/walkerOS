@@ -1,5 +1,5 @@
+import type { NodeClient } from '../types';
 import { assign, onLog } from '@elbwalker/utils';
-import { NodeClient } from './types';
 
 export function getState(
   initConfig: NodeClient.InitConfig,
