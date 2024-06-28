@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/client-node",
   "description": "Node client for walkerOS for sending events from the server-side",
-  "version": "2.0.0-next.2",
+  "version": "3.0.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,7 +20,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/utils": "3.2.0-next.2"
+    "@elbwalker/utils": "3.2.0"
   },
   "devDependencies": {},
   "repository": {

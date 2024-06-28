@@ -1,5 +1,5 @@
+import type { Hooks } from '@elbwalker/types';
 import type { WebClient } from '../types';
-import { Hooks } from '@elbwalker/types';
 
 export function addHook<Hook extends keyof Hooks.Functions>(
   instance: WebClient.Instance,

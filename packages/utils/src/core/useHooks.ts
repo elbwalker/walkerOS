@@ -1,4 +1,4 @@
-import { Hooks } from '@elbwalker/types';
+import type { Hooks } from '@elbwalker/types';
 
 export function useHooks<P extends unknown[], R>(
   fn: (...args: P) => R,

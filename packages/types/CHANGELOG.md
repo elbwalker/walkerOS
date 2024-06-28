@@ -1,12 +1,6 @@
 # @elbwalker/types
 
-## 2.0.0-next.1
-
-### Minor Changes
-
-- v3
-
-## 2.0.0-next.0
+## 3.0.0
 
 ### Major Changes
 
@@ -30,6 +24,7 @@
   [#372](https://github.com/elbwalker/walkerOS/issues/372)
 - 5aa8342: sessionStart cb with defaultCb parameter
   [#380](https://github.com/elbwalker/walkerOS/issues/380)
+- 7c27f86: v3
 
 ## 1.1.0
 
@@ -43,18 +38,6 @@
 
 - 06a0599: on start command
   [#325](https://github.com/elbwalker/walkerOS/issues/325)
-
-## 1.1.0-next.0
-
-### Minor Changes
-
-- walker on command added
-  [#314](https://github.com/elbwalker/walkerOS/issues/314)
-
-  Assign instance to window via config
-  [#316](https://github.com/elbwalker/walkerOS/issues/316)
-
-- on start command [#325](https://github.com/elbwalker/walkerOS/issues/325)
 
 ## 1.1.0
 

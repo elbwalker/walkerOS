@@ -1,35 +1,6 @@
 # @elbwalker/walker.js
 
-## 3.0.0-next.3
-
-### Minor Changes
-
-- v3
-
-### Patch Changes
-
-- Updated dependencies
-  - @elbwalker/utils@3.2.0-next.2
-
-## 3.0.0-next.2
-
-### Minor Changes
-
-- 2325e8e: Config for default dataLayer
-  [#399](https://github.com/elbwalker/walkerOS/issues/399)
-
-## 3.0.0-next.1
-
-### Minor Changes
-
-- Hash ready dynamic value
-
-### Patch Changes
-
-- Updated dependencies
-  - @elbwalker/utils@3.2.0-next.1
-
-## 3.0.0-next.0
+## 3.0.0
 
 ### Major Changes
 
@@ -50,10 +21,13 @@
 
 ### Minor Changes
 
+- a1988f8: Hash ready dynamic value
 - 8c0b444: on ready event
   [#368](https://github.com/elbwalker/walkerOS/issues/368)
 - 228bf1b: Unnecessary walking even if action filter is set
   [#334](https://github.com/elbwalker/walkerOS/issues/334)
+- 2325e8e: Config for default dataLayer
+  [#399](https://github.com/elbwalker/walkerOS/issues/399)
 - 615fa8c: dataLayer destination with walkerjs key
   [#375](https://github.com/elbwalker/walkerOS/issues/375)
 - 2602942: Push events via elb
@@ -66,20 +40,12 @@
   [#384](https://github.com/elbwalker/walkerOS/issues/384)
 - eaaa5e9: Pulse and update support for sessionStart
   [#370](https://github.com/elbwalker/walkerOS/issues/370)
+- 7c27f86: v3
 
 ### Patch Changes
 
-- Updated dependencies [1b0b469]
-- Updated dependencies [cab6106]
-- Updated dependencies [4427d33]
-- Updated dependencies [4badbb3]
-- Updated dependencies [5aa8342]
-- Updated dependencies [a799069]
-- Updated dependencies [9f93511]
-- Updated dependencies [927dc26]
-- Updated dependencies [cc91d5d]
-- Updated dependencies [eaaa5e9]
-  - @elbwalker/utils@3.2.0-next.0
+- Updated dependencies [7c27f86]
+  - @elbwalker/utils@3.2.0
 
 ## 2.1.3
 
@@ -105,23 +71,8 @@
   [#340](https://github.com/elbwalker/walkerOS/issues/340)
 - dc3dea8: Data properties hierarchy
   [#346](https://github.com/elbwalker/walkerOS/issues/346)
-- Updated dependencies [c85eaff]
 - Updated dependencies [da698d9]
   - @elbwalker/utils@3.1.1
-
-## 2.1.1-next.0
-
-### Patch Changes
-
-- c85eaff: sessionStorage with new UTM entry
-  [#342](https://github.com/elbwalker/walkerOS/issues/342)
-- da698d9: devDeps to deps
-  [#340](https://github.com/elbwalker/walkerOS/issues/340)
-- dc3dea8: Data properties hierarchy
-  [#346](https://github.com/elbwalker/walkerOS/issues/346)
-- Updated dependencies [c85eaff]
-- Updated dependencies [da698d9]
-  - @elbwalker/utils@3.1.1-next.0
 
 ## 2.1.0
 
@@ -141,10 +92,8 @@
   [#327](https://github.com/elbwalker/walkerOS/issues/327)
 - d17e25a: walker on command added
   [#314](https://github.com/elbwalker/walkerOS/issues/314)
-
-  Assign instance to window via config
+- r0fll0l: Assign instance to window via config
   [#316](https://github.com/elbwalker/walkerOS/issues/316)
-
 - 412f60d: don't require return on destination init
   [#320](https://github.com/elbwalker/walkerOS/issues/320)
 - 06a0599: on start command
@@ -152,34 +101,6 @@
 - ea7383e: Support for walker on for multiple functions
   [#321](https://github.com/elbwalker/walkerOS/issues/321)
 - 2dc0923: Config options for run and dataLayer
-  [#328](https://github.com/elbwalker/walkerOS/issues/328)
-
-## 2.1.0-next.0
-
-### Minor Changes
-
-- elbLayer init arguments
-  [#326](https://github.com/elbwalker/walkerOS/issues/326)
-- Add a getSession function
-  [#324](https://github.com/elbwalker/walkerOS/issues/324)
-- action Filter type doesn't trim
-  [#288](https://github.com/elbwalker/walkerOS/issues/288)
-- Context for page view events
-  [#269](https://github.com/elbwalker/walkerOS/issues/269)
-- Require consent to run
-  [#327](https://github.com/elbwalker/walkerOS/issues/327)
-- walker on command added
-  [#314](https://github.com/elbwalker/walkerOS/issues/314)
-
-  Assign instance to window via config
-  [#316](https://github.com/elbwalker/walkerOS/issues/316)
-
-- don't require return on destination init
-  [#320](https://github.com/elbwalker/walkerOS/issues/320)
-- on start command [#325](https://github.com/elbwalker/walkerOS/issues/325)
-- Support for walker on for multiple functions
-  [#321](https://github.com/elbwalker/walkerOS/issues/321)
-- Config options for run and dataLayer
   [#328](https://github.com/elbwalker/walkerOS/issues/328)
 
 ## 2.0.1
