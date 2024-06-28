@@ -11,8 +11,7 @@
     "packages/stacks/*"
   ],
   "scripts": {
-    "build": "turbo run build --filter=!@elbwalker/website",
-    "build:website": "turbo run build --filter=@elbwalker/website",
+    "build": "turbo run build",
     "clean": "turbo run clean",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
