@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-node-bigquery",
   "description": "BigQuery node destination for walkerOS",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -12,19 +12,19 @@
   ],
   "scripts": {
     "build": "tsup",
+    "build:dev": "tsup --config tsup.dev.config.ts",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
-    "dev": "npm run dev:build & npm run dev:test",
-    "dev:build": "tsup --watch --config tsup.dev.config.ts",
-    "dev:test": "jest --watchAll --colors",
+    "dev": "jest --watchAll --colors",
     "lint": "eslint \"**/*.ts*\"",
-    "test": "jest --colors --coverage"
+    "test": "jest --colors --coverage",
+    "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/client-node": "1.0.3"
+    "@elbwalker/client-node": "3.0.0"
   },
   "devDependencies": {
-    "@google-cloud/bigquery": "^6.2.1",
-    "@elbwalker/types": "1.1.0"
+    "@google-cloud/bigquery": "^7.8.0",
+    "@elbwalker/types": "3.0.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

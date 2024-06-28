@@ -1,6 +1,7 @@
-import type { WalkerOS, Schema, Handler, Hooks, On } from '@elbwalker/types';
+import type { WalkerOS, Schema, Handler, Hooks } from '@elbwalker/types';
 import type { SessionData } from '@elbwalker/utils';
 import type * as NodeDestination from './destination';
+import type * as On from './on';
 
 export interface Instance extends State, WalkerOS.Instance {
   push: Elb<Promise<PushResult>>;
@@ -12,6 +13,7 @@ export interface Instance extends State, WalkerOS.Instance {
 export interface State extends WalkerOS.State {
   config: Config;
   destinations: Destinations;
+  on: On.Config;
   session: undefined | SessionData;
   timing: number;
 }
@@ -64,7 +66,6 @@ export type PushData =
 export type PushOptions = WalkerOS.PushOptions | NodeDestination.Config;
 
 export interface PushResult extends NodeDestination.PushResult {
-  command?: Command;
   event?: WalkerOS.Event;
   status: Status;
 }

@@ -1,5 +1,17 @@
 # @elbwalker/destination-web-piwikpro
 
+## 1.2.0
+
+### Minor Changes
+
+- 7c27f86: v3
+
+### Patch Changes
+
+- Updated dependencies [7c27f86]
+  - @elbwalker/walker.js@3.0.0
+  - @elbwalker/utils@3.2.0
+
 ## 1.1.3
 
 ### Patch Changes
@@ -21,21 +33,9 @@
 
 ### Patch Changes
 
-- Updated dependencies [c85eaff]
-- Updated dependencies [da698d9]
 - Updated dependencies [dc3dea8]
   - @elbwalker/walker.js@2.1.1
   - @elbwalker/utils@3.1.1
-
-## 1.1.1-next.0
-
-### Patch Changes
-
-- Updated dependencies [c85eaff]
-- Updated dependencies [da698d9]
-- Updated dependencies [dc3dea8]
-  - @elbwalker/walker.js@2.1.1-next.0
-  - @elbwalker/utils@3.1.1-next.0
 
 ## 1.1.0
 
@@ -48,45 +48,9 @@
 
 ### Patch Changes
 
-- Updated dependencies [d17e25a]
-- Updated dependencies [451e1ae]
-- Updated dependencies [451e1ae]
-- Updated dependencies [31aff20]
-- Updated dependencies [284042e]
-- Updated dependencies [7e84227]
-- Updated dependencies [451e1ae]
-- Updated dependencies [d17e25a]
-- Updated dependencies [412f60d]
-- Updated dependencies [06a0599]
-- Updated dependencies [ea7383e]
 - Updated dependencies [2dc0923]
   - @elbwalker/utils@3.1.0
   - @elbwalker/walker.js@2.1.0
-
-## 1.1.0-next.0
-
-### Minor Changes
-
-- Updates type definitions
-  [#315](https://github.com/elbwalker/walkerOS/issues/315)
-- don't require return on destination init
-  [#320](https://github.com/elbwalker/walkerOS/issues/320)
-
-### Patch Changes
-
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-  - @elbwalker/utils@3.1.0-next.0
-  - @elbwalker/walker.js@2.1.0-next.0
 
 ## 1.0.1
 

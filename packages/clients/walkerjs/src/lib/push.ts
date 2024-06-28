@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { WebClient, WebDestination } from '../types';
-import { allowedToPush, createEventOrCommand, isArgument } from './helper';
+import { isArgument, isCommand, isElementOrDocument } from './helper';
 import { handleCommand, handleEvent } from './handle';
 import {
   Const,
@@ -10,6 +10,8 @@ import {
   tryCatch,
   useHooks,
 } from '@elbwalker/utils';
+import { allowedToPush } from './consent';
+import { getEntities } from './walker';
 
 export function createPush(instance: WebClient.Instance): WebClient.Elb {
   const push = (
@@ -125,17 +127,39 @@ export function pushToDestination(
   // Check for an active mapping for proper event handling
   let mappingEvent: WebDestination.EventConfig;
   const mapping = destination.config.mapping;
+  let mappingKey = '';
+
   if (mapping) {
-    const mappingEntity = mapping[event.entity] || mapping['*'] || {};
-    mappingEvent = mappingEntity[event.action] || mappingEntity['*'];
+    let mappingEntityKey = event.entity; // Default key is the entity name
+    let mappingEntity = mapping[mappingEntityKey];
 
-    // Handle individual event settings
-    if (mappingEvent) {
-      // Check if event should be processed or ignored
-      if (mappingEvent.ignore) return false;
+    if (!mappingEntity) {
+      // Fallback to the wildcard key
+      mappingEntityKey = '*';
+      mappingEntity = mapping[mappingEntityKey];
+    }
 
-      // Check to use specific event names
-      if (mappingEvent.name) event.event = mappingEvent.name;
+    if (mappingEntity) {
+      let mappingActionKey = event.action; // Default action is the event action
+      mappingEvent = mappingEntity[mappingActionKey];
+
+      if (!mappingEvent) {
+        // Fallback to the wildcard action
+        mappingActionKey = '*';
+        mappingEvent = mappingEntity[mappingActionKey];
+      }
+
+      // Handle individual event settings
+      if (mappingEvent) {
+        // Check if event should be processed or ignored
+        if (mappingEvent.ignore) return false;
+
+        // Check to use specific event names
+        if (mappingEvent.name) event.event = mappingEvent.name;
+
+        // Save the mapping key for later use
+        mappingKey = `${mappingEntityKey} ${mappingActionKey}`;
+      }
     }
   }
 
@@ -158,21 +182,28 @@ export function pushToDestination(
 
     // Debounce the event if needed
     const batch = mappingEvent?.batch;
-    if (batch && destination.pushBatch) {
-      destination.batch = destination.batch || [];
-      destination.batch.push({ event, mapping: mappingEvent });
+    if (mappingEvent && batch && destination.pushBatch) {
+      const batched = mappingEvent.batched || {
+        key: mappingKey,
+        events: [],
+      };
+      batched.events.push(event);
 
-      destination.batchFn =
-        destination.batchFn ||
+      mappingEvent.batchFn =
+        mappingEvent.batchFn ||
         debounce((destination, instance) => {
-          useHooks(destination.pushBatch!, 'DestinationPush', instance.hooks)(
-            destination.batch || [],
-            destination.config,
-            instance,
-          );
+          useHooks(
+            destination.pushBatch!,
+            'DestinationPushBatch',
+            instance.hooks,
+          )(batched, destination.config, instance);
+
+          // Reset the batched events queue
+          batched.events = [];
         }, batch);
 
-      destination.batchFn!(destination, instance);
+      mappingEvent.batched = batched;
+      mappingEvent.batchFn(destination, instance);
     } else {
       // It's time to go to the destination's side now
       useHooks(destination.push, 'DestinationPush', instance.hooks)(
@@ -187,4 +218,119 @@ export function pushToDestination(
   })();
 
   return pushed;
+}
+
+function createEventOrCommand(
+  instance: WebClient.Instance,
+  nameOrEvent: unknown,
+  pushData: WebClient.PushData,
+  pushContext: WebClient.PushContext,
+  initialNested: WalkerOS.Entities,
+  initialCustom: WalkerOS.Properties,
+  initialTrigger: WebClient.PushOptions = '',
+): { event?: WalkerOS.Event; command?: string } {
+  // Determine the partial event
+  const partialEvent: WalkerOS.PartialEvent = isSameType(
+    nameOrEvent,
+    '' as string,
+  )
+    ? { event: nameOrEvent }
+    : ((nameOrEvent || {}) as WalkerOS.PartialEvent);
+
+  if (!partialEvent.event) return {};
+
+  // Check for valid entity and action event format
+  const [entity, action] = partialEvent.event.split(' ');
+  if (!entity || !action) return {};
+
+  // It's a walker command
+  if (isCommand(entity)) return { command: action };
+
+  // Regular event
+
+  // Increase event counter
+  ++instance.count;
+
+  // Extract properties with default fallbacks
+  const {
+    timestamp = Date.now(),
+    group = instance.group,
+    count = instance.count,
+    source = {
+      type: 'web',
+      id: window.location.href,
+      previous_id: document.referrer,
+    },
+    context = {},
+    globals = instance.globals,
+    user = instance.user,
+    nested = initialNested || [],
+    consent = instance.consent,
+    trigger = isSameType(initialTrigger, '') ? initialTrigger : '',
+    version = { tagging: instance.config.tagging },
+  } = partialEvent;
+
+  // Get data and context either from elements or parameters
+  let data: WalkerOS.Properties =
+    partialEvent.data ||
+    (isSameType(pushData, {} as WalkerOS.Properties) ? pushData : {});
+
+  let eventContext: WalkerOS.OrderedProperties = context;
+
+  let elemParameter: undefined | Element;
+  let dataIsElem = false;
+  if (isElementOrDocument(pushData)) {
+    elemParameter = pushData;
+    dataIsElem = true;
+  }
+
+  if (isElementOrDocument(pushContext)) {
+    elemParameter = pushContext;
+  } else if (isSameType(pushContext, {} as WalkerOS.OrderedProperties)) {
+    eventContext = pushContext;
+  }
+
+  if (elemParameter) {
+    const entityObj = getEntities(instance.config.prefix, elemParameter).find(
+      (obj) => obj.type == entity,
+    );
+    if (entityObj) {
+      if (dataIsElem) data = entityObj.data;
+      eventContext = entityObj.context;
+    }
+  }
+
+  if (entity === 'page') {
+    data.id = data.id || window.location.pathname;
+  }
+
+  const timing =
+    partialEvent.timing ||
+    Math.round((performance.now() - instance.timing) / 10) / 100;
+
+  const event: WalkerOS.Event = {
+    event: `${entity} ${action}`,
+    data,
+    context: eventContext,
+    custom: partialEvent.custom || initialCustom || {},
+    globals,
+    user,
+    nested,
+    consent,
+    trigger,
+    entity,
+    action,
+    timestamp,
+    timing,
+    group,
+    count,
+    id: `${timestamp}-${group}-${count}`,
+    version: {
+      client: instance.client,
+      tagging: version.tagging,
+    },
+    source,
+  };
+
+  return { event };
 }

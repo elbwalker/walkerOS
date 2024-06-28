@@ -1,5 +1,6 @@
 ---
 title: Session
+sidebar_position: 1
 ---
 
 import Link from '@docusaurus/Link';
@@ -201,15 +202,16 @@ callback --> returnSession
 
 Additional config parameters, based on the [Storage](/docs/utils/storage) util:
 
-| Property       | Type   | Description                                                  | Default      |
-| -------------- | ------ | ------------------------------------------------------------ | ------------ |
-| deviceKey      | string | The key to store the device ID in the storage                | elbDeviceId  |
-| deviceStorage  | string | The storage type to use for the device id                    | local        |
-| deviceAge      | number | The age in days to consider the device ID as expired         | 30           |
-| sessionKey     | string | The key to store the session ID in the storage               | elbSessionId |
-| sessionStorage | string | The storage type to use for the session id                   | local        |
-| sessionAge     | number | The age in days to consider the session ID as expired        | 30           |
-| length         | number | Minutes after the last update to consider session as expired | 30           |
+| Property       | Type    | Description                                                  | Default      |
+| -------------- | ------- | ------------------------------------------------------------ | ------------ |
+| deviceKey      | string  | The key to store the device ID in the storage                | elbDeviceId  |
+| deviceStorage  | string  | The storage type to use for the device id                    | local        |
+| deviceAge      | number  | The age in days to consider the device ID as expired         | 30           |
+| sessionKey     | string  | The key to store the session ID in the storage               | elbSessionId |
+| sessionStorage | string  | The storage type to use for the session id                   | local        |
+| sessionAge     | number  | The age in days to consider the session ID as expired        | 30           |
+| length         | number  | Minutes after the last update to consider session as expired | 30           |
+| pulse          | boolean | Update the current session to stay active                    | false        |
 
 :::info
 

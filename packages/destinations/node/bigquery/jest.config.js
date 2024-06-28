@@ -1,4 +1,4 @@
-const commonConfig = require('@elbwalker/jest');
+const commonConfig = require('@elbwalker/jest/node.config');
 
 const config = {};
 

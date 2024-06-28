@@ -1,5 +1,6 @@
-import type { Hooks, On, WalkerOS } from '@elbwalker/types';
+import type { Hooks, WalkerOS } from '@elbwalker/types';
 import type { SessionConfig, SessionData } from '@elbwalker/utils';
+import type * as On from './on';
 import type * as WebDestination from './destination';
 import type * as Walker from './walker';
 
@@ -30,18 +31,21 @@ export interface Instance extends State, WalkerOS.Instance {
     trigger: Walker.Trigger,
     prefix: string,
   ) => Walker.Events;
+  getGlobals: () => WalkerOS.Properties;
   sessionStart: (options?: SessionStartOptions) => void | SessionData;
 }
 
 export interface State extends WalkerOS.State {
   config: Config;
   destinations: Destinations;
+  on: On.Config;
   session: undefined | SessionData;
   timing: number;
 }
 
 export interface Config extends WalkerOS.Config {
   dataLayer: boolean;
+  dataLayerConfig: WebDestination.Config;
   elbLayer: ElbLayer;
   pageview: boolean;
   prefix: string;
@@ -79,6 +83,11 @@ export interface Elb extends WalkerOS.Elb {
     custom?: WalkerOS.Properties,
   ): void;
   (event: 'walker run', state?: Partial<State>): void;
+  (
+    event: 'walker on',
+    type: 'consent',
+    rules: WalkerOS.SingleOrArray<On.ConsentConfig>,
+  ): void;
 }
 
 export type ElbLayer = [
@@ -100,6 +109,7 @@ export type PushData =
 export type PushOptions =
   | WalkerOS.PushOptions
   | Walker.Trigger
+  | WalkerOS.SingleOrArray<On.Options>
   | WebDestination.Config;
 
 export type PushContext = WalkerOS.PushContext | Element;

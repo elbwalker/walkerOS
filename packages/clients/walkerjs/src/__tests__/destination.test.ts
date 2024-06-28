@@ -1,5 +1,6 @@
-import { elb, Walkerjs } from '..';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { WebClient, WebDestination } from '..';
+import { elb, Walkerjs } from '..';
 
 describe('Destination', () => {
   let walkerjs: WebClient.Instance;
@@ -475,7 +476,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
 
-    destinationIgnore.config.mapping!.foo.bar.ignore = true;
+    destinationIgnore.config.mapping!.foo!.bar.ignore = true;
     elb('foo bar');
     expect(mockPushA).toHaveBeenCalledTimes(0);
   });
@@ -656,55 +657,108 @@ describe('Destination', () => {
   });
 
   test('batch', () => {
-    jest.useFakeTimers();
     const mockBatch = jest.fn();
 
+    elb('walker run');
     elb('walker destination', {
       push: mockPush,
       pushBatch: mockBatch,
       config: {
         mapping: {
-          '*': {
+          product: {
+            click: { batch: 50 },
             visible: { batch: 2000 },
-            click: { batch: 2000 },
+          },
+          promotion: {
+            click: { batch: 50 },
+            visible: { batch: 2000 },
+          },
+          '*': {
+            click: { batch: 50 },
+            visible: { batch: 2000 },
           },
         },
       },
     });
-    elb('walker run');
 
-    elb('foo visible');
-    elb('bar visible');
-    elb('foo click');
-    elb('foo important');
+    elb('product visible', { id: 1 });
+    elb('product visible', { id: 2 });
+    elb('promotion visible', { id: 3 });
+    elb('rage click', { id: 4 });
+    elb('rage click', { id: 5 });
+    elb('rage click', { id: 6 });
+    elb('product important', { id: 7 });
 
-    expect(mockPush).toHaveBeenCalledTimes(1); // Push important immediately
+    // Push important immediately
+    expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockBatch).toHaveBeenCalledTimes(0);
-    jest.runAllTimers();
+
+    // Rage clicks
+    jest.advanceTimersByTime(50);
     expect(mockBatch).toHaveBeenCalledTimes(1);
+
+    jest.clearAllMocks();
+    jest.advanceTimersByTime(2000);
+
+    expect(mockBatch).toHaveBeenCalledTimes(2);
+    // product visible
     expect(mockBatch).toHaveBeenNthCalledWith(
       1,
-      [
-        {
-          event: expect.objectContaining({
-            event: 'foo visible',
-          }),
-          mapping: expect.objectContaining({ batch: 2000 }),
-        },
-        {
-          event: expect.objectContaining({
-            event: 'bar visible',
-          }),
-          mapping: expect.objectContaining({ batch: 2000 }),
-        },
-        expect.objectContaining({
-          event: expect.objectContaining({
-            event: 'foo click',
-          }),
-        }),
-      ],
+      {
+        key: 'product visible',
+        events: expect.any(Array),
+      },
       expect.anything(),
       expect.anything(),
     );
+
+    // promotion visible
+    expect(mockBatch).toHaveBeenNthCalledWith(
+      2,
+      {
+        key: 'promotion visible',
+        events: expect.any(Array),
+      },
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  test('dataLayer config', () => {
+    walkerjs = Walkerjs({
+      default: true,
+      pageview: false,
+      session: false,
+      dataLayerConfig: {
+        consent: { functional: true },
+        mapping: {
+          '*': {
+            visible: { batch: 2000 },
+          },
+        },
+      },
+    });
+
+    elb('entity action');
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
+    elb('walker consent', { functional: true });
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
+
+    elb('product visible');
+    elb('product visible');
+
+    jest.clearAllMocks();
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
+
+    jest.runAllTimers();
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
+    expect(mockDataLayer).toHaveBeenCalledWith({
+      event: 'batch',
+      batched_event: '* visible',
+      events: [
+        expect.objectContaining({ event: 'product visible' }),
+        expect.objectContaining({ event: 'product visible' }),
+      ],
+    });
   });
 });

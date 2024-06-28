@@ -1,4 +1,4 @@
-import type { Destination, Hooks, On } from '.';
+import type { Destination, Hooks } from '.';
 
 export type AnyObject = Record<string, unknown>;
 export type SingleOrArray<T> = T | Array<T>;
@@ -17,7 +17,6 @@ export interface State {
   globals: Properties;
   group: string;
   hooks: Hooks.Functions;
-  on: On.Config;
   queue: Events;
   round: number;
   user: User;
@@ -37,11 +36,6 @@ export interface Elb<R = void> {
     event: 'walker hook',
     name: K,
     hookFn: Hooks.Functions[K],
-  ): R;
-  (
-    event: 'walker on',
-    type: 'consent',
-    rules: SingleOrArray<On.ConsentConfig>,
   ): R;
   (event: 'walker run'): R;
   (event: 'walker user', user: User): R;
@@ -64,10 +58,7 @@ export type PushData =
   | User
   | Properties;
 
-export type PushOptions =
-  | Hooks.AnyFunction
-  | SingleOrArray<On.Options>
-  | object;
+export type PushOptions = Hooks.AnyFunction | object;
 
 export type PushContext = OrderedProperties;
 

@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/tagger",
   "description": "A helper to set up tracking based on walkerOS",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -12,14 +12,14 @@
   ],
   "scripts": {
     "build": "tsup",
+    "build:dev": "tsup --config tsup.dev.config.ts",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
-    "dev": "npm run dev:build & npm run dev:test",
-    "dev:build": "tsup --watch --config tsup.dev.config.ts",
-    "dev:test": "jest --watchAll --colors",
-    "test": "jest --colors --coverage"
+    "dev": "jest --watchAll --colors",
+    "test": "jest --colors --coverage",
+    "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/types": "1.1.0"
+    "@elbwalker/types": "3.0.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

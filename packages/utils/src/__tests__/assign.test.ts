@@ -1,7 +1,7 @@
-import { assign } from '..';
+import { assign } from '../core';
 import type { WalkerOS } from '@elbwalker/types';
 
-describe('Utils assign', () => {
+describe('assign', () => {
   let obj1: WalkerOS.AnyObject;
   let obj2: WalkerOS.AnyObject;
 

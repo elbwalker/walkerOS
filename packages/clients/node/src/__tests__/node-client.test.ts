@@ -49,6 +49,13 @@ describe('Client', () => {
     };
   });
 
+  test('client version equals package.json version', () => {
+    const packageJsonVersion = jest.requireActual('../../package.json').version;
+
+    const { instance } = getClient({});
+    expect(instance.client).toStrictEqual(packageJsonVersion);
+  });
+
   test('create', () => {
     const { elb, instance } = getClient();
     expect(elb).toBeDefined();
@@ -172,8 +179,6 @@ describe('Client', () => {
   });
 
   test('timing', async () => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
     const { elb } = getClient();
 
     jest.advanceTimersByTime(2500); // 2.5 sec load time
@@ -201,5 +206,21 @@ describe('Client', () => {
       id: '1d',
       previous_id: 'pr3v10us',
     });
+  });
+
+  test('version', async () => {
+    const { elb } = getClient();
+
+    mockEvent.version = { client: 'cl13nt', tagging: 42 };
+    result = await elb(mockEvent);
+
+    expect(result.event).toEqual(
+      expect.objectContaining({
+        version: {
+          client: 'cl13nt',
+          tagging: 42,
+        },
+      }),
+    );
   });
 });

@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/walker.js",
   "description": "Lightweight & vendor-agnostic tracking implementation layer for data-collection by simply adding attributes to your markup.",
-  "version": "2.1.3",
+  "version": "3.0.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -12,15 +12,15 @@
   ],
   "scripts": {
     "build": "tsup",
+    "build:dev": "tsup --config tsup.dev.config.ts",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
-    "dev": "npm run dev:build & npm run dev:test",
-    "dev:build": "tsup --watch --config tsup.dev.config.ts",
-    "dev:test": "jest --watchAll --colors",
+    "dev": "jest --watchAll --colors",
     "lint": "eslint \"**/*.ts*\"",
-    "test": "jest --colors --coverage"
+    "test": "jest --colors --coverage",
+    "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/utils": "3.1.2"
+    "@elbwalker/utils": "3.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

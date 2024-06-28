@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { StorageType } from '..';
+import type { StorageType } from '../web';
 
 export type CommandTypes =
   | 'Action'

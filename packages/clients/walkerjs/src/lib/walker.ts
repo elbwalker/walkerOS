@@ -46,7 +46,8 @@ export function getElbValues(
             (element as HTMLSelectElement).selectedIndex
           ].text;
         }
-        if (dynamicValue) val = String(dynamicValue);
+
+        val = String(dynamicValue);
       } catch (error) {
         val = '';
       }
@@ -147,7 +148,9 @@ export function getEvents(
   return events;
 }
 
-export function getGlobals(prefix: string): WalkerOS.Properties {
+export function getGlobals(
+  prefix: string = Const.Commands.Prefix,
+): WalkerOS.Properties {
   const globalsName = getElbAttributeName(
     prefix,
     Const.Commands.Globals,

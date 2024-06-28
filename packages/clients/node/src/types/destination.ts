@@ -5,6 +5,7 @@ import type {
 
 export interface Destination<Custom = unknown, EventCustom = unknown>
   extends WalkerOSDestination.Destination<Custom, EventCustom> {
+  config: Config<Custom, EventCustom>;
   push: PushFn<Custom, EventCustom>;
   init?: InitFn<Custom, EventCustom>;
   setup?: SetupFn<Custom, EventCustom>;

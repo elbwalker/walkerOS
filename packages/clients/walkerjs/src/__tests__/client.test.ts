@@ -11,7 +11,6 @@ describe('Walkerjs', () => {
   let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
-    jest.useFakeTimers();
     global.performance.getEntriesByType = jest
       .fn()
       .mockReturnValue([{ type: 'navigate' }]);
@@ -22,6 +21,13 @@ describe('Walkerjs', () => {
       pageview: false,
       session: false,
     });
+  });
+
+  test('client version equals package.json version', () => {
+    const packageJsonVersion = jest.requireActual('../../package.json').version;
+
+    walkerjs = Walkerjs();
+    expect(walkerjs.client).toStrictEqual(packageJsonVersion);
   });
 
   test('go', () => {
@@ -79,7 +85,6 @@ describe('Walkerjs', () => {
         id: 'http://localhost/',
         previous_id: '',
       },
-      walkerjs: true,
     });
 
     expect(mockDataLayer).toHaveBeenNthCalledWith(2, {
@@ -105,7 +110,6 @@ describe('Walkerjs', () => {
         id: 'http://localhost/',
         previous_id: '',
       },
-      walkerjs: true,
     });
   });
 

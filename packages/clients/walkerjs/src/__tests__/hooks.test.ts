@@ -7,7 +7,6 @@ describe('Hooks', () => {
   let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
-    jest.useFakeTimers();
     global.performance.getEntriesByType = jest
       .fn()
       .mockReturnValue([{ type: 'navigate' }]);
@@ -19,9 +18,11 @@ describe('Hooks', () => {
       return true;
     });
     const mockPush = jest.fn();
+    const mockPushBatch = jest.fn();
     const destination: WebDestination.DestinationInit = {
       init: mockInit,
       push: mockPush,
+      pushBatch: mockPushBatch,
     };
 
     const preDestinationInit = jest
@@ -38,19 +39,29 @@ describe('Hooks', () => {
       .mockImplementation(function (params, ...args) {
         return params.fn(...args);
       });
+    const preDestinationPushBatch = jest.fn();
+    const postDestinationPushBatch = jest
+      .fn()
+      .mockImplementation(function (params, ...args) {
+        return params.fn(...args);
+      });
 
     walkerjs = Walkerjs({
       pageview: false,
       session: false,
     });
 
-    elb('walker destination', destination);
+    elb('walker destination', destination, {
+      mapping: { bundle: { me: { batch: 100 } } },
+    });
     elb('walker run');
 
     elb('walker hook', 'preDestinationInit', preDestinationInit);
     elb('walker hook', 'postDestinationInit', postDestinationInit);
     elb('walker hook', 'preDestinationPush', preDestinationPush);
     elb('walker hook', 'postDestinationPush', postDestinationPush);
+    elb('walker hook', 'preDestinationPushBatch', preDestinationPushBatch);
+    elb('walker hook', 'postDestinationPushBatch', postDestinationPushBatch);
 
     expect(walkerjs.hooks).toEqual(
       expect.objectContaining({
@@ -58,6 +69,8 @@ describe('Hooks', () => {
         postDestinationInit: expect.any(Function),
         preDestinationPush: expect.any(Function),
         postDestinationPush: expect.any(Function),
+        preDestinationPushBatch: expect.any(Function),
+        postDestinationPushBatch: expect.any(Function),
       }),
     );
 
@@ -72,10 +85,17 @@ describe('Hooks', () => {
         result: undefined,
       },
       expect.objectContaining({ event: 'e a' }), // event
-      { init: true }, // destination config
+      { init: true, mapping: { bundle: { me: { batch: 100 } } } }, // destination config
       undefined, // custom event mapping
       expect.objectContaining({ allowed: true }), // walkerjs instance
     );
+
+    elb('bundle me', { on: 'ce' });
+    elb('bundle me', { tw: 'ice' });
+    expect(preDestinationPushBatch).toHaveBeenCalledTimes(0);
+    jest.advanceTimersByTime(100);
+
+    expect(preDestinationPushBatch).toHaveBeenCalledTimes(1);
   });
 
   test('Push', () => {
@@ -180,7 +200,6 @@ describe('Hooks', () => {
       },
       expect.objectContaining({
         storage: true,
-        isStart: true,
         instance: expect.any(Object),
         data: expect.any(Object),
         cb: expect.any(Function),

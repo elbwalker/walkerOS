@@ -1,14 +1,10 @@
-import { Const } from '../..';
+import { Const } from '../../core';
 import { storageDelete, storageRead, storageWrite } from '../../';
 
-describe('Utils Storage', () => {
+describe('Storage', () => {
   const w = window;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-    jest.useFakeTimers();
-  });
+  beforeEach(() => {});
 
   test('Storage', async () => {
     const key = 'id';

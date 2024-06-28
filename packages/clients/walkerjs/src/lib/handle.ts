@@ -1,14 +1,15 @@
+import type { Hooks, WalkerOS } from '@elbwalker/types';
+import type { On, WebClient, WebDestination } from '../types';
 import { Const, assign, isSameType } from '@elbwalker/utils';
-import type { WebClient, WebDestination } from '../types';
 import { isElementOrDocument, isObject } from './helper';
-import { Hooks, On, WalkerOS } from '@elbwalker/types';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';
-import { setConsent, setUserIds } from './set';
-import { addDestination, addHook } from './add';
+import { addDestination } from './destination';
 import { on } from './on';
 import { run } from './run';
 import { pushToDestination } from './push';
+import { addHook } from './hooks';
+import { setConsent } from './consent';
 
 export function handleCommand(
   instance: WebClient.Instance,
@@ -56,7 +57,7 @@ export function handleCommand(
       ready(instance, run, instance, data as Partial<WebClient.State>);
       break;
     case Const.Commands.User:
-      isObject(data) && setUserIds(instance, data as WalkerOS.User);
+      if (isObject(data)) assign(instance.user, data, { shallow: false });
       break;
     default:
       break;

@@ -1,9 +1,8 @@
-// const deviceKey = config.deviceKey || 'elbDeviceId';
-// Also as parameter possible like the isNew for sessionStart
-
-import { elb, sessionStorage, sessionWindow } from '../../';
+import type { WalkerOS } from '@elbwalker/types';
 import type { SessionStorageConfig } from './';
-import type { On, WalkerOS } from '@elbwalker/types';
+import { sessionStorage } from './sessionStorage';
+import { sessionWindow } from './sessionWindow';
+import { elb } from '../elb';
 
 export interface SessionConfig extends SessionStorageConfig {
   consent?: string;
@@ -60,7 +59,7 @@ function callFuncAndCb(
 }
 
 function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
-  const func: On.ConsentFn = (instance, consent) => {
+  const func = (instance: WalkerOS.Instance, consent: WalkerOS.Consent) => {
     let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
 
     if (config.consent && consent[config.consent])

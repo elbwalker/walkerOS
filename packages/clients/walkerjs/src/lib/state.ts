@@ -7,6 +7,7 @@ export function getState(
 ): WebClient.State {
   const defaultConfig: WebClient.Config = {
     dataLayer: false, // Do not use dataLayer by default
+    dataLayerConfig: {}, // Configuration for dataLayer
     elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
     globalsStatic: {}, // Static global properties
     pageview: true, // Trigger a page view event by default

@@ -1,5 +1,6 @@
 ---
 title: Helper
+sidebar_position: 1
 ---
 
 import Link from '@docusaurus/Link';
@@ -262,6 +263,20 @@ handle errors gracefully without disrupting the application flow.
 As this is a more complex util learn more about it on
 the&nbsp;<Link to="/docs/utils/hooks">Hooks</Link> page.
 
+## Node
+
+### getHashNode
+
+`async function getHashNode(str: string, length?: number): Promise<string>`
+generates a hash value from a string, usually used to anonymize or
+fingerprinting. To create a string concatenate all values. Use `length` to limit
+the output.
+
+```js
+await getHashNode('' + userAgent + language + domain + dayOfMonth, 16);
+// Return a 16 character hash, like 47e0bdd10f04ef13
+```
+
 ## Web
 
 ### getAttribute
@@ -279,6 +294,18 @@ const value = getAttribute(element, 'data-elb');
 
 This function simplifies the process of interacting with the DOM by providing an
 easy and direct way to access element attributes.
+
+### getHashWeb
+
+`async function getHashWeb(str: string, length?: number): Promise<string>`
+generates a hash value from a string, usually used to anonymize or
+fingerprinting. To create a string concatenate all values. Use `length` to limit
+the output.
+
+```js
+await getHashWeb('' + userAgent + language + domain + dayOfMonth, 16);
+// Return a 16 character hash, like 47e0bdd10f04ef13
+```
 
 ### isVisible
 
