@@ -38,6 +38,7 @@ export interface Instance extends State, WalkerOS.Instance {
 export interface State extends WalkerOS.State {
   config: Config;
   destinations: Destinations;
+  on: On.Config;
   session: undefined | SessionData;
   timing: number;
 }
@@ -82,6 +83,11 @@ export interface Elb extends WalkerOS.Elb {
     custom?: WalkerOS.Properties,
   ): void;
   (event: 'walker run', state?: Partial<State>): void;
+  (
+    event: 'walker on',
+    type: 'consent',
+    rules: WalkerOS.SingleOrArray<On.ConsentConfig>,
+  ): void;
 }
 
 export type ElbLayer = [
@@ -103,6 +109,7 @@ export type PushData =
 export type PushOptions =
   | WalkerOS.PushOptions
   | Walker.Trigger
+  | WalkerOS.SingleOrArray<On.Options>
   | WebDestination.Config;
 
 export type PushContext = WalkerOS.PushContext | Element;

@@ -13,6 +13,7 @@ export interface Instance extends State, WalkerOS.Instance {
 export interface State extends WalkerOS.State {
   config: Config;
   destinations: Destinations;
+  on: On.Config;
   session: undefined | SessionData;
   timing: number;
 }

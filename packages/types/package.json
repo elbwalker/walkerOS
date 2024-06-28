@@ -9,7 +9,9 @@
     "src/**",
     "CHANGELOG.md"
   ],
-  "scripts": {},
+  "scripts": {
+    "lint": "eslint \"**/*.ts*\""
+  },
   "devDependencies": {},
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
