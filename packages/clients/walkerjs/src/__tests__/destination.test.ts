@@ -657,7 +657,6 @@ describe('Destination', () => {
   });
 
   test('batch', () => {
-    jest.useFakeTimers();
     const mockBatch = jest.fn();
 
     elb('walker run');
@@ -666,7 +665,6 @@ describe('Destination', () => {
       pushBatch: mockBatch,
       config: {
         mapping: {
-          // @TODO
           product: {
             click: { batch: 50 },
             visible: { batch: 2000 },

@@ -23,7 +23,7 @@ export type Push<Custom, EventCustom> = (
 ) => void;
 
 export type PushBatch<Custom, EventCustom> = (
-  events: WalkerOSDestination.Batch<EventCustom>,
+  batch: WalkerOSDestination.Batch<EventCustom>,
   config: Config<Custom, EventCustom>,
   instance?: WalkerOS.Instance,
 ) => void;

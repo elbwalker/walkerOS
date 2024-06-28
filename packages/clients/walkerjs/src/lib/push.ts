@@ -192,11 +192,11 @@ export function pushToDestination(
       mappingEvent.batchFn =
         mappingEvent.batchFn ||
         debounce((destination, instance) => {
-          useHooks(destination.pushBatch!, 'DestinationPush', instance.hooks)(
-            batched,
-            destination.config,
-            instance,
-          );
+          useHooks(
+            destination.pushBatch!,
+            'DestinationPushBatch',
+            instance.hooks,
+          )(batched, destination.config, instance);
 
           // Reset the batched events queue
           batched.events = [];

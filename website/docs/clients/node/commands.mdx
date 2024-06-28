@@ -86,7 +86,12 @@ as a value stored in a cookie for a more extended period, and the session can be
 used for temporary identification.
 
 ```js
-elb('walker user', { id: 'us3r', device: 'c00k13', session: 's3ss10n' });
+elb('walker user', {
+  id: 'us3r',
+  device: 'c00k13',
+  session: 's3ss10n',
+  hash: getHash(str),
+});
 ```
 
 The new user IDs have been added to each event. Make sure only to use hashed or
@@ -98,7 +103,8 @@ anonymous ids.
   "user": {
     "id": "us3r",
     "device": "c00k13",
-    "hash": "s3ss10n"
+    "session": "s3ss10n"
+    "hash": "h4sh3d"
   }
   // other properties omitted
 }

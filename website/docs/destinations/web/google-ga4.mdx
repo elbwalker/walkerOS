@@ -43,9 +43,8 @@ const config = {
     transport_url: 'https://www.google-analytics.com/j/collect',
   },
   mapping: {
-    '*': { '*': {} }, // Process all events
     // entity: { action: { name: 'custom_name' } },
-    page: { view: { ignore: true } }, // Ignore page view events, same as pageview: false
+    page: { view: { ignore: true } }, // Ignore page view events
     product: {
       add: {
         name: 'add_to_cart', // Rename the product add event to add_to_cart

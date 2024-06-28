@@ -74,8 +74,8 @@ flowchart LR
     analytics["Analytics"]
   end
   Clients --> Destinations
-  Clients --> Stacks
-  Stacks --> Destinations
+  Destinations --> Stacks
+  Stacks --> Tools
   Destinations --> Tools
   click Clients "/docs/clients/"
   click Stacks "/docs/stacks/"
@@ -84,10 +84,10 @@ flowchart LR
 
 - <Link to="clients">**Clients**</Link>: Collecting events, state management and
   complete control of data collection.
-- <Link to="stacks">**Stacks**</Link>: Server-side processing for data
-  validation, enrichment and redaction.
 - <Link to="destinations">**Destinations**</Link>: Activating data by
   initializing, mapping and finally sharing events to third-party tools.
+- <Link to="stacks">**Stacks**</Link>: Server-side processing for data
+  validation, enrichment and redaction.
 - <Link to="utils">**Utils**</Link>: Supporting helper function to standardize
   and improve data collection.
 
