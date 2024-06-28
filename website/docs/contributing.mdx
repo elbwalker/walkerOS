@@ -57,8 +57,8 @@ turbo run test
 turbo run build
 
 # To develop or build a specific package use --filter option
-turbo run dev --filter=walker.js
-turbo run build --filter=walker.js --filter=utils
+turbo run dev --filter=*walker.js
+turbo run build --filter=*walker.js --filter=*utils
 ```
 
 The `filter` option can be used to only run one or multiple packages. To filter
