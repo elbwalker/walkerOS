@@ -9,7 +9,7 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @elbwalker/utils@4.0.0-next.2
+  - @elbwalker/utils@3.2.0-next.2
 
 ## 2.0.0-next.1
 
@@ -20,7 +20,7 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @elbwalker/utils@4.0.0-next.1
+  - @elbwalker/utils@3.2.0-next.1
 
 ## 2.0.0-next.0
 
@@ -46,7 +46,7 @@
 - Updated dependencies [927dc26]
 - Updated dependencies [cc91d5d]
 - Updated dependencies [eaaa5e9]
-  - @elbwalker/utils@4.0.0-next.0
+  - @elbwalker/utils@3.2.0-next.0
 
 ## 1.0.3
 

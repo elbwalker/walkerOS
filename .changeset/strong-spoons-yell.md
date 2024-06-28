@@ -1,7 +1,7 @@
 ---
 '@elbwalker/walker.js': major
 '@elbwalker/types': major
-'@elbwalker/utils': major
+'@elbwalker/utils': minor
 ---
 
 Bundle event pushes to destinations

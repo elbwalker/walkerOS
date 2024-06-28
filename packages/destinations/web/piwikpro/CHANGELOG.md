@@ -10,7 +10,7 @@
 
 - Updated dependencies
   - @elbwalker/walker.js@3.0.0-next.3
-  - @elbwalker/utils@4.0.0-next.2
+  - @elbwalker/utils@3.2.0-next.2
 
 ## 1.1.4-next.2
 
@@ -25,7 +25,7 @@
 
 - Updated dependencies
   - @elbwalker/walker.js@3.0.0-next.1
-  - @elbwalker/utils@4.0.0-next.1
+  - @elbwalker/utils@3.2.0-next.1
 
 ## 1.1.4-next.0
 
@@ -48,7 +48,7 @@
 - Updated dependencies [cc91d5d]
 - Updated dependencies [eaaa5e9]
   - @elbwalker/walker.js@3.0.0-next.0
-  - @elbwalker/utils@4.0.0-next.0
+  - @elbwalker/utils@3.2.0-next.0
 
 ## 1.1.3
 

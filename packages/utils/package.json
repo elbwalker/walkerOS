@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/utils",
   "description": "Shared utils for walkerOS packages",
-  "version": "4.0.0-next.2",
+  "version": "3.2.0-next.2",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
