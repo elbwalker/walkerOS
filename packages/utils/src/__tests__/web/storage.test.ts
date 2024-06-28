@@ -4,11 +4,7 @@ import { storageDelete, storageRead, storageWrite } from '../../';
 describe('Storage', () => {
   const w = window;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-    jest.useFakeTimers();
-  });
+  beforeEach(() => {});
 
   test('Storage', async () => {
     const key = 'id';

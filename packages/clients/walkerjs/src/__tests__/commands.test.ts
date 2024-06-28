@@ -7,7 +7,6 @@ describe('Commands', () => {
   let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
-    jest.useFakeTimers();
     global.performance.getEntriesByType = jest
       .fn()
       .mockReturnValue([{ type: 'navigate' }]);

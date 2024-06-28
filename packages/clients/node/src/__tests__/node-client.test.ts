@@ -179,8 +179,6 @@ describe('Client', () => {
   });
 
   test('timing', async () => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
     const { elb } = getClient();
 
     jest.advanceTimersByTime(2500); // 2.5 sec load time

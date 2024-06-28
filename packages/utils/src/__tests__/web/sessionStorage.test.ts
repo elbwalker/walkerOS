@@ -15,10 +15,6 @@ describe('SessionStorage', () => {
   const mockStorageRead = storageRead as jest.Mock;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-    jest.useFakeTimers();
-
     mockStorageWrite.mockReset();
     mockStorageRead.mockReset();
 

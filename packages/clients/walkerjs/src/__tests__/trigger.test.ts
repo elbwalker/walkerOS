@@ -16,7 +16,6 @@ describe('Trigger', () => {
   beforeEach(() => {
     document.body.innerHTML = html;
 
-    jest.useFakeTimers();
     jest.spyOn(global, 'setTimeout');
     jest.spyOn(global, 'setInterval');
     global.performance.getEntriesByType = jest

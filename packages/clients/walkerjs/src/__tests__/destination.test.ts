@@ -725,7 +725,6 @@ describe('Destination', () => {
   });
 
   test('dataLayer config', () => {
-    jest.useFakeTimers();
     walkerjs = Walkerjs({
       default: true,
       pageview: false,

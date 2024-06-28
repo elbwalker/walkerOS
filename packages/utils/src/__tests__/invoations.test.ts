@@ -3,11 +3,7 @@ import { debounce, throttle } from '../core';
 describe('Invocations', () => {
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-    jest.useFakeTimers();
-  });
+  beforeEach(() => {});
 
   test('debounce', async () => {
     let fn = debounce(mockFn);
