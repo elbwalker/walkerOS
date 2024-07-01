@@ -1,5 +1,43 @@
 # @elbwalker/destination-web-google-ga4
 
+## 3.0.0
+
+### Major Changes
+
+- cc91d5d: config to state
+  [#349](https://github.com/elbwalker/walkerOS/issues/349)
+
+### Minor Changes
+
+- 7c27f86: v3
+
+### Patch Changes
+
+- Updated dependencies [7c27f86]
+  - @elbwalker/walker.js@3.0.0
+
+## 2.1.3
+
+### Patch Changes
+
+- @elbwalker/walker.js@2.1.3
+
+## 2.1.2
+
+### Patch Changes
+
+- Updated dependencies [710798d]
+  - @elbwalker/walker.js@2.1.2
+
+## 2.1.1
+
+### Patch Changes
+
+- da698d9: devDeps to deps
+  [#340](https://github.com/elbwalker/walkerOS/issues/340)
+- Updated dependencies [dc3dea8]
+  - @elbwalker/walker.js@2.1.1
+
 ## 2.1.0
 
 ### Minor Changes
@@ -11,41 +49,8 @@
 
 ### Patch Changes
 
-- Updated dependencies [451e1ae]
-- Updated dependencies [451e1ae]
-- Updated dependencies [31aff20]
-- Updated dependencies [284042e]
-- Updated dependencies [7e84227]
-- Updated dependencies [451e1ae]
-- Updated dependencies [d17e25a]
-- Updated dependencies [412f60d]
-- Updated dependencies [06a0599]
-- Updated dependencies [ea7383e]
 - Updated dependencies [2dc0923]
   - @elbwalker/walker.js@2.1.0
-
-## 2.1.0-next.0
-
-### Minor Changes
-
-- Updates type definitions
-  [#315](https://github.com/elbwalker/walkerOS/issues/315)
-- don't require return on destination init
-  [#320](https://github.com/elbwalker/walkerOS/issues/320)
-
-### Patch Changes
-
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-- Updated dependencies
-  - @elbwalker/walker.js@2.1.0-next.0
 
 ## 2.0.1
 

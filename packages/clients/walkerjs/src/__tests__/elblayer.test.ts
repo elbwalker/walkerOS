@@ -175,84 +175,66 @@ describe('ElbLayer', () => {
     expect(w.elbLayer).toBeDefined();
   });
 
-  test('client version equals package.json version', () => {
-    const packageJsonVersion = jest.requireActual('../../package.json').version;
-
-    walkerjs = Walkerjs();
-    expect(walkerjs.config.client).toStrictEqual(packageJsonVersion);
-  });
-
   test('config update', () => {
     const defaultConfig: WebClient.Config = {
-      allowed: true,
-      client: expect.any(String),
-      consent: {},
-      count: expect.any(Number),
-      custom: {},
       dataLayer: false,
-      destinations: expect.any(Object),
+      dataLayerConfig: {},
       elbLayer: expect.any(Array),
-      globals: {},
+      globalsStatic: {},
+      pageview: true,
+      prefix: 'data-elb',
+      run: false,
+      session: { storage: false },
+      sessionStatic: {},
+      tagging: expect.any(Number),
+    };
+
+    const defaultState: WebClient.State = {
+      allowed: true,
+      consent: {},
+      config: defaultConfig,
+      custom: {},
+      count: expect.any(Number),
+      destinations: expect.any(Object),
+      globals: expect.any(Object),
       group: expect.any(String),
       hooks: {},
       on: {},
-      pageview: true,
-      prefix: 'data-elb',
       queue: expect.any(Array),
-      run: false,
       round: expect.any(Number),
-      session: { storage: false },
+      session: expect.objectContaining({ storage: false }),
       timing: expect.any(Number),
-      user: {},
-      tagging: expect.any(Number),
+      user: { session: expect.any(String) },
+    };
+
+    const defaultInterface: WebClient.Instance = {
+      push: expect.any(Function),
+      getAllEvents: expect.any(Function),
+      getEvents: expect.any(Function),
+      getGlobals: expect.any(Function),
+      sessionStart: expect.any(Function),
+      client: expect.any(String),
+      ...defaultState,
     };
 
     walkerjs = Walkerjs();
     elb('walker run');
 
-    expect(walkerjs.config).toStrictEqual(defaultConfig);
+    expect(walkerjs).toStrictEqual(defaultInterface);
 
     let update: WalkerOS.Properties | Partial<WebClient.Config> = {
       prefix: 'data-custom',
     };
-    let config = { ...defaultConfig, ...update };
+    const config = { ...defaultConfig, ...update };
     elb('walker config', update);
     expect(walkerjs.config).toStrictEqual(expect.objectContaining(update)); // Partial test
     expect(walkerjs.config).toStrictEqual(config); // Full test
 
-    update = { version: 2 };
-    elb('walker config', update);
-    expect(walkerjs.config).toStrictEqual(expect.objectContaining(update));
+    // @TODO Add more tests for other config properties
 
     update = { pageview: false };
     elb('walker config', update);
     expect(walkerjs.config).toStrictEqual(expect.objectContaining(update));
-
-    // Reset with w.elbLayer = [] creates another array than in defaultConfig
-    w.elbLayer.length = 0;
-    let globals: WalkerOS.Properties = { static: 'value' };
-    config = { ...defaultConfig, globals };
-    walkerjs = Walkerjs({ globals });
-    elb('walker run');
-    expect(walkerjs.config).toStrictEqual(config);
-
-    update = { foo: 'bar' };
-    elb('walker config', { globals: update });
-    globals = { ...globals, ...update };
-
-    expect(walkerjs.config).toStrictEqual(expect.objectContaining({ globals }));
-
-    update = { another: 'value' };
-    elb('walker config', { globals: update });
-    globals = { ...globals, ...update };
-
-    expect(walkerjs.config).toStrictEqual(expect.objectContaining({ globals }));
-
-    update = { static: 'override' };
-    elb('walker config', { globals: update });
-    globals = { ...globals, ...update };
-
-    expect(walkerjs.config).toStrictEqual(expect.objectContaining({ globals }));
   });
 
   test('custom elbLayer', () => {
@@ -366,7 +348,8 @@ describe('ElbLayer', () => {
     );
 
     // Parameters
-    expect((w.elbLayer[1] as unknown[])[0]).toBe('session start');
+    expect((w.elbLayer[1] as unknown[])[0]).toBe('walker user');
+    expect((w.elbLayer[2] as unknown[])[0]).toBe('session start');
   });
 
   test('custom push', () => {

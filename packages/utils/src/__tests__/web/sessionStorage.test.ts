@@ -1,8 +1,8 @@
-import { sessionStorage } from '../../';
-import * as storage from '../../web/storage';
+import { sessionStorage, storageRead, storageWrite } from '../../web';
 
 // Automatically mock the storage module
 jest.mock('../../web/storage', () => ({
+  ...jest.requireActual('../../web/storage'),
   storageRead: jest.fn(),
   storageWrite: jest.fn(),
 }));
@@ -11,13 +11,12 @@ describe('SessionStorage', () => {
   const w = window;
   const device = 'd3v1c3';
 
-  const mockStorageWrite = storage.storageWrite as jest.Mock;
-  const mockStorageRead = storage.storageRead as jest.Mock;
+  const mockStorageWrite = storageWrite as jest.Mock;
+  const mockStorageRead = storageRead as jest.Mock;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-    jest.useFakeTimers();
+    mockStorageWrite.mockReset();
+    mockStorageRead.mockReset();
 
     Object.defineProperty(w, 'performance', {
       value: {
@@ -29,7 +28,7 @@ describe('SessionStorage', () => {
 
   test('Regular first session', () => {
     // Reload with marketing parameter
-    expect(sessionStorage({})).toStrictEqual({
+    expect(sessionStorage()).toStrictEqual({
       isStart: true,
       storage: true,
       id: expect.any(String),
@@ -57,10 +56,6 @@ describe('SessionStorage', () => {
       runs: 1,
     };
 
-    mockStorageRead.mockImplementation((config) => {
-      return { ...config.data, mock: 'window' };
-    });
-
     mockStorageRead
       .mockReturnValue(JSON.stringify(session))
       .mockReturnValueOnce(device);
@@ -76,6 +71,25 @@ describe('SessionStorage', () => {
       isNew: false,
       runs: 2,
     });
+  });
+
+  test('New storage session only', () => {
+    // Using window only wouldn't detect a new session
+    window.performance.getEntriesByType = jest
+      .fn()
+      .mockReturnValue([{ type: 'reload' }]);
+
+    const session = sessionStorage();
+    expect(session).toStrictEqual(
+      expect.objectContaining({
+        isStart: true,
+        id: expect.any(String),
+        device: expect.any(String),
+      }),
+    );
+
+    expect(session.device).toHaveLength(8);
+    expect(session.id).toHaveLength(12);
   });
 
   test('Existing expired session', () => {
@@ -210,5 +224,84 @@ describe('SessionStorage', () => {
         count: 9001,
       }),
     );
+  });
+
+  test('Existing active session with new UTM entry', () => {
+    const start = Date.now();
+    const session = {
+      isStart: false,
+      storage: true,
+      id: 'sessionId',
+      start,
+      referrer: 'org',
+      updated: start,
+      marketing: true,
+      campaign: 'old',
+      isNew: true,
+      count: 1,
+      runs: 5,
+    };
+
+    mockStorageRead.mockImplementation((config) => {
+      return { ...config.data, mock: 'window' };
+    });
+
+    mockStorageRead
+      .mockReturnValue(JSON.stringify(session))
+      .mockReturnValueOnce(device);
+    jest.advanceTimersByTime(1000);
+
+    const newSession = sessionStorage({
+      url: 'https://www.elbwalker.com/?utm_campaign=new',
+    });
+
+    expect(newSession.id).not.toBe(session.id); // Expect a new session id
+    expect(newSession).toStrictEqual({
+      storage: true,
+      device,
+      start: start + 1000,
+      updated: start + 1000,
+      isStart: true,
+      marketing: true,
+      referrer: '',
+      campaign: 'new',
+      id: expect.any(String),
+      isNew: false,
+      count: 2,
+      runs: 1,
+    });
+  });
+
+  test('Pulse', () => {
+    const start = Date.now();
+    const session = {
+      device,
+      isStart: true,
+      storage: true,
+      id: 'sessionId',
+      start,
+      referrer: 'org',
+      updated: start,
+      isNew: true,
+      count: 1,
+      runs: 1,
+    };
+
+    mockStorageRead.mockImplementation((key) => {
+      if (key == 'elbDeviceId') return device;
+      return JSON.stringify(session);
+    });
+    jest.advanceTimersByTime(1000);
+
+    const newSession = sessionStorage({ pulse: true });
+
+    expect(newSession).toStrictEqual({
+      ...session,
+      device,
+      updated: start + 1000,
+      isStart: false,
+      isNew: true,
+      runs: 1,
+    });
   });
 });

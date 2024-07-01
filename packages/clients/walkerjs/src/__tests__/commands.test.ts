@@ -1,215 +1,216 @@
+import type { WebClient } from '..';
+import type { WalkerOS } from '@elbwalker/types';
 import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import type { WebClient } from '..';
 
-describe('Commands on consent', () => {
+describe('Commands', () => {
   let walkerjs: WebClient.Instance;
 
   beforeEach(() => {
+    global.performance.getEntriesByType = jest
+      .fn()
+      .mockReturnValue([{ type: 'navigate' }]);
+
     walkerjs = Walkerjs({
-      consent: { automatically: true },
       default: true,
+      consent: { test: true },
+      pageview: false,
+      session: false,
     });
   });
 
-  test('basics', () => {
-    const mockFn = jest.fn();
+  test('walker action', () => {
+    mockDataLayer.mockClear();
+    elb('walker action');
 
-    // Don't call on default
-    elb('walker on', 'consent', { marketing: mockFn });
-    expect(mockFn).not.toHaveBeenCalled();
+    // don't push walker commands to destinations
+    expect(mockDataLayer).not.toHaveBeenCalled();
+  });
 
-    // Different consent group
-    elb('walker consent', { functional: true });
-    expect(mockFn).not.toHaveBeenCalled();
+  test('walker user', () => {
+    elb('walker run');
 
-    // Granted
+    // Missing argument
+    elb('walker user');
+    elb('entity action');
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: {},
+      }),
+    );
+
+    elb('walker user', { id: 'userId' });
+    elb('entity action');
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: { id: 'userId' },
+      }),
+    );
+
+    elb('walker user', { device: 'userId' });
+    elb('entity action');
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: { id: 'userId', device: 'userId' },
+      }),
+    );
+
+    elb('walker user', { session: 'sessionid' });
+    elb('entity action');
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: { id: 'userId', device: 'userId', session: 'sessionid' },
+      }),
+    );
+
+    elb('walker user', { hash: 'h4sh' });
+    elb('entity action');
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        user: {
+          id: 'userId',
+          device: 'userId',
+          session: 'sessionid',
+          hash: 'h4sh',
+        },
+      }),
+    );
+
+    const user: WalkerOS.User = {
+      userAgent: 'Mozilla...',
+      browser: 'Chrome',
+      browserVersion: '90',
+      deviceType: 'desktop',
+      language: 'de-DE',
+      country: 'DE',
+      region: 'HH',
+      city: 'Hamburg',
+      timezone: 'Berlin',
+      os: 'walkerOS',
+      osVersion: '1.0',
+      screenSize: '1337x420',
+      ip: 'xxx',
+      internal: true,
+      custom: 'value',
+    };
+    elb('walker user', user);
+    expect(walkerjs.user).toStrictEqual(
+      expect.objectContaining({ ...user, id: 'userId' }),
+    );
+
+    elb('walker user', { ip: undefined });
+    expect(walkerjs.user).toStrictEqual(
+      expect.objectContaining({ ip: undefined }),
+    );
+  });
+
+  test('walker consent', () => {
+    jest.clearAllMocks();
+    walkerjs = Walkerjs({
+      consent: { functional: true },
+      default: true,
+      pageview: false,
+    });
+
+    elb('walker run');
+
+    expect(walkerjs.consent.functional).toBeTruthy();
+    expect(walkerjs.consent.marketing).not.toBeTruthy();
+    elb('consent check');
+    expect(mockDataLayer).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'consent check',
+        consent: { functional: true },
+      }),
+    );
+
+    // Missing argument
+    elb('walker consent');
+    expect(walkerjs.consent.functional).toBeTruthy();
+    expect(walkerjs.consent.marketing).not.toBeTruthy();
+
+    // Grant permissions
     elb('walker consent', { marketing: true });
-    expect(mockFn).toHaveBeenCalledTimes(1);
+    expect(walkerjs.consent.marketing).toBeTruthy();
+    elb('consent check');
+    expect(mockDataLayer).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'consent check',
+        consent: { functional: true, marketing: true },
+      }),
+    );
 
-    // Denied
+    // Revoke permissions
     elb('walker consent', { marketing: false });
-    expect(mockFn).toHaveBeenCalledTimes(2);
+    expect(walkerjs.consent.marketing).not.toBeTruthy();
+    elb('consent check');
+    expect(mockDataLayer).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'consent check',
+        consent: { functional: true, marketing: false },
+      }),
+    );
   });
 
-  test('consent register', () => {
-    const mockFn = jest.fn();
-    elb('walker on', 'consent', { foo: mockFn });
-    expect(walkerjs.config.on.consent![0].foo).toBe(mockFn);
+  test('walker globals', () => {
+    walkerjs = Walkerjs({ default: true, globalsStatic: { static: 'value' } });
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        globals: { static: 'value' },
+      }),
+    );
+
+    elb('walker globals', { foo: 'bar' });
+    elb('walker globals', { another: 'value' });
+    elb('walker globals', { static: 'override' });
+    elb('foo bar');
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        globals: {
+          static: 'override',
+          foo: 'bar',
+          another: 'value',
+        },
+      }),
+    );
   });
 
-  test('consent by start', () => {
-    const mockFn = jest.fn();
-    Walkerjs({
-      consent: { foo: false },
-      on: { consent: [{ foo: mockFn }] },
-      default: true,
-    });
-    expect(mockFn).toHaveBeenCalledTimes(1);
+  test('walker custom', () => {
+    walkerjs = Walkerjs({ default: true, custom: { static: 'value' } });
+    expect(walkerjs).toStrictEqual(
+      expect.objectContaining({
+        custom: { static: 'value' },
+      }),
+    );
+
+    elb('walker custom', { foo: 'bar' });
+    elb('walker custom', { another: 'value' });
+    elb('walker custom', { static: 'override' });
+    elb('foo bar');
+    expect(walkerjs).toStrictEqual(
+      expect.objectContaining({
+        custom: {
+          static: 'override',
+          foo: 'bar',
+          another: 'value',
+        },
+      }),
+    );
   });
 
-  test('consent already granted', () => {
-    const mockFn = jest.fn();
-    Walkerjs({
-      consent: { foo: false },
-      on: { consent: [{ foo: mockFn }] },
-      default: true,
-    });
-    expect(mockFn).toHaveBeenCalledTimes(1);
-  });
+  test('run with state', () => {
+    elb('walker run', { group: 'gr0up1d', round: 5 });
 
-  test('consent call on register', () => {
-    const mockFn = jest.fn();
-    elb('walker on', 'consent', { automatically: mockFn });
-
-    expect(mockFn).toHaveBeenCalledTimes(1);
-  });
-
-  test('consent parameters', () => {
-    const mockFn = jest.fn();
-    elb('walker on', 'consent', { automatically: mockFn });
-    expect(mockFn).toHaveBeenCalledWith(walkerjs, {
-      automatically: true,
-    });
-  });
-
-  // test for normal behavior if error is thrown
-  test('consent error', () => {
-    const mockFn = jest.fn(() => {
-      throw new Error('kaputt');
-    });
-    elb('walker on', 'consent', { automatically: mockFn });
-    expect(mockFn).toHaveBeenCalledTimes(1);
-    expect(mockDataLayer).toHaveBeenCalledTimes(2); // session start and page view only
-  });
-
-  test('multiple functions', () => {
-    const mockFnA = jest.fn();
-    const mockFnB = jest.fn();
-    const mockFnC = jest.fn();
-    elb('walker on', 'consent', [
-      { automatically: mockFnA },
-      { automatically: mockFnB },
-    ]);
-
-    expect(walkerjs.config.on.consent).toHaveLength(2);
-    expect(mockFnA).toHaveBeenCalledTimes(1);
-    expect(mockFnB).toHaveBeenCalledTimes(1);
-    // Add a new function
-    jest.clearAllMocks();
-    elb('walker on', 'consent', { automatically: mockFnC });
-    expect(walkerjs.config.on.consent).toHaveLength(3);
-    expect(mockFnA).toHaveBeenCalledTimes(0);
-    expect(mockFnB).toHaveBeenCalledTimes(0);
-    expect(mockFnC).toHaveBeenCalledTimes(1);
-
-    // Update consent
-    jest.clearAllMocks();
-    elb('walker consent', { automatically: false });
-    expect(mockFnA).toHaveBeenCalledTimes(1);
-    expect(mockFnB).toHaveBeenCalledTimes(1);
-    expect(mockFnC).toHaveBeenCalledTimes(1);
-  });
-
-  test('update', () => {
-    const mockFnA = jest.fn();
-    const mockFnB = jest.fn();
-
-    elb('walker on', 'consent', [{ a: mockFnA }, { b: mockFnB }]);
-
-    elb('walker consent', { a: true });
-    expect(mockFnA).toHaveBeenCalledTimes(1);
-    expect(mockFnB).toHaveBeenCalledTimes(0);
-
-    jest.clearAllMocks();
-    elb('walker consent', { b: true });
-    expect(mockFnA).toHaveBeenCalledTimes(0);
-    expect(mockFnB).toHaveBeenCalledTimes(1);
-
-    jest.clearAllMocks();
-    elb('walker consent', { c: true });
-    expect(mockFnA).toHaveBeenCalledTimes(0);
-    expect(mockFnB).toHaveBeenCalledTimes(0);
-  });
-});
-
-describe('Commands on run', () => {
-  let walkerjs: WebClient.Instance;
-
-  beforeEach(() => {
-    walkerjs = Walkerjs();
-  });
-
-  test('basics', () => {
-    const mockFn = jest.fn();
-
-    // Don't call on default
-    elb('walker on', 'run', mockFn);
-    expect(mockFn).toHaveBeenCalledTimes(0);
-
-    elb('walker run');
-    expect(mockFn).toHaveBeenCalledTimes(1); // only once
-  });
-
-  test('run register', () => {
-    const mockFn = jest.fn();
-    elb('walker on', 'run', mockFn);
-    elb('walker run');
-    expect(walkerjs.config.on.run![0]).toBe(mockFn);
-  });
-
-  test('run register init', () => {
-    const mockFn = jest.fn();
-    Walkerjs({
-      on: { run: [mockFn] },
-      default: true,
-    });
-    expect(mockFn).toHaveBeenCalledTimes(1);
-  });
-
-  test('run register after run', () => {
-    const mockFnPre = jest.fn();
-    const mockFnPost = jest.fn();
-    elb('walker on', 'run', mockFnPre);
-    expect(mockFnPre).toHaveBeenCalledTimes(0);
-    walkerjs = Walkerjs();
-    expect(mockFnPre).toHaveBeenCalledTimes(0);
-    elb('walker run');
-    expect(mockFnPre).toHaveBeenCalledTimes(1);
-
-    expect(mockFnPost).toHaveBeenCalledTimes(0);
-    elb('walker on', 'run', mockFnPost);
-    expect(mockFnPost).toHaveBeenCalledTimes(1);
-  });
-
-  test('run register elbLayer', () => {
-    const mockFn = jest.fn();
-    Walkerjs({
-      on: { run: [mockFn] },
-      default: true,
-    });
-    expect(mockFn).toHaveBeenCalledTimes(1);
-  });
-
-  test('consent error', () => {
-    const mockFn = jest.fn();
-    const mockBrokenFn = jest.fn(() => {
-      throw new Error('kaputt');
-    });
-    Walkerjs({
-      on: { run: [mockBrokenFn, mockFn] },
-      default: true,
-    });
-    expect(mockBrokenFn).toHaveBeenCalledTimes(1);
-    expect(mockFn).toHaveBeenCalledTimes(1);
-  });
-
-  test('run multiple', () => {
-    const mockFn = jest.fn();
-    elb('walker on', 'run', mockFn);
-    elb('walker run');
-    elb('walker run');
-    elb('walker run');
-    expect(mockFn).toHaveBeenCalledTimes(3);
+    expect(walkerjs).toStrictEqual(
+      expect.objectContaining({
+        group: 'gr0up1d',
+        round: 6,
+      }),
+    );
   });
 });

@@ -4,8 +4,6 @@ sidebar_position: 1
 description: How to tag a page with walker.js
 ---
 
-# General usage
-
 You can implement all sorts of front-end user events easily with walker.js. From
 product and UX events like promotion view, filter usage, etc. to e-commerce
 actions like product add to carts or order complete events. The walker.js
@@ -38,7 +36,7 @@ Tag a page with...
 </div>
 ```
 
-...get a full event like the following as a result:
+... to get a full event like the following as a result:
 
 ```js
 {
@@ -94,18 +92,19 @@ Learn more about the [event model](/docs/walkeros/event-model).
 
 :::
 
-You are completely **free to define naming conventions**. All you need to get
+You are entirely **free to define naming conventions**. All you need to get
 started are the **entity, action & trigger** attributes. Learn more about the
 [event model](https://www.elbwalker.com/blog/elbwalker-event-concept) in our
 blog.
 
 1. You define the **entity scope** by setting the data-elb attribute with the
-   name of an entity to an element, e.g. `data-elb="promotion"`. The default
-   entity page, when there is no data-elb.
+   name of an entity to an element, e.g., `data-elb="promotion"`. The default
+   entity is `page` when no `data-elb` is set.
 2. An **action** can be added by setting the data-elbaction attribute on the
    **same level or all child** elements in combination with a **matching
-   trigger**, e.g. `data-elbaction="visible:view"` to fire a promotion view
-   event when a user clicks on the tagged element.
+   trigger**, e.g., `data-elbaction="visible:view"` to fire a promotion view
+   event when the element has been in the viewport for at least 50% for one
+   second.
 3. (Optional) To define the entities' **properties**, set the **composited
    attribute** data-elb-ENTITY with the name and value, e.g.
    `data-elb-promotion="name:Setting up tracking easily;position:overlay"`.
@@ -115,43 +114,42 @@ blog.
 Walker.js comes with a bunch of pre-built triggers. You don't have to deal with
 event listener or mutation observer initialization anymore.
 
-| **Event** | **Definition**                                                                                                            |
-| --------- | ------------------------------------------------------------------------------------------------------------------------- |
-| load      | after loading a page when the DOM is ready                                                                                |
-| click     | when the element or a child is clicked                                                                                    |
-| visible   | after the element has been in the viewport for at least 50% for one second                                                |
-| hover     | each time the mouse enters the corresponding element                                                                      |
-| submit    | on a valid form submission                                                                                                |
-| wait(ms)  | waits ms seconds (15 seconds by default) until triggering                                                                 |
-| pulse(ms) | recurring trigger every ms seconds (15 seconds by default) if page is not hidden                                          |
-| custom    | calling elbLayer.push(), see [using JavaScript](/docs/clients/walkerjs/using-javascript)                                  |
-| scroll(y) | fires when min. y percent of the element's height is above the bottom of the window, e.g. scroll(80) for an 80% threshold |
+| **Event** | **Definition**                                                                                                             |
+| --------- | -------------------------------------------------------------------------------------------------------------------------- |
+| load      | after loading a page when the DOM is ready                                                                                 |
+| click     | when the element or a child is clicked                                                                                     |
+| visible   | after the element has been in the viewport for at least 50% for one second                                                 |
+| hover     | each time the mouse enters the corresponding element                                                                       |
+| submit    | on a valid form submission                                                                                                 |
+| wait(ms)  | waits ms seconds (15 seconds by default) until triggering                                                                  |
+| pulse(ms) | recurring trigger every ms seconds (15 seconds by default) if the page is not hidden                                       |
+| scroll(y) | fires when min. y percent of the element's height is above the bottom of the window, e.g., scroll(80) for an 80% threshold |
 
 :::caution
 
-Trigger names are predefined and need to be selected from the list while the
+Trigger names are predefined and need to be selected from the list, while the
 `action` can be an arbitrarily defined name.
 
 :::
 
 ### Abbreviation
 
-If the trigger and action values are equal, e.g. for click events, you can just
+If the trigger and action values are equal, e.g., for click events, you can just
 shorten the implementation:
 
 ```html
-<b data-elbaction="click"
-  >short** is equal to <s data-elbaction="click:click">long</s></b
->
+<b data-elbaction="click">
+  is equal to <s data-elbaction="click:click">long</s>
+</b>
 ```
 
 ### Parameters
 
-Some triggers require more information during their initialization, others
-accept optional parameters. A scroll trigger needs to know about the percentage
-a user scrolls down while a wait trigger wants to know about the number of
-milliseconds until the action gets triggered. Use brackets behind the trigger to
-pass that information.
+Some triggers require more information during initialization, while others
+accept optional parameters. A scroll trigger needs to know the percentage a user
+scrolls down while a wait trigger wants to know the number of milliseconds until
+the action gets triggered. Use brackets behind the trigger to pass that
+information.
 
 ```html
 <!-- specifying trigger parameters -->
@@ -162,10 +160,10 @@ pass that information.
 ### Action filter
 
 At some point, you might want to nest an entity inside another. To prevent an
-action to trigger both entities you can restrict the action to a specific entity
-by adding the name, e.g. data-elbaction="load:view(product)". If the trigger
-event gets called, the result will only include the property values from the
-specific entities.
+action to trigger both entities, you can restrict the action to a specific
+entity by adding the name, e.g. data-elbaction="load:view(product)". If the
+trigger event gets called, the result will only include the property values from
+the specific entities.
 
 ```html
 <!-- setting a filter for an entity -->
@@ -178,11 +176,10 @@ specific entities.
 
 ### Up-bubbling click trigger
 
-By clicking an element the event is bubbling up to the body element. If the
-walker finds a data-elbaction with the click trigger it will fire the action.
-It's often the image or a whole div-block that gets clicked, not the parent
-a-element. Using the bubbling-up flow, the walker still triggers the actions for
-you.
+By clicking an element, the event bubbles up to the body element. If the walker
+finds a data-elbaction with the click trigger, it will fire the action. Often,
+the image or a whole div-block gets clicked, not the parent a-element. Using the
+bubbling-up flow, the walker still triggers the actions for you.
 
 ```html
 <button data-elb="product" data-elbaction="click">
@@ -199,9 +196,9 @@ stopPropagation or preventDefault.
 
 ## Linking elements
 
-Use the `data-elblink` tag to extend the scope of an entity by other elements,
-placed somewhere else (like modals). Linked elements are related by some id.
-They are hierarchically and can either be a parent or a child.
+Use the `data-elblink` tag to extend the scope of an entity by other elements
+placed somewhere else (like modals). Specific IDs connect linked elements. They
+are hierarchically and can either be a parent or a child.
 
 ```html
 <div data-elb="info" data-elblink="details:parent">...</div>
@@ -211,13 +208,13 @@ They are hierarchically and can either be a parent or a child.
 ```
 
 The second element is the parent, triggering the visible action for the
-`info visible` event. There can be multiple children, but only one parent
-element per id.
+`info visible` event. There can be multiple children, but there is only one
+parent element per ID.
 
 :::note
 
 `data-elb`, `data-elbaction`, `data-elbcontext`, `data-elbglobals`, and
-`data-elblink` are reserved attributes whereas `data-elb-*` attributes may be
+`data-elblink` are reserved attributes, whereas `data-elb-*` attributes may be
 arbitrary combinations based on the related entity name. Actions and properties
 can be set anywhere inside an elb scope.
 
@@ -225,37 +222,65 @@ can be set anywhere inside an elb scope.
 
 :::caution
 
-Spaces in entities, e.g. "shopping cart" or actions, e.g. "add to cart" will be
-replaced by underscores to "shopping_cart" and "add_to_cart".
+Spaces in entities, e.g., "shopping cart" or actions, e.g., "add to cart" will
+be replaced by underscores to "shopping_cart" and "add_to_cart".
 
 :::
 
 :::tip
 
 Spaces in property values are no problem, e.g. `"category: 'summer sale'"` works
-fine. But better set them in quotes when doing so or when using symbols,
-especially `:` or `;`
+fine. But it is better to set them in quotes when doing so or when using
+symbols, especially `:` or `;`
 
 :::
 
-## Properties
+## Data
 
 ### Basic attributes
 
-Use the name of the entity to specify its properties. Property attributes have
-to be inside of the entity-scope
+To specify `data`, use the name of the entity. The `data` attributes have to be
+inside of the entity scope or a parent.
 
 ```html
-<div data-elb="entity">
-  <p data-elb-entity="key:value" />
-  <p data-elb-entity="foo:bar" />
+<div data-elb-entity="source:parent">
+  <div data-elb="entity">
+    <p data-elb-entity="key:value">...</p>
+    <p data-elb-entity="foo:bar">...</p>
+  </div>
 </div>
 ```
 
+```js
+{ data: { source: "parent", key: "value", foo: "bar", } }
+```
+
+### Hierarchy
+
+There is a hierarchy for the `data` properties, where the order defines which
+values to use for similar keys. Based on the triggering action element, the
+closest ones or parent values will be preferred over the others.
+
+```html
+<div id="family" data-elb="e" data-elbaction="click">
+  <div id="parent" data-elb-e="key:foo" data-elbaction="click">
+    <p id="child" data-elb-e="key:bar" data-elbaction="click"></p>
+    <b id="sibling" data-elbaction="click"></b>
+  </div>
+  <b data-elb-e="key:baz"></b>
+</div>
+```
+
+Based on which element gets clicked, the event will contain the following data
+
+- family: `{ key: 'baz' }`, the last found data-property
+- parent: `{ key: 'foo' }`, a direct data-value
+- child: `{ key: 'bar' }`, direct value closer than the parent
+- sibling: `{ key: 'foo' }`, no value specified, so it takes the parent's value
+
 ### Type casting
 
-Property values will be casted to their type, supporting string, number &
-boolean.
+Property values will be cast to their type, supporting string, number & boolean.
 
 ```html
 <div data-elb="types">
@@ -270,10 +295,10 @@ boolean.
 Browsers override duplicate attributes. Hence an element can only have one
 `data-elb`, `data-elb-ENTITY`, and/or data-elbaction attribute at a time.
 Nevertheless, it’s possible to define multiple entities, properties, and/or
-actions all at once within one attribute using quotes and semicolons. Key-value
-pairs are split by a semicolon. Therefore it’s necessary to escape values
-containing a semicolon. Quotes are here to meet your needs. To prevent a
-mistaken value-split use single quotes.
+actions within one attribute using quotes and semicolons. A semicolon splits
+key-value pairs. Therefore, it’s necessary to escape values that contain a
+semicolon. Quotes are here to meet your needs. To prevent a mistaken
+value-split, use single quotes.
 
 ```html
 <!-- value wrapping with quotes -->
@@ -281,7 +306,7 @@ mistaken value-split use single quotes.
 <p data-elb="foo" data-elb-foo="b:'a;r'">{ "b": "a;r" }</p>
 ```
 
-If a single quote is part of the value escape it with a backslash:
+If a single quote is part of the value, escape it with a backslash:
 
 ```html
 <!-- escaping values with backslash -->
@@ -298,9 +323,9 @@ The semicolon can be used as a separator to list multiple values inside of a
 
 ### Dynamic field values
 
-You might want to measure dynamic field values e.g. the quantity of a product or
-the value of the selected element. Use a `#` at the beginning followed by the
-attributes name to get access to the value of the element attribute.
+You might want to measure dynamic field values, e.g. the quantity of a product
+or the value of the selected element. Use a `#` at the beginning, followed by
+the attribute name to access the value of the element attribute.
 
 ```html
 <!-- Basic usage: elb-ENTITY="KEY:#VALUE" -->
@@ -308,8 +333,8 @@ attributes name to get access to the value of the element attribute.
 <div data-elb-product="name:#innerHTML">Everyday Ruck Snack</div>
 ```
 
-To capture a selected option from a list use `elb-ENTITY="KEY:#selected"` to get
-size:20L
+To capture a selected option from a list, use `elb-ENTITY="KEY:#selected"` to
+get size:20L
 
 ```html
 <select data-elb-product="size:#selected">
@@ -320,8 +345,8 @@ size:20L
 
 ### Arrays
 
-To use array types add the `[]` suffix to a properties name, like `size[]:m`.
-The walker.js will generate de-duplicated data properties.
+To use array types, add the `[]` suffix to a properties name, such as
+`size[]:m`. The walker.js will generate de-duplicated data properties.
 
 ```html
 <div data-elb="product">
@@ -343,7 +368,7 @@ The walker.js will generate de-duplicated data properties.
 
 Leave the entity name empty (only `data-elb-`) to add the property to any
 related entity. Explicitly named properties are preferred over generic ones.
-It's suggested to prefer explicit properties over generic ones.
+It's suggested that explicit properties be preferred over generic ones.
 
 ```html
 <div data-elb-="p:v">
@@ -372,9 +397,9 @@ It's suggested to prefer explicit properties over generic ones.
 
 There might be properties that don't belong to just one event but to **all
 events on a page**. Those properties are called the globals and will be
-**collected once**, right before the first event got fired. The globals are
-arbitrary like the data property. What is special about them is that you can
-define them anywhere on a page by using the `data-elbglobals` attribute.
+**collected once**, right before the first event, got fired. The globals are
+arbitrary, like the data property. What is unique about them is that you can
+define them anywhere on a page using the `data-elbglobals` attribute.
 
 ```html
 <div data-elbglobals="outof:scope"></div>
@@ -395,7 +420,7 @@ This example will lead to the following event:
 
 :::note
 
-For reasons of performance, the globals are only collected once per run.
+For performance reasons, the globals are only collected once per run.
 
 :::
 
@@ -404,7 +429,7 @@ For reasons of performance, the globals are only collected once per run.
 All entities inside a defined context want to know about their context. Those
 are not as relevant as globals for every event, but helpful information for
 every framing context of an event it is embedded in. A context could be a
-position or test for example.
+position or test, for example.
 
 ```html
 <div data-elbcontext="test:engagement" data-elbglobals="plan:paid">

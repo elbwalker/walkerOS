@@ -1,9 +1,8 @@
-// const deviceKey = config.deviceKey || 'elbDeviceId';
-// Also as parameter possible like the isNew for sessionStart
-
-import { elb, sessionStorage, sessionWindow } from '../../';
+import type { WalkerOS } from '@elbwalker/types';
 import type { SessionStorageConfig } from './';
-import type { On, WalkerOS } from '@elbwalker/types';
+import { sessionStorage } from './sessionStorage';
+import { sessionWindow } from './sessionWindow';
+import { elb } from '../elb';
 
 export interface SessionConfig extends SessionStorageConfig {
   consent?: string;
@@ -29,7 +28,8 @@ export interface SessionData {
 export type SessionFunction = typeof sessionStorage | typeof sessionWindow;
 export type SessionCallback = (
   session: SessionData,
-  instance?: WalkerOS.Instance,
+  instance: WalkerOS.Instance | undefined,
+  defaultCb: SessionCallback,
 ) => void;
 
 export function sessionStart(config: SessionConfig = {}): SessionData | void {
@@ -44,43 +44,45 @@ export function sessionStart(config: SessionConfig = {}): SessionData | void {
     });
   } else {
     // just do it
-    return callFuncAndCb(sessionFn(config), cb, instance);
+    return callFuncAndCb(sessionFn(config), instance, cb);
   }
 }
 
 function callFuncAndCb(
   session: SessionData,
-  cb?: SessionCallback | false,
   instance?: WalkerOS.Instance,
+  cb?: SessionCallback | false,
 ) {
   if (cb === false) return session; // Callback is disabled
   if (!cb) cb = defaultCb; // Default callback if none is provided
-  return cb(session, instance);
+  return cb(session, instance, defaultCb);
 }
 
 function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
-  const func: On.ConsentFn = (instance, consent) => {
+  const func = (instance: WalkerOS.Instance, consent: WalkerOS.Consent) => {
     let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
 
     if (config.consent && consent[config.consent])
       // Use storage if consent is granted
       sessionFn = () => sessionStorage(config);
 
-    return callFuncAndCb(sessionFn(), cb, instance);
+    return callFuncAndCb(sessionFn(), instance, cb);
   };
 
   return func;
 }
 
 const defaultCb: SessionCallback = (session): SessionData => {
-  if (session.storage) {
-    // Set user IDs
-    const user: WalkerOS.User = {};
-    if (session.id) user.session = session.id;
-    if (session.device) user.device = session.device;
+  const user: WalkerOS.User = {};
 
-    elb('walker user', user);
-  }
+  // User.session is the session ID
+  if (session.id) user.session = session.id;
+
+  // Set device ID only in storage mode
+  if (session.storage && session.device) user.device = session.device;
+
+  // Set user IDs
+  elb('walker user', user);
 
   if (session.isStart) elb('session start', session);
 

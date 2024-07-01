@@ -1,24 +1,20 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import WebClient, { elb } from '@elbwalker/walker.js';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { destinationWebAPI } from '@elbwalker/destination-web-api';
 import Tagger from '@elbwalker/tagger';
-import { sessionStart } from '@elbwalker/utils';
 
-export const Walkerjs = () => {
+export const DataCollection = () => {
   const location = useLocation();
 
   useEffect(() => {
     if (!window.walkerjs) {
       // Setup walkerjs
       window.elb = elb;
-      window.walkerjs = WebClient({
+      window.walkerjs = Walkerjs({
         default: true,
+        session: {},
       });
-
-      // Session
-      const session = sessionStart();
-      if (session) elb('session start', session);
 
       // Destination Lama
       elb('walker destination', destinationWebAPI, {

@@ -3,6 +3,7 @@ title: Firebase
 description: Firebase stack for walkerOS
 ---
 
+import Link from '@docusaurus/Link';
 import PackageLink from '/src/components/docs/package-link';
 
 <PackageLink
@@ -10,14 +11,19 @@ import PackageLink from '/src/components/docs/package-link';
   npm="@elbwalker/stack-firebase"
 />
 
-The Firebase Stack is a specialized stack designed to work seamlessly with
-Firebase's suite of backend services. It provides a robust yet simple, scalable,
-and secure way to manage your event data within the Firebase ecosystem by using
-a single function.
+The Firebase Stack is a wrapper for the
+&nbsp;<Link to="/docs/clients/node/">node client</Link> running
+on&nbsp;<Link to="https://firebase.google.com/docs/functions">Cloud Functions
+for Firebase v2</Link>. The serverless function is designed to receive
+incoming&nbsp;<Link to="/docs/walkeros/event-model">walkerOS events</Link> via
+the&nbsp;<Link to="https://firebase.google.com/docs/functions/http-events?gen=2nd">HTTPS
+trigger</Link>, and send them to&nbsp;<Link to="/docs/destinations/node/">node
+destinations</Link>. It allows server-side data processing within an own
+infrastructure.
 
 ## Features
 
-- **Event Reception**: Receives incoming events from clients via API.
+- **Event Ingestion**: Receives incoming from clients via API.
 - **Data Validation**: Ensures incoming data meets predefined schemas and data
   contracts.
 - **Event Processing**: Enriches and transforms data before sending it to
@@ -28,3 +34,73 @@ a single function.
 This stack is currently in beta. Please report any issues you encounter.
 
 :::
+
+## Installation
+
+Read the
+official&nbsp;<Link to="https://firebase.google.com/docs/functions/get-started?gen=2nd">Get
+started</Link> guide for Firebase Cloud Functions, and install
+the&nbsp;<Link to="https://firebase.google.com/docs/cli#setup_update_cli">Firebase
+CLI</Link>.
+
+:::info
+
+There is
+a&nbsp;<Link to="https://github.com/elbwalker/walkerOS/tree/main/apps/demos/stacks/firebase">demo
+setup</Link> for the Firebase stack available.
+
+:::
+
+After creating a Firebase project, and a
+new&nbsp;<Link to="https://firebase.google.com/docs/functions/typescript">functions
+code</Link> directory (e.g., by running `firebase init functions`) install the
+walkerOS Firebase Stack:
+
+```bash
+npm install @elbwalker/stack-firebase
+```
+
+In the `firebase/functions/src/index.ts` file, import the Firebase Stack and
+create a new instance:
+
+```ts
+import { firebaseStack } from '@elbwalker/stack-firebase';
+
+const { elb, push } = firebaseStack({
+  // see Configuration
+});
+```
+
+The `firebaseStack` returns the created node client `instance`, and two
+functions:
+
+- `elb` to configure the instance
+  using&nbsp;<Link to="/docs/clients/node/commands">node commands</Link>
+- `push`: A Firebase `HttpsFunction` function to export and deploy
+
+## Configuration
+
+Set up the Stacks behavior using <Link to="/docs/clients/node/commands">node
+commands</Link>.
+
+```ts
+elb('walker user', { session: createFingerprint() });
+elb('walker destination', { push: console.log });
+```
+
+## Deployment
+
+Export the initially created `push` function with the name (here `ingest`) that
+will be the publicly available endpoints name. The `push` function accepts
+a&nbsp;<Link to="https://firebase.google.com/docs/reference/functions/2nd-gen/node/firebase-functions.https.httpsoptions">HttpsOptions</Link>
+config.
+
+```ts
+export const ingest = push({ cors: true, region: 'europe-west1' });
+```
+
+To deploy the function run:
+
+```bash
+firebase deploy --only functions
+```

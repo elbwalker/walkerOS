@@ -1,19 +1,21 @@
-import { On } from '@elbwalker/types';
-import { elb, sessionStart, sessionStorage, sessionWindow } from '../../';
-import type { WalkerOS } from '@elbwalker/types';
+import type { On, WalkerOS } from '@elbwalker/types';
+import { elb, sessionStart, sessionStorage, sessionWindow } from '../../web';
 
 let consent: On.ConsentConfig;
 
-jest.mock('../../web', () => ({
-  ...jest.requireActual('../../web'), // Keep original
+jest.mock('../../web/elb', () => ({
   elb: jest.fn().mockImplementation((event, data, options) => {
     if (event === 'walker on' && data == 'consent') {
       consent = options;
     }
   }),
+}));
+jest.mock('../../web/session/sessionStorage', () => ({
   sessionStorage: jest.fn().mockImplementation((config) => {
     return { ...config.data, mock: 'storage' };
   }),
+}));
+jest.mock('../../web/session/sessionWindow', () => ({
   sessionWindow: jest.fn().mockImplementation((config) => {
     return { ...config.data, mock: 'window' };
   }),
@@ -87,6 +89,7 @@ describe('sessionStart', () => {
         mock: 'window',
       },
       instance,
+      expect.any(Function),
     );
   });
 
@@ -107,6 +110,7 @@ describe('sessionStart', () => {
         mock: 'storage',
       },
       instance,
+      expect.any(Function),
     );
 
     // Denied, use sessionWindow
@@ -119,15 +123,29 @@ describe('sessionStart', () => {
         mock: 'window',
       },
       instance,
+      expect.any(Function),
     );
   });
 
   test('Callback default', () => {
     // No elb calls if no session is started
     sessionStart();
-    expect(mockElb).toHaveBeenCalledTimes(0);
-    sessionStart({ data: { isStart: true } });
     expect(mockElb).toHaveBeenCalledTimes(1);
+    expect(mockElb).toHaveBeenCalledWith('walker user', expect.any(Object));
+
+    jest.clearAllMocks();
+    sessionStart({ data: { isStart: true } });
+    expect(mockElb).toHaveBeenCalledTimes(2);
+    expect(mockElb).toHaveBeenNthCalledWith(
+      1,
+      'walker user',
+      expect.any(Object),
+    );
+    expect(mockElb).toHaveBeenNthCalledWith(
+      2,
+      'session start',
+      expect.any(Object),
+    );
   });
 
   test('Callback default storage', () => {

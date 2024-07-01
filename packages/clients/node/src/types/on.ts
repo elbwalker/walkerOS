@@ -1,19 +1,17 @@
-import { WalkerOS } from './';
+import type { WalkerOS } from '@elbwalker/types';
 
 // Instance state for the on actions
 export type Config = {
   consent?: Array<ConsentConfig>;
+  ready?: Array<ReadyConfig>;
   run?: Array<RunConfig>;
 };
 
 // On types
 export type Types = keyof Config;
 
-// Function definitions for the on actions
-export type Functions = ConsentFn | RunFn;
-
 // Parameters for the onAction function calls
-export type Options = ConsentConfig | RunConfig;
+export type Options = ConsentConfig | ReadyConfig | RunConfig;
 
 // Consent
 export interface ConsentConfig {
@@ -23,6 +21,10 @@ export type ConsentFn = (
   instance: WalkerOS.Instance,
   consent: WalkerOS.Consent,
 ) => void;
+
+// Ready
+export type ReadyConfig = ReadyFn;
+export type ReadyFn = (instance: WalkerOS.Instance) => void;
 
 // Run
 export type RunConfig = RunFn;

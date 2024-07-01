@@ -1,6 +1,26 @@
-import type { On, WalkerOS } from '@elbwalker/types';
-import type { WebClient } from '../';
+import type { WalkerOS } from '@elbwalker/types';
+import type { On, WebClient } from '../';
 import { Const, tryCatch } from '@elbwalker/utils';
+
+export function on(
+  instance: WebClient.Instance,
+  type: On.Types,
+  option: WalkerOS.SingleOrArray<On.Options>,
+) {
+  const on = instance.on;
+  const onType: Array<On.Options> = on[type] || [];
+  const options = Array.isArray(option) ? option : [option];
+
+  options.forEach((option) => {
+    onType.push(option);
+  });
+
+  // Update instance on state
+  (on[type] as typeof onType) = onType;
+
+  // Execute the on function directly
+  onApply(instance, type, options);
+}
 
 export function onApply(
   instance: WebClient.Instance,
@@ -8,16 +28,34 @@ export function onApply(
   options?: Array<On.Options>,
   config?: WalkerOS.Consent,
 ) {
-  const onConfig = options || instance.config.on[type];
+  // Use the optionally provided options
+  let onConfig = options || [];
 
-  if (!onConfig) return; // No on-events registered, nothing to do
+  if (!options) {
+    // Get the instance on events
+    onConfig = instance.on[type] || [];
+
+    // Add all available on events from the destinations
+    Object.values(instance.destinations).forEach((destination) => {
+      const onTypeConfig = destination.config.on?.[type];
+      if (onTypeConfig) onConfig = onConfig.concat(onTypeConfig);
+    });
+  }
+
+  if (!onConfig.length) return; // No on-events registered, nothing to do
 
   switch (type) {
     case Const.Commands.Consent:
       onConsent(instance, onConfig as Array<On.ConsentConfig>, config);
       break;
+    case Const.Commands.Ready:
+      onReady(instance, onConfig as Array<On.ReadyConfig>);
+      break;
     case Const.Commands.Run:
       onRun(instance, onConfig as Array<On.RunConfig>);
+      break;
+    case Const.Commands.Session:
+      onSession(instance, onConfig as Array<On.SessionConfig>);
       break;
     default:
       break;
@@ -29,7 +67,7 @@ function onConsent(
   onConfig: Array<On.ConsentConfig>,
   currentConsent?: WalkerOS.Consent,
 ): void {
-  const consentState = currentConsent || instance.config.consent;
+  const consentState = currentConsent || instance.consent;
 
   onConfig.forEach((consentConfig) => {
     // Collect functions whose consent keys match the rule keys directly
@@ -43,12 +81,33 @@ function onConsent(
   });
 }
 
+function onReady(
+  instance: WebClient.Instance,
+  onConfig: Array<On.ReadyConfig>,
+): void {
+  if (instance.allowed)
+    onConfig.forEach((func) => {
+      tryCatch(func)(instance);
+    });
+}
+
 function onRun(
   instance: WebClient.Instance,
   onConfig: Array<On.RunConfig>,
 ): void {
-  if (instance.config.allowed)
+  if (instance.allowed)
     onConfig.forEach((func) => {
       tryCatch(func)(instance);
     });
+}
+
+function onSession(
+  instance: WebClient.Instance,
+  onConfig: Array<On.SessionConfig>,
+): void {
+  if (!instance.config.session) return; // Session handling is disabled
+
+  onConfig.forEach((func) => {
+    tryCatch(func)(instance, instance.session);
+  });
 }

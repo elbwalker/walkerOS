@@ -1,7 +1,7 @@
 import type { Handler, WalkerOS } from '.';
 
 export interface Destination<Custom = unknown, EventCustom = unknown> {
-  config: Config<Custom, EventCustom>;
+  config: Config<Custom, EventCustom>; // Configuration settings for the destination
   queue?: Queue; // Non processed events yet and reset with each new run
   type?: string; // The type of the destination
 }
@@ -21,7 +21,13 @@ export interface Config<Custom = unknown, EventCustom = unknown> {
 }
 
 export interface Mapping<EventCustom> {
-  [entity: string]: { [action: string]: EventConfig<EventCustom> };
+  [entity: string]: undefined | { [action: string]: EventConfig<EventCustom> };
+}
+
+export interface Batch<EventCustom> {
+  key: string;
+  events: Array<WalkerOS.Event>;
+  mapping?: EventConfig<EventCustom>;
 }
 
 export type Meta = {
@@ -30,6 +36,8 @@ export type Meta = {
 };
 
 export interface EventConfig<EventCustom = unknown> {
+  batch?: number; // Bundle events for batch processing
+  batched?: Batch<EventCustom>; // Batch of events to be processed
   consent?: WalkerOS.Consent; // Required consent states to init and push events
   custom?: EventCustom; // Arbitrary but protected configurations for custom event config
   ignore?: boolean; // Choose to no process an event when set to true

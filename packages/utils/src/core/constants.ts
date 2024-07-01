@@ -1,11 +1,33 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { StorageType } from '..';
+import type { StorageType } from '../web';
 
-const Commands: { [key: string]: WalkerOS.Commands } = {
+export type CommandTypes =
+  | 'Action'
+  | 'Config'
+  | 'Consent'
+  | 'Context'
+  | 'Custom'
+  | 'Destination'
+  | 'Elb'
+  | 'Globals'
+  | 'Hook'
+  | 'Init'
+  | 'Link'
+  | 'On'
+  | 'Prefix'
+  | 'Ready'
+  | 'Run'
+  | 'Session'
+  | 'User'
+  | 'Walker';
+
+// Define Commands with keys as CommandTypes
+export const Commands: Record<CommandTypes, WalkerOS.Commands> = {
   Action: 'action',
   Config: 'config',
   Consent: 'consent',
   Context: 'context',
+  Custom: 'custom',
   Destination: 'destination',
   Elb: 'elb',
   Globals: 'globals',
@@ -14,7 +36,9 @@ const Commands: { [key: string]: WalkerOS.Commands } = {
   Link: 'link',
   On: 'on',
   Prefix: 'data-elb',
+  Ready: 'ready',
   Run: 'run',
+  Session: 'session',
   User: 'user',
   Walker: 'walker',
 } as const;

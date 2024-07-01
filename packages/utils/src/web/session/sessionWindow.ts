@@ -1,6 +1,8 @@
-import { getId, getMarketingParameters } from '../../';
-import type { MarketingParameters, SessionData } from '../../';
 import type { WalkerOS } from '@elbwalker/types';
+import type { MarketingParameters } from '../../core';
+import type { SessionData } from '../../web';
+import { getMarketingParameters } from '../../core/getMarketingParameters';
+import { getId } from '../../core/getId';
 
 export interface SessionWindowConfig {
   data?: WalkerOS.Properties;
@@ -12,8 +14,11 @@ export interface SessionWindowConfig {
 }
 
 export function sessionWindow(config: SessionWindowConfig = {}): SessionData {
-  const known = { isStart: false, storage: false };
   let isStart = config.isStart || false;
+  const known = { isStart, storage: false };
+
+  // If session has explicitly started, return known
+  if (config.isStart === false) return known;
 
   // Entry type
   if (!isStart) {

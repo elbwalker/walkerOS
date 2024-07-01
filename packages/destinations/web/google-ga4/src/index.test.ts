@@ -166,7 +166,7 @@ describe('Destination Google GA4', () => {
       },
     };
     elb('walker destination', destination, config);
-    elb('walker config', {
+    elb('walker run', {
       globals: { lang: 'de' },
       user: { id: 'us3r1d' },
     });
@@ -191,7 +191,7 @@ describe('Destination Google GA4', () => {
   });
 
   test('Parameters include', () => {
-    elb('walker config', {
+    elb('walker run', {
       globals: { lang: 'de' },
       user: { id: 'us3r1d' },
     });

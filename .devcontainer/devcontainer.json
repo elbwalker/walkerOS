@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/typescript-node
 {
-  "name": "Node.js & TypeScript",
+  "name": "walkerOS dev container",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   "image": "mcr.microsoft.com/devcontainers/typescript-node:latest",
   // Features to add to the dev container. More info: https://containers.dev/features.
@@ -46,8 +46,8 @@
     "5173": {
       "label": "8080 - apps/demo/tagging"
     },
-    "8080": {
-      "label": "5173 - apps/demo/react"
+    "8002": {
+      "label": "8002 - apps/demo/react"
     }
   }
 

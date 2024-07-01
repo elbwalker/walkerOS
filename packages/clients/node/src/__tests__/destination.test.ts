@@ -35,7 +35,7 @@ describe('Destination', () => {
   };
   let result: NodeClient.PushResult;
 
-  function getClient(custom?: Partial<NodeClient.Config>) {
+  function getClient(custom?: Partial<NodeClient.InitConfig>) {
     const config = custom || {
       destinations: { mock: mockDestination },
     };
@@ -108,7 +108,7 @@ describe('Destination', () => {
     expect(result.successful).toHaveProperty('length', 0);
     expect(result.queued).toHaveProperty('length', 0);
     expect(result.failed).toHaveProperty('length', 0);
-    expect(instance.config.queue[0]).toEqual(
+    expect(instance.queue[0]).toEqual(
       expect.objectContaining({
         consent: {},
         user: {},
@@ -117,9 +117,9 @@ describe('Destination', () => {
     );
 
     // Update values after pushing the event
-    instance.config.consent = { demo: true };
-    instance.config.user = { id: 'us3r' };
-    instance.config.globals = { foo: 'bar' };
+    instance.consent = { demo: true };
+    instance.user = { id: 'us3r' };
+    instance.globals = { foo: 'bar' };
 
     result = await elb('walker destination', mockDestination, { id: 'later' });
     expect(result.successful).toHaveProperty('length', 1);

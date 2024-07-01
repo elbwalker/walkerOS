@@ -19,9 +19,10 @@ export function getElbValues(
   name: string,
   isProperty = true,
 ): WalkerOS.Properties {
-  const values = splitAttribute(
-    getAttribute(element, getElbAttributeName(prefix, name, isProperty)) || '',
-  ).reduce((values, str) => {
+  const attributeValue =
+    getAttribute(element, getElbAttributeName(prefix, name, isProperty)) || '';
+
+  const elbValues = splitAttribute(attributeValue).reduce((values, str) => {
     let [key, val] = splitKeyVal(str);
 
     if (!key) return values;
@@ -29,13 +30,13 @@ export function getElbValues(
     // Handle keys without value
     if (!val) {
       // Manually remove the : from key on empty values
-      if (key.charAt(key.length - 1) === ':') key = key.slice(0, -1);
+      if (key.endsWith(':')) key = key.slice(0, -1);
       val = '';
     }
 
     // Dynamic values
-    if (val.charAt(0) === '#') {
-      val = val.substring(1); // Remove # symbol
+    if (val.startsWith('#')) {
+      val = val.slice(1); // Remove # symbol
       try {
         // Read property value from element
         let dynamicValue = (element as Element)[val as keyof Element];
@@ -45,16 +46,15 @@ export function getElbValues(
             (element as HTMLSelectElement).selectedIndex
           ].text;
         }
-        if (dynamicValue) val = String(dynamicValue);
+
+        val = String(dynamicValue);
       } catch (error) {
         val = '';
       }
     }
 
-    // Array property
-    if (key.slice(-2) === '[]') {
+    if (key.endsWith('[]')) {
       key = key.slice(0, -2); // Remove [] symbol
-
       if (!Array.isArray(values[key])) values[key] = [];
       (values[key] as WalkerOS.PropertyType[]).push(castValue(val));
     } else {
@@ -64,7 +64,25 @@ export function getElbValues(
     return values;
   }, {} as WalkerOS.Properties);
 
-  return values;
+  return elbValues;
+}
+
+export function getAllEvents(
+  scope: Element = document.body,
+  prefix: string = Const.Commands.Prefix,
+): Walker.Events {
+  let events: Walker.Events = [];
+  const action = Const.Commands.Action;
+
+  queryAll(scope, `[${getElbAttributeName(prefix, action, false)}]`, (elem) => {
+    Object.keys(getElbValues(prefix, elem, action, false)).forEach(
+      (trigger) => {
+        events = events.concat(getEvents(elem, trigger, prefix));
+      },
+    );
+  });
+
+  return events;
 }
 
 export function getEvents(
@@ -130,7 +148,9 @@ export function getEvents(
   return events;
 }
 
-export function getGlobals(prefix: string): WalkerOS.Properties {
+export function getGlobals(
+  prefix: string = Const.Commands.Prefix,
+): WalkerOS.Properties {
   const globalsName = getElbAttributeName(
     prefix,
     Const.Commands.Globals,
@@ -139,7 +159,7 @@ export function getGlobals(prefix: string): WalkerOS.Properties {
   const globalSelector = `[${globalsName}]`;
   let values = {};
 
-  document.querySelectorAll(globalSelector).forEach((element) => {
+  queryAll(document.body, globalSelector, (element) => {
     values = assign(
       values,
       getElbValues(prefix, element, Const.Commands.Globals, false),
@@ -209,9 +229,8 @@ export function getEntities(
   filter = Object.keys(filter || {}).length !== 0 ? filter : undefined;
 
   while (element) {
-    const entity = getEntity(prefix, element, target);
-
-    if (entity && (!filter || filter[entity.type])) entities.push(entity);
+    const entity = getEntity(prefix, element, target, filter);
+    if (entity) entities.push(entity);
 
     element = getParent(prefix, element);
   }
@@ -223,70 +242,74 @@ function getEntity(
   prefix: string,
   element: Element,
   origin?: Element,
+  filter?: Walker.Filter,
 ): WalkerOS.Entity | null {
   const type = getAttribute(element, getElbAttributeName(prefix));
 
-  if (!type) return null; // It's not a (valid) entity element
+  // It's not a (valid) entity element or should be filtered
+  if (!type || (filter && !filter[type])) return null;
 
   const scopeElems = [element]; // All related elements
-  const entitySelector = `[${getElbAttributeName(
+  const dataSelector = `[${getElbAttributeName(
     prefix,
     type,
   )}],[${getElbAttributeName(prefix, '')}]`; // [data-elb-entity,data-elb-]
   const linkName = getElbAttributeName(prefix, Const.Commands.Link, false); // data-elblink
 
-  const [parentProps, context] = getThisAndParentProperties(
+  let data: WalkerOS.Properties = {};
+  const nested: WalkerOS.Entities = [];
+  const [parentData, context] = getThisAndParentProperties(
     origin || element,
-    entitySelector,
+    dataSelector,
     prefix,
     type,
   );
 
   // Add linked elements (data-elblink)
-  element.querySelectorAll(`[${linkName}]`).forEach((link) => {
+  queryAll(element, `[${linkName}]`, (link) => {
     const [linkId, linkState] = splitKeyVal(getAttribute(link, linkName));
 
     // Get all linked child elements if link is a parent
     if (linkState === 'parent')
-      document
-        .querySelectorAll(`[${linkName}="${linkId}:child"]`)
-        .forEach((wormhole) => {
-          // Skip original elblink element and add only new ones
-          if (wormhole !== link) scopeElems.push(wormhole);
-        });
+      queryAll(document.body, `[${linkName}="${linkId}:child"]`, (wormhole) => {
+        scopeElems.push(wormhole);
+
+        // A linked child can also be an entity
+        const nestedEntity = getEntity(prefix, wormhole);
+        if (nestedEntity) nested.push(nestedEntity);
+      });
   });
 
   // Get all property elements including linked elements
   const propertyElems: Array<Element> = [];
   scopeElems.forEach((elem) => {
     // Also check for property on same level
-    if (elem.matches(entitySelector)) propertyElems.push(elem);
-    elem.querySelectorAll(entitySelector).forEach((elem) => {
-      propertyElems.push(elem);
-    });
+    if (elem.matches(dataSelector)) propertyElems.push(elem);
+
+    queryAll(elem, dataSelector, (elem) => propertyElems.push(elem));
   });
 
   // Get properties
-  let data: WalkerOS.Properties = {};
-  let genericProps: WalkerOS.Properties = {};
+  let genericData: WalkerOS.Properties = {};
   propertyElems.forEach((child) => {
     // Eventually override closer properties
-    genericProps = assign(genericProps, getElbValues(prefix, child, ''));
+    genericData = assign(genericData, getElbValues(prefix, child, ''));
     data = assign(data, getElbValues(prefix, child, type));
   });
 
-  // Merge properties with the hierarchy data > generic > parent
-  data = assign(parentProps, assign(genericProps, data));
+  // Merge properties with the hierarchy generic > data > parent
+  data = assign(assign(genericData, data), parentData);
 
   // Get nested entities
-  const nested: WalkerOS.Entities = [];
   scopeElems.forEach((elem) => {
-    elem
-      .querySelectorAll(`[${getElbAttributeName(prefix)}]`)
-      .forEach((nestedEntityElement) => {
+    queryAll(
+      elem,
+      `[${getElbAttributeName(prefix)}]`,
+      (nestedEntityElement) => {
         const nestedEntity = getEntity(prefix, nestedEntityElement);
         if (nestedEntity) nested.push(nestedEntity);
-      });
+      },
+    );
   });
 
   return { type, data, context, nested };
@@ -349,6 +372,15 @@ function getThisAndParentProperties(
   }
 
   return [data, context];
+}
+
+function queryAll(
+  scope: Element,
+  selector: string,
+  fn: (element: Element) => void,
+): void {
+  const elements = scope.querySelectorAll(selector);
+  elements.forEach(fn);
 }
 
 function resolveAttributes(

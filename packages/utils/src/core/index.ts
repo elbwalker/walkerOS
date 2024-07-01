@@ -1,7 +1,6 @@
 export * from './assign';
 export * from './castValue';
 export * from './constants';
-// export { fingerprint } from './fingerprint';
 export * from './getByStringDot';
 export * from './getId';
 export * from './getMarketingParameters';

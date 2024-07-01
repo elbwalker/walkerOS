@@ -1,5 +1,6 @@
 ---
 title: Helper
+sidebar_position: 1
 ---
 
 import Link from '@docusaurus/Link';
@@ -17,17 +18,28 @@ in any environment, the web-helpers are are made for the browser.
 
 ### assign
 
-`assign<T>(target: T, source: Object = {}): T` function merges two objects into
-a single one. It has a special behavior for array properties: when merging, it
-concatenates arrays from both the source and target objects, removing duplicate
-items in the process. This function is particularly useful for combining objects
-with complex structures, including nested arrays, ensuring that array data is
-effectively integrated without redundancy.
+`assign<T>(target: T, source: WalkerOS.AnyObject = {}, options?): T` function
+merges two objects into a single one. It has a special behavior for array
+properties: when merging, it concatenates arrays from both the source and target
+objects, removing duplicate items in the process. This function is particularly
+useful for combining objects with complex structures, including nested arrays,
+ensuring that array data is effectively integrated without redundancy.
 
-```js
+```ts
+// Options
+interface Assign {
+  merge?: boolean; // Merge array properties (default) instead of overriding them
+  shallow?: boolean; // Create a shallow copy (default) instead of updating the target object
+  extend?: boolean; // Extend the target with new properties (default) instead of only updating existing ones
+}
+
 const obj1 = { a: 1, b: [1, 2] };
 const obj2 = { b: [2, 3], c: 3 };
+
 assign(obj1, obj2); // Returns { a: 1, b: [1, 2, 3], c: 3 }
+assign(obj1, obj2, { merge: false }); // Returns { a: 1, b: [2, 3], c: 3 }
+assign(obj1, obj2, { shallow: false }); // updates obj1 to { a: 1, b: [2, 3], c: 3 }
+assign(obj1, obj2, { extend: false }); // Returns { a: 1, b: [1, 2, 3] }
 ```
 
 Use `assign` to merge configurations or state-objects or events, particularly
@@ -251,6 +263,20 @@ handle errors gracefully without disrupting the application flow.
 As this is a more complex util learn more about it on
 the&nbsp;<Link to="/docs/utils/hooks">Hooks</Link> page.
 
+## Node
+
+### getHashNode
+
+`async function getHashNode(str: string, length?: number): Promise<string>`
+generates a hash value from a string, usually used to anonymize or
+fingerprinting. To create a string concatenate all values. Use `length` to limit
+the output.
+
+```js
+await getHashNode('' + userAgent + language + domain + dayOfMonth, 16);
+// Return a 16 character hash, like 47e0bdd10f04ef13
+```
+
 ## Web
 
 ### getAttribute
@@ -268,6 +294,18 @@ const value = getAttribute(element, 'data-elb');
 
 This function simplifies the process of interacting with the DOM by providing an
 easy and direct way to access element attributes.
+
+### getHashWeb
+
+`async function getHashWeb(str: string, length?: number): Promise<string>`
+generates a hash value from a string, usually used to anonymize or
+fingerprinting. To create a string concatenate all values. Use `length` to limit
+the output.
+
+```js
+await getHashWeb('' + userAgent + language + domain + dayOfMonth, 16);
+// Return a 16 character hash, like 47e0bdd10f04ef13
+```
 
 ### isVisible
 

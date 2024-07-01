@@ -11,7 +11,7 @@ package to integrate it directly into your project. To get started with the
 installation, run:
 
 ```js
-npm i --save @elbwalker/walker.js
+npm i @elbwalker/walker.js
 ```
 
 As a next step run the following code snippet once to create an instance.
@@ -43,9 +43,9 @@ location change in your app, like a real pageview:
 ```js
 import React from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
-import Elbwalker, { elb } from '@elbwalker/walker.js';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
 
-window.walkerjs = Elbwalker({ default: true });
+window.walkerjs = Walkerjs({ default: true });
 
 export default function App() {
   const location = useLocation();

@@ -1,13 +1,12 @@
-import { Options, defineConfig } from 'tsup';
-
-const config: Options = {
-  // clean: true, // Not yet supported for multiple entry points
-  entry: ['src/index.ts'],
-  minify: true, // Don't use terser to minify to preserve Const
-  splitting: false,
-};
+import { config, defineConfig } from '@elbwalker/tsup';
 
 const globalName = 'Utils';
+const filesCoreWeb = [
+  'src/core.ts',
+  'src/core/index.ts',
+  'src/web.ts',
+  'src/web/index.ts',
+];
 
 export default defineConfig([
   // Full index bundle with definitions
@@ -20,13 +19,13 @@ export default defineConfig([
   // Core and Web files
   {
     ...config,
-    entry: ['src/core/*', 'src/web/**/*.ts'],
+    entry: filesCoreWeb,
     format: ['cjs', 'esm'],
   },
   // Browser
   {
     ...config,
-    entry: ['src/index.ts', 'src/core/*', 'src/web/**/*.ts'],
+    entry: filesCoreWeb.concat('src/core/**/*.ts', 'src/web/**/*.ts'),
     format: ['iife'],
     globalName,
     outExtension() {
@@ -36,7 +35,7 @@ export default defineConfig([
   // Web ES5 files
   {
     ...config,
-    entry: ['src/index.ts', 'src/core/*', 'src/web/**/*.ts'],
+    entry: filesCoreWeb,
     format: ['iife'],
     globalName,
     outExtension() {

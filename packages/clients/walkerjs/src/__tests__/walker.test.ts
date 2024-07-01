@@ -1,4 +1,4 @@
-import { getEvents } from '../lib/walker';
+import { getAllEvents, getEvents } from '../lib/walker';
 import { Trigger } from '../lib/trigger';
 import fs from 'fs';
 
@@ -9,6 +9,16 @@ describe('Walker', () => {
 
   beforeEach(() => {
     document.body.innerHTML = html;
+  });
+
+  test('getAllEvents', () => {
+    const events = getAllEvents();
+    expect(events.length).toBeGreaterThan(0);
+    expect(events[0]).toMatchObject({
+      entity: expect.any(String),
+      action: expect.any(String),
+      data: expect.any(Object),
+    });
   });
 
   test('Basic collection', () => {
@@ -126,13 +136,36 @@ describe('Walker', () => {
     expect(getEvents(getElem('just_entity'), Trigger.Click)).toEqual([]);
   });
 
-  test('Get nested child data properties with higher priority', () => {
-    expect(getEvents(getElem('property_priority'), Trigger.Click)).toEqual([
-      expect.objectContaining({
-        entity: 'property',
-        action: 'priority',
-        data: { parent: 'property', prefer: 'deeper' },
-      }),
+  test('Data hierarchy', () => {
+    const entity = 'e';
+    const action = 'click';
+    expect(getEvents(getElem('data_family'), Trigger.Click)).toMatchObject([
+      {
+        entity,
+        action,
+        data: { key: 'baz', scope: 'high' },
+      },
+    ]);
+    expect(getEvents(getElem('data_parent'), Trigger.Click)).toMatchObject([
+      {
+        entity,
+        action,
+        data: { key: 'foo', scope: 'high' },
+      },
+    ]);
+    expect(getEvents(getElem('data_child'), Trigger.Click)).toMatchObject([
+      {
+        entity,
+        action,
+        data: { key: 'bar', scope: 'low' },
+      },
+    ]);
+    expect(getEvents(getElem('data_sibling'), Trigger.Click)).toMatchObject([
+      {
+        entity,
+        action,
+        data: { key: 'foo', scope: 'high' },
+      },
     ]);
   });
 
@@ -147,6 +180,8 @@ describe('Walker', () => {
           id: 'id_value',
           static: 'value',
           option: 'chosen',
+          checked: true,
+          unchecked: false,
         },
       }),
     ]);
@@ -236,6 +271,18 @@ describe('Walker', () => {
     ]);
 
     expect(getEvents(getElem('link-child'), Trigger.Click)).toMatchObject([
+      {
+        entity: 'n',
+        action: 'click',
+        data: { k: 'v' },
+        trigger: 'click',
+        context: {
+          child: ['link', 0],
+          parent: ['link', 1],
+          entity: ['link', 2],
+        },
+        nested: [],
+      },
       {
         entity: 'l',
         data,

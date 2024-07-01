@@ -1,5 +1,6 @@
-import { elb, Walkerjs } from '..';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { WebClient, WebDestination } from '..';
+import { elb, Walkerjs } from '..';
 
 describe('Destination', () => {
   let walkerjs: WebClient.Instance;
@@ -209,13 +210,15 @@ describe('Destination', () => {
     const destinationB: WebDestination.Destination = {
       push: mockPushB,
       config: {
-        mapping: { '*': { action: {} } },
+        mapping: { '*': { action: {}, '*': { ignore: true } } },
       },
     };
 
     const destinationC: WebDestination.Destination = {
       push: mockPushC,
-      config: { mapping: { entity: { '*': {} } } },
+      config: {
+        mapping: { entity: { '*': {} }, '*': { '*': { ignore: true } } },
+      },
     };
 
     elb('walker destination', destinationA);
@@ -267,7 +270,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
     elb('random action');
-    expect(mockPushA).toHaveBeenCalledTimes(0);
+    expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(0);
     expect(mockPushB).toHaveBeenCalledWith(
@@ -281,7 +284,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
     elb('entity random');
-    expect(mockPushA).toHaveBeenCalledTimes(0);
+    expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledWith(
@@ -295,7 +298,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
     elb('absolutely unacceptable');
-    expect(mockPushA).toHaveBeenCalledTimes(0);
+    expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(0);
   });
@@ -473,7 +476,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
 
-    destinationIgnore.config.mapping!.foo.bar.ignore = true;
+    destinationIgnore.config.mapping!.foo!.bar.ignore = true;
     elb('foo bar');
     expect(mockPushA).toHaveBeenCalledTimes(0);
   });
@@ -628,20 +631,134 @@ describe('Destination', () => {
     elb('walker destination', destination, { id: 'foo' }); // Override
     elb('walker destination', destination, { id: 'bar' });
 
-    expect(walkerjs.config.destinations).toHaveProperty('foo');
-    expect(Object.keys(walkerjs.config.destinations)).toHaveLength(2);
+    expect(walkerjs.destinations).toHaveProperty('foo');
+    expect(Object.keys(walkerjs.destinations)).toHaveLength(2);
 
     elb('e a');
     expect(mockPush).toHaveBeenCalledTimes(2);
     mockPush.mockClear();
-    delete walkerjs.config.destinations['foo']; // Delete destination
-    expect(walkerjs.config.destinations).not.toHaveProperty('foo');
-    expect(Object.keys(walkerjs.config.destinations)).toHaveLength(1);
+    delete walkerjs.destinations['foo']; // Delete destination
+    expect(walkerjs.destinations).not.toHaveProperty('foo');
+    expect(Object.keys(walkerjs.destinations)).toHaveLength(1);
 
     elb('e a');
     expect(mockPush).toHaveBeenCalledTimes(1);
 
     elb('walker destination', destination);
-    expect(Object.keys(walkerjs.config.destinations)).toHaveLength(2);
+    expect(Object.keys(walkerjs.destinations)).toHaveLength(2);
+  });
+
+  test('minimal init type', () => {
+    elb('walker destination', { push: mockPush });
+    elb('walker run');
+    elb('e a');
+
+    expect(mockPush).toHaveBeenCalledTimes(1);
+  });
+
+  test('batch', () => {
+    const mockBatch = jest.fn();
+
+    elb('walker run');
+    elb('walker destination', {
+      push: mockPush,
+      pushBatch: mockBatch,
+      config: {
+        mapping: {
+          product: {
+            click: { batch: 50 },
+            visible: { batch: 2000 },
+          },
+          promotion: {
+            click: { batch: 50 },
+            visible: { batch: 2000 },
+          },
+          '*': {
+            click: { batch: 50 },
+            visible: { batch: 2000 },
+          },
+        },
+      },
+    });
+
+    elb('product visible', { id: 1 });
+    elb('product visible', { id: 2 });
+    elb('promotion visible', { id: 3 });
+    elb('rage click', { id: 4 });
+    elb('rage click', { id: 5 });
+    elb('rage click', { id: 6 });
+    elb('product important', { id: 7 });
+
+    // Push important immediately
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockBatch).toHaveBeenCalledTimes(0);
+
+    // Rage clicks
+    jest.advanceTimersByTime(50);
+    expect(mockBatch).toHaveBeenCalledTimes(1);
+
+    jest.clearAllMocks();
+    jest.advanceTimersByTime(2000);
+
+    expect(mockBatch).toHaveBeenCalledTimes(2);
+    // product visible
+    expect(mockBatch).toHaveBeenNthCalledWith(
+      1,
+      {
+        key: 'product visible',
+        events: expect.any(Array),
+      },
+      expect.anything(),
+      expect.anything(),
+    );
+
+    // promotion visible
+    expect(mockBatch).toHaveBeenNthCalledWith(
+      2,
+      {
+        key: 'promotion visible',
+        events: expect.any(Array),
+      },
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  test('dataLayer config', () => {
+    walkerjs = Walkerjs({
+      default: true,
+      pageview: false,
+      session: false,
+      dataLayerConfig: {
+        consent: { functional: true },
+        mapping: {
+          '*': {
+            visible: { batch: 2000 },
+          },
+        },
+      },
+    });
+
+    elb('entity action');
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
+    elb('walker consent', { functional: true });
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
+
+    elb('product visible');
+    elb('product visible');
+
+    jest.clearAllMocks();
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
+
+    jest.runAllTimers();
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
+    expect(mockDataLayer).toHaveBeenCalledWith({
+      event: 'batch',
+      batched_event: '* visible',
+      events: [
+        expect.objectContaining({ event: 'product visible' }),
+        expect.objectContaining({ event: 'product visible' }),
+      ],
+    });
   });
 });

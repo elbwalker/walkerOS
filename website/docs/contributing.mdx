@@ -57,12 +57,20 @@ turbo run test
 turbo run build
 
 # To develop or build a specific package use --filter option
-turbo run dev --filter=walker.js
-turbo run build --filter=walker.js --filter=utils
+turbo run dev --filter=*walker.js
+turbo run build --filter=*walker.js --filter=*utils
 ```
 
 The `filter` option can be used to only run one or multiple packages. To filter
 use the `packages name` field in the `package.json` file.
+
+### Updates
+
+To update all npm packages to the latest version, run:
+
+```bash
+npx npm-check-updates -u && npm update && npm install
+```
 
 ## Documentation
 
@@ -129,42 +137,3 @@ $ npx changeset pre exit
 
 2. Follow the release process again: Create a new changeset for the stable
    release, version, and then publish normally.
-
-## Work-in-progress
-
-@TODOS
-
-- Stacks
-  - Firebase
-  - Google Tag Manager
-- Walkerjs GTM Installation
-
-### About walkerOS
-
-## Getting started
-
-Creating a server-side setup with Stacks
-
-## Principles
-
-## Live demo
-
-### Guides
-
-#### Data contract
-
-- what is a data contract
-- Describing data structure
-- validating events
-- utils/validate page
-
-#### Fingerprinting
-
-- hashing
-- (dis-)advantages
-
-#### Attribution
-
-- different attribution strategies
-- building an independent attribution model
-- custom analysis

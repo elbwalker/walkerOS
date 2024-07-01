@@ -9,6 +9,8 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 <PackageLink
+  browser="@elbwalker/destination-web-google-ga4"
+  es5="@elbwalker/destination-web-google-ga4"
   github="packages/destinations/web/google-ga4"
   npm="@elbwalker/destination-web-google-ga4"
 />
@@ -41,9 +43,8 @@ const config = {
     transport_url: 'https://www.google-analytics.com/j/collect',
   },
   mapping: {
-    '*': { '*': {} }, // Process all events
     // entity: { action: { name: 'custom_name' } },
-    page: { view: { ignore: true } }, // Ignore page view events, same as pageview: false
+    page: { view: { ignore: true } }, // Ignore page view events
     product: {
       add: {
         name: 'add_to_cart', // Rename the product add event to add_to_cart
@@ -157,8 +158,9 @@ const config = {
 <Tabs>
   <TabItem value="ts" label="TypeScript" default>
 Install the destination via npm
-```shell
-npm i --save @elbwalker/destination-web-google-ga4
+
+```bash
+npm i @elbwalker/destination-web-google-ga4
 ```
 
 ```js

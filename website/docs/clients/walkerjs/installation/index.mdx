@@ -16,45 +16,43 @@ There are multiple ways to install and use the web client walker.js:
 
 ## Configuration
 
-There a few configuration options that you can set when creating a walker.js
-instance:
+There a few configuration options when creating a walker.js instance:
 
-| Option    | Type                        | Description                                             |
-| --------- | --------------------------- | ------------------------------------------------------- |
-| consent   | object                      | Initial consent states, learn more under consent.       |
-| dataLayer | boolean                     | Adds a dataLayer destination if enabled.                |
-| default   | boolean                     | Add a dataLayer destination and run automatically.      |
-| elb       | string                      | Name of assign the elb function to the window           |
-| elbLayer  | object                      | Public elbwalker API for async communication.           |
-| globals   | object                      | Static attributes added to each event.                  |
-| instance  | string                      | Name of the walkerjs instance to assign to the window   |
-| pageview  | boolean                     | Trigger a page view event by default.                   |
-| prefix    | string                      | Attributes prefix used by the walker.                   |
-| run       | boolean                     | Automatically start running.                            |
-| session   | false or<br />SessionConfig | Configuration for session detection.                    |
-| tagging   | number                      | Current version of the tracking setup.                  |
-| user      | object                      | Setting the user ids including id, device, and session. |
+| Option          | Type                        | Description                                             |
+| --------------- | --------------------------- | ------------------------------------------------------- |
+| consent         | object                      | Initial consent states, learn more under consent.       |
+| dataLayer       | boolean                     | Adds a dataLayer destination if enabled.                |
+| dataLayerConfig | object                      | Config for the dataLayer destination, e.g. for consent. |
+| default         | boolean                     | Add a dataLayer destination and run automatically.      |
+| elb             | string                      | Name of assign the elb function to the window           |
+| elbLayer        | object                      | Public elbwalker API for async communication.           |
+| globals         | object                      | Static attributes added to each event.                  |
+| instance        | string                      | Name of the walkerjs instance to assign to the window   |
+| pageview        | boolean                     | Trigger a page view event by default.                   |
+| prefix          | string                      | Attributes prefix used by the walker.                   |
+| run             | boolean                     | Automatically start running.                            |
+| session         | false or<br />SessionConfig | Configuration for session detection.                    |
+| tagging         | number                      | Current version of the tracking setup.                  |
+| user            | object                      | Setting the user ids including id, device, and session. |
 
 ```ts
 const walkerjs = Walkerjs({
-  consent: {
-    functional: true,
+  dataLayer: true, // Add the dataLayer destination
+  dataLayerConfig: {
+    consent: 'functional', // Require functional consent
   },
-  dataLayer: true,
-  elb: 'elb',
-  elbLayer: window.elbLayer,
+  elb: 'elb', // Assign the elb function to the window
   globals: {
-    tagged: false,
+    tagged: false, // A static global attribute
   },
-  instance: 'walkerjs',
-  pageview: true,
-  run: true,
+  pageview: true, // Trigger a page view event with each run
+  run: true, // Automatically start running
   session: {
-    storage: true,
-    consent: 'marketing',
-    length: 60,
+    storage: true, // Use the storage for session detection
+    consent: 'marketing', // Require marketing consent to access storage
+    length: 60, // Session length in minutes
   },
-  tagging: 1,
+  tagging: 1, // Current version of the tagging
 });
 ```
 

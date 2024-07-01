@@ -24,7 +24,7 @@ Destinations initialize and process events **only if a user granted consent**.
 
 Destinations are added to a client
 (see&nbsp;<Link to="/docs/clients/walkerjs/commands#destinations">web</Link>
-or&nbsp;<Link to="/docs/clients/node#adding-destinations">node</Link>). Before
+or&nbsp;<Link to="/docs/clients/node/commands#destinations">node</Link>). Before
 receiving events from the client, the proper consent states are checked each
 time automatically. Destinations receive events through the [`push`](#push)
 interface. Each destination can have its own configuration, which is set up in
@@ -57,10 +57,10 @@ flowchart LR
   end
 
   webD & nodeD --> tools
-  click webC "/docs/clients/walkerjs"
-  click nodeC "/docs/clients/node"
-  click webD "/docs/destinations/web"
-  click nodeD "/docs/destinations/node"
+  click webC "/docs/clients/walkerjs/"
+  click nodeC "/docs/clients/node/"
+  click webD "/docs/destinations/web/"
+  click nodeD "/docs/destinations/node/"
 ```
 
 ## Configuration
@@ -70,43 +70,57 @@ optional. A complete destination configuration might look like this:
 
 ```js
 {
-  id: 'demo',
-  custom: { foo: 'bar' },
+  id: "demo",
+  custom: { foo: "bar" },
   consent: { demo: true },
   init: false,
   loadScript: false,
   mapping: {
     // Read more in the mapping section
-    page: { view: { name: 'pageview' } },
+    page: {
+      view: { name: "pageview" },
+    },
+    "*": {
+      visible: { batch: 2000 },
+    },
   },
-  meta: { name: 'Demo', version: '1.0.0' },
+  meta: { name: "Demo", version: "1.0.0" },
   queue: true,
   verbose: false,
-  onError: (error) => console.error('demo error', error),
-  onLog: (message) => console.log('demo log', message),
+  onError: (error) => console.error("demo error", error),
+  onLog: (message) => console.log("demo log", message),
+  on: {
+    // Client-related on-events
+    consent: [{ marketing: console.log }],
+    ready: [console.log],
+    run: [console.log],
+    session: [console.log],
+  },
 };
+
 ```
 
 Overview of all properties:
 
-| Property       | Value    | Description                                                        |
-| -------------- | -------- | ------------------------------------------------------------------ |
-| **id**         | string   | A unique key for the destination                                   |
-| **consent**    | object   | Required consent states to init and push events                    |
-| **custom**     | any      | Used for a destinations individual settings                        |
-| **init**       | boolean  | If the destination has been initialized by calling the init method |
-| **loadScript** | boolean  | If an additional script to work should be loaded                   |
-| **mapping**    | object   | A map to handle events individually                                |
-| **meta**       | object   | Additional meta information about the destination                  |
-| **queue**      | boolean  | Disable processing of previously pushed events                     |
-| **verbose**    | boolean  | Enable verbose logging                                             |
-| **onError**    | function | Custom error handler                                               |
-| **onLog**      | function | Custom log handler                                                 |
+| Property       | Value     | Description                                                        |
+| -------------- | --------- | ------------------------------------------------------------------ |
+| **id**         | string    | A unique key for the destination                                   |
+| **consent**    | object    | Required consent states to init and push events                    |
+| **custom**     | any       | Used for a destinations individual settings                        |
+| **init**       | boolean   | If the destination has been initialized by calling the init method |
+| **loadScript** | boolean   | If an additional script to work should be loaded                   |
+| **mapping**    | object    | A map to handle events individually                                |
+| **meta**       | object    | Additional meta information about the destination                  |
+| **queue**      | boolean   | Disable processing of previously pushed events                     |
+| **verbose**    | boolean   | Enable verbose logging                                             |
+| **onError**    | function  | Custom error handler                                               |
+| **onLog**      | function  | Custom log handler                                                 |
+| **on**         | On.Config | Rules for on-functions that gets triggered on specific events      |
 
 Call `elb('walker destination', { push: console.log }, config);` to add the
 destination to a client. The destination will log all events straight to the
 console. Edit a destinations configuration at runtime by accessing
-`<client>.config.destinations.<id>`.
+`walkerjs.destinations.<id>`.
 
 > To grant required consent call `elb('walker consent', { demo: true });`.
 
@@ -123,22 +137,32 @@ const mapping = {
   entity: { action: {} }, // Basic structure
   page: {
     view: { name: 'pageview' }, // Rename the event name
-    scroll: { ignore: true }, // Ignore all other page actions
     click: { custom: { language: 'globals.language' } }, // Custom settings
+  },
+  product: {
+    visible: { batch: 2000 }, // Bundle all product visible events
   },
   // Set custom properties
   order: { complete: { name: 'purchase' } },
-  '*': { '*': {} }, // Process all other non-listed events
+  '*': { '*': { ignore: true } }, // Ignore all other non-listed events
 };
 ```
 
-Both `name` and `ignore` are standardized options to either rename the event or
-ignore it completely. The `custom` object can be used to set up custom
-properties for the event.
+The `EventConfig` for each event supports standardized default options. The
+`custom` option can be used to set up custom properties for the event and
+destinations individual settings.
 
-If a mapping is set up, only the events listed will be processed. To also
-process non-listed events, add the `{'*': {'*': {}}}` to the mapping. Make sure
-to not list duplicate keys in the mapping.
+| Property   | Value   | Description                                                              |
+| ---------- | ------- | ------------------------------------------------------------------------ |
+| **batch**  | number  | Time in ms to bundle the events before calling `pushBatch` if available. |
+| **custom** | object  | Individual settings for a custom destination.                            |
+| **ignore** | boolean | If set to `true` the event won't get pushed to the destination.          |
+| **name**   | string  | Renaming of the event (e.g. product add to add_to_cart)                  |
+
+To disable processing events, add `{'*': {'*': { ignore: true }}}` to the
+mapping.
+
+Make sure to not list duplicate keys in the mapping, since this is a n object.
 
 :::info
 
@@ -150,7 +174,8 @@ processing.
 ## Methods
 
 A client communicates with a destination through the methods. It's also the
-clients job to check for proper consent and call the `init` or `setup` methods.
+clients job to check for proper consent, calling the `init` method or batching
+events. The only required method is `push` to send events to the destination.
 
 ### init
 
@@ -188,6 +213,60 @@ const push = (event, config, mapping) => {
 // demo log bar
 // demo push { event: { data: { count: 1 }, event: 'pageview' }, config: { ... }, mapping: { ... } }
 ```
+
+### pushBatch
+
+The `pushBatch` method is optional and gets called if the event `mapping` is
+configured with a `batch` number to bundle multiple events before sending them
+to the destination.
+
+```js
+const pushBatch = (batch, config, instance) => {
+  console.log('demo pushBatch', { batch, config });
+};
+```
+
+The `batch` is an object with the `key` of the used mapping, the `events` array
+and the `mapping` object itself.
+
+```js
+// Configuring a destinations mapping with
+const mapping = {
+  '*': {
+    visible: { batch: 2000 },
+  },
+};
+
+// Calling a matching event two times
+elb('product visible');
+elb('promotion visible');
+
+// The destinations pushBatch receives the following batch after 2 seconds
+batch = {
+  key: '* visible',
+  events: [{ event: 'product visible' }, { event: 'promotion visible' }],
+  mapping: { batch: 2000 },
+};
+```
+
+### on
+
+The `on` method is used to set up rules for on-functions that get triggered by
+the client (individually for walker.js and node).
+
+```js
+const on = {
+  consent: [{ marketing: console.log }],
+  ready: [console.log],
+  run: [console.log],
+  session: [console.log], // walker.js only
+};
+```
+
+Once a client triggers an event, the destinations `on` method gets called.
+Replace the `console.log` with your custom function.
+
+## Available Destinations
 
 import DocCardList from '@theme/DocCardList';
 

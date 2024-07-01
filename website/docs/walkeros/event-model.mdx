@@ -57,6 +57,7 @@ different value types.
     id: 'us3r1d',
     device: 'c00k131d',
     session: 's3ss10n1d',
+    // More user-related properties, see below
   },
   nested: [
     // All nested entities within the main entity
@@ -114,9 +115,36 @@ also to support custom requirements.
 
 ### User
 
-There are three identifiers are used for stitching together user journeys: id,
-device, and session. This enables cross-device tracking or linking sessions for
-a cohesive user journey.
+There are recommended identifiers used for stitching together user journeys:
+`id`, `device`, and `session`. This enables cross-device tracking or linking
+sessions for a cohesive user journey. On a server-side setup, a temporarily
+`hash` value is added. Any other user-related information can be added here. A
+few values are recommended:
+
+```ts
+interface User extends Properties {
+  // IDs
+  id?: string; // User ID
+  device?: string; // Typically a cookie or local storage ID
+  session?: string; // Session ID
+  hash?: string; // Temporary hash for server-side setups
+  // User related
+  userAgent?: string; // Full user agent string
+  browser?: string; // Browser name
+  browserVersion?: string; // Browser version
+  deviceType?: string; // Type of device like, mobile, desktop, tablet
+  language?: string; // User's language settings
+  country?: string; // Country code
+  region?: string; // Region code
+  city?: string; // City name
+  timezone?: string; // Timezone
+  os?: string; // Operating system
+  osVersion?: string; // Operating system version
+  screenSize?: string; // Screen size
+  ip?: string; // IP address
+  internal?: boolean; // Internal user flag
+}
+```
 
 ### Consent
 

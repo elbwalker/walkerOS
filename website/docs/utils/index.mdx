@@ -39,7 +39,7 @@ can be used in older browsers as well as the GTM.
 <Tabs>
   <TabItem value="script" label="Scripts" default>
     ```html
-    <script src="https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/web.js"></script>
     ```
   </TabItem>
   <TabItem value="module" label="Module">
@@ -47,7 +47,7 @@ can be used in older browsers as well as the GTM.
     ```html
     <script type="module">
       const Utils = ( await import(
-      'https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/index.mjs' ) );
+      'https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/web.mjs' ) );
       console.log('id', Utils.getId())
     </script>
     ```
@@ -56,14 +56,6 @@ can be used in older browsers as well as the GTM.
 :::info
 
 Be aware of the `latest` version in the URL, better use a specific version like
-2.0.0
-
-:::
-
-### Google Tag Manager
-
-:::note
-
-Coming soon
+3.0.0
 
 :::

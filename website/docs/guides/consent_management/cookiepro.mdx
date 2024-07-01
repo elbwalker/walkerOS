@@ -26,11 +26,11 @@ example of how to map the CookiePro categories to the walker.js
     C0005: 'marketing', // social
   };
 
-  function handleConsent(str) {
+  function handleConsent() {
     // if (!OneTrust.IsAlertBoxClosed()) return; // Process only explicit consent
 
     const consent = {};
-    str.split(',').forEach((category) => {
+    window.OptanonActiveGroups.split(',').forEach((category) => {
       const name = mapping[category];
       if (name) consent[name] = true;
     });
@@ -39,13 +39,18 @@ example of how to map the CookiePro categories to the walker.js
   }
 
   if (window.Optanon && window.OptanonActiveGroups) {
-    handleConsent(window.OptanonActiveGroups); // CMP already loaded
+    handleConsent(); // CMP already loaded
   } else {
     window.OptanonWrapper = function (e) {
       if (wrapper) wrapper(); // Call the original OptanonWrapper
-      handleConsent(window.OptanonActiveGroups);
+      handleConsent();
     };
   }
+
+  // Listen for consent updates
+  window.addEventListener('OneTrustGroupsUpdated', function (event) {
+    handleConsent();
+  });
 })(window.OptanonWrapper);
 ```
 

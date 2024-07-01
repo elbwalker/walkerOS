@@ -1,5 +1,16 @@
 # @elbwalker/tagger
 
+## 2.1.0
+
+### Minor Changes
+
+- 7c27f86: v3
+
+### Patch Changes
+
+- Updated dependencies [7c27f86]
+  - @elbwalker/types@3.0.0
+
 ## 2.0.2
 
 ### Patch Changes
@@ -7,14 +18,6 @@
 - Updated dependencies [d17e25a]
 - Updated dependencies [06a0599]
   - @elbwalker/types@1.1.0
-
-## 2.0.2-next.0
-
-### Patch Changes
-
-- Updated dependencies
-- Updated dependencies
-  - @elbwalker/types@1.1.0-next.0
 
 ## 2.0.1
 

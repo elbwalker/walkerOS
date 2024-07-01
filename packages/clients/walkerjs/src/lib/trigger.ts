@@ -1,4 +1,5 @@
 import type { Walker, WebClient } from '../types';
+import { onApply } from './on';
 import {
   getElbAttributeName,
   getEvents,
@@ -33,17 +34,21 @@ export const Trigger: { [key: string]: Walker.Trigger } = {
   Wait: 'wait',
 } as const;
 
-export function ready(
-  run: (instance: WebClient.Instance) => void,
+export function ready<T extends (...args: never[]) => R, R>(
   instance: WebClient.Instance,
-) {
-  const fn = () => {
-    run(instance);
+  fn: T,
+  ...args: Parameters<T>
+): void {
+  const readyFn = () => {
+    fn(...args);
+    onApply(instance, 'ready');
   };
+
   if (document.readyState !== 'loading') {
-    fn();
+    readyFn();
   } else {
-    document.addEventListener('DOMContentLoaded', fn);
+    document.addEventListener('DOMContentLoaded', readyFn);
+    return;
   }
 }
 
@@ -53,8 +58,7 @@ export function load(instance: WebClient.Instance) {
   // Trigger static page view if enabled
   if (pageview) {
     const [data, context] = getPageViewData(prefix);
-    instance.config.elbLayer.push('page view', data, Trigger.Load, context);
-    // elb('page view', data, Trigger.Load, context);
+    elb('page view', data, Trigger.Load, context);
   }
 
   initScopeTrigger(instance);

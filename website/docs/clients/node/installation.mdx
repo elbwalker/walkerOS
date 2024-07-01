@@ -1,0 +1,70 @@
+---
+title: Installation
+sidebar_position: 1
+description: Installation and configuration of the walkerOS node client.
+---
+
+import Link from '@docusaurus/Link';
+
+Install the walkerOS node client, via NPM:
+
+```bash
+npm install @elbwalker/client-node
+```
+
+Use the `nodeClient` function to create a new client instance. It returns the
+`elb` function for configuration
+via&nbsp;<Link to="/docs/clients/node/commands">commands</Link> and pushing
+events, and the `instance` itself.
+
+```ts
+import { nodeClient } from '@elbwalker/client-node';
+const { elb, instance } = nodeClient({});
+```
+
+## Configuration
+
+There a few configuration options when creating a node client instance:
+
+| Option        | Type     | Description                                               |
+| ------------- | -------- | --------------------------------------------------------- |
+| consent       | object   | Initial consent states                                    |
+| custom        | object   | Individual information                                    |
+| destinations  | object   | Destinations that might process the events                |
+| globalsStatic | object   | Static values for the globals that persist new runs       |
+| onError       | function | custom error handler                                      |
+| onLog         | function | custom logging for the verbose mode                       |
+| source        | object   | To define the events origin (`type`, `id`, `previous_id`) |
+| verbose       | boolean  | To enable verbose mode                                    |
+
+```ts
+const { instance } = nodeClient({
+  consent: {
+    functional: true,
+  },
+  custom: {
+    foo: 'bar',
+  },
+  destinations: {
+    log: {
+      type: 'log',
+      push: console.log,
+    },
+  },
+  globalsStatic: {
+    version: '3.1.4',
+  },
+  onError: (error) => {
+    console.error('node client', error);
+  },
+  onLog: (message) => {
+    console.log('node client', message);
+  },
+  source: {
+    type: 'server',
+    id: '',
+    previous_id: '',
+  },
+  verbose: true,
+});
+```

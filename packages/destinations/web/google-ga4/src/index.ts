@@ -6,11 +6,12 @@ import type {
   Parameters,
   PropertyMapping,
 } from './types';
+import { isSameType } from '@elbwalker/utils';
 
 // Types
 export * as DestinationGoogleGA4 from './types';
 
-const destinationGoogleGA4: Destination = {
+export const destinationGoogleGA4: Destination = {
   type: 'google-ga4',
 
   config: { custom: { measurementId: '' } },
@@ -159,7 +160,7 @@ function getMappedParams(
     let key: string;
     let defaultValue: WalkerOS.PropertyType | undefined;
 
-    if (typeof keyRef == 'string') {
+    if (isSameType(keyRef, '' as string)) {
       key = keyRef;
     } else {
       key = keyRef.key;
@@ -167,9 +168,9 @@ function getMappedParams(
     }
 
     // String dot notation for object ("data.id" -> { data: { id: 1 } })
-    const value = getByStringDot(event, key, i) || defaultValue;
+    const value = getByStringDot(event, key, i) ?? defaultValue;
 
-    if (value) params[prop] = value;
+    if (value != undefined) params[prop] = value;
   });
 
   return Object.keys(params).length ? params : false;

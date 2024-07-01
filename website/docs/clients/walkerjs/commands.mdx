@@ -24,7 +24,7 @@ elb --> elbLayer
 walker <--> elbLayer
 ```
 
-### elb
+## elb
 
 ```js
 // Import
@@ -37,9 +37,16 @@ function elb() {
 }
 ```
 
+Usage options
+
+```js
+elb("entity action", data, ...);
+elb({event: "entity action", data: { foo: "bar"}});
+```
+
 ## Configuration
 
-To&nbsp;<Link to="/docs/clients/walkerjs/installation#configuration">configure
+To&nbsp;<Link to="/docs/clients/walkerjs/installation/#configuration">configure
 walker.js</Link> either do it while creating an instance or use the
 `walker config` command. There are options available before a `run` is called:
 
@@ -68,6 +75,13 @@ globals. A `page view` event is triggered by default, the tagging is checked for
 
 ```js
 elb('walker run');
+```
+
+A run accepts a partial `State` parameter to predefine the state of the
+walker.js:
+
+```js
+elb('walker run', { group: 'gr0up1d' });
 ```
 
 ## Initialization
@@ -192,7 +206,7 @@ anonymous ids.
   "user": {
     "id": "us3r",
     "device": "c00k13",
-    "hash": "s3ss10n"
+    "session": "s3ss10n"
   }
   // other properties omitted
 }
@@ -213,6 +227,18 @@ checking your options with persistent user IDs with your data protection
 officer.
 
 :::
+
+## custom
+
+```js
+elb('walker custom', { key: 'value' });
+```
+
+## globals
+
+```js
+elb('walker globals', { key: 'value' });
+```
 
 ## Hooks
 
@@ -235,9 +261,60 @@ The overall function execution order is as follows:
 1. prePush
 2. preDestinationInit
 3. postDestinationInit
-4. preDestinationPush
-5. postDestinationPush
+4. preDestinationPush or preDestinationPushBatch
+5. postDestinationPush or postDestinationPushBatch
 6. postPush
+
+Others are:
+
+- preSessionStart
+- postSessionStart
+
+#### Function signatures
+
+In general, `params` will be prefixed as a parameter, containing `fn` which is
+the original function and `result` for the post-hooks. Use the following
+function signatures:
+
+```js
+// Push
+function prePush(params, event, data, options, context, nested) {
+  return params.fn(event, data, options, context, nested);
+}
+function postPush(params, event, data, trigger, context, nested) {
+  console.log('default return result', params.result);
+  return;
+}
+
+// DestinationInit
+function preDestinationInit(params, config) {
+  return params.fn(config);
+}
+function postDestinationInit(params, config) {
+  console.log('default return result', params.result);
+  return params.result;
+}
+
+// DestinationPush
+function preDestinationPush(params, event, config, mapping, runState) {
+  console.log('default return result', params.result);
+  return params.fn(event, config, mapping, runState);
+}
+function postDestinationPush(params) {
+  // Custom code with a void return
+  return;
+}
+
+// DestinationPushBatch
+function preDestinationPushBatch(params, event, config, mapping, runState) {
+  console.log('default return result', params.result);
+  return params.fn(event, config, mapping, runState);
+}
+function postDestinationPushBatch(params) {
+  // Custom code with a void return
+  return;
+}
+```
 
 #### Adding a hook
 
