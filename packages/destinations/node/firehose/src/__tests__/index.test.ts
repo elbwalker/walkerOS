@@ -1,7 +1,10 @@
-import type { Config, Destination } from '../types';
+import type { Config, Destination, PartialConfig } from '../types';
 import type { WalkerOS } from '@elbwalker/types';
 
 describe('Node Destination Firehose', () => {
+  // Mock the bigquery package with __mocks__ implementation
+  jest.mock('@aws-sdk/client-firehose');
+
   let destination: Destination;
 
   const event: WalkerOS.Event = {
@@ -41,6 +44,11 @@ describe('Node Destination Firehose', () => {
 
   const streamName = 'demo';
 
+  function getMockFn(config: PartialConfig) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (config.custom?.client || ({} as any)).mockFn;
+  }
+
   async function getConfig(custom = {}) {
     return (await destination.init({
       custom,
@@ -48,9 +56,6 @@ describe('Node Destination Firehose', () => {
   }
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-
     destination = jest.requireActual('../').default;
     destination.config = {};
   });
@@ -64,8 +69,13 @@ describe('Node Destination Firehose', () => {
   });
 
   test('push', async () => {
-    // const config = await getConfig({ streamName });
-    // await destination.push([{ event }], config);
-    expect('TODO').toBe('TODO');
+    const config = await getConfig({ streamName });
+    const mockFn = getMockFn(config);
+
+    await destination.push([{ event }], config);
+    expect(mockFn).toHaveBeenCalledWith('new', {
+      DeliveryStreamName: streamName,
+      Records: [{ Data: expect.any(Buffer) }],
+    });
   });
 });
