@@ -1,12 +1,13 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config, Destination } from '../types';
+import type { Config, CustomConfig, Destination } from '../types';
 import {
   FirehoseClient,
   PutRecordBatchCommand,
 } from '@aws-sdk/client-firehose';
 
-describe('Node Destination Firehose', () => {
+describe('Firehose', () => {
   let destination: Destination;
+  let customConfig: CustomConfig;
 
   const event: WalkerOS.Event = {
     event: 'entity action',
@@ -45,7 +46,7 @@ describe('Node Destination Firehose', () => {
 
   const streamName = 'demo';
 
-  async function getConfig(custom = {}) {
+  async function getConfig(custom: CustomConfig = {}) {
     return (await destination.init({
       custom,
     })) as Config;
@@ -54,15 +55,23 @@ describe('Node Destination Firehose', () => {
   beforeEach(() => {
     destination = jest.requireActual('../').default;
     destination.config = {};
+    customConfig = {
+      firehose: {
+        region: 'eu-central-1',
+        streamName,
+      },
+    };
   });
 
   test('init', async () => {
-    const config = await getConfig({ streamName });
+    const config = await getConfig(customConfig);
     expect(config).toEqual({
       custom: {
-        client: expect.any(FirehoseClient),
-        region: 'eu-central-1',
-        streamName,
+        firehose: {
+          client: expect.any(FirehoseClient),
+          region: 'eu-central-1',
+          streamName,
+        },
       },
       onLog: expect.any(Function),
     });
@@ -70,7 +79,7 @@ describe('Node Destination Firehose', () => {
 
   test('push', async () => {
     const spy = (FirehoseClient.prototype.send = jest.fn());
-    const config = await getConfig({ streamName });
+    const config = await getConfig(customConfig);
 
     await destination.push([{ event }], config);
     expect(spy).toHaveBeenCalledWith(expect.any(PutRecordBatchCommand));

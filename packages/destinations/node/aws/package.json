@@ -1,6 +1,6 @@
 {
-  "name": "@elbwalker/destination-node-firehose",
-  "description": "AWS Data Firehose node destination for walkerOS",
+  "name": "@elbwalker/destination-node-aws",
+  "description": "AWS node destination for walkerOS",
   "version": "0.0.7",
   "license": "MIT",
   "main": "dist/index.js",
@@ -29,7 +29,7 @@
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
-    "directory": "packages/destinations/node/firehose"
+    "directory": "packages/destinations/node/aws"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme",

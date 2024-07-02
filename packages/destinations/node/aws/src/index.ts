@@ -12,6 +12,8 @@ import { push } from './push';
 export * as DestinationFirehose from './types';
 
 export const destinationFirehose: Destination = {
+  type: 'aws',
+
   config: {},
 
   async init(partialConfig) {
@@ -29,7 +31,7 @@ export const destinationFirehose: Destination = {
   async push(events, config) {
     return await tryCatchAsync(push, (error) => {
       if (config.onLog) config.onLog('Push error');
-      // @TODO queue handling
+
       throwError(error);
     })(events, getConfig(config));
   },

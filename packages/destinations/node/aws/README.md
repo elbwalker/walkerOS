@@ -4,6 +4,6 @@
   </a>
 </p>
 
-# AWS Data Firehose destination for walkerOS
+# AWS node destination for walkerOS
 
 TODO

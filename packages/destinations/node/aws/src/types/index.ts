@@ -26,12 +26,16 @@ export type PartialConfig = NodeDestination.Config<
 export type PushEvents = NodeDestination.PushEvents<CustomEventConfig>;
 
 export interface CustomConfig {
-  client: FirehoseClient;
-  region: string;
-  streamName: string;
-  firehose?: FirehoseClientConfig;
+  firehose?: FirehoseConfig;
 }
 
 export interface CustomEventConfig {
   // Custom destination event mapping properties
+}
+
+export interface FirehoseConfig {
+  streamName: string;
+  client?: FirehoseClient;
+  region?: string;
+  config?: FirehoseClientConfig;
 }
