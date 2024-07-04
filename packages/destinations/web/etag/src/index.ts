@@ -1,6 +1,6 @@
-import { getId, tryCatch } from '@elbwalker/utils';
 import type { CustomConfig, Destination, Parameters } from './types';
-import { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
+import { getId } from '@elbwalker/utils';
 
 // Types
 export * as DestinationEtag from './types';
@@ -14,13 +14,11 @@ export const destinationEtag: Destination = {
     if (!config.custom || !config.custom.measurementId) return false;
   },
 
-  push(event, config, mapping = {}) {
+  push(event, config) {
     const { custom } = config;
     if (!custom) return;
 
     const url = custom.url || 'https://www.google-analytics.com/g/collect';
-    const eventName =
-      mapping.name || `${event.entity}_${event.action}`.toLowerCase();
 
     const params: Parameters = {
       v: '2', // Protocol version, always 2 for GA4
@@ -29,7 +27,7 @@ export const destinationEtag: Destination = {
       gcd: '11t1t1t1t5', // Consent mode v2, granted by default
       _p: getId(), // Cache buster
       cid: getClientId(event, custom), // Client ID
-      en: eventName, // Event name
+      en: event.event, // Event name
       // Optional parameters
       _et: event.timing * 1000, // Engagement time
       dl: event.source.id, // Document location
@@ -37,7 +35,7 @@ export const destinationEtag: Destination = {
       ...custom.params, // Custom parameters override defaults
     };
 
-    tryCatch(sendRequest, (e) => console.error(e))(url, params);
+    sendRequest(url, params);
   },
 };
 
