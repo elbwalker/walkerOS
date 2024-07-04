@@ -1,0 +1,110 @@
+---
+title: AWS
+description: Integrate AWS services with walkerOS
+---
+
+import PackageLink from '/src/components/docs/package-link';
+
+<PackageLink
+  github="packages/destinations/node/aws"
+  npm="@elbwalker/destination-node-aws"
+/>
+
+## Overview
+
+The AWS Destination package allows you to send events to various AWS services
+using walkerOS. Currently, it supports AWS Firehose, with plans to add more
+services like SNS, SQS, CloudWatch, and Lambda.
+
+## Installation
+
+To get started, install the package via npm:
+
+```sh
+npm install @elbwalker/destination-node-aws
+```
+
+## Configuration
+
+Configure the AWS destination with your AWS credentials and settings. Below is
+an example configuration:
+
+```js
+import destinationAWS from '@elbwalker/destination-node-aws';
+
+const config = {
+  firehose: firehoseConfig,
+};
+
+elb('walker destination', destinationAWS, config);
+```
+
+## Firehose
+
+To configure AWS Firehose, use the following example:
+
+```js
+const firehoseConfig = {
+  streamName: 'your-firehose-stream-name',
+  region: 'eu-central-1', // e.g., 'eu-central-1' for Frankfurt
+  credentials: {
+    accessKeyId: 'your-access-key-id',
+    secretAccessKey: 'your-secret-access-key',
+  },
+};
+
+elb('walker destination', destinationAWS, { firehose: firehoseConfig });
+```
+
+### Optional Configuration Fields
+
+- `region`: AWS region where your services are hosted.
+- `credentials`: AWS credentials for authentication, containing `accessKeyId`
+  and `secretAccessKey`.
+
+## Usage
+
+You can add the destination multiple times, each with one AWS service
+configured, or once with all services combined. This flexibility allows you to
+use different credentials or handle error handling individually.
+
+### Example
+
+Here is a simple example to demonstrate how to use the AWS destination with
+walkerOS:
+
+```js
+import destinationAWS from '@elbwalker/destination-node-aws';
+
+const config = {
+  firehose: {
+    streamName: 'your-firehose-stream-name',
+    region: 'eu-central-1',
+    credentials: {
+      accessKeyId: 'your-access-key-id',
+      secretAccessKey: 'your-secret-access-key',
+    },
+  },
+};
+
+elb('walker destination', destinationAWS, config);
+```
+
+## Who this package is for
+
+This destination is ideal for data engineers and analysts who are already using
+AWS or plan to integrate it into their data stack. It's also useful for
+companies looking to centralize their data collection and analysis efforts.
+
+## Permissions
+
+When using AWS credentials, it's recommended to follow the principle of _least
+privilege_. Never grant more permissions than what is necessary to perform the
+intended functions.
+
+During initial setup, the credentials may require broader permissions to create
+necessary resources. For production environments, it is recommended to assign
+specific permissions directly to the resources required.
+
+For more detailed information, refer to the official
+[AWS IAM documentation](https://aws.amazon.com/iam/).
