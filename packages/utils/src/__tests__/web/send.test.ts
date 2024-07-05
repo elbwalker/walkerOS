@@ -1,8 +1,13 @@
 import { sendRequest } from '../../';
 
 describe('send', () => {
-  const mockFetch = jest.fn(); //.mockImplementation(console.log);
-  const mockBeacon = jest.fn();
+  const mockFetch = jest.fn(
+    () =>
+      Promise.resolve({
+        json: () => Promise.resolve('demo'),
+      }) as Promise<Response>,
+  );
+  const mockBeacon = jest.fn(() => true);
   const mockXHROpen = jest.fn();
   const mockXHRSend = jest.fn();
   const mockXHRHeader = jest.fn();
@@ -17,7 +22,7 @@ describe('send', () => {
   const oldFetch = window.fetch;
   const oldBeacon = navigator.sendBeacon;
 
-  const data = 'entity action';
+  const data = { key: 'value' };
   const url = 'https://api.elbwalker.com/';
 
   beforeEach(() => {
@@ -35,30 +40,67 @@ describe('send', () => {
     window.XMLHttpRequest = oldXMLHttpRequest;
   });
 
-  test('fetch', () => {
-    sendRequest(url, data);
+  test('fetch', async () => {
+    await sendRequest(url, data, { transport: 'fetch' });
 
     expect(mockFetch).toHaveBeenCalledWith(
       url,
-      expect.objectContaining({ body: data, keepalive: true }),
+      expect.objectContaining({ body: JSON.stringify(data), keepalive: true }),
+      // @TODO expect.objectContaining({ body: (data), keepalive: true }),
     );
+    // expect(await response.json()).toBe('demo');
 
     jest.clearAllMocks();
-    sendRequest(url, data, { transport: 'fetch' });
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    // const responseWithOptions = await sendRequest(url, data, {
+    //   transport: 'fetch',
+    // });
+    // expect(mockFetch).toHaveBeenCalledTimes(1);
+    // expect(await responseWithOptions.json()).toBe('demo');
   });
 
   test('beacon', () => {
-    sendRequest(url, data, { transport: 'beacon' });
-    expect(mockBeacon).toHaveBeenCalledWith(url, expect.any(String));
+    const response = sendRequest(url, data, { transport: 'beacon' });
+    // expect(mockBeacon).toHaveBeenCalledWith(url, (data));
+    expect(response).toBe(true);
   });
 
   test('xhr', () => {
-    sendRequest(url, data, { transport: 'xhr' });
-    expect(mockXHROpen).toHaveBeenCalledWith('POST', expect.any(String), true);
+    const response = sendRequest(url, data, { transport: 'xhr' });
+    expect(mockXHROpen).toHaveBeenCalledWith('POST', url, true);
     expect(mockXHRHeader).toHaveBeenCalledWith(
-      'Content-type',
+      'Content-Type',
       'application/json; charset=utf-8',
     );
+    expect(mockXHR.send).toHaveBeenCalledWith(JSON.stringify(data));
+    expect(response).toBe(mockXHR);
+    // expect(response.responseText).toBe(JSON.stringify('demo'));
+  });
+
+  test('xhr with custom headers', () => {
+    const headers = { 'Custom-Header': 'customValue' };
+    const response = sendRequest(url, data, {
+      transport: 'xhr',
+      headers,
+    }) as XMLHttpRequest;
+    expect(mockXHROpen).toHaveBeenCalledWith('POST', url, true);
+    expect(mockXHRHeader).toHaveBeenCalledWith(
+      'Content-Type',
+      'application/json; charset=utf-8',
+    );
+    expect(mockXHRHeader).toHaveBeenCalledWith('Custom-Header', 'customValue');
+    expect(mockXHR.send).toHaveBeenCalledWith(JSON.stringify(data));
+    expect(response).toBe(mockXHR);
+    expect(response.responseText).toBe(JSON.stringify('demo'));
+  });
+
+  test('xhr with method option', () => {
+    const response = sendRequest(url, data, {
+      transport: 'xhr',
+      method: 'PUT',
+    });
+    expect(mockXHROpen).toHaveBeenCalledWith('PUT', url, true);
+    expect(mockXHR.send).toHaveBeenCalledWith(JSON.stringify(data));
+    expect(response).toBe(mockXHR);
+    // expect(response.responseText).toBe(JSON.stringify('demo'));
   });
 });

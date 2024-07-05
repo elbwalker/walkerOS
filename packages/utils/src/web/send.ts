@@ -1,64 +1,98 @@
 import { WalkerOS } from '@elbwalker/types';
-import { isSameType } from '../web';
+import { assign, isSameType } from '../web';
 
-export interface sendOptions {
-  transport?: Transport;
-}
-
+export type DataValue = WalkerOS.Property | WalkerOS.Properties;
+export type Headers = { [key: string]: string };
 export type Transport = 'fetch' | 'beacon' | 'xhr';
 
-export async function sendAsFetch(
+export interface SendOptions {
+  headers?: Headers;
+  transport?: Transport;
+  method?: string;
+}
+
+type SendOptionsFetch = SendOptions & { transport?: 'fetch' };
+type SendOptionsXhr = SendOptions & { transport?: 'xhr' };
+
+// Define return types for each transport mode
+type SendRequestReturnType<T extends Transport> = T extends 'beacon'
+  ? boolean
+  : T extends 'xhr'
+  ? XMLHttpRequest
+  : Promise<Response>;
+
+// Generic function type
+type SendRequest<T extends Transport = 'fetch'> = (
   url: string,
-  data: XMLHttpRequestBodyInit,
-): Promise<Response> {
-  return fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+  data: DataValue,
+  options?: SendOptions & { transport?: T },
+) => SendRequestReturnType<T>;
+
+// Data transformation function
+const transformData = (data: DataValue): string => {
+  return isSameType(data, '') ? (data as string) : JSON.stringify(data);
+};
+
+export const sendAsFetch: SendRequest<'fetch'> = async (
+  url,
+  data,
+  options = {},
+) => {
+  const headers = assign(
+    {
+      'Content-Type': 'application/json; charset=utf-8',
     },
-    keepalive: true, // Sending data even after the tab is closed
-    body: data,
+    options.headers,
+  );
+
+  const body = transformData(data);
+  return fetch(url, {
+    method: options.method || 'POST',
+    headers,
+    keepalive: true,
+    body,
   });
-}
+};
 
-export function sendAsBeacon(
-  url: string,
-  data: XMLHttpRequestBodyInit,
-): boolean {
-  return navigator.sendBeacon(url, data);
-}
+export const sendAsBeacon: SendRequest<'beacon'> = (url, data) => {
+  const body = transformData(data);
+  return navigator.sendBeacon(url, body);
+};
 
-export function sendAsXhr(
-  url: string,
-  data: XMLHttpRequestBodyInit,
-): XMLHttpRequest {
+export const sendAsXhr: SendRequest<'xhr'> = (url, data, options = {}) => {
+  const headers = assign(
+    {
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+    options.headers,
+  );
+
+  const method = options.method || 'POST';
+  const body = transformData(data);
+
   const xhr = new XMLHttpRequest();
-  xhr.open('POST', url, true);
-  xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
-  xhr.send(data);
+  xhr.open(method, url, true);
+  for (const header in headers) {
+    xhr.setRequestHeader(header, headers[header]);
+  }
+  xhr.send(body);
   return xhr;
-}
+};
 
-export function sendRequest(
-  url: string,
-  data: WalkerOS.Property | WalkerOS.Properties,
-  options: sendOptions = {},
-): void {
-  const { transport = 'fetch' } = options;
-
-  // Transform data to string
-  if (!isSameType(data, '')) data = JSON.stringify(data);
+export const sendRequest: SendRequest<Transport> = (
+  url,
+  data,
+  options = {},
+) => {
+  const transport = options.transport || 'fetch';
 
   switch (transport) {
     case 'beacon':
-      sendAsBeacon(url, data);
-      break;
+      return sendAsBeacon(url, data);
     case 'xhr':
-      sendAsXhr(url, data);
-      break;
+      return sendAsXhr(url, data, options as SendOptionsXhr);
     case 'fetch':
     default:
-      sendAsFetch(url, data);
-      break;
+      return sendAsFetch(url, data, options as SendOptionsFetch);
   }
-}
+};
