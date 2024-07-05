@@ -1,20 +1,12 @@
-import { WalkerOS } from '@elbwalker/types';
-import { assign, isSameType, tryCatch, tryCatchAsync } from '../web';
+import type { SendDataValue, SendHeaders, SendResponse } from '../';
+import { getHeaders, transformData, tryCatch, tryCatchAsync } from '../';
 
-export type DataValue = WalkerOS.Property | WalkerOS.Properties;
-export type Headers = { [key: string]: string };
 export type Transport = 'fetch' | 'beacon' | 'xhr';
 
 export interface SendOptions {
-  headers?: Headers;
+  headers?: SendHeaders;
   transport?: Transport;
   method?: string;
-}
-
-export interface SendResponse {
-  ok: boolean;
-  response?: unknown;
-  error?: string;
 }
 
 export type SendRequestReturnType<T extends Transport> = T extends 'fetch'
@@ -23,7 +15,7 @@ export type SendRequestReturnType<T extends Transport> = T extends 'fetch'
 
 export function sendRequest<T extends Transport>(
   url: string,
-  data: DataValue,
+  data: SendDataValue,
   options: SendOptions & { transport: T } = { transport: 'fetch' as T },
 ): SendRequestReturnType<T> {
   const transport = options.transport || 'fetch';
@@ -41,7 +33,7 @@ export function sendRequest<T extends Transport>(
 
 export async function sendAsFetch(
   url: string,
-  data: DataValue,
+  data: SendDataValue,
   options: SendOptions = {},
 ): Promise<SendResponse> {
   const headers = getHeaders(options.headers);
@@ -73,7 +65,7 @@ export async function sendAsFetch(
   )();
 }
 
-export function sendAsBeacon(url: string, data: DataValue): SendResponse {
+export function sendAsBeacon(url: string, data: SendDataValue): SendResponse {
   const body = transformData(data);
   const ok = navigator.sendBeacon(url, body);
 
@@ -85,7 +77,7 @@ export function sendAsBeacon(url: string, data: DataValue): SendResponse {
 
 export function sendAsXhr(
   url: string,
-  data: DataValue,
+  data: SendDataValue,
   options: SendOptions = {},
 ): SendResponse {
   const headers = getHeaders(options.headers);
@@ -116,17 +108,4 @@ export function sendAsXhr(
       };
     },
   )();
-}
-
-const transformData = (data: DataValue): string => {
-  return isSameType(data, '' as string) ? data : JSON.stringify(data);
-};
-
-function getHeaders(headers: Headers = {}): Headers {
-  return assign(
-    {
-      'Content-Type': 'application/json; charset=utf-8',
-    },
-    headers,
-  );
 }

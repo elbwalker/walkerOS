@@ -7,6 +7,7 @@ export * from './getMarketingParameters';
 export * from './invocations';
 export * from './isSameType';
 export * from './onLog';
+export * from './send';
 export * from './throwError';
 export * from './trim';
 export * from './tryCatch';
