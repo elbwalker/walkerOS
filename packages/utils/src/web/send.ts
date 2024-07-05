@@ -11,32 +11,39 @@ export interface SendOptions {
   method?: string;
 }
 
-// Standardized response type
 export interface SendResponse {
   ok: boolean;
   response?: unknown;
   error?: string;
 }
 
-// Data transformation function
-const transformData = (data: DataValue): string => {
-  return isSameType(data, '' as string) ? data : JSON.stringify(data);
-};
+export type SendRequestReturnType<T extends Transport> = T extends 'fetch'
+  ? Promise<SendResponse>
+  : SendResponse;
 
-function getHeaders(headers: Headers = {}): Headers {
-  return assign(
-    {
-      'Content-Type': 'application/json; charset=utf-8',
-    },
-    headers,
-  );
+export function sendRequest<T extends Transport>(
+  url: string,
+  data: DataValue,
+  options: SendOptions & { transport: T } = { transport: 'fetch' as T },
+): SendRequestReturnType<T> {
+  const transport = options.transport || 'fetch';
+
+  switch (transport) {
+    case 'beacon':
+      return sendAsBeacon(url, data) as SendRequestReturnType<T>;
+    case 'xhr':
+      return sendAsXhr(url, data, options) as SendRequestReturnType<T>;
+    case 'fetch':
+    default:
+      return sendAsFetch(url, data, options) as SendRequestReturnType<T>;
+  }
 }
 
-export const sendAsFetch = async (
+export async function sendAsFetch(
   url: string,
   data: DataValue,
   options: SendOptions = {},
-): Promise<SendResponse> => {
+): Promise<SendResponse> {
   const headers = getHeaders(options.headers);
   const body = transformData(data);
 
@@ -64,9 +71,9 @@ export const sendAsFetch = async (
       };
     },
   )();
-};
+}
 
-export const sendAsBeacon = (url: string, data: DataValue): SendResponse => {
+export function sendAsBeacon(url: string, data: DataValue): SendResponse {
   const body = transformData(data);
   const ok = navigator.sendBeacon(url, body);
 
@@ -74,13 +81,13 @@ export const sendAsBeacon = (url: string, data: DataValue): SendResponse => {
     ok,
     error: ok ? undefined : 'Failed to send beacon',
   };
-};
+}
 
-export const sendAsXhr = (
+export function sendAsXhr(
   url: string,
   data: DataValue,
   options: SendOptions = {},
-): SendResponse => {
+): SendResponse {
   const headers = getHeaders(options.headers);
   const method = options.method || 'POST';
   const body = transformData(data);
@@ -109,23 +116,17 @@ export const sendAsXhr = (
       };
     },
   )();
+}
+
+const transformData = (data: DataValue): string => {
+  return isSameType(data, '' as string) ? data : JSON.stringify(data);
 };
 
-// Updated sendRequest function
-export const sendRequest = (
-  url: string,
-  data: DataValue,
-  options: SendOptions = { transport: 'fetch' },
-): Promise<SendResponse> | SendResponse => {
-  const transport = options.transport || 'fetch';
-
-  switch (transport) {
-    case 'beacon':
-      return sendAsBeacon(url, data);
-    case 'xhr':
-      return sendAsXhr(url, data, options);
-    case 'fetch':
-    default:
-      return sendAsFetch(url, data, options);
-  }
-};
+function getHeaders(headers: Headers = {}): Headers {
+  return assign(
+    {
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+    headers,
+  );
+}

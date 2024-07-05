@@ -9,6 +9,7 @@ describe('send', () => {
     () =>
       Promise.resolve({
         json: () => Promise.resolve('demo'),
+        ok: true,
       }) as Promise<Response>,
   );
   const mockBeacon = jest.fn(() => true);
@@ -43,14 +44,17 @@ describe('send', () => {
   });
 
   test('fetch', async () => {
-    await sendRequest(url, data, { transport: 'fetch' });
+    const response = await sendRequest(url, data, { transport: 'fetch' });
 
     expect(mockFetch).toHaveBeenCalledWith(
       url,
       expect.objectContaining({ body: dataStringified, keepalive: true }),
     );
-
-    jest.clearAllMocks();
+    expect(response).toStrictEqual({
+      ok: true,
+      response: 'demo',
+      error: undefined,
+    });
   });
 
   test('beacon', () => {
