@@ -1,4 +1,4 @@
-import { sendRequest } from '../../';
+import { sendRequestWeb } from '../../';
 
 describe('send', () => {
   const data = { key: 'value' };
@@ -44,7 +44,7 @@ describe('send', () => {
   });
 
   test('fetch', async () => {
-    const response = await sendRequest(url, data, { transport: 'fetch' });
+    const response = await sendRequestWeb(url, data, { transport: 'fetch' });
 
     expect(mockFetch).toHaveBeenCalledWith(
       url,
@@ -58,13 +58,13 @@ describe('send', () => {
   });
 
   test('beacon', () => {
-    const response = sendRequest(url, data, { transport: 'beacon' });
+    const response = sendRequestWeb(url, data, { transport: 'beacon' });
     expect(mockBeacon).toHaveBeenCalledWith(url, dataStringified);
     expect(response).toStrictEqual({ ok: true, error: undefined });
   });
 
   test('xhr', () => {
-    const response = sendRequest(url, data, { transport: 'xhr' });
+    const response = sendRequestWeb(url, data, { transport: 'xhr' });
     expect(mockXHROpen).toHaveBeenCalledWith('POST', url, false);
     expect(mockXHRHeader).toHaveBeenCalledWith(
       'Content-Type',
@@ -80,7 +80,7 @@ describe('send', () => {
 
   test('xhr with custom headers', () => {
     const headers = { 'Custom-Header': 'customValue' };
-    const response = sendRequest(url, data, {
+    const response = sendRequestWeb(url, data, {
       transport: 'xhr',
       headers,
     });
@@ -99,7 +99,7 @@ describe('send', () => {
   });
 
   test('xhr with method option', () => {
-    const response = sendRequest(url, data, {
+    const response = sendRequestWeb(url, data, {
       transport: 'xhr',
       method: 'PUT',
     });

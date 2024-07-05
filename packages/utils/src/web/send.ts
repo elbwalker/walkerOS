@@ -13,7 +13,7 @@ export type SendRequestReturnType<T extends Transport> = T extends 'fetch'
   ? Promise<SendResponse>
   : SendResponse;
 
-export function sendRequest<T extends Transport>(
+export function sendRequestWeb<T extends Transport>(
   url: string,
   data: SendDataValue,
   options: SendOptions & { transport: T } = { transport: 'fetch' as T },
