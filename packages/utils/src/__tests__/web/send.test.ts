@@ -1,6 +1,10 @@
 import { sendRequest } from '../../';
 
 describe('send', () => {
+  const data = { key: 'value' };
+  const dataStringified = JSON.stringify({ key: 'value' });
+  const url = 'https://api.elbwalker.com/';
+
   const mockFetch = jest.fn(
     () =>
       Promise.resolve({
@@ -15,15 +19,13 @@ describe('send', () => {
     open: mockXHROpen,
     send: mockXHRSend,
     setRequestHeader: mockXHRHeader,
+    status: 200,
+    response: dataStringified,
     readyState: 4,
-    responseText: JSON.stringify('demo'),
   };
   const oldXMLHttpRequest = window.XMLHttpRequest;
   const oldFetch = window.fetch;
   const oldBeacon = navigator.sendBeacon;
-
-  const data = { key: 'value' };
-  const url = 'https://api.elbwalker.com/';
 
   beforeEach(() => {
     window.fetch = mockFetch;
@@ -45,35 +47,31 @@ describe('send', () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       url,
-      expect.objectContaining({ body: JSON.stringify(data), keepalive: true }),
-      // @TODO expect.objectContaining({ body: (data), keepalive: true }),
+      expect.objectContaining({ body: dataStringified, keepalive: true }),
     );
-    // expect(await response.json()).toBe('demo');
 
     jest.clearAllMocks();
-    // const responseWithOptions = await sendRequest(url, data, {
-    //   transport: 'fetch',
-    // });
-    // expect(mockFetch).toHaveBeenCalledTimes(1);
-    // expect(await responseWithOptions.json()).toBe('demo');
   });
 
   test('beacon', () => {
     const response = sendRequest(url, data, { transport: 'beacon' });
-    // expect(mockBeacon).toHaveBeenCalledWith(url, (data));
-    expect(response).toBe(true);
+    expect(mockBeacon).toHaveBeenCalledWith(url, dataStringified);
+    expect(response).toStrictEqual({ ok: true, error: undefined });
   });
 
   test('xhr', () => {
     const response = sendRequest(url, data, { transport: 'xhr' });
-    expect(mockXHROpen).toHaveBeenCalledWith('POST', url, true);
+    expect(mockXHROpen).toHaveBeenCalledWith('POST', url, false);
     expect(mockXHRHeader).toHaveBeenCalledWith(
       'Content-Type',
       'application/json; charset=utf-8',
     );
     expect(mockXHR.send).toHaveBeenCalledWith(JSON.stringify(data));
-    expect(response).toBe(mockXHR);
-    // expect(response.responseText).toBe(JSON.stringify('demo'));
+    expect(response).toStrictEqual({
+      ok: true,
+      response: dataStringified,
+      error: undefined,
+    });
   });
 
   test('xhr with custom headers', () => {
@@ -81,16 +79,19 @@ describe('send', () => {
     const response = sendRequest(url, data, {
       transport: 'xhr',
       headers,
-    }) as XMLHttpRequest;
-    expect(mockXHROpen).toHaveBeenCalledWith('POST', url, true);
+    });
+
     expect(mockXHRHeader).toHaveBeenCalledWith(
       'Content-Type',
       'application/json; charset=utf-8',
     );
     expect(mockXHRHeader).toHaveBeenCalledWith('Custom-Header', 'customValue');
     expect(mockXHR.send).toHaveBeenCalledWith(JSON.stringify(data));
-    expect(response).toBe(mockXHR);
-    expect(response.responseText).toBe(JSON.stringify('demo'));
+    expect(response).toStrictEqual({
+      ok: true,
+      response: dataStringified,
+      error: undefined,
+    });
   });
 
   test('xhr with method option', () => {
@@ -98,9 +99,12 @@ describe('send', () => {
       transport: 'xhr',
       method: 'PUT',
     });
-    expect(mockXHROpen).toHaveBeenCalledWith('PUT', url, true);
+    expect(mockXHROpen).toHaveBeenCalledWith('PUT', url, false);
     expect(mockXHR.send).toHaveBeenCalledWith(JSON.stringify(data));
-    expect(response).toBe(mockXHR);
-    // expect(response.responseText).toBe(JSON.stringify('demo'));
+    expect(response).toStrictEqual({
+      ok: true,
+      response: dataStringified,
+      error: undefined,
+    });
   });
 });
