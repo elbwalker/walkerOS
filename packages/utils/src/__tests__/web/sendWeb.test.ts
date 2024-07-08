@@ -8,7 +8,7 @@ describe('send', () => {
   const mockFetch = jest.fn(
     () =>
       Promise.resolve({
-        json: () => Promise.resolve('demo'),
+        text: () => Promise.resolve(dataStringified),
         ok: true,
       }) as Promise<Response>,
   );
@@ -52,7 +52,7 @@ describe('send', () => {
     );
     expect(response).toStrictEqual({
       ok: true,
-      data: 'demo',
+      data: dataStringified,
       error: undefined,
     });
   });
@@ -70,7 +70,7 @@ describe('send', () => {
       'Content-Type',
       'application/json; charset=utf-8',
     );
-    expect(mockXHR.send).toHaveBeenCalledWith(JSON.stringify(data));
+    expect(mockXHR.send).toHaveBeenCalledWith(dataStringified);
     expect(response).toStrictEqual({
       ok: true,
       data: dataStringified,
@@ -90,7 +90,7 @@ describe('send', () => {
       'application/json; charset=utf-8',
     );
     expect(mockXHRHeader).toHaveBeenCalledWith('Custom-Header', 'customValue');
-    expect(mockXHR.send).toHaveBeenCalledWith(JSON.stringify(data));
+    expect(mockXHR.send).toHaveBeenCalledWith(dataStringified);
     expect(response).toStrictEqual({
       ok: true,
       data: dataStringified,
@@ -104,7 +104,7 @@ describe('send', () => {
       method: 'PUT',
     });
     expect(mockXHROpen).toHaveBeenCalledWith('PUT', url, false);
-    expect(mockXHR.send).toHaveBeenCalledWith(JSON.stringify(data));
+    expect(mockXHR.send).toHaveBeenCalledWith(dataStringified);
     expect(response).toStrictEqual({
       ok: true,
       data: dataStringified,

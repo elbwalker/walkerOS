@@ -48,7 +48,7 @@ export async function sendAsFetch(
         body,
       });
 
-      const responseData = await response.json();
+      const responseData = await response.text();
 
       return {
         ok: response.ok,
