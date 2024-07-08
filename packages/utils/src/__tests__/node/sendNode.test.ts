@@ -79,7 +79,7 @@ describe('sendRequestNode', () => {
 
     expect(mockRequest.write).toHaveBeenCalledWith(expect.any(String));
 
-    expect(response).toEqual({
+    expect(response).toStrictEqual({
       ok: true,
       response: dataStringified,
       error: undefined,
@@ -104,9 +104,8 @@ describe('sendRequestNode', () => {
   test('on error', async () => {
     const response = await sendRequestNode(urlBroken, data);
 
-    expect(response).toEqual({
+    expect(response).toStrictEqual({
       ok: false,
-      response: undefined,
       error: 'Request failed',
     });
   });
@@ -131,9 +130,8 @@ describe('sendRequestNode', () => {
     expect(mockRequest.setTimeout).toHaveBeenCalledWith(1000);
     expect(mockRequest.destroy).toHaveBeenCalled();
 
-    expect(response).toEqual({
+    expect(response).toStrictEqual({
       ok: false,
-      response: undefined,
       error: 'Request timeout',
     });
   });

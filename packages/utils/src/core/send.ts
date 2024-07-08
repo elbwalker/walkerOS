@@ -6,7 +6,7 @@ export type SendHeaders = { [key: string]: string };
 
 export interface SendResponse {
   ok: boolean;
-  response: unknown;
+  response?: unknown;
   error?: string;
 }
 

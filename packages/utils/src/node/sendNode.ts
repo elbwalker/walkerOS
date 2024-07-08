@@ -52,7 +52,6 @@ export function sendRequestNode(
     req.on('error', (error) => {
       resolve({
         ok: false,
-        response: undefined,
         error: error.message,
       });
     });
@@ -61,7 +60,6 @@ export function sendRequestNode(
       req.destroy();
       resolve({
         ok: false,
-        response: undefined,
         error: 'Request timeout',
       });
     });
