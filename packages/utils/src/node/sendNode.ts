@@ -17,7 +17,7 @@ export function sendRequestNode(
   const headers = getHeaders(options.headers);
   const body = transformData(data);
   const method = options.method || 'POST';
-  const timeout = options.timeout || 5000; // Default timeout of 5 seconds
+  const timeout = options.timeout || 5000;
 
   return new Promise((resolve) => {
     const urlObj = new URL(url);

@@ -11,12 +11,14 @@ describe('sendRequestNode', () => {
   const urlHttp = 'http://example.com/';
   const urlHttps = 'https://example.com/';
   const urlBroken = 'http://broken';
+  const urlTimeout = 'http://timeout';
 
   const mockRequest = {
     on: jest.fn(),
     write: jest.fn(),
     end: jest.fn(),
     setTimeout: jest.fn(),
+    destroy: jest.fn(),
   };
 
   beforeEach(() => {
@@ -42,6 +44,12 @@ describe('sendRequestNode', () => {
         req.on.mockImplementationOnce((event, handler) => {
           if (event === 'error') {
             handler(new Error('Request failed'));
+          }
+        });
+      } else if (url === urlTimeout) {
+        req.on.mockImplementationOnce((event, handler) => {
+          if (event === 'timeout') {
+            handler();
           }
         });
       } else {
@@ -93,13 +101,40 @@ describe('sendRequestNode', () => {
     );
   });
 
-  test('http request with error', async () => {
+  test('on error', async () => {
     const response = await sendRequestNode(urlBroken, data);
 
     expect(response).toEqual({
       ok: false,
       response: undefined,
       error: 'Request failed',
+    });
+  });
+
+  test('on timeout', async () => {
+    const timeoutHandler = jest.fn();
+
+    mockRequest.on.mockImplementation((event, handler) => {
+      if (event === 'timeout') {
+        timeoutHandler.mockImplementation(handler);
+      }
+    });
+
+    const responsePromise = sendRequestNode(urlTimeout, data, {
+      timeout: 1000,
+    });
+
+    timeoutHandler(); // Trigger the timeout handler manually
+
+    const response = await responsePromise;
+
+    expect(mockRequest.setTimeout).toHaveBeenCalledWith(1000);
+    expect(mockRequest.destroy).toHaveBeenCalled();
+
+    expect(response).toEqual({
+      ok: false,
+      response: undefined,
+      error: 'Request timeout',
     });
   });
 });
