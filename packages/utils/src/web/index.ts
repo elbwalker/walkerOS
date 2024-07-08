@@ -4,6 +4,6 @@ export * from './getAttribute';
 export * from './getHashWeb';
 export * from './userAgent';
 export * from './isVisible';
-export * from './send';
+export * from './sendWeb';
 export * from './session/';
 export * from './storage';

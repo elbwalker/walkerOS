@@ -1,40 +1,40 @@
 import type { SendDataValue, SendHeaders, SendResponse } from '../';
 import { getHeaders, transformData, tryCatch, tryCatchAsync } from '../';
 
-export type Transport = 'fetch' | 'beacon' | 'xhr';
+export type SendWebTransport = 'fetch' | 'beacon' | 'xhr';
 
-export interface SendOptions {
+export interface SendWebOptions {
   headers?: SendHeaders;
-  transport?: Transport;
+  transport?: SendWebTransport;
   method?: string;
 }
 
-export type SendRequestReturnType<T extends Transport> = T extends 'fetch'
+export type SendWebReturn<T extends SendWebTransport> = T extends 'fetch'
   ? Promise<SendResponse>
   : SendResponse;
 
-export function sendRequestWeb<T extends Transport>(
+export function sendRequestWeb<T extends SendWebTransport>(
   url: string,
   data: SendDataValue,
-  options: SendOptions & { transport: T } = { transport: 'fetch' as T },
-): SendRequestReturnType<T> {
+  options: SendWebOptions & { transport: T } = { transport: 'fetch' as T },
+): SendWebReturn<T> {
   const transport = options.transport || 'fetch';
 
   switch (transport) {
     case 'beacon':
-      return sendAsBeacon(url, data) as SendRequestReturnType<T>;
+      return sendAsBeacon(url, data) as SendWebReturn<T>;
     case 'xhr':
-      return sendAsXhr(url, data, options) as SendRequestReturnType<T>;
+      return sendAsXhr(url, data, options) as SendWebReturn<T>;
     case 'fetch':
     default:
-      return sendAsFetch(url, data, options) as SendRequestReturnType<T>;
+      return sendAsFetch(url, data, options) as SendWebReturn<T>;
   }
 }
 
 export async function sendAsFetch(
   url: string,
   data: SendDataValue,
-  options: SendOptions = {},
+  options: SendWebOptions = {},
 ): Promise<SendResponse> {
   const headers = getHeaders(options.headers);
   const body = transformData(data);
@@ -78,7 +78,7 @@ export function sendAsBeacon(url: string, data: SendDataValue): SendResponse {
 export function sendAsXhr(
   url: string,
   data: SendDataValue,
-  options: SendOptions = {},
+  options: SendWebOptions = {},
 ): SendResponse {
   const headers = getHeaders(options.headers);
   const method = options.method || 'POST';
