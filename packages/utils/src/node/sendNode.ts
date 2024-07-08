@@ -9,7 +9,7 @@ export interface SendNodeOptions {
   timeout?: number;
 }
 
-export function sendRequestNode(
+export function sendNode(
   url: string,
   data: SendDataValue,
   options: SendNodeOptions = {},

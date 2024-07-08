@@ -1,11 +1,11 @@
-import { sendRequestNode } from '../../';
+import { sendNode } from '../../';
 import * as http from 'http';
 import * as https from 'https';
 
 jest.mock('http');
 jest.mock('https');
 
-describe('sendRequestNode', () => {
+describe('sendNode', () => {
   const data = { key: 'value' };
   const dataStringified = JSON.stringify({ key: 'value' });
   const urlHttp = 'http://example.com/';
@@ -66,7 +66,7 @@ describe('sendRequestNode', () => {
   });
 
   test('http request', async () => {
-    const response = await sendRequestNode(urlHttp, data);
+    const response = await sendNode(urlHttp, data);
 
     expect(http.request).toHaveBeenCalledWith(
       urlHttp,
@@ -89,7 +89,7 @@ describe('sendRequestNode', () => {
   });
 
   test('https request', async () => {
-    await sendRequestNode(urlHttps, data);
+    await sendNode(urlHttps, data);
 
     expect(https.request).toHaveBeenCalledWith(
       urlHttps,
@@ -102,7 +102,7 @@ describe('sendRequestNode', () => {
   });
 
   test('on error', async () => {
-    const response = await sendRequestNode(urlBroken, data);
+    const response = await sendNode(urlBroken, data);
 
     expect(response).toStrictEqual({
       ok: false,
@@ -119,7 +119,7 @@ describe('sendRequestNode', () => {
       }
     });
 
-    const responsePromise = sendRequestNode(urlTimeout, data, {
+    const responsePromise = sendNode(urlTimeout, data, {
       timeout: 1000,
     });
 
