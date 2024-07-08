@@ -52,7 +52,7 @@ describe('send', () => {
     );
     expect(response).toStrictEqual({
       ok: true,
-      response: 'demo',
+      data: 'demo',
       error: undefined,
     });
   });
@@ -73,7 +73,7 @@ describe('send', () => {
     expect(mockXHR.send).toHaveBeenCalledWith(JSON.stringify(data));
     expect(response).toStrictEqual({
       ok: true,
-      response: dataStringified,
+      data: dataStringified,
       error: undefined,
     });
   });
@@ -93,7 +93,7 @@ describe('send', () => {
     expect(mockXHR.send).toHaveBeenCalledWith(JSON.stringify(data));
     expect(response).toStrictEqual({
       ok: true,
-      response: dataStringified,
+      data: dataStringified,
       error: undefined,
     });
   });
@@ -107,7 +107,7 @@ describe('send', () => {
     expect(mockXHR.send).toHaveBeenCalledWith(JSON.stringify(data));
     expect(response).toStrictEqual({
       ok: true,
-      response: dataStringified,
+      data: dataStringified,
       error: undefined,
     });
   });

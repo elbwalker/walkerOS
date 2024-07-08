@@ -81,7 +81,7 @@ describe('sendRequestNode', () => {
 
     expect(response).toStrictEqual({
       ok: true,
-      response: dataStringified,
+      data: dataStringified,
       error: undefined,
     });
 

@@ -43,7 +43,7 @@ export function sendRequestNode(
 
         resolve({
           ok: !!ok,
-          response: responseData,
+          data: responseData,
           error: ok ? undefined : res.statusMessage,
         });
       });

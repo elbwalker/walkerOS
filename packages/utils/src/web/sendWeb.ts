@@ -52,7 +52,7 @@ export async function sendAsFetch(
 
       return {
         ok: response.ok,
-        response: responseData,
+        data: responseData,
         error: response.ok ? undefined : response.statusText,
       };
     },
@@ -97,7 +97,7 @@ export function sendAsXhr(
 
       return {
         ok,
-        response: xhr.response,
+        data: xhr.response,
         error: ok ? undefined : xhr.statusText,
       };
     },
