@@ -10,6 +10,7 @@ describe('sendRequestNode', () => {
   const dataStringified = JSON.stringify({ key: 'value' });
   const urlHttp = 'http://example.com/';
   const urlHttps = 'https://example.com/';
+  const urlBroken = 'http://broken';
 
   const mockRequest = {
     on: jest.fn(),
@@ -35,10 +36,21 @@ describe('sendRequestNode', () => {
     };
 
     const mockFn = (url, options, callback) => {
-      if (typeof callback === 'function') {
-        callback(mockResponse);
+      const req = mockRequest;
+
+      if (url === urlBroken) {
+        req.on.mockImplementationOnce((event, handler) => {
+          if (event === 'error') {
+            handler(new Error('Request failed'));
+          }
+        });
+      } else {
+        if (typeof callback === 'function') {
+          callback(mockResponse);
+        }
       }
-      return mockRequest;
+
+      return req;
     };
 
     (http.request as jest.Mock).mockImplementation(mockFn);
@@ -69,7 +81,7 @@ describe('sendRequestNode', () => {
   });
 
   test('https request', async () => {
-    const response = await sendRequestNode(urlHttps, data);
+    await sendRequestNode(urlHttps, data);
 
     expect(https.request).toHaveBeenCalledWith(
       urlHttps,
@@ -79,15 +91,15 @@ describe('sendRequestNode', () => {
       }),
       expect.any(Function),
     );
+  });
 
-    expect(mockRequest.write).toHaveBeenCalledWith(expect.any(String));
+  test('http request with error', async () => {
+    const response = await sendRequestNode(urlBroken, data);
 
     expect(response).toEqual({
-      ok: true,
-      response: dataStringified,
-      error: undefined,
+      ok: false,
+      response: undefined,
+      error: 'Request failed',
     });
-
-    expect(mockRequest.end).toHaveBeenCalled();
   });
 });

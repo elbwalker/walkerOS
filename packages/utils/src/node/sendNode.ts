@@ -19,7 +19,7 @@ export function sendRequestNode(
   const method = options.method || 'POST';
   const timeout = options.timeout || 5000; // Default timeout of 5 seconds
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const urlObj = new URL(url);
     const isHttps = urlObj.protocol === 'https:';
     const lib = isHttps ? https : http;
@@ -50,16 +50,18 @@ export function sendRequestNode(
     });
 
     req.on('error', (error) => {
-      reject({
+      resolve({
         ok: false,
+        response: undefined,
         error: error.message,
       });
     });
 
     req.on('timeout', () => {
       req.destroy();
-      reject({
+      resolve({
         ok: false,
+        response: undefined,
         error: 'Request timeout',
       });
     });

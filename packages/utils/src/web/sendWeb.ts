@@ -31,6 +31,8 @@ export function sendRequestWeb<T extends SendWebTransport>(
   }
 }
 
+const response = undefined;
+
 export async function sendAsFetch(
   url: string,
   data: SendDataValue,
@@ -59,6 +61,7 @@ export async function sendAsFetch(
     (error) => {
       return {
         ok: false,
+        response,
         error: (error as Error).message,
       };
     },
@@ -71,6 +74,7 @@ export function sendAsBeacon(url: string, data: SendDataValue): SendResponse {
 
   return {
     ok,
+    response,
     error: ok ? undefined : 'Failed to send beacon',
   };
 }
@@ -104,6 +108,7 @@ export function sendAsXhr(
     (error) => {
       return {
         ok: false,
+        response,
         error: (error as Error).message,
       };
     },
