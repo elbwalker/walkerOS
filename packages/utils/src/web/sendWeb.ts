@@ -15,8 +15,8 @@ export type SendWebReturn<T extends SendWebTransport> = T extends 'fetch'
 
 export function sendWeb<T extends SendWebTransport>(
   url: string,
-  data: SendDataValue,
-  options: SendWebOptions & { transport: T } = { transport: 'fetch' as T },
+  data?: SendDataValue,
+  options: SendWebOptions & { transport?: T } = { transport: 'fetch' as T },
 ): SendWebReturn<T> {
   const transport = options.transport || 'fetch';
 
@@ -33,7 +33,7 @@ export function sendWeb<T extends SendWebTransport>(
 
 export async function sendWebAsFetch(
   url: string,
-  data: SendDataValue,
+  data?: SendDataValue,
   options: SendWebOptions = {},
 ): Promise<SendResponse> {
   const headers = getHeaders(options.headers);
@@ -67,7 +67,7 @@ export async function sendWebAsFetch(
 
 export function sendWebAsBeacon(
   url: string,
-  data: SendDataValue,
+  data?: SendDataValue,
 ): SendResponse {
   const body = transformData(data);
   const ok = navigator.sendBeacon(url, body);
@@ -80,7 +80,7 @@ export function sendWebAsBeacon(
 
 export function sendWebAsXhr(
   url: string,
-  data: SendDataValue,
+  data?: SendDataValue,
   options: SendWebOptions = {},
 ): SendResponse {
   const headers = getHeaders(options.headers);
