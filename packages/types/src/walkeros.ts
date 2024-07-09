@@ -19,6 +19,7 @@ export interface State {
   hooks: Hooks.Functions;
   queue: Events;
   round: number;
+  session: undefined | SessionData;
   user: User;
 }
 
@@ -108,6 +109,20 @@ export type Commands =
   | 'user'
   | 'walker'
   | string;
+
+export interface SessionData {
+  isStart: boolean; // If this is a new session or a known one
+  storage: boolean; // If the storage was used to determine the session
+  id?: string; // Session ID
+  start?: number; // Timestamp of session start
+  marketing?: true; // If the session was started by a marketing parameters
+  // Storage data
+  updated?: number; // Timestamp of last update
+  isNew?: boolean; // If this is the first visit on a device
+  device?: string; // Device ID
+  count?: number; // Total number of sessions
+  runs?: number; // Total number of runs (like page views)
+}
 
 export interface User extends Properties {
   // IDs

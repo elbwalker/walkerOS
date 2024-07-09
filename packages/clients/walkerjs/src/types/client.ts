@@ -1,5 +1,5 @@
 import type { Hooks, WalkerOS } from '@elbwalker/types';
-import type { SessionConfig, SessionData } from '@elbwalker/utils';
+import type { SessionConfig } from '@elbwalker/utils';
 import type * as On from './on';
 import type * as WebDestination from './destination';
 import type * as Walker from './walker';
@@ -32,14 +32,13 @@ export interface Instance extends State, WalkerOS.Instance {
     prefix: string,
   ) => Walker.Events;
   getGlobals: () => WalkerOS.Properties;
-  sessionStart: (options?: SessionStartOptions) => void | SessionData;
+  sessionStart: (options?: SessionStartOptions) => void | WalkerOS.SessionData;
 }
 
 export interface State extends WalkerOS.State {
   config: Config;
   destinations: Destinations;
   on: On.Config;
-  session: undefined | SessionData;
   timing: number;
 }
 
@@ -52,7 +51,7 @@ export interface Config extends WalkerOS.Config {
   run: boolean;
   session: false | SessionConfig;
   globalsStatic: WalkerOS.Properties;
-  sessionStatic: Partial<SessionData>;
+  sessionStatic: Partial<WalkerOS.SessionData>;
   elb?: string;
   instance?: string;
 }
@@ -119,7 +118,7 @@ export type ScopeType = Scope | Scope[];
 
 export interface SessionStartOptions {
   config?: SessionConfig;
-  data?: Partial<SessionData>;
+  data?: Partial<WalkerOS.SessionData>;
 }
 
 export interface Destinations {

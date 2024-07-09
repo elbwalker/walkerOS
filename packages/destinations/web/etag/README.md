@@ -27,22 +27,6 @@ const config = {
 };
 ```
 
-### Node usage
+## Resources
 
-```sh
-npm i --save @elbwalker/destination-web-etag
-```
-
-```ts
-import { elb } from '@elbwalker/walker.js';
-import destinationEtag from '@elbwalker/destination-web-etag';
-
-elb('walker destination', destinationEtag, config);
-```
-
-## Contribute
-
-Feel free to contribute by submitting an
-[issue](https://github.com/elbwalker/walkerOS/issues), starting a
-[discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in
-[contact](https://calendly.com/elb-alexander/30min).
+[[GA4] About Analytics sessions](https://support.google.com/analytics/answer/9191807)

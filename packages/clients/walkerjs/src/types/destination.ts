@@ -2,7 +2,7 @@ import type {
   Destination as WalkerOSDestination,
   WalkerOS,
 } from '@elbwalker/types';
-import type { On } from '.';
+import type { On, WebClient } from '.';
 
 export interface Destination<Custom = never, EventCustom = never>
   extends WalkerOSDestination.Destination<Custom, EventCustom> {
@@ -19,13 +19,13 @@ export type Push<Custom, EventCustom> = (
   event: WalkerOS.Event,
   config: Config<Custom, EventCustom>,
   mapping?: EventConfig<EventCustom>,
-  instance?: WalkerOS.Instance,
+  instance?: WebClient.Instance,
 ) => void;
 
 export type PushBatch<Custom, EventCustom> = (
   batch: WalkerOSDestination.Batch<EventCustom>,
   config: Config<Custom, EventCustom>,
-  instance?: WalkerOS.Instance,
+  instance?: WebClient.Instance,
 ) => void;
 
 export interface Config<Custom = never, EventCustom = never>

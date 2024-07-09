@@ -1,5 +1,4 @@
 import type { WalkerOS, Schema, Handler, Hooks } from '@elbwalker/types';
-import type { SessionData } from '@elbwalker/utils';
 import type * as NodeDestination from './destination';
 import type * as On from './on';
 
@@ -14,14 +13,14 @@ export interface State extends WalkerOS.State {
   config: Config;
   destinations: Destinations;
   on: On.Config;
-  session: undefined | SessionData;
+  session: undefined | WalkerOS.SessionData;
   timing: number;
 }
 
 export interface Config extends WalkerOS.Config {
   contracts?: Schema.Contracts;
   globalsStatic: WalkerOS.Properties;
-  sessionStatic: Partial<SessionData>;
+  sessionStatic: Partial<WalkerOS.SessionData>;
   onError?: Handler.Error;
   onLog?: Handler.Log;
 }
