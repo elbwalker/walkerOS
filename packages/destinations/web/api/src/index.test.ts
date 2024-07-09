@@ -95,10 +95,10 @@ describe('Destination API', () => {
     elb('walker destination', destination, config);
     elb(event);
 
-    expect(mockXHROpen).toHaveBeenCalledWith('POST', expect.any(String), true);
+    expect(mockXHROpen).toHaveBeenCalledWith('POST', expect.any(String), false);
     expect(mockXHRHeader).toHaveBeenCalledWith(
-      'Content-type',
-      'text/plain; charset=utf-8',
+      'Content-Type',
+      'application/json; charset=utf-8',
     );
 
     const sentPayload = JSON.parse(mockXHRSend.mock.calls[0][0]);
