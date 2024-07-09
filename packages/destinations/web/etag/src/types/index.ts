@@ -10,6 +10,7 @@ export interface CustomConfig {
   url?: string; // URL to send the request to
   params?: Partial<Parameters>; // Customize the parameters
   clientId?: string; // Fallback client ID
+  sid?: number; // Session ID
 }
 
 export interface CustomEventConfig {}
@@ -22,6 +23,7 @@ export interface Parameters extends Partial<ParametersOptional> {
   _p: string; // Cache buster
   cid: string; // Client ID
   en: string; // Event name
+  sid: number; // Session ID
   [key: string]: string | number | undefined;
 }
 

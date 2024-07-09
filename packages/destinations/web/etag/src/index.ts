@@ -14,7 +14,7 @@ export const destinationEtag: Destination = {
     if (!config.custom || !config.custom.measurementId) return false;
   },
 
-  push(event, config) {
+  push(event, config, mapping, instance) {
     const { custom } = config;
     if (!custom || !custom.measurementId) return;
 
@@ -27,6 +27,7 @@ export const destinationEtag: Destination = {
       gcd: '11t1t1t1t5', // granted by default
       _p: getId(),
       cid: getClientId(event, custom),
+      sid: getSessionID(custom, instance),
       en: event.event,
       // Optional parameters
       _et: event.timing * 1000, // @TODO number of milliseconds between now and the previous event
@@ -54,6 +55,34 @@ function getClientId(event: WalkerOS.Event, custom: CustomConfig) {
     user.hash ||
     '1234567890.' + Math.floor(Date.now() / 86400000) * 86400 // Daily timestamp
   );
+}
+
+function getSessionID(
+  custom: CustomConfig,
+  instance?: WalkerOS.Instance,
+): number {
+  let str: WalkerOS.PropertyType | undefined = custom.sid;
+
+  if (!str && instance?.session?.id) str = instance.session.id;
+  // @TODO add other session sources
+
+  if (!str) str = '9876543210';
+
+  // Transform session ID to a static 10-digit number
+  str = String(str);
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+
+  const sid = Math.abs(hash % 10000000000);
+
+  // Save sessionID
+  custom.sid = sid;
+
+  return sid;
 }
 
 export default destinationEtag;
