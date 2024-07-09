@@ -1,5 +1,9 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { SendDataValue, SendWebTransport } from '@elbwalker/utils';
+import type {
+  SendDataValue,
+  SendHeaders,
+  SendWebTransport,
+} from '@elbwalker/utils';
 import type { WebDestination } from '@elbwalker/walker.js';
 
 export interface Destination
@@ -9,6 +13,8 @@ export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 
 export interface CustomConfig {
   url: string;
+  headers?: SendHeaders;
+  method?: string;
   transform?: Transform;
   transport?: SendWebTransport;
 }
