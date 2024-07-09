@@ -49,7 +49,7 @@ describe('Destination etag', () => {
     expect(requestedUrl).toContain('tid=' + measurementId);
     expect(requestedUrl).toContain('gcs=G111');
     expect(requestedUrl).toContain('_p=');
-    expect(requestedUrl).toContain('cid=99999999.');
+    expect(requestedUrl).toContain('cid=1234567890.');
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.any(String),

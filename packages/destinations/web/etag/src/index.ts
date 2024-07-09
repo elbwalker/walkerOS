@@ -29,7 +29,7 @@ export const destinationEtag: Destination = {
       cid: getClientId(event, custom),
       en: event.event,
       // Optional parameters
-      _et: event.timing * 1000, // @TODO check if timing is available
+      _et: event.timing * 1000, // @TODO number of milliseconds between now and the previous event
       // dl: event.source.id, // @TODO what if source is not available?
       // dr: event.source.previous_id,
       ...custom.params, // Custom parameters override defaults
@@ -52,7 +52,7 @@ function getClientId(event: WalkerOS.Event, custom: CustomConfig) {
     user.device ||
     user.session ||
     user.hash ||
-    '99999999.' + Math.floor(Date.now() / 86400000) * 86400 // Daily timestamp
+    '1234567890.' + Math.floor(Date.now() / 86400000) * 86400 // Daily timestamp
   );
 }
 
