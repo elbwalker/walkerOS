@@ -15,20 +15,20 @@ export interface CustomConfig {
 export interface CustomEventConfig {}
 
 export interface Parameters extends Partial<ParametersOptional> {
-  v: string;
-  tid: string;
-  gcs: string;
-  gcd: string;
-  _p: string;
-  cid: string;
-  en: string;
+  v: '2'; // Protocol version, always 2 for GA4
+  tid: string; // MeasurementID
+  gcs: string; // Consent mode status
+  gcd: string; // Consent mode default
+  _p: string; // Cache buster
+  cid: string; // Client ID
+  en: string; // Event name
   [key: string]: string | number | undefined;
 }
 
 export interface ParametersOptional {
-  _et?: number;
-  dl?: string;
-  dt?: string;
-  dr?: string;
-  ul?: string;
+  _et?: number; // Engagement time
+  dl?: string; // Document location
+  dt?: string; // Document title
+  dr?: string; // Document referrer
+  ul?: string; // User language
 }

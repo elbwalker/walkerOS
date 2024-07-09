@@ -1,9 +1,9 @@
 import type { CustomConfig, Destination, Parameters } from './types';
 import type { WalkerOS } from '@elbwalker/types';
-import { getId } from '@elbwalker/utils';
+import { getId, requestToParameter, sendWeb } from '@elbwalker/utils';
 
 // Types
-export * as DestinationEtag from './types';
+export * as DestinationWebEtag from './types';
 
 export const destinationEtag: Destination = {
   type: 'etag',
@@ -16,50 +16,45 @@ export const destinationEtag: Destination = {
 
   push(event, config) {
     const { custom } = config;
-    if (!custom) return;
+    if (!custom || !custom.measurementId) return;
 
-    const url = custom.url || 'https://www.google-analytics.com/g/collect';
+    const url = custom.url || 'https://www.google-analytics.com/g/collect?';
 
-    const params: Parameters = {
-      v: '2', // Protocol version, always 2 for GA4
-      tid: custom.measurementId, // TrackingID/MeasurementID
-      gcs: 'G111', // Consent mode, granted
-      gcd: '11t1t1t1t5', // Consent mode v2, granted by default
-      _p: getId(), // Cache buster
-      cid: getClientId(event, custom), // Client ID
-      en: event.event, // Event name
+    const data: Parameters = {
+      v: '2',
+      tid: custom.measurementId,
+      gcs: 'G111', // granted
+      gcd: '11t1t1t1t5', // granted by default
+      _p: getId(),
+      cid: getClientId(event, custom),
+      en: event.event,
       // Optional parameters
-      _et: event.timing * 1000, // Engagement time
-      dl: event.source.id, // Document location
-      dr: event.source.previous_id, // Document referrer
+      _et: event.timing * 1000, // @TODO check if timing is available
+      // dl: event.source.id, // @TODO what if source is not available?
+      // dr: event.source.previous_id,
       ...custom.params, // Custom parameters override defaults
     };
 
-    sendRequest(url, params);
+    const params = requestToParameter(data); // @TODO
+
+    sendWeb(url + params, undefined, {
+      headers: {},
+      transport: 'fetch',
+      method: 'POST',
+    });
   },
 };
 
 function getClientId(event: WalkerOS.Event, custom: CustomConfig) {
-  return custom.clientId || event.user.device || '';
-}
+  const { user = {} } = event;
 
-function sendRequest(url: string, params: Parameters) {
-  // Construct query string from params object
-  const data = new URLSearchParams(paramsToString(params)).toString();
-
-  // Serialize data
-  const payload = new Blob([data], { type: 'text/plain' });
-
-  // Fire and forget
-  navigator.sendBeacon(url, payload);
-}
-
-function paramsToString(params: Parameters): Record<string, string> {
-  // Convert all non-undefined values to strings
-  return Object.entries(params).reduce((acc, [key, value]) => {
-    if (value) acc[key] = String(value);
-    return acc;
-  }, {} as Record<string, string>);
+  return (
+    custom.clientId ||
+    user.device ||
+    user.session ||
+    user.hash ||
+    '99999999.' + Math.floor(Date.now() / 86400000) * 86400 // Daily timestamp
+  );
 }
 
 export default destinationEtag;

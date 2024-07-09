@@ -1,61 +1,73 @@
-import { elb, Walkerjs } from '@elbwalker/walker.js';
-import type { DestinationEtag } from '.';
+import type { WalkerOS } from '@elbwalker/types';
+import type { DestinationWebEtag } from '.';
 
 describe('Destination etag', () => {
-  const mockBeacon = jest.fn(); //.mockImplementation(console.log);
-  const oldBeacon = navigator.sendBeacon;
-  const mockBlob = jest.fn(); //.mockImplementation(console.log);
-  const oldBlob = global.Blob;
+  const mockSendWeb = jest.fn();
+  jest.mock('@elbwalker/utils', () => ({
+    ...jest.requireActual('@elbwalker/utils'),
+    sendWeb: mockSendWeb,
+  }));
 
-  let destination: DestinationEtag.Destination;
-  let config: DestinationEtag.Config;
+  let destination: DestinationWebEtag.Destination;
   const url = 'localhost';
+  const measurementId = 'G-XXXXXXX';
+  const event = { event: 'entity action' } as WalkerOS.Event;
+
+  function push(
+    event: WalkerOS.Event,
+    custom: DestinationWebEtag.CustomConfig = { url, measurementId },
+  ) {
+    destination.push(event, { custom });
+  }
 
   beforeEach(() => {
-    navigator.sendBeacon = mockBeacon;
-    global.Blob = mockBlob;
-
-    config = {
-      custom: {
-        url,
-        measurementId: 'G-XXXXXXX',
-      },
-    };
-
-    Walkerjs({ pageview: false, session: false, run: true });
     destination = jest.requireActual('.').default;
   });
 
-  afterEach(() => {
-    navigator.sendBeacon = oldBeacon;
-    global.Blob = oldBlob;
-  });
-
   test('init', () => {
-    elb('walker destination', destination, {});
-    elb('foo bar');
-    expect(mockBeacon).toHaveBeenCalledTimes(0);
+    push(event);
+    expect(mockSendWeb).toHaveBeenCalledTimes(1);
   });
 
   test('push', () => {
-    elb('walker destination', destination, config);
-    elb('foo bar');
-    expect(mockBeacon).toHaveBeenCalledWith(url, expect.any(Blob));
-    expect(mockBlob).toHaveBeenCalledWith(
-      expect.arrayContaining([expect.any(String)]),
+    push(event);
+    expect(mockSendWeb).toHaveBeenCalledWith(
+      expect.stringContaining(url),
+      undefined,
       expect.objectContaining({
-        type: 'text/plain',
+        method: 'POST',
+        transport: 'fetch',
       }),
     );
   });
 
-  test('custom params', () => {
-    config.custom!.params = { gcs: 'G222', tid: 'cust0m' };
-    elb('walker destination', destination, config);
-    elb('foo bar');
+  test('default params', () => {
+    push(event, { measurementId });
 
-    expect(mockBlob).toHaveBeenCalledWith(
-      expect.arrayContaining([expect.stringContaining('tid=cust0m')]),
+    const requestedUrl = mockSendWeb.mock.calls[0][0];
+    expect(requestedUrl).toContain('v=2');
+    expect(requestedUrl).toContain('tid=' + measurementId);
+    expect(requestedUrl).toContain('gcs=G111');
+    expect(requestedUrl).toContain('_p=');
+    expect(requestedUrl).toContain('cid=99999999.');
+
+    expect(mockSendWeb).toHaveBeenCalledWith(
+      expect.any(String),
+      undefined,
+      expect.any(Object),
+    );
+  });
+
+  test('custom params', () => {
+    push(event, { measurementId, params: { gcs: 'G222', tid: 'foo' } });
+
+    const requestedUrl = mockSendWeb.mock.calls[0][0];
+    expect(requestedUrl).toContain('tid=foo');
+    expect(requestedUrl).toContain('gcs=G222');
+
+    expect(mockSendWeb).toHaveBeenCalledWith(
+      expect.any(String),
+      undefined,
       expect.any(Object),
     );
   });
