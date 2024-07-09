@@ -1,6 +1,6 @@
 import type { CustomConfig, Destination, Parameters } from './types';
 import type { WalkerOS } from '@elbwalker/types';
-import { getId, requestToParameter, sendWeb } from '@elbwalker/utils';
+import { getId, requestToParameter, sendWebAsFetch } from '@elbwalker/utils';
 
 // Types
 export * as DestinationWebEtag from './types';
@@ -37,9 +37,8 @@ export const destinationEtag: Destination = {
 
     const params = requestToParameter(data); // @TODO
 
-    sendWeb(url + params, undefined, {
+    sendWebAsFetch(url + params, undefined, {
       headers: {},
-      transport: 'fetch',
       method: 'POST',
     });
   },

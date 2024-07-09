@@ -2,10 +2,10 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { DestinationWebEtag } from '.';
 
 describe('Destination etag', () => {
-  const mockSendWeb = jest.fn();
+  const mockSend = jest.fn();
   jest.mock('@elbwalker/utils', () => ({
     ...jest.requireActual('@elbwalker/utils'),
-    sendWeb: mockSendWeb,
+    sendWebAsFetch: mockSend,
   }));
 
   let destination: DestinationWebEtag.Destination;
@@ -26,17 +26,17 @@ describe('Destination etag', () => {
 
   test('init', () => {
     push(event);
-    expect(mockSendWeb).toHaveBeenCalledTimes(1);
+    expect(mockSend).toHaveBeenCalledTimes(1);
   });
 
   test('push', () => {
     push(event);
-    expect(mockSendWeb).toHaveBeenCalledWith(
+    expect(mockSend).toHaveBeenCalledWith(
       expect.stringContaining(url),
       undefined,
       expect.objectContaining({
         method: 'POST',
-        transport: 'fetch',
+        headers: {},
       }),
     );
   });
@@ -44,14 +44,14 @@ describe('Destination etag', () => {
   test('default params', () => {
     push(event, { measurementId });
 
-    const requestedUrl = mockSendWeb.mock.calls[0][0];
+    const requestedUrl = mockSend.mock.calls[0][0];
     expect(requestedUrl).toContain('v=2');
     expect(requestedUrl).toContain('tid=' + measurementId);
     expect(requestedUrl).toContain('gcs=G111');
     expect(requestedUrl).toContain('_p=');
     expect(requestedUrl).toContain('cid=99999999.');
 
-    expect(mockSendWeb).toHaveBeenCalledWith(
+    expect(mockSend).toHaveBeenCalledWith(
       expect.any(String),
       undefined,
       expect.any(Object),
@@ -61,11 +61,11 @@ describe('Destination etag', () => {
   test('custom params', () => {
     push(event, { measurementId, params: { gcs: 'G222', tid: 'foo' } });
 
-    const requestedUrl = mockSendWeb.mock.calls[0][0];
+    const requestedUrl = mockSend.mock.calls[0][0];
     expect(requestedUrl).toContain('tid=foo');
     expect(requestedUrl).toContain('gcs=G222');
 
-    expect(mockSendWeb).toHaveBeenCalledWith(
+    expect(mockSend).toHaveBeenCalledWith(
       expect.any(String),
       undefined,
       expect.any(Object),
