@@ -48,11 +48,12 @@ export function requestToData(
 export function requestToParameter(
   data: WalkerOS.AnyObject | WalkerOS.PropertyType,
 ): string {
+  if (!data) return '';
+
   const params = new URLSearchParams();
-  let queryString = '';
 
   function addParam(key: string, value: unknown) {
-    if (!value && value !== false && value !== 0) return;
+    if (value === undefined || value === null) return;
 
     if (Array.isArray(value)) {
       value.forEach((item, index) => addParam(`${key}[${index}]`, item));
@@ -65,11 +66,11 @@ export function requestToParameter(
     }
   }
 
-  if (typeof data === 'object' && data !== null) {
+  if (typeof data === 'object') {
     Object.entries(data).forEach(([key, value]) => addParam(key, value));
-  } else if (data !== undefined && data !== null) {
-    queryString = String(data);
+  } else {
+    return String(data);
   }
 
-  return queryString || params.toString();
+  return params.toString();
 }
