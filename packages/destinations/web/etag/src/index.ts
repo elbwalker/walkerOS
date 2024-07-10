@@ -1,4 +1,4 @@
-import type { CustomConfig, Destination, Parameters } from './types';
+import type { Destination, Parameters } from './types';
 import type { WalkerOS } from '@elbwalker/types';
 import { getId, requestToParameter, sendWebAsFetch } from '@elbwalker/utils';
 
@@ -14,11 +14,13 @@ export const destinationEtag: Destination = {
     if (!config.custom || !config.custom.measurementId) return false;
   },
 
-  push(event, config, mapping, instance) {
+  push(event, config) {
     const { custom } = config;
     if (!custom || !custom.measurementId) return;
 
     const url = custom.url || 'https://www.google-analytics.com/g/collect?';
+
+    const { user = {} } = event;
 
     const data: Parameters = {
       v: '2',
@@ -26,8 +28,8 @@ export const destinationEtag: Destination = {
       gcs: 'G111', // granted
       gcd: '11t1t1t1t5', // granted by default
       _p: getId(),
-      cid: getClientId(event, custom),
-      sid: getSessionID(custom, instance),
+      cid: getClientId(user),
+      sid: getSessionID(user.session), // @TODO concat clientID?
       en: event.event,
       // Optional parameters
       _et: event.timing * 1000, // @TODO number of milliseconds between now and the previous event
@@ -45,44 +47,38 @@ export const destinationEtag: Destination = {
   },
 };
 
-function getClientId(event: WalkerOS.Event, custom: CustomConfig) {
-  const { user = {} } = event;
-
-  return (
-    custom.clientId ||
+function getClientId(user: WalkerOS.AnyObject = {}): string {
+  const clientId =
     user.device ||
     user.session ||
     user.hash ||
-    '1234567890.' + Math.floor(Date.now() / 86400000) * 86400 // Daily timestamp
-  );
+    '1234567890.' + Math.floor(Date.now() / 86400000) * 86400; // Daily timestamp
+
+  return String(clientId);
 }
 
-function getSessionID(
-  custom: CustomConfig,
-  instance?: WalkerOS.Instance,
-): number {
-  let str: WalkerOS.PropertyType | undefined = custom.sid;
+function getSessionID(sid: unknown = 42): number {
+  const str = String(sid);
+  const prime1 = 31;
+  const prime2 = 486187739;
+  const mod = 1000000007;
 
-  if (!str && instance?.session?.id) str = instance.session.id;
-  // @TODO add other session sources
-
-  if (!str) str = '9876543210';
-
-  // Transform session ID to a static 10-digit number
-  str = String(str);
   let hash = 0;
+
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
+    hash = (hash * prime1 + char) % mod;
+    hash = (hash * prime2) % mod;
   }
 
-  const sid = Math.abs(hash % 10000000000);
+  hash = ((hash ^ (hash >>> 16)) * 0x85ebca6b) % mod;
+  hash = ((hash ^ (hash >>> 13)) * 0xc2b2ae35) % mod;
+  hash = (hash ^ (hash >>> 16)) % mod;
 
-  // Save sessionID
-  custom.sid = sid;
+  const min = mod; // almost like 1000000000
+  const max = 9999999999;
 
-  return sid;
+  return (Math.abs(hash) % (max - min + 1)) + min;
 }
 
 export default destinationEtag;

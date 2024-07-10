@@ -9,8 +9,6 @@ export interface CustomConfig {
   measurementId: string; // Measurement ID
   url?: string; // URL to send the request to
   params?: Partial<Parameters>; // Customize the parameters
-  clientId?: string; // Fallback client ID
-  sid?: number; // Session ID
 }
 
 export interface CustomEventConfig {}
