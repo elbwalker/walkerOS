@@ -29,7 +29,7 @@ export const destinationEtag: Destination = {
       gcd: '11t1t1t1t5', // granted by default
       _p: getId(),
       cid: getClientId(user),
-      sid: getSessionID(user.session), // @TODO concat clientID?
+      sid: getSessionId(user),
       en: event.event,
       // Optional parameters
       _et: event.timing * 1000, // @TODO number of milliseconds between now and the previous event
@@ -47,18 +47,25 @@ export const destinationEtag: Destination = {
   },
 };
 
-function getClientId(user: WalkerOS.AnyObject = {}): string {
-  const clientId =
-    user.device ||
-    user.session ||
-    user.hash ||
-    '1234567890.' + Math.floor(Date.now() / 86400000) * 86400; // Daily timestamp
+function getClientId(user: WalkerOS.AnyObject = {}) {
+  const userId = getUser(user);
+  const clientId = userId ? valueToNumber(userId) : '1234567890';
 
-  return String(clientId);
+  return (
+    clientId + '.' + Math.floor(Date.now() / 86400000) * 86400 // Daily timestamp;
+  );
 }
 
-function getSessionID(sid: unknown = 42): number {
-  const str = String(sid);
+function getSessionId(user: WalkerOS.AnyObject = {}) {
+  return valueToNumber(getUser(user) + user.session); // Combine user and session
+}
+
+function getUser(user: WalkerOS.AnyObject = {}) {
+  return String(user.device || user.session || user.hash);
+}
+
+function valueToNumber(value: unknown = 42): number {
+  const str = String(value);
   const prime1 = 31;
   const prime2 = 486187739;
   const mod = 1000000007;
