@@ -47,13 +47,12 @@ describe('Destination etag', () => {
   test('default params', () => {
     push(event, { measurementId });
 
-    const requestedUrl = mockSend.mock.calls[0][0];
-    expect(requestedUrl).toContain('v=2');
-    expect(requestedUrl).toContain('tid=' + measurementId);
-    expect(requestedUrl).toContain('gcs=G111');
-    expect(requestedUrl).toContain('_p=1337');
-    expect(requestedUrl).toMatch(/cid=\d+\.\d+/); // cid=number.number
-    expect(requestedUrl).toContain('sid=1006242960'); // hash of undefined
+    expect(requestedUrl(mockSend)).toContain('v=2');
+    expect(requestedUrl(mockSend)).toContain('tid=' + measurementId);
+    expect(requestedUrl(mockSend)).toContain('gcs=G111');
+    expect(requestedUrl(mockSend)).toContain('_p=1337');
+    expect(requestedUrl(mockSend)).toMatch(/cid=\d+\.\d+/); // cid=number.number
+    expect(requestedUrl(mockSend)).toContain('sid=1006242960'); // hash of undefined
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.any(String),
@@ -68,10 +67,9 @@ describe('Destination etag', () => {
       params: { gcs: 'G222', tid: 'foo', sid: 1337 },
     });
 
-    const requestedUrl = mockSend.mock.calls[0][0];
-    expect(requestedUrl).toContain('tid=foo');
-    expect(requestedUrl).toContain('gcs=G222');
-    expect(requestedUrl).toContain('sid=1337');
+    expect(requestedUrl(mockSend)).toContain('tid=foo');
+    expect(requestedUrl(mockSend)).toContain('gcs=G222');
+    expect(requestedUrl(mockSend)).toContain('sid=1337');
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.any(String),
@@ -82,10 +80,10 @@ describe('Destination etag', () => {
 
   test('session id', () => {
     push({} as WalkerOS.Event, customDefault);
-    expect(mockSend.mock.calls[0][0]).toContain('sid=1006242960'); // hash of undefined
+    expect(requestedUrl(mockSend)).toContain('sid=1006242960'); // hash of undefined
 
     push({ user: { session: 's3ss10n1d' } } as WalkerOS.Event, customDefault);
-    expect(mockSend.mock.calls[1][0]).toContain('sid=1875854770'); // hash of 's3ss10n1ds3ss10n1d'
+    expect(requestedUrl(mockSend, 1)).toContain('sid=1875854770'); // hash of 's3ss10n1ds3ss10n1d'
   });
 
   test('session start', () => {
@@ -99,8 +97,14 @@ describe('Destination etag', () => {
       } as unknown as WalkerOS.Event,
       customDefault,
     );
-    expect(mockSend.mock.calls[0][0]).toContain('_ss=1');
-    expect(mockSend.mock.calls[0][0]).toContain('_fv=1');
-    expect(mockSend.mock.calls[0][0]).toContain('sct=1');
+
+    expect(requestedUrl(mockSend)).toContain('_ss=1');
+    expect(requestedUrl(mockSend)).toContain('_ss=1');
+    expect(requestedUrl(mockSend)).toContain('_fv=1');
+    expect(requestedUrl(mockSend)).toContain('sct=1');
   });
 });
+
+function requestedUrl(mockSend: jest.Mock, i = 0) {
+  return mockSend.mock.calls[i][0];
+}
