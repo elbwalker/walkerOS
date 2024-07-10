@@ -26,6 +26,9 @@ export interface Parameters extends Partial<ParametersOptional> {
 }
 
 export interface ParametersOptional {
+  _fv?: 1; // First visit
+  _ss?: 1; // Session start
+  sct?: number; // Session count
   _et?: number; // Engagement time
   dl?: string; // Document location
   dt?: string; // Document title

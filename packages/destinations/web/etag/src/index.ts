@@ -20,9 +20,9 @@ export const destinationEtag: Destination = {
 
     const url = custom.url || 'https://www.google-analytics.com/g/collect?';
 
-    const { user = {} } = event;
+    const { data = {}, user = {} } = event;
 
-    const data: Parameters = {
+    const params: Parameters = {
       v: '2',
       tid: custom.measurementId,
       gcs: 'G111', // granted
@@ -38,9 +38,15 @@ export const destinationEtag: Destination = {
       ...custom.params, // Custom parameters override defaults
     };
 
-    const params = requestToParameter(data); // @TODO
+    // session start
+    // @TODO eventually use the instance.session data
+    if (event.event == 'session start') {
+      params._ss = 1; // session start
+      if (data.isNew) params._fv = 1; // first visit
+      if (data.count) params.sct = data.count as number; // session count
+    }
 
-    sendWebAsFetch(url + params, undefined, {
+    sendWebAsFetch(url + requestToParameter(params), undefined, {
       headers: {},
       method: 'POST',
     });

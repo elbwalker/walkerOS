@@ -87,4 +87,20 @@ describe('Destination etag', () => {
     push({ user: { session: 's3ss10n1d' } } as WalkerOS.Event, customDefault);
     expect(mockSend.mock.calls[1][0]).toContain('sid=1875854770'); // hash of 's3ss10n1ds3ss10n1d'
   });
+
+  test('session start', () => {
+    push(
+      {
+        event: 'session start',
+        data: {
+          isNew: true,
+          count: 1,
+        },
+      } as unknown as WalkerOS.Event,
+      customDefault,
+    );
+    expect(mockSend.mock.calls[0][0]).toContain('_ss=1');
+    expect(mockSend.mock.calls[0][0]).toContain('_fv=1');
+    expect(mockSend.mock.calls[0][0]).toContain('sct=1');
+  });
 });
