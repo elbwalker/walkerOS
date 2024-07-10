@@ -38,13 +38,16 @@ export const destinationEtag: Destination = {
       ...custom.params, // Custom parameters override defaults
     };
 
-    // session start
+    // session
     // @TODO eventually use the instance.session data
     if (event.event == 'session start') {
       params._ss = 1; // session start
       if (data.isNew) params._fv = 1; // first visit
       if (data.count) params.sct = data.count as number; // session count
     }
+
+    // user id
+    if (user.id) params.uid = user.id;
 
     sendWebAsFetch(url + requestToParameter(params), undefined, {
       headers: {},
@@ -58,7 +61,7 @@ function getClientId(user: WalkerOS.AnyObject = {}) {
   const clientId = userId ? valueToNumber(userId) : '1234567890';
 
   return (
-    clientId + '.' + Math.floor(Date.now() / 86400000) * 86400 // Daily timestamp;
+    clientId + '.' + Math.floor(Date.now() / 86400000) * 86400 // Daily timestamp; // @TODO use the instance.session data
   );
 }
 
