@@ -97,7 +97,7 @@ describe('Destination etag', () => {
     });
 
     expect(requestedUrl(mockSend)).toContain('_ss=1');
-    expect(requestedUrl(mockSend)).toContain('_ss=1');
+    expect(requestedUrl(mockSend)).toContain('_nsi=1');
     expect(requestedUrl(mockSend)).toContain('_fv=1');
     expect(requestedUrl(mockSend)).toContain('sct=1');
   });

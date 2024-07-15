@@ -48,7 +48,7 @@ export const destinationEtag: Destination = {
     // @TODO eventually use the instance.session data
     if (event.event == 'session start') {
       params._ss = 1; // session start
-      // Also use _nsi
+      params._nsi = 1; // new to site
       if (data.isNew) params._fv = 1; // first visit
       if (data.count) params.sct = data.count as number; // session count
     }
