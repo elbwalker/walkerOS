@@ -2,6 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { DestinationWebEtag } from '.';
 
 describe('Destination etag', () => {
+  jest.useFakeTimers();
   const mockSend = jest.fn();
   jest.mock('@elbwalker/utils', () => ({
     ...jest.requireActual('@elbwalker/utils'),
@@ -10,21 +11,21 @@ describe('Destination etag', () => {
   }));
 
   let destination: DestinationWebEtag.Destination;
-  const url = 'localhost';
+  const url = 'localhost?';
   const measurementId = 'G-XXXXXXX';
   const event = { event: 'entity action' } as WalkerOS.Event;
-  let customDefault: DestinationWebEtag.CustomConfig;
+  // let customDefault: DestinationWebEtag.CustomConfig;
 
-  function push(
-    event: WalkerOS.Event,
-    custom: DestinationWebEtag.CustomConfig = customDefault,
-  ) {
-    destination.push(event, { custom });
+  function push(event: unknown, custom?: DestinationWebEtag.CustomConfig) {
+    destination.push(
+      event as WalkerOS.Event,
+      custom ? { custom } : destination.config,
+    );
   }
 
   beforeEach(() => {
     destination = jest.requireActual('.').default;
-    customDefault = { measurementId, url };
+    destination.config = { custom: { measurementId, url } };
   });
 
   test('init', () => {
@@ -79,24 +80,21 @@ describe('Destination etag', () => {
   });
 
   test('session id', () => {
-    push({} as WalkerOS.Event, customDefault);
+    push({});
     expect(requestedUrl(mockSend)).toContain('sid=1006242960'); // hash of undefined
 
-    push({ user: { session: 's3ss10n1d' } } as WalkerOS.Event, customDefault);
+    push({ user: { session: 's3ss10n1d' } });
     expect(requestedUrl(mockSend, 1)).toContain('sid=1875854770'); // hash of 's3ss10n1ds3ss10n1d'
   });
 
   test('session start', () => {
-    push(
-      {
-        event: 'session start',
-        data: {
-          isNew: true,
-          count: 1,
-        },
-      } as unknown as WalkerOS.Event,
-      customDefault,
-    );
+    push({
+      event: 'session start',
+      data: {
+        isNew: true,
+        count: 1,
+      },
+    });
 
     expect(requestedUrl(mockSend)).toContain('_ss=1');
     expect(requestedUrl(mockSend)).toContain('_ss=1');
@@ -105,21 +103,32 @@ describe('Destination etag', () => {
   });
 
   test('user ids', () => {
-    push(
-      {
-        event: 'page view',
-        user: {
-          id: 'us3r',
-          device: 'd3v1c3',
-          session: 's3ss10n',
-        },
-      } as unknown as WalkerOS.Event,
-      customDefault,
-    );
+    push({
+      event: 'page view',
+      user: {
+        id: 'us3r',
+        device: 'd3v1c3',
+        session: 's3ss10n',
+      },
+    });
 
     expect(requestedUrl(mockSend)).toContain('uid=us3r');
     expect(requestedUrl(mockSend)).toContain('cid=1106139110'); // d3v1c3
     expect(requestedUrl(mockSend)).toContain('sid=1552924326'); // d3v1c3s3ss10n
+  });
+
+  test('engagement time', () => {
+    push({
+      event: 'e1',
+    });
+
+    jest.advanceTimersByTime(1337);
+    push({
+      event: 'e2',
+    });
+
+    expect(requestedUrl(mockSend)).toContain('_et=1');
+    expect(requestedUrl(mockSend, 1)).toContain('_et=1337');
   });
 });
 
