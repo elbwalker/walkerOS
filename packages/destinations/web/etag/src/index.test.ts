@@ -130,6 +130,12 @@ describe('Destination etag', () => {
     expect(requestedUrl(mockSend)).toContain('_et=1');
     expect(requestedUrl(mockSend, 1)).toContain('_et=1337');
   });
+
+  test('debug', () => {
+    push(event, { measurementId, url, debug: true });
+
+    expect(requestedUrl(mockSend)).toContain('_dbg=1');
+  });
 });
 
 function requestedUrl(mockSend: jest.Mock, i = 0) {
