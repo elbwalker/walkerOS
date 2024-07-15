@@ -27,18 +27,22 @@ export interface Parameters extends Partial<ParametersOptional> {
   cid: string; // Client ID
   en: string; // Event name
   _et: number; // Engagement time (for realtime view)
-  sid: number; // Session ID
   [key: string]: string | number | undefined;
 }
 
-export interface ParametersOptional {
-  _fv?: 1 | 2; // First visit
-  _ss?: 1 | 2; // Session start
+export interface ParametersOptional extends ParametersSession {
   _z?: string; // Transport
   _dbg?: 1; // Debug mode
-  sct?: number; // Session count
   dl?: string; // Document location
   dt?: string; // Document title
   dr?: string; // Document referrer
   ul?: string; // User language
+}
+
+export interface ParametersSession {
+  sid: number; // Session ID
+  _nsi?: 1; // New to site
+  _fv?: 1 | 2; // First visit
+  _ss?: 1 | 2; // Session start
+  sct?: number; // Session count
 }

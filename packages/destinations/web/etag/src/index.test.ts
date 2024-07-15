@@ -1,4 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
+import type { WebClient } from '@elbwalker/walker.js';
 import type { DestinationWebEtag } from '.';
 
 describe('Destination etag', () => {
@@ -16,10 +17,16 @@ describe('Destination etag', () => {
   const event = { event: 'entity action' } as WalkerOS.Event;
   // let customDefault: DestinationWebEtag.CustomConfig;
 
-  function push(event: unknown, custom?: DestinationWebEtag.CustomConfig) {
+  function push(
+    event: unknown,
+    custom?: DestinationWebEtag.CustomConfig,
+    instance?: WebClient.Instance,
+  ) {
     destination.push(
       event as WalkerOS.Event,
       custom ? { custom } : destination.config,
+      undefined,
+      instance,
     );
   }
 
@@ -88,13 +95,9 @@ describe('Destination etag', () => {
   });
 
   test('session start', () => {
-    push({
-      event: 'session start',
-      data: {
-        isNew: true,
-        count: 1,
-      },
-    });
+    push(event, destination.config.custom, {
+      session: { isNew: true, isStart: true, count: 1 },
+    } as WebClient.Instance);
 
     expect(requestedUrl(mockSend)).toContain('_ss=1');
     expect(requestedUrl(mockSend)).toContain('_nsi=1');

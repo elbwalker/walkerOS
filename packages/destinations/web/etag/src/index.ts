@@ -1,6 +1,12 @@
-import type { CustomConfig, Destination, Parameters } from './types';
+import type {
+  CustomConfig,
+  Destination,
+  Parameters,
+  ParametersSession,
+} from './types';
 import type { WalkerOS } from '@elbwalker/types';
 import { getId, requestToParameter, sendWebAsFetch } from '@elbwalker/utils';
+import { WebClient } from '@elbwalker/walker.js';
 
 // Types
 export * as DestinationWebEtag from './types';
@@ -14,13 +20,13 @@ export const destinationEtag: Destination = {
     if (!config.custom || !config.custom.measurementId) return false;
   },
 
-  push(event, config) {
+  push(event, config, mapping, instance) {
     const { custom } = config;
     if (!custom || !custom.measurementId) return;
 
     const url = custom.url || 'https://region1.google-analytics.com/g/collect?';
 
-    const { data = {}, user = {} } = event;
+    const { user = {} } = event;
 
     // @TODOs
     // key event parameter flags
@@ -32,7 +38,6 @@ export const destinationEtag: Destination = {
       // gcd: '11t1t1t1t5', // granted by default
       _p: getId(),
       cid: getClientId(user),
-      sid: getSessionId(user),
       en: event.event,
       // Optional parameters
       _et: getEventTime(custom), // Time between now and the previous event
@@ -41,17 +46,9 @@ export const destinationEtag: Destination = {
       dl: 'https://test.elbwalker.com/', // @TODO what if source is not available?
       dr: 'https://previous.elbwalker.com/', // @TODO what if source is not available?
       dt: 'Demo',
+      ...getSessionParams(event, custom, instance), // Session parameters
       ...custom.params, // Custom parameters override defaults
     };
-
-    // session
-    // @TODO eventually use the instance.session data
-    if (event.event == 'session start') {
-      params._ss = 1; // session start
-      params._nsi = 1; // new to site
-      if (data.isNew) params._fv = 1; // first visit
-      if (data.count) params.sct = data.count as number; // session count
-    }
 
     // user id
     if (user.id) params.uid = user.id;
@@ -91,6 +88,32 @@ function getEventTime(custom: CustomConfig) {
 
 function getSessionId(user: WalkerOS.AnyObject = {}) {
   return valueToNumber(getUser(user) + user.session); // Combine user and session
+}
+
+function getSessionParams(
+  event: WalkerOS.Event,
+  custom: CustomConfig,
+  instance?: WebClient.Instance,
+): ParametersSession {
+  const { session } = instance || {};
+  const params: ParametersSession = {
+    sid: getSessionId(event.user),
+  };
+
+  if (session) {
+    const { isStart, isNew, count } = session;
+
+    if (isNew) {
+      params._nsi = 1; // new to site
+      params._fv = 1; // first visit
+    }
+
+    if (isStart) params._ss = 1; // session start
+
+    if (count) params.sct = count; // session count
+  }
+
+  return params;
 }
 
 function getUser(user: WalkerOS.AnyObject = {}) {
