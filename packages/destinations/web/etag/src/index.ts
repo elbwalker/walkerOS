@@ -67,13 +67,18 @@ export const destinationEtag: Destination = {
   },
 };
 
-function getClientId(user: WalkerOS.AnyObject = {}) {
+function getClientId(
+  user: WalkerOS.AnyObject = {},
+  instance?: WebClient.Instance,
+) {
   const userId = getUser(user);
   const clientId = userId ? valueToNumber(userId) : '1234567890';
 
-  return (
-    clientId + '.' + Math.floor(Date.now() / 86400000) * 86400 // Daily timestamp; // @TODO use the instance.session data
-  );
+  const timestamp = instance?.session
+    ? instance.session.start
+    : Math.floor(Date.now() / 86400000) * 86400; // Daily timestamp
+
+  return clientId + '.' + timestamp;
 }
 
 function getEventTime(custom: CustomConfig) {
