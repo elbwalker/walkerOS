@@ -1,4 +1,4 @@
-import type { Destination, Parameters } from './types';
+import type { CustomConfig, Destination, Parameters } from './types';
 import type { WalkerOS } from '@elbwalker/types';
 import { getId, requestToParameter, sendWebAsFetch } from '@elbwalker/utils';
 
@@ -18,23 +18,30 @@ export const destinationEtag: Destination = {
     const { custom } = config;
     if (!custom || !custom.measurementId) return;
 
-    const url = custom.url || 'https://www.google-analytics.com/g/collect?';
+    const url = custom.url || 'https://region1.google-analytics.com/g/collect?';
 
     const { data = {}, user = {} } = event;
+
+    // @TODOs
+    // key event parameter flags
 
     const params: Parameters = {
       v: '2',
       tid: custom.measurementId,
       gcs: 'G111', // granted
-      gcd: '11t1t1t1t5', // granted by default
+      // gcd: '11t1t1t1t5', // granted by default
       _p: getId(),
       cid: getClientId(user),
       sid: getSessionId(user),
       en: event.event,
       // Optional parameters
-      _et: event.timing * 1000, // @TODO number of milliseconds between now and the previous event
+      _et: (event.timing || 1) * 1000, // @TODO number of milliseconds between now and the previous event
       // dl: event.source.id, // @TODO what if source is not available?
       // dr: event.source.previous_id,
+      dl: 'https://test.elbwalker.com/', // @TODO what if source is not available?
+      dr: 'https://previous.elbwalker.com/', // @TODO what if source is not available?
+      dt: 'Demo',
+      // _z: 'fetch',
       ...custom.params, // Custom parameters override defaults
     };
 
@@ -42,6 +49,7 @@ export const destinationEtag: Destination = {
     // @TODO eventually use the instance.session data
     if (event.event == 'session start') {
       params._ss = 1; // session start
+      // Also use _nsi
       if (data.isNew) params._fv = 1; // first visit
       if (data.count) params.sct = data.count as number; // session count
     }
@@ -49,8 +57,13 @@ export const destinationEtag: Destination = {
     // user id
     if (user.id) params.uid = user.id;
 
+    // Debug mode
+    if (custom.debug) params._dbg = 1;
+
     sendWebAsFetch(url + requestToParameter(params), undefined, {
-      headers: {},
+      headers: {
+        // @TODO set headers
+      },
       method: 'POST',
     });
   },
