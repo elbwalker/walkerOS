@@ -47,7 +47,9 @@ describe('Destination etag', () => {
       undefined,
       expect.objectContaining({
         method: 'POST',
-        headers: {},
+        headers: {
+          'User-Agent': expect.any(String),
+        },
       }),
     );
   });

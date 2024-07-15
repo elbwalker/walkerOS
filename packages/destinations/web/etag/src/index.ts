@@ -30,6 +30,7 @@ export const destinationEtag: Destination = {
 
     // @TODOs
     // key event parameter flags
+    // event parameter
 
     const params: Parameters = {
       v: '2',
@@ -40,26 +41,26 @@ export const destinationEtag: Destination = {
       cid: getClientId(user),
       en: event.event,
       // Optional parameters
-      _et: getEventTime(custom), // Time between now and the previous event
-      // dl: event.source.id, // @TODO what if source is not available?
-      // dr: event.source.previous_id,
-      dl: 'https://test.elbwalker.com/', // @TODO what if source is not available?
-      dr: 'https://previous.elbwalker.com/', // @TODO what if source is not available?
-      dt: 'Demo',
+      _et: getEngagementTime(custom), // Time between now and the previous event
+      ...getDocumentParams(event), // Document parameters
       ...getSessionParams(event, custom, instance), // Session parameters
       ...custom.params, // Custom parameters override defaults
     };
 
-    // user id
+    // User id
     if (user.id) params.uid = user.id;
 
     // Debug mode
     if (custom.debug) params._dbg = 1;
 
+    const headers: Record<string, string> = {};
+
+    // User Agent
+    const userAgent = user.userAgent || window?.navigator?.userAgent;
+    if (userAgent) headers['User-Agent'] = userAgent;
+
     sendWebAsFetch(url + requestToParameter(params), undefined, {
-      headers: {
-        // @TODO set headers
-      },
+      headers,
       method: 'POST',
     });
 
@@ -81,7 +82,21 @@ function getClientId(
   return clientId + '.' + timestamp;
 }
 
-function getEventTime(custom: CustomConfig) {
+function getDocumentParams(event: Partial<WalkerOS.Event>) {
+  const { source } = event;
+  const params: WalkerOS.AnyObject = {};
+
+  if (source) {
+    params.dl = source.id; // location
+    params.dr = source.previous_id; // referrer
+  }
+
+  if (document) params.dt = document.title; // title
+
+  return params;
+}
+
+function getEngagementTime(custom: CustomConfig) {
   const lastEvent = custom.lastEngagement
     ? Math.floor(Date.now() - (custom.lastEngagement || 1))
     : 1;
