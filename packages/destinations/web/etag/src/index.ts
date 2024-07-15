@@ -35,13 +35,11 @@ export const destinationEtag: Destination = {
     const params: Parameters = {
       v: '2',
       tid: custom.measurementId,
-      gcs: 'G111', // granted
-      // gcd: '11t1t1t1t5', // granted by default
-      _p: getId(),
-      cid: getClientId(user),
       en: event.event,
-      // Optional parameters
-      _et: getEngagementTime(custom), // Time between now and the previous event
+      _p: getId(), // Cache buster
+      ...getConsentMode(), // Consent mode
+      ...getClientId(user), // Client ID
+      ...getEngagementTime(custom), // Time between now and the previous event
       ...getDocumentParams(event), // Document parameters
       ...getSessionParams(event, custom, instance), // Session parameters
       ...custom.params, // Custom parameters override defaults
@@ -71,7 +69,7 @@ export const destinationEtag: Destination = {
 function getClientId(
   user: WalkerOS.AnyObject = {},
   instance?: WebClient.Instance,
-) {
+): { cid: string } {
   const userId = getUser(user);
   const clientId = userId ? valueToNumber(userId) : '1234567890';
 
@@ -79,10 +77,17 @@ function getClientId(
     ? instance.session.start
     : Math.floor(Date.now() / 86400000) * 86400; // Daily timestamp
 
-  return clientId + '.' + timestamp;
+  return { cid: clientId + '.' + timestamp };
 }
 
-function getDocumentParams(event: Partial<WalkerOS.Event>) {
+function getConsentMode(): { gcs: string; gcd?: string } {
+  return {
+    gcs: 'G111', // Status
+    // gcd: '11t1t1t1t5', // Default (granted)
+  };
+}
+
+function getDocumentParams(event: Partial<WalkerOS.Event>): WalkerOS.AnyObject {
   const { source } = event;
   const params: WalkerOS.AnyObject = {};
 
@@ -96,17 +101,17 @@ function getDocumentParams(event: Partial<WalkerOS.Event>) {
   return params;
 }
 
-function getEngagementTime(custom: CustomConfig) {
+function getEngagementTime(custom: CustomConfig): { _et: number } {
   const lastEvent = custom.lastEngagement
     ? Math.floor(Date.now() - (custom.lastEngagement || 1))
     : 1;
 
   custom.lastEngagement = Date.now();
 
-  return lastEvent;
+  return { _et: lastEvent };
 }
 
-function getSessionId(user: WalkerOS.AnyObject = {}) {
+function getSessionId(user: WalkerOS.AnyObject = {}): number {
   return valueToNumber(getUser(user) + user.session); // Combine user and session
 }
 
