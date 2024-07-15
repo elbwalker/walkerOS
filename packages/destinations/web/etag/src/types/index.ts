@@ -5,7 +5,7 @@ export interface Destination
 
 export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 
-export interface CustomConfig {
+export interface CustomConfig extends State {
   measurementId: string; // Measurement ID
   debug?: true; // Enables debug mode
   url?: string; // URL to send the request to
@@ -13,6 +13,10 @@ export interface CustomConfig {
 }
 
 export interface CustomEventConfig {}
+
+export interface State {
+  lastEngagement?: number; // Last event timestamp
+}
 
 export interface Parameters extends Partial<ParametersOptional> {
   v: '2'; // Protocol version, always 2 for GA4

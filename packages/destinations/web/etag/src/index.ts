@@ -35,13 +35,12 @@ export const destinationEtag: Destination = {
       sid: getSessionId(user),
       en: event.event,
       // Optional parameters
-      _et: (event.timing || 1) * 1000, // @TODO number of milliseconds between now and the previous event
+      _et: getEventTime(custom), // Time between now and the previous event
       // dl: event.source.id, // @TODO what if source is not available?
       // dr: event.source.previous_id,
       dl: 'https://test.elbwalker.com/', // @TODO what if source is not available?
       dr: 'https://previous.elbwalker.com/', // @TODO what if source is not available?
       dt: 'Demo',
-      // _z: 'fetch',
       ...custom.params, // Custom parameters override defaults
     };
 
@@ -66,6 +65,8 @@ export const destinationEtag: Destination = {
       },
       method: 'POST',
     });
+
+    config.custom = custom;
   },
 };
 
@@ -76,6 +77,16 @@ function getClientId(user: WalkerOS.AnyObject = {}) {
   return (
     clientId + '.' + Math.floor(Date.now() / 86400000) * 86400 // Daily timestamp; // @TODO use the instance.session data
   );
+}
+
+function getEventTime(custom: CustomConfig) {
+  const lastEvent = custom.lastEngagement
+    ? Math.floor(Date.now() - (custom.lastEngagement || 1))
+    : 1;
+
+  custom.lastEngagement = Date.now();
+
+  return lastEvent;
 }
 
 function getSessionId(user: WalkerOS.AnyObject = {}) {
