@@ -17,6 +17,7 @@ export interface CustomEventConfig {}
 
 export interface State {
   lastEngagement?: number; // Last event timestamp
+  isEngaged?: boolean; // If a user is engaged
   sentPageView?: boolean; // If a page view has been sent
   sentSession?: boolean; // If session parameters have been sent
 }
@@ -54,4 +55,5 @@ export interface ParametersSession {
   _fv?: 1 | 2; // First visit
   _ss?: 1 | 2; // Session start
   sct?: number; // Session count
+  seg?: 1; // Session engaged
 }

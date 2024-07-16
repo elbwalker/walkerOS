@@ -150,6 +150,28 @@ describe('Destination etag', () => {
     expect(requestedUrl(mockSend, 1)).not.toContain('_fv=1');
   });
 
+  test('session engaged', () => {
+    // no engagement
+    push(event);
+    expect(requestedUrl(mockSend)).not.toContain('seg=1');
+
+    // timing
+    push({ timing: 11 });
+    expect(requestedUrl(mockSend, 1)).toContain('seg=1');
+
+    // previous engagement
+    push(event);
+    expect(requestedUrl(mockSend, 2)).toContain('seg=1');
+
+    // multiple runs
+    push(event, { measurementId }, { session: { runs: 2 } });
+    expect(requestedUrl(mockSend, 3)).toContain('seg=1');
+
+    // click trigger
+    push({ trigger: 'click' }, { measurementId });
+    expect(requestedUrl(mockSend, 4)).toContain('seg=1');
+  });
+
   test('user ids', () => {
     push({
       event: 'page view',

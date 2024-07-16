@@ -33,7 +33,6 @@ export const destinationEtag: Destination = {
 
     // @TODOs
     // key event parameter flags
-    // seg: Session Engaged
     // ul: User language
     // sr: Screen Resolution
 
@@ -207,6 +206,19 @@ function getSessionParams(
     sid: getSessionId(event.user),
   };
 
+  // Engagement
+  let isEngaged = custom.isEngaged || false;
+
+  if (!isEngaged && event.timing >= 10) isEngaged = true;
+  if (!isEngaged && event.trigger == 'click') isEngaged = true;
+  if (!isEngaged && session && (session.runs || 0) > 1) isEngaged = true;
+
+  if (isEngaged) {
+    custom.isEngaged = isEngaged;
+    params.seg = 1;
+  }
+
+  // Session status
   if (!custom.sentSession && session) {
     const { isStart, isNew, count } = session;
 
