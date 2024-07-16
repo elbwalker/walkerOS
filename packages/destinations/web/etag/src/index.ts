@@ -207,7 +207,7 @@ function getSessionParams(
     sid: getSessionId(event.user),
   };
 
-  if (session) {
+  if (!custom.sentSession && session) {
     const { isStart, isNew, count } = session;
 
     if (isNew) {
@@ -220,6 +220,7 @@ function getSessionParams(
     if (count) params.sct = count; // session count
   }
 
+  custom.sentSession = true;
   return params;
 }
 

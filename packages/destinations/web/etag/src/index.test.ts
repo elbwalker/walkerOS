@@ -20,13 +20,13 @@ describe('Destination etag', () => {
   function push(
     event: unknown,
     custom?: DestinationWebEtag.CustomConfig,
-    instance?: WebClient.Instance,
+    instance?: unknown,
   ) {
     destination.push(
       event as WalkerOS.Event,
       custom ? { custom } : destination.config,
       undefined,
-      instance,
+      instance as WebClient.Instance,
     );
   }
 
@@ -136,12 +136,18 @@ describe('Destination etag', () => {
   test('session start', () => {
     push(event, destination.config.custom, {
       session: { isNew: true, isStart: true, count: 1 },
-    } as WebClient.Instance);
-
+    });
     expect(requestedUrl(mockSend)).toContain('_ss=1');
     expect(requestedUrl(mockSend)).toContain('_nsi=1');
     expect(requestedUrl(mockSend)).toContain('_fv=1');
     expect(requestedUrl(mockSend)).toContain('sct=1');
+
+    push(event, destination.config.custom, {
+      session: { isNew: true, isStart: true, count: 1 },
+    });
+    expect(requestedUrl(mockSend, 1)).not.toContain('_ss=1');
+    expect(requestedUrl(mockSend, 1)).not.toContain('_nsi=1');
+    expect(requestedUrl(mockSend, 1)).not.toContain('_fv=1');
   });
 
   test('user ids', () => {
