@@ -39,7 +39,6 @@ export const destinationEtag: Destination = {
     const params: Parameters = {
       v: '2',
       tid: custom.measurementId,
-      _ee: 1, // Enhanced Measurement Flag
       _p: getId(), // Cache buster
       ...getConsentMode(), // Consent mode
       ...getClientId(user), // Client ID
@@ -55,7 +54,7 @@ export const destinationEtag: Destination = {
     if (custom.debug) params._dbg = 1;
 
     const headers: Record<string, string> = {
-      'Content-Type': 'text/plain',
+      'Content-Type': 'text/plain;charset=UTF-8',
     };
 
     // User Agent
@@ -135,20 +134,22 @@ function getEngagementTime(custom: CustomConfig): number {
 
   custom.lastEngagement = Date.now();
 
-  return lastEvent;
+  return lastEvent || 1;
 }
 
 // Function to generate event data for the body
 function getEventData(events: WalkerOS.Events, custom: CustomConfig): string {
   const data: string[] = [];
 
-  events.forEach((event) => {
+  events.forEach((event, i) => {
     const eventParams: ParametersEvent = {
       en: event.event, // Event name
       _et: getEngagementTime(custom), // Time between now and the previous event
     };
 
-    const include = [
+    if (i > 0) eventParams._ee = 1; // Enhanced Measurement Flag
+
+    const include: Array<keyof WalkerOS.Event> = [
       'context',
       'data',
       'event',
@@ -159,7 +160,7 @@ function getEventData(events: WalkerOS.Events, custom: CustomConfig): string {
     ];
 
     include.forEach((groupName) => {
-      let group = event[groupName as keyof Omit<WalkerOS.Event, 'all'>];
+      let group = event[groupName];
 
       if (!group) return;
 
@@ -219,6 +220,8 @@ function getSessionParams(
   }
 
   // Session status
+
+  // @TODO session.storage
   if (!custom.sentSession && session) {
     const { isStart, isNew, count } = session;
 

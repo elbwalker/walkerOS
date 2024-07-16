@@ -8,7 +8,7 @@ export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 
 export interface CustomConfig extends State {
   measurementId: string; // Measurement ID
-  debug?: true; // Enables debug mode
+  debug?: boolean; // Enables debug mode
   url?: string; // URL to send the request to
   params?: Partial<Parameters>; // Customize the parameters
 }
@@ -27,7 +27,6 @@ export interface Parameters extends Partial<ParametersOptional> {
   tid: string; // MeasurementID
   cid: string; // Client ID
   _p: string; // Cache buster
-  _ee: 1; // Enhanced Measurement Flag
   gcs?: string; // Consent mode status
   gcd?: string; // Consent mode default
   [key: string]: string | number | undefined;
@@ -45,6 +44,7 @@ export interface ParametersOptional extends ParametersSession {
 export interface ParametersEvent extends WalkerOS.AnyObject {
   en: string; // Event name
   _et: number; // Engagement time (for realtime view)
+  _ee?: 1; // Enhanced Measurement Flag
   [key: `ep.${string}`]: string; // string parameters
   [key: `epn.${string}`]: number; // number parameters
 }

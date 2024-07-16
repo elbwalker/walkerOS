@@ -49,7 +49,7 @@ describe('Destination etag', () => {
       expect.objectContaining({
         method: 'POST',
         headers: {
-          'Content-Type': 'text/plain',
+          'Content-Type': 'text/plain;charset=UTF-8',
           'User-Agent': expect.any(String),
         },
       }),
@@ -94,12 +94,12 @@ describe('Destination etag', () => {
 
     expect(requestedUrl(mockSend)).toContain('v=2');
     expect(requestedUrl(mockSend)).toContain('tid=' + measurementId);
-    expect(requestedUrl(mockSend)).toContain('_ee=1');
     expect(requestedUrl(mockSend)).toContain('gcs=G111');
     expect(requestedUrl(mockSend)).toContain('_p=1337');
     expect(requestedUrl(mockSend)).toMatch(/cid=\d+\.\d+/); // cid=number.number
     expect(requestedUrl(mockSend)).toContain('sid=1006242960'); // hash of undefined
     expect(requestedUrl(mockSend)).toContain('dt=Demo'); // hash of undefined
+    expect(requestedBody(mockSend)).toContain('_ee=1');
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.any(String), // URL
