@@ -33,7 +33,6 @@ export const destinationEtag: Destination = {
 
     // @TODOs
     // key event parameter flags
-    // event parameter
     // seg: Session Engaged
     // ul: User language
     // sr: Screen Resolution
@@ -149,20 +148,47 @@ function getEventData(events: WalkerOS.Events, custom: CustomConfig): string {
       en: event.event, // Event name
       _et: getEngagementTime(custom), // Time between now and the previous event
     };
+
+    const include = [
+      'context',
+      'data',
+      'event',
+      'globals',
+      'source',
+      'user',
+      'version',
+    ];
+
+    include.forEach((groupName) => {
+      let group = event[groupName as keyof Omit<WalkerOS.Event, 'all'>];
+
+      if (!group) return;
+
+      // Create a fake group for event properties
+      if (groupName == 'event')
+        group = {
+          id: event.id,
+          timing: event.timing,
+          trigger: event.trigger,
+          entity: event.entity,
+          action: event.action,
+          group: event.group,
+          count: event.count,
+        };
+
+      Object.entries(group).forEach(([key, val]) => {
+        // Different value access for context
+        if (groupName == 'context')
+          val = (val as WalkerOS.OrderedProperties)[0];
+
+        const type = typeof val === 'number' ? 'epn' : 'ep';
+        const paramKey = `${type}.${groupName}_${key}`;
+        eventParams[paramKey] = val;
+      });
+    });
+
     data.push(requestToParameter(eventParams));
   });
-
-  // Add _s (hit_count) as soon as there are more than one event
-
-  // // Add Event Parameters
-  // for (const key in event.data) {
-  //   const value = event.data[key];
-  //   if (typeof value === 'number') {
-  //     events.push(`epn.${key}=${value}`); // Numeric event parameters
-  //   } else {
-  //     events.push(`ep.${key}=${value}`); // String event parameters
-  //   }
-  // }
 
   return data.join('\r\n');
 }

@@ -56,6 +56,29 @@ describe('Destination etag', () => {
     );
   });
 
+  test('data', () => {
+    push({
+      event: 'entity data',
+      timing: 42,
+      data: {
+        id: 3.14,
+        foo: 'bar',
+      },
+      globals: {
+        glow: 'balls',
+      },
+      context: {
+        env: ['dev', 0],
+      },
+    });
+
+    expect(requestedBody(mockSend)).toContain('ep.data_foo=bar');
+    expect(requestedBody(mockSend)).toContain('ep.globals_glow=balls');
+    expect(requestedBody(mockSend)).toContain('ep.context_env=dev');
+    expect(requestedBody(mockSend)).toContain('epn.data_id=3.14');
+    expect(requestedBody(mockSend)).toContain('epn.event_timing=42');
+  });
+
   test('page_view', () => {
     push(event);
     expect(requestedUrl(mockSend)).toContain('s=2');
