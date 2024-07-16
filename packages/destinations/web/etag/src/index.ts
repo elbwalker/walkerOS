@@ -29,6 +29,8 @@ export const destinationEtag: Destination = {
 
     const { user = {} } = event;
 
+    const events = [event];
+
     // @TODOs
     // key event parameter flags
     // event parameter
@@ -62,7 +64,27 @@ export const destinationEtag: Destination = {
     const userAgent = user.userAgent || window?.navigator?.userAgent;
     if (userAgent) headers['User-Agent'] = userAgent;
 
-    const body = getEventData(event, custom);
+    // page_view
+    if (!custom.sentPageView) {
+      events.push({
+        ...event, // Create a virtual page_view event by copying the original event
+        event: 'page_view',
+        entity: 'page',
+        action: 'view',
+        trigger: 'code',
+        id: String(event.id || getId(5)).slice(0, -1) + '0', // Change the event ID
+        count: 0,
+        data: {},
+        context: {},
+      });
+
+      custom.sentPageView = true;
+    }
+
+    // Event count
+    if (events.length > 1) params._s = events.length; // Hit count
+
+    const body = getEventData(events, custom);
 
     sendWebAsFetch(url + requestToParameter(params), body, {
       headers,
@@ -119,17 +141,30 @@ function getEngagementTime(custom: CustomConfig): number {
 }
 
 // Function to generate event data for the body
-function getEventData(event: WalkerOS.Event, custom: CustomConfig): string {
-  const events: string[] = [];
-  const eventParams: ParametersEvent = {
-    en: event.event, // Event name
-    _et: getEngagementTime(custom), // Time between now and the previous event
-  };
-  events.push(requestToParameter(eventParams));
+function getEventData(events: WalkerOS.Events, custom: CustomConfig): string {
+  const data: string[] = [];
+
+  events.forEach((event) => {
+    const eventParams: ParametersEvent = {
+      en: event.event, // Event name
+      _et: getEngagementTime(custom), // Time between now and the previous event
+    };
+    data.push(requestToParameter(eventParams));
+  });
 
   // Add _s (hit_count) as soon as there are more than one event
 
-  return events.join('\r\n');
+  // // Add Event Parameters
+  // for (const key in event.data) {
+  //   const value = event.data[key];
+  //   if (typeof value === 'number') {
+  //     events.push(`epn.${key}=${value}`); // Numeric event parameters
+  //   } else {
+  //     events.push(`ep.${key}=${value}`); // String event parameters
+  //   }
+  // }
+
+  return data.join('\r\n');
 }
 
 function getSessionId(user: WalkerOS.AnyObject = {}): number {

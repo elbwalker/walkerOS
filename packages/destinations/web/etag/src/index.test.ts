@@ -33,6 +33,7 @@ describe('Destination etag', () => {
   beforeEach(() => {
     destination = jest.requireActual('.').default;
     destination.config = { custom: { measurementId, url } };
+    document.title = 'Demo';
   });
 
   test('init', () => {
@@ -55,6 +56,16 @@ describe('Destination etag', () => {
     );
   });
 
+  test('page_view', () => {
+    push(event);
+    expect(requestedUrl(mockSend)).toContain('s=2');
+    expect(requestedBody(mockSend)).toContain('en=page_view');
+
+    push(event); // Only once
+    expect(requestedUrl(mockSend, 1)).not.toContain('s=2');
+    expect(requestedBody(mockSend, 1)).not.toContain('en=page_view');
+  });
+
   test('default params', () => {
     push(event, { measurementId });
 
@@ -65,6 +76,7 @@ describe('Destination etag', () => {
     expect(requestedUrl(mockSend)).toContain('_p=1337');
     expect(requestedUrl(mockSend)).toMatch(/cid=\d+\.\d+/); // cid=number.number
     expect(requestedUrl(mockSend)).toContain('sid=1006242960'); // hash of undefined
+    expect(requestedUrl(mockSend)).toContain('dt=Demo'); // hash of undefined
 
     expect(mockSend).toHaveBeenCalledWith(
       expect.any(String), // URL

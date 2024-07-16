@@ -17,6 +17,7 @@ export interface CustomEventConfig {}
 
 export interface State {
   lastEngagement?: number; // Last event timestamp
+  sentPageView?: boolean; // If a page view has been sent
 }
 
 export interface Parameters extends Partial<ParametersOptional> {
