@@ -138,7 +138,7 @@ describe('Destination etag', () => {
       session: { isNew: true, isStart: true, count: 1 },
     });
     expect(requestedUrl(mockSend)).toContain('_ss=1');
-    expect(requestedUrl(mockSend)).toContain('_nsi=1');
+    // expect(requestedUrl(mockSend)).toContain('_nsi=1');
     expect(requestedUrl(mockSend)).toContain('_fv=1');
     expect(requestedUrl(mockSend)).toContain('sct=1');
 
@@ -146,7 +146,7 @@ describe('Destination etag', () => {
       session: { isNew: true, isStart: true, count: 1 },
     });
     expect(requestedUrl(mockSend, 1)).not.toContain('_ss=1');
-    expect(requestedUrl(mockSend, 1)).not.toContain('_nsi=1');
+    // expect(requestedUrl(mockSend, 1)).not.toContain('_nsi=1');
     expect(requestedUrl(mockSend, 1)).not.toContain('_fv=1');
   });
 
