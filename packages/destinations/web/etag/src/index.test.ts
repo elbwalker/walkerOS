@@ -60,6 +60,7 @@ describe('Destination etag', () => {
 
     expect(requestedUrl(mockSend)).toContain('v=2');
     expect(requestedUrl(mockSend)).toContain('tid=' + measurementId);
+    expect(requestedUrl(mockSend)).toContain('_ee=1');
     expect(requestedUrl(mockSend)).toContain('gcs=G111');
     expect(requestedUrl(mockSend)).toContain('_p=1337');
     expect(requestedUrl(mockSend)).toMatch(/cid=\d+\.\d+/); // cid=number.number

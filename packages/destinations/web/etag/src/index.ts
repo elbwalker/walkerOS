@@ -39,6 +39,7 @@ export const destinationEtag: Destination = {
     const params: Parameters = {
       v: '2',
       tid: custom.measurementId,
+      _ee: 1, // Enhanced Measurement Flag
       _p: getId(), // Cache buster
       ...getConsentMode(), // Consent mode
       ...getClientId(user), // Client ID
@@ -125,6 +126,8 @@ function getEventData(event: WalkerOS.Event, custom: CustomConfig): string {
     _et: getEngagementTime(custom), // Time between now and the previous event
   };
   events.push(requestToParameter(eventParams));
+
+  // Add _s (hit_count) as soon as there are more than one event
 
   return events.join('\r\n');
 }
