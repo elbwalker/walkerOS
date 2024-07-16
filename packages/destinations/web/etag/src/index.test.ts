@@ -44,10 +44,11 @@ describe('Destination etag', () => {
     push(event);
     expect(mockSend).toHaveBeenCalledWith(
       expect.stringContaining(url),
-      undefined,
+      expect.stringContaining('en=entity+action&_et=1'),
       expect.objectContaining({
         method: 'POST',
         headers: {
+          'Content-Type': 'text/plain',
           'User-Agent': expect.any(String),
         },
       }),
@@ -65,9 +66,9 @@ describe('Destination etag', () => {
     expect(requestedUrl(mockSend)).toContain('sid=1006242960'); // hash of undefined
 
     expect(mockSend).toHaveBeenCalledWith(
-      expect.any(String),
-      undefined,
-      expect.any(Object),
+      expect.any(String), // URL
+      expect.any(String), // Body
+      expect.any(Object), // Headers
     );
   });
 
@@ -82,9 +83,9 @@ describe('Destination etag', () => {
     expect(requestedUrl(mockSend)).toContain('sid=1337');
 
     expect(mockSend).toHaveBeenCalledWith(
-      expect.any(String),
-      undefined,
-      expect.any(Object),
+      expect.any(String), // URL
+      expect.any(String), // Body
+      expect.any(Object), // Headers
     );
   });
 
@@ -132,8 +133,8 @@ describe('Destination etag', () => {
       event: 'e2',
     });
 
-    expect(requestedUrl(mockSend)).toContain('_et=1');
-    expect(requestedUrl(mockSend, 1)).toContain('_et=1337');
+    expect(requestedBody(mockSend)).toContain('_et=1');
+    expect(requestedBody(mockSend, 1)).toContain('_et=1337');
   });
 
   test('debug', () => {
@@ -145,4 +146,8 @@ describe('Destination etag', () => {
 
 function requestedUrl(mockSend: jest.Mock, i = 0) {
   return mockSend.mock.calls[i][0];
+}
+
+function requestedBody(mockSend: jest.Mock, i = 0) {
+  return mockSend.mock.calls[i][1];
 }

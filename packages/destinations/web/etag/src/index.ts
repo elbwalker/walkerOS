@@ -2,6 +2,7 @@ import type {
   CustomConfig,
   Destination,
   Parameters,
+  ParametersEvent,
   ParametersSession,
 } from './types';
 import type { WalkerOS } from '@elbwalker/types';
@@ -31,15 +32,16 @@ export const destinationEtag: Destination = {
     // @TODOs
     // key event parameter flags
     // event parameter
+    // seg: Session Engaged
+    // ul: User language
+    // sr: Screen Resolution
 
     const params: Parameters = {
       v: '2',
       tid: custom.measurementId,
-      en: event.event,
       _p: getId(), // Cache buster
       ...getConsentMode(), // Consent mode
       ...getClientId(user), // Client ID
-      ...getEngagementTime(custom), // Time between now and the previous event
       ...getDocumentParams(event), // Document parameters
       ...getSessionParams(event, custom, instance), // Session parameters
       ...custom.params, // Custom parameters override defaults
@@ -51,13 +53,17 @@ export const destinationEtag: Destination = {
     // Debug mode
     if (custom.debug) params._dbg = 1;
 
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      'Content-Type': 'text/plain',
+    };
 
     // User Agent
     const userAgent = user.userAgent || window?.navigator?.userAgent;
     if (userAgent) headers['User-Agent'] = userAgent;
 
-    sendWebAsFetch(url + requestToParameter(params), undefined, {
+    const body = getEventData(event, custom);
+
+    sendWebAsFetch(url + requestToParameter(params), body, {
       headers,
       method: 'POST',
     });
@@ -101,14 +107,26 @@ function getDocumentParams(event: Partial<WalkerOS.Event>): WalkerOS.AnyObject {
   return params;
 }
 
-function getEngagementTime(custom: CustomConfig): { _et: number } {
+function getEngagementTime(custom: CustomConfig): number {
   const lastEvent = custom.lastEngagement
     ? Math.floor(Date.now() - (custom.lastEngagement || 1))
     : 1;
 
   custom.lastEngagement = Date.now();
 
-  return { _et: lastEvent };
+  return lastEvent;
+}
+
+// Function to generate event data for the body
+function getEventData(event: WalkerOS.Event, custom: CustomConfig): string {
+  const events: string[] = [];
+  const eventParams: ParametersEvent = {
+    en: event.event, // Event name
+    _et: getEngagementTime(custom), // Time between now and the previous event
+  };
+  events.push(requestToParameter(eventParams));
+
+  return events.join('\r\n');
 }
 
 function getSessionId(user: WalkerOS.AnyObject = {}): number {

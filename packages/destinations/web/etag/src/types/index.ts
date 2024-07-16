@@ -1,3 +1,4 @@
+import { WalkerOS } from '@elbwalker/types';
 import type { WebDestination } from '@elbwalker/walker.js';
 
 export interface Destination
@@ -25,8 +26,6 @@ export interface Parameters extends Partial<ParametersOptional> {
   gcd?: string; // Consent mode default
   _p: string; // Cache buster
   cid: string; // Client ID
-  en: string; // Event name
-  _et: number; // Engagement time (for realtime view)
   [key: string]: string | number | undefined;
 }
 
@@ -37,6 +36,13 @@ export interface ParametersOptional extends ParametersSession {
   dt?: string; // Document title
   dr?: string; // Document referrer
   ul?: string; // User language
+}
+
+export interface ParametersEvent extends WalkerOS.AnyObject {
+  en: string; // Event name
+  _et: number; // Engagement time (for realtime view)
+  [key: `ep.${string}`]: string; // string parameters
+  [key: `epn.${string}`]: number; // number parameters
 }
 
 export interface ParametersSession {
