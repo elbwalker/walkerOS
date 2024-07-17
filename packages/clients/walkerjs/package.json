@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/walker.js",
   "description": "Lightweight & vendor-agnostic tracking implementation layer for data-collection by simply adding attributes to your markup.",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
