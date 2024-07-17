@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-plausible",
   "description": "Plausible web destination for walkerOS",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,7 +20,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/walker.js": "3.0.0"
+    "@elbwalker/walker.js": "3.0.1"
   },
   "devDependencies": {
     "@elbwalker/tsup": "0.0.1",

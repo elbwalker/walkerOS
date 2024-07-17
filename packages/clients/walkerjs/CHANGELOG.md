@@ -1,5 +1,11 @@
 # @elbwalker/walker.js
 
+## 3.0.1
+
+### Patch Changes
+
+- body globals [#407](https://github.com/elbwalker/walkerOS/issues/407)
+
 ## 3.0.0
 
 ### Major Changes
