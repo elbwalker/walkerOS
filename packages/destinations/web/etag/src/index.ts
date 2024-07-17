@@ -239,7 +239,7 @@ function getSessionParams(
     const { isStart, isNew, count } = session;
 
     if (isNew) {
-      // params._nsi = 1; // new to site
+      params._nsi = 1; // new to site
       params._fv = 1; // first visit
     }
 
