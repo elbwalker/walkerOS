@@ -26,7 +26,7 @@ export interface Parameters extends Partial<ParametersOptional> {
   v: '2'; // Protocol version, always 2 for GA4
   tid: string; // MeasurementID
   cid: string; // Client ID
-  _p: string; // Cache buster
+  _p: number; // Cache buster
   gcs?: string; // Consent mode status
   gcd?: string; // Consent mode default
   [key: string]: string | number | undefined;
