@@ -14,7 +14,7 @@ describe('Destination etag', () => {
   let destination: DestinationWebEtag.Destination;
   const url = 'localhost?';
   const measurementId = 'G-XXXXXXX';
-  const event = { event: 'entity action' } as WalkerOS.Event;
+  const event = { event: 'entity action', timing: 42 } as WalkerOS.Event;
   // let customDefault: DestinationWebEtag.CustomConfig;
 
   function push(
@@ -96,6 +96,7 @@ describe('Destination etag', () => {
     expect(requestedUrl(mockSend)).toContain('tid=' + measurementId);
     expect(requestedUrl(mockSend)).toContain('gcs=G111');
     expect(requestedUrl(mockSend)).toContain('_z=fetch');
+    expect(requestedUrl(mockSend)).toContain('tfd=42000');
     expect(requestedUrl(mockSend)).toMatch(/_p=\d/);
     expect(requestedUrl(mockSend)).toMatch(/cid=\d+\.\d+/); // cid=number.number
     expect(requestedUrl(mockSend)).toContain('sid=1006242960'); // hash of undefined
@@ -153,7 +154,7 @@ describe('Destination etag', () => {
 
   test('session engaged', () => {
     // no engagement
-    push(event);
+    push({});
     expect(requestedUrl(mockSend)).not.toContain('seg=1');
 
     // timing

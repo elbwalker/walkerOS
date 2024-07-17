@@ -51,6 +51,9 @@ export const destinationEtag: Destination = {
     // User id
     if (user.id) params.uid = user.id;
 
+    // Time to first byte
+    if (event.timing) params.tfd = event.timing * 1000;
+
     // Debug mode
     if (custom.debug) params._dbg = 1;
 

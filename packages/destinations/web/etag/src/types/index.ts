@@ -38,6 +38,7 @@ export interface ParametersOptional extends ParametersSession {
   dl?: string; // Document location
   dt?: string; // Document title
   dr?: string; // Document referrer
+  tfd?: number; // Time to first byte
   ul?: string; // User language
 }
 
