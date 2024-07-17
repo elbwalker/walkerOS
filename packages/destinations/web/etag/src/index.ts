@@ -39,6 +39,7 @@ export const destinationEtag: Destination = {
       v: '2',
       tid: custom.measurementId,
       _p: Date.now(), // Cache buster
+      _z: 'fetch', // Transport mode
       ...getConsentMode(), // Consent mode
       ...getClientId(user), // Client ID
       ...getDeviceParams(user), // User parameters

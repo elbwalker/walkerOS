@@ -95,6 +95,7 @@ describe('Destination etag', () => {
     expect(requestedUrl(mockSend)).toContain('v=2');
     expect(requestedUrl(mockSend)).toContain('tid=' + measurementId);
     expect(requestedUrl(mockSend)).toContain('gcs=G111');
+    expect(requestedUrl(mockSend)).toContain('_z=fetch');
     expect(requestedUrl(mockSend)).toMatch(/_p=\d/);
     expect(requestedUrl(mockSend)).toMatch(/cid=\d+\.\d+/); // cid=number.number
     expect(requestedUrl(mockSend)).toContain('sid=1006242960'); // hash of undefined
