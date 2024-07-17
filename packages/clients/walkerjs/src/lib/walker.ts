@@ -159,7 +159,7 @@ export function getGlobals(
   const globalSelector = `[${globalsName}]`;
   let values = {};
 
-  queryAll(document.body, globalSelector, (element) => {
+  queryAll(document, globalSelector, (element) => {
     values = assign(
       values,
       getElbValues(prefix, element, Const.Commands.Globals, false),
@@ -375,7 +375,7 @@ function getThisAndParentProperties(
 }
 
 function queryAll(
-  scope: Element,
+  scope: Document | Element,
   selector: string,
   fn: (element: Element) => void,
 ): void {
