@@ -206,6 +206,19 @@ describe('Destination etag', () => {
 
     expect(requestedUrl(mockSend)).toContain('_dbg=1');
   });
+
+  test('device params', () => {
+    push({
+      event: 'entity action',
+      user: {
+        language: 'de-DE',
+        screenSize: '800x600',
+      },
+    });
+
+    expect(requestedUrl(mockSend)).toContain('ul=de-de');
+    expect(requestedUrl(mockSend)).toContain('sr=800x600');
+  });
 });
 
 function requestedUrl(mockSend: jest.Mock, i = 0) {

@@ -2,6 +2,7 @@ import type {
   CustomConfig,
   Destination,
   Parameters,
+  ParametersDevice,
   ParametersEvent,
   ParametersSession,
 } from './types';
@@ -33,8 +34,6 @@ export const destinationEtag: Destination = {
 
     // @TODOs
     // key event parameter flags
-    // ul: User language
-    // sr: Screen Resolution
 
     const params: Parameters = {
       v: '2',
@@ -42,6 +41,7 @@ export const destinationEtag: Destination = {
       _p: getId(), // Cache buster
       ...getConsentMode(), // Consent mode
       ...getClientId(user), // Client ID
+      ...getDeviceParams(user), // User parameters
       ...getDocumentParams(event), // Document parameters
       ...getSessionParams(event, custom, instance), // Session parameters
       ...custom.params, // Custom parameters override defaults
@@ -93,7 +93,7 @@ export const destinationEtag: Destination = {
 };
 
 function getClientId(
-  user: WalkerOS.AnyObject = {},
+  user: WalkerOS.User = {},
   instance?: WebClient.Instance,
 ): { cid: string } {
   const userId = getUser(user);
@@ -111,6 +111,15 @@ function getConsentMode(): { gcs: string; gcd?: string } {
     gcs: 'G111', // Status
     // gcd: '11t1t1t1t5', // Default (granted)
   };
+}
+
+function getDeviceParams(user: WalkerOS.User = {}): ParametersDevice {
+  const params: ParametersDevice = {};
+
+  if (user.language) params.ul = String(user.language).toLocaleLowerCase(); // User language
+  if (user.screenSize) params.sr = user.screenSize; // Screen resolution
+
+  return params;
 }
 
 function getDocumentParams(event: Partial<WalkerOS.Event>): WalkerOS.AnyObject {
@@ -193,7 +202,7 @@ function getEventData(events: WalkerOS.Events, custom: CustomConfig): string {
   return data.join('\r\n');
 }
 
-function getSessionId(user: WalkerOS.AnyObject = {}): number {
+function getSessionId(user: WalkerOS.User = {}): number {
   return valueToNumber(getUser(user) + user.session); // Combine user and session
 }
 
@@ -239,7 +248,7 @@ function getSessionParams(
   return params;
 }
 
-function getUser(user: WalkerOS.AnyObject = {}) {
+function getUser(user: WalkerOS.User = {}) {
   return String(user.device || user.session || user.hash);
 }
 
