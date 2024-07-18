@@ -135,7 +135,7 @@ describe('Destination etag', () => {
     expect(requestedUrl(mockSend, 1)).toContain('sid=1875854770'); // hash of 's3ss10n1ds3ss10n1d'
   });
 
-  test('session start', () => {
+  test('session status', () => {
     push(event, destination.config.custom, {
       session: { isNew: true, isStart: true, count: 1 },
     });
@@ -150,6 +150,15 @@ describe('Destination etag', () => {
     expect(requestedUrl(mockSend, 1)).not.toContain('_ss=1');
     expect(requestedUrl(mockSend, 1)).not.toContain('_nsi=1');
     expect(requestedUrl(mockSend, 1)).not.toContain('_fv=1');
+
+    destination.config.custom!.sentSession = false;
+    push(event, destination.config.custom, {
+      session: { storage: false, isStart: true },
+    });
+    expect(requestedUrl(mockSend, 2)).toContain('_ss=1');
+    expect(requestedUrl(mockSend, 2)).toContain('_nsi=1');
+    expect(requestedUrl(mockSend, 2)).toContain('_fv=1');
+    expect(requestedUrl(mockSend, 2)).toContain('sct=1');
   });
 
   test('session engaged', () => {
