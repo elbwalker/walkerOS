@@ -50,7 +50,8 @@ export function requestToParameter(
 ): string {
   if (!data) return '';
 
-  const params = new URLSearchParams();
+  const params: string[] = [];
+  const encode = encodeURIComponent;
 
   function addParam(key: string, value: unknown) {
     if (value === undefined || value === null) return;
@@ -62,15 +63,15 @@ export function requestToParameter(
         addParam(`${key}[${subKey}]`, subValue),
       );
     } else {
-      params.append(key, String(value));
+      params.push(`${encode(key)}=${encode(String(value))}`);
     }
   }
 
   if (typeof data === 'object') {
     Object.entries(data).forEach(([key, value]) => addParam(key, value));
   } else {
-    return String(data);
+    return encode(data);
   }
 
-  return params.toString();
+  return params.join('&');
 }
