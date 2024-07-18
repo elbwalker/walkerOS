@@ -10,6 +10,7 @@ export interface SendWebOptions {
 }
 
 export interface SendWebOptionsFetch extends SendWebOptions {
+  credentials?: 'omit' | 'same-origin' | 'include'; // Add credentials option
   noCors?: boolean; // Add noCors option for fetch transport
 }
 
@@ -55,6 +56,7 @@ export async function sendWebAsFetch(
         method: options.method || 'POST',
         headers,
         keepalive: true,
+        credentials: options.credentials || 'same-origin',
         mode: options.noCors ? 'no-cors' : 'cors',
         body,
       });

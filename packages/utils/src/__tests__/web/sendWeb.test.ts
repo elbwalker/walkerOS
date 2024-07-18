@@ -44,7 +44,7 @@ describe('sendWeb', () => {
   });
 
   test('fetch', async () => {
-    let response = await sendWeb(url, data, { transport: 'fetch' });
+    const response = await sendWeb(url, data, { transport: 'fetch' });
 
     expect(mockFetch).toHaveBeenCalledWith(
       url,
@@ -59,9 +59,13 @@ describe('sendWeb', () => {
       data: dataStringified,
       error: undefined,
     });
+  });
 
-    // no-cors
-    response = await sendWeb(url, data, { transport: 'fetch', noCors: true });
+  test('fetch cors', async () => {
+    const response = await sendWeb(url, data, {
+      transport: 'fetch',
+      noCors: true,
+    });
 
     expect(mockFetch).toHaveBeenCalledWith(
       url,
@@ -74,6 +78,27 @@ describe('sendWeb', () => {
     expect(response).toStrictEqual({
       ok: true,
       data: '',
+      error: undefined,
+    });
+  });
+
+  test('fetch credentials', async () => {
+    const response = await sendWeb(url, data, {
+      transport: 'fetch',
+      credentials: 'include',
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      url,
+      expect.objectContaining({
+        body: dataStringified,
+        keepalive: true,
+        credentials: 'include',
+      }),
+    );
+    expect(response).toStrictEqual({
+      ok: true,
+      data: dataStringified,
       error: undefined,
     });
   });
