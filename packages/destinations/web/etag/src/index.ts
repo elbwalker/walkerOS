@@ -92,6 +92,7 @@ export const destinationEtag: Destination = {
       headers,
       method: 'POST',
       noCors: true,
+      credentials: 'include', // @TODO be careful with this
     });
 
     config.custom = custom;
