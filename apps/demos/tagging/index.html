@@ -197,6 +197,19 @@
           },
         });
 
+        // Destination etag
+        const etag = (
+          await import(
+            'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-etag@0.0.3/dist/index.mjs'
+          )
+        ).default;
+        elb('walker destination', etag, {
+          consent: { marketing: true },
+          custom: {
+            measurementId: 'G-QPQMHPW8HG',
+          },
+        });
+
         // Destination GA4
         const ga4 = (
           await import(
