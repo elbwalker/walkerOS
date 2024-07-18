@@ -107,7 +107,7 @@ function getClientId(
 
   const timestamp = instance?.session
     ? instance.session.start
-    : Math.floor(Date.now() / 86400000) * 86400; // Daily timestamp
+    : Math.floor(Date.now() / 86400000) * 86400 + 1; // Daily timestamp
 
   return { cid: clientId + '.' + timestamp };
 }
