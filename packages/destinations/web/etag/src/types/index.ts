@@ -27,8 +27,6 @@ export interface Parameters extends Partial<ParametersOptional> {
   tid: string; // MeasurementID
   cid: string; // Client ID
   _p: number; // Cache buster
-  gcs?: string; // Consent mode status
-  gcd?: string; // Consent mode default
   [key: string]: string | number | undefined;
 }
 
@@ -48,6 +46,11 @@ export interface ParametersEvent extends WalkerOS.AnyObject {
   _ee?: 1; // Enhanced Measurement Flag
   [key: `ep.${string}`]: string; // string parameters
   [key: `epn.${string}`]: number; // number parameters
+}
+
+export interface ParametersConsent {
+  gcs?: string; // Consent mode status
+  gcd?: string; // Consent mode default
 }
 
 export interface ParametersDevice extends WalkerOS.AnyObject {

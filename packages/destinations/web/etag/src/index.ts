@@ -2,6 +2,7 @@ import type {
   CustomConfig,
   Destination,
   Parameters,
+  ParametersConsent,
   ParametersDevice,
   ParametersEvent,
   ParametersSession,
@@ -90,6 +91,7 @@ export const destinationEtag: Destination = {
     sendWebAsFetch(url + requestToParameter(params), body, {
       headers,
       method: 'POST',
+      noCors: true,
     });
 
     config.custom = custom;
@@ -110,7 +112,7 @@ function getClientId(
   return { cid: clientId + '.' + timestamp };
 }
 
-function getConsentMode(): { gcs: string; gcd?: string } {
+function getConsentMode(): ParametersConsent {
   return {
     gcs: 'G111', // Status
     // gcd: '11t1t1t1t5', // Default (granted)
