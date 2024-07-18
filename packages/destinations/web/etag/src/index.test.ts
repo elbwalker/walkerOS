@@ -45,7 +45,7 @@ describe('Destination etag', () => {
     push(event);
     expect(mockSend).toHaveBeenCalledWith(
       expect.stringContaining(url),
-      expect.stringContaining('en=entity+action&_et=1'),
+      expect.stringContaining('en=entity%20action&_et=1'),
       expect.objectContaining({
         method: 'POST',
         headers: {
