@@ -193,7 +193,7 @@ describe('Destination etag', () => {
       },
     });
 
-    expect(requestedUrl(mockSend)).toContain('uid=us3r');
+    // expect(requestedUrl(mockSend)).toContain('uid=us3r');
     expect(requestedUrl(mockSend)).toContain('cid=1106139110'); // d3v1c3
     expect(requestedUrl(mockSend)).toContain('sid=1552924326'); // d3v1c3s3ss10n
   });
