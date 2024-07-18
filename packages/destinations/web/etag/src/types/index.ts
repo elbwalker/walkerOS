@@ -51,6 +51,9 @@ export interface ParametersEvent extends WalkerOS.AnyObject {
 export interface ParametersConsent {
   gcs?: string; // Consent mode status
   gcd?: string; // Consent mode default
+  dma?: number; // Digital Markets Act
+  dma_cps?: string; // Consent mode data processing
+  pscdl?: string; // Privacy Sandbox
 }
 
 export interface ParametersDevice extends WalkerOS.AnyObject {

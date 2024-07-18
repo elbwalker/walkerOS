@@ -94,7 +94,6 @@ describe('Destination etag', () => {
 
     expect(requestedUrl(mockSend)).toContain('v=2');
     expect(requestedUrl(mockSend)).toContain('tid=' + measurementId);
-    expect(requestedUrl(mockSend)).toContain('gcs=G111');
     expect(requestedUrl(mockSend)).toContain('_z=fetch');
     expect(requestedUrl(mockSend)).toContain('tfd=42000');
     expect(requestedUrl(mockSend)).toMatch(/_p=\d/);
@@ -125,6 +124,15 @@ describe('Destination etag', () => {
       expect.any(String), // Body
       expect.any(Object), // Headers
     );
+  });
+
+  test('consent params', () => {
+    push(event, { measurementId });
+
+    expect(requestedUrl(mockSend)).toContain('gcs=G111');
+    expect(requestedUrl(mockSend)).toContain('dma=1');
+    expect(requestedUrl(mockSend)).toContain('dma_cps=syphamo');
+    expect(requestedUrl(mockSend)).toContain('pscdl=noapi');
   });
 
   test('session id', () => {
