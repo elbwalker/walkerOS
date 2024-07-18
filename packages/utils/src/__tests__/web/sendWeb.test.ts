@@ -44,15 +44,36 @@ describe('sendWeb', () => {
   });
 
   test('fetch', async () => {
-    const response = await sendWeb(url, data, { transport: 'fetch' });
+    let response = await sendWeb(url, data, { transport: 'fetch' });
 
     expect(mockFetch).toHaveBeenCalledWith(
       url,
-      expect.objectContaining({ body: dataStringified, keepalive: true }),
+      expect.objectContaining({
+        body: dataStringified,
+        keepalive: true,
+        mode: 'cors',
+      }),
     );
     expect(response).toStrictEqual({
       ok: true,
       data: dataStringified,
+      error: undefined,
+    });
+
+    // no-cors
+    response = await sendWeb(url, data, { transport: 'fetch', noCors: true });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      url,
+      expect.objectContaining({
+        body: dataStringified,
+        keepalive: true,
+        mode: 'no-cors',
+      }),
+    );
+    expect(response).toStrictEqual({
+      ok: true,
+      data: '',
       error: undefined,
     });
   });

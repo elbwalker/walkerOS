@@ -9,6 +9,14 @@ export interface SendWebOptions {
   method?: string;
 }
 
+export interface SendWebOptionsFetch extends SendWebOptions {
+  noCors?: boolean; // Add noCors option for fetch transport
+}
+
+type SendWebOptionsDynamic<T extends SendWebTransport> = T extends 'fetch'
+  ? SendWebOptionsFetch
+  : SendWebOptions;
+
 export type SendWebReturn<T extends SendWebTransport> = T extends 'fetch'
   ? Promise<SendResponse>
   : SendResponse;
@@ -16,7 +24,9 @@ export type SendWebReturn<T extends SendWebTransport> = T extends 'fetch'
 export function sendWeb<T extends SendWebTransport>(
   url: string,
   data?: SendDataValue,
-  options: SendWebOptions & { transport?: T } = { transport: 'fetch' as T },
+  options: SendWebOptionsDynamic<T> & { transport?: T } = {
+    transport: 'fetch' as T,
+  },
 ): SendWebReturn<T> {
   const transport = options.transport || 'fetch';
 
@@ -34,7 +44,7 @@ export function sendWeb<T extends SendWebTransport>(
 export async function sendWebAsFetch(
   url: string,
   data?: SendDataValue,
-  options: SendWebOptions = {},
+  options: SendWebOptionsFetch = {},
 ): Promise<SendResponse> {
   const headers = getHeaders(options.headers);
   const body = transformData(data);
@@ -45,10 +55,11 @@ export async function sendWebAsFetch(
         method: options.method || 'POST',
         headers,
         keepalive: true,
+        mode: options.noCors ? 'no-cors' : 'cors',
         body,
       });
 
-      const responseData = await response.text();
+      const responseData = options.noCors ? '' : await response.text();
 
       return {
         ok: response.ok,
