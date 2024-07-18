@@ -238,12 +238,14 @@ function getSessionParams(
   if (!custom.sentSession && session) {
     const { isStart, isNew, count, storage } = session;
 
-    if (isNew || !storage) {
-      params._nsi = 1; // new to site
-      params._fv = 1; // first visit
-    }
+    if (isStart) {
+      params._ss = 1; // session start
 
-    if (isStart) params._ss = 1; // session start
+      if (isNew || !storage) {
+        params._nsi = 1; // new to site
+        params._fv = 1; // first visit
+      }
+    }
 
     params.sct = count || 1; // session count
   }
