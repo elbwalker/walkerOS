@@ -13,6 +13,7 @@ export interface CustomConfig extends State {
   url?: string; // URL to send the request to
   headers?: SendHeaders; // Custom headers
   params?: Partial<Parameters>; // Customize the parameters
+  paramsEvent?: Partial<ParametersEvent>; // Customize the event parameters
 }
 
 export interface CustomEventConfig {}

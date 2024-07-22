@@ -126,6 +126,15 @@ describe('Destination etag', () => {
     );
   });
 
+  test('event params', () => {
+    push(event, {
+      measurementId,
+      paramsEvent: { 'ep.etagEvent': 'static' },
+    });
+
+    expect(requestedBody(mockSend)).toContain('ep.etagEvent=static');
+  });
+
   test('consent params', () => {
     push(event, { measurementId });
 

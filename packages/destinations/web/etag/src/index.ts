@@ -170,6 +170,7 @@ function getEventData(events: WalkerOS.Events, custom: CustomConfig): string {
     const eventParams: ParametersEvent = {
       en: event.event, // Event name
       _et: getEngagementTime(custom), // Time between now and the previous event
+      ...custom.paramsEvent,
     };
 
     if (i > 0) eventParams._ee = 1; // Enhanced Measurement Flag
