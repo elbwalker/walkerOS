@@ -238,6 +238,28 @@ describe('Destination etag', () => {
     expect(requestedUrl(mockSend)).toContain('ul=de-de');
     expect(requestedUrl(mockSend)).toContain('sr=800x600');
   });
+
+  test('header', () => {
+    push(event, {
+      measurementId,
+      url,
+      headers: {
+        'Content-Type': 'overridden',
+        'X-Test': 'test',
+      },
+    });
+
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.any(String), // URL
+      expect.any(String), // Body
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Content-Type': 'overridden',
+          'X-Test': 'test',
+        }),
+      }),
+    );
+  });
 });
 
 function requestedUrl(mockSend: jest.Mock, i = 0) {

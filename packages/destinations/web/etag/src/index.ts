@@ -8,7 +8,12 @@ import type {
   ParametersSession,
 } from './types';
 import type { WalkerOS } from '@elbwalker/types';
-import { getId, requestToParameter, sendWebAsFetch } from '@elbwalker/utils';
+import {
+  getId,
+  requestToParameter,
+  SendHeaders,
+  sendWebAsFetch,
+} from '@elbwalker/utils';
 import { WebClient } from '@elbwalker/walker.js';
 
 // Types
@@ -58,8 +63,9 @@ export const destinationEtag: Destination = {
     // Debug mode
     if (custom.debug) params._dbg = 1;
 
-    const headers: Record<string, string> = {
+    const headers: SendHeaders = {
       'Content-Type': 'text/plain;charset=UTF-8',
+      ...custom.headers,
     };
 
     // User Agent
@@ -68,7 +74,7 @@ export const destinationEtag: Destination = {
 
     // page_view
     if (!custom.sentPageView) {
-      events.push({
+      events.unshift({
         ...event, // Create a virtual page_view event by copying the original event
         event: 'page_view',
         entity: 'page',

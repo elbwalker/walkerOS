@@ -1,4 +1,5 @@
-import { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
+import type { SendHeaders } from '@elbwalker/utils';
 import type { WebDestination } from '@elbwalker/walker.js';
 
 export interface Destination
@@ -10,6 +11,7 @@ export interface CustomConfig extends State {
   measurementId: string; // Measurement ID
   debug?: boolean; // Enables debug mode
   url?: string; // URL to send the request to
+  headers?: SendHeaders; // Custom headers
   params?: Partial<Parameters>; // Customize the parameters
 }
 
