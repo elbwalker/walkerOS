@@ -34,7 +34,7 @@ export function setConsent(
   instance: WebClient.Instance,
   data: WalkerOS.Consent,
 ) {
-  const { consent, destinations, globals, user } = instance;
+  const { consent, destinations } = instance;
 
   let runQueue = false;
   const update: WalkerOS.Consent = {};
@@ -55,17 +55,7 @@ export function setConsent(
 
   if (runQueue) {
     Object.values(destinations).forEach((destination) => {
-      const queue = destination.queue || [];
-
-      // Try to push and remove successful ones from queue
-      destination.queue = queue.filter((event) => {
-        // Update previous values with the current state
-        event.consent = instance.consent;
-        event.globals = globals;
-        event.user = user;
-
-        return !pushToDestination(instance, destination, event, false);
-      });
+      pushToDestination(instance, destination, undefined, false);
     });
   }
 }
