@@ -1,7 +1,7 @@
+import type { WalkerOS } from '@elbwalker/types';
 import type { WebClient, WebDestination } from '../types';
 import { debounce, getId, tryCatch, useHooks } from '@elbwalker/utils';
-import { pushToDestination } from './push';
-import { WalkerOS } from '@elbwalker/types';
+import { pushToDestinations } from './push';
 
 export function addDestination(
   instance: WebClient.Instance,
@@ -16,12 +16,6 @@ export function addDestination(
     config,
   };
 
-  // Process previous events if not disabled
-  if (config.queue !== false)
-    instance.queue.forEach((pushEvent) => {
-      pushToDestination(instance, destination, pushEvent);
-    });
-
   let id = config.id; // Use given id
   if (!id) {
     // Generate a new id if none was given
@@ -29,7 +23,15 @@ export function addDestination(
       id = getId(4);
     } while (instance.destinations[id]);
   }
+
+  // Add the destination
   instance.destinations[id] = destination;
+
+  // Process previous events if not disabled
+  if (config.queue !== false) {
+    destination.queue = ([] as WalkerOS.Events).concat(instance.queue); // Copy the queue
+    pushToDestinations(instance, { destination });
+  }
 }
 
 export function dataLayerDestination() {

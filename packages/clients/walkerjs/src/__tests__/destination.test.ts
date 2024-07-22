@@ -509,7 +509,6 @@ describe('Destination', () => {
   });
 
   test('set config on init', () => {
-    walkerjs = Walkerjs({ elbLayer: [], pageview: false });
     elb('walker run');
 
     const mockInitA = jest.fn();

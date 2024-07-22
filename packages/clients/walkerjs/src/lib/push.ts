@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { WebClient, WebDestination } from '../types';
+import type { WebClient } from '../types';
 import { isArgument, isCommand, isElementOrDocument } from './helper';
 import { handleCommand, handleEvent } from './handle';
 import {
@@ -104,43 +104,44 @@ export function pushPredefined(
   });
 }
 
-// @TODO pushToDestinations and include the loop
-export function pushToDestination(
+export function pushToDestinations(
   instance: WebClient.Instance,
-  destination: WebDestination.Destination,
+  destinations: WebClient.Destinations,
   event?: WalkerOS.Event,
-  useQueue = true,
 ) {
-  destination.queue = destination.queue || [];
+  Object.values(destinations).forEach((destination) => {
+    destination.queue = destination.queue || [];
 
-  // Add event to queue stack
-  if (event && useQueue) destination.queue.push(event);
+    // Add event to queue stack
+    if (event) destination.queue.push(event);
 
-  if (
     // Always check for required consent states before pushing
-    !allowedToPush(instance, destination) ||
-    // Initialize the destination if needed
-    !tryCatch(destinationInit)(instance, destination)
-  )
-    // Don't push if not allowed or not initialized
-    return false;
+    if (!allowedToPush(instance, destination)) return false; // Don't push if not allowed
 
-  const { consent, globals, user } = instance;
+    // Init destination if events are in queue
+    if (destination.queue.length > 0) {
+      // Initialize the destination if needed
+      const isInitialized = tryCatch(destinationInit)(instance, destination);
+      if (!isInitialized) return false;
+    }
 
-  // Process the destinations event queue
-  destination.queue = destination.queue.filter((event) => {
-    // Copy the event to prevent mutation
-    event = event
-      ? assign(event, {
-          // Update previous values with the current state
-          consent,
-          globals,
-          user,
-        })
-      : event; // undefined
+    const { consent, globals, user } = instance;
 
-    //Try to push and remove successful ones from queue
-    return !destinationPush(instance, destination, event);
+    // Process the destinations event queue
+    destination.queue = destination.queue.filter((event) => {
+      // Copy the event to prevent mutation
+      event = event
+        ? assign(event, {
+            // Update previous values with the current state
+            consent,
+            globals,
+            user,
+          })
+        : event; // undefined
+
+      //Try to push and remove successful ones from queue
+      return !destinationPush(instance, destination, event);
+    });
   });
 }
 

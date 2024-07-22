@@ -2,7 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { WebClient, WebDestination } from '../types';
 import { assign } from '@elbwalker/utils';
 import { onApply } from './on';
-import { pushToDestination } from './push';
+import { pushToDestinations } from './push';
 
 export function allowedToPush(
   instance: WebClient.Instance,
@@ -53,9 +53,6 @@ export function setConsent(
   // Run on consent events
   onApply(instance, 'consent', undefined, update);
 
-  if (runQueue) {
-    Object.values(destinations).forEach((destination) => {
-      pushToDestination(instance, destination, undefined, false);
-    });
-  }
+  // Process previous events if not disabled
+  if (runQueue) pushToDestinations(instance, destinations);
 }
