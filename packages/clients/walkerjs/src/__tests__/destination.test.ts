@@ -476,7 +476,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
 
-    destinationIgnore.config.mapping!.foo!.bar.ignore = true;
+    destinationIgnore.config.mapping!.foo!.bar!.ignore = true;
     elb('foo bar');
     expect(mockPushA).toHaveBeenCalledTimes(0);
   });

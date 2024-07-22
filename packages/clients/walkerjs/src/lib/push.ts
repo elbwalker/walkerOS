@@ -125,7 +125,7 @@ export function pushToDestination(
   }
 
   // Check for an active mapping for proper event handling
-  let mappingEvent: WebDestination.EventConfig;
+  let mappingEvent: undefined | WebDestination.EventConfig;
   const mapping = destination.config.mapping;
   let mappingKey = '';
 
