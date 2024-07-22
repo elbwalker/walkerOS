@@ -47,6 +47,7 @@ export function sessionStart(
 
     return result;
   };
+
   const session = useHooks(
     sessionStartOrg,
     'SessionStart',

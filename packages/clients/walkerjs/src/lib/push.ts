@@ -172,7 +172,7 @@ export function pushToDestination(
           destination.init,
           'DestinationInit',
           instance.hooks,
-        )(destination.config) !== false; // Actively check for errors
+        )(destination.config, instance) !== false; // Actively check for errors
 
       destination.config.init = init;
 
