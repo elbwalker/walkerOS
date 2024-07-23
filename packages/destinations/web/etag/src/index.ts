@@ -10,6 +10,7 @@ import type {
 } from './types';
 import type { WalkerOS } from '@elbwalker/types';
 import {
+  assign,
   parseUserAgent,
   requestToParameter,
   sendWebAsFetch,
@@ -37,32 +38,6 @@ export const destinationEtag: Destination = {
     // key event parameter flags
     // uip parameter on node
 
-    const { user = {} } = event;
-
-    const params: Parameters = {
-      v: '2',
-      tid: custom.measurementId,
-      _p: Date.now(), // Cache buster
-      _ee: 1, // Enhanced Measurement Flag
-      _z: 'fetch', // Transport mode
-      ...getConsentMode(), // Consent mode
-      ...getClientId(user), // Client ID
-      ...getBrowserParams(), // Browser parameters
-      ...getDeviceParams(user), // User parameters
-      ...getDocumentParams(event), // Document parameters
-      ...getSessionParams(event, custom, instance), // Session parameters
-      ...custom.params, // Custom parameters override defaults
-    };
-
-    // User id
-    // if (user.id) params.uid = user.id;
-
-    // Time to first byte
-    if (event.timing) params.tfd = event.timing * 1000;
-
-    // Debug mode
-    if (custom.debug) params._dbg = 1;
-
     // page_view
     if (!custom.sentPageView) {
       // events.unshift({
@@ -80,35 +55,20 @@ export const destinationEtag: Destination = {
       custom.sentPageView = true;
     }
 
-    // Event count
-    custom.count = (custom.count || 0) + 1;
-    params._s = custom.count; // Hit count
+    const { session } = instance || {};
+    const { body, path } = getRequest(event, custom, session);
 
-    const { body, path } = getRequest(event, custom);
-
-    sendRequest(custom, params, path, body);
+    sendRequest(custom, path, body);
 
     config.custom = custom;
   },
 };
 
-function sendRequest(
-  custom: CustomConfig,
-  params: Parameters,
-  path?: string,
-  body?: string,
-) {
+function sendRequest(custom: CustomConfig, path?: string, body?: string) {
   const url = custom.url || 'https://region1.google-analytics.com/g/collect?';
 
-  // @TODO necessary?
-  // // User Agent
-  // const userAgent = user.userAgent || window?.navigator?.userAgent;
-  // if (userAgent) headers['User-Agent'] = userAgent;
-
-  const headers = custom.headers || {};
-
-  sendWebAsFetch(url + requestToParameter(params) + path + body, body, {
-    headers,
+  sendWebAsFetch(url + path, body, {
+    headers: custom.headers || {},
     method: 'POST',
     noCors: true,
     credentials: 'include', // @TODO be careful with this
@@ -139,12 +99,8 @@ function getConsentMode(): ParametersConsent {
   };
 }
 
-function getBrowserParams(): ParametersBrowser {
+function getBrowserParams(userAgent?: string): ParametersBrowser {
   const params: ParametersBrowser = {};
-
-  if (typeof navigator === 'undefined') return params;
-
-  const userAgent = navigator.userAgent;
 
   const ua = parseUserAgent(userAgent);
 
@@ -193,9 +149,43 @@ function getEngagementTime(custom: CustomConfig): number {
 function getRequest(
   event: WalkerOS.Event,
   custom: CustomConfig,
+  session?: WalkerOS.SessionData,
 ): { body?: string; path?: string } {
-  const data: string[] = [];
+  const { user = {} } = event;
 
+  // Event count
+  custom.count = (custom.count || 0) + 1;
+
+  const params: Parameters = {
+    v: '2',
+    tid: custom.measurementId,
+    _p: Date.now(), // Cache buster
+    _ee: 1, // Enhanced Measurement Flag
+    _s: custom.count, // Hit count
+    _z: 'fetch', // Transport mode
+    ...getConsentMode(), // Consent mode
+    ...getClientId(user), // Client ID
+    ...getDeviceParams(user), // User parameters
+    ...getDocumentParams(event), // Document parameters
+    ...getSessionParams(event, custom, session), // Session parameters
+    ...custom.params, // Custom parameters override defaults
+  };
+
+  if (typeof navigator !== 'undefined') {
+    // Browser parameters
+    assign(params, getBrowserParams(navigator.userAgent), { shallow: false });
+  }
+
+  // User id
+  // if (user.id) params.uid = user.id;
+
+  // Time to first byte
+  if (event.timing) params.tfd = event.timing * 1000;
+
+  // Debug mode
+  if (custom.debug) params._dbg = 1;
+
+  // Event Parameters
   const eventParams: ParametersEvent = {
     en: event.event, // Event name
     _et: getEngagementTime(custom), // Time between now and the previous event
@@ -239,17 +229,8 @@ function getRequest(
     });
   });
 
-  data.push(requestToParameter(eventParams));
-
-  const str = data.join('\r\n');
-  let path = '',
-    body;
-
-  if (data.length > 1) {
-    body = str; // Multiple events via body
-  } else {
-    path = '&' + str; // Single event via path
-  }
+  let body; // Later used for event batching
+  const path = requestToParameter({ ...params, ...eventParams });
 
   return { body, path };
 }
@@ -261,9 +242,8 @@ function getSessionId(user: WalkerOS.User = {}): number {
 function getSessionParams(
   event: WalkerOS.Event,
   custom: CustomConfig,
-  instance?: WebClient.Instance,
+  session?: WalkerOS.SessionData,
 ): ParametersSession {
-  const { session } = instance || {};
   const params: ParametersSession = {
     sid: getSessionId(event.user),
   };
