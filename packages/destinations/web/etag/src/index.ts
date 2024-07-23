@@ -2,6 +2,7 @@ import type {
   CustomConfig,
   Destination,
   Parameters,
+  ParametersBrowser,
   ParametersConsent,
   ParametersDevice,
   ParametersEvent,
@@ -10,6 +11,7 @@ import type {
 import type { WalkerOS } from '@elbwalker/types';
 import {
   getId,
+  parseUserAgent,
   requestToParameter,
   SendHeaders,
   sendWebAsFetch,
@@ -50,6 +52,7 @@ export const destinationEtag: Destination = {
       _z: 'fetch', // Transport mode
       ...getConsentMode(), // Consent mode
       ...getClientId(user), // Client ID
+      ...getBrowserParams(), // Browser parameters
       ...getDeviceParams(user), // User parameters
       ...getDocumentParams(event), // Document parameters
       ...getSessionParams(event, custom, instance), // Session parameters
@@ -132,10 +135,28 @@ function getConsentMode(): ParametersConsent {
   };
 }
 
+function getBrowserParams(): ParametersBrowser {
+  const params: ParametersBrowser = {};
+
+  if (typeof navigator === 'undefined') return params;
+
+  const userAgent = navigator.userAgent;
+
+  const ua = parseUserAgent(userAgent);
+
+  if (ua.os) params.uap = ua.os; // OS
+  params.uamb = ua.deviceType == 'Mobile' ? 1 : 0; // Mobile
+  params.ul = navigator.language.toLocaleLowerCase(); // User language
+  // Skip if (ua.osVersion) params.uapv = ua.osVersion; // OS Version
+  // Skip architecture (uaa) and bitness (uab), and full version list (uafvl) for now
+  // navigator.userAgentData is not supported in all browsers
+
+  return params;
+}
+
 function getDeviceParams(user: WalkerOS.User = {}): ParametersDevice {
   const params: ParametersDevice = {};
 
-  if (user.language) params.ul = String(user.language).toLocaleLowerCase(); // User language
   if (user.screenSize) params.sr = user.screenSize; // Screen resolution
 
   return params;

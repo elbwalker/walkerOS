@@ -249,13 +249,35 @@ describe('Destination etag', () => {
     push({
       event: 'entity action',
       user: {
-        language: 'de-DE',
         screenSize: '800x600',
       },
     });
 
-    expect(requestedUrl(mockSend)).toContain('ul=de-de');
     expect(requestedUrl(mockSend)).toContain('sr=800x600');
+  });
+
+  test('browser params', () => {
+    const oldLanguage = navigator.language;
+    const oldUserAgent = navigator.userAgent;
+
+    Object.defineProperty(navigator, 'language', {
+      value: 'de-DE',
+      configurable: true,
+    });
+    Object.defineProperty(navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+      configurable: true,
+    });
+
+    push(event);
+
+    Object.defineProperty(navigator, 'language', { value: oldLanguage });
+    Object.defineProperty(navigator, 'userAgent', { value: oldUserAgent });
+
+    expect(requestedUrl(mockSend)).toContain('uap=macOS');
+    expect(requestedUrl(mockSend)).toContain('ul=de-de');
+    expect(requestedUrl(mockSend)).toContain('uamb=0');
   });
 
   test('header', () => {

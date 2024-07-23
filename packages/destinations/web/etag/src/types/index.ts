@@ -60,8 +60,17 @@ export interface ParametersConsent {
   pscdl?: string; // Privacy Sandbox
 }
 
-export interface ParametersDevice extends WalkerOS.AnyObject {
+export interface ParametersBrowser extends WalkerOS.AnyObject {
+  uaa?: string; // Architecture
+  uab?: number; // Bitness
+  uafvl?: string; // Full version list
+  uamb?: number; // Mobile
+  uap?: string; // Platform
+  uapv?: string; // Platform version
   ul?: string; // User language
+}
+
+export interface ParametersDevice extends WalkerOS.AnyObject {
   sr?: string; // Screen resolution
 }
 
