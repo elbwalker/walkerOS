@@ -10,10 +10,8 @@ import type {
 } from './types';
 import type { WalkerOS } from '@elbwalker/types';
 import {
-  getId,
   parseUserAgent,
   requestToParameter,
-  SendHeaders,
   sendWebAsFetch,
 } from '@elbwalker/utils';
 import { WebClient } from '@elbwalker/walker.js';
@@ -35,20 +33,17 @@ export const destinationEtag: Destination = {
     const { custom } = config;
     if (!custom || !custom.measurementId) return;
 
-    const url = custom.url || 'https://region1.google-analytics.com/g/collect?';
-
-    const { user = {} } = event;
-
-    const events = [event];
-
     // @TODOs
     // key event parameter flags
     // uip parameter on node
+
+    const { user = {} } = event;
 
     const params: Parameters = {
       v: '2',
       tid: custom.measurementId,
       _p: Date.now(), // Cache buster
+      _ee: 1, // Enhanced Measurement Flag
       _z: 'fetch', // Transport mode
       ...getConsentMode(), // Consent mode
       ...getClientId(user), // Client ID
@@ -68,28 +63,19 @@ export const destinationEtag: Destination = {
     // Debug mode
     if (custom.debug) params._dbg = 1;
 
-    const headers: SendHeaders = {
-      'Content-Type': 'text/plain;charset=UTF-8',
-      ...custom.headers,
-    };
-
-    // User Agent
-    const userAgent = user.userAgent || window?.navigator?.userAgent;
-    if (userAgent) headers['User-Agent'] = userAgent;
-
     // page_view
     if (!custom.sentPageView) {
-      events.unshift({
-        ...event, // Create a virtual page_view event by copying the original event
-        event: 'page_view',
-        entity: 'page',
-        action: 'view',
-        trigger: 'code',
-        id: String(event.id || getId(5)).slice(0, -1) + '0', // Change the event ID
-        count: 0,
-        data: {},
-        context: {},
-      });
+      // events.unshift({
+      //   ...event, // Create a virtual page_view event by copying the original event
+      //   event: 'page_view',
+      //   entity: 'page',
+      //   action: 'view',
+      //   trigger: 'code',
+      //   id: String(event.id || getId(5)).slice(0, -1) + '0', // Change the event ID
+      //   count: 0,
+      //   data: {},
+      //   context: {},
+      // });
 
       custom.sentPageView = true;
     }
@@ -98,18 +84,36 @@ export const destinationEtag: Destination = {
     custom.count = (custom.count || 0) + 1;
     params._s = custom.count; // Hit count
 
-    const body = getEventData(events, custom);
+    const { body, path } = getRequest(event, custom);
 
-    sendWebAsFetch(url + requestToParameter(params), body, {
-      headers,
-      method: 'POST',
-      noCors: true,
-      credentials: 'include', // @TODO be careful with this
-    });
+    sendRequest(custom, params, path, body);
 
     config.custom = custom;
   },
 };
+
+function sendRequest(
+  custom: CustomConfig,
+  params: Parameters,
+  path?: string,
+  body?: string,
+) {
+  const url = custom.url || 'https://region1.google-analytics.com/g/collect?';
+
+  // @TODO necessary?
+  // // User Agent
+  // const userAgent = user.userAgent || window?.navigator?.userAgent;
+  // if (userAgent) headers['User-Agent'] = userAgent;
+
+  const headers = custom.headers || {};
+
+  sendWebAsFetch(url + requestToParameter(params) + path + body, body, {
+    headers,
+    method: 'POST',
+    noCors: true,
+    credentials: 'include', // @TODO be careful with this
+  });
+}
 
 function getClientId(
   user: WalkerOS.User = {},
@@ -186,61 +190,68 @@ function getEngagementTime(custom: CustomConfig): number {
   return lastEvent || 1;
 }
 
-// Function to generate event data for the body
-function getEventData(events: WalkerOS.Events, custom: CustomConfig): string {
+function getRequest(
+  event: WalkerOS.Event,
+  custom: CustomConfig,
+): { body?: string; path?: string } {
   const data: string[] = [];
 
-  events.forEach((event, i) => {
-    const eventParams: ParametersEvent = {
-      en: event.event, // Event name
-      _et: getEngagementTime(custom), // Time between now and the previous event
-      ...custom.paramsEvent,
-    };
+  const eventParams: ParametersEvent = {
+    en: event.event, // Event name
+    _et: getEngagementTime(custom), // Time between now and the previous event
+    ...custom.paramsEvent,
+  };
 
-    if (i > 0) eventParams._ee = 1; // Enhanced Measurement Flag
+  const include: Array<keyof WalkerOS.Event> = [
+    'context',
+    'data',
+    'event',
+    'globals',
+    'source',
+    'user',
+    'version',
+  ];
 
-    const include: Array<keyof WalkerOS.Event> = [
-      'context',
-      'data',
-      'event',
-      'globals',
-      'source',
-      'user',
-      'version',
-    ];
+  include.forEach((groupName) => {
+    let group = event[groupName];
 
-    include.forEach((groupName) => {
-      let group = event[groupName];
+    if (!group) return;
 
-      if (!group) return;
+    // Create a fake group for event properties
+    if (groupName == 'event')
+      group = {
+        id: event.id,
+        timing: event.timing,
+        trigger: event.trigger,
+        entity: event.entity,
+        action: event.action,
+        group: event.group,
+        count: event.count,
+      };
 
-      // Create a fake group for event properties
-      if (groupName == 'event')
-        group = {
-          id: event.id,
-          timing: event.timing,
-          trigger: event.trigger,
-          entity: event.entity,
-          action: event.action,
-          group: event.group,
-          count: event.count,
-        };
+    Object.entries(group).forEach(([key, val]) => {
+      // Different value access for context
+      if (groupName == 'context') val = (val as WalkerOS.OrderedProperties)[0];
 
-      Object.entries(group).forEach(([key, val]) => {
-        // Different value access for context
-        if (groupName == 'context')
-          val = (val as WalkerOS.OrderedProperties)[0];
-
-        const type = typeof val === 'number' ? 'epn' : 'ep';
-        const paramKey = `${type}.${groupName}_${key}`;
-        eventParams[paramKey] = val;
-      });
+      const type = typeof val === 'number' ? 'epn' : 'ep';
+      const paramKey = `${type}.${groupName}_${key}`;
+      eventParams[paramKey] = val;
     });
-
-    data.push(requestToParameter(eventParams));
   });
 
-  return data.join('\r\n');
+  data.push(requestToParameter(eventParams));
+
+  const str = data.join('\r\n');
+  let path = '',
+    body;
+
+  if (data.length > 1) {
+    body = str; // Multiple events via body
+  } else {
+    path = '&' + str; // Single event via path
+  }
+
+  return { body, path };
 }
 
 function getSessionId(user: WalkerOS.User = {}): number {
