@@ -81,12 +81,22 @@ describe('Destination etag', () => {
 
   test('page_view', () => {
     push(event);
-    expect(requestedUrl(mockSend)).toContain('s=2');
+    expect(requestedUrl(mockSend)).toContain('_s=1');
     expect(requestedBody(mockSend)).toContain('en=page_view');
 
     push(event); // Only once
-    expect(requestedUrl(mockSend, 1)).not.toContain('s=2');
     expect(requestedBody(mockSend, 1)).not.toContain('en=page_view');
+  });
+
+  test('hit count', () => {
+    push(event);
+    expect(requestedUrl(mockSend)).toContain('_s=1');
+
+    push(event);
+    expect(requestedBody(mockSend, 1)).not.toContain('_s=2');
+
+    push(event);
+    expect(requestedBody(mockSend, 1)).not.toContain('_s=3');
   });
 
   test('default params', () => {

@@ -24,8 +24,9 @@ export const destinationEtag: Destination = {
 
   config: {},
 
-  init(config) {
-    if (!config.custom || !config.custom.measurementId) return false;
+  init(config, instance) {
+    if (!config.custom || !config.custom.measurementId || !instance.session)
+      return false;
   },
 
   push(event, config, mapping, instance) {
@@ -40,6 +41,7 @@ export const destinationEtag: Destination = {
 
     // @TODOs
     // key event parameter flags
+    // uip parameter on node
 
     const params: Parameters = {
       v: '2',
@@ -90,7 +92,8 @@ export const destinationEtag: Destination = {
     }
 
     // Event count
-    if (events.length > 1) params._s = events.length; // Hit count
+    custom.count = (custom.count || 0) + 1;
+    params._s = custom.count; // Hit count
 
     const body = getEventData(events, custom);
 
@@ -259,9 +262,10 @@ function getSessionParams(
     }
 
     params.sct = count || 1; // session count
+
+    custom.sentSession = true;
   }
 
-  custom.sentSession = true;
   return params;
 }
 
