@@ -11,6 +11,7 @@ import type {
 import type { WalkerOS } from '@elbwalker/types';
 import {
   assign,
+  getId,
   parseUserAgent,
   requestToParameter,
   sendWebAsFetch,
@@ -33,6 +34,7 @@ export const destinationEtag: Destination = {
   push(event, config, mapping, instance) {
     const { custom } = config;
     if (!custom || !custom.measurementId) return;
+    const session = instance?.session;
 
     // @TODOs
     // key event parameter flags
@@ -40,22 +42,24 @@ export const destinationEtag: Destination = {
 
     // page_view
     if (!custom.sentPageView) {
-      // events.unshift({
-      //   ...event, // Create a virtual page_view event by copying the original event
-      //   event: 'page_view',
-      //   entity: 'page',
-      //   action: 'view',
-      //   trigger: 'code',
-      //   id: String(event.id || getId(5)).slice(0, -1) + '0', // Change the event ID
-      //   count: 0,
-      //   data: {},
-      //   context: {},
-      // });
+      const pageViewEvent = {
+        ...event, // Create a virtual page_view event by copying the original event
+        event: 'page_view',
+        entity: 'page',
+        action: 'view',
+        trigger: 'code',
+        id: String(event.id || getId(5)).slice(0, -1) + '0', // Change the event ID
+        count: 0,
+        data: {},
+        context: {},
+      };
+
+      const { body, path } = getRequest(pageViewEvent, custom, session);
+      sendRequest(custom, path, body);
 
       custom.sentPageView = true;
     }
 
-    const { session } = instance || {};
     const { body, path } = getRequest(event, custom, session);
 
     sendRequest(custom, path, body);
