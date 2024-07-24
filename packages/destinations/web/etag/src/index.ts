@@ -3,13 +3,14 @@ import type { WebClient } from '@elbwalker/walker.js';
 import type {
   CustomConfig,
   Destination,
-  Parameters,
   ParametersBrowser,
   ParametersConsent,
   ParametersDevice,
   ParametersEvent,
   ParametersSession,
+  ParametersRequest,
   RequestData,
+  ParametersDocument,
 } from './types';
 import {
   assign,
@@ -104,6 +105,7 @@ function getBrowserParams(userAgent?: string): ParametersBrowser {
   if (ua.os) params.uap = ua.os; // OS
   params.uamb = ua.deviceType == 'Mobile' ? 1 : 0; // Mobile
   params.ul = navigator.language.toLocaleLowerCase(); // User language
+
   // Skip if (ua.osVersion) params.uapv = ua.osVersion; // OS Version
   // Skip architecture (uaa) and bitness (uab), and full version list (uafvl) for now
   // navigator.userAgentData is not supported in all browsers
@@ -119,7 +121,7 @@ function getDeviceParams(user: WalkerOS.User = {}): ParametersDevice {
   return params;
 }
 
-function getDocumentParams(event: WalkerOS.Event): WalkerOS.AnyObject {
+function getDocumentParams(event: WalkerOS.Event): ParametersDocument {
   const { source } = event;
   const params: WalkerOS.AnyObject = {};
 
@@ -149,7 +151,7 @@ function getPageViewEvent(event: WalkerOS.Event): WalkerOS.Event {
     event: 'page_view',
     entity: 'page',
     action: 'view',
-    trigger: 'code',
+    trigger: 'etag',
     id: String(event.id || getId(5)).slice(0, -1) + '0', // Change the event ID
     count: 0,
     data: {},
@@ -169,11 +171,10 @@ function getRequest(
   // Event count
   custom.count = (custom.count || 0) + 1;
 
-  const params: Parameters = {
+  const requestParams: ParametersRequest = {
     v: '2',
     tid: custom.measurementId,
     _p: Date.now(), // Cache buster
-    _ee: 1, // Enhanced Measurement Flag
     _s: custom.count, // Hit count
     _z: 'fetch', // Transport mode
     ...getConsentMode(), // Consent mode
@@ -186,17 +187,19 @@ function getRequest(
 
   if (typeof navigator !== 'undefined') {
     // Browser parameters
-    assign(params, getBrowserParams(navigator.userAgent), { shallow: false });
+    assign(requestParams, getBrowserParams(navigator.userAgent), {
+      shallow: false,
+    });
   }
 
   // User id
   // if (user.id) params.uid = user.id;
 
   // Time to first byte
-  if (event.timing) params.tfd = event.timing * 1000;
+  if (event.timing) requestParams.tfd = event.timing * 1000;
 
   // Debug mode
-  if (custom.debug) params._dbg = 1;
+  if (custom.debug) requestParams._dbg = 1;
 
   // Event Parameters
   const eventParams: ParametersEvent = {
@@ -204,6 +207,9 @@ function getRequest(
     _et: getEngagementTime(custom), // Time between now and the previous event
     ...custom.paramsEvent,
   };
+
+  // Enhanced Measurement Flag
+  if (event.trigger == 'etag') eventParams._ee = 1;
 
   const include: Array<keyof WalkerOS.Event> = [
     'context',
@@ -237,13 +243,13 @@ function getRequest(
       if (groupName == 'context') val = (val as WalkerOS.OrderedProperties)[0];
 
       const type = typeof val === 'number' ? 'epn' : 'ep';
-      const paramKey = `${type}.${groupName}_${key}`;
-      eventParams[paramKey] = val;
+      const paramKey: keyof ParametersEvent = `${type}.${groupName}_${key}`;
+      eventParams[paramKey] = val as never;
     });
   });
 
   let body; // Later used for event batching
-  const path = requestToParameter({ ...params, ...eventParams });
+  const path = requestToParameter({ ...requestParams, ...eventParams });
 
   return { body, path };
 }

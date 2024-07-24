@@ -1,4 +1,3 @@
-import type { WalkerOS } from '@elbwalker/types';
 import type { SendHeaders } from '@elbwalker/utils';
 import type { WebDestination } from '@elbwalker/walker.js';
 
@@ -12,7 +11,7 @@ export interface CustomConfig extends State {
   debug?: boolean; // Enables debug mode
   url?: string; // URL to send the request to
   headers?: SendHeaders; // Custom headers
-  params?: Partial<Parameters>; // Customize the parameters
+  params?: Partial<ParametersBasic>; // Customize the parameters
   paramsEvent?: Partial<ParametersEvent>; // Customize the event parameters
 }
 
@@ -26,30 +25,39 @@ export interface State {
   sentSession?: boolean; // If session parameters have been sent
 }
 
-export interface Parameters extends Partial<ParametersOptional> {
-  v: '2'; // Protocol version, always 2 for GA4
-  tid: string; // MeasurementID
-  cid: string; // Client ID
-  _p: number; // Cache buster
-  [key: string]: string | number | undefined;
-}
-
-export interface ParametersOptional extends ParametersSession {
-  _z?: string; // Transport
-  _dbg?: 1; // Debug mode
-  dl?: string; // Document location
-  dt?: string; // Document title
-  dr?: string; // Document referrer
-  tfd?: number; // Time to first byte
-  ul?: string; // User language
-}
-
-export interface ParametersEvent extends WalkerOS.AnyObject {
+export interface ParametersEvent {
   en: string; // Event name
   _et: number; // Engagement time (for realtime view)
   _ee?: 1; // Enhanced Measurement Flag
   [key: `ep.${string}`]: string; // string parameters
   [key: `epn.${string}`]: number; // number parameters
+}
+
+export type ParametersRequest = ParametersBasic &
+  ParametersSession &
+  ParametersConsent &
+  ParametersBrowser &
+  ParametersDevice &
+  ParametersDocument;
+
+export interface ParametersBasic {
+  v: '2'; // Protocol version, always 2 for GA4
+  tid: string; // MeasurementID
+  cid: string; // Client ID
+  _s: number; // Event sequence number
+  _p: number; // Cache buster
+  _z?: string; // Transport
+  _dbg?: 1; // Debug mode
+  tfd?: number; // Time to first byte
+}
+
+export interface ParametersSession {
+  sid: number; // Session ID
+  _nsi?: 1; // New to site
+  _fv?: 1 | 2; // First visit
+  _ss?: 1 | 2; // Session start
+  sct?: number; // Session count
+  seg?: 1; // Session engaged
 }
 
 export interface ParametersConsent {
@@ -60,7 +68,7 @@ export interface ParametersConsent {
   pscdl?: string; // Privacy Sandbox
 }
 
-export interface ParametersBrowser extends WalkerOS.AnyObject {
+export interface ParametersBrowser {
   uaa?: string; // Architecture
   uab?: number; // Bitness
   uafvl?: string; // Full version list
@@ -70,17 +78,14 @@ export interface ParametersBrowser extends WalkerOS.AnyObject {
   ul?: string; // User language
 }
 
-export interface ParametersDevice extends WalkerOS.AnyObject {
+export interface ParametersDevice {
   sr?: string; // Screen resolution
 }
 
-export interface ParametersSession {
-  sid: number; // Session ID
-  _nsi?: 1; // New to site
-  _fv?: 1 | 2; // First visit
-  _ss?: 1 | 2; // Session start
-  sct?: number; // Session count
-  seg?: 1; // Session engaged
+export interface ParametersDocument {
+  dl?: string; // Document location
+  dt?: string; // Document title
+  dr?: string; // Document referrer
 }
 
 export interface RequestData {
