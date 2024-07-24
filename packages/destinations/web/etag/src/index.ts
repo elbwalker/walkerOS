@@ -50,24 +50,28 @@ export const destinationEtag: Destination = {
     if (!custom.sentPageView) {
       const pageViewEvent = getPageViewEvent(event);
 
-      const requestData = getRequest(pageViewEvent, custom, context);
-      sendRequest(custom, requestData);
+      const requestData = getRequestParams(pageViewEvent, custom, context);
+      sendRequest(
+        custom,
+        requestToParameter(requestData.path),
+        requestData.body,
+      );
 
       custom.sentPageView = true;
     }
 
-    const requestData = getRequest(event, custom, context);
+    const requestData = getRequestParams(event, custom, context);
 
-    sendRequest(custom, requestData);
+    sendRequest(custom, requestToParameter(requestData.path), requestData.body);
 
     config.custom = custom;
   },
 };
 
-function sendRequest(custom: CustomConfig, requestData: RequestData) {
+function sendRequest(custom: CustomConfig, path: string, body?: string) {
   const url = custom.url || 'https://region1.google-analytics.com/g/collect?';
 
-  sendWebAsFetch(url + requestData.path, requestData.body, {
+  sendWebAsFetch(url + path, body, {
     headers: custom.headers || {},
     method: 'POST',
     noCors: true,
@@ -165,7 +169,7 @@ function getPageViewEvent(event: WalkerOS.Event): WalkerOS.Event {
   return pageViewEvent;
 }
 
-function getRequest(
+function getRequestParams(
   event: WalkerOS.Event,
   custom: CustomConfig,
   context: Context,
@@ -251,7 +255,7 @@ function getRequest(
   });
 
   let body; // Later used for event batching
-  const path = requestToParameter({ ...requestParams, ...eventParams });
+  const path = { ...requestParams, ...eventParams };
 
   return { body, path };
 }

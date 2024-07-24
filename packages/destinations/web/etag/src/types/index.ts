@@ -96,5 +96,5 @@ export interface ParametersDocument {
 
 export interface RequestData {
   body?: string;
-  path?: string;
+  path: WalkerOS.AnyObject;
 }
