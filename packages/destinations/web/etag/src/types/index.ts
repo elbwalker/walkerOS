@@ -82,3 +82,8 @@ export interface ParametersSession {
   sct?: number; // Session count
   seg?: 1; // Session engaged
 }
+
+export interface RequestData {
+  body?: string;
+  path?: string;
+}

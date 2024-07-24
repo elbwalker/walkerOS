@@ -1,3 +1,5 @@
+import type { WalkerOS } from '@elbwalker/types';
+import type { WebClient } from '@elbwalker/walker.js';
 import type {
   CustomConfig,
   Destination,
@@ -7,8 +9,8 @@ import type {
   ParametersDevice,
   ParametersEvent,
   ParametersSession,
+  RequestData,
 } from './types';
-import type { WalkerOS } from '@elbwalker/types';
 import {
   assign,
   getId,
@@ -16,7 +18,6 @@ import {
   requestToParameter,
   sendWebAsFetch,
 } from '@elbwalker/utils';
-import { WebClient } from '@elbwalker/walker.js';
 
 // Types
 export * as DestinationWebEtag from './types';
@@ -42,36 +43,26 @@ export const destinationEtag: Destination = {
 
     // page_view
     if (!custom.sentPageView) {
-      const pageViewEvent = {
-        ...event, // Create a virtual page_view event by copying the original event
-        event: 'page_view',
-        entity: 'page',
-        action: 'view',
-        trigger: 'code',
-        id: String(event.id || getId(5)).slice(0, -1) + '0', // Change the event ID
-        count: 0,
-        data: {},
-        context: {},
-      };
+      const pageViewEvent = getPageViewEvent(event);
 
-      const { body, path } = getRequest(pageViewEvent, custom, session);
-      sendRequest(custom, path, body);
+      const requestData = getRequest(pageViewEvent, custom, session);
+      sendRequest(custom, requestData);
 
       custom.sentPageView = true;
     }
 
-    const { body, path } = getRequest(event, custom, session);
+    const requestData = getRequest(event, custom, session);
 
-    sendRequest(custom, path, body);
+    sendRequest(custom, requestData);
 
     config.custom = custom;
   },
 };
 
-function sendRequest(custom: CustomConfig, path?: string, body?: string) {
+function sendRequest(custom: CustomConfig, requestData: RequestData) {
   const url = custom.url || 'https://region1.google-analytics.com/g/collect?';
 
-  sendWebAsFetch(url + path, body, {
+  sendWebAsFetch(url + requestData.path, requestData.body, {
     headers: custom.headers || {},
     method: 'POST',
     noCors: true,
@@ -90,7 +81,9 @@ function getClientId(
     ? instance.session.start
     : Math.floor(Date.now() / 86400000) * 86400 + 1; // Daily timestamp
 
-  return { cid: clientId + '.' + timestamp };
+  const cid = clientId + '.' + timestamp;
+
+  return { cid };
 }
 
 function getConsentMode(): ParametersConsent {
@@ -126,7 +119,7 @@ function getDeviceParams(user: WalkerOS.User = {}): ParametersDevice {
   return params;
 }
 
-function getDocumentParams(event: Partial<WalkerOS.Event>): WalkerOS.AnyObject {
+function getDocumentParams(event: WalkerOS.Event): WalkerOS.AnyObject {
   const { source } = event;
   const params: WalkerOS.AnyObject = {};
 
@@ -150,11 +143,27 @@ function getEngagementTime(custom: CustomConfig): number {
   return lastEvent || 1;
 }
 
+function getPageViewEvent(event: WalkerOS.Event): WalkerOS.Event {
+  const pageViewEvent = {
+    ...event, // Create a virtual page_view event by copying the original event
+    event: 'page_view',
+    entity: 'page',
+    action: 'view',
+    trigger: 'code',
+    id: String(event.id || getId(5)).slice(0, -1) + '0', // Change the event ID
+    count: 0,
+    data: {},
+    context: {},
+  };
+
+  return pageViewEvent;
+}
+
 function getRequest(
   event: WalkerOS.Event,
   custom: CustomConfig,
   session?: WalkerOS.SessionData,
-): { body?: string; path?: string } {
+): RequestData {
   const { user = {} } = event;
 
   // Event count
