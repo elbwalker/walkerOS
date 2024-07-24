@@ -1,3 +1,4 @@
+import type { WalkerOS } from '@elbwalker/types';
 import type { SendHeaders } from '@elbwalker/utils';
 import type { WebDestination } from '@elbwalker/walker.js';
 
@@ -23,6 +24,11 @@ export interface State {
   isEngaged?: boolean; // If a user is engaged
   sentPageView?: boolean; // If a page view has been sent
   sentSession?: boolean; // If session parameters have been sent
+}
+
+export interface Context {
+  session?: WalkerOS.SessionData;
+  userAgent?: string;
 }
 
 export interface ParametersEvent {

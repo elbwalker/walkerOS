@@ -11,6 +11,7 @@ import type {
   ParametersRequest,
   RequestData,
   ParametersDocument,
+  Context,
 } from './types';
 import {
   assign,
@@ -42,17 +43,20 @@ export const destinationEtag: Destination = {
     // key event parameter flags
     // uip parameter on node
 
+    const userAgent = navigator.userAgent;
+    const context = { session, userAgent };
+
     // page_view
     if (!custom.sentPageView) {
       const pageViewEvent = getPageViewEvent(event);
 
-      const requestData = getRequest(pageViewEvent, custom, session);
+      const requestData = getRequest(pageViewEvent, custom, context);
       sendRequest(custom, requestData);
 
       custom.sentPageView = true;
     }
 
-    const requestData = getRequest(event, custom, session);
+    const requestData = getRequest(event, custom, context);
 
     sendRequest(custom, requestData);
 
@@ -123,7 +127,7 @@ function getDeviceParams(user: WalkerOS.User = {}): ParametersDevice {
 
 function getDocumentParams(event: WalkerOS.Event): ParametersDocument {
   const { source } = event;
-  const params: WalkerOS.AnyObject = {};
+  const params: ParametersDocument = {};
 
   if (source) {
     params.dl = source.id; // location
@@ -164,7 +168,7 @@ function getPageViewEvent(event: WalkerOS.Event): WalkerOS.Event {
 function getRequest(
   event: WalkerOS.Event,
   custom: CustomConfig,
-  session?: WalkerOS.SessionData,
+  context: Context,
 ): RequestData {
   const { user = {} } = event;
 
@@ -181,16 +185,14 @@ function getRequest(
     ...getClientId(user), // Client ID
     ...getDeviceParams(user), // User parameters
     ...getDocumentParams(event), // Document parameters
-    ...getSessionParams(event, custom, session), // Session parameters
+    ...getSessionParams(event, custom, context.session), // Session parameters
     ...custom.params, // Custom parameters override defaults
   };
 
-  if (typeof navigator !== 'undefined') {
-    // Browser parameters
-    assign(requestParams, getBrowserParams(navigator.userAgent), {
-      shallow: false,
-    });
-  }
+  // Browser parameters
+  assign(requestParams, getBrowserParams(context.userAgent), {
+    shallow: false,
+  });
 
   // User id
   // if (user.id) params.uid = user.id;
