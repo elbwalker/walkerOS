@@ -6,6 +6,7 @@
     "packages/*",
     "packages/config/*",
     "packages/clients/*",
+    "packages/destinations/core/*",
     "packages/destinations/node/*",
     "packages/destinations/web/*",
     "packages/stacks/*"
