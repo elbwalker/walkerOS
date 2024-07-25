@@ -10,7 +10,7 @@ export interface CustomConfig extends State {
 import type { WalkerOS } from '@elbwalker/types';
 import type { SendHeaders } from '@elbwalker/utils';
 
-export interface Config extends State {
+export interface Config extends Partial<State> {
   measurementId: string; // Measurement ID
   debug?: boolean; // Enables debug mode
   url?: string; // URL to send the request to
@@ -20,11 +20,11 @@ export interface Config extends State {
 }
 
 export interface State {
-  count?: number; // Sent events count
+  count: number; // Sent events count
   lastEngagement: number; // Last event timestamp
-  isEngaged?: boolean; // If a user is engaged
-  sentPageView?: boolean; // If a page view has been sent
-  sentSession?: boolean; // If session parameters have been sent
+  isEngaged: boolean; // If a user is engaged
+  sentPageView: boolean; // If a page view has been sent
+  sentSession: boolean; // If session parameters have been sent
 }
 
 export interface Context {

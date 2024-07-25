@@ -1,3 +1,6 @@
+// Types
+export * as DestinationCoreEtag from './types';
+
 export * from './getBrowserParams';
 export * from './getClientId';
 export * from './getConsentParams';
