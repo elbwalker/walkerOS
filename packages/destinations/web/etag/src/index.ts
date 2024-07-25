@@ -39,10 +39,6 @@ export const destinationEtag: Destination = {
     if (!custom || !custom.measurementId) return;
     const session = instance?.session;
 
-    // @TODOs
-    // key event parameter flags
-    // uip parameter on node
-
     const userAgent = navigator.userAgent;
     const context = { session, userAgent };
 

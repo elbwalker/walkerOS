@@ -2,7 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { WebClient } from '@elbwalker/walker.js';
 import type { DestinationWebEtag } from '.';
 
-describe('Destination etag', () => {
+describe('Destination web etag', () => {
   jest.useFakeTimers();
   const mockSend = jest.fn();
   jest.mock('@elbwalker/utils', () => ({
