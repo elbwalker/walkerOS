@@ -60,7 +60,6 @@ describe('Destination core etag', () => {
     state = {
       lastEngagement: 1,
       isEngaged: false,
-      sentSession: false,
     };
   });
 
@@ -229,7 +228,7 @@ describe('Destination core etag', () => {
     );
 
     // Session status already sent
-    expect(getSessionParams(event, state, session)).not.toStrictEqual(
+    expect(getSessionParams(event, state)).not.toStrictEqual(
       expect.objectContaining({
         _fv: 1,
         _nsi: 1,
@@ -243,11 +242,7 @@ describe('Destination core etag', () => {
       isStart: true,
     };
     expect(
-      getSessionParams(
-        event,
-        { ...state, sentSession: false },
-        sessionCookieless,
-      ),
+      getSessionParams(event, { ...state }, sessionCookieless),
     ).toStrictEqual(
       expect.objectContaining({
         _fv: 1,
@@ -264,9 +259,7 @@ describe('Destination core etag', () => {
       isStart: true,
       count: 2,
     };
-    expect(
-      getSessionParams(event, { ...state, sentSession: false }, sessionSecond),
-    ).toStrictEqual({
+    expect(getSessionParams(event, { ...state }, sessionSecond)).toStrictEqual({
       _ss: 1,
       sct: 2,
       seg: 1,
@@ -279,11 +272,7 @@ describe('Destination core etag', () => {
       count: 2,
     };
     expect(
-      getSessionParams(
-        event,
-        { ...state, sentSession: false },
-        sessionExisting,
-      ),
+      getSessionParams(event, { ...state }, sessionExisting),
     ).toStrictEqual({
       sct: 2,
       seg: 1,

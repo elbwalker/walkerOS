@@ -30,7 +30,6 @@ export function getParams(
   const defaultState: State = {
     lastEngagement: 1,
     isEngaged: false,
-    sentSession: false,
   };
 
   const state = assign(defaultState, config);

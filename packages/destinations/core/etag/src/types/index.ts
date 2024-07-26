@@ -22,7 +22,6 @@ export interface Config extends Partial<State> {
 export interface State {
   lastEngagement: number; // Last event timestamp
   isEngaged: boolean; // If a user is engaged
-  sentSession: boolean; // If session parameters have been sent
 }
 
 export interface Context {

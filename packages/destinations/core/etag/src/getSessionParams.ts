@@ -24,7 +24,7 @@ export function getSessionParams(
   }
 
   // Session status
-  if (!state.sentSession && session) {
+  if (session) {
     const { isStart, isNew, count, storage } = session;
 
     if (isStart) {
@@ -37,8 +37,6 @@ export function getSessionParams(
     }
 
     params.sct = count || 1; // session count
-
-    state.sentSession = true;
   }
 
   return params;
