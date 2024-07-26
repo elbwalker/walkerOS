@@ -20,10 +20,8 @@ export interface Config extends Partial<State> {
 }
 
 export interface State {
-  count: number; // Sent events count
   lastEngagement: number; // Last event timestamp
   isEngaged: boolean; // If a user is engaged
-  sentPageView: boolean; // If a page view has been sent
   sentSession: boolean; // If session parameters have been sent
 }
 

@@ -25,13 +25,11 @@ export function getParams(
   const { user = {} } = event;
 
   // Event count
-  config.count = (config.count || 0) + 1;
+  const count = event.count || 1;
 
   const defaultState: State = {
-    count: 0,
     lastEngagement: 1,
     isEngaged: false,
-    sentPageView: false,
     sentSession: false,
   };
 
@@ -41,7 +39,7 @@ export function getParams(
     v: '2',
     tid: config.measurementId,
     _p: Date.now(), // Cache buster
-    _s: config.count, // Hit count
+    _s: count, // Hit count
     _z: 'fetch', // Transport mode
     ...getConsentMode(), // Consent mode
     ...getClientId(user), // Client ID

@@ -58,10 +58,8 @@ describe('Destination core etag', () => {
     };
 
     state = {
-      count: 0,
       lastEngagement: 1,
       isEngaged: false,
-      sentPageView: false,
       sentSession: false,
     };
   });
