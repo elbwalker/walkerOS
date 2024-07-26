@@ -1,7 +1,6 @@
 import type { CustomConfig, Destination } from './types';
 import type { DestinationCoreEtag } from '@elbwalker/destination-core-etag';
-import { getPageViewEvent, getParams } from '@elbwalker/destination-core-etag';
-import { WalkerOS } from '@elbwalker/types';
+import { getParameters } from '@elbwalker/destination-core-etag';
 import { requestToParameter, sendWebAsFetch } from '@elbwalker/utils';
 
 // Types
@@ -28,9 +27,11 @@ export const destinationEtag: Destination = {
       language: navigator.language,
     };
 
-    const requestData = getParams(event, custom, context);
+    const parameters = getParameters([event], custom, context);
 
-    sendRequest(custom, requestToParameter(requestData.path), requestData.body);
+    parameters.forEach((parameter) => {
+      sendRequest(custom, requestToParameter(parameter.path), parameter.body);
+    });
 
     config.custom = custom;
   },
