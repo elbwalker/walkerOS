@@ -71,7 +71,9 @@ export function sendNode(
     });
 
     req.setTimeout(timeout);
-    req.write(body);
+
+    if (body) req.write(body);
+
     req.end();
   });
 }
