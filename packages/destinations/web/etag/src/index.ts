@@ -29,7 +29,7 @@ export const destinationEtag: Destination = {
     };
 
     // session_start
-    if (event.event == 'session start') {
+    if (event.event == (custom.sessionStart || 'session start')) {
       const session: WalkerOS.SessionData = {
         isStart: false,
         storage: false,
@@ -39,7 +39,7 @@ export const destinationEtag: Destination = {
     }
 
     // page_view
-    if (event.event == 'page view') {
+    if (event.event == (custom.pageView || 'page view')) {
       const pageViewEvent = getPageViewEvent(event);
 
       const requestData = getParams(pageViewEvent, custom, context);
