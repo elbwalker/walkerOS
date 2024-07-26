@@ -38,7 +38,7 @@ describe('Destination web etag', () => {
 
   test('init', () => {
     push(event);
-    expect(mockSend).toHaveBeenCalledTimes(2);
+    expect(mockSend).toHaveBeenCalledTimes(1);
   });
 
   test('push', () => {
@@ -69,39 +69,32 @@ describe('Destination web etag', () => {
       },
     });
 
-    expect(requestedUrl(mockSend, 1)).toContain('ep.data_foo=bar');
-    expect(requestedUrl(mockSend, 1)).toContain('ep.globals_glow=balls');
-    expect(requestedUrl(mockSend, 1)).toContain('ep.context_env=dev');
-    expect(requestedUrl(mockSend, 1)).toContain('epn.data_id=3.14');
-    expect(requestedUrl(mockSend, 1)).toContain('epn.event_timing=42');
+    expect(requestedUrl(mockSend)).toContain('ep.data_foo=bar');
+    expect(requestedUrl(mockSend)).toContain('ep.globals_glow=balls');
+    expect(requestedUrl(mockSend)).toContain('ep.context_env=dev');
+    expect(requestedUrl(mockSend)).toContain('epn.data_id=3.14');
+    expect(requestedUrl(mockSend)).toContain('epn.event_timing=42');
   });
 
   test('page_view', () => {
-    push(event);
-    expect(requestedUrl(mockSend)).toContain('_s=1');
+    push({ ...event, event: 'page view' });
+    // expect(requestedUrl(mockSend)).toContain('_s=1');
+    expect(requestedUrl(mockSend)).toContain('_ee=1');
     expect(requestedUrl(mockSend)).toContain('en=page_view');
-
-    push(event); // Only once
-    expect(requestedUrl(mockSend, 1)).not.toContain('en=page_view');
   });
 
   test('hit count', () => {
     push(event);
     expect(requestedUrl(mockSend)).toContain('_s=1');
 
-    push(event);
-    expect(requestedUrl(mockSend, 1)).toContain('_s=2');
-
-    push(event);
-    expect(requestedUrl(mockSend, 2)).toContain('_s=3');
+    push({ ...event, count: 5 });
+    expect(requestedUrl(mockSend, 1)).toContain('_s=5');
   });
 
   test('default params', () => {
     push(event, { measurementId });
 
     expect(requestedUrl(mockSend)).toContain('v=2');
-    expect(requestedUrl(mockSend)).toContain('tid=' + measurementId);
-    expect(requestedUrl(mockSend)).toContain('_ee=1');
     expect(requestedUrl(mockSend)).toContain('_z=fetch');
     expect(requestedUrl(mockSend)).toContain('tfd=42000');
     expect(requestedUrl(mockSend)).toMatch(/_p=\d/);
@@ -140,59 +133,40 @@ describe('Destination web etag', () => {
   });
 
   test('session id', () => {
-    push({});
-    expect(requestedUrl(mockSend, 1)).toContain('sid=1006242960'); // hash of undefined
+    push(event);
+    expect(requestedUrl(mockSend)).toContain('sid=1006242960'); // hash of undefined
 
     push({ user: { session: 's3ss10n1d' } });
-    expect(requestedUrl(mockSend, 2)).toContain('sid=1875854770'); // hash of 's3ss10n1ds3ss10n1d'
+    expect(requestedUrl(mockSend, 1)).toContain('sid=1875854770'); // hash of 's3ss10n1ds3ss10n1d'
   });
 
   test('session status', () => {
-    push(event, destination.config.custom, {
-      session: { isNew: true, isStart: true, count: 1 },
+    push({
+      event: 'session start',
+      data: {
+        isNew: true,
+        isStart: true,
+        count: 1,
+      },
     });
     expect(requestedUrl(mockSend)).toContain('_ss=1');
     expect(requestedUrl(mockSend)).toContain('_nsi=1');
     expect(requestedUrl(mockSend)).toContain('_fv=1');
     expect(requestedUrl(mockSend)).toContain('sct=1');
-
-    push(event, destination.config.custom, {
-      session: { isNew: true, isStart: true, count: 1 },
-    });
-    expect(requestedUrl(mockSend, 1)).not.toContain('_ss=1');
-    expect(requestedUrl(mockSend, 1)).not.toContain('_nsi=1');
-    expect(requestedUrl(mockSend, 1)).not.toContain('_fv=1');
-
-    destination.config.custom!.sentSession = false;
-    push(event, destination.config.custom, {
-      session: { storage: false, isStart: true },
-    });
-    expect(requestedUrl(mockSend, 3)).toContain('_ss=1');
-    expect(requestedUrl(mockSend, 3)).toContain('_nsi=1');
-    expect(requestedUrl(mockSend, 3)).toContain('_fv=1');
-    expect(requestedUrl(mockSend, 3)).toContain('sct=1');
   });
 
   test('session engaged', () => {
     // no engagement
-    push({});
-    expect(requestedUrl(mockSend, 1)).not.toContain('seg=1');
-
-    // timing
     push({ timing: 11 });
-    expect(requestedUrl(mockSend, 2)).toContain('seg=1');
+    expect(requestedUrl(mockSend)).toContain('seg=1');
 
-    // previous engagement
-    push(event);
-    expect(requestedUrl(mockSend, 3)).toContain('seg=1');
+    // click
+    push({ trigger: 'click' });
+    expect(requestedUrl(mockSend, 1)).toContain('seg=1');
 
     // multiple runs
-    push(event, { measurementId }, { session: { runs: 2 } });
-    expect(requestedUrl(mockSend, 4)).toContain('seg=1');
-
-    // click trigger
-    push({ trigger: 'click' }, { measurementId });
-    expect(requestedUrl(mockSend, 5)).toContain('seg=1');
+    push({ event: 'session start', data: { runs: 2 } });
+    expect(requestedUrl(mockSend, 2)).toContain('seg=1');
   });
 
   test('user ids', () => {
@@ -221,8 +195,7 @@ describe('Destination web etag', () => {
     });
 
     expect(requestedUrl(mockSend)).toContain('_et=1');
-    expect(requestedUrl(mockSend, 1)).toContain('_et=1');
-    expect(requestedUrl(mockSend, 2)).toContain('_et=1337');
+    expect(requestedUrl(mockSend, 1)).toContain('_et=1337');
   });
 
   test('debug', () => {

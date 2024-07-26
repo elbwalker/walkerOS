@@ -1,5 +1,7 @@
 import type { CustomConfig, Destination } from './types';
+import type { DestinationCoreEtag } from '@elbwalker/destination-core-etag';
 import { getPageViewEvent, getParams } from '@elbwalker/destination-core-etag';
+import { WalkerOS } from '@elbwalker/types';
 import { requestToParameter, sendWebAsFetch } from '@elbwalker/utils';
 
 // Types
@@ -15,21 +17,29 @@ export const destinationEtag: Destination = {
       return false;
   },
 
-  push(event, config, mapping, instance) {
+  push(event, config) {
     const { custom } = config;
     if (!custom || !custom.measurementId) return;
-    const session = instance?.session;
 
     const userAgent = navigator.userAgent;
-    const context = {
-      session,
+    const context: DestinationCoreEtag.Context = {
       userAgent,
       pageTitle: document.title,
       language: navigator.language,
     };
 
+    // session_start
+    if (event.event == 'session start') {
+      const session: WalkerOS.SessionData = {
+        isStart: false,
+        storage: false,
+        ...event.data,
+      };
+      context.session = session;
+    }
+
     // page_view
-    if (!custom.sentPageView) {
+    if (event.event == 'page view') {
       const pageViewEvent = getPageViewEvent(event);
 
       const requestData = getParams(pageViewEvent, custom, context);
@@ -38,8 +48,6 @@ export const destinationEtag: Destination = {
         requestToParameter(requestData.path),
         requestData.body,
       );
-
-      custom.sentPageView = true;
     }
 
     const requestData = getParams(event, custom, context);
