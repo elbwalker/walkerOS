@@ -9,7 +9,6 @@ export function getPageViewEvent(event: WalkerOS.Event): WalkerOS.Event {
     action: 'view',
     trigger: 'etag',
     id: String(event.id || getId(5)).slice(0, -1) + '0', // Change the event ID
-    count: 0,
     data: {}, // @TODO Add data
     context: {},
   };

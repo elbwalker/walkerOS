@@ -8,7 +8,8 @@ import {
   getDocumentParams,
   getEventParams,
   getPageViewEvent,
-  getParams,
+  getParameter,
+  getParameters,
   getSessionParams,
 } from '..';
 
@@ -58,6 +59,7 @@ describe('Destination core etag', () => {
     };
 
     state = {
+      count: 0,
       lastEngagement: 1,
       isEngaged: false,
     };
@@ -141,16 +143,34 @@ describe('Destination core etag', () => {
       action: 'view',
       trigger: 'etag',
       id: expect.any(String),
-      count: 0,
       data: {},
       context: {},
     });
   });
 
-  test('getParams', () => {
+  test('getParameters', () => {
+    const pageViewEvent = { event: 'page view' } as WalkerOS.Event;
+    const parameters = getParameters(
+      [event, pageViewEvent],
+      { measurementId },
+      {},
+    );
+    expect(parameters).toHaveLength(3);
+    expect(parameters[0].path).toStrictEqual(
+      expect.objectContaining({ en: 'entity data' }),
+    );
+    expect(parameters[1].path).toStrictEqual(
+      expect.objectContaining({ en: 'page_view' }),
+    );
+    expect(parameters[2].path).toStrictEqual(
+      expect.objectContaining({ en: 'page view' }),
+    );
+  });
+
+  test('getParameter', () => {
     event.user.screenSize = '800x600';
 
-    const { path } = getParams(
+    const { path } = getParameter(
       event,
       {
         debug: true,
@@ -171,7 +191,7 @@ describe('Destination core etag', () => {
       v: '2',
       tid: measurementId,
       cid: expect.any(String),
-      _s: 1,
+      _s: 2,
       _p: expect.any(Number),
       _z: 'fetch',
       _dbg: 1,

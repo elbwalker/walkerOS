@@ -1,12 +1,3 @@
-export interface CustomConfig extends State {
-  measurementId: string; // Measurement ID
-  debug?: boolean; // Enables debug mode
-  url?: string; // URL to send the request to
-  headers?: SendHeaders; // Custom headers
-  params?: Partial<ParametersBasic>; // Customize the parameters
-  paramsEvent?: Partial<ParametersEvent>; // Customize the event parameters
-}
-
 import type { WalkerOS } from '@elbwalker/types';
 import type { SendHeaders } from '@elbwalker/utils';
 
@@ -15,11 +6,14 @@ export interface Config extends Partial<State> {
   debug?: boolean; // Enables debug mode
   url?: string; // URL to send the request to
   headers?: SendHeaders; // Custom headers
+  pageView?: false | string; // Name of the page view event
   params?: Partial<ParametersRequest>; // Customize the parameters
   paramsEvent?: Partial<ParametersEvent>; // Customize the event parameters
+  sessionStart?: string; // Name of the session start event
 }
 
 export interface State {
+  count: number; // Event count
   lastEngagement: number; // Last event timestamp
   isEngaged: boolean; // If a user is engaged
 }
@@ -31,10 +25,11 @@ export interface Context {
   userAgent?: string;
 }
 
-export interface RequestData {
+export interface Parameter {
   body?: string;
   path: WalkerOS.AnyObject;
 }
+export type Parameters = Array<Parameter>;
 
 export type ParametersRequest = ParametersBasic &
   ParametersBrowser &

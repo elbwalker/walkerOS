@@ -6,9 +6,6 @@ export interface Destination
 
 export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 
-export interface CustomConfig extends DestinationCoreEtag.Config {
-  pageView?: false | string; // Name of the page view event
-  sessionStart?: string; // Name of the session start event
-}
+export interface CustomConfig extends DestinationCoreEtag.Config {}
 
 export interface CustomEventConfig {}

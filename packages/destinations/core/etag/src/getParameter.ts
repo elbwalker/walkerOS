@@ -2,8 +2,8 @@ import type { WalkerOS } from '@elbwalker/types';
 import type {
   Config,
   Context,
+  Parameter,
   ParametersRequest,
-  RequestData,
   State,
 } from './types';
 import { assign } from '@elbwalker/utils';
@@ -17,17 +17,15 @@ import {
   getSessionParams,
 } from '.';
 
-export function getParams(
+export function getParameter(
   event: WalkerOS.Event,
   config: Config,
   context: Context,
-): RequestData {
+): Parameter {
   const { user = {} } = event;
 
-  // Event count
-  const count = event.count || 1;
-
   const defaultState: State = {
+    count: 2, // Always leave 1 for session start
     lastEngagement: 1,
     isEngaged: false,
   };
@@ -38,7 +36,7 @@ export function getParams(
     v: '2',
     tid: config.measurementId,
     _p: Date.now(), // Cache buster
-    _s: count, // Hit count
+    _s: state.count, // Hit count
     _z: 'fetch', // Transport mode
     ...getConsentMode(), // Consent mode
     ...getClientId(user), // Client ID

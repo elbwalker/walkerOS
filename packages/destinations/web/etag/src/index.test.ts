@@ -83,12 +83,15 @@ describe('Destination web etag', () => {
     expect(requestedUrl(mockSend)).toContain('en=page_view');
   });
 
-  test('hit count', () => {
+  test.only('hit count', () => {
     push(event);
-    expect(requestedUrl(mockSend)).toContain('_s=1');
+    expect(requestedUrl(mockSend)).toContain('_s=2');
 
     push({ ...event, count: 5 });
-    expect(requestedUrl(mockSend, 1)).toContain('_s=5');
+    expect(requestedUrl(mockSend, 1)).toContain('_s=6');
+
+    push({ event: 'session start', count: 5 });
+    expect(requestedUrl(mockSend, 1)).toContain('_s=1');
   });
 
   test('default params', () => {

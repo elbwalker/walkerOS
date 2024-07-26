@@ -28,28 +28,6 @@ export const destinationEtag: Destination = {
       language: navigator.language,
     };
 
-    // session_start
-    if (event.event == (custom.sessionStart || 'session start')) {
-      const session: WalkerOS.SessionData = {
-        isStart: false,
-        storage: false,
-        ...event.data,
-      };
-      context.session = session;
-    }
-
-    // page_view
-    if (event.event == (custom.pageView || 'page view')) {
-      const pageViewEvent = getPageViewEvent(event);
-
-      const requestData = getParams(pageViewEvent, custom, context);
-      sendRequest(
-        custom,
-        requestToParameter(requestData.path),
-        requestData.body,
-      );
-    }
-
     const requestData = getParams(event, custom, context);
 
     sendRequest(custom, requestToParameter(requestData.path), requestData.body);
