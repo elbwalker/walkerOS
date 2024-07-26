@@ -170,23 +170,24 @@ describe('Destination core etag', () => {
   test('getParameter', () => {
     event.user.screenSize = '800x600';
 
-    const { path } = getParameter(
-      event,
-      {
-        debug: true,
-        lastEngagement: 1,
-        measurementId,
-        params: { gcs: 'G111' },
-        paramsEvent: { 'epn.data_id': 3.14, 'epn.event_timing': 42 },
-      },
-      {
-        language: 'de-DE',
-        pageTitle: 'Demo',
-        session,
-        userAgent,
-      },
-    );
-    expect(path).toStrictEqual({
+    expect(
+      getParameter(
+        event,
+        {
+          debug: true,
+          lastEngagement: 1,
+          measurementId,
+          params: { gcs: 'G111' },
+          paramsEvent: { 'epn.data_id': 3.14, 'epn.event_timing': 42 },
+        },
+        {
+          language: 'de-DE',
+          pageTitle: 'Demo',
+          session,
+          userAgent,
+        },
+      ).path,
+    ).toStrictEqual({
       // Basic
       v: '2',
       tid: measurementId,
@@ -233,6 +234,17 @@ describe('Destination core etag', () => {
       'ep.user_screenSize': '800x600',
       'ep.user_session': 's3ss10n',
     });
+
+    expect(
+      getParameter(
+        { ...event, event: 'order complete' },
+        { measurementId, keyEvents: ['order complete'] },
+      ).path,
+    ).toStrictEqual(
+      expect.objectContaining({
+        _c: 1,
+      }),
+    );
   });
 
   test('getSessionParams', () => {

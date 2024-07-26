@@ -19,10 +19,10 @@
     "test": "jest --colors --coverage"
   },
   "dependencies": {
-    "@elbwalker/client-node": "^3.0.0"
+    "@elbwalker/client-node": "^3.0.0",
+    "@elbwalker/destination-core-etag": "0.0.1"
   },
   "devDependencies": {
-    "@elbwalker/destination-core-etag": "0.0.1",
     "@elbwalker/tsup": "0.0.1",
     "@elbwalker/types": "3.0.0",
     "@elbwalker/utils": "^3.2.0"

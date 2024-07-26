@@ -6,7 +6,7 @@ import { getPageViewEvent } from './getPageViewEvent';
 export function getParameters(
   events: WalkerOS.Events,
   config: Config,
-  context: Context,
+  context: Context = {},
 ): Parameters {
   const parameters: Parameters = [];
 

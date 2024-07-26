@@ -3,6 +3,7 @@ import type { SendHeaders } from '@elbwalker/utils';
 
 export interface Config extends Partial<State> {
   measurementId: string; // Measurement ID
+  keyEvents?: Array<string>; // Names of key events
   debug?: boolean; // Enables debug mode
   url?: string; // URL to send the request to
   headers?: SendHeaders; // Custom headers
@@ -79,6 +80,7 @@ export interface ParametersDocument {
 
 export interface ParametersEvent {
   en: string; // Event name
+  _c?: number; // Is conversion
   _et: number; // Engagement time (for realtime view)
   _ee?: 1; // Enhanced Measurement Flag
   [key: `ep.${string}`]: string; // string parameters

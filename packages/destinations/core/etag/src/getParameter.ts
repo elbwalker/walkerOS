@@ -20,7 +20,7 @@ import {
 export function getParameter(
   event: WalkerOS.Event,
   config: Config,
-  context: Context,
+  context: Context = {},
 ): Parameter {
   const { user = {} } = event;
 
@@ -60,7 +60,14 @@ export function getParameter(
   // Debug mode
   if (config.debug) requestParams._dbg = 1;
 
-  const eventParams = getEventParams(event, state, config.paramsEvent);
+  const paramsEvent = config.paramsEvent || {};
+
+  // Key events (conversion)
+  if (config.keyEvents && config.keyEvents.includes(event.event)) {
+    paramsEvent._c = paramsEvent._c || 1; // Flag as key event
+  }
+
+  const eventParams = getEventParams(event, state, paramsEvent);
 
   let body; // Later used for event batching
   const path = { ...requestParams, ...eventParams };
