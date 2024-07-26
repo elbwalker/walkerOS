@@ -10,7 +10,7 @@ export interface Instance {
 
 export type PartialConfig = Partial<Config>;
 export interface Config {
-  client: NodeClient.PartialConfig;
+  client: NodeClient.InitConfig;
 }
 
 export interface Push {
