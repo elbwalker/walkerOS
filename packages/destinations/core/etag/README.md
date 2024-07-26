@@ -19,3 +19,5 @@ Made to be used with [walkerOS](https://github.com/elbwalker/walkerOS).
 [Consent Mode 2.0 FAQ](https://www.markus-baersch.de/blog/consent-mode-2-0-faq/)
 
 [Google Analytics 4 Measurement Protocol](https://www.thyngster.com/ga4-measurement-protocol-cheatsheet/)
+
+[Not set in Google Analytics 4. How to fix it?](https://www.analyticsmania.com/post/not-set-in-google-analytics-4/)

@@ -2,27 +2,26 @@ import type {
   Destination as WalkerOSDestination,
   WalkerOS,
 } from '@elbwalker/types';
+import type { NodeClient } from '.';
 
 export interface Destination<Custom = unknown, EventCustom = unknown>
   extends WalkerOSDestination.Destination<Custom, EventCustom> {
   config: Config<Custom, EventCustom>;
   push: PushFn<Custom, EventCustom>;
   init?: InitFn<Custom, EventCustom>;
-  setup?: SetupFn<Custom, EventCustom>;
 }
+
+export type InitFn<Custom, EventCustom> = (
+  config: Config<Custom, EventCustom>,
+  instance: NodeClient.Instance,
+) => Promise<void | boolean | Config<Custom, EventCustom>>;
 
 export type PushFn<Custom, EventCustom> = (
   events: PushEvents<EventCustom>,
   config: Config<Custom, EventCustom>,
+  mapping?: EventConfig<EventCustom>,
+  instance?: NodeClient.Instance,
 ) => Promise<Push> | void;
-
-export type InitFn<Custom, EventCustom> = (
-  config: Config<Custom, EventCustom>,
-) => Promise<boolean | Config<Custom, EventCustom>>;
-
-export type SetupFn<Custom, EventCustom> = (
-  config: Config<Custom, EventCustom>,
-) => Promise<boolean | Config<Custom, EventCustom>>;
 
 export interface Config<Custom = unknown, EventCustom = unknown>
   extends WalkerOSDestination.Config<Custom, EventCustom> {}

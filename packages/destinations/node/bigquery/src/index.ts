@@ -10,17 +10,6 @@ export * as DestinationBigQuery from './types';
 export const destinationBigQuery: Destination = {
   config: {},
 
-  async setup(config) {
-    if (config.onLog) config.onLog('Run setup');
-
-    return await tryCatchAsync(setup, (error) => {
-      if (config.onLog) config.onLog('Setup error');
-      if (config.onError) config.onError(error);
-
-      throwError(error);
-    })(getConfig(config));
-  },
-
   async init(partialConfig) {
     const config = await tryCatchAsync(getConfig, (error) => {
       log('Init error', partialConfig.verbose);

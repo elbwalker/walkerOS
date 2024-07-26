@@ -66,25 +66,20 @@ describe('Node Destination BigQuery', () => {
 
     destination = jest.requireActual('../').default;
     destination.config = {};
-    // config = {
-    //   custom: {
-    //     projectId,
-    //     location,
-    //     datasetId,
-    //     tableId,
-    //   },
-    // };
   });
 
-  test('setup', async () => {
-    expect(destination.setup).toBeDefined();
-    if (!destination.setup) return;
+  test('runSetup', async () => {
+    await expect(
+      destination.init({ custom: { runSetup: true } }),
+    ).rejects.toThrow(Error);
 
-    await expect(destination.setup({})).rejects.toThrow(Error);
+    const config = await getConfig({
+      runSetup: true,
+      projectId,
+      bigquery: { credentials },
+    });
 
-    const config = await getConfig({ projectId, bigquery: { credentials } });
-
-    expect(await destination.setup(config)).toBeTruthy();
+    expect(await destination.init(config)).toBeTruthy();
 
     const mockFn = getMockFn(config);
     expect(mockFn).toHaveBeenCalledWith('dataset', 'walkeros');

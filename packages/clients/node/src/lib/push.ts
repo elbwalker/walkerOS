@@ -114,7 +114,7 @@ export async function pushToDestinations(
           (await tryCatchAsync(destination.init, (error) => {
             // Call custom error handling
             if (config.onError) config.onError(error, instance);
-          })(destination.config)) || false;
+          })(destination.config, instance)) || false;
 
         if (isSameType(init, {} as NodeDestination.Config)) {
           destination.config = init;
