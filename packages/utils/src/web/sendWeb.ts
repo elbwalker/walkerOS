@@ -111,10 +111,12 @@ export function sendWebAsXhr(
 
       const ok = xhr.status >= 200 && xhr.status < 300;
 
+      const parsedData = tryCatch(JSON.parse, () => xhr.response)(xhr.response);
+
       return {
         ok,
-        data: xhr.response,
-        error: ok ? undefined : xhr.statusText,
+        data: parsedData,
+        error: ok ? undefined : `${xhr.status} ${xhr.statusText}`,
       };
     },
     (error) => {

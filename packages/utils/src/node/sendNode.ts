@@ -1,5 +1,5 @@
 import type { SendDataValue, SendResponse, SendHeaders } from '../';
-import { getHeaders, transformData } from '../';
+import { getHeaders, transformData, tryCatch } from '../';
 import * as http from 'http';
 import * as https from 'https';
 
@@ -11,7 +11,7 @@ export interface SendNodeOptions {
 
 export function sendNode(
   url: string,
-  data: SendDataValue,
+  data?: SendDataValue,
   options: SendNodeOptions = {},
 ): Promise<SendResponse> {
   const headers = getHeaders(options.headers);
@@ -21,14 +21,13 @@ export function sendNode(
 
   return new Promise((resolve) => {
     const urlObj = new URL(url);
-    const isHttps = urlObj.protocol === 'https:';
-    const lib = isHttps ? https : http;
-    const requestOptions: http.RequestOptions | https.RequestOptions = {
+    const lib = urlObj.protocol === 'https:' ? https : http;
+    const options: http.RequestOptions | https.RequestOptions = {
       method,
       headers,
     };
 
-    const req = lib.request(url, requestOptions, (res) => {
+    const req = lib.request(urlObj, options, (res) => {
       const chunks: Uint8Array[] = [];
 
       res.on('data', (chunk) => {
@@ -36,15 +35,22 @@ export function sendNode(
       });
 
       res.on('end', () => {
-        const responseData = Buffer.concat(chunks).toString();
+        const ok = !!(
+          res.statusCode &&
+          res.statusCode >= 200 &&
+          res.statusCode < 300
+        );
 
-        const ok =
-          res.statusCode && res.statusCode >= 200 && res.statusCode < 300;
+        const responseData = Buffer.concat(chunks).toString();
+        const parsedData = tryCatch(
+          JSON.parse,
+          () => responseData,
+        )(responseData);
 
         resolve({
-          ok: !!ok,
-          data: responseData,
-          error: ok ? undefined : res.statusMessage,
+          ok,
+          data: parsedData,
+          error: ok ? undefined : `${res.statusCode} ${res.statusMessage}`,
         });
       });
     });

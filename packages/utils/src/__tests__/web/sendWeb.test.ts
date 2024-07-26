@@ -119,7 +119,7 @@ describe('sendWeb', () => {
     expect(mockXHR.send).toHaveBeenCalledWith(dataStringified);
     expect(response).toStrictEqual({
       ok: true,
-      data: dataStringified,
+      data,
       error: undefined,
     });
   });
@@ -139,7 +139,7 @@ describe('sendWeb', () => {
     expect(mockXHR.send).toHaveBeenCalledWith(dataStringified);
     expect(response).toStrictEqual({
       ok: true,
-      data: dataStringified,
+      data,
       error: undefined,
     });
   });
@@ -153,7 +153,7 @@ describe('sendWeb', () => {
     expect(mockXHR.send).toHaveBeenCalledWith(dataStringified);
     expect(response).toStrictEqual({
       ok: true,
-      data: dataStringified,
+      data,
       error: undefined,
     });
   });

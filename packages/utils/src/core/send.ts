@@ -10,7 +10,9 @@ export interface SendResponse {
   error?: string;
 }
 
-export function transformData(data?: SendDataValue): string {
+export function transformData(data?: SendDataValue): string | undefined {
+  if (data === undefined) return data;
+
   return isSameType(data, '' as string) ? data : JSON.stringify(data);
 }
 

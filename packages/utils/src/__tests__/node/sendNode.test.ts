@@ -37,16 +37,16 @@ describe('sendNode', () => {
       }),
     };
 
-    const mockFn = (url, options, callback) => {
+    const mockFn = (url: URL, options, callback) => {
       const req = mockRequest;
 
-      if (url === urlBroken) {
+      if (url.origin === urlBroken) {
         req.on.mockImplementationOnce((event, handler) => {
           if (event === 'error') {
             handler(new Error('Request failed'));
           }
         });
-      } else if (url === urlTimeout) {
+      } else if (url.origin === urlTimeout) {
         req.on.mockImplementationOnce((event, handler) => {
           if (event === 'timeout') {
             handler();
@@ -69,7 +69,7 @@ describe('sendNode', () => {
     const response = await sendNode(urlHttp, data);
 
     expect(http.request).toHaveBeenCalledWith(
-      urlHttp,
+      expect.any(URL),
       expect.objectContaining({
         method: 'POST',
         headers: expect.any(Object),
@@ -81,7 +81,7 @@ describe('sendNode', () => {
 
     expect(response).toStrictEqual({
       ok: true,
-      data: dataStringified,
+      data: data,
       error: undefined,
     });
 
@@ -92,7 +92,7 @@ describe('sendNode', () => {
     await sendNode(urlHttps, data);
 
     expect(https.request).toHaveBeenCalledWith(
-      urlHttps,
+      expect.any(URL),
       expect.objectContaining({
         method: 'POST',
         headers: expect.any(Object),
