@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-api",
   "description": "API web destination for walkerOS",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,11 +20,11 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/walker.js": "3.0.1"
+    "@elbwalker/walker.js": "3.0.2"
   },
   "devDependencies": {
     "@elbwalker/tsup": "0.0.1",
-    "@elbwalker/types": "3.0.0"
+    "@elbwalker/types": "3.0.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

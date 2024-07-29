@@ -29,8 +29,6 @@ export function run(
     { ...state },
   );
 
-  // @TODO state and globals should be merged with the current state
-
   // Update the instance reference with the updated state
   assign(instance, newState, { merge: false, shallow: false, extend: false });
 
@@ -38,9 +36,6 @@ export function run(
   Object.values(destinations).forEach((destination) => {
     destination.queue = [];
   });
-
-  // Call the predefined run events
-  onApply(instance, 'run');
 
   // Increase round counter
   if (++instance.round == 1) {
@@ -63,6 +58,9 @@ export function run(
       data: config.sessionStatic, // Static default session data
     });
   }
+
+  // Call the predefined run events
+  onApply(instance, 'run');
 
   tryCatch(load)(instance);
 }

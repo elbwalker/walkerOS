@@ -2,7 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { WebClient, WebDestination } from '../types';
 import { assign } from '@elbwalker/utils';
 import { onApply } from './on';
-import { pushToDestination } from './push';
+import { pushToDestinations } from './push';
 
 export function allowedToPush(
   instance: WebClient.Instance,
@@ -34,7 +34,7 @@ export function setConsent(
   instance: WebClient.Instance,
   data: WalkerOS.Consent,
 ) {
-  const { consent, destinations, globals, user } = instance;
+  const { consent, destinations } = instance;
 
   let runQueue = false;
   const update: WalkerOS.Consent = {};
@@ -53,19 +53,6 @@ export function setConsent(
   // Run on consent events
   onApply(instance, 'consent', undefined, update);
 
-  if (runQueue) {
-    Object.values(destinations).forEach((destination) => {
-      const queue = destination.queue || [];
-
-      // Try to push and remove successful ones from queue
-      destination.queue = queue.filter((event) => {
-        // Update previous values with the current state
-        event.consent = instance.consent;
-        event.globals = globals;
-        event.user = user;
-
-        return !pushToDestination(instance, destination, event, false);
-      });
-    });
-  }
+  // Process previous events if not disabled
+  if (runQueue) pushToDestinations(instance, destinations);
 }

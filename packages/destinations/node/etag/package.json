@@ -1,0 +1,57 @@
+{
+  "name": "@elbwalker/destination-node-etag",
+  "description": "etag node destination for walkerOS",
+  "version": "0.0.1",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:dev": "tsup --config tsup.dev.config.ts",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "lint": "eslint \"**/*.ts*\"",
+    "test": "jest --colors --coverage"
+  },
+  "dependencies": {
+    "@elbwalker/client-node": "^3.0.1",
+    "@elbwalker/destination-core-etag": "0.0.2"
+  },
+  "devDependencies": {
+    "@elbwalker/tsup": "0.0.1",
+    "@elbwalker/types": "3.0.1",
+    "@elbwalker/utils": "^3.3.0"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/destinations/node/etag"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "keywords": [
+    "elb",
+    "elbwalker",
+    "walker",
+    "walkerOS",
+    "walker destination",
+    "analytics",
+    "tracking",
+    "etag",
+    "gtag",
+    "endpoint"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

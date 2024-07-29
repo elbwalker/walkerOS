@@ -9,7 +9,6 @@ export interface Destination
 
 export type PushFn = NodeDestination.PushFn<CustomConfig, CustomEventConfig>;
 export type InitFn = (config: PartialConfig) => Promise<false | Config>;
-export type SetupFn = NodeDestination.SetupFn<CustomConfig, CustomEventConfig>;
 
 export type Config = {
   custom: CustomConfig;

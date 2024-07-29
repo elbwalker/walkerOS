@@ -1,5 +1,4 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { SessionData } from '@elbwalker/utils';
 
 // Instance state for the on actions
 export type Config = {
@@ -36,5 +35,5 @@ export type RunFn = (instance: WalkerOS.Instance) => void;
 export type SessionConfig = SessionFn;
 export type SessionFn = (
   instance: WalkerOS.Instance,
-  session?: SessionData,
+  session?: WalkerOS.SessionData,
 ) => void;

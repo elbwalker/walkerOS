@@ -1,5 +1,15 @@
 # @elbwalker/walker.js
 
+## 3.0.2
+
+### Patch Changes
+
+- 29571c6: queue on false
+  [#410](https://github.com/elbwalker/walkerOS/issues/410)
+- Updated dependencies [f361e4d]
+- Updated dependencies [f361e4d]
+  - @elbwalker/utils@3.3.0
+
 ## 3.0.1
 
 ### Patch Changes

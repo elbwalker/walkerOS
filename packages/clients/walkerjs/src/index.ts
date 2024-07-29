@@ -17,7 +17,7 @@ export { elb };
 export function Walkerjs(
   customConfig: WebClient.InitConfig = {},
 ): WebClient.Instance {
-  const client = '3.0.1'; // Client version
+  const client = '3.0.2'; // Client version
   const state = getState(customConfig);
   const instance: WebClient.Instance = {
     client,

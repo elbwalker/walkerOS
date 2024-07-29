@@ -7,7 +7,7 @@ import { getState } from './state';
 import { addDestination } from './destination';
 import { on } from './on';
 import { run } from './run';
-import { pushToDestination } from './push';
+import { pushToDestinations } from './push';
 import { addHook } from './hooks';
 import { setConsent } from './consent';
 
@@ -74,7 +74,5 @@ export function handleEvent(
   // Add event to internal queue
   instance.queue.push(event);
 
-  Object.values(instance.destinations).forEach((destination) => {
-    pushToDestination(instance, destination, event);
-  });
+  pushToDestinations(instance, instance.destinations, event);
 }

@@ -1,6 +1,7 @@
+import type { WalkerOS } from '@elbwalker/types';
 import type { WebClient, WebDestination } from '../types';
-import { getId } from '@elbwalker/utils';
-import { pushToDestination } from './push';
+import { debounce, getId, tryCatch, useHooks } from '@elbwalker/utils';
+import { pushToDestinations } from './push';
 
 export function addDestination(
   instance: WebClient.Instance,
@@ -15,12 +16,6 @@ export function addDestination(
     config,
   };
 
-  // Process previous events if not disabled
-  if (config.queue !== false)
-    instance.queue.forEach((pushEvent) => {
-      pushToDestination(instance, destination, pushEvent);
-    });
-
   let id = config.id; // Use given id
   if (!id) {
     // Generate a new id if none was given
@@ -28,7 +23,15 @@ export function addDestination(
       id = getId(4);
     } while (instance.destinations[id]);
   }
+
+  // Add the destination
   instance.destinations[id] = destination;
+
+  // Process previous events if not disabled
+  if (config.queue !== false) {
+    destination.queue = ([] as WalkerOS.Events).concat(instance.queue); // Copy the queue
+    pushToDestinations(instance, { destination });
+  }
 }
 
 export function dataLayerDestination() {
@@ -53,4 +56,120 @@ export function dataLayerDestination() {
   };
 
   return destination;
+}
+
+export function destinationInit(
+  instance: WebClient.Instance,
+  destination: WebDestination.Destination,
+) {
+  // Check if the destination was initialized properly or try to do so
+  if (destination.init && !destination.config.init) {
+    const init =
+      useHooks(
+        destination.init,
+        'DestinationInit',
+        instance.hooks,
+      )(destination.config, instance) !== false; // Actively check for errors
+
+    destination.config.init = init;
+
+    // don't push if init is false
+    if (!init) return false;
+  }
+
+  return true; // Destination is ready to push
+}
+
+export function destinationPush(
+  instance: WebClient.Instance,
+  destination: WebDestination.Destination,
+  event: WalkerOS.Event,
+): boolean {
+  const { eventConfig, mappingKey } = destinationMapping(
+    event,
+    destination.config.mapping,
+  );
+
+  if (eventConfig) {
+    // Check if event should be processed or ignored
+    if (eventConfig.ignore) return false;
+
+    // Check to use specific event names
+    if (eventConfig.name) event.event = eventConfig.name;
+  }
+
+  return !!tryCatch(() => {
+    if (eventConfig?.batch && destination.pushBatch) {
+      const batched = eventConfig.batched || {
+        key: mappingKey,
+        events: [],
+      };
+      batched.events.push(event);
+
+      eventConfig.batchFn =
+        eventConfig.batchFn ||
+        debounce((destination, instance) => {
+          useHooks(
+            destination.pushBatch!,
+            'DestinationPushBatch',
+            instance.hooks,
+          )(batched, destination.config, instance);
+
+          // Reset the batched events queue
+          batched.events = [];
+        }, eventConfig.batch);
+
+      eventConfig.batched = batched;
+      eventConfig.batchFn(destination, instance);
+    } else {
+      // It's time to go to the destination's side now
+      useHooks(destination.push, 'DestinationPush', instance.hooks)(
+        event,
+        destination.config,
+        eventConfig,
+        instance,
+      );
+    }
+
+    return true;
+  })();
+}
+
+export function destinationMapping(
+  event: WalkerOS.Event,
+  mapping?: WebDestination.Mapping<never>,
+) {
+  // Check for an active mapping for proper event handling
+  let eventConfig: undefined | WebDestination.EventConfig;
+  let mappingKey = '';
+
+  if (mapping) {
+    let mappingEntityKey = event.entity; // Default key is the entity name
+    let mappingEntity = mapping[mappingEntityKey];
+
+    if (!mappingEntity) {
+      // Fallback to the wildcard key
+      mappingEntityKey = '*';
+      mappingEntity = mapping[mappingEntityKey];
+    }
+
+    if (mappingEntity) {
+      let mappingActionKey = event.action; // Default action is the event action
+      eventConfig = mappingEntity[mappingActionKey];
+
+      if (!eventConfig) {
+        // Fallback to the wildcard action
+        mappingActionKey = '*';
+        eventConfig = mappingEntity[mappingActionKey];
+      }
+
+      // Handle individual event settings
+      if (eventConfig) {
+        // Save the mapping key for later use
+        mappingKey = `${mappingEntityKey} ${mappingActionKey}`;
+      }
+    }
+  }
+
+  return { eventConfig, mappingKey };
 }

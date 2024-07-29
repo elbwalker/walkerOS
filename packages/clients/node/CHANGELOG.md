@@ -1,5 +1,13 @@
 # @elbwalker/client-node
 
+## 3.0.1
+
+### Patch Changes
+
+- Updated dependencies [f361e4d]
+- Updated dependencies [f361e4d]
+  - @elbwalker/utils@3.3.0
+
 ## 3.0.0
 
 ### Major Changes

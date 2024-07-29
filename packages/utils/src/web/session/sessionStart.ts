@@ -11,28 +11,16 @@ export interface SessionConfig extends SessionStorageConfig {
   instance?: WalkerOS.Instance;
 }
 
-export interface SessionData {
-  isStart: boolean; // If this is a new session or a known one
-  storage: boolean; // If the storage was used to determine the session
-  id?: string; // Session ID
-  start?: number; // Timestamp of session start
-  marketing?: true; // If the session was started by a marketing parameters
-  // Storage data
-  updated?: number; // Timestamp of last update
-  isNew?: boolean; // If this is the first visit on a device
-  device?: string; // Device ID
-  count?: number; // Total number of sessions
-  runs?: number; // Total number of runs (like page views)
-}
-
 export type SessionFunction = typeof sessionStorage | typeof sessionWindow;
 export type SessionCallback = (
-  session: SessionData,
+  session: WalkerOS.SessionData,
   instance: WalkerOS.Instance | undefined,
   defaultCb: SessionCallback,
 ) => void;
 
-export function sessionStart(config: SessionConfig = {}): SessionData | void {
+export function sessionStart(
+  config: SessionConfig = {},
+): WalkerOS.SessionData | void {
   const { cb, consent, instance, storage } = config;
   const sessionFn: SessionFunction = storage ? sessionStorage : sessionWindow;
 
@@ -49,7 +37,7 @@ export function sessionStart(config: SessionConfig = {}): SessionData | void {
 }
 
 function callFuncAndCb(
-  session: SessionData,
+  session: WalkerOS.SessionData,
   instance?: WalkerOS.Instance,
   cb?: SessionCallback | false,
 ) {
@@ -72,7 +60,7 @@ function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
   return func;
 }
 
-const defaultCb: SessionCallback = (session): SessionData => {
+const defaultCb: SessionCallback = (session): WalkerOS.SessionData => {
   const user: WalkerOS.User = {};
 
   // User.session is the session ID

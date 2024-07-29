@@ -1,4 +1,5 @@
-import type { SessionCallback, SessionData } from '@elbwalker/utils';
+import type { WalkerOS } from '@elbwalker/types';
+import type { SessionCallback } from '@elbwalker/utils';
 import {
   assign,
   isSameType,
@@ -10,7 +11,9 @@ import { SessionStartOptions } from '../types/client';
 import { onApply } from './on';
 
 export function createSessionStart(instance: WebClient.Instance) {
-  return function (options: SessionStartOptions = {}): void | SessionData {
+  return function (
+    options: SessionStartOptions = {},
+  ): void | WalkerOS.SessionData {
     const { config = {}, ...otherOptions } = options;
     return sessionStart(instance, {
       config: { pulse: true, ...config },
@@ -23,13 +26,13 @@ export function createSessionStart(instance: WebClient.Instance) {
 export function sessionStart(
   instance: WebClient.Instance,
   options: SessionStartOptions = {},
-): void | SessionData {
+): void | WalkerOS.SessionData {
   const sessionConfig = assign(instance.config.session || {}, options.config);
   const sessionData = assign(instance.config.sessionStatic, options.data);
 
   // A wrapper for the callback
   const cb: SessionCallback = (session, instance, defaultCb) => {
-    let result: void | undefined | SessionData;
+    let result: void | undefined | WalkerOS.SessionData;
     if (sessionConfig.cb !== false)
       // Run either the default callback or the provided one
       result = (sessionConfig.cb || defaultCb)(session, instance, defaultCb);
@@ -44,6 +47,7 @@ export function sessionStart(
 
     return result;
   };
+
   const session = useHooks(
     sessionStartOrg,
     'SessionStart',

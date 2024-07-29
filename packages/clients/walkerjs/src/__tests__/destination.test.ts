@@ -476,7 +476,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
 
-    destinationIgnore.config.mapping!.foo!.bar.ignore = true;
+    destinationIgnore.config.mapping!.foo!.bar!.ignore = true;
     elb('foo bar');
     expect(mockPushA).toHaveBeenCalledTimes(0);
   });
@@ -509,7 +509,6 @@ describe('Destination', () => {
   });
 
   test('set config on init', () => {
-    walkerjs = Walkerjs({ elbLayer: [], pageview: false });
     elb('walker run');
 
     const mockInitA = jest.fn();

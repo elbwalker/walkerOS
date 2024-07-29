@@ -1,5 +1,12 @@
 # @elbwalker/destination-web-plausible
 
+## 3.0.2
+
+### Patch Changes
+
+- Updated dependencies [29571c6]
+  - @elbwalker/walker.js@3.0.2
+
 ## 3.0.1
 
 ### Patch Changes

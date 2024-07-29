@@ -1,5 +1,15 @@
 # @elbwalker/destination-web-piwikpro
 
+## 1.2.2
+
+### Patch Changes
+
+- Updated dependencies [f361e4d]
+- Updated dependencies [29571c6]
+- Updated dependencies [f361e4d]
+  - @elbwalker/utils@3.3.0
+  - @elbwalker/walker.js@3.0.2
+
 ## 1.2.1
 
 ### Patch Changes

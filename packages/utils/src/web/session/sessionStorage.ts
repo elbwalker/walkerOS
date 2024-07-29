@@ -1,4 +1,5 @@
-import type { SessionData, StorageType, SessionWindowConfig } from '../../web';
+import type { WalkerOS } from '@elbwalker/types';
+import type { StorageType, SessionWindowConfig } from '../../web';
 import { storageRead, storageWrite } from '../../web/storage';
 import { sessionWindow } from '../../web/session/sessionWindow';
 import { tryCatch } from '../../core/tryCatch';
@@ -15,7 +16,9 @@ export interface SessionStorageConfig extends SessionWindowConfig {
   pulse?: boolean;
 }
 
-export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
+export function sessionStorage(
+  config: SessionStorageConfig = {},
+): WalkerOS.SessionData {
   const now = Date.now();
   const {
     length = 30, // Session length in minutes
@@ -41,7 +44,7 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
   })(deviceKey, deviceAge, deviceStorage);
 
   // Retrieve or initialize session data
-  const existingSession: SessionData =
+  const existingSession: WalkerOS.SessionData =
     tryCatch(
       (key: string, storage?: StorageType) => {
         const session = JSON.parse(String(storageRead(key, storage)));
@@ -81,7 +84,7 @@ export function sessionStorage(config: SessionStorageConfig = {}): SessionData {
     )(sessionKey, sessionStorage) || {};
 
   // Default session data
-  const defaultSession: Partial<SessionData> = {
+  const defaultSession: Partial<WalkerOS.SessionData> = {
     id: getId(12),
     start: now,
     isNew: true,

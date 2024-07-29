@@ -8,7 +8,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 export * from './types';
 
 export function firebaseStack(
-  customConfig: FirebaseStack.PartialConfig = {}, // @TODO InitConfig
+  customConfig: FirebaseStack.PartialConfig = {},
 ): FirebaseStack.Instance {
   const config = getConfig(customConfig);
   const { elb, instance } = createNodeClient(config.client);

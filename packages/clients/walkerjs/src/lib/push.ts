@@ -1,17 +1,17 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { WebClient, WebDestination } from '../types';
+import type { WebClient } from '../types';
 import { isArgument, isCommand, isElementOrDocument } from './helper';
 import { handleCommand, handleEvent } from './handle';
 import {
   Const,
   assign,
-  debounce,
   isSameType,
   tryCatch,
   useHooks,
 } from '@elbwalker/utils';
 import { allowedToPush } from './consent';
 import { getEntities } from './walker';
+import { destinationInit, destinationPush } from './destination';
 
 export function createPush(instance: WebClient.Instance): WebClient.Elb {
   const push = (
@@ -104,120 +104,45 @@ export function pushPredefined(
   });
 }
 
-export function pushToDestination(
+export function pushToDestinations(
   instance: WebClient.Instance,
-  destination: WebDestination.Destination,
-  event: WalkerOS.Event,
-  useQueue = true,
-): boolean {
-  // Copy the event to prevent mutation
-  event = assign({}, event);
+  destinations: WebClient.Destinations,
+  event?: WalkerOS.Event,
+) {
+  Object.values(destinations).forEach((destination) => {
+    destination.queue = destination.queue || [];
 
-  // Always check for required consent states before pushing
-  if (!allowedToPush(instance, destination)) {
-    if (useQueue) {
-      destination.queue = destination.queue || [];
-      destination.queue.push(event);
+    // Add event to queue stack
+    if (event) destination.queue.push(event);
+
+    // Always check for required consent states before pushing
+    if (!allowedToPush(instance, destination)) return false; // Don't push if not allowed
+
+    // Init destination if events are in queue
+    if (destination.queue.length > 0) {
+      // Initialize the destination if needed
+      const isInitialized = tryCatch(destinationInit)(instance, destination);
+      if (!isInitialized) return false;
     }
 
-    // Stop processing the event on this destination
-    return false;
-  }
+    const { consent, globals, user } = instance;
 
-  // Check for an active mapping for proper event handling
-  let mappingEvent: WebDestination.EventConfig;
-  const mapping = destination.config.mapping;
-  let mappingKey = '';
+    // Process the destinations event queue
+    destination.queue = destination.queue.filter((event) => {
+      // Copy the event to prevent mutation
+      event = event
+        ? assign(event, {
+            // Update previous values with the current state
+            consent,
+            globals,
+            user,
+          })
+        : event; // undefined
 
-  if (mapping) {
-    let mappingEntityKey = event.entity; // Default key is the entity name
-    let mappingEntity = mapping[mappingEntityKey];
-
-    if (!mappingEntity) {
-      // Fallback to the wildcard key
-      mappingEntityKey = '*';
-      mappingEntity = mapping[mappingEntityKey];
-    }
-
-    if (mappingEntity) {
-      let mappingActionKey = event.action; // Default action is the event action
-      mappingEvent = mappingEntity[mappingActionKey];
-
-      if (!mappingEvent) {
-        // Fallback to the wildcard action
-        mappingActionKey = '*';
-        mappingEvent = mappingEntity[mappingActionKey];
-      }
-
-      // Handle individual event settings
-      if (mappingEvent) {
-        // Check if event should be processed or ignored
-        if (mappingEvent.ignore) return false;
-
-        // Check to use specific event names
-        if (mappingEvent.name) event.event = mappingEvent.name;
-
-        // Save the mapping key for later use
-        mappingKey = `${mappingEntityKey} ${mappingActionKey}`;
-      }
-    }
-  }
-
-  const pushed = !!tryCatch(() => {
-    // Destination initialization
-    // Check if the destination was initialized properly or try to do so
-    if (destination.init && !destination.config.init) {
-      const init =
-        useHooks(
-          destination.init,
-          'DestinationInit',
-          instance.hooks,
-        )(destination.config) !== false; // Actively check for errors
-
-      destination.config.init = init;
-
-      // don't push if init is false
-      if (!init) return false;
-    }
-
-    // Debounce the event if needed
-    const batch = mappingEvent?.batch;
-    if (mappingEvent && batch && destination.pushBatch) {
-      const batched = mappingEvent.batched || {
-        key: mappingKey,
-        events: [],
-      };
-      batched.events.push(event);
-
-      mappingEvent.batchFn =
-        mappingEvent.batchFn ||
-        debounce((destination, instance) => {
-          useHooks(
-            destination.pushBatch!,
-            'DestinationPushBatch',
-            instance.hooks,
-          )(batched, destination.config, instance);
-
-          // Reset the batched events queue
-          batched.events = [];
-        }, batch);
-
-      mappingEvent.batched = batched;
-      mappingEvent.batchFn(destination, instance);
-    } else {
-      // It's time to go to the destination's side now
-      useHooks(destination.push, 'DestinationPush', instance.hooks)(
-        event,
-        destination.config,
-        mappingEvent,
-        instance,
-      );
-    }
-
-    return true;
-  })();
-
-  return pushed;
+      //Try to push and remove successful ones from queue
+      return !destinationPush(instance, destination, event);
+    });
+  });
 }
 
 function createEventOrCommand(

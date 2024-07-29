@@ -21,7 +21,9 @@ export interface Config<Custom = unknown, EventCustom = unknown> {
 }
 
 export interface Mapping<EventCustom> {
-  [entity: string]: undefined | { [action: string]: EventConfig<EventCustom> };
+  [entity: string]:
+    | undefined
+    | { [action: string]: undefined | EventConfig<EventCustom> };
 }
 
 export interface Batch<EventCustom> {
