@@ -1,3 +1,4 @@
+export * from './anonymizeIP';
 export * from './assign';
 export * from './castValue';
 export * from './constants';

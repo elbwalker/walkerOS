@@ -235,6 +235,7 @@ describe('Destination core etag', () => {
       'ep.user_session': 's3ss10n',
     });
 
+    // Key events (conversion)
     expect(
       getParameter(
         { ...event, event: 'order complete' },

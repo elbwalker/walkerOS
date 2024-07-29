@@ -65,6 +65,7 @@ export function getParameter(
   // Key events (conversion)
   if (config.keyEvents && config.keyEvents.includes(event.event)) {
     paramsEvent._c = paramsEvent._c || 1; // Flag as key event
+    // @TODO redirect
   }
 
   const eventParams = getEventParams(event, state, paramsEvent);
