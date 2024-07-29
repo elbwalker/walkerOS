@@ -1,5 +1,17 @@
 # @elbwalker/destination-web-api
 
+## 2.4.0
+
+### Minor Changes
+
+- 7a4e91b: API destination should use sendRequest
+  [#406](https://github.com/elbwalker/walkerOS/issues/406)
+
+### Patch Changes
+
+- Updated dependencies [29571c6]
+  - @elbwalker/walker.js@3.0.2
+
 ## 2.3.1
 
 ### Patch Changes

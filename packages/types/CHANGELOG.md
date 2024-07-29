@@ -1,5 +1,12 @@
 # @elbwalker/types
 
+## 3.0.1
+
+### Patch Changes
+
+- 29571c6: queue on false
+  [#410](https://github.com/elbwalker/walkerOS/issues/410)
+
 ## 3.0.0
 
 ### Major Changes

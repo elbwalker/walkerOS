@@ -1,5 +1,18 @@
 # @elbwalker/utils
 
+## 3.3.0
+
+### Minor Changes
+
+- f361e4d: API Utils [#404](https://github.com/elbwalker/walkerOS/issues/404)
+- f361e4d: Create and parse requests
+  [#405](https://github.com/elbwalker/walkerOS/issues/405)
+
+### Patch Changes
+
+- Updated dependencies [29571c6]
+  - @elbwalker/types@3.0.1
+
 ## 3.2.0
 
 ### Minor Changes
