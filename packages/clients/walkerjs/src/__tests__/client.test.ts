@@ -149,9 +149,9 @@ describe('Walkerjs', () => {
     expect(walkerjs.allowed).toBeTruthy();
   });
 
-  test('globals properties', () => {
+  test('globalsStatic', () => {
     const html: string = fs
-      .readFileSync(__dirname + '/html/globals.html')
+      .readFileSync(__dirname + '/html/walker.html')
       .toString();
     document.body.innerHTML = html;
 
@@ -161,15 +161,13 @@ describe('Walkerjs', () => {
       default: true,
       pageview: false,
       session: false,
-      globalsStatic: { out_of: 'override', static: 'value' },
+      globalsStatic: { be: 'water', random: 'value' },
     });
 
     expect(mockDataLayer).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        event: 'entity action',
-        data: { foo: 'bar' },
-        globals: { out_of: 'scope', static: 'value' },
+        globals: { be: 'mindful', its: 'everywhere', random: 'value' },
       }),
     );
 
@@ -178,9 +176,7 @@ describe('Walkerjs', () => {
     expect(mockDataLayer).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        event: 'entity action',
-        data: { foo: 'bar' },
-        globals: { out_of: 'scope', static: 'value' },
+        globals: { be: 'mindful', its: 'everywhere', random: 'value' },
       }),
     );
   });

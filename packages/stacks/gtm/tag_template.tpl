@@ -32,7 +32,7 @@ ___TEMPLATE_PARAMETERS___
   {
     "type": "LABEL",
     "name": "intro",
-    "displayName": "This is the \u003cb\u003ewalkerOS Tag template\u003c/b\u003e (v1.1) for installing and configuring walker.js on a website. Learn more in the \u003ca href\u003d\"https://www.elbwalker.com/docs/stacks/gtm/tag_template\"\u003edocumentation at elbwalker.com\u003c/a\u003e."
+    "displayName": "This is the \u003cb\u003ewalkerOS Tag template\u003c/b\u003e (v1.2) for installing and configuring walker.js on a website. Learn more in the \u003ca href\u003d\"https://www.elbwalker.com/docs/stacks/gtm/tag_template\"\u003edocumentation at elbwalker.com\u003c/a\u003e."
   },
   {
     "type": "GROUP",
@@ -392,6 +392,20 @@ ___TEMPLATE_PARAMETERS___
         "help": "Enabling this option will push every single event to the dataLayer automatically."
       },
       {
+        "type": "TEXT",
+        "name": "destinationDataLayerConfig",
+        "displayName": "dataLayer configuration",
+        "simpleValueType": true,
+        "help": "",
+        "enablingConditions": [
+          {
+            "paramName": "destinationDataLayer",
+            "paramValue": true,
+            "type": "EQUALS"
+          }
+        ]
+      },
+      {
         "type": "PARAM_TABLE",
         "name": "destinations",
         "displayName": "Additional destinations",
@@ -450,8 +464,16 @@ ___TEMPLATE_PARAMETERS___
                 "displayValue": "Consent"
               },
               {
+                "value": "ready",
+                "displayValue": "Ready"
+              },
+              {
                 "value": "run",
                 "displayValue": "Run"
+              },
+              {
+                "value": "session",
+                "displayValue": "Session"
               }
             ]
           },
@@ -500,12 +522,28 @@ ___TEMPLATE_PARAMETERS___
                 "displayValue": "preDestinationPush"
               },
               {
+                "value": "preDestinationPushBatch",
+                "displayValue": "preDestinationPushBatch"
+              },
+              {
                 "value": "postDestinationPush",
                 "displayValue": "postDestinationPush"
               },
               {
+                "value": "postDestinationPushBatch",
+                "displayValue": "postDestinationPushBatch"
+              },
+              {
                 "value": "postPush",
                 "displayValue": "postPush"
+              },
+              {
+                "value": "preSessionStart",
+                "displayValue": "preSessionStart"
+              },
+              {
+                "value": "postSessionStart",
+                "displayValue": "postSessionStart"
               }
             ],
             "valueValidators": [
@@ -583,11 +621,14 @@ function installation() {
       acc[global.key] = global.value;
       return acc;
     }, {});
-    config.globals = globals;
+    config.globalsStatic = globals;
   }
 
   // DataLayer destination
-  if (data.destinationDataLayer) config.dataLayer = true;
+  if (data.destinationDataLayer) {
+    config.dataLayer = true;
+    config.dataLayerConfig = data.destinationDataLayerConfig || {};
+  }
 
   // Session
   if (data.session) {
@@ -640,14 +681,20 @@ if (data.destinations) {
 // On Events
 if (data.on) {
   var onConsent = [];
+  var onReady = [];
   var onRun = [];
+  var onSession = [];
   data.on.forEach(function (on) {
     if (on.trigger == "consent") onConsent.push(on.code);
+    if (on.trigger == "ready") onReady.push(on.code);
     if (on.trigger == "run") onRun.push(on.code);
+    if (on.trigger == "session") onSession.push(on.code);
   });
 
   if (onConsent.length) elb("walker on", "consent", onConsent);
+  if (onReady.length) elb("walker on", "ready", onReady);
   if (onRun.length) elb("walker on", "run", onRun);
+  if (onSession.length) elb("walker on", "session", onSession);
 }
 
 // Hooks

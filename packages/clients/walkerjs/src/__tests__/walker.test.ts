@@ -1,4 +1,4 @@
-import { getAllEvents, getEvents } from '../lib/walker';
+import { getAllEvents, getEvents, getGlobals } from '../lib/walker';
 import { Trigger } from '../lib/trigger';
 import fs from 'fs';
 
@@ -294,6 +294,16 @@ describe('Walker', () => {
         nested: [{ type: 'n', data: { k: 'v' } }],
       },
     ]);
+  });
+
+  test('globalsStatic', () => {
+    document.body.setAttribute('data-elbglobals', 'position:body');
+
+    expect(getGlobals()).toStrictEqual({
+      be: 'mindful',
+      its: 'everywhere',
+      position: 'body',
+    });
   });
 });
 
