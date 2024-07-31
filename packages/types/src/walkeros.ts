@@ -147,12 +147,12 @@ export interface User extends Properties {
   internal?: boolean;
 }
 
-export interface Version {
+export interface Version extends Properties {
   client: string;
   tagging: number;
 }
 
-export interface Source {
+export interface Source extends Properties {
   type: SourceType;
   id: string; // https://github.com/elbwalker/walkerOS
   previous_id: string; // https://www.elbwalker.com/
