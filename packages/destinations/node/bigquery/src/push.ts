@@ -11,11 +11,10 @@ export const push = async function (events: PushEvents, config: Config) {
   return { queue: [] };
 };
 
-export const mapEvent = (event: WalkerOS.Event) => {
+export const mapEvent = (event: WalkerOS.Event): Row => {
   // Required properties
   const destinationEvent: Row = {
     event: event.event,
-    consent: JSON.stringify(event.consent),
     id: event.id,
     entity: event.entity,
     action: event.action,
@@ -24,18 +23,24 @@ export const mapEvent = (event: WalkerOS.Event) => {
   };
 
   // Optional properties
-  if (event.data) destinationEvent.data = JSON.stringify(event.data);
-  if (event.context) destinationEvent.context = JSON.stringify(event.context);
-  if (event.custom) destinationEvent.custom = JSON.stringify(event.custom);
-  if (event.globals) destinationEvent.globals = JSON.stringify(event.globals);
-  if (event.user) destinationEvent.user = event.user;
-  if (event.nested) destinationEvent.nested = JSON.stringify(event.nested);
+  if (event.consent) destinationEvent.consent = stringify(event.consent);
+  if (event.data) destinationEvent.data = stringify(event.data);
+  if (event.context) destinationEvent.context = stringify(event.context);
+  if (event.custom) destinationEvent.custom = stringify(event.custom);
+  if (event.globals) destinationEvent.globals = stringify(event.globals);
+  if (event.user) destinationEvent.user = stringify(event.user);
+  if (event.nested && event.nested.length)
+    destinationEvent.nested = JSON.stringify(event.nested); // Array
   if (event.trigger) destinationEvent.trigger = event.trigger;
   if (event.timing) destinationEvent.timing = event.timing;
   if (event.group) destinationEvent.group = event.group;
   if (event.count) destinationEvent.count = event.count;
-  if (event.version) destinationEvent.version = event.version;
-  if (event.source) destinationEvent.source = event.source;
+  if (event.version) destinationEvent.version = stringify(event.version);
+  if (event.source) destinationEvent.source = stringify(event.source);
 
   return destinationEvent;
 };
+
+function stringify(obj: WalkerOS.AnyObject): undefined | string {
+  return Object.keys(obj).length ? JSON.stringify(obj) : undefined;
+}

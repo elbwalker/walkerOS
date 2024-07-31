@@ -114,24 +114,26 @@ describe('Node Destination BigQuery', () => {
     expect(mockFn).toHaveBeenCalledWith('insert', [
       {
         event: 'entity action',
-        consent: '{"debugging":true}',
         id: '1-gr0up-1',
         entity: 'entity',
         action: 'action',
         timestamp: expect.any(Date),
         server_timestamp: expect.any(Date),
+        consent: '{"debugging":true}',
         data: '{"foo":"bar"}',
         context: '{"dev":["test",1]}',
         custom: '{"bar":"baz"}',
         globals: '{"lang":"ts"}',
-        user: expect.any(Object),
-        nested: expect.any(String),
+        user: '{"id":"us3r","device":"c00k13","session":"s3ss10n"}',
+        nested:
+          '[{"type":"child","data":{"type":"nested"},"nested":[],"context":{"element":["child",0]}}]',
         trigger: 'test',
         timing: 3.14,
         group: 'gr0up',
         count: 1,
-        version: expect.any(Object),
-        source: expect.any(Object),
+        version: '{"client":"0.0.7","tagging":1}',
+        source:
+          '{"type":"jest","id":"https://localhost:80","previous_id":"http://remotehost:9001"}',
       },
     ]);
   });

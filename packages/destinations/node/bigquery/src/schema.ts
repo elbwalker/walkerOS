@@ -39,25 +39,8 @@ export const schema: TableMetadata = {
     },
     {
       name: 'user',
-      type: 'RECORD',
-      description: 'Stored user ids (manually added once)',
-      fields: [
-        {
-          name: 'id',
-          type: 'STRING',
-          description: 'Unique id of a single user',
-        },
-        {
-          name: 'device',
-          type: 'STRING',
-          description: 'Device identifier',
-        },
-        {
-          name: 'session',
-          type: 'STRING',
-          description: 'Temporary session identifier',
-        },
-      ],
+      type: 'JSON',
+      description: 'User IDs for journey stitching',
     },
     {
       name: 'nested',
@@ -116,42 +99,13 @@ export const schema: TableMetadata = {
     },
     {
       name: 'version',
-      type: 'RECORD',
-      description: 'Helpful when working with raw data',
-      fields: [
-        {
-          name: 'client',
-          type: 'STRING',
-          description: 'Version of the client configuration',
-        },
-        {
-          name: 'tagging',
-          type: 'NUMERIC',
-          description: 'Used version number of the tagging',
-        },
-      ],
+      type: 'JSON',
+      description: 'Used versions of the client and tagging and more',
     },
     {
       name: 'source',
-      type: 'RECORD',
-      description: 'Origins of the event',
-      fields: [
-        {
-          name: 'type',
-          type: 'STRING',
-          description: 'Source type of the event (web, app, server, ...))',
-        },
-        {
-          name: 'id',
-          type: 'STRING',
-          description: "Source id of the event's origin (like url)",
-        },
-        {
-          name: 'previous_id',
-          type: 'STRING',
-          description: 'Previous source id (like referrer)',
-        },
-      ],
+      type: 'JSON',
+      description: 'Origins of the event (type, id and previous_id and more)',
     },
     {
       name: 'server_timestamp',

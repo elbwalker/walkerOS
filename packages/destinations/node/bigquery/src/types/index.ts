@@ -1,5 +1,5 @@
 import type { NodeDestination } from '@elbwalker/client-node';
-import type { Handler, WalkerOS } from '@elbwalker/types';
+import type { Handler } from '@elbwalker/types';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Destination
@@ -37,29 +37,22 @@ export interface CustomEventConfig {
 
 export interface Row {
   event: string;
-  data?: string;
-  context?: string;
-  custom?: string;
-  globals?: string;
-  user?: WalkerOS.User;
-  nested?: string;
-  consent: string;
   id: string;
-  trigger?: string;
   entity: string;
   action: string;
   timestamp: Date;
+  server_timestamp: Date;
+  data?: string; // stringified
+  context?: string; // stringified
+  custom?: string; // stringified
+  globals?: string; // stringified
+  user?: string; // stringified
+  nested?: string; // stringified
+  consent?: string; // stringified
+  trigger?: string;
   timing?: number;
   group?: string;
   count?: number;
-  version?: {
-    client?: string;
-    tagging?: number;
-  };
-  source?: {
-    type?: string;
-    id?: string;
-    previous_id?: string;
-  };
-  server_timestamp: Date;
+  version?: string; // stringified
+  source?: string; // stringified
 }
