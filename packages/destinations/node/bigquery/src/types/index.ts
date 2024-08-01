@@ -28,7 +28,6 @@ export interface CustomConfig {
   tableId: string;
   location?: string;
   bigquery?: BigQueryOptions;
-  runSetup?: boolean;
 }
 
 export interface CustomEventConfig {
@@ -36,20 +35,20 @@ export interface CustomEventConfig {
 }
 
 export interface Row {
-  event: string;
-  id: string;
-  entity: string;
-  action: string;
   timestamp: Date;
-  server_timestamp: Date;
+  event: string;
+  createdAt: Date;
   data?: string; // stringified
   context?: string; // stringified
-  custom?: string; // stringified
   globals?: string; // stringified
+  custom?: string; // stringified
   user?: string; // stringified
   nested?: string; // stringified
   consent?: string; // stringified
+  id?: string;
   trigger?: string;
+  entity: string;
+  action: string;
   timing?: number;
   group?: string;
   count?: number;

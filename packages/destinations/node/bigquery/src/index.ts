@@ -1,8 +1,7 @@
-import type { CustomConfig, Destination } from './types';
-import { isSameType, throwError, tryCatchAsync } from '@elbwalker/utils';
+import type { Destination } from './types';
+import { throwError, tryCatchAsync } from '@elbwalker/utils';
 import { getConfig, log } from './config';
 import { push } from './push';
-import { setup } from './setup';
 
 // Types
 export * as DestinationBigQuery from './types';
@@ -16,12 +15,6 @@ export const destinationBigQuery: Destination = {
 
       throwError(error);
     })(partialConfig);
-
-    // Only run setup if enabled
-    // This checks if the dataset and table exists and creates them if not
-    if (config.custom.runSetup) await setup(config);
-
-    if (!isSameType(config.custom, {} as CustomConfig)) return false;
 
     return config;
   },

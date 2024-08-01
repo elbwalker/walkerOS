@@ -68,31 +68,6 @@ describe('Node Destination BigQuery', () => {
     destination.config = {};
   });
 
-  test('runSetup', async () => {
-    await expect(
-      destination.init({ custom: { runSetup: true } }),
-    ).rejects.toThrow(Error);
-
-    const config = await getConfig({
-      runSetup: true,
-      projectId,
-      bigquery: { credentials },
-    });
-
-    expect(await destination.init(config)).toBeTruthy();
-
-    const mockFn = getMockFn(config);
-    expect(mockFn).toHaveBeenCalledWith('dataset', 'walkeros');
-    expect(mockFn).toHaveBeenCalledWith('createDataset', 'walkeros', {
-      location: 'EU',
-    });
-    expect(mockFn).toHaveBeenCalledWith(
-      'createTable',
-      'events',
-      expect.any(Object),
-    );
-  });
-
   test('init', async () => {
     expect(destination.init).toBeDefined();
     if (!destination.init) return;
@@ -113,12 +88,11 @@ describe('Node Destination BigQuery', () => {
     await destination.push([{ event }], config);
     expect(mockFn).toHaveBeenCalledWith('insert', [
       {
+        timestamp: expect.any(Date),
         event: 'entity action',
         id: '1-gr0up-1',
         entity: 'entity',
         action: 'action',
-        timestamp: expect.any(Date),
-        server_timestamp: expect.any(Date),
         consent: '{"debugging":true}',
         data: '{"foo":"bar"}',
         context: '{"dev":["test",1]}',
@@ -134,6 +108,7 @@ describe('Node Destination BigQuery', () => {
         version: '{"client":"0.0.7","tagging":1}',
         source:
           '{"type":"jest","id":"https://localhost:80","previous_id":"http://remotehost:9001"}',
+        createdAt: expect.any(Date),
       },
     ]);
   });

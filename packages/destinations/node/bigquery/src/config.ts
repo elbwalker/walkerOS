@@ -1,13 +1,10 @@
-import { onLog, throwError } from '@elbwalker/utils';
 import type { Config, CustomConfig, PartialConfig } from './types';
-import { BigQuery, type BigQueryOptions } from '@google-cloud/bigquery';
-
-export function log(message: string, verbose?: boolean) {
-  onLog(`Destination BigQuery: ${message}`, verbose);
-}
+import type { BigQueryOptions } from '@google-cloud/bigquery';
+import { onLog, throwError } from '@elbwalker/utils';
+import { BigQuery } from '@google-cloud/bigquery';
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {
-  const custom = partialConfig.custom || ({} as CustomConfig);
+  const custom = partialConfig.custom || {};
   const { projectId, bigquery } = custom;
   let { client, location, datasetId, tableId } = custom;
 
@@ -35,4 +32,8 @@ export function getConfig(partialConfig: PartialConfig = {}): Config {
   const onLog = (message: string) => log(message, partialConfig.verbose);
 
   return { ...partialConfig, custom: customConfig, onLog };
+}
+
+export function log(message: string, verbose?: boolean) {
+  onLog(`Destination BigQuery: ${message}`, verbose);
 }

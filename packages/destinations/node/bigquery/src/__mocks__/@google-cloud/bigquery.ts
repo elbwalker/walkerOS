@@ -10,16 +10,6 @@ class BigQuery {
     return this;
   }
 
-  createDataset() {
-    mockFn('createDataset', ...arguments);
-    return this;
-  }
-
-  createTable() {
-    mockFn('createTable', ...arguments);
-    return this;
-  }
-
   table() {
     mockFn('table', ...arguments);
     return this;
