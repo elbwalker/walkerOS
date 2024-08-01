@@ -11,7 +11,6 @@ export interface SessionStorageConfig extends SessionWindowConfig {
   deviceAge?: number;
   sessionKey?: string;
   sessionStorage?: StorageType;
-  sessionAge?: number;
   length?: number; // Minutes after last update to consider session as expired (default: 30)
   pulse?: boolean;
 }
@@ -27,7 +26,6 @@ export function sessionStorage(
     deviceAge = 30, // Device ID age in days
     sessionKey = 'elbSessionId',
     sessionStorage = 'local',
-    sessionAge = 30, // Session age in minutes
     pulse = false, // Handle the counting
   } = config;
   const windowSession = sessionWindow(config); // Status based on window only
@@ -38,7 +36,7 @@ export function sessionStorage(
     let id = storageRead(key, storage);
     if (!id) {
       id = getId(8); // Create a new device ID
-      storageWrite(key, id, age, storage); // Write device ID to storage
+      storageWrite(key, id, age * 1440, storage); // Write device ID to storage
     }
     return String(id);
   })(deviceKey, deviceAge, deviceStorage);
@@ -62,7 +60,7 @@ export function sessionStorage(
         }
 
         // Check if session is still active
-        if (isStart || session.updated + length * 60 * 1000 < now) {
+        if (isStart || session.updated + length * 60000 < now) {
           // Session has expired
           delete session.id; // Unset session ID
           delete session.referrer; // Unset referrer
@@ -103,7 +101,7 @@ export function sessionStorage(
   );
 
   // Write (updated) session to storage
-  storageWrite(sessionKey, JSON.stringify(session), sessionAge, sessionStorage);
+  storageWrite(sessionKey, JSON.stringify(session), length * 2, sessionStorage);
 
   return session;
 }
