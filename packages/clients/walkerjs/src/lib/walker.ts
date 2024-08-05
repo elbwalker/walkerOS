@@ -327,6 +327,15 @@ function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
     }
   }
 
+  // Shadow DOM traversal
+  if (
+    !elem.parentElement &&
+    elem.getRootNode &&
+    elem.getRootNode() instanceof ShadowRoot
+  ) {
+    return (elem.getRootNode() as ShadowRoot).host as HTMLElement;
+  }
+
   return elem.parentElement;
 }
 
