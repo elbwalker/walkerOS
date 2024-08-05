@@ -1,5 +1,13 @@
 # @elbwalker/walker.js
 
+## 3.0.3
+
+### Patch Changes
+
+- 94f040f: shadow dom [#415](https://github.com/elbwalker/walkerOS/issues/415)
+- Updated dependencies [3aafaee]
+  - @elbwalker/utils@3.4.0
+
 ## 3.0.2
 
 ### Patch Changes

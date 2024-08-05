@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-node-aws",
   "description": "AWS node destination for walkerOS",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -21,8 +21,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-firehose": "^3.606.0",
-    "@elbwalker/client-node": "3.0.1",
-    "@elbwalker/utils": "^3.3.0"
+    "@elbwalker/client-node": "3.0.2",
+    "@elbwalker/utils": "^3.4.0"
   },
   "devDependencies": {
     "@elbwalker/types": "3.0.1"
