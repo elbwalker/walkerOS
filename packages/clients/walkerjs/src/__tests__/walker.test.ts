@@ -305,6 +305,41 @@ describe('Walker', () => {
       position: 'body',
     });
   });
+
+  test('Shadow DOM', () => {
+    const shadowHostOpen = getElem('shadow-host-open');
+    const shadowHostClosed = getElem('shadow-host-closed');
+    const shadowRootOpen = shadowHostOpen.attachShadow({ mode: 'open' });
+    const shadowRootClosed = shadowHostClosed.attachShadow({ mode: 'closed' });
+
+    // Add content to shadow DOM
+    const html = `<p id="shadow-action" data-elbaction="click"></p>`;
+    shadowRootOpen.innerHTML = html;
+    shadowRootClosed.innerHTML = html;
+
+    expect(
+      getEvents(shadowRootOpen.getElementById('shadow-action')!, Trigger.Click),
+    ).toMatchObject([
+      {
+        entity: 'e',
+        action: 'click',
+        data: { k: 'v' },
+      },
+    ]);
+
+    expect(
+      getEvents(
+        shadowRootClosed.getElementById('shadow-action')!,
+        Trigger.Click,
+      ),
+    ).toMatchObject([
+      {
+        entity: 'e',
+        action: 'click',
+        data: { k: 'v' },
+      },
+    ]);
+  });
 });
 
 function getElem(selector: string) {
