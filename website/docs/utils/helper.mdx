@@ -16,6 +16,12 @@ in any environment, the web-helpers are are made for the browser.
 
 ## Core
 
+### anonymizeIP
+
+`anonymizeIP(ip: string): string` is used to anonymize IP addresses (v4) by
+masking the last octet with zeros. This is particularly useful in scenarios
+where you need to store or process IP addresses while maintaining user privacy.
+
 ### assign
 
 `assign<T>(target: T, source: WalkerOS.AnyObject = {}, options?): T` function
@@ -122,6 +128,52 @@ with `{ utm_custom: "custom" }` to get `{ custom: "123" }`.
 This function facilitates the easy retrieval of marketing data, aiding in
 campaign tracking and analysis.
 
+### UserAgent
+
+A collection of functions to extract information from the user agent string.
+
+`parseUserAgent(userAgent?: string): WalkerOS.User` combines all
+userAgent-functions to extract available information to return an object with
+the following properties:
+
+```ts
+// All keys are optional parts of the WalkerOS.User object
+interface User {
+  userAgent: string; // Used UserAgent string
+  browser: string; // Browser name
+  browserVersion: string; // Browser version
+  os: string; // Operating system
+  osVersion: string; // Operating system version
+  deviceType: string; // Device type
+}
+```
+
+#### getBrowser
+
+`getBrowser(userAgent: string): string | undefined` extracts the browser name
+and returns one of `Chrome`, `Firefox`, `Safari`, `Edge`, `IE`, or `undefined`.
+
+#### getBrowserVersion
+
+`getBrowserVersion(userAgent: string): string | undefined` extracts the
+browser's version.
+
+#### getOS
+
+`getOS(userAgent: string): string | undefined` extracts the operating system,
+and returns one of `Windows`, `macOS`, `iOS`, `Android`, `Linux`, or
+`undefined`.
+
+#### getOSVersion
+
+`getOSVersion(userAgent: string): string | undefined` extracts the operating
+system's version.
+
+#### getDeviceType
+
+`getDeviceType(userAgent: string): string | undefined` is a lean implementation
+to extract the device type, which is either `Desktop`, `Tablet`, or `Mobile`.
+
 ### Invocations
 
 The `debounce` and `throttle` functions are both ways to batch invocations,
@@ -182,6 +234,12 @@ onLog('Curious', true); // Logs a message
 ```
 
 This function is for maintaining a standardized logging format is crucial. I
+
+### Request
+
+#### requestToURL
+
+### requestToData
 
 ### sessionStart
 
@@ -267,17 +325,58 @@ the&nbsp;<Link to="/docs/utils/hooks">Hooks</Link> page.
 
 ### getHashNode
 
-`async function getHashNode(str: string, length?: number): Promise<string>`
-generates a hash value from a string, usually used to anonymize or
-fingerprinting. To create a string concatenate all values. Use `length` to limit
-the output.
+`async getHashNode(str: string, length?: number): Promise<string>` generates a
+hash value from a string, usually used to anonymize or fingerprinting. To create
+a string concatenate all values. Use `length` to limit the output.
 
 ```js
 await getHashNode('' + userAgent + language + domain + dayOfMonth, 16);
 // Return a 16 character hash, like 47e0bdd10f04ef13
 ```
 
+### sendNode
+
+`async sendNode(url: string, data?: SendDataValue, options: SendNodeOptions = {}): Promise<SendResponse>`
+sends data to a specified `url` using the official Node.js HTTP/HTTPS modules.
+This function is useful for scenarios where you need to send data to a server or
+API endpoint from a Node.js environment.
+
+```ts
+interface SendNodeOptions {
+  headers?: SendHeaders; // Custom headers to be sent with the request
+  method?: string; // HTTP method to be used for the request (default: POST)
+  timeout?: number; // Request timeout in milliseconds (default: 5000)
+}
+
+interface SendResponse {
+  ok: boolean; // Indicates if the request was successful
+  data?: unknown; // (Parsed) response data (if available)
+  error?: string; // Error message (if request failed)
+}
+```
+
 ## Web
+
+### Browser
+
+These functions are designed to provide mode detailed information about the
+user's browser settings.
+
+> **Note:** Accessing this information might require a user's consent
+
+#### getLanguage
+
+`getLanguage(navigatorRef: Navigator): string | undefined` returns the user's
+preferred language.
+
+#### getTimezone
+
+`getTimezone(): string | undefined` reads the user's timezone from `Intl`
+object.
+
+#### getScreenSize
+
+`getScreenSize(windowRef: Window): string` returns the windows's screen size.
 
 ### getAttribute
 
@@ -297,10 +396,9 @@ easy and direct way to access element attributes.
 
 ### getHashWeb
 
-`async function getHashWeb(str: string, length?: number): Promise<string>`
-generates a hash value from a string, usually used to anonymize or
-fingerprinting. To create a string concatenate all values. Use `length` to limit
-the output.
+`async getHashWeb(str: string, length?: number): Promise<string>` generates a
+hash value from a string, usually used to anonymize or fingerprinting. To create
+a string concatenate all values. Use `length` to limit the output.
 
 ```js
 await getHashWeb('' + userAgent + language + domain + dayOfMonth, 16);
@@ -316,3 +414,60 @@ visible on the page from a users perspective.
 isVisible(document.getElementById('promotion'));
 // Returns true if 'promotion' is visible
 ```
+
+### sendWeb
+
+`async sendWeb(url: string, data?: SendDataValue, options: SendWebOptionsDynamic { transport: 'fetch' }): SendWebReturn`
+sends data to a specified `url` using the browser's native APIs. This function
+is useful for scenarios where you need to send data to a server or API endpoint
+from a web environment. It supports sending data via `fetch`, `beacon`, or
+`XHR`.
+
+```ts
+type SendWebTransport = 'fetch' | 'beacon' | 'xhr';
+
+interface SendWebOptions {
+  headers?: SendHeaders; // Custom headers to be sent with the request
+  transport?: SendWebTransport; // Transport method to be used for the request (default: fetch)
+  method?: string; // HTTP method to be used for the request (default: POST)
+}
+
+interface SendResponse {
+  ok: boolean; // Indicates if the request was successful
+  data?: unknown; // (Parsed) response data (if available)
+  error?: string; // Error message (if request failed)
+}
+```
+
+`sendWeb` calls one of the following functions based on the `transport` option.
+
+#### sendWebAsBeacon
+
+`sendWebAsBeacon(url: string, data?: SendDataValue): SendResponse` sends data to
+a specified `url` using the browser's Beacon API. The Beacon API is designed for
+sending small amounts of data to a server with minimal impact on the user's
+experience. It is typically used for sending analytics data and best for small,
+non-critical data payloads. It ensures data is sent even if the page is being
+closed.
+
+#### sendWebAsFetch
+
+`async sendWebAsFetch(url: string, data?: SendDataValue, options: SendWebOptionsFetch = {}): Promise<SendResponse>`
+sends data to a specified `url` using the browser's Fetch API. It provides a
+modern way to make more powerful and flexible network requests than older `XHR`
+method. It can be used for both simple and complex data transactions and returns
+a promise. Additionally, it supports the `credentials` and `noCors` options.
+
+```ts
+interface SendWebOptionsFetch extends SendWebOptions {
+  credentials?: 'omit' | 'same-origin' | 'include'; // Add credentials option
+  noCors?: boolean; // Add noCors option for fetch transport
+}
+```
+
+#### sendWebAsXhr
+
+`sendWebAsXhr(url: string, data?: SendDataValue, options: SendWebOptions = {}): SendResponse`
+sends data to a specified `url` using the browser's older XMLHttpRequest API.
+It's implemented to make **synchronous requests only**. It's a reliable method
+for sending and receiving data from a server.
