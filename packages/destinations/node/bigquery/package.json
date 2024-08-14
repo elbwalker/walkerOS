@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-node-bigquery",
   "description": "BigQuery node destination for walkerOS",
-  "version": "1.1.2",
+  "version": "2.0.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

@@ -11,31 +11,34 @@ export const push = async function (events: PushEvents, config: Config) {
   return { queue: [] };
 };
 
-export const mapEvent = (event: WalkerOS.Event) => {
-  // Required properties
+export const mapEvent = (event: WalkerOS.Event): Row => {
+  const now = new Date();
+
   const destinationEvent: Row = {
+    timestamp: event.timestamp ? new Date(event.timestamp) : now,
     event: event.event,
-    consent: JSON.stringify(event.consent),
+    createdAt: now,
+    data: stringify(event.data),
+    context: stringify(event.context),
+    globals: stringify(event.globals),
+    user: stringify(event.user),
+    nested: JSON.stringify(event.nested),
+    consent: stringify(event.consent),
     id: event.id,
+    trigger: event.trigger,
     entity: event.entity,
     action: event.action,
-    timestamp: new Date(event.timestamp),
-    server_timestamp: new Date(),
+    custom: stringify(event.custom),
+    timing: event.timing,
+    group: event.group,
+    count: event.count,
+    version: stringify(event.version),
+    source: stringify(event.source),
   };
-
-  // Optional properties
-  if (event.data) destinationEvent.data = JSON.stringify(event.data);
-  if (event.context) destinationEvent.context = JSON.stringify(event.context);
-  if (event.custom) destinationEvent.custom = JSON.stringify(event.custom);
-  if (event.globals) destinationEvent.globals = JSON.stringify(event.globals);
-  if (event.user) destinationEvent.user = event.user;
-  if (event.nested) destinationEvent.nested = JSON.stringify(event.nested);
-  if (event.trigger) destinationEvent.trigger = event.trigger;
-  if (event.timing) destinationEvent.timing = event.timing;
-  if (event.group) destinationEvent.group = event.group;
-  if (event.count) destinationEvent.count = event.count;
-  if (event.version) destinationEvent.version = event.version;
-  if (event.source) destinationEvent.source = event.source;
 
   return destinationEvent;
 };
+
+function stringify(obj?: WalkerOS.AnyObject): undefined | string {
+  return obj && Object.keys(obj).length ? JSON.stringify(obj) : undefined;
+}
