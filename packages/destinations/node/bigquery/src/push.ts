@@ -18,29 +18,27 @@ export const mapEvent = (event: WalkerOS.Event): Row => {
     timestamp: event.timestamp ? new Date(event.timestamp) : now,
     event: event.event,
     createdAt: now,
+    data: stringify(event.data),
+    context: stringify(event.context),
+    globals: stringify(event.globals),
+    user: stringify(event.user),
+    nested: JSON.stringify(event.nested),
+    consent: stringify(event.consent),
+    id: event.id,
+    trigger: event.trigger,
+    entity: event.entity,
+    action: event.action,
+    custom: stringify(event.custom),
+    timing: event.timing,
+    group: event.group,
+    count: event.count,
+    version: stringify(event.version),
+    source: stringify(event.source),
   };
-
-  // Optional properties
-  if (event.entity) destinationEvent.entity = event.entity;
-  if (event.action) destinationEvent.entity = event.action;
-  if (event.consent) destinationEvent.consent = stringify(event.consent);
-  if (event.data) destinationEvent.data = stringify(event.data);
-  if (event.context) destinationEvent.context = stringify(event.context);
-  if (event.custom) destinationEvent.custom = stringify(event.custom);
-  if (event.globals) destinationEvent.globals = stringify(event.globals);
-  if (event.user) destinationEvent.user = stringify(event.user);
-  if (event.nested && event.nested.length)
-    destinationEvent.nested = JSON.stringify(event.nested); // Array
-  if (event.trigger) destinationEvent.trigger = event.trigger;
-  if (event.timing) destinationEvent.timing = event.timing;
-  if (event.group) destinationEvent.group = event.group;
-  if (event.count) destinationEvent.count = event.count;
-  if (event.version) destinationEvent.version = stringify(event.version);
-  if (event.source) destinationEvent.source = stringify(event.source);
 
   return destinationEvent;
 };
 
-function stringify(obj: WalkerOS.AnyObject): undefined | string {
-  return Object.keys(obj).length ? JSON.stringify(obj) : undefined;
+function stringify(obj?: WalkerOS.AnyObject): undefined | string {
+  return obj && Object.keys(obj).length ? JSON.stringify(obj) : undefined;
 }
