@@ -14,4 +14,5 @@ export * from './throwError';
 export * from './trim';
 export * from './tryCatch';
 export * from './useHooks';
+export * from './userAgent';
 export * from './validate';

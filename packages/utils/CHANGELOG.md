@@ -1,5 +1,12 @@
 # @elbwalker/utils
 
+## 3.4.0
+
+### Minor Changes
+
+- 3aafaee: sessionStorage device age
+  [#413](https://github.com/elbwalker/walkerOS/issues/413)
+
 ## 3.3.0
 
 ### Minor Changes

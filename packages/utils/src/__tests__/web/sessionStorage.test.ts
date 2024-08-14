@@ -179,7 +179,7 @@ describe('SessionStorage', () => {
     expect(mockStorageWrite).toHaveBeenCalledWith(
       'elbSessionId',
       expect.any(String),
-      30,
+      60,
       'local',
     );
     const obj = JSON.parse(mockStorageWrite.mock.calls[0][1]);
@@ -198,19 +198,19 @@ describe('SessionStorage', () => {
     expect(mockStorageWrite).toHaveBeenCalledWith(
       'elbSessionId',
       expect.any(String),
-      30,
+      60,
       'local',
     );
 
     sessionStorage({
-      sessionAge: 5,
+      length: 5,
       sessionKey: 'foo',
       sessionStorage: 'session',
     });
     expect(mockStorageWrite).toHaveBeenCalledWith(
       'foo',
       expect.any(String),
-      5,
+      10,
       'session',
     );
   });
@@ -303,5 +303,12 @@ describe('SessionStorage', () => {
       isNew: true,
       runs: 1,
     });
+  });
+
+  test('storage expiry dates', () => {
+    sessionStorage({ length: 60, deviceAge: 42 });
+
+    expect(mockStorageWrite.mock.calls[0][2]).toBe(60480); // 42 days in minutes
+    expect(mockStorageWrite.mock.calls[1][2]).toBe(120); // double the session length
   });
 });

@@ -1,5 +1,12 @@
 # @elbwalker/destination-web-meta-pixel
 
+## 2.2.3
+
+### Patch Changes
+
+- Updated dependencies [94f040f]
+  - @elbwalker/walker.js@3.0.3
+
 ## 2.2.2
 
 ### Patch Changes

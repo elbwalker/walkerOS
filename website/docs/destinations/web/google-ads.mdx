@@ -29,7 +29,7 @@ in both a Node environment and directly in the browser.
 ```js
 const config = {
   custom: {
-    conversionId: 'AW-123456789',
+    conversionId: 'AW-123456789', // Required
     currency: 'EUR',
     defaultValue: 1,
   },
@@ -39,7 +39,7 @@ const config = {
       // e.g. complete
       action: {
         custom: {
-          label: 'abc',
+          label: 'abc', // Required
           id: 'order_id',
           value: 'revenue',
         },
