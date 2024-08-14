@@ -12,18 +12,17 @@ export const push = async function (events: PushEvents, config: Config) {
 };
 
 export const mapEvent = (event: WalkerOS.Event): Row => {
-  // Required properties not anymore
-  const timestamp = event.timestamp ? new Date(event.timestamp) : new Date();
+  const now = new Date();
+
   const destinationEvent: Row = {
-    timestamp,
+    timestamp: event.timestamp ? new Date(event.timestamp) : now,
     event: event.event,
-    id: event.id,
-    entity: event.entity,
-    action: event.action,
-    createdAt: new Date(),
+    createdAt: now,
   };
 
   // Optional properties
+  if (event.entity) destinationEvent.entity = event.entity;
+  if (event.action) destinationEvent.entity = event.action;
   if (event.consent) destinationEvent.consent = stringify(event.consent);
   if (event.data) destinationEvent.data = stringify(event.data);
   if (event.context) destinationEvent.context = stringify(event.context);

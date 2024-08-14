@@ -47,8 +47,8 @@ export interface Row {
   consent?: string; // stringified
   id?: string;
   trigger?: string;
-  entity: string;
-  action: string;
+  entity?: string;
+  action?: string;
   timing?: number;
   group?: string;
   count?: number;
