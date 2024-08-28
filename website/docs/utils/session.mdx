@@ -48,6 +48,7 @@ returns an object with several properties. If a new session is detected,
 | id        | string  | Randomly generated or previously stored session id  |
 | start     | number  | Timestamp of session start                          |
 | marketing | true    | If the session was started by a marketing parameter |
+| referrer  | string  | Hostname of the referring site if available         |
 
 With `storage: true` and eventually granted `consent`, the returning object will
 be extended with the following:

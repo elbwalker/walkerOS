@@ -9,9 +9,9 @@ export default function LegalImprintContentEN() {
           <p>
             <b>elbwalker GmbH</b>
             <br />
-            Bernstorffstraße 118
+            Gerhofstraße 1-3
             <br />
-            22767 Hamburg
+            20354 Hamburg
           </p>
           <p>
             Email: hello@elbwalker.com

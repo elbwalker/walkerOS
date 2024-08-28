@@ -35,8 +35,8 @@ export default function LegalPrivacyContentDE() {
               <br />
               Geschäftsführer: Alexander Kirtzel, Ayla Prinz
               <br />
-              Bernstorffstraße 118
-              <br /> 22767 Hamburg
+              Gerhofstraße 1-3
+              <br /> 20354 Hamburg
               <br /> E-Mail: hello@elbwalker.com
             </p>
           </div>
@@ -423,7 +423,7 @@ export default function LegalPrivacyContentDE() {
                 <p>
                   Um nachvollziehen zu können, welche Inhalte unserer Website
                   für Nutzer interessant sind, binden wir den „Walker“ der
-                  elbwalker GmbH, Bernstorffstraße 118, 22767 Hamburg, ein. Der
+                  elbwalker GmbH, Gerhofstraße 1-3, 20354 Hamburg, ein. Der
                   Walker ist ein Tool, mithilfe dessen wir bspw. nachvollziehen
                   können, welche Buttons auf unserer Website geklickt werden und
                   welche Angebote unserer Website in Anspruch genommen werden.

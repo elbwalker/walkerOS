@@ -34,8 +34,8 @@ export default function LegalPrivacyContentEN() {
               <br />
               Managing Director: Alexander Kirtzel, Ayla Prinz
               <br />
-              Bernstorffstraße 118
-              <br /> 22767 Hamburg
+              Gerhofstraße 1-3
+              <br /> 20354 Hamburg
               <br /> E-Mail: hello@elbwalker.com
             </p>
           </div>
@@ -379,7 +379,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   In order to be able to understand which contents of our
                   website are interesting for users, we integrate the "Walker"
-                  from elbwalker GmbH, Bernstorffstraße 118, 22767 Hamburg. The
+                  from elbwalker GmbH, Gerhofstraße 1-3, 20354 Hamburg. The
                   Walker is a tool with which we can, for example, understand
                   which buttons are clicked on our website and which offers on
                   our website are being used. In order to be able to track

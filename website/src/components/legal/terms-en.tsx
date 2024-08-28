@@ -8,7 +8,7 @@ export default function LegalTermsContentEN() {
           <h3 className="text-gray-50">1. Scope / General </h3>
           <p>
             1.1 For the business relationship between elbwalker GmbH,
-            Bernstorffstraße 118, 22767 Hamburg (hereinafter referred to as
+            Gerhofstraße 1-3, 20354 Hamburg (hereinafter referred to as
             elbwalker), and the customer (hereinafter referred to as user), the
             following General Terms of Use apply exclusively in the version
             valid at the time the contract was concluded. Deviating conditions

@@ -8,7 +8,7 @@ export default function LegalTermsContentDE() {
           <h3 className="text-gray-50">1. Geltungsbereich /Allgemeines</h3>
           <p>
             1.1 Für die Geschäftsbeziehung zwischen elbwalker GmbH,
-            Bernstorffstr. 118, 22767 Hamburg (nachfolgend elbwalker genannt),
+            Gerhofstraße 1-3, 20354 Hamburg (nachfolgend elbwalker genannt),
             und dem Kunden (nachfolgend Nutzer genannt) gelten ausschließlich
             die nachfolgenden Allgemeinen Nutzungsbedingungen in ihrer *zum
             Zeitpunkt bei Vertragsschluss gültigen Fassung. Abweichende
