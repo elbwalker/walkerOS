@@ -2,7 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { SessionStorageConfig } from './';
 import { sessionStorage } from './sessionStorage';
 import { sessionWindow } from './sessionWindow';
-import { elb } from '../elb';
+import { elb as elbOrg } from '../elb';
 
 export interface SessionConfig extends SessionStorageConfig {
   consent?: string;
@@ -22,6 +22,7 @@ export function sessionStart(
   config: SessionConfig = {},
 ): WalkerOS.SessionData | void {
   const { cb, consent, instance, storage } = config;
+  const elb = instance?.push || elbOrg;
   const sessionFn: SessionFunction = storage ? sessionStorage : sessionWindow;
 
   // Consent
@@ -60,7 +61,11 @@ function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
   return func;
 }
 
-const defaultCb: SessionCallback = (session): WalkerOS.SessionData => {
+const defaultCb: SessionCallback = (
+  session,
+  instance,
+): WalkerOS.SessionData => {
+  const elb = instance?.push || elbOrg;
   const user: WalkerOS.User = {};
 
   // User.session is the session ID

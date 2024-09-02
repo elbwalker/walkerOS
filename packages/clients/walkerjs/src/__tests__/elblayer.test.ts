@@ -264,6 +264,16 @@ describe('ElbLayer', () => {
       push: mockDest2,
     });
 
+    // Regular session start calls to both
+    expect(mockDest1).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'session start' }),
+      expect.anything(),
+      undefined,
+      expect.anything(),
+    );
+    expect(mockDest2).toHaveBeenCalledTimes(1);
+    jest.clearAllMocks();
+
     customLayer1.push('e a');
     expect(mockDest1).toHaveBeenCalled();
     expect(mockDest2).not.toHaveBeenCalled();
@@ -340,6 +350,8 @@ describe('ElbLayer', () => {
 
   test('command order', () => {
     walkerjs = Walkerjs();
+    const pushSpy = jest.spyOn(walkerjs, 'push');
+
     elb('walker run');
 
     // Arguments
@@ -348,8 +360,8 @@ describe('ElbLayer', () => {
     );
 
     // Parameters
-    expect((w.elbLayer[1] as unknown[])[0]).toBe('walker user');
-    expect((w.elbLayer[2] as unknown[])[0]).toBe('session start');
+    expect(pushSpy).toHaveBeenCalledWith('walker user', expect.any(Object));
+    expect(pushSpy).toHaveBeenCalledWith('session start', expect.any(Object));
   });
 
   test('custom push', () => {
