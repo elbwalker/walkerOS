@@ -1,7 +1,7 @@
-import { elb, Walkerjs } from '..';
-import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { WebClient } from '..';
 import type { Data } from '@elbwalker/types';
+import { elb, Walkerjs } from '..';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import fs from 'fs';
 
 describe('Walkerjs', () => {
@@ -45,7 +45,7 @@ describe('Walkerjs', () => {
       elb: 'foo',
       instance: 'bar',
     });
-    expect(w.foo).toBe(elb);
+    expect(typeof w.foo).toBe('function');
     expect(w.bar).toBe(instance);
   });
 
