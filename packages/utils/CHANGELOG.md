@@ -1,5 +1,12 @@
 # @elbwalker/utils
 
+## 3.4.1
+
+### Patch Changes
+
+- cc2c041: elb with custom elbLayer support
+  [#419[(https://github.com/elbwalker/walkerOS/issues/419)
+
 ## 3.4.0
 
 ### Minor Changes

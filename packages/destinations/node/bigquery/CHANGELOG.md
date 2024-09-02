@@ -1,5 +1,11 @@
 # @elbwalker/destination-node-bigquery
 
+## 2.0.1
+
+### Patch Changes
+
+- @elbwalker/client-node@3.0.3
+
 ## 2.0.0
 
 ### Major Changes

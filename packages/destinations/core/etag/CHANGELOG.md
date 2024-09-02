@@ -1,5 +1,12 @@
 # @elbwalker/destination-core-etag
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [cc2c041]
+  - @elbwalker/walker.js@3.0.4
+
 ## 0.0.3
 
 ### Patch Changes

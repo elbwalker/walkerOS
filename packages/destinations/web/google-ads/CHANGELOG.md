@@ -1,5 +1,12 @@
 # @elbwalker/destination-web-google-ads
 
+## 2.2.4
+
+### Patch Changes
+
+- Updated dependencies [cc2c041]
+  - @elbwalker/walker.js@3.0.4
+
 ## 2.2.3
 
 ### Patch Changes

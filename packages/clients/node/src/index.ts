@@ -17,7 +17,7 @@ export function createNodeClient(customConfig?: NodeClient.InitConfig) {
 export function nodeClient(
   customConfig: NodeClient.PartialConfig = {},
 ): NodeClient.Instance {
-  const client = '3.0.2'; // Client version
+  const client = '3.0.3'; // Client version
   const state = getState(customConfig);
   const instance: NodeClient.Instance = {
     client,
