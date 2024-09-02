@@ -6,13 +6,15 @@ import { createPush, elbLayerInit } from './lib/push';
 import { run } from './lib/run';
 import { createSessionStart } from './lib/session';
 import { getState } from './lib/state';
-import { elb, initGlobalTrigger, ready } from './lib/trigger';
+import { createElb, initGlobalTrigger, ready } from './lib/trigger';
 import { getAllEvents, getEvents, getGlobals } from './lib/walker';
 import { dataLayerDestination } from './lib/destination';
 
 // Export types and elb
 export * from './types';
 export { elb };
+
+const elb = createElb();
 
 export function Walkerjs(
   customConfig: WebClient.InitConfig = {},
@@ -41,7 +43,9 @@ export function Walkerjs(
 
   // Assign instance and/or elb to the window object
   if (config.elb)
-    (window as unknown as Record<string, unknown>)[config.elb] = elb;
+    (window as unknown as Record<string, unknown>)[config.elb] = createElb(
+      config.elbLayer,
+    );
   if (config.instance)
     (window as unknown as Record<string, unknown>)[config.instance] = instance;
 

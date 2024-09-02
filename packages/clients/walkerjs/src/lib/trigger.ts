@@ -1,4 +1,4 @@
-import type { Walker, WebClient } from '../types';
+import { Walker, WebClient } from '../types';
 import { onApply } from './on';
 import {
   getElbAttributeName,
@@ -19,8 +19,16 @@ let visibleObserver: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
 
-const elb = elbOrg as WebClient.Elb;
-export { elb };
+export const createElb: (customLayer?: WebClient.ElbLayer) => WebClient.Elb = (
+  customLayer?,
+) => {
+  return customLayer
+    ? function () {
+        // eslint-disable-next-line prefer-rest-params
+        customLayer.push(arguments);
+      }
+    : (elbOrg as WebClient.Elb);
+};
 
 export const Trigger: { [key: string]: Walker.Trigger } = {
   Click: 'click',
@@ -58,7 +66,7 @@ export function load(instance: WebClient.Instance) {
   // Trigger static page view if enabled
   if (pageview) {
     const [data, context] = getPageViewData(prefix);
-    elb('page view', data, Trigger.Load, context);
+    instance.push('page view', data, Trigger.Load, context);
   }
 
   initScopeTrigger(instance);
