@@ -37,7 +37,8 @@ export type ParametersRequest = ParametersBasic &
   ParametersConsent &
   ParametersDevice &
   ParametersDocument &
-  ParametersSession;
+  ParametersSession &
+  ParametersEcommerce;
 
 export interface ParametersBasic {
   v: '2'; // Protocol version, always 2 for GA4
@@ -58,6 +59,8 @@ export interface ParametersBrowser {
   uap?: string; // Platform
   uapv?: string; // Platform version
   ul?: string; // User language
+  uip?: string; // IP override
+  _uc?: string; // User country
 }
 
 export interface ParametersConsent {
@@ -94,4 +97,12 @@ export interface ParametersSession {
   _ss?: 1 | 2; // Session start
   sct?: number; // Session count
   seg?: 1; // Session engaged
+}
+
+export interface ParametersEcommerce {
+  'ep.transaction_id'?: string; // Transaction ID
+  'epn.value'?: number; // Value of the transaction
+  'epn.tax'?: number; // Tax applied
+  'epn.shipping'?: number; // Shipping cost
+  'ep.coupon'?: string; // Coupon code
 }
