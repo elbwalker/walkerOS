@@ -8,4 +8,4 @@ export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 
 export interface CustomConfig extends DestinationCoreEtag.Config {}
 
-export interface CustomEventConfig {}
+export interface CustomEventConfig extends DestinationCoreEtag.EventConfig {}

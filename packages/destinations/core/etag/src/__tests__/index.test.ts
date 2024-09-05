@@ -180,6 +180,7 @@ describe('Destination core etag', () => {
           params: { gcs: 'G111' },
           paramsEvent: { 'epn.data_id': 3.14, 'epn.event_timing': 42 },
         },
+        {},
         {
           language: 'de-DE',
           pageTitle: 'Demo',

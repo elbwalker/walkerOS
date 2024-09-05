@@ -6,6 +6,7 @@ export * from './getClientId';
 export * from './getConsentParams';
 export * from './getDeviceParams';
 export * from './getDocumentParams';
+export * from './getEcommerceParams';
 export * from './getEventParams';
 export * from './getPageViewEvent';
 export * from './getParameter';

@@ -1,11 +1,12 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config, Context, Parameters } from './types';
+import type { Config, Context, EventConfig, Parameters } from './types';
 import { getParameter } from './getParameter';
 import { getPageViewEvent } from './getPageViewEvent';
 
 export function getParameters(
   events: WalkerOS.Events,
   config: Config,
+  eventConfig: EventConfig = {},
   context: Context = {},
 ): Parameters {
   const parameters: Parameters = [];
@@ -28,11 +29,13 @@ export function getParameters(
 
     // page_view
     if (event.event == (config.pageView || 'page view')) {
-      parameters.push(getParameter(getPageViewEvent(event), config, context));
+      parameters.push(
+        getParameter(getPageViewEvent(event), config, {}, context),
+      );
     }
 
     // Current event
-    parameters.push(getParameter(event, config, context));
+    parameters.push(getParameter(event, config, eventConfig, context));
   });
 
   return parameters;

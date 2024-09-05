@@ -13,6 +13,10 @@ export interface Config extends Partial<State> {
   sessionStart?: string; // Name of the session start event
 }
 
+export interface EventConfig {
+  value?: string; // @TODO MappingValueOptions
+}
+
 export interface State {
   count: number; // Event count
   lastEngagement: number; // Last event timestamp

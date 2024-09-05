@@ -1,6 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type {
   Config,
+  EventConfig,
   Context,
   Parameter,
   ParametersRequest,
@@ -13,6 +14,7 @@ import {
   getConsentMode,
   getDeviceParams,
   getDocumentParams,
+  getEcommerceParams,
   getEventParams,
   getSessionParams,
 } from '.';
@@ -20,6 +22,7 @@ import {
 export function getParameter(
   event: WalkerOS.Event,
   config: Config,
+  eventConfig: EventConfig = {},
   context: Context = {},
 ): Parameter {
   const { user = {} } = event;
@@ -42,6 +45,7 @@ export function getParameter(
     ...getClientId(user), // Client ID
     ...getDeviceParams(user), // User parameters
     ...getDocumentParams(event, context.pageTitle), // Document parameters
+    ...getEcommerceParams(event, eventConfig), // Ecommerce parameters
     ...getSessionParams(event, state, context.session), // Session parameters
     ...config.params, // Custom parameters override defaults
   };

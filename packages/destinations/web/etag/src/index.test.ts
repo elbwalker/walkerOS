@@ -14,18 +14,22 @@ describe('Destination web etag', () => {
   let destination: DestinationWebEtag.Destination;
   const url = 'localhost?';
   const measurementId = 'G-XXXXXXX';
-  const event = { event: 'entity action', timing: 42 } as WalkerOS.Event;
-  // let customDefault: DestinationWebEtag.CustomConfig;
+  const event = {
+    event: 'entity action',
+    timing: 42,
+    data: { total: 3.14 },
+  } as unknown as WalkerOS.Event;
 
   function push(
     event: unknown,
     custom?: DestinationWebEtag.CustomConfig,
+    eventConfig?: DestinationWebEtag.CustomEventConfig,
     instance?: unknown,
   ) {
     destination.push(
       event as WalkerOS.Event,
       custom ? { custom } : destination.config,
-      undefined,
+      { custom: eventConfig },
       instance as WebClient.Instance,
     );
   }
@@ -240,6 +244,12 @@ describe('Destination web etag', () => {
     expect(requestedUrl(mockSend)).toContain('uap=macOS');
     expect(requestedUrl(mockSend)).toContain('ul=de-de');
     expect(requestedUrl(mockSend)).toContain('uamb=0');
+  });
+
+  test('ecommerce params', () => {
+    push(event, { measurementId }, { value: 'data.total' });
+
+    expect(requestedUrl(mockSend)).toContain('epn.value=3.14');
   });
 
   test('header', () => {

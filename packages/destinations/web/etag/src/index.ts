@@ -16,9 +16,11 @@ export const destinationEtag: Destination = {
       return false;
   },
 
-  push(event, config) {
+  push(event, config, mapping = {}) {
     const { custom } = config;
     if (!custom || !custom.measurementId) return;
+
+    const eventConfig = mapping.custom || {};
 
     const userAgent = navigator.userAgent;
     const context: DestinationCoreEtag.Context = {
@@ -27,7 +29,7 @@ export const destinationEtag: Destination = {
       language: navigator.language,
     };
 
-    const parameters = getParameters([event], custom, context);
+    const parameters = getParameters([event], custom, eventConfig, context);
 
     parameters.forEach((parameter) => {
       sendRequest(custom, requestToParameter(parameter.path), parameter.body);
