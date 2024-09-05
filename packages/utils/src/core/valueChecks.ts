@@ -1,4 +1,4 @@
-export function hasValue(value: unknown): boolean {
+export function hasValue<T>(value: T): value is Exclude<T, undefined | null> {
   return value !== undefined && value !== null && value !== '';
 }
 

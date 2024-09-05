@@ -12,7 +12,7 @@ export function getMappingValue(
   event: WalkerOS.Event,
   mapping?: MappingValue,
   defaultValue?: unknown,
-): unknown {
+): unknown | undefined {
   if (!mapping) return defaultValue;
 
   const mappingObject: MappingValue = isSameType(mapping, '' as string)

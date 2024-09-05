@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { SendHeaders } from '@elbwalker/utils';
+import type { MappingValue, SendHeaders } from '@elbwalker/utils';
 
 export interface Config extends Partial<State> {
   measurementId: string; // Measurement ID
@@ -14,7 +14,8 @@ export interface Config extends Partial<State> {
 }
 
 export interface EventConfig {
-  value?: string; // @TODO MappingValueOptions
+  id?: MappingValue;
+  value?: MappingValue;
 }
 
 export interface State {

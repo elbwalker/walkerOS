@@ -22,4 +22,8 @@ describe('getMappingValue', () => {
       getMappingValue(event, { key: 'data.nope', default: 'fallback' }),
     ).toBe('fallback');
   });
+
+  test('empty', () => {
+    expect(getMappingValue(event)).toBeUndefined();
+  });
 });

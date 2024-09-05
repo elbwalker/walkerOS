@@ -42,6 +42,7 @@ describe('Destination core etag', () => {
         glow: 'balls',
       },
       user,
+      id: 'f00b4r',
       timing: 42,
       source: {
         id: 'localhost',
@@ -109,6 +110,7 @@ describe('Destination core etag', () => {
       en: 'entity data',
       _et: expect.any(Number),
       'epn.data_id': 3.14,
+      'ep.event_id': 'f00b4r',
       'epn.event_timing': 42,
       'ep.data_foo': 'bar',
       'ep.context_env': 'dev',
@@ -180,7 +182,7 @@ describe('Destination core etag', () => {
           params: { gcs: 'G111' },
           paramsEvent: { 'epn.data_id': 3.14, 'epn.event_timing': 42 },
         },
-        {},
+        { id: 'data.id', value: 'data.id' },
         {
           language: 'de-DE',
           pageTitle: 'Demo',
@@ -224,6 +226,7 @@ describe('Destination core etag', () => {
       en: 'entity data',
       _et: expect.any(Number),
       'epn.data_id': 3.14,
+      'ep.event_id': 'f00b4r',
       'epn.event_timing': 42,
       'ep.data_foo': 'bar',
       'ep.context_env': 'dev',
@@ -234,6 +237,8 @@ describe('Destination core etag', () => {
       'ep.user_id': 'us3r',
       'ep.user_screenSize': '800x600',
       'ep.user_session': 's3ss10n',
+      'ep.transaction_id': '3.14', // @TODO 'f00b4r',
+      'epn.value': 3.14,
     });
 
     // Key events (conversion)
