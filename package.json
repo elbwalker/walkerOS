@@ -25,6 +25,7 @@
     "@elbwalker/tsconfig": "*",
     "@elbwalker/tsup": "*",
     "eslint-config-custom": "*",
+    "facebook-nodejs-business-sdk": "^20.0.3",
     "turbo": "^2.0.5",
     "typescript": "^5.5.2"
   },

@@ -20,7 +20,10 @@ export type PartialConfig = NodeDestination.Config<
 
 export type PushEvents = NodeDestination.PushEvents<CustomEventConfig>;
 
-export interface CustomConfig {}
+export interface CustomConfig {
+  pixel_id: string;
+  access_token: string;
+}
 
 export interface CustomEventConfig {
   // Custom destination event mapping properties
