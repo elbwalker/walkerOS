@@ -24,6 +24,7 @@
     "@elbwalker/jest": "*",
     "@elbwalker/tsconfig": "*",
     "@elbwalker/tsup": "*",
+    "@types/facebook-nodejs-business-sdk": "^20.0.2",
     "eslint-config-custom": "*",
     "facebook-nodejs-business-sdk": "^20.0.3",
     "turbo": "^2.0.5",
