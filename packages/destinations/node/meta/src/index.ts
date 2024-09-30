@@ -16,7 +16,7 @@ export const destinationMeta: Destination = {
       log('Init error', partialConfig.verbose);
 
       throwError(error);
-    })();
+    })(partialConfig);
 
     return config;
   },
