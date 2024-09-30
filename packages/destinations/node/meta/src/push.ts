@@ -1,11 +1,10 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Config, Mapping, PushEvents } from './types';
-import bizSdk from 'facebook-nodejs-business-sdk';
+import type { ServerEvent } from 'facebook-nodejs-business-sdk';
+import * as bizSdk from 'facebook-nodejs-business-sdk';
 
 export const push = async function (events: PushEvents, config: Config) {
-  const { access_token, pixel_id } = config.custom;
-  events;
-  config;
+  const { access_token, pixel_id, test_code } = config.custom;
 
   bizSdk.FacebookAdsApi.init(access_token);
 
@@ -13,28 +12,33 @@ export const push = async function (events: PushEvents, config: Config) {
     mapEvent(event.event, event.mapping),
   );
 
-  const EventRequest = bizSdk.EventRequest;
-  const eventRequest = new EventRequest(access_token, pixel_id).setEvents(
+  const eventRequest = new bizSdk.EventRequest(
+    access_token,
+    pixel_id,
     serverEvents,
-  );
+  )
+    .setNamespaceId(new Date().getTime().toString()) // Must be a number but only accepts string
+    .setUploadId('1') // Must be a number but only accepts string
+    .setDebugMode(true);
 
-  eventRequest.execute().then(
-    (response) => {
-      console.log('Response: ', response);
+  if (test_code) eventRequest._test_event_code = test_code;
+
+  return eventRequest.execute().then(
+    () => {
+      return {};
     },
-    (err) => {
-      console.error('Error: ', err);
+    (err: unknown) => {
+      throw err;
     },
   );
-
-  return { queue: [] };
 };
 
 export const mapEvent = (
   event: WalkerOS.Event,
   mapping: Mapping = {},
-): bizSdk.ServerEvent => {
+): ServerEvent => {
   mapping; // @TODO
+  const { user, source } = event;
 
   const Content = bizSdk.Content;
   const CustomData = bizSdk.CustomData;
@@ -44,11 +48,10 @@ export const mapEvent = (
   let userData = new UserData();
   // @TODO
   // .setEmails(['joe@eg.com'])
-  // .setPhones(['12345678901', '14251234567'])
+  // .setPhones(['12345678901', '14251234567']);
   // .setFbp('fb.1.1558571054389.1098115397') // _fbp cookie
   // .setFbc('fb.1.1554763741205.AbCdEfGhIjKlMnOpQrStUvWxYz1234567890'); // Facebook Click ID
-
-  const { user, source } = event;
+  if (user.city) userData = userData.setCity(user.city);
 
   if (user.userAgent) userData = userData.setClientUserAgent(user.userAgent);
   if (user.ip) userData = userData.setClientIpAddress(user.ip);
@@ -60,13 +63,19 @@ export const mapEvent = (
     .setCurrency('usd') // @TODO
     .setValue(123.45); // @TODO
 
+  const timestamp = Math.floor(
+    (event.timestamp || new Date().getTime()) / 1000,
+  );
+  const actionSource = source.type === 'web' ? 'website' : 'server';
+
   const serverEvent = new ServerEvent()
+    .setEventId(event.id)
     .setEventName(event.event)
-    .setEventTime(event.timestamp)
+    .setEventTime(timestamp)
     .setUserData(userData)
     .setCustomData(customData)
     .setEventSourceUrl(source.id)
-    .setActionSource(source.type);
+    .setActionSource(actionSource);
 
   return serverEvent;
 };

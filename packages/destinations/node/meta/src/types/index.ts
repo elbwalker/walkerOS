@@ -23,8 +23,9 @@ export type Mapping = NodeDestination.EventConfig<CustomEventConfig>;
 export type PushEvents = NodeDestination.PushEvents<CustomEventConfig>;
 
 export interface CustomConfig {
-  pixel_id: string;
   access_token: string;
+  pixel_id: string;
+  test_code?: string;
 }
 
 export interface CustomEventConfig {
