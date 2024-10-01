@@ -25,6 +25,7 @@ export type PushEvents = NodeDestination.PushEvents<CustomEventConfig>;
 export interface CustomConfig {
   access_token: string;
   pixel_id: string;
+  debug?: boolean;
   test_code?: string;
 }
 

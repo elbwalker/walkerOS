@@ -1,26 +1,28 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Config, Mapping, PushEvents } from './types';
-import type { ServerEvent } from 'facebook-nodejs-business-sdk';
-import * as bizSdk from 'facebook-nodejs-business-sdk';
+import {
+  Content,
+  CustomData,
+  EventRequest,
+  FacebookAdsApi,
+  ServerEvent,
+  UserData,
+} from 'facebook-nodejs-business-sdk';
 
 export const push = async function (events: PushEvents, config: Config) {
-  const { access_token, pixel_id, test_code } = config.custom;
+  const { access_token, pixel_id, debug, test_code } = config.custom;
 
-  bizSdk.FacebookAdsApi.init(access_token);
+  FacebookAdsApi.init(access_token);
 
   const serverEvents = events.map((event) =>
     mapEvent(event.event, event.mapping),
   );
 
-  const eventRequest = new bizSdk.EventRequest(
-    access_token,
-    pixel_id,
-    serverEvents,
-  )
+  const eventRequest = new EventRequest(access_token, pixel_id, serverEvents)
     .setNamespaceId(new Date().getTime().toString()) // Must be a number but only accepts string
-    .setUploadId('1') // Must be a number but only accepts string
-    .setDebugMode(true);
+    .setUploadId('1'); // Must be a number but only accepts string
 
+  if (debug) eventRequest.setDebugMode(true);
   if (test_code) eventRequest._test_event_code = test_code;
 
   return eventRequest.execute().then(
@@ -39,11 +41,6 @@ export const mapEvent = (
 ): ServerEvent => {
   mapping; // @TODO
   const { user, source } = event;
-
-  const Content = bizSdk.Content;
-  const CustomData = bizSdk.CustomData;
-  const UserData = bizSdk.UserData;
-  const ServerEvent = bizSdk.ServerEvent;
 
   let userData = new UserData();
   // @TODO
