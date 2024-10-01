@@ -26,6 +26,7 @@ export interface CustomConfig {
   access_token: string;
   pixel_id: string;
   debug?: boolean;
+  partner?: string;
   test_code?: string;
 }
 

@@ -10,7 +10,13 @@ import {
 } from 'facebook-nodejs-business-sdk';
 
 export const push = async function (events: PushEvents, config: Config) {
-  const { access_token, pixel_id, debug, test_code } = config.custom;
+  const {
+    access_token,
+    pixel_id,
+    debug,
+    partner = 'walkerOS',
+    test_code,
+  } = config.custom;
 
   FacebookAdsApi.init(access_token);
 
@@ -18,12 +24,15 @@ export const push = async function (events: PushEvents, config: Config) {
     mapEvent(event.event, event.mapping),
   );
 
-  const eventRequest = new EventRequest(access_token, pixel_id, serverEvents)
-    .setNamespaceId(new Date().getTime().toString()) // Must be a number but only accepts string
-    .setUploadId('1'); // Must be a number but only accepts string
+  const eventRequest = new EventRequest(
+    access_token,
+    pixel_id,
+    serverEvents,
+    partner,
+    test_code,
+  );
 
   if (debug) eventRequest.setDebugMode(true);
-  if (test_code) eventRequest._test_event_code = test_code;
 
   return eventRequest.execute().then(
     () => {
@@ -44,7 +53,7 @@ export const mapEvent = (
 
   let userData = new UserData();
   // @TODO
-  // .setEmails(['joe@eg.com'])
+  // .setEmails(['joe@eg.com']);
   // .setPhones(['12345678901', '14251234567']);
   // .setFbp('fb.1.1558571054389.1098115397') // _fbp cookie
   // .setFbc('fb.1.1554763741205.AbCdEfGhIjKlMnOpQrStUvWxYz1234567890'); // Facebook Click ID
