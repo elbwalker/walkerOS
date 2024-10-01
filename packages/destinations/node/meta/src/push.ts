@@ -4,7 +4,6 @@ import {
   Content,
   CustomData,
   EventRequest,
-  FacebookAdsApi,
   ServerEvent,
   UserData,
 } from 'facebook-nodejs-business-sdk';
@@ -17,8 +16,6 @@ export const push = async function (events: PushEvents, config: Config) {
     partner = 'walkerOS',
     test_code,
   } = config.custom;
-
-  FacebookAdsApi.init(access_token);
 
   const serverEvents = events.map((event) =>
     mapEvent(event.event, event.mapping),
