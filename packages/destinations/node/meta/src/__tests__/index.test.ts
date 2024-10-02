@@ -10,7 +10,7 @@ describe('Node Destination Meta', () => {
   });
   const mockXHRSend = jest.fn().mockImplementation(function () {
     this.status = 200;
-    this.response = JSON.stringify({});
+    this.response = JSON.stringify({ data: {} });
     this.onload(); // Manually trigger onload to simulate the response
   });
   const mockXHR = {
