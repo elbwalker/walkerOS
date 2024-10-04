@@ -113,8 +113,8 @@ in scenarios where you need to analyze the effectiveness of marketing campaigns
 by identifying sources, mediums, campaigns, etc., from the URL query parameters.
 
 ```js
-getMarketingParameters('https://localhost/?utm_source=docs&gclid=xxx');
-// Returns { source: "docs", clickId: "xxx" }
+getMarketingParameters('https://example.com/?utm_source=docs&gclid=xxx');
+// Returns { source: "docs", clickId: "xxx", platform: "google" }
 
 getMarketingParameters('https://example.com/?utm_custom=value', {
   utm_custom: 'custom',
@@ -123,7 +123,16 @@ getMarketingParameters('https://example.com/?utm_custom=value', {
 ```
 
 Add `custom` parameters to parse more values from the url like `?utm_custom=123`
-with `{ utm_custom: "custom" }` to get `{ custom: "123" }`.
+with `{ utm_custom: "custom" }` to get `{ custom: "123" }`. To add the
+additional `platform` information, use an array as value with
+`{ param: [name, platform] }`.
+
+```js
+getMarketingParameters('https://example.com/?partner=abc', {
+  partner: ['partnerId', 'affiliate'],
+});
+// Returns { partnerId: "abc", platform: "affiliate" }
+```
 
 This function facilitates the easy retrieval of marketing data, aiding in
 campaign tracking and analysis.

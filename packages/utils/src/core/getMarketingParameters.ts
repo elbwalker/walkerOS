@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 
 export interface MarketingParameters {
-  [key: string]: string;
+  [key: string]: string | [key: string, platform: string];
 }
 
 export function getMarketingParameters(
@@ -9,24 +9,33 @@ export function getMarketingParameters(
   custom: MarketingParameters = {},
 ): WalkerOS.Properties {
   const data: WalkerOS.Properties = {};
-  const parameters = Object.assign(
+  const clickId = 'clickId';
+  const parameters: MarketingParameters = Object.assign(
     {
       utm_campaign: 'campaign',
       utm_content: 'content',
-      dclid: 'clickId',
-      fbclid: 'clickId',
-      gclid: 'clickId',
       utm_medium: 'medium',
-      msclkid: 'clickId',
       utm_source: 'source',
       utm_term: 'term',
+      dclid: [clickId, 'google'],
+      fbclid: [clickId, 'meta'],
+      gclid: [clickId, 'google'],
+      msclkid: [clickId, 'microsoft'],
+      ttclid: [clickId, 'tiktok'],
+      twclid: [clickId, 'twitter'],
+      igshid: [clickId, 'meta'],
+      sclid: [clickId, 'snapchat'],
     },
     custom,
   );
 
-  Object.entries(parameters).forEach(([param, name]) => {
-    const value = url.searchParams.get(param);
-    if (value) data[name] = value;
+  Object.entries(parameters).forEach(([key, mapping]) => {
+    const param = url.searchParams.get(key); // Search for the parameter in the URL
+    if (param) {
+      const [name, platform] = Array.isArray(mapping) ? mapping : [mapping];
+      data[name] = param;
+      if (platform) data.platform = platform;
+    }
   });
 
   return data;
