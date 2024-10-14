@@ -50,9 +50,8 @@ export const mapEvent = (
 
   let userData = new UserData();
   if (user) {
-    // @TODO
-    // .setEmails(['joe@eg.com']);
-    // .setPhones(['12345678901', '14251234567']);
+    if (user.email) userData = userData.setEmail(lower(user.email));
+    if (user.phone) userData = userData.setPhone(lower(user.phone));
     if (user.city) userData = userData.setCity(lower(user.city));
     if (user.country) userData = userData.setCountry(lower(user.country));
     if (user.zip) userData = userData.setZip(lower(user.zip));
@@ -108,6 +107,6 @@ function formatClickId(clickId: WalkerOS.Property, time?: number): string {
   return `${version}.${subdomainIndex}.${creationTime}.${clickId}`;
 }
 
-function lower(str: string) {
-  return str.toLocaleLowerCase();
+function lower(str: WalkerOS.Property): string {
+  return String(str).toLocaleLowerCase();
 }

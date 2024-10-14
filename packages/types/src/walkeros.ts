@@ -131,6 +131,9 @@ export interface User extends Properties {
   session?: string;
   hash?: string;
   // User related
+  address?: string;
+  email?: string;
+  phone?: string;
   userAgent?: string;
   browser?: string;
   browserVersion?: string;

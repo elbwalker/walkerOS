@@ -125,7 +125,6 @@ describe('Node Destination Meta', () => {
     await destination.push([{ event }], config);
 
     const user_data = getRequestData(mockXHRSend).user_data;
-    console.log('🚀 ~ test ~ user_data:', user_data);
 
     expect(user_data).toEqual(
       expect.objectContaining({
@@ -137,6 +136,8 @@ describe('Node Destination Meta', () => {
   });
 
   test('user data', async () => {
+    event.user.email = 'a@b.c';
+    event.user.phone = '0401337';
     event.user.city = 'Hamburg';
     event.user.country = 'DE';
     event.user.zip = '20354';
@@ -149,6 +150,8 @@ describe('Node Destination Meta', () => {
 
     expect(user_data).toEqual(
       expect.objectContaining({
+        em: expect.any(Array),
+        ph: expect.any(Array),
         ct: expect.any(Array),
         country: expect.any(Array),
         zp: expect.any(Array),
