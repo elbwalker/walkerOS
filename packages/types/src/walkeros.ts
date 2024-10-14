@@ -139,6 +139,7 @@ export interface User extends Properties {
   country?: string;
   region?: string;
   city?: string;
+  zip?: string;
   timezone?: string;
   os?: string;
   osVersion?: string;

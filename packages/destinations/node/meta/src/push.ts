@@ -54,8 +54,9 @@ export const mapEvent = (
   // .setPhones(['12345678901', '14251234567']);
   // .setFbp('fb.1.1558571054389.1098115397') // _fbp cookie
   // .setFbc('fb.1.1554763741205.AbCdEfGhIjKlMnOpQrStUvWxYz1234567890'); // Facebook Click ID
-  if (user.city) userData = userData.setCity(user.city);
-
+  if (user.city) userData = userData.setCity(lower(user.city));
+  if (user.country) userData = userData.setCountry(lower(user.country));
+  if (user.zip) userData = userData.setZip(lower(user.zip));
   if (user.userAgent) userData = userData.setClientUserAgent(user.userAgent);
   if (user.ip) userData = userData.setClientIpAddress(user.ip);
 
@@ -82,3 +83,7 @@ export const mapEvent = (
 
   return serverEvent;
 };
+
+function lower(str: string) {
+  return str.toLocaleLowerCase();
+}

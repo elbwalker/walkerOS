@@ -21,47 +21,11 @@ describe('Node Destination Meta', () => {
     readyState: 4,
   };
 
+  let event: WalkerOS.Event;
+  let config: Config;
   const access_token = 's3cr3t';
   const pixel_id = 'p1x3l1d';
   const onLog = jest.fn();
-  const config: Config = {
-    custom: { access_token, pixel_id },
-    onLog,
-  };
-  const event: WalkerOS.Event = {
-    event: 'entity action',
-    data: { foo: 'bar' },
-    custom: { bar: 'baz' },
-    context: { dev: ['test', 1] },
-    globals: { lang: 'ts' },
-    user: { id: 'us3r', device: 'c00k13', session: 's3ss10n' },
-    nested: [
-      {
-        type: 'child',
-        data: { type: 'nested' },
-        nested: [],
-        context: { element: ['child', 0] },
-      },
-    ],
-    consent: { debugging: true },
-    id: '1-gr0up-1',
-    trigger: 'test',
-    entity: 'entity',
-    action: 'action',
-    timestamp: new Date().getTime(),
-    timing: 3.14,
-    group: 'gr0up',
-    count: 1,
-    version: {
-      client: '0.0.7',
-      tagging: 1,
-    },
-    source: {
-      type: 'web',
-      id: 'https://localhost:80',
-      previous_id: 'http://remotehost:9001',
-    },
-  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -74,6 +38,45 @@ describe('Node Destination Meta', () => {
 
     destination = jest.requireActual('../').default;
     destination.config = {};
+
+    config = {
+      custom: { access_token, pixel_id },
+      onLog,
+    };
+    event = {
+      event: 'entity action',
+      data: { foo: 'bar' },
+      custom: { bar: 'baz' },
+      context: { dev: ['test', 1] },
+      globals: { lang: 'ts' },
+      user: { id: 'us3r', device: 'c00k13', session: 's3ss10n' },
+      nested: [
+        {
+          type: 'child',
+          data: { type: 'nested' },
+          nested: [],
+          context: { element: ['child', 0] },
+        },
+      ],
+      consent: { debugging: true },
+      id: '1-gr0up-1',
+      trigger: 'test',
+      entity: 'entity',
+      action: 'action',
+      timestamp: new Date().getTime(),
+      timing: 3.14,
+      group: 'gr0up',
+      count: 1,
+      version: {
+        client: '0.0.7',
+        tagging: 1,
+      },
+      source: {
+        type: 'web',
+        id: 'https://localhost:80',
+        previous_id: 'http://remotehost:9001',
+      },
+    };
   });
 
   afterEach(() => {
@@ -98,19 +101,55 @@ describe('Node Destination Meta', () => {
     await destination.push([{ event }], config);
 
     expect(mockXHRSend).toHaveBeenCalledWith(expect.any(String));
-    expect(getDataStr(mockXHRSend)).toContain('"access_token":"s3cr3t"');
-    expect(getDataStr(mockXHRSend)).toContain('"id":"p1x3l1d"');
-    expect(getDataStr(mockXHRSend)).toContain('"event_name":"entity action"');
+    expect(getRequestStr(mockXHRSend)).toContain('"access_token":"s3cr3t"');
+    expect(getRequestStr(mockXHRSend)).toContain('"id":"p1x3l1d"');
+    expect(getRequestStr(mockXHRSend)).toContain(
+      '"event_name":"entity action"',
+    );
   });
 
   test('test_code', async () => {
-    config.custom.test_code = 'TEST46460';
+    config.custom.test_code = 'TESTNNNNN';
     await destination.push([{ event }], config);
 
-    expect(getDataStr(mockXHRSend)).toContain('"test_event_code":"TEST46460"');
+    expect(getRequestObj(mockXHRSend)).toEqual(
+      expect.objectContaining({
+        test_event_code: 'TESTNNNNN',
+      }),
+    );
   });
 
-  function getDataStr(mock: jest.Mock, i = 0) {
+  test('user data', async () => {
+    event.user.city = 'Hamburg';
+    event.user.country = 'DE';
+    event.user.zip = '20354';
+    event.user.userAgent = 'br0ws3r';
+    event.user.ip = '127.0.0.1';
+
+    await destination.push([{ event }], config);
+
+    const user_data = getRequestData(mockXHRSend).user_data;
+
+    expect(user_data).toEqual(
+      expect.objectContaining({
+        ct: expect.any(Array),
+        country: expect.any(Array),
+        zp: expect.any(Array),
+        client_ip_address: '127.0.0.1',
+        client_user_agent: 'br0ws3r',
+      }),
+    );
+  });
+
+  function getRequestStr(mock: jest.Mock, i = 0) {
     return mock.mock.calls[i][0];
+  }
+
+  function getRequestObj(mock: jest.Mock, i = 0) {
+    return JSON.parse(getRequestStr(mock, i));
+  }
+
+  function getRequestData(mock: jest.Mock, i = 0) {
+    return getRequestObj(mock, i).data[0];
   }
 });
