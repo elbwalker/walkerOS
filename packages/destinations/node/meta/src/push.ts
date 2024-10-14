@@ -51,7 +51,8 @@ export const mapEvent = (
   let userData = new UserData();
   if (user) {
     if (user.email) userData = userData.setEmail(lower(user.email));
-    if (user.phone) userData = userData.setPhone(lower(user.phone));
+    if (user.phone && user.phone.length > 6)
+      userData = userData.setPhone(lower(user.phone));
     if (user.city) userData = userData.setCity(lower(user.city));
     if (user.country) userData = userData.setCountry(lower(user.country));
     if (user.zip) userData = userData.setZip(lower(user.zip));
