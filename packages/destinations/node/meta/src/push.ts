@@ -46,19 +46,27 @@ export const mapEvent = (
   mapping: Mapping = {},
 ): ServerEvent => {
   mapping; // @TODO
-  const { user, source } = event;
+  const { data, user, source } = event;
 
   let userData = new UserData();
-  // @TODO
-  // .setEmails(['joe@eg.com']);
-  // .setPhones(['12345678901', '14251234567']);
-  // .setFbp('fb.1.1558571054389.1098115397') // _fbp cookie
-  // .setFbc('fb.1.1554763741205.AbCdEfGhIjKlMnOpQrStUvWxYz1234567890'); // Facebook Click ID
-  if (user.city) userData = userData.setCity(lower(user.city));
-  if (user.country) userData = userData.setCountry(lower(user.country));
-  if (user.zip) userData = userData.setZip(lower(user.zip));
-  if (user.userAgent) userData = userData.setClientUserAgent(user.userAgent);
-  if (user.ip) userData = userData.setClientIpAddress(user.ip);
+  if (user) {
+    // @TODO
+    // .setEmails(['joe@eg.com']);
+    // .setPhones(['12345678901', '14251234567']);
+    if (user.city) userData = userData.setCity(lower(user.city));
+    if (user.country) userData = userData.setCountry(lower(user.country));
+    if (user.zip) userData = userData.setZip(lower(user.zip));
+    if (user.userAgent) userData = userData.setClientUserAgent(user.userAgent);
+    if (user.ip) userData = userData.setClientIpAddress(user.ip);
+  }
+
+  if (data.clickId) {
+    let time;
+    if (event.event == 'session start') time = event.timestamp;
+
+    userData = userData.setFbc(formatClickId(data.clickId, time));
+    // @TODO userData.setFbp('fb.1.1558571054389.1098115397') // _fbp cookie
+  }
 
   const content = new Content().setId('product123').setQuantity(1); // @TODO
 
@@ -70,6 +78,7 @@ export const mapEvent = (
   const timestamp = Math.floor(
     (event.timestamp || new Date().getTime()) / 1000,
   );
+
   const actionSource = source.type === 'web' ? 'website' : 'server';
 
   const serverEvent = new ServerEvent()
@@ -83,6 +92,21 @@ export const mapEvent = (
 
   return serverEvent;
 };
+
+function formatClickId(clickId: WalkerOS.Property, time?: number): string {
+  // https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/fbp-and-fbc#2--format-clickid
+
+  // Version is always "fb"
+  const version = 'fb';
+
+  // Subdomain ('com' = 0, 'example.com' = 1, 'www.example.com' = 2)
+  const subdomainIndex = '1';
+
+  // Get the current timestamp in milliseconds (or when the fbclid was observed)
+  const creationTime = time || Date.now();
+
+  return `${version}.${subdomainIndex}.${creationTime}.${clickId}`;
+}
 
 function lower(str: string) {
   return str.toLocaleLowerCase();

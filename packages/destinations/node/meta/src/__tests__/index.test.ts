@@ -119,6 +119,23 @@ describe('Node Destination Meta', () => {
     );
   });
 
+  test('IDs', async () => {
+    event.data.clickId = 'abc...';
+
+    await destination.push([{ event }], config);
+
+    const user_data = getRequestData(mockXHRSend).user_data;
+    console.log('🚀 ~ test ~ user_data:', user_data);
+
+    expect(user_data).toEqual(
+      expect.objectContaining({
+        fbc: expect.any(String),
+      }),
+    );
+    expect(user_data.fbc).toContain('fb.1.');
+    expect(user_data.fbc).toContain('abc...');
+  });
+
   test('user data', async () => {
     event.user.city = 'Hamburg';
     event.user.country = 'DE';
