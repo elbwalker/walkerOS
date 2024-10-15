@@ -165,8 +165,11 @@ describe('Node Destination Meta', () => {
     event.data = { id: 'abc', quantity: 42, total: 9001 };
     const custom: CustomEventConfig = {
       currency: { default: 'EUR' },
-      id: 'data.id',
-      quantity: 'data.quantity',
+      content: {
+        id: 'data.id',
+        price: { default: 214.31 },
+        quantity: 'data.quantity',
+      },
       value: 'data.total',
     };
 
@@ -186,6 +189,7 @@ describe('Node Destination Meta', () => {
         contents: expect.arrayContaining([
           {
             id: 'abc',
+            item_price: 214.31,
             quantity: 42,
           },
         ]),

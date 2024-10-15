@@ -47,7 +47,7 @@ export const mapEvent = (
   mapping: Mapping = {},
 ): ServerEvent => {
   const { data, user, source } = event;
-  const { currency, id, quantity, value } = mapping.custom || {};
+  const { currency, content, value } = mapping.custom || {};
 
   const eventName = mapping.name || event.event;
 
@@ -82,12 +82,18 @@ export const mapEvent = (
   if (valueValue) customData.setValue(parseFloat(String(valueValue)));
 
   // Content
-  const content = new Content();
-  const idValue = id && getMappingValue(event, id);
-  const quantityValue = quantity && getMappingValue(event, quantity);
-  if (idValue) content.setId(String(idValue));
-  if (quantityValue) content.setQuantity(parseFloat(String(quantityValue)));
-  customData.setContents([content]);
+  if (content) {
+    const { id, price, quantity } = content;
+    const item = new Content();
+    const idValue = id && getMappingValue(event, id);
+    const priceValue = price && getMappingValue(event, price);
+    const quantityValue = quantity && getMappingValue(event, quantity);
+    if (idValue) item.setId(String(idValue));
+    if (priceValue) item.setItemPrice(parseFloat(String(priceValue)));
+    if (quantityValue) item.setQuantity(parseFloat(String(quantityValue)));
+
+    customData.setContents([item]);
+  }
 
   const timestamp = Math.floor(
     (event.timestamp || new Date().getTime()) / 1000,
