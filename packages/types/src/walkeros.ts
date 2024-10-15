@@ -165,7 +165,6 @@ export interface Source extends Properties {
 export type SourceType = 'web' | 'node' | 'app' | 'other' | string;
 
 export type PropertyType = boolean | string | number;
-
 export type Property = PropertyType | Array<PropertyType>;
 export interface Properties {
   [key: string]: Property | undefined;
@@ -180,4 +179,11 @@ export interface Entity {
   data: Properties;
   nested: Entities;
   context: OrderedProperties;
+}
+
+export type MappingValue = string | MappingValueObject;
+export interface MappingValueObject {
+  key: string;
+  default?: PropertyType;
+  // consent?: string | Array<string>;
 }
