@@ -32,5 +32,6 @@ export interface CustomConfig {
 
 export interface CustomEventConfig {
   // Custom destination event mapping properties
+  currency?: WalkerOS.MappingValue;
   value?: WalkerOS.MappingValue;
 }

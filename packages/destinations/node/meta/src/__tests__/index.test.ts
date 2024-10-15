@@ -164,6 +164,7 @@ describe('Node Destination Meta', () => {
   test('Mapping', async () => {
     event.data.total = 42;
     const custom: CustomEventConfig = {
+      currency: { default: 'EUR' },
       value: 'data.total',
     };
 
@@ -173,6 +174,7 @@ describe('Node Destination Meta', () => {
 
     expect(custom_data).toEqual(
       expect.objectContaining({
+        currency: 'EUR',
         value: 42,
       }),
     );

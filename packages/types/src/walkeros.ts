@@ -183,7 +183,7 @@ export interface Entity {
 
 export type MappingValue = string | MappingValueObject;
 export interface MappingValueObject {
-  key: string;
+  key?: string;
   default?: PropertyType;
   // consent?: string | Array<string>;
 }

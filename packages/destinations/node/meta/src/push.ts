@@ -48,7 +48,7 @@ export const mapEvent = (
 ): ServerEvent => {
   mapping; // @TODO
   const { data, user, source } = event;
-  const { value } = mapping.custom || {};
+  const { currency, value } = mapping.custom || {};
 
   let userData = new UserData();
   if (user) {
@@ -71,12 +71,17 @@ export const mapEvent = (
   }
 
   const customData = new CustomData();
+
+  // Currency
+  const currencyParams = currency && getMappingValue(event, currency);
+  if (currencyParams) customData.setCurrency(String(currencyParams));
+
+  // Value
   const valueParams = value && getMappingValue(event, value);
   if (valueParams) customData.setValue(parseFloat(String(valueParams)));
 
   // const content = new Content().setId('product123').setQuantity(1); // @TODO
   // .setContents([content])
-  // .setCurrency('usd') // @TODO
 
   const timestamp = Math.floor(
     (event.timestamp || new Date().getTime()) / 1000,
