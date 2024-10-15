@@ -49,6 +49,8 @@ export const mapEvent = (
   const { data, user, source } = event;
   const { currency, id, quantity, value } = mapping.custom || {};
 
+  const eventName = mapping.name || event.event;
+
   let userData = new UserData();
   if (user) {
     if (user.email) userData = userData.setEmail(lower(user.email));
@@ -95,7 +97,7 @@ export const mapEvent = (
 
   const serverEvent = new ServerEvent()
     .setEventId(event.id)
-    .setEventName(event.event)
+    .setEventName(eventName)
     .setEventTime(timestamp)
     .setUserData(userData)
     .setCustomData(customData)

@@ -170,10 +170,15 @@ describe('Node Destination Meta', () => {
       value: 'data.total',
     };
 
-    await destination.push([{ event, mapping: { custom } }], config);
+    await destination.push(
+      [{ event, mapping: { name: 'Purchase', custom } }],
+      config,
+    );
 
-    const custom_data = getRequestData(mockXHRSend).custom_data;
+    const requestData = getRequestData(mockXHRSend);
+    const custom_data = requestData.custom_data;
 
+    expect(requestData.event_name).toEqual('Purchase');
     expect(custom_data).toEqual(
       expect.objectContaining({
         currency: 'EUR',
