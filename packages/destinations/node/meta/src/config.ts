@@ -3,15 +3,15 @@ import { onLog, throwError } from '@elbwalker/utils';
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {
   const custom = partialConfig.custom || {};
-  const { access_token, pixel_id } = custom;
+  const { accessToken, pixelId } = custom;
 
-  if (!access_token) throwError('Config custom access_token missing');
-  if (!pixel_id) throwError('Config custom pixel_id missing');
+  if (!accessToken) throwError('Config custom accessToken missing');
+  if (!pixelId) throwError('Config custom pixelId missing');
 
   const customConfig: CustomConfig = {
     ...custom,
-    access_token,
-    pixel_id,
+    accessToken,
+    pixelId,
   };
 
   // Log Handler

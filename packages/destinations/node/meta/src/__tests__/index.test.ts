@@ -23,8 +23,8 @@ describe('Node Destination Meta', () => {
 
   let event: WalkerOS.Event;
   let config: Config;
-  const access_token = 's3cr3t';
-  const pixel_id = 'p1x3l1d';
+  const accessToken = 's3cr3t';
+  const pixelId = 'p1x3l1d';
   const onLog = jest.fn();
 
   beforeEach(async () => {
@@ -40,7 +40,7 @@ describe('Node Destination Meta', () => {
     destination.config = {};
 
     config = {
-      custom: { access_token, pixel_id },
+      custom: { accessToken, pixelId },
       onLog,
     };
     event = {
@@ -85,15 +85,17 @@ describe('Node Destination Meta', () => {
 
   test('init', async () => {
     await expect(destination.init({})).rejects.toThrow(
-      'Error: Config custom access_token missing',
+      'Error: Config custom accessToken missing',
+    );
+    await expect(destination.init({ custom: { accessToken } })).rejects.toThrow(
+      'Error: Config custom pixelId missing',
     );
     await expect(
-      destination.init({ custom: { access_token } }),
-    ).rejects.toThrow('Error: Config custom pixel_id missing');
-    await expect(
-      destination.init({ custom: { access_token, pixel_id } }),
+      destination.init({ custom: { accessToken, pixelId } }),
     ).resolves.toEqual(
-      expect.objectContaining({ custom: { access_token, pixel_id } }),
+      expect.objectContaining({
+        custom: { accessToken, pixelId },
+      }),
     );
   });
 
@@ -108,8 +110,8 @@ describe('Node Destination Meta', () => {
     );
   });
 
-  test('test_code', async () => {
-    config.custom.test_code = 'TESTNNNNN';
+  test('testCode', async () => {
+    config.custom.testCode = 'TESTNNNNN';
     await destination.push([{ event }], config);
 
     expect(getRequestObj(mockXHRSend)).toEqual(

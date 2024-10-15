@@ -11,11 +11,11 @@ import { getMappingValue } from '@elbwalker/utils';
 
 export const push = async function (events: PushEvents, config: Config) {
   const {
-    access_token,
-    pixel_id,
+    accessToken,
+    pixelId,
     debug,
     partner = 'walkerOS',
-    test_code,
+    testCode,
   } = config.custom;
 
   const serverEvents = events.map((event) =>
@@ -23,11 +23,11 @@ export const push = async function (events: PushEvents, config: Config) {
   );
 
   const eventRequest = new EventRequest(
-    access_token,
-    pixel_id,
+    accessToken,
+    pixelId,
     serverEvents,
     partner,
-    test_code,
+    testCode,
   );
 
   if (debug) eventRequest.setDebugMode(true);

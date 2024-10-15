@@ -23,11 +23,11 @@ export type Mapping = NodeDestination.EventConfig<CustomEventConfig>;
 export type PushEvents = NodeDestination.PushEvents<CustomEventConfig>;
 
 export interface CustomConfig {
-  access_token: string;
-  pixel_id: string;
+  accessToken: string;
+  pixelId: string;
   debug?: boolean;
   partner?: string;
-  test_code?: string;
+  testCode?: string;
 }
 
 export interface CustomEventConfig {
