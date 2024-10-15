@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Config, Mapping, PushEvents } from './types';
 import {
-  // Content,
+  Content,
   CustomData,
   EventRequest,
   ServerEvent,
@@ -46,9 +46,8 @@ export const mapEvent = (
   event: WalkerOS.Event,
   mapping: Mapping = {},
 ): ServerEvent => {
-  mapping; // @TODO
   const { data, user, source } = event;
-  const { currency, value } = mapping.custom || {};
+  const { currency, id, quantity, value } = mapping.custom || {};
 
   let userData = new UserData();
   if (user) {
@@ -73,15 +72,20 @@ export const mapEvent = (
   const customData = new CustomData();
 
   // Currency
-  const currencyParams = currency && getMappingValue(event, currency);
-  if (currencyParams) customData.setCurrency(String(currencyParams));
+  const currencyValue = currency && getMappingValue(event, currency);
+  if (currencyValue) customData.setCurrency(String(currencyValue));
 
   // Value
-  const valueParams = value && getMappingValue(event, value);
-  if (valueParams) customData.setValue(parseFloat(String(valueParams)));
+  const valueValue = value && getMappingValue(event, value);
+  if (valueValue) customData.setValue(parseFloat(String(valueValue)));
 
-  // const content = new Content().setId('product123').setQuantity(1); // @TODO
-  // .setContents([content])
+  // Content
+  const content = new Content();
+  const idValue = id && getMappingValue(event, id);
+  const quantityValue = quantity && getMappingValue(event, quantity);
+  if (idValue) content.setId(String(idValue));
+  if (quantityValue) content.setQuantity(parseFloat(String(quantityValue)));
+  customData.setContents([content]);
 
   const timestamp = Math.floor(
     (event.timestamp || new Date().getTime()) / 1000,

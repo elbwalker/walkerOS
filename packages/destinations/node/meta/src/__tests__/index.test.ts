@@ -162,9 +162,11 @@ describe('Node Destination Meta', () => {
   });
 
   test('Mapping', async () => {
-    event.data.total = 42;
+    event.data = { id: 'abc', quantity: 42, total: 9001 };
     const custom: CustomEventConfig = {
       currency: { default: 'EUR' },
+      id: 'data.id',
+      quantity: 'data.quantity',
       value: 'data.total',
     };
 
@@ -175,7 +177,13 @@ describe('Node Destination Meta', () => {
     expect(custom_data).toEqual(
       expect.objectContaining({
         currency: 'EUR',
-        value: 42,
+        value: 9001,
+        contents: expect.arrayContaining([
+          {
+            id: 'abc',
+            quantity: 42,
+          },
+        ]),
       }),
     );
   });
