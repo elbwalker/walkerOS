@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config, Destination } from '../types';
+import type { Config, CustomEventConfig, Destination } from '../types';
 
 describe('Node Destination Meta', () => {
   let destination: Destination;
@@ -157,6 +157,23 @@ describe('Node Destination Meta', () => {
         zp: expect.any(Array),
         client_ip_address: '127.0.0.1',
         client_user_agent: 'br0ws3r',
+      }),
+    );
+  });
+
+  test('Mapping', async () => {
+    event.data.total = 42;
+    const custom: CustomEventConfig = {
+      value: 'data.total',
+    };
+
+    await destination.push([{ event, mapping: { custom } }], config);
+
+    const custom_data = getRequestData(mockXHRSend).custom_data;
+
+    expect(custom_data).toEqual(
+      expect.objectContaining({
+        value: 42,
       }),
     );
   });

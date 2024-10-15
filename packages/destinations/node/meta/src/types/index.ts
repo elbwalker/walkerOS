@@ -1,5 +1,5 @@
 import type { NodeDestination } from '@elbwalker/client-node';
-import type { Handler } from '@elbwalker/types';
+import type { Handler, WalkerOS } from '@elbwalker/types';
 
 export interface Destination
   extends NodeDestination.Destination<CustomConfig, CustomEventConfig> {
@@ -32,4 +32,5 @@ export interface CustomConfig {
 
 export interface CustomEventConfig {
   // Custom destination event mapping properties
+  value?: WalkerOS.MappingValue;
 }

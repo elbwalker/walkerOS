@@ -1,12 +1,13 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Config, Mapping, PushEvents } from './types';
 import {
-  Content,
+  // Content,
   CustomData,
   EventRequest,
   ServerEvent,
   UserData,
 } from 'facebook-nodejs-business-sdk';
+import { getMappingValue } from '@elbwalker/utils';
 
 export const push = async function (events: PushEvents, config: Config) {
   const {
@@ -47,6 +48,7 @@ export const mapEvent = (
 ): ServerEvent => {
   mapping; // @TODO
   const { data, user, source } = event;
+  const { value } = mapping.custom || {};
 
   let userData = new UserData();
   if (user) {
@@ -68,12 +70,13 @@ export const mapEvent = (
     // @TODO userData.setFbp('fb.1.1558571054389.1098115397') // _fbp cookie
   }
 
-  const content = new Content().setId('product123').setQuantity(1); // @TODO
+  const customData = new CustomData();
+  const valueParams = value && getMappingValue(event, value);
+  if (valueParams) customData.setValue(parseFloat(String(valueParams)));
 
-  const customData = new CustomData()
-    .setContents([content])
-    .setCurrency('usd') // @TODO
-    .setValue(123.45); // @TODO
+  // const content = new Content().setId('product123').setQuantity(1); // @TODO
+  // .setContents([content])
+  // .setCurrency('usd') // @TODO
 
   const timestamp = Math.floor(
     (event.timestamp || new Date().getTime()) / 1000,
