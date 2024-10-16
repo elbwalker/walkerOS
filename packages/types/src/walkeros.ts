@@ -185,5 +185,9 @@ export type MappingValue = string | MappingValueObject;
 export interface MappingValueObject {
   key?: string;
   default?: PropertyType;
-  // consent?: string | Array<string>;
+  // Ideas:
+  // - As array to try multiple ways to get the value
+  // - consent?: string | Array<string>;
+  // - filter
+  // - fn
 }

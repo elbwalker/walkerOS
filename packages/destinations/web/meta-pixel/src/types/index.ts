@@ -28,6 +28,7 @@ export interface CustomEventConfig {
   contents?: ParamContents; // Value(s) to be used for contents
 }
 
+// @TODO use WalkerOS.MappingValue
 export type PropertyMapping = string | PropertyMappingValue;
 
 export interface PropertyMappingValue {

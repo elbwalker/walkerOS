@@ -105,6 +105,15 @@ This function is particularly useful for scenarios where unique identifiers are
 needed, such as dynamically generated element IDs, unique keys for list items in
 rendering, or temporary identifiers.
 
+### getMappingValue
+
+`getMappingValue(event: WalkerOS.Event, mapping: WalkerOS.MappingValue): WalkerOS.Property | undefined`
+reads the value from an event based on
+the&nbsp;<Link to="/docs/destinations/mapping">mapping configuration</Link>. It
+is used by destinations to
+transform&nbsp;<Link to="/docs/walkeros/event-model">walkerOS events</Link> into
+another required format.
+
 ### getMarketingParameters
 
 `getMarketingParameters(url: string, custom={}): WalkerOS.Properties` extracts

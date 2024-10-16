@@ -32,7 +32,7 @@ destination:
 ```ts
 import { destinationBigQuery } from '@elbwalker/destination-node-bigquery';
 
-elb('walker destination', destinationBigQuery, {
+await elb('walker destination', destinationBigQuery, {
   custom: {
     projectId: 'PR0J3CT1D', // Required
     // client: BigQuery; // A BigQuery instance from @google-cloud/bigquery

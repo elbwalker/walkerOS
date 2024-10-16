@@ -40,7 +40,7 @@ export type Meta = {
 export interface EventConfig<EventCustom = unknown> {
   batch?: number; // Bundle events for batch processing
   batched?: Batch<EventCustom>; // Batch of events to be processed
-  consent?: WalkerOS.Consent; // Required consent states to init and push events
+  consent?: WalkerOS.Consent; // Required consent states process the event
   custom?: EventCustom; // Arbitrary but protected configurations for custom event config
   ignore?: boolean; // Choose to no process an event when set to true
   name?: string; // Use a custom event name
