@@ -130,6 +130,7 @@ describe('Node Destination Meta', () => {
 
     expect(user_data).toEqual(
       expect.objectContaining({
+        external_id: expect.arrayContaining(['us3r', 'c00k13', 's3ss10n']),
         fbc: expect.any(String),
       }),
     );

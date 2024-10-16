@@ -53,6 +53,13 @@ export const mapEvent = (
 
   let userData = new UserData();
   if (user) {
+    // IDs
+    const ids = [user.id, user.device, user.session, user.hash]
+      .filter((id) => typeof id === 'string')
+      .map(lower);
+    userData = userData.setExternalIds(ids);
+
+    // Customer Information Parameters
     if (user.email) userData = userData.setEmail(lower(user.email));
     if (user.phone && user.phone.length > 6)
       userData = userData.setPhone(lower(user.phone));
