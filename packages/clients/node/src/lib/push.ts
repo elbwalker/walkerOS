@@ -3,6 +3,7 @@ import type { NodeClient, NodeDestination } from '../types';
 import { assign, isSameType, tryCatchAsync } from '@elbwalker/utils';
 import { allowedToPush } from './consent';
 import { isCommand } from './helper';
+import { destinationInit, destinationPush } from './destination';
 
 export function createPush(
   instance: NodeClient.Instance,
@@ -85,59 +86,59 @@ export async function pushToDestinations(
       const queue = ([] as Destination.Queue).concat(destination.queue || []);
       destination.queue = []; // Reset original queue while processing
 
-      if (event)
-        // Add event to queue
-        queue.push(event);
+      // Add event to queue stack
+      if (event) queue.push(event);
 
-      if (!queue.length)
-        // Nothing to do here
-        return { id, destination, skipped: true };
+      // Nothing to do here if the queue is empty
+      if (!queue.length) return { id, destination, skipped: true };
 
       // Always check for required consent states before pushing
       if (!allowedToPush(instance, destination))
-        // Not allowed to continue
-        return { id, destination, queue };
+        return { id, destination, queue }; // Don't push if not allowed
 
-      // Update previous values with the current state
-      const events: NodeDestination.PushEvents = queue.map((event) => {
-        // @TODO check if this is correct, as a client might keeps running as a thread
-        event.consent = assign(instance.consent, event.consent);
-        event.globals = assign(instance.globals, event.globals);
-        event.user = assign(instance.user, event.user);
-        return { event }; // @TODO mapping
-      });
+      // Init destination (eventually)
+      const isInitialized = await tryCatchAsync(destinationInit)(
+        instance,
+        destination,
+      );
 
-      // Destination initialization
-      // Check if the destination was initialized properly or try to do so
-      if (destination.init && !destination.config.init) {
-        const init =
-          (await tryCatchAsync(destination.init, (error) => {
+      if (!isInitialized) return { id, destination, queue };
+
+      const { consent, globals, user } = instance;
+
+      // Process the destinations event queue
+      let error: unknown;
+      await Promise.all(
+        queue.map(async (event) => {
+          if (error) {
+            // Skip if an error occurred
+            // @TODO retry
+            destination.queue!.push(event); // Add back to queue
+          }
+
+          // Copy the event to prevent mutation
+          event = assign(event, {
+            // Update previous values with the current state
+            consent, // @TODO prefer the events consent state
+            globals,
+            user,
+          });
+
+          //Try to push and remove successful ones from queue
+          return await tryCatchAsync(destinationPush, (err) => {
             // Call custom error handling
-            if (config.onError) config.onError(error, instance);
-          })(destination.config, instance)) || false;
+            if (config.onError) config.onError(err, instance);
 
-        if (isSameType(init, {} as NodeDestination.Config)) {
-          destination.config = init;
-        } else {
-          destination.config.init = init;
-        }
+            // Default error handling for failing destinations
+            error = err; // Captured error from destination
 
-        // don't push if init is false
-        if (!init) return { id, destination, queue };
-      }
+            // @TODO Dead letter queue
+            // destination.dlq!.push(event); // Add to DLQ
+          })(instance, destination, event);
+        }),
+      );
 
-      const result =
-        (await tryCatchAsync(destination.push, (error) => {
-          // Call custom error handling
-          if (config.onError) config.onError(error, instance);
-
-          // Default error handling for failing destinations
-          return { error, queue: undefined };
-        })(events, destination.config)) || {}; // everything is fine
-
-      const error = result.error; // Captured error from destination
-
-      return { id, destination, queue: [], error };
+      return { id, destination, queue: destination.queue, error };
     }),
   );
 

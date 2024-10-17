@@ -83,6 +83,8 @@ describe('Client', () => {
     expect(mockDestinationPush).toHaveBeenCalledWith(
       [{ event: mockEvent }],
       mockDestination.config,
+      undefined, // @TODO mapping
+      expect.any(Object), // Instance
     );
     expect(result).toEqual({
       event: mockEvent,
@@ -138,6 +140,8 @@ describe('Client', () => {
         },
       ],
       mockDestination.config,
+      undefined, // @TODO mapping
+      expect.any(Object), // Instance
     );
   });
 

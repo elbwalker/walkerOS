@@ -1,5 +1,6 @@
+import type { WalkerOS } from '@elbwalker/types';
 import type { NodeClient, NodeDestination } from '../types';
-import { getId, isSameType } from '@elbwalker/utils';
+import { getId, isSameType, tryCatchAsync } from '@elbwalker/utils';
 import { pushToDestinations } from './push';
 
 export async function addDestination(
@@ -33,4 +34,37 @@ export async function addDestination(
   // Process previous events if not disabled
   if (config.queue !== false) destination.queue = [...instance.queue];
   return await pushToDestinations(instance, undefined, { [id]: destination });
+}
+
+export async function destinationInit(
+  instance: NodeClient.Instance,
+  destination: NodeDestination.Destination,
+) {
+  // Check if the destination was initialized properly or try to do so
+  if (destination.init && !destination.config.init) {
+    const init =
+      (await tryCatchAsync(destination.init, (error) => {
+        // Call custom error handling
+        if (instance.config.onError) instance.config.onError(error, instance);
+      })(destination.config, instance)) !== false; // Actively check for errors
+
+    destination.config.init = init;
+
+    // don't push if init is false
+    if (!init) return false;
+  }
+
+  return true; // Destination is ready to push
+}
+
+export async function destinationPush(
+  instance: NodeClient.Instance,
+  destination: NodeDestination.Destination,
+  event: WalkerOS.Event,
+): Promise<boolean> {
+  await destination.push([{ event }], destination.config, undefined, instance);
+
+  // @TODO
+
+  return true;
 }
