@@ -1,6 +1,12 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { WebClient, WebDestination } from '../types';
-import { debounce, getId, tryCatch, useHooks } from '@elbwalker/utils';
+import {
+  debounce,
+  getEventConfig,
+  getId,
+  tryCatch,
+  useHooks,
+} from '@elbwalker/utils';
 import { pushToDestinations } from './push';
 
 export function addDestination(
@@ -85,7 +91,7 @@ export function destinationPush(
   destination: WebDestination.Destination,
   event: WalkerOS.Event,
 ): boolean {
-  const { eventConfig, mappingKey } = destinationMapping(
+  const { eventConfig, mappingKey } = getEventConfig(
     event,
     destination.config.mapping,
   );
@@ -133,43 +139,4 @@ export function destinationPush(
 
     return true;
   })();
-}
-
-export function destinationMapping(
-  event: WalkerOS.Event,
-  mapping?: WebDestination.Mapping<never>,
-) {
-  // Check for an active mapping for proper event handling
-  let eventConfig: undefined | WebDestination.EventConfig;
-  let mappingKey = '';
-
-  if (mapping) {
-    let mappingEntityKey = event.entity; // Default key is the entity name
-    let mappingEntity = mapping[mappingEntityKey];
-
-    if (!mappingEntity) {
-      // Fallback to the wildcard key
-      mappingEntityKey = '*';
-      mappingEntity = mapping[mappingEntityKey];
-    }
-
-    if (mappingEntity) {
-      let mappingActionKey = event.action; // Default action is the event action
-      eventConfig = mappingEntity[mappingActionKey];
-
-      if (!eventConfig) {
-        // Fallback to the wildcard action
-        mappingActionKey = '*';
-        eventConfig = mappingEntity[mappingActionKey];
-      }
-
-      // Handle individual event settings
-      if (eventConfig) {
-        // Save the mapping key for later use
-        mappingKey = `${mappingEntityKey} ${mappingActionKey}`;
-      }
-    }
-  }
-
-  return { eventConfig, mappingKey };
 }

@@ -4,6 +4,7 @@ export interface Destination<Custom = unknown, EventCustom = unknown> {
   config: Config<Custom, EventCustom>; // Configuration settings for the destination
   queue?: Queue; // Non processed events yet and reset with each new run
   type?: string; // The type of the destination
+  pushBatch?: PushBatchFn<Custom, EventCustom>;
 }
 
 export interface Config<Custom = unknown, EventCustom = unknown> {
@@ -26,6 +27,12 @@ export interface Mapping<EventCustom> {
     | { [action: string]: undefined | EventConfig<EventCustom> };
 }
 
+export type PushBatchFn<Custom, EventCustom> = (
+  batch: Batch<EventCustom>,
+  config: Config<Custom, EventCustom>,
+  instance?: WalkerOS.Instance,
+) => void;
+
 export interface Batch<EventCustom> {
   key: string;
   events: Array<WalkerOS.Event>;
@@ -39,6 +46,7 @@ export type Meta = {
 
 export interface EventConfig<EventCustom = unknown> {
   batch?: number; // Bundle events for batch processing
+  batchFn?: (destination: Destination, instance: WalkerOS.Instance) => void;
   batched?: Batch<EventCustom>; // Batch of events to be processed
   consent?: WalkerOS.Consent; // Required consent states process the event
   custom?: EventCustom; // Arbitrary but protected configurations for custom event config

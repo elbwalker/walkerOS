@@ -1,6 +1,5 @@
 import type { WalkerOS, Schema, Handler, Hooks } from '@elbwalker/types';
-import type * as NodeDestination from './destination';
-import type * as On from './on';
+import type { NodeDestination, On } from '.';
 
 export interface Instance extends State, WalkerOS.Instance {
   push: Elb<Promise<PushResult>>;
