@@ -125,7 +125,7 @@ describe('Destination', () => {
     expect(result.successful).toHaveProperty('length', 1);
     expect(result.successful[0]).toHaveProperty('id', 'later');
     expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(mockPush.mock.calls[0][0][0].event).toEqual(
+    expect(mockPush.mock.calls[0][0]).toEqual(
       expect.objectContaining({
         consent: { demo: true },
         user: { id: 'us3r' },
@@ -193,7 +193,7 @@ describe('Destination', () => {
     expect(result).toHaveProperty('failed', []);
 
     result = await elb('walker consent', { test: true });
-    expect(mockPush.mock.calls[0][0][0].event).toEqual(
+    expect(mockPush.mock.calls[0][0]).toEqual(
       expect.objectContaining({
         consent: { test: true },
       }),

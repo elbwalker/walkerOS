@@ -81,7 +81,7 @@ describe('Firehose', () => {
     const spy = (FirehoseClient.prototype.send = jest.fn());
     const config = await getConfig(customConfig);
 
-    await destination.push([{ event }], config);
+    await destination.push(event, config);
     expect(spy).toHaveBeenCalledWith(expect.any(PutRecordBatchCommand));
   });
 });

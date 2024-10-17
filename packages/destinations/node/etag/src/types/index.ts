@@ -11,6 +11,8 @@ export type PartialConfig = NodeDestination.Config<
   Partial<CustomEventConfig>
 >;
 
+export type PushFn = NodeDestination.PushFn<CustomConfig, CustomEventConfig>;
+
 export interface CustomConfig extends DestinationCoreEtag.Config {}
 
 export interface CustomEventConfig {}

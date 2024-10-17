@@ -1,9 +1,9 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config, CustomConfig, PushEvents } from './types';
+import type { CustomConfig, PushFn } from './types';
 import { requestToParameter, sendNode } from '@elbwalker/utils';
 import { getParameters } from '@elbwalker/destination-core-etag';
 
-export const push = async function (pushEvents: PushEvents, config: Config) {
+export const push: PushFn = async function (pushEvent, config) {
   const { custom } = config;
 
   if (!custom) return {};
@@ -19,9 +19,7 @@ export const push = async function (pushEvents: PushEvents, config: Config) {
     language,
   };
 
-  const events: WalkerOS.Events = pushEvents.map(
-    (pushEvent) => pushEvent.event,
-  );
+  const events: WalkerOS.Events = [pushEvent];
 
   const parameters = getParameters(events, custom, context);
 

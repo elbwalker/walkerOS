@@ -18,7 +18,7 @@ export type PartialConfig = NodeDestination.Config<
   Partial<CustomEventConfig>
 >;
 
-export type Mapping = NodeDestination.EventConfig<CustomEventConfig>;
+export type EventConfig = NodeDestination.EventConfig<CustomEventConfig>;
 
 export type PushEvents = NodeDestination.PushEvents<CustomEventConfig>;
 
@@ -35,6 +35,7 @@ export interface CustomEventConfig {
   currency?: WalkerOS.MappingValue;
   content?: {
     id?: WalkerOS.MappingValue;
+    name?: WalkerOS.MappingValue;
     price?: WalkerOS.MappingValue;
     quantity?: WalkerOS.MappingValue;
   };

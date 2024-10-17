@@ -85,7 +85,7 @@ describe('Node Destination BigQuery', () => {
     const config = await getConfig({ projectId, bigquery: { credentials } });
     const mockFn = getMockFn(config);
 
-    await destination.push([{ event }], config);
+    await destination.push(event, config);
     expect(mockFn).toHaveBeenCalledWith('insert', [
       {
         timestamp: expect.any(Date),

@@ -1,10 +1,10 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config, PushEvents, Row } from './types';
+import type { PushFn, Row } from './types';
 
-export const push = async function (events: PushEvents, config: Config) {
-  const { client, datasetId, tableId } = config.custom;
+export const push: PushFn = async function (event, config) {
+  const { client, datasetId, tableId } = config.custom!;
 
-  const rows = events.map((event) => mapEvent(event.event));
+  const rows = [mapEvent(event)];
 
   await client.dataset(datasetId).table(tableId).insert(rows);
 

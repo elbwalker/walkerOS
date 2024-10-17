@@ -7,8 +7,8 @@ import type { On, WebClient } from '.';
 export interface Destination<Custom = unknown, EventCustom = unknown>
   extends WalkerOSDestination.Destination<Custom, EventCustom> {
   config: Config<Custom, EventCustom>;
-  init?: InitFn<Custom, EventCustom>;
   push: PushFn<Custom, EventCustom>;
+  init?: InitFn<Custom, EventCustom>;
 }
 
 export type DestinationInit = Partial<Omit<Destination, 'push'>> &

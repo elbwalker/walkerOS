@@ -21,12 +21,12 @@ export const destinationMeta: Destination = {
     return config;
   },
 
-  async push(events, config) {
+  async push(event, config, mapping) {
     return await tryCatchAsync(push, (error) => {
       if (config.onLog) config.onLog('Push error');
       // @TODO queue handling
       throwError(error);
-    })(events, getConfig(config));
+    })([{ event, mapping }], getConfig(config));
   },
 };
 

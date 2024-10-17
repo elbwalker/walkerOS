@@ -27,11 +27,17 @@ export interface Mapping<EventCustom> {
     | { [action: string]: undefined | EventConfig<EventCustom> };
 }
 
+export type PushEvent<EventCustom = unknown> = {
+  event: WalkerOS.Event;
+  mapping?: EventConfig<EventCustom>;
+};
+export type PushEvents<EventCustom = unknown> = Array<PushEvent<EventCustom>>;
+
 export type PushBatchFn<Custom, EventCustom> = (
   batch: Batch<EventCustom>,
   config: Config<Custom, EventCustom>,
   instance?: WalkerOS.Instance,
-) => void;
+) => void; // @TODO Promise
 
 export interface Batch<EventCustom> {
   key: string;

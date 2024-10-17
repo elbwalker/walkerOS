@@ -1,4 +1,5 @@
-import type { FirehoseConfig, PushEvents } from '../types';
+import type { Destination } from '@elbwalker/types';
+import type { FirehoseConfig } from '../types';
 import { throwError } from '@elbwalker/utils';
 import {
   FirehoseClient,
@@ -23,13 +24,16 @@ export function getConfigFirehose(
   };
 }
 
-export async function pushFirehose(events: PushEvents, config: FirehoseConfig) {
+export async function pushFirehose(
+  pushEvents: Destination.PushEvents,
+  config: FirehoseConfig,
+) {
   const { client, streamName } = config;
 
-  if (!client) return { queue: events };
+  if (!client) return { queue: pushEvents };
 
   // Up to 500 records per batch
-  const records = events.map((event) => ({
+  const records = pushEvents.map(({ event }) => ({
     Data: Buffer.from(JSON.stringify(event)),
   }));
 

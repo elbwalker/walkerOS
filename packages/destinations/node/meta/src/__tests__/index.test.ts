@@ -100,7 +100,7 @@ describe('Node Destination Meta', () => {
   });
 
   test('push', async () => {
-    await destination.push([{ event }], config);
+    await destination.push(event, config);
 
     expect(mockXHRSend).toHaveBeenCalledWith(expect.any(String));
     expect(getRequestStr(mockXHRSend)).toContain('"access_token":"s3cr3t"');
@@ -112,7 +112,7 @@ describe('Node Destination Meta', () => {
 
   test('testCode', async () => {
     config.custom.testCode = 'TESTNNNNN';
-    await destination.push([{ event }], config);
+    await destination.push(event, config);
 
     expect(getRequestObj(mockXHRSend)).toEqual(
       expect.objectContaining({
@@ -124,7 +124,7 @@ describe('Node Destination Meta', () => {
   test('IDs', async () => {
     event.data.clickId = 'abc...';
 
-    await destination.push([{ event }], config);
+    await destination.push(event, config);
 
     const user_data = getRequestData(mockXHRSend).user_data;
 
@@ -147,7 +147,7 @@ describe('Node Destination Meta', () => {
     event.user.userAgent = 'br0ws3r';
     event.user.ip = '127.0.0.1';
 
-    await destination.push([{ event }], config);
+    await destination.push(event, config);
 
     const user_data = getRequestData(mockXHRSend).user_data;
 
@@ -176,15 +176,11 @@ describe('Node Destination Meta', () => {
       value: 'data.total',
     };
 
-    await destination.push(
-      [{ event, mapping: { name: 'Purchase', custom } }],
-      config,
-    );
+    await destination.push(event, config, { custom });
 
     const requestData = getRequestData(mockXHRSend);
     const custom_data = requestData.custom_data;
 
-    expect(requestData.event_name).toEqual('Purchase');
     expect(custom_data).toEqual(
       expect.objectContaining({
         currency: 'EUR',

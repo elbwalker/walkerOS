@@ -15,12 +15,12 @@ export const destinationEtag: Destination = {
     if (!config.custom || !config.custom.measurementId) return false;
   },
 
-  async push(events, config) {
+  async push(event, config) {
     return await tryCatchAsync(push, (error) => {
       if (config.onLog) config.onLog('Push error');
 
       throwError(error);
-    })(events, getConfig(config));
+    })(event, getConfig(config));
   },
 };
 

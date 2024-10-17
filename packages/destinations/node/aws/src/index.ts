@@ -28,12 +28,12 @@ export const destinationFirehose: Destination = {
     return config;
   },
 
-  async push(events, config) {
+  async push(event, config) {
     return await tryCatchAsync(push, (error) => {
       if (config.onLog) config.onLog('Push error');
 
       throwError(error);
-    })(events, getConfig(config));
+    })(event, getConfig(config));
   },
 };
 

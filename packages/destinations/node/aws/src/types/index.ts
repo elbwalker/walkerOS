@@ -23,8 +23,6 @@ export type PartialConfig = NodeDestination.Config<
   Partial<CustomEventConfig>
 >;
 
-export type PushEvents = NodeDestination.PushEvents<CustomEventConfig>;
-
 export interface CustomConfig {
   firehose?: FirehoseConfig;
 }

@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config, Mapping, PushEvents } from './types';
+import type { Config, EventConfig, PushEvents } from './types';
 import {
   Content,
   CustomData,
@@ -18,8 +18,8 @@ export const push = async function (events: PushEvents, config: Config) {
     testCode,
   } = config.custom;
 
-  const serverEvents = events.map((event) =>
-    mapEvent(event.event, event.mapping),
+  const serverEvents = events.map(({ event, mapping }) =>
+    mapEvent(event, mapping),
   );
 
   const eventRequest = new EventRequest(
@@ -44,12 +44,10 @@ export const push = async function (events: PushEvents, config: Config) {
 
 export const mapEvent = (
   event: WalkerOS.Event,
-  mapping: Mapping = {},
+  mapping: EventConfig = {},
 ): ServerEvent => {
   const { data, user, source } = event;
   const { currency, content, value } = mapping.custom || {};
-
-  const eventName = mapping.name || event.event;
 
   let userData = new UserData();
   if (user) {
@@ -110,7 +108,7 @@ export const mapEvent = (
 
   const serverEvent = new ServerEvent()
     .setEventId(event.id)
-    .setEventName(eventName)
+    .setEventName(event.event)
     .setEventTime(timestamp)
     .setUserData(userData)
     .setCustomData(customData)

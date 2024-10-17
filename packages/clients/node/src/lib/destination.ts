@@ -1,6 +1,13 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { NodeClient, NodeDestination } from '../types';
-import { getId, isSameType, tryCatchAsync } from '@elbwalker/utils';
+import {
+  debounce,
+  getEventConfig,
+  getId,
+  isSameType,
+  tryCatchAsync,
+  useHooks,
+} from '@elbwalker/utils';
 import { pushToDestinations } from './push';
 
 export async function addDestination(
@@ -62,9 +69,51 @@ export async function destinationPush(
   destination: NodeDestination.Destination,
   event: WalkerOS.Event,
 ): Promise<boolean> {
-  await destination.push([{ event }], destination.config, undefined, instance);
+  const { eventConfig, mappingKey } = getEventConfig(
+    event,
+    destination.config.mapping,
+  );
 
-  // @TODO
+  if (eventConfig) {
+    // Check if event should be processed or ignored
+    if (eventConfig.ignore) return false;
+
+    // Check to use specific event names
+    if (eventConfig.name) event.event = eventConfig.name;
+  }
+
+  if (eventConfig?.batch && destination.pushBatch) {
+    const batched = eventConfig.batched || {
+      key: mappingKey,
+      events: [],
+    };
+    batched.events.push(event);
+
+    eventConfig.batchFn =
+      eventConfig.batchFn ||
+      debounce(async (destination, instance) => {
+        useHooks(
+          destination.pushBatch!,
+          'DestinationPushBatch',
+          instance.hooks,
+        )(batched, destination.config, instance);
+
+        // Reset the batched events queue
+        // pushBatch isn't async yet, may cause trouble
+        batched.events = [];
+      }, eventConfig.batch);
+
+    eventConfig.batched = batched;
+    eventConfig.batchFn(destination, instance);
+  } else {
+    // It's time to go to the destination's side now
+    await useHooks(destination.push, 'DestinationPush', instance.hooks)(
+      event,
+      destination.config,
+      eventConfig,
+      instance,
+    );
+  }
 
   return true;
 }
