@@ -83,6 +83,10 @@ describe('Node Destination Meta', () => {
     window.XMLHttpRequest = oldXMLHttpRequest;
   });
 
+  async function getConfig(custom = {}) {
+    return (await destination.init({ custom })) as Config;
+  }
+
   test('init', async () => {
     await expect(destination.init({})).rejects.toThrow(
       'Error: Config custom accessToken missing',
@@ -90,9 +94,9 @@ describe('Node Destination Meta', () => {
     await expect(destination.init({ custom: { accessToken } })).rejects.toThrow(
       'Error: Config custom pixelId missing',
     );
-    await expect(
-      destination.init({ custom: { accessToken, pixelId } }),
-    ).resolves.toEqual(
+
+    const config = await getConfig({ accessToken, pixelId });
+    expect(config).toEqual(
       expect.objectContaining({
         custom: { accessToken, pixelId },
       }),

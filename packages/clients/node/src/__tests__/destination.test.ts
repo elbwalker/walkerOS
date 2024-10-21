@@ -4,9 +4,7 @@ import { createNodeClient } from '../';
 
 describe('Destination', () => {
   const mockPush = jest.fn(); //.mockImplementation(console.log);
-  const mockInit = jest.fn().mockImplementation(() => {
-    return true;
-  });
+  const mockInit = jest.fn();
 
   const mockEvent: WalkerOS.Event = {
     event: 'entity action',
@@ -92,6 +90,18 @@ describe('Destination', () => {
       init: mockInitFalse,
       push: mockPushFalse,
     });
+
+    // Save config automatically
+    const destinationSave = (
+      await elb('walker destination', {
+        config: {},
+        init: jest.fn().mockImplementation(() => {
+          return { foo: 'bar' };
+        }),
+        push: mockPush,
+      })
+    ).successful[0].destination;
+    expect(destinationSave.config).toEqual({ foo: 'bar', init: true });
 
     jest.clearAllMocks();
     await elb(mockEvent);

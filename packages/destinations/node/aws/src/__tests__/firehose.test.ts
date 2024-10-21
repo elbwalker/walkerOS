@@ -47,9 +47,7 @@ describe('Firehose', () => {
   const streamName = 'demo';
 
   async function getConfig(custom: CustomConfig = {}) {
-    return (await destination.init({
-      custom,
-    })) as Config;
+    return (await destination.init({ custom })) as Config;
   }
 
   beforeEach(() => {

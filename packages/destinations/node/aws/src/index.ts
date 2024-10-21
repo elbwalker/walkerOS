@@ -1,10 +1,5 @@
 import type { CustomConfig, Destination } from './types';
-import {
-  isSameType,
-  throwError,
-  tryCatch,
-  tryCatchAsync,
-} from '@elbwalker/utils';
+import { isSameType, throwError, tryCatchAsync } from '@elbwalker/utils';
 import { getConfig } from './config';
 import { push } from './push';
 
@@ -17,7 +12,7 @@ export const destinationFirehose: Destination = {
   config: {},
 
   async init(partialConfig) {
-    const config = tryCatch(getConfig, (error) => {
+    const config = await tryCatchAsync(getConfig, (error) => {
       config.onLog('Init error', partialConfig.verbose);
 
       throwError(error);

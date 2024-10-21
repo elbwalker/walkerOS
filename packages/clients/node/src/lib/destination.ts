@@ -5,7 +5,6 @@ import {
   getEventConfig,
   getId,
   isSameType,
-  tryCatchAsync,
   useHooks,
 } from '@elbwalker/utils';
 import { pushToDestinations } from './push';
@@ -49,16 +48,16 @@ export async function destinationInit(
 ) {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
-    const init =
-      (await tryCatchAsync(destination.init, (error) => {
-        // Call custom error handling
-        if (instance.config.onError) instance.config.onError(error, instance);
-      })(destination.config, instance)) !== false; // Actively check for errors
+    const config = await destination.init(destination.config, instance);
 
-    destination.config.init = init;
+    // Actively check for errors (when false)
+    if (config === false) return config; // don't push if init is false
 
-    // don't push if init is false
-    if (!init) return false;
+    // Update the destination config if it was returned
+    if (config) destination.config = config;
+
+    // Remember that the destination was initialized
+    destination.config.init = true;
   }
 
   return true; // Destination is ready to push

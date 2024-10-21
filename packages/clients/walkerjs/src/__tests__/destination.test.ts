@@ -513,9 +513,7 @@ describe('Destination', () => {
 
     const mockInitA = jest.fn();
     const mockPushA = jest.fn();
-    const mockInitB = jest.fn().mockImplementation(() => {
-      return true;
-    });
+    const mockInitB = jest.fn();
     const mockPushB = jest.fn();
 
     const name = 'foo';
@@ -556,6 +554,20 @@ describe('Destination', () => {
       { name: 'different' },
       expect.anything(),
     );
+
+    // Save config automatically
+    elb('walker destination', {
+      type: 'save',
+      config: {},
+      init: jest.fn().mockImplementation(() => {
+        return { foo: 'bar' };
+      }),
+      push: mockPush,
+    });
+    const destinationSave = Object.values(walkerjs.destinations).filter(
+      (item) => item.type === 'save',
+    )[0];
+    expect(destinationSave.config).toEqual({ foo: 'bar', init: true });
   });
 
   test('temp async queue', () => {

@@ -17,7 +17,7 @@ export type DestinationInit = Partial<Omit<Destination, 'push'>> &
 export type InitFn<Custom, EventCustom> = (
   config: Config<Custom, EventCustom>,
   instance: WebClient.Instance,
-) => void | boolean;
+) => void | Config | false;
 
 export type PushFn<Custom, EventCustom> = (
   event: WalkerOS.Event,

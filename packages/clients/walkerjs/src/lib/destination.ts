@@ -70,17 +70,20 @@ export function destinationInit(
 ) {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
-    const init =
-      useHooks(
-        destination.init,
-        'DestinationInit',
-        instance.hooks,
-      )(destination.config, instance) !== false; // Actively check for errors
+    const config = useHooks(
+      destination.init,
+      'DestinationInit',
+      instance.hooks,
+    )(destination.config, instance);
 
-    destination.config.init = init;
+    // Actively check for errors (when false)
+    if (config === false) return config; // don't push if init is false
 
-    // don't push if init is false
-    if (!init) return false;
+    // Update the destination config if it was returned
+    if (config) destination.config = config;
+
+    // Remember that the destination was initialized
+    destination.config.init = true;
   }
 
   return true; // Destination is ready to push

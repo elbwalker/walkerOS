@@ -8,13 +8,16 @@ export interface Destination<Custom = unknown, EventCustom = unknown>
   extends WalkerOSDestination.Destination<Custom, EventCustom> {
   config: Config<Custom, EventCustom>;
   push: PushFn<Custom, EventCustom>;
-  init?: InitFn<Custom, EventCustom>;
+  init?: InitFn<
+    Partial<Config<Custom, EventCustom>>,
+    Config<Custom, EventCustom>
+  >;
 }
 
-export type InitFn<Custom, EventCustom> = (
-  config: Config<Custom, EventCustom>,
-  instance: NodeClient.Instance,
-) => Promise<void | boolean | Config<Custom, EventCustom>>;
+export type InitFn<PartialConfig = unknown, Config = unknown> = (
+  config: PartialConfig,
+  instance?: NodeClient.Instance,
+) => Promise<void | Config | false>;
 
 export type PushFn<Custom, EventCustom> = (
   event: WalkerOS.Event,
