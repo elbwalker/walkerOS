@@ -19,12 +19,12 @@ export const destinationBigQuery: Destination = {
     return config;
   },
 
-  async push(events, config) {
+  async push(event, config) {
     return await tryCatchAsync(push, (error) => {
       if (config.onLog) config.onLog('Push error');
       // @TODO queue handling
       throwError(error);
-    })(events, getConfig(config));
+    })(event, config);
   },
 };
 

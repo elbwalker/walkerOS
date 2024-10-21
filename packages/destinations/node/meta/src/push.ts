@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config, EventConfig, PushEvents } from './types';
+import type { EventConfig, PushFn } from './types';
 import {
   Content,
   CustomData,
@@ -9,23 +9,21 @@ import {
 } from 'facebook-nodejs-business-sdk';
 import { getMappingValue } from '@elbwalker/utils';
 
-export const push = async function (events: PushEvents, config: Config) {
+export const push: PushFn = async function (event, config, mapping) {
   const {
     accessToken,
     pixelId,
     debug,
     partner = 'walkerOS',
     testCode,
-  } = config.custom;
+  } = config.custom!;
 
-  const serverEvents = events.map(({ event, mapping }) =>
-    mapEvent(event, mapping),
-  );
+  const events = [mapEvent(event, mapping)];
 
   const eventRequest = new EventRequest(
     accessToken,
     pixelId,
-    serverEvents,
+    events,
     partner,
     testCode,
   );

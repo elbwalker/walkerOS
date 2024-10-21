@@ -26,7 +26,7 @@ export const destinationMeta: Destination = {
       if (config.onLog) config.onLog('Push error');
       // @TODO queue handling
       throwError(error);
-    })([{ event, mapping }], getConfig(config));
+    })(event, config, mapping);
   },
 };
 

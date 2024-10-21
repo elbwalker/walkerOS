@@ -28,7 +28,7 @@ export const destinationFirehose: Destination = {
       if (config.onLog) config.onLog('Push error');
 
       throwError(error);
-    })(event, getConfig(config));
+    })(event, config);
   },
 };
 
