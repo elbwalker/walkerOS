@@ -46,7 +46,7 @@ describe('Destination', () => {
     jest.resetModules();
   });
 
-  test.skip('regular', async () => {});
+  // @TODO test.skip('regular', async () => {});
 
   test('init call', async () => {
     const { elb } = getClient();
@@ -178,7 +178,7 @@ describe('Destination', () => {
     expect(result.failed[0].error).toBe('Error: kaputt');
   });
 
-  test.skip('queue', async () => {});
+  // @TODO test.skip('queue', async () => {});
 
   test('consent', async () => {
     const mockPush = jest.fn();

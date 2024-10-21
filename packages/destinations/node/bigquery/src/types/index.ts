@@ -4,7 +4,6 @@ import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Destination
   extends NodeDestination.Destination<CustomConfig, CustomEventConfig> {
-  // CustomConfig Naming anpassen?
   init: InitFn;
 }
 
