@@ -7,27 +7,24 @@ import { pushToDestinations } from './push';
 export function allowedToPush(
   instance: WebClient.Instance,
   destination: WebDestination.Destination,
-): boolean {
-  // Default without consent handling
-  let granted = true;
+  event?: WalkerOS.Event,
+): false | WalkerOS.Consent {
+  const requiredStates = Object.keys(destination.config.consent || {});
 
-  // Check for consent
-  const destinationConsent = destination.config.consent;
+  // No explicit consent required
+  if (!requiredStates.length) return {};
 
-  if (destinationConsent) {
-    // Let's be strict here
-    granted = false;
+  const grantedStates: WalkerOS.Consent = {};
 
-    // Set the current consent states
-    const consentStates = instance.consent;
+  // Search for required and granted consent
+  requiredStates.forEach((consent) => {
+    // Check if either instance or event granted consent
+    if (instance.consent[consent] || event?.consent?.[consent])
+      grantedStates[consent] = true;
+  });
 
-    // Search for a required and granted consent
-    Object.keys(destinationConsent).forEach((consent) => {
-      if (consentStates[consent]) granted = true;
-    });
-  }
-
-  return granted;
+  // Return the granted consent states or false
+  return Object.keys(grantedStates).length ? grantedStates : false;
 }
 
 export function setConsent(
