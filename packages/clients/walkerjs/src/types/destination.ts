@@ -4,12 +4,11 @@ import type {
 } from '@elbwalker/types';
 import type { On, WebClient } from '.';
 
-export interface Destination<Custom = never, EventCustom = never>
+export interface Destination<Custom = unknown, EventCustom = unknown>
   extends WalkerOSDestination.Destination<Custom, EventCustom> {
   config: Config<Custom, EventCustom>;
-  init?: InitFn<Custom, EventCustom>;
   push: PushFn<Custom, EventCustom>;
-  pushBatch?: PushBatchFn<Custom, EventCustom>;
+  init?: InitFn<Custom, EventCustom>;
 }
 
 export type DestinationInit = Partial<Omit<Destination, 'push'>> &
@@ -18,7 +17,7 @@ export type DestinationInit = Partial<Omit<Destination, 'push'>> &
 export type InitFn<Custom, EventCustom> = (
   config: Config<Custom, EventCustom>,
   instance: WebClient.Instance,
-) => void | boolean;
+) => void | Config | false;
 
 export type PushFn<Custom, EventCustom> = (
   event: WalkerOS.Event,
@@ -33,7 +32,7 @@ export type PushBatchFn<Custom, EventCustom> = (
   instance?: WebClient.Instance,
 ) => void;
 
-export interface Config<Custom = never, EventCustom = never>
+export interface Config<Custom = unknown, EventCustom = unknown>
   extends WalkerOSDestination.Config<Custom, EventCustom> {
   on?: On.Config; // On events listener rules
 }
@@ -41,7 +40,5 @@ export interface Config<Custom = never, EventCustom = never>
 export interface Mapping<EventCustom = unknown>
   extends WalkerOSDestination.Mapping<EventCustom> {}
 
-export interface EventConfig<EventCustom = never>
-  extends WalkerOSDestination.EventConfig<EventCustom> {
-  batchFn?: (destination: Destination, instance: WebClient.Instance) => void;
-}
+export interface EventConfig<EventCustom = unknown>
+  extends WalkerOSDestination.EventConfig<EventCustom> {}

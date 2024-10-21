@@ -130,14 +130,12 @@ export function pushToDestinations(
     // Process the destinations event queue
     destination.queue = destination.queue.filter((event) => {
       // Copy the event to prevent mutation
-      event = event
-        ? assign(event, {
-            // Update previous values with the current state
-            consent,
-            globals,
-            user,
-          })
-        : event; // undefined
+      event = assign(event, {
+        // Update previous values with the current state
+        consent,
+        globals,
+        user,
+      });
 
       //Try to push and remove successful ones from queue
       return !destinationPush(instance, destination, event);

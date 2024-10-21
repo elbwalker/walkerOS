@@ -81,8 +81,10 @@ describe('Client', () => {
     result = await elb(mockEvent);
     expect(mockDestinationPush).toHaveBeenCalledTimes(1);
     expect(mockDestinationPush).toHaveBeenCalledWith(
-      [{ event: mockEvent }],
+      mockEvent,
       mockDestination.config,
+      undefined,
+      expect.anything(),
     );
     expect(result).toEqual({
       event: mockEvent,
@@ -132,12 +134,10 @@ describe('Client', () => {
     await elb('e a');
     expect(mockDestinationPush).toHaveBeenCalledTimes(1);
     expect(mockDestinationPush).toHaveBeenCalledWith(
-      [
-        {
-          event,
-        },
-      ],
+      event,
       mockDestination.config,
+      undefined,
+      expect.anything(),
     );
   });
 

@@ -1,10 +1,10 @@
-import type { Config, PushEvents } from './types';
+import type { PushFn } from './types';
 import { pushFirehose } from './lib/firehose';
 
-export const push = async function (events: PushEvents, config: Config) {
-  const { firehose } = config.custom;
+export const push: PushFn = async function (event, config) {
+  const { firehose } = config.custom || {};
 
-  if (firehose) pushFirehose(events, firehose);
+  if (firehose) pushFirehose([{ event }], firehose);
 
   return { queue: [] }; // @TODO
 };

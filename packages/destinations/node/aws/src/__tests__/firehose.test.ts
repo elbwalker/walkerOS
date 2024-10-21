@@ -47,9 +47,7 @@ describe('Firehose', () => {
   const streamName = 'demo';
 
   async function getConfig(custom: CustomConfig = {}) {
-    return (await destination.init({
-      custom,
-    })) as Config;
+    return (await destination.init({ custom })) as Config;
   }
 
   beforeEach(() => {
@@ -81,7 +79,7 @@ describe('Firehose', () => {
     const spy = (FirehoseClient.prototype.send = jest.fn());
     const config = await getConfig(customConfig);
 
-    await destination.push([{ event }], config);
+    await destination.push(event, config);
     expect(spy).toHaveBeenCalledWith(expect.any(PutRecordBatchCommand));
   });
 });

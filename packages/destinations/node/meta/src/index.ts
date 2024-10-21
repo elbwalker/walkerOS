@@ -4,9 +4,11 @@ import { getConfig, log } from './config';
 import { push } from './push';
 
 // Types
-export * as DestinationBigQuery from './types';
+export * as DestinationMeta from './types';
 
-export const destinationBigQuery: Destination = {
+export const destinationMeta: Destination = {
+  type: 'meta',
+
   config: {},
 
   async init(partialConfig) {
@@ -19,13 +21,13 @@ export const destinationBigQuery: Destination = {
     return config;
   },
 
-  async push(event, config) {
+  async push(event, config, mapping) {
     return await tryCatchAsync(push, (error) => {
       if (config.onLog) config.onLog('Push error');
       // @TODO queue handling
       throwError(error);
-    })(event, config);
+    })(event, config, mapping);
   },
 };
 
-export default destinationBigQuery;
+export default destinationMeta;

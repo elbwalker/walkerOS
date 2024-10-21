@@ -1,6 +1,12 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { WebClient, WebDestination } from '../types';
-import { debounce, getId, tryCatch, useHooks } from '@elbwalker/utils';
+import {
+  debounce,
+  getEventConfig,
+  getId,
+  tryCatch,
+  useHooks,
+} from '@elbwalker/utils';
 import { pushToDestinations } from './push';
 
 export function addDestination(
@@ -64,17 +70,20 @@ export function destinationInit(
 ) {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
-    const init =
-      useHooks(
-        destination.init,
-        'DestinationInit',
-        instance.hooks,
-      )(destination.config, instance) !== false; // Actively check for errors
+    const config = useHooks(
+      destination.init,
+      'DestinationInit',
+      instance.hooks,
+    )(destination.config, instance);
 
-    destination.config.init = init;
+    // Actively check for errors (when false)
+    if (config === false) return config; // don't push if init is false
 
-    // don't push if init is false
-    if (!init) return false;
+    // Update the destination config if it was returned
+    if (config) destination.config = config;
+
+    // Remember that the destination was initialized
+    destination.config.init = true;
   }
 
   return true; // Destination is ready to push
@@ -85,7 +94,7 @@ export function destinationPush(
   destination: WebDestination.Destination,
   event: WalkerOS.Event,
 ): boolean {
-  const { eventConfig, mappingKey } = destinationMapping(
+  const { eventConfig, mappingKey } = getEventConfig(
     event,
     destination.config.mapping,
   );
@@ -133,43 +142,4 @@ export function destinationPush(
 
     return true;
   })();
-}
-
-export function destinationMapping(
-  event: WalkerOS.Event,
-  mapping?: WebDestination.Mapping<never>,
-) {
-  // Check for an active mapping for proper event handling
-  let eventConfig: undefined | WebDestination.EventConfig;
-  let mappingKey = '';
-
-  if (mapping) {
-    let mappingEntityKey = event.entity; // Default key is the entity name
-    let mappingEntity = mapping[mappingEntityKey];
-
-    if (!mappingEntity) {
-      // Fallback to the wildcard key
-      mappingEntityKey = '*';
-      mappingEntity = mapping[mappingEntityKey];
-    }
-
-    if (mappingEntity) {
-      let mappingActionKey = event.action; // Default action is the event action
-      eventConfig = mappingEntity[mappingActionKey];
-
-      if (!eventConfig) {
-        // Fallback to the wildcard action
-        mappingActionKey = '*';
-        eventConfig = mappingEntity[mappingActionKey];
-      }
-
-      // Handle individual event settings
-      if (eventConfig) {
-        // Save the mapping key for later use
-        mappingKey = `${mappingEntityKey} ${mappingActionKey}`;
-      }
-    }
-  }
-
-  return { eventConfig, mappingKey };
 }

@@ -14,9 +14,7 @@ describe('Hooks', () => {
 
   test('Destinations', () => {
     // Destination mocks
-    const mockInit = jest.fn().mockImplementation(() => {
-      return true;
-    });
+    const mockInit = jest.fn();
     const mockPush = jest.fn();
     const mockPushBatch = jest.fn();
     const destination: WebDestination.DestinationInit = {

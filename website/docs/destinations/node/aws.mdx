@@ -36,7 +36,7 @@ const config = {
   firehose: firehoseConfig,
 };
 
-elb('walker destination', destinationAWS, config);
+await elb('walker destination', destinationAWS, config);
 ```
 
 ## Firehose
@@ -53,7 +53,7 @@ const firehoseConfig = {
   },
 };
 
-elb('walker destination', destinationAWS, { firehose: firehoseConfig });
+await elb('walker destination', destinationAWS, { firehose: firehoseConfig });
 ```
 
 ### Optional Configuration Fields
@@ -87,7 +87,7 @@ const config = {
   },
 };
 
-elb('walker destination', destinationAWS, config);
+await elb('walker destination', destinationAWS, config);
 ```
 
 ## Who this package is for

@@ -102,20 +102,20 @@ optional. A complete destination configuration might look like this:
 
 Overview of all properties:
 
-| Property       | Value     | Description                                                        |
-| -------------- | --------- | ------------------------------------------------------------------ |
-| **id**         | string    | A unique key for the destination                                   |
-| **consent**    | object    | Required consent states to init and push events                    |
-| **custom**     | any       | Used for a destinations individual settings                        |
-| **init**       | boolean   | If the destination has been initialized by calling the init method |
-| **loadScript** | boolean   | If an additional script to work should be loaded                   |
-| **mapping**    | object    | A map to handle events individually                                |
-| **meta**       | object    | Additional meta information about the destination                  |
-| **queue**      | boolean   | Disable processing of previously pushed events                     |
-| **verbose**    | boolean   | Enable verbose logging                                             |
-| **onError**    | function  | Custom error handler                                               |
-| **onLog**      | function  | Custom log handler                                                 |
-| **on**         | On.Config | Rules for on-functions that gets triggered on specific events      |
+| Property       | Value     | Description                                                                                           |
+| -------------- | --------- | ----------------------------------------------------------------------------------------------------- |
+| **id**         | string    | A unique key for the destination                                                                      |
+| **consent**    | object    | Required consent states to init and push events                                                       |
+| **custom**     | any       | Used for a destinations individual settings                                                           |
+| **init**       | boolean   | If the destination has been initialized by calling the init method                                    |
+| **loadScript** | boolean   | If an additional script to work should be loaded                                                      |
+| **mapping**    | object    | Configuration how to transform events (see&nbsp;<Link to="/docs/destinations/mapping">Mapping</Link>) |
+| **meta**       | object    | Additional meta information about the destination                                                     |
+| **queue**      | boolean   | Disable processing of previously pushed events                                                        |
+| **verbose**    | boolean   | Enable verbose logging                                                                                |
+| **onError**    | function  | Custom error handler                                                                                  |
+| **onLog**      | function  | Custom log handler                                                                                    |
+| **on**         | On.Config | Rules for on-functions that gets triggered on specific events                                         |
 
 Call `elb('walker destination', { push: console.log }, config);` to add the
 destination to a client. The destination will log all events straight to the
@@ -123,53 +123,6 @@ console. Edit a destinations configuration at runtime by accessing
 `walkerjs.destinations.<id>`.
 
 > To grant required consent call `elb('walker consent', { demo: true });`.
-
-## Mapping
-
-There are common rules for destinations like the renaming of the event name or
-the basic rules how to set up the mapping, based on entities and actions
-specifically. A `*` can be used to match all entities or actions and set up
-common rules. Each destination requires specific settings which can be
-configured in the `custom` section of the mapping.
-
-```js
-const mapping = {
-  entity: { action: {} }, // Basic structure
-  page: {
-    view: { name: 'pageview' }, // Rename the event name
-    click: { custom: { language: 'globals.language' } }, // Custom settings
-  },
-  product: {
-    visible: { batch: 2000 }, // Bundle all product visible events
-  },
-  // Set custom properties
-  order: { complete: { name: 'purchase' } },
-  '*': { '*': { ignore: true } }, // Ignore all other non-listed events
-};
-```
-
-The `EventConfig` for each event supports standardized default options. The
-`custom` option can be used to set up custom properties for the event and
-destinations individual settings.
-
-| Property   | Value   | Description                                                              |
-| ---------- | ------- | ------------------------------------------------------------------------ |
-| **batch**  | number  | Time in ms to bundle the events before calling `pushBatch` if available. |
-| **custom** | object  | Individual settings for a custom destination.                            |
-| **ignore** | boolean | If set to `true` the event won't get pushed to the destination.          |
-| **name**   | string  | Renaming of the event (e.g. product add to add_to_cart)                  |
-
-To disable processing events, add `{'*': {'*': { ignore: true }}}` to the
-mapping.
-
-Make sure to not list duplicate keys in the mapping, since this is a n object.
-
-:::info
-
-Use&nbsp;<Link to="/docs/utils/hooks">Utils/Hooks</Link> to modify events before
-processing.
-
-:::
 
 ## Methods
 

@@ -45,7 +45,7 @@ describe('Node Destination BigQuery', () => {
   const datasetId = 'd4t4s3t1d';
   const tableId = 't4bl31d';
 
-  let destination: Destination, config: Config;
+  let destination: Destination;
 
   const credentials: string = 'psst';
 
@@ -55,9 +55,7 @@ describe('Node Destination BigQuery', () => {
   }
 
   async function getConfig(custom = {}) {
-    return (await destination.init({
-      custom,
-    })) as Config;
+    return (await destination.init({ custom })) as Config;
   }
 
   beforeEach(() => {
@@ -76,16 +74,24 @@ describe('Node Destination BigQuery', () => {
       destination.init({ custom: { datasetId, tableId } }),
     ).rejects.toThrow('Config custom projectId missing');
 
-    config = await getConfig({ projectId });
-    expect(config.custom.datasetId).toBe('walkeros');
-    expect(config.custom.tableId).toBe('events');
+    const config = await getConfig({ projectId });
+    expect(config).toEqual({
+      custom: {
+        client: expect.any(Object),
+        projectId,
+        location: 'EU',
+        datasetId: 'walkeros',
+        tableId: 'events',
+      },
+      onLog: expect.any(Function),
+    });
   });
 
   test('push', async () => {
     const config = await getConfig({ projectId, bigquery: { credentials } });
     const mockFn = getMockFn(config);
 
-    await destination.push([{ event }], config);
+    await destination.push(event, config);
     expect(mockFn).toHaveBeenCalledWith('insert', [
       {
         timestamp: expect.any(Date),

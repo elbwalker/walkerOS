@@ -131,6 +131,9 @@ export interface User extends Properties {
   session?: string;
   hash?: string;
   // User related
+  address?: string;
+  email?: string;
+  phone?: string;
   userAgent?: string;
   browser?: string;
   browserVersion?: string;
@@ -139,6 +142,7 @@ export interface User extends Properties {
   country?: string;
   region?: string;
   city?: string;
+  zip?: string;
   timezone?: string;
   os?: string;
   osVersion?: string;
@@ -161,7 +165,6 @@ export interface Source extends Properties {
 export type SourceType = 'web' | 'node' | 'app' | 'other' | string;
 
 export type PropertyType = boolean | string | number;
-
 export type Property = PropertyType | Array<PropertyType>;
 export interface Properties {
   [key: string]: Property | undefined;
@@ -176,4 +179,15 @@ export interface Entity {
   data: Properties;
   nested: Entities;
   context: OrderedProperties;
+}
+
+export type MappingValue = string | MappingValueObject;
+export interface MappingValueObject {
+  key?: string;
+  default?: PropertyType;
+  // Ideas:
+  // - As array to try multiple ways to get the value
+  // - consent?: string | Array<string>;
+  // - filter
+  // - fn
 }

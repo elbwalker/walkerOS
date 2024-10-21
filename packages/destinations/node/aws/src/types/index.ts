@@ -11,19 +11,14 @@ export interface Destination
 }
 
 export type PushFn = NodeDestination.PushFn<CustomConfig, CustomEventConfig>;
-export type InitFn = (config: PartialConfig) => Promise<false | Config>;
+export type InitFn = NodeDestination.InitFn<PartialConfig, Config>;
 
 export type Config = {
   custom: CustomConfig;
   onLog: Handler.Log;
 } & NodeDestination.Config<CustomConfig, CustomEventConfig>;
 
-export type PartialConfig = NodeDestination.Config<
-  Partial<CustomConfig>,
-  Partial<CustomEventConfig>
->;
-
-export type PushEvents = NodeDestination.PushEvents<CustomEventConfig>;
+export type PartialConfig = Partial<Config>;
 
 export interface CustomConfig {
   firehose?: FirehoseConfig;

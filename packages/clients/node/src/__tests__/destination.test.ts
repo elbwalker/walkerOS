@@ -4,9 +4,7 @@ import { createNodeClient } from '../';
 
 describe('Destination', () => {
   const mockPush = jest.fn(); //.mockImplementation(console.log);
-  const mockInit = jest.fn().mockImplementation(() => {
-    return true;
-  });
+  const mockInit = jest.fn();
 
   const mockEvent: WalkerOS.Event = {
     event: 'entity action',
@@ -48,7 +46,7 @@ describe('Destination', () => {
     jest.resetModules();
   });
 
-  test.skip('regular', async () => {});
+  // @TODO test.skip('regular', async () => {});
 
   test('init call', async () => {
     const { elb } = getClient();
@@ -93,6 +91,18 @@ describe('Destination', () => {
       push: mockPushFalse,
     });
 
+    // Save config automatically
+    const destinationSave = (
+      await elb('walker destination', {
+        config: {},
+        init: jest.fn().mockImplementation(() => {
+          return { foo: 'bar' };
+        }),
+        push: mockPush,
+      })
+    ).successful[0].destination;
+    expect(destinationSave.config).toEqual({ foo: 'bar', init: true });
+
     jest.clearAllMocks();
     await elb(mockEvent);
     expect(mockInitFalse).toHaveBeenCalledTimes(1);
@@ -125,7 +135,7 @@ describe('Destination', () => {
     expect(result.successful).toHaveProperty('length', 1);
     expect(result.successful[0]).toHaveProperty('id', 'later');
     expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(mockPush.mock.calls[0][0][0].event).toEqual(
+    expect(mockPush.mock.calls[0][0]).toEqual(
       expect.objectContaining({
         consent: { demo: true },
         user: { id: 'us3r' },
@@ -168,7 +178,7 @@ describe('Destination', () => {
     expect(result.failed[0].error).toBe('Error: kaputt');
   });
 
-  test.skip('queue', async () => {});
+  // @TODO test.skip('queue', async () => {});
 
   test('consent', async () => {
     const mockPush = jest.fn();
@@ -193,7 +203,7 @@ describe('Destination', () => {
     expect(result).toHaveProperty('failed', []);
 
     result = await elb('walker consent', { test: true });
-    expect(mockPush.mock.calls[0][0][0].event).toEqual(
+    expect(mockPush.mock.calls[0][0]).toEqual(
       expect.objectContaining({
         consent: { test: true },
       }),

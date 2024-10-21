@@ -8,20 +8,23 @@ export interface Destination<Custom = unknown, EventCustom = unknown>
   extends WalkerOSDestination.Destination<Custom, EventCustom> {
   config: Config<Custom, EventCustom>;
   push: PushFn<Custom, EventCustom>;
-  init?: InitFn<Custom, EventCustom>;
+  init?: InitFn<
+    Partial<Config<Custom, EventCustom>>,
+    Config<Custom, EventCustom>
+  >;
 }
 
-export type InitFn<Custom, EventCustom> = (
-  config: Config<Custom, EventCustom>,
-  instance: NodeClient.Instance,
-) => Promise<void | boolean | Config<Custom, EventCustom>>;
+export type InitFn<PartialConfig = unknown, Config = unknown> = (
+  config: PartialConfig,
+  instance?: NodeClient.Instance,
+) => Promise<void | Config | false>;
 
 export type PushFn<Custom, EventCustom> = (
-  events: PushEvents<EventCustom>,
+  event: WalkerOS.Event,
   config: Config<Custom, EventCustom>,
   mapping?: EventConfig<EventCustom>,
   instance?: NodeClient.Instance,
-) => Promise<Push> | void;
+) => Promise<Push | void>;
 
 export interface Config<Custom = unknown, EventCustom = unknown>
   extends WalkerOSDestination.Config<Custom, EventCustom> {}
@@ -32,12 +35,10 @@ export interface Mapping<EventCustom>
 export interface EventConfig<EventCustom = unknown>
   extends WalkerOSDestination.EventConfig<EventCustom> {}
 
-export type PushEvents<EventCustom = unknown> = Array<PushEvent<EventCustom>>;
-
-export type PushEvent<EventCustom = unknown> = {
-  event: WalkerOS.Event;
-  mapping?: EventConfig<EventCustom>;
-};
+export type PushEvent<EventCustom = unknown> =
+  WalkerOSDestination.PushEvent<EventCustom>;
+export type PushEvents<EventCustom = unknown> =
+  WalkerOSDestination.PushEvents<EventCustom>;
 
 export type Ref = {
   id: string;

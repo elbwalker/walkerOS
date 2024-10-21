@@ -22,7 +22,7 @@ describe('Destination node etag', () => {
     instance?: unknown,
   ) {
     return destination.push(
-      [{ event: event as WalkerOS.Event }],
+      event as WalkerOS.Event,
       custom ? { custom } : destination.config,
       undefined,
       instance as NodeClient.Instance,
