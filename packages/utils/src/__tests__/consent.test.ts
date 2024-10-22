@@ -1,6 +1,12 @@
 import { getGrantedConsent } from '../core';
 
 describe('consent', () => {
+  test('nothing required', () => {
+    expect(getGrantedConsent(undefined, { foo: true })).toStrictEqual({
+      foo: true,
+    });
+  });
+
   test('denied', () => {
     expect(
       getGrantedConsent(

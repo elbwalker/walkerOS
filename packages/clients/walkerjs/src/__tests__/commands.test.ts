@@ -152,7 +152,7 @@ describe('Commands', () => {
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'consent check',
-        consent: { functional: true, marketing: false },
+        consent: { functional: true },
       }),
     );
   });

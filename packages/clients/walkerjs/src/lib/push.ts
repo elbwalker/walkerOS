@@ -119,12 +119,20 @@ export function pushToDestinations(
 
     const allowedEvents: WalkerOS.Events = [];
     destination.queue = destination.queue.filter((queuedEvent) => {
-      if (getGrantedConsent(instance, destination, queuedEvent)) {
-        // @TODO remember states
-        allowedEvents.push(queuedEvent);
-        return false; // Remove from the queue
+      const grantedConsent = getGrantedConsent(
+        destination.config.consent, // Required
+        consent, // Destination state
+        queuedEvent.consent, // Individual event state
+      );
+
+      if (grantedConsent) {
+        queuedEvent.consent = grantedConsent; // Save granted consent states only
+
+        allowedEvents.push(queuedEvent); // Add to allowed queue
+        return false; // Remove from destination queue
       }
-      return true; // Keep unprocessed events in the queue
+
+      return true; // Keep denied events in the queue
     });
 
     // Execution shall not pass if no events are allowed
@@ -141,7 +149,6 @@ export function pushToDestinations(
         destination,
         assign(event, {
           // Update previous values with the current state
-          consent, // @TODO use the granted states only
           globals,
           user,
         }),
