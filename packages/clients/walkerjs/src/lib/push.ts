@@ -5,11 +5,11 @@ import { handleCommand, handleEvent } from './handle';
 import {
   Const,
   assign,
+  getGrantedConsent,
   isSameType,
   tryCatch,
   useHooks,
 } from '@elbwalker/utils';
-import { allowedToPush } from './consent';
 import { getEntities } from './walker';
 import { destinationInit, destinationPush } from './destination';
 
@@ -119,7 +119,8 @@ export function pushToDestinations(
 
     const allowedEvents: WalkerOS.Events = [];
     destination.queue = destination.queue.filter((queuedEvent) => {
-      if (allowedToPush(instance, destination, queuedEvent)) {
+      if (getGrantedConsent(instance, destination, queuedEvent)) {
+        // @TODO remember states
         allowedEvents.push(queuedEvent);
         return false; // Remove from the queue
       }
@@ -140,7 +141,7 @@ export function pushToDestinations(
         destination,
         assign(event, {
           // Update previous values with the current state
-          consent,
+          consent, // @TODO use the granted states only
           globals,
           user,
         }),

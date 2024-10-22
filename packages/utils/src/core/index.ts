@@ -1,6 +1,7 @@
 export * from './anonymizeIP';
 export * from './assign';
 export * from './castValue';
+export * from './consent';
 export * from './constants';
 export * from './getByStringDot';
 export * from './getId';
