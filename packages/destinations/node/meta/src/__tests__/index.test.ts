@@ -126,7 +126,7 @@ describe('Node Destination Meta', () => {
   });
 
   test('IDs', async () => {
-    event.data.clickId = 'abc...';
+    event.data.fbclid = 'abc...';
 
     await destination.push(event, config);
 

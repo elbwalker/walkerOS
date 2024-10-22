@@ -66,11 +66,11 @@ export const mapEvent = (
     if (user.ip) userData = userData.setClientIpAddress(user.ip);
   }
 
-  if (data.clickId) {
+  if (data.fbclid) {
     let time;
     if (event.event == 'session start') time = event.timestamp;
 
-    userData = userData.setFbc(formatClickId(data.clickId, time));
+    userData = userData.setFbc(formatClickId(data.fbclid, time));
     // @TODO userData.setFbp('fb.1.1558571054389.1098115397') // _fbp cookie
   }
 
