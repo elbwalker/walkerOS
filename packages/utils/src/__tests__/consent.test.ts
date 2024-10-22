@@ -1,10 +1,12 @@
-import type { WalkerOS } from '@elbwalker/types';
 import { getGrantedConsent } from '../core';
 
 describe('consent', () => {
   test('denied', () => {
     expect(
-      getGrantedConsent({ marketing: true }, { functional: true }),
+      getGrantedConsent(
+        { marketing: true },
+        { functional: true, marketing: false },
+      ),
     ).toBeFalsy();
   });
 
@@ -14,19 +16,19 @@ describe('consent', () => {
     ).toStrictEqual({ functional: true });
   });
 
-  test('granted by event', () => {
+  test('granted individually', () => {
     expect(
-      getGrantedConsent({ functional: false }, { functional: true }, {
-        consent: { functional: true },
-      } as unknown as WalkerOS.Event),
-    ).toStrictEqual({ functional: true });
+      getGrantedConsent(
+        { marketing: true },
+        { marketing: false },
+        { marketing: true },
+      ),
+    ).toStrictEqual({ marketing: true });
   });
 
   test('granted states', () => {
     expect(
-      getGrantedConsent({ a: true }, { a: true }, {
-        consent: { b: true },
-      } as unknown as WalkerOS.Event),
-    ).toStrictEqual({ a: true, b: true });
+      getGrantedConsent({ foo: true }, { foo: true }, { bar: true }),
+    ).toStrictEqual({ foo: true, bar: true });
   });
 });

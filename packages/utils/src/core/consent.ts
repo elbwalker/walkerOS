@@ -1,12 +1,12 @@
 import type { WalkerOS } from '@elbwalker/types';
 
 export function getGrantedConsent(
-  state: WalkerOS.Consent,
   required: WalkerOS.Consent = {},
-  event?: WalkerOS.Event, // Should also be the consent and called individual
+  state: WalkerOS.Consent = {},
+  individual: WalkerOS.Consent = {},
 ): false | WalkerOS.Consent {
-  // Merge state and event.consent, prioritizing event.consent
-  const states: WalkerOS.Consent = { ...state, ...event?.consent };
+  // Merge state and individual, prioritizing individual states
+  const states: WalkerOS.Consent = { ...state, ...individual };
 
   const grantedStates: WalkerOS.Consent = {};
   let hasRequiredConsent = false;
