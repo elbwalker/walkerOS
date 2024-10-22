@@ -16,13 +16,13 @@ describe('consent', () => {
 
   test('granted by event', () => {
     expect(
-      getGrantedConsent({ functional: true }, { functional: false }, {
+      getGrantedConsent({ functional: false }, { functional: true }, {
         consent: { functional: true },
       } as unknown as WalkerOS.Event),
     ).toStrictEqual({ functional: true });
   });
 
-  test.skip('granted states', () => {
+  test('granted states', () => {
     expect(
       getGrantedConsent({ a: true }, { a: true }, {
         consent: { b: true },

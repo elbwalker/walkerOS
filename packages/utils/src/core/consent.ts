@@ -3,21 +3,23 @@ import type { WalkerOS } from '@elbwalker/types';
 export function getGrantedConsent(
   state: WalkerOS.Consent,
   required: WalkerOS.Consent = {},
-  event?: WalkerOS.Event,
+  event?: WalkerOS.Event, // Should also be the consent and called individual
 ): false | WalkerOS.Consent {
-  const requiredStates = Object.keys(required);
-
-  // No explicit consent required
-  if (!requiredStates.length) return {};
+  // Merge state and event.consent, prioritizing event.consent
+  const states: WalkerOS.Consent = { ...state, ...event?.consent };
 
   const grantedStates: WalkerOS.Consent = {};
+  let hasRequiredConsent = false;
 
-  // Search for required and granted consent
-  requiredStates.forEach((name) => {
-    // Check if either instance or event granted consent
-    if (state[name] || event?.consent?.[name]) grantedStates[name] = true;
+  Object.keys(states).forEach((name) => {
+    if (states[name]) {
+      // consent granted
+      grantedStates[name] = true;
+
+      // Check if it's required and granted consent
+      if (required[name]) hasRequiredConsent = true;
+    }
   });
 
-  // Return the granted consent states or false
-  return Object.keys(grantedStates).length ? grantedStates : false;
+  return hasRequiredConsent ? grantedStates : false;
 }
