@@ -123,24 +123,24 @@ by identifying sources, mediums, campaigns, etc., from the URL query parameters.
 
 ```js
 getMarketingParameters('https://example.com/?utm_source=docs&gclid=xxx');
-// Returns { source: "docs", clickId: "xxx", platform: "google" }
+// Returns { source: "docs", gclid: "xxx", clickId: "gclid" }
 
-getMarketingParameters('https://example.com/?utm_custom=value', {
+getMarketingParameters('https://example.com/?utm_custom=value&partner=abc', {
   utm_custom: 'custom',
+  partner: 'partnerId',
 });
 // Returns { custom: 'value' }
 ```
 
 Add `custom` parameters to parse more values from the url like `?utm_custom=123`
-with `{ utm_custom: "custom" }` to get `{ custom: "123" }`. To add the
-additional `platform` information, use an array as value with
-`{ param: [name, platform] }`.
+with `{ utm_custom: "custom" }` to get `{ custom: "123" }`. If the value is
+`clickId` an additional `clickId` parameter pointing to the key is added.
 
 ```js
 getMarketingParameters('https://example.com/?partner=abc', {
-  partner: ['partnerId', 'affiliate'],
+  partner: 'clickId',
 });
-// Returns { partnerId: "abc", platform: "affiliate" }
+// Returns { partner: "abc", clickId: "partner" }
 ```
 
 This function facilitates the easy retrieval of marketing data, aiding in

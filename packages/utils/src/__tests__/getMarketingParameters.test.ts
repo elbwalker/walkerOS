@@ -21,36 +21,36 @@ describe('getMarketingParameters', () => {
       term: 't',
     });
     expect(getMarketingParameters(new URL(url + 'dclid=did'))).toStrictEqual({
-      clickId: 'did',
-      platform: 'google',
+      clickId: 'dclid',
+      dclid: 'did',
     });
     expect(getMarketingParameters(new URL(url + 'fbclid=fb'))).toStrictEqual({
-      clickId: 'fb',
-      platform: 'meta',
+      clickId: 'fbclid',
+      fbclid: 'fb',
     });
     expect(getMarketingParameters(new URL(url + 'gclid=gid'))).toStrictEqual({
-      clickId: 'gid',
-      platform: 'google',
+      clickId: 'gclid',
+      gclid: 'gid',
     });
     expect(getMarketingParameters(new URL(url + 'msclkid=ms'))).toStrictEqual({
-      clickId: 'ms',
-      platform: 'microsoft',
+      clickId: 'msclkid',
+      msclkid: 'ms',
     });
     expect(getMarketingParameters(new URL(url + 'ttclid=tt'))).toStrictEqual({
-      clickId: 'tt',
-      platform: 'tiktok',
+      clickId: 'ttclid',
+      ttclid: 'tt',
     });
     expect(getMarketingParameters(new URL(url + 'twclid=x'))).toStrictEqual({
-      clickId: 'x',
-      platform: 'twitter',
+      clickId: 'twclid',
+      twclid: 'x',
     });
     expect(getMarketingParameters(new URL(url + 'igshid=ig'))).toStrictEqual({
-      clickId: 'ig',
-      platform: 'meta',
+      clickId: 'igshid',
+      igshid: 'ig',
     });
     expect(getMarketingParameters(new URL(url + 'sclid=sc'))).toStrictEqual({
-      clickId: 'sc',
-      platform: 'snapchat',
+      clickId: 'sclid',
+      sclid: 'sc',
     });
 
     // Custom parameters

@@ -1,40 +1,41 @@
 import type { WalkerOS } from '@elbwalker/types';
+import { assign } from './assign';
 
 export interface MarketingParameters {
-  [key: string]: string | [key: string, platform: string];
+  [key: string]: string;
 }
 
 export function getMarketingParameters(
   url: URL,
   custom: MarketingParameters = {},
 ): WalkerOS.Properties {
-  const data: WalkerOS.Properties = {};
   const clickId = 'clickId';
-  const parameters: MarketingParameters = Object.assign(
-    {
-      utm_campaign: 'campaign',
-      utm_content: 'content',
-      utm_medium: 'medium',
-      utm_source: 'source',
-      utm_term: 'term',
-      dclid: [clickId, 'google'],
-      fbclid: [clickId, 'meta'],
-      gclid: [clickId, 'google'],
-      msclkid: [clickId, 'microsoft'],
-      ttclid: [clickId, 'tiktok'],
-      twclid: [clickId, 'twitter'],
-      igshid: [clickId, 'meta'],
-      sclid: [clickId, 'snapchat'],
-    },
-    custom,
-  );
+  const data: WalkerOS.Properties = {};
+  const parameters: MarketingParameters = {
+    utm_campaign: 'campaign',
+    utm_content: 'content',
+    utm_medium: 'medium',
+    utm_source: 'source',
+    utm_term: 'term',
+    dclid: clickId,
+    fbclid: clickId,
+    gclid: clickId,
+    msclkid: clickId,
+    ttclid: clickId,
+    twclid: clickId,
+    igshid: clickId,
+    sclid: clickId,
+  };
 
-  Object.entries(parameters).forEach(([key, mapping]) => {
+  Object.entries(assign(parameters, custom)).forEach(([key, name]) => {
     const param = url.searchParams.get(key); // Search for the parameter in the URL
     if (param) {
-      const [name, platform] = Array.isArray(mapping) ? mapping : [mapping];
+      if (name === clickId) {
+        name = key;
+        data[clickId] = key; // Reference the clickId parameter
+      }
+
       data[name] = param;
-      if (platform) data.platform = platform;
     }
   });
 
