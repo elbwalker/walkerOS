@@ -1,7 +1,11 @@
 import type { Destination, WalkerOS } from '@elbwalker/types';
 import type { NodeClient, NodeDestination } from '../types';
-import { assign, isSameType, tryCatchAsync } from '@elbwalker/utils';
-import { allowedToPush } from './consent';
+import {
+  assign,
+  getGrantedConsent,
+  isSameType,
+  tryCatchAsync,
+} from '@elbwalker/utils';
 import { isCommand } from './helper';
 import { destinationInit, destinationPush } from './destination';
 
@@ -70,6 +74,8 @@ export async function pushToDestinations(
   event?: WalkerOS.Event,
   destination?: NodeClient.Destinations,
 ): Promise<NodeDestination.PushResult> {
+  const { consent, globals, user } = instance;
+
   // Push to all destinations if no destination was given
   const destinations = destination || instance.destinations;
   const config = instance.config;
@@ -83,7 +89,7 @@ export async function pushToDestinations(
     // Process all destinations in parallel
     Object.entries(destinations).map(async ([id, destination]) => {
       // Setup queue of events to be processed
-      const queue = ([] as Destination.Queue).concat(destination.queue || []);
+      let queue = ([] as Destination.Queue).concat(destination.queue || []);
       destination.queue = []; // Reset original queue while processing
 
       // Add event to queue stack
@@ -92,53 +98,70 @@ export async function pushToDestinations(
       // Nothing to do here if the queue is empty
       if (!queue.length) return { id, destination, skipped: true };
 
-      // Always check for required consent states before pushing
-      if (!allowedToPush(instance, destination))
-        return { id, destination, queue }; // Don't push if not allowed
+      const allowedEvents: WalkerOS.Events = [];
+      queue = queue.filter((queuedEvent) => {
+        const grantedConsent = getGrantedConsent(
+          destination.config.consent, // Required
+          consent, // Destination state
+          queuedEvent.consent, // Individual event state
+        );
 
-      // Init destination (eventually)
+        if (grantedConsent) {
+          queuedEvent.consent = grantedConsent; // Save granted consent states only
+
+          allowedEvents.push(queuedEvent); // Add to allowed queue
+          return false; // Remove from destination queue
+        }
+
+        return true; // Keep denied events in the queue
+      });
+
+      // Execution shall not pass if no events are allowed
+      if (!allowedEvents.length) {
+        return { id, destination, queue }; // Don't push if not allowed
+      }
+
+      // Initialize the destination if needed
       const isInitialized = await tryCatchAsync(destinationInit)(
         instance,
         destination,
       );
-
       if (!isInitialized) return { id, destination, queue };
-
-      const { consent, globals, user } = instance;
 
       // Process the destinations event queue
       let error: unknown;
-      await Promise.all(
-        queue.map(async (event) => {
+
+      // Process allowed events and store failed ones in the dead letter queue (dlq)
+      const dlq = await Promise.all(
+        allowedEvents.filter(async (event) => {
           if (error) {
             // Skip if an error occurred
-            // @TODO retry
-            destination.queue!.push(event); // Add back to queue
+            destination.queue?.push(event); // Add back to queue
           }
 
-          // Copy the event to prevent mutation
-          event = assign(event, {
-            // Update previous values with the current state
-            consent, // @TODO prefer the events consent state
-            globals,
-            user,
-          });
-
           //Try to push and remove successful ones from queue
-          return await tryCatchAsync(destinationPush, (err) => {
+          return !(await tryCatchAsync(destinationPush, (err) => {
             // Call custom error handling
             if (config.onError) config.onError(err, instance);
 
             // Default error handling for failing destinations
             error = err; // Captured error from destination
-
-            // @TODO Dead letter queue
-            // destination.dlq!.push(event); // Add to DLQ
-          })(instance, destination, event);
+          })(
+            instance,
+            destination,
+            assign(event, {
+              // Update previous values with the current state
+              globals,
+              user,
+            }),
+          ));
         }),
       );
 
-      return { id, destination, queue: destination.queue, error };
+      // Concatenate failed events with unprocessed ones in the queue
+      queue.concat(dlq);
+
+      return { id, destination, queue, error };
     }),
   );
 

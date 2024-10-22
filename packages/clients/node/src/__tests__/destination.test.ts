@@ -192,15 +192,23 @@ describe('Destination', () => {
     });
 
     result = await elb(mockEvent);
-    expect(result.status).toHaveProperty('ok', true);
-    expect(result.successful[0]).toHaveProperty('id', 'mockDestination');
-    expect(result.queued[0]).toHaveProperty('id', 'destinationConsent');
+    expect(result).toStrictEqual(
+      expect.objectContaining({
+        status: { ok: true },
+        successful: [expect.objectContaining({ id: 'mockDestination' })],
+        queued: [expect.objectContaining({ id: 'destinationConsent' })],
+      }),
+    );
 
     result = await elb('walker consent', { test: false });
-    expect(result.status).toHaveProperty('ok', true);
-    expect(result).toHaveProperty('successful', []);
-    expect(result).toHaveProperty('queued', []);
-    expect(result).toHaveProperty('failed', []);
+    expect(result).toStrictEqual(
+      expect.objectContaining({
+        status: { ok: true },
+        successful: [],
+        queued: [],
+        failed: [],
+      }),
+    );
 
     result = await elb('walker consent', { test: true });
     expect(mockPush.mock.calls[0][0]).toEqual(
@@ -208,9 +216,12 @@ describe('Destination', () => {
         consent: { test: true },
       }),
     );
-    expect(result.status).toHaveProperty('ok', true);
-    expect(result.successful[0]).toHaveProperty('id', 'destinationConsent');
-    expect(result).toHaveProperty('queued', []);
-    expect(result).toHaveProperty('failed', []);
+    expect(result).toStrictEqual(
+      expect.objectContaining({
+        status: { ok: true },
+        successful: [expect.objectContaining({ id: 'destinationConsent' })],
+        queued: [],
+      }),
+    );
   });
 });

@@ -144,7 +144,7 @@ export function pushToDestinations(
 
     // Process allowed events and store failed ones in the dead letter queue (dlq)
     const dlq = allowedEvents.filter((event) => {
-      destinationPush(
+      return !destinationPush(
         instance,
         destination,
         assign(event, {
