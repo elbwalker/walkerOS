@@ -5,11 +5,11 @@ import { handleCommand, handleEvent } from './handle';
 import {
   Const,
   assign,
+  getGrantedConsent,
   isSameType,
   tryCatch,
   useHooks,
 } from '@elbwalker/utils';
-import { allowedToPush } from './consent';
 import { getEntities } from './walker';
 import { destinationInit, destinationPush } from './destination';
 
@@ -109,37 +109,54 @@ export function pushToDestinations(
   destinations: WebClient.Destinations,
   event?: WalkerOS.Event,
 ) {
+  const { consent, globals, user } = instance;
+
   Object.values(destinations).forEach((destination) => {
     destination.queue = destination.queue || [];
 
     // Add event to queue stack
     if (event) destination.queue.push(event);
 
-    // Always check for required consent states before pushing
-    if (!allowedToPush(instance, destination)) return false; // Don't push if not allowed
+    const allowedEvents: WalkerOS.Events = [];
+    destination.queue = destination.queue.filter((queuedEvent) => {
+      const grantedConsent = getGrantedConsent(
+        destination.config.consent, // Required
+        consent, // Destination state
+        queuedEvent.consent, // Individual event state
+      );
 
-    // Init destination if events are in queue
-    if (destination.queue.length > 0) {
-      // Initialize the destination if needed
-      const isInitialized = tryCatch(destinationInit)(instance, destination);
-      if (!isInitialized) return false;
-    }
+      if (grantedConsent) {
+        queuedEvent.consent = grantedConsent; // Save granted consent states only
 
-    const { consent, globals, user } = instance;
+        allowedEvents.push(queuedEvent); // Add to allowed queue
+        return false; // Remove from destination queue
+      }
 
-    // Process the destinations event queue
-    destination.queue = destination.queue.filter((event) => {
-      // Copy the event to prevent mutation
-      event = assign(event, {
-        // Update previous values with the current state
-        consent,
-        globals,
-        user,
-      });
-
-      //Try to push and remove successful ones from queue
-      return !destinationPush(instance, destination, event);
+      return true; // Keep denied events in the queue
     });
+
+    // Execution shall not pass if no events are allowed
+    if (!allowedEvents.length) return;
+
+    // Initialize the destination if needed
+    const isInitialized = tryCatch(destinationInit)(instance, destination);
+    if (!isInitialized) return;
+
+    // Process allowed events and store failed ones in the dead letter queue (dlq)
+    const dlq = allowedEvents.filter((event) => {
+      return !destinationPush(
+        instance,
+        destination,
+        assign(event, {
+          // Update previous values with the current state
+          globals,
+          user,
+        }),
+      );
+    });
+
+    // Concatenate failed events with unprocessed ones in the queue
+    destination.queue.concat(dlq);
   });
 }
 

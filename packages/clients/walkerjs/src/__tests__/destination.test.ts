@@ -315,6 +315,7 @@ describe('Destination', () => {
     const mockPushA = jest.fn();
     const mockPushB = jest.fn();
     const mockPushC = jest.fn();
+    const mockPushD = jest.fn();
 
     const destinationA: WebDestination.Destination = {
       push: mockPushA,
@@ -331,9 +332,15 @@ describe('Destination', () => {
       config: { consent: { marketing: true } },
     };
 
+    const destinationD: WebDestination.Destination = {
+      push: mockPushD,
+      config: { consent: { via_event: true } },
+    };
+
     elb('walker destination', destinationA);
     elb('walker destination', destinationB);
     elb('walker destination', destinationC);
+    elb('walker destination', destinationD);
 
     // Init consent state
     jest.clearAllMocks();
@@ -361,6 +368,15 @@ describe('Destination', () => {
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(0);
+
+    // Consent in event
+    expect(mockPushD).toHaveBeenCalledTimes(0);
+    expect(walkerjs.consent.via_event).not.toBeTruthy();
+
+    jest.clearAllMocks();
+    elb({ event: 'via event', consent: { via_event: true } });
+    expect(mockPushB).toHaveBeenCalledTimes(0); // requires functional consent only
+    expect(mockPushD).toHaveBeenCalledTimes(1);
   });
 
   test('queue', () => {
