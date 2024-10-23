@@ -6,26 +6,8 @@ describe('Destination', () => {
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn();
 
-  const mockEvent: WalkerOS.Event = {
-    event: 'entity action',
-    data: { k: 'v' },
-    context: {},
-    custom: {},
-    globals: {},
-    user: {},
-    nested: [],
-    consent: {},
-    id: '1d',
-    trigger: '',
-    entity: 'entity',
-    action: 'action',
-    timestamp: 1,
-    timing: 1,
-    group: 'g',
-    count: 1,
-    version: { client: 'c', tagging: 1 },
-    source: { type: 'node', id: '', previous_id: '' },
-  };
+  let mockEvent: WalkerOS.Event;
+
   const mockDestination: NodeDestination.Destination = {
     config: {},
     init: mockInit,
@@ -44,9 +26,28 @@ describe('Destination', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
-  });
 
-  // @TODO test.skip('regular', async () => {});
+    mockEvent = {
+      event: 'entity action',
+      data: { k: 'v' },
+      context: {},
+      custom: {},
+      globals: { foo: 'bar' },
+      user: { session: 's3ss10n' },
+      nested: [],
+      consent: { client: true },
+      id: '1d',
+      trigger: '',
+      entity: 'entity',
+      action: 'action',
+      timestamp: 1,
+      timing: 1,
+      group: 'g',
+      count: 1,
+      version: { client: 'c', tagging: 1 },
+      source: { type: 'node', id: '', previous_id: '' },
+    };
+  });
 
   test('init call', async () => {
     const { elb } = getClient();
@@ -111,6 +112,51 @@ describe('Destination', () => {
     expect(mockPushFalse).not.toHaveBeenCalled();
   });
 
+  test('push', async () => {
+    const eventMapping = {
+      name: 'renamed event',
+      custom: { something: 'random' },
+    };
+    const mapping = {
+      entity: {
+        action: eventMapping,
+      },
+    };
+    mockDestination.config.mapping = mapping;
+
+    const { elb, instance } = getClient({
+      destinations: { mockDestination },
+      user: { id: 'us3r' },
+      globalsStatic: { foo: 'irrelevant', bar: 'baz' },
+      consent: { server: true },
+    });
+    result = await elb(mockEvent);
+
+    expect(mockDestination.push).toHaveBeenCalledTimes(1);
+    expect(mockDestination.push).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'renamed event',
+        consent: { client: true, server: true },
+        user: { id: 'us3r', session: 's3ss10n' },
+        globals: { foo: 'bar', bar: 'baz' },
+      }),
+      mockDestination.config,
+      eventMapping,
+      instance,
+    );
+  });
+
+  test('ignore', async () => {
+    mockDestination.config.mapping = { entity: { action: { ignore: true } } };
+
+    const { elb } = getClient({
+      destinations: { mockDestination },
+    });
+    result = await elb(mockEvent);
+
+    expect(mockDestination.push).toHaveBeenCalledTimes(0);
+  });
+
   test('add with queue', async () => {
     const { elb, instance } = getClient({});
 
@@ -120,9 +166,9 @@ describe('Destination', () => {
     expect(result.failed).toHaveProperty('length', 0);
     expect(instance.queue[0]).toEqual(
       expect.objectContaining({
-        consent: {},
-        user: {},
-        globals: {},
+        consent: mockEvent.consent,
+        user: mockEvent.user,
+        globals: mockEvent.globals,
       }),
     );
 
@@ -137,8 +183,8 @@ describe('Destination', () => {
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush.mock.calls[0][0]).toEqual(
       expect.objectContaining({
-        consent: { demo: true },
-        user: { id: 'us3r' },
+        consent: { client: true, demo: true },
+        user: { id: 'us3r', session: 's3ss10n' },
         globals: { foo: 'bar' },
       }),
     );

@@ -139,6 +139,10 @@ export async function pushToDestinations(
             destination.queue?.push(event); // Add back to queue
           }
 
+          // Merge event with instance state, prioritizing event properties
+          event.globals = assign(globals, event.globals);
+          event.user = assign(user, event.user);
+
           //Try to push and remove successful ones from queue
           return !(await tryCatchAsync(destinationPush, (err) => {
             // Call custom error handling
@@ -146,15 +150,7 @@ export async function pushToDestinations(
 
             // Default error handling for failing destinations
             error = err; // Captured error from destination
-          })(
-            instance,
-            destination,
-            assign(event, {
-              // Update previous values with the current state
-              globals,
-              user,
-            }),
-          ));
+          })(instance, destination, event));
         }),
       );
 
