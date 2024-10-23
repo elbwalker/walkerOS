@@ -145,15 +145,22 @@ describe('Destination', () => {
   });
 
   test('fail', async () => {
-    const destinationFailure: NodeDestination.Destination = {
+    const initFail: NodeDestination.Destination = {
       config: {},
       push: jest.fn().mockImplementation(() => {
-        throw new Error('kaputt');
+        throw new Error('init kaputt');
+      }),
+    };
+
+    const pushFail: NodeDestination.Destination = {
+      config: {},
+      push: jest.fn().mockImplementation(() => {
+        throw new Error('push kaputt');
       }),
     };
 
     const { elb } = getClient({
-      destinations: { mockDestination, destinationFailure },
+      destinations: { mockDestination, initFail, pushFail },
     });
     result = await elb('entity action');
 
@@ -169,13 +176,19 @@ describe('Destination', () => {
       queued: [],
       failed: [
         {
-          id: 'destinationFailure',
-          destination: destinationFailure,
+          id: 'initFail',
+          destination: initFail,
+          error: expect.any(String),
+        },
+        {
+          id: 'pushFail',
+          destination: pushFail,
           error: expect.any(String),
         },
       ],
     });
-    expect(result.failed[0].error).toBe('Error: kaputt');
+    expect(result.failed[0].error).toBe('Error: init kaputt');
+    expect(result.failed[1].error).toBe('Error: push kaputt');
   });
 
   // @TODO test.skip('queue', async () => {});
