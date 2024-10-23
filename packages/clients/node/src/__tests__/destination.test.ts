@@ -146,6 +146,25 @@ describe('Destination', () => {
     );
   });
 
+  test('mapping', async () => {
+    const eventMapping = { name: 'custom' };
+    const mapping = { entity: { action: eventMapping } };
+
+    const { elb, instance } = getClient({});
+    await elb('walker destination', mockDestination, { mapping });
+    result = await elb(mockEvent);
+
+    expect(mockDestination.push).toHaveBeenCalledTimes(1);
+    expect(mockDestination.push).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'custom',
+      }),
+      expect.any(Object),
+      eventMapping,
+      instance,
+    );
+  });
+
   test('ignore', async () => {
     mockDestination.config.mapping = { entity: { action: { ignore: true } } };
 
