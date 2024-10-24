@@ -92,8 +92,6 @@ export async function pushToDestinations(
       let queue = ([] as Destination.Queue).concat(destination.queue || []);
       destination.queue = []; // Reset original queue while processing
 
-      // @TODO create an event copy to avoid mutation
-
       // Add event to queue stack
       if (event) queue.push(event);
 
@@ -142,6 +140,7 @@ export async function pushToDestinations(
           }
 
           // Merge event with instance state, prioritizing event properties
+          event = assign({}, event);
           event.globals = assign(globals, event.globals);
           event.user = assign(user, event.user);
 

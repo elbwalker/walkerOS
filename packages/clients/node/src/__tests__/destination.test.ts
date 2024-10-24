@@ -189,6 +189,50 @@ describe('Destination', () => {
     expect(mockDestination.push).toHaveBeenCalledTimes(0);
   });
 
+  test('immutable events', async () => {
+    let changedByFirst = false;
+    const first = jest.fn();
+    const fistDestination: NodeDestination.Destination = {
+      config: {
+        mapping: {
+          // Destination will change event
+          entity: { action: { name: 'new name' } },
+        },
+      },
+      push: async (event) => {
+        // Destination will change event
+        event.custom = { foo: 'bar' };
+        changedByFirst = true;
+
+        first({ ...event });
+      },
+    };
+    const second = jest.fn();
+    const secondDestination: NodeDestination.Destination = {
+      config: {},
+      push: async (event) => {
+        // Make sure the first destination was called before
+        if (!changedByFirst) throw Error('wrong execution order');
+
+        second(event);
+      },
+    };
+
+    const { elb } = getClient({
+      destinations: { fistDestination, secondDestination },
+    });
+    result = await elb(mockEvent);
+
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(first).toHaveBeenCalledWith({
+      ...mockEvent,
+      event: 'new name',
+      custom: { foo: 'bar' },
+    });
+    expect(second).toHaveBeenCalledWith({ ...mockEvent });
+  });
+
   test('add with queue', async () => {
     const { elb, instance } = getClient({});
 
