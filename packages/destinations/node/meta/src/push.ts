@@ -53,7 +53,8 @@ export const mapEvent = (
     const ids = [user.id, user.device, user.session, user.hash]
       .filter((id) => typeof id === 'string')
       .map(lower);
-    userData = userData.setExternalIds(ids);
+
+    if (ids.length) userData = userData.setExternalIds(ids);
 
     // Customer Information Parameters
     if (user.email) userData = userData.setEmail(lower(user.email));
@@ -95,7 +96,12 @@ export const mapEvent = (
     if (priceValue) item.setItemPrice(parseFloat(String(priceValue)));
     if (quantityValue) item.setQuantity(parseFloat(String(quantityValue)));
 
-    customData.setContents([item]);
+    // Check if at least one value is defined
+    const definedValues = Object.values(item).filter(
+      (value) => value !== undefined,
+    ).length;
+
+    if (definedValues) customData.setContents([item]);
   }
 
   const timestamp = Math.floor(
