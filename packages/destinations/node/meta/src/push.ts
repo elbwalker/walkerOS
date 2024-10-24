@@ -26,6 +26,8 @@ export const push: PushFn = async function (event, config, mapping) {
     events,
     partner,
     testCode,
+    pixelId,
+    String(new Date().getTime()),
   );
 
   if (debug) eventRequest.setDebugMode(true);
