@@ -20,6 +20,7 @@ export interface CustomConfig {
   measurementId: string;
   pageview?: boolean;
   params?: PropertyMapping;
+  server_container_url?: string;
   snakeCase?: boolean;
   transport_url?: string;
 }

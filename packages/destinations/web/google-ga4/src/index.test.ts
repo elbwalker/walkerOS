@@ -12,6 +12,7 @@ describe('Destination Google GA4', () => {
   const data = { foo: 'bar' };
   const trigger = 'manual';
   const measurementId = 'G-XXXXXX-1';
+  const server_container_url = 'https://server.example.com';
   const transport_url = 'https://collect.example.com';
 
   beforeEach(async () => {
@@ -120,6 +121,7 @@ describe('Destination Google GA4', () => {
   });
 
   test('Settings', () => {
+    config.custom!.server_container_url = server_container_url;
     config.custom!.transport_url = transport_url;
     destination.config = config;
 
@@ -129,6 +131,7 @@ describe('Destination Google GA4', () => {
     Object.assign(data, { send_to: measurementId });
 
     expect(mockFn).toHaveBeenCalledWith('config', measurementId, {
+      server_container_url,
       transport_url,
     });
 
