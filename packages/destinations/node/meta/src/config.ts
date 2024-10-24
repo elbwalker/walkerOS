@@ -17,7 +17,7 @@ export function getConfig(partialConfig: PartialConfig = {}): Config {
   // Log Handler
   const onLog = (message: string) => log(message, partialConfig.verbose);
 
-  return { custom: customConfig, onLog };
+  return { ...partialConfig, custom: customConfig, onLog };
 }
 
 export function log(message: string, verbose?: boolean) {

@@ -139,6 +139,11 @@ export async function pushToDestinations(
             destination.queue?.push(event); // Add back to queue
           }
 
+          // Merge event with instance state, prioritizing event properties
+          event = assign({}, event);
+          event.globals = assign(globals, event.globals);
+          event.user = assign(user, event.user);
+
           //Try to push and remove successful ones from queue
           return !(await tryCatchAsync(destinationPush, (err) => {
             // Call custom error handling
@@ -146,15 +151,7 @@ export async function pushToDestinations(
 
             // Default error handling for failing destinations
             error = err; // Captured error from destination
-          })(
-            instance,
-            destination,
-            assign(event, {
-              // Update previous values with the current state
-              globals,
-              user,
-            }),
-          ));
+          })(instance, destination, event));
         }),
       );
 
@@ -183,7 +180,7 @@ export async function pushToDestinations(
       });
     } else if (result.queue && result.queue.length) {
       // Merge queue with existing queue
-      destination.queue = assign(destination.queue || [], result.queue);
+      destination.queue = (destination.queue || []).concat(result.queue);
       queued.push({ id, destination });
     } else {
       successful.push({ id, destination });
@@ -210,53 +207,56 @@ function createEventOrCommand(
   if (!partialEvent.event) throw new Error('Event name is required');
 
   // Check for valid entity and action event format
-  const [entity, action] = partialEvent.event.split(' ');
-  if (!entity || !action) throw new Error('Event name is invalid');
+  const [entityValue, actionValue] = partialEvent.event.split(' ');
+  if (!entityValue || !actionValue) throw new Error('Event name is invalid');
 
   // It's a walker command
-  if (isCommand(entity)) return { command: action };
+  if (isCommand(entityValue)) return { command: actionValue };
 
   // Regular event
 
   // Increase event counter
   ++instance.count;
 
-  // Extract properties with default fallbacks
+  // Values that are eventually used by other properties
   const {
     timestamp = Date.now(),
     group = instance.group,
     count = instance.count,
-    source = { type: 'node', id: '', previous_id: '' },
+  } = partialEvent;
+
+  // Extract properties with default fallbacks
+  const {
+    event = `${entityValue} ${actionValue}`,
+    data = isSameType(pushData, {} as WalkerOS.Properties) ? pushData : {},
     context = {},
-    custom = {},
     globals = instance.globals,
+    custom = {},
     user = instance.user,
     nested = [],
     consent = instance.consent,
+    id = `${timestamp}-${group}-${count}`,
     trigger = '',
+    entity = entityValue,
+    action = actionValue,
+    timing = Math.round((Date.now() - instance.timing) / 10) / 100,
     version = {
       client: instance.client,
       tagging: instance.config.tagging,
     },
+    source = { type: 'node', id: '', previous_id: '' },
   } = partialEvent;
 
-  const data: WalkerOS.Properties =
-    partialEvent.data ||
-    (isSameType(pushData, {} as WalkerOS.Properties) ? pushData : {});
-
-  const timing =
-    partialEvent.timing ||
-    Math.round((Date.now() - instance.timing) / 10) / 100;
-
-  const event: WalkerOS.Event = {
-    event: `${entity} ${action}`,
+  const fullEvent: WalkerOS.Event = {
+    event,
     data,
     context,
-    custom,
     globals,
+    custom,
     user,
     nested,
     consent,
+    id,
     trigger,
     entity,
     action,
@@ -264,10 +264,9 @@ function createEventOrCommand(
     timing,
     group,
     count,
-    id: `${timestamp}-${group}-${count}`,
     version,
     source,
   };
 
-  return { event };
+  return { event: fullEvent };
 }

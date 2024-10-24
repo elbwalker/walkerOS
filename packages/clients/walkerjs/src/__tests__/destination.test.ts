@@ -788,4 +788,60 @@ describe('Destination', () => {
       ],
     });
   });
+
+  test('immutable events', async () => {
+    let changedByFirst = false;
+    const first = jest.fn();
+    const fistDestination: WebDestination.Destination = {
+      config: {
+        mapping: {
+          // Destination will change event
+          entity: { action: { name: 'new name' } },
+        },
+      },
+      push: (event) => {
+        // Destination will change event
+        event.custom = { foo: 'bar' };
+        changedByFirst = true;
+
+        first({ ...event });
+      },
+    };
+    const second = jest.fn();
+    const secondDestination: WebDestination.Destination = {
+      config: {},
+      push: (event) => {
+        // Make sure the first destination was called before
+        if (!changedByFirst) throw Error('wrong execution order');
+
+        second(event);
+      },
+    };
+
+    walkerjs = Walkerjs({
+      run: true,
+      pageview: false,
+      session: false,
+      destinations: { fistDestination, secondDestination },
+    });
+
+    const mockEvent = { event: 'entity action' };
+
+    elb(mockEvent);
+
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(first).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'new name',
+        custom: { foo: 'bar' },
+      }),
+    );
+    expect(second).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'entity action',
+        custom: {},
+      }),
+    );
+  });
 });

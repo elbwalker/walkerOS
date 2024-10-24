@@ -7,15 +7,18 @@ interface MappingObject {
 }
 
 export function getEventConfig(
-  event: WalkerOS.Event,
+  event: string,
   mapping?: Destination.Mapping<unknown>,
 ) {
+  const [entity, action] = event.split(' ');
+  if (!entity || !action) return {};
+
   // Check for an active mapping for proper event handling
   let eventConfig: undefined | Destination.EventConfig;
   let mappingKey = '';
 
   if (mapping) {
-    let mappingEntityKey = event.entity; // Default key is the entity name
+    let mappingEntityKey = entity; // Default key is the entity name
     let mappingEntity = mapping[mappingEntityKey];
 
     if (!mappingEntity) {
@@ -25,7 +28,7 @@ export function getEventConfig(
     }
 
     if (mappingEntity) {
-      let mappingActionKey = event.action; // Default action is the event action
+      let mappingActionKey = action; // Default action is the event action
       eventConfig = mappingEntity[mappingActionKey];
 
       if (!eventConfig) {
