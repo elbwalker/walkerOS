@@ -3,7 +3,11 @@ import type { WalkerOS } from '@elbwalker/types';
 import { createNodeClient } from '../';
 
 describe('Destination', () => {
-  const mockPush = jest.fn(); //.mockImplementation(console.log);
+  const eventCall = jest.fn();
+  const mockPush = jest.fn().mockImplementation((event) => {
+    eventCall(event);
+    // console.log(event);
+  });
   const mockInit = jest.fn();
 
   let mockEvent: WalkerOS.Event;
@@ -43,7 +47,7 @@ describe('Destination', () => {
       timestamp: 1,
       timing: 1,
       group: 'g',
-      count: 1,
+      count: 2,
       version: { client: 'c', tagging: 1 },
       source: { type: 'node', id: '', previous_id: '' },
     };
@@ -114,12 +118,12 @@ describe('Destination', () => {
 
   test('push', async () => {
     const eventMapping = {
-      name: 'renamed event',
+      name: 'NewEventName',
       custom: { something: 'random' },
     };
     const mapping = {
       entity: {
-        action: eventMapping,
+        rename: eventMapping,
       },
     };
     mockDestination.config.mapping = mapping;
@@ -130,15 +134,24 @@ describe('Destination', () => {
       globalsStatic: { foo: 'irrelevant', bar: 'baz' },
       consent: { server: true },
     });
-    result = await elb(mockEvent);
 
+    const changes = {
+      consent: { client: true, server: true },
+      user: { id: 'us3r', session: 's3ss10n' },
+      globals: { foo: 'bar', bar: 'baz' },
+    };
+
+    result = await elb(mockEvent);
     expect(mockDestination.push).toHaveBeenCalledTimes(1);
+    expect(eventCall).toHaveBeenCalledWith({ ...mockEvent, ...changes });
+
+    jest.clearAllMocks();
+    await elb({ ...mockEvent, event: 'entity rename' });
     expect(mockDestination.push).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'renamed event',
-        consent: { client: true, server: true },
-        user: { id: 'us3r', session: 's3ss10n' },
-        globals: { foo: 'bar', bar: 'baz' },
+        ...mockEvent,
+        ...changes,
+        event: 'NewEventName',
       }),
       mockDestination.config,
       eventMapping,
@@ -259,10 +272,10 @@ describe('Destination', () => {
   // @TODO test.skip('queue', async () => {});
 
   test('consent', async () => {
-    const mockPush = jest.fn();
+    const mockPushConsent = jest.fn();
     const destinationConsent: NodeDestination.Destination = {
       config: { consent: { test: true } },
-      push: mockPush,
+      push: mockPushConsent,
     };
 
     const { elb } = getClient({
@@ -289,9 +302,9 @@ describe('Destination', () => {
     );
 
     result = await elb('walker consent', { test: true });
-    expect(mockPush.mock.calls[0][0]).toEqual(
+    expect(mockPushConsent.mock.calls[0][0]).toEqual(
       expect.objectContaining({
-        consent: { test: true },
+        consent: { client: true, test: true },
       }),
     );
     expect(result).toStrictEqual(
