@@ -69,7 +69,7 @@ export async function destinationPush(
   event: WalkerOS.Event,
 ): Promise<boolean> {
   const { eventConfig, mappingKey } = getEventConfig(
-    event,
+    event.event,
     destination.config.mapping,
   );
 

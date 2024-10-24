@@ -95,7 +95,7 @@ export function destinationPush(
   event: WalkerOS.Event,
 ): boolean {
   const { eventConfig, mappingKey } = getEventConfig(
-    event,
+    event.event,
     destination.config.mapping,
   );
 
