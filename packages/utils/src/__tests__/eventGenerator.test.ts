@@ -72,8 +72,20 @@ describe('createEvent', () => {
       expect.objectContaining({
         event: 'page view',
         data: { id: '/custom' },
+        trigger: 'load',
         entity: 'page',
         action: 'view',
+      }),
+    );
+
+    expect(getEvent('promotion visible')).toStrictEqual(
+      expect.objectContaining({
+        event: 'promotion visible',
+        data: {
+          name: 'Setting up tracking easily',
+          position: 'hero',
+        },
+        trigger: 'visible',
       }),
     );
   });

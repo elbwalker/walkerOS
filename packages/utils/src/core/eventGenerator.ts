@@ -82,6 +82,14 @@ export function getEvent(
         hash: '#hash',
         id: '/path/to/page',
       },
+      trigger: 'load',
+    },
+    'promotion visible': {
+      data: {
+        name: 'Setting up tracking easily',
+        position: 'hero',
+      },
+      trigger: 'visible',
     },
   };
 
