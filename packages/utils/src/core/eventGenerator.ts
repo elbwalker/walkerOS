@@ -67,3 +67,23 @@ export function createEvent(props: WalkerOS.PartialEvent = {}): WalkerOS.Event {
 
   return event;
 }
+
+export function getEvent(
+  name: string,
+  props: WalkerOS.PartialEvent = {},
+): WalkerOS.Event {
+  const defaultEvents: Record<string, WalkerOS.PartialEvent> = {
+    'page view': {
+      data: {
+        domain: 'www.example.com',
+        title: 'walkerOS',
+        referrer: 'https://www.elbwalker.com/',
+        search: '?foo=bar',
+        hash: '#hash',
+        id: '/path/to/page',
+      },
+    },
+  };
+
+  return createEvent({ ...defaultEvents[name], ...props, event: name });
+}

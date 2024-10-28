@@ -1,4 +1,4 @@
-import { createEvent } from '../core';
+import { createEvent, getEvent } from '../core';
 
 describe('createEvent', () => {
   const timestamp = new Date().setHours(0, 13, 37, 0);
@@ -49,5 +49,32 @@ describe('createEvent', () => {
 
   test('regular', () => {
     expect(createEvent()).toStrictEqual(defaultEvent);
+  });
+
+  test('getEvent', () => {
+    expect(getEvent('page view')).toStrictEqual(
+      expect.objectContaining({
+        event: 'page view',
+        data: {
+          domain: 'www.example.com',
+          title: 'walkerOS',
+          referrer: 'https://www.elbwalker.com/',
+          search: '?foo=bar',
+          hash: '#hash',
+          id: '/path/to/page',
+        },
+        entity: 'page',
+        action: 'view',
+      }),
+    );
+
+    expect(getEvent('page view', { data: { id: '/custom' } })).toStrictEqual(
+      expect.objectContaining({
+        event: 'page view',
+        data: { id: '/custom' },
+        entity: 'page',
+        action: 'view',
+      }),
+    );
   });
 });
