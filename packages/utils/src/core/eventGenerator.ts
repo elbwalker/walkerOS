@@ -89,6 +89,23 @@ export function getEvent(
   };
 
   const defaultEvents: Record<string, WalkerOS.PartialEvent> = {
+    'cart view': {
+      data: {
+        currency: 'EUR',
+        quantity: 1,
+        value: product1.data.prize,
+      },
+      context: { shopping: ['cart', 0] },
+      nested: [
+        {
+          type: 'product',
+          ...product1,
+          context: { shopping: ['cart', 0] },
+          nested: [],
+        },
+      ],
+      trigger: 'load',
+    },
     'order complete': {
       data: {
         id: '0rd3r1d',
@@ -102,13 +119,13 @@ export function getEvent(
         {
           type: 'product',
           ...product1,
-          context: {},
+          context: { shopping: ['complete', 0] },
           nested: [],
         },
         {
           type: 'product',
           ...product2,
-          context: {},
+          context: { shopping: ['complete', 0] },
           nested: [],
         },
         {
@@ -116,7 +133,7 @@ export function getEvent(
           data: {
             name: 'Surprise',
           },
-          context: {},
+          context: { shopping: ['complete', 0] },
           nested: [],
         },
       ],
@@ -145,11 +162,20 @@ export function getEvent(
       nested: [],
       trigger: 'load',
     },
+    'product visible': {
+      ...assign(product1, {
+        data: { ...product1.data, position: 3, promo: true },
+      }),
+      context: { shopping: ['discover', 0] },
+      nested: [],
+      trigger: 'load',
+    },
     'promotion visible': {
       data: {
         name: 'Setting up tracking easily',
         position: 'hero',
       },
+      context: { ab_test: ['engagement', 0] },
       trigger: 'visible',
     },
   };
