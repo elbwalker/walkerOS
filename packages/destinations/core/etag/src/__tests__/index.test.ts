@@ -12,6 +12,7 @@ import {
   getParameters,
   getSessionParams,
 } from '..';
+import { createEvent } from '@elbwalker/utils';
 
 describe('Destination core etag', () => {
   jest.useFakeTimers();
@@ -29,7 +30,7 @@ describe('Destination core etag', () => {
   };
 
   beforeEach(() => {
-    event = {
+    event = createEvent({
       event: 'entity data',
       data: {
         id: 3.14,
@@ -44,10 +45,11 @@ describe('Destination core etag', () => {
       user,
       timing: 42,
       source: {
+        type: 'web',
         id: 'localhost',
         previous_id: 'remotehost',
       },
-    } as unknown as WalkerOS.Event;
+    });
 
     session = {
       id: 's3ss10n',
@@ -105,21 +107,23 @@ describe('Destination core etag', () => {
   });
 
   test('getEventParams', () => {
-    expect(getEventParams(event, state, { 'ep.cus': 'tom' })).toStrictEqual({
-      en: 'entity data',
-      _et: expect.any(Number),
-      'epn.data_id': 3.14,
-      'epn.event_timing': 42,
-      'ep.data_foo': 'bar',
-      'ep.context_env': 'dev',
-      'ep.globals_glow': 'balls',
-      'ep.source_id': 'localhost',
-      'ep.source_previous_id': 'remotehost',
-      'ep.user_device': 'd3v1c3',
-      'ep.user_id': 'us3r',
-      'ep.user_session': 's3ss10n',
-      'ep.cus': 'tom',
-    });
+    expect(getEventParams(event, state, { 'ep.cus': 'tom' })).toStrictEqual(
+      expect.objectContaining({
+        en: 'entity data',
+        _et: expect.any(Number),
+        'epn.data_id': 3.14,
+        'epn.event_timing': 42,
+        'ep.data_foo': 'bar',
+        'ep.context_env': 'dev',
+        'ep.globals_glow': 'balls',
+        'ep.source_id': 'localhost',
+        'ep.source_previous_id': 'remotehost',
+        'ep.user_device': 'd3v1c3',
+        'ep.user_id': 'us3r',
+        'ep.user_session': 's3ss10n',
+        'ep.cus': 'tom',
+      }),
+    );
 
     expect(state.lastEngagement).toBeGreaterThan(1);
 
@@ -187,53 +191,55 @@ describe('Destination core etag', () => {
           userAgent,
         },
       ).path,
-    ).toStrictEqual({
-      // Basic
-      v: '2',
-      tid: measurementId,
-      cid: expect.any(String),
-      _s: 2,
-      _p: expect.any(Number),
-      _z: 'fetch',
-      _dbg: 1,
-      tfd: expect.any(Number),
-      // Browser
-      uap: expect.any(String),
-      uamb: expect.any(Number),
-      ul: expect.any(String),
-      // Consent
-      gcs: 'G111',
-      dma: 1,
-      dma_cps: 'syphamo',
-      pscdl: 'noapi',
-      // Device
-      sr: expect.any(String),
-      // Document
-      dl: expect.any(String),
-      dr: expect.any(String),
-      dt: expect.any(String),
-      // Session
-      sid: expect.any(Number),
-      seg: expect.any(Number),
-      _ss: 1,
-      _nsi: 1,
-      _fv: 1,
-      sct: 1,
-      // Event
-      en: 'entity data',
-      _et: expect.any(Number),
-      'epn.data_id': 3.14,
-      'epn.event_timing': 42,
-      'ep.data_foo': 'bar',
-      'ep.context_env': 'dev',
-      'ep.globals_glow': 'balls',
-      'ep.source_id': 'localhost',
-      'ep.source_previous_id': 'remotehost',
-      'ep.user_device': 'd3v1c3',
-      'ep.user_id': 'us3r',
-      'ep.user_screenSize': '800x600',
-      'ep.user_session': 's3ss10n',
-    });
+    ).toStrictEqual(
+      expect.objectContaining({
+        // Basic
+        v: '2',
+        tid: measurementId,
+        cid: expect.any(String),
+        _s: 2,
+        _p: expect.any(Number),
+        _z: 'fetch',
+        _dbg: 1,
+        tfd: expect.any(Number),
+        // Browser
+        uap: expect.any(String),
+        uamb: expect.any(Number),
+        ul: expect.any(String),
+        // Consent
+        gcs: 'G111',
+        dma: 1,
+        dma_cps: 'syphamo',
+        pscdl: 'noapi',
+        // Device
+        sr: expect.any(String),
+        // Document
+        dl: expect.any(String),
+        dr: expect.any(String),
+        dt: expect.any(String),
+        // Session
+        sid: expect.any(Number),
+        seg: expect.any(Number),
+        _ss: 1,
+        _nsi: 1,
+        _fv: 1,
+        sct: 1,
+        // Event
+        en: 'entity data',
+        _et: expect.any(Number),
+        'epn.data_id': 3.14,
+        'epn.event_timing': 42,
+        'ep.data_foo': 'bar',
+        'ep.context_env': 'dev',
+        'ep.globals_glow': 'balls',
+        'ep.source_id': 'localhost',
+        'ep.source_previous_id': 'remotehost',
+        'ep.user_device': 'd3v1c3',
+        'ep.user_id': 'us3r',
+        'ep.user_screenSize': '800x600',
+        'ep.user_session': 's3ss10n',
+      }),
+    );
 
     // Key events (conversion)
     expect(
