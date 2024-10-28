@@ -72,6 +72,8 @@ export function getEvent(
   name: string,
   props: WalkerOS.PartialEvent = {},
 ): WalkerOS.Event {
+  const timestamp = props.timestamp || new Date().setHours(0, 13, 37, 0);
+
   const product1 = {
     data: {
       name: 'Everyday Ruck Snack',
@@ -207,6 +209,44 @@ export function getEvent(
       context: { ab_test: ['engagement', 0] },
       globals: { pagegroup: 'homepage' },
       trigger: 'visible',
+    },
+    'session start': {
+      data: {
+        id: 's3ss10n',
+        start: timestamp,
+        isNew: true,
+        count: 1,
+        runs: 1,
+        isStart: true,
+        storage: true,
+        referrer: '',
+        device: 'c00k13',
+      },
+      user: {
+        id: 'us3r',
+        device: 'c00k13',
+        session: 's3ss10n',
+        hash: 'h4sh',
+        address: 'street number',
+        email: 'user@example.com',
+        phone: '+49 123 456 789',
+        userAgent: 'Mozilla...',
+        browser: 'Chrome',
+        browserVersion: '90',
+        deviceType: 'desktop',
+        language: 'de-DE',
+        country: 'DE',
+        region: 'HH',
+        city: 'Hamburg',
+        zip: '20354',
+        timezone: 'Berlin',
+        os: 'walkerOS',
+        osVersion: '1.0',
+        screenSize: '1337x420',
+        ip: '127.0.0.0',
+        internal: true,
+        custom: 'value',
+      },
     },
   };
 
