@@ -1,6 +1,7 @@
 import type { NodeClient, NodeDestination } from '../types';
 import type { WalkerOS } from '@elbwalker/types';
 import { createNodeClient } from '../';
+import { createEvent } from '@elbwalker/utils';
 
 describe('Destination', () => {
   const eventCall = jest.fn();
@@ -31,26 +32,11 @@ describe('Destination', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    mockEvent = {
-      event: 'entity action',
-      data: { k: 'v' },
-      context: {},
-      custom: {},
+    mockEvent = createEvent({
       globals: { foo: 'bar' },
-      user: { session: 's3ss10n' },
-      nested: [],
       consent: { client: true },
-      id: '1d',
-      trigger: '',
-      entity: 'entity',
-      action: 'action',
-      timestamp: 1,
-      timing: 1,
-      group: 'g',
-      count: 2,
-      version: { client: 'c', tagging: 1 },
-      source: { type: 'node', id: '', previous_id: '' },
-    };
+      user: { session: 's3ss10n' },
+    });
   });
 
   test('init call', async () => {

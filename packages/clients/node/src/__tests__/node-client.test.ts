@@ -1,6 +1,7 @@
 import type { NodeClient, NodeDestination } from '../types';
 import type { WalkerOS } from '@elbwalker/types';
 import { createNodeClient } from '../';
+import { createEvent } from '@elbwalker/utils/src';
 
 describe('Client', () => {
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
@@ -23,30 +24,7 @@ describe('Client', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    mockEvent = {
-      event: 'entity action',
-      data: expect.any(Object),
-      context: {},
-      custom: {},
-      globals: {},
-      user: {},
-      nested: [],
-      consent: {},
-      id: expect.any(String),
-      trigger: '',
-      entity: 'entity',
-      action: 'action',
-      timestamp: expect.any(Number),
-      timing: expect.any(Number),
-      group: expect.any(String),
-      count: expect.any(Number),
-      version: { client: expect.any(String), tagging: expect.any(Number) },
-      source: {
-        type: 'node',
-        id: '',
-        previous_id: '',
-      },
-    };
+    mockEvent = createEvent();
   });
 
   test('client version equals package.json version', () => {
@@ -180,6 +158,9 @@ describe('Client', () => {
 
   test('timing', async () => {
     const { elb } = getClient();
+
+    // Remove timing from event
+    delete (mockEvent as unknown as WalkerOS.AnyObject).timing;
 
     jest.advanceTimersByTime(2500); // 2.5 sec load time
     let result = await elb(mockEvent);
