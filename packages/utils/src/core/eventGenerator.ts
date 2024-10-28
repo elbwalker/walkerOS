@@ -92,7 +92,6 @@ export function getEvent(
     'cart view': {
       data: {
         currency: 'EUR',
-        quantity: 1,
         value: product1.data.prize,
       },
       context: { shopping: ['cart', 0] },
@@ -102,6 +101,30 @@ export function getEvent(
           type: 'product',
           ...product1,
           context: { shopping: ['cart', 0] },
+          nested: [],
+        },
+      ],
+      trigger: 'load',
+    },
+    'checkout view': {
+      data: {
+        step: 'payment',
+        currency: 'EUR',
+        value: product1.data.prize + product2.data.prize,
+      },
+      context: { shopping: ['checkout', 0] },
+      globals: { pagegroup: 'shop' },
+      nested: [
+        {
+          type: 'product',
+          ...product1,
+          context: { shopping: ['checkout', 0] },
+          nested: [],
+        },
+        {
+          type: 'product',
+          ...product2,
+          context: { shopping: ['checkout', 0] },
           nested: [],
         },
       ],

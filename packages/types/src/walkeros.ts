@@ -187,6 +187,7 @@ export interface MappingValueObject {
   default?: PropertyType;
   // Ideas:
   // - As array to try multiple ways to get the value
+  // - condition
   // - consent?: string | Array<string>;
   // - filter
   // - fn
