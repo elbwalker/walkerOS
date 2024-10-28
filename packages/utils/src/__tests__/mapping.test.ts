@@ -1,4 +1,4 @@
-import { getEventConfig } from '../core';
+import { createEvent, getEventConfig, getMappingValue } from '../core';
 
 describe('mapping', () => {
   test('getEventConfig', () => {
@@ -26,5 +26,15 @@ describe('mapping', () => {
       eventConfig: asterisksActionConfig,
       mappingKey: '* view',
     });
+  });
+
+  test('getMappingValue', () => {
+    const event = createEvent();
+    expect(getMappingValue(event, 'data.string')).toBe(event.data.string);
+    expect(getMappingValue(event, 'context.dev.0')).toBe(event.context.dev![0]);
+    expect(getMappingValue(event, 'globals.lang')).toBe(event.globals.lang);
+    expect(getMappingValue(event, 'nested.0.data.is')).toBe(
+      event.nested[0].data.is,
+    );
   });
 });
