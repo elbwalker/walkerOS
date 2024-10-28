@@ -1,44 +1,11 @@
 import type { Config, Destination, PartialConfig } from '../types';
-import type { WalkerOS } from '@elbwalker/types';
+import { createEvent } from '@elbwalker/utils';
 
 describe('Node Destination BigQuery', () => {
   // Mock the bigquery package with __mocks__ implementation
   jest.mock('@google-cloud/bigquery');
 
-  const event: WalkerOS.Event = {
-    event: 'entity action',
-    data: { foo: 'bar' },
-    custom: { bar: 'baz' },
-    context: { dev: ['test', 1] },
-    globals: { lang: 'ts' },
-    user: { id: 'us3r', device: 'c00k13', session: 's3ss10n' },
-    nested: [
-      {
-        type: 'child',
-        data: { type: 'nested' },
-        nested: [],
-        context: { element: ['child', 0] },
-      },
-    ],
-    consent: { debugging: true },
-    id: '1-gr0up-1',
-    trigger: 'test',
-    entity: 'entity',
-    action: 'action',
-    timestamp: 1690561989523,
-    timing: 3.14,
-    group: 'gr0up',
-    count: 1,
-    version: {
-      client: '0.0.7',
-      tagging: 1,
-    },
-    source: {
-      type: 'jest',
-      id: 'https://localhost:80',
-      previous_id: 'http://remotehost:9001',
-    },
-  };
+  const event = createEvent();
 
   const projectId = 'pr0j3ct1d';
   // const location = 'EU';
@@ -96,24 +63,24 @@ describe('Node Destination BigQuery', () => {
       {
         timestamp: expect.any(Date),
         event: 'entity action',
-        id: '1-gr0up-1',
+        id: event.id,
         entity: 'entity',
         action: 'action',
-        consent: '{"debugging":true}',
-        data: '{"foo":"bar"}',
+        consent: '{"functional":true}',
+        data: '{"string":"foo","number":1,"boolean":true,"array":[0,"text",false]}',
         context: '{"dev":["test",1]}',
-        custom: '{"bar":"baz"}',
-        globals: '{"lang":"ts"}',
+        globals: '{"lang":"elb"}',
+        custom: '{"completely":"random"}',
         user: '{"id":"us3r","device":"c00k13","session":"s3ss10n"}',
         nested:
-          '[{"type":"child","data":{"type":"nested"},"nested":[],"context":{"element":["child",0]}}]',
+          '[{"type":"child","data":{"is":"subordinated"},"nested":[],"context":{"element":["child",0]}}]',
         trigger: 'test',
         timing: 3.14,
         group: 'gr0up',
         count: 1,
         version: '{"client":"0.0.7","tagging":1}',
         source:
-          '{"type":"jest","id":"https://localhost:80","previous_id":"http://remotehost:9001"}',
+          '{"type":"web","id":"https://localhost:80","previous_id":"http://remotehost:9001"}',
         createdAt: expect.any(Date),
       },
     ]);
