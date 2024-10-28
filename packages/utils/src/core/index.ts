@@ -3,6 +3,7 @@ export * from './assign';
 export * from './castValue';
 export * from './consent';
 export * from './constants';
+export * from './eventGenerator';
 export * from './getByStringDot';
 export * from './getId';
 export * from './getMarketingParameters';
