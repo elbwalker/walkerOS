@@ -72,6 +72,22 @@ export function getEvent(
   name: string,
   props: WalkerOS.PartialEvent = {},
 ): WalkerOS.Event {
+  const product1 = {
+    data: {
+      name: 'Everyday Ruck Snack',
+      color: 'black',
+      size: 'l',
+      prize: 420,
+    },
+  };
+  const product2 = {
+    data: {
+      name: 'Cool Cap',
+      size: 'one size',
+      prize: 42,
+    },
+  };
+
   const defaultEvents: Record<string, WalkerOS.PartialEvent> = {
     'order complete': {
       data: {
@@ -84,22 +100,13 @@ export function getEvent(
       nested: [
         {
           type: 'product',
-          data: {
-            name: 'Everyday Ruck Snack',
-            color: 'black',
-            size: 'l',
-            prize: 420,
-          },
+          ...product1,
           context: {},
           nested: [],
         },
         {
           type: 'product',
-          data: {
-            name: 'Cool Cap',
-            size: 'one size',
-            prize: 42,
-          },
+          ...product2,
           context: {},
           nested: [],
         },
@@ -123,6 +130,11 @@ export function getEvent(
         hash: '#hash',
         id: '/path/to/page',
       },
+      trigger: 'load',
+    },
+    'product view': {
+      ...product1,
+      nested: [],
       trigger: 'load',
     },
     'promotion visible': {
