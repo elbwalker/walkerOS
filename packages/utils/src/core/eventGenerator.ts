@@ -51,7 +51,7 @@ export function createEvent(props: WalkerOS.PartialEvent = {}): WalkerOS.Event {
   // Note: Always prefer the props over the defaults
 
   // Merge properties
-  const event = assign(defaultEvent, props);
+  const event = assign(defaultEvent, props, { merge: false });
 
   // Update conditions
 
@@ -73,6 +73,47 @@ export function getEvent(
   props: WalkerOS.PartialEvent = {},
 ): WalkerOS.Event {
   const defaultEvents: Record<string, WalkerOS.PartialEvent> = {
+    'order complete': {
+      data: {
+        id: '0rd3r1d',
+        currency: 'EUR',
+        shipping: 5.22,
+        taxes: 73.76,
+        total: 555,
+      },
+      nested: [
+        {
+          type: 'product',
+          data: {
+            name: 'Everyday Ruck Snack',
+            color: 'black',
+            size: 'l',
+            prize: 420,
+          },
+          context: {},
+          nested: [],
+        },
+        {
+          type: 'product',
+          data: {
+            name: 'Cool Cap',
+            size: 'one size',
+            prize: 42,
+          },
+          context: {},
+          nested: [],
+        },
+        {
+          type: 'gift',
+          data: {
+            name: 'Surprise',
+          },
+          context: {},
+          nested: [],
+        },
+      ],
+      trigger: 'load',
+    },
     'page view': {
       data: {
         domain: 'www.example.com',
