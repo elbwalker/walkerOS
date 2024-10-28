@@ -33,6 +33,7 @@ const config = {
       },
       user_id: 'user.id',
     },
+    server_container_url: 'https://server.example.com',
     snakeCase: true,
     transport_url: 'https://www.google-analytics.com/g/collect',
   },

@@ -26,6 +26,10 @@ export const destinationGoogleGA4: Destination = {
     // custom transport url
     if (custom.transport_url) settings.transport_url = custom.transport_url;
 
+    // custom server_container_url
+    if (custom.server_container_url)
+      settings.server_container_url = custom.server_container_url;
+
     // disable pageviews
     if (custom.pageview === false) settings.send_page_view = false;
 
