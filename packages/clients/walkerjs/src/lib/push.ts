@@ -236,7 +236,7 @@ function createEventOrCommand(
 
   if (isElementOrDocument(pushContext)) {
     elemParameter = pushContext;
-  } else if (isSameType(pushContext, {} as WalkerOS.OrderedProperties)) {
+  } else if (Object.keys(pushContext).length) {
     eventContext = pushContext;
   }
 
