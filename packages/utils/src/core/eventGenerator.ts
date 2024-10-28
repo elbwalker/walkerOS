@@ -96,6 +96,7 @@ export function getEvent(
         value: product1.data.prize,
       },
       context: { shopping: ['cart', 0] },
+      globals: { pagegroup: 'shop' },
       nested: [
         {
           type: 'product',
@@ -115,6 +116,7 @@ export function getEvent(
         total: 555,
       },
       context: { shopping: ['complete', 0] },
+      globals: { pagegroup: 'shop' },
       nested: [
         {
           type: 'product',
@@ -142,23 +144,26 @@ export function getEvent(
     'page view': {
       data: {
         domain: 'www.example.com',
-        title: 'walkerOS',
+        title: 'walkerOS documentation',
         referrer: 'https://www.elbwalker.com/',
         search: '?foo=bar',
         hash: '#hash',
-        id: '/path/to/page',
+        id: '/docs/',
       },
+      globals: { pagegroup: 'docs' },
       trigger: 'load',
     },
     'product add': {
       ...product1,
       context: { shopping: ['intent', 0] },
+      globals: { pagegroup: 'shop' },
       nested: [],
       trigger: 'click',
     },
     'product view': {
       ...product1,
       context: { shopping: ['detail', 0] },
+      globals: { pagegroup: 'shop' },
       nested: [],
       trigger: 'load',
     },
@@ -167,6 +172,7 @@ export function getEvent(
         data: { ...product1.data, position: 3, promo: true },
       }),
       context: { shopping: ['discover', 0] },
+      globals: { pagegroup: 'shop' },
       nested: [],
       trigger: 'load',
     },
@@ -176,6 +182,7 @@ export function getEvent(
         position: 'hero',
       },
       context: { ab_test: ['engagement', 0] },
+      globals: { pagegroup: 'homepage' },
       trigger: 'visible',
     },
   };
