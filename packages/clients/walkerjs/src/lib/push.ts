@@ -202,21 +202,22 @@ function createEventOrCommand(
 
   // Extract properties with default fallbacks
   const {
+    context = {},
+    globals = instance.globals,
+    custom = initialCustom || {},
+    user = instance.user,
+    nested = initialNested || [],
+    consent = instance.consent,
+    trigger = initialTrigger ? String(initialTrigger) : '',
     timestamp = Date.now(),
     group = instance.group,
     count = instance.count,
+    version = { client: instance.client, tagging: instance.config.tagging },
     source = {
       type: 'web',
       id: window.location.href,
       previous_id: document.referrer,
     },
-    context = {},
-    globals = instance.globals,
-    user = instance.user,
-    nested = initialNested || [],
-    consent = instance.consent,
-    trigger = isSameType(initialTrigger, '') ? initialTrigger : '',
-    version = { tagging: instance.config.tagging },
   } = partialEvent;
 
   // Get data and context either from elements or parameters
@@ -261,8 +262,8 @@ function createEventOrCommand(
     event: `${entity} ${action}`,
     data,
     context: eventContext,
-    custom: partialEvent.custom || initialCustom || {},
     globals,
+    custom,
     user,
     nested,
     consent,
@@ -274,10 +275,7 @@ function createEventOrCommand(
     group,
     count,
     id: `${timestamp}-${group}-${count}`,
-    version: {
-      client: instance.client,
-      tagging: version.tagging,
-    },
+    version,
     source,
   };
 
