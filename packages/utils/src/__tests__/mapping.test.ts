@@ -28,7 +28,7 @@ describe('mapping', () => {
     });
   });
 
-  test('getMappingValue', () => {
+  test('getMappingValue string', () => {
     const event = createEvent();
     expect(getMappingValue(event, 'data.string')).toBe(event.data.string);
     expect(getMappingValue(event, 'context.dev.0')).toBe(event.context.dev![0]);
@@ -36,5 +36,16 @@ describe('mapping', () => {
     expect(getMappingValue(event, 'nested.0.data.is')).toBe(
       event.nested[0].data.is,
     );
+    expect(getMappingValue(event, 'nested.*.data.is')).toBe(
+      event.nested[0].data.is,
+    );
+  });
+
+  test('getMappingValue key default', () => {
+    const event = createEvent();
+    expect(
+      getMappingValue(event, { key: 'data.string', default: 'static' }),
+    ).toBe(event.data.string);
+    expect(getMappingValue(event, { default: 'static' })).toBe('static');
   });
 });
