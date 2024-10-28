@@ -97,6 +97,7 @@ export function getEvent(
         taxes: 73.76,
         total: 555,
       },
+      context: { shopping: ['complete', 0] },
       nested: [
         {
           type: 'product',
@@ -132,8 +133,15 @@ export function getEvent(
       },
       trigger: 'load',
     },
+    'product add': {
+      ...product1,
+      context: { shopping: ['intent', 0] },
+      nested: [],
+      trigger: 'click',
+    },
     'product view': {
       ...product1,
+      context: { shopping: ['detail', 0] },
       nested: [],
       trigger: 'load',
     },
