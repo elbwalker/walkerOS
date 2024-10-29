@@ -53,11 +53,9 @@ export function getMappingValue(
   event: WalkerOS.Event,
   mapping: WalkerOS.MappingValue,
 ): WalkerOS.Property | undefined {
-  const obj = getMappingObject(mapping);
-  if (obj.key)
-    return castToProperty(getByStringDot(event, obj.key, obj.defaultValue));
+  const { key, defaultValue } = getMappingObject(mapping);
 
-  return obj.defaultValue;
+  return castToProperty(getByStringDot(event, key, defaultValue));
 }
 
 function getMappingObject(param: WalkerOS.MappingValue): MappingObject {
