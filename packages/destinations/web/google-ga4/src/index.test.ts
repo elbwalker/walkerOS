@@ -1,5 +1,5 @@
-import { elb, Walkerjs } from '@elbwalker/walker.js';
 import type { DestinationGoogleGA4 } from '.';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
 
 describe('Destination Google GA4', () => {
   const w = window;
@@ -23,8 +23,7 @@ describe('Destination Google GA4', () => {
     destination = jest.requireActual('.').default;
     destination.config = config;
 
-    Walkerjs({ pageview: false, session: false, tagging: 2 });
-    elb('walker run');
+    Walkerjs({ pageview: false, session: false, tagging: 2, run: true });
     w.gtag = mockFn;
   });
 
@@ -155,10 +154,14 @@ describe('Destination Google GA4', () => {
           params: {
             name: 'mapped_ga4_params',
             custom: {
+              include: [],
               params: {
                 override: 'data.override',
                 position: 'context.position.0',
-                unavailable: { key: 'context.doesnt.exist', default: 'backup' },
+                unavailable: {
+                  key: 'context.does.not.exist',
+                  default: 'backup',
+                },
                 empty: 'context.not.there',
                 timing: 'timing',
                 lang: 'globals.lang',
@@ -174,8 +177,13 @@ describe('Destination Google GA4', () => {
       user: { id: 'us3r1d' },
     });
 
-    elb('ga4 params', { old: false, override: 'important' }, trigger, {
-      position: ['reco', 0],
+    elb({
+      event: 'ga4 params',
+      data: { old: false, override: 'important' },
+      context: {
+        position: ['reco', 0],
+      },
+      timing: 2,
     });
 
     expect(mockFn).toHaveBeenCalledWith(
@@ -296,6 +304,7 @@ describe('Destination Google GA4', () => {
           add: {
             name: 'add_to_cart',
             custom: {
+              include: [],
               items: {
                 params: {
                   item_id: 'data.id',
@@ -314,6 +323,8 @@ describe('Destination Google GA4', () => {
               items: {
                 params: {
                   item_id: 'nested.*.data.id',
+                  item_index: 'nested.*.data.i',
+                  item_coupon: 'data.coupon',
                 },
               },
               params: { transaction_id: 'data.id' },
@@ -347,25 +358,29 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    elb(
-      'order complete',
-      { id: 'orderid', revenue: 25.42 },
-      trigger,
-      { key: ['value', 0] },
-      [
-        { type: 'product', data: { id: 'a' }, nested: [], context: {} },
+    const coupon = 'S4L3';
+    elb({
+      event: 'order complete',
+      data: { id: 'orderid', revenue: 25.42, coupon },
+      nested: [
+        { type: 'product', data: { id: 'a', i: 1 }, nested: [], context: {} },
         { type: 'product', data: { id: 'b' }, nested: [], context: {} },
+        { type: 'product', data: { id: 'c', i: 2 }, nested: [], context: {} },
       ],
-    );
+    });
 
-    expect(mockFn).toHaveBeenCalledWith(
+    expect(mockFn).toHaveBeenLastCalledWith(
       'event',
       'purchase',
       expect.objectContaining({
         transaction_id: 'orderid',
         currency: 'EUR',
         value: 25.42,
-        items: [{ item_id: 'a' }, { item_id: 'b' }],
+        items: [
+          { item_id: 'a', item_coupon: coupon, item_index: 1 },
+          { item_id: 'b', item_coupon: coupon },
+          { item_id: 'c', item_coupon: coupon, item_index: 2 },
+        ],
       }),
     );
   });

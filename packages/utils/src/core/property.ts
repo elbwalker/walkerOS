@@ -4,7 +4,8 @@ export function isPropertyType(value: unknown): value is WalkerOS.PropertyType {
   return (
     typeof value === 'boolean' ||
     typeof value === 'string' ||
-    typeof value === 'number'
+    typeof value === 'number' ||
+    typeof value === 'undefined'
   );
 }
 

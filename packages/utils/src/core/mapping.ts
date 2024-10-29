@@ -48,7 +48,6 @@ export function getEventConfig(
   return { eventConfig, mappingKey };
 }
 
-// @TODO stringDot for event values like timing, id, etc
 export function getMappingValue(
   event: WalkerOS.Event,
   mapping: WalkerOS.MappingValue,
