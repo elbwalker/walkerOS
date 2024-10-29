@@ -4,7 +4,7 @@
   </a>
 </p>
 
-# walkerOS: Your Unified Data Collection Solution
+# walkerOS: Open-source data collection and tag management
 
 [Request Feature](https://github.com/elbwalker/walkerOS/issues/new) ·
 [Report Bug](https://github.com/elbwalker/walkerOS/issues/new) ·
@@ -13,33 +13,32 @@
 <div align="left">
   <img src="https://img.shields.io/github/license/elbwalker/walkerOS" />
   <a href="https://www.elbwalker.com/docs/"><img src="https://img.shields.io/badge/docs-www.elbwalker.com/docs/-yellow" alt="walkerOS Documentation"></a>
+  <a href="https://github.com/elbwalker/walkerOS/tree/main/apps/demos/react"><img src="https://img.shields.io/badge/React_demo-blue" alt="React demo"></a>
+
 </div>
 
 ## Why walkerOS?
 
-walkerOS offers a unified, flexible, and privacy-centric data collection
-platform, adaptable to your evolving data needs. It integrates seamlessly with
-any analytical or storage tool, providing a reliable source of truth for data
+walkerOS offers a unified, flexible, and privacy-centric event data collection
+platform. It integrates seamlessly with any analytics or storage tool, providing a reliable source of truth for data
 teams.
 
 It is a modular data collection infrastructure, ideal for capturing first-party
 events reliably and with privacy in mind. Its vendor-agnostic design ensures
 seamless integration, giving you complete control over your data.
 
-### Key Features
+### Benefits
 
 - **Modular Design**: Customize your data collection strategy like building with
   Lego bricks.
 - **Data Quality and Privacy**: Prioritize data integrity and user privacy with
   built-in consent management.
-- **Flexibility**: Tailored for both server-side and client-side tracking,
+- **Flexibility**: Tailored for both server-side and client-side tagging & tracking,
   adaptable to your evolving needs.
 
 ### Target Audience
 
-Designed for enterprises, agencies, freelancers, and data-driven
-decision-makers, walkerOS enables quick, adaptable solutions without disrupting
-your current setup.
+walkerOS is designed for teams, agencies, and freelancers, who prefer tag management as code and implement tags fast while keeping full control over the whole data collection.
 
 ### Pre-requisites
 
@@ -56,8 +55,8 @@ to understand its capabilities fully.
 - **Clients** ([docs](https://www.elbwalker.com/docs/clients/),
   [code](./packages/clients/)): For data creation and state management.
 - **Destinations** ([docs](https://www.elbwalker.com/docs/destinations/),
-  [code](./packages/destinations/)): Activating data by initializing, mapping
-  and finally sharing events to third-party tools.
+  [code](./packages/destinations/)): Initialize, mapp
+  and share events to third-party tools.
 - **Stacks** ([docs](https://www.elbwalker.com/docs/stacks/),
   [code](./packages/stacks/)): APIs for event ingestion and processing.
 - **Utils** ([docs](https://www.elbwalker.com/docs/utils/),
@@ -67,21 +66,13 @@ to understand its capabilities fully.
 - **Demos** ([docs](https://www.elbwalker.com/docs/), [code](./apps/demos/)):
   See walkerOS in action.
 
-## Getting Started
-
-Start building your data collection strategy with walkerOS. Follow the
-[Quick Start Guide](https://www.elbwalker.com/docs/walkeros/getting-started/)
-for an easy setup.
-
 ## Installation
 
-Implement clients for data collection, manage endpoints with stacks, and
-leverage utilities for custom setups.
+Start collecting data with our [web](https://github.com/elbwalker/walkerOS/tree/main/packages/clients/walkerjs) or [node](https://github.com/elbwalker/walkerOS/tree/main/packages/clients/node) client.
 
 ## Contributing
 
-Join our community-driven project to address real-world data challenges. See our
-[Contributing Guidelines](https://www.elbwalker.com/docs/contributing) to get
+ ⭐️ Help us grow and star us. See our [Contributing Guidelines](https://www.elbwalker.com/docs/contributing) to get
 involved.
 
 ## Support
