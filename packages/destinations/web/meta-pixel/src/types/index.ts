@@ -20,24 +20,17 @@ export interface CustomConfig {
 }
 
 export interface CustomEventConfig {
-  content_ids?: string; // Name of data property key to use in content_ids
-  content_name?: string; // Name of data property key to use as content_name
-  content_type?: string; // Name of data property key to use as content_type
+  content_ids?: WalkerOS.MappingValue; // Name of data property key to use in content_ids
+  content_name?: WalkerOS.MappingValue; // Name of data property key to use as content_name
+  content_type?: WalkerOS.MappingValue; // Name of data property key to use as content_type
   track?: StandardEventNames; // Name of a standard event to track
-  value?: string; // Name of data property key to use for value
+  value?: WalkerOS.MappingValue; // Name of data property key to use for value
   contents?: ParamContents; // Value(s) to be used for contents
 }
 
-export type PropertyMapping = string | PropertyMappingValue;
-
-export interface PropertyMappingValue {
-  key: string;
-  default?: WalkerOS.PropertyType;
-}
-
 export interface ParamContents {
-  id: PropertyMapping;
-  quantity: PropertyMapping;
+  id: WalkerOS.MappingValue;
+  quantity: WalkerOS.MappingValue;
 }
 
 export type ContentIds =

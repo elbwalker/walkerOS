@@ -4,10 +4,9 @@ import type {
   Contents,
   CustomEventConfig,
   Destination,
-  PropertyMapping,
   StartSubscribeParameters,
 } from './types';
-import { getByStringDot } from '@elbwalker/utils';
+import { getMappingValue } from '@elbwalker/utils';
 
 // https://developers.facebook.com/docs/meta-pixel/
 
@@ -77,25 +76,13 @@ function getParameters(
 ) {
   // value
   let value = 1;
-  if (mapping.value) {
-    const valueParams = getParam(mapping.value);
-    value = parseFloat(
-      String(getByStringDot(event, valueParams.key, valueParams.defaultValue)),
-    );
-  }
+  if (mapping.value)
+    value = parseFloat(String(getMappingValue(event, mapping.value)));
 
   // content_name
   let content_name = '';
-  if (mapping.content_name) {
-    const content_nameParams = getParam(mapping.content_name);
-    content_name = String(
-      getByStringDot(
-        event,
-        content_nameParams.key,
-        content_nameParams.defaultValue,
-      ),
-    );
-  }
+  if (mapping.content_name)
+    content_name = String(getMappingValue(event, mapping.content_name));
 
   // content_type
   const content_type = mapping.content_type ? mapping.content_type : '';
@@ -182,20 +169,6 @@ function getParameters(
   }
 }
 
-function getParam(param: PropertyMapping) {
-  let key: string;
-  let defaultValue: WalkerOS.PropertyType | undefined;
-
-  if (typeof param == 'string') {
-    key = param;
-  } else {
-    key = param.key;
-    defaultValue = param.default;
-  }
-
-  return { key, defaultValue };
-}
-
 function getParameterContentIds(
   event: WalkerOS.Event,
   mapping: CustomEventConfig,
@@ -205,8 +178,8 @@ function getParameterContentIds(
 
   const ids: ContentIds = [];
 
-  const idParams = getParam(contentsMapping.id);
-  let id = getByStringDot(event, idParams.key, idParams.defaultValue);
+  let id = getMappingValue(event, contentsMapping.id);
+  // @TODO check if id isn't already an array
 
   // Both values are required
   if (!id) return;
@@ -226,31 +199,24 @@ function getParameterContents(
   event: WalkerOS.Event,
   mapping: CustomEventConfig,
 ): Contents | undefined {
-  const contentsMapping = mapping.contents;
-  if (!contentsMapping) return;
-
-  const contents: Contents = [];
-
-  const idParams = getParam(contentsMapping.id);
-  const quantityParams = getParam(contentsMapping.quantity);
-  let id = getByStringDot(event, idParams.key, idParams.defaultValue);
-  let quantity = getByStringDot(
-    event,
-    quantityParams.key,
-    quantityParams.defaultValue,
-  );
-
-  // Both values are required
+  const { id, quantity } = mapping.contents || {};
   if (!id || !quantity) return;
 
-  if (!Array.isArray(id)) id = [id];
-  if (!Array.isArray(quantity)) quantity = [quantity];
+  let idValue = getMappingValue(event, id);
+  let quantityValue = getMappingValue(event, quantity);
 
-  if (Array.isArray(id) && Array.isArray(quantity)) {
-    for (let i = 0; i < id.length; i++) {
+  // Both values are required
+  if (!idValue || !quantityValue) return;
+
+  if (!Array.isArray(idValue)) idValue = [idValue];
+  if (!Array.isArray(quantityValue)) quantityValue = [quantityValue];
+
+  const contents: Contents = [];
+  if (Array.isArray(idValue) && Array.isArray(quantityValue)) {
+    for (let i = 0; i < idValue.length; i++) {
       contents.push({
-        id: String(id[i]),
-        quantity: parseFloat(String(quantity[i])),
+        id: String(idValue[i]),
+        quantity: parseFloat(String(quantityValue[i])),
       });
     }
   }
