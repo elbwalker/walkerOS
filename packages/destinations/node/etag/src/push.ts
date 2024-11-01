@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { CustomConfig, PushFn } from './types';
+import type { Custom, PushFn } from './types';
 import { requestToParameter, sendNode } from '@elbwalker/utils';
 import { getParameters } from '@elbwalker/destination-core-etag';
 
@@ -36,7 +36,7 @@ export const push: PushFn = async function (pushEvent, config) {
   return { queue: [] }; // @TODO
 };
 
-async function sendRequest(custom: CustomConfig, path: string, body?: string) {
+async function sendRequest(custom: Custom, path: string, body?: string) {
   const url = custom.url || 'https://region1.google-analytics.com/g/collect?';
 
   return sendNode(url + path, body, {

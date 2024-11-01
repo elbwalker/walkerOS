@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config, CustomEventConfig, Destination } from '../types';
+import type { Config, CustomEvent, Destination } from '../types';
 import { createEvent } from '@elbwalker/utils';
 
 describe('Node Destination Meta', () => {
@@ -138,7 +138,7 @@ describe('Node Destination Meta', () => {
 
   test('Mapping', async () => {
     event.data = { id: 'abc', quantity: 42, total: 9001 };
-    const custom: CustomEventConfig = {
+    const custom: CustomEvent = {
       currency: { value: 'EUR' },
       content: {
         id: 'data.id',

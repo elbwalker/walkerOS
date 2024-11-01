@@ -14,7 +14,7 @@ describe('Destination API', () => {
 
   function push(
     event: WalkerOS.Event,
-    custom: DestinationWebAPI.CustomConfig = { url },
+    custom: DestinationWebAPI.Custom = { url },
   ) {
     destination.push(event, { custom });
   }

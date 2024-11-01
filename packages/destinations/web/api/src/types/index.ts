@@ -7,11 +7,11 @@ import type {
 import type { WebDestination } from '@elbwalker/walker.js';
 
 export interface Destination
-  extends WebDestination.Destination<CustomConfig, CustomEventConfig> {}
+  extends WebDestination.Destination<Custom, CustomEvent> {}
 
-export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
+export type Config = WebDestination.Config<Custom, CustomEvent>;
 
-export interface CustomConfig {
+export interface Custom {
   url: string;
   headers?: SendHeaders;
   method?: string;
@@ -19,10 +19,10 @@ export interface CustomConfig {
   transport?: SendWebTransport;
 }
 
-export interface CustomEventConfig {}
+export interface CustomEvent {}
 
 export type Transform = (
   event: WalkerOS.Event,
   config?: Config,
-  mapping?: WebDestination.EventConfig<CustomEventConfig>,
+  mapping?: WebDestination.EventConfig<CustomEvent>,
 ) => SendDataValue;

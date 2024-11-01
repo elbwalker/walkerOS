@@ -1,4 +1,4 @@
-import type { Config, CustomConfig, Destination } from '../types';
+import type { Config, Custom, Destination } from '../types';
 import { createEvent } from '@elbwalker/utils';
 import {
   FirehoseClient,
@@ -7,13 +7,13 @@ import {
 
 describe('Firehose', () => {
   let destination: Destination;
-  let customConfig: CustomConfig;
+  let customConfig: Custom;
 
   const event = createEvent();
 
   const streamName = 'demo';
 
-  async function getConfig(custom: CustomConfig = {}) {
+  async function getConfig(custom: Custom = {}) {
     return (await destination.init({ custom })) as Config;
   }
 

@@ -1,4 +1,4 @@
-import type { Config, CustomConfig, PartialConfig } from './types';
+import type { Config, Custom, PartialConfig } from './types';
 import type { BigQueryOptions } from '@google-cloud/bigquery';
 import { onLog, throwError } from '@elbwalker/utils';
 import { BigQuery } from '@google-cloud/bigquery';
@@ -19,7 +19,7 @@ export function getConfig(partialConfig: PartialConfig = {}): Config {
 
   client = client || new BigQuery(options);
 
-  const customConfig: CustomConfig = {
+  const customConfig: Custom = {
     ...custom,
     client,
     projectId,

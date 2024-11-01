@@ -9,17 +9,17 @@ declare global {
 }
 
 export interface Destination
-  extends WebDestination.Destination<CustomConfig, CustomEventConfig> {}
+  extends WebDestination.Destination<Custom, CustomEvent> {}
 
-export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
+export type Config = WebDestination.Config<Custom, CustomEvent>;
 
-export interface CustomConfig {
+export interface Custom {
   pixelId?: string; // Required pixel id
   currency?: string; // Default currency is EUR
   pageview?: boolean; // Send the PageView event (default yes, deactivate actively)
 }
 
-export interface CustomEventConfig {
+export interface CustomEvent {
   content_ids?: Mapping.Value; // Name of data property key to use in content_ids
   content_name?: Mapping.Value; // Name of data property key to use as content_name
   content_type?: Mapping.Value; // Name of data property key to use as content_type

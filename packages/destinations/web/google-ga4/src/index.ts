@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { CustomConfig, Destination, Parameters } from './types';
+import type { Custom, Destination, Parameters } from './types';
 import { getParams, getParamsInclude, getParamsItems } from './parameters';
 
 // Types
@@ -12,7 +12,7 @@ export const destinationGoogleGA4: Destination = {
 
   init(config) {
     const w = window;
-    const custom: Partial<CustomConfig> = config.custom || {};
+    const custom: Partial<Custom> = config.custom || {};
     const settings: WalkerOS.AnyObject = {};
     // required measurement id
     if (!custom.measurementId) return false;

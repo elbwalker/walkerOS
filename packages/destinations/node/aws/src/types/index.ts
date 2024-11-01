@@ -6,25 +6,25 @@ import type {
 } from '@aws-sdk/client-firehose';
 
 export interface Destination
-  extends NodeDestination.Destination<CustomConfig, CustomEventConfig> {
+  extends NodeDestination.Destination<Custom, CustomEvent> {
   init: InitFn;
 }
 
-export type PushFn = NodeDestination.PushFn<CustomConfig, CustomEventConfig>;
+export type PushFn = NodeDestination.PushFn<Custom, CustomEvent>;
 export type InitFn = NodeDestination.InitFn<PartialConfig, Config>;
 
 export type Config = {
-  custom: CustomConfig;
+  custom: Custom;
   onLog: Handler.Log;
-} & NodeDestination.Config<CustomConfig, CustomEventConfig>;
+} & NodeDestination.Config<Custom, CustomEvent>;
 
 export type PartialConfig = Partial<Config>;
 
-export interface CustomConfig {
+export interface Custom {
   firehose?: FirehoseConfig;
 }
 
-export interface CustomEventConfig {
+export interface CustomEvent {
   // Custom destination event mapping properties
 }
 
