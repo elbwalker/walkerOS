@@ -20,17 +20,17 @@ export interface CustomConfig {
 }
 
 export interface CustomEventConfig {
-  content_ids?: Mapping.MappingValue; // Name of data property key to use in content_ids
-  content_name?: Mapping.MappingValue; // Name of data property key to use as content_name
-  content_type?: Mapping.MappingValue; // Name of data property key to use as content_type
+  content_ids?: Mapping.Value; // Name of data property key to use in content_ids
+  content_name?: Mapping.Value; // Name of data property key to use as content_name
+  content_type?: Mapping.Value; // Name of data property key to use as content_type
   track?: StandardEventNames; // Name of a standard event to track
-  value?: Mapping.MappingValue; // Name of data property key to use for value
+  value?: Mapping.Value; // Name of data property key to use for value
   contents?: ParamContents; // Value(s) to be used for contents
 }
 
 export interface ParamContents {
-  id: Mapping.MappingValue;
-  quantity: Mapping.MappingValue;
+  id: Mapping.Value;
+  quantity: Mapping.Value;
 }
 
 export type ContentIds =

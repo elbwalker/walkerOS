@@ -45,7 +45,7 @@ export function getEventConfig(
 
 export function getMappingValue(
   event: WalkerOS.Event,
-  mapping: Mapping.MappingValue,
+  mapping: Mapping.Value,
   instance?: WalkerOS.Instance,
 ): WalkerOS.Property | undefined {
   // Ensure mapping is an array for uniform processing
@@ -57,7 +57,7 @@ export function getMappingValue(
 
     const { condition, consent, fn, key, validate, value } =
       typeof mappingItem == 'string'
-        ? ({ key: mappingItem } as Mapping.MappingValueObject)
+        ? ({ key: mappingItem } as Mapping.ValueConfig)
         : mappingItem;
 
     // Check if this mapping should be used
