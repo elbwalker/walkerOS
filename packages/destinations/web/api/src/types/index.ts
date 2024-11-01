@@ -24,5 +24,5 @@ export interface CustomEvent {}
 export type Transform = (
   event: WalkerOS.Event,
   config?: Config,
-  mapping?: WebDestination.EventConfig<CustomEvent>,
+  mapping?: WebDestination.EventMapping<CustomEvent>,
 ) => SendDataValue;

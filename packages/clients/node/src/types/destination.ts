@@ -23,7 +23,7 @@ export type InitFn<PartialConfig = unknown, Config = unknown> = (
 export type PushFn<Custom, CustomEvent> = (
   event: WalkerOS.Event,
   config: Config<Custom, CustomEvent>,
-  mapping?: EventConfig<CustomEvent>,
+  mapping?: EventMapping<CustomEvent>,
   instance?: NodeClient.Instance,
 ) => Promise<Push | void>;
 
@@ -33,7 +33,7 @@ export interface Config<Custom = unknown, CustomEvent = unknown>
 export interface Mapping<CustomEvent>
   extends WalkerOSMapping.Config<CustomEvent> {}
 
-export interface EventConfig<CustomEvent = unknown>
+export interface EventMapping<CustomEvent = unknown>
   extends WalkerOSMapping.Event<CustomEvent> {}
 
 export type PushEvent<CustomEvent = unknown> =

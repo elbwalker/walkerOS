@@ -19,7 +19,7 @@ export type PartialConfig = NodeDestination.Config<
   Partial<CustomEvent>
 >;
 
-export type EventConfig = NodeDestination.EventConfig<CustomEvent>;
+export type EventMapping = NodeDestination.EventMapping<CustomEvent>;
 
 export type PushEvents = NodeDestination.PushEvents<CustomEvent>;
 

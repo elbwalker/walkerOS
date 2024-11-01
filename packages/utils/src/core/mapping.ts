@@ -1,7 +1,7 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import { castToProperty, getByStringDot, getGrantedConsent } from '.';
 
-export function getEventConfig(
+export function getEventMapping(
   event: string,
   mapping?: Mapping.Config<unknown>,
 ) {
@@ -9,7 +9,7 @@ export function getEventConfig(
   if (!entity || !action) return {};
 
   // Check for an active mapping for proper event handling
-  let eventConfig: undefined | Mapping.Event;
+  let eventMapping: undefined | Mapping.Event;
   let mappingKey = '';
 
   if (mapping) {
@@ -24,23 +24,23 @@ export function getEventConfig(
 
     if (mappingEntity) {
       let mappingActionKey = action; // Default action is the event action
-      eventConfig = mappingEntity[mappingActionKey];
+      eventMapping = mappingEntity[mappingActionKey];
 
-      if (!eventConfig) {
+      if (!eventMapping) {
         // Fallback to the wildcard action
         mappingActionKey = '*';
-        eventConfig = mappingEntity[mappingActionKey];
+        eventMapping = mappingEntity[mappingActionKey];
       }
 
       // Handle individual event settings
-      if (eventConfig) {
+      if (eventMapping) {
         // Save the mapping key for later use
         mappingKey = `${mappingEntityKey} ${mappingActionKey}`;
       }
     }
   }
 
-  return { eventConfig, mappingKey };
+  return { eventMapping, mappingKey };
 }
 
 export function getMappingValue(
