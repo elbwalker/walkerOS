@@ -1,9 +1,9 @@
 import type { Destination, WalkerOS } from '.';
 
-export interface Config<EventCustom> {
+export interface Config<CustomEvent> {
   [entity: string]:
     | undefined // @TODO are the undefined types necessary
-    | { [action: string]: undefined | Event<EventCustom> };
+    | { [action: string]: undefined | Event<CustomEvent> };
 }
 
 export interface Event<CustomEvent = unknown> {
