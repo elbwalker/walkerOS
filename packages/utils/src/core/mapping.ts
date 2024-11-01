@@ -62,7 +62,7 @@ export function getMappingValue(
     mappingValue = fn(event, mapping, instance);
   } else {
     // Get dynamic value from the event
-    mappingValue = getByStringDot(event, key);
+    mappingValue = getByStringDot(event, key, value);
   }
 
   // Validate the value
