@@ -1,15 +1,15 @@
-import type { Destination, WalkerOS } from '@elbwalker/types';
+import type { Mapping, WalkerOS } from '@elbwalker/types';
 import { castToProperty, getByStringDot, getGrantedConsent } from '.';
 
 export function getEventConfig(
   event: string,
-  mapping?: Destination.Mapping<unknown>,
+  mapping?: Mapping.Config<unknown>,
 ) {
   const [entity, action] = event.split(' ');
   if (!entity || !action) return {};
 
   // Check for an active mapping for proper event handling
-  let eventConfig: undefined | Destination.EventConfig;
+  let eventConfig: undefined | Mapping.Event;
   let mappingKey = '';
 
   if (mapping) {

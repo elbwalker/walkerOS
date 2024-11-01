@@ -206,6 +206,4 @@ describe('mapping', () => {
     expect(getMappingValue(event, mappings)).toBe(event.data.string);
     expect(mockFn).not.toHaveBeenCalled();
   });
-
-  // test.skip('execution order', () => {});
 });

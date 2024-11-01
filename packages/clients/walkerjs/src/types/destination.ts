@@ -1,5 +1,6 @@
 import type {
   Destination as WalkerOSDestination,
+  Mapping as WalkerOSMapping,
   WalkerOS,
 } from '@elbwalker/types';
 import type { On, WebClient } from '.';
@@ -38,7 +39,7 @@ export interface Config<Custom = unknown, EventCustom = unknown>
 }
 
 export interface Mapping<EventCustom = unknown>
-  extends WalkerOSDestination.Mapping<EventCustom> {}
+  extends WalkerOSMapping.Config<EventCustom> {}
 
 export interface EventConfig<EventCustom = unknown>
-  extends WalkerOSDestination.EventConfig<EventCustom> {}
+  extends WalkerOSMapping.Event<EventCustom> {}

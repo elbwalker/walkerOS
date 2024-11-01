@@ -1,5 +1,6 @@
 import type {
   Destination as WalkerOSDestination,
+  Mapping as WalkerOSMapping,
   WalkerOS,
 } from '@elbwalker/types';
 import type { NodeClient } from '.';
@@ -30,10 +31,10 @@ export interface Config<Custom = unknown, EventCustom = unknown>
   extends WalkerOSDestination.Config<Custom, EventCustom> {}
 
 export interface Mapping<EventCustom>
-  extends WalkerOSDestination.Mapping<EventCustom> {}
+  extends WalkerOSMapping.Config<EventCustom> {}
 
 export interface EventConfig<EventCustom = unknown>
-  extends WalkerOSDestination.EventConfig<EventCustom> {}
+  extends WalkerOSMapping.Event<EventCustom> {}
 
 export type PushEvent<EventCustom = unknown> =
   WalkerOSDestination.PushEvent<EventCustom>;
