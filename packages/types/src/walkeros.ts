@@ -185,6 +185,7 @@ export type MappingValue = string | MappingValueObject;
 export interface MappingValueObject {
   key?: string;
   value?: PropertyType;
+  fn?: MappingFunction;
   // Ideas:
   // - As array to try multiple ways to get the value
   // - condition
@@ -192,3 +193,9 @@ export interface MappingValueObject {
   // - filter
   // - fn
 }
+
+export type MappingFunction = (
+  event: Event,
+  mapping: MappingValue,
+  instance?: Instance,
+) => Property | void;

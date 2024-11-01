@@ -46,12 +46,19 @@ export function getEventConfig(
 export function getMappingValue(
   event: WalkerOS.Event,
   mapping: WalkerOS.MappingValue,
-  // instance?: WalkerOS.Instance,
+  instance?: WalkerOS.Instance,
 ): WalkerOS.Property | undefined {
-  const { key, value } =
+  const { fn, key, value } =
     typeof mapping == 'string'
       ? ({ key: mapping } as WalkerOS.MappingValueObject)
       : mapping;
 
-  return castToProperty(getByStringDot(event, key, value));
+  let mappingValue;
+  if (fn) {
+    mappingValue = fn(event, mapping, instance);
+  } else {
+    mappingValue = getByStringDot(event, key, value);
+  }
+
+  return castToProperty(mappingValue);
 }
