@@ -29,7 +29,7 @@ describe('mapping', () => {
     });
   });
 
-  test('getMappingValue string', () => {
+  test('string', () => {
     const event = createEvent();
     expect(getMappingValue(event, 'timing')).toBe(event.timing);
     // expect(getMappingValue(event, 'data')).toBe(event.data); // @TODO
@@ -38,7 +38,7 @@ describe('mapping', () => {
     expect(getMappingValue(event, 'globals.lang')).toBe(event.globals.lang);
   });
 
-  test('getMappingValue nested', () => {
+  test('nested', () => {
     const event = createEvent();
     expect(getMappingValue(event, 'nested.0.data.is')).toBe(
       event.nested[0].data.is,
@@ -67,14 +67,145 @@ describe('mapping', () => {
     ).toStrictEqual(['foo', undefined, 'bar']);
   });
 
-  test('getMappingValue key default', () => {
+  test('key default', () => {
     const event = createEvent();
     expect(
-      getMappingValue(event, { key: 'data.string', default: 'static' }),
+      getMappingValue(event, { key: 'data.string', value: 'static' }),
     ).toBe(event.data.string);
     expect(
-      getMappingValue(event, { key: 'does.not.exist', default: 'fallback' }),
+      getMappingValue(event, { key: 'does.not.exist', value: 'fallback' }),
     ).toBe('fallback');
-    expect(getMappingValue(event, { default: 'static' })).toBe('static');
+    expect(getMappingValue(event, { value: 'static' })).toBe('static');
   });
+
+  test('fn', () => {
+    const mockFn = jest.fn((event) => {
+      if (event.event === 'page view') return 'foo';
+      return 'bar';
+    });
+
+    expect(
+      getMappingValue(createEvent({ event: 'page view' }), {
+        fn: mockFn,
+      }),
+    ).toBe('foo');
+    expect(
+      getMappingValue(createEvent({ event: 'page click' }), {
+        fn: mockFn,
+      }),
+    ).toBe('bar');
+
+    expect(mockFn).toHaveBeenCalledTimes(2);
+  });
+
+  test('validate', () => {
+    const event = createEvent();
+    const mockValidate = jest.fn((value) => {
+      return typeof value === 'string';
+    });
+
+    // validation passed
+    expect(
+      getMappingValue(event, {
+        key: 'data.string',
+        validate: mockValidate,
+      }),
+    ).toBe(event.data.string);
+
+    // validation failed
+    expect(
+      getMappingValue(event, {
+        key: 'data.number',
+        validate: mockValidate,
+      }),
+    ).toBeUndefined();
+
+    // Use value as a fallback
+    expect(
+      getMappingValue(event, {
+        key: 'data.number',
+        validate: mockValidate,
+        value: 'fallback',
+      }),
+    ).toBe('fallback');
+  });
+
+  test('consent', () => {
+    const event = createEvent({ consent: { functional: true } });
+    const instance = {
+      consent: { functional: true },
+    } as unknown as WalkerOS.Instance;
+
+    // Granted
+    expect(
+      getMappingValue(
+        event,
+        {
+          key: 'data.string',
+          consent: { functional: true },
+        },
+        instance,
+      ),
+    ).toBe(event.data.string);
+
+    // Denied
+    expect(
+      getMappingValue(
+        event,
+        {
+          key: 'data.string',
+          consent: { marketing: true },
+        },
+        instance,
+      ),
+    ).toBeUndefined();
+
+    // Denied automatically if no instance is provided
+    expect(
+      getMappingValue(event, {
+        key: 'data.string',
+        consent: { functional: true },
+      }),
+    ).toBeUndefined();
+  });
+
+  test('condition', () => {
+    const mockCondition = jest.fn((event) => {
+      return event.event === 'page view';
+    });
+
+    // Condition met
+    expect(
+      getMappingValue(createEvent({ event: 'page view' }), {
+        key: 'data.string',
+        condition: mockCondition,
+      }),
+    ).toEqual(expect.any(String));
+
+    // Condition not met
+    expect(
+      getMappingValue(createEvent(), {
+        key: 'data.string',
+        condition: mockCondition,
+        value: 'fallback', // Should not be used
+      }),
+    ).toBeUndefined();
+  });
+
+  test('mapping array', () => {
+    const event = createEvent();
+    const mockFn = jest.fn();
+
+    const mappings = [
+      { condition: (event) => event.event === 'no pe' },
+      'non.existing.key',
+      { key: 'data.string' },
+      { fn: mockFn },
+    ];
+
+    expect(getMappingValue(event, mappings)).toBe(event.data.string);
+    expect(mockFn).not.toHaveBeenCalled();
+  });
+
+  // test.skip('execution order', () => {});
 });

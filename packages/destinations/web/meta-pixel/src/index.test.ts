@@ -150,7 +150,7 @@ describe('Destination Meta Pixel', () => {
     );
   });
 
-  test('Property contents', () => {
+  test('property contents', () => {
     destination.config.mapping = {
       use: {
         data: {
@@ -169,7 +169,7 @@ describe('Destination Meta Pixel', () => {
             track: 'ViewContent',
             contents: {
               id: 'nested.*.data.id',
-              quantity: { key: 'nested.*.data.quantity', default: 9 },
+              quantity: { key: 'nested.*.data.quantity', value: 9 },
             },
           },
         },
@@ -187,21 +187,24 @@ describe('Destination Meta Pixel', () => {
       }),
     );
 
-    elb('use nested', {}, 'custom', { quantity: [2, 0] }, [
-      {
-        type: 'product',
-        data: { id: 'a', quantity: 3 },
-        nested: [],
-        context: {},
-      },
-      {
-        type: 'product',
-        data: { id: 'b' },
-        nested: [],
-        context: {},
-      },
-    ]);
-    expect(mockFn).toHaveBeenCalledWith(
+    elb({
+      event: 'use nested',
+      nested: [
+        {
+          type: 'product',
+          data: { id: 'a', quantity: 3 },
+          nested: [],
+          context: {},
+        },
+        {
+          type: 'product',
+          data: { id: 'b' },
+          nested: [],
+          context: {},
+        },
+      ],
+    });
+    expect(mockFn).toHaveBeenLastCalledWith(
       'track',
       'ViewContent',
       expect.objectContaining({

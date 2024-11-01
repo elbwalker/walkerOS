@@ -181,14 +181,30 @@ export interface Entity {
   context: OrderedProperties;
 }
 
-export type MappingValue = string | MappingValueObject;
+export type MappingValue =
+  | string
+  | MappingValueObject
+  | Array<string | MappingValueObject>;
+
 export interface MappingValueObject {
+  condition?: MappingCondition;
+  consent?: Consent;
+  fn?: MappingFn;
   key?: string;
-  default?: PropertyType;
-  // Ideas:
-  // - As array to try multiple ways to get the value
-  // - condition
-  // - consent?: string | Array<string>;
-  // - filter
-  // - fn
+  validate?: MappingValidate;
+  value?: PropertyType;
 }
+
+export type MappingFn = (
+  event: Event,
+  mapping: MappingValue,
+  instance?: Instance,
+) => Property | void;
+
+export type MappingCondition = (
+  event: Event,
+  mapping: MappingValue,
+  instance?: Instance,
+) => boolean;
+
+export type MappingValidate = (value?: unknown) => boolean;
