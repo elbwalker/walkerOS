@@ -183,16 +183,14 @@ export interface Entity {
 
 export type MappingValue = string | MappingValueObject;
 export interface MappingValueObject {
-  key?: string;
-  value?: PropertyType;
+  consent?: Consent;
   fn?: MappingFn;
+  key?: string;
   validate?: MappingValidate;
+  value?: PropertyType;
   // Ideas:
   // - As array to try multiple ways to get the value
   // - condition
-  // - consent?: string | Array<string>;
-  // - filter
-  // - fn
 }
 
 export type MappingFn = (

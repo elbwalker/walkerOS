@@ -1,5 +1,5 @@
 import type { Destination, WalkerOS } from '@elbwalker/types';
-import { castToProperty, getByStringDot } from '.';
+import { castToProperty, getByStringDot, getGrantedConsent } from '.';
 
 export function getEventConfig(
   event: string,
@@ -48,21 +48,28 @@ export function getMappingValue(
   mapping: WalkerOS.MappingValue,
   instance?: WalkerOS.Instance,
 ): WalkerOS.Property | undefined {
-  const { fn, key, validate, value } =
+  const { consent, fn, key, validate, value } =
     typeof mapping == 'string'
       ? ({ key: mapping } as WalkerOS.MappingValueObject)
       : mapping;
 
+  // Check if consent is required and granted
+  if (consent && !getGrantedConsent(consent, instance?.consent)) return value;
+
   let mappingValue;
   if (fn) {
+    // Use a custom function to get the value
     mappingValue = fn(event, mapping, instance);
   } else {
+    // Get dynamic value from the event
     mappingValue = getByStringDot(event, key);
   }
 
+  // Validate the value
   if (validate && !validate(mappingValue)) {
     mappingValue = undefined;
   }
 
-  return castToProperty(mappingValue) || value;
+  // Finally, check and convert the type
+  return castToProperty(mappingValue) || value; // Always use value as a fallback
 }

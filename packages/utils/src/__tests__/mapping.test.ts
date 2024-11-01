@@ -129,4 +129,45 @@ describe('mapping', () => {
       }),
     ).toBe('fallback');
   });
+
+  test('consent', () => {
+    const event = createEvent({ consent: { functional: true } });
+    const instance = {
+      consent: { functional: true },
+    } as unknown as WalkerOS.Instance;
+
+    // Granted
+    expect(
+      getMappingValue(
+        event,
+        {
+          key: 'data.string',
+          consent: { functional: true },
+        },
+        instance,
+      ),
+    ).toBe(event.data.string);
+
+    // Denied
+    expect(
+      getMappingValue(
+        event,
+        {
+          key: 'data.string',
+          consent: { marketing: true },
+        },
+        instance,
+      ),
+    ).toBeUndefined();
+
+    // Denied automatically if no instance is provided
+    expect(
+      getMappingValue(event, {
+        key: 'data.string',
+        consent: { functional: true },
+      }),
+    ).toBeUndefined();
+  });
+
+  // test.skip('execution order', () => {});
 });
