@@ -1,12 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type {
-  CustomConfig,
-  Destination,
-  Items,
-  Parameters,
-  PropertyMapping,
-} from './types';
-import { isSameType } from '@elbwalker/utils';
+import type { CustomConfig, Destination, Parameters } from './types';
+import { getParams, getParamsInclude, getParamsItems } from './parameters';
 
 // Types
 export * as DestinationGoogleGA4 from './types';
@@ -57,76 +51,29 @@ export const destinationGoogleGA4: Destination = {
 
     if (!custom.measurementId) return;
 
-    const eventParams: Parameters = {};
-
-    // Add data to include by default
-    let include = customEvent.include || custom.include || ['data'];
-
-    // Check for the 'all' group to add each group
-    if (include.includes('all'))
-      include = [
-        'context',
-        'data',
-        'event',
-        'globals',
-        'source',
-        'user',
-        'version',
-      ];
-
-    include.forEach((groupName) => {
-      let group = event[groupName as keyof Omit<WalkerOS.Event, 'all'>];
-
-      // Create a fake group for event properties
-      if (groupName == 'event')
-        group = {
-          id: event.id,
-          timing: event.timing,
-          trigger: event.trigger,
-          entity: event.entity,
-          action: event.action,
-          group: event.group,
-          count: event.count,
-        };
-
-      Object.entries(group).forEach(([key, val]) => {
-        // Different value access for context
-        if (groupName == 'context')
-          val = (val as WalkerOS.OrderedProperties)[0];
-
-        eventParams[`${groupName}_${key}`] = val;
-      });
+    const params = getParams(event, {
+      // Prefer event mapping over general mapping
+      ...custom.params,
+      ...customEvent.params,
     });
 
-    // Parameters
-    Object.assign(
-      eventParams,
-      getMappedParams(
-        {
-          // Prefer event mapping over general mapping
-          ...custom.params,
-          ...customEvent.params,
-        },
-        event,
-      ),
+    const paramsInclude = getParamsInclude(
+      event,
+      // Add data to include by default
+      customEvent.include || custom.include || ['data'],
     );
 
-    // Item parameters
-    const items: Items = [];
-    // Loop for each nested entity but at least one time
-    for (let i = 0, l = event.nested.length || 1; i < l; i++) {
-      const item = getMappedParams(
-        {
-          // Prefer event item mapping over general item mapping
-          ...(custom.items && custom.items.params),
-          ...(customEvent.items && customEvent.items.params),
-        },
-        event,
-        i,
-      );
-      if (item) items.push(item);
-    }
-    if (items.length) eventParams.items = items;
+    const paramsItems = getParamsItems(event, {
+      // Prefer event item mapping over general item mapping
+      ...(custom.items && custom.items.params),
+      ...(customEvent.items && customEvent.items.params),
+    });
+
+    const eventParams: Parameters = {
+      ...paramsInclude,
+      ...paramsItems,
+      ...params,
+    };
 
     // Event name (snake_case default)
     let eventName = event.event; // Assume custom mapped name
@@ -151,47 +98,6 @@ function addScript(
   const script = document.createElement('script');
   script.src = src + measurementId;
   document.head.appendChild(script);
-}
-
-function getMappedParams(
-  mapping: PropertyMapping,
-  event: WalkerOS.Event,
-  i: number = 0,
-) {
-  const params: Parameters = {};
-
-  Object.entries(mapping).forEach(([prop, keyRef]) => {
-    let key: string;
-    let defaultValue: WalkerOS.PropertyType | undefined;
-
-    if (isSameType(keyRef, '' as string)) {
-      key = keyRef;
-    } else {
-      key = keyRef.key;
-      defaultValue = keyRef.default;
-    }
-
-    // String dot notation for object ("data.id" -> { data: { id: 1 } })
-    const value = getByStringDot(event, key, i) ?? defaultValue;
-
-    if (value != undefined) params[prop] = value;
-  });
-
-  return Object.keys(params).length ? params : false;
-}
-
-function getByStringDot(event: unknown, key: string, i: number): unknown {
-  // String dot notation for object ("data.id" -> { data: { id: 1 } })
-  const value = key.split('.').reduce((obj, key) => {
-    // Update the wildcard to the given index
-    if (key == '*') key = String(i);
-
-    if (obj instanceof Object) return obj[key as keyof typeof obj];
-
-    return;
-  }, event);
-
-  return value;
 }
 
 export default destinationGoogleGA4;

@@ -1,5 +1,5 @@
-import { getByStringDot } from '@elbwalker/utils';
 import type { CustomConfig, CustomEventConfig, Destination } from './types';
+import { getByStringDot } from '@elbwalker/utils';
 
 // @TODOs
 // - static values besides dynamic data values

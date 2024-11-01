@@ -1,17 +1,33 @@
 export function getByStringDot(
   event: unknown,
-  key: string,
+  key: string = '',
+  defaultValue?: unknown,
   i: unknown = 0,
 ): unknown {
   // String dot notation for object ("data.id" -> { data: { id: 1 } })
-  const value = key.split('.').reduce((obj, key) => {
-    // Update the wildcard to the given index
-    if (key == '*') key = String(i);
+  const keys = key.split('.');
+  let values: unknown = event;
 
-    if (obj instanceof Object) return obj[key as keyof typeof obj];
+  for (let index = 0; index < keys.length; index++) {
+    const k = keys[index];
 
-    return;
-  }, event);
+    if (k === '*' && Array.isArray(values)) {
+      const remainingKeys = keys.slice(index + 1).join('.');
+      const result: unknown[] = [];
 
-  return value;
+      for (const item of values) {
+        const value = getByStringDot(item, remainingKeys, defaultValue, i);
+        result.push(value);
+      }
+
+      return result;
+    }
+
+    values =
+      values instanceof Object ? values[k as keyof typeof values] : undefined;
+
+    if (!values) break;
+  }
+
+  return values || defaultValue;
 }

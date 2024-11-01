@@ -69,6 +69,7 @@ const config = {
       complete: {
         name: 'purchase',
         custom: {
+          include: [], // Don't include any properties
           items: {
             params: {
               // Nested entities are looped and can be used with a wildcard
@@ -86,17 +87,17 @@ const config = {
 
 ### CustomConfig
 
-| Property             | Type    | Description                                                  |
-| -------------------- | ------- | ------------------------------------------------------------ |
-| measurementId\*      | string  | The GA4 measurement ID                                       |
-| debug                | boolean | Enables debug mode for additional logging                    |
-| include              | array   | Defines groups of properties to be included in all events    |
-| items                | object  | Sets parameters for item-level data in events                |
-| pageview             | boolean | Enables or disables automatic pageview tracking              |
-| params               | object  | Custom parameters for event-level data                       |
-| server_container_url | string  | The URL for a server-side tag manager                        |
-| snakeCase            | boolean | Converts parameter names to snake_case for GA4 compatibility |
-| transport_url        | string  | The URL used for sending events to GA4                       |
+| Property             | Type    | Description                                                                                                |
+| -------------------- | ------- | ---------------------------------------------------------------------------------------------------------- |
+| measurementId\*      | string  | The GA4 measurement ID                                                                                     |
+| debug                | boolean | Enables debug mode for additional logging                                                                  |
+| include              | array   | Defines groups of properties to be included in all events, `data` by default. Use an empty array for none. |
+| items                | object  | Sets parameters for item-level data in events                                                              |
+| pageview             | boolean | Enables or disables automatic pageview tracking                                                            |
+| params               | object  | Custom parameters for event-level data                                                                     |
+| server_container_url | string  | The URL for a server-side tag manager                                                                      |
+| snakeCase            | boolean | Converts parameter names to snake_case for GA4 compatibility                                               |
+| transport_url        | string  | The URL used for sending events to GA4                                                                     |
 
 Properties with a `*` are required.
 

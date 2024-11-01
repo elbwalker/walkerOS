@@ -16,10 +16,10 @@ export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
 export interface CustomConfig {
   debug?: boolean;
   include?: Include;
-  items?: ItemsConfig;
+  items?: Items;
   measurementId: string;
   pageview?: boolean;
-  params?: PropertyMapping;
+  params?: Params;
   server_container_url?: string;
   snakeCase?: boolean;
   transport_url?: string;
@@ -27,23 +27,19 @@ export interface CustomConfig {
 
 export interface CustomEventConfig {
   include?: Include;
-  items?: ItemsConfig;
-  params?: PropertyMapping;
+  items?: Items;
+  params?: Params;
 }
 
-export interface ItemsConfig {
-  params?: PropertyMapping;
+export interface Items {
+  params?: Params;
 }
 
-export interface PropertyMapping {
-  [key: string]: string | PropertyMappingValue;
+export interface Params {
+  [key: string]: Param;
 }
 
-export interface PropertyMappingValue {
-  key: string;
-  default?: WalkerOS.PropertyType;
-}
-
+export type Param = WalkerOS.MappingValue;
 export type Include = Array<
   | 'all'
   | 'context'
@@ -55,7 +51,7 @@ export type Include = Array<
   | 'version'
 >;
 
-export type Items = Gtag.Item[];
+export type GtagItems = Gtag.Item[];
 export type Parameters = Gtag.ControlParams &
   Gtag.EventParams &
   Gtag.CustomParams;

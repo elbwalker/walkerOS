@@ -1,5 +1,4 @@
-import { Const } from '../../core';
-import { storageDelete, storageRead, storageWrite } from '../../';
+import { Const, storageDelete, storageRead, storageWrite } from '../../';
 
 describe('Storage', () => {
   const w = window;
