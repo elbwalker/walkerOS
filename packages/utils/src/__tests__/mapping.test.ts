@@ -32,7 +32,7 @@ describe('mapping', () => {
   test('string', () => {
     const event = createEvent();
     expect(getMappingValue(event, 'timing')).toBe(event.timing);
-    // expect(getMappingValue(event, 'data')).toBe(event.data); // @TODO
+    expect(getMappingValue(event, 'data')).toBe(event.data);
     expect(getMappingValue(event, 'data.string')).toBe(event.data.string);
     expect(getMappingValue(event, 'context.dev.0')).toBe(event.context.dev![0]);
     expect(getMappingValue(event, 'globals.lang')).toBe(event.globals.lang);

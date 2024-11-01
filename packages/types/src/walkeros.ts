@@ -165,7 +165,10 @@ export interface Source extends Properties {
 export type SourceType = 'web' | 'node' | 'app' | 'other' | string;
 
 export type PropertyType = boolean | string | number;
-export type Property = PropertyType | Array<PropertyType>;
+export type Property =
+  | PropertyType
+  | Array<PropertyType>
+  | { [key: string]: PropertyType };
 export interface Properties {
   [key: string]: Property | undefined;
 }
