@@ -185,7 +185,8 @@ export type MappingValue = string | MappingValueObject;
 export interface MappingValueObject {
   key?: string;
   value?: PropertyType;
-  fn?: MappingFunction;
+  fn?: MappingFn;
+  validate?: MappingValidate;
   // Ideas:
   // - As array to try multiple ways to get the value
   // - condition
@@ -194,8 +195,10 @@ export interface MappingValueObject {
   // - fn
 }
 
-export type MappingFunction = (
+export type MappingFn = (
   event: Event,
   mapping: MappingValue,
   instance?: Instance,
 ) => Property | void;
+
+export type MappingValidate = (value?: unknown) => boolean;

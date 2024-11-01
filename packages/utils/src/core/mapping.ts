@@ -48,7 +48,7 @@ export function getMappingValue(
   mapping: WalkerOS.MappingValue,
   instance?: WalkerOS.Instance,
 ): WalkerOS.Property | undefined {
-  const { fn, key, value } =
+  const { fn, key, validate, value } =
     typeof mapping == 'string'
       ? ({ key: mapping } as WalkerOS.MappingValueObject)
       : mapping;
@@ -57,8 +57,12 @@ export function getMappingValue(
   if (fn) {
     mappingValue = fn(event, mapping, instance);
   } else {
-    mappingValue = getByStringDot(event, key, value);
+    mappingValue = getByStringDot(event, key);
   }
 
-  return castToProperty(mappingValue);
+  if (validate && !validate(mappingValue)) {
+    mappingValue = undefined;
+  }
+
+  return castToProperty(mappingValue) || value;
 }

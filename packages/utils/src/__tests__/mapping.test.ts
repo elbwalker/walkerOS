@@ -77,24 +77,56 @@ describe('mapping', () => {
     ).toBe('fallback');
     expect(getMappingValue(event, { value: 'static' })).toBe('static');
   });
-});
 
-test('fn', () => {
-  const mockFn = jest.fn((event) => {
-    if (event.event === 'page view') return 'foo';
-    return 'bar';
+  test('fn', () => {
+    const mockFn = jest.fn((event) => {
+      if (event.event === 'page view') return 'foo';
+      return 'bar';
+    });
+
+    expect(
+      getMappingValue(createEvent({ event: 'page view' }), {
+        fn: mockFn,
+      }),
+    ).toBe('foo');
+    expect(
+      getMappingValue(createEvent({ event: 'page click' }), {
+        fn: mockFn,
+      }),
+    ).toBe('bar');
+
+    expect(mockFn).toHaveBeenCalledTimes(2);
   });
 
-  expect(
-    getMappingValue(createEvent({ event: 'page view' }), {
-      fn: mockFn,
-    }),
-  ).toBe('foo');
-  expect(
-    getMappingValue(createEvent({ event: 'page click' }), {
-      fn: mockFn,
-    }),
-  ).toBe('bar');
+  test('validate', () => {
+    const event = createEvent();
+    const mockValidate = jest.fn((value) => {
+      return typeof value === 'string';
+    });
 
-  expect(mockFn).toHaveBeenCalledTimes(2);
+    // validation passed
+    expect(
+      getMappingValue(event, {
+        key: 'data.string',
+        validate: mockValidate,
+      }),
+    ).toBe(event.data.string);
+
+    // validation failed
+    expect(
+      getMappingValue(event, {
+        key: 'data.number',
+        validate: mockValidate,
+      }),
+    ).toBeUndefined();
+
+    // Use value as a fallback
+    expect(
+      getMappingValue(event, {
+        key: 'data.number',
+        validate: mockValidate,
+        value: 'fallback',
+      }),
+    ).toBe('fallback');
+  });
 });
