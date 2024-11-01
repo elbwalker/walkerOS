@@ -38,10 +38,10 @@ const config = {
     entity: {
       // e.g. complete
       action: {
+        name: 'Purchase',
         custom: {
           id: 'data.id',
           name: 'data.title',
-          track: 'Purchase',
           value: 'data.revenue',
         },
       },
@@ -50,7 +50,7 @@ const config = {
 };
 ```
 
-### CustomConfig
+### Custom
 
 | Property  | Type    | Description                                  |
 | --------- | ------- | -------------------------------------------- |
@@ -60,7 +60,7 @@ const config = {
 
 Properties with a `*` are required.
 
-### CustomEventConfig
+### CustomEvent
 
 For the custom event mapping (`mapping.entity.action.custom`):
 

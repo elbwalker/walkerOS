@@ -4,7 +4,7 @@ import { castToProperty, getByStringDot, getGrantedConsent } from '.';
 export function getEventMapping(
   event: string,
   mapping?: Mapping.Config<unknown>,
-) {
+): Mapping.EventMapping {
   const [entity, action] = event.split(' ');
   if (!entity || !action) return {};
 

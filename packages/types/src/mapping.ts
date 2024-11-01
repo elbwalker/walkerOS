@@ -19,6 +19,11 @@ export interface Event<CustomEvent = unknown> {
   name?: string; // Use a custom event name
 }
 
+export interface EventMapping {
+  eventMapping?: Event;
+  mappingKey?: string;
+}
+
 export type Value = ValueType | Array<ValueType>;
 export type ValueType = string | ValueConfig;
 
@@ -31,16 +36,16 @@ export interface ValueConfig {
   value?: WalkerOS.PropertyType;
 }
 
-export type Fn = (
-  event: Event,
-  mapping: Value,
-  instance?: WalkerOS.Instance,
-) => WalkerOS.Property | void;
-
 export type Condition = (
   event: Event,
   mapping: Value,
   instance?: WalkerOS.Instance,
 ) => boolean;
+
+export type Fn = (
+  event: Event,
+  mapping: Value,
+  instance?: WalkerOS.Instance,
+) => WalkerOS.Property | void;
 
 export type Validate = (value?: unknown) => boolean;
