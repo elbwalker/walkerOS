@@ -39,7 +39,7 @@ export interface Params {
   [key: string]: Param;
 }
 
-export type Param = Mapping.MappingValue;
+export type Param = Mapping.Value;
 export type Include = Array<
   | 'all'
   | 'context'
