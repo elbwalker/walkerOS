@@ -28,7 +28,7 @@ const config = {
     pageview: false,
     params: {
       currency: {
-        static: 'EUR',
+        value: 'EUR',
         key: 'data.currency',
       },
       user_id: 'user.id',
