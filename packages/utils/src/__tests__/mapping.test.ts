@@ -169,5 +169,28 @@ describe('mapping', () => {
     ).toBeUndefined();
   });
 
+  test('condition', () => {
+    const mockCondition = jest.fn((event) => {
+      return event.event === 'page view';
+    });
+
+    // Condition met
+    expect(
+      getMappingValue(createEvent({ event: 'page view' }), {
+        key: 'data.string',
+        condition: mockCondition,
+      }),
+    ).toEqual(expect.any(String));
+
+    // Condition not met
+    expect(
+      getMappingValue(createEvent(), {
+        key: 'data.string',
+        condition: mockCondition,
+        value: 'fallback', // Should not be used
+      }),
+    ).toBeUndefined();
+  });
+
   // test.skip('execution order', () => {});
 });

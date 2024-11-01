@@ -183,14 +183,12 @@ export interface Entity {
 
 export type MappingValue = string | MappingValueObject;
 export interface MappingValueObject {
+  condition?: MappingCondition;
   consent?: Consent;
   fn?: MappingFn;
   key?: string;
   validate?: MappingValidate;
   value?: PropertyType;
-  // Ideas:
-  // - As array to try multiple ways to get the value
-  // - condition
 }
 
 export type MappingFn = (
@@ -198,5 +196,11 @@ export type MappingFn = (
   mapping: MappingValue,
   instance?: Instance,
 ) => Property | void;
+
+export type MappingCondition = (
+  event: Event,
+  mapping: MappingValue,
+  instance?: Instance,
+) => boolean;
 
 export type MappingValidate = (value?: unknown) => boolean;

@@ -48,10 +48,13 @@ export function getMappingValue(
   mapping: WalkerOS.MappingValue,
   instance?: WalkerOS.Instance,
 ): WalkerOS.Property | undefined {
-  const { consent, fn, key, validate, value } =
+  const { condition, consent, fn, key, validate, value } =
     typeof mapping == 'string'
       ? ({ key: mapping } as WalkerOS.MappingValueObject)
       : mapping;
+
+  // Check if this mapping should be used
+  if (condition && !condition(event, mapping, instance)) return;
 
   // Check if consent is required and granted
   if (consent && !getGrantedConsent(consent, instance?.consent)) return value;
