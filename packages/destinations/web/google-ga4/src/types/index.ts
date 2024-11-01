@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { Mapping } from '@elbwalker/types';
 import type { WebDestination } from '@elbwalker/walker.js';
 
 declare global {
@@ -39,7 +39,7 @@ export interface Params {
   [key: string]: Param;
 }
 
-export type Param = WalkerOS.MappingValue;
+export type Param = Mapping.MappingValue;
 export type Include = Array<
   | 'all'
   | 'context'

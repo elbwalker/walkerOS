@@ -18,3 +18,31 @@ export interface Event<CustomEvent = unknown> {
   ignore?: boolean; // Choose to no process an event when set to true
   name?: string; // Use a custom event name
 }
+
+export type MappingValue =
+  | string
+  | MappingValueObject
+  | Array<string | MappingValueObject>;
+
+export interface MappingValueObject {
+  condition?: MappingCondition;
+  consent?: WalkerOS.Consent;
+  fn?: MappingFn;
+  key?: string;
+  validate?: MappingValidate;
+  value?: WalkerOS.PropertyType;
+}
+
+export type MappingFn = (
+  event: Event,
+  mapping: MappingValue,
+  instance?: WalkerOS.Instance,
+) => WalkerOS.Property | void;
+
+export type MappingCondition = (
+  event: Event,
+  mapping: MappingValue,
+  instance?: WalkerOS.Instance,
+) => boolean;
+
+export type MappingValidate = (value?: unknown) => boolean;
