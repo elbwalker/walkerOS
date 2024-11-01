@@ -169,7 +169,7 @@ describe('Destination Meta Pixel', () => {
             track: 'ViewContent',
             contents: {
               id: 'nested.*.data.id',
-              quantity: { key: 'nested.*.data.quantity', default: 9 },
+              quantity: { key: 'nested.*.data.quantity', value: 9 },
             },
           },
         },

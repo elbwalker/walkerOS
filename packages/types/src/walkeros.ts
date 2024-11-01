@@ -184,7 +184,7 @@ export interface Entity {
 export type MappingValue = string | MappingValueObject;
 export interface MappingValueObject {
   key?: string;
-  default?: PropertyType;
+  value?: PropertyType;
   // Ideas:
   // - As array to try multiple ways to get the value
   // - condition

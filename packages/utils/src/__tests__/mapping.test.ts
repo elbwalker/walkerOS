@@ -29,7 +29,7 @@ describe('mapping', () => {
     });
   });
 
-  test('getMappingValue string', () => {
+  test('string', () => {
     const event = createEvent();
     expect(getMappingValue(event, 'timing')).toBe(event.timing);
     // expect(getMappingValue(event, 'data')).toBe(event.data); // @TODO
@@ -38,7 +38,7 @@ describe('mapping', () => {
     expect(getMappingValue(event, 'globals.lang')).toBe(event.globals.lang);
   });
 
-  test('getMappingValue nested', () => {
+  test('nested', () => {
     const event = createEvent();
     expect(getMappingValue(event, 'nested.0.data.is')).toBe(
       event.nested[0].data.is,
@@ -67,14 +67,14 @@ describe('mapping', () => {
     ).toStrictEqual(['foo', undefined, 'bar']);
   });
 
-  test('getMappingValue key default', () => {
+  test('key default', () => {
     const event = createEvent();
     expect(
-      getMappingValue(event, { key: 'data.string', default: 'static' }),
+      getMappingValue(event, { key: 'data.string', value: 'static' }),
     ).toBe(event.data.string);
     expect(
-      getMappingValue(event, { key: 'does.not.exist', default: 'fallback' }),
+      getMappingValue(event, { key: 'does.not.exist', value: 'fallback' }),
     ).toBe('fallback');
-    expect(getMappingValue(event, { default: 'static' })).toBe('static');
+    expect(getMappingValue(event, { value: 'static' })).toBe('static');
   });
 });

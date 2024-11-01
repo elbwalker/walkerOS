@@ -34,7 +34,7 @@ const config = {
     pageview: false,
     params: {
       currency: {
-        default: 'EUR',
+        value: 'EUR',
         key: 'data.currency',
       },
       user_id: 'user.id',
@@ -56,7 +56,7 @@ const config = {
             params: {
               item_id: 'data.id',
               item_category: 'context.category.0', // Value is an array
-              quantity: { default: 1, key: 'data.quantity' },
+              quantity: { value: 1, key: 'data.quantity' },
             },
           },
           // Set event parameters
@@ -123,7 +123,7 @@ used as a key to access an event value directly. An object can be used to set a
 {
   params: {
     name: 'data.name', // Key to value
-    quantity: { default: 1, key: 'data.quantity' }, // default value and key to value
+    quantity: { value: 1, key: 'data.quantity' }, // default value and key to value
   },
 };
 ```

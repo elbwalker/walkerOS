@@ -28,7 +28,7 @@ const config = {
     pageview: false,
     params: {
       currency: {
-        default: 'EUR',
+        static: 'EUR',
         key: 'data.currency',
       },
       user_id: 'user.id',
@@ -51,7 +51,7 @@ const config = {
             params: {
               item_id: 'data.id',
               item_category: 'context.category.0', // Value is an array
-              quantity: { default: 1, key: 'data.quantity' },
+              quantity: { value: 1, key: 'data.quantity' },
             },
           },
           // Set event parameters

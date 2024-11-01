@@ -142,7 +142,7 @@ describe('Destination Google GA4', () => {
       custom: {
         measurementId,
         params: {
-          currency: { default: 'EUR', key: 'data.currency' },
+          currency: { value: 'EUR', key: 'data.currency' },
           override: 'data.old', // override at event level
           user_id: 'user.id',
           value: 'data.revenue',
@@ -160,7 +160,7 @@ describe('Destination Google GA4', () => {
                 position: 'context.position.0',
                 unavailable: {
                   key: 'context.does.not.exist',
-                  default: 'backup',
+                  value: 'backup',
                 },
                 empty: 'context.not.there',
                 timing: 'timing',
@@ -293,7 +293,7 @@ describe('Destination Google GA4', () => {
       custom: {
         measurementId,
         params: {
-          currency: { default: 'EUR', key: 'data.currency' },
+          currency: { value: 'EUR', key: 'data.currency' },
           override: 'data.old', // override at event level
           value: 'data.revenue',
         },
@@ -309,7 +309,7 @@ describe('Destination Google GA4', () => {
                 params: {
                   item_id: 'data.id',
                   item_category: 'data.category',
-                  quantity: { default: 1, key: 'data.quantity' },
+                  quantity: { value: 1, key: 'data.quantity' },
                 },
               },
               params: { value: 'data.price' },

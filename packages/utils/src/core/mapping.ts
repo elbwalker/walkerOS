@@ -1,11 +1,6 @@
 import type { Destination, WalkerOS } from '@elbwalker/types';
 import { castToProperty, getByStringDot } from '.';
 
-interface MappingObject {
-  key?: string;
-  defaultValue?: WalkerOS.PropertyType;
-}
-
 export function getEventConfig(
   event: string,
   mapping?: Destination.Mapping<unknown>,
@@ -51,22 +46,12 @@ export function getEventConfig(
 export function getMappingValue(
   event: WalkerOS.Event,
   mapping: WalkerOS.MappingValue,
+  // instance?: WalkerOS.Instance,
 ): WalkerOS.Property | undefined {
-  const { key, defaultValue } = getMappingObject(mapping);
+  const { key, value } =
+    typeof mapping == 'string'
+      ? ({ key: mapping } as WalkerOS.MappingValueObject)
+      : mapping;
 
-  return castToProperty(getByStringDot(event, key, defaultValue));
-}
-
-function getMappingObject(param: WalkerOS.MappingValue): MappingObject {
-  let key: string | undefined;
-  let defaultValue: WalkerOS.PropertyType | undefined;
-
-  if (typeof param == 'string') {
-    key = param;
-  } else {
-    key = param.key;
-    defaultValue = param.default;
-  }
-
-  return { key, defaultValue };
+  return castToProperty(getByStringDot(event, key, value));
 }

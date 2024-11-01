@@ -139,10 +139,10 @@ describe('Node Destination Meta', () => {
   test('Mapping', async () => {
     event.data = { id: 'abc', quantity: 42, total: 9001 };
     const custom: CustomEventConfig = {
-      currency: { default: 'EUR' },
+      currency: { value: 'EUR' },
       content: {
         id: 'data.id',
-        price: { default: 214.31 },
+        price: { value: 214.31 },
         quantity: 'data.quantity',
       },
       value: 'data.total',
