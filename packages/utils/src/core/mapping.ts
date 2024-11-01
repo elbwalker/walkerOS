@@ -48,31 +48,39 @@ export function getMappingValue(
   mapping: WalkerOS.MappingValue,
   instance?: WalkerOS.Instance,
 ): WalkerOS.Property | undefined {
-  const { condition, consent, fn, key, validate, value } =
-    typeof mapping == 'string'
-      ? ({ key: mapping } as WalkerOS.MappingValueObject)
-      : mapping;
+  // Ensure mapping is an array for uniform processing
+  const mappings = Array.isArray(mapping) ? mapping : [mapping];
 
-  // Check if this mapping should be used
-  if (condition && !condition(event, mapping, instance)) return;
+  // Loop over each mapping and return the first valid result
+  return mappings.reduce((acc, mappingItem) => {
+    if (acc) return acc; // A valid result was already found
 
-  // Check if consent is required and granted
-  if (consent && !getGrantedConsent(consent, instance?.consent)) return value;
+    const { condition, consent, fn, key, validate, value } =
+      typeof mappingItem == 'string'
+        ? ({ key: mappingItem } as WalkerOS.MappingValueObject)
+        : mappingItem;
 
-  let mappingValue;
-  if (fn) {
-    // Use a custom function to get the value
-    mappingValue = fn(event, mapping, instance);
-  } else {
-    // Get dynamic value from the event
-    mappingValue = getByStringDot(event, key, value);
-  }
+    // Check if this mapping should be used
+    if (condition && !condition(event, mappingItem, instance)) return;
 
-  // Validate the value
-  if (validate && !validate(mappingValue)) {
-    mappingValue = undefined;
-  }
+    // Check if consent is required and granted
+    if (consent && !getGrantedConsent(consent, instance?.consent)) return value;
 
-  // Finally, check and convert the type
-  return castToProperty(mappingValue) || value; // Always use value as a fallback
+    let mappingValue;
+    if (fn) {
+      // Use a custom function to get the value
+      mappingValue = fn(event, mappingItem, instance);
+    } else {
+      // Get dynamic value from the event
+      mappingValue = getByStringDot(event, key, value);
+    }
+
+    // Validate the value
+    if (validate && !validate(mappingValue)) {
+      mappingValue = undefined;
+    }
+
+    // Finally, check and convert the type
+    return castToProperty(mappingValue) || value; // Always use value as a fallback
+  }, undefined as WalkerOS.Property | undefined);
 }

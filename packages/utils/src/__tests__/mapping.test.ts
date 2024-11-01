@@ -192,5 +192,20 @@ describe('mapping', () => {
     ).toBeUndefined();
   });
 
+  test('mapping array', () => {
+    const event = createEvent();
+    const mockFn = jest.fn();
+
+    const mappings = [
+      { condition: (event) => event.event === 'no pe' },
+      'non.existing.key',
+      { key: 'data.string' },
+      { fn: mockFn },
+    ];
+
+    expect(getMappingValue(event, mappings)).toBe(event.data.string);
+    expect(mockFn).not.toHaveBeenCalled();
+  });
+
   // test.skip('execution order', () => {});
 });

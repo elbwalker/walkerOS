@@ -181,7 +181,10 @@ export interface Entity {
   context: OrderedProperties;
 }
 
-export type MappingValue = string | MappingValueObject;
+export type MappingValue =
+  | string
+  | MappingValueObject
+  | Array<string | MappingValueObject>;
 export interface MappingValueObject {
   condition?: MappingCondition;
   consent?: Consent;
