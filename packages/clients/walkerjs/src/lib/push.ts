@@ -117,6 +117,7 @@ export function pushToDestinations(
     // Add event to queue stack
     if (event) destination.queue.push(event);
 
+
     const allowedEvents: WalkerOS.Events = [];
     destination.queue = destination.queue.filter((queuedEvent) => {
       const grantedConsent = getGrantedConsent(

@@ -1,4 +1,4 @@
-import { getByPath } from '../core';
+import { createEvent, getByPath, setByPath } from '../core';
 
 describe('byPath', () => {
   test('getByPath', () => {
@@ -17,5 +17,15 @@ describe('byPath', () => {
       'dynamic',
     ]);
     expect(getByPath(undefined, 'na')).toBe(undefined);
+  });
+
+  test.only('setByPath', () => {
+    const event = createEvent();
+
+    expect(setByPath(event, 'foo', 'bar')).toHaveProperty('foo', 'bar');
+    expect(setByPath(event, 'data.foo', 'bar')).toHaveProperty(
+      'data.foo',
+      'bar',
+    );
   });
 });

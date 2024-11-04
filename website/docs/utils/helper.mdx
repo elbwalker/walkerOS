@@ -52,24 +52,9 @@ Use `assign` to merge configurations or state-objects or events, particularly
 when dealing with array properties that should be concatenated without
 duplicates.
 
-### castValue
+### byPath
 
-`castValue(value: unknown): WalkerOS.PropertyType` function converts string
-values to their respective data types like number or boolean. This is useful
-when dealing with values that are inherently strings, such as those from query
-parameters or data-attributes, and need to be utilized in their correct data
-type.
-
-```js
-const num = castValue('123'); // Converts to 123 (number)
-const bool = castValue('true'); // Converts to true (boolean)
-```
-
-The function simplifies the process of data type conversion, ensuring that
-string inputs are appropriately processed for further use in various logic
-flows.
-
-### getByPath
+#### getByPath
 
 `getByPath(event: unknown, key: string, i=0): unknown` allows accessing
 properties in an object with a string path. It supports using a wildcard `_` to
@@ -90,6 +75,25 @@ getByPath({ nested: [1, 2, { id: 'impressive' }] }, 'nested._.id', 2);
 ```
 
 It's created to access values from an event by using the string-dot notation.
+
+#### setByPath
+
+### castValue
+
+`castValue(value: unknown): WalkerOS.PropertyType` function converts string
+values to their respective data types like number or boolean. This is useful
+when dealing with values that are inherently strings, such as those from query
+parameters or data-attributes, and need to be utilized in their correct data
+type.
+
+```js
+const num = castValue('123'); // Converts to 123 (number)
+const bool = castValue('true'); // Converts to true (boolean)
+```
+
+The function simplifies the process of data type conversion, ensuring that
+string inputs are appropriately processed for further use in various logic
+flows.
 
 ### getId
 
