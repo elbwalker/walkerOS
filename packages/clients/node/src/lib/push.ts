@@ -1,4 +1,4 @@
-import type { Destination, WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import type { NodeClient, NodeDestination } from '../types';
 import {
   assign,
@@ -89,7 +89,7 @@ export async function pushToDestinations(
     // Process all destinations in parallel
     Object.entries(destinations).map(async ([id, destination]) => {
       // Setup queue of events to be processed
-      let queue = ([] as Destination.Queue).concat(destination.queue || []);
+      let queue = ([] as WalkerOS.Events).concat(destination.queue || []);
       destination.queue = []; // Reset original queue while processing
 
       // Add event to queue stack
