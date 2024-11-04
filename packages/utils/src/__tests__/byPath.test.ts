@@ -19,13 +19,25 @@ describe('byPath', () => {
     expect(getByPath(undefined, 'na')).toBe(undefined);
   });
 
-  test.only('setByPath', () => {
+  test('setByPath', () => {
     const event = createEvent();
 
+    expect(setByPath(event, 'timing', 2)).toHaveProperty('timing', 2);
     expect(setByPath(event, 'foo', 'bar')).toHaveProperty('foo', 'bar');
     expect(setByPath(event, 'data.foo', 'bar')).toHaveProperty(
       'data.foo',
       'bar',
+    );
+    expect(setByPath(event, 'data.array.1', 'bar')).toHaveProperty(
+      'data.array.1',
+      'bar',
+    );
+    expect(setByPath(event, 'data.nested', [])).toHaveProperty(
+      'data.nested',
+      [],
+    );
+    expect(setByPath(event, 'data', { a: 1 })).toStrictEqual(
+      expect.objectContaining({ data: { a: 1 } }),
     );
   });
 });
