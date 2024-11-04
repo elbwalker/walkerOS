@@ -1,4 +1,4 @@
-export function getByStringDot(
+export function getByPath(
   event: unknown,
   key: string = '',
   defaultValue?: unknown,
@@ -16,7 +16,7 @@ export function getByStringDot(
       const result: unknown[] = [];
 
       for (const item of values) {
-        const value = getByStringDot(item, remainingKeys, defaultValue, i);
+        const value = getByPath(item, remainingKeys, defaultValue, i);
         result.push(value);
       }
 

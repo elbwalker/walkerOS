@@ -1,5 +1,5 @@
 import type { Custom, CustomEvent, Destination } from './types';
-import { getByStringDot } from '@elbwalker/utils';
+import { getByPath } from '@elbwalker/utils';
 
 // @TODOs
 // - static values besides dynamic data values
@@ -51,7 +51,7 @@ export const destinationPiwikPro: Destination = {
       event.action === 'view'
     ) {
       // Pageview tracking will move to run part in next version
-      window._paq!.push(['trackPageView', getByStringDot(event, 'data.title')]);
+      window._paq!.push(['trackPageView', getByPath(event, 'data.title')]);
 
       return;
     }
@@ -61,9 +61,8 @@ export const destinationPiwikPro: Destination = {
     let name: unknown, value: unknown; // @TODO fix types
 
     if (customMapping) {
-      if (customMapping.name) name = getByStringDot(event, customMapping.name);
-      if (customMapping.value)
-        value = getByStringDot(event, customMapping.value);
+      if (customMapping.name) name = getByPath(event, customMapping.name);
+      if (customMapping.value) value = getByPath(event, customMapping.value);
     }
 
     window._paq!.push([
@@ -77,7 +76,7 @@ export const destinationPiwikPro: Destination = {
 
     if (customMapping.goalId) {
       const goalValue = customMapping.goalValue
-        ? getByStringDot(event, customMapping.goalValue)
+        ? getByPath(event, customMapping.goalValue)
         : undefined;
 
       window._paq!.push([

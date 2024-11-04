@@ -69,15 +69,15 @@ The function simplifies the process of data type conversion, ensuring that
 string inputs are appropriately processed for further use in various logic
 flows.
 
-### getByStringDot
+### getByPath
 
-`getByStringDot(event: unknown, key: string, i=0): unknown` allows accessing
+`getByPath(event: unknown, key: string, i=0): unknown` allows accessing
 properties in an object with a string path. It supports using a wildcard `_` to
 iterate through array elements. If the specified path does not exist, the
 function returns undefined, ensuring safe access to nested properties.
 
 ```js
-getByStringDot({ data: { id: 'wow' } }, 'data.id');
+getByPath({ data: { id: 'wow' } }, 'data.id');
 // Returns "wow"
 ```
 
@@ -85,7 +85,7 @@ Use the wildcard character `_` and `i` for dynamic access on arrays, like
 `"nested._.id"`
 
 ```js
-getByStringDot({ nested: [1, 2, { id: 'impressive' }] }, 'nested._.id', 2);
+getByPath({ nested: [1, 2, { id: 'impressive' }] }, 'nested._.id', 2);
 // Returns 'impressive'
 ```
 
