@@ -83,7 +83,7 @@ export async function destinationPush(
 
   if (eventMapping?.batch && destination.pushBatch) {
     const batched = eventMapping.batched || {
-      key: mappingKey,
+      key: mappingKey || '',
       events: [],
     };
     batched.events.push(event);
