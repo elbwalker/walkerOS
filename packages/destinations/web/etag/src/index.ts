@@ -1,4 +1,4 @@
-import type { CustomConfig, Destination } from './types';
+import type { Custom, Destination } from './types';
 import type { DestinationCoreEtag } from '@elbwalker/destination-core-etag';
 import { getParameters } from '@elbwalker/destination-core-etag';
 import { requestToParameter, sendWebAsFetch } from '@elbwalker/utils';
@@ -37,7 +37,7 @@ export const destinationEtag: Destination = {
   },
 };
 
-function sendRequest(custom: CustomConfig, path: string, body?: string) {
+function sendRequest(custom: Custom, path: string, body?: string) {
   const url = custom.url || 'https://region1.google-analytics.com/g/collect?';
 
   sendWebAsFetch(url + path, body, {

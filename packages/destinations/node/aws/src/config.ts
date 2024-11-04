@@ -1,9 +1,9 @@
-import type { Config, CustomConfig, PartialConfig } from './types';
+import type { Config, Custom, PartialConfig } from './types';
 import { onLog } from '@elbwalker/utils';
 import { getConfigFirehose } from './lib/firehose';
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {
-  const custom = partialConfig.custom || ({} as CustomConfig);
+  const custom = partialConfig.custom || ({} as Custom);
 
   if (custom.firehose) custom.firehose = getConfigFirehose(custom.firehose);
 

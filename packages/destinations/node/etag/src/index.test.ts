@@ -18,7 +18,7 @@ describe('Destination node etag', () => {
 
   async function push(
     event: unknown,
-    custom?: DestinationNodeEtag.CustomConfig,
+    custom?: DestinationNodeEtag.Custom,
     instance?: unknown,
   ) {
     return destination.push(

@@ -1,4 +1,4 @@
-import type { Config, CustomConfig, PartialConfig } from './types';
+import type { Config, Custom, PartialConfig } from './types';
 import { onLog, throwError } from '@elbwalker/utils';
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {
@@ -7,7 +7,7 @@ export function getConfig(partialConfig: PartialConfig = {}): Config {
 
   if (!measurementId) throwError('Config custom measurementId missing');
 
-  const customConfig: CustomConfig = {
+  const customConfig: Custom = {
     ...custom,
     measurementId,
   };

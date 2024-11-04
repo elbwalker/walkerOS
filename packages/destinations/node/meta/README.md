@@ -26,9 +26,9 @@ the detailed
 [Meta Conversion API](https://developers.facebook.com/docs/marketing-api/conversions-api).
 
 ```js
-import type { CustomConfig } from '@elbwalker/destination-node-meta';
+import type { Custom } from '@elbwalker/destination-node-meta';
 
-const config: CustomConfig = {
+const config: Custom = {
   custom: {
     accessToken: 's3cr3tc0d3',
     pixelId: '1234567890',

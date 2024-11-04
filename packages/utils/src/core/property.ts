@@ -5,17 +5,14 @@ export function isPropertyType(value: unknown): value is WalkerOS.PropertyType {
     typeof value === 'boolean' ||
     typeof value === 'string' ||
     typeof value === 'number' ||
-    typeof value === 'undefined'
-  );
-}
-
-export function isProperty(value: unknown): value is WalkerOS.Property {
-  return (
-    isPropertyType(value) ||
-    (Array.isArray(value) && value.every(isPropertyType))
+    typeof value === 'undefined' ||
+    (Array.isArray(value) && value.every(isPropertyType)) ||
+    (typeof value === 'object' &&
+      value !== null &&
+      Object.values(value).every(isPropertyType))
   );
 }
 
 export function castToProperty(value: unknown): WalkerOS.Property | undefined {
-  return isProperty(value) ? value : undefined;
+  return isPropertyType(value) ? value : undefined;
 }

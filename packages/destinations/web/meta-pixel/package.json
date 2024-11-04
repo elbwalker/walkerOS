@@ -15,7 +15,7 @@
     "build:dev": "tsup --config tsup.dev.config.ts",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
-    "lint": "eslint \"**/*.ts*\"",
+    "lint": "tsc && eslint \"**/*.ts*\"",
     "test": "jest --colors --coverage",
     "update": "npx npm-check-updates -u && npm update"
   },

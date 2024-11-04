@@ -91,6 +91,7 @@ export function storageWrite(
 
   switch (storage) {
     case Const.Utils.Storage.Cookie: {
+      value = typeof value === 'object' ? JSON.stringify(value) : value;
       let cookie = `${key}=${encodeURIComponent(value)}; max-age=${
         maxAgeInMinutes * 60
       }; path=/; SameSite=Lax; secure`;

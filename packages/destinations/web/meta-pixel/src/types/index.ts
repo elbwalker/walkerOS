@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { Mapping } from '@elbwalker/types';
 import type { WebDestination } from '@elbwalker/walker.js';
 
 declare global {
@@ -9,28 +9,28 @@ declare global {
 }
 
 export interface Destination
-  extends WebDestination.Destination<CustomConfig, CustomEventConfig> {}
+  extends WebDestination.Destination<Custom, CustomEvent> {}
 
-export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
+export type Config = WebDestination.Config<Custom, CustomEvent>;
 
-export interface CustomConfig {
+export interface Custom {
   pixelId?: string; // Required pixel id
   currency?: string; // Default currency is EUR
   pageview?: boolean; // Send the PageView event (default yes, deactivate actively)
 }
 
-export interface CustomEventConfig {
-  content_ids?: WalkerOS.MappingValue; // Name of data property key to use in content_ids
-  content_name?: WalkerOS.MappingValue; // Name of data property key to use as content_name
-  content_type?: WalkerOS.MappingValue; // Name of data property key to use as content_type
+export interface CustomEvent {
+  content_ids?: Mapping.Value; // Name of data property key to use in content_ids
+  content_name?: Mapping.Value; // Name of data property key to use as content_name
+  content_type?: Mapping.Value; // Name of data property key to use as content_type
   track?: StandardEventNames; // Name of a standard event to track
-  value?: WalkerOS.MappingValue; // Name of data property key to use for value
+  value?: Mapping.Value; // Name of data property key to use for value
   contents?: ParamContents; // Value(s) to be used for contents
 }
 
 export interface ParamContents {
-  id: WalkerOS.MappingValue;
-  quantity: WalkerOS.MappingValue;
+  id: Mapping.Value;
+  quantity: Mapping.Value;
 }
 
 export type ContentIds =

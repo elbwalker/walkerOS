@@ -1,16 +1,17 @@
 import type {
   Destination as WalkerOSDestination,
+  Mapping as WalkerOSMapping,
   WalkerOS,
 } from '@elbwalker/types';
 import type { NodeClient } from '.';
 
-export interface Destination<Custom = unknown, EventCustom = unknown>
-  extends WalkerOSDestination.Destination<Custom, EventCustom> {
-  config: Config<Custom, EventCustom>;
-  push: PushFn<Custom, EventCustom>;
+export interface Destination<Custom = unknown, CustomEvent = unknown>
+  extends WalkerOSDestination.Destination<Custom, CustomEvent> {
+  config: Config<Custom, CustomEvent>;
+  push: PushFn<Custom, CustomEvent>;
   init?: InitFn<
-    Partial<Config<Custom, EventCustom>>,
-    Config<Custom, EventCustom>
+    Partial<Config<Custom, CustomEvent>>,
+    Config<Custom, CustomEvent>
   >;
 }
 
@@ -19,26 +20,26 @@ export type InitFn<PartialConfig = unknown, Config = unknown> = (
   instance?: NodeClient.Instance,
 ) => Promise<void | Config | false>;
 
-export type PushFn<Custom, EventCustom> = (
+export type PushFn<Custom, CustomEvent> = (
   event: WalkerOS.Event,
-  config: Config<Custom, EventCustom>,
-  mapping?: EventConfig<EventCustom>,
+  config: Config<Custom, CustomEvent>,
+  mapping?: EventMapping<CustomEvent>,
   instance?: NodeClient.Instance,
 ) => Promise<Push | void>;
 
-export interface Config<Custom = unknown, EventCustom = unknown>
-  extends WalkerOSDestination.Config<Custom, EventCustom> {}
+export interface Config<Custom = unknown, CustomEvent = unknown>
+  extends WalkerOSDestination.Config<Custom, CustomEvent> {}
 
-export interface Mapping<EventCustom>
-  extends WalkerOSDestination.Mapping<EventCustom> {}
+export interface Mapping<CustomEvent>
+  extends WalkerOSMapping.Config<CustomEvent> {}
 
-export interface EventConfig<EventCustom = unknown>
-  extends WalkerOSDestination.EventConfig<EventCustom> {}
+export interface EventMapping<CustomEvent = unknown>
+  extends WalkerOSMapping.Event<CustomEvent> {}
 
-export type PushEvent<EventCustom = unknown> =
-  WalkerOSDestination.PushEvent<EventCustom>;
-export type PushEvents<EventCustom = unknown> =
-  WalkerOSDestination.PushEvents<EventCustom>;
+export type PushEvent<CustomEvent = unknown> =
+  WalkerOSDestination.PushEvent<CustomEvent>;
+export type PushEvents<CustomEvent = unknown> =
+  WalkerOSDestination.PushEvents<CustomEvent>;
 
 export type Ref = {
   id: string;

@@ -1,4 +1,4 @@
-import type { CustomConfig, CustomEventConfig, Destination } from './types';
+import type { Custom, CustomEvent, Destination } from './types';
 import { getByStringDot } from '@elbwalker/utils';
 
 // @TODOs
@@ -18,7 +18,7 @@ export const destinationPiwikPro: Destination = {
 
   init(config) {
     const w = window;
-    const custom: Partial<CustomConfig> = config.custom || {};
+    const custom: Partial<Custom> = config.custom || {};
 
     // Required parameters
     if (!custom.appId || !custom.url) return false;
@@ -42,7 +42,7 @@ export const destinationPiwikPro: Destination = {
   },
 
   push(event, config, mapping = {}) {
-    const custom: Partial<CustomConfig> = config.custom || {};
+    const custom: Partial<Custom> = config.custom || {};
 
     // Send pageviews if not disabled
     if (
@@ -56,7 +56,7 @@ export const destinationPiwikPro: Destination = {
       return;
     }
 
-    const customMapping: CustomEventConfig = mapping.custom || {};
+    const customMapping: CustomEvent = mapping.custom || {};
 
     let name: unknown, value: unknown; // @TODO fix types
 

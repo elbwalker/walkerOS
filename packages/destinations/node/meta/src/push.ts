@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { EventConfig, PushFn } from './types';
+import type { EventMapping, PushFn } from './types';
 import {
   Content,
   CustomData,
@@ -44,7 +44,7 @@ export const push: PushFn = async function (event, config, mapping) {
 
 export const mapEvent = (
   event: WalkerOS.Event,
-  mapping: EventConfig = {},
+  mapping: EventMapping = {},
 ): ServerEvent => {
   const { data, user, source } = event;
   const { currency, content, value } = mapping.custom || {};

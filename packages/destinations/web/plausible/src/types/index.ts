@@ -13,12 +13,12 @@ export type Plausible = (
 ) => void;
 
 export interface Destination
-  extends WebDestination.Destination<CustomConfig, CustomEventConfig> {}
+  extends WebDestination.Destination<Custom, CustomEvent> {}
 
-export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
+export type Config = WebDestination.Config<Custom, CustomEvent>;
 
-export interface CustomConfig {
+export interface Custom {
   domain?: string; // Name of the domain to be tracked
 }
 
-export interface CustomEventConfig {}
+export interface CustomEvent {}

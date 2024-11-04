@@ -31,7 +31,7 @@ const config = {
     entity: {
       action: {
         custom: {
-          // CustomEventConfig
+          // CustomEvent
           goalId: 'xxx-xxx-...', // Count the event as a goal
           goalValue: '', // Property to be used as goal value
           name: '', // Renaming the event

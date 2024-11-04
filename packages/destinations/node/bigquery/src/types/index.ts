@@ -3,26 +3,26 @@ import type { Handler } from '@elbwalker/types';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Destination
-  extends NodeDestination.Destination<CustomConfig, CustomEventConfig> {
+  extends NodeDestination.Destination<Custom, CustomEvent> {
   init: InitFn;
 }
 
-export type PushFn = NodeDestination.PushFn<CustomConfig, CustomEventConfig>;
+export type PushFn = NodeDestination.PushFn<Custom, CustomEvent>;
 export type InitFn = NodeDestination.InitFn<PartialConfig, Config>;
 
 export type Config = {
-  custom: CustomConfig;
+  custom: Custom;
   onLog: Handler.Log;
-} & NodeDestination.Config<CustomConfig, CustomEventConfig>;
+} & NodeDestination.Config<Custom, CustomEvent>;
 
 export type PartialConfig = NodeDestination.Config<
-  Partial<CustomConfig>,
-  Partial<CustomEventConfig>
+  Partial<Custom>,
+  Partial<CustomEvent>
 >;
 
-export type PushEvents = NodeDestination.PushEvents<CustomEventConfig>;
+export type PushEvents = NodeDestination.PushEvents<CustomEvent>;
 
-export interface CustomConfig {
+export interface Custom {
   client: BigQuery;
   projectId: string;
   datasetId: string;
@@ -31,7 +31,7 @@ export interface CustomConfig {
   bigquery?: BigQueryOptions;
 }
 
-export interface CustomEventConfig {
+export interface CustomEvent {
   // Custom destination event mapping properties
 }
 

@@ -47,7 +47,7 @@ destination configuration</Link>.
 
 :::
 
-The individual `Custom` settings and `EventConfig` in the mapping used for event
+The individual `Custom` settings and `EventMapping` in the mapping used for event
 specifications. All configuration definitions, and examples are available in
 each destination's detail page.
 
@@ -86,24 +86,24 @@ elb('walker destination', { push: console.log });
   </TabItem>
   <TabItem value="ts" label="TypeScript" default>
     Import and extend the default `WebDestination` interface.
-    To customize the destinations config use the generic types `CustomConfig`
-    and `CustomEventConfig`.
+    To customize the destinations config use the generic types `Custom`
+    and `CustomEvent`.
 
     ```ts
     import type { WebDestination } from '@elbwalker/walker.js';
 
     interface Destination
-      extends WebDestination.Destination<CustomConfig, CustomEventConfig> {
+      extends WebDestination.Destination<Custom, CustomEvent> {
         // Add additional methods
     }
 
-    type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
+    type Config = WebDestination.Config<Custom, CustomEvent>;
 
-    interface CustomConfig {
+    interface Custom {
       // Destination related configuration settings in config.custom
     }
 
-    interface CustomEventConfig {
+    interface CustomEvent {
       // Event related configuration settings in event.mapping.custom
     }
 

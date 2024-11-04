@@ -7,11 +7,11 @@ declare global {
 }
 
 export interface Destination
-  extends WebDestination.Destination<CustomConfig, CustomEventConfig> {}
+  extends WebDestination.Destination<Custom, CustomEvent> {}
 
-export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
+export type Config = WebDestination.Config<Custom, CustomEvent>;
 
-export interface CustomConfig {
+export interface Custom {
   appId: string;
   // dimensions?: Dimensions;
   linkTracking?: boolean;
@@ -19,7 +19,7 @@ export interface CustomConfig {
   url: string;
 }
 
-export interface CustomEventConfig {
+export interface CustomEvent {
   // dimensions?: Dimensions;
   goalId?: string;
   goalValue?: string;

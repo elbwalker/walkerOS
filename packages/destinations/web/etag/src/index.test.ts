@@ -15,11 +15,11 @@ describe('Destination web etag', () => {
   const url = 'localhost?';
   const measurementId = 'G-XXXXXXX';
   const event = { event: 'entity action', timing: 42 } as WalkerOS.Event;
-  // let customDefault: DestinationWebEtag.CustomConfig;
+  // let customDefault: DestinationWebEtag.Custom;
 
   function push(
     event: unknown,
-    custom?: DestinationWebEtag.CustomConfig,
+    custom?: DestinationWebEtag.Custom,
     instance?: unknown,
   ) {
     destination.push(

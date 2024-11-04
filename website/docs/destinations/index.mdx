@@ -84,7 +84,6 @@ optional. A complete destination configuration might look like this:
       visible: { batch: 2000 },
     },
   },
-  meta: { name: "Demo", version: "1.0.0" },
   queue: true,
   verbose: false,
   onError: (error) => console.error("demo error", error),
@@ -110,7 +109,6 @@ Overview of all properties:
 | **init**       | boolean   | If the destination has been initialized by calling the init method                                    |
 | **loadScript** | boolean   | If an additional script to work should be loaded                                                      |
 | **mapping**    | object    | Configuration how to transform events (see&nbsp;<Link to="/docs/destinations/mapping">Mapping</Link>) |
-| **meta**       | object    | Additional meta information about the destination                                                     |
 | **queue**      | boolean   | Disable processing of previously pushed events                                                        |
 | **verbose**    | boolean   | Enable verbose logging                                                                                |
 | **onError**    | function  | Custom error handler                                                                                  |

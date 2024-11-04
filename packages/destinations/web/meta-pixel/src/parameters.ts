@@ -2,14 +2,14 @@ import type { WalkerOS } from '@elbwalker/types';
 import type {
   ContentIds,
   Contents,
-  CustomEventConfig,
+  CustomEvent,
   StartSubscribeParameters,
 } from './types';
 import { getMappingValue } from '@elbwalker/utils';
 
 export function getParameters(
   event: WalkerOS.Event,
-  mapping: CustomEventConfig,
+  mapping: CustomEvent,
   currency: string = 'EUR',
 ) {
   // value
@@ -109,7 +109,7 @@ export function getParameters(
 
 function getParameterContentIds(
   event: WalkerOS.Event,
-  mapping: CustomEventConfig,
+  mapping: CustomEvent,
 ): ContentIds | undefined {
   const contentsMapping = mapping.contents;
   if (!contentsMapping) return;
@@ -135,7 +135,7 @@ function getParameterContentIds(
 
 function getParameterContents(
   event: WalkerOS.Event,
-  mapping: CustomEventConfig,
+  mapping: CustomEvent,
 ): Contents | undefined {
   const { id, quantity } = mapping.contents || {};
   if (!id || !quantity) return;

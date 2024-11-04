@@ -1,4 +1,4 @@
-import type { CustomConfig, Destination } from './types';
+import type { Custom, Destination } from './types';
 import { isSameType, throwError, tryCatchAsync } from '@elbwalker/utils';
 import { getConfig } from './config';
 import { push } from './push';
@@ -18,7 +18,7 @@ export const destinationFirehose: Destination = {
       throwError(error);
     })(partialConfig);
 
-    if (!isSameType(config.custom, {} as CustomConfig)) return false;
+    if (!isSameType(config.custom, {} as Custom)) return false;
 
     return config;
   },

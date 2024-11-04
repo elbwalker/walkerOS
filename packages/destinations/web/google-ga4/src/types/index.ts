@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { Mapping } from '@elbwalker/types';
 import type { WebDestination } from '@elbwalker/walker.js';
 
 declare global {
@@ -9,11 +9,11 @@ declare global {
 }
 
 export interface Destination
-  extends WebDestination.Destination<CustomConfig, CustomEventConfig> {}
+  extends WebDestination.Destination<Custom, CustomEvent> {}
 
-export type Config = WebDestination.Config<CustomConfig, CustomEventConfig>;
+export type Config = WebDestination.Config<Custom, CustomEvent>;
 
-export interface CustomConfig {
+export interface Custom {
   debug?: boolean;
   include?: Include;
   items?: Items;
@@ -25,7 +25,7 @@ export interface CustomConfig {
   transport_url?: string;
 }
 
-export interface CustomEventConfig {
+export interface CustomEvent {
   include?: Include;
   items?: Items;
   params?: Params;
@@ -39,7 +39,7 @@ export interface Params {
   [key: string]: Param;
 }
 
-export type Param = WalkerOS.MappingValue;
+export type Param = Mapping.Value;
 export type Include = Array<
   | 'all'
   | 'context'

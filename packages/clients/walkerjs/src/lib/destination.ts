@@ -2,7 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { WebClient, WebDestination } from '../types';
 import {
   debounce,
-  getEventConfig,
+  getEventMapping,
   getId,
   tryCatch,
   useHooks,
@@ -94,29 +94,29 @@ export function destinationPush(
   destination: WebDestination.Destination,
   event: WalkerOS.Event,
 ): boolean {
-  const { eventConfig, mappingKey } = getEventConfig(
+  const { eventMapping, mappingKey } = getEventMapping(
     event.event,
     destination.config.mapping,
   );
 
-  if (eventConfig) {
+  if (eventMapping) {
     // Check if event should be processed or ignored
-    if (eventConfig.ignore) return false;
+    if (eventMapping.ignore) return false;
 
     // Check to use specific event names
-    if (eventConfig.name) event.event = eventConfig.name;
+    if (eventMapping.name) event.event = eventMapping.name;
   }
 
   return !!tryCatch(() => {
-    if (eventConfig?.batch && destination.pushBatch) {
-      const batched = eventConfig.batched || {
-        key: mappingKey,
+    if (eventMapping?.batch && destination.pushBatch) {
+      const batched = eventMapping.batched || {
+        key: mappingKey || '',
         events: [],
       };
       batched.events.push(event);
 
-      eventConfig.batchFn =
-        eventConfig.batchFn ||
+      eventMapping.batchFn =
+        eventMapping.batchFn ||
         debounce((destination, instance) => {
           useHooks(
             destination.pushBatch!,
@@ -126,16 +126,16 @@ export function destinationPush(
 
           // Reset the batched events queue
           batched.events = [];
-        }, eventConfig.batch);
+        }, eventMapping.batch);
 
-      eventConfig.batched = batched;
-      eventConfig.batchFn(destination, instance);
+      eventMapping.batched = batched;
+      eventMapping.batchFn(destination, instance);
     } else {
       // It's time to go to the destination's side now
       useHooks(destination.push, 'DestinationPush', instance.hooks)(
         event,
         destination.config,
-        eventConfig,
+        eventMapping,
         instance,
       );
     }

@@ -164,8 +164,14 @@ export interface Source extends Properties {
 
 export type SourceType = 'web' | 'node' | 'app' | 'other' | string;
 
-export type PropertyType = boolean | string | number;
+export type PropertyType =
+  | boolean
+  | string
+  | number
+  | { [key: string]: Property };
+
 export type Property = PropertyType | Array<PropertyType>;
+
 export interface Properties {
   [key: string]: Property | undefined;
 }
@@ -180,31 +186,3 @@ export interface Entity {
   nested: Entities;
   context: OrderedProperties;
 }
-
-export type MappingValue =
-  | string
-  | MappingValueObject
-  | Array<string | MappingValueObject>;
-
-export interface MappingValueObject {
-  condition?: MappingCondition;
-  consent?: Consent;
-  fn?: MappingFn;
-  key?: string;
-  validate?: MappingValidate;
-  value?: PropertyType;
-}
-
-export type MappingFn = (
-  event: Event,
-  mapping: MappingValue,
-  instance?: Instance,
-) => Property | void;
-
-export type MappingCondition = (
-  event: Event,
-  mapping: MappingValue,
-  instance?: Instance,
-) => boolean;
-
-export type MappingValidate = (value?: unknown) => boolean;
