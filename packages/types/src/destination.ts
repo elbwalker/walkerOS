@@ -2,7 +2,7 @@ import type { Handler, Mapping, WalkerOS } from '.';
 
 export interface Destination<Custom = unknown, CustomEvent = unknown> {
   config: Config<Custom, CustomEvent>; // Configuration settings for the destination
-  queue?: Queue; // Non processed events yet and reset with each new run
+  queue?: WalkerOS.Events; // Non processed events yet and reset with each new run
   type?: string; // The type of the destination
   pushBatch?: PushBatchFn<Custom, CustomEvent>;
 }
@@ -34,8 +34,6 @@ export type PushBatchFn<Custom, CustomEvent> = (
 
 export interface Batch<CustomEvent> {
   key: string;
-  events: Array<WalkerOS.Event>;
+  events: WalkerOS.Events;
   mapping?: Mapping.Event<CustomEvent>;
 }
-
-export type Queue = Array<WalkerOS.Event>;
