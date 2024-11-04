@@ -110,7 +110,7 @@ export function destinationPush(
   return !!tryCatch(() => {
     if (eventMapping?.batch && destination.pushBatch) {
       const batched = eventMapping.batched || {
-        key: mappingKey,
+        key: mappingKey || '',
         events: [],
       };
       batched.events.push(event);
