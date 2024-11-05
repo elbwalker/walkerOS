@@ -42,19 +42,44 @@ const mapping: Config = {
 ### getEventMapping
 
 `getEventMapping(event: string, mapping?: Mapping.Config<unknown>): EventMapping`
+returns the matching `eventMapping` configuration and the used `mappingKey` for
+the given entity-action event name. If no mapping is found, it will return an
+empty object. An explicit key is favored over an asterisk `*` key.
 
 ```ts
 interface EventMapping {
   eventMapping?: Event;
   mappingKey?: string;
 }
+
+const mapping: Config = {
+  entity: {
+    action: {
+      name: 'entity_action',
+    },
+    '*': {
+      name: 'other',
+    },
+    '*': {
+      '*': {
+        name: 'irrelevant',
+      },
+    },
+  },
+};
+
+getEventMapping('entity action', mapping);
+// { eventMapping: { name: 'entity_action' }, mappingKey: 'entity action' }
+
+getEventMapping('entity something', mapping);
+// { eventMapping: { name: 'other' }, mappingKey: 'entity *' }
 ```
 
 ### getMappingValue
 
 `getMappingValue(event: WalkerOS.Event, mapping: Mapping.Value, instance?: WalkerOS.Instance): WalkerOS.Property | undefined`
-is used by destinations to access values from the original event. This offers
-flexibility to configure
+primarily used by destinations to access values from the original event. This
+offers flexibility to configure
 individual&nbsp;<Link to="/docs/clients/walkerjs/tagging">tagging setups</Link>
 to standard fields of the destination.
 
@@ -72,4 +97,10 @@ export interface ValueConfig {
 }
 ```
 
-An empty `ValueType` will return `undefined`.
+First the `condition` is checked to determine if the `ValueConfig` should be
+used. Second, the `consent` state gets checked if an `instance` is provided. If
+no required consent is given, no value will be returned. If a `fn` is provided,
+it will be called to define the value, otherwise the `key` or initial `string`
+value will be used. The current value will be check using the `validate`
+function and set to `undefined` if it fails. Finally, the `value` will be cast
+to match the `WalkerOS.Property`. An empty `ValueType` will return `undefined`.

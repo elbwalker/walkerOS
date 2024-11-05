@@ -30,10 +30,4 @@ describe('Destination PiwikPro', () => {
 
     expect(true).toBeTruthy();
   });
-
-  // test('push', () => {
-  //   elb('walker destination', destination);
-  //   elb(event);
-  //   // expect(mockFn).toHaveBeenNthCalledWith(1, event);
-  // });
 });

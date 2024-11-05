@@ -1,5 +1,23 @@
 # @elbwalker/destination-web-google-ga4
 
+## 3.1.0
+
+### Minor Changes
+
+- d7c9098: GA4 server_container_url
+  [#428](https://github.com/elbwalker/walkerOS/issues/428)
+- 9fbf78a: Mapping Options
+  [#443](https://github.com/elbwalker/walkerOS/issues/443)
+
+### Patch Changes
+
+- 3053fd6: Events generator
+  [#438](https://github.com/elbwalker/walkerOS/issues/438)
+- Updated dependencies [3053fd6]
+- Updated dependencies [5a2c0b0]
+- Updated dependencies [934c5a7]
+  - @elbwalker/walker.js@3.1.0
+
 ## 3.0.4
 
 ### Patch Changes

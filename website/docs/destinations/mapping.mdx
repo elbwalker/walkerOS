@@ -37,22 +37,22 @@ const mapping: Mapping.Config = {
 };
 ```
 
-
 ## Event
 
-The `EventMapping` for each event supports standardized default options. The
-`custom` option can be used to set up custom properties for the event and
-destinations individual settings.
+The `Destination.Event` mapping for each event supports standardized default
+options. The `custom` option can be used to set up custom properties for the
+event and destinations individual settings.
 
-| Property   | Value   | Description                                                              |
-| ---------- | ------- | ------------------------------------------------------------------------ |
-| **name**   | string  | Renaming of the event (e.g. `product add` to `add_to_cart`)              |
-| **ignore** | boolean | If set to `true` the event won't get pushed to the destination.          |
-| **custom** | object  | Individual settings for a custom destination.                            |
-| **batch**  | number  | Time in ms to bundle the events before calling `pushBatch` if available. |
+| Property    | Value   | Description                                                              |
+| ----------- | ------- | ------------------------------------------------------------------------ |
+| **name**    | string  | Renaming of the event (e.g. `product add` to `add_to_cart`)              |
+| **ignore**  | boolean | If set to `true` the event won't get pushed to the destination.          |
+| **consent** | object  | Required states to process the event.                                    |
+| **custom**  | object  | Individual settings for a custom destination.                            |
+| **batch**   | number  | Time in ms to bundle the events before calling `pushBatch` if available. |
 
-To disable processing events, add `{'*': {'*': { ignore: true }}}` to the
-mapping.
+To disable processing of other events, add `{'*': {'*': { ignore: true }}}` to
+the mapping.
 
 Make sure to not list duplicate keys in the mapping, since this is an object.
 

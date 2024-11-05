@@ -1,5 +1,14 @@
 # @elbwalker/destination-web-api
 
+## 2.4.3
+
+### Patch Changes
+
+- Updated dependencies [3053fd6]
+- Updated dependencies [5a2c0b0]
+- Updated dependencies [934c5a7]
+  - @elbwalker/walker.js@3.1.0
+
 ## 2.4.2
 
 ### Patch Changes

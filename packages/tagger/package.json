@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/tagger",
   "description": "A helper to set up tracking based on walkerOS",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -19,7 +19,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/types": "3.0.1"
+    "@elbwalker/types": "3.1.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

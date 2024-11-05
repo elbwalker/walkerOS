@@ -82,6 +82,11 @@ It's created to access values from an event by using the string-dot notation.
 updates the event object by setting the given value at the specified
 dot-separated key path, mutating the original `event` object in place.
 
+```js
+setByPath(event, 'data.id', 'wow');
+// Updates and returns the event object with { data: { id: 'wow' } }
+```
+
 ### castValue
 
 `castValue(value: unknown): WalkerOS.PropertyType` function converts string

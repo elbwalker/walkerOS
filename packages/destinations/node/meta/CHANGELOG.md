@@ -1,16 +1,19 @@
-# @elbwalker/destination-node-firehose
+# @elbwalker/destination-node-meta
 
-## 1.1.0
+## 2.1.0
 
 ### Minor Changes
 
 - 4fd313e: Harmonise push interfaces
   [#430](https://github.com/elbwalker/walkerOS/issues/430)
+- 9fbf78a: Mapping Options
+  [#443](https://github.com/elbwalker/walkerOS/issues/443)
 
 ### Patch Changes
 
 - 3053fd6: Events generator
   [#438](https://github.com/elbwalker/walkerOS/issues/438)
+- 706a7de: META CAPI [#424](https://github.com/elbwalker/walkerOS/issues/424)
 - Updated dependencies [51e9841]
 - Updated dependencies [4fd313e]
 - Updated dependencies [c898b11]
@@ -24,40 +27,3 @@
 - Updated dependencies [9fbf78a]
   - @elbwalker/utils@3.5.0
   - @elbwalker/client-node@3.1.0
-
-## 1.0.3
-
-### Patch Changes
-
-- Updated dependencies [cc2c041]
-  - @elbwalker/utils@3.4.1
-  - @elbwalker/client-node@3.0.3
-
-## 1.0.2
-
-### Patch Changes
-
-- Updated dependencies [3aafaee]
-  - @elbwalker/utils@3.4.0
-  - @elbwalker/client-node@3.0.2
-
-## 1.0.1
-
-### Patch Changes
-
-- Updated dependencies [f361e4d]
-- Updated dependencies [f361e4d]
-  - @elbwalker/utils@3.3.0
-  - @elbwalker/client-node@3.0.1
-
-## 1.0.0
-
-### Major Changes
-
-- Firehose
-
-## 0.1.0
-
-### Minor Changes
-
-- f67839b: hello world

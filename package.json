@@ -16,7 +16,7 @@
     "clean": "turbo run clean",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "publish-packages": "turbo run lint build test && changeset version && changeset publish",
+    "publish-packages": "turbo run build lint test && changeset version && changeset publish",
     "test": "turbo run test"
   },
   "devDependencies": {

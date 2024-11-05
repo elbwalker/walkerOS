@@ -1,5 +1,32 @@
 # @elbwalker/utils
 
+## 3.5.0
+
+### Minor Changes
+
+- 51e9841: Property type support for JSON
+  [#444](https://github.com/elbwalker/walkerOS/issues/444)
+- c898b11: clickIds with platform information
+  [#425](https://github.com/elbwalker/walkerOS/issues/425)
+- 934c5a7: Data Policy [#447]https://(github.com/elbwalker/walkerOS/issues/447)
+- c4ed35f: Standardized mapping
+  [#427](https://github.com/elbwalker/walkerOS/issues/427)
+- 5d093a3: getEventConfig event name
+  [#435](https://github.com/elbwalker/walkerOS/issues/435)
+- 9fbf78a: Mapping Options
+  [#443](https://github.com/elbwalker/walkerOS/issues/443)
+
+### Patch Changes
+
+- 3053fd6: Events generator
+  [#438](https://github.com/elbwalker/walkerOS/issues/438)
+- Updated dependencies [51e9841]
+- Updated dependencies [4fd313e]
+- Updated dependencies [934c5a7]
+- Updated dependencies [c4ed35f]
+- Updated dependencies [9fbf78a]
+  - @elbwalker/types@3.1.0
+
 ## 3.4.1
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @elbwalker/destination-web-google-gtm
 
+## 2.2.5
+
+### Patch Changes
+
+- 3053fd6: Events generator
+  [#438](https://github.com/elbwalker/walkerOS/issues/438)
+- Updated dependencies [3053fd6]
+- Updated dependencies [5a2c0b0]
+- Updated dependencies [934c5a7]
+  - @elbwalker/walker.js@3.1.0
+
 ## 2.2.4
 
 ### Patch Changes

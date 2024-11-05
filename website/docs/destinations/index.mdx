@@ -40,14 +40,14 @@ title: Eventflow
 ---
 flowchart LR
   subgraph frontend["Frontend <small>(client-side)</small>"]
-    webC["walker.js\nweb client"]
-    webD["<b>Web\nDestinations</b>"]
-    webC -- consent\ncheck --> webD
+    webC["walker.js<br>web client"]
+    webD["<b>Web<br>Destinations</b>"]
+    webC -- consent<br>check --> webD
   end
   subgraph backend["Backend <small>(server-side)</small>"]
-    nodeC["Node\nclient"]
-    nodeD["<b>Node\nDestinations</b>"]
-    nodeC -- consent\ncheck --> nodeD
+    nodeC["Node<br>client"]
+    nodeD["<b>Node<br>Destinations</b>"]
+    nodeC -- consent<br>check --> nodeD
   end
   subgraph tools["Tools"]
     direction LR
@@ -84,6 +84,9 @@ optional. A complete destination configuration might look like this:
       visible: { batch: 2000 },
     },
   },
+  policy: {
+    'data.gclid': { consent: { marketing: true } },
+  },
   queue: true,
   verbose: false,
   onError: (error) => console.error("demo error", error),
@@ -101,19 +104,20 @@ optional. A complete destination configuration might look like this:
 
 Overview of all properties:
 
-| Property       | Value     | Description                                                                                           |
-| -------------- | --------- | ----------------------------------------------------------------------------------------------------- |
-| **id**         | string    | A unique key for the destination                                                                      |
-| **consent**    | object    | Required consent states to init and push events                                                       |
-| **custom**     | any       | Used for a destinations individual settings                                                           |
-| **init**       | boolean   | If the destination has been initialized by calling the init method                                    |
-| **loadScript** | boolean   | If an additional script to work should be loaded                                                      |
-| **mapping**    | object    | Configuration how to transform events (see&nbsp;<Link to="/docs/destinations/mapping">Mapping</Link>) |
-| **queue**      | boolean   | Disable processing of previously pushed events                                                        |
-| **verbose**    | boolean   | Enable verbose logging                                                                                |
-| **onError**    | function  | Custom error handler                                                                                  |
-| **onLog**      | function  | Custom log handler                                                                                    |
-| **on**         | On.Config | Rules for on-functions that gets triggered on specific events                                         |
+| Property       | Value     | Description                                                                                                                              |
+| -------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **id**         | string    | A unique key for the destination                                                                                                         |
+| **consent**    | object    | Required consent states to init and push events                                                                                          |
+| **custom**     | any       | Used for a destinations individual settings                                                                                              |
+| **init**       | boolean   | If the destination has been initialized by calling the init method                                                                       |
+| **loadScript** | boolean   | If an additional script to work should be loaded                                                                                         |
+| **mapping**    | object    | Configuration how to transform events (see&nbsp;<Link to="/docs/destinations/mapping">Mapping</Link>)                                    |
+| **policy**     | boolean   | Enriches, validates, and redacts properties from the event (see&nbsp;<Link to="/docs/utils/mapping#getmappingvalue">MappingValue</Link>) |
+| **queue**      | boolean   | Disable processing of previously pushed events                                                                                           |
+| **verbose**    | boolean   | Enable verbose logging                                                                                                                   |
+| **onError**    | function  | Custom error handler                                                                                                                     |
+| **onLog**      | function  | Custom log handler                                                                                                                       |
+| **on**         | On.Config | Rules for on-functions that gets triggered on specific events                                                                            |
 
 Call `elb('walker destination', { push: console.log }, config);` to add the
 destination to a client. The destination will log all events straight to the
