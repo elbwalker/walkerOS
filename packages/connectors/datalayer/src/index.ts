@@ -1,10 +1,21 @@
-const defaultDataLayer = 'dataLayer';
+import type { Config, DataLayer } from './types';
 
-// Types
-export * as ConnectorDatalayer from './types';
-
-export function connectorDatalayer() {
-  return defaultDataLayer;
+declare global {
+  interface Window {
+    [key: string]: DataLayer | undefined;
+  }
 }
 
-export default connectorDatalayer;
+// Types
+export * as ConnectorDataLayer from './types';
+
+export function elbDataLayer(config: Config = {}) {
+  const { name = 'dataLayer' } = config;
+  const key = name as keyof Window;
+
+  const dataLayer = (window[key] as DataLayer | undefined) || [];
+
+  (window[key] as DataLayer) = dataLayer;
+}
+
+export default { elbDataLayer };

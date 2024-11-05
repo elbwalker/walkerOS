@@ -1,7 +1,10 @@
 declare global {
   interface Window {
-    dataLayer: Array<unknown> | unknown;
+    dataLayer: DataLayer | undefined;
   }
 }
 
-export interface Connector {}
+export type DataLayer = Array<unknown>;
+export interface Config {
+  name?: string;
+}

@@ -1,10 +1,22 @@
-import { connectorDatalayer } from '..';
+import { elbDataLayer } from '..';
 // import type { ConnectorDatalayer } from '..';
 
 describe('connector datalayer', () => {
-  beforeEach(() => {});
+  beforeEach(() => {
+    window.dataLayer = undefined;
+  });
 
   test('init', () => {
-    expect(connectorDatalayer()).toBe('dataLayer');
+    expect(window.dataLayer).toBeUndefined();
+
+    elbDataLayer();
+    expect(window.dataLayer).toEqual([]);
+  });
+
+  test('config name', () => {
+    expect(window.foo).toBeUndefined();
+
+    elbDataLayer({ name: 'foo' });
+    expect(window.foo).toEqual([]);
   });
 });
