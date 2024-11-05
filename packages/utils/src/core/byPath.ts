@@ -38,7 +38,7 @@ export function setByPath(
   event: WalkerOS.Event,
   key: string,
   value: unknown,
-): void {
+): WalkerOS.Event {
   const keys = key.split('.');
   let current: WalkerOS.AnyObject | WalkerOS.Event = event;
 
@@ -62,4 +62,6 @@ export function setByPath(
       current = current[k] as WalkerOS.AnyObject;
     }
   }
+
+  return event;
 }
