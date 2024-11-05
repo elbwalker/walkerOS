@@ -7,7 +7,6 @@ describe('Destination PiwikPro', () => {
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  const event = 'entity action';
   const appId = 'XXX-XXX-XXX-XXX-XXX';
   const url = 'https://your_account_name.piwik.pro/';
 
