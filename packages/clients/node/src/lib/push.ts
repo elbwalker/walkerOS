@@ -3,7 +3,9 @@ import type { NodeClient, NodeDestination } from '../types';
 import {
   assign,
   getGrantedConsent,
+  getMappingValue,
   isSameType,
+  setByPath,
   tryCatchAsync,
 } from '@elbwalker/utils';
 import { isCommand } from './helper';
@@ -93,7 +95,16 @@ export async function pushToDestinations(
       destination.queue = []; // Reset original queue while processing
 
       // Add event to queue stack
-      if (event) queue.push(event);
+      if (event) {
+        // Policy check
+        Object.entries(destination.config.policy || []).forEach(
+          ([key, mapping]) => {
+            setByPath(event, key, getMappingValue(event, mapping, instance));
+          },
+        );
+
+        queue.push(event);
+      }
 
       // Nothing to do here if the queue is empty
       if (!queue.length) return { id, destination, skipped: true };

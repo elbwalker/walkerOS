@@ -345,4 +345,46 @@ describe('Destination', () => {
       }),
     );
   });
+
+  test('policy', async () => {
+    const event = createEvent();
+
+    const policy = {
+      event: {
+        value: 'new name',
+      },
+      'data.string': { value: 'bar' },
+      'nested.0.type': { value: 'kid' },
+      'data.number': {
+        consent: { marketing: true },
+      },
+      'data.new': { value: 'value' },
+      // timing: { value: 'now' }, // @TODO shouldn't be possible
+    };
+
+    const destination: NodeDestination.Destination = {
+      config: { policy },
+      push: async (e) => {
+        mockPush(e);
+      },
+    };
+
+    const { elb } = getClient({
+      destinations: { destination },
+    });
+
+    await elb(event);
+
+    expect(mockPush).toHaveBeenCalledWith({
+      ...event,
+      event: 'new name',
+      data: expect.objectContaining({
+        string: 'bar',
+        number: undefined, // Redacted due to missing consent
+        new: 'value',
+      }),
+      nested: [expect.objectContaining({ type: 'kid' })],
+      // timing: 0, // @TODO should be set to default type
+    });
+  });
 });
