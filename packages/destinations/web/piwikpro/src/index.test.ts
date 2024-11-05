@@ -32,9 +32,9 @@ describe('Destination PiwikPro', () => {
     expect(true).toBeTruthy();
   });
 
-  test.skip('push', () => {
-    elb('walker destination', destination);
-    elb(event);
-    // expect(mockFn).toHaveBeenNthCalledWith(1, event);
-  });
+  // test('push', () => {
+  //   elb('walker destination', destination);
+  //   elb(event);
+  //   // expect(mockFn).toHaveBeenNthCalledWith(1, event);
+  // });
 });
