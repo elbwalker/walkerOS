@@ -34,11 +34,11 @@ export function getByPath(
   return values || defaultValue;
 }
 
-export function setByPath<T extends WalkerOS.AnyObject | WalkerOS.Event>(
-  event: T,
+export function setByPath(
+  event: WalkerOS.Event,
   key: string,
   value: unknown,
-): T {
+): void {
   const keys = key.split('.');
   let current: WalkerOS.AnyObject | WalkerOS.Event = event;
 
@@ -62,6 +62,4 @@ export function setByPath<T extends WalkerOS.AnyObject | WalkerOS.Event>(
       current = current[k] as WalkerOS.AnyObject;
     }
   }
-
-  return event;
 }

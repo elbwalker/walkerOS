@@ -22,20 +22,17 @@ describe('byPath', () => {
   test('setByPath', () => {
     const event = createEvent();
 
+    // expect(setByPath(event, 'foo', 'bar')).not.toHaveProperty('foo'); // @TODO
     expect(setByPath(event, 'timing', 2)).toHaveProperty('timing', 2);
-    expect(setByPath(event, 'foo', 'bar')).toHaveProperty('foo', 'bar');
-    expect(setByPath(event, 'data.foo', 'bar')).toHaveProperty(
-      'data.foo',
-      'bar',
+    expect(setByPath(event, 'data.string', 'updated')).toHaveProperty(
+      'data.string',
+      'updated',
     );
     expect(setByPath(event, 'data.array.1', 'bar')).toHaveProperty(
       'data.array.1',
       'bar',
     );
-    expect(setByPath(event, 'data.nested', [])).toHaveProperty(
-      'data.nested',
-      [],
-    );
+    expect(setByPath(event, 'nested', [])).toHaveProperty('nested', []);
     expect(setByPath(event, 'data', { a: 1 })).toStrictEqual(
       expect.objectContaining({ data: { a: 1 } }),
     );

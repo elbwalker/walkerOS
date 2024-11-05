@@ -14,10 +14,15 @@ export interface Config<Custom = unknown, CustomEvent = unknown> {
   init?: boolean; // If the destination has been initialized by calling the init method
   loadScript?: boolean; // If an additional script to work should be loaded
   mapping?: Mapping.Config<CustomEvent>; // A map to handle events individually
+  policy?: Policy; // Rules for processing events
   queue?: boolean; // Disable processing of previously pushed events
   verbose?: boolean; // Enable verbose logging
   onError?: Handler.Error; // Custom error handler
   onLog?: Handler.Log; // Custom log handler
+}
+
+export interface Policy {
+  [key: string]: Mapping.Value;
 }
 
 export type PushEvent<CustomEvent = unknown> = {
