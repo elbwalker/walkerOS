@@ -1,5 +1,5 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
-import { castToProperty, getByStringDot, getGrantedConsent } from '.';
+import { castToProperty, getByPath, getGrantedConsent } from '.';
 
 export function getEventMapping(
   event: string,
@@ -72,7 +72,7 @@ export function getMappingValue(
       mappingValue = fn(event, mappingItem, instance);
     } else {
       // Get dynamic value from the event
-      mappingValue = getByStringDot(event, key, value);
+      mappingValue = getByPath(event, key, value);
     }
 
     // Validate the value

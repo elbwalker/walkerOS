@@ -78,6 +78,10 @@ describe('mapping', () => {
     expect(getMappingValue(event, { value: 'static' })).toBe('static');
   });
 
+  test('empty', () => {
+    expect(getMappingValue(createEvent(), {})).toBeUndefined();
+  });
+
   test('fn', () => {
     const mockFn = jest.fn((event) => {
       if (event.event === 'page view') return 'foo';

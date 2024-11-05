@@ -7,7 +7,6 @@ describe('Destination PiwikPro', () => {
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  const event = 'entity action';
   const appId = 'XXX-XXX-XXX-XXX-XXX';
   const url = 'https://your_account_name.piwik.pro/';
 
@@ -32,9 +31,9 @@ describe('Destination PiwikPro', () => {
     expect(true).toBeTruthy();
   });
 
-  test.skip('push', () => {
-    elb('walker destination', destination);
-    elb(event);
-    // expect(mockFn).toHaveBeenNthCalledWith(1, event);
-  });
+  // test('push', () => {
+  //   elb('walker destination', destination);
+  //   elb(event);
+  //   // expect(mockFn).toHaveBeenNthCalledWith(1, event);
+  // });
 });

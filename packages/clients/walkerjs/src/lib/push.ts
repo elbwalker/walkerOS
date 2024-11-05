@@ -6,7 +6,9 @@ import {
   Const,
   assign,
   getGrantedConsent,
+  getMappingValue,
   isSameType,
+  setByPath,
   tryCatch,
   useHooks,
 } from '@elbwalker/utils';
@@ -114,8 +116,17 @@ export function pushToDestinations(
   Object.values(destinations).forEach((destination) => {
     destination.queue = destination.queue || [];
 
-    // Add event to queue stack
-    if (event) destination.queue.push(event);
+    if (event) {
+      // Policy check
+      Object.entries(destination.config.policy || []).forEach(
+        ([key, mapping]) => {
+          setByPath(event, key, getMappingValue(event, mapping, instance));
+        },
+      );
+
+      // Add event to queue stack
+      destination.queue.push(event);
+    }
 
     const allowedEvents: WalkerOS.Events = [];
     destination.queue = destination.queue.filter((queuedEvent) => {

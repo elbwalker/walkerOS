@@ -1,6 +1,7 @@
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { WebClient, WebDestination } from '..';
 import { elb, Walkerjs } from '..';
+import { createEvent } from '@elbwalker/utils';
 
 describe('Destination', () => {
   let walkerjs: WebClient.Instance;
@@ -843,5 +844,50 @@ describe('Destination', () => {
         custom: {},
       }),
     );
+  });
+
+  test('policy', () => {
+    const event = createEvent();
+
+    const policy = {
+      event: {
+        value: 'new name',
+      },
+      'data.string': { value: 'bar' },
+      'nested.0.type': { value: 'kid' },
+      'data.number': {
+        consent: { marketing: true },
+      },
+      'data.new': { value: 'value' },
+      // timing: { value: 'now' }, // @TODO shouldn't be possible
+    };
+
+    const destination: WebDestination.Destination = {
+      config: { policy },
+      push: (e) => {
+        mockPush(e);
+      },
+    };
+
+    walkerjs = Walkerjs({
+      run: true,
+      pageview: false,
+      session: false,
+      destinations: { destination },
+    });
+
+    elb(event);
+
+    expect(mockPush).toHaveBeenCalledWith({
+      ...event,
+      event: 'new name',
+      data: expect.objectContaining({
+        string: 'bar',
+        number: undefined, // Redacted due to missing consent
+        new: 'value',
+      }),
+      nested: [expect.objectContaining({ type: 'kid' })],
+      // timing: 0, // @TODO should be set to default type
+    });
   });
 });
