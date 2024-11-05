@@ -1,12 +1,5 @@
 import type { Config, DataLayer } from './types';
 
-declare global {
-  interface Window {
-    [key: string]: DataLayer | undefined;
-  }
-}
-
-// Types
 export * as ConnectorDataLayer from './types';
 
 export function elbDataLayer(config: Config = {}) {

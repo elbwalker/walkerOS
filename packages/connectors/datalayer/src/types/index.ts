@@ -1,6 +1,6 @@
 declare global {
   interface Window {
-    dataLayer: DataLayer | undefined;
+    [key: string]: DataLayer | undefined;
   }
 }
 
