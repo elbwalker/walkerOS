@@ -1,5 +1,26 @@
 # @elbwalker/walker.js
 
+## 3.1.0
+
+### Minor Changes
+
+- 5a2c0b0: Prefer an events consent state
+  [#431](https://github.com/elbwalker/walkerOS/issues/431)
+- 934c5a7: Data Policy [#447]https://(github.com/elbwalker/walkerOS/issues/447)
+
+### Patch Changes
+
+- 3053fd6: Events generator
+  [#438](https://github.com/elbwalker/walkerOS/issues/438)
+- Updated dependencies [51e9841]
+- Updated dependencies [c898b11]
+- Updated dependencies [3053fd6]
+- Updated dependencies [934c5a7]
+- Updated dependencies [c4ed35f]
+- Updated dependencies [5d093a3]
+- Updated dependencies [9fbf78a]
+  - @elbwalker/utils@3.5.0
+
 ## 3.0.4
 
 ### Patch Changes

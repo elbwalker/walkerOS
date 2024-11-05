@@ -1,5 +1,19 @@
 # @elbwalker/types
 
+## 3.1.0
+
+### Minor Changes
+
+- 51e9841: Property type support for JSON
+  [#444](https://github.com/elbwalker/walkerOS/issues/444)
+- 4fd313e: Harmonise push interfaces
+  [#430](https://github.com/elbwalker/walkerOS/issues/430)
+- 934c5a7: Data Policy [#447]https://(github.com/elbwalker/walkerOS/issues/447)
+- c4ed35f: Standardized mapping
+  [#427](https://github.com/elbwalker/walkerOS/issues/427)
+- 9fbf78a: Mapping Options
+  [#443](https://github.com/elbwalker/walkerOS/issues/443)
+
 ## 3.0.1
 
 ### Patch Changes
