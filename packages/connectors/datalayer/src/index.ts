@@ -17,12 +17,16 @@ export function elbDataLayer(push: WalkerOS.Elb, config: Config = {}) {
   const originalPush = dataLayer.push.bind(dataLayer);
 
   dataLayer.push = function (...args: unknown[]) {
-    tryCatch(() => {
+    tryCatch((...args: unknown[]) => {
       // Clone the arguments to avoid mutation
       const clonedArgs = deepClone(args);
 
-      push(...clonedArgs);
-    }, console.error)(...args);
+      // Map the incoming event to a WalkerOS event
+      const event = mapPush(clonedArgs);
+
+      // Hand over to walker instance
+      push(event);
+    })(...args);
 
     // Always call the original push function
     return originalPush(...args);
@@ -46,3 +50,10 @@ function deepClone<T>(obj: T): T {
 }
 
 export default { elbDataLayer };
+
+function mapPush(clonedArgs: unknown[]): WalkerOS.PartialEvent {
+  clonedArgs;
+
+  // @TODO dummy
+  return { event: 'e a' };
+}
