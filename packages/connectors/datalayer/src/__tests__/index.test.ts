@@ -42,9 +42,27 @@ describe('connector dataLayer', () => {
 
   test('push', () => {
     elbDataLayer(mockPush);
-    window.dataLayer!.push('foo');
+    dataLayer!.push('foo');
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith({ event: 'e a' }); // @TODO dummy
+  });
+
+  test('mutation prevention', () => {
+    const originalObj = {};
+    const originalArr: unknown[] = [];
+
+    mockPush.mockImplementation((...args) => {
+      // Attempt to mutate the values
+      args[0]['mutated'] = true;
+      args[1].push('newElement');
+    });
+
+    elbDataLayer(mockPush);
+    dataLayer.push(originalObj, originalArr);
+    expect(dataLayer[0]).toStrictEqual({});
+    expect(dataLayer[1]).toStrictEqual([]);
+    expect(originalObj).toEqual({});
+    expect(originalArr).toEqual([]);
   });
 
   test('error handling', () => {
@@ -55,7 +73,7 @@ describe('connector dataLayer', () => {
     });
 
     elbDataLayer(mockPush);
-    window.dataLayer!.push('foo');
+    dataLayer.push('foo');
     expect(mockPush).toThrow();
     expect(mockOrg).toHaveBeenCalledTimes(1);
   });

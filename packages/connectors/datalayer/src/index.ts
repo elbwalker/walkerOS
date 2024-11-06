@@ -26,7 +26,7 @@ export function elbDataLayer(push: WalkerOS.Elb, config: Config = {}) {
 
       // Hand over to walker instance
       push(event);
-    })(...args);
+    })(args);
 
     // Always call the original push function
     return originalPush(...args);
@@ -51,9 +51,9 @@ function deepClone<T>(obj: T): T {
 
 export default { elbDataLayer };
 
-function mapPush(clonedArgs: unknown[]): WalkerOS.PartialEvent {
+function mapPush(...clonedArgs: unknown[]): WalkerOS.PartialEvent {
   clonedArgs;
 
-  // @TODO dummy
+  // @TODO dummy return
   return { event: 'e a' };
 }
