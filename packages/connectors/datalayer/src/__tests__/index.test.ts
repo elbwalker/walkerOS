@@ -1,5 +1,5 @@
 import type { DataLayer } from '../types';
-import { elbDataLayer } from '..';
+import { connectorDataLayer } from '..';
 
 describe('connector dataLayer', () => {
   const mockPush = jest.fn();
@@ -14,7 +14,7 @@ describe('connector dataLayer', () => {
     window.dataLayer = undefined;
     expect(window.dataLayer).toBeUndefined();
 
-    elbDataLayer(mockPush);
+    connectorDataLayer(mockPush);
     expect(Array.isArray(window.dataLayer)).toBe(true);
     expect(window.dataLayer!.length).toBe(0);
   });
@@ -23,25 +23,25 @@ describe('connector dataLayer', () => {
     const originalPush = dataLayer.push;
     expect(originalPush).toBe(dataLayer.push);
 
-    elbDataLayer(mockPush);
+    connectorDataLayer(mockPush);
     expect(originalPush).not.toBe(dataLayer!.push);
   });
 
   test('config name', () => {
     expect(window.foo).toBeUndefined();
 
-    elbDataLayer(mockPush, { name: 'foo' });
+    connectorDataLayer(mockPush, { name: 'foo' });
     expect(Array.isArray(window.foo)).toBe(true);
   });
 
   test('original arguments', () => {
-    elbDataLayer(mockPush, { name: 'foo' });
+    connectorDataLayer(mockPush, { name: 'foo' });
     dataLayer.push('foo');
     expect(dataLayer).toEqual(['foo']);
   });
 
   test('push', () => {
-    elbDataLayer(mockPush);
+    connectorDataLayer(mockPush);
     dataLayer!.push('foo');
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith({ event: 'e a' }); // @TODO dummy
@@ -57,7 +57,7 @@ describe('connector dataLayer', () => {
       args[1].push('newElement');
     });
 
-    elbDataLayer(mockPush);
+    connectorDataLayer(mockPush);
     dataLayer.push(originalObj, originalArr);
     expect(dataLayer[0]).toStrictEqual({});
     expect(dataLayer[1]).toStrictEqual([]);
@@ -72,7 +72,7 @@ describe('connector dataLayer', () => {
       throw new Error();
     });
 
-    elbDataLayer(mockPush);
+    connectorDataLayer(mockPush);
     dataLayer.push('foo');
     expect(mockPush).toThrow();
     expect(mockOrg).toHaveBeenCalledTimes(1);

@@ -4,7 +4,7 @@ import { interceptPush } from './intercept';
 
 export * as ConnectorDataLayer from './types';
 
-export function elbDataLayer(push: WalkerOS.Elb, config: Config = {}) {
+export function connectorDataLayer(push: WalkerOS.Elb, config: Config = {}) {
   const { name = 'dataLayer' } = config;
   const key = name as keyof Window;
 
@@ -20,4 +20,4 @@ export function elbDataLayer(push: WalkerOS.Elb, config: Config = {}) {
   dataLayer.push = interceptPush(originalPush, push);
 }
 
-export default { elbDataLayer };
+export default connectorDataLayer;
