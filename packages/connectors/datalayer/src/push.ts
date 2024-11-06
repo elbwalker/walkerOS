@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { clone, tryCatch } from '@elbwalker/utils';
-import { mapPush } from './mapping';
+import { dataLayerToWalkerOS } from './mapping';
 
 export function intercept<T extends (...args: unknown[]) => ReturnType<T>>(
   orgPush: T,
@@ -20,7 +20,7 @@ export function push(elb: WalkerOS.Elb, ...args: unknown[]) {
     const clonedArgs = clone(args);
 
     // Map the incoming event to a WalkerOS event
-    const event = mapPush(clonedArgs);
+    const event = dataLayerToWalkerOS(clonedArgs);
 
     // Hand over to walker instance
     elb(event);
