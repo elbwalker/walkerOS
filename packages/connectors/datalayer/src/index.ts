@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Config, DataLayer } from './types';
-import { interceptPush } from './intercept';
+import { intercept } from './push';
 
 export * as ConnectorDataLayer from './types';
 
@@ -17,7 +17,7 @@ export function connectorDataLayer(push: WalkerOS.Elb, config: Config = {}) {
   const originalPush = dataLayer.push.bind(dataLayer);
 
   // Override the original push function to intercept incoming events
-  dataLayer.push = interceptPush(originalPush, push);
+  dataLayer.push = intercept(originalPush, push);
 }
 
 export default connectorDataLayer;
