@@ -2,6 +2,7 @@ export * from './anonymizeIP';
 export * from './assign';
 export * from './byPath';
 export * from './castValue';
+export * from './clone';
 export * from './consent';
 export * from './constants';
 export * from './eventGenerator';

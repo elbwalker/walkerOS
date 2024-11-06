@@ -104,6 +104,23 @@ The function simplifies the process of data type conversion, ensuring that
 string inputs are appropriately processed for further use in various logic
 flows.
 
+### clone
+
+`clone<T>(org: T): T` is designed for deep cloning by making a recursive copy of
+the `org` input (e.g. object or array), preserving the structure and contents of
+the original object. `clone` creates an exact, deep copy of an object or array
+that's independent of the original with no shared references to prevent
+mutations.
+
+```js
+const org = { foo: true, b: ['foo'] };
+const cloned = clone(org);
+org.foo = false;
+org.b.push('bar');
+// org: { foo: false, b: ['foo', 'bar'] }
+// cloned: { foo: true, b: ['foo'] }
+```
+
 ### getId
 
 `getId(length=6): string` function generates a random alphanumeric string of a
