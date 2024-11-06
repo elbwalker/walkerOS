@@ -1,15 +1,17 @@
+import type { WalkerOS } from '@elbwalker/types';
 import type { Config, DataLayer } from './types';
 import { tryCatch } from '@elbwalker/utils';
 
 export * as ConnectorDataLayer from './types';
 
-export function elbDataLayer(config: Config = {}) {
+export function elbDataLayer(push: WalkerOS.Elb, config: Config = {}) {
   const { name = 'dataLayer' } = config;
   const key = name as keyof Window;
 
-  // Initialize or get the dataLayer
-  const dataLayer = (window[key] as DataLayer | undefined) || [];
-  (window[key] as DataLayer) = dataLayer;
+  // Ensure the dataLayer exists
+  if (!window[key]) (window[key] as unknown) = [];
+
+  const dataLayer = window[key] as DataLayer;
 
   // Store the original push function to preserve existing functionality
   const originalPush = dataLayer.push.bind(dataLayer);
@@ -19,8 +21,8 @@ export function elbDataLayer(config: Config = {}) {
       // Clone the arguments to avoid mutation
       const clonedArgs = deepClone(args);
 
-      console.log('Intercepted event:', clonedArgs);
-    }, console.error);
+      push(...clonedArgs);
+    }, console.error)(...args);
 
     // Always call the original push function
     return originalPush(...args);
@@ -28,7 +30,8 @@ export function elbDataLayer(config: Config = {}) {
 }
 
 function deepClone<T>(obj: T): T {
-  if (obj === null || typeof obj !== 'object') return obj;
+  if (typeof obj !== 'object' || obj === null) return obj;
+
   if (Array.isArray(obj))
     return obj.map((item) => deepClone(item)) as unknown as T;
 
@@ -38,6 +41,7 @@ function deepClone<T>(obj: T): T {
       clonedObj[key] = deepClone(obj[key]);
     }
   }
+
   return clonedObj;
 }
 
