@@ -47,6 +47,14 @@ describe('connector dataLayer', () => {
     expect(mockPush).toHaveBeenCalledWith({ event: 'e a' }); // @TODO dummy
   });
 
+  test('existing events', () => {
+    dataLayer.push({ event: 'add_to_cart' });
+    dataLayer.push({ event: 'purchase' });
+    connectorDataLayer(mockPush);
+
+    expect(mockPush).toHaveBeenCalledTimes(2);
+  });
+
   test('mutation prevention', () => {
     const originalObj = {};
     const originalArr: unknown[] = [];
