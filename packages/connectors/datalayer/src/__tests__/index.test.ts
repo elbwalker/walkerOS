@@ -1,3 +1,4 @@
+/* eslint-disable prefer-rest-params */
 import type { DataLayer } from '../types';
 import { connectorDataLayer } from '..';
 
@@ -9,6 +10,10 @@ describe('connector dataLayer', () => {
     window.dataLayer = [];
     dataLayer = window.dataLayer;
   });
+
+  const gtag: Gtag.Gtag = function () {
+    dataLayer.push(arguments);
+  };
 
   test('init new', () => {
     window.dataLayer = undefined;
@@ -27,12 +32,12 @@ describe('connector dataLayer', () => {
     expect(originalPush).not.toBe(dataLayer!.push);
   });
 
-  test.only('config dataLayer', () => {
+  test('config dataLayer', () => {
     const dataLayer: DataLayer = [];
 
     connectorDataLayer(mockPush, { dataLayer, name: 'foo' });
     expect(window.foo).toBeUndefined(); // Prefer dataLayer over name
-    dataLayer.push('foo');
+    dataLayer.push({ event: 'foo' });
     expect(mockPush).toHaveBeenCalledTimes(1);
   });
 
@@ -51,7 +56,7 @@ describe('connector dataLayer', () => {
 
   test('push', () => {
     connectorDataLayer(mockPush);
-    dataLayer!.push('foo');
+    dataLayer!.push({ event: 'foo' });
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith({ event: 'e a' }); // @TODO dummy
   });
@@ -62,6 +67,30 @@ describe('connector dataLayer', () => {
     connectorDataLayer(mockPush);
 
     expect(mockPush).toHaveBeenCalledTimes(2);
+  });
+
+  test('arguments', () => {
+    dataLayer = [
+      {
+        'gtm.start': 1730909886667,
+        event: 'gtm.js',
+        'gtm.uniqueEventId': 1,
+      },
+      (function (...args: unknown[]) {
+        return arguments || args;
+      })('event', 'arg', {
+        foo: 'bar',
+      }),
+    ];
+
+    connectorDataLayer(mockPush, { dataLayer });
+
+    gtag('event', 'another_arg', {
+      bar: 'baz',
+    });
+
+    expect(mockPush).toHaveBeenCalledTimes(3);
+    // @TODO check how mockPush has been called
   });
 
   test('mutation prevention', () => {
