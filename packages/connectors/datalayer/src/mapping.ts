@@ -10,8 +10,10 @@ export function dataLayerToWalkerOS(
   return { event: 'e a' };
 }
 
-export function gtagToObj(args: unknown[]): WalkerOS.AnyObject | void {
-  const [command, arg, params] = args;
+export function gtagToObj(args: WalkerOS.AnyObject): WalkerOS.AnyObject | void {
+  const command = args[0];
+  const value = args[1];
+  const params = args[2];
 
   if (typeof command !== 'string') return;
 
@@ -20,7 +22,7 @@ export function gtagToObj(args: unknown[]): WalkerOS.AnyObject | void {
 
   switch (command) {
     case 'event':
-      if (typeof arg === 'string') event = arg;
+      if (typeof value === 'string') event = value;
       if (isObject(params)) data = params;
 
       break;
@@ -28,6 +30,8 @@ export function gtagToObj(args: unknown[]): WalkerOS.AnyObject | void {
       // Unknown command
       return;
   }
+
+  if (!event) return;
 
   return { event, ...data };
 }

@@ -1,14 +1,20 @@
+import { clone } from '@elbwalker/utils';
 import { dataLayerToWalkerOS, gtagToObj } from '../mapping';
+import { WalkerOS } from '@elbwalker/types';
 
 describe('mapping', () => {
   function gtag(...args: unknown[]) {
-    return args;
+    // eslint-disable-next-line prefer-rest-params
+    return clone(arguments as unknown as WalkerOS.AnyObject) || args;
   }
 
   beforeEach(() => {});
 
   test('gtagToObj', () => {
-    expect(gtagToObj(gtag('e'))).toBe(void 0);
+    expect(gtagToObj(gtag())).toBeUndefined();
+    expect(gtagToObj(gtag('e'))).toBeUndefined();
+    expect(gtagToObj(gtag('event'))).toBeUndefined();
+    expect(gtagToObj(gtag('event', 'foo'))).toStrictEqual({ event: 'foo' });
   });
 
   test('dataLayerToWalkerOS', () => {

@@ -2,7 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { DataLayer } from './types';
 import { clone, tryCatch } from '@elbwalker/utils';
 import { dataLayerToWalkerOS, gtagToObj } from './mapping';
-import { isArguments, isValidEvent } from './helper';
+import { isValidEvent, wasArguments } from './helper';
 
 export function intercept(
   dataLayer: DataLayer,
@@ -23,8 +23,10 @@ export function push(elb: WalkerOS.Elb, ...args: unknown[]) {
     // Clone the arguments to avoid mutation
     const clonedArgs = clone(args);
 
-    // Get the pushed items and eventually convert gtag to regular dataLayer pushes
-    const items = isArguments(args[0]) ? [gtagToObj(clonedArgs)] : clonedArgs;
+    // Get the pushed items
+    const items = wasArguments(clonedArgs[0])
+      ? [gtagToObj(clonedArgs[0])] // Convert gtag to dataLayer
+      : clonedArgs; // Regular dataLayer push
 
     const events = items.filter(isValidEvent);
 
@@ -35,5 +37,5 @@ export function push(elb: WalkerOS.Elb, ...args: unknown[]) {
       // Hand over to walker instance
       if (event) elb(event);
     });
-  })(...args);
+  }, console.error)(...args);
 }

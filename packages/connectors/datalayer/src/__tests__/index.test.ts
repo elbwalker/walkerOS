@@ -69,7 +69,7 @@ describe('connector dataLayer', () => {
     expect(mockPush).toHaveBeenCalledTimes(2);
   });
 
-  test.skip('arguments', () => {
+  test('arguments', () => {
     dataLayer = [
       {
         'gtm.start': 1730909886667,
