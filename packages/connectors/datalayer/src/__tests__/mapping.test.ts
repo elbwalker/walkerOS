@@ -4,6 +4,8 @@ describe('mapping', () => {
   beforeEach(() => {});
 
   test('init new', () => {
-    expect(dataLayerToWalkerOS()).toStrictEqual({ event: 'e a' });
+    expect(dataLayerToWalkerOS({ event: 'e a' })).toStrictEqual({
+      event: 'e a',
+    });
   });
 });
