@@ -2,6 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { DataLayer } from './types';
 import { clone, tryCatch } from '@elbwalker/utils';
 import { dataLayerToWalkerOS, gtagToObj } from './mapping';
+import { isArguments, isValidEvent } from './helper';
 
 export function intercept(
   dataLayer: DataLayer,
@@ -35,17 +36,4 @@ export function push(elb: WalkerOS.Elb, ...args: unknown[]) {
       if (event) elb(event);
     });
   })(...args);
-}
-
-function isArguments(value: unknown): value is IArguments {
-  return typeof value === 'object' && value !== null && 'callee' in value;
-}
-
-function isValidEvent(value: unknown): value is WalkerOS.AnyObject {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    !Array.isArray(value) &&
-    'event' in value
-  );
 }
