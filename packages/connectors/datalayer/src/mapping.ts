@@ -1,21 +1,19 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { isObject } from './helper';
 
-export function dataLayerToWalkerOS(
+export function objToWalkerOS(
   event: WalkerOS.AnyObject,
 ): WalkerOS.PartialEvent | void {
-  event;
+  if (typeof event.event !== 'string') return;
 
-  // @TODO dummy return
-  return { event: 'e a' };
+  // @TODO other values
+  return { event: event.event };
 }
 
 export function gtagToObj(args: WalkerOS.AnyObject): WalkerOS.AnyObject | void {
   const command = args[0];
   const value = args[1];
   const params = args[2];
-
-  if (typeof command !== 'string') return;
 
   let event: string | undefined;
   let data: WalkerOS.AnyObject = {};
@@ -31,7 +29,5 @@ export function gtagToObj(args: WalkerOS.AnyObject): WalkerOS.AnyObject | void {
       return;
   }
 
-  if (!event) return;
-
-  return { event, ...data };
+  return { ...data, event };
 }

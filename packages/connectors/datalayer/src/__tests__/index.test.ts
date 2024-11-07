@@ -58,7 +58,7 @@ describe('connector dataLayer', () => {
     connectorDataLayer(mockPush);
     dataLayer!.push({ event: 'foo' });
     expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith({ event: 'e a' }); // @TODO dummy
+    expect(mockPush).toHaveBeenCalledWith({ event: 'foo' });
   });
 
   test('existing events', () => {
@@ -79,10 +79,12 @@ describe('connector dataLayer', () => {
       (function (...args: unknown[]) {
         return arguments || args;
       })('event', 'arg', {
-        // @TODO arguments not supported yet
+        // @TODO params not supported yet
         foo: 'bar',
       }),
     ];
+
+    // mockPush.mockImplementation(console.log);
 
     connectorDataLayer(mockPush, { dataLayer });
 
@@ -91,7 +93,9 @@ describe('connector dataLayer', () => {
     });
 
     expect(mockPush).toHaveBeenCalledTimes(3);
-    // @TODO check how mockPush has been called
+    expect(mockPush).toHaveBeenNthCalledWith(1, { event: 'gtm.js' });
+    expect(mockPush).toHaveBeenNthCalledWith(2, { event: 'arg' });
+    expect(mockPush).toHaveBeenNthCalledWith(3, { event: 'another_arg' });
   });
 
   test('mutation prevention', () => {

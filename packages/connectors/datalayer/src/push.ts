@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { DataLayer } from './types';
 import { clone, tryCatch } from '@elbwalker/utils';
-import { dataLayerToWalkerOS, gtagToObj } from './mapping';
+import { objToWalkerOS, gtagToObj } from './mapping';
 import { isValidEvent, wasArguments } from './helper';
 
 export function intercept(
@@ -32,7 +32,7 @@ export function push(elb: WalkerOS.Elb, ...args: unknown[]) {
 
     events.forEach((obj) => {
       // Map the incoming event to a WalkerOS event
-      const event = dataLayerToWalkerOS(obj);
+      const event = objToWalkerOS(obj);
 
       // Hand over to walker instance
       if (event) elb(event);
