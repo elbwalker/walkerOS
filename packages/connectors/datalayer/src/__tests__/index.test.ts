@@ -27,6 +27,15 @@ describe('connector dataLayer', () => {
     expect(originalPush).not.toBe(dataLayer!.push);
   });
 
+  test.only('config dataLayer', () => {
+    const dataLayer: DataLayer = [];
+
+    connectorDataLayer(mockPush, { dataLayer, name: 'foo' });
+    expect(window.foo).toBeUndefined(); // Prefer dataLayer over name
+    dataLayer.push('foo');
+    expect(mockPush).toHaveBeenCalledTimes(1);
+  });
+
   test('config name', () => {
     expect(window.foo).toBeUndefined();
 

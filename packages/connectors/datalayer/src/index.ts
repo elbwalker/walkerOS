@@ -5,19 +5,20 @@ import { intercept, push } from './push';
 export * as ConnectorDataLayer from './types';
 
 export function connectorDataLayer(elb: WalkerOS.Elb, config: Config = {}) {
-  const { name = 'dataLayer' } = config;
-  const key = name as keyof Window;
+  let { dataLayer } = config;
 
-  // Ensure the dataLayer exists
-  if (!window[key]) (window[key] as unknown) = [];
+  if (!dataLayer) {
+    const { name = 'dataLayer' } = config;
+    const key = name as keyof Window;
 
-  const dataLayer = window[key] as DataLayer;
+    // Ensure the dataLayer exists
+    if (!window[key]) (window[key] as unknown) = [];
 
-  // Store the original push function to preserve existing functionality
-  const dataLayerPush = dataLayer.push.bind(dataLayer);
+    dataLayer = window[key] as DataLayer;
+  }
 
   // Override the original push function to intercept incoming events
-  dataLayer.push = intercept(dataLayerPush, elb);
+  intercept(dataLayer, elb);
 
   // Process already existing events in the dataLayer
   dataLayer.forEach((item) => push(elb, item));
