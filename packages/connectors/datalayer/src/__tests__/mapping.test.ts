@@ -45,22 +45,22 @@ describe('mapping', () => {
   });
 
   test('gtagToObj config', () => {
-    expect(gtagToObj(gtag('config', 'GA_MEASUREMENT_ID'))).toStrictEqual({
-      event: 'config GA_MEASUREMENT_ID',
+    expect(gtagToObj(gtag('config', 'GA-XXXXXXXXXX'))).toStrictEqual({
+      event: 'config GA-XXXXXXXXXX',
       data: {},
     });
 
     expect(
-      gtagToObj(gtag('config', 'GA_MEASUREMENT_ID', { send_page_view: false })),
+      gtagToObj(gtag('config', 'GA-XXXXXXXXXX', { send_page_view: false })),
     ).toStrictEqual({
-      event: 'config GA_MEASUREMENT_ID',
+      event: 'config GA-XXXXXXXXXX',
       data: { send_page_view: false },
     });
 
     expect(
-      gtagToObj(gtag('config', 'GA_MEASUREMENT_ID', 'non-object')),
+      gtagToObj(gtag('config', 'GA-XXXXXXXXXX', 'non-object')),
     ).toStrictEqual({
-      event: 'config GA_MEASUREMENT_ID',
+      event: 'config GA-XXXXXXXXXX',
       data: {},
     });
   });

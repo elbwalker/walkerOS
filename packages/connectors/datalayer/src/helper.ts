@@ -8,10 +8,6 @@ export function isString(value: unknown): value is string {
   return typeof value === 'string';
 }
 
-export function isValidEvent(value: unknown): value is WalkerOS.AnyObject {
-  return isObject(value) && 'event' in value;
-}
-
 export function wasArguments(obj: unknown): obj is WalkerOS.AnyObject {
   return (
     isObject(obj) &&

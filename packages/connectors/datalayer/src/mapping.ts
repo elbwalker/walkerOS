@@ -1,13 +1,10 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { convertConsentStates, isObject, isString } from './helper';
 
-export function objToEvent(
-  event: WalkerOS.AnyObject,
-): WalkerOS.PartialEvent | void {
-  if (typeof event.event !== 'string') return;
+export function objToEvent(obj: unknown): WalkerOS.PartialEvent | void {
+  if (!(isObject(obj) && isString(obj.event))) return;
 
-  // @TODO other values
-  return { event: event.event };
+  return { ...obj };
 }
 
 // https://developers.google.com/tag-platform/gtagjs/reference
