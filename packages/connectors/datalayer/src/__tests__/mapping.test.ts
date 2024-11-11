@@ -16,50 +16,73 @@ describe('mapping', () => {
   });
 
   test('gtagToObj event', () => {
-    expect(gtagToObj(gtag('event'))).toStrictEqual({ event: undefined });
-    expect(gtagToObj(gtag('event', 'foo'))).toStrictEqual({ event: 'foo' });
+    expect(gtagToObj(gtag('event'))).toStrictEqual({
+      event: undefined,
+      data: {},
+    });
+    expect(gtagToObj(gtag('event', 'foo'))).toStrictEqual({
+      event: 'foo',
+      data: {},
+    });
     expect(gtagToObj(gtag('event', 'foo', { foo: 'bar' }))).toStrictEqual({
       event: 'foo',
-      foo: 'bar',
+      data: { foo: 'bar' },
     });
     expect(gtagToObj(gtag('event', 'foo', { count: 5 }))).toStrictEqual({
       event: 'foo',
-      count: 5,
+      data: { count: 5 },
     });
     expect(
       gtagToObj(gtag('event', 'foo', { foo: 'bar', count: 3 })),
     ).toStrictEqual({
       event: 'foo',
-      foo: 'bar',
-      count: 3,
+      data: { foo: 'bar', count: 3 },
     });
     expect(gtagToObj(gtag('event', 'foo', 'not-an-object'))).toStrictEqual({
       event: 'foo',
+      data: {},
     });
   });
 
-  test.skip('gtagToObj consent', () => {
+  test('gtagToObj consent', () => {
+    expect(
+      gtagToObj(
+        gtag('consent', 'default', {
+          ad_storage: true,
+          analytics_storage: false,
+          wait_for_update: 500,
+        }),
+      ),
+    ).toStrictEqual({
+      event: 'consent default',
+      data: {
+        ad_storage: true,
+        analytics_storage: false,
+        wait_for_update: 500,
+      },
+    });
+
     expect(
       gtagToObj(gtag('consent', 'update', { ad_storage: 'granted' })),
     ).toStrictEqual({
-      event: 'consent',
-      consentArg: 'update',
-      consentParams: { ad_storage: 'granted' },
+      event: 'consent update',
+      data: { ad_storage: true },
     });
 
     expect(
       gtagToObj(gtag('consent', 'update', { analytics_storage: 'denied' })),
     ).toStrictEqual({
-      event: 'consent',
-      consentArg: 'update',
-      consentParams: { analytics_storage: 'denied' },
+      event: 'consent update',
+      data: { analytics_storage: false },
     });
 
-    // Invalid consent params, should return undefined or handle gracefully
-    expect(
-      gtagToObj(gtag('consent', 'update', 'invalid-param')),
-    ).toBeUndefined();
-    expect(gtagToObj(gtag('consent', 'update'))).toBeUndefined();
+    expect(gtagToObj(gtag('consent', 'update', 'invalid-param'))).toStrictEqual(
+      { event: 'consent update', data: {} },
+    );
+    expect(gtagToObj(gtag('consent', 'update'))).toStrictEqual({
+      event: 'consent update',
+      data: {},
+    });
   });
 
   test.skip('gtagToObj config', () => {

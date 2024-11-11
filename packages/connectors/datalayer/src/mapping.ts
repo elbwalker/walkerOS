@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import { isObject } from './helper';
+import { convertConsentStates, isObject, isString } from './helper';
 
 export function objToEvent(
   event: WalkerOS.AnyObject,
@@ -20,14 +20,21 @@ export function gtagToObj(args: WalkerOS.AnyObject): WalkerOS.AnyObject | void {
 
   switch (command) {
     case 'event':
-      if (typeof value === 'string') event = value;
-      if (isObject(params)) data = params;
+      if (!isString(value)) break;
+      event = value;
 
+      if (isObject(params)) data = params;
+      break;
+    case 'consent':
+      if (!isString(value)) break;
+      event = `${command} ${value}`;
+
+      if (isObject(params)) data = convertConsentStates(params);
       break;
     default:
       // Unknown command
       return;
   }
 
-  return { ...data, event };
+  return { data, event };
 }
