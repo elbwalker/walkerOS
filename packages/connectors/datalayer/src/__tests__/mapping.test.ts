@@ -44,6 +44,27 @@ describe('mapping', () => {
     });
   });
 
+  test('gtagToObj config', () => {
+    expect(gtagToObj(gtag('config', 'GA_MEASUREMENT_ID'))).toStrictEqual({
+      event: 'config GA_MEASUREMENT_ID',
+      data: {},
+    });
+
+    expect(
+      gtagToObj(gtag('config', 'GA_MEASUREMENT_ID', { send_page_view: false })),
+    ).toStrictEqual({
+      event: 'config GA_MEASUREMENT_ID',
+      data: { send_page_view: false },
+    });
+
+    expect(
+      gtagToObj(gtag('config', 'GA_MEASUREMENT_ID', 'non-object')),
+    ).toStrictEqual({
+      event: 'config GA_MEASUREMENT_ID',
+      data: {},
+    });
+  });
+
   test('gtagToObj consent', () => {
     expect(
       gtagToObj(
@@ -85,47 +106,30 @@ describe('mapping', () => {
     });
   });
 
-  test.skip('gtagToObj config', () => {
-    expect(
-      gtagToObj(gtag('config', 'GA_MEASUREMENT_ID', { page_path: '/home' })),
-    ).toStrictEqual({
-      event: 'config',
-      targetId: 'GA_MEASUREMENT_ID',
-      params: { page_path: '/home' },
-    });
-
-    expect(gtagToObj(gtag('config', 'GA_MEASUREMENT_ID'))).toStrictEqual({
-      event: 'config',
-      targetId: 'GA_MEASUREMENT_ID',
-    });
-
-    // Invalid config with non-object params
-    expect(
-      gtagToObj(gtag('config', 'GA_MEASUREMENT_ID', 'non-object')),
-    ).toStrictEqual({
-      event: 'config',
-      targetId: 'GA_MEASUREMENT_ID',
-    });
+  test('gtagToObj get', () => {
+    expect(gtagToObj(gtag('get', 'campaign'))).toBeUndefined();
   });
 
-  test.skip('gtagToObj set', () => {
+  test('gtagToObj set', () => {
     expect(
-      gtagToObj(gtag('set', 'user_properties', { favorite_color: 'blue' })),
+      gtagToObj(
+        gtag('set', 'campaign', {
+          id: 'abc',
+        }),
+      ),
     ).toStrictEqual({
-      event: 'set',
-      targetId: 'user_properties',
-      params: { favorite_color: 'blue' },
+      event: 'set campaign',
+      data: { id: 'abc' },
     });
 
     expect(gtagToObj(gtag('set', { currency: 'USD' }))).toStrictEqual({
-      event: 'set',
-      params: { currency: 'USD' },
+      event: undefined,
+      data: {},
     });
 
-    // Invalid set command with non-object params
     expect(gtagToObj(gtag('set', 'user_properties', 'invalid'))).toStrictEqual({
-      event: 'set',
-      targetId: 'user_properties',
+      event: 'set user_properties',
+      data: {},
     });
   });
 

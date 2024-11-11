@@ -10,6 +10,7 @@ export function objToEvent(
   return { event: event.event };
 }
 
+// https://developers.google.com/tag-platform/gtagjs/reference
 export function gtagToObj(args: WalkerOS.AnyObject): WalkerOS.AnyObject | void {
   const command = args[0];
   const value = args[1];
@@ -25,14 +26,26 @@ export function gtagToObj(args: WalkerOS.AnyObject): WalkerOS.AnyObject | void {
 
       if (isObject(params)) data = params;
       break;
+    case 'config':
+      if (!isString(value)) break;
+      event = `${command} ${value}`;
+
+      if (isObject(params)) data = convertConsentStates(params);
+      break;
     case 'consent':
       if (!isString(value)) break;
       event = `${command} ${value}`;
 
       if (isObject(params)) data = convertConsentStates(params);
       break;
+    case 'set':
+      if (!isString(value)) break;
+      event = `${command} ${value}`;
+
+      if (isObject(params)) data = params;
+      break;
     default:
-      // Unknown command
+      // Ignore command (like get)
       return;
   }
 
