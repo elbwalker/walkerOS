@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { isObject } from './helper';
 
-export function objToWalkerOS(
+export function objToEvent(
   event: WalkerOS.AnyObject,
 ): WalkerOS.PartialEvent | void {
   if (typeof event.event !== 'string') return;
