@@ -58,7 +58,10 @@ describe('connector dataLayer', () => {
     connectorDataLayer(mockPush);
     dataLayer!.push({ event: 'foo' });
     expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith({ event: 'foo', data: {} });
+    expect(mockPush).toHaveBeenCalledWith({
+      event: 'foo',
+      data: { id: expect.any(String) },
+    });
   });
 
   test('existing events', () => {
@@ -95,15 +98,19 @@ describe('connector dataLayer', () => {
     expect(mockPush).toHaveBeenCalledTimes(3);
     expect(mockPush).toHaveBeenNthCalledWith(1, {
       event: 'gtm.js',
-      data: { 'gtm.start': expect.any(Number), 'gtm.uniqueEventId': 1 },
+      data: {
+        id: expect.any(String),
+        'gtm.start': expect.any(Number),
+        'gtm.uniqueEventId': 1,
+      },
     });
     expect(mockPush).toHaveBeenNthCalledWith(2, {
       event: 'arg',
-      data: { foo: 'bar' },
+      data: { id: expect.any(String), foo: 'bar' },
     });
     expect(mockPush).toHaveBeenNthCalledWith(3, {
       event: 'another_arg',
-      data: { bar: 'baz' },
+      data: { id: expect.any(String), bar: 'baz' },
     });
   });
 

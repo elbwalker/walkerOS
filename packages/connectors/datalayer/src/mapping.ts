@@ -1,4 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
+import { getId } from '@elbwalker/utils';
 import { convertConsentStates, isObject, isString } from './helper';
 
 export function objToEvent(obj: unknown): WalkerOS.PartialEvent | void {
@@ -7,7 +8,12 @@ export function objToEvent(obj: unknown): WalkerOS.PartialEvent | void {
   const event = obj.event;
   delete obj.event;
 
-  return { event, data: obj as WalkerOS.Properties };
+  const data = obj as WalkerOS.Properties;
+
+  // Add an id for duplicate detection
+  if (!data.id) data.id = getId();
+
+  return { event, data };
 }
 
 // https://developers.google.com/tag-platform/gtagjs/reference
