@@ -60,7 +60,7 @@ describe('connector dataLayer', () => {
 
   test('push', () => {
     connectorDataLayer({ elb });
-    dataLayer!.push({ event: 'foo' });
+    dataLayer.push({ event: 'foo' });
     expect(elb).toHaveBeenCalledTimes(1);
     expect(elb).toHaveBeenCalledWith({
       event: 'foo',
@@ -88,7 +88,6 @@ describe('connector dataLayer', () => {
       (function (...args: unknown[]) {
         return arguments || args;
       })('event', 'arg', {
-        // @TODO params not supported yet
         foo: 'bar',
       }),
     ];

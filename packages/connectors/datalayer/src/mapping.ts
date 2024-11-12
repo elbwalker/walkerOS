@@ -1,18 +1,25 @@
 import type { WalkerOS } from '@elbwalker/types';
+import { getId } from '@elbwalker/utils';
 import { convertConsentStates, isObject, isString } from './helper';
 
-export function objToEvent(obj: unknown): WalkerOS.PartialEvent | void {
+export function objToEvent(
+  obj: unknown,
+): (WalkerOS.PartialEvent & { id: string }) | void {
   if (!(isObject(obj) && isString(obj.event))) return;
 
+  // event name
   const event = obj.event;
   delete obj.event;
 
-  const id = obj.id ? String(obj.id) : undefined;
+  // id for duplicate detection
+  const id = obj.id ? String(obj.id) : getId();
   delete obj.id;
 
   const data = obj as WalkerOS.Properties;
 
-  return { event, id, data };
+  const source = { type: 'dataLayer' } as WalkerOS.Source;
+
+  return { event, id, data, source };
 }
 
 // https://developers.google.com/tag-platform/gtagjs/reference

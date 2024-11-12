@@ -139,8 +139,9 @@ describe('mapping', () => {
   test('dataLayerToWalkerOS', () => {
     expect(objToEvent({ event: 'e a' })).toStrictEqual({
       event: 'e a',
-      id: undefined,
       data: {},
+      id: expect.any(String),
+      source: { type: 'dataLayer' },
     });
   });
 });
