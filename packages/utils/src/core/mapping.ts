@@ -44,7 +44,7 @@ export function getEventMapping(
 }
 
 export function getMappingValue(
-  event: WalkerOS.Event,
+  event: WalkerOS.PartialEvent,
   mapping: Mapping.Value,
   instance?: WalkerOS.Instance,
 ): WalkerOS.Property | undefined {
