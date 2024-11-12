@@ -15,21 +15,25 @@ export function intercept(dataLayer: DataLayer, elb: WalkerOS.Elb) {
 }
 
 export function push(elb: WalkerOS.Elb, ...args: unknown[]) {
-  return tryCatch((...args: unknown[]) => {
-    // Clone the arguments to avoid mutation
-    const clonedArgs = clone(args);
+  return tryCatch(
+    (...args: unknown[]) => {
+      // Clone the arguments to avoid mutation
+      const clonedArgs = clone(args);
 
-    // Get the pushed items
-    const items = wasArguments(clonedArgs[0])
-      ? [gtagToObj(clonedArgs[0])] // Convert gtag to dataLayer
-      : clonedArgs; // Regular dataLayer push
+      // Get the pushed items
+      const items = wasArguments(clonedArgs[0])
+        ? [gtagToObj(clonedArgs[0])] // Convert gtag to dataLayer
+        : clonedArgs; // Regular dataLayer push
 
-    items.forEach((obj) => {
-      // Map the incoming event to a WalkerOS event
-      const event = objToEvent(obj);
+      items.forEach((obj) => {
+        // Map the incoming event to a WalkerOS event
+        const event = objToEvent(obj);
 
-      // Hand over to walker instance
-      if (event) elb(event);
-    });
-  }, console.error)(...args);
+        // Hand over to walker instance
+        if (event) elb(event);
+      });
+    },
+    // eslint-disable-next-line no-console
+    console.error,
+  )(...args);
 }
