@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Config } from './types';
-import { getId } from '@elbwalker/utils';
+import { getId, getMappingValue } from '@elbwalker/utils';
 import { convertConsentStates, isObject, isString } from './helper';
 
 export function objToEvent(
@@ -9,13 +9,25 @@ export function objToEvent(
 ): (WalkerOS.PartialEvent & { id: string }) | void {
   if (!(isObject(obj) && isString(obj.event))) return;
 
+  const eventName = obj.event;
+  const mapping = config.mapping ? config.mapping[eventName] : {};
+
+  // Set default values first
+
   // event name
-  const event = `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
+  let event = `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
   delete obj.event;
 
   // id for duplicate detection
   const id = obj.id ? String(obj.id) : getId();
   delete obj.id;
+
+  if (mapping) {
+    if (mapping.event) {
+      const mappedName = getMappingValue(obj, mapping.event);
+      if (mappedName) event = String(mappedName);
+    }
+  }
 
   const data = obj as WalkerOS.Properties;
 

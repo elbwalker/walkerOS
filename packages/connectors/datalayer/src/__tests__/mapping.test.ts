@@ -1,8 +1,11 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { clone } from '@elbwalker/utils';
 import { gtagToObj } from '../mapping';
+import { connectorDataLayer } from '..';
 
 describe('mapping', () => {
+  const elb = jest.fn(); //.mockImplementation(console.log);
+
   function gtag(...args: unknown[]) {
     // eslint-disable-next-line prefer-rest-params
     return clone(arguments as unknown as WalkerOS.AnyObject) || args;
@@ -134,5 +137,33 @@ describe('mapping', () => {
     expect(gtagToObj(gtag('set', 'user_properties', 'invalid'))).toStrictEqual({
       event: 'set user_properties',
     });
+  });
+
+  test('mapping', () => {
+    const { dataLayer } = connectorDataLayer({
+      elb,
+      mapping: {
+        foo: {
+          event: { value: 'page view' },
+          data: {
+            some: {
+              value: 'thing',
+            },
+          },
+        },
+        add_to_cart: {
+          event: 'product add',
+          data: {
+            id: 'data.id',
+            price: 'data.price',
+          },
+        },
+      },
+    })!;
+
+    dataLayer.push({ event: 'foo' });
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'page view' }),
+    );
   });
 });
