@@ -17,11 +17,11 @@ export function connectorDataLayer(elb: WalkerOS.Elb, config: Config = {}) {
     dataLayer = window[key] as DataLayer;
   }
 
-  // Override the original push function to intercept incoming events
-  intercept(dataLayer, elb);
-
   // Process already existing events in the dataLayer
   dataLayer.forEach((item) => push(elb, item));
+
+  // Override the original push function to intercept incoming events
+  intercept(dataLayer, elb);
 }
 
 export default connectorDataLayer;
