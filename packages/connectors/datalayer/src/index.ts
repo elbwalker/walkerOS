@@ -3,12 +3,15 @@ import { intercept, push } from './push';
 
 export * as ConnectorDataLayer from './types';
 
-export function connectorDataLayer(partialConfig: Partial<Config> = {}) {
+export function connectorDataLayer(
+  partialConfig: Partial<Config> = {},
+): Config | undefined {
   const { elb } = partialConfig;
   if (!elb) return;
 
-  let { dataLayer } = partialConfig;
+  let { dataLayer, processedEvents } = partialConfig;
 
+  // Ensure the dataLayer exists
   if (!dataLayer) {
     const { name = 'dataLayer' } = partialConfig;
     const key = name as keyof Window;
@@ -19,13 +22,18 @@ export function connectorDataLayer(partialConfig: Partial<Config> = {}) {
     dataLayer = window[key] as DataLayer;
   }
 
-  const config: Config = { ...partialConfig, elb, dataLayer };
+  // Ensure the processedEvents exists
+  if (!processedEvents) processedEvents = new Set();
+
+  const config: Config = { ...partialConfig, elb, dataLayer, processedEvents };
 
   // Process already existing events in the dataLayer
   dataLayer.forEach((item) => push(config, item));
 
   // Override the original push function to intercept incoming events
   intercept(config);
+
+  return config;
 }
 
 export default connectorDataLayer;

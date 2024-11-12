@@ -64,7 +64,8 @@ describe('connector dataLayer', () => {
     expect(elb).toHaveBeenCalledTimes(1);
     expect(elb).toHaveBeenCalledWith({
       event: 'foo',
-      data: { id: expect.any(String) },
+      id: expect.any(String),
+      data: {},
     });
   });
 
@@ -91,8 +92,6 @@ describe('connector dataLayer', () => {
       }),
     ];
 
-    // mockPush.mockImplementation(console.log);
-
     connectorDataLayer({ elb, dataLayer });
 
     gtag('event', 'another_arg', {
@@ -102,23 +101,26 @@ describe('connector dataLayer', () => {
     expect(elb).toHaveBeenCalledTimes(3);
     expect(elb).toHaveBeenNthCalledWith(1, {
       event: 'gtm.js',
+      id: expect.any(String),
       data: {
-        id: expect.any(String),
         'gtm.start': expect.any(Number),
         'gtm.uniqueEventId': 1,
       },
     });
     expect(elb).toHaveBeenNthCalledWith(2, {
       event: 'arg',
-      data: { id: expect.any(String), foo: 'bar' },
+      id: expect.any(String),
+      data: { foo: 'bar' },
     });
     expect(elb).toHaveBeenNthCalledWith(3, {
       event: 'another_arg',
-      data: { id: expect.any(String), bar: 'baz' },
+      id: expect.any(String),
+      data: { bar: 'baz' },
     });
   });
 
   test('mutation prevention', () => {
+    const elb = jest.fn();
     const originalObj = {};
     const originalArr: unknown[] = [];
 
@@ -128,12 +130,40 @@ describe('connector dataLayer', () => {
       args[1].push('newElement');
     });
 
-    connectorDataLayer(elb);
+    connectorDataLayer({ elb });
     dataLayer.push(originalObj, originalArr);
     expect(dataLayer[0]).toStrictEqual({});
     expect(dataLayer[1]).toStrictEqual([]);
     expect(originalObj).toEqual({});
     expect(originalArr).toEqual([]);
+  });
+
+  test('duplicate prevention', () => {
+    const processedEvents = new Set<string>();
+    processedEvents.add('foo');
+    connectorDataLayer({ elb, processedEvents });
+
+    dataLayer.push({ event: 'foo', id: 'foo' });
+    expect(elb).toHaveBeenCalledTimes(0);
+
+    dataLayer.push({ event: 'bar', id: 'bar' });
+    expect(elb).toHaveBeenCalledWith({
+      event: 'bar',
+      id: 'bar',
+      data: {},
+    });
+    expect(elb).toHaveBeenCalledTimes(1);
+
+    dataLayer.push({ event: 'foo', id: 'bar' });
+    expect(elb).toHaveBeenCalledTimes(1);
+
+    processedEvents.delete('foo');
+    dataLayer.push({ event: 'foo', id: 'foo' });
+    expect(elb).toHaveBeenCalledTimes(2);
+
+    expect(processedEvents.has('foo')).toBeTruthy();
+    expect(processedEvents.has('bar')).toBeTruthy();
+    expect(processedEvents.size).toBe(2);
   });
 
   test('error handling', () => {

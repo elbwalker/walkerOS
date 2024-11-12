@@ -11,4 +11,5 @@ export interface Config {
   elb: WalkerOS.Elb;
   dataLayer: DataLayer;
   name?: string;
+  processedEvents: Set<string>;
 }

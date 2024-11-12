@@ -1,5 +1,5 @@
 import type { Config } from './types';
-import { clone, tryCatch } from '@elbwalker/utils';
+import { clone, getId, tryCatch } from '@elbwalker/utils';
 import { objToEvent, gtagToObj } from './mapping';
 import { wasArguments } from './helper';
 
@@ -30,8 +30,17 @@ export function push(config: Config, ...args: unknown[]) {
         // Map the incoming event to a WalkerOS event
         const event = objToEvent(obj);
 
-        // Hand over to walker instance
-        if (event) config.elb(event);
+        if (event) {
+          // Add an id for duplicate detection
+          event.id = event.id || getId();
+
+          // Prevent duplicate events
+          if (config.processedEvents.has(event.id)) return;
+          config.processedEvents.add(event.id);
+
+          // Hand over to walker instance
+          config.elb(event);
+        }
       });
     },
     // eslint-disable-next-line no-console
