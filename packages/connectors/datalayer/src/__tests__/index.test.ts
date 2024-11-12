@@ -3,7 +3,7 @@ import type { DataLayer } from '../types';
 import { connectorDataLayer } from '..';
 
 describe('connector dataLayer', () => {
-  const mockPush = jest.fn();
+  const mockPush = jest.fn(); //.mockImplementation(console.log);
   let dataLayer: DataLayer;
 
   beforeEach(() => {
@@ -58,7 +58,7 @@ describe('connector dataLayer', () => {
     connectorDataLayer(mockPush);
     dataLayer!.push({ event: 'foo' });
     expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith({ event: 'foo' });
+    expect(mockPush).toHaveBeenCalledWith({ event: 'foo', data: {} });
   });
 
   test('existing events', () => {
@@ -72,8 +72,8 @@ describe('connector dataLayer', () => {
   test('arguments', () => {
     dataLayer = [
       {
-        'gtm.start': 1730909886667,
         event: 'gtm.js',
+        'gtm.start': 1730909886667,
         'gtm.uniqueEventId': 1,
       },
       (function (...args: unknown[]) {
@@ -93,9 +93,18 @@ describe('connector dataLayer', () => {
     });
 
     expect(mockPush).toHaveBeenCalledTimes(3);
-    expect(mockPush).toHaveBeenNthCalledWith(1, { event: 'gtm.js' });
-    expect(mockPush).toHaveBeenNthCalledWith(2, { event: 'arg' });
-    expect(mockPush).toHaveBeenNthCalledWith(3, { event: 'another_arg' });
+    expect(mockPush).toHaveBeenNthCalledWith(1, {
+      event: 'gtm.js',
+      data: { 'gtm.start': expect.any(Number), 'gtm.uniqueEventId': 1 },
+    });
+    expect(mockPush).toHaveBeenNthCalledWith(2, {
+      event: 'arg',
+      data: { foo: 'bar' },
+    });
+    expect(mockPush).toHaveBeenNthCalledWith(3, {
+      event: 'another_arg',
+      data: { bar: 'baz' },
+    });
   });
 
   test('mutation prevention', () => {
