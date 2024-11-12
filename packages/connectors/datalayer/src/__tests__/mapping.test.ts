@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { clone } from '@elbwalker/utils';
-import { gtagToObj, objToEvent } from '../mapping';
+import { gtagToObj } from '../mapping';
 
 describe('mapping', () => {
   function gtag(...args: unknown[]) {
@@ -133,15 +133,6 @@ describe('mapping', () => {
 
     expect(gtagToObj(gtag('set', 'user_properties', 'invalid'))).toStrictEqual({
       event: 'set user_properties',
-    });
-  });
-
-  test('dataLayerToWalkerOS', () => {
-    expect(objToEvent({ event: 'e a' })).toStrictEqual({
-      event: 'e a',
-      data: {},
-      id: expect.any(String),
-      source: { type: 'dataLayer' },
     });
   });
 });

@@ -1,14 +1,16 @@
 import type { WalkerOS } from '@elbwalker/types';
+import type { Config } from './types';
 import { getId } from '@elbwalker/utils';
 import { convertConsentStates, isObject, isString } from './helper';
 
 export function objToEvent(
+  config: Config,
   obj: unknown,
 ): (WalkerOS.PartialEvent & { id: string }) | void {
   if (!(isObject(obj) && isString(obj.event))) return;
 
   // event name
-  const event = obj.event;
+  const event = `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
   delete obj.event;
 
   // id for duplicate detection

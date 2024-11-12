@@ -6,7 +6,7 @@ export * as ConnectorDataLayer from './types';
 export function connectorDataLayer(
   partialConfig: Partial<Config> = {},
 ): Config | undefined {
-  const { elb } = partialConfig;
+  const { elb, prefix = 'dataLayer' } = partialConfig;
   if (!elb) return;
 
   let { dataLayer, processedEvents } = partialConfig;
@@ -25,7 +25,13 @@ export function connectorDataLayer(
   // Ensure the processedEvents exists
   if (!processedEvents) processedEvents = new Set();
 
-  const config: Config = { ...partialConfig, elb, dataLayer, processedEvents };
+  const config: Config = {
+    ...partialConfig,
+    elb,
+    dataLayer,
+    prefix,
+    processedEvents,
+  };
 
   // Process already existing events in the dataLayer
   dataLayer.forEach((item) => push(config, item));

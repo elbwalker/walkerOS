@@ -63,11 +63,21 @@ describe('connector dataLayer', () => {
     dataLayer.push({ event: 'foo' });
     expect(elb).toHaveBeenCalledTimes(1);
     expect(elb).toHaveBeenCalledWith({
-      event: 'foo',
+      event: 'dataLayer foo',
       data: {},
       id: expect.any(String),
       source: { type: 'dataLayer' },
     });
+  });
+
+  test('prefix', () => {
+    connectorDataLayer({ elb, prefix: 'foo' });
+    dataLayer.push({ event: 'bar baz' });
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'foo bar_baz',
+      }),
+    );
   });
 
   test('existing events', () => {
@@ -102,7 +112,7 @@ describe('connector dataLayer', () => {
     expect(elb).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        event: 'gtm.js',
+        event: 'dataLayer gtm.js',
         data: {
           'gtm.start': expect.any(Number),
           'gtm.uniqueEventId': 1,
@@ -112,14 +122,14 @@ describe('connector dataLayer', () => {
     expect(elb).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
-        event: 'arg',
+        event: 'dataLayer arg',
         data: { foo: 'bar' },
       }),
     );
     expect(elb).toHaveBeenNthCalledWith(
       3,
       expect.objectContaining({
-        event: 'another_arg',
+        event: 'dataLayer another_arg',
         data: { bar: 'baz' },
       }),
     );
@@ -155,7 +165,6 @@ describe('connector dataLayer', () => {
     dataLayer.push({ event: 'bar', id: 'bar' });
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'bar',
         id: 'bar',
       }),
     );

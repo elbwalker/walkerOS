@@ -28,7 +28,7 @@ export function push(config: Config, ...args: unknown[]) {
 
       items.forEach((obj) => {
         // Map the incoming event to a WalkerOS event
-        const event = objToEvent(obj);
+        const event = objToEvent(config, obj);
 
         if (event) {
           // Prevent duplicate events
