@@ -64,8 +64,9 @@ describe('connector dataLayer', () => {
     expect(elb).toHaveBeenCalledTimes(1);
     expect(elb).toHaveBeenCalledWith({
       event: 'foo',
-      id: expect.any(String),
       data: {},
+      id: expect.any(String),
+      source: { type: 'dataLayer' },
     });
   });
 
@@ -99,24 +100,30 @@ describe('connector dataLayer', () => {
     });
 
     expect(elb).toHaveBeenCalledTimes(3);
-    expect(elb).toHaveBeenNthCalledWith(1, {
-      event: 'gtm.js',
-      id: expect.any(String),
-      data: {
-        'gtm.start': expect.any(Number),
-        'gtm.uniqueEventId': 1,
-      },
-    });
-    expect(elb).toHaveBeenNthCalledWith(2, {
-      event: 'arg',
-      id: expect.any(String),
-      data: { foo: 'bar' },
-    });
-    expect(elb).toHaveBeenNthCalledWith(3, {
-      event: 'another_arg',
-      id: expect.any(String),
-      data: { bar: 'baz' },
-    });
+    expect(elb).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        event: 'gtm.js',
+        data: {
+          'gtm.start': expect.any(Number),
+          'gtm.uniqueEventId': 1,
+        },
+      }),
+    );
+    expect(elb).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        event: 'arg',
+        data: { foo: 'bar' },
+      }),
+    );
+    expect(elb).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        event: 'another_arg',
+        data: { bar: 'baz' },
+      }),
+    );
   });
 
   test('mutation prevention', () => {
@@ -147,11 +154,12 @@ describe('connector dataLayer', () => {
     expect(elb).toHaveBeenCalledTimes(0);
 
     dataLayer.push({ event: 'bar', id: 'bar' });
-    expect(elb).toHaveBeenCalledWith({
-      event: 'bar',
-      id: 'bar',
-      data: {},
-    });
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'bar',
+        id: 'bar',
+      }),
+    );
     expect(elb).toHaveBeenCalledTimes(1);
 
     dataLayer.push({ event: 'foo', id: 'bar' });

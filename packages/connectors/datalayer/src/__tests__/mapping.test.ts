@@ -64,6 +64,10 @@ describe('mapping', () => {
     ).toStrictEqual({
       event: 'config GA-XXXXXXXXXX',
     });
+
+    expect(gtagToObj(gtag('config'))).toStrictEqual({
+      event: undefined,
+    });
   });
 
   test('gtagToObj consent', () => {
@@ -101,6 +105,9 @@ describe('mapping', () => {
     );
     expect(gtagToObj(gtag('consent', 'update'))).toStrictEqual({
       event: 'consent update',
+    });
+    expect(gtagToObj(gtag('consent'))).toStrictEqual({
+      event: undefined,
     });
   });
 

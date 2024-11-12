@@ -1,3 +1,4 @@
+import type { WalkerOS } from '@elbwalker/types';
 import type { Config } from './types';
 import { clone, getId, tryCatch } from '@elbwalker/utils';
 import { objToEvent, gtagToObj } from './mapping';
@@ -33,6 +34,9 @@ export function push(config: Config, ...args: unknown[]) {
         if (event) {
           // Add an id for duplicate detection
           event.id = event.id || getId();
+
+          if (!event.source) event.source = {} as WalkerOS.Source;
+          if (!event.source.type) event.source.type = 'dataLayer';
 
           // Prevent duplicate events
           if (config.processedEvents.has(event.id)) return;
