@@ -3,7 +3,7 @@ import type { DataLayer } from '../types';
 import { connectorDataLayer } from '..';
 
 describe('connector dataLayer', () => {
-  const mockPush = jest.fn(); //.mockImplementation(console.log);
+  const elb = jest.fn(); //.mockImplementation(console.log);
   let dataLayer: DataLayer;
 
   beforeEach(() => {
@@ -19,7 +19,11 @@ describe('connector dataLayer', () => {
     window.dataLayer = undefined;
     expect(window.dataLayer).toBeUndefined();
 
-    connectorDataLayer(mockPush);
+    connectorDataLayer();
+    connectorDataLayer({});
+    expect(window.dataLayer).toBeUndefined();
+
+    connectorDataLayer({ elb });
     expect(Array.isArray(window.dataLayer)).toBe(true);
     expect(window.dataLayer!.length).toBe(0);
   });
@@ -28,37 +32,37 @@ describe('connector dataLayer', () => {
     const originalPush = dataLayer.push;
     expect(originalPush).toBe(dataLayer.push);
 
-    connectorDataLayer(mockPush);
+    connectorDataLayer({ elb });
     expect(originalPush).not.toBe(dataLayer!.push);
   });
 
   test('config dataLayer', () => {
     const dataLayer: DataLayer = [];
 
-    connectorDataLayer(mockPush, { dataLayer, name: 'foo' });
+    connectorDataLayer({ elb, dataLayer, name: 'foo' });
     expect(window.foo).toBeUndefined(); // Prefer dataLayer over name
     dataLayer.push({ event: 'foo' });
-    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(elb).toHaveBeenCalledTimes(1);
   });
 
   test('config name', () => {
     expect(window.foo).toBeUndefined();
 
-    connectorDataLayer(mockPush, { name: 'foo' });
+    connectorDataLayer({ elb, name: 'foo' });
     expect(Array.isArray(window.foo)).toBe(true);
   });
 
   test('original arguments', () => {
-    connectorDataLayer(mockPush, { name: 'foo' });
+    connectorDataLayer({ elb, name: 'foo' });
     dataLayer.push('foo');
     expect(dataLayer).toEqual(['foo']);
   });
 
   test('push', () => {
-    connectorDataLayer(mockPush);
+    connectorDataLayer({ elb });
     dataLayer!.push({ event: 'foo' });
-    expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith({
+    expect(elb).toHaveBeenCalledTimes(1);
+    expect(elb).toHaveBeenCalledWith({
       event: 'foo',
       data: { id: expect.any(String) },
     });
@@ -67,9 +71,9 @@ describe('connector dataLayer', () => {
   test('existing events', () => {
     dataLayer.push({ event: 'add_to_cart' });
     dataLayer.push({ event: 'purchase' });
-    connectorDataLayer(mockPush);
+    connectorDataLayer({ elb });
 
-    expect(mockPush).toHaveBeenCalledTimes(2);
+    expect(elb).toHaveBeenCalledTimes(2);
   });
 
   test('arguments', () => {
@@ -89,14 +93,14 @@ describe('connector dataLayer', () => {
 
     // mockPush.mockImplementation(console.log);
 
-    connectorDataLayer(mockPush, { dataLayer });
+    connectorDataLayer({ elb, dataLayer });
 
     gtag('event', 'another_arg', {
       bar: 'baz',
     });
 
-    expect(mockPush).toHaveBeenCalledTimes(3);
-    expect(mockPush).toHaveBeenNthCalledWith(1, {
+    expect(elb).toHaveBeenCalledTimes(3);
+    expect(elb).toHaveBeenNthCalledWith(1, {
       event: 'gtm.js',
       data: {
         id: expect.any(String),
@@ -104,11 +108,11 @@ describe('connector dataLayer', () => {
         'gtm.uniqueEventId': 1,
       },
     });
-    expect(mockPush).toHaveBeenNthCalledWith(2, {
+    expect(elb).toHaveBeenNthCalledWith(2, {
       event: 'arg',
       data: { id: expect.any(String), foo: 'bar' },
     });
-    expect(mockPush).toHaveBeenNthCalledWith(3, {
+    expect(elb).toHaveBeenNthCalledWith(3, {
       event: 'another_arg',
       data: { id: expect.any(String), bar: 'baz' },
     });
@@ -118,13 +122,13 @@ describe('connector dataLayer', () => {
     const originalObj = {};
     const originalArr: unknown[] = [];
 
-    mockPush.mockImplementation((...args) => {
+    elb.mockImplementation((...args) => {
       // Attempt to mutate the values
       args[0]['mutated'] = true;
       args[1].push('newElement');
     });
 
-    connectorDataLayer(mockPush);
+    connectorDataLayer(elb);
     dataLayer.push(originalObj, originalArr);
     expect(dataLayer[0]).toStrictEqual({});
     expect(dataLayer[1]).toStrictEqual([]);
@@ -135,13 +139,13 @@ describe('connector dataLayer', () => {
   test('error handling', () => {
     const mockOrg = jest.fn();
     dataLayer.push = mockOrg;
-    mockPush.mockImplementation(() => {
+    elb.mockImplementation(() => {
       throw new Error();
     });
 
-    connectorDataLayer(mockPush);
+    connectorDataLayer(elb);
     dataLayer.push('foo');
-    expect(mockPush).toThrow();
+    expect(elb).toThrow();
     expect(mockOrg).toHaveBeenCalledTimes(1);
   });
 });

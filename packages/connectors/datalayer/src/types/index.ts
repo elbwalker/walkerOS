@@ -1,3 +1,5 @@
+import type { WalkerOS } from '@elbwalker/types';
+
 declare global {
   interface Window {
     [key: string]: DataLayer | undefined;
@@ -6,6 +8,7 @@ declare global {
 
 export type DataLayer = Array<unknown>;
 export interface Config {
-  dataLayer?: DataLayer;
+  elb: WalkerOS.Elb;
+  dataLayer: DataLayer;
   name?: string;
 }
