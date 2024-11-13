@@ -144,11 +144,12 @@ describe('mapping', () => {
       elb,
       mapping: {
         foo: {
-          event: { value: 'page view' },
+          event: { value: 'entity action' },
           data: {
             some: {
               value: 'thing',
             },
+            key: 'dynamic',
           },
         },
         add_to_cart: {
@@ -161,9 +162,15 @@ describe('mapping', () => {
       },
     })!;
 
-    dataLayer.push({ event: 'foo' });
+    dataLayer.push({ event: 'foo', dynamic: 'value' });
     expect(elb).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'page view' }),
+      expect.objectContaining({
+        event: 'entity action',
+        data: {
+          some: 'thing',
+          key: 'value',
+        },
+      }),
     );
   });
 });

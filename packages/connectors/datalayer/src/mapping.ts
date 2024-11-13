@@ -14,24 +14,28 @@ export function objToEvent(
 
   // Set default values first
 
-  // event name
-  let event = `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
-  delete obj.event;
-
   // id for duplicate detection
   const id = obj.id ? String(obj.id) : getId();
   delete obj.id;
 
-  if (mapping) {
-    if (mapping.event) {
-      const mappedName = getMappingValue(obj, mapping.event);
-      if (mappedName) event = String(mappedName);
-    }
-  }
-
-  const data = obj as WalkerOS.Properties;
+  // event name
+  let event = `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
+  delete obj.event;
 
   const source = { type: 'dataLayer' } as WalkerOS.Source;
+
+  let data = obj as WalkerOS.Properties;
+
+  if (mapping) {
+    const mappedName = mapping.event && getMappingValue(obj, mapping.event);
+    if (mappedName) event = String(mappedName);
+
+    if (mapping.data)
+      data = Object.entries(mapping.data).reduce((acc, [key, value]) => {
+        acc[key] = getMappingValue(obj, value);
+        return acc;
+      }, {} as WalkerOS.Properties);
+  }
 
   return { event, id, data, source };
 }
