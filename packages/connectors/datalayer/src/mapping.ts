@@ -27,8 +27,7 @@ export function objToEvent(
   let data = obj as WalkerOS.Properties;
 
   if (mapping) {
-    const mappedName = mapping.event && getMappingValue(obj, mapping.event);
-    if (mappedName) event = String(mappedName);
+    if (mapping.event) event = mapping.event;
 
     if (mapping.data)
       data = Object.entries(mapping.data).reduce((acc, [key, value]) => {

@@ -21,7 +21,7 @@ export interface Mapping {
 }
 
 export type EventMapping = {
-  event?: Value;
+  event?: string;
   data?: ObjectValue;
   context?: ObjectValue;
   globals?: ObjectValue;
