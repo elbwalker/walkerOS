@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config } from './types';
+import type { Config, EventMapping, Value } from './types';
 import { getId, getMappingValue } from '@elbwalker/utils';
 import { convertConsentStates, isObject, isString } from './helper';
 
@@ -24,10 +24,26 @@ export function objToEvent(
 
   const source = { type: 'dataLayer' } as WalkerOS.Source;
 
+  let props = {} as WalkerOS.Properties;
   let data = obj as WalkerOS.Properties;
 
   if (mapping) {
     if (mapping.event) event = mapping.event;
+
+    props = [
+      'id',
+      'trigger',
+      'entity',
+      'action',
+      'timestamp',
+      'timing',
+      'group',
+      'count',
+    ].reduce((acc, key) => {
+      const config = mapping[key as keyof EventMapping] as Value;
+      if (config) acc[key] = getMappingValue(obj, config);
+      return acc;
+    }, props);
 
     if (mapping.data)
       data = Object.entries(mapping.data).reduce((acc, [key, value]) => {
@@ -36,7 +52,7 @@ export function objToEvent(
       }, {} as WalkerOS.Properties);
   }
 
-  return { event, id, data, source };
+  return { ...props, event, id, data, source };
 }
 
 // https://developers.google.com/tag-platform/gtagjs/reference

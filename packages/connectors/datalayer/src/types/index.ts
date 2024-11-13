@@ -37,12 +37,19 @@ export type EventMapping = {
   timing?: Value;
   group?: Value;
   count?: Value;
-  version?: Value;
-  source?: Value;
+  version?: Version;
+  source?: Source;
 };
 
 export type ObjectValue = {
   [key: string]: Value;
 };
+
+export type Version = Partial<{
+  [K in keyof WalkerOS.Version]: Value;
+}>;
+export type Source = Partial<{
+  [K in keyof WalkerOS.Source]: Value;
+}>;
 
 export type Value = WalkerOSMapping.Value;
