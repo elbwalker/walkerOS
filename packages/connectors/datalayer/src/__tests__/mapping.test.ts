@@ -144,7 +144,7 @@ describe('mapping', () => {
       elb,
       mapping: {
         foo: {
-          event: { value: 'entity action' },
+          event: 'entity action',
           data: {
             some: {
               value: 'thing',
@@ -155,9 +155,18 @@ describe('mapping', () => {
         add_to_cart: {
           event: 'product add',
           data: {
-            id: 'data.id',
-            price: 'data.price',
+            id: 'items.0.item_id',
+            name: 'items.0.item_name',
+            discount: 'items.0.discount',
+            brand: 'items.0.item_brand',
+            category: 'items.0.item_category',
+            color: 'items.0.item_variant',
+            currency: 'currency',
+            price: 'items.0.price',
+            quantity: 'items.0.quantity',
+            total: 'value',
           },
+          // context list
         },
       },
     })!;
@@ -169,6 +178,43 @@ describe('mapping', () => {
         data: {
           some: 'thing',
           key: 'value',
+        },
+      }),
+    );
+
+    dataLayer.push({
+      event: 'add_to_cart',
+      currency: 'EUR',
+      value: 840,
+      items: [
+        {
+          item_id: 'abc',
+          item_name: 'Everyday Ruck Snack',
+          discount: 10,
+          item_brand: 'Fictive',
+          item_category: 'Apparel',
+          item_list_id: 'related_products',
+          item_variant: 'black',
+          price: 420,
+          quantity: 2,
+        },
+      ],
+    });
+
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'product add',
+        data: {
+          currency: 'EUR',
+          id: 'abc',
+          name: 'Everyday Ruck Snack',
+          discount: 10,
+          brand: 'Fictive',
+          category: 'Apparel',
+          color: 'black',
+          price: 420,
+          quantity: 2,
+          total: 840,
         },
       }),
     );
