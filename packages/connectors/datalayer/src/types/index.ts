@@ -31,7 +31,7 @@ export type EventMappingObjectValues = {
   globals?: ObjectValue;
   custom?: ObjectValue;
   user?: ObjectValue;
-  // nested?: WalkerOS.Entities; // @TODO
+  nested?: Nested;
   consent?: ObjectValue;
   version?: ObjectValue;
   source?: ObjectValue;
@@ -46,6 +46,11 @@ export type EventMappingValues = {
   timing?: Value;
   group?: Value;
   count?: Value;
+};
+
+export type Nested = {
+  type?: Value;
+  data?: ObjectValue;
 };
 
 export type ObjectValue = {

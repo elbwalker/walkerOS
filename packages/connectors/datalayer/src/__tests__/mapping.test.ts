@@ -23,11 +23,9 @@ describe('mapping', () => {
     quantity: 2,
   };
   const product2 = {
-    data: {
-      name: 'Cool Cap',
-      size: 'one size',
-      prize: 42,
-    },
+    item_id: 'xyz',
+    item_name: 'Cool Cap',
+    price: 42,
   };
 
   beforeEach(() => {});
@@ -293,9 +291,14 @@ describe('mapping', () => {
             total: 'value',
             coupon: 'coupon',
           },
-          // nested: {
-          //   type: { value: 'product' },
-          // },
+          nested: {
+            type: { value: 'product' },
+            data: {
+              id: 'items.*.item_id',
+              name: 'items.*.item_name',
+              price: 'items.*.price',
+            },
+          },
         },
       },
     })!;
@@ -322,6 +325,29 @@ describe('mapping', () => {
           total: 555,
           coupon: 'SUMM3RS4L3',
         },
+        context: {},
+        nested: [
+          {
+            type: 'product',
+            data: {
+              id: 'abc',
+              name: 'Everyday Ruck Snack',
+              price: 420,
+            },
+            nested: [],
+            context: {},
+          },
+          {
+            type: 'product',
+            data: {
+              id: 'xyz',
+              name: 'Cool Cap',
+              price: 42,
+            },
+            nested: [],
+            context: {},
+          },
+        ],
       }),
     );
   });

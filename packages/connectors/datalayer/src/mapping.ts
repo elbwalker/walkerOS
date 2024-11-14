@@ -59,12 +59,50 @@ export function objToEvent(
       'source',
     ];
 
-    const foo = eventMappingObjectValueKeys.reduce((acc, key) => {
+    const objectValues = eventMappingObjectValueKeys.reduce((acc, key) => {
       const config = mapping[key];
       if (config) acc[key] = mapEntries(obj, config);
       return acc;
     }, {} as WalkerOS.AnyObject);
-    event = { ...event, ...foo };
+    event = { ...event, ...objectValues };
+
+    // @TODO
+    const context = {};
+    event.context = context;
+
+    if (mapping.nested) {
+      const nested: WalkerOS.Entities = [];
+      const config = mapping.nested;
+
+      const nestedData = mapEntries(obj, config.data ?? {});
+      const maxLength = Math.max(
+        ...Object.values(nestedData)
+          .filter((value) => Array.isArray(value))
+          .map((array) => array.length),
+      );
+
+      for (let i = 0; i < maxLength; i++) {
+        const data = Object.entries(nestedData).reduce((acc, [key, value]) => {
+          acc[key] = Array.isArray(value) ? value[i] : value;
+          return acc;
+        }, {} as WalkerOS.Properties);
+        nested.push({
+          type: String(
+            getMappingValue(
+              obj,
+              config.type ?? { value: 'item' },
+              undefined,
+              i,
+            ),
+          ),
+          data: data,
+          nested: [],
+          context,
+        });
+      }
+
+      event.nested = nested;
+    }
   }
 
   // Update the event name
