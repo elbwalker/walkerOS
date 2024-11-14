@@ -23,8 +23,6 @@ export interface Mapping {
 export type EventMapping = EventMappingValues &
   EventMappingObjectValues & {
     event?: string;
-    version?: Version;
-    source?: Source;
   };
 
 export type EventMappingObjectValues = {
@@ -35,6 +33,8 @@ export type EventMappingObjectValues = {
   user?: ObjectValue;
   // nested?: WalkerOS.Entities; // @TODO
   consent?: ObjectValue;
+  version?: ObjectValue;
+  source?: ObjectValue;
 };
 
 export type EventMappingValues = {
@@ -51,12 +51,5 @@ export type EventMappingValues = {
 export type ObjectValue = {
   [key: string]: Value;
 };
-
-export type Version = Partial<{
-  [K in keyof WalkerOS.Version]: Value;
-}>;
-export type Source = Partial<{
-  [K in keyof WalkerOS.Source]: Value;
-}>;
 
 export type Value = WalkerOSMapping.Value;

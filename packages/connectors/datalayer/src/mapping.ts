@@ -1,5 +1,10 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config, EventMappingValues, Value } from './types';
+import type {
+  Config,
+  EventMappingObjectValues,
+  EventMappingValues,
+  Value,
+} from './types';
 import { getId, getMappingValue } from '@elbwalker/utils';
 import { convertConsentStates, isObject, isString } from './helper';
 
@@ -36,6 +41,7 @@ export function objToEvent(
       'group',
       'count',
     ];
+
     event = eventMappingValueKeys.reduce((acc, key) => {
       const config = mapping[key];
       if (config)
@@ -43,20 +49,22 @@ export function objToEvent(
       return acc;
     }, event);
 
-    if (mapping.data)
-      event.data = mapEntries<WalkerOS.Properties>(obj, mapping.data);
-    if (mapping.globals)
-      event.globals = mapEntries<WalkerOS.Properties>(obj, mapping.globals);
-    if (mapping.custom)
-      event.custom = mapEntries<WalkerOS.Properties>(obj, mapping.custom);
-    if (mapping.user)
-      event.user = mapEntries<WalkerOS.Properties>(obj, mapping.user);
-    if (mapping.consent)
-      event.consent = mapEntries<WalkerOS.Consent>(obj, mapping.consent, true);
-    if (mapping.version)
-      event.version = mapEntries<WalkerOS.Version>(obj, mapping.version);
-    if (mapping.source)
-      event.source = mapEntries<WalkerOS.Source>(obj, mapping.source);
+    const eventMappingObjectValueKeys: Array<keyof EventMappingObjectValues> = [
+      'data',
+      'globals',
+      'custom',
+      'user',
+      'consent',
+      'version',
+      'source',
+    ];
+
+    const foo = eventMappingObjectValueKeys.reduce((acc, key) => {
+      const config = mapping[key];
+      if (config) acc[key] = mapEntries(obj, config);
+      return acc;
+    }, {} as WalkerOS.AnyObject);
+    event = { ...event, ...foo };
   }
 
   // Update the event name
@@ -69,22 +77,16 @@ export function objToEvent(
   return event;
 }
 
-type MappedProperties<T> = T extends WalkerOS.Consent
-  ? WalkerOS.Consent
-  : WalkerOS.Properties;
-function mapEntries<T>(
+function mapEntries(
   obj: WalkerOS.AnyObject,
   mapping: Record<string, Value | undefined>,
-  isConsent = false,
-): MappedProperties<T> {
+): WalkerOS.Properties {
   return Object.entries(mapping).reduce((acc, [key, value]) => {
     if (value) {
-      acc[key] = isConsent
-        ? !!getMappingValue(obj, value)
-        : getMappingValue(obj, value);
+      acc[key] = getMappingValue(obj, value);
     }
     return acc;
-  }, {} as MappedProperties<T>);
+  }, {} as WalkerOS.Properties);
 }
 
 // https://developers.google.com/tag-platform/gtagjs/reference
