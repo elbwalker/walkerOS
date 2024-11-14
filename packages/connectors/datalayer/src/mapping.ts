@@ -66,9 +66,14 @@ export function objToEvent(
     }, {} as WalkerOS.AnyObject);
     event = { ...event, ...objectValues };
 
-    // @TODO
-    const context = {};
-    event.context = context;
+    if (mapping.context) {
+      event.context = Object.entries(
+        mapEntries(obj, mapping.context ?? {}),
+      ).reduce((acc, [key, value]) => {
+        if (value) acc[key] = [value, 0];
+        return acc;
+      }, {} as WalkerOS.OrderedProperties);
+    }
 
     if (mapping.nested) {
       const nested: WalkerOS.Entities = [];
@@ -90,14 +95,14 @@ export function objToEvent(
           type: String(
             getMappingValue(
               obj,
-              config.type ?? { value: 'item' },
+              config.type || { value: 'item' },
               undefined,
               i,
             ),
           ),
           data: data,
           nested: [],
-          context,
+          context: event.context || {},
         });
       }
 

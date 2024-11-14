@@ -168,7 +168,9 @@ describe('mapping', () => {
             },
             key: 'dynamic',
           },
-          context: {},
+          context: {
+            foo: { value: 'bar' },
+          },
           globals: { foo: { value: 'bar' } },
           custom: { completely: { value: 'random' } },
           user: { hash: { value: 'h4sh' } },
@@ -201,6 +203,9 @@ describe('mapping', () => {
         data: {
           some: 'thing',
           key: 'value',
+        },
+        context: {
+          foo: ['bar', 0],
         },
         globals: { foo: 'bar' },
         custom: { completely: 'random' },
@@ -325,7 +330,6 @@ describe('mapping', () => {
           total: 555,
           coupon: 'SUMM3RS4L3',
         },
-        context: {},
         nested: [
           {
             type: 'product',
