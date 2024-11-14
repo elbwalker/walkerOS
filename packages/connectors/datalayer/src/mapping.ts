@@ -22,7 +22,6 @@ export function objToEvent(
 
   // event name
   let eventName = `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
-  delete obj.event; // @TODO
 
   if (mapping) {
     if (mapping.event) eventName = mapping.event;
