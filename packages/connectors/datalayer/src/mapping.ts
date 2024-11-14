@@ -22,7 +22,12 @@ export function objToEvent(
   let event = `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
   delete obj.event;
 
-  const source = { type: 'dataLayer' } as WalkerOS.Source;
+  let globals: WalkerOS.Properties = {};
+  let custom: WalkerOS.Properties = {};
+  let user: WalkerOS.User = {};
+  let consent: WalkerOS.Consent = {};
+  let version = {} as WalkerOS.Version;
+  let source = { type: 'dataLayer' } as WalkerOS.Source;
 
   let props = {} as WalkerOS.Properties;
   let data = obj as WalkerOS.Properties;
@@ -47,12 +52,61 @@ export function objToEvent(
 
     if (mapping.data)
       data = Object.entries(mapping.data).reduce((acc, [key, value]) => {
-        acc[key] = getMappingValue(obj, value);
+        if (value) acc[key] = getMappingValue(obj, value);
         return acc;
       }, {} as WalkerOS.Properties);
+
+    if (mapping.globals)
+      globals = Object.entries(mapping.globals).reduce((acc, [key, value]) => {
+        if (value) acc[key] = getMappingValue(obj, value);
+        return acc;
+      }, {} as WalkerOS.Properties);
+
+    if (mapping.custom)
+      custom = Object.entries(mapping.custom).reduce((acc, [key, value]) => {
+        if (value) acc[key] = getMappingValue(obj, value);
+        return acc;
+      }, {} as WalkerOS.Properties);
+
+    if (mapping.user)
+      user = Object.entries(mapping.user).reduce((acc, [key, value]) => {
+        if (value) acc[key] = getMappingValue(obj, value);
+        return acc;
+      }, {} as WalkerOS.Properties);
+
+    if (mapping.consent)
+      consent = Object.entries(mapping.consent).reduce((acc, [key, value]) => {
+        if (value) acc[key] = !!getMappingValue(obj, value);
+        return acc;
+      }, {} as WalkerOS.Consent);
+
+    if (mapping.version) {
+      version = Object.entries(mapping.version).reduce((acc, [key, value]) => {
+        if (value) acc[key] = getMappingValue(obj, value);
+        return acc;
+      }, {} as WalkerOS.Version);
+    }
+
+    if (mapping.source) {
+      source = Object.entries(mapping.source).reduce((acc, [key, value]) => {
+        if (value) acc[key] = getMappingValue(obj, value);
+        return acc;
+      }, {} as WalkerOS.Source);
+    }
   }
 
-  return { ...props, event, id, data, source };
+  return {
+    ...props,
+    event,
+    globals,
+    custom,
+    user,
+    consent,
+    id,
+    data,
+    version,
+    source,
+  };
 }
 
 // https://developers.google.com/tag-platform/gtagjs/reference
