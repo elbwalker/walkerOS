@@ -98,8 +98,23 @@ describe('mapping', () => {
         fn: mockFn,
       }),
     ).toBe('bar');
-
     expect(mockFn).toHaveBeenCalledTimes(2);
+
+    // Props
+    getMappingValue(
+      createEvent({ event: 'page click' }),
+      { fn: mockFn },
+      undefined,
+      'random',
+    );
+
+    expect(mockFn).toHaveBeenNthCalledWith(
+      3,
+      expect.any(Object),
+      { fn: mockFn },
+      undefined,
+      'random',
+    );
   });
 
   test('validate', () => {

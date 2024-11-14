@@ -137,7 +137,7 @@ rendering, or temporary identifiers.
 
 ### getMappingValue
 
-`getMappingValue(event: WalkerOS.Event, mapping: WalkerOS.MappingValue): WalkerOS.Property | undefined`
+`getMappingValue(event: WalkerOS.Event, mapping: WalkerOS.MappingValue, instance? WalkerOS.Instance, props?: unknown): WalkerOS.Property | undefined`
 reads the value from an event based on
 the&nbsp;<Link to="/docs/destinations/mapping">mapping configuration</Link>. It
 is used by destinations to

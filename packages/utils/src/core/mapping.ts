@@ -47,6 +47,7 @@ export function getMappingValue(
   event: WalkerOS.PartialEvent,
   mapping: Mapping.Value,
   instance?: WalkerOS.Instance,
+  props?: unknown,
 ): WalkerOS.Property | undefined {
   // Ensure mapping is an array for uniform processing
   const mappings = Array.isArray(mapping) ? mapping : [mapping];
@@ -69,7 +70,7 @@ export function getMappingValue(
     let mappingValue;
     if (fn) {
       // Use a custom function to get the value
-      mappingValue = fn(event, mappingItem, instance);
+      mappingValue = fn(event, mappingItem, instance, props);
     } else {
       // Get dynamic value from the event
       mappingValue = getByPath(event, key, value);
