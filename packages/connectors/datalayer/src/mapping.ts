@@ -1,41 +1,33 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config, EventMapping, Value } from './types';
+import type { Config, EventMappingValues, Value } from './types';
 import { getId, getMappingValue } from '@elbwalker/utils';
 import { convertConsentStates, isObject, isString } from './helper';
 
 export function objToEvent(
   config: Config,
   obj: unknown,
-): (WalkerOS.PartialEvent & { id: string }) | void {
+): (WalkerOS.DeepPartialEvent & { id: string }) | void {
   if (!(isObject(obj) && isString(obj.event))) return;
 
-  const eventName = obj.event;
-  const mapping = config.mapping ? config.mapping[eventName] : {};
-
-  // Set default values first
+  const mapping = config.mapping ? config.mapping[obj.event] : {};
 
   // id for duplicate detection
   const id = obj.id ? String(obj.id) : getId();
   delete obj.id;
 
+  let event: WalkerOS.DeepPartialEvent & { id: string } = {
+    id,
+    data: obj as WalkerOS.Properties,
+  };
+
   // event name
-  let event = `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
-  delete obj.event;
-
-  let globals: WalkerOS.Properties = {};
-  let custom: WalkerOS.Properties = {};
-  let user: WalkerOS.User = {};
-  let consent: WalkerOS.Consent = {};
-  let version = {} as WalkerOS.Version;
-  let source = { type: 'dataLayer' } as WalkerOS.Source;
-
-  let props = {} as WalkerOS.Properties;
-  let data = obj as WalkerOS.Properties;
+  let eventName = `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
+  delete obj.event; // @TODO
 
   if (mapping) {
-    if (mapping.event) event = mapping.event;
+    if (mapping.event) eventName = mapping.event;
 
-    props = [
+    const eventMappingValueKeys: Array<keyof EventMappingValues> = [
       'id',
       'trigger',
       'entity',
@@ -44,69 +36,56 @@ export function objToEvent(
       'timing',
       'group',
       'count',
-    ].reduce((acc, key) => {
-      const config = mapping[key as keyof EventMapping] as Value;
-      if (config) acc[key] = getMappingValue(obj, config);
+    ];
+    event = eventMappingValueKeys.reduce((acc, key) => {
+      const config = mapping[key];
+      if (config)
+        (acc as WalkerOS.Properties)[key] = getMappingValue(obj, config);
       return acc;
-    }, props);
+    }, event);
 
     if (mapping.data)
-      data = Object.entries(mapping.data).reduce((acc, [key, value]) => {
-        if (value) acc[key] = getMappingValue(obj, value);
-        return acc;
-      }, {} as WalkerOS.Properties);
-
+      event.data = mapEntries<WalkerOS.Properties>(obj, mapping.data);
     if (mapping.globals)
-      globals = Object.entries(mapping.globals).reduce((acc, [key, value]) => {
-        if (value) acc[key] = getMappingValue(obj, value);
-        return acc;
-      }, {} as WalkerOS.Properties);
-
+      event.globals = mapEntries<WalkerOS.Properties>(obj, mapping.globals);
     if (mapping.custom)
-      custom = Object.entries(mapping.custom).reduce((acc, [key, value]) => {
-        if (value) acc[key] = getMappingValue(obj, value);
-        return acc;
-      }, {} as WalkerOS.Properties);
-
+      event.custom = mapEntries<WalkerOS.Properties>(obj, mapping.custom);
     if (mapping.user)
-      user = Object.entries(mapping.user).reduce((acc, [key, value]) => {
-        if (value) acc[key] = getMappingValue(obj, value);
-        return acc;
-      }, {} as WalkerOS.Properties);
-
+      event.user = mapEntries<WalkerOS.Properties>(obj, mapping.user);
     if (mapping.consent)
-      consent = Object.entries(mapping.consent).reduce((acc, [key, value]) => {
-        if (value) acc[key] = !!getMappingValue(obj, value);
-        return acc;
-      }, {} as WalkerOS.Consent);
-
-    if (mapping.version) {
-      version = Object.entries(mapping.version).reduce((acc, [key, value]) => {
-        if (value) acc[key] = getMappingValue(obj, value);
-        return acc;
-      }, {} as WalkerOS.Version);
-    }
-
-    if (mapping.source) {
-      source = Object.entries(mapping.source).reduce((acc, [key, value]) => {
-        if (value) acc[key] = getMappingValue(obj, value);
-        return acc;
-      }, {} as WalkerOS.Source);
-    }
+      event.consent = mapEntries<WalkerOS.Consent>(obj, mapping.consent, true);
+    if (mapping.version)
+      event.version = mapEntries<WalkerOS.Version>(obj, mapping.version);
+    if (mapping.source)
+      event.source = mapEntries<WalkerOS.Source>(obj, mapping.source);
   }
 
-  return {
-    ...props,
-    event,
-    globals,
-    custom,
-    user,
-    consent,
-    id,
-    data,
-    version,
-    source,
-  };
+  // Update the event name
+  event.event = eventName;
+
+  // source type is dataLayer
+  event.source = event.source ?? {};
+  event.source.type = event.source.type ?? 'dataLayer';
+
+  return event;
+}
+
+type MappedProperties<T> = T extends WalkerOS.Consent
+  ? WalkerOS.Consent
+  : WalkerOS.Properties;
+function mapEntries<T>(
+  obj: WalkerOS.AnyObject,
+  mapping: Record<string, Value | undefined>,
+  isConsent = false,
+): MappedProperties<T> {
+  return Object.entries(mapping).reduce((acc, [key, value]) => {
+    if (value) {
+      acc[key] = isConsent
+        ? !!getMappingValue(obj, value)
+        : getMappingValue(obj, value);
+    }
+    return acc;
+  }, {} as MappedProperties<T>);
 }
 
 // https://developers.google.com/tag-platform/gtagjs/reference

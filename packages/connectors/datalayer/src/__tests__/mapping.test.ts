@@ -171,11 +171,11 @@ describe('mapping', () => {
             key: 'dynamic',
           },
           context: {},
-          globals: {},
-          custom: {},
-          user: {},
-          consent: {},
-          id: 'id',
+          globals: { foo: { value: 'bar' } },
+          custom: { completely: { value: 'random' } },
+          user: { hash: { value: 'h4sh' } },
+          consent: { demo: { value: true } },
+          id: { value: '1d' },
           trigger: { value: 'push' },
           entity: { value: 'entity' },
           action: { value: 'action' },
@@ -188,7 +188,7 @@ describe('mapping', () => {
             tagging: { value: 1 },
           },
           source: {
-            type: { value: 'web' },
+            type: { value: 'test' },
             id: { value: 'https://localhost:80' },
             previous_id: { value: 'http://remotehost:9001' },
           },
@@ -204,6 +204,10 @@ describe('mapping', () => {
           some: 'thing',
           key: 'value',
         },
+        globals: { foo: 'bar' },
+        custom: { completely: 'random' },
+        user: { hash: 'h4sh' },
+        consent: { demo: true },
         id: '1d',
         trigger: 'push',
         entity: 'entity',
@@ -212,7 +216,16 @@ describe('mapping', () => {
         timing: 3.14,
         group: 'group',
         count: 1,
-        // @TODO context, globals, custom, user, consent, version, source
+        version: {
+          client: '0.0.7',
+          tagging: 1,
+        },
+        source: {
+          type: 'test',
+          id: 'https://localhost:80',
+          previous_id: 'http://remotehost:9001',
+        },
+        // @TODO context, nested
       }),
     );
   });
