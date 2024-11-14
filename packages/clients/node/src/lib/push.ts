@@ -17,7 +17,7 @@ export function createPush(
   handleEvent: NodeClient.HandleEvent,
 ): NodeClient.Elb {
   const push: NodeClient.Elb = async (
-    nameOrEvent: string | WalkerOS.PartialEvent,
+    nameOrEvent: string | WalkerOS.DeepPartialEvent,
     data?: NodeClient.PushData,
     options?: NodeClient.PushOptions,
   ): Promise<NodeClient.PushResult> => {
@@ -30,7 +30,7 @@ export function createPush(
 
     return await tryCatchAsync(
       async (
-        nameOrEvent: string | WalkerOS.PartialEvent,
+        nameOrEvent: string | WalkerOS.DeepPartialEvent,
         data?: NodeClient.PushData,
         options?: NodeClient.PushOptions,
       ): Promise<NodeClient.PushResult> => {
@@ -204,7 +204,7 @@ export async function pushToDestinations(
 
 function createEventOrCommand(
   instance: NodeClient.Instance,
-  nameOrEvent: string | WalkerOS.PartialEvent,
+  nameOrEvent: string | WalkerOS.DeepPartialEvent,
   pushData: unknown,
 ): { event?: WalkerOS.Event; command?: string } {
   // Determine the partial event
