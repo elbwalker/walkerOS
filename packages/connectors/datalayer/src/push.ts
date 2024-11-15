@@ -28,15 +28,21 @@ export function push(config: Config, ...args: unknown[]) {
 
       items.forEach((obj) => {
         // Map the incoming event to a WalkerOS event
-        const event = objToEvent(config, obj);
+        const mappedObj = objToEvent(config, obj);
 
-        if (event) {
-          // Prevent duplicate events
-          if (config.processedEvents.has(event.id)) return;
-          config.processedEvents.add(event.id);
+        if (mappedObj) {
+          const { command, event } = mappedObj;
 
-          // Hand over to walker instance
-          config.elb(event);
+          if (command) {
+            config.elb(event.event || '', event.data);
+          } else {
+            // Prevent duplicate events
+            if (config.processedEvents.has(event.id)) return;
+            config.processedEvents.add(event.id);
+
+            // Hand over to walker instance
+            config.elb(event);
+          }
         }
       });
     },

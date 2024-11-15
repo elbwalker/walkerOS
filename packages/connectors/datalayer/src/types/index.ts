@@ -19,7 +19,11 @@ export interface Config {
 export type SupportedMapping<CustomEvent = unknown> = Omit<
   WalkerOSMapping.Event<CustomEvent>,
   'batch' | 'batchFn' | 'batched' | 'consent'
->;
+> & { command?: boolean };
+
+export type MappedEvent =
+  | { event: WalkerOS.DeepPartialEvent & { id: string }; command?: boolean }
+  | undefined;
 
 export interface Mapping {
   [event: string]: SupportedMapping<Custom>;

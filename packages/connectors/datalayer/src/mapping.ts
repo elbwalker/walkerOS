@@ -3,18 +3,36 @@ import type {
   Config,
   EventMappingObjectValues,
   EventMappingValues,
+  MappedEvent,
+  Mapping,
   Value,
 } from './types';
 import { getId, getMappingValue } from '@elbwalker/utils';
 import { convertConsentStates, isObject, isString } from './helper';
 
-export function objToEvent(
-  config: Config,
-  obj: unknown,
-): (WalkerOS.DeepPartialEvent & { id: string }) | void {
+const defaultMapping: Mapping = {
+  'consent default': {
+    ignore: true,
+  },
+  'consent update': {
+    command: true,
+    name: 'walker consent',
+    custom: {
+      data: {
+        // @TODO update list
+        marketing: 'ad_storage',
+        analytics: 'analytics_storage',
+      },
+    },
+  },
+  // @TODO set for globals
+};
+
+export function objToEvent(config: Config, obj: unknown): MappedEvent | void {
   if (!(isObject(obj) && isString(obj.event))) return;
 
-  const { custom, ignore, name } = config.mapping?.[obj.event] ?? {};
+  const mapping = Object.assign(defaultMapping, config.mapping ?? {});
+  const { command, custom, ignore, name } = mapping[obj.event];
 
   if (ignore) return;
 
@@ -116,7 +134,7 @@ export function objToEvent(
   event.source = event.source ?? {};
   event.source.type = event.source.type ?? 'dataLayer';
 
-  return event;
+  return { command, event };
 }
 
 function mapEntries(
