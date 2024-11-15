@@ -31,8 +31,8 @@ const defaultMapping: Mapping = {
 export function objToEvent(config: Config, obj: unknown): MappedEvent | void {
   if (!(isObject(obj) && isString(obj.event))) return;
 
-  const mapping = Object.assign(defaultMapping, config.mapping ?? {});
-  const { command, custom, ignore, name } = mapping[obj.event];
+  const mapping = Object.assign(defaultMapping, config.mapping);
+  const { command, custom, ignore, name } = mapping[obj.event] || {};
 
   if (ignore) return;
 
