@@ -17,10 +17,12 @@ export default function Projects() {
         <div className="mx-auto mt-16 max-w-2xl rounded-3xl ring-1 ring-gray-700 sm:mt-20 lg:mx-0 lg:flex lg:max-w-none">
           <div className="p-8 sm:p-10 lg:flex-auto">
             <h3 className="text-3xl font-semibold tracking-tight text-white">
-              Projects (>5 days)
+              Projects (&gt;5 days)
             </h3>
             <p className="mt-6 text-base/7 text-gray-200">
-            Partner with us to design and implement a robust pipeline for high-quality, privacy-friendly data. We're creating a solution tailored to your unique needs, ensuring long-term success.
+              Partner with us to design and implement a robust pipeline for
+              high-quality, privacy-friendly data. We're creating a solution
+              tailored to your unique needs, ensuring long-term success.
             </p>
             <div className="mt-10 flex items-center gap-x-4">
               <h4 className="flex-none text-sm/6 font-semibold text-elbwalker-600">
@@ -61,7 +63,7 @@ export default function Projects() {
                 >
                   Schedule free call
                 </a>
-                <p className="mt-6 text-xs/5 text-gray-200">
+                <p className="mt-6 text-xs/5 text-gray-800">
                   Invoices and receipts available for easy company reimbursement
                 </p>
               </div>

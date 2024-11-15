@@ -45,7 +45,7 @@ export default function Hero() {
       </div>
       <div className="mt-10 text-center">
         <CheckSVG>direct support from the creators</CheckSVG>
-        <CheckSVG>initial setup in under 5 days</CheckSVG>
+        <CheckSVG>initial setup in 5 days</CheckSVG>
         <CheckSVG>fully integrated into your infrastructure</CheckSVG>
       </div>
     </main>
