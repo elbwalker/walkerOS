@@ -161,36 +161,38 @@ describe('mapping', () => {
       elb,
       mapping: {
         foo: {
-          event: { value: 'entity action' },
-          data: {
-            some: {
-              value: 'thing',
+          custom: {
+            event: { value: 'entity action' },
+            data: {
+              some: {
+                value: 'thing',
+              },
+              key: 'dynamic',
             },
-            key: 'dynamic',
-          },
-          context: {
-            foo: { value: 'bar' },
-          },
-          globals: { foo: { value: 'bar' } },
-          custom: { completely: { value: 'random' } },
-          user: { hash: { value: 'h4sh' } },
-          consent: { demo: { value: true } },
-          id: { value: '1d' },
-          trigger: { value: 'push' },
-          entity: { value: 'entity' },
-          action: { value: 'action' },
-          timestamp: { value: 1626780000 },
-          timing: { value: 3.14 },
-          group: { value: 'group' },
-          count: { value: 1 },
-          version: {
-            client: { value: '0.0.7' },
-            tagging: { value: 1 },
-          },
-          source: {
-            type: { value: 'test' },
-            id: { value: 'https://localhost:80' },
-            previous_id: { value: 'http://remotehost:9001' },
+            context: {
+              foo: { value: 'bar' },
+            },
+            globals: { foo: { value: 'bar' } },
+            custom: { completely: { value: 'random' } },
+            user: { hash: { value: 'h4sh' } },
+            consent: { demo: { value: true } },
+            id: { value: '1d' },
+            trigger: { value: 'push' },
+            entity: { value: 'entity' },
+            action: { value: 'action' },
+            timestamp: { value: 1626780000 },
+            timing: { value: 3.14 },
+            group: { value: 'group' },
+            count: { value: 1 },
+            version: {
+              client: { value: '0.0.7' },
+              tagging: { value: 1 },
+            },
+            source: {
+              type: { value: 'test' },
+              id: { value: 'https://localhost:80' },
+              previous_id: { value: 'http://remotehost:9001' },
+            },
           },
         },
       },
@@ -238,20 +240,22 @@ describe('mapping', () => {
       elb,
       mapping: {
         add_to_cart: {
-          event: { value: 'product add' },
-          data: {
-            id: 'items.0.item_id',
-            name: 'items.0.item_name',
-            discount: 'items.0.discount',
-            brand: 'items.0.item_brand',
-            category: 'items.0.item_category',
-            color: 'items.0.item_variant',
-            currency: 'currency',
-            price: 'items.0.price',
-            quantity: 'items.0.quantity',
-            total: 'value',
+          custom: {
+            event: { value: 'product add' },
+            data: {
+              id: 'items.0.item_id',
+              name: 'items.0.item_name',
+              discount: 'items.0.discount',
+              brand: 'items.0.item_brand',
+              category: 'items.0.item_category',
+              color: 'items.0.item_variant',
+              currency: 'currency',
+              price: 'items.0.price',
+              quantity: 'items.0.quantity',
+              total: 'value',
+            },
+            // context list
           },
-          // context list
         },
       },
     })!;
@@ -287,21 +291,23 @@ describe('mapping', () => {
       elb,
       mapping: {
         purchase: {
-          event: { value: 'order complete' },
-          data: {
-            id: 'transaction_id',
-            currency: 'currency',
-            shipping: 'shipping',
-            taxes: 'tax',
-            total: 'value',
-            coupon: 'coupon',
-          },
-          nested: {
-            type: { value: 'product' },
+          custom: {
+            event: { value: 'order complete' },
             data: {
-              id: 'items.*.item_id',
-              name: 'items.*.item_name',
-              price: 'items.*.price',
+              id: 'transaction_id',
+              currency: 'currency',
+              shipping: 'shipping',
+              taxes: 'tax',
+              total: 'value',
+              coupon: 'coupon',
+            },
+            nested: {
+              type: { value: 'product' },
+              data: {
+                id: 'items.*.item_id',
+                name: 'items.*.item_name',
+                price: 'items.*.price',
+              },
             },
           },
         },

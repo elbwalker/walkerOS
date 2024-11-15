@@ -14,7 +14,9 @@ export function objToEvent(
 ): (WalkerOS.DeepPartialEvent & { id: string }) | void {
   if (!(isObject(obj) && isString(obj.event))) return;
 
-  const mapping = config.mapping ? config.mapping[obj.event] : {};
+  const { custom, ignore, name } = config.mapping?.[obj.event] ?? {};
+
+  if (ignore) return; // @TODO test
 
   // id for duplicate detection
   const id = obj.id ? String(obj.id) : getId();
@@ -25,7 +27,7 @@ export function objToEvent(
     data: obj as WalkerOS.Properties,
   };
 
-  if (mapping) {
+  if (custom) {
     const eventMappingValueKeys: Array<keyof EventMappingValues> = [
       'event',
       'id',
@@ -39,7 +41,7 @@ export function objToEvent(
     ];
 
     event = eventMappingValueKeys.reduce((acc, key) => {
-      const config = mapping[key];
+      const config = custom[key];
       if (config)
         (acc as WalkerOS.Properties)[key] = getMappingValue(obj, config);
       return acc;
@@ -56,24 +58,24 @@ export function objToEvent(
     ];
 
     const objectValues = eventMappingObjectValueKeys.reduce((acc, key) => {
-      const config = mapping[key];
+      const config = custom[key];
       if (config) acc[key] = mapEntries(obj, config);
       return acc;
     }, {} as WalkerOS.AnyObject);
     event = { ...event, ...objectValues };
 
-    if (mapping.context) {
+    if (custom.context) {
       event.context = Object.entries(
-        mapEntries(obj, mapping.context ?? {}),
+        mapEntries(obj, custom.context ?? {}),
       ).reduce((acc, [key, value]) => {
         if (value) acc[key] = [value, 0];
         return acc;
       }, {} as WalkerOS.OrderedProperties);
     }
 
-    if (mapping.nested) {
+    if (custom.nested) {
       const nested: WalkerOS.Entities = [];
-      const config = mapping.nested;
+      const config = custom.nested;
 
       const nestedData = mapEntries(obj, config.data ?? {});
       const maxLength = Math.max(
@@ -106,9 +108,9 @@ export function objToEvent(
     }
   }
 
-  // Update the event name
+  // Update the event name // @TODO test for name
   event.event =
-    event.event || `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
+    event.event || name || `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
 
   // source type is dataLayer
   event.source = event.source ?? {};

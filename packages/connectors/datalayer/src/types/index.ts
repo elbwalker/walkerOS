@@ -17,10 +17,10 @@ export interface Config {
 }
 
 export interface Mapping {
-  [event: string]: EventMapping;
+  [event: string]: WalkerOSMapping.Event<Custom>;
 }
 
-export type EventMapping = EventMappingValues & EventMappingObjectValues;
+export type Custom = EventMappingValues & EventMappingObjectValues;
 
 export type EventMappingObjectValues = {
   data?: ObjectValue;
