@@ -16,7 +16,7 @@ export function objToEvent(
 
   const { custom, ignore, name } = config.mapping?.[obj.event] ?? {};
 
-  if (ignore) return; // @TODO test
+  if (ignore) return;
 
   // id for duplicate detection
   const id = obj.id ? String(obj.id) : getId();
