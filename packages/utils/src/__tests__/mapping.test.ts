@@ -83,7 +83,7 @@ describe('mapping', () => {
   });
 
   test('false', () => {
-    expect(getMappingValue(createEvent(), 'data.array.2')).toBeFalsy(); // is false
+    expect(getMappingValue(createEvent(), 'data.array.2')).toBe(false);
   });
 
   test('fn', () => {

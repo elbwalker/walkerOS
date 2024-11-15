@@ -81,7 +81,9 @@ export function getMappingValue(
       mappingValue = undefined;
     }
 
+    const property = castToProperty(mappingValue);
+
     // Finally, check and convert the type
-    return castToProperty(mappingValue) || value; // Always use value as a fallback
+    return typeof property !== 'undefined' ? property : value; // Always use value as a fallback
   }, undefined as WalkerOS.Property | undefined);
 }
