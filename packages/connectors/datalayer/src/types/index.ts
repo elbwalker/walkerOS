@@ -16,8 +16,13 @@ export interface Config {
   processedEvents: Set<string>;
 }
 
+export type SupportedMapping<CustomEvent = unknown> = Omit<
+  WalkerOSMapping.Event<CustomEvent>,
+  'batch' | 'batchFn' | 'batched' | 'consent'
+>;
+
 export interface Mapping {
-  [event: string]: WalkerOSMapping.Event<Custom>;
+  [event: string]: SupportedMapping<Custom>;
 }
 
 export type Custom = EventMappingValues & EventMappingObjectValues;
