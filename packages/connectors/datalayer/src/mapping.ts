@@ -25,13 +25,9 @@ export function objToEvent(
     data: obj as WalkerOS.Properties,
   };
 
-  // event name
-  let eventName = `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
-
   if (mapping) {
-    if (mapping.event) eventName = mapping.event;
-
     const eventMappingValueKeys: Array<keyof EventMappingValues> = [
+      'event',
       'id',
       'trigger',
       'entity',
@@ -111,7 +107,8 @@ export function objToEvent(
   }
 
   // Update the event name
-  event.event = eventName;
+  event.event =
+    event.event || `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
 
   // source type is dataLayer
   event.source = event.source ?? {};

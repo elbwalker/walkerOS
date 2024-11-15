@@ -20,10 +20,7 @@ export interface Mapping {
   [event: string]: EventMapping;
 }
 
-export type EventMapping = EventMappingValues &
-  EventMappingObjectValues & {
-    event?: string;
-  };
+export type EventMapping = EventMappingValues & EventMappingObjectValues;
 
 export type EventMappingObjectValues = {
   data?: ObjectValue;
@@ -38,6 +35,7 @@ export type EventMappingObjectValues = {
 };
 
 export type EventMappingValues = {
+  event?: Value;
   id?: Value;
   trigger?: Value;
   entity?: Value;

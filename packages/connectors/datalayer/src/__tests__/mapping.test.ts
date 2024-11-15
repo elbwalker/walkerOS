@@ -161,7 +161,7 @@ describe('mapping', () => {
       elb,
       mapping: {
         foo: {
-          event: 'entity action',
+          event: { value: 'entity action' },
           data: {
             some: {
               value: 'thing',
@@ -238,7 +238,7 @@ describe('mapping', () => {
       elb,
       mapping: {
         add_to_cart: {
-          event: 'product add',
+          event: { value: 'product add' },
           data: {
             id: 'items.0.item_id',
             name: 'items.0.item_name',
@@ -287,7 +287,7 @@ describe('mapping', () => {
       elb,
       mapping: {
         purchase: {
-          event: 'order complete',
+          event: { value: 'order complete' },
           data: {
             id: 'transaction_id',
             currency: 'currency',
