@@ -30,6 +30,30 @@ describe('mapping', () => {
 
   beforeEach(() => {});
 
+  test('mapping name', () => {
+    const { dataLayer } = connectorDataLayer({
+      elb,
+      mapping: {
+        foo: {
+          name: 'bar',
+        },
+        baz: {
+          name: 'nope',
+          custom: {
+            event: { value: 'prioritize' },
+          },
+        },
+      },
+    })!;
+
+    dataLayer.push({ event: 'foo' });
+    expect(elb).toHaveBeenCalledWith(expect.objectContaining({ event: 'bar' }));
+    dataLayer.push({ event: 'baz' });
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'prioritize' }),
+    );
+  });
+
   test('mapping ignore', () => {
     const { dataLayer } = connectorDataLayer({
       elb,

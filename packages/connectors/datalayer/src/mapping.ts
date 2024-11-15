@@ -108,7 +108,7 @@ export function objToEvent(
     }
   }
 
-  // Update the event name // @TODO test for name
+  // Update the event name
   event.event =
     event.event || name || `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
 
