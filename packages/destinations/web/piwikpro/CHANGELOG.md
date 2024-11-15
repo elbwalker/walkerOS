@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- 934c5a7: Data Policy [#447]https://(github.com/elbwalker/walkerOS/issues/447)
+- 934c5a7: Data Policy [#447](https://github.com/elbwalker/walkerOS/issues/447)
 
 ### Patch Changes
 

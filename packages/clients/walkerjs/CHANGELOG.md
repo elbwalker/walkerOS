@@ -6,7 +6,7 @@
 
 - 5a2c0b0: Prefer an events consent state
   [#431](https://github.com/elbwalker/walkerOS/issues/431)
-- 934c5a7: Data Policy [#447]https://(github.com/elbwalker/walkerOS/issues/447)
+- 934c5a7: Data Policy [#447](https://github.com/elbwalker/walkerOS/issues/447)
 
 ### Patch Changes
 
@@ -26,7 +26,7 @@
 ### Patch Changes
 
 - cc2c041: elb with custom elbLayer support
-  [#419[(https://github.com/elbwalker/walkerOS/issues/419)
+  [#419](https://github.com/elbwalker/walkerOS/issues/419)
 - Updated dependencies [cc2c041]
   - @elbwalker/utils@3.4.1
 

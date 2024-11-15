@@ -82,6 +82,10 @@ describe('mapping', () => {
     expect(getMappingValue(createEvent(), {})).toBeUndefined();
   });
 
+  test('false', () => {
+    expect(getMappingValue(createEvent(), 'data.array.2')).toBeFalsy(); // is false
+  });
+
   test('fn', () => {
     const mockFn = jest.fn((event) => {
       if (event.event === 'page view') return 'foo';

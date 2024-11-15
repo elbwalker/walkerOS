@@ -31,7 +31,7 @@ export function getByPath(
     if (!values) break;
   }
 
-  return values || defaultValue;
+  return typeof values !== 'undefined' ? values : defaultValue;
 }
 
 export function setByPath(

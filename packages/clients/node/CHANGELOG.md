@@ -12,7 +12,7 @@
   [#429](https://github.com/elbwalker/walkerOS/issues/429)
 - 5a2c0b0: Prefer an events consent state
   [#431](https://github.com/elbwalker/walkerOS/issues/431)
-- 934c5a7: Data Policy [#447]https://(github.com/elbwalker/walkerOS/issues/447)
+- 934c5a7: Data Policy [#447](https://github.com/elbwalker/walkerOS/issues/447)
 
 ### Patch Changes
 

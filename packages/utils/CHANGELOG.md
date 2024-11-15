@@ -8,7 +8,7 @@
   [#444](https://github.com/elbwalker/walkerOS/issues/444)
 - c898b11: clickIds with platform information
   [#425](https://github.com/elbwalker/walkerOS/issues/425)
-- 934c5a7: Data Policy [#447]https://(github.com/elbwalker/walkerOS/issues/447)
+- 934c5a7: Data Policy [#447](https://github.com/elbwalker/walkerOS/issues/447)
 - c4ed35f: Standardized mapping
   [#427](https://github.com/elbwalker/walkerOS/issues/427)
 - 5d093a3: getEventConfig event name
@@ -32,7 +32,7 @@
 ### Patch Changes
 
 - cc2c041: elb with custom elbLayer support
-  [#419[(https://github.com/elbwalker/walkerOS/issues/419)
+  [#419](https://github.com/elbwalker/walkerOS/issues/419)
 
 ## 3.4.0
 
