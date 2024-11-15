@@ -25,7 +25,6 @@ const defaultMapping: Mapping = {
       },
     },
   },
-  // @TODO set for globals
 };
 
 export function objToEvent(config: Config, obj: unknown): MappedEvent | void {

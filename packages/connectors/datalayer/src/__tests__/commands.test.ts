@@ -45,4 +45,29 @@ describe('commands', () => {
       analytics: true,
     });
   });
+
+  test('set', () => {
+    connectorDataLayer({
+      elb,
+      mapping: {
+        'set campaign': {
+          name: 'walker globals',
+          command: true,
+          custom: {
+            data: {
+              term: 'term',
+            },
+          },
+        },
+      },
+    });
+
+    gtag('set', 'campaign', {
+      term: 'running+shoes',
+    });
+
+    expect(elb).toHaveBeenNthCalledWith(1, 'walker globals', {
+      term: 'running+shoes',
+    });
+  });
 });

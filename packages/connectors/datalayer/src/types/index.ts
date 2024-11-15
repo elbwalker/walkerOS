@@ -10,8 +10,8 @@ export type DataLayer = Array<unknown>;
 export interface Config {
   elb: WalkerOS.Elb;
   dataLayer: DataLayer;
-  name?: string;
   mapping?: Mapping;
+  name?: string;
   prefix: string;
   processedEvents: Set<string>;
 }
