@@ -1,5 +1,14 @@
 # @elbwalker/stack-firebase
 
+## 2.0.5
+
+### Patch Changes
+
+- Updated dependencies [5c33b75]
+- Updated dependencies [d3735ad]
+  - @elbwalker/utils@3.5.1
+  - @elbwalker/client-node@3.1.1
+
 ## 2.0.4
 
 ### Patch Changes

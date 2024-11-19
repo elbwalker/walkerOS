@@ -1,5 +1,14 @@
 # @elbwalker/utils
 
+## 3.5.1
+
+### Patch Changes
+
+- 5c33b75: getByPath false support
+  [#451](https://github.com/elbwalker/walkerOS/issues/451)
+- d3735ad: gcp connector
+  [#453](https://github.com/elbwalker/walkerOS/issues/453)
+
 ## 3.5.0
 
 ### Minor Changes

@@ -19,7 +19,7 @@ const elb = createElb();
 export function Walkerjs(
   customConfig: WebClient.InitConfig = {},
 ): WebClient.Instance {
-  const client = '3.1.0'; // Client version
+  const client = '3.1.1'; // Client version
   const state = getState(customConfig);
   const instance: WebClient.Instance = {
     client,

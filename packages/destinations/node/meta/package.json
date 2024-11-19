@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-node-meta",
   "description": "Meta node destination for walkerOS",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,8 +20,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/client-node": "3.1.0",
-    "@elbwalker/utils": "^3.5.0"
+    "@elbwalker/client-node": "3.1.1",
+    "@elbwalker/utils": "^3.5.1"
   },
   "devDependencies": {
     "@elbwalker/types": "3.1.0",

@@ -1,5 +1,11 @@
 # @elbwalker/destination-web-etag
 
+## 0.1.4
+
+### Patch Changes
+
+- @elbwalker/walker.js@3.1.1
+
 ## 0.1.3
 
 ### Patch Changes
