@@ -1,4 +1,4 @@
-import { isDefined } from '../web';
+import { isDefined } from '../';
 
 async function sha256(message: string): Promise<string | undefined> {
   const crypto: Crypto | undefined =

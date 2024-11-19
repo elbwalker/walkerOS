@@ -1,5 +1,5 @@
 import { WalkerOS } from '@elbwalker/types';
-import { isDefined } from '..';
+import { isDefined } from './is';
 
 export function getByPath(
   event: unknown,
