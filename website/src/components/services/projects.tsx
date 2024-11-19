@@ -17,7 +17,7 @@ export default function Projects() {
         <div className="mx-auto mt-16 max-w-2xl rounded-3xl ring-1 ring-gray-700 sm:mt-20 lg:mx-0 lg:flex lg:max-w-none">
           <div className="p-8 sm:p-10 lg:flex-auto">
             <h3 className="text-3xl font-semibold tracking-tight text-white">
-              Projects (&gt;5 days)
+              Projects (5+ days)
             </h3>
             <p className="mt-6 text-base/7 text-gray-200">
               Partner with us to design and implement a robust pipeline for
