@@ -13,6 +13,7 @@ describe('connector GCP', () => {
         'X-AppEngine-Country': 'DE',
         'X-AppEngine-Region': 'Hamburg',
         'X-AppEngine-City': 'Hamburg',
+        'X-Custom-Header': 'custom',
       }[header];
     },
   } as GCPRequest;
@@ -52,5 +53,20 @@ describe('connector GCP', () => {
     ).toStrictEqual(
       expect.objectContaining({ fingerprint: expect.any(String) }),
     );
+  });
+
+  test('mapping', async () => {
+    const context = await connectorGCPHttpFunction(request, {
+      mapping: {
+        origin: 'foo',
+        'X-Real-Ip': false,
+        'X-Custom-Header': 'custom',
+      },
+    });
+
+    expect(context).toStrictEqual(
+      expect.objectContaining({ foo: 'localhost', custom: 'custom' }),
+    );
+    expect(context.ip).toBeUndefined();
   });
 });
