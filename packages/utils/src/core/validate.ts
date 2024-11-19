@@ -1,7 +1,5 @@
 import type { Schema, WalkerOS } from '@elbwalker/types';
-import { throwError } from './throwError';
-import { isSameType } from './isSameType';
-import { tryCatch } from './tryCatch';
+import { isSameType, throwError, tryCatch } from './..';
 
 export function validateEvent(
   obj: unknown,

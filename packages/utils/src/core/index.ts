@@ -9,7 +9,7 @@ export * from './eventGenerator';
 export * from './getId';
 export * from './getMarketingParameters';
 export * from './invocations';
-export * from './isSameType';
+export * from './is';
 export * from './mapping';
 export * from './onLog';
 export * from './property';

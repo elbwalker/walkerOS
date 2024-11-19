@@ -1,5 +1,6 @@
 import type { Request } from '@elbwalker/types';
 import type { Request as GCPRequest } from '@google-cloud/functions-framework';
+import { isDefined } from '../../../utils/dist';
 
 export * as ConnectorGCP from './types';
 
@@ -18,7 +19,7 @@ export function connectorGCPHttpFunction(request: GCPRequest): Request.Context {
 
   Object.entries(headerMapping).forEach(([header, key]) => {
     const value = request.get(header);
-    if (value) context[key] = value;
+    if (isDefined(value)) context[key] = value;
   });
 
   return context;
