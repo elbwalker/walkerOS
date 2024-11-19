@@ -25,7 +25,6 @@ describe('connector GCP', () => {
       city: 'Hamburg',
       country: 'DE',
       encoding: 'gzip',
-      hash: expect.any(String),
       ip: '127.0.0.0',
       language: 'ts',
       origin: 'localhost',
@@ -44,15 +43,6 @@ describe('connector GCP', () => {
 
     expect(first).toStrictEqual(expect.objectContaining({ ip: '127.0.0.0' }));
     expect(second).toStrictEqual(expect.objectContaining({ ip: '127.0.0.1' }));
-    expect(first.hash).not.toEqual(second.hash);
-  });
-
-  test('hash', async () => {
-    expect(
-      await connectorGCPHttpFunction(request, { hash: 'fingerprint' }),
-    ).toStrictEqual(
-      expect.objectContaining({ fingerprint: expect.any(String) }),
-    );
   });
 
   test('mapping', async () => {
