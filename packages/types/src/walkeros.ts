@@ -48,7 +48,7 @@ export interface Elb<R = void> {
     nested?: Entities,
     custom?: Properties,
   ): R;
-  (partialEvent: PartialEvent): R;
+  (partialEvent: DeepPartialEvent): R;
 }
 
 export type PushData =
@@ -69,6 +69,7 @@ export interface Destinations {
 
 export type Events = Array<Event>;
 export type PartialEvent = Partial<Event>;
+export type DeepPartialEvent = DeepPartial<Event>;
 export interface Event {
   event: string;
   data: Properties;
@@ -186,3 +187,7 @@ export interface Entity {
   nested: Entities;
   context: OrderedProperties;
 }
+
+export type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};

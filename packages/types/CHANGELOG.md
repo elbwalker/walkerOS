@@ -8,7 +8,7 @@
   [#444](https://github.com/elbwalker/walkerOS/issues/444)
 - 4fd313e: Harmonise push interfaces
   [#430](https://github.com/elbwalker/walkerOS/issues/430)
-- 934c5a7: Data Policy [#447]https://(github.com/elbwalker/walkerOS/issues/447)
+- 934c5a7: Data Policy [#447](https://github.com/elbwalker/walkerOS/issues/447)
 - c4ed35f: Standardized mapping
   [#427](https://github.com/elbwalker/walkerOS/issues/427)
 - 9fbf78a: Mapping Options

@@ -1,6 +1,8 @@
+import { isDefined } from '../';
+
 async function sha256(message: string): Promise<string | undefined> {
   const crypto: Crypto | undefined =
-    typeof window !== 'undefined' && window.crypto ? window.crypto : undefined;
+    isDefined(window) && window.crypto ? window.crypto : undefined;
 
   // Crypto API not available
   if (!crypto || !crypto.subtle || !TextEncoder) return;

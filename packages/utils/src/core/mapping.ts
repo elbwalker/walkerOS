@@ -1,5 +1,5 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
-import { castToProperty, getByPath, getGrantedConsent } from '.';
+import { castToProperty, getByPath, getGrantedConsent, isDefined } from '.';
 
 export function getEventMapping(
   event: string,
@@ -44,9 +44,10 @@ export function getEventMapping(
 }
 
 export function getMappingValue(
-  event: WalkerOS.Event,
+  event: WalkerOS.PartialEvent,
   mapping: Mapping.Value,
   instance?: WalkerOS.Instance,
+  props?: unknown,
 ): WalkerOS.Property | undefined {
   // Ensure mapping is an array for uniform processing
   const mappings = Array.isArray(mapping) ? mapping : [mapping];
@@ -69,7 +70,7 @@ export function getMappingValue(
     let mappingValue;
     if (fn) {
       // Use a custom function to get the value
-      mappingValue = fn(event, mappingItem, instance);
+      mappingValue = fn(event, mappingItem, instance, props);
     } else {
       // Get dynamic value from the event
       mappingValue = getByPath(event, key, value);
@@ -80,7 +81,9 @@ export function getMappingValue(
       mappingValue = undefined;
     }
 
+    const property = castToProperty(mappingValue);
+
     // Finally, check and convert the type
-    return castToProperty(mappingValue) || value; // Always use value as a fallback
+    return isDefined(property) ? property : value; // Always use value as a fallback
   }, undefined as WalkerOS.Property | undefined);
 }

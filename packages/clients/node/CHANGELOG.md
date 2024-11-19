@@ -1,5 +1,13 @@
 # @elbwalker/client-node
 
+## 3.1.1
+
+### Patch Changes
+
+- Updated dependencies [5c33b75]
+- Updated dependencies [d3735ad]
+  - @elbwalker/utils@3.5.1
+
 ## 3.1.0
 
 ### Minor Changes
@@ -12,7 +20,7 @@
   [#429](https://github.com/elbwalker/walkerOS/issues/429)
 - 5a2c0b0: Prefer an events consent state
   [#431](https://github.com/elbwalker/walkerOS/issues/431)
-- 934c5a7: Data Policy [#447]https://(github.com/elbwalker/walkerOS/issues/447)
+- 934c5a7: Data Policy [#447](https://github.com/elbwalker/walkerOS/issues/447)
 
 ### Patch Changes
 

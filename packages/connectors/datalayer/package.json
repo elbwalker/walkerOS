@@ -1,0 +1,54 @@
+{
+  "name": "@elbwalker/connector-datalayer",
+  "description": "datalayer connector for walkerOS",
+  "version": "0.0.1",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:dev": "tsup --config tsup.dev.config.ts",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "lint": "tsc && eslint \"**/*.ts*\"",
+    "test": "jest --colors --coverage",
+    "update": "npx npm-check-updates -u && npm update"
+  },
+  "dependencies": {
+    "@elbwalker/walker.js": "3.1.1"
+  },
+  "devDependencies": {
+    "@elbwalker/tsup": "0.0.1",
+    "@elbwalker/types": "3.1.0"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/connectors/datalayer"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "keywords": [
+    "elb",
+    "elbwalker",
+    "walker",
+    "walkerOS",
+    "analytics",
+    "tracking",
+    "google tag manager",
+    "gtm"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

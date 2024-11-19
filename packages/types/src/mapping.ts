@@ -46,6 +46,7 @@ export type Fn = (
   event: Event,
   mapping: Value,
   instance?: WalkerOS.Instance,
+  props?: unknown,
 ) => WalkerOS.Property | void;
 
 export type Validate = (value?: unknown) => boolean;

@@ -5,6 +5,7 @@
   "workspaces": [
     "packages/*",
     "packages/config/*",
+    "packages/connectors/*",
     "packages/clients/*",
     "packages/destinations/core/*",
     "packages/destinations/node/*",

@@ -82,6 +82,10 @@ describe('mapping', () => {
     expect(getMappingValue(createEvent(), {})).toBeUndefined();
   });
 
+  test('false', () => {
+    expect(getMappingValue(createEvent(), 'data.array.2')).toBe(false);
+  });
+
   test('fn', () => {
     const mockFn = jest.fn((event) => {
       if (event.event === 'page view') return 'foo';
@@ -98,8 +102,23 @@ describe('mapping', () => {
         fn: mockFn,
       }),
     ).toBe('bar');
-
     expect(mockFn).toHaveBeenCalledTimes(2);
+
+    // Props
+    getMappingValue(
+      createEvent({ event: 'page click' }),
+      { fn: mockFn },
+      undefined,
+      'random',
+    );
+
+    expect(mockFn).toHaveBeenNthCalledWith(
+      3,
+      expect.any(Object),
+      { fn: mockFn },
+      undefined,
+      'random',
+    );
   });
 
   test('validate', () => {
