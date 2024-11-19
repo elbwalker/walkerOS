@@ -1,5 +1,5 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
-import { castToProperty, getByPath, getGrantedConsent } from '.';
+import { castToProperty, getByPath, getGrantedConsent, isDefined } from '.';
 
 export function getEventMapping(
   event: string,
@@ -84,6 +84,6 @@ export function getMappingValue(
     const property = castToProperty(mappingValue);
 
     // Finally, check and convert the type
-    return typeof property !== 'undefined' ? property : value; // Always use value as a fallback
+    return isDefined(property) ? property : value; // Always use value as a fallback
   }, undefined as WalkerOS.Property | undefined);
 }

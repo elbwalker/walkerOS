@@ -1,4 +1,5 @@
 import { WalkerOS } from '@elbwalker/types';
+import { isDefined } from '..';
 
 export function getByPath(
   event: unknown,
@@ -31,7 +32,7 @@ export function getByPath(
     if (!values) break;
   }
 
-  return typeof values !== 'undefined' ? values : defaultValue;
+  return isDefined(values) ? values : defaultValue;
 }
 
 export function setByPath(
