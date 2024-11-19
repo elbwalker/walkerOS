@@ -27,7 +27,6 @@ export async function connectorGCPHttpFunction(
     ...defaultMapping,
     ...mapping,
   };
-  console.log('🚀 ~ headerMapping:', headerMapping);
 
   Object.entries(headerMapping).forEach(([header, key]) => {
     const value = request.get(header);

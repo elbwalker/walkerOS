@@ -8,4 +8,5 @@ export interface Context {
   origin?: string;
   region?: string;
   userAgent?: string;
+  [key: string]: string | undefined;
 }
