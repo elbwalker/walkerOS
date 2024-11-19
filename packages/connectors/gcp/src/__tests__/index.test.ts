@@ -25,12 +25,25 @@ describe('connector GCP', () => {
       country: 'DE',
       encoding: 'gzip',
       hash: expect.any(String),
-      ip: '127.0.0.1',
+      ip: '127.0.0.0',
       language: 'ts',
       origin: 'localhost',
       region: 'Hamburg',
       userAgent: 'Mozilla/5.0',
     });
+  });
+
+  test('anonymizeIp', async () => {
+    const first = await connectorGCPHttpFunction(request, {
+      anonymizeIp: true,
+    });
+    const second = await connectorGCPHttpFunction(request, {
+      anonymizeIp: false,
+    });
+
+    expect(first).toStrictEqual(expect.objectContaining({ ip: '127.0.0.0' }));
+    expect(second).toStrictEqual(expect.objectContaining({ ip: '127.0.0.1' }));
+    expect(first.hash).not.toEqual(second.hash);
   });
 
   test('hash', async () => {
