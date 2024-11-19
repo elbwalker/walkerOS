@@ -2,6 +2,7 @@ export interface Context {
   city?: string;
   country?: string;
   encoding?: string;
+  hash?: string;
   ip?: string;
   language?: string;
   origin?: string;

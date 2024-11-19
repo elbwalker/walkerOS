@@ -19,16 +19,25 @@ describe('connector GCP', () => {
 
   beforeEach(() => {});
 
-  test('init new', () => {
-    expect(connectorGCPHttpFunction(request)).toStrictEqual({
+  test('basic', async () => {
+    expect(await connectorGCPHttpFunction(request)).toStrictEqual({
       city: 'Hamburg',
       country: 'DE',
       encoding: 'gzip',
+      hash: expect.any(String),
       ip: '127.0.0.1',
       language: 'ts',
       origin: 'localhost',
       region: 'Hamburg',
       userAgent: 'Mozilla/5.0',
     });
+  });
+
+  test('hash', async () => {
+    expect(
+      await connectorGCPHttpFunction(request, { hash: 'fingerprint' }),
+    ).toStrictEqual(
+      expect.objectContaining({ fingerprint: expect.any(String) }),
+    );
   });
 });

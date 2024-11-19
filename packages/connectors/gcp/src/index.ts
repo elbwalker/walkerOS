@@ -1,11 +1,17 @@
 import type { Request } from '@elbwalker/types';
 import type { Request as GCPRequest } from '@google-cloud/functions-framework';
-import { isDefined } from '../../../utils/dist';
+import type { HttpFunction } from './types';
+import { getHashNode, isDefined } from '@elbwalker/utils';
 
 export * as ConnectorGCP from './types';
 
-export function connectorGCPHttpFunction(request: GCPRequest): Request.Context {
+export async function connectorGCPHttpFunction(
+  request: GCPRequest,
+  options: HttpFunction = { hash: 'hash' },
+): Promise<Request.Context> {
   const context: Request.Context = {};
+  const { hash } = options;
+
   const headerMapping: Record<string, keyof typeof context> = {
     origin: 'origin',
     'X-Real-Ip': 'ip',
@@ -21,6 +27,17 @@ export function connectorGCPHttpFunction(request: GCPRequest): Request.Context {
     const value = request.get(header);
     if (isDefined(value)) context[key] = value;
   });
+
+  if (hash)
+    context[hash as keyof Request.Context] = await getHashNode(
+      '' +
+        new Date().getDate() + // day of the month
+        context.origin +
+        context.userAgent +
+        context.language +
+        context.encoding +
+        context.ip,
+    );
 
   return context;
 }
