@@ -84,8 +84,9 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'docsSidebar',
           position: 'left',
-          label: 'Docs',
+          label: 'Documentation',
         },
+        { to: '/services', label: 'Services', position: 'left' },
         { to: '/blog', label: 'Blog', position: 'left' },
         {
           href: vars.github,
