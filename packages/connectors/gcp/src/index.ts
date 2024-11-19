@@ -10,9 +10,9 @@ export async function connectorGCPHttpFunction(
   options: HttpFunction = {},
 ): Promise<Request.Context> {
   const context: Request.Context = {};
-  const { anonymizeIp = true, hash = 'hash' } = options;
+  const { anonymizeIp = true, hash = 'hash', mapping = {} } = options;
 
-  const headerMapping: Record<string, keyof typeof context> = {
+  const defaultMapping: Record<string, keyof typeof context> = {
     origin: 'origin',
     'X-Real-Ip': 'ip',
     'User-Agent': 'userAgent',
@@ -23,9 +23,15 @@ export async function connectorGCPHttpFunction(
     'X-AppEngine-City': 'city',
   };
 
+  const headerMapping = {
+    ...defaultMapping,
+    ...mapping,
+  };
+  console.log('🚀 ~ headerMapping:', headerMapping);
+
   Object.entries(headerMapping).forEach(([header, key]) => {
     const value = request.get(header);
-    if (isDefined(value)) context[key] = value;
+    if (key && isDefined(value)) context[key] = value;
   });
 
   // Anonymize IP address before processing it
