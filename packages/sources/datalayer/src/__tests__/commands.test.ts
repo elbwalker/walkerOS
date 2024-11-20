@@ -1,6 +1,6 @@
 /* eslint-disable prefer-rest-params */
 import type { DataLayer } from '../types';
-import { connectorDataLayer } from '..';
+import { sourceDataLayer } from '..';
 
 describe('commands', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
@@ -16,7 +16,7 @@ describe('commands', () => {
   });
 
   test('consent default', () => {
-    connectorDataLayer({ elb });
+    sourceDataLayer({ elb });
 
     gtag('consent', 'default', {
       ad_user_data: 'denied',
@@ -30,7 +30,7 @@ describe('commands', () => {
   });
 
   test('consent update', () => {
-    connectorDataLayer({ elb, mapping: { foo: {} } });
+    sourceDataLayer({ elb, mapping: { foo: {} } });
 
     gtag('consent', 'update', {
       ad_user_data: 'denied',
@@ -47,7 +47,7 @@ describe('commands', () => {
   });
 
   test('set', () => {
-    connectorDataLayer({
+    sourceDataLayer({
       elb,
       mapping: {
         'set campaign': {

@@ -5,7 +5,7 @@ import { anonymizeIP, isDefined } from '@elbwalker/utils';
 
 export * as ConnectorGCP from './types';
 
-export async function connectorGCPHttpFunction(
+export async function sourceGCPHttpFunction(
   request: GCPRequest,
   options: HttpFunction = {},
 ): Promise<Request.Context> {

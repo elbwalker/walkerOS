@@ -1,6 +1,6 @@
 {
-  "name": "@elbwalker/connector-datalayer",
-  "description": "datalayer connector for walkerOS",
+  "name": "@elbwalker/source-gcp",
+  "description": "GCP source for walkerOS",
   "version": "0.0.1",
   "license": "MIT",
   "main": "dist/index.js",
@@ -24,11 +24,12 @@
   },
   "devDependencies": {
     "@elbwalker/tsup": "0.0.1",
-    "@elbwalker/types": "3.1.0"
+    "@elbwalker/types": "3.1.0",
+    "@google-cloud/functions-framework": "^3.4.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
-    "directory": "packages/connectors/datalayer"
+    "directory": "packages/sources/gcp"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme",
@@ -42,8 +43,8 @@
     "walkerOS",
     "analytics",
     "tracking",
-    "google tag manager",
-    "gtm"
+    "GCP",
+    "Google Clout Platform"
   ],
   "funding": [
     {

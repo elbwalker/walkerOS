@@ -1,8 +1,8 @@
 /* eslint-disable prefer-rest-params */
 import type { DataLayer } from '../types';
-import { connectorDataLayer } from '..';
+import { sourceDataLayer } from '..';
 
-describe('connector dataLayer', () => {
+describe('source dataLayer', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
   let dataLayer: DataLayer;
 
@@ -19,11 +19,11 @@ describe('connector dataLayer', () => {
     window.dataLayer = undefined;
     expect(window.dataLayer).toBeUndefined();
 
-    connectorDataLayer();
-    connectorDataLayer({});
+    sourceDataLayer();
+    sourceDataLayer({});
     expect(window.dataLayer).toBeUndefined();
 
-    connectorDataLayer({ elb });
+    sourceDataLayer({ elb });
     expect(Array.isArray(window.dataLayer)).toBe(true);
     expect(window.dataLayer!.length).toBe(0);
   });
@@ -32,14 +32,14 @@ describe('connector dataLayer', () => {
     const originalPush = dataLayer.push;
     expect(originalPush).toBe(dataLayer.push);
 
-    connectorDataLayer({ elb });
+    sourceDataLayer({ elb });
     expect(originalPush).not.toBe(dataLayer!.push);
   });
 
   test('config dataLayer', () => {
     const dataLayer: DataLayer = [];
 
-    connectorDataLayer({ elb, dataLayer, name: 'foo' });
+    sourceDataLayer({ elb, dataLayer, name: 'foo' });
     expect(window.foo).toBeUndefined(); // Prefer dataLayer over name
     dataLayer.push({ event: 'foo' });
     expect(elb).toHaveBeenCalledTimes(1);
@@ -48,18 +48,18 @@ describe('connector dataLayer', () => {
   test('config name', () => {
     expect(window.foo).toBeUndefined();
 
-    connectorDataLayer({ elb, name: 'foo' });
+    sourceDataLayer({ elb, name: 'foo' });
     expect(Array.isArray(window.foo)).toBe(true);
   });
 
   test('original arguments', () => {
-    connectorDataLayer({ elb, name: 'foo' });
+    sourceDataLayer({ elb, name: 'foo' });
     dataLayer.push('foo');
     expect(dataLayer).toEqual(['foo']);
   });
 
   test('push', () => {
-    connectorDataLayer({ elb });
+    sourceDataLayer({ elb });
     dataLayer.push({ event: 'foo' });
     expect(elb).toHaveBeenCalledTimes(1);
     expect(elb).toHaveBeenCalledWith({
@@ -71,7 +71,7 @@ describe('connector dataLayer', () => {
   });
 
   test('prefix', () => {
-    connectorDataLayer({ elb, prefix: 'foo' });
+    sourceDataLayer({ elb, prefix: 'foo' });
     dataLayer.push({ event: 'bar baz' });
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -83,7 +83,7 @@ describe('connector dataLayer', () => {
   test('existing events', () => {
     dataLayer.push({ event: 'add_to_cart' });
     dataLayer.push({ event: 'purchase' });
-    connectorDataLayer({ elb });
+    sourceDataLayer({ elb });
 
     expect(elb).toHaveBeenCalledTimes(2);
   });
@@ -102,7 +102,7 @@ describe('connector dataLayer', () => {
       }),
     ];
 
-    connectorDataLayer({ elb, dataLayer });
+    sourceDataLayer({ elb, dataLayer });
 
     gtag('event', 'another_arg', {
       bar: 'baz',
@@ -147,7 +147,7 @@ describe('connector dataLayer', () => {
       args[1].push('newElement');
     });
 
-    connectorDataLayer({ elb });
+    sourceDataLayer({ elb });
     dataLayer.push(originalObj, originalArr);
     expect(dataLayer[0]).toStrictEqual({});
     expect(dataLayer[1]).toStrictEqual([]);
@@ -158,7 +158,7 @@ describe('connector dataLayer', () => {
   test('duplicate prevention', () => {
     const processedEvents = new Set<string>();
     processedEvents.add('foo');
-    connectorDataLayer({ elb, processedEvents });
+    sourceDataLayer({ elb, processedEvents });
 
     dataLayer.push({ event: 'foo', id: 'foo' });
     expect(elb).toHaveBeenCalledTimes(0);
@@ -190,7 +190,7 @@ describe('connector dataLayer', () => {
       throw new Error();
     });
 
-    connectorDataLayer(elb);
+    sourceDataLayer(elb);
     dataLayer.push('foo');
     expect(elb).toThrow();
     expect(mockOrg).toHaveBeenCalledTimes(1);

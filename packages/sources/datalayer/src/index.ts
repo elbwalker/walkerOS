@@ -3,7 +3,7 @@ import { intercept, push } from './push';
 
 export * as ConnectorDataLayer from './types';
 
-export function connectorDataLayer(
+export function sourceDataLayer(
   partialConfig: Partial<Config> = {},
 ): Config | undefined {
   const { elb, prefix = 'dataLayer' } = partialConfig;
@@ -42,4 +42,4 @@ export function connectorDataLayer(
   return config;
 }
 
-export default connectorDataLayer;
+export default sourceDataLayer;

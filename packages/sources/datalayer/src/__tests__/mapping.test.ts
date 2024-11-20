@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { clone } from '@elbwalker/utils';
 import { gtagToObj } from '../mapping';
-import { connectorDataLayer } from '..';
+import { sourceDataLayer } from '..';
 
 describe('mapping', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
@@ -31,7 +31,7 @@ describe('mapping', () => {
   beforeEach(() => {});
 
   test('mapping name', () => {
-    const { dataLayer } = connectorDataLayer({
+    const { dataLayer } = sourceDataLayer({
       elb,
       mapping: {
         foo: {
@@ -55,7 +55,7 @@ describe('mapping', () => {
   });
 
   test('mapping ignore', () => {
-    const { dataLayer } = connectorDataLayer({
+    const { dataLayer } = sourceDataLayer({
       elb,
       mapping: {
         foo: {
@@ -69,7 +69,7 @@ describe('mapping', () => {
   });
 
   test('mapping foo', () => {
-    const { dataLayer } = connectorDataLayer({
+    const { dataLayer } = sourceDataLayer({
       elb,
       mapping: {
         foo: {
@@ -148,7 +148,7 @@ describe('mapping', () => {
   });
 
   test('mapping add_to_cart', () => {
-    const { dataLayer } = connectorDataLayer({
+    const { dataLayer } = sourceDataLayer({
       elb,
       mapping: {
         add_to_cart: {
@@ -199,7 +199,7 @@ describe('mapping', () => {
   });
 
   test('mapping purchase', () => {
-    const { dataLayer } = connectorDataLayer({
+    const { dataLayer } = sourceDataLayer({
       elb,
       mapping: {
         purchase: {

@@ -1,7 +1,7 @@
 import type { Request as GCPRequest } from '@google-cloud/functions-framework';
-import { connectorGCPHttpFunction } from '..';
+import { sourceGCPHttpFunction } from '..';
 
-describe('connector GCP', () => {
+describe('source GCP', () => {
   const request: GCPRequest = {
     get: (header: string) => {
       return {
@@ -21,7 +21,7 @@ describe('connector GCP', () => {
   beforeEach(() => {});
 
   test('basic', async () => {
-    expect(await connectorGCPHttpFunction(request)).toStrictEqual({
+    expect(await sourceGCPHttpFunction(request)).toStrictEqual({
       city: 'Hamburg',
       country: 'DE',
       encoding: 'gzip',
@@ -34,10 +34,10 @@ describe('connector GCP', () => {
   });
 
   test('anonymizeIp', async () => {
-    const first = await connectorGCPHttpFunction(request, {
+    const first = await sourceGCPHttpFunction(request, {
       anonymizeIp: true,
     });
-    const second = await connectorGCPHttpFunction(request, {
+    const second = await sourceGCPHttpFunction(request, {
       anonymizeIp: false,
     });
 
@@ -46,7 +46,7 @@ describe('connector GCP', () => {
   });
 
   test('mapping', async () => {
-    const context = await connectorGCPHttpFunction(request, {
+    const context = await sourceGCPHttpFunction(request, {
       mapping: {
         origin: 'foo',
         'X-Real-Ip': false,
