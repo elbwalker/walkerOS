@@ -7,7 +7,7 @@ import {
   useHooks,
 } from '@elbwalker/utils';
 import { SourceWalkerjs } from '../types';
-import { SessionStartOptions } from '../types/client';
+import { SessionStartOptions } from '../types/source';
 import { onApply } from './on';
 
 export function createSessionStart(instance: SourceWalkerjs.Instance) {
