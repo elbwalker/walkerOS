@@ -1,6 +1,6 @@
 import type { Hooks, WalkerOS } from '@elbwalker/types';
 import type { SessionConfig } from '@elbwalker/utils';
-import type { On, Walker, WebDestination } from '.';
+import type { On, Walker, DestinationWeb } from '.';
 
 declare global {
   interface Window {
@@ -42,7 +42,7 @@ export interface State extends WalkerOS.State {
 
 export interface Config extends WalkerOS.Config {
   dataLayer: boolean;
-  dataLayerConfig: WebDestination.Config;
+  dataLayerConfig: DestinationWeb.Config;
   elbLayer: ElbLayer;
   pageview: boolean;
   prefix: string;
@@ -67,8 +67,8 @@ export interface InitConfig extends Partial<Config> {
 export interface Elb extends WalkerOS.Elb {
   (
     event: 'walker destination',
-    destination: WebDestination.Destination | WebDestination.DestinationInit,
-    config?: WebDestination.Config,
+    destination: DestinationWeb.Destination | DestinationWeb.DestinationInit,
+    config?: DestinationWeb.Config,
   ): void;
   (event: 'walker init', scope: Scope | Scope[]): void;
   (
@@ -98,8 +98,8 @@ export type ElbLayer = [
 
 export type PushData =
   | WalkerOS.PushData
-  | WebDestination.Destination
-  | WebDestination.DestinationInit
+  | DestinationWeb.Destination
+  | DestinationWeb.DestinationInit
   | Partial<State>
   | ScopeType;
 
@@ -107,7 +107,7 @@ export type PushOptions =
   | WalkerOS.PushOptions
   | Walker.Trigger
   | WalkerOS.SingleOrArray<On.Options>
-  | WebDestination.Config;
+  | DestinationWeb.Config;
 
 export type PushContext = WalkerOS.PushContext | Element;
 
@@ -120,5 +120,5 @@ export interface SessionStartOptions {
 }
 
 export interface Destinations {
-  [name: string]: WebDestination.Destination;
+  [name: string]: DestinationWeb.Destination;
 }

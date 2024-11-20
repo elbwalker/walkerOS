@@ -1,5 +1,5 @@
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import type { SourceWalkerjs, WebDestination } from '..';
+import type { SourceWalkerjs, DestinationWeb } from '..';
 import { elb, Walkerjs } from '..';
 import { createEvent } from '@elbwalker/utils';
 
@@ -9,8 +9,8 @@ describe('Destination', () => {
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn();
 
-  let destination: WebDestination.Destination;
-  let config: WebDestination.Config;
+  let destination: DestinationWeb.Destination;
+  let config: DestinationWeb.Config;
 
   beforeEach(() => {
     walkerjs = Walkerjs({ pageview: false, session: false });
@@ -198,7 +198,7 @@ describe('Destination', () => {
     const mockPushB = jest.fn();
     const mockPushC = jest.fn();
 
-    const destinationA: WebDestination.Destination = {
+    const destinationA: DestinationWeb.Destination = {
       push: mockPushA,
       config: {
         mapping: {
@@ -208,14 +208,14 @@ describe('Destination', () => {
       },
     };
 
-    const destinationB: WebDestination.Destination = {
+    const destinationB: DestinationWeb.Destination = {
       push: mockPushB,
       config: {
         mapping: { '*': { action: {}, '*': { ignore: true } } },
       },
     };
 
-    const destinationC: WebDestination.Destination = {
+    const destinationC: DestinationWeb.Destination = {
       push: mockPushC,
       config: {
         mapping: { entity: { '*': {} }, '*': { '*': { ignore: true } } },
@@ -318,22 +318,22 @@ describe('Destination', () => {
     const mockPushC = jest.fn();
     const mockPushD = jest.fn();
 
-    const destinationA: WebDestination.Destination = {
+    const destinationA: DestinationWeb.Destination = {
       push: mockPushA,
       config: {}, // No consent settings
     };
 
-    const destinationB: WebDestination.Destination = {
+    const destinationB: DestinationWeb.Destination = {
       push: mockPushB,
       config: { consent: { functional: true } },
     };
 
-    const destinationC: WebDestination.Destination = {
+    const destinationC: DestinationWeb.Destination = {
       push: mockPushC,
       config: { consent: { marketing: true } },
     };
 
-    const destinationD: WebDestination.Destination = {
+    const destinationD: DestinationWeb.Destination = {
       push: mockPushD,
       config: { consent: { via_event: true } },
     };
@@ -392,17 +392,17 @@ describe('Destination', () => {
     const mockPushB = jest.fn();
     const mockPushC = jest.fn();
 
-    const destinationA: WebDestination.Destination = {
+    const destinationA: DestinationWeb.Destination = {
       push: mockPushA,
       config: {}, // No consent settings
     };
 
-    const destinationB: WebDestination.Destination = {
+    const destinationB: DestinationWeb.Destination = {
       push: mockPushB,
       config: { consent: { functional: true } },
     };
 
-    const destinationC: WebDestination.Destination = {
+    const destinationC: DestinationWeb.Destination = {
       push: mockPushC,
       config: { consent: { marketing: true } },
     };
@@ -478,7 +478,7 @@ describe('Destination', () => {
 
     const mockPushA = jest.fn();
 
-    const destinationIgnore: WebDestination.Destination = {
+    const destinationIgnore: DestinationWeb.Destination = {
       push: mockPushA,
       config: {
         mapping: {
@@ -508,7 +508,7 @@ describe('Destination', () => {
       },
     };
 
-    const destination: WebDestination.Destination = {
+    const destination: DestinationWeb.Destination = {
       push: mockPushA,
       config,
     };
@@ -536,13 +536,13 @@ describe('Destination', () => {
     const name = 'foo';
     const config = { init: true, mapping: { p: { v: { name } } } };
 
-    const destinationA: WebDestination.Destination = {
+    const destinationA: DestinationWeb.Destination = {
       init: mockInitA,
       push: mockPushA,
       config,
     };
 
-    const destinationB: WebDestination.Destination = {
+    const destinationB: DestinationWeb.Destination = {
       init: mockInitB,
       push: mockPushB,
       config,
@@ -606,7 +606,7 @@ describe('Destination', () => {
 
     // Expect previous events
     const mockPushLate = jest.fn();
-    const destinationLate: WebDestination.Destination = {
+    const destinationLate: DestinationWeb.Destination = {
       push: mockPushLate,
       config,
     };
@@ -634,7 +634,7 @@ describe('Destination', () => {
       expect.anything(),
     );
     const mockPushLater = jest.fn();
-    const destinationLater: WebDestination.Destination = {
+    const destinationLater: DestinationWeb.Destination = {
       push: mockPushLater,
       config,
     };
@@ -643,7 +643,7 @@ describe('Destination', () => {
 
     // Disable processing previous events
     const mockPushLatest = jest.fn();
-    const destinationLatest: WebDestination.Destination = {
+    const destinationLatest: DestinationWeb.Destination = {
       push: mockPushLatest,
       config,
     };
@@ -793,7 +793,7 @@ describe('Destination', () => {
   test('immutable events', async () => {
     let changedByFirst = false;
     const first = jest.fn();
-    const fistDestination: WebDestination.Destination = {
+    const fistDestination: DestinationWeb.Destination = {
       config: {
         mapping: {
           // Destination will change event
@@ -809,7 +809,7 @@ describe('Destination', () => {
       },
     };
     const second = jest.fn();
-    const secondDestination: WebDestination.Destination = {
+    const secondDestination: DestinationWeb.Destination = {
       config: {},
       push: (event) => {
         // Make sure the first destination was called before
@@ -862,7 +862,7 @@ describe('Destination', () => {
       // timing: { value: 'now' }, // @TODO shouldn't be possible
     };
 
-    const destination: WebDestination.Destination = {
+    const destination: DestinationWeb.Destination = {
       config: { policy },
       push: (e) => {
         mockPush(e);

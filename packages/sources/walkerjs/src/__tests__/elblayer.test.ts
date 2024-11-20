@@ -1,6 +1,6 @@
 import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import type { SourceWalkerjs, WebDestination } from '..';
+import type { SourceWalkerjs, DestinationWeb } from '..';
 import type { WalkerOS } from '@elbwalker/types';
 
 describe('ElbLayer', () => {
@@ -9,7 +9,7 @@ describe('ElbLayer', () => {
 
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
   const mockDestinationInit = jest.fn(); //.mockImplementation(console.log);
-  const destination: WebDestination.Destination = {
+  const destination: DestinationWeb.Destination = {
     init: mockDestinationInit,
     push: mockDestinationPush,
     config: { init: true },

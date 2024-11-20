@@ -1,6 +1,6 @@
 import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import type { SourceWalkerjs, WebDestination } from '..';
+import type { SourceWalkerjs, DestinationWeb } from '..';
 import type { Hooks } from '@elbwalker/types';
 
 describe('Hooks', () => {
@@ -17,7 +17,7 @@ describe('Hooks', () => {
     const mockInit = jest.fn();
     const mockPush = jest.fn();
     const mockPushBatch = jest.fn();
-    const destination: WebDestination.DestinationInit = {
+    const destination: DestinationWeb.DestinationInit = {
       init: mockInit,
       push: mockPush,
       pushBatch: mockPushBatch,

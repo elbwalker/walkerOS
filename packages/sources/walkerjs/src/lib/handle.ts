@@ -1,5 +1,5 @@
 import type { Hooks, WalkerOS } from '@elbwalker/types';
-import type { On, SourceWalkerjs, WebDestination } from '../types';
+import type { On, SourceWalkerjs, DestinationWeb } from '../types';
 import { Const, assign, isSameType } from '@elbwalker/utils';
 import { isElementOrDocument, isObject } from './helper';
 import { initScopeTrigger, ready } from './trigger';
@@ -35,8 +35,8 @@ export function handleCommand(
       isObject(data) &&
         addDestination(
           instance,
-          data as WebDestination.Destination,
-          options as WebDestination.Config,
+          data as DestinationWeb.Destination,
+          options as DestinationWeb.Config,
         );
       break;
     case Const.Commands.Globals:

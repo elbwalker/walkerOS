@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { SourceWalkerjs, WebDestination } from '../types';
+import type { SourceWalkerjs, DestinationWeb } from '../types';
 import {
   debounce,
   getEventMapping,
@@ -11,13 +11,13 @@ import { pushToDestinations } from './push';
 
 export function addDestination(
   instance: SourceWalkerjs.Instance,
-  data: WebDestination.DestinationInit,
-  options?: WebDestination.Config,
+  data: DestinationWeb.DestinationInit,
+  options?: DestinationWeb.Config,
 ) {
   // Prefer explicit given config over default config
   const config = options || data.config || { init: false };
 
-  const destination: WebDestination.Destination = {
+  const destination: DestinationWeb.Destination = {
     ...data,
     config,
   };
@@ -45,7 +45,7 @@ export function dataLayerDestination() {
   const dataLayerPush = (event: unknown) => {
     (window.dataLayer as unknown[]).push(event);
   };
-  const destination: WebDestination.DestinationInit = {
+  const destination: DestinationWeb.DestinationInit = {
     push: (event) => {
       dataLayerPush({
         ...event,
@@ -66,7 +66,7 @@ export function dataLayerDestination() {
 
 export function destinationInit(
   instance: SourceWalkerjs.Instance,
-  destination: WebDestination.Destination,
+  destination: DestinationWeb.Destination,
 ) {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
@@ -91,7 +91,7 @@ export function destinationInit(
 
 export function destinationPush(
   instance: SourceWalkerjs.Instance,
-  destination: WebDestination.Destination,
+  destination: DestinationWeb.Destination,
   event: WalkerOS.Event,
 ): boolean {
   const { eventMapping, mappingKey } = getEventMapping(

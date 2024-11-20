@@ -1,4 +1,4 @@
-import type { SourceWalkerjs, WebDestination } from '..';
+import type { SourceWalkerjs, DestinationWeb } from '..';
 import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import { sessionStart } from '@elbwalker/utils';
@@ -19,7 +19,7 @@ const mockOnRun = jest.fn();
 const mockOnSession = jest.fn();
 
 let walkerjs: SourceWalkerjs.Instance;
-const destination: WebDestination.Destination = {
+const destination: DestinationWeb.Destination = {
   config: {
     on: {
       consent: [{ marketing: mockOnConsent }],
