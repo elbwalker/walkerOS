@@ -1,11 +1,11 @@
-import type { SourceNode, NodeDestination } from '../types';
+import type { SourceNode, DestinationNode } from '../types';
 import type { WalkerOS } from '@elbwalker/types';
 import { createSourceNode } from '../';
 import { createEvent } from '@elbwalker/utils/src';
 
 describe('Source', () => {
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
-  const mockDestination: NodeDestination.Destination = {
+  const mockDestination: DestinationNode.Destination = {
     config: {},
     push: mockDestinationPush,
   };

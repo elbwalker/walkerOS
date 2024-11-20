@@ -1,4 +1,4 @@
-import type { SourceNode, NodeDestination } from '../types';
+import type { SourceNode, DestinationNode } from '../types';
 import type { WalkerOS } from '@elbwalker/types';
 import { createSourceNode } from '../';
 import { createEvent } from '@elbwalker/utils';
@@ -13,7 +13,7 @@ describe('Destination', () => {
 
   let mockEvent: WalkerOS.Event;
 
-  const mockDestination: NodeDestination.Destination = {
+  const mockDestination: DestinationNode.Destination = {
     config: {},
     init: mockInit,
     push: mockPush,
@@ -178,7 +178,7 @@ describe('Destination', () => {
   test('immutable events', async () => {
     let changedByFirst = false;
     const first = jest.fn();
-    const fistDestination: NodeDestination.Destination = {
+    const fistDestination: DestinationNode.Destination = {
       config: {
         mapping: {
           // Destination will change event
@@ -194,7 +194,7 @@ describe('Destination', () => {
       },
     };
     const second = jest.fn();
-    const secondDestination: NodeDestination.Destination = {
+    const secondDestination: DestinationNode.Destination = {
       config: {},
       push: async (event) => {
         // Make sure the first destination was called before
@@ -253,14 +253,14 @@ describe('Destination', () => {
   });
 
   test('fail', async () => {
-    const initFail: NodeDestination.Destination = {
+    const initFail: DestinationNode.Destination = {
       config: {},
       push: jest.fn().mockImplementation(() => {
         throw new Error('init kaputt');
       }),
     };
 
-    const pushFail: NodeDestination.Destination = {
+    const pushFail: DestinationNode.Destination = {
       config: {},
       push: jest.fn().mockImplementation(() => {
         throw new Error('push kaputt');
@@ -303,7 +303,7 @@ describe('Destination', () => {
 
   test('consent', async () => {
     const mockPushConsent = jest.fn();
-    const destinationConsent: NodeDestination.Destination = {
+    const destinationConsent: DestinationNode.Destination = {
       config: { consent: { test: true } },
       push: mockPushConsent,
     };
@@ -362,7 +362,7 @@ describe('Destination', () => {
       // timing: { value: 'now' }, // @TODO shouldn't be possible
     };
 
-    const destination: NodeDestination.Destination = {
+    const destination: DestinationNode.Destination = {
       config: { policy },
       push: async (e) => {
         mockPush(e);

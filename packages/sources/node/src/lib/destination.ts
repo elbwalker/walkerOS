@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { SourceNode, NodeDestination } from '../types';
+import type { SourceNode, DestinationNode } from '../types';
 import {
   debounce,
   getEventMapping,
@@ -14,13 +14,13 @@ export async function addDestination(
   data: unknown = {},
   options: unknown = {},
 ) {
-  if (!isSameType(data, {} as NodeDestination.Destination)) return;
-  if (!isSameType(options, {} as NodeDestination.Config)) return;
+  if (!isSameType(data, {} as DestinationNode.Destination)) return;
+  if (!isSameType(options, {} as DestinationNode.Config)) return;
 
   // Prefer explicit given config over default config
   const config = options || data.config || { init: false };
 
-  const destination: NodeDestination.Destination = {
+  const destination: DestinationNode.Destination = {
     init: data.init,
     push: data.push,
     config,
@@ -44,7 +44,7 @@ export async function addDestination(
 
 export async function destinationInit(
   instance: SourceNode.Instance,
-  destination: NodeDestination.Destination,
+  destination: DestinationNode.Destination,
 ) {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
@@ -65,7 +65,7 @@ export async function destinationInit(
 
 export async function destinationPush(
   instance: SourceNode.Instance,
-  destination: NodeDestination.Destination,
+  destination: DestinationNode.Destination,
   event: WalkerOS.Event,
 ): Promise<boolean> {
   const { eventMapping, mappingKey } = getEventMapping(

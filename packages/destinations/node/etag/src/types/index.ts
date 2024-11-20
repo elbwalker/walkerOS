@@ -1,20 +1,20 @@
-import type { NodeDestination } from '@elbwalker/source-node';
+import type { DestinationNode } from '@elbwalker/source-node';
 import type { DestinationCoreEtag } from '@elbwalker/destination-core-etag';
 
 export interface Destination
-  extends NodeDestination.Destination<Custom, CustomEvent> {}
+  extends DestinationNode.Destination<Custom, CustomEvent> {}
 
-export type Config = NodeDestination.Config<Custom, CustomEvent>;
+export type Config = DestinationNode.Config<Custom, CustomEvent>;
 
-export type PartialConfig = NodeDestination.Config<
+export type PartialConfig = DestinationNode.Config<
   Partial<Custom>,
   Partial<CustomEvent>
 >;
 
-export type PushFn = NodeDestination.PushFn<Custom, CustomEvent>;
+export type PushFn = DestinationNode.PushFn<Custom, CustomEvent>;
 
 export interface Custom extends DestinationCoreEtag.Config {}
 
 export interface CustomEvent {}
 
-export type PushEvents = NodeDestination.PushEvents<CustomEvent>;
+export type PushEvents = DestinationNode.PushEvents<CustomEvent>;

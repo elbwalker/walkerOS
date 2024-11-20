@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { SourceNode, NodeDestination } from '../types';
+import type { SourceNode, DestinationNode } from '../types';
 import {
   assign,
   getGrantedConsent,
@@ -75,7 +75,7 @@ export async function pushToDestinations(
   instance: SourceNode.Instance,
   event?: WalkerOS.Event,
   destination?: SourceNode.Destinations,
-): Promise<NodeDestination.PushResult> {
+): Promise<DestinationNode.PushResult> {
   const { consent, globals, user } = instance;
 
   // Push to all destinations if no destination was given
@@ -83,7 +83,7 @@ export async function pushToDestinations(
   const config = instance.config;
   const results: Array<{
     id: string;
-    destination: NodeDestination.Destination;
+    destination: DestinationNode.Destination;
     skipped?: boolean;
     queue?: WalkerOS.Events;
     error?: unknown;
@@ -173,9 +173,9 @@ export async function pushToDestinations(
     }),
   );
 
-  const successful: NodeDestination.PushSuccess = [];
-  const queued: NodeDestination.PushSuccess = [];
-  const failed: NodeDestination.PushFailure = [];
+  const successful: DestinationNode.PushSuccess = [];
+  const queued: DestinationNode.PushSuccess = [];
+  const failed: DestinationNode.PushFailure = [];
 
   for (const result of results) {
     if (result.skipped) continue;

@@ -1,5 +1,5 @@
 import type { WalkerOS, Schema, Handler, Hooks } from '@elbwalker/types';
-import type { NodeDestination, On } from '.';
+import type { DestinationNode, On } from '.';
 
 export interface Instance extends State, WalkerOS.Instance {
   push: Elb<Promise<PushResult>>;
@@ -36,7 +36,7 @@ export interface InitConfig extends Partial<Config> {
 }
 
 export interface AddDestination {
-  (id: string, destination: NodeDestination.Destination): void;
+  (id: string, destination: DestinationNode.Destination): void;
 }
 
 export interface Elb<R = Promise<PushResult>> extends WalkerOS.Elb<R> {
@@ -58,12 +58,12 @@ export type HandleEvent = (
 
 export type PushData =
   | WalkerOS.PushData
-  | NodeDestination.Destination
+  | DestinationNode.Destination
   | Partial<State>;
 
-export type PushOptions = WalkerOS.PushOptions | NodeDestination.Config;
+export type PushOptions = WalkerOS.PushOptions | DestinationNode.Config;
 
-export interface PushResult extends NodeDestination.PushResult {
+export interface PushResult extends DestinationNode.PushResult {
   event?: WalkerOS.Event;
   status: Status;
 }
@@ -79,7 +79,7 @@ export interface Status {
 }
 
 export interface Destinations {
-  [key: string]: NodeDestination.Destination;
+  [key: string]: DestinationNode.Destination;
 }
 
 export type PrependInstance<Fn extends (...args: never) => ReturnType<Fn>> = (
