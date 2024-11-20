@@ -1,4 +1,4 @@
-import type { NodeDestination } from '@elbwalker/client-node';
+import type { NodeDestination } from '@elbwalker/source-node';
 import type { Handler } from '@elbwalker/types';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 

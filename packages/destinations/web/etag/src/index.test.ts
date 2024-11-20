@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { WebClient } from '@elbwalker/walker.js';
+import type { SourceWalkerjs } from '@elbwalker/walker.js';
 import type { DestinationWebEtag } from '.';
 
 describe('Destination web etag', () => {
@@ -26,7 +26,7 @@ describe('Destination web etag', () => {
       event as WalkerOS.Event,
       custom ? { custom } : destination.config,
       undefined,
-      instance as WebClient.Instance,
+      instance as SourceWalkerjs.Instance,
     );
   }
 

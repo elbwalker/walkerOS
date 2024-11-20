@@ -1,7 +1,7 @@
 # GCP source for walkerOS
 
 Made to be used with
-[node client](https://www.npmjs.com/package/@elbwalker/client-node) from
+[node client](https://www.npmjs.com/package/@elbwalker/source-node) from
 [walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the

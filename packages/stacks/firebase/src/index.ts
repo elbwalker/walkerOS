@@ -1,6 +1,6 @@
-import type { NodeClient } from '@elbwalker/client-node';
+import type { SourceNode } from '@elbwalker/source-node';
 import type { FirebaseStack } from './types';
-import { createNodeClient } from '@elbwalker/client-node';
+import { createSourceNode } from '@elbwalker/source-node';
 import { tryCatchAsync, validateEvent } from '@elbwalker/utils';
 import { onRequest } from 'firebase-functions/v2/https';
 
@@ -11,7 +11,7 @@ export function firebaseStack(
   customConfig: FirebaseStack.PartialConfig = {},
 ): FirebaseStack.Instance {
   const config = getConfig(customConfig);
-  const { elb, instance } = createNodeClient(config.client);
+  const { elb, instance } = createSourceNode(config.client);
 
   const push: FirebaseStack.Push = (options) => {
     return pushFn(instance, options);
@@ -37,7 +37,7 @@ function getConfig(
   return { ...defaultConfig, ...customConfig };
 }
 
-const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
+const pushFn: SourceNode.PrependInstance<FirebaseStack.Push> = (
   instance,
   options = {},
 ) => {
@@ -47,7 +47,7 @@ const pushFn: NodeClient.PrependInstance<FirebaseStack.Push> = (
     // @TODO add a custom response handler
     // @TODO move validation to the client
     await tryCatchAsync(
-      async (body: string, config: NodeClient.Config) => {
+      async (body: string, config: SourceNode.Config) => {
         const event = validateEvent(JSON.parse(body), config.contracts);
 
         // @TODO what if it's a command?

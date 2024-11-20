@@ -56,7 +56,7 @@ The config is optional and supports the following settings:
 ```ts
 // See type FirebaseStack.PartialConfig
 const customConfig = {
-  client: {}, // See NodeClient.PartialConfig from node-client
+  client: {}, // See SourceNode.PartialConfig from node-client
   firebase: {}, // See AppOptions from firebase-admin
 };
 ```

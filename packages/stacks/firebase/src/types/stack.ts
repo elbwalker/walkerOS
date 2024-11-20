@@ -1,16 +1,16 @@
-import type { NodeClient } from '@elbwalker/client-node';
+import type { SourceNode } from '@elbwalker/source-node';
 import type { HttpsFunction, HttpsOptions } from 'firebase-functions/v2/https';
 
 export interface Instance {
   config: Config;
-  instance: NodeClient.Instance;
-  elb: NodeClient.Elb;
+  instance: SourceNode.Instance;
+  elb: SourceNode.Elb;
   push: Push;
 }
 
 export type PartialConfig = Partial<Config>;
 export interface Config {
-  client: NodeClient.InitConfig;
+  client: SourceNode.InitConfig;
 }
 
 export interface Push {
