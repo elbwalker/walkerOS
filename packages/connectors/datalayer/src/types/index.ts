@@ -8,7 +8,7 @@ declare global {
 
 export type DataLayer = Array<unknown>;
 export interface Config {
-  elb: WalkerOS.Elb;
+  elb: WalkerOS.Elb | WalkerOS.AnyFunction;
   dataLayer: DataLayer;
   mapping?: Mapping;
   name?: string;
