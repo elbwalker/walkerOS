@@ -3,7 +3,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import { createSourceNode } from '../';
 import { createEvent } from '@elbwalker/utils/src';
 
-describe('Source', () => {
+describe('Source Node', () => {
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
   const mockDestination: DestinationNode.Destination = {
     config: {},
