@@ -1,8 +1,0 @@
-{
-  "extends": "@elbwalker/tsconfig/node.json",
-  "compilerOptions": {
-    "outDir": "dist",
-    "sourceMap": true
-  },
-  "exclude": ["node_modules", "dist", "**/*.test.*"]
-}

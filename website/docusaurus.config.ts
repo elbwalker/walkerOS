@@ -114,10 +114,6 @@ const config: Config = {
               to: '/docs/destinations',
             },
             {
-              label: 'Stacks',
-              to: '/docs/stacks',
-            },
-            {
               label: 'Guides',
               to: '/docs/guides',
             },

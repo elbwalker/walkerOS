@@ -8,8 +8,7 @@
     "packages/destinations/core/*",
     "packages/destinations/node/*",
     "packages/destinations/web/*",
-    "packages/sources/*",
-    "packages/stacks/*"
+    "packages/sources/*"
   ],
   "scripts": {
     "build": "turbo run build",
