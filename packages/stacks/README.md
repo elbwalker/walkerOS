@@ -14,7 +14,7 @@ infrastructure, giving you complete control over data ingestion and processing.
 
 Stacks are essentially the backbones of your data collection journey. They:
 
-- **Receive Events**: Capture incoming data from clients.
+- **Receive Events**: Capture incoming data from sources.
 - **Validate Data**: Ensure the data conforms to your specified formats.
 - **Process Events**: Enrich, transform, or filter the data as needed.
 - **Route Data**: Send the processed data to its final destination.

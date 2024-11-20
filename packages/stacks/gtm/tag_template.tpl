@@ -565,7 +565,7 @@ ___TEMPLATE_PARAMETERS___
           }
         ],
         "newRowButtonText": "Add Hook",
-        "help": "Hooks can be used to customize the default behavior of the walker.js. Three hooks are available: Push, DestinationInit, and DestinationPush. Hooks allows for validation, manipulation, or even eventual cancellation of default behavior. \u003ca href\u003d\"https://www.elbwalker.com/docs/clients/walkerjs/commands#hooks\"\u003eRead more about hooks\u003c/a\u003e."
+        "help": "Hooks can be used to customize the default behavior of the walker.js. Three hooks are available: Push, DestinationInit, and DestinationPush. Hooks allows for validation, manipulation, or even eventual cancellation of default behavior. \u003ca href\u003d\"https://www.elbwalker.com/docs/sources/walkerjs/commands#hooks\"\u003eRead more about hooks\u003c/a\u003e."
       }
     ]
   }

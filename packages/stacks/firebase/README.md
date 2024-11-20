@@ -25,7 +25,7 @@ maintain.
 ## Features
 
 - **Event Reception**: Receives incoming events from walkerOS
-  [clients](../../clients/).
+  [sources](../../sources/).
 - **Data Validation**: Ensures incoming data meets your predefined schemas.
 - **Event Processing**: Enriches and transforms data before sending it to its
   final destination.
@@ -56,13 +56,13 @@ The config is optional and supports the following settings:
 ```ts
 // See type FirebaseStack.PartialConfig
 const customConfig = {
-  client: {}, // See SourceNode.PartialConfig from node-client
+  client: {}, // See SourceNode.PartialConfig from source-node
   firebase: {}, // See AppOptions from firebase-admin
 };
 ```
 
-The `client` object configures the in-built node-client where you can define a
-name, destination settings, globals, contracs, etc.
+The `client` object configures the in-built node source where you can define a
+name, destination settings, globals, contracts, etc.
 
 The `firebase` object are the original `AppOptions` from the official firebase
 SDK. Specify credentials, a projectId, or other setting.
@@ -83,5 +83,5 @@ Start sending events to the endpoint.
 ## Requirements
 
 - Firebase project
-- walkerOS [client](../../clients/) with an
+- walkerOS [sources](../../sources/) with an
   [API destination](../../destinations/)

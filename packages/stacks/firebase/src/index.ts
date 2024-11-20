@@ -42,7 +42,7 @@ const pushFn: SourceNode.PrependInstance<FirebaseStack.Push> = (
   options = {},
 ) => {
   return onRequest(options, async (req, res) => {
-    // ATTENTION! Never process unknown data from the client
+    // ATTENTION! Never process unknown data from sources
 
     // @TODO add a custom response handler
     // @TODO move validation to the client

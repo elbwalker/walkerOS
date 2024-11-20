@@ -14,7 +14,7 @@ data collection with the actual integration of external tools.
 
 Destinations in walkerOS act as connections, channeling data to appropriate
 tools and platforms. They ensure data is mapped and shared effectively,
-functioning in tandem with walkerOS clients.
+functioning in tandem with walkerOS sources.
 
 ## Types of Destinations
 
