@@ -97,7 +97,7 @@ describe('mapping', () => {
             group: { value: 'group' },
             count: { value: 1 },
             version: {
-              client: { value: '0.0.7' },
+              source: { value: '0.0.7' },
               tagging: { value: 1 },
             },
             source: {
@@ -134,7 +134,7 @@ describe('mapping', () => {
         group: 'group',
         count: 1,
         version: {
-          client: '0.0.7',
+          source: '0.0.7',
           tagging: 1,
         },
         source: {

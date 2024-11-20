@@ -2,10 +2,10 @@ import type { WalkerOS, Schema, Handler, Hooks } from '@elbwalker/types';
 import type { DestinationNode, On } from '.';
 
 export interface Instance extends State, WalkerOS.Instance {
-  push: Elb<Promise<PushResult>>;
-  client: string;
   config: Config;
   destinations: Destinations;
+  version: string;
+  push: Elb<Promise<PushResult>>;
 }
 
 export interface State extends WalkerOS.State {

@@ -252,7 +252,7 @@ function createEventOrCommand(
     action = actionValue,
     timing = Math.round((Date.now() - instance.timing) / 10) / 100,
     version = {
-      client: instance.client,
+      source: instance.version,
       tagging: instance.config.tagging,
     },
     source = { type: 'node', id: '', previous_id: '' },

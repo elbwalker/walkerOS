@@ -213,7 +213,7 @@ describe('ElbLayer', () => {
       getEvents: expect.any(Function),
       getGlobals: expect.any(Function),
       sessionStart: expect.any(Function),
-      client: expect.any(String),
+      version: expect.any(String),
       ...defaultState,
     };
 

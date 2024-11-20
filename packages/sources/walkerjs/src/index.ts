@@ -19,10 +19,10 @@ const elb = createElb();
 export function Walkerjs(
   customConfig: SourceWalkerjs.InitConfig = {},
 ): SourceWalkerjs.Instance {
-  const client = '3.1.1'; // Client version
+  const version = '3.1.1'; // Client version
   const state = getState(customConfig);
   const instance: SourceWalkerjs.Instance = {
-    client,
+    version,
     ...state,
     // Placeholder functions to be overwritten with instance-reference
     push: (() => {}) as unknown as SourceWalkerjs.Elb,

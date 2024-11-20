@@ -154,7 +154,7 @@ export interface User extends Properties {
 }
 
 export interface Version extends Properties {
-  client: string;
+  source: string;
   tagging: number;
 }
 

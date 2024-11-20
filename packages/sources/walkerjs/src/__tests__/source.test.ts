@@ -6,7 +6,7 @@ import fs from 'fs';
 
 describe('Walkerjs', () => {
   const w = window;
-  const version = { client: expect.any(String), tagging: expect.any(Number) };
+  const version = { source: expect.any(String), tagging: expect.any(Number) };
 
   let walkerjs: SourceWalkerjs.Instance;
 
@@ -23,11 +23,11 @@ describe('Walkerjs', () => {
     });
   });
 
-  test('client version equals package.json version', () => {
+  test('version equals package.json version', () => {
     const packageJsonVersion = jest.requireActual('../../package.json').version;
 
     walkerjs = Walkerjs();
-    expect(walkerjs.client).toStrictEqual(packageJsonVersion);
+    expect(walkerjs.version).toStrictEqual(packageJsonVersion);
   });
 
   test('go', () => {

@@ -19,9 +19,9 @@ type WalkerEvent = Array<
 >;
 
 export interface Instance extends State, WalkerOS.Instance {
-  client: string;
   config: Config;
   destinations: Destinations;
+  version: string;
   push: Elb;
   getAllEvents: (scope: Element, prefix: string) => Walker.Events;
   getEvents: (

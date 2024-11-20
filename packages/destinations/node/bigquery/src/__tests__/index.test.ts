@@ -78,7 +78,7 @@ describe('Node Destination BigQuery', () => {
         timing: 3.14,
         group: 'gr0up',
         count: 1,
-        version: '{"client":"0.0.7","tagging":1}',
+        version: '{"source":"0.0.7","tagging":1}',
         source:
           '{"type":"web","id":"https://localhost:80","previous_id":"http://remotehost:9001"}',
         createdAt: expect.any(Date),

@@ -27,11 +27,11 @@ describe('Source Node', () => {
     mockEvent = createEvent();
   });
 
-  test('client version equals package.json version', () => {
+  test('version equals package.json version', () => {
     const packageJsonVersion = jest.requireActual('../../package.json').version;
 
     const { instance } = getSource({});
-    expect(instance.client).toStrictEqual(packageJsonVersion);
+    expect(instance.version).toStrictEqual(packageJsonVersion);
   });
 
   test('create', () => {
@@ -99,7 +99,7 @@ describe('Source Node', () => {
       group: expect.any(String),
       count: 1,
       version: {
-        client: expect.any(String),
+        source: expect.any(String),
         tagging: 42,
       },
       source: {
@@ -192,13 +192,13 @@ describe('Source Node', () => {
   test('version', async () => {
     const { elb } = getSource();
 
-    mockEvent.version = { client: 'cl13nt', tagging: 42 };
+    mockEvent.version = { source: 'cl13nt', tagging: 42 };
     result = await elb(mockEvent);
 
     expect(result.event).toEqual(
       expect.objectContaining({
         version: {
-          client: 'cl13nt',
+          source: 'cl13nt',
           tagging: 42,
         },
       }),

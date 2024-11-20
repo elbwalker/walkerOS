@@ -277,8 +277,8 @@ describe('Destination Google GA4', () => {
         source_id: expect.any(String),
         source_previous_id: expect.any(String),
         user_id: 'us3r1d',
+        version_source: expect.any(String),
         version_tagging: 2,
-        version_client: expect.any(String),
       }),
     );
 

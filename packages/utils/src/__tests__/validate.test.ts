@@ -26,7 +26,7 @@ describe('validate', () => {
       timing: expect.any(Number),
       group: '',
       count: 0,
-      version: { client: '', tagging: 0 },
+      version: { source: '', tagging: 0 },
       source: { type: '', id: '', previous_id: '' },
     });
 

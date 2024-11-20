@@ -17,10 +17,10 @@ export function createSourceNode(customConfig?: SourceNode.InitConfig) {
 export function sourceNode(
   customConfig: SourceNode.PartialConfig = {},
 ): SourceNode.Instance {
-  const client = '3.1.1'; // Client version
+  const version = '3.1.1'; // Client version
   const state = getState(customConfig);
   const instance: SourceNode.Instance = {
-    client,
+    version,
     ...state,
     push: (() => {}) as unknown as SourceNode.Elb, // Placeholder for the actual push function
   };
