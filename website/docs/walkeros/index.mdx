@@ -59,9 +59,6 @@ flowchart LR
     subgraph Collection
         Clients
     end
-    subgraph Processing
-        Stacks
-    end
     subgraph Activation
         Destinations
     end
@@ -74,11 +71,8 @@ flowchart LR
     analytics["Analytics"]
   end
   Clients --> Destinations
-  Destinations --> Stacks
-  Stacks --> Tools
   Destinations --> Tools
   click Clients "/docs/clients/"
-  click Stacks "/docs/stacks/"
   click Destinations "/docs/destinations/"
 ```
 
@@ -86,8 +80,6 @@ flowchart LR
   complete control of data collection.
 - <Link to="destinations">**Destinations**</Link>: Activating data by
   initializing, mapping and finally sharing events to third-party tools.
-- <Link to="stacks">**Stacks**</Link>: Server-side processing for data
-  validation, enrichment and redaction.
 - <Link to="utils">**Utils**</Link>: Supporting helper function to standardize
   and improve data collection.
 
@@ -118,8 +110,7 @@ flowchart LR
       DestinationsC["Destinations"]
     end
     subgraph Server-side["Server-side"]
-      Stacks
-      Node["Node\nClient"]
+      SourceNode["Source Node"]
       DestinationsS["Destinations"]
     end
   end
@@ -132,16 +123,14 @@ flowchart LR
   Website <-- a --> walker.js
   walker.js -- b --> DestinationsC
   DestinationsC -- c --> Tools
-  DestinationsC -- d --> Stacks
-  App -- d --> Stacks
-  Backend -- d --> Stacks
-  Stacks -- e --> Node
-  Node -- f --> DestinationsS
+  DestinationsC -- d --> SourceNode
+  App -- d --> SourceNode
+  Backend -- d --> SourceNode
+  SourceNode -- f --> DestinationsS
   DestinationsS -- g --> Tools
   click Utils "/docs/utils/"
   click walker.js "/docs/clients/walkerjs/"
-  click Node "/docs/clients/node/"
-  click Stacks "/docs/stacks/"
+  click SourceNode "/docs/clients/node/"
   click DestinationsC "/docs/destinations/web/"
   click DestinationsS "/docs/destinations/node/"
 ```
@@ -166,11 +155,8 @@ flowchart LR
 
 ### Server-side setups
 
-- **d**: Events can be sent to a&nbsp;<Link to="/docs/stacks/">Stacks</Link>
-  (public) endpoint from various sources.
-- **e**: Within&nbsp;<Link to="/docs/stacks/">Stacks</Link>, events are
-  processed using the&nbsp;<Link to="/docs/clients/node/">Node Client</Link>,
-  validating and enhancing them before forwarding.
+- **d**: Events can be sent to a (public) endpoint from various sources, running
+  a&nbsp;<Link to="/docs/sources/node/">Source Node</Link>
 - **f**: Similar to client-side operations, consent gets verified, a
   &nbsp;<Link to="/docs/destinations/node/">destination</Link>
   eventually&nbsp;<Link to="/docs/destinations/node/#init">initialized</Link>,
