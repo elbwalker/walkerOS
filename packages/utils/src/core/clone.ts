@@ -1,39 +1,50 @@
-export function clone<T>(org: T): T {
+export function clone<T>(
+  org: T,
+  visited: WeakMap<object, unknown> = new WeakMap(),
+): T {
   // Handle primitive values and functions directly
   if (typeof org !== 'object' || org === null) return org;
 
+  // Check for circular references
+  if (visited.has(org)) return visited.get(org) as T;
+
   // Allow list of clonable types
   const type = Object.prototype.toString.call(org);
-
   if (type === '[object Object]') {
-    // Clone plain object
-    const clonedObj = {} as T;
-    for (const key in org) {
+    const clonedObj = {} as Record<string | symbol, unknown>;
+    visited.set(org as object, clonedObj); // Remember the reference
+
+    for (const key in org as Record<string | symbol, unknown>) {
       if (Object.prototype.hasOwnProperty.call(org, key)) {
-        clonedObj[key] = clone(org[key]);
+        clonedObj[key] = clone(
+          (org as Record<string | symbol, unknown>)[key],
+          visited,
+        );
       }
     }
-    return clonedObj;
+    return clonedObj as T;
   }
 
   if (type === '[object Array]') {
-    // Clone array
-    return (org as unknown as Array<unknown>).map((item) =>
-      clone(item),
-    ) as unknown as T;
+    const clonedArray = [] as unknown[];
+    visited.set(org as object, clonedArray); // Remember the reference
+
+    (org as unknown[]).forEach((item) => {
+      clonedArray.push(clone(item, visited));
+    });
+
+    return clonedArray as T;
   }
 
   if (type === '[object Date]') {
-    // Clone date
-    return new Date((org as unknown as Date).getTime()) as unknown as T;
+    return new Date((org as unknown as Date).getTime()) as T;
   }
 
   if (type === '[object RegExp]') {
-    // Clone regular expression
     const reg = org as unknown as RegExp;
-    return new RegExp(reg.source, reg.flags) as unknown as T;
+    return new RegExp(reg.source, reg.flags) as T;
   }
 
-  // Skip cloning for non-allowed types and return reference
+  // Skip cloning for unsupported types and return reference
   return org;
 }
