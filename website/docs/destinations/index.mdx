@@ -6,7 +6,7 @@ sidebar_position: 1
 
 import Link from '@docusaurus/Link';
 
-WalkerOS is meant to be **vendor-agnostic**. While clients create events,
+WalkerOS is meant to be **vendor-agnostic**. While sources create events,
 destinations are used to manage how events are processed and sent to various
 analytics or data storage tools. The purpose of using destinations in walkerOS
 is to ensure that data captured from your website or application is
@@ -23,8 +23,8 @@ Destinations initialize and process events **only if a user granted consent**.
 ## How to use
 
 Destinations are added to a client
-(see&nbsp;<Link to="/docs/clients/walkerjs/commands#destinations">web</Link>
-or&nbsp;<Link to="/docs/clients/node/commands#destinations">node</Link>). Before
+(see&nbsp;<Link to="/docs/sources/walkerjs/commands#destinations">web</Link>
+or&nbsp;<Link to="/docs/sources/node/commands#destinations">node</Link>). Before
 receiving events from the client, the proper consent states are checked each
 time automatically. Destinations receive events through the [`push`](#push)
 interface. Each destination can have its own configuration, which is set up in
@@ -57,8 +57,8 @@ flowchart LR
   end
 
   webD & nodeD --> tools
-  click webC "/docs/clients/walkerjs/"
-  click nodeC "/docs/clients/node/"
+  click webC "/docs/sources/walkerjs/"
+  click nodeC "/docs/sources/node/"
   click webD "/docs/destinations/web/"
   click nodeD "/docs/destinations/node/"
 ```
@@ -129,7 +129,7 @@ console. Edit a destinations configuration at runtime by accessing
 ## Methods
 
 A client communicates with a destination through the methods. It's also the
-clients job to check for proper consent, calling the `init` method or batching
+sources job to check for proper consent, calling the `init` method or batching
 events. The only required method is `push` to send events to the destination.
 
 ### init

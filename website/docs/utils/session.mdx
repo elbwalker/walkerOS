@@ -9,7 +9,7 @@ import Link from '@docusaurus/Link';
 
 import PackageLink from '/src/components/docs/package-link';
 
-<PackageLink github="packages/clients/walkerjs" npm="@elbwalker/walker.js" />
+<PackageLink github="packages/sources/walkerjs" npm="@elbwalker/walker.js" />
 <PackageLink github="packages/utils/src/web/session" npm="@elbwalker/utils" />
 
 There are multiple ways to define and measure a session. Sessions represent a
@@ -119,7 +119,7 @@ There are additional config parameters [for storage](#sessionstorage) and
 
 Setting a consent state to wait for before detecting a new session is used to
 decide if storage access is allowed or not. If set, it registers an
-[on consent event](/docs/clients/walkerjs/commands#on-events) and won't start
+[on consent event](/docs/sources/walkerjs/commands#on-events) and won't start
 until that consent choice is available. If permission was granted, the
 `sessionStorage` detects a new session; otherwise, the `sessionWindow`.
 
@@ -164,7 +164,7 @@ Based on the [storage](#storage) option either the
 [sessionStorage](#sessionstorage) or the [sessionWindow](#sessionwindow) is used
 to detect a new session. If a [consent](#consent) state is set, the session
 detection gets scheduled via an
-[on-consent](/docs/clients/walkerjs/commands#on-events) command.
+[on-consent](/docs/sources/walkerjs/commands#on-events) command.
 
 ```mermaid
 ---

@@ -57,7 +57,7 @@ flowchart LR
   subgraph walkerOS
     direction LR
     subgraph Collection
-        Clients
+        Sources
     end
     subgraph Activation
         Destinations
@@ -70,13 +70,13 @@ flowchart LR
     marketing["Marketing"]
     analytics["Analytics"]
   end
-  Clients --> Destinations
+  Sources --> Destinations
   Destinations --> Tools
-  click Clients "/docs/clients/"
+  click Sources "/docs/sources/"
   click Destinations "/docs/destinations/"
 ```
 
-- <Link to="clients">**Clients**</Link>: Collecting events, state management and
+- <Link to="sources">**Sources**</Link>: Collecting events, state management and
   complete control of data collection.
 - <Link to="destinations">**Destinations**</Link>: Activating data by
   initializing, mapping and finally sharing events to third-party tools.
@@ -129,19 +129,19 @@ flowchart LR
   SourceNode -- f --> DestinationsS
   DestinationsS -- g --> Tools
   click Utils "/docs/utils/"
-  click walker.js "/docs/clients/walkerjs/"
-  click SourceNode "/docs/clients/node/"
+  click walker.js "/docs/sources/walkerjs/"
+  click SourceNode "/docs/sources/node/"
   click DestinationsC "/docs/destinations/web/"
   click DestinationsS "/docs/destinations/node/"
 ```
 
-- **a**: The&nbsp;<Link to="/docs/clients/walkerjs/">walker.js</Link> integrates
+- **a**: The&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> integrates
   with the
-  website,&nbsp;<Link to="/docs/clients/walkerjs/commands#initialization">initializes</Link>
+  website,&nbsp;<Link to="/docs/sources/walkerjs/commands#initialization">initializes</Link>
   event listeners and interprets
-  the&nbsp;<Link to="/docs/clients/walkerjs/tagging">tagging</Link> on the page.
+  the&nbsp;<Link to="/docs/sources/walkerjs/tagging">tagging</Link> on the page.
 - **b**: Ensures a
-  user&nbsp;<Link to="/docs/clients/walkerjs/commands#consent-management">granted
+  user&nbsp;<Link to="/docs/sources/walkerjs/commands#consent-management">granted
   consent</Link>,
   eventually&nbsp;<Link to="/docs/destinations/#init">initializes</Link> and
   &nbsp;<Link to="/docs/destinations/#mapping">maps</Link>

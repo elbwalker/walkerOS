@@ -107,7 +107,7 @@ const config: Config = {
             },
             {
               label: 'walker.js',
-              to: '/docs/clients/walkerjs',
+              to: '/docs/sources/walkerjs',
             },
             {
               label: 'Destinations',

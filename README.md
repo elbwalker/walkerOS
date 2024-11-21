@@ -69,8 +69,8 @@ to understand its capabilities fully.
 ## Installation
 
 Start collecting data with our
-[web](https://github.com/elbwalker/walkerOS/tree/main/packages/clients/walkerjs)
-or [node](https://github.com/elbwalker/walkerOS/tree/main/packages/clients/node)
+[web](https://github.com/elbwalker/walkerOS/tree/main/packages/sources/walkerjs)
+or [node](https://github.com/elbwalker/walkerOS/tree/main/packages/sources/node)
 client.
 
 ## Contributing
