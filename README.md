@@ -71,7 +71,7 @@ to understand its capabilities fully.
 Start collecting data with our
 [web](https://github.com/elbwalker/walkerOS/tree/main/packages/sources/walkerjs)
 or [node](https://github.com/elbwalker/walkerOS/tree/main/packages/sources/node)
-client.
+source.
 
 ## Contributing
 

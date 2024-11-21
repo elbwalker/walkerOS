@@ -21,8 +21,6 @@ infrastructure, facilitating:
   destinations.
 - **Consent Management**: Manages and respects user consent, which is crucial for privacy
   compliance.
-- **Integration with Stacks**: Seamlessly works with walkerOS Stacks for
-  advanced data operations.
 
 > Learn more in the
 > [Node Source documentation](https://www.elbwalker.com/docs/sources/node/)
