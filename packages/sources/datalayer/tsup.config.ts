@@ -1,6 +1,6 @@
 import { config, defineConfig } from '@elbwalker/tsup';
 
-const globalName = 'Connector';
+const globalName = 'Source';
 
 export default defineConfig([
   // Modules

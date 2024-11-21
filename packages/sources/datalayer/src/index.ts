@@ -1,7 +1,7 @@
 import type { Config, DataLayer } from './types';
 import { intercept, push } from './push';
 
-export * as ConnectorDataLayer from './types';
+export * as SourceDataLayer from './types';
 
 export function sourceDataLayer(
   partialConfig: Partial<Config> = {},
