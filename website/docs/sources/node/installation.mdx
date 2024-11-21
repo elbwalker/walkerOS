@@ -1,30 +1,30 @@
 ---
 title: Installation
 sidebar_position: 1
-description: Installation and configuration of the walkerOS node client.
+description: Installation and configuration of the walkerOS node source.
 ---
 
 import Link from '@docusaurus/Link';
 
-Install the walkerOS node client, via NPM:
+Install the walkerOS node source, via NPM:
 
 ```bash
-npm install @elbwalker/client-node
+npm install @elbwalker/source-node
 ```
 
-Use the `nodeClient` function to create a new client instance. It returns the
-`elb` function for configuration
+Use the `createSourceNode` function to create a new source instance. It returns
+the `elb` function for configuration
 via&nbsp;<Link to="/docs/sources/node/commands">commands</Link> and pushing
 events, and the `instance` itself.
 
 ```ts
-import { nodeClient } from '@elbwalker/client-node';
-const { elb, instance } = nodeClient({});
+import { createSourceNode } from '@elbwalker/source-node';
+const { elb, instance } = createSourceNode({});
 ```
 
 ## Configuration
 
-There a few configuration options when creating a node client instance:
+There a few configuration options when creating a node source instance:
 
 | Option        | Type     | Description                                               |
 | ------------- | -------- | --------------------------------------------------------- |
@@ -38,7 +38,7 @@ There a few configuration options when creating a node client instance:
 | verbose       | boolean  | To enable verbose mode                                    |
 
 ```ts
-const { instance } = nodeClient({
+const { instance } = createSourceNode({
   consent: {
     functional: true,
   },
@@ -55,10 +55,10 @@ const { instance } = nodeClient({
     version: '3.1.4',
   },
   onError: (error) => {
-    console.error('node client', error);
+    console.error('node source', error);
   },
   onLog: (message) => {
-    console.log('node client', message);
+    console.log('node source', message);
   },
   source: {
     type: 'server',

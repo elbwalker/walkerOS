@@ -22,10 +22,10 @@ Destinations initialize and process events **only if a user granted consent**.
 
 ## How to use
 
-Destinations are added to a client
+Destinations are added to a source
 (see&nbsp;<Link to="/docs/sources/walkerjs/commands#destinations">web</Link>
 or&nbsp;<Link to="/docs/sources/node/commands#destinations">node</Link>). Before
-receiving events from the client, the proper consent states are checked each
+receiving events from the source, the proper consent states are checked each
 time automatically. Destinations receive events through the [`push`](#push)
 interface. Each destination can have its own configuration, which is set up in
 the [`config`](#configuration) object. This configuration includes general
@@ -40,12 +40,12 @@ title: Eventflow
 ---
 flowchart LR
   subgraph frontend["Frontend <small>(client-side)</small>"]
-    webC["walker.js<br>web client"]
+    webC["walker.js<br>web source"]
     webD["<b>Web<br>Destinations</b>"]
     webC -- consent<br>check --> webD
   end
   subgraph backend["Backend <small>(server-side)</small>"]
-    nodeC["Node<br>client"]
+    nodeC["Node<br>source"]
     nodeD["<b>Node<br>Destinations</b>"]
     nodeC -- consent<br>check --> nodeD
   end
@@ -92,7 +92,7 @@ optional. A complete destination configuration might look like this:
   onError: (error) => console.error("demo error", error),
   onLog: (message) => console.log("demo log", message),
   on: {
-    // Client-related on-events
+    // Source-related on-events
     consent: [{ marketing: console.log }],
     ready: [console.log],
     run: [console.log],
@@ -120,7 +120,7 @@ Overview of all properties:
 | **on**         | On.Config | Rules for on-functions that gets triggered on specific events                                                                            |
 
 Call `elb('walker destination', { push: console.log }, config);` to add the
-destination to a client. The destination will log all events straight to the
+destination to a source. The destination will log all events straight to the
 console. Edit a destinations configuration at runtime by accessing
 `walkerjs.destinations.<id>`.
 
@@ -128,7 +128,7 @@ console. Edit a destinations configuration at runtime by accessing
 
 ## Methods
 
-A client communicates with a destination through the methods. It's also the
+A source communicates with a destination through the methods. It's also the
 sources job to check for proper consent, calling the `init` method or batching
 events. The only required method is `push` to send events to the destination.
 
@@ -207,7 +207,7 @@ batch = {
 ### on
 
 The `on` method is used to set up rules for on-functions that get triggered by
-the client (individually for walker.js and node).
+the source (individually for walker.js and node).
 
 ```js
 const on = {
@@ -218,7 +218,7 @@ const on = {
 };
 ```
 
-Once a client triggers an event, the destinations `on` method gets called.
+Once a source triggers an event, the destinations `on` method gets called.
 Replace the `console.log` with your custom function.
 
 ## Available Destinations

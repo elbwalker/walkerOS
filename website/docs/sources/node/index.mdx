@@ -1,14 +1,14 @@
 ---
-title: Node client
-description: node client for server-side data processing with walkerOS.
+title: Node source
+description: node source for server-side data processing with walkerOS.
 ---
 
 import Link from '@docusaurus/Link';
 import PackageLink from '/src/components/docs/package-link';
 
-<PackageLink github="packages/sources/node/" npm="@elbwalker/client-node" />
+<PackageLink github="packages/sources/node/" npm="@elbwalker/source-node" />
 
-The walkerOS node client is build for both, being used in a node app or as part
+The walkerOS node source is build for both, being used in a node app or as part
 of a serverless function. It's goal is to capture user events, state management,
 and sending data to&nbsp;<Link to="/docs/destinations/node/">node
 destinations</Link>.
@@ -16,7 +16,7 @@ destinations</Link>.
 ## Event Lifecycle
 
 1. **Run Initialization**: Similar to a web page view, each run reinitialize the
-   client's state.
+   source's state.
 2. **Event Creation**: Events are formulated and queued internally.
 3. **Consent Verification**: Consent is checked before pushing events.
 4. **Destination Management**: Events are sent to destinations based on consent
