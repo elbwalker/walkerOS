@@ -33,7 +33,7 @@ export function validateEvent(
         timestamp: { min: 0 },
         timing: { min: 0 },
         count: { min: 0 },
-        version: { allowedKeys: ['client', 'tagging'] },
+        version: { allowedKeys: ['source', 'tagging'] },
         source: { allowedKeys: ['type', 'id', 'previous_id'] },
       },
     },
@@ -56,7 +56,7 @@ export function validateEvent(
     timing: 0,
     group: '',
     count: 0,
-    version: { client: '', tagging: 0 },
+    version: { source: '', tagging: 0 },
     source: { type: '', id: '', previous_id: '' },
   };
 

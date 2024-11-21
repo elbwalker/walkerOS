@@ -6,11 +6,11 @@ the sign up and pricing discovery behavior.
 
 ## Setup and helper function
 
-Using the walkerOS web client with a SPA requires call the `walker run` event on
-each router update (see src/app.tsx). We also use a short helper function to
-push events to the web client. In this example we're using `console.log` and
-`dataLayer` as our destinations (see src/data.ts). In order to activate the
-Google GTM destination, functional consent is required (run
+Using the walkerOS web source walker.js with a SPA requires call the
+`walker run` event on each router update (see src/app.tsx). We also use a short
+helper function to push events to the walker.js. In this example we're using
+`console.log` and `dataLayer` as our destinations (see src/data.ts). In order to
+activate the Google GTM destination, functional consent is required (run
 `elb('walker consent', { functional: true });` in the console).
 
 ## Trigger page views

@@ -34,14 +34,14 @@ extend your data pipeline.
 
 ### init
 
-Before pushing events to a destination, the node client checks for an available
+Before pushing events to a destination, the node source checks for an available
 `init` function and calls it. This asynchronous function returns either `false`
 if an error occurs, preventing any events from being processed, or a complete
 destination `config` that will be used for pushing events.
 
 ### push
 
-The node client calls `await destination.push([{ event, mapping }], config);` to
+The node source calls `await destination.push([{ event, mapping }], config);` to
 send events to destinations. This function is executed after checking for proper
 consent settings. Events are processed in parallel, and the function supports
 the batching of multiple events. The mapping parameter is optional and allows

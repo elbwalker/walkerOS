@@ -38,7 +38,7 @@ export function createEvent(props: WalkerOS.PartialEvent = {}): WalkerOS.Event {
     group,
     count,
     version: {
-      client: '0.0.7',
+      source: '0.0.7',
       tagging: 1,
     },
     source: {

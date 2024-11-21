@@ -1,6 +1,7 @@
 import type { Destination, Hooks } from '.';
 
 export type AnyObject = Record<string, unknown>;
+export type AnyFunction = (...args: unknown[]) => unknown;
 export type SingleOrArray<T> = T | Array<T>;
 
 export interface Instance extends State {
@@ -153,7 +154,7 @@ export interface User extends Properties {
 }
 
 export interface Version extends Properties {
-  client: string;
+  source: string;
   tagging: number;
 }
 

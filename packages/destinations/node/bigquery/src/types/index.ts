@@ -1,26 +1,26 @@
-import type { NodeDestination } from '@elbwalker/client-node';
+import type { DestinationNode } from '@elbwalker/source-node';
 import type { Handler } from '@elbwalker/types';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Destination
-  extends NodeDestination.Destination<Custom, CustomEvent> {
+  extends DestinationNode.Destination<Custom, CustomEvent> {
   init: InitFn;
 }
 
-export type PushFn = NodeDestination.PushFn<Custom, CustomEvent>;
-export type InitFn = NodeDestination.InitFn<PartialConfig, Config>;
+export type PushFn = DestinationNode.PushFn<Custom, CustomEvent>;
+export type InitFn = DestinationNode.InitFn<PartialConfig, Config>;
 
 export type Config = {
   custom: Custom;
   onLog: Handler.Log;
-} & NodeDestination.Config<Custom, CustomEvent>;
+} & DestinationNode.Config<Custom, CustomEvent>;
 
-export type PartialConfig = NodeDestination.Config<
+export type PartialConfig = DestinationNode.Config<
   Partial<Custom>,
   Partial<CustomEvent>
 >;
 
-export type PushEvents = NodeDestination.PushEvents<CustomEvent>;
+export type PushEvents = DestinationNode.PushEvents<CustomEvent>;
 
 export interface Custom {
   client: BigQuery;

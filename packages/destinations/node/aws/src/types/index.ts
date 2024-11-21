@@ -1,4 +1,4 @@
-import type { NodeDestination } from '@elbwalker/client-node';
+import type { DestinationNode } from '@elbwalker/source-node';
 import type { Handler } from '@elbwalker/types';
 import type {
   FirehoseClient,
@@ -6,17 +6,17 @@ import type {
 } from '@aws-sdk/client-firehose';
 
 export interface Destination
-  extends NodeDestination.Destination<Custom, CustomEvent> {
+  extends DestinationNode.Destination<Custom, CustomEvent> {
   init: InitFn;
 }
 
-export type PushFn = NodeDestination.PushFn<Custom, CustomEvent>;
-export type InitFn = NodeDestination.InitFn<PartialConfig, Config>;
+export type PushFn = DestinationNode.PushFn<Custom, CustomEvent>;
+export type InitFn = DestinationNode.InitFn<PartialConfig, Config>;
 
 export type Config = {
   custom: Custom;
   onLog: Handler.Log;
-} & NodeDestination.Config<Custom, CustomEvent>;
+} & DestinationNode.Config<Custom, CustomEvent>;
 
 export type PartialConfig = Partial<Config>;
 

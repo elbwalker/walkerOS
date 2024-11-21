@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from '../atoms/buttons';
 
 import { CheckIcon } from '@heroicons/react/20/solid';
 

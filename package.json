@@ -5,12 +5,10 @@
   "workspaces": [
     "packages/*",
     "packages/config/*",
-    "packages/connectors/*",
-    "packages/clients/*",
     "packages/destinations/core/*",
     "packages/destinations/node/*",
     "packages/destinations/web/*",
-    "packages/stacks/*"
+    "packages/sources/*"
   ],
   "scripts": {
     "build": "turbo run build",

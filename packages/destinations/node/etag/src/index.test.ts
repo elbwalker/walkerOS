@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { NodeClient } from '@elbwalker/client-node';
+import type { SourceNode } from '@elbwalker/source-node';
 import type { DestinationNodeEtag } from '.';
 
 describe('Destination node etag', () => {
@@ -25,7 +25,7 @@ describe('Destination node etag', () => {
       event as WalkerOS.Event,
       custom ? { custom } : destination.config,
       undefined,
-      instance as NodeClient.Instance,
+      instance as SourceNode.Instance,
     );
   }
 

@@ -1,4 +1,4 @@
-import type { WebDestination } from '@elbwalker/walker.js';
+import type { DestinationWeb } from '@elbwalker/walker.js';
 
 declare global {
   interface Window {
@@ -7,9 +7,9 @@ declare global {
 }
 
 export interface Destination
-  extends WebDestination.Destination<Custom, CustomEvent> {}
+  extends DestinationWeb.Destination<Custom, CustomEvent> {}
 
-export type Config = WebDestination.Config<Custom, CustomEvent>;
+export type Config = DestinationWeb.Config<Custom, CustomEvent>;
 
 export interface Custom {
   appId: string;

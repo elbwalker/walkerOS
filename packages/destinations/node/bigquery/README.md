@@ -112,7 +112,7 @@ for companies looking to centralize their data collection and analysis efforts.
 
 Before using the BigQuery destination, ensure you have:
 
-- walkerOS node client
+- walkerOS source node
 - Google Cloud Platform account
 - BigQuery dataset and table
 - GCP service account with permissions to write to the events table

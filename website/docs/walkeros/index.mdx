@@ -57,10 +57,7 @@ flowchart LR
   subgraph walkerOS
     direction LR
     subgraph Collection
-        Clients
-    end
-    subgraph Processing
-        Stacks
+        Sources
     end
     subgraph Activation
         Destinations
@@ -73,21 +70,16 @@ flowchart LR
     marketing["Marketing"]
     analytics["Analytics"]
   end
-  Clients --> Destinations
-  Destinations --> Stacks
-  Stacks --> Tools
+  Sources --> Destinations
   Destinations --> Tools
-  click Clients "/docs/clients/"
-  click Stacks "/docs/stacks/"
+  click Sources "/docs/sources/"
   click Destinations "/docs/destinations/"
 ```
 
-- <Link to="clients">**Clients**</Link>: Collecting events, state management and
+- <Link to="sources">**Sources**</Link>: Collecting events, state management and
   complete control of data collection.
 - <Link to="destinations">**Destinations**</Link>: Activating data by
   initializing, mapping and finally sharing events to third-party tools.
-- <Link to="stacks">**Stacks**</Link>: Server-side processing for data
-  validation, enrichment and redaction.
 - <Link to="utils">**Utils**</Link>: Supporting helper function to standardize
   and improve data collection.
 
@@ -118,8 +110,7 @@ flowchart LR
       DestinationsC["Destinations"]
     end
     subgraph Server-side["Server-side"]
-      Stacks
-      Node["Node\nClient"]
+      SourceNode["Source Node"]
       DestinationsS["Destinations"]
     end
   end
@@ -132,45 +123,40 @@ flowchart LR
   Website <-- a --> walker.js
   walker.js -- b --> DestinationsC
   DestinationsC -- c --> Tools
-  DestinationsC -- d --> Stacks
-  App -- d --> Stacks
-  Backend -- d --> Stacks
-  Stacks -- e --> Node
-  Node -- f --> DestinationsS
+  DestinationsC -- d --> SourceNode
+  App -- d --> SourceNode
+  Backend -- d --> SourceNode
+  SourceNode -- f --> DestinationsS
   DestinationsS -- g --> Tools
   click Utils "/docs/utils/"
-  click walker.js "/docs/clients/walkerjs/"
-  click Node "/docs/clients/node/"
-  click Stacks "/docs/stacks/"
+  click walker.js "/docs/sources/walkerjs/"
+  click SourceNode "/docs/sources/node/"
   click DestinationsC "/docs/destinations/web/"
   click DestinationsS "/docs/destinations/node/"
 ```
 
-- **a**: The&nbsp;<Link to="/docs/clients/walkerjs/">walker.js</Link> integrates
+- **a**: The&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> integrates
   with the
-  website,&nbsp;<Link to="/docs/clients/walkerjs/commands#initialization">initializes</Link>
+  website,&nbsp;<Link to="/docs/sources/walkerjs/commands#initialization">initializes</Link>
   event listeners and interprets
-  the&nbsp;<Link to="/docs/clients/walkerjs/tagging">tagging</Link> on the page.
+  the&nbsp;<Link to="/docs/sources/walkerjs/tagging">tagging</Link> on the page.
 - **b**: Ensures a
-  user&nbsp;<Link to="/docs/clients/walkerjs/commands#consent-management">granted
+  user&nbsp;<Link to="/docs/sources/walkerjs/commands#consent-management">granted
   consent</Link>,
   eventually&nbsp;<Link to="/docs/destinations/#init">initializes</Link> and
-  &nbsp;<Link to="/docs/destinations/#mapping">maps</Link>
+  &nbsp;<Link to="/docs/destinations/mapping">maps</Link>
   events&nbsp;<Link to="/docs/destinations/#configuration">appropriately</Link>
   before&nbsp;<Link to="/docs/destinations/#push">pushing</Link> them
   to&nbsp;<Link to="/docs/destinations/web/">destinations</Link>.
 - **c**: Events
   are&nbsp;<Link to="/docs/destinations/web/#create-your-own">formatted
   correctly</Link> and get sent directly to the respective tools from the
-  client.
+  source.
 
 ### Server-side setups
 
-- **d**: Events can be sent to a&nbsp;<Link to="/docs/stacks/">Stacks</Link>
-  (public) endpoint from various sources.
-- **e**: Within&nbsp;<Link to="/docs/stacks/">Stacks</Link>, events are
-  processed using the&nbsp;<Link to="/docs/clients/node/">Node Client</Link>,
-  validating and enhancing them before forwarding.
+- **d**: Events can be sent to a (public) endpoint from various sources, running
+  a&nbsp;<Link to="/docs/sources/node/">Source Node</Link>
 - **f**: Similar to client-side operations, consent gets verified, a
   &nbsp;<Link to="/docs/destinations/node/">destination</Link>
   eventually&nbsp;<Link to="/docs/destinations/node/#init">initialized</Link>,

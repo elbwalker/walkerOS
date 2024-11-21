@@ -46,11 +46,11 @@ export default function Features(): JSX.Element {
     <section className="my-20">
       <div className="container">
         <div className="row">
-          <Feature title="Collect" link="/docs/clients/" icon={iconCollect}>
+          <Feature title="Collect" link="/docs/sources/" icon={iconCollect}>
             Capture events easily and privacy-compliant from your application or
-            site with WalkerOS web or node.js clients.
+            site with WalkerOS web or node.js sources.
           </Feature>
-          <Feature title="Process" link="/docs/stacks/" icon={iconProcess}>
+          <Feature title="Process" link="/docs/walkeros/event-model" icon={iconProcess}>
             Ingest your data to your own endpoint to ensure ownership and comply
             with legislation.
           </Feature>
