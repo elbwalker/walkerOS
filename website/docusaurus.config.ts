@@ -70,6 +70,7 @@ const config: Config = {
     autoCollapsedSidebar: true,
     docs: {
       sidebar: {
+        autoCollapseCategories: true,
         hideable: true,
       },
     },
