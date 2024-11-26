@@ -25,10 +25,10 @@
     "@elbwalker/walker.js": "latest",
     "@iconify/react": "^5.0.2",
     "@mdx-js/react": "^3.1.0",
-    "console-feed": "^3.6.0",
     "prism-react-renderer": "^2.4.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-inspector": "^6.0.2",
     "react-live": "^4.1.8",
     "react-shadow-root": "^6.2.0"
   },
