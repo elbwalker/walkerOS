@@ -2,7 +2,6 @@ import type { CSSProperties } from 'react';
 import React, { useState } from 'react';
 import { ObjectInspector, chromeDark } from 'react-inspector';
 import { LiveProvider, LiveEditor, LiveError, LivePreview } from 'react-live';
-import ReactShadowRoot from 'react-shadow-root';
 import styles from './Preview.module.css';
 
 interface PreviewProps {
@@ -25,49 +24,31 @@ const Preview: React.FC<PreviewProps> = ({
     setLogs((prevLogs) => [...prevLogs, log]);
   };
 
-  const logMessage = () => {
-    addLog({
-      hello: 'world',
-      nested: { key: 'value' },
-    });
-    addLog({ type: 'warn' });
-    addLog({ a: 'error', message: 'Something went wrong!' });
-  };
-
   const theme = {
     ...chromeDark,
     ...{
       // OBJECT_NAME_COLOR: '#01b5e2',
-      OBJECT_VALUE_STRING_COLOR: "#01b5e2"
+      OBJECT_VALUE_STRING_COLOR: '#01b5e2',
     },
   } as unknown as string;
 
   const scope = { React, console: window.console, addLog };
 
-  const editorStyle: CSSProperties = {
+  const containerStyle: CSSProperties = {
+    // height: `${height}px`,
     maxHeight: `${height}px`,
     overflowY: 'scroll',
-  };
-
-  const containerStyle: CSSProperties = {
-    height: `${height}px`,
   };
 
   return (
     <div className={styles.previewContainer}>
       <LiveProvider code={code} scope={scope}>
         <LiveError className="mt-2 text-red-500" />
-        <button
-          className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-500"
-          onClick={logMessage}
-        >
-          Log Example
-        </button>
         <div className="flex gap-4" style={containerStyle}>
           {!hideCode && (
             <div className="flex flex-col w-1/3 border border-gray-300 rounded-md overflow-hidden">
               <div className="bg-gray-200 p-2 font-bold text-center">Code</div>
-              <div className="flex-1" style={editorStyle}>
+              <div className="flex-1">
                 <LiveEditor className="h-full" />
               </div>
             </div>
@@ -79,9 +60,7 @@ const Preview: React.FC<PreviewProps> = ({
                 Preview
               </div>
               <div className="flex-1">
-                <div className="h-full">
-                  <ShadowPreview />
-                </div>
+                <LivePreview className="h-full" />
               </div>
             </div>
           )}
@@ -102,21 +81,6 @@ const Preview: React.FC<PreviewProps> = ({
           )}
         </div>
       </LiveProvider>
-    </div>
-  );
-};
-
-const ShadowPreview: React.FC = () => {
-  const style = `:host {
-    display: inline-flex;
-  }`;
-
-  return (
-    <div className={styles.shadowPreview}>
-      <ReactShadowRoot>
-        <style>{style}</style>
-        <LivePreview />
-      </ReactShadowRoot>
     </div>
   );
 };
