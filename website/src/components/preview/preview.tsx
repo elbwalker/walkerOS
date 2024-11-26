@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import React, { useState } from 'react';
-import { ObjectInspector } from 'react-inspector';
+import { ObjectInspector, chromeDark } from 'react-inspector';
 import { LiveProvider, LiveEditor, LiveError, LivePreview } from 'react-live';
 import ReactShadowRoot from 'react-shadow-root';
 import styles from './Preview.module.css';
@@ -27,13 +27,22 @@ const Preview: React.FC<PreviewProps> = ({
 
   const logMessage = () => {
     addLog({
-     hello: 'world', nested: { key: 'value' } },
-    );
+      hello: 'world',
+      nested: { key: 'value' },
+    });
     addLog({ type: 'warn' });
     addLog({ a: 'error', message: 'Something went wrong!' });
   };
 
-  const scope = { React, console: window.console };
+  const theme = {
+    ...chromeDark,
+    ...{
+      // OBJECT_NAME_COLOR: '#01b5e2',
+      OBJECT_VALUE_STRING_COLOR: "#01b5e2"
+    },
+  } as unknown as string;
+
+  const scope = { React, console: window.console, addLog };
 
   const editorStyle: CSSProperties = {
     maxHeight: `${height}px`,
@@ -85,11 +94,7 @@ const Preview: React.FC<PreviewProps> = ({
               <div className="flex-1 overflow-y-auto">
                 <div className="p-2 bg-gray-900 text-white h-full">
                   {logs.map((log, index) => (
-                    <ObjectInspector
-                      key={index}
-                      theme="chromeDark"
-                      data={log}
-                    />
+                    <ObjectInspector key={index} theme={theme} data={log} />
                   ))}
                 </div>
               </div>
