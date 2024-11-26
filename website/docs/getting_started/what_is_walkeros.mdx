@@ -7,47 +7,38 @@ sidebar_position: 1
 
 import Link from '@docusaurus/Link';
 
-# walkerOS
+# Welcome to walkerOS
 
-Every business is **individual**, and so are their **data needs**. Data
-foundations grow and adapt to those needs over time. Evolving requirements often
-result in tremendous communication and implementation effort, (accidental) user
-privacy violations, and a growing dependence on a single analytics provider.
-
-Designed as a **unified and privacy-centric data collection platform**, walkerOS
-creates the **single source of truth** for data teams.
-
-It seamlessly integrates with **various tools** for analysis and marketing,
-bringing together **various roles** like Data Engineers, Analysts, Product
-Owners, Growth Marketers, and Developers with their individual needs.
-
-Key features include **data quality** enforcement, built-in **consent
-management**, **data redaction** capabilities, **first-party** data collection,
-and support for server-side and client-side event tracking.
-
-It's tailored for **enterprises, agencies, freelancers, and anyone involved in
-data-driven decision-making**. Its flexibility allows **quick results** without
-disrupting existing setups.
+walkerOS is a unified, privacy-centric data collection platform that creates a
+single source of truth for data, marketing and product teams. It offers features
+like&nbsp;<Link to="/docs/sources/overview">data
+capturing</Link>,&nbsp;<Link to="/docs/consent_management/overview">consent
+management</Link>,&nbsp;<Link to="/docs/destinations/overview">data
+integration</Link>, and&nbsp;<Link to="/docs/destinations/event_mapping">tag
+management</Link> creating reliable first-party data with full data ownership.
 
 ## Why walkerOS?
 
-- **Reliability**: A dependable infrastructure for continuous data collection,
+- **Sustainability**: A robust infrastructure for continuous data collection,
   even amidst evolving data landscapes.
-- **Privacy Focus**: Emphasizing user privacy, with a strict privacy-by-design
-  approach, in-build consent management and various data protection features.
-- **Complete Data Ownership**: Gain full control with your first-party data,
+- **Privacy focus**: Emphasizing user privacy, with a strict privacy-by-design
+  approach, in-build&nbsp;<Link to="/docs/consent_management/overview">consent
+  management</Link> and various data protection features.
+- **Complete data ownership**: Gain full control with your first-party data,
   avoid vendor lock-in and control data processing.
-- **Flexible Architecture**: Adapt walkerOS to your specific data needs with the
-  modular design and grow step-by-step.
-- **Simplified Data Model**: The intuitive event model streamlines data
+- **Simplified data model**: The intuitive event model streamlines data
   collection, making analytics straightforward and efficient.
+- **Flexible architecture**: Adapt walkerOS to your specific data needs with the
+  modular design and grow step-by-step.
 
 ## How walkerOS operates
 
-walkerOS functions through a streamlined framework with one
+walkerOS is a streamlined framework with one
 standardized&nbsp;<Link to="/docs/walkeros/event-model">Event model</Link>.
 Components are designed to always be extensible for a steadily growing data
 journey.
+
+### Basic infrastructure
 
 ```mermaid
 ---
@@ -66,7 +57,7 @@ flowchart LR
   end
   subgraph Tools
     direction LR
-    tag["Tag Manager"]
+    storage["Storage"]
     marketing["Marketing"]
     analytics["Analytics"]
   end
@@ -76,21 +67,15 @@ flowchart LR
   click Destinations "/docs/destinations/"
 ```
 
-- <Link to="sources">**Sources**</Link>: Collecting events, state management and
-  complete control of data collection.
-- <Link to="destinations">**Destinations**</Link>: Activating data by
-  initializing, mapping and finally sharing events to third-party tools.
+- <Link to="sources">**Sources**</Link>: Event collection and state management
+  with complete control.
+- <Link to="destinations">**Destinations**</Link>: Data activation by
+  initializing,&nbsp;<Link to="/docs/destinations/event_mapping">mapping</Link> and
+  then sharing events to third-party tools.
 - <Link to="utils">**Utils**</Link>: Supporting helper function to standardize
   and improve data collection.
 
-<Link to="/docs/walkeros/getting-started">**Get started**</Link> with walkerOS step-by-step
-to enable the full potential of your data.
-
-## Complete infrastructure
-
-A complete event journey is something that grows steadily. It's not created by
-one large project. Step-by-step, the infrastructure evolves, additional events
-get triggered, new destinations are added, and configurations are updated.
+### Complete infrastructure
 
 ```mermaid
 ---
@@ -116,7 +101,7 @@ flowchart LR
   end
   subgraph Tools
     direction LR
-    tag["Tag Manager"]
+    storage["Storage"]
     marketing["Marketing"]
     analytics["Analytics"]
   end
@@ -135,12 +120,14 @@ flowchart LR
   click DestinationsS "/docs/destinations/node/"
 ```
 
+#### Example event journey
+
 - **a**: The&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> integrates
   with the
   website,&nbsp;<Link to="/docs/sources/walkerjs/commands#initialization">initializes</Link>
   event listeners and interprets
   the&nbsp;<Link to="/docs/sources/walkerjs/tagging">tagging</Link> on the page.
-- **b**: Ensures a
+- **b**: The&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> ensures a
   user&nbsp;<Link to="/docs/sources/walkerjs/commands#consent-management">granted
   consent</Link>,
   eventually&nbsp;<Link to="/docs/destinations/#init">initializes</Link> and
@@ -152,9 +139,6 @@ flowchart LR
   are&nbsp;<Link to="/docs/destinations/web/#create-your-own">formatted
   correctly</Link> and get sent directly to the respective tools from the
   source.
-
-### Server-side setups
-
 - **d**: Events can be sent to a (public) endpoint from various sources, running
   a&nbsp;<Link to="/docs/sources/node/">Source Node</Link>
 - **f**: Similar to client-side operations, consent gets verified, a
@@ -164,3 +148,31 @@ flowchart LR
   event&nbsp;<Link to="/docs/destinations/node/#custom-configuration">preparation</Link>
   are processed server-side.
 - **g**: Events are formatted correctly and sent to tools from the server.
+
+## Our principles of data collection
+
+- **Step-by-step**: While everyone has become an AI expert in no time, we should
+  remember everything that has to be done before going there. It's a journey
+  that requires lots of work from the ground up. No shortcuts.
+- **Don't build on rented land**: In the ever-evolving world of data, relying
+  solely on external platforms can be risky. Prioritize building your own robust
+  data infrastructures to maintain control and adaptability. Sunsets are
+  inevitable, also for features.
+- **Resilience is key**: As data environments are dynamic, designing resilient
+  systems can help withstand changes and unexpected challenges, ensuring
+  continuous data flow and integrity. Yes, more legal requirements are coming.
+- **Focus on what you can control**: In data management, focusing on elements
+  within your control, like data quality and security, can lead to more reliable
+  and effective outcomes. It's your responsibility and a great chance to set the
+  rules.
+- **Use tools only for what they are made for**: Utilize each data tool for its
+  intended purpose to maximize efficiency and avoid unnecessary complications in
+  data processes. Just don't misuse them, please!
+
+- **Data is never done**: The journey of data is ongoing. Continuous analysis,
+  refinement, and updating are crucial to keep data relevant and actionable.
+  Build-measure-learn-grow.
+
+- **Internalize data**: Embrace data as a core part of your strategy and
+  operations. Integrating data into your processes ensures it becomes an
+  intrinsic part of decision-making.
