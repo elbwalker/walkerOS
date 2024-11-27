@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { destinationWebAPI } from '@elbwalker/destination-web-api';
 import Tagger from '@elbwalker/tagger';
+import { previewRegistry } from './preview/preview';
 
 export const DataCollection = () => {
   const location = useLocation();
@@ -37,6 +38,14 @@ export const DataCollection = () => {
         custom: {
           url: 'https://europe-west1-walkeros-firebase-stack.cloudfunctions.net/ingest',
           transport: 'beacon',
+        },
+      });
+
+      // Destination Preview
+      elb('walker destination', {
+        push: (e) => {
+          const previewId = e.context?.previewId?.[0];
+          if (previewId) previewRegistry.get(String(previewId))?.(e);
         },
       });
     } else {

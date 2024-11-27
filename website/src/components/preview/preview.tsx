@@ -1,8 +1,28 @@
-import type { CSSProperties } from 'react';
+import type { WalkerOS } from '@elbwalker/types';
+import { getId } from '@elbwalker/utils';
 import React, { useState } from 'react';
 import { ObjectInspector, chromeDark } from 'react-inspector';
 import { LiveProvider, LiveEditor, LiveError, LivePreview } from 'react-live';
-import styles from './Preview.module.css';
+
+type AddLogFunction = (message: WalkerOS.Event) => void;
+
+class PreviewRegistry {
+  private registry = new Map<string, AddLogFunction>();
+
+  add(previewId: string, addLog: AddLogFunction): void {
+    this.registry.set(previewId, addLog);
+  }
+
+  get(previewId: string): AddLogFunction | undefined {
+    return this.registry.get(previewId);
+  }
+
+  delete(previewId: string): void {
+    this.registry.delete(previewId);
+  }
+}
+
+export const previewRegistry = new PreviewRegistry();
 
 interface PreviewProps {
   code: string;
@@ -19,10 +39,12 @@ const Preview: React.FC<PreviewProps> = ({
   hidePreview = false,
   hideConsole = false,
 }) => {
+  const previewId = getId();
   const [logs, setLogs] = useState<unknown[]>([]);
-  const addLog = (log: unknown) => {
+
+  previewRegistry.add(previewId, (log: WalkerOS.Event) => {
     setLogs((prevLogs) => [...prevLogs, log]);
-  };
+  });
 
   const theme = {
     ...chromeDark,
@@ -32,50 +54,63 @@ const Preview: React.FC<PreviewProps> = ({
     },
   } as unknown as string;
 
-  const scope = { React, console: window.console, addLog };
-
-  const containerStyle: CSSProperties = {
-    // height: `${height}px`,
-    maxHeight: `${height}px`,
-    overflowY: 'scroll',
-  };
-
   return (
-    <div className={styles.previewContainer}>
-      <LiveProvider code={code} scope={scope}>
+    <div className="m-4" data-elbcontext={`previewId:${previewId}`}>
+      <LiveProvider code={code}>
         <LiveError className="mt-2 text-red-500" />
-        <div className="flex gap-4" style={containerStyle}>
+        <div className="flex gap-4">
           {!hideCode && (
-            <div className="flex flex-col w-1/3 border border-gray-300 rounded-md overflow-hidden">
-              <div className="bg-gray-200 p-2 font-bold text-center">Code</div>
-              <div className="flex-1">
-                <LiveEditor className="h-full" />
+            <div className="mockup-code w-1/3 h-full overflow-y-auto border border-base-300">
+              <div
+                className="border-t border-base-300 px-2"
+                style={{
+                  maxHeight: `${height}px`,
+                  overflow: 'scroll',
+                }}
+              >
+                <LiveEditor />
               </div>
             </div>
           )}
 
           {!hidePreview && (
-            <div className="flex flex-col w-1/3 border border-gray-300 rounded-md overflow-hidden">
-              <div className="bg-gray-200 p-2 font-bold text-center">
-                Preview
+            <div className="mockup-browser w-1/3 h-full overflow-y-auto border bg-base-300">
+              <div className="mockup-browser-toolbar">
+                <div className="input ">localhost:9001</div>
               </div>
-              <div className="flex-1">
-                <LivePreview className="h-full" />
+              <div
+                className="bg-base-200 border-t border-base-300 px-2 mb-4"
+                style={{
+                  maxHeight: `${height}px`,
+                  overflow: 'scroll',
+                }}
+              >
+                <LivePreview />
               </div>
             </div>
           )}
 
           {!hideConsole && (
-            <div className="flex flex-col w-1/3 border border-gray-300 rounded-md overflow-hidden">
-              <div className="bg-gray-200 p-2 font-bold text-center">
-                Console
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                <div className="p-2 bg-gray-900 text-white h-full">
-                  {logs.map((log, index) => (
-                    <ObjectInspector key={index} theme={theme} data={log} />
-                  ))}
-                </div>
+            <div className="mockup-code w-1/3 h-full overflow-y-auto border border-base-300">
+              <div
+                className="border-t border-base-300 px-2"
+                style={{
+                  maxHeight: `${height}px`,
+                  overflow: 'scroll',
+                }}
+              >
+                {logs.length === 0 ? (
+                  <div className="text-sm text-gray-500">No logs yet.</div>
+                ) : (
+                  logs.map((log, index) => (
+                    <ObjectInspector
+                      key={index}
+                      theme={theme}
+                      data={log}
+                      className="text-sm"
+                    />
+                  ))
+                )}
               </div>
             </div>
           )}
