@@ -54,53 +54,48 @@ const Preview: React.FC<PreviewProps> = ({
     },
   } as unknown as string;
 
+  const boxHeightStyle = {
+    height: `${height}px`,
+  };
+
   return (
     <div className="m-4" data-elbcontext={`previewId:${previewId}`}>
       <LiveProvider code={code}>
         <LiveError className="mt-2 text-red-500" />
-        <div className="flex gap-4">
+        <div className="flex gap-4" style={boxHeightStyle}>
           {!hideCode && (
-            <div className="mockup-code w-1/3 h-full overflow-y-auto border border-base-300">
-              <div
-                className="border-t border-base-300 px-2"
-                style={{
-                  maxHeight: `${height}px`,
-                  overflow: 'scroll',
-                }}
-              >
+            <div
+              className="mockup-code w-1/3 border border-base-300 overflow-hidden"
+              style={boxHeightStyle}
+            >
+              <div className="border-t border-base-300 px-2 pb-4 overflow-y-auto h-full">
                 <LiveEditor />
               </div>
             </div>
           )}
 
           {!hidePreview && (
-            <div className="mockup-browser w-1/3 h-full overflow-y-auto border bg-base-300">
+            <div
+              className="mockup-browser w-1/3 border border-base-300 bg-base-300 overflow-hidden"
+              style={boxHeightStyle}
+            >
               <div className="mockup-browser-toolbar">
-                <div className="input ">localhost:9001</div>
+                <div className="input">localhost:9001</div>
               </div>
-              <div
-                className="bg-base-200 border-t border-base-300 px-2 mb-4"
-                style={{
-                  maxHeight: `${height}px`,
-                  overflow: 'scroll',
-                }}
-              >
+              <div className="bg-base-200 border-t border-base-300 px-2 pb-8 overflow-y-auto h-full">
                 <LivePreview />
               </div>
             </div>
           )}
 
           {!hideConsole && (
-            <div className="mockup-code w-1/3 h-full overflow-y-auto border border-base-300">
-              <div
-                className="border-t border-base-300 px-2"
-                style={{
-                  maxHeight: `${height}px`,
-                  overflow: 'scroll',
-                }}
-              >
+            <div
+              className="mockup-code w-1/3 border border-base-300 overflow-hidden"
+              style={boxHeightStyle}
+            >
+              <div className="border-t border-base-300 px-2 pb-4 overflow-y-auto h-full">
                 {logs.length === 0 ? (
-                  <div className="text-sm text-gray-500">No logs yet.</div>
+                  <div className="border-base-300 flex justify-center border-t px-4 py-10">No events yet.</div>
                 ) : (
                   logs.map((log, index) => (
                     <ObjectInspector
