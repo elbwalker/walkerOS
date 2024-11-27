@@ -1,9 +1,10 @@
 import type { WalkerOS } from '@elbwalker/types';
-import { getId } from '@elbwalker/utils';
-import React, { useState } from 'react';
+import { debounce, getId } from '@elbwalker/utils';
+import React, { useEffect, useRef, useState } from 'react';
 import { ObjectInspector, chromeDark } from 'react-inspector';
 import { LiveProvider, LiveEditor, LiveError, LivePreview } from 'react-live';
 import { themes as prismThemes } from 'prism-react-renderer';
+import { elb } from '@elbwalker/walker.js';
 
 type AddLogFunction = (message: WalkerOS.Event) => void;
 
@@ -33,6 +34,11 @@ interface PreviewProps {
   hideConsole?: boolean;
 }
 
+const initPreview = debounce(
+  (elem?: HTMLElement) => elb('walker init', elem),
+  2000,
+);
+
 const Preview: React.FC<PreviewProps> = ({
   code,
   height = 400,
@@ -40,17 +46,31 @@ const Preview: React.FC<PreviewProps> = ({
   hidePreview = false,
   hideConsole = false,
 }) => {
-  const previewId = getId();
+  const previewId = useRef(getId()).current;
   const [logs, setLogs] = useState<unknown[]>([]);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [liveCode, setLiveCode] = useState(code.trim());
 
-  previewRegistry.add(previewId, (log: WalkerOS.Event) => {
-    setLogs((prevLogs) => [...prevLogs, log]);
-  });
+  useEffect(() => {
+    initPreview(previewRef?.current);
+  }, [liveCode]);
+
+  useEffect(() => {
+    previewRegistry.add(previewId, (log: WalkerOS.Event) => {
+      setLogs((prevLogs) => [...prevLogs, log]);
+    });
+
+    return () => {
+      previewRegistry.delete(previewId);
+    };
+  }, [previewId]);
 
   const consoleTheme = {
     ...chromeDark,
     ...{
-      // OBJECT_NAME_COLOR: '#01b5e2',
+      BASE_BACKGROUND_COLOR: 'rgb(40, 44, 52)',
+      BASE_FONT_SIZE: '14px',
+      OBJECT_NAME_COLOR: '#01b5e2',
       OBJECT_VALUE_STRING_COLOR: '#01b5e2',
     },
   } as unknown as string;
@@ -59,9 +79,17 @@ const Preview: React.FC<PreviewProps> = ({
     height: `${height}px`,
   };
 
+  const transformCode = (inputCode: string) => {
+    return inputCode.replace(/class=/g, 'className=');
+  };
+
   return (
     <div className="m-4" data-elbcontext={`previewId:${previewId}`}>
-      <LiveProvider code={code} theme={prismThemes.oneDark}>
+      <LiveProvider
+        code={liveCode}
+        theme={prismThemes.oneDark}
+        transformCode={transformCode}
+      >
         <LiveError className="mt-2 text-red-500" />
         <div className="flex gap-4" style={boxHeightStyle}>
           {!hideCode && (
@@ -70,7 +98,11 @@ const Preview: React.FC<PreviewProps> = ({
               style={boxHeightStyle}
             >
               <div className="border-t border-base-300 px-2 pb-4 overflow-y-auto h-full">
-                <LiveEditor />
+                <LiveEditor
+                  onChange={(newCode) => {
+                    setLiveCode(newCode);
+                  }}
+                />
               </div>
             </div>
           )}
@@ -83,7 +115,10 @@ const Preview: React.FC<PreviewProps> = ({
               <div className="mockup-browser-toolbar">
                 <div className="input">localhost:9001</div>
               </div>
-              <div className="bg-base-200 border-t border-base-300 px-2 pb-8 overflow-y-auto h-full">
+              <div
+                ref={previewRef}
+                className="bg-base-200 border-t border-base-300 px-2 pb-8 overflow-y-auto h-full"
+              >
                 <LivePreview />
               </div>
             </div>
