@@ -5,55 +5,49 @@ sidebar_position: 2
 
 import Link from '@docusaurus/Link';
 
-walkerOS is a modular and composable data infrastructure for complete control
-of&nbsp;<Link to="/docs/walkeros/event-model">how to collect</Link> and process
-data. It can be used in many ways, using only a
-few&nbsp;<Link to="/docs/utils/">Utils</Link> or building
-an&nbsp;<Link to="/docs/#complete-infrastructure">extensive setup</Link>. There
-is more than one way to work with walkerOS. It's like playing with building
-blocks that you build up step by step as you want and need them. The ultimate
-goal is to send data to any tool reliably.
+# Quick start
 
-To get started, learn about the principles behind creating tracking setups in
-general and look at the&nbsp;<Link to="/docs/walkeros/event-model">event
-model</Link>. It's based on
-an&nbsp;<Link to="/docs/walkeros/event-model#entity-action-approach">entity
-action</Link> approach. The project started as a single web library
+walkerOS is a modular and composable data infrastructure for complete control of
+how to collect and process data. The project started as a web library
 called&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> and has evolved
 into a complete first-party tracking system.
 
-## Collection
+## Prerequisities
 
-### Tracking a website with walker.js
+Before you start, learn about
+the&nbsp;<Link to="/docs/walkeros/event-model">event model</Link>. It's based on
+an entity action approach.
 
-To measure user interaction on a website start by installing walker.js on your
-site. By default, all collected events are send to the `dataLayer`. That's it,
-you're done. Form now on, all events are now available in Google Tag Manager.
+## Step 1: Choose a source
 
-Next step is to
-start&nbsp;<Link to="/docs/sources/walkerjs/tagging/">tagging</Link> a website
-by adding data-attributes to the HTML. The `data-elb` attributes defines an
-**entity** and sets the scope, like `data-elb="promotion"`. Within that scope,
-we can define an **action** that gets triggered by user interaction, like
-`data-elbaction="click"`. Once a users clicks on that element, a
-`promotion click` event will be send to the `dataLayer`. Learn more about
-the&nbsp;<Link to="/docs/sources/walkerjs/#basic-idea">basic idea</Link> of
-tagging.
+Before you start, learn about
+the&nbsp;<Link to="/docs/walkeros/event-model">event model</Link>. It's based on
+an entity action approach.
 
-## Activating
+import DocCardList from '@theme/DocCardList';
 
-To&nbsp;<Link to="/docs/sources/walkerjs/commands#destinations">add a
-destination</Link> other than the GTM, we can for example log all events also to
-the console.
+<DocCardList />
 
-```js
-function elb() {
-  (window.elbLayer = window.elbLayer || []).push(arguments);
-}
-elb('walker destination', { push: console.log });
-```
+## Step 2: Add a destination
 
-There are&nbsp;<Link to="/docs/destinations/web/">pre-built web
-destinations</Link> available, but you can
-also&nbsp;<Link to="/docs/destinations/web/#create-your-own">build your
-own</Link>.
+Before you start, learn about
+the&nbsp;<Link to="/docs/walkeros/event-model">event model</Link>. It's based on
+an entity action approach.
+
+<DocCardList />
+
+Congratulations! You have created your first event pipeline with walkerOS.
+
+## Next steps
+
+Depending on your use-case next steps differ. But here is a list with the most
+common next steps after the intial setup:
+
+- Start tagging with&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link>
+- Add more&nbsp;<Link to="/docs/destinations/overview/">destinations</Link>
+- **Add another source**: xx
+- **Consent Management**: xx
+- **Utils**: Emphasizing user privacy, with a strict privacy-by-design approach,
+  in-build&nbsp;<Link to="/docs/consent_management/overview">consent
+  management</Link> and various data protection features.
+- **User stichting**: xx
