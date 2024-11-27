@@ -3,6 +3,7 @@ import { getId } from '@elbwalker/utils';
 import React, { useState } from 'react';
 import { ObjectInspector, chromeDark } from 'react-inspector';
 import { LiveProvider, LiveEditor, LiveError, LivePreview } from 'react-live';
+import { themes as prismThemes } from 'prism-react-renderer';
 
 type AddLogFunction = (message: WalkerOS.Event) => void;
 
@@ -46,7 +47,7 @@ const Preview: React.FC<PreviewProps> = ({
     setLogs((prevLogs) => [...prevLogs, log]);
   });
 
-  const theme = {
+  const consoleTheme = {
     ...chromeDark,
     ...{
       // OBJECT_NAME_COLOR: '#01b5e2',
@@ -60,7 +61,7 @@ const Preview: React.FC<PreviewProps> = ({
 
   return (
     <div className="m-4" data-elbcontext={`previewId:${previewId}`}>
-      <LiveProvider code={code}>
+      <LiveProvider code={code} theme={prismThemes.oneDark}>
         <LiveError className="mt-2 text-red-500" />
         <div className="flex gap-4" style={boxHeightStyle}>
           {!hideCode && (
@@ -95,12 +96,14 @@ const Preview: React.FC<PreviewProps> = ({
             >
               <div className="border-t border-base-300 px-2 pb-4 overflow-y-auto h-full">
                 {logs.length === 0 ? (
-                  <div className="border-base-300 flex justify-center border-t px-4 py-10">No events yet.</div>
+                  <div className="border-base-300 flex justify-center border-t px-4 py-10">
+                    No events yet.
+                  </div>
                 ) : (
                   logs.map((log, index) => (
                     <ObjectInspector
                       key={index}
-                      theme={theme}
+                      theme={consoleTheme}
                       data={log}
                       className="text-sm"
                     />
