@@ -3,6 +3,7 @@ import Layout from '@theme/Layout';
 import Hero from '@site/src/components/home/hero';
 import Features from '@site/src/components/home/features';
 import CTAStart from '@site/src/components/ctas/start';
+import PromotionLive from '@site/src/components/examples/promotionLive';
 
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
@@ -13,6 +14,7 @@ export default function Home(): JSX.Element {
     >
       <Hero />
       <main>
+        <PromotionLive />
         <Features />
         <CTAStart />
       </main>
