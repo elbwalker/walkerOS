@@ -27,18 +27,22 @@
     "@mdx-js/react": "^3.1.0",
     "prism-react-renderer": "^2.4.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-inspector": "^6.0.2",
+    "react-live": "^4.1.8"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.6.2",
     "@docusaurus/tsconfig": "^3.6.2",
     "@docusaurus/types": "^3.6.2",
+    "@elbwalker/types": "^3.1.0",
     "@heroicons/react": "^2.2.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/forms": "^0.5.9",
     "@tailwindcss/typography": "^0.5.15",
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",
+    "daisyui": "^4.12.14",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
     "typescript": "~5.6.3"
