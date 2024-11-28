@@ -166,7 +166,7 @@ const config: Config = {
     },
     prism: {
       theme: prismThemes.oneLight,
-      darkTheme: prismThemes.oneDark,
+      darkTheme: prismThemes.palenight,
     },
   } satisfies Preset.ThemeConfig,
 
