@@ -47,7 +47,7 @@ const Preview: React.FC<PreviewProps> = ({
   hideConsole = false,
 }) => {
   const previewId = useRef(getId()).current;
-  const [logs, setLogs] = useState<unknown[]>([]);
+  const [logs, setLogs] = useState<unknown[]>([123]);
   const previewRef = useRef<HTMLDivElement>(null);
   const [liveCode, setLiveCode] = useState(code.trim());
 
@@ -69,7 +69,7 @@ const Preview: React.FC<PreviewProps> = ({
     ...chromeDark,
     ...{
       BASE_BACKGROUND_COLOR: 'rgb(40, 44, 52)',
-      BASE_FONT_SIZE: '14px',
+      TREENODE_FONT_SIZE: '14px',
       OBJECT_NAME_COLOR: '#01b5e2',
       OBJECT_VALUE_STRING_COLOR: '#01b5e2',
     },
@@ -88,6 +88,7 @@ const Preview: React.FC<PreviewProps> = ({
       <LiveProvider
         code={liveCode}
         theme={prismThemes.oneDark}
+        language="html"
         transformCode={transformCode}
       >
         <LiveError className="mt-2 text-red-500" />
@@ -129,7 +130,10 @@ const Preview: React.FC<PreviewProps> = ({
               className="mockup-code w-1/3 border border-base-300 overflow-hidden"
               style={boxHeightStyle}
             >
-              <div className="border-t border-base-300 px-2 pb-4 overflow-y-auto h-full">
+              <div
+                className="border-t border-base-300 mx-2 pb-4 overflow-y-auto h-full"
+                style={{ backgroundColor: 'rgb(40, 44, 52)' }}
+              >
                 {logs.length === 0 ? (
                   <div className="border-base-300 flex justify-center border-t px-4 py-10">
                     No events yet.
