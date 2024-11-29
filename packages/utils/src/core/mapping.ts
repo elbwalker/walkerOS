@@ -8,13 +8,15 @@ export function getMappingEvent(
   const [entity, action] = (event.event || '').split(' ');
   if (!mapping || !entity || !action) return {};
 
-  let eventMapping: Mapping.Event | undefined;
+  let eventMapping: Mapping.EventConfig | undefined;
   let mappingKey = '';
   let entityKey = entity;
   let actionKey = action;
 
   const resolveEventMapping = (
-    eventMapping?: Mapping.Event<unknown> | Mapping.Event<unknown>[],
+    eventMapping?:
+      | Mapping.EventConfig<unknown>
+      | Mapping.EventConfig<unknown>[],
   ) => {
     if (!eventMapping) return;
     eventMapping = Array.isArray(eventMapping) ? eventMapping : [eventMapping];

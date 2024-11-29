@@ -2,11 +2,11 @@ import type { Destination, WalkerOS } from '.';
 
 export interface Config<CustomEvent = unknown> {
   [entity: string]:
-    | Record<string, Event<CustomEvent> | Array<Event<CustomEvent>>>
+    | Record<string, EventConfig<CustomEvent> | Array<EventConfig<CustomEvent>>>
     | undefined;
 }
 
-export interface Event<CustomEvent = unknown> {
+export interface EventConfig<CustomEvent = unknown> {
   batch?: number; // Bundle events for batch processing
   batchFn?: (
     destination: Destination.Destination,
@@ -21,7 +21,7 @@ export interface Event<CustomEvent = unknown> {
 }
 
 export interface EventMapping {
-  eventMapping?: Event;
+  eventMapping?: EventConfig;
   mappingKey?: string;
 }
 
@@ -44,7 +44,7 @@ export type Condition = (
 ) => boolean;
 
 export type Fn = (
-  event: Event,
+  event: WalkerOS.PartialEvent,
   mapping: Value,
   instance?: WalkerOS.Instance,
   props?: unknown,

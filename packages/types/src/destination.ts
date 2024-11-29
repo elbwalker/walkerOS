@@ -27,7 +27,7 @@ export interface Policy {
 
 export type PushEvent<CustomEvent = unknown> = {
   event: WalkerOS.Event;
-  mapping?: Mapping.Event<CustomEvent>;
+  mapping?: Mapping.EventConfig<CustomEvent>;
 };
 export type PushEvents<CustomEvent = unknown> = Array<PushEvent<CustomEvent>>;
 
@@ -40,5 +40,5 @@ export type PushBatchFn<Custom, CustomEvent> = (
 export interface Batch<CustomEvent> {
   key: string;
   events: WalkerOS.Events;
-  mapping?: Mapping.Event<CustomEvent>;
+  mapping?: Mapping.EventConfig<CustomEvent>;
 }
