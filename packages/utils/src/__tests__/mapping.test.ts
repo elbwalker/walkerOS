@@ -1,20 +1,28 @@
-import { WalkerOS } from '@elbwalker/types';
-import { createEvent, getEventMapping, getMappingValue } from '../core';
+import { Mapping, WalkerOS } from '@elbwalker/types';
+import { createEvent, getMappingEvent, getMappingValue } from '../core';
 
-describe('mapping', () => {
-  test('getEventMapping', () => {
+describe('getMappingEvent', () => {
+  test('basic', () => {
     const pageViewConfig = { name: 'page_view' };
 
     expect(
-      getEventMapping('page view', { page: { view: pageViewConfig } }),
+      getMappingEvent(
+        { event: 'page view' },
+        { page: { view: pageViewConfig } },
+      ),
     ).toStrictEqual({
       eventMapping: pageViewConfig,
       mappingKey: 'page view',
     });
+  });
 
+  test('asterisk', () => {
     const entityAsterisksConfig = { name: 'entity_*' };
     expect(
-      getEventMapping('page random', { page: { '*': entityAsterisksConfig } }),
+      getMappingEvent(
+        { event: 'page random' },
+        { page: { '*': entityAsterisksConfig } },
+      ),
     ).toStrictEqual({
       eventMapping: entityAsterisksConfig,
       mappingKey: 'page *',
@@ -22,13 +30,80 @@ describe('mapping', () => {
 
     const asterisksActionConfig = { name: '*_view' };
     expect(
-      getEventMapping('random view', { '*': { view: asterisksActionConfig } }),
+      getMappingEvent(
+        { event: 'random view' },
+        { '*': { view: asterisksActionConfig } },
+      ),
     ).toStrictEqual({
       eventMapping: asterisksActionConfig,
       mappingKey: '* view',
     });
+
+    const mapping = {
+      '*': {
+        '*': { name: 'asterisk' },
+        action: { name: 'action' },
+      },
+      foo: { '*': { name: 'foo_asterisk' } },
+      bar: { baz: { name: 'irrelevant' } },
+    };
+
+    expect(getMappingEvent({ event: 'not existing' }, mapping)).toStrictEqual({
+      eventMapping: { name: 'asterisk' },
+      mappingKey: '* *',
+    });
+
+    expect(
+      getMappingEvent({ event: 'asterisk action' }, mapping),
+    ).toStrictEqual({
+      eventMapping: { name: 'action' },
+      mappingKey: '* action',
+    });
+
+    expect(getMappingEvent({ event: 'foo something' }, mapping)).toStrictEqual({
+      eventMapping: { name: 'foo_asterisk' },
+      mappingKey: 'foo *',
+    });
+
+    expect(getMappingEvent({ event: 'bar something' }, mapping)).toStrictEqual({
+      eventMapping: { name: 'asterisk' },
+      mappingKey: '* *',
+    });
   });
 
+  test('condition', () => {
+    const mapping: Mapping.Config = {
+      pii: {
+        event: [
+          {
+            name: 'secret',
+            condition: (event) => !!event.consent?.marketing,
+          },
+          {
+            name: 'fallback',
+          },
+        ],
+      },
+    };
+
+    expect(getMappingEvent({ event: 'pii event' }, mapping)).toStrictEqual({
+      eventMapping: { name: 'fallback' },
+      mappingKey: 'pii event',
+    });
+
+    expect(
+      getMappingEvent(
+        { event: 'pii event', consent: { marketing: true } },
+        mapping,
+      ),
+    ).toStrictEqual({
+      eventMapping: mapping.pii!.event[0],
+      mappingKey: 'pii event',
+    });
+  });
+});
+
+describe('getMappingValue', () => {
   test('string', () => {
     const event = createEvent();
     expect(getMappingValue(event, 'timing')).toBe(event.timing);
