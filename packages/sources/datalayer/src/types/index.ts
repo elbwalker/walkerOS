@@ -17,7 +17,7 @@ export interface Config {
 }
 
 export type SupportedMapping<CustomEvent = unknown> = Omit<
-  WalkerOSMapping.Event<CustomEvent>,
+  WalkerOSMapping.EventConfig<CustomEvent>,
   'batch' | 'batchFn' | 'batched' | 'consent'
 > & { command?: boolean };
 
