@@ -6,39 +6,29 @@ export function getEventMapping(
   mapping?: Mapping.Config<unknown>,
 ): Mapping.EventMapping {
   const [entity, action] = event.split(' ');
-  if (!entity || !action) return {};
+  if (!mapping || !entity || !action) return {};
 
-  // Check for an active mapping for proper event handling
-  let eventMapping: undefined | Mapping.Event;
+  let eventMapping: Mapping.Event | undefined;
   let mappingKey = '';
+  let entityKey = entity;
+  let actionKey = action;
 
-  if (mapping) {
-    let mappingEntityKey = entity; // Default key is the entity name
-    let mappingEntity = mapping[mappingEntityKey];
+  if (!mapping[entityKey]) entityKey = '*';
+  const entityMapping = mapping[entityKey];
 
-    if (!mappingEntity) {
-      // Fallback to the wildcard key
-      mappingEntityKey = '*';
-      mappingEntity = mapping[mappingEntityKey];
-    }
-
-    if (mappingEntity) {
-      let mappingActionKey = action; // Default action is the event action
-      eventMapping = mappingEntity[mappingActionKey];
-
-      if (!eventMapping) {
-        // Fallback to the wildcard action
-        mappingActionKey = '*';
-        eventMapping = mappingEntity[mappingActionKey];
-      }
-
-      // Handle individual event settings
-      if (eventMapping) {
-        // Save the mapping key for later use
-        mappingKey = `${mappingEntityKey} ${mappingActionKey}`;
-      }
-    }
+  if (entityMapping) {
+    if (!entityMapping[actionKey]) actionKey = '*';
+    eventMapping = entityMapping[actionKey];
   }
+
+  // Fallback to * *
+  if (!eventMapping) {
+    entityKey = '*';
+    actionKey = '*';
+    eventMapping = mapping[entityKey]?.[actionKey];
+  }
+
+  if (eventMapping) mappingKey = `${entityKey} ${actionKey}`;
 
   return { eventMapping, mappingKey };
 }

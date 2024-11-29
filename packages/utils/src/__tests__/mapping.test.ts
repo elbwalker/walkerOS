@@ -29,6 +29,37 @@ describe('mapping', () => {
     });
   });
 
+  test('asterisk', () => {
+    const mapping = {
+      '*': {
+        '*': { name: 'asterisk' },
+        action: { name: 'action' },
+      },
+      foo: { '*': { name: 'foo_asterisk' } },
+      bar: { baz: { name: 'irrelevant' } },
+    };
+
+    expect(getEventMapping('not existing', mapping)).toStrictEqual({
+      eventMapping: { name: 'asterisk' },
+      mappingKey: '* *',
+    });
+
+    expect(getEventMapping('asterisk action', mapping)).toStrictEqual({
+      eventMapping: { name: 'action' },
+      mappingKey: '* action',
+    });
+
+    expect(getEventMapping('foo something', mapping)).toStrictEqual({
+      eventMapping: { name: 'foo_asterisk' },
+      mappingKey: 'foo *',
+    });
+
+    expect(getEventMapping('bar something', mapping)).toStrictEqual({
+      eventMapping: { name: 'asterisk' },
+      mappingKey: '* *',
+    });
+  });
+
   test('string', () => {
     const event = createEvent();
     expect(getMappingValue(event, 'timing')).toBe(event.timing);
