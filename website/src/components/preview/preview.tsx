@@ -95,7 +95,7 @@ const Preview: React.FC<PreviewProps> = ({
         <div className="flex gap-4" style={boxHeightStyle}>
           {!hideCode && (
             <div
-              className="mockup-code w-1/3 border border-base-300 overflow-hidden"
+              className="dui-mockup-code w-1/3 border border-base-300 overflow-hidden"
               style={boxHeightStyle}
             >
               <div className="border-t border-base-300 px-2 pb-4 overflow-y-auto h-full">
@@ -110,10 +110,10 @@ const Preview: React.FC<PreviewProps> = ({
 
           {!hidePreview && (
             <div
-              className="mockup-browser w-1/3 border border-base-300 bg-base-300 overflow-hidden"
+              className="dui-mockup-browser w-1/3 border border-base-300 bg-base-300 overflow-hidden"
               style={boxHeightStyle}
             >
-              <div className="mockup-browser-toolbar">
+              <div className="dui-mockup-browser-toolbar">
                 <div className="input">localhost:9001</div>
               </div>
               <div
@@ -127,7 +127,7 @@ const Preview: React.FC<PreviewProps> = ({
 
           {!hideConsole && (
             <div
-              className="mockup-code w-1/3 border border-base-300 overflow-hidden"
+              className="dui-mockup-code w-1/3 border border-base-300 overflow-hidden"
               style={boxHeightStyle}
             >
               <div

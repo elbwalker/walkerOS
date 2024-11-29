@@ -4,7 +4,7 @@ const defaultTheme = require('tailwindcss/defaultTheme');
 
 module.exports = {
   content: ['./{docs,src}/**/*.{js,jsx,mdx,ts,tsx}'],
-  darkMode: ['class', '[data-theme="dark"]'], // hooks into docusaurus' dark mode settigns
+  darkMode: ['class', '[data-theme="dark"]'], // hooks into docusaurus' dark mode settings
   corePlugins: { preflight: false },
   blocklist: ['container'],
   theme: {
@@ -45,6 +45,9 @@ module.exports = {
     },
   },
   daisyui: {
+    base: false,
+    logs: false,
+    prefix: 'dui-',
     themes: false,
   },
   plugins: [
