@@ -1,59 +1,69 @@
-/** @type {import('tailwindcss').Config} */
+import { fontFamily } from 'tailwindcss/defaultTheme';
+import daisyTheme from 'daisyui/src/theming/themes';
 
-const defaultTheme = require('tailwindcss/defaultTheme');
+const elbwalker = {
+  DEFAULT: '#01B5E2',
+  50: '#FFFFFF',
+  100: '#EDFEFF',
+  200: '#ABF8FF',
+  300: '#69ECFE',
+  400: '#27DBFE',
+  500: '#01B5E2',
+  600: '#01B5E2',
+  700: '#015372',
+  800: '#00283A',
+  900: '#000203',
+};
 
-module.exports = {
-  content: ['./{docs,src}/**/*.{js,jsx,mdx,ts,tsx}'],
-  darkMode: ['class', '[data-theme="dark"]'], // hooks into docusaurus' dark mode settings
-  corePlugins: { preflight: false },
-  blocklist: ['container'],
-  theme: {
-    extend: {
-      colors: {
-        gray: {
-          50: '#f9fafb',
-          100: '#f3f4f6',
-          200: '#e5e7eb',
-          300: '#d1d5db',
-          400: '#9ca3af',
-          500: '#6b7280',
-          600: '#4b5563',
-          700: '#374151',
-          800: '#1f2937',
-          900: '#111827',
-        },
-        elbwalker: {
-          DEFAULT: '#01B5E2',
-          50: '#FFFFFF',
-          100: '#EDFEFF',
-          200: '#ABF8FF',
-          300: '#69ECFE',
-          400: '#27DBFE',
-          500: '#01B5E2',
-          600: '#01B5E2',
-          700: '#015372',
-          800: '#00283A',
-          900: '#000203',
-        },
+export const content = ['./{docs,src}/**/*.{js,jsx,mdx,ts,tsx}'];
+export const darkMode = ['class', '[data-theme="dark"]'];
+export const corePlugins = { preflight: false };
+export const blocklist = ['container'];
+export const theme = {
+  extend: {
+    colors: {
+      gray: {
+        50: '#f9fafb',
+        100: '#f3f4f6',
+        200: '#e5e7eb',
+        300: '#d1d5db',
+        400: '#9ca3af',
+        500: '#6b7280',
+        600: '#4b5563',
+        700: '#374151',
+        800: '#1f2937',
+        900: '#111827',
       },
-      fontFamily: {
-        sans: ['Lato', ...defaultTheme.fontFamily.sans],
-      },
-      height: {
-        128: '32rem',
-      },
+      elbwalker,
+    },
+    fontFamily: {
+      sans: ['Lato', ...fontFamily.sans],
+    },
+    height: {
+      128: '32rem',
     },
   },
-  daisyui: {
-    base: false,
-    logs: false,
-    prefix: 'dui-',
-    themes: false,
-  },
-  plugins: [
-    require('@tailwindcss/forms'),
-    require('@tailwindcss/typography'),
-    require('@tailwindcss/aspect-ratio'),
-    require('daisyui'),
+};
+export const daisyui = {
+  base: false,
+  logs: false,
+  prefix: 'dui-',
+  themes: [
+    {
+      light: {
+        ...daisyTheme['light'],
+        primary: elbwalker.DEFAULT,
+      },
+      dark: {
+        ...daisyTheme['dark'],
+        primary: elbwalker.DEFAULT,
+      },
+    },
   ],
 };
+export const plugins = [
+  require('@tailwindcss/forms'),
+  require('@tailwindcss/typography'),
+  require('@tailwindcss/aspect-ratio'),
+  require('daisyui'),
+];
