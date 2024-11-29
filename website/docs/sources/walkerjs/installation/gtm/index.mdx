@@ -22,7 +22,9 @@ Template Gallery. In the meantime, it can be imported manually.
 
 :::
 
-### Setup
+## Setup
+
+### Download
 
 The walkerOS tag template creates a new tag type in Google Tag Manager (GTM)
 that allows you to load walker.js on your website easily. Download and import it
@@ -33,44 +35,50 @@ once:
   link="https://raw.githubusercontent.com/elbwalker/gtm-walkerOS-tag-template/refs/heads/main/template.tpl"
 />
 
-To install the walkerOS tag template, follow these steps:
+Click **Download GTM Tag Template** to go to the official source and click the
+**Download raw file**.
 
-<Tabs>
-  <TabItem value="step-0" label="Download">
-    Click [**Download GTM Tag
-    Template**](https://raw.githubusercontent.com/elbwalker/gtm-walkerOS-tag-template/refs/heads/main/template.tpl)
-    to go to the official source and click the **Download raw file**. ![walkerOS
+![walkerOS
     GTM Tag Template setup download](setup-0.png)
-  </TabItem>
-  <TabItem value="step1" label="Step 1" default>
-    In Google Tag Manager, navigate to **Templates** on the left and click on
-    **New** in the **Tag Template** section. ![walkerOS GTM Tag Template setup
+
+For installation, follow these steps:
+
+### Step 1
+
+In Google Tag Manager, navigate to **Templates** and click on **New** in the
+**Tag Template** section.
+![walkerOS GTM Tag Template setup
     step 1](setup-1.png)
-  </TabItem>
-  <TabItem value="step2" label="Step 2">
+
+### Step 2
+
     Click on the **three dots** and **Import** option. Select the previously
     downloaded `walkerOS_tag_template.tpl` file and click the **Save** button.
     ![walkerOS GTM Tag Template setup step 2](setup-2.png)
-  </TabItem>
-  <TabItem value="step3" label="Step 3">
+
+### Step 3
+
     Now you can **create a new Tag** and select the **walkerOS** tag template
     from the **Custom** section. ![walkerOS GTM Tag Template setup step
     3](setup-3.png)
-  </TabItem>
-</Tabs>
 
-### Installation
+## Installation
 
-There are multiple ways to load walker.js on a site.
-
-#### Load walker.js
+There are multiple ways to install walker.js on a site using the Google Tag
+Manager template.
 
 <Tabs>
-  <TabItem value="cdn" label="CDN" default>
-    This option loads the walker.js script from an external source (jsDelivr).
-    It's good for quick testing but refers to an external domain. A version can
-    be specified. It's recommended to use a specific version starting from
-    `2.1.0` ![walkerOS GTM Tag Template load CDN](load-cdn.png)
+  <TabItem value="window" label="Window (recommended)" default>
+    The **recommended approach** is to integrate walker.js without fully loading another file. This reduces the total file size and the number of requests for better performance. 
+    
+    ![walkerOS
+    GTM Tag Template load Window](load-window.png)
+    
+    The Tag template creates an instance using the available factory in the browser window.
+    ```js
+    import { Walkerjs } from '@elbwalker/walker.js';
+    window.Walkerjs = Walkerjs; // Make it globally available
+    ```
   </TabItem>
   <TabItem value="self-hosted" label="Self-hosted">
     Save and upload the
@@ -80,23 +88,38 @@ There are multiple ways to load walker.js on a site.
 
      ![walkerOS GTM Tag Template load Self-hosted](load-self_hosted.png)
 
+:::warning
+
      The GTM is very restrictive about loading third-party scripts. To load walker.js from a custom domain, update the **Tag Template Permissions** and add `YOUR_DOMAIN` to the **Injects scripts** section.
+
+:::
 
      ![walkerOS GTM Tag Template load Self-hosted Permissions](load-self_hosted-permissions.png)
 
   </TabItem>
-  <TabItem value="window" label="Window (recommended)">
-    A more advanced but **recommended approach** is to integrate walker.js without fully loading another file. This reduces the total file size and the number of requests for better performance. ![walkerOS
-    GTM Tag Template load Window](load-window.png)
-    The Tag template creates an instance using the available factory in the browser window.
-    ```js
-    import { Walkerjs } from '@elbwalker/walker.js';
-    window.Walkerjs = Walkerjs; // Make it globally available
-    ```
-  </TabItem>
+<TabItem value="cdn" label="CDN">
+Load the script from an external source
+(<Link to="https://www.jsdelivr.com/package/npm/@elbwalker/walker.js">jsDelivr</Link>).
+
+![walkerOS GTM Tag Template load CDN](load-cdn.png)
+
+:::warning
+
+It's recommended to use a specific version starting from `2.1.0`
+
+:::
+
+:::tip
+
+It's recommended to use the externally hosted version only for demo purposes,
+not in production
+
+:::
+
+</TabItem>
 </Tabs>
 
-#### Mode
+### Mode
 
 There are three modes to start walker.js:
 
@@ -105,19 +128,18 @@ There are three modes to start walker.js:
    `walker run`. This uses the `walker on` command internally.
 3. **Manual**: won't do anything - it's up to you.
 
-#### Names
+### Names
 
 The default names can be changed to prevent eventual conflicts with other
 scripts or existing variables. Ensure the template's **Permissions** are updated
 to enable read/write access to the new names.
 
-### Options
+## Options
 
-#### Tagging version
+### Tagging version
 
-Specifying a tagging `version` helps manage and debug a setup by knowing the
-version used during measurement. After changing the setup, increase the version
-number.
+Specifying a tagging `version` helps manage and debug a setup. After changing
+the setup, increase the version number.
 
 ### User ID
 
@@ -128,6 +150,14 @@ IDs will be set in the Session section or via a custom on-event.
 
 Add static `globals` that will be added to every single event.
 
+:::tip
+
+Learn more about
+using&nbsp;<Link to="/docs/sources/walkerjs/tagging#globals">globals</Link>
+within walkerOS
+
+:::
+
 ### Logging
 
 Enabling the `preview` adds a destination that logs all events to the console.
@@ -135,28 +165,32 @@ Enabling the `preview` adds a destination that logs all events to the console.
 ### Session
 
 Session detection, user identification, consent management, and race conditions
-are closely connected. Learn more about how
-to&nbsp;<Link to="/docs/utils/session">detect a session</Link>.
+are closely connected.
+
+:::tip
+
+Learn more about&nbsp;<Link to="/docs/utils/session">how to detect a
+session</Link>.
+
+:::
 
 Enabling session detection will use the **sessionWindow** Util as a cookie-less
 version to eventually trigger a `session start` event.
 
-Additionally, enabling the **Storage** uses the **sessionStorage** Util to
-persist data and enhance session information and user identification. As this
-might require consent, it's possible to add a **Required consent for storage
-access**.
-
-This uses `elbDeviceId` and `elbSessionId` in the localStorage. There is a
-virtual rule to limit the age to 30 days for the device ID and 30 minutes for a
-session ID, which updates with each new run.
+Additionally, enabling the **Storage** uses
+the&nbsp;<Link to="/docs/utils/session#sessionstorage">**sessionStorage
+util**</Link> to persist data and enhance session information and user
+identification. As this might require consent, it's possible to add a **Required
+consent for storage access**. This uses `elbDeviceId` and `elbSessionId` in the
+localStorage. There is a virtual rule to limit the age to 30 days for the device
+ID and 30 minutes for a session ID, which updates with each new run.
 
 ### Destinations
 
-Destinations are used to send events to other systems. Using **dataLayer** will
+Destinations are used to send events to other systems. **Use dataLayer** will
 automatically send all events to the GTM `dataLayer`.
 
-To **add a destination**, the **Code** is required, while **Config** is
-optional.
+To **add a destination**, **Code** is required, while **Config** is optional.
 
 ![walkerOS GTM Tag Template destinations](destinations-overview.png)
 
