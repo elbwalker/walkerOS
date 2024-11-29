@@ -1,12 +1,12 @@
 import { WalkerOS } from '@elbwalker/types';
-import { createEvent, getEventMapping, getMappingValue } from '../core';
+import { createEvent, getMappingEvent, getMappingValue } from '../core';
 
 describe('mapping', () => {
-  test('getEventMapping', () => {
+  test('getMappingEvent', () => {
     const pageViewConfig = { name: 'page_view' };
 
     expect(
-      getEventMapping('page view', { page: { view: pageViewConfig } }),
+      getMappingEvent('page view', { page: { view: pageViewConfig } }),
     ).toStrictEqual({
       eventMapping: pageViewConfig,
       mappingKey: 'page view',
@@ -14,7 +14,7 @@ describe('mapping', () => {
 
     const entityAsterisksConfig = { name: 'entity_*' };
     expect(
-      getEventMapping('page random', { page: { '*': entityAsterisksConfig } }),
+      getMappingEvent('page random', { page: { '*': entityAsterisksConfig } }),
     ).toStrictEqual({
       eventMapping: entityAsterisksConfig,
       mappingKey: 'page *',
@@ -22,7 +22,7 @@ describe('mapping', () => {
 
     const asterisksActionConfig = { name: '*_view' };
     expect(
-      getEventMapping('random view', { '*': { view: asterisksActionConfig } }),
+      getMappingEvent('random view', { '*': { view: asterisksActionConfig } }),
     ).toStrictEqual({
       eventMapping: asterisksActionConfig,
       mappingKey: '* view',
@@ -39,22 +39,22 @@ describe('mapping', () => {
       bar: { baz: { name: 'irrelevant' } },
     };
 
-    expect(getEventMapping('not existing', mapping)).toStrictEqual({
+    expect(getMappingEvent('not existing', mapping)).toStrictEqual({
       eventMapping: { name: 'asterisk' },
       mappingKey: '* *',
     });
 
-    expect(getEventMapping('asterisk action', mapping)).toStrictEqual({
+    expect(getMappingEvent('asterisk action', mapping)).toStrictEqual({
       eventMapping: { name: 'action' },
       mappingKey: '* action',
     });
 
-    expect(getEventMapping('foo something', mapping)).toStrictEqual({
+    expect(getMappingEvent('foo something', mapping)).toStrictEqual({
       eventMapping: { name: 'foo_asterisk' },
       mappingKey: 'foo *',
     });
 
-    expect(getEventMapping('bar something', mapping)).toStrictEqual({
+    expect(getMappingEvent('bar something', mapping)).toStrictEqual({
       eventMapping: { name: 'asterisk' },
       mappingKey: '* *',
     });

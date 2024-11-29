@@ -2,7 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { SourceWalkerjs, DestinationWeb } from '../types';
 import {
   debounce,
-  getEventMapping,
+  getMappingEvent,
   getId,
   tryCatch,
   useHooks,
@@ -94,7 +94,7 @@ export function destinationPush(
   destination: DestinationWeb.Destination,
   event: WalkerOS.Event,
 ): boolean {
-  const { eventMapping, mappingKey } = getEventMapping(
+  const { eventMapping, mappingKey } = getMappingEvent(
     event.event,
     destination.config.mapping,
   );

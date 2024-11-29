@@ -2,7 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { SourceNode, DestinationNode } from '../types';
 import {
   debounce,
-  getEventMapping,
+  getMappingEvent,
   getId,
   isSameType,
   useHooks,
@@ -68,7 +68,7 @@ export async function destinationPush(
   destination: DestinationNode.Destination,
   event: WalkerOS.Event,
 ): Promise<boolean> {
-  const { eventMapping, mappingKey } = getEventMapping(
+  const { eventMapping, mappingKey } = getMappingEvent(
     event.event,
     destination.config.mapping,
   );

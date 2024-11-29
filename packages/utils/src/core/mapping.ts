@@ -1,7 +1,7 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import { castToProperty, getByPath, getGrantedConsent, isDefined } from '.';
 
-export function getEventMapping(
+export function getMappingEvent(
   event: string,
   mapping?: Mapping.Config<unknown>,
 ): Mapping.EventMapping {
