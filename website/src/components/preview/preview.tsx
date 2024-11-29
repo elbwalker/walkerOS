@@ -6,25 +6,20 @@ import { LiveProvider, LiveEditor, LiveError, LivePreview } from 'react-live';
 import { themes as prismThemes } from 'prism-react-renderer';
 import { elb } from '@elbwalker/walker.js';
 
-type AddLogFunction = (message: WalkerOS.Event) => void;
+export const previewRegistry = (() => {
+  const registry = new Map<string, (message: WalkerOS.Event) => void>();
 
-class PreviewRegistry {
-  private registry = new Map<string, AddLogFunction>();
-
-  add(previewId: string, addLog: AddLogFunction): void {
-    this.registry.set(previewId, addLog);
-  }
-
-  get(previewId: string): AddLogFunction | undefined {
-    return this.registry.get(previewId);
-  }
-
-  delete(previewId: string): void {
-    this.registry.delete(previewId);
-  }
-}
-
-export const previewRegistry = new PreviewRegistry();
+  return {
+    add: (previewId: string, addLog: (message: WalkerOS.Event) => void) => {
+      registry.set(previewId, addLog);
+    },
+    get: (previewId: string) => registry.get(previewId),
+    delete: (previewId: string) => {
+      registry.delete(previewId);
+    },
+    clear: () => registry.clear(),
+  };
+})();
 
 interface PreviewProps {
   code: string;
@@ -49,6 +44,7 @@ const Preview: React.FC<PreviewProps> = ({
   const previewId = useRef(getId()).current;
   const [logs, setLogs] = useState<unknown[]>([123]);
   const previewRef = useRef<HTMLDivElement>(null);
+  const consoleRef = useRef<HTMLDivElement>(null);
   const [liveCode, setLiveCode] = useState(code.trim());
 
   useEffect(() => {
@@ -64,6 +60,20 @@ const Preview: React.FC<PreviewProps> = ({
       previewRegistry.delete(previewId);
     };
   }, [previewId]);
+
+  useEffect(() => {
+    const container = consoleRef.current;
+    if (!container) return;
+
+    requestAnimationFrame(() => {
+      const latestTreeElement = container.querySelector(
+        'ol[role="tree"]:last-of-type',
+      );
+
+      if (latestTreeElement && latestTreeElement instanceof HTMLElement)
+        container.scrollTop = latestTreeElement.offsetTop - 48;
+    });
+  }, [logs]);
 
   const consoleTheme = {
     ...chromeDark,
@@ -131,6 +141,7 @@ const Preview: React.FC<PreviewProps> = ({
               style={boxHeightStyle}
             >
               <div
+                ref={consoleRef}
                 className="border-t border-base-300 mx-2 pb-4 overflow-y-auto h-full"
                 style={{ backgroundColor: 'rgb(40, 44, 52)' }}
               >
@@ -144,7 +155,8 @@ const Preview: React.FC<PreviewProps> = ({
                       key={index}
                       theme={consoleTheme}
                       data={log}
-                      className="text-sm"
+                      // expandLevel={1}
+                      expandPaths={['$', '$.data']}
                     />
                   ))
                 )}
