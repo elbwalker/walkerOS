@@ -5,36 +5,40 @@ sidebar_position: 3
 
 import Link from '@docusaurus/Link';
 
-A single event model to support analytics, marketing, privacy and data science
-needs.
+The walkerOS event model was created to support analytics, marketing, privacy
+and data science needs.
 
 ## Entity-Action Approach
 
-The Entity-Action approach is the core of the walkerOS event model. It's a
-framework designed to capture interactions in a structured yet flexible manner.
-Two primary components define each event: the 'entity' (what is involved within
-an interaction) and the 'action' (what is done with the entity). This method
-provides a comprehensive and clear understanding of user behaviors and
-interactions.
+The Entity-Action approach is core of the walkerOS event model. It's a framework
+designed to capture user interactions in a **structured** yet **flexible** way.
+Two primary components define each event:
 
-One of the great things about walkerOS is the full **flexibility** of event
+- the **'entity'** (what is involved within an interaction) and
+- the **'action'** (what is done with the entity)
+
+This method provides a comprehensive and clear structure of user behavior.
+
+One of the great things about walkerOS is the full flexibility of event
 definitions. You can build your tracking based on your **business logic**
 instead of trying to press your business logic into analytics specs.
 
-We believe that tracking shouldn't sound like some abstract technical concept.
-It should feel **natural** and everyone involved should immediately understand
-it. Only when everyone understands what is being measured, there will be **fewer
-misunderstandings, higher data quality**, and more actionable data in the
-organization at the end of the day.
-
-A walkerOS event consists of three components: a **trigger** (e.g. load), an
-**entity** (e.g. page), and an **action** (e.g. view).
+Tracking shouldn't sound like some abstract technical concept. It should feel
+**natural** and everyone involved should immediately understand it. Only when
+everyone understands what is being measured, there will be **fewer
+misunderstandings, higher data quality**, and more **actionable data** in the
+organization.
 
 ## Event Structure
 
-Here's an example illustrating the structure and components of an event in
-walkerOS. While keys are static, their content can be defined dynamically with
-different value types.
+A walkerOS event consists of three components:
+
+- a **trigger** (e.g. load)
+- an **entity** (e.g. page)
+- an **action** (e.g. view)
+
+Here's an example of the structure and components of a walkerOS event. Keys are
+static, their content can be defined dynamically with different value types.
 
 ```js
 {
@@ -90,27 +94,46 @@ different value types.
 
 ```
 
-This structure remains consistent across all interactions, whether the event is
-a `page view`, `page read`, `product add`, or `session start` and
-`order complete`. Event names are a combination of the entities involved
-(_promotion_) and the action performed (_view_).
+**Event names** are a combination of the entities involved (_promotion_) and the
+action performed (_view_).
+
+```mermaid
+---
+title: walkerOS Event
+---
+flowchart
+    A(event = entity + action)
+```
+
+```mermaid
+---
+title: Example
+---
+flowchart
+    A(promotion view = promotion + view)
+```
+
+The structure remains consistent across all interactions, whether the event e.g.
+is a `page view`, `session start`, `product visible`, or `order complete`.
 
 ### Data Properties
 
-Data properties describe the entity in more detail. Depending on the entity
-(e.g. _product_, _order_, _article_) they can vary and provide specific insights
-relevant to the interaction.
+<Link to="/docs/sources/walkerjs/tagging#data">Data properties</Link>
+describe the entity in **more detail**. Depending on the entity (e.g. _product_,
+_order_, _content_) they can vary and provide specific insights relevant to the interaction.
 
 ### Context
 
-Context refers to the state or environment in which the event was triggered. It
-could be as simple as a page position or as complex as the logical stage in a
-user journey, like a shopping journey from inspiration to checkout stage.
+<Link to="/docs/sources/walkerjs/tagging#context">Context</Link> refers to the **state**
+or **environment** in which the event was triggered. It could be as simple as a page
+position or as complex as the logical stage in a user journey, like a shopping journey
+from inspiration to checkout stage.
 
 ### Globals
 
-Globals describe the overall state influencing events or user behavior. These
-might include the theme used, page type for web, or cart value.
+<Link to="/docs/sources/walkerjs/tagging#globals">Globals</Link> describe the **overall
+state** influencing events or user behavior. These might include the theme used,
+page type for web, or cart value.
 
 ### Custom
 
@@ -119,11 +142,13 @@ also to support custom requirements.
 
 ### User
 
-There are recommended identifiers used for stitching together user journeys:
-`id`, `device`, and `session`. This enables cross-device tracking or linking
-sessions for a cohesive user journey. On a server-side setup, a temporarily
-`hash` value is added. Any other user-related information can be added here. A
-few values are recommended:
+There are recommended identifiers used
+for&nbsp;<Link to="/docs/user_stitching">stitching user journeys</Link>
+together: `id`, `device`, and `session`.
+
+This enables cross-device tracking or linking sessions for a cohesive user
+journey. On a server-side setup, a temporarily `hash` value is added. Any other
+user-related information can also be added. A few values are recommended:
 
 ```ts
 interface User extends Properties {
@@ -152,48 +177,33 @@ interface User extends Properties {
 
 ### Consent
 
-Consent captures the permissions granted by the user, which is crucial for
-subsequent data processing and helpful to comply with privacy regulations.
+<Link to="/docs/consent_management/overview">Consent</Link> captures the **permissions
+granted** by the user, which is crucial for subsequent data processing and helpful
+to comply with privacy regulations.
 
 ### Source
 
-The source is the origin of the event, including type (web, app, server),
-specific site or component, and referrer information for basic journey
-attribution.
+The&nbsp;<Link to="/docs/sources/overview">source</Link> is the **origin** of
+the event, including type (web, app, server), specific site or component, and
+referrer information for basic journey attribution.
 
-## Principles
+## Strengths
 
 ### Structured flexibility
 
-The event model is made to fit every company's requirements while maintaining a
-structured approach for easy access and interpretation.
-
-### First-Party
-
-With walkerOS data is collected directly and built into your code. This ensures
-control over what, when, and where data is measured, enhancing data management
-and privacy.
-
-### Source of Truth
-
-A single source of truth for data ensures comparability, manageability, and
-minimizes implementation efforts, preventing data leaks or inaccuracies.
+walkerOS is the single source of truth of data collection. The event model
+ensures comparability, manageability, and minimizes implementation efforts,
+preventing data leaks or inaccuracies.
 
 ### Vendor-agnostic
 
-The event model is designed to be resilient and flexible, allowing adaptability
-to future legal or internal requirements without vendor lock-in.
+The event model is designed to be resilient, allowing adaptability to future
+legal or internal requirements without vendor lock-in.
 
 ### Industry-agnostic
 
 The model supports diverse use cases beyond e-commerce, including media, (B2B)
 SaaS, and more, ensuring versatility and comparability.
-
-### Mapping
-
-Mapping involves translating walkerOS events to the formats required by
-different analytics tools. For example, a `product add` event in walkerOS can be
-mapped to `add_to_cart` in GA4 or a corresponding event in another tool.
 
 :::info
 

@@ -4,24 +4,9 @@ sidebar_position: 2
 description: How to configure walker.js
 ---
 
-There a few configuration options when creating a walker.js instance:
+import Link from '@docusaurus/Link';
 
-| Option          | Type                        | Description                                             |
-| --------------- | --------------------------- | ------------------------------------------------------- |
-| consent         | object                      | Initial consent states, learn more under consent.       |
-| dataLayer       | boolean                     | Adds a dataLayer destination if enabled.                |
-| dataLayerConfig | object                      | Config for the dataLayer destination, e.g. for consent. |
-| default         | boolean                     | Add a dataLayer destination and run automatically.      |
-| elb             | string                      | Name of assign the elb function to the window           |
-| elbLayer        | object                      | Public elbwalker API for async communication.           |
-| globals         | object                      | Static attributes added to each event.                  |
-| instance        | string                      | Name of the walkerjs instance to assign to the window   |
-| pageview        | boolean                     | Trigger a page view event by default.                   |
-| prefix          | string                      | Attributes prefix used by the walker.                   |
-| run             | boolean                     | Automatically start running.                            |
-| session         | false or<br />SessionConfig | Configuration for session detection.                    |
-| tagging         | number                      | Current version of the tracking setup.                  |
-| user            | object                      | Setting the user ids including id, device, and session. |
+There are several configuration options when creating a walker.js instance:
 
 ```ts
 const walkerjs = Walkerjs({
@@ -44,5 +29,33 @@ const walkerjs = Walkerjs({
 });
 ```
 
+| Option          | Type                        | Description                                            |
+| --------------- | --------------------------- | ------------------------------------------------------ |
+| consent         | object                      | Initial consent states                                 |
+| dataLayer       | boolean                     | Adds a dataLayer destination if enabled                |
+| dataLayerConfig | object                      | Config for dataLayer destination, e.g. for consent     |
+| default         | boolean                     | Add dataLayer destination and run automatically        |
+| elb             | string                      | Name of assign the elb function to the window          |
+| elbLayer        | object                      | Public elbwalker API for async communication           |
+| globals         | object                      | Static attributes added to each event                  |
+| instance        | string                      | Name of the walker.js instance to assign to the window |
+| pageview        | boolean                     | Trigger a page view event by default                   |
+| prefix          | string                      | Attributes prefix used by walker                       |
+| run             | boolean                     | Automatically start running                            |
+| session         | false or<br />SessionConfig | Configuration for session detection                    |
+| tagging         | number                      | Current version of the tagging setup                   |
+| user            | object                      | Setting the user ids including id, device, and session |
+
+:::note
+
 During a run you can still use `globals` and `tagging` to update the
 configuration.
+
+:::
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

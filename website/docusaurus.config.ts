@@ -8,7 +8,7 @@ const vars = {
 
 const config: Config = {
   title: 'walkerOS',
-  tagline: 'Open-source data collection platform',
+  tagline: 'Open-source event data collection platform',
   favicon: 'img/favicon.png',
 
   // Set the production url of your site here
