@@ -74,16 +74,21 @@ describe('getMappingEvent', () => {
   test('condition', () => {
     const mapping: Mapping.Config = {
       pii: {
-        event: {
-          name: 'secret',
-          condition: (event) => !!event.consent?.marketing,
-        },
+        event: [
+          {
+            name: 'secret',
+            condition: (event) => !!event.consent?.marketing,
+          },
+          {
+            name: 'fallback',
+          },
+        ],
       },
     };
 
     expect(getMappingEvent({ event: 'pii event' }, mapping)).toStrictEqual({
-      eventMapping: undefined,
-      mappingKey: '',
+      eventMapping: { name: 'fallback' },
+      mappingKey: 'pii event',
     });
 
     expect(
@@ -92,7 +97,7 @@ describe('getMappingEvent', () => {
         mapping,
       ),
     ).toStrictEqual({
-      eventMapping: mapping.pii!.event,
+      eventMapping: mapping.pii!.event[0],
       mappingKey: 'pii event',
     });
   });
