@@ -97,6 +97,22 @@ static, their content can be defined dynamically with different value types.
 **Event names** are a combination of the entities involved (_promotion_) and the
 action performed (_view_).
 
+```mermaid
+---
+title: walkerOS Event
+---
+flowchart
+    A(event = entity + action)
+```
+
+```mermaid
+---
+title: Example
+---
+flowchart
+    A(promotion view = promotion + view)
+```
+
 The structure remains consistent across all interactions, whether the event e.g.
 is a `page view`, `session start`, `product visible`, or `order complete`.
 

@@ -87,7 +87,7 @@ const Preview: React.FC<PreviewProps> = ({
     <div className="m-4" data-elbcontext={`previewId:${previewId}`}>
       <LiveProvider
         code={liveCode}
-        theme={prismThemes.oneDark}
+        theme={prismThemes.palenight}
         language="html"
         transformCode={transformCode}
       >
