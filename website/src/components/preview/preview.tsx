@@ -49,6 +49,12 @@ const Preview: React.FC<PreviewProps> = ({
 
   useEffect(() => {
     initPreview(previewRef?.current);
+
+    document.querySelectorAll('.token.attr-name').forEach((token) => {
+      if (token.textContent?.startsWith('data-elb')) {
+        token.classList.add('elb-attribute');
+      }
+    });
   }, [liveCode]);
 
   useEffect(() => {
@@ -97,7 +103,7 @@ const Preview: React.FC<PreviewProps> = ({
     <div className="m-4" data-elbcontext={`previewId:${previewId}`}>
       <LiveProvider
         code={liveCode}
-        theme={prismThemes.oneDark}
+        theme={prismThemes.palenight}
         language="html"
         transformCode={transformCode}
       >
@@ -165,6 +171,14 @@ const Preview: React.FC<PreviewProps> = ({
           )}
         </div>
       </LiveProvider>
+
+      <style>
+        {`
+          .elb-attribute {
+            color: #01B5E2 !important;
+          }
+        `}
+      </style>
     </div>
   );
 };
