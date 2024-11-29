@@ -4,14 +4,14 @@ sidebar_position: 3
 description: How to tag a page with walker.js
 ---
 
-You can implement all sorts of front-end user events easily with walker.js. From
-product and UX events like promotion view, filter usage, etc. to e-commerce
-actions like product add to carts or order complete events. The walker.js
-handles all trigger initializations and race conditions, builds the events with
-context, and distributes them based on consent states and mapping definitions to
-any destinations.
+You can implement all sorts of front-end user events with walker.js. From
+product and UX events like promotion views, filter and search usage to
+e-commerce actions like product add to carts or order complete events. The
+walker.js handles all trigger initializations and race conditions, builds the
+events with context, and distributes them based on consent states and mapping
+definitions to any destinations.
 
-Tag a page with...
+Tag a page...
 
 ```html
 <!-- Generic usage -->
@@ -36,7 +36,7 @@ Tag a page with...
 </div>
 ```
 
-... to get a full event like the following as a result:
+... to get a structured event as a result:
 
 ```js
 {
@@ -86,60 +86,69 @@ Tag a page with...
 }
 ```
 
-:::info
+:::note
 
-Learn more about the [event model](/docs/walkeros/event-model).
+You are entirely **free** to define naming conventions.
 
 :::
 
-You are entirely **free to define naming conventions**. All you need to get
-started are the **entity, action & trigger** attributes. Learn more about the
+To get started you need to know **entity, action & trigger** attributes.
+
+:::tip
+
+Learn more about the
 [event model](https://www.elbwalker.com/blog/elbwalker-event-concept) in our
 blog.
 
-1. You define the **entity scope** by setting the data-elb attribute with the
-   name of an entity to an element, e.g., `data-elb="promotion"`. The default
-   entity is `page` when no `data-elb` is set.
-2. An **action** can be added by setting the data-elbaction attribute on the
-   **same level or all child** elements in combination with a **matching
-   trigger**, e.g., `data-elbaction="visible:view"` to fire a promotion view
-   event when the element has been in the viewport for at least 50% for one
-   second.
-3. (Optional) To define the entities' **properties**, set the **composited
-   attribute** data-elb-ENTITY with the name and value, e.g.
-   `data-elb-promotion="name:Setting up tracking easily;position:overlay"`.
+:::
+
+## Entity & action
+
+You define the entity **scope** by setting the `data-elb` attribute with the
+name of an entity to an element, e.g. `data-elb="promotion"`. The default entity
+is `page` when no `data-elb` is set.
+
+An **action** can be added by setting the `data-elbaction` attribute on the
+**same level** or **child elements** in combination with a **matching trigger**,
+e.g., `data-elbaction="visible:view"` to fire a promotion view event when an
+element has been in the viewport for at least 50% for one second.
+
+To define the entities' **properties**, set the **composited attribute**
+`data-elb-ENTITY` with the key and value, e.g.
+`data-elb-promotion="name:tagging is fun;position:overlay"`.
 
 ## Trigger
 
 Walker.js comes with a bunch of pre-built triggers. You don't have to deal with
 event listener or mutation observer initialization anymore.
 
-| **Event** | **Definition**                                                                                                             |
-| --------- | -------------------------------------------------------------------------------------------------------------------------- |
-| load      | after loading a page when the DOM is ready                                                                                 |
-| click     | when the element or a child is clicked                                                                                     |
-| visible   | after the element has been in the viewport for at least 50% for one second                                                 |
-| hover     | each time the mouse enters the corresponding element                                                                       |
-| submit    | on a valid form submission                                                                                                 |
-| wait(ms)  | waits ms seconds (15 seconds by default) until triggering                                                                  |
-| pulse(ms) | recurring trigger every ms seconds (15 seconds by default) if the page is not hidden                                       |
-| scroll(y) | fires when min. y percent of the element's height is above the bottom of the window, e.g., scroll(80) for an 80% threshold |
+| **Trigger** | **Definition**                                                                       |
+| ----------- | ------------------------------------------------------------------------------------ |
+| load        | after loading a page when DOM is ready                                               |
+| click       | when an element or a child is clicked                                                |
+| visible     | after an element has been in the viewport for at least 50% for one second            |
+| hover       | each time the mouse enters the corresponding element                                 |
+| submit      | on valid form submission                                                             |
+| wait(ms)    | waits ms seconds (15 seconds by default) until triggering                            |
+| pulse(ms)   | recurring trigger every ms seconds (15 seconds by default) if the page is not hidden |
 
-:::caution
+:::note
 
-Trigger names are predefined and need to be selected from the list, while the
+Trigger names are predefined and to be selected from the list, while the
 `action` can be an arbitrarily defined name.
 
 :::
 
 ### Abbreviation
 
-If the trigger and action values are equal, e.g., for click events, you can just
+If the trigger and action values are equal, e.g. for click events, you can
 shorten the implementation:
 
 ```html
+Use
 <b data-elbaction="click">
-  is equal to <s data-elbaction="click:click">long</s>
+  instead of
+  <s data-elbaction="click:click">long</s>
 </b>
 ```
 
@@ -505,8 +514,14 @@ This example will lead to the following event on load:
 Nested entities that are nested inside another entity will be captured on both
 levels.
 
-:::caution
+:::note
 
 Nested entities are not available for auto-captured page view events.
+
+:::
+
+:::tip
+
+Learn more about the walkerOS [event model](/docs/walkeros/event-model).
 
 :::
