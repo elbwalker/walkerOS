@@ -13,19 +13,31 @@ export function getMappingEvent(
   let entityKey = entity;
   let actionKey = action;
 
+  const resolveEventMapping = (
+    eventMapping?: Mapping.Event<unknown> | Mapping.Event<unknown>[],
+  ) => {
+    if (!eventMapping) return;
+    eventMapping = Array.isArray(eventMapping) ? eventMapping : [eventMapping];
+
+    return eventMapping.find(
+      (eventMapping) =>
+        !eventMapping.condition || eventMapping.condition(event),
+    );
+  };
+
   if (!mapping[entityKey]) entityKey = '*';
   const entityMapping = mapping[entityKey];
 
   if (entityMapping) {
     if (!entityMapping[actionKey]) actionKey = '*';
-    eventMapping = entityMapping[actionKey];
+    eventMapping = resolveEventMapping(entityMapping[actionKey]);
   }
 
   // Fallback to * *
   if (!eventMapping) {
     entityKey = '*';
     actionKey = '*';
-    eventMapping = mapping[entityKey]?.[actionKey];
+    eventMapping = resolveEventMapping(mapping[entityKey]?.[actionKey]);
   }
 
   if (eventMapping) mappingKey = `${entityKey} ${actionKey}`;

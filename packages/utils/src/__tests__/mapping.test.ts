@@ -1,8 +1,8 @@
-import { WalkerOS } from '@elbwalker/types';
+import { Mapping, WalkerOS } from '@elbwalker/types';
 import { createEvent, getMappingEvent, getMappingValue } from '../core';
 
-describe('mapping', () => {
-  test('getMappingEvent', () => {
+describe('getMappingEvent', () => {
+  test('basic', () => {
     const pageViewConfig = { name: 'page_view' };
 
     expect(
@@ -14,7 +14,9 @@ describe('mapping', () => {
       eventMapping: pageViewConfig,
       mappingKey: 'page view',
     });
+  });
 
+  test('asterisk', () => {
     const entityAsterisksConfig = { name: 'entity_*' };
     expect(
       getMappingEvent(
@@ -36,9 +38,7 @@ describe('mapping', () => {
       eventMapping: asterisksActionConfig,
       mappingKey: '* view',
     });
-  });
 
-  test('asterisk', () => {
     const mapping = {
       '*': {
         '*': { name: 'asterisk' },
@@ -71,6 +71,34 @@ describe('mapping', () => {
     });
   });
 
+  test('condition', () => {
+    const mapping: Mapping.Config = {
+      pii: {
+        event: {
+          name: 'secret',
+          condition: (event) => !!event.consent?.marketing,
+        },
+      },
+    };
+
+    expect(getMappingEvent({ event: 'pii event' }, mapping)).toStrictEqual({
+      eventMapping: undefined,
+      mappingKey: '',
+    });
+
+    expect(
+      getMappingEvent(
+        { event: 'pii event', consent: { marketing: true } },
+        mapping,
+      ),
+    ).toStrictEqual({
+      eventMapping: mapping.pii!.event,
+      mappingKey: 'pii event',
+    });
+  });
+});
+
+describe('getMappingValue', () => {
   test('string', () => {
     const event = createEvent();
     expect(getMappingValue(event, 'timing')).toBe(event.timing);

@@ -1,8 +1,8 @@
 import type { Destination, WalkerOS } from '.';
 
-export interface Config<CustomEvent> {
+export interface Config<CustomEvent = unknown> {
   [entity: string]:
-    | { [action: string]: Event<CustomEvent> | undefined }
+    | Record<string, Event<CustomEvent> | Array<Event<CustomEvent>>>
     | undefined;
 }
 
@@ -13,6 +13,7 @@ export interface Event<CustomEvent = unknown> {
     instance: WalkerOS.Instance,
   ) => void;
   batched?: Destination.Batch<CustomEvent>; // Batch of events to be processed
+  condition?: Condition; // Added condition;
   consent?: WalkerOS.Consent; // Required consent states process the event
   custom?: CustomEvent; // Arbitrary but protected configurations for custom event config
   ignore?: boolean; // Choose to no process an event when set to true
@@ -37,8 +38,8 @@ export interface ValueConfig {
 }
 
 export type Condition = (
-  event: Event,
-  mapping: Value,
+  event: WalkerOS.PartialEvent,
+  mapping?: Value,
   instance?: WalkerOS.Instance,
 ) => boolean;
 
