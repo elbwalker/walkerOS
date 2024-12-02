@@ -82,7 +82,8 @@ describe('getMappingEvent', () => {
         event: [
           {
             name: 'secret',
-            condition: (event) => !!event.consent?.marketing,
+            condition: (event) =>
+              !!(event as WalkerOS.PartialEvent).consent?.marketing,
           },
           {
             name: 'fallback',
@@ -204,22 +205,17 @@ describe('getMappingValue', () => {
   test('loop', () => {
     const event = getEvent('order complete');
 
-    // @TODO "event" as a reference to the whole event
     expect(
       getMappingValue(event, {
         loop: [
           'nested',
           {
-            // condition: (entity) => entity.type === 'product',
+            condition: (entity) => entity.type === 'product',
             key: 'data.name',
           },
         ],
       }),
-    ).toStrictEqual([
-      event.nested[0].data.name,
-      event.nested[1].data.name,
-      event.nested[2].data.name,
-    ]);
+    ).toStrictEqual([event.nested[0].data.name, event.nested[1].data.name]);
   });
 
   test('map', () => {

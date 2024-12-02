@@ -1,5 +1,11 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
-import { castToProperty, getByPath, getGrantedConsent, isDefined } from '.';
+import {
+  castToProperty,
+  getByPath,
+  getGrantedConsent,
+  isDefined,
+  isObject,
+} from '.';
 
 export function getMappingEvent(
   event: WalkerOS.PartialEvent,
@@ -48,7 +54,7 @@ export function getMappingEvent(
 }
 
 export function getMappingValue(
-  event: WalkerOS.PartialEvent,
+  obj: WalkerOS.PartialEvent | WalkerOS.AnyObject,
   mapping: Mapping.Value,
   instance?: WalkerOS.Instance,
   props?: unknown,
@@ -66,7 +72,7 @@ export function getMappingValue(
         : mappingItem;
 
     // Check if this mapping should be used
-    if (condition && !condition(event, mappingItem, instance)) return;
+    if (condition && !condition(obj, mappingItem, instance)) return;
 
     // Check if consent is required and granted
     if (consent && !getGrantedConsent(consent, instance?.consent)) return value;
@@ -74,23 +80,23 @@ export function getMappingValue(
     let mappingValue;
     if (fn) {
       // Use a custom function to get the value
-      mappingValue = fn(event, mappingItem, instance, props);
+      mappingValue = fn(obj, mappingItem, instance, props);
     } else {
       // Get dynamic value from the event
-      mappingValue = getByPath(event, key, value);
+      mappingValue = getByPath(obj, key, value);
     }
 
     if (loop) {
       const [scope, itemMapping] = loop;
 
       // Retrieve the array from the event
-      const data = getMappingValue(event, scope, instance, props);
+      const data = getMappingValue(obj, scope, instance, props);
 
       if (Array.isArray(data)) {
         mappingValue = data
           .map((item) =>
             getMappingValue(
-              item as WalkerOS.PartialEvent, // @TODO not so nice
+              isObject(item) ? item : {},
               itemMapping,
               instance,
               props,
@@ -103,7 +109,7 @@ export function getMappingValue(
     if (map) {
       mappingValue = Object.entries(map).reduce(
         (mappedObj, [mapKey, mapValue]) => {
-          const result = getMappingValue(event, mapValue, instance, props);
+          const result = getMappingValue(obj, mapValue, instance, props);
           if (isDefined(result)) mappedObj[mapKey] = result;
 
           return mappedObj;

@@ -40,7 +40,7 @@ export interface ValueConfig {
 }
 
 export type Condition = (
-  event: WalkerOS.PartialEvent,
+  obj: WalkerOS.AnyObject,
   mapping?: Value,
   instance?: WalkerOS.Instance,
 ) => boolean;
