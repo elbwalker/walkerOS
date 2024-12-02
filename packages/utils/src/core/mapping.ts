@@ -60,7 +60,7 @@ export function getMappingValue(
   return mappings.reduce((acc, mappingItem) => {
     if (acc) return acc; // A valid result was already found
 
-    const { condition, consent, fn, key, map, validate, value } =
+    const { condition, consent, fn, key, loop, map, validate, value } =
       typeof mappingItem == 'string'
         ? ({ key: mappingItem } as Mapping.ValueConfig)
         : mappingItem;
@@ -78,6 +78,26 @@ export function getMappingValue(
     } else {
       // Get dynamic value from the event
       mappingValue = getByPath(event, key, value);
+    }
+
+    if (loop) {
+      const [scope, itemMapping] = loop;
+
+      // Retrieve the array from the event
+      const data = getMappingValue(event, scope, instance, props);
+
+      if (Array.isArray(data)) {
+        mappingValue = data
+          .map((item) =>
+            getMappingValue(
+              item as WalkerOS.PartialEvent, // @TODO not so nice
+              itemMapping,
+              instance,
+              props,
+            ),
+          )
+          .filter(isDefined);
+      }
     }
 
     if (map) {

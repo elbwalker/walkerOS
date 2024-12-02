@@ -1,5 +1,10 @@
 import { Mapping, WalkerOS } from '@elbwalker/types';
-import { createEvent, getMappingEvent, getMappingValue } from '../core';
+import {
+  createEvent,
+  getEvent,
+  getMappingEvent,
+  getMappingValue,
+} from '../core';
 
 describe('getMappingEvent', () => {
   test('basic', () => {
@@ -194,6 +199,27 @@ describe('getMappingValue', () => {
       undefined,
       'random',
     );
+  });
+
+  test('loop', () => {
+    const event = getEvent('order complete');
+
+    // @TODO "event" as a reference to the whole event
+    expect(
+      getMappingValue(event, {
+        loop: [
+          'nested',
+          {
+            // condition: (entity) => entity.type === 'product',
+            key: 'data.name',
+          },
+        ],
+      }),
+    ).toStrictEqual([
+      event.nested[0].data.name,
+      event.nested[1].data.name,
+      event.nested[2].data.name,
+    ]);
   });
 
   test('map', () => {
