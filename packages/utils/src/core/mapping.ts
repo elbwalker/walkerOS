@@ -56,9 +56,10 @@ export function getMappingEvent(
 export function getMappingValue(
   obj: WalkerOS.PartialEvent | WalkerOS.AnyObject,
   mapping: Mapping.Value,
-  instance?: WalkerOS.Instance,
-  props?: unknown,
+  options: Mapping.Options = {},
 ): WalkerOS.Property | undefined {
+  const { instance } = options;
+
   // Ensure mapping is an array for uniform processing
   const mappings = Array.isArray(mapping) ? mapping : [mapping];
 
@@ -80,7 +81,7 @@ export function getMappingValue(
     let mappingValue;
     if (fn) {
       // Use a custom function to get the value
-      mappingValue = fn(obj, mappingItem, instance, props);
+      mappingValue = fn(obj, mappingItem, options);
     } else {
       // Get dynamic value from the event
       mappingValue = getByPath(obj, key, value);
@@ -90,17 +91,12 @@ export function getMappingValue(
       const [scope, itemMapping] = loop;
 
       // Retrieve the array from the event
-      const data = getMappingValue(obj, scope, instance, props);
+      const data = getMappingValue(obj, scope, options);
 
       if (Array.isArray(data)) {
         mappingValue = data
           .map((item) =>
-            getMappingValue(
-              isObject(item) ? item : {},
-              itemMapping,
-              instance,
-              props,
-            ),
+            getMappingValue(isObject(item) ? item : {}, itemMapping, options),
           )
           .filter(isDefined);
       }
@@ -109,7 +105,7 @@ export function getMappingValue(
     if (map) {
       mappingValue = Object.entries(map).reduce(
         (mappedObj, [mapKey, mapValue]) => {
-          const result = getMappingValue(obj, mapValue, instance, props);
+          const result = getMappingValue(obj, mapValue, options);
           if (isDefined(result)) mappedObj[mapKey] = result;
 
           return mappedObj;

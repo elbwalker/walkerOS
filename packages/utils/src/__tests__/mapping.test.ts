@@ -189,16 +189,14 @@ describe('getMappingValue', () => {
     getMappingValue(
       createEvent({ event: 'page click' }),
       { fn: mockFn },
-      undefined,
-      'random',
+      { props: 'random' },
     );
 
     expect(mockFn).toHaveBeenNthCalledWith(
       3,
       expect.any(Object),
       { fn: mockFn },
-      undefined,
-      'random',
+      { props: 'random' },
     );
   });
 
@@ -286,7 +284,7 @@ describe('getMappingValue', () => {
           key: 'data.string',
           consent: { functional: true },
         },
-        instance,
+        { instance },
       ),
     ).toBe(event.data.string);
 
@@ -298,7 +296,7 @@ describe('getMappingValue', () => {
           key: 'data.string',
           consent: { marketing: true },
         },
-        instance,
+        { instance },
       ),
     ).toBeUndefined();
 

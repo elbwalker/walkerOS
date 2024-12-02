@@ -108,12 +108,9 @@ export function objToEvent(config: Config, obj: unknown): MappedEvent | void {
         }, {} as WalkerOS.Properties);
         nested.push({
           type: String(
-            getMappingValue(
-              obj,
-              config.type || { value: 'item' },
-              undefined,
-              i,
-            ),
+            getMappingValue(obj, config.type || { value: 'item' }, {
+              props: i,
+            }),
           ),
           data: data,
           nested: [],

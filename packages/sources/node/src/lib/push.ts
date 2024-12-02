@@ -99,7 +99,11 @@ export async function pushToDestinations(
         // Policy check
         Object.entries(destination.config.policy || []).forEach(
           ([key, mapping]) => {
-            setByPath(event, key, getMappingValue(event, mapping, instance));
+            setByPath(
+              event,
+              key,
+              getMappingValue(event, mapping, { instance }),
+            );
           },
         );
 
