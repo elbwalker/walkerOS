@@ -33,6 +33,7 @@ export interface ValueConfig {
   consent?: WalkerOS.Consent;
   fn?: Fn;
   key?: string;
+  map?: Map;
   validate?: Validate;
   value?: WalkerOS.PropertyType;
 }
@@ -49,5 +50,7 @@ export type Fn = (
   instance?: WalkerOS.Instance,
   props?: unknown,
 ) => WalkerOS.Property | void;
+
+export type Map = { [key: string]: Value };
 
 export type Validate = (value?: unknown) => boolean;

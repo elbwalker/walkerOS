@@ -196,6 +196,28 @@ describe('getMappingValue', () => {
     );
   });
 
+  test('map', () => {
+    const event = createEvent();
+
+    expect(
+      getMappingValue(event, {
+        map: {
+          foo: 'data.string',
+          bar: { value: 'bar' },
+          data: {
+            map: {
+              recursive: { value: true },
+            },
+          },
+        },
+      }),
+    ).toStrictEqual({
+      foo: event.data.string,
+      bar: 'bar',
+      data: { recursive: true },
+    });
+  });
+
   test('validate', () => {
     const event = createEvent();
     const mockValidate = jest.fn((value) => {
