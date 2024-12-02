@@ -1,7 +1,7 @@
 import type { Hooks, WalkerOS } from '@elbwalker/types';
 import type { On, SourceWalkerjs, DestinationWeb } from '../types';
-import { Const, assign, isSameType } from '@elbwalker/utils';
-import { isElementOrDocument, isObject } from './helper';
+import { Const, assign, isObject, isSameType } from '@elbwalker/utils';
+import { isElementOrDocument } from './helper';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';
 import { addDestination } from './destination';

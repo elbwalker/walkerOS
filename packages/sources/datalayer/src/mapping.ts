@@ -7,8 +7,8 @@ import type {
   Mapping,
   Value,
 } from './types';
-import { getId, getMappingValue } from '@elbwalker/utils';
-import { convertConsentStates, isObject, isString } from './helper';
+import { getId, getMappingValue, isObject } from '@elbwalker/utils';
+import { convertConsentStates, isString } from './helper';
 
 const defaultMapping: Mapping = {
   'consent default': {
