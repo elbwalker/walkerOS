@@ -42,13 +42,19 @@ const Preview: React.FC<PreviewProps> = ({
   hideConsole = false,
 }) => {
   const previewId = useRef(getId()).current;
-  const [logs, setLogs] = useState<unknown[]>([123]);
+  const [logs, setLogs] = useState<unknown[]>([]);
   const previewRef = useRef<HTMLDivElement>(null);
   const consoleRef = useRef<HTMLDivElement>(null);
   const [liveCode, setLiveCode] = useState(code.trim());
 
   useEffect(() => {
     initPreview(previewRef?.current);
+
+    document.querySelectorAll('.token.attr-name').forEach((token) => {
+      if (token.textContent?.startsWith('data-elb')) {
+        token.classList.add('elb-attribute');
+      }
+    });
   }, [liveCode]);
 
   useEffect(() => {
@@ -165,6 +171,14 @@ const Preview: React.FC<PreviewProps> = ({
           )}
         </div>
       </LiveProvider>
+
+      <style>
+        {`
+          .elb-attribute {
+            color: #01B5E2 !important;
+          }
+        `}
+      </style>
     </div>
   );
 };
