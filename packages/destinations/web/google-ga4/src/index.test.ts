@@ -1,3 +1,4 @@
+import { getEvent } from '@elbwalker/utils';
 import type { DestinationGoogleGA4 } from '.';
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 
@@ -138,26 +139,20 @@ describe('Destination Google GA4', () => {
   });
 
   test('Parameters', () => {
+    const event = getEvent();
     const config: DestinationGoogleGA4.Config = {
-      custom: {
-        measurementId,
-        params: {
-          currency: { value: 'EUR', key: 'data.currency' },
-          override: 'data.old', // override at event level
-          user_id: 'user.id',
-          value: 'data.revenue',
-        },
-      },
+      custom: { measurementId },
       init: true,
       mapping: {
-        ga4: {
-          params: {
-            name: 'mapped_ga4_params',
-            custom: {
-              include: [],
-              params: {
-                override: 'data.override',
-                position: 'context.position.0',
+        entity: {
+          action: {
+            name: 'parameters',
+            data: {
+              map: {
+                currency: { value: 'EUR', key: 'data.currency' },
+                user_id: 'user.id',
+                value: 'data.revenue',
+                position: 'context.dev.0',
                 unavailable: {
                   key: 'context.does.not.exist',
                   value: 'backup',
@@ -167,36 +162,26 @@ describe('Destination Google GA4', () => {
                 lang: 'globals.lang',
               },
             },
+            custom: {
+              include: [],
+            },
           },
         },
       },
     };
     elb('walker destination', destination, config);
-    elb('walker run', {
-      globals: { lang: 'de' },
-      user: { id: 'us3r1d' },
-    });
-
-    elb({
-      event: 'ga4 params',
-      data: { old: false, override: 'important' },
-      context: {
-        position: ['reco', 0],
-      },
-      timing: 2,
-    });
+    elb(event);
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
-      'mapped_ga4_params',
+      'parameters',
       expect.objectContaining({
         currency: 'EUR', // default value
-        lang: 'de',
-        override: 'important',
-        position: 'reco',
+        lang: 'elb',
+        position: 'test',
         unavailable: 'backup',
-        user_id: 'us3r1d',
-        timing: expect.any(Number),
+        user_id: 'us3r',
+        timing: event.timing,
       }),
     );
   });
@@ -207,19 +192,18 @@ describe('Destination Google GA4', () => {
       user: { id: 'us3r1d' },
     });
     config = {
-      custom: {
-        measurementId,
-        // include: ['data'], // Default behavior
-      },
+      custom: { measurementId },
       init: true,
       mapping: {
         entity: {
           action: {
-            custom: {
-              include: ['data', 'globals'],
-              params: {
+            data: {
+              map: {
                 data_foo: 'data.override',
               },
+            },
+            custom: {
+              include: ['data', 'globals'],
             },
           },
           all: { custom: { include: ['all'] } },
@@ -288,46 +272,33 @@ describe('Destination Google GA4', () => {
     });
   });
 
-  test('Items', () => {
-    config = {
-      custom: {
-        measurementId,
-        params: {
-          currency: { value: 'EUR', key: 'data.currency' },
-          override: 'data.old', // override at event level
-          value: 'data.revenue',
-        },
-      },
+  test('event add_to_cart', () => {
+    const event = getEvent('product add');
+    const config: DestinationGoogleGA4.Config = {
+      custom: { measurementId },
       init: true,
       mapping: {
         product: {
           add: {
             name: 'add_to_cart',
-            custom: {
-              include: [],
-              items: {
-                params: {
-                  item_id: 'data.id',
-                  item_category: 'data.category',
-                  quantity: { value: 1, key: 'data.quantity' },
+            data: {
+              map: {
+                currency: { value: 'EUR', key: 'data.currency' },
+                override: 'data.old',
+                value: 'data.price',
+                items: {
+                  loop: [
+                    'this',
+                    {
+                      map: {
+                        item_id: 'data.id',
+                        item_variant: 'data.color',
+                        quantity: { value: 1, key: 'data.quantity' },
+                      },
+                    },
+                  ],
                 },
               },
-              params: { value: 'data.price' },
-            },
-          },
-        },
-        order: {
-          complete: {
-            name: 'purchase',
-            custom: {
-              items: {
-                params: {
-                  item_id: 'nested.*.data.id',
-                  item_index: 'nested.*.data.i',
-                  item_coupon: 'data.coupon',
-                },
-              },
-              params: { transaction_id: 'data.id' },
             },
           },
         },
@@ -335,51 +306,77 @@ describe('Destination Google GA4', () => {
     };
     elb('walker destination', destination, config);
 
-    elb('product add', {
-      id: 'sku',
-      category: 'Examples',
-      currency: 'USD', // override default
-      price: 7.77,
-    });
+    elb(event);
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'add_to_cart',
       expect.objectContaining({
-        currency: 'USD',
-        value: 7.77,
+        currency: 'EUR',
+        value: event.data.price,
         items: [
           {
-            item_id: 'sku',
-            item_category: 'Examples',
-            quantity: 1, // Event level default
+            item_id: event.data.id,
+            item_variant: event.data.color,
+            quantity: 1,
           },
         ],
       }),
     );
+  });
 
-    const coupon = 'S4L3';
-    elb({
-      event: 'order complete',
-      data: { id: 'orderid', revenue: 25.42, coupon },
-      nested: [
-        { type: 'product', data: { id: 'a', i: 1 }, nested: [], context: {} },
-        { type: 'product', data: { id: 'b' }, nested: [], context: {} },
-        { type: 'product', data: { id: 'c', i: 2 }, nested: [], context: {} },
-      ],
-    });
+  test('event purchase', () => {
+    const event = getEvent('order complete');
+    const config: DestinationGoogleGA4.Config = {
+      custom: { measurementId },
+      init: true,
+      mapping: {
+        order: {
+          complete: {
+            name: 'purchase',
+            data: {
+              map: {
+                transaction_id: 'data.id',
+                value: 'data.total',
+                tax: 'data.taxes',
+                shipping: 'data.shipping',
+                currency: { key: 'data.currency', value: 'EUR' },
+                items: {
+                  loop: [
+                    'nested',
+                    {
+                      condition: (entity) => entity.type === 'product',
+                      map: {
+                        item_id: 'data.id',
+                        item_name: 'data.name',
+                        quantity: { key: 'data.quantity', value: 1 },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    elb('walker destination', destination, config);
 
-    expect(mockFn).toHaveBeenLastCalledWith(
+    elb(event);
+    const product1 = event.nested[0].data;
+    const product2 = event.nested[1].data;
+    expect(mockFn).toHaveBeenCalledWith(
       'event',
       'purchase',
       expect.objectContaining({
-        transaction_id: 'orderid',
+        transaction_id: event.data.id,
+        value: event.data.total,
+        tax: event.data.taxes,
+        shipping: event.data.shipping,
         currency: 'EUR',
-        value: 25.42,
         items: [
-          { item_id: 'a', item_coupon: coupon, item_index: 1 },
-          { item_id: 'b', item_coupon: coupon },
-          { item_id: 'c', item_coupon: coupon, item_index: 2 },
+          { item_id: product1.id, item_name: product1.name, quantity: 1 },
+          { item_id: product2.id, item_name: product2.name, quantity: 1 },
         ],
       }),
     );

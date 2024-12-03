@@ -1,6 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Custom, Destination, Parameters } from './types';
-import { getParams, getParamsInclude, getParamsItems } from './parameters';
+import { getParamsInclude } from './parameters';
+import { isObject } from '@elbwalker/utils';
 
 // Types
 export * as DestinationGoogleGA4 from './types';
@@ -44,18 +45,14 @@ export const destinationGoogleGA4: Destination = {
     w.gtag('config', custom.measurementId, settings);
   },
 
-  push(event, config, mapping = {}) {
+  push(event, config, mapping = {}, options = {}) {
     const custom = config.custom;
     const customEvent = mapping.custom || {};
     if (!custom) return;
 
     if (!custom.measurementId) return;
 
-    const params = getParams(event, {
-      // Prefer event mapping over general mapping
-      ...custom.params,
-      ...customEvent.params,
-    });
+    const data = isObject(options.data) ? options.data : {};
 
     const paramsInclude = getParamsInclude(
       event,
@@ -63,16 +60,9 @@ export const destinationGoogleGA4: Destination = {
       customEvent.include || custom.include || ['data'],
     );
 
-    const paramsItems = getParamsItems(event, {
-      // Prefer event item mapping over general item mapping
-      ...(custom.items && custom.items.params),
-      ...(customEvent.items && customEvent.items.params),
-    });
-
     const eventParams: Parameters = {
       ...paramsInclude,
-      ...paramsItems,
-      ...params,
+      ...data,
     };
 
     // Event name (snake_case default)

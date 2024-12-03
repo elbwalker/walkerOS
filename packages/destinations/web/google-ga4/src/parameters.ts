@@ -1,16 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { GtagItems, Include, Parameters, Params } from './types';
-import { getMappingValue } from '@elbwalker/utils';
-
-export function getParams(event: WalkerOS.Event, mapping: Params): Parameters {
-  const params = Object.entries(mapping).reduce((acc, [key, mapping]) => {
-    const value = getMappingValue(event, mapping);
-    if (value) acc[key] = value;
-    return acc;
-  }, {} as Parameters);
-
-  return params;
-}
+import type { Include, Parameters } from './types';
 
 export function getParamsInclude(
   event: WalkerOS.Event,
@@ -54,35 +43,4 @@ export function getParamsInclude(
   });
 
   return params;
-}
-
-export function getParamsItems(
-  event: WalkerOS.Event,
-  mapping: Params,
-): Parameters {
-  let itemsCount = 0; // This will become the total items
-  const params = Object.entries(mapping).reduce((acc, [key, mapping]) => {
-    const value = getMappingValue(event, mapping);
-    if (value) {
-      itemsCount = itemsCount || 1;
-      // Define the number of items based on the longest array
-      if (Array.isArray(value) && value.length > itemsCount)
-        itemsCount = value.length;
-
-      acc[key] = value;
-    }
-
-    return acc;
-  }, {} as Parameters);
-
-  const items: GtagItems = [];
-  for (let i = 0; i < itemsCount; i++) {
-    const item = (items[i] = {} as Gtag.Item);
-    Object.entries(params).forEach(([key, paramValue]) => {
-      const value = Array.isArray(paramValue) ? paramValue[i] : paramValue;
-      if (value) item[key as keyof Gtag.Item] = value;
-    });
-  }
-
-  return items.length ? { items } : {};
 }
