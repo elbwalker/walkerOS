@@ -88,7 +88,8 @@ export function getMappingValue(
       const [scope, itemMapping] = loop;
 
       // Retrieve the array from the event
-      const data = getMappingValue(obj, scope, options);
+      const data =
+        scope === 'this' ? [obj] : getMappingValue(obj, scope, options);
 
       if (Array.isArray(data)) {
         mappingValue = data
