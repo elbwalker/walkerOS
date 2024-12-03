@@ -1,5 +1,5 @@
 import type { Destination } from './types';
-import { sendWeb } from '@elbwalker/utils';
+import { isDefined, sendWeb } from '@elbwalker/utils';
 
 // Types
 export * as DestinationWebAPI from './types';
@@ -9,7 +9,7 @@ export const destinationWebAPI: Destination = {
 
   config: {},
 
-  push(event, config, mapping) {
+  push(event, config, mapping, options = {}) {
     const {
       url,
       headers,
@@ -20,11 +20,12 @@ export const destinationWebAPI: Destination = {
 
     if (!url) return;
 
-    const data = transform
-      ? transform(event, config, mapping) // Transform event data
-      : JSON.stringify(event);
+    const value = isDefined(options.data) ? options.data : event;
+    const body = transform
+      ? transform(value, config, mapping) // Transform event data
+      : JSON.stringify(value);
 
-    sendWeb(url, data, { headers, method, transport });
+    sendWeb(url, body, { headers, method, transport });
   },
 };
 
