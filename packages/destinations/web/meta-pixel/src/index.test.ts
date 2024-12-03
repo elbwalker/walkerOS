@@ -99,8 +99,8 @@ describe('Destination Meta Pixel', () => {
         order: {
           complete: {
             name: 'Purchase',
-            custom: {
-              parameters: {
+            data: {
+              map: {
                 currency: { value: 'EUR' },
                 value: 'data.total',
                 contents: {
@@ -147,8 +147,8 @@ describe('Destination Meta Pixel', () => {
         product: {
           add: {
             name: 'AddToCart',
-            custom: {
-              parameters: {
+            data: {
+              map: {
                 currency: { value: 'EUR' },
                 value: 'data.price',
                 content_ids: {

@@ -1,4 +1,3 @@
-import type { Mapping } from '@elbwalker/types';
 import type { DestinationWeb } from '@elbwalker/walker.js';
 
 declare global {
@@ -23,7 +22,6 @@ export interface Custom {
 export interface CustomEvent {
   track?: StandardEventNames; // Name of a standard event to track
   trackCustom?: string; // Name of a custom event to track
-  parameters?: Mapping.Map; // Mapping of parameters for fbq
 }
 
 export type StandardEventNames =

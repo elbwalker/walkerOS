@@ -29,26 +29,18 @@ export const destinationMetaPixel: Destination = {
   },
 
   push(event, config, mapping = {}, options = {}) {
-    const { track, trackCustom, parameters = {} } = mapping.custom || {};
-    const { instance } = options;
+    const { track, trackCustom } = mapping.custom || {};
+    const { data, instance } = options;
 
     const eventName =
       getMappingValue(event, track || trackCustom || '', {
         instance,
       }) || event.event;
 
-    const parametersValue = getMappingValue(
-      event,
-      { map: parameters },
-      {
-        instance,
-      },
-    );
-
     window.fbq(
       trackCustom ? 'trackCustom' : 'track',
       String(eventName),
-      isObject(parametersValue) ? parametersValue : {},
+      isObject(data) ? data : {},
     );
   },
 };
