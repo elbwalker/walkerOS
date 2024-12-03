@@ -6,6 +6,7 @@ import {
   getId,
   tryCatch,
   useHooks,
+  getMappingValue,
 } from '@elbwalker/utils';
 import { pushToDestinations } from './push';
 
@@ -47,6 +48,7 @@ export function dataLayerDestination() {
   };
   const destination: DestinationWeb.DestinationInit = {
     push: (event) => {
+      // @TODO prefer data
       dataLayerPush({
         ...event,
       });
@@ -99,12 +101,17 @@ export function destinationPush(
     destination.config.mapping,
   );
 
+  let data: WalkerOS.Property | undefined;
+
   if (eventMapping) {
     // Check if event should be processed or ignored
     if (eventMapping.ignore) return false;
 
     // Check to use specific event names
     if (eventMapping.name) event.event = eventMapping.name;
+
+    // Transform event to a custom data
+    if (eventMapping.data) data = getMappingValue(event, eventMapping.data);
   }
 
   return !!tryCatch(() => {
@@ -136,7 +143,7 @@ export function destinationPush(
         event,
         destination.config,
         eventMapping,
-        instance,
+        { data, instance },
       );
     }
 

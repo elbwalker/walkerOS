@@ -24,7 +24,7 @@ export type PushFn<Custom, CustomEvent> = (
   event: WalkerOS.Event,
   config: Config<Custom, CustomEvent>,
   mapping?: EventMapping<CustomEvent>,
-  instance?: SourceWalkerjs.Instance,
+  options?: Options,
 ) => void;
 
 export type PushBatchFn<Custom, CustomEvent> = (
@@ -43,3 +43,8 @@ export interface Mapping<CustomEvent = unknown>
 
 export interface EventMapping<CustomEvent = unknown>
   extends WalkerOSMapping.EventConfig<CustomEvent> {}
+
+export interface Options {
+  data?: WalkerOS.Property;
+  instance?: SourceWalkerjs.Instance;
+}

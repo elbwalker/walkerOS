@@ -1,5 +1,5 @@
-import { elb, Walkerjs } from '@elbwalker/walker.js';
 import type { DestinationMetaPixel } from '.';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
 
 describe('Destination Meta Pixel', () => {

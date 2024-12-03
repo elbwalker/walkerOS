@@ -97,9 +97,9 @@ describe('Destination', () => {
       }),
       expect.anything(),
       undefined,
-      expect.objectContaining({
-        round: 1,
-      }),
+      {
+        instance: walkerjs,
+      },
     );
 
     elb('walker run');
@@ -111,9 +111,9 @@ describe('Destination', () => {
       }),
       expect.anything(),
       undefined,
-      expect.objectContaining({
-        round: 2,
-      }),
+      {
+        instance: walkerjs,
+      },
     );
   });
 
@@ -302,6 +302,23 @@ describe('Destination', () => {
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(0);
+  });
+
+  test('mapping data', () => {
+    walkerjs = Walkerjs({ run: true, session: false });
+
+    const eventMapping = { data: { value: 'bar' } };
+    elb(
+      'walker destination',
+      { push: mockPush },
+      { mapping: { page: { view: eventMapping } } },
+    );
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'page view' }),
+      expect.anything(),
+      eventMapping,
+      { data: 'bar', instance: expect.anything() },
+    );
   });
 
   test('consent', () => {
@@ -493,7 +510,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
 
-    destinationIgnore.config.mapping!.foo!.bar!.ignore = true;
+    destinationIgnore.config.mapping!.foo!.bar = { ignore: true };
     elb('foo bar');
     expect(mockPushA).toHaveBeenCalledTimes(0);
   });
