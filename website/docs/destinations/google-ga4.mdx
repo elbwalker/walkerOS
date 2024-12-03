@@ -16,8 +16,58 @@ import TabItem from '@theme/TabItem';
 />
 
 [Google Analytics 4](https://marketingplatform.google.com/about/analytics) is
-the current version of Google's marketing measurement software. It's the most
-common analytics tool for tracking conversions and user behavior on websites.
+the current version of Google's marketing measurement software. It's a common
+analytics tool for tracking conversions and user behavior on websites.
+
+## Installation
+
+<Tabs>
+  <TabItem value="ts" label="TypeScript" default>
+Install the destination via npm
+
+```bash
+npm i @elbwalker/destination-web-google-ga4
+```
+
+```js
+import { elb } from '@elbwalker/walker.js';
+import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
+
+elb('walker destination', destinationGoogleGA4, config);
+```
+
+</TabItem>
+<TabItem value="script" label="Script">
+Load the destination via dynamic import
+
+```html
+<script>
+  // Upload the dist/index.mjs on your own server
+  const destination = (
+    await import(
+      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4/dist/index.mjs'
+    )
+  ).default;
+
+  elb('walker destination', destination, config);
+</script>
+```
+
+</TabItem>
+  <TabItem value="code" label="Code">
+Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4@latest/dist/index.browser.js">index.browser.js</Link> file
+
+```js
+(function () {
+  'use strict';
+  var Destination = (() => {})(); // This is the copied code
+
+  elb('walker destination', Destination.default, config);
+})();
+```
+
+  </TabItem>
+</Tabs>
 
 ## Configuration
 
@@ -145,63 +195,3 @@ default. If you don't want this add `include: []`.
 The properties get prefixed with the group's name and underscore (like
 `globals_lang` for `{ globals: { lang: 'de' } }`). Custom parameters will
 override `include` values with the same key.
-
-## How to use
-
-Choose one of the installation options below to start using the GA4 destination:
-
-```js
-const config = {
-  custom: {
-    measurementId: 'G-XXXXXXXXXX',
-  },
-};
-```
-
-<Tabs>
-  <TabItem value="ts" label="TypeScript" default>
-Install the destination via npm
-
-```bash
-npm i @elbwalker/destination-web-google-ga4
-```
-
-```js
-import { elb } from '@elbwalker/walker.js';
-import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
-
-elb('walker destination', destinationGoogleGA4, config);
-```
-
-</TabItem>
-<TabItem value="script" label="Script">
-Loading the destination via dynamic import
-
-```html
-<script>
-  // Upload the dist/index.mjs on your own server
-  const destination = (
-    await import(
-      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4/dist/index.mjs'
-    )
-  ).default;
-
-  elb('walker destination', destination, config);
-</script>
-```
-
-</TabItem>
-  <TabItem value="code" label="Code">
-Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-ga4@latest/dist/index.browser.js">index.browser.js</Link> file
-
-```js
-(function () {
-  'use strict';
-  var Destination = (() => {})(); // This is the copied code
-
-  elb('walker destination', Destination.default, config);
-})();
-```
-
-  </TabItem>
-</Tabs>
