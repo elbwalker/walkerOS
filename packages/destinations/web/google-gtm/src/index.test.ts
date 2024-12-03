@@ -72,4 +72,24 @@ describe('destination google-tag-manager', () => {
 
     expect(mockDataLayer).toHaveBeenLastCalledWith(event);
   });
+
+  test('push mapping data', () => {
+    elb('walker destination', destination, {
+      mapping: {
+        entity: {
+          action: {
+            data: {
+              map: {
+                foo: { value: 'bar' },
+              },
+            },
+          },
+        },
+      },
+    });
+    elb(event);
+    expect(w.dataLayer).toBeDefined();
+
+    expect(mockDataLayer).toHaveBeenLastCalledWith({ foo: 'bar' });
+  });
 });

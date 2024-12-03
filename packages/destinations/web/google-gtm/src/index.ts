@@ -28,8 +28,8 @@ export const destinationGoogleGTM: Destination = {
       addScript(custom.containerId, custom.domain || defaultDomain, dataLayer);
   },
 
-  push(event) {
-    (window.dataLayer as unknown[]).push(event);
+  push(event, config, mapping, options = {}) {
+    (window.dataLayer as unknown[]).push(options.data ?? event);
   },
 };
 
