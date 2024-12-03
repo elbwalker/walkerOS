@@ -1,8 +1,6 @@
 import type { Destination } from './types';
-import { getParameters } from './parameters';
 import { addScript, setup } from './setup';
-
-// https://developers.facebook.com/docs/meta-pixel/
+import { getMappingValue, isObject } from '@elbwalker/utils';
 
 // Types
 export * as DestinationMetaPixel from './types';
@@ -15,10 +13,10 @@ export const destinationMetaPixel: Destination = {
   init(config) {
     const custom = config.custom || {};
 
-    // load fbevents.js
+    // Load Meta Pixel script if required (fbevents.js)
     if (config.loadScript) addScript();
 
-    // required pixel id
+    // Required pixel id
     if (!custom.pixelId) return false;
 
     // fbq function setup
@@ -26,24 +24,31 @@ export const destinationMetaPixel: Destination = {
 
     window.fbq('init', custom.pixelId);
 
-    // PageView event (deactivate actively)
+    // PageView event (default yes, deactivate actively)
     if (custom.pageview !== false) window.fbq('track', 'PageView');
   },
 
-  push(event, config, mapping = {}) {
-    const custom = config.custom;
-    if (!custom) return;
+  push(event, config, mapping = {}, instance) {
+    const { track, trackCustom, parameters = {} } = mapping.custom || {};
 
-    const customMapping = mapping.custom || {};
+    const eventName =
+      getMappingValue(event, track || trackCustom || '', {
+        instance,
+      }) || event.event;
 
-    // Standard events
-    if (customMapping.track) {
-      const parameters = getParameters(event, customMapping, custom.currency);
-      window.fbq('track', customMapping.track, parameters);
-    } else {
-      // Custom events
-      window.fbq('trackCustom', event.event);
-    }
+    const parametersValue = getMappingValue(
+      event,
+      { map: parameters },
+      {
+        instance,
+      },
+    );
+
+    window.fbq(
+      trackCustom ? 'trackCustom' : 'track',
+      String(eventName),
+      isObject(parametersValue) ? parametersValue : {},
+    );
   },
 };
 

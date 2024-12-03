@@ -33,12 +33,14 @@ export interface ValueConfig {
   consent?: WalkerOS.Consent;
   fn?: Fn;
   key?: string;
+  loop?: Loop;
+  map?: Map;
   validate?: Validate;
   value?: WalkerOS.PropertyType;
 }
 
 export type Condition = (
-  event: WalkerOS.PartialEvent,
+  obj: WalkerOS.AnyObject,
   mapping?: Value,
   instance?: WalkerOS.Instance,
 ) => boolean;
@@ -46,8 +48,16 @@ export type Condition = (
 export type Fn = (
   event: WalkerOS.PartialEvent,
   mapping: Value,
-  instance?: WalkerOS.Instance,
-  props?: unknown,
+  options: Options,
 ) => WalkerOS.Property | void;
+
+export type Loop = [Value, Value];
+
+export type Map = { [key: string]: Value };
+
+export interface Options {
+  instance?: WalkerOS.Instance;
+  props?: unknown;
+}
 
 export type Validate = (value?: unknown) => boolean;

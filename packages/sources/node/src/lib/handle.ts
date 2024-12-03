@@ -1,9 +1,9 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { SourceNode, DestinationNode } from '../types';
-import { Const, assign, isSameType } from '@elbwalker/utils';
+import { Const, assign, isObject, isSameType } from '@elbwalker/utils';
 import { addDestination } from './destination';
 import { pushToDestinations } from './push';
-import { createResult, isObject } from './helper';
+import { createResult } from './helper';
 import { run } from './run';
 import { getState } from './state';
 import { setConsent } from './consent';

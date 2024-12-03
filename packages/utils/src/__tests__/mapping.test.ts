@@ -1,5 +1,10 @@
 import { Mapping, WalkerOS } from '@elbwalker/types';
-import { createEvent, getMappingEvent, getMappingValue } from '../core';
+import {
+  createEvent,
+  getEvent,
+  getMappingEvent,
+  getMappingValue,
+} from '../core';
 
 describe('getMappingEvent', () => {
   test('basic', () => {
@@ -77,7 +82,8 @@ describe('getMappingEvent', () => {
         event: [
           {
             name: 'secret',
-            condition: (event) => !!event.consent?.marketing,
+            condition: (event) =>
+              !!(event as WalkerOS.PartialEvent).consent?.marketing,
           },
           {
             name: 'fallback',
@@ -183,17 +189,53 @@ describe('getMappingValue', () => {
     getMappingValue(
       createEvent({ event: 'page click' }),
       { fn: mockFn },
-      undefined,
-      'random',
+      { props: 'random' },
     );
 
     expect(mockFn).toHaveBeenNthCalledWith(
       3,
       expect.any(Object),
       { fn: mockFn },
-      undefined,
-      'random',
+      { props: 'random' },
     );
+  });
+
+  test('loop', () => {
+    const event = getEvent('order complete');
+
+    expect(
+      getMappingValue(event, {
+        loop: [
+          'nested',
+          {
+            condition: (entity) => entity.type === 'product',
+            key: 'data.name',
+          },
+        ],
+      }),
+    ).toStrictEqual([event.nested[0].data.name, event.nested[1].data.name]);
+  });
+
+  test('map', () => {
+    const event = createEvent();
+
+    expect(
+      getMappingValue(event, {
+        map: {
+          foo: 'data.string',
+          bar: { value: 'bar' },
+          data: {
+            map: {
+              recursive: { value: true },
+            },
+          },
+        },
+      }),
+    ).toStrictEqual({
+      foo: event.data.string,
+      bar: 'bar',
+      data: { recursive: true },
+    });
   });
 
   test('validate', () => {
@@ -242,7 +284,7 @@ describe('getMappingValue', () => {
           key: 'data.string',
           consent: { functional: true },
         },
-        instance,
+        { instance },
       ),
     ).toBe(event.data.string);
 
@@ -254,7 +296,7 @@ describe('getMappingValue', () => {
           key: 'data.string',
           consent: { marketing: true },
         },
-        instance,
+        { instance },
       ),
     ).toBeUndefined();
 

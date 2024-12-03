@@ -1,8 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-
-export function isObject(value: unknown): value is WalkerOS.AnyObject {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+import { isObject } from '@elbwalker/utils';
 
 export function isString(value: unknown): value is string {
   return typeof value === 'string';

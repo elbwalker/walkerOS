@@ -69,24 +69,26 @@ export function createEvent(props: WalkerOS.PartialEvent = {}): WalkerOS.Event {
 }
 
 export function getEvent(
-  name: string,
+  name: string = 'entity action',
   props: WalkerOS.PartialEvent = {},
 ): WalkerOS.Event {
   const timestamp = props.timestamp || new Date().setHours(0, 13, 37, 0);
 
   const product1 = {
     data: {
+      id: 'ers',
       name: 'Everyday Ruck Snack',
       color: 'black',
       size: 'l',
-      prize: 420,
+      price: 420,
     },
   };
   const product2 = {
     data: {
+      id: 'cc',
       name: 'Cool Cap',
       size: 'one size',
-      prize: 42,
+      price: 42,
     },
   };
 
@@ -94,7 +96,7 @@ export function getEvent(
     'cart view': {
       data: {
         currency: 'EUR',
-        value: product1.data.prize,
+        value: product1.data.price,
       },
       context: { shopping: ['cart', 0] },
       globals: { pagegroup: 'shop' },
@@ -112,7 +114,7 @@ export function getEvent(
       data: {
         step: 'payment',
         currency: 'EUR',
-        value: product1.data.prize + product2.data.prize,
+        value: product1.data.price + product2.data.price,
       },
       context: { shopping: ['checkout', 0] },
       globals: { pagegroup: 'shop' },

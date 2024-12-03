@@ -1,5 +1,6 @@
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 import type { DestinationMetaPixel } from '.';
+import { getEvent } from '@elbwalker/utils';
 
 describe('Destination Meta Pixel', () => {
   const w = window;
@@ -8,7 +9,7 @@ describe('Destination Meta Pixel', () => {
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  const event = 'entity action';
+  const event = getEvent();
   const pixelId = '1234567890';
 
   beforeEach(() => {
@@ -21,8 +22,7 @@ describe('Destination Meta Pixel', () => {
 
     w.fbq = mockFn;
 
-    Walkerjs({ pageview: false, session: false });
-    elb('walker run');
+    Walkerjs({ pageview: false, run: true, session: false });
   });
 
   afterEach(() => {});
@@ -64,7 +64,7 @@ describe('Destination Meta Pixel', () => {
   test('push', () => {
     elb('walker destination', destination);
     elb(event);
-    expect(mockFn).toHaveBeenCalledWith('trackCustom', event);
+    expect(mockFn).toHaveBeenCalledWith('track', event.event, {});
   });
 
   test('pageview', () => {
@@ -80,139 +80,100 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('push standard event', () => {
-    destination.config.mapping = {
-      entity: { action: { custom: { track: 'Contact' } } },
-    };
-
-    elb('walker destination', destination);
-    elb(event);
-    expect(mockFn).toHaveBeenCalledWith('track', 'Contact', {});
-  });
-
-  test('push purchase', () => {
-    destination.config.mapping = {
-      entity: {
-        action: {
-          custom: {
-            track: 'Purchase',
-            content_name: 'data.title',
-            value: 'data.revenue',
-          },
-        },
+    elb('walker destination', destination, {
+      custom: { pixelId },
+      mapping: {
+        entity: { action: { custom: { trackCustom: { value: 'foo' } } } },
       },
-    };
-    elb('walker destination', destination);
-
-    elb(event, { title: 'Shirt', revenue: 42 });
-    expect(mockFn).toHaveBeenCalledWith(
-      'track',
-      'Purchase',
-      expect.objectContaining({
-        content_name: 'Shirt',
-        currency: 'EUR',
-        value: 42,
-      }),
-    );
-
+    });
     elb(event);
-    expect(mockFn).toHaveBeenCalledWith(
-      'track',
-      'Purchase',
-      expect.objectContaining({ value: 1 }),
-    );
+    expect(mockFn).toHaveBeenCalledWith('trackCustom', 'foo', {});
   });
 
-  test('push addToCart', () => {
-    destination.config.mapping = {
-      entity: {
-        action: {
-          custom: {
-            track: 'AddToCart',
-            content_name: 'data.title',
-            content_type: 'product',
-            value: 'data.price',
-          },
-        },
-      },
-    };
+  test('event Purchase', () => {
+    const event = getEvent('order complete');
 
-    elb('walker destination', destination);
-    elb(event, { title: 'Shirt', price: 3.14 });
-    expect(mockFn).toHaveBeenCalledWith(
-      'track',
-      'AddToCart',
-      expect.objectContaining({
-        content_name: 'Shirt',
-        content_type: 'product',
-        currency: 'EUR',
-        value: 3.14,
-      }),
-    );
-  });
-
-  test('property contents', () => {
-    destination.config.mapping = {
-      use: {
-        data: {
-          custom: {
-            track: 'Purchase',
-            contents: {
-              id: 'data.id',
-              quantity: {
-                key: 'data.quantity',
+    elb('walker destination', destination, {
+      custom: { pixelId },
+      mapping: {
+        order: {
+          complete: {
+            name: 'Purchase',
+            custom: {
+              parameters: {
+                currency: { value: 'EUR' },
+                value: 'data.total',
+                contents: {
+                  loop: [
+                    'nested',
+                    {
+                      condition: (entity) => entity.type === 'product',
+                      map: {
+                        id: 'data.id',
+                        quantity: { key: 'data.quantity', value: 1 },
+                      },
+                    },
+                  ],
+                },
+                content_type: { value: 'product' },
               },
             },
           },
         },
-        nested: {
-          custom: {
-            track: 'ViewContent',
-            contents: {
-              id: 'nested.*.data.id',
-              quantity: { key: 'nested.*.data.quantity', value: 9 },
-            },
-          },
-        },
       },
-    };
+    });
 
-    elb('walker destination', destination);
-
-    elb('use data', { id: 'sku', quantity: 5 });
+    elb(event);
     expect(mockFn).toHaveBeenCalledWith(
       'track',
       'Purchase',
       expect.objectContaining({
-        contents: [{ id: 'sku', quantity: 5 }],
+        contents: [
+          { id: 'ers', quantity: 1 },
+          { id: 'cc', quantity: 1 },
+        ],
+        currency: 'EUR',
+        value: 555,
       }),
     );
+  });
 
-    elb({
-      event: 'use nested',
-      nested: [
-        {
-          type: 'product',
-          data: { id: 'a', quantity: 3 },
-          nested: [],
-          context: {},
+  test('event AddToCart', () => {
+    const event = getEvent('product add');
+
+    elb('walker destination', destination, {
+      custom: { pixelId },
+      mapping: {
+        product: {
+          add: {
+            name: 'AddToCart',
+            custom: {
+              parameters: {
+                currency: { value: 'EUR' },
+                value: 'data.price',
+                content_ids: {
+                  fn: (event) =>
+                    [event].map(
+                      (product) => product.data.id || product.data.name,
+                    ),
+                },
+                content_type: { value: 'product' },
+              },
+            },
+          },
         },
-        {
-          type: 'product',
-          data: { id: 'b' },
-          nested: [],
-          context: {},
-        },
-      ],
+      },
     });
-    expect(mockFn).toHaveBeenLastCalledWith(
+
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(
       'track',
-      'ViewContent',
+      'AddToCart',
       expect.objectContaining({
-        content_ids: ['a', 'b'],
-        contents: [
-          { id: 'a', quantity: 3 },
-          { id: 'b', quantity: 9 },
-        ],
+        content_ids: [event.data.id],
+        content_type: 'product',
+        currency: 'EUR',
+        value: event.data.price,
       }),
     );
   });

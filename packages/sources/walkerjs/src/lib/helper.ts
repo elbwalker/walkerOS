@@ -1,5 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
-import { Const, isSameType } from '@elbwalker/utils';
+import { Const } from '@elbwalker/utils';
 
 export function isArgument(event?: unknown): event is IArguments {
   if (!event) return false;
@@ -12,8 +11,4 @@ export function isCommand(entity: string) {
 
 export function isElementOrDocument(elem: unknown): elem is Element {
   return elem === document || elem instanceof Element;
-}
-
-export function isObject(obj: unknown): obj is WalkerOS.AnyObject {
-  return isSameType(obj, {}) && !Array.isArray(obj) && obj !== null;
 }
