@@ -30,7 +30,7 @@ export type PushFn<Custom, CustomEvent> = (
 export type PushBatchFn<Custom, CustomEvent> = (
   batch: WalkerOSDestination.Batch<CustomEvent>,
   config: Config<Custom, CustomEvent>,
-  instance?: SourceWalkerjs.Instance,
+  options?: Options,
 ) => void;
 
 export interface Config<Custom = unknown, CustomEvent = unknown>

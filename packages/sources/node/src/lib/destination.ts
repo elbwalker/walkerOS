@@ -7,6 +7,7 @@ import {
   isSameType,
   useHooks,
   getMappingValue,
+  isDefined,
 } from '@elbwalker/utils';
 import { pushToDestinations } from './push';
 
@@ -87,12 +88,16 @@ export async function destinationPush(
     if (eventMapping.data) data = getMappingValue(event, eventMapping.data);
   }
 
+  const options = { data, instance };
+
   if (eventMapping?.batch && destination.pushBatch) {
     const batched = eventMapping.batched || {
       key: mappingKey || '',
       events: [],
+      data: [],
     };
     batched.events.push(event);
+    if (isDefined(data)) batched.data.push(data);
 
     eventMapping.batchFn =
       eventMapping.batchFn ||
@@ -101,11 +106,12 @@ export async function destinationPush(
           destination.pushBatch!,
           'DestinationPushBatch',
           instance.hooks,
-        )(batched, destination.config, instance);
+        )(batched, destination.config, options);
 
-        // Reset the batched events queue
+        // Reset the batched queues
         // pushBatch isn't async yet, may cause trouble
         batched.events = [];
+        batched.data = [];
       }, eventMapping.batch);
 
     eventMapping.batched = batched;
@@ -116,7 +122,7 @@ export async function destinationPush(
       event,
       destination.config,
       eventMapping,
-      { data, instance },
+      options,
     );
   }
 

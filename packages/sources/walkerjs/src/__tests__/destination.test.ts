@@ -752,6 +752,7 @@ describe('Destination', () => {
       {
         key: 'product visible',
         events: expect.any(Array),
+        data: [],
       },
       expect.anything(),
       expect.anything(),
@@ -763,6 +764,7 @@ describe('Destination', () => {
       {
         key: 'promotion visible',
         events: expect.any(Array),
+        data: [],
       },
       expect.anything(),
       expect.anything(),
@@ -777,8 +779,9 @@ describe('Destination', () => {
       dataLayerConfig: {
         consent: { functional: true },
         mapping: {
+          entity: { action: { data: { value: 'foo' } } },
           '*': {
-            visible: { batch: 2000 },
+            visible: { batch: 2000, data: { value: 'bar' } },
           },
         },
       },
@@ -800,11 +803,12 @@ describe('Destination', () => {
     expect(mockDataLayer).toHaveBeenCalledWith({
       event: 'batch',
       batched_event: '* visible',
-      events: [
-        expect.objectContaining({ event: 'product visible' }),
-        expect.objectContaining({ event: 'product visible' }),
-      ],
+      events: ['bar', 'bar'],
     });
+
+    jest.clearAllMocks();
+    elb('entity action');
+    expect(mockDataLayer).toHaveBeenCalledWith('foo');
   });
 
   test('immutable events', async () => {

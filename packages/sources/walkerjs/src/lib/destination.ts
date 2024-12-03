@@ -7,6 +7,7 @@ import {
   tryCatch,
   useHooks,
   getMappingValue,
+  isDefined,
 } from '@elbwalker/utils';
 import { pushToDestinations } from './push';
 
@@ -47,17 +48,15 @@ export function dataLayerDestination() {
     (window.dataLayer as unknown[]).push(event);
   };
   const destination: DestinationWeb.DestinationInit = {
-    push: (event) => {
-      // @TODO prefer data
-      dataLayerPush({
-        ...event,
-      });
+    push: (event, config, mapping, options = {}) => {
+      const data = options.data || event;
+      dataLayerPush(data);
     },
     pushBatch: (batch) => {
       dataLayerPush({
         event: 'batch',
         batched_event: batch.key,
-        events: batch.events,
+        events: batch.data.length ? batch.data : batch.events,
       });
     },
     type: 'dataLayer',
@@ -114,13 +113,17 @@ export function destinationPush(
     if (eventMapping.data) data = getMappingValue(event, eventMapping.data);
   }
 
+  const options = { data, instance };
+
   return !!tryCatch(() => {
     if (eventMapping?.batch && destination.pushBatch) {
       const batched = eventMapping.batched || {
         key: mappingKey || '',
         events: [],
+        data: [],
       };
       batched.events.push(event);
+      if (isDefined(data)) batched.data.push(data);
 
       eventMapping.batchFn =
         eventMapping.batchFn ||
@@ -129,10 +132,11 @@ export function destinationPush(
             destination.pushBatch!,
             'DestinationPushBatch',
             instance.hooks,
-          )(batched, destination.config, instance);
+          )(batched, destination.config, options);
 
-          // Reset the batched events queue
+          // Reset the batched queues
           batched.events = [];
+          batched.data = [];
         }, eventMapping.batch);
 
       eventMapping.batched = batched;
@@ -143,7 +147,7 @@ export function destinationPush(
         event,
         destination.config,
         eventMapping,
-        { data, instance },
+        options,
       );
     }
 

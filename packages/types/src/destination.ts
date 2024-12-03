@@ -34,11 +34,16 @@ export type PushEvents<CustomEvent = unknown> = Array<PushEvent<CustomEvent>>;
 export type PushBatchFn<Custom, CustomEvent> = (
   batch: Batch<CustomEvent>,
   config: Config<Custom, CustomEvent>,
-  instance?: WalkerOS.Instance,
+  options?: Options,
 ) => void; // @TODO Promise
 
 export interface Batch<CustomEvent> {
   key: string;
   events: WalkerOS.Events;
+  data: WalkerOS.Property[];
   mapping?: Mapping.EventConfig<CustomEvent>;
+}
+
+export interface Options {
+  instance?: WalkerOS.Instance;
 }
