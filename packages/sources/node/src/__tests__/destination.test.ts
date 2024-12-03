@@ -141,7 +141,7 @@ describe('Destination', () => {
       }),
       mockDestination.config,
       eventMapping,
-      instance,
+      { instance },
     );
   });
 
@@ -160,7 +160,26 @@ describe('Destination', () => {
       }),
       expect.any(Object),
       eventMapping,
-      instance,
+      { instance },
+    );
+  });
+
+  test('mapping data', async () => {
+    const { elb } = getSource({});
+
+    const eventMapping = { data: { value: 'bar' } };
+    elb(
+      'walker destination',
+      { push: mockPush },
+      { mapping: { entity: { action: eventMapping } } },
+    );
+
+    result = await elb(mockEvent);
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'entity action' }),
+      expect.anything(),
+      eventMapping,
+      { data: 'bar', instance: expect.anything() },
     );
   });
 
