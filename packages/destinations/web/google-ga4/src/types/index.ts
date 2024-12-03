@@ -39,7 +39,6 @@ export type Include = Array<
   | 'version'
 >;
 
-export type GtagItems = Gtag.Item[];
 export type Parameters = Gtag.ControlParams &
   Gtag.EventParams &
   Gtag.CustomParams;

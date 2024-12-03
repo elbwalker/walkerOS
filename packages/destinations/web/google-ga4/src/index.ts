@@ -13,28 +13,36 @@ export const destinationGoogleGA4: Destination = {
 
   init(config) {
     const w = window;
-    const custom: Partial<Custom> = config.custom || {};
-    const settings: WalkerOS.AnyObject = {};
-    // required measurement id
-    if (!custom.measurementId) return false;
+    const { custom = {}, loadScript } = config;
+    const {
+      measurementId,
+      transport_url,
+      server_container_url,
+      pageview,
+    }: Partial<Custom> = custom;
 
-    // custom transport url
-    if (custom.transport_url) settings.transport_url = custom.transport_url;
-
-    // custom server_container_url
-    if (custom.server_container_url)
-      settings.server_container_url = custom.server_container_url;
-
-    // disable pageviews
-    if (custom.pageview === false) settings.send_page_view = false;
+    if (!measurementId) return false;
 
     // Load the gtag script
-    if (config.loadScript) addScript(custom.measurementId);
+    if (loadScript) addScript(measurementId);
+
+    const settings: WalkerOS.AnyObject = {};
+
+    // custom transport_url
+    if (transport_url) settings.transport_url = transport_url;
+
+    // custom server_container_url
+    if (server_container_url)
+      settings.server_container_url = server_container_url;
+
+    // disable pageviews
+    if (pageview === false) settings.send_page_view = false;
 
     // setup required methods
     w.dataLayer = w.dataLayer || [];
+
     if (!w.gtag) {
-      w.gtag = function gtag() {
+      w.gtag = function () {
         // eslint-disable-next-line prefer-rest-params
         (w.dataLayer as unknown[]).push(arguments);
       };
@@ -42,7 +50,7 @@ export const destinationGoogleGA4: Destination = {
     }
 
     // gtag init call
-    w.gtag('config', custom.measurementId, settings);
+    w.gtag('config', measurementId, settings);
   },
 
   push(event, config, mapping = {}, options = {}) {
