@@ -1,25 +1,33 @@
 ---
 title: Installation
 sidebar_position: 1
-description: Installation of the walkerOS node source.
+description: Installation walkerOS node source.
 ---
 
 import Link from '@docusaurus/Link';
+import PackageLink from '/src/components/docs/package-link';
 
-Install the walkerOS node source, via NPM:
+<PackageLink github="packages/sources/node/" npm="@elbwalker/source-node" />
+
+Install walkerOS node source via NPM:
 
 ```bash
 npm install @elbwalker/source-node
 ```
 
 Use the `createSourceNode` function to create a new source instance. It returns
-the `elb` function for configuration
-via&nbsp;<Link to="/docs/sources/node/commands">commands</Link> and pushing
-events, and the `instance` itself.
+the `elb` function to
+use&nbsp;<Link to="/docs/sources/node/commands">commands</Link>, pushing events,
+and the `instance` itself.
 
 ```ts
 import { createSourceNode } from '@elbwalker/source-node';
 const { elb, instance } = createSourceNode({});
 ```
 
+:::info
 
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

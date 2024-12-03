@@ -8,11 +8,10 @@ import Link from '@docusaurus/Link';
 
 The walker is designed to support asynchronous communication through the
 elbLayer array. With the creation of the `Walkerjs`, the `elbLayer` items are
-scanned. The walker will process each push. Use the `elb` function as a handy
-helper.
+scanned. The walker will process each push.
 
 The communication works entirely asynchronously. The `elb` function pushes
-events to the `elbLayer`. The `walker.js` will process the stack and each push.
+events to the `elbLayer`. The `walker.js` will process each push.
 
 ```mermaid
 flowchart
@@ -31,24 +30,24 @@ walker <--> elbLayer
 import { elb } from '@elbwalker/walker.js';
 window.elb = elb;
 
-// Or define the elb function manually in the browser as an alternative
+// Or define the elb function manually in the browser
 function elb() {
   (window.elbLayer = window.elbLayer || []).push(arguments);
 }
 ```
 
-Usage options
+Usage options:
 
 ```js
 elb("entity action", data, ...);
 elb({event: "entity action", data: { foo: "bar"}});
 ```
 
-## Configuration
+## config
 
-To&nbsp;<Link to="/docs/sources/walkerjs/installation/#configuration">configure
-walker.js</Link> either do it while creating an instance or use the
-`walker config` command. There are options available before a `run` is called:
+To configure walker.js either do it while creating an instance or use the
+`walker config` command. There are a few options available before a `run` is
+called:
 
 ```js
 elb('walker config', {
@@ -64,14 +63,18 @@ elb('walker config', {
 });
 ```
 
+:::note
+
 After the `run` command, only `globals` and `tagging` can be updated.
 
-## Run
+:::
+
+## run
 
 A `run` can be seen like a regular page view. It will start the walker.js and
-(re-)Initialize the handler, reset counters, clear queues, and update the
-globals. A `page view` event is triggered by default, the tagging is checked for
-`load` actions, and the `elbLayer` stack is processed.
+(re-)Initialize the handler, reset counters, clear queues, and update globals. A
+`page view` event is triggered by default, the tagging is checked for `load`
+actions, and the `elbLayer` stack is processed.
 
 ```js
 elb('walker run');
@@ -84,21 +87,20 @@ walker.js:
 elb('walker run', { group: 'gr0up1d' });
 ```
 
-## Initialization
+## init
 
 (Re-)initializes event listeners on one or multiple target elements. Can be used
 e.g., asynchronously loaded content like newly added products in a category list
-or a wizard.
+or within a wizard.
 
 ```js
 elb('walker init', element); // or an array of elements
 ```
 
-## Destinations
+## destination
 
-Run the `walker destination` command to add a destination to the walker.js.
-Individual destination configurations can be made by using the
-destination.config property.
+Run `walker destination` to add a destination to walker.js. Individual
+destination configurations can be made by using the destination.config property.
 
 ```js
 const destinationLog = { push: console.log }; // Demo destination for console.log
@@ -110,19 +112,12 @@ elb('walker destination', destinationGTM, {
 });
 ```
 
-## Consent Management
+## consent
 
-:::info
-
-Learn more about&nbsp;<Link to="/docs/guides/consent_management/">consent
-management in detail</Link>.
-
-:::
-
-Those names can be defined arbitrarily, but common groups are functional,
-analytics, and marketing. Values are booleans, and once a value is set to `true`
-it's treated as consent being granted. Previously pushed events during the run
-are now shared with destinations and new ones.
+Names can be defined arbitrarily, but common groups are functional, analytics,
+and marketing. Values are booleans, and once a value is set to `true` it's
+treated as consent being granted. Previously pushed events during the run are
+now shared with existing destinations and new ones.
 
 ```js
 elb('walker consent', { marketing: true, randomTool: true });
@@ -131,19 +126,26 @@ elb('walker consent', { marketing: true, randomTool: true });
 Setting a consent state to `false` will immediately stop a destination from
 processing any events.
 
-## On-Events
+:::info
 
-The `on` command adds event listeners to the walker.js. They get called when the
-type changes with `run` or `consent`.
+Learn more about&nbsp;<Link to="/docs/consent_management/overview">consent
+management</Link> in detail.
+
+:::
+
+## on
+
+`on` adds event listeners to walker.js. They get called when the type changes
+with `run` or `consent`.
 
 ```js
 elb('walker on', type, options);
 ```
 
-`Options` depend on the `type` and can also be an array for multiple listeners
-at once.
+`Options` depend on `type` and can also be an array for multiple listeners at
+once.
 
-### Run
+### run
 
 With each `run`, the on-event will be called with `instance` as a parameter.
 
@@ -162,7 +164,7 @@ elb('walker run');
 // Output: run with { instance: { ... } }
 ```
 
-### Consent
+### consent
 
 Every time the `consent` changes, the rules-matching function(s) will be called
 with the parameters `instance`, and `consent`, which is the current consent
@@ -186,19 +188,18 @@ elb('walker consent', { functional: true }); // Won't trigger the onConsent func
 elb('walker consent', { marketing: true }); // Will trigger the onConsent function
 ```
 
-## User
+## user
 
-Setting the user IDs. There are three levels for user identification. Typically,
-the user is a company's internal ID. In contrast, the device ID can be treated
-as a value stored in a cookie for a more extended period, and the session can be
-used for temporary identification.
+There are three levels for user identification. Typically, the user is a
+company's internal ID. The device ID can be treated as a value stored in a
+cookie for a more extended period, and the session can be used for temporary
+identification.
 
 ```js
 elb('walker user', { id: 'us3r', device: 'c00k13', session: 's3ss10n' });
 ```
 
-The new user IDs have been added to each event. Make sure only to use hashed or
-anonymous ids.
+User IDs have are added to each event.
 
 ```js
 {
@@ -212,19 +213,17 @@ anonymous ids.
 }
 ```
 
-:::info
+:::warning
 
-Learn more about identification
-and&nbsp;<Link to="/docs/guides/user_stitching">user stitching</Link> in the
-guides.
+Use fully anonymized & arbitrary IDs by default and check your options with
+persistent user IDs with your data protection officer.
 
 :::
 
-:::caution
+:::tip
 
-We highly recommend only using fully anonymized & arbitrary IDs by default and
-checking your options with persistent user IDs with your data protection
-officer.
+Learn more about identification and&nbsp;<Link to="/docs/user_stitching">user
+stitching</Link>
 
 :::
 
@@ -240,21 +239,21 @@ elb('walker custom', { key: 'value' });
 elb('walker globals', { key: 'value' });
 ```
 
-## Hooks
+## hook
 
 Hooks can be used to customize the default behavior of the walker.js. Three
 hooks are available: `Push`, `DestinationInit`, and `DestinationPush`. Hooks
 allows for validation, manipulation, or even eventual cancellation of default
 behavior.
 
-The `walker hook` command adds a function to the walker.js to customize or
-enhance default processing.
+`walker hook` adds a function to the walker.js to customize or enhance default
+processing.
 
 ```js
 elb('walker hook', '<moment>', hookFn);
 ```
 
-#### Moments
+### Moments
 
 The overall function execution order is as follows:
 
@@ -270,7 +269,7 @@ Others are:
 - preSessionStart
 - postSessionStart
 
-#### Function signatures
+### Function signatures
 
 In general, `params` will be prefixed as a parameter, containing `fn` which is
 the original function and `result` for the post-hooks. Use the following
@@ -316,7 +315,7 @@ function postDestinationPushBatch(params) {
 }
 ```
 
-#### Adding a hook
+### Adding a hook
 
 To add a hook, either add the `hooks` during initialization or call the `hook`
 command:
@@ -343,9 +342,16 @@ elb('entity action');
 // walker exec time 1
 ```
 
-:::note
+:::tip
 
 To learn more about hooks, visit the<Link to="/docs/utils/hooks">
-Utils/Hooks</Link> section.
+utils/hooks</Link> section.
+
+:::
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
 
 :::

@@ -6,18 +6,15 @@ sidebar_position: 3
 
 import Link from '@docusaurus/Link';
 
-The mapping is used to
-translate&nbsp;<Link to="/docs/walkeros/event-model">walkerOS events</Link> into
-another required format. The mapping also defines how to process events, like
-renaming, bundling, or ignoring them. as well as checking for consent or
-validating a value.
+Mapping is used to translate walkerOS events into a required format of another
+tool. The mapping also defines how to process events like renaming, bundling, or
+ignoring them. It's also checking for consent or validating a value.
 
-There are common&nbsp;<Link to="#event">Event</Link> rules for destinations like
-`name` to rename an event (e.g. `product add` to `add_to_cart`) or `ignore` to
-not process an event at all. And there are custom settings, that are individual
-for each destination (e.g. a GA4 destination might require a `measurement_id`
-while a Meta destination requires a `pixel_id`).
-The&nbsp;<Link to="/docs/walkeros/event-model">`getMappingValue`</Link> util
+There are common event rules for destinations like `name` to rename an event
+(e.g. `product add` to `add_to_cart`) or `ignore` to not process an event at
+all. There are settings, that are individual for each destination (e.g. a GA4
+destination might require a `measurement_id` while a Meta destination requires a
+`pixel_id`).
 
 A `*` can be used to match all entities or actions and set up common rules. Each
 destination requires specific settings which can be configured in the `custom`
@@ -38,11 +35,11 @@ const mapping: Mapping.Config = {
 };
 ```
 
-## Event
+#### Event
 
 The `Destination.Event` mapping for each event supports standardized default
 options. The `custom` option can be used to set up custom properties for the
-event and destinations individual settings.
+event and destination's individual settings.
 
 | Property    | Value   | Description                                                              |
 | ----------- | ------- | ------------------------------------------------------------------------ |
@@ -55,11 +52,22 @@ event and destinations individual settings.
 To disable processing of other events, add `{'*': {'*': { ignore: true }}}` to
 the mapping.
 
+:::warning
+
 Make sure to not list duplicate keys in the mapping, since this is an object.
+
+:::
+
+:::tip
+
+Use&nbsp;<Link to="/docs/utils/hooks">hooks</Link> to modify events before
+processing.
+
+:::
 
 :::info
 
-Use&nbsp;<Link to="/docs/utils/hooks">Utils/Hooks</Link> to modify events before
-processing.
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
 
 :::

@@ -3,13 +3,16 @@ title: Testing
 sidebar_position: 6
 ---
 
-Some handy ideas on how to test the setup easily. Start by just looking at the
-instance by typing `walkerjs` in the console (or the name used during init).
-This will show the current state, including `allowed` if the walker.js has been
-started using the `run` command, the `config` object, `destinations`, `queue`
-for all events during the current run, and many more.
+import Link from '@docusaurus/Link';
 
-### Console destination
+Here are some ideas on how to test your setup easily.
+
+Start by typing `walkerjs` in the console (or the name used during init). This
+will show the current state, including `allowed` if the walker.js has been
+started using `run` command, `config` object, `destinations`, and `queue` for
+all events during the current run.
+
+## Console destination
 
 Add a custom destination where `push` points to console.log to list all events
 in the console:
@@ -18,7 +21,7 @@ in the console:
 elb('walker destination', { push: console.log });
 ```
 
-### Test the tagging
+## Tagging
 
 Use the `getAllEvents` method to get all events that have been tagged:
 
@@ -35,8 +38,20 @@ To get the `globals` use
 walkerjs.getGlobals();
 ```
 
-### elbLayer
+## elbLayer
 
-Usually, events get pushed to the `window.elbLayer`. You can take a look at the
-elbLayer in the console to see events. However, some events might skip the
-elbLayer.
+Usually, events get pushed to `window.elbLayer`. You can take a look at the
+elbLayer in the console to see events.
+
+:::note
+
+Some events might skip the elbLayer.
+
+:::
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

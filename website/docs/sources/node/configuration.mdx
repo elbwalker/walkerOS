@@ -1,21 +1,12 @@
 ---
 title: Configuration
 sidebar_position: 2
-description: How to configure the node source.
+description: How to configure walkerOS node source.
 ---
 
-There a few configuration options when creating a node source instance:
+import Link from '@docusaurus/Link';
 
-| Option        | Type     | Description                                               |
-| ------------- | -------- | --------------------------------------------------------- |
-| consent       | object   | Initial consent states                                    |
-| custom        | object   | Individual information                                    |
-| destinations  | object   | Destinations that might process the events                |
-| globalsStatic | object   | Static values for the globals that persist new runs       |
-| onError       | function | custom error handler                                      |
-| onLog         | function | custom logging for the verbose mode                       |
-| source        | object   | To define the events origin (`type`, `id`, `previous_id`) |
-| verbose       | boolean  | To enable verbose mode                                    |
+There are a few configuration options when creating a node source instance:
 
 ```ts
 const { instance } = createSourceNode({
@@ -48,3 +39,21 @@ const { instance } = createSourceNode({
   verbose: true,
 });
 ```
+
+| Option        | Type     | Description                                               |
+| ------------- | -------- | --------------------------------------------------------- |
+| consent       | object   | Initial consent states                                    |
+| custom        | object   | Individual information                                    |
+| destinations  | object   | Destinations that might process the events                |
+| globalsStatic | object   | Static values for the globals that persist new runs       |
+| onError       | function | custom error handler                                      |
+| onLog         | function | custom logging for the verbose mode                       |
+| source        | object   | To define the events origin (`type`, `id`, `previous_id`) |
+| verbose       | boolean  | To enable verbose mode                                    |
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::
