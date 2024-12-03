@@ -16,52 +16,11 @@ import TabItem from '@theme/TabItem';
 />
 
 The walker.js API destination allows you to send events to a custom API endpoint
-using the&nbsp;<Link to="/docs/sources/walkerjs">walker.js</Link> library. This
-can be useful when you want to send data to a backend system for further
-processing or any external service.
+using&nbsp;<Link to="/docs/sources/walkerjs">walker.js</Link> library. This can
+be useful when you want to send data to a backend system for further processing
+or any external services.
 
-## Configuration
-
-Start by setting up the config for the destination. Destinations can be used via
-node or directly in the browser.
-
-```js
-const config = {
-  custom: {
-    url: 'https://httpbin.org/anything',
-    transform: (event, config, mapping) => {
-      return JSON.stringify(event);
-    },
-    transport: 'fetch',
-  },
-};
-```
-
-### Custom
-
-| Property  | Type                                   | Description                                                        |
-| --------- | -------------------------------------- | ------------------------------------------------------------------ |
-| url\*     | string                                 | The URL to send the events to.                                     |
-| transform | function                               | A function to transform the events before sending them to the URL. |
-| transport | fetch (default),<br />xhr,<br />beacon | The transport method to use when sending events.                   |
-
-Properties with a `*` are required.
-
-## How to use
-
-First, define the config that you want to use for the destination:
-
-```js
-const config = {
-  custom: {
-    url: 'https://httpbin.org/anything',
-  },
-};
-```
-
-Choose one of the
-following&nbsp;<Link to="/docs/destinations/web/#installation">installation
-options</Link> to use the destination:
+## Installation
 
 <Tabs>
   <TabItem value="ts" label="TypeScript" default>
@@ -81,7 +40,7 @@ elb('walker destination', destinationAPI, config);
   </TabItem>
   <TabItem value="script" label="Script">
 
-Loading the destination via dynamic import
+Load the destination via dynamic import
 
 ```html
 <script>
@@ -111,3 +70,34 @@ Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/de
 
   </TabItem>
 </Tabs>
+
+## Configuration
+
+Set up the config for the destination.
+
+```js
+const config = {
+  custom: {
+    url: 'https://httpbin.org/anything',
+    transform: (event, config, mapping) => {
+      return JSON.stringify(event);
+    },
+    transport: 'fetch',
+  },
+};
+```
+
+| Property  | Type                                   | Description                                                        |
+| --------- | -------------------------------------- | ------------------------------------------------------------------ |
+| url\*     | string                                 | URL to send the events to.                                         |
+| transform | function                               | A function to transform the events before sending them to the URL. |
+| transport | fetch (default),<br />xhr,<br />beacon | The transport method to use when sending events.                   |
+
+Properties with a `*` are required.
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

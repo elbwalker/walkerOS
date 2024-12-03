@@ -4,30 +4,39 @@ description: Streaming events directly to Google BigQuery.
 ---
 
 import PackageLink from '/src/components/docs/package-link';
+import Link from '@docusaurus/Link';
 
 <PackageLink
   github="packages/destinations/node/bigquery"
   npm="@elbwalker/destination-node-bigquery"
 />
 
-Streamline your data collection and analysis by directly sending events from
-walkerOS to Google BigQuery. This destination package makes it easy to integrate
-your data pipeline with one of the most powerful data warehouses available.
-
 The BigQuery destination allows you to send server-side events from walkerOS to
 Google BigQuery. It handles the data transformation and ensures that your events
 are correctly formatted for BigQuery tables.
 
-## Usage
+## Dependencies
 
-The BigQuery destination allows you to send server-side events from walkerOS to
-Google BigQuery. It handles the data transformation and ensures that your events
-are correctly formatted for BigQuery tables.
+Before using the BigQuery destination, ensure you have:
 
-## Basic example
+- Google Cloud Platform account
+- walkerOS Node source installed
+- Permissions to write to BigQuery
+- Run the setup function to create the table
 
-Here's a simple example to demonstrate how to configure the BigQuery
-destination:
+## Installation
+
+To get started, install the package via npm:
+
+```sh
+npm install @elbwalker/destination-node-bigquery
+```
+
+## Configuration
+
+Configure the BigQuery destination with your `projectId`.
+
+#### Example
 
 ```ts
 import { destinationBigQuery } from '@elbwalker/destination-node-bigquery';
@@ -44,9 +53,13 @@ await elb('walker destination', destinationBigQuery, {
 });
 ```
 
+:::tip
+
 Learn more how to
 [authenticate with a service account key file](https://cloud.google.com/bigquery/docs/authentication/service-account-file)
 using the custom `bigquery` options.
+
+:::
 
 ```ts
 {
@@ -76,20 +89,16 @@ within BigQuery (using the share option). This ensures that the service account
 only has access to what is necessary for operation. The service account may hold
 owner permissions after creating the dataset.
 
+:::tip
+
 For more detailed information, refer to the official
 [Google Cloud IAM documentation](https://cloud.google.com/iam/docs).
 
-## Who this package is for
+:::
 
-This destination is ideal for data engineers and analysts who are already using
-Google BigQuery or plan to integrate it into their data stack. It's also useful
-for companies looking to centralize their data collection and analysis efforts.
+:::info
 
-## Dependencies
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
 
-Before using the BigQuery destination, ensure you have:
-
-- Google Cloud Platform account
-- walkerOS Node source installed
-- Permissions to write to BigQuery
-- Run the setup function to create the table
+:::
