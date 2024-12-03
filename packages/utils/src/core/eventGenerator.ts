@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import { assign } from '../web';
+import { assign } from './assign';
 
 export function createEvent(props: WalkerOS.PartialEvent = {}): WalkerOS.Event {
   const timestamp = props.timestamp || new Date().setHours(0, 13, 37, 0);
