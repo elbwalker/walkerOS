@@ -16,7 +16,7 @@ export interface EventConfig<CustomEvent = unknown> {
   condition?: Condition; // Added condition
   consent?: WalkerOS.Consent; // Required consent states process the event
   custom?: CustomEvent; // Arbitrary but protected configurations for custom event config
-  data?: Map; // Mapping of event data
+  data?: Value; // Mapping of event data
   ignore?: boolean; // Choose to no process an event when set to true
   name?: string; // Use a custom event name
 }

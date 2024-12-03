@@ -1,4 +1,5 @@
 import type { DestinationMetaPixel } from '.';
+import type { DestinationWeb } from '@elbwalker/walker.js';
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
 
@@ -93,7 +94,7 @@ describe('Destination Meta Pixel', () => {
   test('event Purchase', () => {
     const event = getEvent('order complete');
 
-    elb('walker destination', destination, {
+    const config: DestinationWeb.Config = {
       custom: { pixelId },
       mapping: {
         order: {
@@ -121,7 +122,9 @@ describe('Destination Meta Pixel', () => {
           },
         },
       },
-    });
+    };
+
+    elb('walker destination', destination, config);
 
     elb(event);
     expect(mockFn).toHaveBeenCalledWith(
@@ -154,7 +157,7 @@ describe('Destination Meta Pixel', () => {
                 content_ids: {
                   fn: (event) =>
                     [event].map(
-                      (product) => product.data.id || product.data.name,
+                      (product) => product.data!.id || product.data!.name,
                     ),
                 },
                 content_type: { value: 'product' },
