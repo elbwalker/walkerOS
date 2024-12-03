@@ -28,8 +28,9 @@ export const destinationMetaPixel: Destination = {
     if (custom.pageview !== false) window.fbq('track', 'PageView');
   },
 
-  push(event, config, mapping = {}, instance) {
+  push(event, config, mapping = {}, options = {}) {
     const { track, trackCustom, parameters = {} } = mapping.custom || {};
+    const { instance } = options;
 
     const eventName =
       getMappingValue(event, track || trackCustom || '', {
