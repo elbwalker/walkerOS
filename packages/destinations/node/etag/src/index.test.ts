@@ -25,7 +25,7 @@ describe('Destination node etag', () => {
       event as WalkerOS.Event,
       custom ? { custom } : destination.config,
       undefined,
-      instance as SourceNode.Instance,
+      { instance: instance as SourceNode.Instance },
     );
   }
 

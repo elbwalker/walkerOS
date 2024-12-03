@@ -26,7 +26,7 @@ describe('Destination web etag', () => {
       event as WalkerOS.Event,
       custom ? { custom } : destination.config,
       undefined,
-      instance as SourceWalkerjs.Instance,
+      { instance: instance as SourceWalkerjs.Instance },
     );
   }
 
