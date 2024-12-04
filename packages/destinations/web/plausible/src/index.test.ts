@@ -1,5 +1,6 @@
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 import type { DestinationPlausible } from '.';
+import { getEvent } from '@elbwalker/utils';
 
 describe('destination plausible', () => {
   const w = window;
@@ -7,7 +8,7 @@ describe('destination plausible', () => {
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  const event = 'entity action';
+  const event = getEvent();
   const script = 'https://plausible.io/js/script.manual.js';
 
   beforeEach(() => {
@@ -15,8 +16,7 @@ describe('destination plausible', () => {
 
     w.plausible = mockFn;
 
-    Walkerjs({ pageview: false, session: false });
-    elb('walker run');
+    Walkerjs({ pageview: false, run: true, session: false });
   });
 
   afterEach(() => {});
@@ -70,9 +70,28 @@ describe('destination plausible', () => {
   test('push', () => {
     elb('walker destination', destination);
     const data = { a: 1 };
-    elb(event, data, 'manual');
+    elb(event.event, data, 'manual');
 
     expect(w.plausible).toBeDefined();
-    expect(mockFn).toHaveBeenCalledWith(event, { props: data });
+    expect(mockFn).toHaveBeenCalledWith(event.event, { props: data });
+  });
+
+  test('mapping data', () => {
+    elb('walker destination', destination, {
+      mapping: {
+        entity: {
+          action: {
+            data: {
+              map: {
+                foo: { value: 'bar' },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(event.event, { props: { foo: 'bar' } });
   });
 });
