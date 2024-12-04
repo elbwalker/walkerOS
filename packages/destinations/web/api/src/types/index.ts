@@ -22,7 +22,7 @@ export interface Custom {
 export interface CustomEvent {}
 
 export type Transform = (
-  event: WalkerOS.Event | WalkerOS.Property,
+  event?: WalkerOS.Event | WalkerOS.Property,
   config?: Config,
   mapping?: DestinationWeb.EventMapping<CustomEvent>,
 ) => SendDataValue;

@@ -45,6 +45,6 @@ export interface EventMapping<CustomEvent = unknown>
   extends WalkerOSMapping.EventConfig<CustomEvent> {}
 
 export interface Options {
-  data?: WalkerOS.Property;
+  data?: WalkerOSDestination.Data;
   instance?: SourceWalkerjs.Instance;
 }

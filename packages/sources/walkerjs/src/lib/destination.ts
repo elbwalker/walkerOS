@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { Destination, WalkerOS } from '@elbwalker/types';
 import type { SourceWalkerjs, DestinationWeb } from '../types';
 import {
   debounce,
@@ -100,7 +100,7 @@ export function destinationPush(
     destination.config.mapping,
   );
 
-  let data: WalkerOS.Property | undefined;
+  let data: Destination.Data;
 
   if (eventMapping) {
     // Check if event should be processed or ignored
@@ -110,7 +110,11 @@ export function destinationPush(
     if (eventMapping.name) event.event = eventMapping.name;
 
     // Transform event to a custom data
-    if (eventMapping.data) data = getMappingValue(event, eventMapping.data);
+    if (eventMapping.data) {
+      data = Array.isArray(eventMapping.data)
+        ? eventMapping.data.map((item) => getMappingValue(event, item))
+        : getMappingValue(event, eventMapping.data);
+    }
   }
 
   const options = { data, instance };

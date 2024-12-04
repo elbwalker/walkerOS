@@ -41,10 +41,15 @@ export type PushBatchFn<Custom, CustomEvent> = (
 export interface Batch<CustomEvent> {
   key: string;
   events: WalkerOS.Events;
-  data: WalkerOS.Property[];
+  data: Array<Data>;
   mapping?: Mapping.EventConfig<CustomEvent>;
 }
 
 export interface Options {
   instance?: WalkerOS.Instance;
 }
+
+export type Data =
+  | WalkerOS.Property
+  | undefined
+  | Array<WalkerOS.Property | undefined>;

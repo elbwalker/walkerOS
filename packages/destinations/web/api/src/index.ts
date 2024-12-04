@@ -15,7 +15,8 @@ export const destinationWebAPI: Destination = {
 
     if (!url) return;
 
-    const value = isDefined(options.data) ? options.data : event;
+    const data = isDefined(options.data) ? options.data : event;
+    const value = Array.isArray(data) ? data[0] : data;
     const body = transform
       ? transform(value, config, mapping) // Transform event data
       : JSON.stringify(value);
