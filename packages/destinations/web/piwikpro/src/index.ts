@@ -36,8 +36,9 @@ export const destinationPiwikPro: Destination = {
     if (custom.linkTracking !== false) func(['enableLinkTracking']);
   },
 
-  push(event, config, mapping = {}) {
+  push(event, config, mapping = {}, options = {}) {
     const { fn } = config;
+    const { data } = options;
     const func = fn || window._paq!.push;
 
     // Send pageviews if not disabled
@@ -48,21 +49,10 @@ export const destinationPiwikPro: Destination = {
 
     const customMapping: CustomEvent = mapping.custom || {};
 
-    let name: unknown, value: unknown; // @TODO fix types
-
-    if (customMapping) {
-      if (customMapping.name) name = getMappingValue(event, customMapping.name);
-      if (customMapping.value)
-        value = getMappingValue(event, customMapping.value);
-    }
-
     func([
-      'trackEvent',
-      event.entity,
-      event.action,
-      name,
-      value,
-      // @TODO dimensions
+      event.event,
+      data || event.entity,
+      // @TODO parameters
     ]);
 
     if (customMapping.goalId) {

@@ -22,8 +22,6 @@ export interface CustomEvent {
   // dimensions?: Dimensions;
   goalId?: string;
   goalValue?: string;
-  name?: string;
-  value?: string;
 }
 
 export interface Dimensions {
