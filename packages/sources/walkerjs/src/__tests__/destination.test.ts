@@ -1,7 +1,7 @@
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { SourceWalkerjs, DestinationWeb } from '..';
 import { elb, Walkerjs } from '..';
-import { createEvent } from '@elbwalker/utils';
+import { getEvent } from '@elbwalker/utils';
 
 describe('Destination', () => {
   let walkerjs: SourceWalkerjs.Instance;
@@ -9,6 +9,7 @@ describe('Destination', () => {
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn();
 
+  const event = getEvent();
   let destination: DestinationWeb.Destination;
   let config: DestinationWeb.Config;
 
@@ -29,12 +30,12 @@ describe('Destination', () => {
     expect(mockInit).toHaveBeenCalledTimes(0);
     expect(mockPush).toHaveBeenCalledTimes(0);
     elb('walker destination', destination);
-    elb('entity action');
+    elb(event);
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'entity action',
+        event: event.event,
       }),
       config,
       undefined,
@@ -50,7 +51,7 @@ describe('Destination', () => {
       config: {},
       push: mockPush,
     });
-    elb('entity action');
+    elb(event);
     expect(mockInit).toHaveBeenCalledTimes(0);
     expect(mockPush).toHaveBeenCalledTimes(1);
 
@@ -60,7 +61,7 @@ describe('Destination', () => {
       push: mockPush,
       config: { init: true },
     });
-    elb('entity action');
+    elb(event);
     expect(mockInit).toHaveBeenCalledTimes(0);
 
     // Always trigger init since it returns false
@@ -75,9 +76,9 @@ describe('Destination', () => {
     });
 
     jest.clearAllMocks();
-    elb('entity action');
+    elb(event);
     expect(mockInitFalse).toHaveBeenCalledTimes(1);
-    elb('entity action');
+    elb(event);
     expect(mockInitFalse).toHaveBeenCalledTimes(2);
     expect(mockPushFalse).not.toHaveBeenCalled();
   });
@@ -128,12 +129,12 @@ describe('Destination', () => {
     destination.config = configB;
     elb('walker destination', destination);
 
-    elb('entity action');
+    elb(event);
     expect(mockInit).toHaveBeenCalledTimes(2);
     expect(mockPush).toHaveBeenCalledTimes(2);
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'entity action',
+        event: event.event,
       }),
       { init: true },
       undefined,
@@ -183,7 +184,7 @@ describe('Destination', () => {
       push: mockPush,
     });
     elb('walker destination', destination);
-    elb('entity action');
+    elb(event);
 
     // @TODO custom error handling
     expect(mockInit).toHaveBeenCalled(); // 2nd destination
@@ -226,13 +227,13 @@ describe('Destination', () => {
     elb('walker destination', destinationB);
     elb('walker destination', destinationC);
 
-    elb('entity action');
+    elb(event);
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
     expect(mockPushA).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'entity action',
+        event: event.event,
       }),
       expect.anything(),
       {},
@@ -240,7 +241,7 @@ describe('Destination', () => {
     );
     expect(mockPushB).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'entity action',
+        event: event.event,
       }),
       expect.anything(),
       {},
@@ -248,7 +249,7 @@ describe('Destination', () => {
     );
     expect(mockPushC).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'entity action',
+        event: event.event,
       }),
       expect.anything(),
       {},
@@ -311,8 +312,18 @@ describe('Destination', () => {
     elb(
       'walker destination',
       { push: mockPush },
-      { mapping: { page: { view: eventMapping } } },
+      {
+        data: { value: 'foo' },
+        mapping: { page: { view: eventMapping } },
+      },
     );
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'page view' }),
+      expect.anything(),
+      eventMapping,
+      { data: 'bar', instance: expect.anything() },
+    );
+    elb(event);
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'page view' }),
       expect.anything(),
@@ -807,7 +818,7 @@ describe('Destination', () => {
     });
 
     jest.clearAllMocks();
-    elb('entity action');
+    elb(event);
     expect(mockDataLayer).toHaveBeenCalledWith('foo');
   });
 
@@ -868,8 +879,6 @@ describe('Destination', () => {
   });
 
   test('policy', () => {
-    const event = createEvent();
-
     const policy = {
       event: {
         value: 'new name',
