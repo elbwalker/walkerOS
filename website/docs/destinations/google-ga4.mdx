@@ -71,8 +71,11 @@ Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/de
 
 ## Configuration
 
-Set up the GA4 destination configuration to start tracking events. This
-destination works both in a Node environment and directly in the browser.
+Configure the GA4 destination with
+your&nbsp;<Link to="https://support.google.com/analytics/answer/12270356?hl=en">Measurement
+ID</Link>.
+
+#### Example
 
 ```js
 const config = {
@@ -139,35 +142,39 @@ const config = {
 
 | Property             | Type    | Description                                                                                                |
 | -------------------- | ------- | ---------------------------------------------------------------------------------------------------------- |
-| measurementId\*      | string  | The GA4 measurement ID                                                                                     |
+| measurementId\*      | string  | GA4 Measurement ID                                                                                         |
 | debug                | boolean | Enables debug mode for additional logging                                                                  |
 | include              | array   | Defines groups of properties to be included in all events, `data` by default. Use an empty array for none. |
 | items                | object  | Sets parameters for item-level data in events                                                              |
 | pageview             | boolean | Enables or disables automatic pageview tracking                                                            |
 | params               | object  | Custom parameters for event-level data                                                                     |
-| server_container_url | string  | The URL for a server-side tag manager                                                                      |
+| server_container_url | string  | URL for a server-side tag manager                                                                          |
 | snakeCase            | boolean | Converts parameter names to snake_case for GA4 compatibility                                               |
-| transport_url        | string  | The URL used for sending events to GA4                                                                     |
+| transport_url        | string  | URL used for sending events to GA4                                                                         |
 
 Properties with a `*` are required.
 
 ### CustomEvent
 
-| Property     | Type   | Description                                                                                 |
-| ------------ | ------ | ------------------------------------------------------------------------------------------- |
-| params       | object | Custom parameters for the event. Includes data properties like `value`, `item_id`, etc.     |
-| include      | array  | Specifies which groups of properties to include, e.g., ['all'], ['data'], ['context'], etc. |
-| items        | object | Defines parameters for item-level data in events, like 'quantity', 'item_id'                |
-| items.params | object | Parameters for items array, specifying data property keys and defaults for quantities, etc. |
+| Property     | Type   | Description                                                                                  |
+| ------------ | ------ | -------------------------------------------------------------------------------------------- |
+| params       | object | Custom parameters for the event. Includes data properties like `value`, `item_id`, etc.      |
+| include      | array  | Specifies which groups of properties to include, e.g., ['all'], ['data'], ['context'], etc.  |
+| items        | object | Defines parameters for item-level data in events, like 'quantity', 'item_id'                 |
+| items.params | object | Parameters for items array, specifying data property keys, and defaults for quantities, etc. |
+
+:::note
 
 `params`, `items`, and `include` are available at both, the config and event
 level. Settings on the event level will override the general ones.
 
+:::
+
 Use the&nbsp;<Link to="/docs/utils/helper#bypath">string-dot notation</Link>
 (`data.id`, `user.id`, `group`, `context.position.0`) to access all values of an
 event. They can either be a string or an object. A string is used as a key to
-access an event value directly. An object can be used to set a `default` value
-and a `key` to access the event value.
+access an event value directly. An object can be used to set a `default` value.
+A `key` to access the event value.
 
 ```js
 {
@@ -189,9 +196,20 @@ timing, etc.), `data`, `context`, `globals`, `nested`, `source`, `user`,
 `version`, or just `all`. All `data` properties are added automatically by
 default. If you don't want this add `include: []`.
 
-> Note: `consent` and `nested` are not available via `include`, but you can add
-> them explicitly using `params` or `items`.
+:::note
+
+`consent` and `nested` are not available via `include`, but you can add them
+explicitly using `params` or `items`.
+
+:::
 
 The properties get prefixed with the group's name and underscore (like
 `globals_lang` for `{ globals: { lang: 'de' } }`). Custom parameters will
 override `include` values with the same key.
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

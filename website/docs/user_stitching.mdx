@@ -1,10 +1,11 @@
 ---
 title: User stitching
 sidebar_position: 5
+description: How walkerOS handels user identification and user stichting
 ---
 
-To combine website and mobile app data, unifying customer interaction data
-across different platforms, or generally tracking a user's journey through
+To combine website and mobile app data, to unify customer interaction data
+across different platforms, or to generally track a user's journey through
 various touchpoints, **user stitching** is required. It is a technique to
 combine data from multiple sources or sessions to create a unified view of a
 user. This is especially useful in scenarios where a user interacts with a
@@ -14,8 +15,8 @@ these interactions into a single, coherent user profile.
 ## User identification
 
 **User identification** is the process of recognizing the identity of a user.
-This typically involves associating a user with a mostly unique identifier.
-There are three levels of user identification in walkerOS:
+This typically involves associating a user with a unique identifier. There are
+three levels of user identification in walkerOS:
 
 - **id**: Represents a unique identifier for a user, typically drawn from
   internal systems like a CRM.
@@ -23,7 +24,7 @@ There are three levels of user identification in walkerOS:
 - **session**: Refers to a session-specific identifier to track user activities
   within a single session.
 
-One single user can have different devices with multiple sessions. The `id` is
+A single user can have different devices with multiple sessions. The `id` is
 used to distinctly identify an individual user across various sessions and
 devices. The `device` helps to recognize a user across multiple sessions on the
 same device, providing continuity in tracking user interactions over time, while
@@ -55,25 +56,27 @@ Laptop --> Friday
 
 The diagram represents one user with two devices across three sessions.
 
-:::info
+:::warning
 
-These techniques may require a users consent and documentation to respect a
-visitors privacy and stay compliant. This guide is not a legal advice.
+These techniques may require a user's consent and documentation to respect
+privacy and stay compliant. Please request your data protection officer for
+legal advice.
 
 :::
 
 ## Event log
 
-Events are individually measured user interactions that needs to be stitched
-together. Beside all event-related data are additional information to help
-identifying a user. This is neccessary to create user journeys.
+Events are individually measured user interactions that need to be stitched
+together. All event-related data is additional information to help identifying a
+user. This is neccessary to create user journeys.
 
 The following table represents a minified event log over several days. It shows
 how user activities can be tracked over time, across different sessions, with
-varying levels of user identification and consent categories. A `group` id gets
-generated with each run, representing kind of a page load. A `hash` is a
-temporary fingerprint. `session`, `device`, and `user` are all simplyfied unique
-identifiers.
+varying levels of user identification and consent categories.
+
+A `group` id gets generated with each run, representing a page load. A `hash` is
+a temporary fingerprint. `session`, `device`, and `user` are all simplyfied
+unique identifiers.
 
 | Step | Day                 | Event          | Consent   | Group | Hash | Session | Device | User |
 | ---- | ------------------- | -------------- | --------- | ----- | ---- | ------- | ------ | ---- |
@@ -106,25 +109,25 @@ Based on the data, we can at least summarize the following:
 - 2 known `devices` ('phone' and 'ph0n3')
 - 1 unique `user` ('olli')
 
-These statistics illustrate the complexity and richness of user data captured
+The example illustrates the complexity and richness of user data captured
 through user stitching.
 
-## Common pitfalls
+## Recommendation
 
-In general, when working with a users behavior data, there's always a high
-chance of incomplete data. Especially in such a volatile environment like the
-web, where users can easily delete cookies, change devices, or simply use a
-different browser. Understanding user identification to stitch correctly is key.
+In general, when working with user behavior data, there's always a high chance
+of incomplete data. Especially in such a volatile environment like the web,
+where users can easily **delete cookies**, **change devices**, or simply use a
+**different browser**. Understanding user identification to stitch correctly is
+key.
 
 Identifiers are changing frequently. While it's easy to identify a logged-in
 user with a unique id, it's more difficult to identify anonymous users. Knowing
 when to use which level of identification is crucial. As well as knowing the
 pros and cons of each level.
 
-Working with persistent identifiers requires a users consent. Consent is always
+Working with persistent identifiers requires a user's consent. Consent is always
 bound to specific puprpouses, which have to be documentated and communicated
-properly. may raise privacy concerns, especially if not respected, anonymized or
-managed.
+properly.
 
 Relying on third-party tools and cookies might have been a common practice with
 benefits in the past. Support for third-party cookies is phasing out, and there

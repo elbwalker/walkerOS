@@ -18,40 +18,7 @@ import TabItem from '@theme/TabItem';
 [Plausible Analytics](https://plausible.io/) is a simple, and privacy-friendly
 Google Analytics Alternative.
 
-## Configuration
-
-Start by setting up the config for the destination. Destinations can be used via
-node or directly in the browser.
-
-```js
-const config = {
-  custom: {
-    domain: 'elbwalker.com', // Optional, domain of your site as registered
-  },
-};
-```
-
-### Custom
-
-| Property | Type   | Description                                        |
-| -------- | ------ | -------------------------------------------------- |
-| domain   | string | The domain of your site as registered in Plausible |
-
-## How to use
-
-Define the configuration for your Plausible Analytics destination:
-
-```js
-const config = {
-  custom: {
-    domain: 'yourdomain.com',
-  },
-};
-```
-
-Choose one of the
-following&nbsp;<Link to="/docs/destinations/web/#installation">installation
-options</Link> to use the destination:
+## Installation
 
 <Tabs>
   <TabItem value="ts" label="TypeScript" default>
@@ -71,7 +38,7 @@ elb('walker destination', destinationPlausible, config);
   </TabItem>
   <TabItem value="script" label="Script">
 
-Loading the destination via dynamic import
+Load the destination via dynamic import
 
 ```html
 <script>
@@ -101,3 +68,30 @@ Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/de
 
   </TabItem>
 </Tabs>
+
+## Configuration
+
+Configure your Plausible destination.
+
+#### Example
+
+```js
+const config = {
+  custom: {
+    domain: 'elbwalker.com', // Optional, domain of your site as registered
+  },
+};
+```
+
+### Custom
+
+| Property | Type   | Description                                        |
+| -------- | ------ | -------------------------------------------------- |
+| domain   | string | The domain of your site as registered in Plausible |
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

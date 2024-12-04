@@ -1,6 +1,9 @@
 ---
 title: Usercentrics
+description: How to use walkerOS consent mode with Usercentrics
 ---
+
+import Link from '@docusaurus/Link';
 
 Usercentrics supports an
 [implementation via DataLayer & Events](https://docs.usercentrics.com/#/v2-events?id=usage-as-window-event).
@@ -51,8 +54,11 @@ Optionally uncomment the `e.type !== 'explicit'` check to process only
 explicitly given content. This will prevent walker.js from starting
 unintentionally or running eventually running twice.
 
+Ensure the [elb](/docs/sources/walkerjs/commands#elb) function is available.
+
 :::info
 
-Ensure the [elb](/docs/sources/walkerjs/commands#elb) function is available.
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
 
 :::

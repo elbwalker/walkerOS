@@ -14,12 +14,28 @@ import PackageLink from '/src/components/docs/package-link';
 The&nbsp;<Link to="https://developers.facebook.com/docs/marketing-api/conversions-api">Meta
 Conversion API (CAPI)</Link> destination is used to send server-side events from
 walkerOS to the Facebook Conversion API. It handles the data transformation and
-ensures that your events are correctly formatted for the Facebook Conversion
-API.
+ensures that your events are correctly formatted for the Meta Conversion API.
 
-## Basic example
+## Dependencies
 
-Here's a simple example to demonstrate how to configure the Meta destination:
+Before using the Meta destination, ensure you have:
+
+- walkerOS&nbsp;<Link to="/docs/sources/node">node source</Link> installed
+- <Link to="https://developers.facebook.com/docs/marketing-api/conversions-api/get-started#requirements">
+    Conversion API requirements
+  </Link>
+
+## Installation
+
+To get started, install the package via npm:
+
+```sh
+npm install @elbwalker/destination-meta
+```
+
+## Configuration
+
+#### Example
 
 ```ts
 import { destinationMeta } from '@elbwalker/destination-node-meta';
@@ -49,11 +65,9 @@ await elb('walker destination', destinationMeta, {
 });
 ```
 
-## Dependencies
+:::info
 
-Before using the Meta destination, ensure you have:
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
 
-- walkerOS Node source installed
-- <Link to="https://developers.facebook.com/docs/marketing-api/conversions-api/get-started#requirements">
-    Conversion API requirements
-  </Link>
+:::

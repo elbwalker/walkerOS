@@ -15,37 +15,11 @@ import TabItem from '@theme/TabItem';
   npm="@elbwalker/destination-web-google-gtm"
 />
 
-The
 [Google Tag Manager (GTM)](https://marketingplatform.google.com/about/tag-manager/)
-is a popular tag management solution that allows you to create and update tags
-for your web and mobile applications.
+is a tag management solution that allows you to create and update tags for your
+web and mobile applications.
 
-## Configuration
-
-Start by setting up the config for the destination. Destinations can be used via
-node or directly in the browser.
-
-```js
-const config = {
-  custom: {
-    containerId: "GTM-XXXXXXX",
-    dataLayer: "dataLayer",
-    domain: "https://www.googletagmanager.com/gtm.js?id=";
-  },
-};
-```
-
-| Property    | Type   | Description                                    |
-| ----------- | ------ | ---------------------------------------------- |
-| containerId | string | The published Google Tag Manager container ID. |
-| dataLayer   | string | Name of the dataLayer array.                   |
-| domain      | string | Source domain for the GTM script.              |
-
-When using `loadScript: true` the `containerId` is required.
-
-## How to use
-
-Choose one of the installation options below to start using the GTM destination:
+## Installation
 
 <Tabs>
   <TabItem value="ts" label="TypeScript" default>
@@ -63,7 +37,7 @@ elb('walker destination', destinationGoogleGTM, config);
 
 </TabItem>
 <TabItem value="script" label="Script">
-Loading the destination via dynamic import
+Load the destination via dynamic import
 
 ```html
 <script>
@@ -93,3 +67,36 @@ Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/de
 
   </TabItem>
 </Tabs>
+
+## Configuration
+
+Configure your Google Tag Manager destination.
+
+#### Example
+
+```js
+const config = {
+  custom: {
+    containerId: "GTM-XXXXXXX",
+    dataLayer: "dataLayer",
+    domain: "https://www.googletagmanager.com/gtm.js?id=";
+  },
+};
+```
+
+### Custom
+
+| Property    | Type   | Description                                                                                                         |
+| ----------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
+| containerId | string | Google Tag Manager&nbsp;<Link to="https://support.google.com/tagmanager/answer/14847097?hl=en">container ID</Link>. |
+| dataLayer   | string | Name of the dataLayer array.                                                                                        |
+| domain      | string | Source domain for the Google Tag Manager script.                                                                    |
+
+When using `loadScript: true` the `containerId` is required.
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

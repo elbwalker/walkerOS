@@ -16,88 +16,11 @@ import TabItem from '@theme/TabItem';
   npm="@elbwalker/destination-web-meta-pixel"
 />
 
-[Meta Pixel](https://developers.facebook.com/docs/meta-pixel/) allows tracking
-visitor activity on a website and tracking conversions that appear in the Meta
+With [Meta Pixel](https://developers.facebook.com/docs/meta-pixel/) you can
+track visitor activity on a website and track conversions to appear in the Meta
 Ads Manager.
 
-## Configuration
-
-To integrate Meta Pixel with your web application using walker.js, begin by
-setting up the configuration. The destination can be utilized in both Node and
-browser environments.
-
-```js
-const config = {
-  custom: {
-    pixelId: '1234567890', // Required
-    currency: 'EUR',
-    pageview: true,
-  },
-  mapping: {
-    // e.g. order
-    entity: {
-      // e.g. complete
-      action: {
-        name: 'Purchase',
-        custom: {
-          id: 'data.id',
-          name: 'data.title',
-          value: 'data.revenue',
-        },
-      },
-    },
-  },
-};
-```
-
-### Custom
-
-| Property  | Type    | Description                                  |
-| --------- | ------- | -------------------------------------------- |
-| pixelId\* | string  | The ads account ID used for every conversion |
-| currency  | string  | Default currency for conversions             |
-| pageview  | boolean | Whether to send the PageView event           |
-
-Properties with a `*` are required.
-
-### CustomEvent
-
-For the custom event mapping (`mapping.entity.action.custom`):
-
-For `track`, use one of the official
-[standard event names](https://developers.facebook.com/docs/facebook-pixel/reference#standard-events),
-otherwise `trackCustom` will be used.
-
-| Property     | Type   | Description                                                          |
-| ------------ | ------ | -------------------------------------------------------------------- |
-| content_ids  | string | Data property key to use in content_ids, e.g., "data.product_ids".   |
-| content_name | string | Data property key to use as content_name, e.g., "data.product_name". |
-| content_type | string | Type of content, e.g., "product".                                    |
-| contents     | object | Contains `id` and `quantity` for content, accessible via wildcard.   |
-| track        | string | Standard event to track, e.g., "Purchase".                           |
-| value        | string | Data property key for value, e.g., "data.value".                     |
-
-`contents` is an object with the following properties:
-
-- `id`: PropertyMapping (`string` or object with `key` and optional `default`)
-- `quantity`: PropertyMapping (`string` or object with `key` and optional
-  `default`)
-
-## How to use
-
-First, define the config that you want to use for the destination:
-
-```js
-const config = {
-  custom: {
-    pixelId: '1234567890',
-  },
-};
-```
-
-Choose one of the
-following&nbsp;<Link to="/docs/destinations/web/#installation">installation
-options</Link> to use the destination:
+## Installation
 
 <Tabs>
   <TabItem value="ts" label="TypeScript" default>
@@ -117,7 +40,7 @@ elb('walker destination', destinationMetaPixel, config);
   </TabItem>
   <TabItem value="script" label="Script">
 
-Loading the destination via dynamic import
+Load the destination via dynamic import
 
 ```html
 <script>
@@ -147,3 +70,75 @@ Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/de
 
   </TabItem>
 </Tabs>
+
+## Configuration
+
+Configure your meta pixel destination with
+your&nbsp;<Link to="https://www.facebook.com/business/help/952192354843755?id=1205376682832142">Pixel
+ID</Link>.
+
+#### Example
+
+```js
+const config = {
+  custom: {
+    pixelId: '1234567890', // Required
+    currency: 'EUR',
+    pageview: true,
+  },
+  mapping: {
+    // e.g. order
+    entity: {
+      // e.g. complete
+      action: {
+        name: 'Purchase',
+        custom: {
+          id: 'data.id',
+          name: 'data.title',
+          value: 'data.revenue',
+        },
+      },
+    },
+  },
+};
+```
+
+### Custom
+
+| Property  | Type    | Description                              |
+| --------- | ------- | ---------------------------------------- |
+| pixelId\* | string  | Ads account ID used for every conversion |
+| currency  | string  | Default currency for conversions         |
+| pageview  | boolean | Whether to send the PageView event       |
+
+Properties with a `*` are required.
+
+### CustomEvent
+
+For the custom event mapping (`mapping.entity.action.custom`):
+
+For `track`, use one of the official
+[standard event names](https://developers.facebook.com/docs/facebook-pixel/reference#standard-events),
+otherwise `trackCustom` will be used.
+
+| Property     | Type   | Description                                                          |
+| ------------ | ------ | -------------------------------------------------------------------- |
+| content_ids  | string | Data property key to use in content_ids, e.g., "data.product_ids".   |
+| content_name | string | Data property key to use as content_name, e.g., "data.product_name". |
+| content_type | string | Type of content, e.g., "product".                                    |
+| contents     | object | Contains `id` and `quantity` for content, accessible via wildcard.   |
+| track        | string | Standard event to track, e.g., "Purchase".                           |
+| value        | string | Data property key for value, e.g., "data.value".                     |
+
+`contents` is an object with the following properties:
+
+- `id`: PropertyMapping (`string` or object with `key` and optional `default`)
+- `quantity`: PropertyMapping (`string` or object with `key` and optional
+  `default`)
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::
