@@ -8,17 +8,14 @@ describe('Destination Google GA4', () => {
     config: DestinationGoogleGA4.Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  const event = 'Entity Action';
-  const eventName = 'entity_action';
-  const data = { foo: 'bar' };
-  const trigger = 'manual';
+  const event = getEvent();
   const measurementId = 'G-XXXXXX-1';
   const server_container_url = 'https://server.example.com';
   const transport_url = 'https://collect.example.com';
 
   beforeEach(async () => {
     config = {
-      custom: { measurementId },
+      custom: { measurementId, snakeCase: false },
     };
 
     destination = jest.requireActual('.').default;
@@ -28,7 +25,7 @@ describe('Destination Google GA4', () => {
     w.gtag = mockFn;
   });
 
-  test('Init', () => {
+  test('init', () => {
     (w.dataLayer as unknown) = undefined;
     (w.gtag as unknown) = undefined;
 
@@ -47,16 +44,7 @@ describe('Destination Google GA4', () => {
     expect((w.dataLayer as unknown[]).length).toBe(3);
   });
 
-  test('fn', () => {
-    (w.gtag as unknown) = undefined;
-    const fn = jest.fn();
-    destination.config.fn = fn;
-    elb('walker destination', destination);
-    elb(event);
-    expect(fn).toHaveBeenCalledTimes(3);
-  });
-
-  test('Init calls', () => {
+  test('init calls', () => {
     destination.config = config;
 
     // Bad configs
@@ -78,7 +66,16 @@ describe('Destination Google GA4', () => {
     expect(mockFn).toHaveBeenNthCalledWith(1, 'config', measurementId, {});
   });
 
-  test('Init with load script', () => {
+  test('fn', () => {
+    (w.gtag as unknown) = undefined;
+    const fn = jest.fn();
+    destination.config.fn = fn;
+    elb('walker destination', destination);
+    elb(event);
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
+  test('init with load script', () => {
     destination.config.loadScript = true;
     elb('walker destination', destination);
 
@@ -93,20 +90,19 @@ describe('Destination Google GA4', () => {
     expect(elem).toBeTruthy();
   });
 
-  test('Debug mode', () => {
-    config.custom!.debug = true;
-    destination.config = config;
+  test('debug mode', () => {
+    destination.config.custom!.debug = true;
     elb('walker destination', destination);
     elb(event);
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
-      eventName,
+      event.event,
       expect.objectContaining({ debug_mode: true }),
     );
   });
 
-  test('Disable pageview', () => {
+  test('disable pageview', () => {
     config.custom!.pageview = false;
     destination.config = config;
     elb('walker destination', destination);
@@ -119,35 +115,39 @@ describe('Destination Google GA4', () => {
     );
   });
 
-  test('Push', () => {
+  test('push', () => {
     elb('walker destination', destination);
-    elb(event, data, trigger);
+    elb(getEvent('entity action', { data: { foo: 'bar' } }));
 
-    expect(mockFn).toHaveBeenCalledWith('event', eventName, {
+    expect(mockFn).toHaveBeenCalledWith('event', event.event, {
       data_foo: 'bar',
       send_to: measurementId,
     });
   });
 
-  test('Settings', () => {
-    config.custom!.server_container_url = server_container_url;
-    config.custom!.transport_url = transport_url;
-    destination.config = config;
-
-    elb('walker destination', destination);
-    elb(event, data, trigger);
-
-    Object.assign(data, { send_to: measurementId });
+  test('settings', () => {
+    elb('walker destination', destination, {
+      custom: {
+        measurementId,
+        server_container_url,
+        transport_url,
+      },
+    });
+    elb(event);
 
     expect(mockFn).toHaveBeenCalledWith('config', measurementId, {
       server_container_url,
       transport_url,
     });
 
-    expect(mockFn).toHaveBeenCalledWith('event', eventName, expect.any(Object));
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'entity_action',
+      expect.any(Object),
+    );
   });
 
-  test('Parameters', () => {
+  test('parameters', () => {
     const event = getEvent();
     const config: DestinationGoogleGA4.Config = {
       custom: { measurementId },
@@ -195,7 +195,7 @@ describe('Destination Google GA4', () => {
     );
   });
 
-  test('Parameters include', () => {
+  test('parameters include', () => {
     elb('walker run', {
       globals: { lang: 'de' },
       user: { id: 'us3r1d' },
@@ -234,14 +234,14 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    elb('entity event', {}, trigger);
+    elb(getEvent('entity event'));
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'entity_event',
       expect.objectContaining({
         event_id: expect.any(String),
         event_timing: expect.any(Number),
-        event_trigger: trigger,
+        event_trigger: event.trigger,
         event_entity: 'entity',
         event_action: 'event',
         event_group: expect.any(String),
@@ -249,29 +249,32 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    elb(
-      'entity all',
-      { foo: 'bar' },
-      trigger,
-      {
-        position: ['reco', 0],
-      },
-      [{ type: 'n', data: { k: 'v' }, nested: [], context: {} }],
-    );
+    const entity_all = getEvent('entity all');
+    elb(entity_all);
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'entity_all',
       expect.objectContaining({
-        context_position: 'reco',
-        data_foo: 'bar',
-        event_trigger: trigger,
-        globals_lang: 'de',
-        source_type: 'web',
-        source_id: expect.any(String),
-        source_previous_id: expect.any(String),
-        user_id: 'us3r1d',
-        version_source: expect.any(String),
-        version_tagging: 2,
+        data_string: entity_all.data.string,
+        data_boolean: entity_all.data.boolean,
+        data_number: entity_all.data.number,
+        data_array: entity_all.data.array,
+        context_dev: entity_all.context.dev![0],
+        globals_lang: entity_all.globals.lang,
+        user_id: entity_all.user.id,
+        user_device: entity_all.user.device,
+        user_session: entity_all.user.session,
+        event_id: entity_all.id,
+        event_trigger: entity_all.trigger,
+        event_entity: entity_all.entity,
+        event_action: entity_all.action,
+        event_timing: entity_all.timing,
+        event_group: entity_all.group,
+        event_count: entity_all.count,
+        version_source: entity_all.version.source,
+        version_tagging: entity_all.version.tagging,
+        source_id: entity_all.source.id,
+        source_previous_id: entity_all.source.previous_id,
       }),
     );
 
@@ -391,7 +394,7 @@ describe('Destination Google GA4', () => {
     );
   });
 
-  test('Snake case disabled', () => {
+  test('snake case disabled', () => {
     config = {
       custom: { measurementId, snakeCase: false },
       init: true,
