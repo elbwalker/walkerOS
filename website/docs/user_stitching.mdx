@@ -4,6 +4,8 @@ sidebar_position: 5
 description: How walkerOS handels user identification and user stichting
 ---
 
+import Link from '@docusaurus/Link';
+
 To combine website and mobile app data, to unify customer interaction data
 across different platforms, or to generally track a user's journey through
 various touchpoints, **user stitching** is required. It is a technique to
@@ -12,7 +14,32 @@ user. This is especially useful in scenarios where a user interacts with a
 system across multiple devices or platforms, and the goal is to consolidate
 these interactions into a single, coherent user profile.
 
-## User identification
+In general, when working with user behavior data, there's always a high chance
+of incomplete data. Especially in such a volatile environment like the web,
+where users can easily **delete cookies**, **change devices**, or simply use a
+**different browser**. Understanding user identification to stitch correctly is
+key.
+
+Working with persistent identifiers requires a **user's consent**. Consent is
+always bound to specific purposes, which have to be documentated and
+communicated properly.
+
+:::tip
+
+Learn more about&nbsp;<Link to="/docs/consent_management">consent
+management</Link> with walkerOS.
+
+:::
+
+Relying on third-party tools and cookies might have been a common practice with
+benefits in the past. Support for third-party cookies is phasing out, and there
+always has been and will be a dependence on others if data isn't owned and
+collected first-party.
+
+First-party data collection is fundamental for **attribtion moddeling**,
+creating a **holistic view** of your users and gaining **data ownership**.
+
+## User identification levels
 
 **User identification** is the process of recognizing the identity of a user.
 This typically involves associating a user with a unique identifier. There are
@@ -64,7 +91,7 @@ legal advice.
 
 :::
 
-## Event log
+## Example
 
 Events are individually measured user interactions that need to be stitched
 together. All event-related data is additional information to help identifying a
@@ -112,31 +139,9 @@ Based on the data, we can at least summarize the following:
 The example illustrates the complexity and richness of user data captured
 through user stitching.
 
-## Recommendation
+:::info
 
-In general, when working with user behavior data, there's always a high chance
-of incomplete data. Especially in such a volatile environment like the web,
-where users can easily **delete cookies**, **change devices**, or simply use a
-**different browser**. Understanding user identification to stitch correctly is
-key.
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
 
-Identifiers are changing frequently. While it's easy to identify a logged-in
-user with a unique id, it's more difficult to identify anonymous users. Knowing
-when to use which level of identification is crucial. As well as knowing the
-pros and cons of each level.
-
-Working with persistent identifiers requires a user's consent. Consent is always
-bound to specific puprpouses, which have to be documentated and communicated
-properly.
-
-Relying on third-party tools and cookies might have been a common practice with
-benefits in the past. Support for third-party cookies is phasing out, and there
-always has been and will be a fully dependence on others if data isn't owned and
-collected first-party.
-
-## Summary
-
-User ids help to stitch together a users journey across devices and sessions.
-More importantly, using own ids helps to master third-party tools by syncing
-them without relying on third-party cookies. It's fundamental for attribtion
-moddeling, creating a holistic view of your users and gaining data owenership.
+:::

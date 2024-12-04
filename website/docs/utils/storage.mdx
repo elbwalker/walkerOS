@@ -3,20 +3,22 @@ title: Storage
 sidebar_position: 7
 ---
 
+import Link from '@docusaurus/Link';
+
 # Storage
 
 To persist data on a device the storage utils can be used to work with either
 `localStorage`, `sessionStorage`, or `cookie` to write, read and delete values.
 Use `cookies` as a stage location when values should also be transmitted with
-each request. The `localStorage` can be used to persist data for a longer period
-and across all the browser's tabs. As a volatile memory for one specific task,
-the `sessionStorage` can be a good choice in terms of short-term persistence,
-where data is only available in one tab.
+each request. `localStorage` can be used to persist data for a longer period and
+across all the browser's tabs. As a volatile memory for one specific task, the
+`sessionStorage` can be a good choice in terms of short-term persistence, where
+data is only available in one tab.
 
-Following a privacy-by-design approach, the storage utils have an in-build
-max-age functionality, to specify the maximum lifetime of a value. The default
-is set to 30 minutes. While cookies get deleted automatically by a browser, this
-doesn't apply to localStorage and sessionStorage.
+Following a privacy-by-design approach, storage utils have an in-build max-age
+functionality, to specify the maximum lifetime of a value. The default is set to
+30 minutes. While cookies get deleted automatically by a browser, this doesn't
+apply to localStorage and sessionStorage.
 
 Values are written as JSON strings in the format of
 `{ e: 1525779420000, v: "value"}` where `e` is the expiration date and `v` is
@@ -65,3 +67,10 @@ Used to delete a `key` from a `storage`.
 // Delete the elbUserId from localStorage
 storageDelete('elbUserId', 'local');
 ```
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::
