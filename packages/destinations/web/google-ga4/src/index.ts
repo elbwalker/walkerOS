@@ -13,7 +13,7 @@ export const destinationGoogleGA4: Destination = {
 
   init(config) {
     const w = window;
-    const { custom = {}, loadScript } = config;
+    const { custom = {}, fn, loadScript } = config;
     const {
       measurementId,
       transport_url,
@@ -41,24 +41,28 @@ export const destinationGoogleGA4: Destination = {
     // setup required methods
     w.dataLayer = w.dataLayer || [];
 
+    let func = fn || w.gtag;
     if (!w.gtag) {
       w.gtag = function () {
         // eslint-disable-next-line prefer-rest-params
         (w.dataLayer as unknown[]).push(arguments);
       };
-      w.gtag('js', new Date());
+      func = func || w.gtag;
+      func('js', new Date());
     }
 
     // gtag init call
-    w.gtag('config', measurementId, settings);
+    func('config', measurementId, settings);
   },
 
   push(event, config, mapping = {}, options = {}) {
-    const custom = config.custom;
+    const { custom, fn } = config;
     const customEvent = mapping.custom || {};
     if (!custom) return;
 
     if (!custom.measurementId) return;
+
+    const func = fn || window.gtag;
 
     const data = isObject(options.data) ? options.data : {};
 
@@ -85,7 +89,7 @@ export const destinationGoogleGA4: Destination = {
     // Debug mode
     if (custom.debug) eventParams.debug_mode = true;
 
-    window.gtag('event', eventName, eventParams);
+    func('event', eventName, eventParams);
   },
 };
 

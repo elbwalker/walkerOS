@@ -17,6 +17,7 @@ export interface Config<Custom = unknown, CustomEvent = unknown> {
   policy?: Policy; // Rules for processing events
   queue?: boolean; // Disable processing of previously pushed events
   verbose?: boolean; // Enable verbose logging
+  fn?: (...args: unknown[]) => unknown; // Custom function to be called
   onError?: Handler.Error; // Custom error handler
   onLog?: Handler.Log; // Custom log handler
 }

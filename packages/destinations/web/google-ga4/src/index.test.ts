@@ -47,6 +47,15 @@ describe('Destination Google GA4', () => {
     expect((w.dataLayer as unknown[]).length).toBe(3);
   });
 
+  test('fn', () => {
+    (w.gtag as unknown) = undefined;
+    const fn = jest.fn();
+    destination.config.fn = fn;
+    elb('walker destination', destination);
+    elb(event);
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
   test('Init calls', () => {
     destination.config = config;
 
