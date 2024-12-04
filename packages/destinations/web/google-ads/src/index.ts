@@ -9,7 +9,7 @@ export const destinationGoogleAds: Destination = {
   config: {},
 
   init(config) {
-    const custom = config.custom || {};
+    const { custom = {}, fn, loadScript } = config;
     const w = window;
 
     // required measurement id
@@ -18,28 +18,33 @@ export const destinationGoogleAds: Destination = {
     // Default currency value
     custom.currency = custom.currency || 'EUR';
 
-    if (config.loadScript) addScript(custom.conversionId);
+    if (loadScript) addScript(custom.conversionId);
 
     w.dataLayer = w.dataLayer || [];
+
+    let func = fn || w.gtag;
     if (!w.gtag) {
       w.gtag = function gtag() {
         // eslint-disable-next-line prefer-rest-params
         (w.dataLayer as unknown[]).push(arguments);
       };
-      w.gtag('js', new Date());
+      func = func || w.gtag;
+      func('js', new Date());
     }
 
     // gtag init call
-    w.gtag('config', custom.conversionId);
+    func('config', custom.conversionId);
+
+    return config;
   },
 
   push(event, config, mapping = {}): void {
+    const { custom = {}, fn } = config;
     const customMapping = mapping.custom;
 
     if (!customMapping) return;
 
     if (!customMapping.label) return;
-    const custom = config.custom || {};
 
     // Basic conversion parameters
     const eventParams: Gtag.CustomParams = {
@@ -59,7 +64,8 @@ export const destinationGoogleAds: Destination = {
     if (customMapping.id)
       eventParams.transaction_id = event.data[customMapping.id];
 
-    window.gtag('event', 'conversion', eventParams);
+    const func = fn || window.gtag;
+    func('event', 'conversion', eventParams);
   },
 };
 

@@ -45,6 +45,18 @@ describe('destination Google Ads', () => {
     expect(w.gtag).toBeDefined();
   });
 
+  test('fn', () => {
+    (w.gtag as unknown) = undefined;
+    const fn = jest.fn();
+    elb('walker destination', destination, {
+      ...config,
+      mapping: { entity: { action: { custom: { label } } } },
+      fn,
+    });
+    elb(event);
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
   test('Init calls', () => {
     elb('walker destination', destination);
 

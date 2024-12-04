@@ -62,8 +62,6 @@ export const destinationGoogleGA4: Destination = {
 
     if (!custom.measurementId) return;
 
-    const func = fn || window.gtag;
-
     const data = isObject(options.data) ? options.data : {};
 
     const paramsInclude = getParamsInclude(
@@ -89,6 +87,7 @@ export const destinationGoogleGA4: Destination = {
     // Debug mode
     if (custom.debug) eventParams.debug_mode = true;
 
+    const func = fn || window.gtag;
     func('event', eventName, eventParams);
   },
 };
