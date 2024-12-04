@@ -15,7 +15,6 @@ export interface Custom {
   appId: string;
   // dimensions?: Dimensions;
   linkTracking?: boolean;
-  pageview?: boolean;
   url: string;
 }
 
