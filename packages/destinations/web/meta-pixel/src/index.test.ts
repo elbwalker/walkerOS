@@ -39,6 +39,15 @@ describe('Destination Meta Pixel', () => {
     expect(w.fbq).toBeDefined();
   });
 
+  test('fn', () => {
+    (w.fbq as unknown) = undefined;
+    const fn = jest.fn();
+    destination.config.fn = fn;
+    elb('walker destination', destination);
+    elb(event);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
   test('Init calls', () => {
     elb('walker destination', destination);
 

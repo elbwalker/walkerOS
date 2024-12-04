@@ -1,4 +1,4 @@
-import type { Destination } from './types';
+import type { Custom, Destination } from './types';
 import { addScript, setup } from './setup';
 import { getMappingValue, isObject } from '@elbwalker/utils';
 
@@ -11,24 +11,27 @@ export const destinationMetaPixel: Destination = {
   config: {},
 
   init(config) {
-    const custom = config.custom || {};
+    const { custom = {} as Partial<Custom>, fn, loadScript } = config;
+    const { pixelId, pageview } = custom;
 
     // Load Meta Pixel script if required (fbevents.js)
-    if (config.loadScript) addScript();
+    if (loadScript) addScript();
 
     // Required pixel id
-    if (!custom.pixelId) return false;
+    if (!pixelId) return false;
 
     // fbq function setup
     setup();
 
-    window.fbq('init', custom.pixelId);
+    const func = fn || window.fbq;
+    func('init', pixelId);
 
     // PageView event (default yes, deactivate actively)
-    if (custom.pageview !== false) window.fbq('track', 'PageView');
+    if (pageview !== false) window.fbq('track', 'PageView');
   },
 
   push(event, config, mapping = {}, options = {}) {
+    const { fn } = config;
     const { track, trackCustom } = mapping.custom || {};
     const { data, instance } = options;
 
@@ -37,7 +40,8 @@ export const destinationMetaPixel: Destination = {
         instance,
       }) || event.event;
 
-    window.fbq(
+    const func = fn || window.fbq;
+    func(
       trackCustom ? 'trackCustom' : 'track',
       String(eventName),
       isObject(data) ? data : {},
