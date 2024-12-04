@@ -182,6 +182,34 @@ describe('Destination', () => {
     );
   });
 
+  test('mapping data merge', async () => {
+    const { elb } = getSource({});
+
+    const eventMapping = { data: { map: { foo: { value: 'bar' } } } };
+    elb(
+      'walker destination',
+      { push: mockPush },
+      {
+        data: { map: { foo: { value: 'unknown' }, bar: { value: 'baz' } } },
+        mapping: { entity: { action: eventMapping } },
+      },
+    );
+
+    result = await elb(mockEvent);
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.any(Object),
+      eventMapping,
+      {
+        data: {
+          foo: 'bar',
+          bar: 'baz',
+        },
+        instance: expect.anything(),
+      },
+    );
+  });
+
   test('ignore', async () => {
     mockDestination.config.mapping = { entity: { action: { ignore: true } } };
 

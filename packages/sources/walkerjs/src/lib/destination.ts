@@ -1,4 +1,4 @@
-import type { Destination, WalkerOS } from '@elbwalker/types';
+import type { Destination, Mapping, WalkerOS } from '@elbwalker/types';
 import type { SourceWalkerjs, DestinationWeb } from '../types';
 import {
   debounce,
@@ -8,6 +8,8 @@ import {
   useHooks,
   getMappingValue,
   isDefined,
+  assign,
+  isObject,
 } from '@elbwalker/utils';
 import { pushToDestinations } from './push';
 
@@ -90,17 +92,26 @@ export function destinationInit(
   return true; // Destination is ready to push
 }
 
+function resolveMappingData(
+  event: WalkerOS.Event,
+  data?: Mapping.Data,
+): Destination.Data {
+  if (!data) return;
+
+  return Array.isArray(data)
+    ? data.map((item) => getMappingValue(event, item))
+    : getMappingValue(event, data);
+}
+
 export function destinationPush(
   instance: SourceWalkerjs.Instance,
   destination: DestinationWeb.Destination,
   event: WalkerOS.Event,
 ): boolean {
-  const { eventMapping, mappingKey } = getMappingEvent(
-    event,
-    destination.config.mapping,
-  );
+  const { config } = destination;
+  const { eventMapping, mappingKey } = getMappingEvent(event, config.mapping);
 
-  let data: Destination.Data;
+  let data = resolveMappingData(event, config.data);
 
   if (eventMapping) {
     // Check if event should be processed or ignored
@@ -111,9 +122,11 @@ export function destinationPush(
 
     // Transform event to a custom data
     if (eventMapping.data) {
-      data = Array.isArray(eventMapping.data)
-        ? eventMapping.data.map((item) => getMappingValue(event, item))
-        : getMappingValue(event, eventMapping.data);
+      const dataEvent = resolveMappingData(event, eventMapping.data);
+      data =
+        isObject(data) && isObject(dataEvent) // Only merge objects
+          ? assign(data, dataEvent)
+          : dataEvent;
     }
   }
 

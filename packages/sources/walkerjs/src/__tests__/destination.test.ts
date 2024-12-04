@@ -317,18 +317,50 @@ describe('Destination', () => {
         mapping: { page: { view: eventMapping } },
       },
     );
+
+    // Event data
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'page view' }),
       expect.anything(),
       eventMapping,
       { data: 'bar', instance: expect.anything() },
     );
+
+    // Destination data
+    jest.clearAllMocks();
     elb(event);
     expect(mockPush).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'page view' }),
+      expect.objectContaining({ event: event.event }),
       expect.anything(),
+      undefined,
+      { data: 'foo', instance: expect.anything() },
+    );
+  });
+
+  test('mapping data merge', () => {
+    walkerjs = Walkerjs({ run: true, session: false });
+
+    const eventMapping = { data: { map: { foo: { value: 'bar' } } } };
+    elb(
+      'walker destination',
+      { push: mockPush },
+      {
+        data: { map: { foo: { value: 'unknown' }, bar: { value: 'baz' } } },
+        mapping: { page: { view: eventMapping } },
+      },
+    );
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.any(Object),
       eventMapping,
-      { data: 'bar', instance: expect.anything() },
+      {
+        data: {
+          foo: 'bar',
+          bar: 'baz',
+        },
+        instance: expect.anything(),
+      },
     );
   });
 
