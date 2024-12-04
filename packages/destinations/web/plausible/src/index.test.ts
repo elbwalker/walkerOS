@@ -31,6 +31,14 @@ describe('destination plausible', () => {
     expect(w.plausible).toBeDefined();
   });
 
+  test('fn', () => {
+    const fn = jest.fn();
+    destination.config.fn = fn;
+    elb('walker destination', destination);
+    elb(event);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
   test('init with script load', () => {
     elb('walker destination', destination, { loadScript: true });
 
