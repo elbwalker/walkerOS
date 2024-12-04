@@ -49,11 +49,9 @@ export const destinationPiwikPro: Destination = {
 
     const customMapping: CustomEvent = mapping.custom || {};
 
-    func([
-      event.event,
-      data || event.entity,
-      // @TODO parameters
-    ]);
+    const parameters = Array.isArray(data) ? data : [data];
+
+    func([event.event, ...parameters]);
 
     if (customMapping.goalId) {
       const goalValue = customMapping.goalValue

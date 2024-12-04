@@ -7,7 +7,6 @@ describe('Destination', () => {
   const eventCall = jest.fn();
   const mockPush = jest.fn().mockImplementation((event) => {
     eventCall(event);
-    // console.log(event);
   });
   const mockInit = jest.fn();
 

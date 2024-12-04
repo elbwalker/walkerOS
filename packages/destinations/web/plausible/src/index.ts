@@ -24,7 +24,6 @@ export const destinationPlausible: Destination = {
   },
 
   push(event, config, mapping, options = {}) {
-    console.log('🚀 ~ push ~ options:', options);
     const { fn } = config;
     const props = isObject(options.data) ? options.data : event.data;
 

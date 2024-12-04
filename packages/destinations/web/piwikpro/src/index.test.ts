@@ -66,7 +66,19 @@ describe('Destination PiwikPro', () => {
         order: {
           complete: {
             name: 'trackEcommerceOrder',
-            data: 'data.id',
+            data: [
+              'data.id',
+              'data.total',
+              {
+                fn: (event) => {
+                  const total = Number(event.data?.total ?? 0);
+                  const taxes = Number(event.data?.taxes ?? 0);
+                  const shipping = Number(event.data?.shipping ?? 0);
+
+                  return total - taxes - shipping;
+                },
+              },
+            ],
           },
         },
       },
@@ -76,6 +88,8 @@ describe('Destination PiwikPro', () => {
     expect(mockFn).toHaveBeenCalledWith([
       'trackEcommerceOrder',
       order_complete.data.id,
+      order_complete.data.total,
+      expect.any(Number),
     ]);
   });
 });
