@@ -32,6 +32,14 @@ describe('destination google-tag-manager', () => {
     expect(w.dataLayer).toBeDefined();
   });
 
+  test('fn', () => {
+    w.dataLayer = undefined as unknown;
+    const fn = jest.fn();
+    elb('walker destination', destination, { fn });
+    elb(event);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
   test('init with load script', () => {
     destination.config = {
       loadScript: true,

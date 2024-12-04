@@ -13,13 +13,9 @@ export const destinationGoogleGA4: Destination = {
 
   init(config) {
     const w = window;
-    const { custom = {}, fn, loadScript } = config;
-    const {
-      measurementId,
-      transport_url,
-      server_container_url,
-      pageview,
-    }: Partial<Custom> = custom;
+    const { custom = {} as Partial<Custom>, fn, loadScript } = config;
+    const { measurementId, transport_url, server_container_url, pageview } =
+      custom;
 
     if (!measurementId) return false;
 
