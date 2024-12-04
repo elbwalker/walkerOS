@@ -42,6 +42,12 @@ describe('Destination API', () => {
     );
   });
 
+  test('fn', () => {
+    const fn = jest.fn();
+    destination.push(event, { custom: { url }, fn });
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
   test('transform', () => {
     push(event, { url, transform: () => 'transformed' });
     expect(mockSendWeb).toHaveBeenCalledWith(

@@ -1,4 +1,4 @@
-import type { Destination } from './types';
+import type { Custom, Destination } from './types';
 import { isDefined, sendWeb } from '@elbwalker/utils';
 
 // Types
@@ -10,13 +10,8 @@ export const destinationWebAPI: Destination = {
   config: {},
 
   push(event, config, mapping, options = {}) {
-    const {
-      url,
-      headers,
-      method,
-      transform,
-      transport = 'fetch',
-    } = config.custom || {};
+    const { custom = {} as Custom, fn } = config;
+    const { url, headers, method, transform, transport = 'fetch' } = custom;
 
     if (!url) return;
 
@@ -25,7 +20,8 @@ export const destinationWebAPI: Destination = {
       ? transform(value, config, mapping) // Transform event data
       : JSON.stringify(value);
 
-    sendWeb(url, body, { headers, method, transport });
+    const func = fn || sendWeb;
+    func(url, body, { headers, method, transport });
   },
 };
 
