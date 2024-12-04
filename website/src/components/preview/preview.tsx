@@ -134,7 +134,7 @@ const Preview: React.FC<PreviewProps> = ({
               </div>
               <div
                 ref={previewRef}
-                className="bg-base-200 border-t border-base-300 px-2 pb-8 overflow-y-auto h-full"
+                className="border-t border-base-300 px-2 pb-8 overflow-y-auto h-full"
               >
                 <LivePreview />
               </div>

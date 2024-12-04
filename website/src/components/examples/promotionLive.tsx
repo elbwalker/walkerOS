@@ -5,6 +5,7 @@ const code = `<div
   data-elb="promotion"
   data-elbaction="visible:view"
   data-elb-promotion="category:analytics"
+  data-elbcontext="test:live_demo"
   class="dui-hero bg-base-200 p-4"
 >
   <div class="dui-hero-content max-w-md text-center">

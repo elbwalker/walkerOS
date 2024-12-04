@@ -10,11 +10,10 @@ export default function Home(): JSX.Element {
   return (
     <Layout
       title={`${siteConfig.title}`}
-      description="Open-source data collection platform"
+      description="Open-source event data collection platform"
     >
       <Hero />
       <main>
-        <PromotionLive />
         <Features />
         <CTAStart />
       </main>
