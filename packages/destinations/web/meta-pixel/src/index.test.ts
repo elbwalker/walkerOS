@@ -78,14 +78,15 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('pageview', () => {
+    const page_view = getEvent('page view');
     elb('walker destination', destination);
-    elb(event);
-    expect(mockFn).toHaveBeenCalledWith('track', 'PageView');
+
+    elb(page_view);
+    expect(mockFn).toHaveBeenCalledWith('track', 'PageView', {});
 
     jest.clearAllMocks();
-    destination.config.custom!.pageview = false;
-    destination.config.init = false;
-    elb(event);
+    destination.config.mapping = { page: { view: { ignore: true } } };
+    elb(page_view);
     expect(mockFn).not.toHaveBeenCalledWith('track', 'PageView');
   });
 
@@ -93,7 +94,7 @@ describe('Destination Meta Pixel', () => {
     elb('walker destination', destination, {
       custom: { pixelId },
       mapping: {
-        entity: { action: { custom: { trackCustom: { value: 'foo' } } } },
+        entity: { action: { custom: { trackCustom: 'foo' } } },
       },
     });
     elb(event);

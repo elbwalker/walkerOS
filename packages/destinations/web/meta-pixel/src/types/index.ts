@@ -15,7 +15,6 @@ export type Config = DestinationWeb.Config<Custom, CustomEvent>;
 export interface Custom {
   pixelId?: string; // Required pixel id
   currency?: string; // Default currency is EUR
-  pageview?: boolean; // Send the PageView event (default yes, deactivate actively)
   loadScript?: boolean; // Whether to load the Meta Pixel script
 }
 
@@ -25,6 +24,7 @@ export interface CustomEvent {
 }
 
 export type StandardEventNames =
+  | 'PageView'
   | 'AddPaymentInfo'
   | 'AddToCart'
   | 'AddToWishlist'
