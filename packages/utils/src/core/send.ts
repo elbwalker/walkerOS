@@ -1,5 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
-import { assign, isSameType } from '../';
+import { isSameType } from './is';
+import { assign } from './assign';
 
 export type SendDataValue = WalkerOS.Property | WalkerOS.Properties;
 export type SendHeaders = { [key: string]: string };

@@ -1,6 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Custom, Destination, Parameters } from './types';
-import { getParams, getParamsInclude, getParamsItems } from './parameters';
+import { getParamsInclude } from './parameters';
+import { isObject } from '@elbwalker/utils';
 
 // Types
 export * as DestinationGoogleGA4 from './types';
@@ -12,50 +13,52 @@ export const destinationGoogleGA4: Destination = {
 
   init(config) {
     const w = window;
-    const custom: Partial<Custom> = config.custom || {};
-    const settings: WalkerOS.AnyObject = {};
-    // required measurement id
-    if (!custom.measurementId) return false;
+    const { custom = {} as Partial<Custom>, fn, loadScript } = config;
+    const { measurementId, transport_url, server_container_url, pageview } =
+      custom;
 
-    // custom transport url
-    if (custom.transport_url) settings.transport_url = custom.transport_url;
-
-    // custom server_container_url
-    if (custom.server_container_url)
-      settings.server_container_url = custom.server_container_url;
-
-    // disable pageviews
-    if (custom.pageview === false) settings.send_page_view = false;
+    if (!measurementId) return false;
 
     // Load the gtag script
-    if (config.loadScript) addScript(custom.measurementId);
+    if (loadScript) addScript(measurementId);
+
+    const settings: WalkerOS.AnyObject = {};
+
+    // custom transport_url
+    if (transport_url) settings.transport_url = transport_url;
+
+    // custom server_container_url
+    if (server_container_url)
+      settings.server_container_url = server_container_url;
+
+    // disable pageviews
+    if (pageview === false) settings.send_page_view = false;
 
     // setup required methods
     w.dataLayer = w.dataLayer || [];
+
+    let func = fn || w.gtag;
     if (!w.gtag) {
-      w.gtag = function gtag() {
+      w.gtag = function () {
         // eslint-disable-next-line prefer-rest-params
         (w.dataLayer as unknown[]).push(arguments);
       };
-      w.gtag('js', new Date());
+      func = func || w.gtag;
+      func('js', new Date());
     }
 
     // gtag init call
-    w.gtag('config', custom.measurementId, settings);
+    func('config', measurementId, settings);
   },
 
-  push(event, config, mapping = {}) {
-    const custom = config.custom;
+  push(event, config, mapping = {}, options = {}) {
+    const { custom, fn } = config;
     const customEvent = mapping.custom || {};
     if (!custom) return;
 
     if (!custom.measurementId) return;
 
-    const params = getParams(event, {
-      // Prefer event mapping over general mapping
-      ...custom.params,
-      ...customEvent.params,
-    });
+    const data = isObject(options.data) ? options.data : {};
 
     const paramsInclude = getParamsInclude(
       event,
@@ -63,16 +66,9 @@ export const destinationGoogleGA4: Destination = {
       customEvent.include || custom.include || ['data'],
     );
 
-    const paramsItems = getParamsItems(event, {
-      // Prefer event item mapping over general item mapping
-      ...(custom.items && custom.items.params),
-      ...(customEvent.items && customEvent.items.params),
-    });
-
     const eventParams: Parameters = {
       ...paramsInclude,
-      ...paramsItems,
-      ...params,
+      ...data,
     };
 
     // Event name (snake_case default)
@@ -87,7 +83,8 @@ export const destinationGoogleGA4: Destination = {
     // Debug mode
     if (custom.debug) eventParams.debug_mode = true;
 
-    window.gtag('event', eventName, eventParams);
+    const func = fn || window.gtag;
+    func('event', eventName, eventParams);
   },
 };
 

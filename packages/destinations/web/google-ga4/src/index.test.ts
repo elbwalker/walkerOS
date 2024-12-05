@@ -1,3 +1,4 @@
+import { getEvent } from '@elbwalker/utils';
 import type { DestinationGoogleGA4 } from '.';
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 
@@ -7,17 +8,14 @@ describe('Destination Google GA4', () => {
     config: DestinationGoogleGA4.Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  const event = 'Entity Action';
-  const eventName = 'entity_action';
-  const data = { foo: 'bar' };
-  const trigger = 'manual';
+  const event = getEvent();
   const measurementId = 'G-XXXXXX-1';
   const server_container_url = 'https://server.example.com';
   const transport_url = 'https://collect.example.com';
 
   beforeEach(async () => {
     config = {
-      custom: { measurementId },
+      custom: { measurementId, snakeCase: false },
     };
 
     destination = jest.requireActual('.').default;
@@ -27,7 +25,7 @@ describe('Destination Google GA4', () => {
     w.gtag = mockFn;
   });
 
-  test('Init', () => {
+  test('init', () => {
     (w.dataLayer as unknown) = undefined;
     (w.gtag as unknown) = undefined;
 
@@ -46,7 +44,7 @@ describe('Destination Google GA4', () => {
     expect((w.dataLayer as unknown[]).length).toBe(3);
   });
 
-  test('Init calls', () => {
+  test('init calls', () => {
     destination.config = config;
 
     // Bad configs
@@ -68,7 +66,16 @@ describe('Destination Google GA4', () => {
     expect(mockFn).toHaveBeenNthCalledWith(1, 'config', measurementId, {});
   });
 
-  test('Init with load script', () => {
+  test('fn', () => {
+    (w.gtag as unknown) = undefined;
+    const fn = jest.fn();
+    destination.config.fn = fn;
+    elb('walker destination', destination);
+    elb(event);
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
+  test('init with load script', () => {
     destination.config.loadScript = true;
     elb('walker destination', destination);
 
@@ -83,20 +90,19 @@ describe('Destination Google GA4', () => {
     expect(elem).toBeTruthy();
   });
 
-  test('Debug mode', () => {
-    config.custom!.debug = true;
-    destination.config = config;
+  test('debug mode', () => {
+    destination.config.custom!.debug = true;
     elb('walker destination', destination);
     elb(event);
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
-      eventName,
+      event.event,
       expect.objectContaining({ debug_mode: true }),
     );
   });
 
-  test('Disable pageview', () => {
+  test('disable pageview', () => {
     config.custom!.pageview = false;
     destination.config = config;
     elb('walker destination', destination);
@@ -109,55 +115,53 @@ describe('Destination Google GA4', () => {
     );
   });
 
-  test('Push', () => {
+  test('push', () => {
     elb('walker destination', destination);
-    elb(event, data, trigger);
+    elb(getEvent('entity action', { data: { foo: 'bar' } }));
 
-    expect(mockFn).toHaveBeenCalledWith('event', eventName, {
+    expect(mockFn).toHaveBeenCalledWith('event', event.event, {
       data_foo: 'bar',
       send_to: measurementId,
     });
   });
 
-  test('Settings', () => {
-    config.custom!.server_container_url = server_container_url;
-    config.custom!.transport_url = transport_url;
-    destination.config = config;
-
-    elb('walker destination', destination);
-    elb(event, data, trigger);
-
-    Object.assign(data, { send_to: measurementId });
+  test('settings', () => {
+    elb('walker destination', destination, {
+      custom: {
+        measurementId,
+        server_container_url,
+        transport_url,
+      },
+    });
+    elb(event);
 
     expect(mockFn).toHaveBeenCalledWith('config', measurementId, {
       server_container_url,
       transport_url,
     });
 
-    expect(mockFn).toHaveBeenCalledWith('event', eventName, expect.any(Object));
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'entity_action',
+      expect.any(Object),
+    );
   });
 
-  test('Parameters', () => {
+  test('parameters', () => {
+    const event = getEvent();
     const config: DestinationGoogleGA4.Config = {
-      custom: {
-        measurementId,
-        params: {
-          currency: { value: 'EUR', key: 'data.currency' },
-          override: 'data.old', // override at event level
-          user_id: 'user.id',
-          value: 'data.revenue',
-        },
-      },
+      custom: { measurementId },
       init: true,
       mapping: {
-        ga4: {
-          params: {
-            name: 'mapped_ga4_params',
-            custom: {
-              include: [],
-              params: {
-                override: 'data.override',
-                position: 'context.position.0',
+        entity: {
+          action: {
+            name: 'parameters',
+            data: {
+              map: {
+                currency: { value: 'EUR', key: 'data.currency' },
+                user_id: 'user.id',
+                value: 'data.revenue',
+                position: 'context.dev.0',
                 unavailable: {
                   key: 'context.does.not.exist',
                   value: 'backup',
@@ -167,59 +171,48 @@ describe('Destination Google GA4', () => {
                 lang: 'globals.lang',
               },
             },
+            custom: {
+              include: [],
+            },
           },
         },
       },
     };
     elb('walker destination', destination, config);
-    elb('walker run', {
-      globals: { lang: 'de' },
-      user: { id: 'us3r1d' },
-    });
-
-    elb({
-      event: 'ga4 params',
-      data: { old: false, override: 'important' },
-      context: {
-        position: ['reco', 0],
-      },
-      timing: 2,
-    });
+    elb(event);
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
-      'mapped_ga4_params',
+      'parameters',
       expect.objectContaining({
         currency: 'EUR', // default value
-        lang: 'de',
-        override: 'important',
-        position: 'reco',
+        lang: 'elb',
+        position: 'test',
         unavailable: 'backup',
-        user_id: 'us3r1d',
-        timing: expect.any(Number),
+        user_id: 'us3r',
+        timing: event.timing,
       }),
     );
   });
 
-  test('Parameters include', () => {
+  test('parameters include', () => {
     elb('walker run', {
       globals: { lang: 'de' },
       user: { id: 'us3r1d' },
     });
     config = {
-      custom: {
-        measurementId,
-        // include: ['data'], // Default behavior
-      },
+      custom: { measurementId },
       init: true,
       mapping: {
         entity: {
           action: {
-            custom: {
-              include: ['data', 'globals'],
-              params: {
+            data: {
+              map: {
                 data_foo: 'data.override',
               },
+            },
+            custom: {
+              include: ['data', 'globals'],
             },
           },
           all: { custom: { include: ['all'] } },
@@ -241,14 +234,14 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    elb('entity event', {}, trigger);
+    elb(getEvent('entity event'));
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'entity_event',
       expect.objectContaining({
         event_id: expect.any(String),
         event_timing: expect.any(Number),
-        event_trigger: trigger,
+        event_trigger: event.trigger,
         event_entity: 'entity',
         event_action: 'event',
         event_group: expect.any(String),
@@ -256,29 +249,32 @@ describe('Destination Google GA4', () => {
       }),
     );
 
-    elb(
-      'entity all',
-      { foo: 'bar' },
-      trigger,
-      {
-        position: ['reco', 0],
-      },
-      [{ type: 'n', data: { k: 'v' }, nested: [], context: {} }],
-    );
+    const entity_all = getEvent('entity all');
+    elb(entity_all);
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'entity_all',
       expect.objectContaining({
-        context_position: 'reco',
-        data_foo: 'bar',
-        event_trigger: trigger,
-        globals_lang: 'de',
-        source_type: 'web',
-        source_id: expect.any(String),
-        source_previous_id: expect.any(String),
-        user_id: 'us3r1d',
-        version_source: expect.any(String),
-        version_tagging: 2,
+        data_string: entity_all.data.string,
+        data_boolean: entity_all.data.boolean,
+        data_number: entity_all.data.number,
+        data_array: entity_all.data.array,
+        context_dev: entity_all.context.dev![0],
+        globals_lang: entity_all.globals.lang,
+        user_id: entity_all.user.id,
+        user_device: entity_all.user.device,
+        user_session: entity_all.user.session,
+        event_id: entity_all.id,
+        event_trigger: entity_all.trigger,
+        event_entity: entity_all.entity,
+        event_action: entity_all.action,
+        event_timing: entity_all.timing,
+        event_group: entity_all.group,
+        event_count: entity_all.count,
+        version_source: entity_all.version.source,
+        version_tagging: entity_all.version.tagging,
+        source_id: entity_all.source.id,
+        source_previous_id: entity_all.source.previous_id,
       }),
     );
 
@@ -288,46 +284,33 @@ describe('Destination Google GA4', () => {
     });
   });
 
-  test('Items', () => {
-    config = {
-      custom: {
-        measurementId,
-        params: {
-          currency: { value: 'EUR', key: 'data.currency' },
-          override: 'data.old', // override at event level
-          value: 'data.revenue',
-        },
-      },
+  test('event add_to_cart', () => {
+    const event = getEvent('product add');
+    const config: DestinationGoogleGA4.Config = {
+      custom: { measurementId },
       init: true,
       mapping: {
         product: {
           add: {
             name: 'add_to_cart',
-            custom: {
-              include: [],
-              items: {
-                params: {
-                  item_id: 'data.id',
-                  item_category: 'data.category',
-                  quantity: { value: 1, key: 'data.quantity' },
+            data: {
+              map: {
+                currency: { value: 'EUR', key: 'data.currency' },
+                override: 'data.old',
+                value: 'data.price',
+                items: {
+                  loop: [
+                    'this',
+                    {
+                      map: {
+                        item_id: 'data.id',
+                        item_variant: 'data.color',
+                        quantity: { value: 1, key: 'data.quantity' },
+                      },
+                    },
+                  ],
                 },
               },
-              params: { value: 'data.price' },
-            },
-          },
-        },
-        order: {
-          complete: {
-            name: 'purchase',
-            custom: {
-              items: {
-                params: {
-                  item_id: 'nested.*.data.id',
-                  item_index: 'nested.*.data.i',
-                  item_coupon: 'data.coupon',
-                },
-              },
-              params: { transaction_id: 'data.id' },
             },
           },
         },
@@ -335,57 +318,83 @@ describe('Destination Google GA4', () => {
     };
     elb('walker destination', destination, config);
 
-    elb('product add', {
-      id: 'sku',
-      category: 'Examples',
-      currency: 'USD', // override default
-      price: 7.77,
-    });
+    elb(event);
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',
       'add_to_cart',
       expect.objectContaining({
-        currency: 'USD',
-        value: 7.77,
+        currency: 'EUR',
+        value: event.data.price,
         items: [
           {
-            item_id: 'sku',
-            item_category: 'Examples',
-            quantity: 1, // Event level default
+            item_id: event.data.id,
+            item_variant: event.data.color,
+            quantity: 1,
           },
-        ],
-      }),
-    );
-
-    const coupon = 'S4L3';
-    elb({
-      event: 'order complete',
-      data: { id: 'orderid', revenue: 25.42, coupon },
-      nested: [
-        { type: 'product', data: { id: 'a', i: 1 }, nested: [], context: {} },
-        { type: 'product', data: { id: 'b' }, nested: [], context: {} },
-        { type: 'product', data: { id: 'c', i: 2 }, nested: [], context: {} },
-      ],
-    });
-
-    expect(mockFn).toHaveBeenLastCalledWith(
-      'event',
-      'purchase',
-      expect.objectContaining({
-        transaction_id: 'orderid',
-        currency: 'EUR',
-        value: 25.42,
-        items: [
-          { item_id: 'a', item_coupon: coupon, item_index: 1 },
-          { item_id: 'b', item_coupon: coupon },
-          { item_id: 'c', item_coupon: coupon, item_index: 2 },
         ],
       }),
     );
   });
 
-  test('Snake case disabled', () => {
+  test('event purchase', () => {
+    const event = getEvent('order complete');
+    const config: DestinationGoogleGA4.Config = {
+      custom: { measurementId },
+      init: true,
+      mapping: {
+        order: {
+          complete: {
+            name: 'purchase',
+            data: {
+              map: {
+                transaction_id: 'data.id',
+                value: 'data.total',
+                tax: 'data.taxes',
+                shipping: 'data.shipping',
+                currency: { key: 'data.currency', value: 'EUR' },
+                items: {
+                  loop: [
+                    'nested',
+                    {
+                      condition: (entity) => entity.type === 'product',
+                      map: {
+                        item_id: 'data.id',
+                        item_name: 'data.name',
+                        quantity: { key: 'data.quantity', value: 1 },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    elb('walker destination', destination, config);
+
+    elb(event);
+    const product1 = event.nested[0].data;
+    const product2 = event.nested[1].data;
+    expect(mockFn).toHaveBeenCalledWith(
+      'event',
+      'purchase',
+      expect.objectContaining({
+        transaction_id: event.data.id,
+        value: event.data.total,
+        tax: event.data.taxes,
+        shipping: event.data.shipping,
+        currency: 'EUR',
+        items: [
+          { item_id: product1.id, item_name: product1.name, quantity: 1 },
+          { item_id: product2.id, item_name: product2.name, quantity: 1 },
+        ],
+      }),
+    );
+  });
+
+  test('snake case disabled', () => {
     config = {
       custom: { measurementId, snakeCase: false },
       init: true,

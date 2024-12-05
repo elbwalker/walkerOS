@@ -1,5 +1,6 @@
 import type { SendDataValue, SendHeaders, SendResponse } from '../';
-import { getHeaders, transformData, tryCatch, tryCatchAsync } from '../';
+import { getHeaders, transformData } from '../core/send';
+import { tryCatch, tryCatchAsync } from '../core/tryCatch';
 
 export type SendWebTransport = 'fetch' | 'beacon' | 'xhr';
 

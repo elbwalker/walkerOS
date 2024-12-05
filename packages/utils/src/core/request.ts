@@ -1,5 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
-import { castValue, tryCatch } from '.';
+import { tryCatch } from './tryCatch';
+import { castValue } from './castValue';
 
 export function requestToData(
   parameter: unknown,

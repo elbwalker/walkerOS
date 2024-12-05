@@ -7,7 +7,6 @@ describe('Destination', () => {
   const eventCall = jest.fn();
   const mockPush = jest.fn().mockImplementation((event) => {
     eventCall(event);
-    // console.log(event);
   });
   const mockInit = jest.fn();
 
@@ -141,7 +140,7 @@ describe('Destination', () => {
       }),
       mockDestination.config,
       eventMapping,
-      instance,
+      { instance },
     );
   });
 
@@ -160,7 +159,54 @@ describe('Destination', () => {
       }),
       expect.any(Object),
       eventMapping,
-      instance,
+      { instance },
+    );
+  });
+
+  test('mapping data', async () => {
+    const { elb } = getSource({});
+
+    const eventMapping = { data: { value: 'bar' } };
+    elb(
+      'walker destination',
+      { push: mockPush },
+      { mapping: { entity: { action: eventMapping } } },
+    );
+
+    result = await elb(mockEvent);
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'entity action' }),
+      expect.anything(),
+      eventMapping,
+      { data: 'bar', instance: expect.anything() },
+    );
+  });
+
+  test('mapping data merge', async () => {
+    const { elb } = getSource({});
+
+    const eventMapping = { data: { map: { foo: { value: 'bar' } } } };
+    elb(
+      'walker destination',
+      { push: mockPush },
+      {
+        data: { map: { foo: { value: 'unknown' }, bar: { value: 'baz' } } },
+        mapping: { entity: { action: eventMapping } },
+      },
+    );
+
+    result = await elb(mockEvent);
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.any(Object),
+      eventMapping,
+      {
+        data: {
+          foo: 'bar',
+          bar: 'baz',
+        },
+        instance: expect.anything(),
+      },
     );
   });
 

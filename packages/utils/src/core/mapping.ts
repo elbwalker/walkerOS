@@ -1,11 +1,8 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
-import {
-  castToProperty,
-  getByPath,
-  getGrantedConsent,
-  isDefined,
-  isObject,
-} from '.';
+import { getGrantedConsent } from './consent';
+import { getByPath } from './byPath';
+import { isDefined, isObject } from './is';
+import { castToProperty } from './property';
 
 export function getMappingEvent(
   event: WalkerOS.PartialEvent,
@@ -91,7 +88,8 @@ export function getMappingValue(
       const [scope, itemMapping] = loop;
 
       // Retrieve the array from the event
-      const data = getMappingValue(obj, scope, options);
+      const data =
+        scope === 'this' ? [obj] : getMappingValue(obj, scope, options);
 
       if (Array.isArray(data)) {
         mappingValue = data

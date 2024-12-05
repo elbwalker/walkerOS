@@ -1,4 +1,4 @@
-import { Destination } from './types';
+import type { Custom, Destination } from './types';
 
 const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
@@ -13,23 +13,26 @@ export const destinationGoogleGTM: Destination = {
 
   init(config) {
     const w = window as unknown as Record<string, unknown[]>;
-    const custom = config.custom || {};
-    const dataLayer = custom.dataLayer || defaultDataLayer;
+    const { custom = {} as Partial<Custom>, fn, loadScript } = config;
+    const { containerId, dataLayer, domain } = custom;
+    const dataLayerName = dataLayer || defaultDataLayer;
 
-    w[dataLayer] = w[dataLayer] || [];
+    w[dataLayerName] = w[dataLayerName] || [];
 
-    w[dataLayer].push({
+    const func = fn || w[dataLayerName].push;
+    func({
       'gtm.start': new Date().getTime(),
       event: 'gtm.js',
     });
 
     // Load the gtm script and container
-    if (config.loadScript && custom.containerId)
-      addScript(custom.containerId, custom.domain || defaultDomain, dataLayer);
+    if (loadScript && containerId)
+      addScript(containerId, domain || defaultDomain, dataLayerName);
   },
 
-  push(event) {
-    (window.dataLayer as unknown[]).push(event);
+  push(event, config, mapping, options = {}) {
+    const func = config.fn || (window.dataLayer as unknown[]).push;
+    func(options.data ?? event);
   },
 };
 

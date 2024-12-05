@@ -24,7 +24,7 @@ export type PushFn<Custom, CustomEvent> = (
   event: WalkerOS.Event,
   config: Config<Custom, CustomEvent>,
   mapping?: EventMapping<CustomEvent>,
-  instance?: SourceNode.Instance,
+  options?: Options,
 ) => Promise<Push | void>;
 
 export interface Config<Custom = unknown, CustomEvent = unknown>
@@ -35,6 +35,11 @@ export interface Mapping<CustomEvent>
 
 export interface EventMapping<CustomEvent = unknown>
   extends WalkerOSMapping.EventConfig<CustomEvent> {}
+
+export interface Options {
+  data?: WalkerOSDestination.Data;
+  instance?: SourceNode.Instance;
+}
 
 export type PushEvent<CustomEvent = unknown> =
   WalkerOSDestination.PushEvent<CustomEvent>;

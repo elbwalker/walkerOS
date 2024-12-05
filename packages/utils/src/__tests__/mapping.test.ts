@@ -214,6 +214,17 @@ describe('getMappingValue', () => {
         ],
       }),
     ).toStrictEqual([event.nested[0].data.name, event.nested[1].data.name]);
+
+    expect(
+      getMappingValue(event, {
+        loop: [
+          'this',
+          {
+            key: 'event',
+          },
+        ],
+      }),
+    ).toStrictEqual([event.event]);
   });
 
   test('map', () => {

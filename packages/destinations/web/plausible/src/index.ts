@@ -1,4 +1,5 @@
 import type { Config, Destination } from './types';
+import { isObject } from '@elbwalker/utils';
 
 // Types
 export * as DestinationPlausible from './types';
@@ -22,8 +23,12 @@ export const destinationPlausible: Destination = {
       };
   },
 
-  push(event) {
-    window.plausible!(`${event.event}`, { props: event.data });
+  push(event, config, mapping, options = {}) {
+    const { fn } = config;
+    const props = isObject(options.data) ? options.data : event.data;
+
+    const func = fn || window.plausible!;
+    func(`${event.event}`, { props });
   },
 };
 

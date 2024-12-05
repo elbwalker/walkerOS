@@ -1,5 +1,6 @@
-import { elb, Walkerjs } from '@elbwalker/walker.js';
 import type { DestinationMetaPixel } from '.';
+import type { DestinationWeb } from '@elbwalker/walker.js';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
 
 describe('Destination Meta Pixel', () => {
@@ -38,6 +39,15 @@ describe('Destination Meta Pixel', () => {
     expect(w.fbq).toBeDefined();
   });
 
+  test('fn', () => {
+    (w.fbq as unknown) = undefined;
+    const fn = jest.fn();
+    destination.config.fn = fn;
+    elb('walker destination', destination);
+    elb(event);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
   test('Init calls', () => {
     elb('walker destination', destination);
 
@@ -68,14 +78,15 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('pageview', () => {
+    const page_view = getEvent('page view');
     elb('walker destination', destination);
-    elb(event);
-    expect(mockFn).toHaveBeenCalledWith('track', 'PageView');
+
+    elb(page_view);
+    expect(mockFn).toHaveBeenCalledWith('track', 'PageView', {});
 
     jest.clearAllMocks();
-    destination.config.custom!.pageview = false;
-    destination.config.init = false;
-    elb(event);
+    destination.config.mapping = { page: { view: { ignore: true } } };
+    elb(page_view);
     expect(mockFn).not.toHaveBeenCalledWith('track', 'PageView');
   });
 
@@ -83,7 +94,7 @@ describe('Destination Meta Pixel', () => {
     elb('walker destination', destination, {
       custom: { pixelId },
       mapping: {
-        entity: { action: { custom: { trackCustom: { value: 'foo' } } } },
+        entity: { action: { custom: { trackCustom: 'foo' } } },
       },
     });
     elb(event);
@@ -93,14 +104,14 @@ describe('Destination Meta Pixel', () => {
   test('event Purchase', () => {
     const event = getEvent('order complete');
 
-    elb('walker destination', destination, {
+    const config: DestinationWeb.Config = {
       custom: { pixelId },
       mapping: {
         order: {
           complete: {
             name: 'Purchase',
-            custom: {
-              parameters: {
+            data: {
+              map: {
                 currency: { value: 'EUR' },
                 value: 'data.total',
                 contents: {
@@ -121,7 +132,9 @@ describe('Destination Meta Pixel', () => {
           },
         },
       },
-    });
+    };
+
+    elb('walker destination', destination, config);
 
     elb(event);
     expect(mockFn).toHaveBeenCalledWith(
@@ -147,14 +160,14 @@ describe('Destination Meta Pixel', () => {
         product: {
           add: {
             name: 'AddToCart',
-            custom: {
-              parameters: {
+            data: {
+              map: {
                 currency: { value: 'EUR' },
                 value: 'data.price',
                 content_ids: {
                   fn: (event) =>
                     [event].map(
-                      (product) => product.data.id || product.data.name,
+                      (product) => product.data!.id || product.data!.name,
                     ),
                 },
                 content_type: { value: 'product' },

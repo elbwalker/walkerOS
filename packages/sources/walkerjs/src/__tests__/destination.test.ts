@@ -1,7 +1,7 @@
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { SourceWalkerjs, DestinationWeb } from '..';
 import { elb, Walkerjs } from '..';
-import { createEvent } from '@elbwalker/utils';
+import { getEvent } from '@elbwalker/utils';
 
 describe('Destination', () => {
   let walkerjs: SourceWalkerjs.Instance;
@@ -9,6 +9,7 @@ describe('Destination', () => {
   const mockPush = jest.fn(); //.mockImplementation(console.log);
   const mockInit = jest.fn();
 
+  const event = getEvent();
   let destination: DestinationWeb.Destination;
   let config: DestinationWeb.Config;
 
@@ -29,12 +30,12 @@ describe('Destination', () => {
     expect(mockInit).toHaveBeenCalledTimes(0);
     expect(mockPush).toHaveBeenCalledTimes(0);
     elb('walker destination', destination);
-    elb('entity action');
+    elb(event);
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'entity action',
+        event: event.event,
       }),
       config,
       undefined,
@@ -50,7 +51,7 @@ describe('Destination', () => {
       config: {},
       push: mockPush,
     });
-    elb('entity action');
+    elb(event);
     expect(mockInit).toHaveBeenCalledTimes(0);
     expect(mockPush).toHaveBeenCalledTimes(1);
 
@@ -60,7 +61,7 @@ describe('Destination', () => {
       push: mockPush,
       config: { init: true },
     });
-    elb('entity action');
+    elb(event);
     expect(mockInit).toHaveBeenCalledTimes(0);
 
     // Always trigger init since it returns false
@@ -75,9 +76,9 @@ describe('Destination', () => {
     });
 
     jest.clearAllMocks();
-    elb('entity action');
+    elb(event);
     expect(mockInitFalse).toHaveBeenCalledTimes(1);
-    elb('entity action');
+    elb(event);
     expect(mockInitFalse).toHaveBeenCalledTimes(2);
     expect(mockPushFalse).not.toHaveBeenCalled();
   });
@@ -97,9 +98,9 @@ describe('Destination', () => {
       }),
       expect.anything(),
       undefined,
-      expect.objectContaining({
-        round: 1,
-      }),
+      {
+        instance: walkerjs,
+      },
     );
 
     elb('walker run');
@@ -111,9 +112,9 @@ describe('Destination', () => {
       }),
       expect.anything(),
       undefined,
-      expect.objectContaining({
-        round: 2,
-      }),
+      {
+        instance: walkerjs,
+      },
     );
   });
 
@@ -128,12 +129,12 @@ describe('Destination', () => {
     destination.config = configB;
     elb('walker destination', destination);
 
-    elb('entity action');
+    elb(event);
     expect(mockInit).toHaveBeenCalledTimes(2);
     expect(mockPush).toHaveBeenCalledTimes(2);
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'entity action',
+        event: event.event,
       }),
       { init: true },
       undefined,
@@ -183,7 +184,7 @@ describe('Destination', () => {
       push: mockPush,
     });
     elb('walker destination', destination);
-    elb('entity action');
+    elb(event);
 
     // @TODO custom error handling
     expect(mockInit).toHaveBeenCalled(); // 2nd destination
@@ -226,13 +227,13 @@ describe('Destination', () => {
     elb('walker destination', destinationB);
     elb('walker destination', destinationC);
 
-    elb('entity action');
+    elb(event);
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(1);
     expect(mockPushC).toHaveBeenCalledTimes(1);
     expect(mockPushA).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'entity action',
+        event: event.event,
       }),
       expect.anything(),
       {},
@@ -240,7 +241,7 @@ describe('Destination', () => {
     );
     expect(mockPushB).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'entity action',
+        event: event.event,
       }),
       expect.anything(),
       {},
@@ -248,7 +249,7 @@ describe('Destination', () => {
     );
     expect(mockPushC).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'entity action',
+        event: event.event,
       }),
       expect.anything(),
       {},
@@ -302,6 +303,65 @@ describe('Destination', () => {
     expect(mockPushA).toHaveBeenCalledTimes(1);
     expect(mockPushB).toHaveBeenCalledTimes(0);
     expect(mockPushC).toHaveBeenCalledTimes(0);
+  });
+
+  test('mapping data', () => {
+    walkerjs = Walkerjs({ run: true, session: false });
+
+    const eventMapping = { data: { value: 'bar' } };
+    elb(
+      'walker destination',
+      { push: mockPush },
+      {
+        data: { value: 'foo' },
+        mapping: { page: { view: eventMapping } },
+      },
+    );
+
+    // Event data
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'page view' }),
+      expect.anything(),
+      eventMapping,
+      { data: 'bar', instance: expect.anything() },
+    );
+
+    // Destination data
+    jest.clearAllMocks();
+    elb(event);
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({ event: event.event }),
+      expect.anything(),
+      undefined,
+      { data: 'foo', instance: expect.anything() },
+    );
+  });
+
+  test('mapping data merge', () => {
+    walkerjs = Walkerjs({ run: true, session: false });
+
+    const eventMapping = { data: { map: { foo: { value: 'bar' } } } };
+    elb(
+      'walker destination',
+      { push: mockPush },
+      {
+        data: { map: { foo: { value: 'unknown' }, bar: { value: 'baz' } } },
+        mapping: { page: { view: eventMapping } },
+      },
+    );
+
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.any(Object),
+      eventMapping,
+      {
+        data: {
+          foo: 'bar',
+          bar: 'baz',
+        },
+        instance: expect.anything(),
+      },
+    );
   });
 
   test('consent', () => {
@@ -493,7 +553,7 @@ describe('Destination', () => {
 
     jest.clearAllMocks();
 
-    destinationIgnore.config.mapping!.foo!.bar!.ignore = true;
+    destinationIgnore.config.mapping!.foo!.bar = { ignore: true };
     elb('foo bar');
     expect(mockPushA).toHaveBeenCalledTimes(0);
   });
@@ -735,6 +795,7 @@ describe('Destination', () => {
       {
         key: 'product visible',
         events: expect.any(Array),
+        data: [],
       },
       expect.anything(),
       expect.anything(),
@@ -746,6 +807,7 @@ describe('Destination', () => {
       {
         key: 'promotion visible',
         events: expect.any(Array),
+        data: [],
       },
       expect.anything(),
       expect.anything(),
@@ -760,8 +822,9 @@ describe('Destination', () => {
       dataLayerConfig: {
         consent: { functional: true },
         mapping: {
+          entity: { action: { data: { value: 'foo' } } },
           '*': {
-            visible: { batch: 2000 },
+            visible: { batch: 2000, data: { value: 'bar' } },
           },
         },
       },
@@ -783,11 +846,12 @@ describe('Destination', () => {
     expect(mockDataLayer).toHaveBeenCalledWith({
       event: 'batch',
       batched_event: '* visible',
-      events: [
-        expect.objectContaining({ event: 'product visible' }),
-        expect.objectContaining({ event: 'product visible' }),
-      ],
+      events: ['bar', 'bar'],
     });
+
+    jest.clearAllMocks();
+    elb(event);
+    expect(mockDataLayer).toHaveBeenCalledWith('foo');
   });
 
   test('immutable events', async () => {
@@ -847,8 +911,6 @@ describe('Destination', () => {
   });
 
   test('policy', () => {
-    const event = createEvent();
-
     const policy = {
       event: {
         value: 'new name',

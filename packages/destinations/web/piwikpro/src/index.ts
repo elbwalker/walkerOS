@@ -1,13 +1,6 @@
 import type { Custom, CustomEvent, Destination } from './types';
 import { getMappingValue } from '@elbwalker/utils';
 
-// @TODOs
-// - static values besides dynamic data values
-// - site search
-// - e-commerce support
-// - support for dimensions
-// - testing
-
 // Types
 export * as DestinationPiwikPro from './types';
 
@@ -18,72 +11,54 @@ export const destinationPiwikPro: Destination = {
 
   init(config) {
     const w = window;
-    const custom: Partial<Custom> = config.custom || {};
+    const { custom = {} as Partial<Custom>, fn, loadScript } = config;
+    const { appId, url } = custom;
 
     // Required parameters
-    if (!custom.appId || !custom.url) return false;
+    if (!appId || !url) return false;
 
     // Set up the Piwik Pro interface _paq
     w._paq = w._paq || [];
 
-    if (config.loadScript) {
+    const func = fn || w._paq.push;
+    if (loadScript) {
       // Load the JavaScript Tracking Client
-      addScript(custom.url);
+      addScript(url);
 
       // Register the tracker url only with script loading
-      w._paq.push(['setTrackerUrl', custom.url + 'ppms.php']);
+      func(['setTrackerUrl', url + 'ppms.php']);
 
       // Register app id
-      w._paq.push(['setSiteId', custom.appId]);
+      func(['setSiteId', appId]);
     }
 
     // Enable download and outlink tracking if not disabled
-    if (custom.linkTracking !== false) w._paq.push(['enableLinkTracking']);
+    if (custom.linkTracking !== false) func(['enableLinkTracking']);
   },
 
-  push(event, config, mapping = {}) {
-    const custom: Partial<Custom> = config.custom || {};
+  push(event, config, mapping = {}, options = {}) {
+    const { fn } = config;
+    const { data } = options;
+    const func = fn || window._paq!.push;
 
     // Send pageviews if not disabled
-    if (
-      custom.pageview !== false &&
-      event.entity === 'page' &&
-      event.action === 'view'
-    ) {
-      // Pageview tracking will move to run part in next version
-      window._paq!.push([
-        'trackPageView',
-        getMappingValue(event, 'data.title'),
-      ]);
-
+    if (event.event === 'page view' && !mapping.custom) {
+      func(['trackPageView', getMappingValue(event, 'data.title')]);
       return;
     }
 
     const customMapping: CustomEvent = mapping.custom || {};
 
-    let name: unknown, value: unknown; // @TODO fix types
+    const parameters = Array.isArray(data) ? data : [data];
 
-    if (customMapping) {
-      if (customMapping.name) name = getMappingValue(event, customMapping.name);
-      if (customMapping.value)
-        value = getMappingValue(event, customMapping.value);
-    }
-
-    window._paq!.push([
-      'trackEvent',
-      event.entity,
-      event.action,
-      name,
-      value,
-      // @TODO dimensions
-    ]);
+    func([event.event, ...parameters]);
 
     if (customMapping.goalId) {
       const goalValue = customMapping.goalValue
         ? getMappingValue(event, customMapping.goalValue)
         : undefined;
 
-      window._paq!.push([
+      func([
         'trackGoal',
         customMapping.goalId,
         goalValue,

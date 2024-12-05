@@ -13,9 +13,10 @@ export interface EventConfig<CustomEvent = unknown> {
     instance: WalkerOS.Instance,
   ) => void;
   batched?: Destination.Batch<CustomEvent>; // Batch of events to be processed
-  condition?: Condition; // Added condition;
+  condition?: Condition; // Added condition
   consent?: WalkerOS.Consent; // Required consent states process the event
   custom?: CustomEvent; // Arbitrary but protected configurations for custom event config
+  data?: Data; // Mapping of event data
   ignore?: boolean; // Choose to no process an event when set to true
   name?: string; // Use a custom event name
 }
@@ -26,6 +27,7 @@ export interface EventMapping {
 }
 
 export type Value = ValueType | Array<ValueType>;
+export type Values = Array<Value>;
 export type ValueType = string | ValueConfig;
 
 export interface ValueConfig {
@@ -44,6 +46,8 @@ export type Condition = (
   mapping?: Value,
   instance?: WalkerOS.Instance,
 ) => boolean;
+
+export type Data = Value | Values;
 
 export type Fn = (
   event: WalkerOS.PartialEvent,

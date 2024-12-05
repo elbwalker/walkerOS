@@ -1,6 +1,6 @@
-import type { Destination } from './types';
+import type { Custom, Destination } from './types';
 import { addScript, setup } from './setup';
-import { getMappingValue, isObject } from '@elbwalker/utils';
+import { isObject } from '@elbwalker/utils';
 
 // Types
 export * as DestinationMetaPixel from './types';
@@ -11,43 +11,40 @@ export const destinationMetaPixel: Destination = {
   config: {},
 
   init(config) {
-    const custom = config.custom || {};
+    const { custom = {} as Partial<Custom>, fn, loadScript } = config;
+    const { pixelId } = custom;
 
     // Load Meta Pixel script if required (fbevents.js)
-    if (config.loadScript) addScript();
+    if (loadScript) addScript();
 
     // Required pixel id
-    if (!custom.pixelId) return false;
+    if (!pixelId) return false;
 
     // fbq function setup
     setup();
 
-    window.fbq('init', custom.pixelId);
-
-    // PageView event (default yes, deactivate actively)
-    if (custom.pageview !== false) window.fbq('track', 'PageView');
+    const func = fn || window.fbq;
+    func('init', pixelId);
   },
 
-  push(event, config, mapping = {}, instance) {
-    const { track, trackCustom, parameters = {} } = mapping.custom || {};
+  push(event, config, mapping = {}, options = {}) {
+    const { fn } = config;
+    const { track, trackCustom } = mapping.custom || {};
+    const { data } = options;
+    const func = fn || window.fbq;
 
-    const eventName =
-      getMappingValue(event, track || trackCustom || '', {
-        instance,
-      }) || event.event;
+    // page view
+    if (event.event === 'page view' && !mapping.custom) {
+      // Define a custom mapping
+      event.event = 'PageView';
+    }
 
-    const parametersValue = getMappingValue(
-      event,
-      { map: parameters },
-      {
-        instance,
-      },
-    );
+    const eventName = track || trackCustom || event.event;
 
-    window.fbq(
+    func(
       trackCustom ? 'trackCustom' : 'track',
       String(eventName),
-      isObject(parametersValue) ? parametersValue : {},
+      isObject(data) ? data : {},
     );
   },
 };

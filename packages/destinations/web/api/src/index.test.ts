@@ -4,6 +4,7 @@ import type { DestinationWebAPI } from '.';
 describe('Destination API', () => {
   const mockSendWeb = jest.fn();
   jest.mock('@elbwalker/utils', () => ({
+    ...jest.requireActual('@elbwalker/utils'),
     sendWeb: mockSendWeb,
   }));
 
@@ -15,8 +16,10 @@ describe('Destination API', () => {
   function push(
     event: WalkerOS.Event,
     custom: DestinationWebAPI.Custom = { url },
+    mapping = {},
+    options = {},
   ) {
-    destination.push(event, { custom });
+    destination.push(event, { custom }, mapping, options);
   }
 
   beforeEach(async () => {
@@ -37,6 +40,12 @@ describe('Destination API', () => {
         transport: 'fetch',
       }),
     );
+  });
+
+  test('fn', () => {
+    const fn = jest.fn();
+    destination.push(event, { custom: { url }, fn });
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 
   test('transform', () => {
@@ -64,6 +73,17 @@ describe('Destination API', () => {
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
       data,
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    );
+  });
+
+  test('mapping data', () => {
+    push(event, { url, method: 'POST' }, {}, { data: { foo: 'bar' } });
+    expect(mockSendWeb).toHaveBeenCalledWith(
+      url,
+      JSON.stringify({ foo: 'bar' }),
       expect.objectContaining({
         method: 'POST',
       }),

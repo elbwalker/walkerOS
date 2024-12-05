@@ -32,6 +32,14 @@ describe('destination google-tag-manager', () => {
     expect(w.dataLayer).toBeDefined();
   });
 
+  test('fn', () => {
+    w.dataLayer = undefined as unknown;
+    const fn = jest.fn();
+    elb('walker destination', destination, { fn });
+    elb(event);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
   test('init with load script', () => {
     destination.config = {
       loadScript: true,
@@ -71,5 +79,25 @@ describe('destination google-tag-manager', () => {
     expect(w.dataLayer).toBeDefined();
 
     expect(mockDataLayer).toHaveBeenLastCalledWith(event);
+  });
+
+  test('push mapping data', () => {
+    elb('walker destination', destination, {
+      mapping: {
+        entity: {
+          action: {
+            data: {
+              map: {
+                foo: { value: 'bar' },
+              },
+            },
+          },
+        },
+      },
+    });
+    elb(event);
+    expect(w.dataLayer).toBeDefined();
+
+    expect(mockDataLayer).toHaveBeenLastCalledWith({ foo: 'bar' });
   });
 });

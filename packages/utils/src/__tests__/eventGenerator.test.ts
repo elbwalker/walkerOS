@@ -89,8 +89,5 @@ describe('createEvent', () => {
         trigger: 'visible',
       }),
     );
-
-    // All the other events are tested in the same way
-    // console.log(getEvent('order complete'));
   });
 });

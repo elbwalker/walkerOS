@@ -16,10 +16,8 @@ export type Config = DestinationWeb.Config<Custom, CustomEvent>;
 export interface Custom {
   debug?: boolean;
   include?: Include;
-  items?: Items;
   measurementId: string;
   pageview?: boolean;
-  params?: Params;
   server_container_url?: string;
   snakeCase?: boolean;
   transport_url?: string;
@@ -27,16 +25,6 @@ export interface Custom {
 
 export interface CustomEvent {
   include?: Include;
-  items?: Items;
-  params?: Params;
-}
-
-export interface Items {
-  params?: Params;
-}
-
-export interface Params {
-  [key: string]: Param;
 }
 
 export type Param = Mapping.Value;
@@ -51,7 +39,6 @@ export type Include = Array<
   | 'version'
 >;
 
-export type GtagItems = Gtag.Item[];
 export type Parameters = Gtag.ControlParams &
   Gtag.EventParams &
   Gtag.CustomParams;
