@@ -5,37 +5,41 @@ sidebar_position: 5
 
 import Link from '@docusaurus/Link';
 
-The `Config` stores all individual `Event` configurations for each entity-action
-event. The&nbsp;<Link to="#getmappingevent">`getMappingEvent`</Link> function
-returns the matching `Event` config while
+The `Mapping.Config` stores all
+individual&nbsp;<Link to="/docs/destinations/event_mapping#eventconfig">`Mapping.EventConfig`</Link>
+configurations for
+each&nbsp;<Link to="/docs/getting_started/event-model">entity-action
+event</Link>. The&nbsp;<Link to="#getmappingevent">`getMappingEvent`</Link>
+function returns the matching event mapping while
 the&nbsp;<Link to="#getmappingvalue">`getMappingValue`</Link> is used to resolve
-the `Value` settings for a specific property to return an actual value. The
-`custom` property is used by
+a `Mapping.Value` settings for a specific property to return an actual value.
+The `custom` property is used by
 each&nbsp;<Link to="/docs/destinations/">destination</Link> individually.
 
 ```ts
-interface Config<CustomEvent> {
-  [entity: string]: { [action: string]: Event<CustomEvent> };
-}
-
-interface Event<CustomEvent = unknown> {
-  batch?: number; // Bundle events for batch processing (in ms)
-  consent?: WalkerOS.Consent; // Required consent states process the event
-  custom?: CustomEvent; // Arbitrary but protected configurations for custom event config
-  ignore?: boolean; // Choose to no process an event when set to true
-  name?: string; // Use a custom event name
+interface Config<CustomEvent = unknown> {
+  [entity: string]:
+    | Record<string, EventConfig<CustomEvent> | Array<EventConfig<CustomEvent>>>
+    | undefined;
 }
 
 const mapping: Config = {
   entity: {
-    action: {
-      batch: 2000,
-      consent: { marketing: true },
-      custom: { language: 'globals.language' },
-      ignore: false,
-      name: 'entity_action',
-    },
+    action: { name: 'entity_action' }, // Explicit EventConfig
+    '*': {}, // Generic EventConfig for all entity entities
   },
+  order: {
+    complete: [
+      {
+        // EventConfig only for production
+        condition: (event: WalkerOS.PartialEvent) =>
+          event.globals?.env === 'prod',
+        ignore: true,
+      },
+      { name: 'purchase' }, // Fallback EventConfig
+    ],
+  },
+  '*': { '*': { ignore: true } },
 };
 ```
 
@@ -44,7 +48,8 @@ const mapping: Config = {
 `getMappingEvent(event: string, mapping?: Mapping.Config<unknown>): EventMapping`
 returns the matching `eventMapping` configuration and the used `mappingKey` for
 the given entity-action event name. If no mapping is found, it will return an
-empty object. An explicit key is favored over an asterisk `*` key.
+empty object. An explicit key is favored over an asterisk `*` key. If available
+a `condition` will be checked to determine if the `EventConfig` should be used.
 
 ```ts
 interface EventMapping {
@@ -52,27 +57,20 @@ interface EventMapping {
   mappingKey?: string;
 }
 
-const mapping: Config = {
-  entity: {
-    action: {
-      name: 'entity_action',
-    },
-    '*': {
-      name: 'other',
-    },
-    '*': {
-      '*': {
-        name: 'irrelevant',
-      },
-    },
-  },
-};
-
-getMappingEvent('entity action', mapping);
+getMappingEvent({ event: 'entity action' }, mapping);
 // { eventMapping: { name: 'entity_action' }, mappingKey: 'entity action' }
 
-getMappingEvent('entity something', mapping);
-// { eventMapping: { name: 'other' }, mappingKey: 'entity *' }
+getMappingEvent({ event: 'entity action' }, mapping);
+// { eventMapping: { }, mappingKey: 'entity action' }
+
+getMappingEvent({ event: 'order complete' }, mapping);
+// { eventMapping: { name: 'purchase' }, mappingKey: 'order complete' }
+
+getMappingEvent({ event: 'order complete', globals: { env: 'prod' } }, mapping);
+// { eventMapping: { ignore: true, condition: Function }, mappingKey: 'order complete' }
+
+getMappingEvent({ event: 'page view' }, mapping);
+// { eventMapping: { ignore: true }, mappingKey: 'page view' }
 ```
 
 ### getMappingValue

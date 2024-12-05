@@ -78,33 +78,35 @@ describe('getMappingEvent', () => {
 
   test('condition', () => {
     const mapping: Mapping.Config = {
-      pii: {
-        event: [
+      order: {
+        complete: [
           {
-            name: 'secret',
-            condition: (event) =>
-              !!(event as WalkerOS.PartialEvent).consent?.marketing,
+            condition: (event: WalkerOS.PartialEvent) =>
+              event.globals?.env === 'prod',
+            ignore: true,
           },
           {
-            name: 'fallback',
+            name: 'purchase',
           },
         ],
       },
     };
 
-    expect(getMappingEvent({ event: 'pii event' }, mapping)).toStrictEqual({
-      eventMapping: { name: 'fallback' },
-      mappingKey: 'pii event',
-    });
+    expect(getMappingEvent({ event: 'order complete' }, mapping)).toStrictEqual(
+      {
+        eventMapping: mapping.order!.complete[1],
+        mappingKey: 'order complete',
+      },
+    );
 
     expect(
       getMappingEvent(
-        { event: 'pii event', consent: { marketing: true } },
+        { event: 'order complete', globals: { env: 'prod' } },
         mapping,
       ),
     ).toStrictEqual({
-      eventMapping: mapping.pii!.event[0],
-      mappingKey: 'pii event',
+      eventMapping: mapping.order!.complete[0],
+      mappingKey: 'order complete',
     });
   });
 });
