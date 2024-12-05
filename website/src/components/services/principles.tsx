@@ -15,7 +15,7 @@ type FeatureItem = {
   children: React.ReactNode;
 };
 
-function Feature({ title, link, icon, children }: FeatureItem) {
+function Principle({ title, link, icon, children }: FeatureItem) {
   return (
     <div className={clsx('col col--4')}>
       <div className="text--center">{icon}</div>
@@ -31,7 +31,7 @@ function Feature({ title, link, icon, children }: FeatureItem) {
   );
 }
 
-export default function Features(): JSX.Element {
+export default function Principles(): JSX.Element {
   const iconMeasurementplan = (
     <PresentationChartBarIcon
       className="h-12 w-12 text-elbwalker"

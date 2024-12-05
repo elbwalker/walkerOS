@@ -44,7 +44,7 @@ export default function Hero() {
       <div className="mt-10 text-center">
         <CheckSVG>runs in your own infrastructure</CheckSVG>
         <CheckSVG>integrates with various analytics & marketing tools</CheckSVG>
-        <CheckSVG>real-time data delivery</CheckSVG>
+        <CheckSVG>in-built consent mode</CheckSVG>
       </div>
     </main>
   );
