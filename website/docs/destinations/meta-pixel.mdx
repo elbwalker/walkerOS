@@ -83,19 +83,28 @@ ID</Link>.
 const config = {
   custom: {
     pixelId: '1234567890', // Required
-    currency: 'EUR',
-    pageview: true,
   },
   mapping: {
-    // e.g. order
-    entity: {
-      // e.g. complete
-      action: {
+    order: {
+      complete: {
         name: 'Purchase',
-        custom: {
-          id: 'data.id',
-          name: 'data.title',
-          value: 'data.revenue',
+        data: {
+          map: {
+            currency: { value: 'EUR' },
+            value: 'data.total',
+            contents: {
+              loop: [
+                'nested',
+                {
+                  map: {
+                    id: 'data.id',
+                    quantity: { key: 'data.quantity', value: 1 },
+                  },
+                },
+              ],
+            },
+            content_type: { value: 'product' },
+          },
         },
       },
     },
