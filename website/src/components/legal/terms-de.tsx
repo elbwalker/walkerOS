@@ -7,13 +7,13 @@ export default function LegalTermsContentDE() {
         <div className="prose-elbwalker prose prose-lg mx-auto mt-6 text-gray-400">
           <h3 className="text-gray-50">1. Geltungsbereich /Allgemeines</h3>
           <p>
-            1.1 Für die Geschäftsbeziehung zwischen elbwalker GmbH,
-            Gerhofstraße 1-3, 20354 Hamburg (nachfolgend elbwalker genannt),
-            und dem Kunden (nachfolgend Nutzer genannt) gelten ausschließlich
-            die nachfolgenden Allgemeinen Nutzungsbedingungen in ihrer *zum
-            Zeitpunkt bei Vertragsschluss gültigen Fassung. Abweichende
-            Bedingungen des Nutzers oder Dritter werden nicht anerkannt, es sei
-            denn elbwalker stimmt ihrer Geltung ausdrücklich schriftlich zu.
+            1.1 Für die Geschäftsbeziehung zwischen elbwalker GmbH, Gerhofstraße
+            1-3, 20354 Hamburg (nachfolgend elbwalker genannt), und dem Kunden
+            (nachfolgend Nutzer genannt) gelten ausschließlich die nachfolgenden
+            Allgemeinen Nutzungsbedingungen in ihrer *zum Zeitpunkt bei
+            Vertragsschluss gültigen Fassung. Abweichende Bedingungen des
+            Nutzers oder Dritter werden nicht anerkannt, es sei denn elbwalker
+            stimmt ihrer Geltung ausdrücklich schriftlich zu.
           </p>
           <p>
             1.2 Sofern nichts Abweichendes vereinbart ist, gelten die
@@ -439,7 +439,7 @@ export default function LegalTermsContentDE() {
             11.1 Informationen zur Datenerhebung durch elbwalker können dem
             Datenschutzhinweis unter www.elbwalker.com/datenschutz und dem
             Schema zur Erhebung von anonymisierten Anwendungsdaten unter
-            www.elbwalker.com/docs/walkeros/event-model entnommen werden.
+            www.elbwalker.com/docs/getting_started/event-model entnommen werden.
           </p>
           <p>
             11.2 Der Nutzer erklärt, dass sämtliche für die Verarbeitung im

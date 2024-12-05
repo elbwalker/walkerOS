@@ -25,4 +25,4 @@ Web destinations ensure your front-end data is efficiently utilized for
 insightful analytics and targeted marketing efforts.
 
 > Learn more about Web Destinations in the
-> [Web Destinations documentation](https://www.elbwalker.com/docs/destinations/web/)
+> [Web Destinations documentation](https://www.elbwalker.com/docs/destinations/)

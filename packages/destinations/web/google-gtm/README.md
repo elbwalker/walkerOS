@@ -5,7 +5,7 @@ Made to be used with
 [walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the
-[documentation](https://www.elbwalker.com/docs/destinations/web/google-gtm).
+[documentation](https://www.elbwalker.com/docs/destinations/google-gtm).
 
 ## 🤓 Usage
 
@@ -17,7 +17,7 @@ Destinations can be used via node or directly in the browser.
 Learn more about the
 [destinations](https://www.elbwalker.com/docs/destinations/) in general and read
 the detailled
-[Google Tag Manager configuration](https://www.elbwalker.com/docs/destinations/web/google-gtm#configuration).
+[Google Tag Manager configuration](https://www.elbwalker.com/docs/destinations/google-gtm#configuration).
 
 ```js
 const config = {

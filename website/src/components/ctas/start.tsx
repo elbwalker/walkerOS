@@ -17,10 +17,7 @@ export default function CTAStart() {
           </span>
         </h2>
         <div className="mx-auto mt-5 max-w-md sm:flex sm:justify-center md:mt-8">
-          <Button link="docs/">About walkerOS</Button>
-          <Button link="https://calendly.com/elb-alexander/30min" isSecondary>
-            Learn more
-          </Button>
+          <Button link="docs/">Learn more</Button>
         </div>
       </div>
     </div>

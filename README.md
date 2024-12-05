@@ -45,7 +45,7 @@ whole data collection.
 ### Pre-requisites
 
 Familiarize yourself with the
-[walkerOS event model](https://www.elbwalker.com/docs/walkeros/event-model) and,
+[walkerOS event model](https://www.elbwalker.com/docs/getting_started/event-model) and,
 learn
 [how walkerOS operates](https://www.elbwalker.com/docs/#how-walkeros-operates)
 explore a complete

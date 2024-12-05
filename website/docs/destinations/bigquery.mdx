@@ -1,0 +1,104 @@
+---
+title: BigQuery
+description: Streaming events directly to Google BigQuery.
+---
+
+import PackageLink from '/src/components/docs/package-link';
+import Link from '@docusaurus/Link';
+
+<PackageLink
+  github="packages/destinations/node/bigquery"
+  npm="@elbwalker/destination-node-bigquery"
+/>
+
+The BigQuery destination allows you to send server-side events from walkerOS to
+Google BigQuery. It handles the data transformation and ensures that your events
+are correctly formatted for BigQuery tables.
+
+## Dependencies
+
+Before using the BigQuery destination, ensure you have:
+
+- Google Cloud Platform account
+- walkerOS Node source installed
+- Permissions to write to BigQuery
+- Run the setup function to create the table
+
+## Installation
+
+To get started, install the package via npm:
+
+```sh
+npm install @elbwalker/destination-node-bigquery
+```
+
+## Configuration
+
+Configure the BigQuery destination with your `projectId`.
+
+#### Example
+
+```ts
+import { destinationBigQuery } from '@elbwalker/destination-node-bigquery';
+
+await elb('walker destination', destinationBigQuery, {
+  custom: {
+    projectId: 'PR0J3CT1D', // Required
+    // client: BigQuery; // A BigQuery instance from @google-cloud/bigquery
+    // datasetId: string; // 'walkerOS' as default
+    // tableId: string; // 'events' as default
+    // location: string; // 'EU' as default
+    // bigquery?: BigQueryOptions; // BigQueryOptions from @google-cloud/bigquery
+  },
+});
+```
+
+:::tip
+
+Learn more how to
+[authenticate with a service account key file](https://cloud.google.com/bigquery/docs/authentication/service-account-file)
+using the custom `bigquery` options.
+
+:::
+
+```ts
+{
+  custom: {
+    projectId: 'PR0J3CT1D', // Required
+    bigquery: {
+
+    }
+  }
+}
+```
+
+## Permissions
+
+When using Service Accounts (SAs) for Google Cloud BigQuery, it's recommended to
+follow the principle of _least privilege_. Never grant more permissions than
+what it needs to perform its intended functions.
+
+During initial setup, the SA may require broader permissions to create necessary
+datasets. Typically, this involves assigning a role like
+`roles/bigquery.dataOwner` to the service account. This role can be granted
+through Google Cloud IAM.
+
+For production environments, it is recommended to **revoke broader IAM roles**
+granted during the setup phase. Assign explicit permissions directly to datasets
+within BigQuery (using the share option). This ensures that the service account
+only has access to what is necessary for operation. The service account may hold
+owner permissions after creating the dataset.
+
+:::tip
+
+For more detailed information, refer to the official
+[Google Cloud IAM documentation](https://cloud.google.com/iam/docs).
+
+:::
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

@@ -1,6 +1,6 @@
 ---
 title: Session
-sidebar_position: 1
+sidebar_position: 6
 ---
 
 import Link from '@docusaurus/Link';
@@ -15,7 +15,7 @@ import PackageLink from '/src/components/docs/package-link';
 There are multiple ways to define and measure a session. Sessions represent a
 period when a user actively engages with a website, often used for attribution
 and conversion tracking. Different tools may define and detect sessions in
-varying ways.
+different ways.
 
 The `sessionStart` util helps to detect a new session independently and triggers
 a `session start` event or [executes custom code](#callback). It works
@@ -27,7 +27,7 @@ In the cookieless mode (default), only the [sessionWindow](#sessionwindow) Util
 is used. With config parameter `storage: true`, the
 [sessionStorage](#sessionstorage) gets called before the `sessionWindow`.
 
-:::info
+:::note
 
 Working with [Storage](/docs/utils/storage) usually requires consent and is not
 activated by default. Use the [consent](#consent) option to control the storage
@@ -119,8 +119,8 @@ There are additional config parameters [for storage](#sessionstorage) and
 
 Setting a consent state to wait for before detecting a new session is used to
 decide if storage access is allowed or not. If set, it registers an
-[on consent event](/docs/sources/walkerjs/commands#on-events) and won't start
-until that consent choice is available. If permission was granted, the
+[on consent event](/docs/sources/walkerjs/commands#on) and won't start until
+that consent choice is available. If permission was granted, the
 `sessionStorage` detects a new session; otherwise, the `sessionWindow`.
 
 ```js
@@ -163,8 +163,8 @@ sessionStart({
 Based on the [storage](#storage) option either the
 [sessionStorage](#sessionstorage) or the [sessionWindow](#sessionwindow) is used
 to detect a new session. If a [consent](#consent) state is set, the session
-detection gets scheduled via an
-[on-consent](/docs/sources/walkerjs/commands#on-events) command.
+detection gets scheduled via an [on-consent](/docs/sources/walkerjs/commands#on)
+command.
 
 ```mermaid
 ---
@@ -396,10 +396,17 @@ referrer -- internal --> existingSession
 isReload -- reload --> existingSession
 ```
 
-:::info
+:::note
 
 Be aware of potential multiple unintended events for the same user due to
 referrer hiding. For more details, learn about
 [Referrer Hiding](https://en.wikipedia.org/wiki/HTTP_referer#Referrer_hiding).
+
+:::
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
 
 :::

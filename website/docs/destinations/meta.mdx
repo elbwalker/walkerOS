@@ -1,0 +1,73 @@
+---
+title: Meta Conversion API
+description: Meta Conversion API (CAPI) destination for walkerOS
+---
+
+import Link from '@docusaurus/Link';
+import PackageLink from '/src/components/docs/package-link';
+
+<PackageLink
+  github="packages/destinations/node/meta"
+  npm="@elbwalker/destination-node-meta"
+/>
+
+The&nbsp;<Link to="https://developers.facebook.com/docs/marketing-api/conversions-api">Meta
+Conversion API (CAPI)</Link> destination is used to send server-side events from
+walkerOS to the Facebook Conversion API. It handles the data transformation and
+ensures that your events are correctly formatted for the Meta Conversion API.
+
+## Dependencies
+
+Before using the Meta destination, ensure you have:
+
+- walkerOS&nbsp;<Link to="/docs/sources/node">node source</Link> installed
+- <Link to="https://developers.facebook.com/docs/marketing-api/conversions-api/get-started#requirements">
+    Conversion API requirements
+  </Link>
+
+## Installation
+
+To get started, install the package via npm:
+
+```sh
+npm install @elbwalker/destination-meta
+```
+
+## Configuration
+
+#### Example
+
+```ts
+import { destinationMeta } from '@elbwalker/destination-node-meta';
+
+await elb('walker destination', destinationMeta, {
+  custom: {
+    accessToken: 's3cr3tc0d3',
+    pixelId: '1234567890',
+    // debug: true,
+    // partner: 'walkerOS',
+    // testCode: 'TEST00000',
+  },
+  mapping: {
+    // e.g. order
+    entity: {
+      // e.g. complete
+      action: {
+        name: 'Purchase',
+        custom: {
+          id: 'data.id',
+          name: 'data.title',
+          value: 'data.total',
+        },
+      },
+    },
+  },
+});
+```
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

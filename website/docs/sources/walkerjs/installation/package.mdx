@@ -1,0 +1,73 @@
+---
+title: Package
+description: Install walker.js via package manager.
+sidebar_position: 1
+---
+
+import Link from '@docusaurus/Link';
+import PackageLink from '/src/components/docs/package-link';
+
+<PackageLink npm="@elbwalker/walker.js" />
+
+To get started with the installation, run:
+
+```js
+npm i @elbwalker/walker.js
+```
+
+Then run the following code once to create an instance:
+
+```js
+import { Walkerjs } from '@elbwalker/walker.js';
+
+window.walkerjs = Walkerjs({
+  /* custom config */
+});
+```
+
+To configure and communicate with the walker.js instance load the `elb`-helper
+function:
+
+```js
+import { elb } from '@elbwalker/walker.js';
+
+window.elb = elb;
+elb('entity action', data, trigger, context, nested); // push events
+elb('walker <command>', data); // configure walker, see Commands
+```
+
+## Single Page Applications
+
+When using a Single Page Application like React, tell the walker to run on each
+location change in your app:
+
+```js
+import React from 'react';
+import { Route, Routes, useLocation } from 'react-router-dom';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
+
+window.walkerjs = Walkerjs({ default: true });
+
+export default function App() {
+  const location = useLocation();
+  React.useEffect(() => {
+    elb('walker run'); // party hard!
+  }, [location]);
+
+  return <Routes>// ...</Routes>;
+}
+```
+
+:::tip
+
+Check out the detailed react example on
+[Github](https://github.com/elbwalker/walkerOS/tree/main/apps/demos/react).
+
+:::
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

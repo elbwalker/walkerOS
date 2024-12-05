@@ -8,7 +8,7 @@ const vars = {
 
 const config: Config = {
   title: 'walkerOS',
-  tagline: 'Open-source data collection platform',
+  tagline: 'Open-source event data collection platform',
   favicon: 'img/favicon.png',
 
   // Set the production url of your site here
@@ -70,6 +70,7 @@ const config: Config = {
     autoCollapsedSidebar: true,
     docs: {
       sidebar: {
+        autoCollapseCategories: true,
         hideable: true,
       },
     },
@@ -103,19 +104,19 @@ const config: Config = {
           items: [
             {
               label: 'Documentation',
-              to: '/docs',
+              to: '/docs/',
             },
             {
               label: 'walker.js',
-              to: '/docs/sources/walkerjs',
+              to: '/docs/sources/walkerjs/',
+            },
+            {
+              label: 'Sources',
+              to: '/docs/sources/',
             },
             {
               label: 'Destinations',
-              to: '/docs/destinations',
-            },
-            {
-              label: 'Guides',
-              to: '/docs/guides',
+              to: '/docs/destinations/',
             },
           ],
         },
@@ -165,7 +166,7 @@ const config: Config = {
     },
     prism: {
       theme: prismThemes.oneLight,
-      darkTheme: prismThemes.oneDark,
+      darkTheme: prismThemes.palenight,
     },
   } satisfies Preset.ThemeConfig,
 

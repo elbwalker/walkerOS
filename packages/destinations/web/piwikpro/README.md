@@ -5,7 +5,7 @@ Made to be used with
 [walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the
-[documentation](https://www.elbwalker.com/docs/destinations/web/piwikpro).
+[documentation](https://www.elbwalker.com/docs/destinations/piwikpro).
 
 ## 🤓 Usage
 
@@ -17,7 +17,7 @@ Destinations can be used via node or directly in the browser.
 Learn more about the
 [destinations](https://www.elbwalker.com/docs/destinations/) in general and read
 the detailled
-[Piwik PRO configuration](https://www.elbwalker.com/docs/destinations/web/piwikpro#configuration).
+[Piwik PRO configuration](https://www.elbwalker.com/docs/destinations/piwikpro#configuration).
 
 ```js
 const config = {

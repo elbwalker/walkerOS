@@ -19,15 +19,15 @@ infrastructure, facilitating:
 - **Event Validation**: Validates and ensures data quality and integrity.
 - **Data Processing**: Processes and enriches events before they are sent to
   destinations.
-- **Consent Management**: Manages and respects user consent, which is crucial for privacy
-  compliance.
+- **Consent Management**: Manages and respects user consent, which is crucial
+  for privacy compliance.
 
 > Learn more in the
 > [Node Source documentation](https://www.elbwalker.com/docs/sources/node/)
 
 A **previous step** is understanding the
-[walkerOS event model](https://www.elbwalker.com/docs/walkeros/event-model/).
+[walkerOS event model](https://www.elbwalker.com/docs/getting_started/event-model/).
 
 The **next step** is integrating these processed events with
-[Node Destinations](https://www.elbwalker.com/docs/destinations/node/) for
-actionable insights.
+[Node Destinations](https://www.elbwalker.com/docs/destinations/) for actionable
+insights.

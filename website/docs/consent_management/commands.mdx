@@ -1,0 +1,102 @@
+---
+title: Commands
+sidebar_position: 3
+description: Commands to use walkerOS consent mode
+---
+
+import Link from '@docusaurus/Link';
+
+## consent
+
+Typically, a Consent Management Platform (CMP) handles the consent. This is an
+asynchronous process. The CMP has to be loaded, a user has to make a choice,
+and/or the state has to be updated.
+
+To set/update the consent state, the CMP should actively push the
+`consent command` with a group or an individual tool's permission state
+(`true/false`). If only one condition applies, consent is granted. Updating only
+one value won't override existing states.
+
+```js
+elb('walker consent', { functional: true, marketing: false });
+```
+
+Consent keys can be defined arbitrarily (typically known as _functional_,
+_analytics_, and _marketing_). However, you can also use individual names for
+each vendor.
+
+The walker handles the **race conditions**: Previously pushed events get
+processed in the correct order after granting the consent state with the
+destinations as well as new ones.
+
+### Destinations
+
+With each event, the consent states get checked. Every event will be added to an
+ordered queue if consent isn't granted yet and the
+[destination's queue](/docs/destinations/configuration#overview-of-all-properties)
+isn't disabled. The queue resets with each `walker run` command. And will be
+(re-)processed with each `walker consent` update. The key must match the key
+used in each `destination.config.consent`.
+
+:::note
+
+The queued events properties `consent`, `globals`, and `user` will be
+**updated** to the current state before being processed.
+
+:::
+
+:::note
+
+A destination only requires one granted consent state to process events.
+
+:::
+
+To revoke consent and stop sharing events with a destination, all matching rules
+have to be set to `false`:
+
+```js
+elb('walker consent', { marketing: false });
+```
+
+## on Consent
+
+To start walker.js only after a consent choice, use the `on consent` command:
+
+```js
+// Wait for functional consent to run
+elb('walker on', 'consent', {
+  functional: () => {
+    elb('walker run');
+  },
+});
+
+// Later, a CMP has to update the consent state
+elb('walker consent', { functional: true });
+```
+
+Another example of how to use the `on consent` command might be to update
+[Googles consent mode v2](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic):
+
+```js
+elb('walker on', 'consent', (instance, consent) => {
+  // Check if marketing consent is granted
+  if (consent.marketing) {
+    gtag('consent', 'update', {
+      ad_user_data: 'granted',
+      ad_personalization: 'granted',
+      ad_storage: 'granted',
+      analytics_storage: 'granted',
+    });
+  }
+});
+```
+
+The consent mode will be updated via `gtag` as soon as marketing consent is
+granted.
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

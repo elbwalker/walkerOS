@@ -11,7 +11,7 @@ Made to be used with
 [walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the
-[documentation](https://www.elbwalker.com/docs/destinations/node/meta).
+[documentation](https://www.elbwalker.com/docs/destinations/meta).
 
 ## 🤓 Usage
 

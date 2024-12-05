@@ -1,61 +1,34 @@
 ---
 title: Utils
+
 description:
-  A collection of helpful functions for easier and privacy-friendly tracking
-  setups
+  Utils are a collection of helpful functions for easier and privacy-friendly
+  tracking setups with walkerOS
 ---
 
 import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PackageLink from '/src/components/docs/package-link';
+import DocCardList from '@theme/DocCardList';
 
 <PackageLink github="packages/utils" npm="@elbwalker/utils" />
 
-Utils are re-usable functions to standardize and simplify tracking setups. They
+Utils are re-usable functions to standardize and simplify tracking setups. Utils
 vary from simple&nbsp;<Link to="/docs/utils/helper">helper</Link> functions to
 more complex ones for&nbsp;<Link to="/docs/utils/session">session
 handling</Link>. They are used in walkerOS itself and can be used in custom
-tracking setups as well. Simple functions are grouped on
-the&nbsp;<Link to="/docs/utils/helper">Helper</Link> page, more complex ones
+tracking setups as well.
+
+Simple functions are grouped on
+the&nbsp;<Link to="/docs/utils/helper">helper</Link> page, more complex ones
 have their own pages.
 
-## Installation
+<DocCardList />
 
-There are multiple ways to install and use the utils.
-
-### NPM
-
-```bash
-$ npm install @elbwalker/utils
-```
-
-### CDN
-
-There are multiple build files available. Bundled with all functions, grouped
-only for the core or web, and separated into individual files. The `es5` files
-can be used in older browsers as well as the GTM.
-
-<Tabs>
-  <TabItem value="script" label="Scripts" default>
-    ```html
-    <script src="https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/web.js"></script>
-    ```
-  </TabItem>
-  <TabItem value="module" label="Module">
-    Load the `.mjs` module-file directly from the CDN or your own server.
-    ```html
-    <script type="module">
-      const Utils = ( await import(
-      'https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/web.mjs' ) );
-      console.log('id', Utils.getId())
-    </script>
-    ```
-  </TabItem>
-</Tabs>
 :::info
 
-Be aware of the `latest` version in the URL, better use a specific version like
-3.0.0
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
 
 :::

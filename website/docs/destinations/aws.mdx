@@ -1,0 +1,87 @@
+---
+title: AWS
+description: Integrate AWS services with walkerOS
+---
+
+import PackageLink from '/src/components/docs/package-link';
+import Link from '@docusaurus/Link';
+
+<PackageLink
+  github="packages/destinations/node/aws"
+  npm="@elbwalker/destination-node-aws"
+/>
+
+The AWS destination package allows you to send events to various AWS services
+using walkerOS. Currently, it supports AWS Firehose with plans to add more
+services like SNS, SQS, CloudWatch, and Lambda.
+
+You can add the destination multiple times, each with one AWS service
+configured, or once with all services combined. This flexibility allows you to
+use different credentials or handle error handling individually.
+
+## Installation
+
+To get started, install the package via npm:
+
+```sh
+npm install @elbwalker/destination-node-aws
+```
+
+## Configuration
+
+Configure the AWS destination with your AWS credentials and settings.
+
+#### Example configuration
+
+```js
+import destinationAWS from '@elbwalker/destination-node-aws';
+
+const config = {
+  firehose: firehoseConfig,
+};
+
+await elb('walker destination', destinationAWS, config);
+```
+
+## Firehose
+
+To configure AWS Firehose, use the following example:
+
+```js
+const firehoseConfig = {
+  streamName: 'your-firehose-stream-name',
+  region: 'eu-central-1', // e.g., 'eu-central-1' for Frankfurt
+  credentials: {
+    accessKeyId: 'your-access-key-id',
+    secretAccessKey: 'your-secret-access-key',
+  },
+};
+
+await elb('walker destination', destinationAWS, { firehose: firehoseConfig });
+```
+
+#### Optional Configuration Fields
+
+- `region`: AWS region where your services are hosted.
+- `credentials`: AWS credentials for authentication, containing `accessKeyId`
+  and `secretAccessKey`.
+
+## Permissions
+
+When using AWS credentials, it's recommended to follow the principle of _least
+privilege_. Never grant more permissions than what is necessary to perform the
+intended functions.
+
+During initial setup, the credentials may require broader permissions to create
+necessary resources. For production environments, it is recommended to assign
+specific permissions directly to the resources required.
+
+For more detailed information, refer to the official
+[AWS IAM documentation](https://aws.amazon.com/iam/).
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::
