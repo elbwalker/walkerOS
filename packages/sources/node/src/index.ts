@@ -17,7 +17,7 @@ export function createSourceNode(customConfig?: SourceNode.InitConfig) {
 export function sourceNode(
   customConfig: SourceNode.PartialConfig = {},
 ): SourceNode.Instance {
-  const version = '3.1.1'; // Source version
+  const version = '3.2.0'; // Source version
   const state = getState(customConfig);
   const instance: SourceNode.Instance = {
     version,

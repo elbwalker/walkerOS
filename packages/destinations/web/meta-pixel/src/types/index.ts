@@ -14,7 +14,6 @@ export type Config = DestinationWeb.Config<Custom, CustomEvent>;
 
 export interface Custom {
   pixelId?: string; // Required pixel id
-  currency?: string; // Default currency is EUR
   loadScript?: boolean; // Whether to load the Meta Pixel script
 }
 

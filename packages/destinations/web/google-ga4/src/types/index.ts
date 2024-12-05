@@ -14,9 +14,9 @@ export interface Destination
 export type Config = DestinationWeb.Config<Custom, CustomEvent>;
 
 export interface Custom {
+  measurementId: string;
   debug?: boolean;
   include?: Include;
-  measurementId: string;
   pageview?: boolean;
   server_container_url?: string;
   snakeCase?: boolean;

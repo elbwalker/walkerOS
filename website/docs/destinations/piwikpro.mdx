@@ -83,19 +83,30 @@ const config = {
   custom: {
     appId: 'XXX-XXX-XXX-XXX-XXX', // Id of the site
     // linkTracking: false, // Disable download and outlink tracking
-    // pageview: false, // Disable default pageview events
     url: 'https://your_account_name.piwik.pro/', // Same address as the login
   },
   mapping: {
-    entity: {
-      action: {
+    order: {
+      complete: {
+        name: 'trackEcommerceOrder',
         custom: {
           // CustomEvent
           goalId: 'xxx-xxx-...', // Count the event as a goal
-          goalValue: '', // Property to be used as goal value
-          name: '', // Renaming the event
-          value: '', // Property to be used for the value
+          goalValue: 'data.total', // Property to be used as goal value
         },
+        data: [
+          'data.id',
+          'data.total',
+          {
+            fn: (event) => {
+              const total = Number(event.data?.total ?? 0);
+              const taxes = Number(event.data?.taxes ?? 0);
+              const shipping = Number(event.data?.shipping ?? 0);
+
+              return total - taxes - shipping;
+            },
+          },
+        ],
       },
     },
   },

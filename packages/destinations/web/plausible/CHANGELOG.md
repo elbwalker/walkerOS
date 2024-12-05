@@ -1,5 +1,16 @@
 # @elbwalker/destination-web-plausible
 
+## 4.0.0
+
+### Major Changes
+
+- 2d15fef: data mapping [#467](https://github.com/elbwalker/walkerOS/issues/467)
+
+### Patch Changes
+
+- Updated dependencies [2d15fef]
+  - @elbwalker/walker.js@3.2.0
+
 ## 3.0.6
 
 ### Patch Changes

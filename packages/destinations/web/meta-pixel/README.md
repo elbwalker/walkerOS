@@ -23,8 +23,6 @@ the detailed
 const config = {
   custom: {
     pixelId: '1234567890',
-    currency: 'EUR',
-    pageview: true,
   },
   mapping: {
     // e.g. order

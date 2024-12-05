@@ -1,5 +1,21 @@
 # @elbwalker/destination-web-piwikpro
 
+## 2.0.0
+
+### Major Changes
+
+- 2d15fef: data mapping [#467](https://github.com/elbwalker/walkerOS/issues/467)
+
+### Patch Changes
+
+- Updated dependencies [2d15fef]
+- Updated dependencies [e2b8243]
+- Updated dependencies [366ef4c]
+- Updated dependencies [0bbd470]
+- Updated dependencies [28adeb8]
+  - @elbwalker/walker.js@3.2.0
+  - @elbwalker/utils@3.6.0
+
 ## 1.3.1
 
 ### Patch Changes

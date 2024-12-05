@@ -135,12 +135,19 @@ rendering, or temporary identifiers.
 
 ### getMappingValue
 
-`getMappingValue(event: WalkerOS.Event, mapping: WalkerOS.MappingValue, instance? WalkerOS.Instance, props?: unknown): WalkerOS.Property | undefined`
+`getMappingValue(event: WalkerOS.Event, mapping: WalkerOS.MappingValue, options?: Mapping.Options): WalkerOS.Property | undefined`
 reads the value from an event based on
 the&nbsp;<Link to="/docs/destinations/event_mapping">mapping
 configuration</Link>. It is used by destinations to
 transform&nbsp;<Link to="/docs/getting_started/event-model">walkerOS
 events</Link> into another required format.
+
+```ts
+interface Options {
+  instance?: WalkerOS.Instance;
+  props?: unknown;
+}
+```
 
 ### getMarketingParameters
 

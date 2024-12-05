@@ -6,7 +6,7 @@ sidebar_position: 5
 import Link from '@docusaurus/Link';
 
 The `Config` stores all individual `Event` configurations for each entity-action
-event. The&nbsp;<Link to="#geteventmapping">`getEventMapping`</Link> function
+event. The&nbsp;<Link to="#getmappingevent">`getMappingEvent`</Link> function
 returns the matching `Event` config while
 the&nbsp;<Link to="#getmappingvalue">`getMappingValue`</Link> is used to resolve
 the `Value` settings for a specific property to return an actual value. The
@@ -39,9 +39,9 @@ const mapping: Config = {
 };
 ```
 
-### getEventMapping
+### getMappingEvent
 
-`getEventMapping(event: string, mapping?: Mapping.Config<unknown>): EventMapping`
+`getMappingEvent(event: string, mapping?: Mapping.Config<unknown>): EventMapping`
 returns the matching `eventMapping` configuration and the used `mappingKey` for
 the given entity-action event name. If no mapping is found, it will return an
 empty object. An explicit key is favored over an asterisk `*` key.
@@ -68,16 +68,16 @@ const mapping: Config = {
   },
 };
 
-getEventMapping('entity action', mapping);
+getMappingEvent('entity action', mapping);
 // { eventMapping: { name: 'entity_action' }, mappingKey: 'entity action' }
 
-getEventMapping('entity something', mapping);
+getMappingEvent('entity something', mapping);
 // { eventMapping: { name: 'other' }, mappingKey: 'entity *' }
 ```
 
 ### getMappingValue
 
-`getMappingValue(event: WalkerOS.Event, mapping: Mapping.Value, instance?: WalkerOS.Instance): WalkerOS.Property | undefined`
+`getMappingValue(event: WalkerOS.Event, mapping: Mapping.Value, options?: Mapping.Options): WalkerOS.Property | undefined`
 primarily used by destinations to access values from the original event. This
 offers flexibility to configure
 individual&nbsp;<Link to="/docs/sources/walkerjs/tagging">tagging setups</Link>
