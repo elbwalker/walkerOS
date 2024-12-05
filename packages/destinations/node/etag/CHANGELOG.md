@@ -1,5 +1,13 @@
 # @elbwalker/destination-node-etag
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [2d15fef]
+  - @elbwalker/source-node@3.2.0
+  - @elbwalker/destination-core-etag@0.0.7
+
 ## 0.1.1
 
 ### Patch Changes

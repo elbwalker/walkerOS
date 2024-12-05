@@ -1,5 +1,12 @@
 # @elbwalker/destination-web-google-ga4
 
+## 3.1.2
+
+### Patch Changes
+
+- Updated dependencies [2d15fef]
+  - @elbwalker/walker.js@3.2.0
+
 ## 3.1.1
 
 ### Patch Changes

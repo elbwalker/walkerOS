@@ -1,5 +1,25 @@
 # @elbwalker/utils
 
+## 3.6.0
+
+### Minor Changes
+
+- 2d15fef: data mapping [#467](https://github.com/elbwalker/walkerOS/issues/467)
+- e2b8243: loop and map mapping
+  [#463](https://github.com/elbwalker/walkerOS/issues/463)
+- 366ef4c: getMappingEvent upgrade
+  [#461](https://github.com/elbwalker/walkerOS/issues/461)
+
+### Patch Changes
+
+- 0bbd470: getMappingEvent asterisk fallback
+  [#460](https://github.com/elbwalker/walkerOS/issues/460)
+- 28adeb8: clone with circular structures
+  [#456](https://github.com/elbwalker/walkerOS/issues/456)
+- Updated dependencies [2d15fef]
+- Updated dependencies [e2b8243]
+  - @elbwalker/types@3.2.0
+
 ## 3.5.1
 
 ### Patch Changes

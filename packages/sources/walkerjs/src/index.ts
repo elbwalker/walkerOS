@@ -19,7 +19,7 @@ const elb = createElb();
 export function Walkerjs(
   customConfig: SourceWalkerjs.InitConfig = {},
 ): SourceWalkerjs.Instance {
-  const version = '3.1.1'; // Source version
+  const version = '3.2.0'; // Source version
   const state = getState(customConfig);
   const instance: SourceWalkerjs.Instance = {
     version,

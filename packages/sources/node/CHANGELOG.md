@@ -1,5 +1,20 @@
 # @elbwalker/source-node
 
+## 3.2.0
+
+### Minor Changes
+
+- 2d15fef: data mapping [#467](https://github.com/elbwalker/walkerOS/issues/467)
+
+### Patch Changes
+
+- Updated dependencies [2d15fef]
+- Updated dependencies [e2b8243]
+- Updated dependencies [366ef4c]
+- Updated dependencies [0bbd470]
+- Updated dependencies [28adeb8]
+  - @elbwalker/utils@3.6.0
+
 ## 3.1.1
 
 ### Patch Changes

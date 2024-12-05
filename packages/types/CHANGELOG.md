@@ -1,5 +1,13 @@
 # @elbwalker/types
 
+## 3.2.0
+
+### Minor Changes
+
+- 2d15fef: data mapping [#467](https://github.com/elbwalker/walkerOS/issues/467)
+- e2b8243: loop and map mapping
+  [#463](https://github.com/elbwalker/walkerOS/issues/463)
+
 ## 3.1.0
 
 ### Minor Changes
