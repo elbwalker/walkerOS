@@ -83,14 +83,14 @@ const config = {
     measurementId: 'G-XXXXXXXXXX', // Required
     debug: false,
     include: ['globals'],
-    items: {},
     pageview: false,
-    params: {
-      currency: {
-        value: 'EUR',
-        key: 'data.currency',
+    data: {
+      map: {
+        currency: {
+          value: 'EUR',
+          key: 'data.currency',
+        },
       },
-      user_id: 'user.id',
     },
     server_container_url: 'https://server.example.com',
     snakeCase: true,
@@ -101,36 +101,52 @@ const config = {
     page: { view: { ignore: true } }, // Ignore page view events
     product: {
       add: {
-        name: 'add_to_cart', // Rename the product add event to add_to_cart
-        custom: {
-          // Set parameters for items array
-          include: ['all'], // Add all properties to parameters
-          items: {
-            params: {
-              item_id: 'data.id',
-              item_category: 'context.category.0', // Value is an array
-              quantity: { value: 1, key: 'data.quantity' },
+        name: 'add_to_cart',
+        data: {
+          map: {
+            currency: { value: 'EUR', key: 'data.currency' },
+            override: 'data.old',
+            value: 'data.price',
+            items: {
+              loop: [
+                'this',
+                {
+                  map: {
+                    item_id: 'data.id',
+                    item_variant: 'data.color',
+                    quantity: { value: 1, key: 'data.quantity' },
+                  },
+                },
+              ],
             },
           },
-          // Set event parameters
-          params: { value: 'data.price' },
         },
       },
-      // Add view and other product-related actions
     },
     order: {
       complete: {
         name: 'purchase',
-        custom: {
-          include: [], // Don't include any properties
-          items: {
-            params: {
-              // Nested entities are looped and can be used with a wildcard
-              // This will add multiple items to the event
-              item_id: 'nested.*.data.id',
+        data: {
+          map: {
+            transaction_id: 'data.id',
+            value: 'data.total',
+            tax: 'data.taxes',
+            shipping: 'data.shipping',
+            currency: { key: 'data.currency', value: 'EUR' },
+            items: {
+              loop: [
+                'nested',
+                {
+                  condition: (entity) => entity.type === 'product',
+                  map: {
+                    item_id: 'data.id',
+                    item_name: 'data.name',
+                    quantity: { key: 'data.quantity', value: 1 },
+                  },
+                },
+              ],
             },
           },
-          params: { transaction_id: 'data.id', value: 'data.revenue' },
         },
       },
     },
@@ -145,9 +161,7 @@ const config = {
 | measurementId\*      | string  | GA4 Measurement ID                                                                                         |
 | debug                | boolean | Enables debug mode for additional logging                                                                  |
 | include              | array   | Defines groups of properties to be included in all events, `data` by default. Use an empty array for none. |
-| items                | object  | Sets parameters for item-level data in events                                                              |
 | pageview             | boolean | Enables or disables automatic pageview tracking                                                            |
-| params               | object  | Custom parameters for event-level data                                                                     |
 | server_container_url | string  | URL for a server-side tag manager                                                                          |
 | snakeCase            | boolean | Converts parameter names to snake_case for GA4 compatibility                                               |
 | transport_url        | string  | URL used for sending events to GA4                                                                         |
@@ -156,17 +170,14 @@ Properties with a `*` are required.
 
 ### CustomEvent
 
-| Property     | Type   | Description                                                                                  |
-| ------------ | ------ | -------------------------------------------------------------------------------------------- |
-| params       | object | Custom parameters for the event. Includes data properties like `value`, `item_id`, etc.      |
-| include      | array  | Specifies which groups of properties to include, e.g., ['all'], ['data'], ['context'], etc.  |
-| items        | object | Defines parameters for item-level data in events, like 'quantity', 'item_id'                 |
-| items.params | object | Parameters for items array, specifying data property keys, and defaults for quantities, etc. |
+| Property | Type  | Description                                                                                 |
+| -------- | ----- | ------------------------------------------------------------------------------------------- |
+| include  | array | Specifies which groups of properties to include, e.g., ['all'], ['data'], ['context'], etc. |
 
 :::note
 
-`params`, `items`, and `include` are available at both, the config and event
-level. Settings on the event level will override the general ones.
+`include` is available at both, the config and event level. Settings on the
+event level will override the general ones.
 
 :::
 
@@ -175,19 +186,6 @@ Use the&nbsp;<Link to="/docs/utils/helper#bypath">string-dot notation</Link>
 event. They can either be a string or an object. A string is used as a key to
 access an event value directly. An object can be used to set a `default` value.
 A `key` to access the event value.
-
-```js
-{
-  params: {
-    name: 'data.name', // Key to value
-    quantity: { value: 1, key: 'data.quantity' }, // default value and key to value
-  },
-};
-```
-
-Nested entities will be looped if available. Use `items` and the wildcard (\*)
-to access and add them dynamically (for `order complete` events with multiple
-nested `product` entities for example).
 
 Use the `include` option to bulk-add event properties without explicitly mapping
 custom event parameters. This adds all available properties of the specified
@@ -199,7 +197,7 @@ default. If you don't want this add `include: []`.
 :::note
 
 `consent` and `nested` are not available via `include`, but you can add them
-explicitly using `params` or `items`.
+explicitly using `data`.
 
 :::
 
