@@ -19,16 +19,17 @@ new tools.
 ## How it works
 
 Destinations are added to a source
-(see&nbsp;<Link to="/docs/sources/walkerjs/commands#destinations">walker.js</Link>
-or&nbsp;<Link to="/docs/sources/node/commands#destinations">node</Link>). Before
+(see&nbsp;<Link to="/docs/sources/walkerjs/commands#destination">walker.js</Link>
+or&nbsp;<Link to="/docs/sources/node/commands#destination">node</Link>). Before
 receiving events from the source, the proper consent states are checked each
-time automatically. Destinations receive events through the [`push`](#push)
-interface. Each destination can have its own configuration, which is set up in
-the [`config`](#configuration) object. This configuration includes general
-settings for the destination and individual event settings. The optional
-[`init`](#init) function in a destination gets called before actually pushing
-events. This function must return `true` upon successful initialization for the
-events to be processed.
+time automatically. Destinations receive events through the
+[`push`](/docs/destinations/configuration#push) interface. Each destination can
+have its own configuration, which is set up in the
+[`config`](/docs/destinations/configuration#example) object. This configuration
+includes general settings for the destination and individual event settings. The
+optional [`init`](/docs/destinations/configuration#init) function in a
+destination gets called before actually pushing events. This function must
+return `true` upon successful initialization for the events to be processed.
 
 ```mermaid
 ---

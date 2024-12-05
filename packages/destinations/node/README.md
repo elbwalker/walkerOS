@@ -25,4 +25,4 @@ Node destinations streamline your data workflow, enabling efficient and secure
 data movement from your server to desired tools.
 
 > Discover more about Node Destinations in the
-> [Node Destinations documentation](https://www.elbwalker.com/docs/destinations/node/)
+> [Node Destinations documentation](https://www.elbwalker.com/docs/destinations/)

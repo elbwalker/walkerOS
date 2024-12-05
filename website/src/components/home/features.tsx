@@ -50,7 +50,7 @@ export default function Features(): JSX.Element {
             Capture events easily and privacy-compliant from your application or
             site with WalkerOS web or node.js sources.
           </Feature>
-          <Feature title="Process" link="/docs/walkeros/event-model" icon={iconProcess}>
+          <Feature title="Process" link="/docs/getting_started/event-model" icon={iconProcess}>
             Ingest your data to your own endpoint to ensure ownership and comply
             with legislation.
           </Feature>

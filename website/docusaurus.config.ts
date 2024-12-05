@@ -104,19 +104,19 @@ const config: Config = {
           items: [
             {
               label: 'Documentation',
-              to: '/docs',
+              to: '/docs/',
             },
             {
               label: 'walker.js',
-              to: '/docs/sources/walkerjs',
+              to: '/docs/sources/walkerjs/',
+            },
+            {
+              label: 'Sources',
+              to: '/docs/sources/',
             },
             {
               label: 'Destinations',
-              to: '/docs/destinations',
-            },
-            {
-              label: 'Guides',
-              to: '/docs/guides',
+              to: '/docs/destinations/',
             },
           ],
         },

@@ -29,10 +29,10 @@ ensuring:
 > [walker.js documentation](https://www.elbwalker.com/docs/sources/walkerjs/)
 
 A **previous step** is understanding the
-[walkerOS event model](https://www.elbwalker.com/docs/walkeros/event-model/) and
+[walkerOS event model](https://www.elbwalker.com/docs/getting_started/event-model/) and
 the [tagging](https://www.elbwalker.com/docs/sources/walkerjs/tagging/) of a
 webpage.
 
 The **next step** in the data journey is to forward these events to
-[Web Destinations](https://www.elbwalker.com/docs/destinations/web/) for further
+[Web Destinations](https://www.elbwalker.com/docs/destinations/) for further
 processing and analysis.

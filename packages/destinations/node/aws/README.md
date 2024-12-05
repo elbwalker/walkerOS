@@ -111,4 +111,4 @@ for details.
 ## More Information
 
 For more detailed information and examples, please refer to the
-[documentation](https://www.elbwalker.com/docs/destinations/node/aws).
+[documentation](https://www.elbwalker.com/docs/destinations/aws).

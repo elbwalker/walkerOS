@@ -24,14 +24,14 @@ functioning in tandem with walkerOS sources.
   processing.
 
   > Explore
-  > [Node Destinations](https://www.elbwalker.com/docs/destinations/node/)
+  > [Node Destinations](https://www.elbwalker.com/docs/destinations/)
 
 - **Web Destinations**: Tailored for client-side implementations, these
   destinations excel in real-time tracking and user interaction analytics within
   web applications.
 
   > Discover
-  > [Web Destinations](https://www.elbwalker.com/docs/destinations/web/)
+  > [Web Destinations](https://www.elbwalker.com/docs/destinations/)
 
 walkerOS Destinations ensures that your data journey, from collection to
 activation is seamless, reliable, and efficient.

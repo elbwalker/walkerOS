@@ -8,10 +8,9 @@ import Link from '@docusaurus/Link';
 
 ## consent
 
-Typically, a
-[Consent Management Platform (CMP)](#consent-management-platforms-cmps) handles
-the consent. This is an asynchronous process. The CMP has to be loaded, a user
-has to make a choice, and/or the state has to be updated.
+Typically, a Consent Management Platform (CMP) handles the consent. This is an
+asynchronous process. The CMP has to be loaded, a user has to make a choice,
+and/or the state has to be updated.
 
 To set/update the consent state, the CMP should actively push the
 `consent command` with a group or an individual tool's permission state
@@ -34,10 +33,10 @@ destinations as well as new ones.
 
 With each event, the consent states get checked. Every event will be added to an
 ordered queue if consent isn't granted yet and the
-[destination's queue](/docs/destinations/#configuration) isn't disabled. The
-queue resets with each `walker run` command. And will be (re-)processed with
-each `walker consent` update. The key must match the key used in each
-`destination.config.consent`.
+[destination's queue](/docs/destinations/configuration#overview-of-all-properties)
+isn't disabled. The queue resets with each `walker run` command. And will be
+(re-)processed with each `walker consent` update. The key must match the key
+used in each `destination.config.consent`.
 
 :::note
 

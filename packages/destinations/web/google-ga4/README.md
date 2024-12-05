@@ -5,7 +5,7 @@ Made to be used with
 [walkerOS](https://github.com/elbwalker/walkerOS).
 
 More detailed information and examples can be found in the
-[documentation](https://www.elbwalker.com/docs/destinations/web/google-ga4).
+[documentation](https://www.elbwalker.com/docs/destinations/google-ga4).
 
 ## 🤓 Usage
 
@@ -16,7 +16,7 @@ Destinations can be used via node or directly in the browser.
 
 Learn more about [destinations](https://www.elbwalker.com/docs/destinations/) in
 general and read the detailled
-[Google GA4 configuration](https://www.elbwalker.com/docs/destinations/web/ga4#configuration).
+[Google GA4 configuration](https://www.elbwalker.com/docs/destinations/ga4#configuration).
 
 ```js
 const config = {

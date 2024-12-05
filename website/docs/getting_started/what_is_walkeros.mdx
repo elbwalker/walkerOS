@@ -34,9 +34,9 @@ management</Link> creating reliable first-party data with full data ownership.
 ## How walkerOS operates
 
 walkerOS is a streamlined framework with one
-standardized&nbsp;<Link to="/docs/walkeros/event-model">Event model</Link>.
-Components are designed to always be extensible for a steadily growing data
-journey.
+standardized&nbsp;<Link to="/docs/getting_started/event-model">Event
+model</Link>. Components are designed to always be extensible for a steadily
+growing data journey.
 
 ### Basic infrastructure
 
@@ -116,36 +116,34 @@ flowchart LR
   click Utils "/docs/utils/"
   click walker.js "/docs/sources/walkerjs/"
   click SourceNode "/docs/sources/node/"
-  click DestinationsC "/docs/destinations/web/"
-  click DestinationsS "/docs/destinations/node/"
+  click DestinationsC "/docs/destinations/"
+  click DestinationsS "/docs/destinations/"
 ```
 
 #### Example event journey
 
 - **a**: The&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> integrates
   with the
-  website,&nbsp;<Link to="/docs/sources/walkerjs/commands#initialization">initializes</Link>
+  website,&nbsp;<Link to="/docs/sources/walkerjs/commands#init">initializes</Link>
   event listeners and interprets
   the&nbsp;<Link to="/docs/sources/walkerjs/tagging">tagging</Link> on the page.
 - **b**: The&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> ensures a
-  user&nbsp;<Link to="/docs/sources/walkerjs/commands#consent-management">granted
+  user&nbsp;<Link to="/docs/sources/walkerjs/commands#consent">granted
   consent</Link>,
-  eventually&nbsp;<Link to="/docs/destinations/#init">initializes</Link> and
-  &nbsp;<Link to="/docs/destinations/mapping">maps</Link>
-  events&nbsp;<Link to="/docs/destinations/#configuration">appropriately</Link>
-  before&nbsp;<Link to="/docs/destinations/#push">pushing</Link> them
-  to&nbsp;<Link to="/docs/destinations/web/">destinations</Link>.
-- **c**: Events
-  are&nbsp;<Link to="/docs/destinations/web/#create-your-own">formatted
+  eventually&nbsp;<Link to="/docs/destinations/configuration#init">initializes</Link> and
+  &nbsp;<Link to="/docs/destinations/event_mapping">maps</Link>
+  events&nbsp;<Link to="/docs/destinations/configuration">appropriately</Link>
+  before&nbsp;<Link to="/docs/destinations/configuration#push">pushing</Link> them
+  to&nbsp;<Link to="/docs/destinations/">destinations</Link>.
+- **c**: Events are&nbsp;<Link to="/docs/destinations/configuration">formatted
   correctly</Link> and get sent directly to the respective tools from the
   source.
 - **d**: Events can be sent to a (public) endpoint from various sources, running
   a&nbsp;<Link to="/docs/sources/node/">Source Node</Link>
 - **f**: Similar to client-side operations, consent gets verified, a
-  &nbsp;<Link to="/docs/destinations/node/">destination</Link>
-  eventually&nbsp;<Link to="/docs/destinations/node/#init">initialized</Link>,
-  and
-  event&nbsp;<Link to="/docs/destinations/node/#custom-configuration">preparation</Link>
+  &nbsp;<Link to="/docs/destinations/">destination</Link>
+  eventually&nbsp;<Link to="/docs/destinations/configuration#init">initialized</Link>,
+  and event&nbsp;<Link to="/docs/destinations/configuration">preparation</Link>
   are processed server-side.
 - **g**: Events are formatted correctly and sent to tools from the server.
 
