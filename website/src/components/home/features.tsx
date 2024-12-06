@@ -48,13 +48,17 @@ export default function Features(): JSX.Element {
     <section className="my-20">
       <div className="container">
         <div className="row">
-          <Feature title="Collect" link="/docs/clients/" icon={iconCollect}>
-            Capture events easily and privacy-compliant from your application or
-            site with WalkerOS web or node.js clients.
+          <Feature title="Collect" link="/docs/sources/" icon={iconCollect}>
+            Capture events easily and privacy-compliant from your app or site
+            with web and node sources.
           </Feature>
-          <Feature title="Process" link="/docs/stacks/" icon={iconProcess}>
-            Ingest your data to your own endpoint to ensure ownership and comply
-            with legislation.
+          <Feature
+            title="Handle consent"
+            link="/docs/consent_management/overview"
+            icon={iconProcess}
+          >
+            Implement and manage consent to ensure user privacy and comply with
+            legislation.
           </Feature>
           <Feature
             title="Activate"
