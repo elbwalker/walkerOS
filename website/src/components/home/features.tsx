@@ -20,7 +20,9 @@ function Feature({ title, link, icon, children }: FeatureItem) {
       <div className="text--center">{icon}</div>
       <div className="text--center padding-horiz--md mt-2">
         <Heading as="h3">
-          <Link to={link} className="text-black dark:text-white">{title}</Link>
+          <Link to={link} className="text-black dark:text-white">
+            {title}
+          </Link>
         </Heading>
         <p>{children}</p>
       </div>
@@ -47,12 +49,16 @@ export default function Features(): JSX.Element {
       <div className="container">
         <div className="row">
           <Feature title="Collect" link="/docs/sources/" icon={iconCollect}>
-            Capture events easily and privacy-compliant from your application or
-            site with WalkerOS web or node.js sources.
+            Capture events easily and privacy-compliant from your app or site
+            with web and node sources.
           </Feature>
-          <Feature title="Process" link="/docs/getting_started/event-model" icon={iconProcess}>
-            Ingest your data to your own endpoint to ensure ownership and comply
-            with legislation.
+          <Feature
+            title="Handle consent"
+            link="/docs/consent_management/overview"
+            icon={iconProcess}
+          >
+            Implement and manage consent to ensure user privacy and comply with
+            legislation.
           </Feature>
           <Feature
             title="Activate"
