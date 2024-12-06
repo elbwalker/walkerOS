@@ -4,7 +4,7 @@
   </a>
 </p>
 
-# walkerOS: Open-source data collection and tag management
+# Open-source event data collection and tag management
 
 [Request Feature](https://github.com/elbwalker/walkerOS/issues/new) ·
 [Report Bug](https://github.com/elbwalker/walkerOS/issues/new) ·
@@ -17,42 +17,18 @@
 
 </div>
 
-## Why walkerOS?
+# What is walkerOS
 
-walkerOS offers a unified, flexible, and privacy-centric event data collection
-platform. It integrates seamlessly with any analytics or storage tool, providing
-a reliable source of truth for data teams.
+walkerOS is a privacy-centric event data collection platform. It offers features
+like data
+capturing, [consent management](https://www.elbwalker.com/docs/consent_management/overview/), data
+integration, and [tag management](https://www.elbwalker.com/docs/destinations/event_mapping). Fully configurable as code. 
 
-It is a modular data collection infrastructure, ideal for capturing first-party
-events reliably and with privacy in mind. Its vendor-agnostic design ensures
-seamless integration, giving you complete control over your data.
+The project started as a web
+library called&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> and has
+evolved into a complete first-party tracking system.
 
-### Benefits
-
-- **Modular Design**: Customize your data collection strategy like building with
-  Lego bricks.
-- **Data Quality and Privacy**: Prioritize data integrity and user privacy with
-  built-in consent management.
-- **Flexibility**: Tailored for both server-side and client-side tagging &
-  tracking, adaptable to your evolving needs.
-
-### Target Audience
-
-walkerOS is designed for teams, agencies, and freelancers, who prefer tag
-management as code and implement tags fast while keeping full control over the
-whole data collection.
-
-### Pre-requisites
-
-Familiarize yourself with the
-[walkerOS event model](https://www.elbwalker.com/docs/getting_started/event-model) and,
-learn
-[how walkerOS operates](https://www.elbwalker.com/docs/#how-walkeros-operates)
-explore a complete
-[demo infrastructure](https://www.elbwalker.com/docs/#complete-infrastructure)
-to understand its capabilities fully.
-
-## Package Overview
+## Packages Overview
 
 - **Sources** ([docs](https://www.elbwalker.com/docs/sources/),
   [code](./packages/sources/)): For data creation and state management.
@@ -61,10 +37,46 @@ to understand its capabilities fully.
   third-party tools.
 - **Utils** ([docs](https://www.elbwalker.com/docs/utils/),
   [code](./packages/utils/)): Enhance data collection with shared utilities.
-- **Docs** ([docs](https://www.elbwalker.com/docs/), [code](./website/docs/)):
-  Deep dive into the official documentation.
-- **Demos** ([docs](https://www.elbwalker.com/docs/), [code](./apps/demos/)):
-  See walkerOS in action.
+
+## Why walkerOS?
+
+- **Sustainability**: Robust infrastructure for continuous data collection,
+  even amidst evolving data landscapes.
+- **Privacy focus**: Strict privacy-by-design
+  approach, in-build consent
+  management</Link> and various data protection features.
+- **Complete data ownership**: Full control of your first-party data,
+  no vendor lock-in, and control of data processing.
+- **Simplified data model**: Intuitive event model that streamlines data
+  collection, making analytics straightforward and efficient.
+- **Flexible architecture**: Modular design adapting to your specific data needs and allows growing step-by-step.
+
+## How walkerOS operates
+
+```mermaid
+---
+title: Basic infrastructure
+---
+flowchart LR
+  subgraph walkerOS
+    direction LR
+    subgraph Collection
+        Sources
+    end
+    subgraph Activation
+        Destinations
+    end
+    %%Utils
+  end
+  subgraph Tools
+    direction LR
+    storage["Storage"]
+    marketing["Marketing"]
+    analytics["Analytics"]
+  end
+  Sources --> Destinations
+  Destinations --> Tools
+```
 
 ## Installation
 
