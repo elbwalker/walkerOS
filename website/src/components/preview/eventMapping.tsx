@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { Mapping, WalkerOS } from '@elbwalker/types';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { createEvent, debounce, isObject } from '@elbwalker/utils';
 import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
@@ -8,14 +8,15 @@ import CodeBox from './codeBox';
 // separate config and mapping
 // one init part at the beginning and use it as config and configure the mapping here
 
-interface MappingProps {
+interface EventMappingProps {
   event: WalkerOS.AnyObject;
   custom?: WalkerOS.AnyObject;
+  mapping?: Mapping.Config;
   fnName?: string;
   height?: number;
 }
 
-const Mapping: React.FC<MappingProps> = ({
+const EventMapping: React.FC<EventMappingProps> = ({
   event: initEvent = {},
   custom: initCustom = {},
   height = 400,
@@ -84,4 +85,4 @@ const Mapping: React.FC<MappingProps> = ({
   );
 };
 
-export default Mapping;
+export default EventMapping;
