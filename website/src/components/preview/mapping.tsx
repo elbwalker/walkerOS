@@ -1,9 +1,67 @@
 import type { WalkerOS } from '@elbwalker/types';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { debounce, isObject } from '@elbwalker/utils';
-import { LiveProvider, LiveEditor, LiveError } from 'react-live';
 import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
 import { Highlight, themes as prismThemes } from 'prism-react-renderer';
+import Editor from 'react-simple-code-editor';
+
+interface CodeBoxProps {
+  label: string;
+  value: string;
+  onChange?: (code: string) => void;
+  disabled?: boolean;
+  language?: string;
+}
+
+const CodeBox: React.FC<CodeBoxProps> = ({
+  label,
+  value,
+  onChange,
+  disabled = false,
+  language = 'javascript',
+}) => {
+  const highlightCode = (code: string) => (
+    <Highlight theme={prismThemes.palenight} code={code} language={language}>
+      {({ tokens, getLineProps, getTokenProps }) => (
+        <>
+          {tokens.map((line, i) => (
+            <div {...getLineProps({ line, key: i })} key={i}>
+              {line.map((token, key) => (
+                <span {...getTokenProps({ token, key })} key={key} />
+              ))}
+            </div>
+          ))}
+        </>
+      )}
+    </Highlight>
+  );
+
+  return (
+    <div className="w-1/3 border border-base-300 overflow-hidden flex flex-col">
+      <div className="border-b border-base-300 px-2 py-1 text-center">
+        {label}
+      </div>
+      <div className="flex-1 overflow-auto">
+        <Editor
+          value={value}
+          disabled={disabled}
+          onValueChange={onChange}
+          highlight={highlightCode}
+          padding={10}
+          style={{
+            fontFamily: '"Fira Code", monospace',
+            fontSize: 14,
+            backgroundColor: '#282c34',
+            color: '#abb2bf',
+            minHeight: '100%',
+            outline: 'none',
+          }}
+          className="code-editor"
+        />
+      </div>
+    </div>
+  );
+};
 
 interface MappingProps {
   event?: WalkerOS.AnyObject;
@@ -18,13 +76,13 @@ const Mapping: React.FC<MappingProps> = ({
 }) => {
   const [event, setEvent] = useState(JSON.stringify(initEvent, null, 2));
   const [custom, setCustom] = useState(JSON.stringify(initCustom, null, 2));
-  const [logs, setLogs] = useState<unknown[]>([]);
+  const [logs, setLogs] = useState<string[]>([]);
 
   const gtagFn = useCallback((...args: unknown[]) => {
     const params = args.map((arg) => {
-      return isObject(arg) ? JSON.stringify(arg, null, 2) : `'${arg}'`;
+      return isObject(arg) ? JSON.stringify(arg, null, 2) : `"${arg}"`;
     });
-    setLogs([`gtag(${params});`]);
+    setLogs([`gtag(${params.join(', ')})`]);
   }, []);
 
   const consoleLogRef = useRef(
@@ -39,7 +97,8 @@ const Mapping: React.FC<MappingProps> = ({
           fn: gtagFn,
         });
       } catch (e) {
-        setLogs([`Preview error: ${String(e)}`]);
+        const errorMsg = `Preview error: ${String(e)}`;
+        setLogs([errorMsg]);
       }
     }, 500),
   ).current;
@@ -52,95 +111,27 @@ const Mapping: React.FC<MappingProps> = ({
     height: `${height}px`,
   };
 
-  const transformCode = (inputCode: string) => inputCode;
-
   return (
     <div className="my-4">
       <div className="flex gap-4" style={boxHeightStyle}>
-        {/* Event Editor */}
-        <LiveProvider code={event} transformCode={transformCode}>
-          <div className="w-1/3 border border-base-300 overflow-hidden flex flex-col">
-            <div className="border-b border-base-300 px-2 py-1 text-center">
-              Event
-            </div>
-            <LiveEditor onChange={(newCode) => setEvent(newCode)} />
-            <LiveError className="text-red-500 px-2" />
-          </div>
-        </LiveProvider>
+        <CodeBox label="Event" value={event} onChange={setEvent} />
 
-        {/* Custom Config Editor */}
-        <LiveProvider code={custom} transformCode={transformCode}>
-          <div className="w-1/3 border border-base-300 overflow-hidden flex flex-col">
-            <div className="border-b border-base-300 px-2 py-1 text-center">
-              Custom config
-            </div>
-            <LiveEditor
-              onChange={(newCode) => setCustom(newCode)}
-              style={{ flex: 1, overflow: 'auto', fontFamily: 'monospace' }}
-            />
-            <LiveError className="text-red-500 px-2" />
-          </div>
-        </LiveProvider>
+        <CodeBox label="Custom config" value={custom} onChange={setCustom} />
 
-        {/* Console Output */}
-        <div className="w-1/3 border border-base-300 overflow-hidden flex flex-col">
-          <div className="border-b border-base-300 px-2 py-1 text-center">
-            Result
-          </div>
-          <div className="flex-1 px-2 py-1 overflow-auto">
-            {logs.length === 0 ? (
-              <div className="border-base-300 flex justify-center border-t px-4 py-10">
-                No event yet.
-              </div>
-            ) : (
-              logs.map((log, index) => (
-                <Highlight
-                  // {...defaultProps}
-                  key={index}
-                  theme={prismThemes.palenight}
-                  code={String(log)}
-                  language="javascript"
-                >
-                  {({
-                    className,
-                    style,
-                    tokens,
-                    getLineProps,
-                    getTokenProps,
-                  }) => (
-                    <pre className={className} style={{ ...style, margin: 0 }}>
-                      {tokens.map((line, i) => (
-                        <div {...getLineProps({ line, key: i })} key={i}>
-                          {line.map((token, key) => (
-                            <span
-                              {...getTokenProps({ token, key })}
-                              key={key}
-                            />
-                          ))}
-                        </div>
-                      ))}
-                    </pre>
-                  )}
-                </Highlight>
-              ))
-            )}
-          </div>
-        </div>
+        <CodeBox
+          label="Result"
+          disabled={false}
+          value={logs[0] || 'No event yet.'}
+        />
       </div>
 
-      {/* Optional: Additional Styling */}
       <style>
         {`
-          .live-editor {
-            height: 100%;
-          }
-          .live-error {
-            height: 50px;
-            overflow: auto;
+          .code-editor {
+            outline: none;
           }
           pre {
-            font-family: 'Fira Code', monospace;
-            font-size: 14px;
+            margin: 0;
           }
         `}
       </style>
