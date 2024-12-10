@@ -9,8 +9,9 @@ import CodeBox from './codeBox';
 // one init part at the beginning and use it as config and configure the mapping here
 
 interface MappingProps {
-  event?: WalkerOS.AnyObject;
+  event: WalkerOS.AnyObject;
   custom?: WalkerOS.AnyObject;
+  fnName?: string;
   height?: number;
 }
 
@@ -18,18 +19,21 @@ const Mapping: React.FC<MappingProps> = ({
   event: initEvent = {},
   custom: initCustom = {},
   height = 400,
+  fnName = 'push',
 }) => {
   const [event, setEvent] = useState(JSON.stringify(initEvent, null, 2));
   const [custom, setCustom] = useState(JSON.stringify(initCustom, null, 2));
   const [logs, setLogs] = useState<string[]>([]);
 
-  // @TODO make gtag function configurable
-  const gtagFn = useCallback((...args: unknown[]) => {
-    const params = args.map((arg) => {
-      return isObject(arg) ? JSON.stringify(arg, null, 2) : `"${arg}"`;
-    });
-    setLogs([`gtag(${params.join(', ')})`]);
-  }, []);
+  const fn = useCallback(
+    (...args: unknown[]) => {
+      const params = args.map((arg) => {
+        return isObject(arg) ? JSON.stringify(arg, null, 2) : `"${arg}"`;
+      });
+      setLogs([`${fnName}(${params.join(', ')})`]);
+    },
+    [fnName],
+  );
 
   const parseJavaScriptObject = (code: string): unknown => {
     return Function('"use strict"; return (' + code + ')')();
@@ -46,7 +50,7 @@ const Mapping: React.FC<MappingProps> = ({
         destinationGoogleGA4.push(parsedEvent, {
           custom: parsedCustom,
           init: true,
-          fn: gtagFn,
+          fn,
         });
       } catch (e) {
         const errorMsg = `Preview error: ${String(e)}`;
