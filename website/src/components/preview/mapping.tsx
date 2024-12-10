@@ -1,9 +1,9 @@
 import type { WalkerOS } from '@elbwalker/types';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { debounce, isObject } from '@elbwalker/utils';
-import { ObjectInspector, chromeDark } from 'react-inspector';
 import { LiveProvider, LiveEditor, LiveError } from 'react-live';
 import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
+import { Highlight, themes as prismThemes } from 'prism-react-renderer';
 
 interface MappingProps {
   event?: WalkerOS.AnyObject;
@@ -24,11 +24,12 @@ const Mapping: React.FC<MappingProps> = ({
     const params = args.map((arg) => {
       return isObject(arg) ? JSON.stringify(arg, null, 2) : `'${arg}'`;
     });
-    setLogs([`gtag(${params.join(', ')})`]);
+    setLogs([`gtag(${params});`]);
   }, []);
 
   const consoleLogRef = useRef(
     debounce((eventStr: string, customStr: string) => {
+      setLogs([]);
       try {
         const parsedEvent = JSON.parse(eventStr);
         const parsedCustom = JSON.parse(customStr);
@@ -38,22 +39,14 @@ const Mapping: React.FC<MappingProps> = ({
           fn: gtagFn,
         });
       } catch (e) {
-        setLogs([`Preview error, ${String(e)}`]);
+        setLogs([`Preview error: ${String(e)}`]);
       }
-    }, 1000),
+    }, 500),
   ).current;
 
   useEffect(() => {
     consoleLogRef(event, custom);
   }, [event, custom, consoleLogRef]);
-
-  const consoleTheme = {
-    ...chromeDark,
-    BASE_BACKGROUND_COLOR: 'rgb(40, 44, 52)',
-    TREENODE_FONT_SIZE: '14px',
-    OBJECT_NAME_COLOR: '#01b5e2',
-    OBJECT_VALUE_STRING_COLOR: '#01b5e2',
-  } as unknown as string;
 
   const boxHeightStyle = {
     height: `${height}px`,
@@ -64,23 +57,22 @@ const Mapping: React.FC<MappingProps> = ({
   return (
     <div className="my-4">
       <div className="flex gap-4" style={boxHeightStyle}>
+        {/* Event Editor */}
         <LiveProvider code={event} transformCode={transformCode}>
           <div className="w-1/3 border border-base-300 overflow-hidden flex flex-col">
-            <div className="border-b border-base-300 px-2 py-1 bg-gray-200">
-              JSON Object
+            <div className="border-b border-base-300 px-2 py-1 text-center">
+              Event
             </div>
-            <LiveEditor
-              onChange={(newCode) => setEvent(newCode)}
-              // style={{ flex: 1, overflow: 'auto', fontFamily: 'monospace' }}
-            />
+            <LiveEditor onChange={(newCode) => setEvent(newCode)} />
             <LiveError className="text-red-500 px-2" />
           </div>
         </LiveProvider>
 
+        {/* Custom Config Editor */}
         <LiveProvider code={custom} transformCode={transformCode}>
           <div className="w-1/3 border border-base-300 overflow-hidden flex flex-col">
-            <div className="border-b border-base-300 px-2 py-1 bg-gray-200">
-              Configuration
+            <div className="border-b border-base-300 px-2 py-1 text-center">
+              Custom config
             </div>
             <LiveEditor
               onChange={(newCode) => setCustom(newCode)}
@@ -90,32 +82,53 @@ const Mapping: React.FC<MappingProps> = ({
           </div>
         </LiveProvider>
 
+        {/* Console Output */}
         <div className="w-1/3 border border-base-300 overflow-hidden flex flex-col">
-          <div className="border-b border-base-300 px-2 py-1 bg-gray-200">
+          <div className="border-b border-base-300 px-2 py-1 text-center">
             Result
           </div>
-          <div
-            className="flex-1 px-2 py-1 overflow-auto"
-            style={{ backgroundColor: 'rgb(40, 44, 52)' }}
-          >
+          <div className="flex-1 px-2 py-1 overflow-auto">
             {logs.length === 0 ? (
               <div className="border-base-300 flex justify-center border-t px-4 py-10">
                 No event yet.
               </div>
             ) : (
               logs.map((log, index) => (
-                <ObjectInspector
+                <Highlight
+                  // {...defaultProps}
                   key={index}
-                  theme={consoleTheme}
-                  data={log}
-                  expandLevel={2}
-                />
+                  theme={prismThemes.palenight}
+                  code={String(log)}
+                  language="javascript"
+                >
+                  {({
+                    className,
+                    style,
+                    tokens,
+                    getLineProps,
+                    getTokenProps,
+                  }) => (
+                    <pre className={className} style={{ ...style, margin: 0 }}>
+                      {tokens.map((line, i) => (
+                        <div {...getLineProps({ line, key: i })} key={i}>
+                          {line.map((token, key) => (
+                            <span
+                              {...getTokenProps({ token, key })}
+                              key={key}
+                            />
+                          ))}
+                        </div>
+                      ))}
+                    </pre>
+                  )}
+                </Highlight>
               ))
             )}
           </div>
         </div>
       </div>
 
+      {/* Optional: Additional Styling */}
       <style>
         {`
           .live-editor {
@@ -124,6 +137,10 @@ const Mapping: React.FC<MappingProps> = ({
           .live-error {
             height: 50px;
             overflow: auto;
+          }
+          pre {
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
           }
         `}
       </style>
