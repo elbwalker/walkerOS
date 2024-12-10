@@ -48,29 +48,28 @@ const EventMapping: React.FC<EventMappingProps> = ({
     return Function('"use strict"; return (' + code + ')')();
   };
 
-  const consoleLogRef = useRef(
-    debounce((eventStr: string, customStr: string) => {
+  const updateRight = useRef(
+    debounce((leftStr: string, middleStr: string) => {
       setRight([]);
 
       try {
-        const parsedEvent = createEvent(parseJavaScriptObject(eventStr));
-        const parsedCustom = parseJavaScriptObject(customStr) as never;
+        const parsedLeft = parseJavaScriptObject(leftStr);
+        const parsedMiddle = parseJavaScriptObject(middleStr) as never;
 
-        destinationGoogleGA4.push(parsedEvent, {
-          custom: parsedCustom,
+        destinationGoogleGA4.push(createEvent(parsedLeft), {
+          custom: parsedMiddle,
           init: true,
           fn,
         });
       } catch (e) {
-        const errorMsg = `Preview error: ${String(e)}`;
-        setRight([errorMsg]);
+        setRight([`Preview error: ${String(e)}`]);
       }
     }, 500),
   ).current;
 
   useEffect(() => {
-    consoleLogRef(left, middle);
-  }, [left, middle, consoleLogRef]);
+    updateRight(left, middle);
+  }, [left, middle, updateRight]);
 
   const boxHeightStyle = {
     height: `${height}px`,
