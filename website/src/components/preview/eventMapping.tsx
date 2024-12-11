@@ -1,18 +1,18 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { createEvent, debounce, isObject } from '@elbwalker/utils';
-import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
+import { debounce, isObject } from '@elbwalker/utils';
 import CodeBox from './codeBox';
-
-// @TODO
-// separate config and mapping
-// one init part at the beginning and use it as config and configure the mapping here
 
 interface EventMappingProps {
   left: WalkerOS.AnyObject;
   middle?: WalkerOS.AnyObject;
   right?: string;
   mapping?: Mapping.Config;
+  fn: (
+    left: unknown,
+    middle: unknown,
+    log: (...args: unknown[]) => void,
+  ) => void;
   fnName?: string;
   height?: number;
   labelLeft?: string;
@@ -24,17 +24,18 @@ const EventMapping: React.FC<EventMappingProps> = ({
   left: initLeft = {},
   middle: initMiddle = {},
   right: initRight = '',
+  fn,
   fnName = 'push',
   height = 400,
   labelLeft = 'Event',
-  labelMiddle = 'Config',
+  labelMiddle = 'Custom Config',
   labelRight = 'Result',
 }) => {
   const [left, setLeft] = useState(JSON.stringify(initLeft, null, 2));
   const [middle, setMiddle] = useState(JSON.stringify(initMiddle, null, 2));
   const [right, setRight] = useState<string[]>([initRight]);
 
-  const fn = useCallback(
+  const log = useCallback(
     (...args: unknown[]) => {
       const params = args.map((arg) => {
         return isObject(arg) ? JSON.stringify(arg, null, 2) : `"${arg}"`;
@@ -44,9 +45,9 @@ const EventMapping: React.FC<EventMappingProps> = ({
     [fnName],
   );
 
-  const parseJavaScriptObject = (code: string): unknown => {
+  const parseJavaScriptObject = useCallback((code: string): unknown => {
     return Function('"use strict"; return (' + code + ')')();
-  };
+  }, []);
 
   const updateRight = useRef(
     debounce((leftStr: string, middleStr: string) => {
@@ -56,11 +57,7 @@ const EventMapping: React.FC<EventMappingProps> = ({
         const parsedLeft = parseJavaScriptObject(leftStr);
         const parsedMiddle = parseJavaScriptObject(middleStr) as never;
 
-        destinationGoogleGA4.push(createEvent(parsedLeft), {
-          custom: parsedMiddle,
-          init: true,
-          fn,
-        });
+        fn(parsedLeft, parsedMiddle, log);
       } catch (e) {
         setRight([`Preview error: ${String(e)}`]);
       }
@@ -82,7 +79,11 @@ const EventMapping: React.FC<EventMappingProps> = ({
 
         <CodeBox label={labelMiddle} value={middle} onChange={setMiddle} />
 
-        <CodeBox label={labelRight} disabled={true} value={right[0]} />
+        <CodeBox
+          label={labelRight}
+          disabled={true}
+          value={right[0] || 'No event yet.'}
+        />
       </div>
     </div>
   );
