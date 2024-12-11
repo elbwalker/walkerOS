@@ -62,7 +62,11 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
   ) => {
     setConfig(left);
     try {
-      destination.init(
+      (
+        // @TODO this is ugly af
+        (destination as unknown as WalkerOS.AnyObject)
+          .init as WalkerOS.AnyFunction
+      )(
         {
           custom: left,
           fn: log,
@@ -110,7 +114,7 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
       const finalMapping = { [entity]: { [action]: middle } };
 
       destinationPush(
-        { hooks: {} },
+        { hooks: {} } as never, // Fake instance
         {
           ...destination,
           config: {

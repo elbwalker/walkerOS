@@ -1,5 +1,4 @@
 import type { Destination, Mapping, WalkerOS } from '@elbwalker/types';
-import type { DestinationWeb, SourceWalkerjs } from '@elbwalker/walker.js';
 import {
   assign,
   debounce,
@@ -23,8 +22,8 @@ function resolveMappingData(
 }
 
 export function destinationPush(
-  instance: SourceWalkerjs.Instance,
-  destination: DestinationWeb.Destination,
+  instance: WalkerOS.Instance,
+  destination: Destination.Destination,
   event: WalkerOS.Event,
 ): boolean {
   const { config } = destination;
@@ -79,12 +78,13 @@ export function destinationPush(
       eventMapping.batchFn(destination, instance);
     } else {
       // It's time to go to the destination's side now
-      useHooks(destination.push, 'DestinationPush', instance.hooks)(
-        event,
-        destination.config,
-        eventMapping,
-        options,
-      );
+      useHooks(
+        // @TODO this is ugly af
+        (destination as unknown as WalkerOS.AnyObject)
+          .push as WalkerOS.AnyFunction,
+        'DestinationPush',
+        instance.hooks,
+      )(event, destination.config, eventMapping, options);
     }
 
     return true;
