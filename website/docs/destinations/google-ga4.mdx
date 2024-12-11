@@ -9,9 +9,16 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import { getEvent } from '@elbwalker/utils';
 import {
-  MappingGA4Init,
-  MappingGA4,
-} from '@site/src/components/mappings/google-ga4';
+  DestinationContextProvider,
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/examples/destination';
+import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
+
+<DestinationContextProvider
+  destination={destinationGoogleGA4}
+  fnName='gtag'
+>
 
 <PackageLink
   browser="@elbwalker/destination-web-google-ga4"
@@ -82,31 +89,9 @@ ID</Link>.
 
 #### Example
 
-```js
-const config = {
-  custom: {
-    measurementId: 'G-XXXXXXXXXX', // Required
-    debug: false,
-    include: ['globals'],
-    pageview: false,
-    data: {
-      map: {
-        currency: {
-          value: 'EUR',
-          key: 'data.currency',
-        },
-      },
-    },
-    server_container_url: 'https://server.example.com',
-    snakeCase: true,
-    transport_url: 'https://www.google-analytics.com/g/collect',
-  },
-};
-```
-
-<MappingGA4Init
+<DestinationInit
   custom={{
-    measurementId: 'G-XXXXXXXXXX', // Required
+    measurementId: 'G-XXXXXXXXXX',
     debug: false,
     include: ['globals'],
     pageview: false,
@@ -182,9 +167,8 @@ live&nbsp;<Link to="#configuration">configuration</Link>.
 
 ### add_to_cart
 
-<MappingGA4
+<DestinationPush
   event={getEvent('product add', { custom: {} })}
-  custom={{ measurementId: 'G-XXXXXXX' }}
   mapping={{
     name: 'add_to_cart',
     data: {
@@ -210,9 +194,8 @@ live&nbsp;<Link to="#configuration">configuration</Link>.
 
 ### purchase
 
-<MappingGA4
+<DestinationPush
   event={getEvent('order complete', { custom: {} })}
-  custom={{ measurementId: 'G-XXXXXXX' }}
   mapping={{
     name: 'purchase',
     data: {
@@ -226,7 +209,6 @@ live&nbsp;<Link to="#configuration">configuration</Link>.
           loop: [
             'nested',
             {
-              condition: (entity) => entity.type === 'product', // @TODO
               map: {
                 item_id: 'data.id',
                 item_name: 'data.name',
@@ -246,3 +228,5 @@ If you need professional support with your walkerOS implementation, check out
 our&nbsp;<Link to="/services">services</Link>.
 
 :::
+
+</DestinationContextProvider>

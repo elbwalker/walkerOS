@@ -7,11 +7,13 @@ interface EventMappingProps {
   left: WalkerOS.AnyObject;
   middle?: WalkerOS.AnyObject;
   right?: string;
+  options?: WalkerOS.AnyObject;
   mapping?: Mapping.Config;
   fn: (
     left: unknown,
     middle: unknown,
     log: (...args: unknown[]) => void,
+    options?: WalkerOS.AnyObject,
   ) => void;
   fnName?: string;
   height?: number;
@@ -25,6 +27,7 @@ const EventMapping: React.FC<EventMappingProps> = ({
   left: initLeft = {},
   middle: initMiddle = {},
   right: initRight = '',
+  options = {},
   fn,
   fnName = 'push',
   height = 400,
@@ -52,23 +55,26 @@ const EventMapping: React.FC<EventMappingProps> = ({
   }, []);
 
   const updateRight = useRef(
-    debounce((leftStr: string, middleStr: string) => {
-      setRight([]);
+    debounce(
+      (leftStr: string, middleStr: string, options: WalkerOS.AnyObject) => {
+        setRight([]);
 
-      try {
-        const parsedLeft = parseJavaScriptObject(leftStr);
-        const parsedMiddle = parseJavaScriptObject(middleStr) as never;
+        try {
+          const parsedLeft = parseJavaScriptObject(leftStr);
+          const parsedMiddle = parseJavaScriptObject(middleStr) as never;
 
-        fn(parsedLeft, parsedMiddle, log);
-      } catch (e) {
-        setRight([`Preview error: ${String(e)}`]);
-      }
-    }, 500),
+          fn(parsedLeft, parsedMiddle, log, options);
+        } catch (e) {
+          setRight([`Preview error: ${String(e)}`]);
+        }
+      },
+      500,
+    ),
   ).current;
 
   useEffect(() => {
-    updateRight(left, middle);
-  }, [left, middle, updateRight]);
+    updateRight(left, middle, options);
+  }, [left, middle, options, updateRight]);
 
   const boxHeightStyle = {
     height: `${height}px`,
