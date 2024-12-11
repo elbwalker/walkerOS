@@ -5,13 +5,43 @@ import EventMapping from '../preview/eventMapping';
 import { destinationPush } from './destination';
 import { SourceWalkerjs } from '@elbwalker/walker.js';
 
+export const MappingGA4Init: React.FC<MappingGA4Props> = ({ custom = {} }) => {
+  const mappingFn = (
+    left: never,
+    middle: never,
+    log: (...args: unknown[]) => void,
+  ) => {
+    try {
+      destinationGoogleGA4.init(
+        {
+          custom: left,
+          fn: log,
+        },
+        {} as unknown as SourceWalkerjs.Instance,
+      );
+    } catch (error) {
+      log(`Error mappingFn: ${error}`);
+    }
+  };
+
+  return (
+    <EventMapping
+      fnName="gtag"
+      fn={mappingFn}
+      left={custom}
+      labelLeft="Custom Config"
+      showMiddle={false}
+    />
+  );
+};
+
 interface MappingGA4Props {
   event: WalkerOS.PartialEvent;
   custom?: WalkerOS.AnyObject;
   mapping?: Mapping.Config;
 }
 
-const MappingGA4: React.FC<MappingGA4Props> = ({
+export const MappingGA4: React.FC<MappingGA4Props> = ({
   event,
   custom = {},
   mapping = {},
@@ -44,14 +74,6 @@ const MappingGA4: React.FC<MappingGA4Props> = ({
   };
 
   return (
-    <EventMapping
-      fnName="gtag"
-      left={event}
-      middle={mapping}
-      mapping={mapping}
-      fn={mappingFn}
-    />
+    <EventMapping fnName="gtag" left={event} middle={mapping} fn={mappingFn} />
   );
 };
-
-export default MappingGA4;
