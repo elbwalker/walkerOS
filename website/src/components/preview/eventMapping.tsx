@@ -18,6 +18,7 @@ interface EventMappingProps {
   labelLeft?: string;
   labelMiddle?: string;
   labelRight?: string;
+  showMiddle?: boolean;
 }
 
 const EventMapping: React.FC<EventMappingProps> = ({
@@ -30,6 +31,7 @@ const EventMapping: React.FC<EventMappingProps> = ({
   labelLeft = 'Event',
   labelMiddle = 'Custom Config',
   labelRight = 'Result',
+  showMiddle = true,
 }) => {
   const [left, setLeft] = useState(JSON.stringify(initLeft, null, 2));
   const [middle, setMiddle] = useState(JSON.stringify(initMiddle, null, 2));
@@ -71,18 +73,32 @@ const EventMapping: React.FC<EventMappingProps> = ({
   const boxHeightStyle = {
     height: `${height}px`,
   };
+  const widthClass = showMiddle ? 'w-1/3' : 'w-1/2';
 
   return (
     <div className="my-4">
       <div className="flex gap-4" style={boxHeightStyle}>
-        <CodeBox label={labelLeft} value={left} onChange={setLeft} />
+        <CodeBox
+          label={labelLeft}
+          value={left}
+          onChange={setLeft}
+          widthClass={widthClass}
+        />
 
-        <CodeBox label={labelMiddle} value={middle} onChange={setMiddle} />
+        {showMiddle && (
+          <CodeBox
+            label={labelMiddle}
+            value={middle}
+            onChange={setMiddle}
+            widthClass={widthClass}
+          />
+        )}
 
         <CodeBox
           label={labelRight}
           disabled={true}
           value={right[0] || 'No event yet.'}
+          widthClass={widthClass}
         />
       </div>
     </div>

@@ -7,6 +7,7 @@ interface CodeBoxProps {
   onChange?: (code: string) => void;
   disabled?: boolean;
   language?: string;
+  widthClass?: string;
 }
 
 const CodeBox: React.FC<CodeBoxProps> = ({
@@ -15,6 +16,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   onChange,
   disabled = false,
   language = 'javascript',
+  widthClass = 'w-1/3',
 }) => {
   const highlightCode = (code: string) => (
     <Highlight theme={prismThemes.palenight} code={code} language={language}>
@@ -33,7 +35,9 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   );
 
   return (
-    <div className="w-1/3 border border-base-300 overflow-hidden flex flex-col">
+    <div
+      className={`${widthClass} border border-base-300 overflow-hidden flex flex-col`}
+    >
       <div className="border-b border-base-300 px-2 py-1 text-center">
         {label}
       </div>
