@@ -196,7 +196,7 @@ live&nbsp;<Link to="#configuration">configuration</Link>.
 
 <DestinationPush
   event={getEvent('order complete', { custom: {} })}
-  mapping={{
+  mapping={`{
     name: 'purchase',
     data: {
       map: {
@@ -209,6 +209,7 @@ live&nbsp;<Link to="#configuration">configuration</Link>.
           loop: [
             'nested',
             {
+              condition: (entity) => entity.type === 'product',
               map: {
                 item_id: 'data.id',
                 item_name: 'data.name',
@@ -219,7 +220,7 @@ live&nbsp;<Link to="#configuration">configuration</Link>.
         },
       },
     },
-  }}
+  }`}
 />
 
 :::info

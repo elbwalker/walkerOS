@@ -56,7 +56,7 @@ const EventMapping: React.FC<EventMappingProps> = ({
     [fnName],
   );
 
-  const parseJavaScriptObject = useCallback((code: string): unknown => {
+  const parseInput = useCallback((code: string): unknown => {
     return Function('"use strict"; return (' + code + ')')();
   }, []);
 
@@ -66,8 +66,8 @@ const EventMapping: React.FC<EventMappingProps> = ({
         setRight([]);
 
         try {
-          const parsedLeft = parseJavaScriptObject(leftStr);
-          const parsedMiddle = parseJavaScriptObject(middleStr) as never;
+          const parsedLeft = parseInput(leftStr);
+          const parsedMiddle = parseInput(middleStr) as never;
 
           fn(parsedLeft, parsedMiddle, log, options);
         } catch (e) {
