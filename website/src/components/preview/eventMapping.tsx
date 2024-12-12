@@ -1,5 +1,5 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { debounce, isObject } from '@elbwalker/utils';
 import CodeBox from './codeBox';
 
@@ -23,98 +23,98 @@ interface EventMappingProps {
   showMiddle?: boolean;
 }
 
-const EventMapping: React.FC<EventMappingProps> = ({
-  left: initLeft = {},
-  middle: initMiddle = {},
-  right: initRight = '',
-  options = {},
-  fn,
-  fnName = 'push',
-  height = 400,
-  labelLeft = 'Event',
-  labelMiddle = 'Custom Config',
-  labelRight = 'Result',
-  showMiddle = true,
-}) => {
-  const formatValue = (obj: unknown): string => {
-    return typeof obj === 'string'
-      ? obj // Return string as is
-      : JSON.stringify(obj, null, 2).replace(/"([^"]+)":/g, '$1:'); // Remove quotes from keys
-  };
+const EventMapping: React.FC<EventMappingProps> = memo(
+  ({
+    left: initLeft = {},
+    middle: initMiddle = {},
+    right: initRight = '',
+    options,
+    fn,
+    fnName = 'push',
+    height = 400,
+    labelLeft = 'Event',
+    labelMiddle = 'Custom Config',
+    labelRight = 'Result',
+    showMiddle = true,
+  }) => {
+    const formatValue = (value: unknown): string => {
+      return isObject(value)
+        ? JSON.stringify(value, null, 2).replace(/"([^"]+)":/g, '$1:') // Remove quotes from keys
+        : String(value);
+    };
 
-  const [left, setLeft] = useState(formatValue(initLeft));
-  const [middle, setMiddle] = useState(formatValue(initMiddle));
-  const [right, setRight] = useState<string[]>([initRight]);
+    const [left, setLeft] = useState(formatValue(initLeft));
+    const [middle, setMiddle] = useState(formatValue(initMiddle));
+    const [right, setRight] = useState<string[]>([initRight]);
 
-  const log = useCallback(
-    (...args: unknown[]) => {
-      const params = args.map((arg) => {
-        return isObject(arg) ? formatValue(arg) : `"${arg}"`;
-      });
+    const log = useRef((...args: unknown[]) => {
+      const params = args.map((arg) =>
+        isObject(arg) ? formatValue(arg) : `"${arg}"`,
+      );
       setRight([`${fnName}(${params.join(', ')})`]);
-    },
-    [fnName],
-  );
+    }).current;
 
-  const parseInput = useCallback((code: string): unknown => {
-    return Function('"use strict"; return (' + code + ')')();
-  }, []);
+    const parseInput = useCallback((code: string): unknown => {
+      return Function('"use strict"; return (' + code + ')')();
+    }, []);
 
-  const updateRight = useRef(
-    debounce(
-      (leftStr: string, middleStr: string, options: WalkerOS.AnyObject) => {
-        setRight([]);
+    const updateRight = useRef(
+      debounce(
+        (leftStr: string, middleStr: string, options: WalkerOS.AnyObject) => {
+          setRight([]);
 
-        try {
-          const parsedLeft = parseInput(leftStr);
-          const parsedMiddle = parseInput(middleStr) as never;
+          try {
+            const parsedLeft = parseInput(leftStr);
+            const parsedMiddle = parseInput(middleStr);
 
-          fn(parsedLeft, parsedMiddle, log, options);
-        } catch (e) {
-          setRight([`Preview error: ${String(e)}`]);
-        }
-      },
-      500,
-    ),
-  ).current;
+            fn(parsedLeft, parsedMiddle, log, options);
+          } catch (e) {
+            setRight([`Preview error: ${String(e)}`]);
+          }
+        },
+        500,
+      ),
+    ).current;
 
-  useEffect(() => {
-    updateRight(left, middle, options);
-  }, [left, middle, options, updateRight]);
+    useEffect(() => {
+      console.log('eventMapping useEffect');
+      updateRight(left, middle, options);
+    }, [left, middle, options]);
 
-  const boxHeightStyle = {
-    height: `${height}px`,
-  };
-  const widthClass = showMiddle ? 'w-1/3' : 'w-1/2';
+    const boxHeightStyle = {
+      height: `${height}px`,
+    };
+    const widthClass = showMiddle ? 'w-1/3' : 'w-1/2';
 
-  return (
-    <div className="my-4">
-      <div className="flex gap-4" style={boxHeightStyle}>
-        <CodeBox
-          label={labelLeft}
-          value={left}
-          onChange={setLeft}
-          widthClass={widthClass}
-        />
-
-        {showMiddle && (
+    return (
+      <div className="my-4">
+        <div className="flex gap-4" style={boxHeightStyle}>
           <CodeBox
-            label={labelMiddle}
-            value={middle}
-            onChange={setMiddle}
+            label={labelLeft}
+            value={left}
+            onChange={setLeft}
             widthClass={widthClass}
           />
-        )}
 
-        <CodeBox
-          label={labelRight}
-          disabled={true}
-          value={right[0] || 'No event yet.'}
-          widthClass={widthClass}
-        />
+          {showMiddle && (
+            <CodeBox
+              label={labelMiddle}
+              value={middle}
+              onChange={setMiddle}
+              widthClass={widthClass}
+            />
+          )}
+
+          <CodeBox
+            label={labelRight}
+            disabled={true}
+            value={right[0] || 'No event yet.'}
+            widthClass={widthClass}
+          />
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  },
+);
 
 export default EventMapping;

@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from 'react';
 import type { Destination, Mapping, WalkerOS } from '@elbwalker/types';
 import { destinationPush } from '../mappings/destination'; // Adjust the import path as necessary
 import { createEvent } from '@elbwalker/utils';
@@ -27,10 +33,12 @@ export const DestinationContextProvider: React.FC<
 > = ({ children, destination, initialConfig = {}, fnName = 'push' }) => {
   const [customConfig, setConfig] = useState<WalkerOS.AnyObject>(initialConfig);
 
+  const value = useMemo(() => {
+    return { customConfig, setConfig, destination, fnName };
+  }, [customConfig, destination, fnName]);
+
   return (
-    <DestinationContext.Provider
-      value={{ customConfig: customConfig, setConfig, destination, fnName }}
-    >
+    <DestinationContext.Provider value={value}>
       {children}
     </DestinationContext.Provider>
   );
@@ -38,11 +46,11 @@ export const DestinationContextProvider: React.FC<
 
 export function useDestinationContext(): DestinationContextValue {
   const context = useContext(DestinationContext);
-  if (!context) {
+  if (!context)
     throw new Error(
       'useDestinationContext must be used within a DestinationContextProvider',
     );
-  }
+
   return context;
 }
 
@@ -62,8 +70,8 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
   ) => {
     setConfig(left);
     try {
+      // @TODO this is ugly af
       (
-        // @TODO this is ugly af
         (destination as unknown as WalkerOS.AnyObject)
           .init as WalkerOS.AnyFunction
       )(
@@ -102,33 +110,36 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
 }) => {
   const { customConfig, destination, fnName } = useDestinationContext();
 
-  const mappingFn = (
-    left: unknown,
-    middle: unknown,
-    log: (...args: unknown[]) => void,
-    options: WalkerOS.AnyObject,
-  ) => {
-    try {
-      const evt = createEvent(left);
-      const [entity, action] = evt.event.split(' ');
-      const finalMapping = { [entity]: { [action]: middle } };
+  const mappingFn = useCallback(
+    (
+      left: unknown,
+      middle: unknown,
+      log: (...args: unknown[]) => void,
+      options: WalkerOS.AnyObject,
+    ) => {
+      try {
+        const event = createEvent(left);
+        const [entity, action] = event.event.split(' ');
+        const finalMapping = { [entity]: { [action]: middle } };
 
-      destinationPush(
-        { hooks: {} } as never, // Fake instance
-        {
-          ...destination,
-          config: {
-            custom: options,
-            fn: log,
-            mapping: finalMapping,
+        destinationPush(
+          { hooks: {} } as never, // Fake instance
+          {
+            ...destination,
+            config: {
+              custom: options,
+              fn: log,
+              mapping: finalMapping,
+            },
           },
-        },
-        evt,
-      );
-    } catch (error) {
-      log(`Error mappingFn: ${error}`);
-    }
-  };
+          event,
+        );
+      } catch (error) {
+        log(`Error mappingFn: ${error}`);
+      }
+    },
+    [],
+  );
 
   return (
     <EventMapping
