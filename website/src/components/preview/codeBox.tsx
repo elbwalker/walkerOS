@@ -45,7 +45,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
         <Editor
           value={value}
           disabled={disabled}
-          onValueChange={onChange}
+          onValueChange={(newCode) => onChange?.(newCode)}
           highlight={highlightCode}
           padding={10}
           style={{

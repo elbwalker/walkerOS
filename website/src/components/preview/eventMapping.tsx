@@ -36,14 +36,20 @@ const EventMapping: React.FC<EventMappingProps> = ({
   labelRight = 'Result',
   showMiddle = true,
 }) => {
-  const [left, setLeft] = useState(JSON.stringify(initLeft, null, 2));
-  const [middle, setMiddle] = useState(JSON.stringify(initMiddle, null, 2));
+  const formatValue = (obj: unknown): string => {
+    return typeof obj === 'string'
+      ? obj // Return string as is
+      : JSON.stringify(obj, null, 2).replace(/"([^"]+)":/g, '$1:'); // Remove quotes from keys
+  };
+
+  const [left, setLeft] = useState(formatValue(initLeft));
+  const [middle, setMiddle] = useState(formatValue(initMiddle));
   const [right, setRight] = useState<string[]>([initRight]);
 
   const log = useCallback(
     (...args: unknown[]) => {
       const params = args.map((arg) => {
-        return isObject(arg) ? JSON.stringify(arg, null, 2) : `"${arg}"`;
+        return isObject(arg) ? formatValue(arg) : `"${arg}"`;
       });
       setRight([`${fnName}(${params.join(', ')})`]);
     },

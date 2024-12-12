@@ -90,8 +90,8 @@ ID</Link>.
 #### Example
 
 <DestinationInit
-  custom={{
-    measurementId: 'G-XXXXXXXXXX',
+  custom={`{
+    measurementId: 'G-XXXXXXXXXX', // Required
     debug: false,
     include: ['globals'],
     pageview: false,
@@ -106,7 +106,7 @@ ID</Link>.
     server_container_url: 'https://server.example.com',
     snakeCase: true,
     transport_url: 'https://www.google-analytics.com/g/collect',
-  }}
+  }`}
 />
 
 ### Custom
