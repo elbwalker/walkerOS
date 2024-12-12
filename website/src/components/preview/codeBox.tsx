@@ -38,19 +38,18 @@ const CodeBox: React.FC<CodeBoxProps> = ({
     <div
       className={`${widthClass} border border-base-300 overflow-hidden flex flex-col`}
     >
-      <div className="border-b border-base-300 px-2 py-1 text-center">
-        {label}
-      </div>
-      <div className="flex-1 overflow-auto">
+      <div className="font-bold px-2 py-1">{label}</div>
+      <div className="flex-1 overflow-auto rounded-lg">
         <Editor
           value={value}
           disabled={disabled}
+          // onValueChange={console.log}
           onValueChange={(newCode) => onChange?.(newCode)}
           highlight={highlightCode}
-          padding={10}
+          padding={4}
           style={{
             fontFamily: '"Fira Code", monospace',
-            fontSize: 14,
+            fontSize: 12,
             backgroundColor: '#282c34',
             color: '#abb2bf',
             minHeight: '100%',
