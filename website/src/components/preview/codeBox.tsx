@@ -55,10 +55,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
             color: '#abb2bf',
             minHeight: '100%',
             outline: 'none',
-            whiteSpace: 'pre', // Prevents line wrapping
-            overflowX: 'auto', // Enables horizontal scrolling
-            wordBreak: 'normal', // Prevents breaking words
-            overflowWrap: 'normal', // Prevents wrapping at all
+            overflow: 'auto',
           }}
           className="code-editor"
         />
