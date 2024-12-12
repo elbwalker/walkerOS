@@ -1,7 +1,7 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { debounce, isObject } from '@elbwalker/utils';
-import CodeBox from './codeBox';
+import CodeBox, { formatValue } from './codeBox';
 
 interface EventMappingProps {
   left: WalkerOS.AnyObject;
@@ -37,14 +37,10 @@ const EventMapping: React.FC<EventMappingProps> = memo(
     labelRight = 'Result',
     showMiddle = true,
   }) => {
-    const formatValue = (value: unknown): string => {
-      return isObject(value)
-        ? JSON.stringify(value, null, 2).replace(/"([^"]+)":/g, '$1:') // Remove quotes from keys
-        : String(value);
-    };
-
-    const [left, setLeft] = useState(formatValue(initLeft));
-    const [middle, setMiddle] = useState(formatValue(initMiddle));
+    const toString = (value: unknown) =>
+      isObject(value) ? JSON.stringify(value) : String(value);
+    const [left, setLeft] = useState(toString(initLeft));
+    const [middle, setMiddle] = useState(toString(initMiddle));
     const [right, setRight] = useState<string[]>([initRight]);
 
     const log = useRef((...args: unknown[]) => {
@@ -77,7 +73,6 @@ const EventMapping: React.FC<EventMappingProps> = memo(
     ).current;
 
     useEffect(() => {
-      console.log('eventMapping useEffect');
       updateRight(left, middle, options);
     }, [left, middle, options]);
 
