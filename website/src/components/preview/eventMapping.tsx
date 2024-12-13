@@ -78,7 +78,7 @@ const EventMapping: React.FC<EventMappingProps> = memo(
 
     return (
       <div className="my-4">
-        <div className={`flex flex-col xl:flex-row gap-2`}>
+        <div className={`flex flex-col xl:flex-row gap-2 text-sm`}>
           <CodeBox
             label={labelLeft}
             value={left}

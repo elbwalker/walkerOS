@@ -66,7 +66,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
     <div
       className={`border border-base-300 rounded-lg flex flex-col overflow-hidden bg-gray-800 ${className}`}
     >
-      {label && <div className="font-bold px-2 py-1 bg-base-200">{label}</div>}
+      {label && <div className="font-bold px-2 py-1 bg-base-200 text-base">{label}</div>}
       <div className="flex-1 overflow-auto">
         <Editor
           value={prettyValue}
@@ -74,7 +74,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
           onValueChange={(newCode) => onChange?.(newCode)}
           highlight={highlightCode}
           padding={4}
-          className="code-editor font-mono text-xs"
+          className="code-editor font-mono min-h-full"
           style={{ overflow: 'auto' }}
         />
       </div>
