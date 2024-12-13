@@ -6,7 +6,7 @@ import { LiveProvider, LiveEditor, LiveError, LivePreview } from 'react-live';
 import { themes as prismThemes } from 'prism-react-renderer';
 import { elb } from '@elbwalker/walker.js';
 
-export const previewRegistry = (() => {
+export const taggingRegistry = (() => {
   const registry = new Map<string, (message: WalkerOS.Event) => void>();
 
   return {
@@ -34,7 +34,7 @@ const initPreview = debounce(
   2000,
 );
 
-const Preview: React.FC<PreviewProps> = ({
+const Tagging: React.FC<PreviewProps> = ({
   code,
   height = 400,
   hideCode = false,
@@ -58,12 +58,12 @@ const Preview: React.FC<PreviewProps> = ({
   }, [liveCode]);
 
   useEffect(() => {
-    previewRegistry.add(previewId, (log: WalkerOS.Event) => {
+    taggingRegistry.add(previewId, (log: WalkerOS.Event) => {
       setLogs((prevLogs) => [...prevLogs, log]);
     });
 
     return () => {
-      previewRegistry.delete(previewId);
+      taggingRegistry.delete(previewId);
     };
   }, [previewId]);
 
@@ -183,4 +183,4 @@ const Preview: React.FC<PreviewProps> = ({
   );
 };
 
-export default Preview;
+export default Tagging;

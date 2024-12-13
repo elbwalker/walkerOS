@@ -1,6 +1,6 @@
+import { assign } from '@elbwalker/utils';
 import { ComponentProps } from 'react';
 import CodeBox from './codeBox';
-import { assign } from '@elbwalker/utils';
 
 interface CodeProps extends ComponentProps<typeof CodeBox> {
   transparent?: boolean;

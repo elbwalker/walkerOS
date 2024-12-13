@@ -1,6 +1,6 @@
+import { isObject, tryCatch } from '@elbwalker/utils';
 import { Highlight, themes as prismThemes } from 'prism-react-renderer';
 import Editor from 'react-simple-code-editor';
-import { isObject, tryCatch } from '@elbwalker/utils';
 
 interface FormatValueProps {
   intent?: number;

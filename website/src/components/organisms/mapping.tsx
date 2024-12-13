@@ -1,14 +1,14 @@
-import type { Mapping, WalkerOS } from '@elbwalker/types';
+import type { Mapping as WalkerOSMapping, WalkerOS } from '@elbwalker/types';
 import { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { debounce, isObject } from '@elbwalker/utils';
-import CodeBox, { formatValue } from './codeBox';
+import CodeBox, { formatValue } from '../molecules/codeBox';
 
-interface EventMappingProps {
+interface MappingProps {
   left: WalkerOS.AnyObject;
   middle?: WalkerOS.AnyObject;
   right?: string;
   options?: WalkerOS.AnyObject;
-  mapping?: Mapping.Config;
+  mapping?: WalkerOSMapping.Config;
   fn: (
     left: unknown,
     middle: unknown,
@@ -22,7 +22,7 @@ interface EventMappingProps {
   showMiddle?: boolean;
 }
 
-const EventMapping: React.FC<EventMappingProps> = memo(
+const Mapping: React.FC<MappingProps> = memo(
   ({
     left: initLeft = {},
     middle: initMiddle = {},
@@ -74,7 +74,7 @@ const EventMapping: React.FC<EventMappingProps> = memo(
       updateRight(left, middle, options);
     }, [left, middle, options]);
 
-    const boxClassNames = 'flex-1 resize max-h-96 xl:max-h-full flex flex-col ';
+    const boxClassNames = 'flex-1 resize max-h-96 xl:max-h-full flex flex-col';
 
     return (
       <div className="my-4">
@@ -107,4 +107,4 @@ const EventMapping: React.FC<EventMappingProps> = memo(
   },
 );
 
-export default EventMapping;
+export default Mapping;

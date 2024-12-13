@@ -1,5 +1,5 @@
 import React from 'react';
-import Preview from '../preview/preview';
+import Tagging from '../organisms/tagging';
 
 const code = `<div
   data-elb="promotion"
@@ -30,7 +30,7 @@ const code = `<div
 const PromotionLive: React.FC = () => {
   return (
     <div className="my-8">
-      <Preview code={code} />
+      <Tagging code={code} />
     </div>
   );
 };
