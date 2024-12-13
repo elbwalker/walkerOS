@@ -25,23 +25,24 @@ export const formatValue = (value: unknown, options: FormatValueProps = {}) => {
 };
 
 interface CodeBoxProps {
-  label: string;
   value: string;
+  label?: string;
   format?: FormatValueProps;
   onChange?: (code: string) => void;
   disabled?: boolean;
   language?: string;
-  widthClass?: string;
+  inline?: boolean;
+  className?: string;
 }
 
 const CodeBox: React.FC<CodeBoxProps> = ({
-  label,
   value = '',
+  label,
   format,
   onChange,
   disabled = false,
   language = 'javascript',
-  widthClass = 'w-1/3',
+  className = '',
 }) => {
   const prettyValue = formatValue(tryCatch(JSON.parse)(value) || value, format);
 
@@ -63,26 +64,18 @@ const CodeBox: React.FC<CodeBoxProps> = ({
 
   return (
     <div
-      className={`${widthClass} border border-base-300 overflow-hidden flex flex-col`}
+      className={`border border-base-300 rounded-lg flex flex-col overflow-hidden bg-gray-800 ${className}`}
     >
-      {label && <div className="font-bold px-2 py-1">{label}</div>}
-      <div className="flex-1 overflow-auto rounded-lg">
+      {label && <div className="font-bold px-2 py-1 bg-base-200">{label}</div>}
+      <div className="flex-1 overflow-auto">
         <Editor
           value={prettyValue}
           disabled={disabled}
           onValueChange={(newCode) => onChange?.(newCode)}
           highlight={highlightCode}
           padding={4}
-          style={{
-            fontFamily: '"Fira Code", monospace',
-            fontSize: 12,
-            backgroundColor: '#282c34',
-            color: '#abb2bf',
-            minHeight: '100%',
-            outline: 'none',
-            overflow: 'auto',
-          }}
-          className="code-editor"
+          className="code-editor font-mono text-xs"
+          style={{ overflow: 'auto' }}
         />
       </div>
     </div>

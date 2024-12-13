@@ -16,7 +16,6 @@ interface EventMappingProps {
     options?: WalkerOS.AnyObject,
   ) => void;
   fnName?: string;
-  height?: number;
   labelLeft?: string;
   labelMiddle?: string;
   labelRight?: string;
@@ -31,7 +30,6 @@ const EventMapping: React.FC<EventMappingProps> = memo(
     options,
     fn,
     fnName = 'push',
-    height = 400,
     labelLeft = 'Event',
     labelMiddle = 'Custom Config',
     labelRight = 'Result',
@@ -76,19 +74,16 @@ const EventMapping: React.FC<EventMappingProps> = memo(
       updateRight(left, middle, options);
     }, [left, middle, options]);
 
-    const boxHeightStyle = {
-      height: `${height}px`,
-    };
-    const widthClass = showMiddle ? 'w-1/3' : 'w-1/2';
+    const boxClassNames = 'flex-1 resize max-h-96 xl:max-h-full';
 
     return (
       <div className="my-4">
-        <div className="flex gap-4" style={boxHeightStyle}>
+        <div className={`flex flex-col xl:flex-row gap-2`}>
           <CodeBox
             label={labelLeft}
             value={left}
             onChange={setLeft}
-            widthClass={widthClass}
+            className={boxClassNames}
           />
 
           {showMiddle && (
@@ -96,15 +91,15 @@ const EventMapping: React.FC<EventMappingProps> = memo(
               label={labelMiddle}
               value={middle}
               onChange={setMiddle}
-              widthClass={widthClass}
+              className={boxClassNames}
             />
           )}
 
           <CodeBox
             label={labelRight}
-            disabled={true}
+            disabled
             value={right[0] || 'No event yet.'}
-            widthClass={widthClass}
+            className={boxClassNames}
           />
         </div>
       </div>

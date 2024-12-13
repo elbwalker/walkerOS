@@ -94,7 +94,6 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
       labelLeft="Custom Config"
       showMiddle={false}
       labelRight="Result"
-      height={400}
     />
   );
 };
