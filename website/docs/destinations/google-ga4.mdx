@@ -7,6 +7,19 @@ import PackageLink from '/src/components/docs/package-link';
 import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import { getEvent } from '@elbwalker/utils';
+import { DestinationContextProvider } from '@site/src/components/templates/destination';
+import {
+  GoogleGA4Init,
+  GoogleGA4OrderComplete,
+  GoogleGA4ProductAdd,
+} from '@site/src/components/templates/mappings/google-ga4';
+import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
+
+<DestinationContextProvider
+  destination={destinationGoogleGA4}
+  fnName='gtag'
+>
 
 <PackageLink
   browser="@elbwalker/destination-web-google-ga4"
@@ -77,82 +90,7 @@ ID</Link>.
 
 #### Example
 
-```js
-const config = {
-  custom: {
-    measurementId: 'G-XXXXXXXXXX', // Required
-    debug: false,
-    include: ['globals'],
-    pageview: false,
-    data: {
-      map: {
-        currency: {
-          value: 'EUR',
-          key: 'data.currency',
-        },
-      },
-    },
-    server_container_url: 'https://server.example.com',
-    snakeCase: true,
-    transport_url: 'https://www.google-analytics.com/g/collect',
-  },
-  mapping: {
-    // entity: { action: { name: 'custom_name' } },
-    page: { view: { ignore: true } }, // Ignore page view events
-    product: {
-      add: {
-        name: 'add_to_cart',
-        data: {
-          map: {
-            currency: { value: 'EUR', key: 'data.currency' },
-            override: 'data.old',
-            value: 'data.price',
-            items: {
-              loop: [
-                'this',
-                {
-                  map: {
-                    item_id: 'data.id',
-                    item_variant: 'data.color',
-                    quantity: { value: 1, key: 'data.quantity' },
-                  },
-                },
-              ],
-            },
-          },
-        },
-      },
-    },
-    order: {
-      complete: {
-        name: 'purchase',
-        data: {
-          map: {
-            transaction_id: 'data.id',
-            value: 'data.total',
-            tax: 'data.taxes',
-            shipping: 'data.shipping',
-            currency: { key: 'data.currency', value: 'EUR' },
-            items: {
-              loop: [
-                'nested',
-                {
-                  condition: (entity) => entity.type === 'product',
-                  map: {
-                    item_id: 'data.id',
-                    item_name: 'data.name',
-                    quantity: { key: 'data.quantity', value: 1 },
-                  },
-                },
-              ],
-            },
-          },
-        },
-      },
-    },
-  },
-};
-```
+<GoogleGA4Init />
 
 ### Custom
 
@@ -205,9 +143,24 @@ The properties get prefixed with the group's name and underscore (like
 `globals_lang` for `{ globals: { lang: 'de' } }`). Custom parameters will
 override `include` values with the same key.
 
+## Mapping
+
+The `mapping` examples are using the
+live&nbsp;<Link to="#configuration">configuration</Link>.
+
+### add_to_cart
+
+<GoogleGA4ProductAdd />
+
+### purchase
+
+<GoogleGA4OrderComplete />
+
 :::info
 
 If you need professional support with your walkerOS implementation, check out
 our&nbsp;<Link to="/services">services</Link>.
 
 :::
+
+</DestinationContextProvider>
