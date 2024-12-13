@@ -61,8 +61,8 @@ article h3 {
   font-size: var(--ifm-h3-font-size);
 }
 
-.code-editor pre,
-.code-editor textarea {
+.scroll .code-editor pre,
+.scroll .code-editor textarea {
   white-space: pre !important;
   overflow: auto !important;
   width: 200% !important;
