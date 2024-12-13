@@ -74,11 +74,11 @@ const EventMapping: React.FC<EventMappingProps> = memo(
       updateRight(left, middle, options);
     }, [left, middle, options]);
 
-    const boxClassNames = 'flex-1 resize max-h-96 xl:max-h-full';
+    const boxClassNames = 'flex-1 resize max-h-96 xl:max-h-full flex flex-col ';
 
     return (
       <div className="my-4">
-        <div className={`flex flex-col xl:flex-row gap-2 text-sm scroll`}>
+        <div className={`flex flex-col xl:flex-row gap-2 scroll`}>
           <CodeBox
             label={labelLeft}
             value={left}

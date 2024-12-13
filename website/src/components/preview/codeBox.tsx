@@ -64,9 +64,9 @@ const CodeBox: React.FC<CodeBoxProps> = ({
 
   return (
     <div
-      className={`border border-base-300 rounded-lg flex flex-col overflow-hidden bg-gray-800 ${className}`}
+      className={`border border-base-300 rounded-lg overflow-hidden bg-gray-800 text-sm ${className}`}
     >
-      {label && <div className="font-bold px-2 py-1 bg-base-200 text-base">{label}</div>}
+      {label && <div className="font-bold px-2 py-1 bg-base-100 text-base">{label}</div>}
       <div className="flex-1 overflow-auto">
         <Editor
           value={prettyValue}
