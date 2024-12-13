@@ -4,8 +4,8 @@ import { debounce, isObject } from '@elbwalker/utils';
 import CodeBox, { formatValue } from '../molecules/codeBox';
 
 interface MappingProps {
-  left: WalkerOS.AnyObject;
-  middle?: WalkerOS.AnyObject;
+  left: unknown;
+  middle?: unknown;
   right?: string;
   options?: WalkerOS.AnyObject;
   mapping?: WalkerOSMapping.Config;

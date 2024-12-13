@@ -8,11 +8,12 @@ import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import { getEvent } from '@elbwalker/utils';
+import { DestinationContextProvider } from '@site/src/components/templates/destination';
 import {
-  DestinationContextProvider,
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/templates/destination';
+  GoogleGA4Init,
+  GoogleGA4OrderComplete,
+  GoogleGA4ProductAdd,
+} from '@site/src/components/templates/mappings/google-ga4';
 import destinationGoogleGA4 from '@elbwalker/destination-web-google-ga4';
 
 <DestinationContextProvider
@@ -89,25 +90,7 @@ ID</Link>.
 
 #### Example
 
-<DestinationInit
-  custom={`{
-    measurementId: 'G-XXXXXXXXXX', // Required
-    debug: false,
-    include: ['globals'],
-    pageview: false,
-    data: {
-      map: {
-        currency: {
-          value: 'EUR',
-          key: 'data.currency',
-        },
-      },
-    },
-    server_container_url: 'https://server.example.com',
-    snakeCase: true,
-    transport_url: 'https://www.google-analytics.com/g/collect',
-  }`}
-/>
+<GoogleGA4Init />
 
 ### Custom
 
@@ -167,61 +150,11 @@ live&nbsp;<Link to="#configuration">configuration</Link>.
 
 ### add_to_cart
 
-<DestinationPush
-  event={getEvent('product add', { custom: {} })}
-  mapping={{
-    name: 'add_to_cart',
-    data: {
-      map: {
-        currency: { value: 'EUR', key: 'data.currency' },
-        value: 'data.price',
-        items: {
-          loop: [
-            'this',
-            {
-              map: {
-                item_id: 'data.id',
-                item_variant: 'data.color',
-                quantity: { value: 1, key: 'data.quantity' },
-              },
-            },
-          ],
-        },
-      },
-    },
-  }}
-/>
+<GoogleGA4ProductAdd />
 
 ### purchase
 
-<DestinationPush
-  event={getEvent('order complete', { custom: {} })}
-  mapping={`{
-    name: 'purchase',
-    data: {
-      map: {
-        transaction_id: 'data.id',
-        value: 'data.total',
-        tax: 'data.taxes',
-        shipping: 'data.shipping',
-        currency: { key: 'data.currency', value: 'EUR' },
-        items: {
-          loop: [
-            'nested',
-            {
-              condition: (entity) => entity.type === 'product',
-              map: {
-                item_id: 'data.id',
-                item_name: 'data.name',
-                quantity: { key: 'data.quantity', value: 1 },
-              },
-            },
-          ],
-        },
-      },
-    },
-  }`}
-/>
+<GoogleGA4OrderComplete />
 
 :::info
 

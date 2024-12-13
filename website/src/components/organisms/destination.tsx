@@ -54,7 +54,7 @@ export function useDestinationContext(): DestinationContextValue {
 }
 
 interface DestinationInitProps {
-  custom?: unknown;
+  custom?: WalkerOS.AnyObject;
 }
 
 export const DestinationInit: React.FC<DestinationInitProps> = ({
@@ -99,7 +99,7 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
 
 interface DestinationPushProps {
   event: WalkerOS.PartialEvent;
-  mapping?: Mapping.EventConfig | string;
+  mapping?: Mapping.Config;
 }
 
 export const DestinationPush: React.FC<DestinationPushProps> = ({
