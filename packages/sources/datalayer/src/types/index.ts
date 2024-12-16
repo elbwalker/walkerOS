@@ -26,8 +26,10 @@ export type MappedEvent =
   | undefined;
 
 export interface Mapping {
-  [event: string]: SupportedMapping<Custom>;
+  [event: string]: EventConfig | undefined;
 }
+
+export type EventConfig = SupportedMapping<Custom>;
 
 export type Custom = EventMappingValues & EventMappingObjectValues;
 

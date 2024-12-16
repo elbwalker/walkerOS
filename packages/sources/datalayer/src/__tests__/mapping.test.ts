@@ -68,6 +68,23 @@ describe('mapping', () => {
     expect(elb).toHaveBeenCalledTimes(0);
   });
 
+  test('mapping *', () => {
+    const { dataLayer } = sourceDataLayer({
+      elb,
+      mapping: {
+        '*': { ignore: true },
+        foo: {},
+      },
+    })!;
+
+    dataLayer.push({ event: 'foo' });
+    expect(elb).toHaveBeenCalledTimes(1);
+
+    jest.resetAllMocks();
+    dataLayer.push({ event: 'bar' });
+    expect(elb).toHaveBeenCalledTimes(0);
+  });
+
   test('mapping foo', () => {
     const { dataLayer } = sourceDataLayer({
       elb,

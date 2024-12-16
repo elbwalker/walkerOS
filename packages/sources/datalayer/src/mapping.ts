@@ -1,6 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type {
   Config,
+  EventConfig,
   EventMappingObjectValues,
   EventMappingValues,
   MappedEvent,
@@ -27,11 +28,18 @@ const defaultMapping: Mapping = {
   },
 };
 
+function getMapping(name: string, mapping: Mapping): EventConfig {
+  return mapping[name] || mapping['*'] || {};
+}
+
 export function objToEvent(config: Config, obj: unknown): MappedEvent | void {
   if (!(isObject(obj) && isString(obj.event))) return;
 
-  const mapping = Object.assign(defaultMapping, config.mapping);
-  const { command, custom, ignore, name } = mapping[obj.event] || {};
+  const mapping = getMapping(
+    obj.event,
+    Object.assign(defaultMapping, config.mapping),
+  );
+  const { command, custom, ignore, name } = mapping;
 
   if (ignore) return;
 

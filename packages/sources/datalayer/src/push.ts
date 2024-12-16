@@ -33,8 +33,10 @@ export function push(config: Config, ...args: unknown[]) {
         if (mappedObj) {
           const { command, event } = mappedObj;
 
+          if (!event.event) return;
+
           if (command) {
-            config.elb(event.event || '', event.data);
+            config.elb(event.event, event.data);
           } else {
             // Prevent duplicate events
             if (config.processedEvents.has(event.id)) return;
