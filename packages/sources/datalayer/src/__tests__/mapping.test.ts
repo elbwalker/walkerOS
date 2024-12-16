@@ -30,6 +30,20 @@ describe('mapping', () => {
 
   beforeEach(() => {});
 
+  test('default values', () => {
+    const { dataLayer } = sourceDataLayer({ elb })!;
+
+    dataLayer.push({ event: 'foo this' });
+    expect(elb).toHaveBeenCalledWith({
+      event: 'dataLayer foo_this',
+      id: expect.any(String),
+      data: {
+        event: 'foo this',
+      },
+      source: { type: 'dataLayer' },
+    });
+  });
+
   test('mapping name', () => {
     const { dataLayer } = sourceDataLayer({
       elb,
