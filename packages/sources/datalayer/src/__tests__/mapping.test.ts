@@ -48,14 +48,10 @@ describe('mapping', () => {
     const { dataLayer } = sourceDataLayer({
       elb,
       mapping: {
-        foo: {
-          name: 'bar',
-        },
+        foo: { name: 'bar' },
         baz: {
           name: 'nope',
-          custom: {
-            event: { value: 'prioritize' },
-          },
+          data: { map: { event: { value: 'prioritize' } } },
         },
       },
     })!;
@@ -99,42 +95,51 @@ describe('mapping', () => {
     expect(elb).toHaveBeenCalledTimes(0);
   });
 
-  test('mapping foo', () => {
+  test('mapping all', () => {
     const { dataLayer } = sourceDataLayer({
       elb,
       mapping: {
         foo: {
-          custom: {
-            event: { value: 'entity action' },
-            data: {
-              some: {
-                value: 'thing',
+          data: {
+            map: {
+              event: { value: 'entity action' },
+              data: {
+                map: {
+                  some: { value: 'thing' },
+                  key: 'dynamic',
+                },
               },
-              key: 'dynamic',
-            },
-            context: {
-              foo: { value: 'bar' },
-            },
-            globals: { foo: { value: 'bar' } },
-            custom: { completely: { value: 'random' } },
-            user: { hash: { value: 'h4sh' } },
-            consent: { demo: { value: true } },
-            id: { value: '1d' },
-            trigger: { value: 'push' },
-            entity: { value: 'entity' },
-            action: { value: 'action' },
-            timestamp: { value: 1626780000 },
-            timing: { value: 3.14 },
-            group: { value: 'group' },
-            count: { value: 1 },
-            version: {
-              source: { value: '0.0.7' },
-              tagging: { value: 1 },
-            },
-            source: {
-              type: { value: 'test' },
-              id: { value: 'https://localhost:80' },
-              previous_id: { value: 'http://remotehost:9001' },
+              context: {
+                map: { foo: { value: 'bar' } },
+              },
+              globals: { map: { foo: { value: 'bar' } } },
+              custom: { map: { completely: { value: 'random' } } },
+              user: { map: { hash: { value: 'h4sh' } } },
+              nested: {
+                loop: ['this', { map: { type: { value: 'foo' } } }],
+              },
+              consent: { map: { demo: { value: true } } },
+              id: { value: '1d' },
+              trigger: { value: 'push' },
+              entity: { value: 'entity' },
+              action: { value: 'action' },
+              timestamp: { value: 1626780000 },
+              timing: { value: 3.14 },
+              group: { value: 'group' },
+              count: { value: 1 },
+              version: {
+                map: {
+                  source: { value: '0.0.7' },
+                  tagging: { value: 1 },
+                },
+              },
+              source: {
+                map: {
+                  type: { value: 'test' },
+                  id: { value: 'https://localhost:80' },
+                  previous_id: { value: 'http://remotehost:9001' },
+                },
+              },
             },
           },
         },
@@ -142,40 +147,38 @@ describe('mapping', () => {
     })!;
 
     dataLayer.push({ event: 'foo', dynamic: 'value', id: '1d' });
-    expect(elb).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: 'entity action',
-        data: {
-          some: 'thing',
-          key: 'value',
-        },
-        context: {
-          foo: ['bar', 0],
-        },
-        globals: { foo: 'bar' },
-        custom: { completely: 'random' },
-        user: { hash: 'h4sh' },
-        consent: { demo: true },
-        id: '1d',
-        trigger: 'push',
-        entity: 'entity',
-        action: 'action',
-        timestamp: 1626780000,
-        timing: 3.14,
-        group: 'group',
-        count: 1,
-        version: {
-          source: '0.0.7',
-          tagging: 1,
-        },
-        source: {
-          type: 'test',
-          id: 'https://localhost:80',
-          previous_id: 'http://remotehost:9001',
-        },
-        // @TODO context, nested
-      }),
-    );
+    expect(elb).toHaveBeenCalledWith({
+      event: 'entity action',
+      data: {
+        some: 'thing',
+        key: 'value',
+      },
+      context: {
+        foo: ['bar', 0],
+      },
+      globals: { foo: 'bar' },
+      custom: { completely: 'random' },
+      user: { hash: 'h4sh' },
+      nested: [{ type: 'foo', data: {}, context: {}, nested: [] }],
+      consent: { demo: true },
+      id: '1d',
+      trigger: 'push',
+      entity: 'entity',
+      action: 'action',
+      timestamp: 1626780000,
+      timing: 3.14,
+      group: 'group',
+      count: 1,
+      version: {
+        source: '0.0.7',
+        tagging: 1,
+      },
+      source: {
+        type: 'test',
+        id: 'https://localhost:80',
+        previous_id: 'http://remotehost:9001',
+      },
+    });
   });
 
   test('mapping add_to_cart', () => {
@@ -184,18 +187,22 @@ describe('mapping', () => {
       mapping: {
         add_to_cart: {
           name: 'product add',
-          custom: {
-            data: {
-              id: 'items.0.item_id',
-              name: 'items.0.item_name',
-              discount: 'items.0.discount',
-              brand: 'items.0.item_brand',
-              category: 'items.0.item_category',
-              color: 'items.0.item_variant',
-              currency: 'currency',
-              price: 'items.0.price',
-              quantity: 'items.0.quantity',
-              total: 'value',
+          data: {
+            map: {
+              data: {
+                map: {
+                  id: 'items.0.item_id',
+                  name: 'items.0.item_name',
+                  discount: 'items.0.discount',
+                  brand: 'items.0.item_brand',
+                  category: 'items.0.item_category',
+                  color: 'items.0.item_variant',
+                  currency: 'currency',
+                  price: 'items.0.price',
+                  quantity: 'items.0.quantity',
+                  total: 'value',
+                },
+              },
             },
             // context list
           },
@@ -235,21 +242,33 @@ describe('mapping', () => {
       mapping: {
         purchase: {
           name: 'order complete',
-          custom: {
-            data: {
-              id: 'transaction_id',
-              currency: 'currency',
-              shipping: 'shipping',
-              taxes: 'tax',
-              total: 'value',
-              coupon: 'coupon',
-            },
-            nested: {
-              type: { value: 'product' },
+          data: {
+            map: {
               data: {
-                id: 'items.*.item_id',
-                name: 'items.*.item_name',
-                price: 'items.*.price',
+                map: {
+                  id: 'transaction_id',
+                  currency: 'currency',
+                  shipping: 'shipping',
+                  taxes: 'tax',
+                  total: 'value',
+                  coupon: 'coupon',
+                },
+              },
+              nested: {
+                loop: [
+                  'items',
+                  {
+                    map: {
+                      data: {
+                        map: {
+                          id: 'item_id',
+                          name: 'item_name',
+                          price: 'price',
+                        },
+                      },
+                    },
+                  },
+                ],
               },
             },
           },
