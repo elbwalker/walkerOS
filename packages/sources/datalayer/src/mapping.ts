@@ -4,14 +4,12 @@ import { getId, getMappingValue, isObject } from '@elbwalker/utils';
 import { convertConsentStates, isString } from './helper';
 
 const defaultMapping: Mapping = {
-  'consent default': {
-    ignore: true,
-  },
+  'consent default': { ignore: true },
   'consent update': {
     command: true,
     name: 'walker consent',
-    custom: {
-      data: {
+    data: {
+      map: {
         // @TODO update list
         marketing: 'ad_storage',
         analytics: 'analytics_storage',
@@ -24,13 +22,14 @@ function getMapping(name: string, mapping: Mapping): EventConfig {
   return mapping[name] || mapping['*'] || {};
 }
 
-export function objToEvent(config: Config, obj: unknown): MappedEvent | void {
+export function objToEvent(obj: unknown, config: Config): MappedEvent | void {
   if (!(isObject(obj) && isString(obj.event))) return;
 
-  const mapping = getMapping(
-    obj.event,
-    Object.assign(defaultMapping, config.mapping),
-  );
+  const mapping = getMapping(obj.event, {
+    ...defaultMapping,
+    ...config.mapping,
+  });
+
   const { command, data, ignore, name } = mapping;
 
   if (ignore) return;
@@ -42,7 +41,6 @@ export function objToEvent(config: Config, obj: unknown): MappedEvent | void {
 
   // id for duplicate detection
   const id = obj.id ? String(obj.id) : getId();
-  delete obj.id;
 
   const event: WalkerOS.DeepPartialEvent & { id: string } = {
     id,
@@ -110,8 +108,8 @@ export function gtagToObj(args: WalkerOS.AnyObject): WalkerOS.AnyObject | void {
       obj = convertConsentStates(obj);
       break;
     case 'set':
-      if (!isString(value)) break;
-      event = `${command} ${value}`;
+      if (isObject(value)) obj = value;
+      event = `${command} ${isString(value) ? value : 'custom'}`;
       break;
     default:
       // Ignore command (like get)

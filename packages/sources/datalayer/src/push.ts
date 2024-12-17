@@ -28,7 +28,7 @@ export function push(config: Config, ...args: unknown[]) {
 
       items.forEach((obj) => {
         // Map the incoming event to a WalkerOS event
-        const mappedObj = objToEvent(config, obj);
+        const mappedObj = objToEvent(obj, config);
 
         if (mappedObj) {
           const { command, event } = mappedObj;
@@ -36,6 +36,7 @@ export function push(config: Config, ...args: unknown[]) {
           if (!event.event) return;
 
           if (command) {
+            delete event.data?.event;
             config.elb(event.event, event.data);
           } else {
             // Prevent duplicate events
