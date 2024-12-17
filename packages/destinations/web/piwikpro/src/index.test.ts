@@ -58,7 +58,7 @@ describe('Destination PiwikPro', () => {
     expect(mockFn).toHaveBeenCalledTimes(0);
   });
 
-  test.skip('event trackEcommerceOrder', () => {
+  test('event trackEcommerceOrder', () => {
     const order_complete = getEvent('order complete');
     elb('walker destination', destination, {
       custom,
@@ -66,19 +66,21 @@ describe('Destination PiwikPro', () => {
         order: {
           complete: {
             name: 'trackEcommerceOrder',
-            data: [
-              'data.id',
-              'data.total',
-              {
-                fn: (event) => {
-                  const total = Number(event.data?.total ?? 0);
-                  const taxes = Number(event.data?.taxes ?? 0);
-                  const shipping = Number(event.data?.shipping ?? 0);
+            data: {
+              set: [
+                'data.id',
+                'data.total',
+                {
+                  fn: (event) => {
+                    const total = Number(event.data?.total ?? 0);
+                    const taxes = Number(event.data?.taxes ?? 0);
+                    const shipping = Number(event.data?.shipping ?? 0);
 
-                  return total - taxes - shipping;
+                    return total - taxes - shipping;
+                  },
                 },
-              },
-            ],
+              ],
+            },
           },
         },
       },

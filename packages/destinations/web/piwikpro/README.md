@@ -16,7 +16,7 @@ Destinations can be used via node or directly in the browser.
 
 Learn more about the
 [destinations](https://www.elbwalker.com/docs/destinations/) in general and read
-the detailled
+the detailed
 [Piwik PRO configuration](https://www.elbwalker.com/docs/destinations/piwikpro#configuration).
 
 ```js

@@ -1,5 +1,5 @@
 import type { Custom, CustomEvent, Destination } from './types';
-import { getMappingValue } from '@elbwalker/utils';
+import { getMappingValue, isArray } from '@elbwalker/utils';
 
 // Types
 export * as DestinationPiwikPro from './types';
@@ -49,7 +49,7 @@ export const destinationPiwikPro: Destination = {
 
     const customMapping: CustomEvent = mapping.custom || {};
 
-    const parameters = Array.isArray(data) ? data : [data];
+    const parameters = isArray(data) ? data : [data];
 
     func([event.event, ...parameters]);
 
