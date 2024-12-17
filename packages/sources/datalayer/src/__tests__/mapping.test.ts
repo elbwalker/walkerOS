@@ -451,41 +451,6 @@ describe('mapping', () => {
     expect(elb).toHaveBeenCalledTimes(0);
   });
 
-  test.skip('consent', () => {
-    sourceDataLayer({ elb });
-
-    gtag('consent', 'default', {
-      ad_storage: true,
-      analytics_storage: false,
-      wait_for_update: 500,
-    });
-    expect(elb).toHaveBeenCalledTimes(0);
-
-    gtag('consent', 'update', { ad_storage: 'granted' });
-    expect(elb).toHaveBeenLastCalledWith('walker consent', {
-      marketing: true,
-    });
-
-    gtag('consent', 'update', { analytics_storage: 'denied' });
-    expect(elb).toHaveBeenLastCalledWith('walker consent', {
-      analytics: false,
-    });
-
-    jest.clearAllMocks();
-    gtag('consent', 'update', 'invalid-param');
-    expect(elb).toHaveBeenLastCalledWith({ event: 'consent update' });
-
-    gtag('consent', 'update');
-    expect(elb).toHaveBeenLastCalledWith({
-      event: 'consent update',
-    });
-
-    gtag('consent');
-    expect(elb).toHaveBeenLastCalledWith({
-      event: undefined,
-    });
-  });
-
   test('gtag get', () => {
     sourceDataLayer({ elb });
 

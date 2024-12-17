@@ -10,9 +10,13 @@ const defaultMapping: Mapping = {
     name: 'walker consent',
     data: {
       map: {
-        // @TODO update list
-        marketing: 'ad_storage',
-        analytics: 'analytics_storage',
+        data: {
+          map: {
+            // @TODO update list
+            marketing: 'ad_storage',
+            analytics: 'analytics_storage',
+          },
+        },
       },
     },
   },

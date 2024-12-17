@@ -1,7 +1,8 @@
 import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
+import { WalkerOS } from '@elbwalker/types';
 
-describe.skip('commands', () => {
+describe('commands', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
   let dataLayer: DataLayer;
 
@@ -30,7 +31,7 @@ describe.skip('commands', () => {
   });
 
   test('consent update', () => {
-    sourceDataLayer({ elb, mapping: { foo: {} } });
+    sourceDataLayer({ elb });
 
     gtag('consent', 'update', {
       ad_user_data: 'denied',
@@ -40,10 +41,30 @@ describe.skip('commands', () => {
       wait_for_update: 500,
     });
 
-    expect(elb).toHaveBeenNthCalledWith(1, 'walker consent', {
+    expect(elb).toHaveBeenCalledWith('walker consent', {
       marketing: false,
       analytics: true,
     });
+
+    gtag('consent', 'update', { analytics_storage: 'granted' });
+    expect(elb).toHaveBeenLastCalledWith('walker consent', {
+      analytics: true,
+    });
+
+    gtag('consent', 'update', { ad_storage: 'denied' });
+    expect(elb).toHaveBeenLastCalledWith('walker consent', {
+      marketing: false,
+    });
+
+    jest.clearAllMocks();
+    (gtag as WalkerOS.AnyFunction)('consent', 'update', 'invalid-param');
+    expect(elb).toHaveBeenLastCalledWith('walker consent', {});
+
+    (gtag as WalkerOS.AnyFunction)('consent', 'update');
+    expect(elb).toHaveBeenLastCalledWith('walker consent', {});
+
+    (gtag as WalkerOS.AnyFunction)('consent');
+    expect(elb).toHaveBeenLastCalledWith('walker consent', {});
   });
 
   test('set', () => {
@@ -53,9 +74,13 @@ describe.skip('commands', () => {
         'set campaign': {
           name: 'walker globals',
           command: true,
-          custom: {
-            data: {
-              term: 'term',
+          data: {
+            map: {
+              data: {
+                map: {
+                  term: 'term',
+                },
+              },
             },
           },
         },
@@ -66,7 +91,7 @@ describe.skip('commands', () => {
       term: 'running+shoes',
     });
 
-    expect(elb).toHaveBeenNthCalledWith(1, 'walker globals', {
+    expect(elb).toHaveBeenCalledWith('walker globals', {
       term: 'running+shoes',
     });
   });
