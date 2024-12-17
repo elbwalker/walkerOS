@@ -1,17 +1,3 @@
-import type { WalkerOS } from '@elbwalker/types';
-import { isObject } from '@elbwalker/utils';
-
-export function isString(value: unknown): value is string {
-  return typeof value === 'string';
-}
-
-export function wasArguments(obj: unknown): obj is WalkerOS.AnyObject {
-  return (
-    isObject(obj) &&
-    Object.keys(obj).every((key, index) => key === String(index))
-  );
-}
-
 export function convertConsentStates(
   obj: Record<string, unknown>,
 ): Record<string, unknown> {

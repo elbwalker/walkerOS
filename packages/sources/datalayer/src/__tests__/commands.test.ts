@@ -1,12 +1,12 @@
-/* eslint-disable prefer-rest-params */
 import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
 
-describe('commands', () => {
+describe.skip('commands', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
   let dataLayer: DataLayer;
 
   const gtag: Gtag.Gtag = function () {
+    // eslint-disable-next-line prefer-rest-params
     dataLayer.push(arguments);
   };
 

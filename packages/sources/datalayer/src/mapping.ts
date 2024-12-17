@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Config, EventConfig, MappedEvent, Mapping } from './types';
-import { getId, getMappingValue, isObject } from '@elbwalker/utils';
-import { convertConsentStates, isString } from './helper';
+import { getId, getMappingValue, isObject, isString } from '@elbwalker/utils';
+import { convertConsentStates } from './helper';
 
 const defaultMapping: Mapping = {
   'consent default': { ignore: true },
@@ -85,10 +85,8 @@ export function objToEvent(obj: unknown, config: Config): MappedEvent | void {
 }
 
 // https://developers.google.com/tag-platform/gtagjs/reference
-export function gtagToObj(args: WalkerOS.AnyObject): WalkerOS.AnyObject | void {
-  const command = args[0];
-  const value = args[1];
-  const params = args[2];
+export function gtagToObj(args: IArguments): WalkerOS.AnyObject | void {
+  const [command, value, params] = args;
 
   let event: string | undefined;
   let obj = isObject(params) ? params : {};

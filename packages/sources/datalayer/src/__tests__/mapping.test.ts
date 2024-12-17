@@ -417,7 +417,7 @@ describe('mapping', () => {
     );
   });
 
-  test('gtagToObj config', () => {
+  test('gtag config', () => {
     sourceDataLayer({ elb });
 
     gtag('config', 'GA-XXXXXXXXXX');
@@ -486,7 +486,7 @@ describe('mapping', () => {
     });
   });
 
-  test('gtagToObj get', () => {
+  test('gtag get', () => {
     sourceDataLayer({ elb });
 
     gtag('get', 'campaign');
@@ -522,6 +522,24 @@ describe('mapping', () => {
     expect(elb).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'dataLayer set_user_properties',
+      }),
+    );
+  });
+
+  test('filter parameters', () => {
+    sourceDataLayer({ elb });
+
+    gtag('event', 'foo', {
+      elem: document.createElement('div'),
+      fn: jest.fn(),
+      a: '',
+    });
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          event: 'foo',
+          a: '',
+        },
       }),
     );
   });

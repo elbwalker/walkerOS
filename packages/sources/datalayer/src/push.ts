@@ -1,7 +1,6 @@
 import type { Config } from './types';
-import { clone, tryCatch } from '@elbwalker/utils';
+import { clone, filterValues, isArguments, tryCatch } from '@elbwalker/utils';
 import { objToEvent, gtagToObj } from './mapping';
-import { wasArguments } from './helper';
 
 export function intercept(config: Config) {
   const { dataLayer } = config;
@@ -22,13 +21,13 @@ export function push(config: Config, ...args: unknown[]) {
       const clonedArgs = clone(args);
 
       // Get the pushed items
-      const items = wasArguments(clonedArgs[0])
+      const items = isArguments(clonedArgs[0])
         ? [gtagToObj(clonedArgs[0])] // Convert gtag to dataLayer
         : clonedArgs; // Regular dataLayer push
 
       items.forEach((obj) => {
         // Map the incoming event to a WalkerOS event
-        const mappedObj = objToEvent(obj, config);
+        const mappedObj = objToEvent(filterValues(obj), config);
 
         if (mappedObj) {
           const { command, event } = mappedObj;
