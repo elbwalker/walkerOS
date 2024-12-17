@@ -38,6 +38,7 @@ export interface ValueConfig {
   key?: string;
   loop?: Loop;
   map?: Map;
+  set?: Value[];
   validate?: Validate;
   value?: WalkerOS.PropertyType;
 }

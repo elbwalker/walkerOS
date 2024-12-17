@@ -1,7 +1,7 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import { getGrantedConsent } from './consent';
 import { getByPath } from './byPath';
-import { isArray, isDefined, isObject } from './is';
+import { isArray, isDefined, isObject, isString } from './is';
 import { castToProperty } from './property';
 
 export function getMappingEvent(
@@ -77,8 +77,8 @@ function processMappingValue(
   return mappings.reduce((acc, mappingItem) => {
     if (acc) return acc; // A valid result was already found
 
-    const { condition, consent, fn, key, loop, map, validate, value } =
-      typeof mappingItem == 'string'
+    const { condition, consent, fn, key, loop, map, set, validate, value } =
+      isString(mappingItem)
         ? ({ key: mappingItem } as Mapping.ValueConfig)
         : mappingItem;
 
@@ -100,7 +100,6 @@ function processMappingValue(
     if (loop) {
       const [scope, itemMapping] = loop;
 
-      // Retrieve the array from the event
       const data =
         scope === 'this' ? [obj] : getMappingValue(obj, scope, options);
 
@@ -111,9 +110,7 @@ function processMappingValue(
           )
           .filter(isDefined);
       }
-    }
-
-    if (map) {
+    } else if (map) {
       mappingValue = Object.entries(map).reduce(
         (mappedObj, [mapKey, mapValue]) => {
           const result = getMappingValue(obj, mapValue, options);
@@ -123,6 +120,8 @@ function processMappingValue(
         },
         {} as WalkerOS.AnyObject,
       );
+    } else if (set) {
+      mappingValue = set.map((item) => processMappingValue(obj, item, options));
     }
 
     // Validate the value

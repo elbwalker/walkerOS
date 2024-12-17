@@ -229,6 +229,16 @@ describe('getMappingValue', () => {
     ).toStrictEqual([event.event]);
   });
 
+  test('set', () => {
+    const event = getEvent('order complete');
+
+    expect(
+      getMappingValue(event, {
+        set: ['event', 'data', { value: 'static' }, { fn: () => 'fn' }],
+      }),
+    ).toStrictEqual(['order complete', event.data, 'static', 'fn']);
+  });
+
   test('map', () => {
     const event = createEvent();
 
