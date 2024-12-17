@@ -1,3 +1,4 @@
+import type { WalkerOS } from '@elbwalker/types';
 import type { Config } from './types';
 import { clone, filterValues, isArguments, tryCatch } from '@elbwalker/utils';
 import { objToEvent, gtagToObj } from './mapping';
@@ -32,12 +33,9 @@ export function push(config: Config, ...args: unknown[]) {
         if (mappedObj) {
           const { command, event } = mappedObj;
 
-          if (!event.event) return;
-
           if (command) {
-            delete event.data?.event;
-            config.elb(event.event, event.data);
-          } else {
+            config.elb(command.name, command.data as WalkerOS.PushData);
+          } else if (event) {
             // Prevent duplicate events
             if (config.processedEvents.has(event.id)) return;
             config.processedEvents.add(event.id);

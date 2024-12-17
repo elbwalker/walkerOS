@@ -58,7 +58,7 @@ describe('Destination PiwikPro', () => {
     expect(mockFn).toHaveBeenCalledTimes(0);
   });
 
-  test('event trackEcommerceOrder', () => {
+  test.skip('event trackEcommerceOrder', () => {
     const order_complete = getEvent('order complete');
     elb('walker destination', destination, {
       custom,

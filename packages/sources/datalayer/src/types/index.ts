@@ -20,11 +20,19 @@ export interface Mapping {
   [event: string]: EventConfig | undefined;
 }
 
-export type EventConfig<CustomEvent = unknown> = Omit<
-  WalkerOSMapping.EventConfig<CustomEvent>,
+export type EventConfig<T = CustomEvent> = Omit<
+  WalkerOSMapping.EventConfig<T>,
   'batch' | 'batchFn' | 'batched' | 'consent'
-> & { command?: boolean };
+>;
 
-export type MappedEvent =
-  | { event: WalkerOS.DeepPartialEvent & { id: string }; command?: boolean }
-  | undefined;
+export interface CustomEvent {
+  command: WalkerOSMapping.Data;
+}
+
+export type MappedEvent = {
+  event?: WalkerOS.DeepPartialEvent & { id: string };
+  command?: {
+    name: string;
+    data: unknown;
+  };
+};

@@ -73,13 +73,10 @@ describe('commands', () => {
       mapping: {
         'set campaign': {
           name: 'walker globals',
-          command: true,
-          data: {
-            map: {
-              data: {
-                map: {
-                  term: 'term',
-                },
+          custom: {
+            command: {
+              map: {
+                term: 'term',
               },
             },
           },

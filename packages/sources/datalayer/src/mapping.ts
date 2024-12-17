@@ -6,16 +6,13 @@ import { convertConsentStates } from './helper';
 const defaultMapping: Mapping = {
   'consent default': { ignore: true },
   'consent update': {
-    command: true,
     name: 'walker consent',
-    data: {
-      map: {
-        data: {
-          map: {
-            // @TODO update list
-            marketing: 'ad_storage',
-            analytics: 'analytics_storage',
-          },
+    custom: {
+      command: {
+        map: {
+          // @TODO update list
+          marketing: 'ad_storage',
+          analytics: 'analytics_storage',
         },
       },
     },
@@ -34,14 +31,19 @@ export function objToEvent(obj: unknown, config: Config): MappedEvent | void {
     ...config.mapping,
   });
 
-  const { command, data, ignore, name } = mapping;
+  const { custom, data, ignore, name } = mapping;
+  const eventName = name || `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
 
   if (ignore) return;
 
+  // Command
+  if (custom?.command) {
+    const data = getMappingValue(obj, custom.command);
+    return data ? { command: { name: eventName, data } } : undefined;
+  }
+
   // Mapping values
-  const values = Array.isArray(data)
-    ? data.map((item) => getMappingValue(event, item))
-    : getMappingValue(obj, data || {});
+  const values = getMappingValue(obj, data || {});
 
   // id for duplicate detection
   const id = obj.id ? String(obj.id) : getId();
@@ -78,14 +80,13 @@ export function objToEvent(obj: unknown, config: Config): MappedEvent | void {
   }
 
   // Update the event name
-  event.event =
-    event.event || name || `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
+  event.event = event.event || eventName;
 
   // source type is dataLayer
   event.source = event.source ?? {};
   event.source.type = event.source.type ?? 'dataLayer';
 
-  return { command, event };
+  return { event };
 }
 
 // https://developers.google.com/tag-platform/gtagjs/reference
