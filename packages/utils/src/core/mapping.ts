@@ -1,7 +1,7 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import { getGrantedConsent } from './consent';
 import { getByPath } from './byPath';
-import { isDefined, isObject } from './is';
+import { isArray, isDefined, isObject } from './is';
 import { castToProperty } from './property';
 
 export function getMappingEvent(
@@ -22,7 +22,7 @@ export function getMappingEvent(
       | Mapping.EventConfig<unknown>[],
   ) => {
     if (!eventMapping) return;
-    eventMapping = Array.isArray(eventMapping) ? eventMapping : [eventMapping];
+    eventMapping = isArray(eventMapping) ? eventMapping : [eventMapping];
 
     return eventMapping.find(
       (eventMapping) =>
@@ -51,6 +51,19 @@ export function getMappingEvent(
 }
 
 export function getMappingValue(
+  obj: WalkerOS.PartialEvent | WalkerOS.AnyObject,
+  data: Mapping.Data,
+  options: Mapping.Options = {},
+): WalkerOS.Property | undefined {
+  const mappings = isArray(data) ? data : [data];
+
+  for (const mapping of mappings) {
+    const result = processMappingValue(obj, mapping, options);
+    if (isDefined(result)) return result;
+  }
+}
+
+function processMappingValue(
   obj: WalkerOS.PartialEvent | WalkerOS.AnyObject,
   mapping: Mapping.Value,
   options: Mapping.Options = {},

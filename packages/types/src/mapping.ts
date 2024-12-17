@@ -26,6 +26,7 @@ export interface EventMapping {
   mappingKey?: string;
 }
 
+export type Data = Value | Values;
 export type Value = ValueType | Array<ValueType>;
 export type Values = Array<Value>;
 export type ValueType = string | ValueConfig;
@@ -46,8 +47,6 @@ export type Condition = (
   mapping?: Value,
   instance?: WalkerOS.Instance,
 ) => boolean;
-
-export type Data = Value | Values;
 
 export type Fn = (
   event: WalkerOS.PartialEvent,

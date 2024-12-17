@@ -73,9 +73,7 @@ function resolveMappingData(
 ): Destination.Data {
   if (!data) return;
 
-  return Array.isArray(data)
-    ? data.map((item) => getMappingValue(event, item))
-    : getMappingValue(event, data);
+  return getMappingValue(event, data);
 }
 
 export async function destinationPush(
