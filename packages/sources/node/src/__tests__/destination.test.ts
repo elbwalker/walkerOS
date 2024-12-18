@@ -433,4 +433,20 @@ describe('Destination', () => {
       // timing: 0, // @TODO should be set to default type
     });
   });
+
+  test('loop prevention', async () => {
+    mockDestination.type = 'foo';
+    const { elb } = getSource({
+      destinations: { mockDestination },
+    });
+
+    await elb({ event: 'e a' });
+    await elb({ event: 'e a', source: { type: 'another one' } });
+    expect(mockPush).toHaveBeenCalledTimes(2);
+
+    jest.clearAllMocks();
+    await elb({ event: 'e a', source: { type: 'foo' } });
+
+    expect(mockPush).toHaveBeenCalledTimes(0);
+  });
 });

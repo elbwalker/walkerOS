@@ -103,6 +103,10 @@ export async function destinationPush(
     }
   }
 
+  // Prevent recursive loops between sources and destinations
+  if (isDefined(destination.type) && destination.type === event.source.type)
+    return false;
+
   const options = { data, instance };
 
   if (eventMapping?.batch && destination.pushBatch) {
