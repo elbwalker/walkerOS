@@ -1,6 +1,7 @@
 /* eslint-disable prefer-rest-params */
 import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
+import { isArray } from '@elbwalker/utils';
 
 describe('source dataLayer', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
@@ -8,7 +9,7 @@ describe('source dataLayer', () => {
 
   beforeEach(() => {
     window.dataLayer = [];
-    dataLayer = window.dataLayer;
+    dataLayer = window.dataLayer as DataLayer;
   });
 
   const gtag: Gtag.Gtag = function () {
@@ -24,8 +25,8 @@ describe('source dataLayer', () => {
     expect(window.dataLayer).toBeUndefined();
 
     sourceDataLayer({ elb });
-    expect(Array.isArray(window.dataLayer)).toBe(true);
-    expect(window.dataLayer!.length).toBe(0);
+    expect(isArray(window.dataLayer)).toBe(true);
+    expect((window.dataLayer as DataLayer)!.length).toBe(0);
   });
 
   test('init existing', () => {
@@ -49,7 +50,7 @@ describe('source dataLayer', () => {
     expect(window.foo).toBeUndefined();
 
     sourceDataLayer({ elb, name: 'foo' });
-    expect(Array.isArray(window.foo)).toBe(true);
+    expect(isArray(window.foo)).toBe(true);
   });
 
   test('original arguments', () => {

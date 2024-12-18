@@ -1,6 +1,6 @@
 import type { Hooks, WalkerOS } from '@elbwalker/types';
 import type { On, SourceWalkerjs, DestinationWeb } from '../types';
-import { Const, assign, isObject, isSameType } from '@elbwalker/utils';
+import { Const, assign, isArray, isObject, isSameType } from '@elbwalker/utils';
 import { isElementOrDocument } from './helper';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';
@@ -47,7 +47,7 @@ export function handleCommand(
         addHook(instance, data as keyof Hooks.Functions, options);
       break;
     case Const.Commands.Init: {
-      const elems: unknown[] = Array.isArray(data) ? data : [data || document];
+      const elems: unknown[] = isArray(data) ? data : [data || document];
       elems.forEach((elem) => {
         isElementOrDocument(elem) && initScopeTrigger(instance, elem);
       });

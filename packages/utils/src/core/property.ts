@@ -1,24 +1,27 @@
 import type { WalkerOS } from '@elbwalker/types';
-import { isArguments, isArray, isNumber, isObject } from './is';
+import {
+  isArguments,
+  isArray,
+  isBoolean,
+  isDefined,
+  isNumber,
+  isObject,
+  isString,
+} from './is';
 
 export function isPropertyType(value: unknown): value is WalkerOS.PropertyType {
   return (
-    typeof value === 'boolean' ||
-    typeof value === 'string' ||
+    isBoolean(value) ||
+    isString(value) ||
     isNumber(value) ||
-    typeof value === 'undefined' ||
+    !isDefined(value) ||
     (isArray(value) && value.every(isPropertyType)) ||
     (isObject(value) && Object.values(value).every(isPropertyType))
   );
 }
 
 export function filterValues(value: unknown): WalkerOS.Property | undefined {
-  if (
-    typeof value === 'boolean' ||
-    typeof value === 'string' ||
-    isNumber(value)
-  )
-    return value;
+  if (isBoolean(value) || isString(value) || isNumber(value)) return value;
 
   if (isArguments(value)) return filterValues(Array.from(value));
 

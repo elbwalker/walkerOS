@@ -8,6 +8,10 @@ export function isArray<T>(value: unknown): value is T[] {
   return Array.isArray(value);
 }
 
+export function isBoolean(value: unknown): value is boolean {
+  return typeof value === 'boolean';
+}
+
 export function isDefined<T>(val: T | undefined): val is T {
   return typeof val !== 'undefined';
 }

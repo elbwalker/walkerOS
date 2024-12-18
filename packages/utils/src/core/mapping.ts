@@ -71,7 +71,7 @@ function processMappingValue(
   const { instance } = options;
 
   // Ensure mapping is an array for uniform processing
-  const mappings = Array.isArray(mapping) ? mapping : [mapping];
+  const mappings = isArray(mapping) ? mapping : [mapping];
 
   // Loop over each mapping and return the first valid result
   return mappings.reduce((acc, mappingItem) => {
@@ -103,7 +103,7 @@ function processMappingValue(
       const data =
         scope === 'this' ? [obj] : getMappingValue(obj, scope, options);
 
-      if (Array.isArray(data)) {
+      if (isArray(data)) {
         mappingValue = data
           .map((item) =>
             getMappingValue(isObject(item) ? item : {}, itemMapping, options),

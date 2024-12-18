@@ -1,6 +1,13 @@
 import type { Walker } from '../types';
 import type { WalkerOS } from '@elbwalker/types';
-import { Const, assign, castValue, getAttribute, trim } from '@elbwalker/utils';
+import {
+  Const,
+  assign,
+  castValue,
+  getAttribute,
+  isArray,
+  trim,
+} from '@elbwalker/utils';
 
 export function getElbAttributeName(
   prefix: string,
@@ -55,7 +62,7 @@ export function getElbValues(
 
     if (key.endsWith('[]')) {
       key = key.slice(0, -2); // Remove [] symbol
-      if (!Array.isArray(values[key])) values[key] = [];
+      if (!isArray(values[key])) values[key] = [];
       (values[key] as WalkerOS.PropertyType[]).push(castValue(val));
     } else {
       values[key] = castValue(val);

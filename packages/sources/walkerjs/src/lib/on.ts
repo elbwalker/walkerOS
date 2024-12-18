@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { On, SourceWalkerjs } from '../';
-import { Const, tryCatch } from '@elbwalker/utils';
+import { Const, isArray, tryCatch } from '@elbwalker/utils';
 
 export function on(
   instance: SourceWalkerjs.Instance,
@@ -9,7 +9,7 @@ export function on(
 ) {
   const on = instance.on;
   const onType: Array<On.Options> = on[type] || [];
-  const options = Array.isArray(option) ? option : [option];
+  const options = isArray(option) ? option : [option];
 
   options.forEach((option) => {
     onType.push(option);

@@ -4,6 +4,7 @@ import {
   getEvent,
   getMappingEvent,
   getMappingValue,
+  isString,
 } from '../core';
 
 describe('getMappingEvent', () => {
@@ -263,9 +264,7 @@ describe('getMappingValue', () => {
 
   test('validate', () => {
     const event = createEvent();
-    const mockValidate = jest.fn((value) => {
-      return typeof value === 'string';
-    });
+    const mockValidate = jest.fn(isString);
 
     // validation passed
     expect(
