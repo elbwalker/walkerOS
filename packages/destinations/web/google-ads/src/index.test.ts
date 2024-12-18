@@ -22,8 +22,7 @@ describe('destination Google Ads', () => {
 
     w.gtag = mockFn;
 
-    Walkerjs({ pageview: false, session: false });
-    elb('walker run');
+    Walkerjs({ pageview: false, run: true, session: false });
   });
 
   afterEach(() => {});
@@ -105,6 +104,21 @@ describe('destination Google Ads', () => {
       send_to: `${conversionId}/${label}`,
       currency,
     });
+  });
+
+  test('dataLayer source', () => {
+    elb('walker destination', destination);
+    destination.config.mapping = {
+      entity: { action: { custom: { label } } },
+    };
+    elb(event);
+    jest.resetAllMocks();
+
+    elb({ event, source: { type: 'dataLayer' } });
+    expect(mockFn).toHaveBeenCalledTimes(0);
+
+    elb({ event, source: { type: 'web' } });
+    expect(mockFn).toHaveBeenCalledTimes(1);
   });
 
   test('push with value', () => {
