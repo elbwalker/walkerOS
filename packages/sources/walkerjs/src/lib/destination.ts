@@ -4,7 +4,6 @@ import {
   debounce,
   getMappingEvent,
   getId,
-  tryCatch,
   useHooks,
   getMappingValue,
   isDefined,
@@ -133,42 +132,40 @@ export function destinationPush(
 
   const options = { data, instance };
 
-  return !!tryCatch(() => {
-    if (eventMapping?.batch && destination.pushBatch) {
-      const batched = eventMapping.batched || {
-        key: mappingKey || '',
-        events: [],
-        data: [],
-      };
-      batched.events.push(event);
-      if (isDefined(data)) batched.data.push(data);
+  if (eventMapping?.batch && destination.pushBatch) {
+    const batched = eventMapping.batched || {
+      key: mappingKey || '',
+      events: [],
+      data: [],
+    };
+    batched.events.push(event);
+    if (isDefined(data)) batched.data.push(data);
 
-      eventMapping.batchFn =
-        eventMapping.batchFn ||
-        debounce((destination, instance) => {
-          useHooks(
-            destination.pushBatch!,
-            'DestinationPushBatch',
-            instance.hooks,
-          )(batched, destination.config, options);
+    eventMapping.batchFn =
+      eventMapping.batchFn ||
+      debounce((destination, instance) => {
+        useHooks(
+          destination.pushBatch!,
+          'DestinationPushBatch',
+          instance.hooks,
+        )(batched, destination.config, options);
 
-          // Reset the batched queues
-          batched.events = [];
-          batched.data = [];
-        }, eventMapping.batch);
+        // Reset the batched queues
+        batched.events = [];
+        batched.data = [];
+      }, eventMapping.batch);
 
-      eventMapping.batched = batched;
-      eventMapping.batchFn(destination, instance);
-    } else {
-      // It's time to go to the destination's side now
-      useHooks(destination.push, 'DestinationPush', instance.hooks)(
-        event,
-        destination.config,
-        eventMapping,
-        options,
-      );
-    }
+    eventMapping.batched = batched;
+    eventMapping.batchFn(destination, instance);
+  } else {
+    // It's time to go to the destination's side now
+    useHooks(destination.push, 'DestinationPush', instance.hooks)(
+      event,
+      destination.config,
+      eventMapping,
+      options,
+    );
+  }
 
-    return true;
-  })();
+  return true;
 }

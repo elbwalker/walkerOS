@@ -103,10 +103,6 @@ export async function destinationPush(
     }
   }
 
-  // Prevent recursive loops between sources and destinations
-  if (isDefined(destination.type) && destination.type === event.source.type)
-    return false;
-
   const options = { data, instance };
 
   if (eventMapping?.batch && destination.pushBatch) {
@@ -120,7 +116,7 @@ export async function destinationPush(
 
     eventMapping.batchFn =
       eventMapping.batchFn ||
-      debounce(async (destination, instance) => {
+      debounce((destination, instance) => {
         useHooks(
           destination.pushBatch!,
           'DestinationPushBatch',
