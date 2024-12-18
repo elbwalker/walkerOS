@@ -713,6 +713,21 @@ describe('Destination', () => {
     expect(mockPushLatest).toHaveBeenCalledTimes(0);
   });
 
+  test('loop prevention', () => {
+    elb('walker run');
+    destination.type = 'foo';
+    elb('walker destination', destination);
+
+    elb({ event: 'e a' });
+    elb({ event: 'e a', source: { type: 'another one' } });
+    expect(mockPush).toHaveBeenCalledTimes(2);
+
+    jest.clearAllMocks();
+    elb({ event: 'e a', source: { type: 'foo' } });
+
+    expect(mockPush).toHaveBeenCalledTimes(0);
+  });
+
   test('id namings', () => {
     elb('walker run');
     elb('walker destination', destination, { id: 'foo' });

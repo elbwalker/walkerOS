@@ -128,6 +128,10 @@ export function destinationPush(
     }
   }
 
+  // Prevent recursive loops between sources and destinations
+  if (isDefined(destination.type) && destination.type === event.source.type)
+    return false;
+
   const options = { data, instance };
 
   return !!tryCatch(() => {
