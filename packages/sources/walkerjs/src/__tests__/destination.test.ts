@@ -713,19 +713,19 @@ describe('Destination', () => {
     expect(mockPushLatest).toHaveBeenCalledTimes(0);
   });
 
-  test('loop prevention', () => {
-    elb('walker run');
-    destination.type = 'foo';
-    elb('walker destination', destination);
+  test('dataLayer source', () => {
+    walkerjs = Walkerjs({
+      dataLayer: true,
+      run: true,
+      session: false,
+    });
+    jest.resetAllMocks();
 
-    elb({ event: 'e a' });
-    elb({ event: 'e a', source: { type: 'another one' } });
-    expect(mockPush).toHaveBeenCalledTimes(2);
+    elb({ ...event, source: { type: 'dataLayer' } });
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
 
-    jest.clearAllMocks();
-    elb({ event: 'e a', source: { type: 'foo' } });
-
-    expect(mockPush).toHaveBeenCalledTimes(0);
+    elb({ ...event, source: { type: 'web' } });
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
   });
 
   test('id namings', () => {

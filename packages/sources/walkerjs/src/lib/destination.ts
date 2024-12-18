@@ -51,6 +51,9 @@ export function dataLayerDestination() {
   };
   const destination: DestinationWeb.DestinationInit = {
     push: (event, config, mapping, options = {}) => {
+      // Do not process events from dataLayer source
+      if (event.source?.type === 'dataLayer') return;
+
       const data = options.data || event;
       dataLayerPush(data);
     },
@@ -127,10 +130,6 @@ export function destinationPush(
           : dataEvent;
     }
   }
-
-  // Prevent recursive loops between sources and destinations
-  if (isDefined(destination.type) && destination.type === event.source.type)
-    return false;
 
   const options = { data, instance };
 
