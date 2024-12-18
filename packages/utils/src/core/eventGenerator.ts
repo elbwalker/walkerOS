@@ -1,7 +1,9 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { assign } from './assign';
 
-export function createEvent(props: WalkerOS.PartialEvent = {}): WalkerOS.Event {
+export function createEvent(
+  props: WalkerOS.DeepPartialEvent = {},
+): WalkerOS.Event {
   const timestamp = props.timestamp || new Date().setHours(0, 13, 37, 0);
   const group = props.group || 'gr0up';
   const count = props.count || 1;
@@ -70,7 +72,7 @@ export function createEvent(props: WalkerOS.PartialEvent = {}): WalkerOS.Event {
 
 export function getEvent(
   name: string = 'entity action',
-  props: WalkerOS.PartialEvent = {},
+  props: WalkerOS.DeepPartialEvent = {},
 ): WalkerOS.Event {
   const timestamp = props.timestamp || new Date().setHours(0, 13, 37, 0);
 
