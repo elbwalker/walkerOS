@@ -9,7 +9,7 @@ export function sourceDataLayer(
   const { elb, prefix = 'dataLayer' } = partialConfig;
   if (!elb) return;
 
-  let { dataLayer, processedEvents } = partialConfig;
+  let { dataLayer } = partialConfig;
 
   // Ensure the dataLayer exists
   if (!dataLayer) {
@@ -22,15 +22,11 @@ export function sourceDataLayer(
     dataLayer = window[key] as DataLayer;
   }
 
-  // Ensure the processedEvents exists
-  if (!processedEvents) processedEvents = new Set();
-
   const config: Config = {
     ...partialConfig,
     elb,
     dataLayer,
     prefix,
-    processedEvents,
   };
 
   // Process already existing events in the dataLayer

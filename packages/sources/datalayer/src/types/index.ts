@@ -13,7 +13,6 @@ export interface Config {
   mapping?: Mapping;
   name?: string;
   prefix: string;
-  processedEvents: Set<string>;
 }
 
 export interface Mapping {

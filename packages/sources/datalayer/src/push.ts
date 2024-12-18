@@ -36,10 +36,6 @@ export function push(config: Config, ...args: unknown[]) {
           if (command) {
             config.elb(command.name, command.data as WalkerOS.PushData);
           } else if (event) {
-            // Prevent duplicate events
-            if (config.processedEvents.has(event.id)) return;
-            config.processedEvents.add(event.id);
-
             // Hand over to walker instance
             config.elb(event);
           }

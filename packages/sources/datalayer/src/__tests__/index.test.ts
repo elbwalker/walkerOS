@@ -26,7 +26,7 @@ describe('source dataLayer', () => {
 
     sourceDataLayer({ elb });
     expect(isArray(window.dataLayer)).toBe(true);
-    expect((window.dataLayer as DataLayer)!.length).toBe(0);
+    expect((window.dataLayer as unknown as DataLayer)!.length).toBe(0);
   });
 
   test('init existing', () => {
@@ -154,34 +154,6 @@ describe('source dataLayer', () => {
     expect(dataLayer[1]).toStrictEqual([]);
     expect(originalObj).toEqual({});
     expect(originalArr).toEqual([]);
-  });
-
-  test('duplicate prevention', () => {
-    const processedEvents = new Set<string>();
-    processedEvents.add('foo');
-    sourceDataLayer({ elb, processedEvents });
-
-    dataLayer.push({ event: 'foo', id: 'foo' });
-    expect(elb).toHaveBeenCalledTimes(0);
-
-    dataLayer.push({ event: 'bar', id: 'bar' });
-    expect(elb).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'bar',
-      }),
-    );
-    expect(elb).toHaveBeenCalledTimes(1);
-
-    dataLayer.push({ event: 'foo', id: 'bar' });
-    expect(elb).toHaveBeenCalledTimes(1);
-
-    processedEvents.delete('foo');
-    dataLayer.push({ event: 'foo', id: 'foo' });
-    expect(elb).toHaveBeenCalledTimes(2);
-
-    expect(processedEvents.has('foo')).toBeTruthy();
-    expect(processedEvents.has('bar')).toBeTruthy();
-    expect(processedEvents.size).toBe(2);
   });
 
   test('error handling', () => {
