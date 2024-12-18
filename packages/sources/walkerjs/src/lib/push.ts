@@ -1,12 +1,13 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { SourceWalkerjs } from '../types';
-import { isArgument, isCommand, isElementOrDocument } from './helper';
+import { isCommand, isElementOrDocument } from './helper';
 import { handleCommand, handleEvent } from './handle';
 import {
   Const,
   assign,
   getGrantedConsent,
   getMappingValue,
+  isArguments,
   isSameType,
   setByPath,
   tryCatch,
@@ -53,7 +54,7 @@ export function elbLayerInit(instance: SourceWalkerjs.Instance) {
 
   elbLayer.push = function (...args: SourceWalkerjs.ElbLayer) {
     // Pushed as Arguments
-    if (isArgument(args[0])) {
+    if (isArguments(args[0])) {
       args = args[0] as unknown as SourceWalkerjs.ElbLayer;
     }
 
