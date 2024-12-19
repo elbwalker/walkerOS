@@ -9,9 +9,10 @@ import {
   tryCatch,
 } from '@elbwalker/utils';
 import { objToEvent, gtagToObj } from './mapping';
+import { getDataLayer } from './helper';
 
 export function intercept(config: Config) {
-  const { dataLayer } = config;
+  const dataLayer = getDataLayer(config.name);
 
   // Store the original push function to preserve existing functionality
   const dataLayerPush = dataLayer.push.bind(dataLayer);

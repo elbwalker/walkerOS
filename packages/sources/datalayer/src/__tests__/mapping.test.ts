@@ -1,7 +1,9 @@
+import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
 
 describe('mapping', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
+  let dataLayer: DataLayer;
 
   function gtag(...args: unknown[]) {
     args;
@@ -28,7 +30,8 @@ describe('mapping', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    window.dataLayer = undefined;
+    window.dataLayer = [];
+    dataLayer = window.dataLayer as DataLayer;
   });
 
   test('init dataLayer', () => {
@@ -70,7 +73,7 @@ describe('mapping', () => {
   });
 
   test('default values', () => {
-    const { dataLayer } = sourceDataLayer({ elb })!;
+    sourceDataLayer({ elb })!;
 
     dataLayer.push({ event: 'foo this' });
     expect(elb).toHaveBeenCalledWith({
@@ -84,7 +87,7 @@ describe('mapping', () => {
   });
 
   test('mapping name', () => {
-    const { dataLayer } = sourceDataLayer({
+    sourceDataLayer({
       elb,
       mapping: {
         foo: { name: 'bar' },
@@ -104,7 +107,7 @@ describe('mapping', () => {
   });
 
   test('mapping ignore', () => {
-    const { dataLayer } = sourceDataLayer({
+    sourceDataLayer({
       elb,
       mapping: {
         foo: {
@@ -118,7 +121,7 @@ describe('mapping', () => {
   });
 
   test('mapping *', () => {
-    const { dataLayer } = sourceDataLayer({
+    sourceDataLayer({
       elb,
       mapping: {
         '*': { ignore: true },
@@ -221,7 +224,7 @@ describe('mapping', () => {
   });
 
   test('mapping add_to_cart', () => {
-    const { dataLayer } = sourceDataLayer({
+    sourceDataLayer({
       elb,
       mapping: {
         add_to_cart: {
@@ -276,7 +279,7 @@ describe('mapping', () => {
   });
 
   test('mapping purchase', () => {
-    const { dataLayer } = sourceDataLayer({
+    sourceDataLayer({
       elb,
       mapping: {
         purchase: {

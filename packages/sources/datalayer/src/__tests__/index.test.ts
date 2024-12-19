@@ -13,7 +13,7 @@ describe('source dataLayer', () => {
   });
 
   const gtag: Gtag.Gtag = function () {
-    dataLayer.push(arguments);
+    window.dataLayer!.push(arguments);
   };
 
   test('init new', () => {
@@ -35,15 +35,6 @@ describe('source dataLayer', () => {
 
     sourceDataLayer({ elb });
     expect(originalPush).not.toBe(dataLayer!.push);
-  });
-
-  test('config dataLayer', () => {
-    const dataLayer: DataLayer = [];
-
-    sourceDataLayer({ elb, dataLayer, name: 'foo' });
-    expect(window.foo).toBeUndefined(); // Prefer dataLayer over name
-    dataLayer.push({ event: 'foo' });
-    expect(elb).toHaveBeenCalledTimes(1);
   });
 
   test('config name', () => {
@@ -90,7 +81,7 @@ describe('source dataLayer', () => {
   });
 
   test('arguments', () => {
-    dataLayer = [
+    window.dataLayer = [
       {
         event: 'gtm.js',
         'gtm.start': 1730909886667,
@@ -103,7 +94,7 @@ describe('source dataLayer', () => {
       }),
     ];
 
-    sourceDataLayer({ elb, dataLayer });
+    sourceDataLayer({ elb });
 
     gtag('event', 'another_arg', {
       bar: 'baz',

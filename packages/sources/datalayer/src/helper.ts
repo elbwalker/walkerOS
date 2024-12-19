@@ -1,3 +1,5 @@
+import type { DataLayer } from './types';
+
 export function convertConsentStates(
   obj: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -9,4 +11,11 @@ export function convertConsentStates(
   }
 
   return consent;
+}
+
+export function getDataLayer(name = 'dataLayer'): DataLayer {
+  // Ensure the dataLayer exists
+  if (!window[name]) window[name] = [];
+
+  return window[name] || [];
 }

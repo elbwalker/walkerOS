@@ -1,31 +1,20 @@
-import type { Config, DataLayer } from './types';
+import type { Config } from './types';
 import { intercept, push } from './push';
+import { getDataLayer } from './helper';
 
 export * as SourceDataLayer from './types';
 
 export function sourceDataLayer(
   partialConfig: Partial<Config> = {},
 ): Config | undefined {
-  const { elb, prefix = 'dataLayer', skipped = [] } = partialConfig;
+  const { elb, name, prefix = 'dataLayer', skipped = [] } = partialConfig;
   if (!elb) return;
 
-  let { dataLayer } = partialConfig;
-
-  // Ensure the dataLayer exists
-  if (!dataLayer) {
-    const { name = 'dataLayer' } = partialConfig;
-    const key = name as keyof Window;
-
-    // Ensure the dataLayer exists
-    if (!window[key]) (window[key] as unknown) = [];
-
-    dataLayer = window[key] as DataLayer;
-  }
+  const dataLayer = getDataLayer(name);
 
   const config: Config = {
     ...partialConfig,
     elb,
-    dataLayer,
     prefix,
     skipped,
   };
