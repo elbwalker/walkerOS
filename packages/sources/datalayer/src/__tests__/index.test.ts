@@ -1,7 +1,7 @@
 /* eslint-disable prefer-rest-params */
 import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
-import { isArray } from '@elbwalker/utils';
+import { isArray, isObject } from '@elbwalker/utils';
 
 describe('source dataLayer', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
@@ -60,6 +60,27 @@ describe('source dataLayer', () => {
       id: expect.any(String),
       source: { type: 'dataLayer' },
     });
+  });
+
+  test('filter', () => {
+    const mockFn = jest.fn();
+    sourceDataLayer({
+      elb,
+      filter: (event) => {
+        mockFn(event);
+        return isObject(event) && event.event !== 'foo';
+      },
+    });
+
+    let event = { event: 'foo' };
+    dataLayer.push(event);
+    expect(elb).toHaveBeenCalledTimes(0);
+    expect(mockFn).toHaveBeenCalledWith(event);
+
+    event = { event: 'bar' };
+    dataLayer.push(event);
+    expect(elb).toHaveBeenCalledTimes(1);
+    expect(mockFn).toHaveBeenCalledWith(event);
   });
 
   test('prefix', () => {

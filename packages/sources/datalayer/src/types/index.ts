@@ -9,6 +9,7 @@ declare global {
 export type DataLayer = Array<unknown>;
 export interface Config {
   elb: WalkerOS.Elb | WalkerOS.AnyFunction;
+  filter?: (event: unknown) => boolean;
   mapping?: Mapping;
   name?: string;
   prefix: string;
