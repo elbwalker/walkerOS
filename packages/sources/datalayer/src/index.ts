@@ -6,7 +6,7 @@ export * as SourceDataLayer from './types';
 export function sourceDataLayer(
   partialConfig: Partial<Config> = {},
 ): Config | undefined {
-  const { elb, prefix = 'dataLayer' } = partialConfig;
+  const { elb, prefix = 'dataLayer', skipped = [] } = partialConfig;
   if (!elb) return;
 
   let { dataLayer } = partialConfig;
@@ -27,13 +27,14 @@ export function sourceDataLayer(
     elb,
     dataLayer,
     prefix,
+    skipped,
   };
-
-  // Process already existing events in the dataLayer
-  dataLayer.forEach((item) => push(config, item));
 
   // Override the original push function to intercept incoming events
   intercept(config);
+
+  // Process already existing events in the dataLayer
+  dataLayer.forEach((item) => push(config, item));
 
   return config;
 }

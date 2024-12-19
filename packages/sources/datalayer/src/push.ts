@@ -29,6 +29,13 @@ export function push(config: Config, ...args: unknown[]) {
       const clonedArgs = clone(args);
       const entries = getEntries(clonedArgs);
 
+      // Prevent infinite loops
+      if (config.processing) {
+        config.skipped?.push(entries);
+        return;
+      }
+
+      config.processing = true;
       entries.forEach((obj) => {
         // Map the incoming event to a WalkerOS event
         const mappedObj = objToEvent(filterValues(obj), config);
@@ -44,6 +51,9 @@ export function push(config: Config, ...args: unknown[]) {
           }
         }
       });
+
+      // Finished processing
+      config.processing = false;
     },
     // eslint-disable-next-line no-console
     console.error,

@@ -137,6 +137,52 @@ describe('source dataLayer', () => {
     );
   });
 
+  test('processing', () => {
+    const loopFn = jest.fn().mockImplementation(() => {
+      // Create an infinite loop
+      dataLayer.push({ event: 'loop' });
+    });
+
+    dataLayer.push({ event: 'foo' });
+    dataLayer.push({ event: 'bar' });
+
+    const source = sourceDataLayer({ elb: loopFn });
+    dataLayer.push({ event: 'baz' });
+
+    expect(JSON.stringify(dataLayer)).toBe(
+      JSON.stringify([
+        { event: 'foo' },
+        { event: 'bar' },
+        { event: 'loop' },
+        { event: 'loop' },
+        { event: 'loop' },
+        { event: 'baz' },
+      ]),
+    );
+
+    expect(JSON.stringify(source!.skipped)).toBe(
+      JSON.stringify([
+        [{ event: 'loop' }],
+        [{ event: 'loop' }],
+        [{ event: 'loop' }],
+      ]),
+    );
+
+    expect(loopFn).toHaveBeenCalledTimes(3);
+    expect(loopFn).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ event: 'dataLayer foo' }),
+    );
+    expect(loopFn).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ event: 'dataLayer bar' }),
+    );
+    expect(loopFn).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ event: 'dataLayer baz' }),
+    );
+  });
+
   test('mutation prevention', () => {
     const elb = jest.fn();
     const originalObj = {};

@@ -13,6 +13,8 @@ export interface Config {
   mapping?: Mapping;
   name?: string;
   prefix: string;
+  processing?: boolean;
+  skipped?: unknown[];
 }
 
 export interface Mapping {
