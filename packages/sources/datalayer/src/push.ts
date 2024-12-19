@@ -1,6 +1,13 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Config } from './types';
-import { clone, filterValues, isArguments, tryCatch } from '@elbwalker/utils';
+import {
+  clone,
+  filterValues,
+  isArguments,
+  isArray,
+  isObject,
+  tryCatch,
+} from '@elbwalker/utils';
 import { objToEvent, gtagToObj } from './mapping';
 
 export function intercept(config: Config) {
@@ -20,13 +27,9 @@ export function push(config: Config, ...args: unknown[]) {
     (...args: unknown[]) => {
       // Clone the arguments to avoid mutation
       const clonedArgs = clone(args);
+      const entries = getEntries(clonedArgs);
 
-      // Get the pushed items
-      const items = isArguments(clonedArgs[0])
-        ? [gtagToObj(clonedArgs[0])] // Convert gtag to dataLayer
-        : clonedArgs; // Regular dataLayer push
-
-      items.forEach((obj) => {
+      entries.forEach((obj) => {
         // Map the incoming event to a WalkerOS event
         const mappedObj = objToEvent(filterValues(obj), config);
 
@@ -34,10 +37,10 @@ export function push(config: Config, ...args: unknown[]) {
           const { command, event } = mappedObj;
 
           if (command) {
-            config.elb(command.name, command.data as WalkerOS.PushData);
+            if (command.name)
+              config.elb(command.name, command.data as WalkerOS.PushData);
           } else if (event) {
-            // Hand over to walker instance
-            config.elb(event);
+            if (event.event) config.elb(event);
           }
         }
       });
@@ -45,4 +48,10 @@ export function push(config: Config, ...args: unknown[]) {
     // eslint-disable-next-line no-console
     console.error,
   )(...args);
+}
+
+function getEntries(args: unknown[]): unknown[] {
+  if (isArray(args) && isArguments(args[0])) return [gtagToObj(args[0])]; // gtag
+  if (isObject(args)) return [args]; // dataLayer.push
+  return args;
 }
