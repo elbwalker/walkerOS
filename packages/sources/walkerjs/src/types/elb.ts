@@ -7,7 +7,8 @@ export interface Fn
     CommandDestination,
     CommandRun,
     CommandOn,
-    CommandGeneric {}
+    Parameters,
+    WalkerOS.DeepPartialEvent {}
 
 export type CommandInit = (
   event: 'walker init',
@@ -28,7 +29,7 @@ export type CommandOn = (
   rules: WalkerOS.SingleOrArray<On.ConsentConfig>,
 ) => void;
 
-export type CommandGeneric = (
+export type Parameters = (
   event: string | unknown,
   data?: PushData,
   options?: PushOptions,
