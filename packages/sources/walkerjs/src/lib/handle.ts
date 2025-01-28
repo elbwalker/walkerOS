@@ -1,5 +1,5 @@
 import type { Hooks, WalkerOS } from '@elbwalker/types';
-import type { On, SourceWalkerjs, DestinationWeb } from '../types';
+import type { On, SourceWalkerjs, DestinationWeb, Elb } from '../types';
 import { Const, assign, isArray, isObject, isSameType } from '@elbwalker/utils';
 import { isElementOrDocument } from './helper';
 import { initScopeTrigger, ready } from './trigger';
@@ -14,8 +14,8 @@ import { setConsent } from './consent';
 export function handleCommand(
   instance: SourceWalkerjs.Instance,
   action: string,
-  data?: SourceWalkerjs.PushData,
-  options?: SourceWalkerjs.PushOptions,
+  data?: Elb.PushData,
+  options?: Elb.PushOptions,
 ) {
   switch (action) {
     case Const.Commands.Config:

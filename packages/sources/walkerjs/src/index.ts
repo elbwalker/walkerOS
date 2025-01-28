@@ -1,4 +1,4 @@
-import type { SourceWalkerjs } from './types';
+import type { Elb, SourceWalkerjs } from './types';
 import { sessionStart } from '@elbwalker/utils';
 import { addDestination } from './lib/destination';
 import { onApply } from './lib/on';
@@ -25,7 +25,7 @@ export function Walkerjs(
     version,
     ...state,
     // Placeholder functions to be overwritten with instance-reference
-    push: (() => {}) as unknown as SourceWalkerjs.Elb,
+    push: (() => {}) as unknown as Elb.Fn,
     getAllEvents,
     getEvents,
     getGlobals,
