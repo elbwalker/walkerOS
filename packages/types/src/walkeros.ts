@@ -1,11 +1,11 @@
-import type { Destination, Hooks } from '.';
+import type { Destination, Elb, Hooks } from '.';
 
 export type AnyObject = Record<string, unknown>;
 export type AnyFunction = (...args: unknown[]) => unknown;
 export type SingleOrArray<T> = T | Array<T>;
 
 export interface Instance extends State {
-  push: Elb;
+  push: Elb.Fn;
 }
 
 export interface State {
@@ -29,40 +29,6 @@ export interface Config {
   default?: boolean;
   verbose?: boolean; // Enable verbose logging
 }
-
-export interface Elb<R = void> {
-  (event: 'walker config', config: Partial<Config>): R;
-  (event: 'walker consent', consent: Consent): R;
-
-  <K extends keyof Hooks.Functions>(
-    event: 'walker hook',
-    name: K,
-    hookFn: Hooks.Functions[K],
-  ): R;
-  (event: 'walker run'): R;
-  (event: 'walker user', user: User): R;
-  (
-    event: string,
-    data?: PushData,
-    options?: PushOptions,
-    context?: PushContext,
-    nested?: Entities,
-    custom?: Properties,
-  ): R;
-  (partialEvent: DeepPartialEvent): R;
-}
-
-export type PushData =
-  | string
-  | object
-  | Partial<Config>
-  | Consent
-  | User
-  | Properties;
-
-export type PushOptions = Hooks.AnyFunction | object;
-
-export type PushContext = OrderedProperties;
 
 export interface Destinations {
   [name: string]: Destination.Destination;

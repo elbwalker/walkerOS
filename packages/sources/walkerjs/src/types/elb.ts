@@ -1,42 +1,47 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { Elb, WalkerOS } from '@elbwalker/types';
 import { State } from './source';
 import type { On, DestinationWeb, Walker } from '.';
 
-export interface Fn
-  extends CommandInit,
-    CommandDestination,
-    CommandRun,
-    CommandOn,
-    Parameters,
-    WalkerOS.DeepPartialEvent {}
+export interface Fn<R = void>
+  extends CommandInit<R>,
+    CommandDestination<R>,
+    CommandRun<R>,
+    CommandOn<R>,
+    Parameters<R>,
+    Event<R> {}
 
-export type CommandInit = (
+export type CommandInit<R = void> = (
   event: 'walker init',
   scope: Scope | Scope[],
-) => void;
+) => R;
 
-export type CommandDestination = (
+export type CommandDestination<R = void> = (
   event: 'walker destination',
   destination: DestinationWeb.Destination | DestinationWeb.DestinationInit,
   config?: DestinationWeb.Config,
-) => void;
+) => R;
 
-export type CommandRun = (event: 'walker run', state?: Partial<State>) => void;
+export type CommandRun<R = void> = (
+  event: 'walker run',
+  state?: Partial<State>,
+) => R;
 
-export type CommandOn = (
+export type CommandOn<R = void> = (
   event: 'walker on',
   type: 'consent',
   rules: WalkerOS.SingleOrArray<On.ConsentConfig>,
-) => void;
+) => R;
 
-export type Parameters = (
+export type Parameters<R = void> = (
   event: string | unknown,
   data?: PushData,
   options?: PushOptions,
   context?: PushContext,
   nested?: WalkerOS.Entities,
   custom?: WalkerOS.Properties,
-) => void;
+) => R;
+
+export type Event<R = void> = (partialEvent: WalkerOS.DeepPartialEvent) => R;
 
 export type Layer = [
   string?,
@@ -48,14 +53,14 @@ export type Layer = [
 ];
 
 export type PushData =
-  | WalkerOS.PushData
+  | Elb.PushData
   | DestinationWeb.Destination
   | DestinationWeb.DestinationInit
   | Partial<State>
   | ScopeType;
 
 export type PushOptions =
-  | WalkerOS.PushOptions
+  | Elb.PushOptions
   | Walker.Trigger
   | WalkerOS.SingleOrArray<On.Options>
   | DestinationWeb.Config;
