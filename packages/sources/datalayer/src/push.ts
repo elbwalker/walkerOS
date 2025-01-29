@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { Elb } from '@elbwalker/types';
 import type { Config } from './types';
 import {
   clone,
@@ -49,7 +49,7 @@ export function push(config: Config, ...args: unknown[]) {
 
           if (command) {
             if (command.name)
-              config.elb(command.name, command.data as WalkerOS.PushData);
+              config.elb(command.name, command.data as Elb.PushData);
           } else if (event) {
             if (event.event) config.elb(event);
           }
