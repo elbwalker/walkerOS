@@ -3,11 +3,11 @@ import { DestinationNode, SourceNode } from '.';
 
 export interface Fn<R = Return>
   extends Elb.Fn<R>,
-    Parameters<R>,
+    Arguments<R>,
     CommandDestination<R>,
     CommandRun<R> {}
 
-export type Parameters<R = Return> = (
+export type Arguments<R = Return> = (
   name: string,
   data?: PushData,
   options?: PushOptions,

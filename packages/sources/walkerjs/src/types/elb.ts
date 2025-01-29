@@ -3,14 +3,14 @@ import type { On, DestinationWeb, Walker, SourceWalkerjs } from '.';
 
 export interface Fn<R = void>
   extends Elb.Fn<R>,
-    Parameters<R>,
+    Arguments<R>,
     CommandInit<R>,
     CommandDestination<R>,
     CommandOn<R>,
     CommandRun<R> {}
 
-export type Parameters<R = void> = (
-  event: string,
+export type Arguments<R = void> = (
+  event?: string,
   data?: PushData,
   options?: PushOptions,
   context?: PushContext,
@@ -40,14 +40,19 @@ export type CommandOn<R = void> = (
   rules: WalkerOS.SingleOrArray<On.ConsentConfig>,
 ) => R;
 
-export type Layer = [
-  string?,
-  PushData?,
-  PushOptions?,
-  WalkerOS.OrderedProperties?,
-  WalkerOS.Entities?,
-  WalkerOS.Properties?,
-];
+export type Layer = Array<
+  | Parameters<Fn>
+  | WalkerOS.DeepPartialEvent
+  | IArguments
+  | [
+      event: string,
+      data?: PushData,
+      options?: PushOptions,
+      context?: PushContext,
+      nested?: WalkerOS.Entities,
+      custom?: WalkerOS.Properties,
+    ]
+>;
 
 export type PushData =
   | Elb.PushData
@@ -62,6 +67,6 @@ export type PushOptions =
   | WalkerOS.SingleOrArray<On.Options>
   | DestinationWeb.Config;
 
-export type PushContext = WalkerOS.OrderedProperties;
+export type PushContext = Elb.PushContext | Element;
 export type Scope = Element | Document;
 export type ScopeType = Scope | Scope[];
