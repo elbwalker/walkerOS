@@ -1,8 +1,8 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { Elb } from '@elbwalker/types';
 
 export type ElbLayer = Array<IArguments>;
 
-export const elb: WalkerOS.Elb = function () {
+export const elb: Elb.Fn = function () {
   const w = window as unknown as Record<string, unknown[]>;
   // eslint-disable-next-line prefer-rest-params
   (w.elbLayer = w.elbLayer || []).push(arguments);
