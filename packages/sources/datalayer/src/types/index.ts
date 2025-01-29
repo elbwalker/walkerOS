@@ -1,4 +1,8 @@
-import type { Mapping as WalkerOSMapping, WalkerOS } from '@elbwalker/types';
+import type {
+  Elb,
+  Mapping as WalkerOSMapping,
+  WalkerOS,
+} from '@elbwalker/types';
 
 declare global {
   interface Window {
@@ -8,7 +12,7 @@ declare global {
 
 export type DataLayer = Array<unknown>;
 export interface Config {
-  elb: WalkerOS.Elb | WalkerOS.AnyFunction;
+  elb: Elb.Fn | WalkerOS.AnyFunction;
   filter?: (event: unknown) => boolean;
   mapping?: Mapping;
   name?: string;
