@@ -1,11 +1,11 @@
 import type { WalkerOS, Schema, Handler, Hooks } from '@elbwalker/types';
-import type { DestinationNode, On } from '.';
+import type { DestinationNode, Elb, On } from '.';
 
 export interface Instance extends State, WalkerOS.Instance {
   config: Config;
   destinations: Destinations;
   version: string;
-  push: Elb<Promise<PushResult>>;
+  push: Elb.Fn;
 }
 
 export interface State extends WalkerOS.State {
@@ -39,34 +39,17 @@ export interface AddDestination {
   (id: string, destination: DestinationNode.Destination): void;
 }
 
-export interface Elb<R = Promise<PushResult>> extends WalkerOS.Elb<R> {
-  (name: string, data?: PushData, options?: PushOptions): R;
-  (event: WalkerOS.PartialEvent, data?: PushData, options?: PushOptions): R;
-}
-
 export type HandleCommand = (
   instance: Instance,
   action: string,
-  data?: PushData,
-  options?: PushOptions,
-) => Promise<PushResult>;
+  data?: Elb.PushData,
+  options?: Elb.PushOptions,
+) => Promise<Elb.PushResult>;
 
 export type HandleEvent = (
   instance: Instance,
   event: WalkerOS.Event,
-) => Promise<PushResult>;
-
-export type PushData =
-  | WalkerOS.PushData
-  | DestinationNode.Destination
-  | Partial<State>;
-
-export type PushOptions = WalkerOS.PushOptions | DestinationNode.Config;
-
-export interface PushResult extends DestinationNode.PushResult {
-  event?: WalkerOS.Event;
-  status: Status;
-}
+) => Promise<Elb.PushResult>;
 
 export interface Command {
   name: string;

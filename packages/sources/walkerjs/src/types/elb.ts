@@ -1,9 +1,9 @@
 import type { Elb, WalkerOS } from '@elbwalker/types';
-import { State } from './source';
-import type { On, DestinationWeb, Walker } from '.';
+import type { On, DestinationWeb, Walker, SourceWalkerjs } from '.';
 
 export interface Fn<R = void>
-  extends CommandInit<R>,
+  extends Elb.Fn<R>,
+    CommandInit<R>,
     CommandDestination<R>,
     CommandRun<R>,
     CommandOn<R>,
@@ -23,7 +23,7 @@ export type CommandDestination<R = void> = (
 
 export type CommandRun<R = void> = (
   event: 'walker run',
-  state?: Partial<State>,
+  state?: Partial<SourceWalkerjs.State>,
 ) => R;
 
 export type CommandOn<R = void> = (
@@ -56,7 +56,7 @@ export type PushData =
   | Elb.PushData
   | DestinationWeb.Destination
   | DestinationWeb.DestinationInit
-  | Partial<State>
+  | Partial<SourceWalkerjs.State>
   | ScopeType;
 
 export type PushOptions =

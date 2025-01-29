@@ -1,4 +1,4 @@
-import type { SourceNode } from './types';
+import type { Elb, SourceNode } from './types';
 import { handleCommand, handleEvent } from './lib/handle';
 import { run } from './lib/run';
 import { getState } from './lib/state';
@@ -22,7 +22,7 @@ export function sourceNode(
   const instance: SourceNode.Instance = {
     version,
     ...state,
-    push: (() => {}) as unknown as SourceNode.Elb, // Placeholder for the actual push function
+    push: (() => {}) as unknown as Elb.Fn, // Placeholder for the actual push function
   };
 
   // Overwrite the push function with the instance-reference

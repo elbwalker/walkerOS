@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { SourceNode, DestinationNode } from '../types';
+import type { SourceNode, DestinationNode, Elb } from '../types';
 import {
   assign,
   getGrantedConsent,
@@ -15,13 +15,13 @@ export function createPush(
   instance: SourceNode.Instance,
   handleCommand: SourceNode.HandleCommand,
   handleEvent: SourceNode.HandleEvent,
-): SourceNode.Elb {
-  const push: SourceNode.Elb = async (
+): Elb.Fn<Promise<Elb.PushResult>> {
+  const push = async (
     nameOrEvent: string | WalkerOS.DeepPartialEvent,
-    data?: SourceNode.PushData,
-    options?: SourceNode.PushOptions,
-  ): Promise<SourceNode.PushResult> => {
-    let result: SourceNode.PushResult = {
+    data?: Elb.PushData,
+    options?: Elb.PushOptions,
+  ) => {
+    let result: Elb.PushResult = {
       status: { ok: false },
       successful: [],
       queued: [],
@@ -31,9 +31,9 @@ export function createPush(
     return await tryCatchAsync(
       async (
         nameOrEvent: string | WalkerOS.DeepPartialEvent,
-        data?: SourceNode.PushData,
-        options?: SourceNode.PushOptions,
-      ): Promise<SourceNode.PushResult> => {
+        data?: Elb.PushData,
+        options?: Elb.PushOptions,
+      ): Promise<Elb.PushResult> => {
         const { event, command } = createEventOrCommand(
           instance,
           nameOrEvent,
