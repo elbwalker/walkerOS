@@ -15,6 +15,9 @@ export interface Destination<Custom = unknown, CustomEvent = unknown>
   >;
 }
 
+export type DestinationInit = Partial<Omit<Destination, 'push'>> &
+  Pick<Destination, 'push'>;
+
 export type InitFn<PartialConfig = unknown, Config = unknown> = (
   config: PartialConfig,
   instance?: SourceNode.Instance,

@@ -3,12 +3,20 @@ import type { On, DestinationWeb, Walker, SourceWalkerjs } from '.';
 
 export interface Fn<R = void>
   extends Elb.Fn<R>,
+    Parameters<R>,
     CommandInit<R>,
     CommandDestination<R>,
-    CommandRun<R>,
     CommandOn<R>,
-    Parameters<R>,
-    Event<R> {}
+    CommandRun<R> {}
+
+export type Parameters<R = void> = (
+  event: string,
+  data?: PushData,
+  options?: PushOptions,
+  context?: PushContext,
+  nested?: WalkerOS.Entities,
+  custom?: WalkerOS.Properties,
+) => R;
 
 export type CommandInit<R = void> = (
   event: 'walker init',
@@ -31,17 +39,6 @@ export type CommandOn<R = void> = (
   type: 'consent',
   rules: WalkerOS.SingleOrArray<On.ConsentConfig>,
 ) => R;
-
-export type Parameters<R = void> = (
-  event: string | unknown,
-  data?: PushData,
-  options?: PushOptions,
-  context?: PushContext,
-  nested?: WalkerOS.Entities,
-  custom?: WalkerOS.Properties,
-) => R;
-
-export type Event<R = void> = (partialEvent: WalkerOS.DeepPartialEvent) => R;
 
 export type Layer = [
   string?,

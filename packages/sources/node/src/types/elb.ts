@@ -1,7 +1,11 @@
 import type { Elb, WalkerOS } from '@elbwalker/types';
 import { DestinationNode, SourceNode } from '.';
 
-export interface Fn<R = Return> extends Elb.Fn<R>, Parameters<R>, Event<R> {}
+export interface Fn<R = Return>
+  extends Elb.Fn<R>,
+    Parameters<R>,
+    CommandDestination<R>,
+    CommandRun<R> {}
 
 export type Parameters<R = Return> = (
   name: string,
@@ -9,11 +13,12 @@ export type Parameters<R = Return> = (
   options?: PushOptions,
 ) => R;
 
-export type Event<R = Return> = (
-  event: WalkerOS.DeepPartialEvent,
-  data?: PushData,
-  options?: PushOptions,
+export type CommandDestination<R = void> = (
+  event: 'walker destination',
+  destination: DestinationNode.Destination | DestinationNode.DestinationInit,
+  config?: DestinationNode.Config,
 ) => R;
+export type CommandRun<R = void> = (event: 'walker run') => R;
 
 export type PushData =
   | Elb.PushData

@@ -1,13 +1,11 @@
 import type { Hooks, WalkerOS } from '.';
 
 export interface Fn<R = void>
-  extends CommandConfig<R>,
+  extends Event<R>,
+    CommandConfig<R>,
     CommandConsent<R>,
     CommandHook<R>,
-    CommandRun<R>,
-    CommandUser<R>,
-    CommandPush<R>,
-    Event<R> {}
+    CommandUser<R> {}
 
 export type CommandConfig<R = void> = (
   event: 'walker config',
@@ -22,18 +20,9 @@ export type CommandHook<R = void> = <K extends keyof Hooks.Functions>(
   name: K,
   hookFn: Hooks.Functions[K],
 ) => R;
-export type CommandRun<R = void> = (event: 'walker run') => R;
 export type CommandUser<R = void> = (
   event: 'walker user',
   user: WalkerOS.User,
-) => R;
-export type CommandPush<R = void> = (
-  event: string,
-  data?: PushData,
-  options?: PushOptions,
-  context?: PushContext,
-  nested?: WalkerOS.Entities,
-  custom?: WalkerOS.Properties,
 ) => R;
 export type Event<R = void> = (partialEvent: WalkerOS.DeepPartialEvent) => R;
 
