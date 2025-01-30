@@ -13,7 +13,7 @@ export function convertConsentStates(
   return consent;
 }
 
-export function getDataLayer(name = 'dataLayer'): DataLayer {
+export function getDataLayer(name = 'dataLayer'): DataLayer | undefined {
   // Ensure the dataLayer exists
   if (!window[name]) window[name] = [];
 

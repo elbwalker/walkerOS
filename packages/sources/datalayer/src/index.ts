@@ -12,6 +12,8 @@ export function sourceDataLayer(
 
   const dataLayer = getDataLayer(name);
 
+  if (!dataLayer) return;
+
   const config: Config = {
     ...partialConfig,
     elb,

@@ -14,6 +14,8 @@ import { getDataLayer } from './helper';
 export function intercept(config: Config) {
   const dataLayer = getDataLayer(config.name);
 
+  if (!dataLayer) return;
+
   // Store the original push function to preserve existing functionality
   const dataLayerPush = dataLayer.push.bind(dataLayer);
 
