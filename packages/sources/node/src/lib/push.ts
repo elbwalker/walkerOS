@@ -15,10 +15,10 @@ export function createPush(
   instance: SourceNode.Instance,
   handleCommand: SourceNode.HandleCommand,
   handleEvent: SourceNode.HandleEvent,
-): Elb.Fn<Promise<Elb.PushResult>> {
+): Elb.Fn {
   const push = async (
-    nameOrEvent: string | WalkerOS.DeepPartialEvent,
-    data?: Elb.PushData,
+    nameOrEvent: unknown,
+    data: Elb.PushData = {},
     options?: Elb.PushOptions,
   ) => {
     let result: Elb.PushResult = {
@@ -30,10 +30,10 @@ export function createPush(
 
     return await tryCatchAsync(
       async (
-        nameOrEvent: string | WalkerOS.DeepPartialEvent,
-        data?: Elb.PushData,
+        nameOrEvent: unknown,
+        data: Elb.PushData,
         options?: Elb.PushOptions,
-      ): Promise<Elb.PushResult> => {
+      ): Elb.Return => {
         const { event, command } = createEventOrCommand(
           instance,
           nameOrEvent,
@@ -208,8 +208,8 @@ export async function pushToDestinations(
 
 function createEventOrCommand(
   instance: SourceNode.Instance,
-  nameOrEvent: string | WalkerOS.DeepPartialEvent,
-  pushData: unknown,
+  nameOrEvent: unknown,
+  pushData: Elb.PushData,
 ): { event?: WalkerOS.Event; command?: string } {
   // Determine the partial event
   const partialEvent: WalkerOS.PartialEvent = isSameType(

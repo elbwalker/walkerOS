@@ -1,7 +1,5 @@
 import type { Elb } from '@elbwalker/types';
 
-export type ElbLayer = Array<IArguments>;
-
 export const elb: Elb.Fn = function () {
   const w = window as unknown as Record<string, unknown[]>;
   // eslint-disable-next-line prefer-rest-params

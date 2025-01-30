@@ -1,12 +1,26 @@
 import type { Hooks, WalkerOS } from '.';
 
-export interface Fn<R = void>
+export interface Fn<R = void, D = PushData, O = PushOptions, C = PushContext>
   extends Event<R>,
+    Arguments<R, D, O, C>,
     CommandConfig<R>,
     CommandConsent<R>,
     CommandHook<R>,
     CommandUser<R> {}
 
+export type Arguments<
+  R = void,
+  D = PushData,
+  O = PushOptions,
+  C = PushContext,
+> = (
+  event?: string,
+  data?: D,
+  options?: O,
+  context?: C,
+  nested?: WalkerOS.Entities,
+  custom?: WalkerOS.Properties,
+) => R;
 export type CommandConfig<R = void> = (
   event: 'walker config',
   config: Partial<WalkerOS.Config>,
@@ -37,3 +51,14 @@ export type PushData =
 export type PushOptions = Hooks.AnyFunction | object;
 
 export type PushContext = WalkerOS.OrderedProperties;
+
+type FnParameters<T> = T extends (...args: unknown[]) => unknown
+  ? Parameters<T>[number]
+  : never;
+
+export type Layer = Array<
+  | IArguments
+  | WalkerOS.DeepPartialEvent
+  | FnParameters<Fn[keyof Fn]>
+  | Parameters<Arguments>[number]
+>;

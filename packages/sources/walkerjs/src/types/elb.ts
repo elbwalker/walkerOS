@@ -1,22 +1,12 @@
 import type { Elb, WalkerOS } from '@elbwalker/types';
 import type { On, DestinationWeb, Walker, SourceWalkerjs } from '.';
 
-export interface Fn<R = void>
-  extends Elb.Fn<R>,
-    Arguments<R>,
+export interface Fn<R = void, D = PushData, O = PushOptions, C = PushContext>
+  extends Elb.Fn<R, D, O, C>,
     CommandInit<R>,
     CommandDestination<R>,
     CommandOn<R>,
     CommandRun<R> {}
-
-export type Arguments<R = void> = (
-  event?: string,
-  data?: PushData,
-  options?: PushOptions,
-  context?: PushContext,
-  nested?: WalkerOS.Entities,
-  custom?: WalkerOS.Properties,
-) => R;
 
 export type CommandInit<R = void> = (
   event: 'walker init',
@@ -40,16 +30,7 @@ export type CommandOn<R = void> = (
   rules: WalkerOS.SingleOrArray<On.ConsentConfig>,
 ) => R;
 
-type FnParameters<T> = T extends (...args: unknown[]) => unknown
-  ? Parameters<T>[number]
-  : never;
-
-export type Layer = Array<
-  | IArguments
-  | WalkerOS.DeepPartialEvent
-  | FnParameters<Fn[keyof Fn]>
-  | Parameters<Arguments>[number]
->;
+export type Layer = Elb.Layer;
 
 export type PushData =
   | Elb.PushData
