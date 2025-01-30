@@ -66,4 +66,52 @@ describe('consent', () => {
     gtag('consent');
     expect(elb).toHaveBeenLastCalledWith('walker consent', {});
   });
+
+  test('usercentrics', () => {
+    gtag({
+      action: 'onInitialPageLoad',
+      event: 'consent_status',
+      type: 'explicit',
+      ucCategory: {
+        essential: true,
+        functional: true,
+        marketing: true,
+      },
+      ga4: true,
+      'meta pixel': true,
+      declined: false,
+      'gtm.uniqueEventId': 1,
+    });
+
+    sourceDataLayer({
+      elb,
+      mapping: {
+        consent_status: {
+          name: 'walker consent',
+          custom: {
+            command: {
+              condition: (event) => event.type == 'explicit', // Only process explicit consent
+              map: {
+                essential: 'ucCategory.essential',
+                functional: 'ucCategory.functional',
+                marketing: 'ucCategory.marketing',
+                ga4: 'ga4',
+                meta: 'meta pixel',
+                declined: 'declined',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(elb).toHaveBeenCalledWith('walker consent', {
+      essential: true,
+      functional: true,
+      marketing: true,
+      ga4: true,
+      meta: true,
+      declined: false,
+    });
+  });
 });
