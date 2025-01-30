@@ -28,23 +28,37 @@ export function createPush(instance: SourceWalkerjs.Instance): Elb.Fn {
     nested: WalkerOS.Entities = [],
     custom: WalkerOS.Properties = {},
   ) => {
-    const { event, command } = createEventOrCommand(
-      instance,
-      nameOrEvent,
-      pushData,
-      pushContext,
-      nested,
-      custom,
-      options,
-    );
+    return tryCatch(
+      (
+        nameOrEvent: unknown,
+        pushData: Elb.PushData,
+        options: Elb.PushOptions,
+        pushContext: Elb.PushContext,
+        nested: WalkerOS.Entities,
+        custom: WalkerOS.Properties,
+      ) => {
+        const { event, command } = createEventOrCommand(
+          instance,
+          nameOrEvent,
+          pushData,
+          pushContext,
+          nested,
+          custom,
+          options,
+        );
 
-    if (command) {
-      // Command event
-      handleCommand(instance, command, pushData, options);
-    } else if (event) {
-      // Regular event
-      handleEvent(instance, event);
-    }
+        if (command) {
+          // Command event
+          handleCommand(instance, command, pushData, options);
+        } else if (event) {
+          // Regular event
+          handleEvent(instance, event);
+        }
+      },
+      () => {
+        // @TODO custom error handling
+      },
+    )(nameOrEvent, pushData, options, pushContext, nested, custom);
   };
 
   return useHooks(push, 'Push', instance.hooks);

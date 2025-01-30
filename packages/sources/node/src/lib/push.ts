@@ -10,12 +10,9 @@ import {
 } from '@elbwalker/utils';
 import { isCommand } from './helper';
 import { destinationInit, destinationPush } from './destination';
+import { handleCommand, handleEvent } from './handle';
 
-export function createPush(
-  instance: SourceNode.Instance,
-  handleCommand: SourceNode.HandleCommand,
-  handleEvent: SourceNode.HandleEvent,
-): Elb.Fn {
+export function createPush(instance: SourceNode.Instance): Elb.Fn {
   const push = async (
     nameOrEvent: unknown,
     data: Elb.PushData = {},

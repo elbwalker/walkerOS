@@ -1,5 +1,4 @@
 import type { Elb, SourceNode } from './types';
-import { handleCommand, handleEvent } from './lib/handle';
 import { run } from './lib/run';
 import { getState } from './lib/state';
 import { createPush } from './lib/push';
@@ -26,7 +25,7 @@ export function sourceNode(
   };
 
   // Overwrite the push function with the instance-reference
-  instance.push = createPush(instance, handleCommand, handleEvent);
+  instance.push = createPush(instance);
 
   // That's when the party starts
   run(instance);
