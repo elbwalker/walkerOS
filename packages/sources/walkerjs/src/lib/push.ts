@@ -8,7 +8,10 @@ import {
   getGrantedConsent,
   getMappingValue,
   isArguments,
+  isArray,
+  isObject,
   isSameType,
+  isString,
   setByPath,
   tryCatch,
   useHooks,
@@ -52,12 +55,10 @@ export function elbLayerInit(instance: SourceWalkerjs.Instance) {
 
   elbLayer.push = function (...args: Elb.Layer) {
     // Pushed as Arguments
-    if (isArguments(args[0])) {
-      args = args[0] as unknown as Elb.Layer;
-    }
+    if (isArguments(args[0])) args = [...Array.from(args[0])];
 
     const i = Array.prototype.push.apply(this, [args]);
-    instance.push(...args);
+    instance.push(...(args as Parameters<Elb.Fn>));
 
     return i;
   };
@@ -75,31 +76,40 @@ export function pushPredefined(
   // walker events gets prioritized before others
   // this guarantees a fully configuration before the first run
   const walkerCommand = `${Const.Commands.Walker} `; // Space on purpose
-  const events: Array<Elb.Layer> = [];
+  const events: Array<Parameters<Elb.Fn>> = [];
   let isFirstRunEvent = true;
 
   // At that time the elbLayer was not yet initialized
-  instance.config.elbLayer.map((pushedEvent) => {
-    const event = [...Array.from(pushedEvent as IArguments)] as Elb.Layer;
-    if (!event?.[0]) return;
+  instance.config.elbLayer.map((pushedItem) => {
+    const item = isArguments(pushedItem)
+      ? [...Array.from(pushedItem)]
+      : isArray(pushedItem)
+      ? pushedItem
+      : [pushedItem];
 
-    // @TODO this can be an object!
-    // if (!isSameType(event[0], '')) return;
+    const firstParam = item[0];
+    const isCommand =
+      !isObject(firstParam) && String(firstParam).startsWith(walkerCommand);
 
-    // Skip the first stacked run event since it's the reason we're here
-    // and to prevent duplicate execution which we don't want
-    const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
-    if (isFirstRunEvent && event[0] == runCommand) {
-      isFirstRunEvent = false; // Next time it's on
-      return;
+    if (!isObject(firstParam)) {
+      const args = Array.from(item);
+      if (!isString(args[0])) return;
+
+      // Skip the first stacked run event since it's the reason we're here
+      // and to prevent duplicate execution which we don't want
+      const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
+      if (isFirstRunEvent && args[0] == runCommand) {
+        isFirstRunEvent = false; // Next time it's on
+        return;
+      }
     }
 
     // Handle commands and events separately
     if (
-      (commandsOnly && event[0].startsWith(walkerCommand)) || // Only commands
-      (!commandsOnly && !event[0].startsWith(walkerCommand)) // Only events
+      (commandsOnly && isCommand) || // Only commands
+      (!commandsOnly && !isCommand) // Only events
     )
-      events.push(event);
+      events.push(item as Parameters<Elb.Fn>);
   });
 
   events.map((item) => {

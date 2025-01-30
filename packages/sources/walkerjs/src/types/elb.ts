@@ -40,18 +40,15 @@ export type CommandOn<R = void> = (
   rules: WalkerOS.SingleOrArray<On.ConsentConfig>,
 ) => R;
 
+type FnParameters<T> = T extends (...args: unknown[]) => unknown
+  ? Parameters<T>[number]
+  : never;
+
 export type Layer = Array<
-  | Parameters<Fn>
-  | WalkerOS.DeepPartialEvent
   | IArguments
-  | [
-      event: string,
-      data?: PushData,
-      options?: PushOptions,
-      context?: PushContext,
-      nested?: WalkerOS.Entities,
-      custom?: WalkerOS.Properties,
-    ]
+  | WalkerOS.DeepPartialEvent
+  | FnParameters<Fn[keyof Fn]>
+  | Parameters<Arguments>[number]
 >;
 
 export type PushData =

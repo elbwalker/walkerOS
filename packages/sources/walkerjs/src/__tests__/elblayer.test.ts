@@ -100,19 +100,32 @@ describe('elbLayer', () => {
   });
 
   test('predefined stack with run', () => {
+    w.elbLayer = [{ event: 'pre event' }];
+    elb('pre argument');
+
     walkerjs = Walkerjs({ session: false, pageview: false });
 
     elb('walker destination', destination);
-    elb('ingest argument', { a: 1 }, 'a'); // Push as arguments
-    //elb({ event: 'ingest object' });
-    w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
+    elb('ingest argument', { a: 1 }); // Push as arguments
+    elb({ event: 'event object' }); // Push as event
+    w.elbLayer.push({ event: 'event push' });
     elb('walker run');
 
-    expect(walkerjs.queue).toEqual([
+    expect(walkerjs.queue).toContainEqual(
+      expect.objectContaining({ event: 'pre event' }),
+    );
+    expect(walkerjs.queue).toContainEqual(
+      expect.objectContaining({ event: 'pre argument' }),
+    );
+    expect(walkerjs.queue).toContainEqual(
       expect.objectContaining({ event: 'ingest argument', data: { a: 1 } }),
-      // expect.objectContaining({ event: "ingest object" }),
-      expect.objectContaining({ event: 'ingest event', data: { b: 2 } }),
-    ]);
+    );
+    expect(walkerjs.queue).toContainEqual(
+      expect.objectContaining({ event: 'event object' }),
+    );
+    expect(walkerjs.queue).toContainEqual(
+      expect.objectContaining({ event: 'event push' }),
+    );
   });
 
   test('prioritize walker commands before run', () => {
@@ -230,8 +243,8 @@ describe('elbLayer', () => {
   test('custom elbLayer', () => {
     w.dataLayer = [];
     const dataLayer = w.dataLayer as unknown[];
-    const customLayer1 = [] as Elb.Layer;
-    const customLayer2 = [] as Elb.Layer;
+    const customLayer1: Elb.Layer = [];
+    const customLayer2: Elb.Layer = [];
     const instance1 = Walkerjs({
       elbLayer: customLayer1,
       default: true,
@@ -345,9 +358,7 @@ describe('elbLayer', () => {
     elb('walker run');
 
     // Arguments
-    expect(JSON.stringify(w.elbLayer[0])).toEqual(
-      JSON.stringify({ '0': 'walker run' }),
-    );
+    expect(w.elbLayer[0]).toStrictEqual(['walker run']);
 
     // Parameters
     expect(pushSpy).toHaveBeenCalledWith('walker user', expect.any(Object));
