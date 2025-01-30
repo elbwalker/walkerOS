@@ -90,8 +90,10 @@ export function objToEvent(obj: unknown, config: Config): MappedEvent | void {
 }
 
 // https://developers.google.com/tag-platform/gtagjs/reference
-export function gtagToObj(args: IArguments): WalkerOS.AnyObject | void {
-  const [command, value, params] = args;
+export function gtagToObj(args: IArguments): Array<WalkerOS.AnyObject> {
+  const [command, value, params] = Array.from(args);
+
+  if (isObject(command)) return [command];
 
   let event: string | undefined;
   let obj = isObject(params) ? params : {};
@@ -116,8 +118,8 @@ export function gtagToObj(args: IArguments): WalkerOS.AnyObject | void {
       break;
     default:
       // Ignore command (like get)
-      return;
+      return [];
   }
 
-  return { ...obj, event };
+  return [{ ...obj, event }];
 }

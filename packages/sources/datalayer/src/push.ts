@@ -66,8 +66,12 @@ export function push(config: Config, ...args: unknown[]) {
   )(...args);
 }
 
-function getEntries(args: unknown[]): unknown[] {
-  if (isArray(args) && isArguments(args[0])) return [gtagToObj(args[0])]; // gtag
+function getEntries(args: unknown): unknown[] {
   if (isObject(args)) return [args]; // dataLayer.push
-  return args;
+  if (isArray(args)) {
+    if (isArguments(args[0])) return gtagToObj(args[0]); // gtag
+    return args;
+  }
+
+  return [];
 }
