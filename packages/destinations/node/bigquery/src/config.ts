@@ -15,7 +15,7 @@ export function getConfig(partialConfig: PartialConfig = {}): Config {
   tableId = tableId || 'events';
 
   const options: BigQueryOptions = bigquery || {};
-  if (projectId) options.projectId = projectId;
+  options.projectId = projectId;
 
   client = client || new BigQuery(options);
 

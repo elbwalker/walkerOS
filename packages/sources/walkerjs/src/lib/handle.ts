@@ -26,7 +26,7 @@ export function handleCommand(
         ).config;
       break;
     case Const.Commands.Consent:
-      isObject(data) && setConsent(instance, data as WalkerOS.Consent);
+      if (isObject(data)) setConsent(instance, data as WalkerOS.Consent);
       break;
     case Const.Commands.Custom:
       if (isObject(data)) instance.custom = assign(instance.custom, data);
