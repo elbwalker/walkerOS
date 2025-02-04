@@ -79,6 +79,8 @@ function processMappingValue(
   return mappings.reduce((acc, mappingItem) => {
     if (acc) return acc; // A valid result was already found
 
+    const mapping = isString(mappingItem) ? { key: mappingItem } : mappingItem;
+
     const {
       condition,
       consent,
@@ -89,7 +91,7 @@ function processMappingValue(
       set,
       validate,
       value: staticValue,
-    } = isString(mappingItem) ? { key: mappingItem } : mappingItem;
+    } = mapping;
 
     // Check if this mapping should be used
     if (condition && !condition(value, mappingItem, instance)) return;
@@ -102,7 +104,7 @@ function processMappingValue(
 
     if (fn) {
       // Use a custom function to get the value
-      mappingValue = fn(value as WalkerOS.PartialEvent, mappingItem, options); // @TODO stop casting
+      mappingValue = fn(value, mappingItem, options);
     }
 
     if (key) {

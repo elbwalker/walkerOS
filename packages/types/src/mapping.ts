@@ -50,7 +50,7 @@ export type Condition = (
 ) => boolean;
 
 export type Fn = (
-  event: WalkerOS.PartialEvent,
+  value: WalkerOS.DeepPartialEvent | unknown,
   mapping: Value,
   options: Options,
 ) => WalkerOS.Property | unknown;
