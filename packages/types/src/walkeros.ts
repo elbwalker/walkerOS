@@ -1,6 +1,6 @@
 import type { Destination, Elb, Hooks } from '.';
 
-export type AnyObject = Record<string, unknown>;
+export type AnyObject<T = unknown> = Record<string, T>;
 export type AnyFunction = (...args: unknown[]) => unknown;
 export type SingleOrArray<T> = T | Array<T>;
 

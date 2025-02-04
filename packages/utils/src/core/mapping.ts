@@ -1,7 +1,7 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import { getGrantedConsent } from './consent';
 import { getByPath } from './byPath';
-import { isArray, isDefined, isObject, isString } from './is';
+import { isArray, isDefined, isString } from './is';
 import { castToProperty } from './property';
 
 export function getMappingEvent(
@@ -51,20 +51,22 @@ export function getMappingEvent(
 }
 
 export function getMappingValue(
-  obj: WalkerOS.PartialEvent | WalkerOS.AnyObject,
-  data: Mapping.Data,
+  value: WalkerOS.DeepPartialEvent | unknown | undefined,
+  data: Mapping.Data = {},
   options: Mapping.Options = {},
 ): WalkerOS.Property | undefined {
+  if (!isDefined(value)) return;
+
   const mappings = isArray(data) ? data : [data];
 
   for (const mapping of mappings) {
-    const result = processMappingValue(obj, mapping, options);
+    const result = processMappingValue(value, mapping, options);
     if (isDefined(result)) return result;
   }
 }
 
 function processMappingValue(
-  obj: WalkerOS.PartialEvent | WalkerOS.AnyObject,
+  value: WalkerOS.DeepPartialEvent | unknown,
   mapping: Mapping.Value,
   options: Mapping.Options = {},
 ): WalkerOS.Property | undefined {
@@ -77,43 +79,52 @@ function processMappingValue(
   return mappings.reduce((acc, mappingItem) => {
     if (acc) return acc; // A valid result was already found
 
-    const { condition, consent, fn, key, loop, map, set, validate, value } =
-      isString(mappingItem)
-        ? ({ key: mappingItem } as Mapping.ValueConfig)
-        : mappingItem;
+    const {
+      condition,
+      consent,
+      fn,
+      key,
+      loop,
+      map,
+      set,
+      validate,
+      value: staticValue,
+    } = isString(mappingItem) ? { key: mappingItem } : mappingItem;
 
     // Check if this mapping should be used
-    if (condition && !condition(obj, mappingItem, instance)) return;
+    if (condition && !condition(value, mappingItem, instance)) return;
 
     // Check if consent is required and granted
-    if (consent && !getGrantedConsent(consent, instance?.consent)) return value;
+    if (consent && !getGrantedConsent(consent, instance?.consent))
+      return staticValue;
 
-    let mappingValue;
+    let mappingValue: unknown = staticValue || value;
+
     if (fn) {
       // Use a custom function to get the value
-      mappingValue = fn(obj, mappingItem, options);
-    } else {
+      mappingValue = fn(value as WalkerOS.PartialEvent, mappingItem, options); // @TODO stop casting
+    }
+
+    if (key) {
       // Get dynamic value from the event
-      mappingValue = getByPath(obj, key, value);
+      mappingValue = getByPath(value, key, staticValue);
     }
 
     if (loop) {
       const [scope, itemMapping] = loop;
 
       const data =
-        scope === 'this' ? [obj] : getMappingValue(obj, scope, options);
+        scope === 'this' ? [value] : getMappingValue(value, scope, options);
 
       if (isArray(data)) {
         mappingValue = data
-          .map((item) =>
-            getMappingValue(isObject(item) ? item : {}, itemMapping, options),
-          )
+          .map((item) => getMappingValue(item, itemMapping, options))
           .filter(isDefined);
       }
     } else if (map) {
       mappingValue = Object.entries(map).reduce(
         (mappedObj, [mapKey, mapValue]) => {
-          const result = getMappingValue(obj, mapValue, options);
+          const result = getMappingValue(value, mapValue, options);
           if (isDefined(result)) mappedObj[mapKey] = result;
 
           return mappedObj;
@@ -121,17 +132,17 @@ function processMappingValue(
         {} as WalkerOS.AnyObject,
       );
     } else if (set) {
-      mappingValue = set.map((item) => processMappingValue(obj, item, options));
+      mappingValue = set.map((item) =>
+        processMappingValue(value, item, options),
+      );
     }
 
     // Validate the value
-    if (validate && !validate(mappingValue)) {
-      mappingValue = undefined;
-    }
+    if (validate && !validate(mappingValue)) mappingValue = undefined;
 
     const property = castToProperty(mappingValue);
 
     // Finally, check and convert the type
-    return isDefined(property) ? property : value; // Always use value as a fallback
+    return isDefined(property) ? property : castToProperty(staticValue); // Always use value as a fallback
   }, undefined as WalkerOS.Property | undefined);
 }

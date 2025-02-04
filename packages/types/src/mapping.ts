@@ -44,7 +44,7 @@ export interface ValueConfig {
 }
 
 export type Condition = (
-  obj: WalkerOS.AnyObject,
+  value: WalkerOS.DeepPartialEvent | unknown,
   mapping?: Value,
   instance?: WalkerOS.Instance,
 ) => boolean;
@@ -53,7 +53,7 @@ export type Fn = (
   event: WalkerOS.PartialEvent,
   mapping: Value,
   options: Options,
-) => WalkerOS.Property | void;
+) => WalkerOS.Property | unknown;
 
 export type Loop = [Value, Value];
 
