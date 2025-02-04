@@ -1,6 +1,12 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Config, EventConfig, MappedEvent, Mapping } from './types';
-import { getId, getMappingValue, isObject, isString } from '@elbwalker/utils';
+import {
+  getId,
+  getMappingValue,
+  isDefined,
+  isObject,
+  isString,
+} from '@elbwalker/utils';
 import { convertConsentStates } from './helper';
 
 const defaultMapping: Mapping = {
@@ -32,7 +38,9 @@ export function objToEvent(obj: unknown, config: Config): MappedEvent | void {
   });
 
   const { custom, data, ignore, name } = mapping;
-  const eventName = name || `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
+  const eventName = isDefined(name)
+    ? name
+    : `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
 
   if (ignore) return;
 
@@ -43,7 +51,7 @@ export function objToEvent(obj: unknown, config: Config): MappedEvent | void {
   }
 
   // Mapping values
-  const values = getMappingValue(obj, data || {});
+  const values = data ? getMappingValue(obj, data) : {};
 
   // id for duplicate detection
   const id = obj.id ? String(obj.id) : getId();
@@ -52,6 +60,7 @@ export function objToEvent(obj: unknown, config: Config): MappedEvent | void {
     id,
     data: obj as WalkerOS.Properties,
     ...(isObject(values) ? values : {}),
+    event: eventName, // Update the event name
   };
 
   // Update the context structure
@@ -78,9 +87,6 @@ export function objToEvent(obj: unknown, config: Config): MappedEvent | void {
       } as WalkerOS.Entity;
     });
   }
-
-  // Update the event name
-  event.event = event.event || eventName;
 
   // source type is dataLayer
   event.source = event.source ?? {};

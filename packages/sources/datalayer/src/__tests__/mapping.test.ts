@@ -1,3 +1,4 @@
+import type { WalkerOS } from '@elbwalker/types';
 import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
 
@@ -5,11 +6,10 @@ describe('mapping', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
   let dataLayer: DataLayer;
 
-  function gtag(...args: unknown[]) {
-    args;
+  const gtag: Gtag.Gtag & WalkerOS.AnyFunction = function () {
     // eslint-disable-next-line prefer-rest-params
-    window.dataLayer!.push(arguments);
-  }
+    dataLayer.push(arguments);
+  };
 
   const product1 = {
     item_id: 'abc',
@@ -60,7 +60,7 @@ describe('mapping', () => {
   test('dataLayer push', () => {
     sourceDataLayer({ elb });
 
-    window.dataLayer!.push({ event: 'foo', bar: 'baz' });
+    dataLayer.push({ event: 'foo', bar: 'baz' });
     expect(elb).toHaveBeenCalledWith({
       event: 'dataLayer foo',
       id: expect.any(String),
@@ -92,8 +92,8 @@ describe('mapping', () => {
       mapping: {
         foo: { name: 'bar' },
         baz: {
-          name: 'nope',
-          data: { map: { event: { value: 'prioritize' } } },
+          name: 'prioritize',
+          data: { map: { event: { value: 'nope' } } },
         },
       },
     })!;
@@ -142,6 +142,7 @@ describe('mapping', () => {
       elb,
       mapping: {
         foo: {
+          name: 'all_mapped',
           data: {
             map: {
               event: { value: 'entity action' },
@@ -186,11 +187,11 @@ describe('mapping', () => {
           },
         },
       },
-    })!;
+    });
 
-    window.dataLayer!.push({ event: 'foo', dynamic: 'value', id: '1d' });
+    dataLayer.push({ event: 'foo', dynamic: 'value', id: '1d' });
     expect(elb).toHaveBeenCalledWith({
-      event: 'entity action',
+      event: 'all_mapped',
       data: {
         some: 'thing',
         key: 'value',

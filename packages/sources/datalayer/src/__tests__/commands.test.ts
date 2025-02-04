@@ -12,7 +12,7 @@ describe('commands', () => {
 
   beforeEach(() => {
     window.dataLayer = [];
-    dataLayer = window.dataLayer;
+    dataLayer = window.dataLayer as DataLayer;
   });
 
   test('set', () => {

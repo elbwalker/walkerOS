@@ -1,6 +1,7 @@
+import type { WalkerOS } from '@elbwalker/types';
 import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
-import { WalkerOS } from '@elbwalker/types';
+import { isObject } from '@elbwalker/utils';
 
 describe('consent', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
@@ -13,7 +14,7 @@ describe('consent', () => {
 
   beforeEach(() => {
     window.dataLayer = [];
-    dataLayer = window.dataLayer;
+    dataLayer = window.dataLayer as DataLayer;
   });
 
   test('consent default', () => {
@@ -68,6 +69,29 @@ describe('consent', () => {
   });
 
   test('usercentrics', () => {
+    sourceDataLayer({
+      elb,
+      mapping: {
+        consent_status: {
+          name: 'walker consent',
+          custom: {
+            command: {
+              condition: (event) => isObject(event) && event.type == 'explicit', // Only process explicit consent
+              map: {
+                essential: 'ucCategory.essential',
+                functional: 'ucCategory.functional',
+                marketing: 'ucCategory.marketing',
+                ga4: 'ga4',
+                meta: 'meta pixel',
+                declined: 'declined',
+                // IDEA "*" as a key to map all other keys
+              },
+            },
+          },
+        },
+      },
+    });
+
     gtag({
       action: 'onInitialPageLoad',
       event: 'consent_status',
@@ -81,28 +105,6 @@ describe('consent', () => {
       'meta pixel': true,
       declined: false,
       'gtm.uniqueEventId': 1,
-    });
-
-    sourceDataLayer({
-      elb,
-      mapping: {
-        consent_status: {
-          name: 'walker consent',
-          custom: {
-            command: {
-              condition: (event) => event.type == 'explicit', // Only process explicit consent
-              map: {
-                essential: 'ucCategory.essential',
-                functional: 'ucCategory.functional',
-                marketing: 'ucCategory.marketing',
-                ga4: 'ga4',
-                meta: 'meta pixel',
-                declined: 'declined',
-              },
-            },
-          },
-        },
-      },
     });
 
     expect(elb).toHaveBeenCalledWith('walker consent', {

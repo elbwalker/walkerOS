@@ -1,4 +1,3 @@
-/* eslint-disable prefer-rest-params */
 import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
 import { isArray, isObject } from '@elbwalker/utils';
@@ -7,14 +6,15 @@ describe('source dataLayer', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
   let dataLayer: DataLayer;
 
+  const gtag: Gtag.Gtag = function () {
+    // eslint-disable-next-line prefer-rest-params
+    dataLayer.push(arguments);
+  };
+
   beforeEach(() => {
     window.dataLayer = [];
     dataLayer = window.dataLayer as DataLayer;
   });
-
-  const gtag: Gtag.Gtag = function () {
-    window.dataLayer!.push(arguments);
-  };
 
   test('init new', () => {
     window.dataLayer = undefined;
@@ -26,7 +26,7 @@ describe('source dataLayer', () => {
 
     sourceDataLayer({ elb });
     expect(isArray(window.dataLayer)).toBe(true);
-    expect((window.dataLayer as unknown as DataLayer)!.length).toBe(0);
+    expect((window.dataLayer as DataLayer).length).toBe(0);
   });
 
   test('init existing', () => {
@@ -109,11 +109,15 @@ describe('source dataLayer', () => {
         'gtm.uniqueEventId': 1,
       },
       (function (...args: unknown[]) {
+        // eslint-disable-next-line prefer-rest-params
         return arguments || args;
       })('event', 'arg', {
         foo: 'bar',
       }),
     ];
+
+    // Reassign the dataLayer to the window.dataLayer
+    dataLayer = window.dataLayer as DataLayer;
 
     sourceDataLayer({ elb });
 
