@@ -1,20 +1,32 @@
 export function debounce<P extends unknown[], R>(
   fn: (...args: P) => R,
   wait = 1000,
+  immediate = false,
 ) {
-  let timer: number | NodeJS.Timeout;
+  let timer: number | NodeJS.Timeout | null = null;
+  let result: R;
 
   return (...args: P): Promise<R> => {
-    // abort previous invocation
-    clearTimeout(timer);
-
     // Return value as promise
     return new Promise((resolve) => {
-      // Schedule execution
+      const callNow = immediate && !timer;
+
+      // abort previous invocation
+      if (timer) clearTimeout(timer);
+
       timer = setTimeout(() => {
-        // Call the function
-        resolve(fn(...args));
+        timer = null;
+
+        if (!immediate) {
+          result = fn(...args);
+          resolve(result);
+        }
       }, wait);
+
+      if (callNow) {
+        result = fn(...args);
+        resolve(result);
+      }
     });
   };
 }
