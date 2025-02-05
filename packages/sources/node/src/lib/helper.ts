@@ -1,10 +1,10 @@
-import type { SourceNode } from '../types';
+import type { Elb } from '../types';
 import { Const, assign } from '@elbwalker/utils';
 
 export function createResult(
-  partialResult?: Partial<SourceNode.PushResult>,
-): SourceNode.PushResult {
-  const result: SourceNode.PushResult = assign(
+  partialResult?: Partial<Elb.PushResult>,
+): Elb.PushResult {
+  const result: Elb.PushResult = assign(
     {
       successful: [],
       queued: [],

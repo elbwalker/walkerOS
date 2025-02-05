@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { SourceNode, DestinationNode } from '../types';
+import type { Elb, SourceNode } from '../types';
 import { Const, assign, isObject, isSameType } from '@elbwalker/utils';
 import { addDestination } from './destination';
 import { pushToDestinations } from './push';
@@ -14,9 +14,7 @@ export const handleCommand: SourceNode.HandleCommand = async (
   data?,
   options?,
 ) => {
-  let result:
-    | Partial<SourceNode.PushResult | DestinationNode.PushResult>
-    | undefined = {};
+  let result: Partial<Elb.PushResult> | undefined = {};
 
   switch (action) {
     case Const.Commands.Config:

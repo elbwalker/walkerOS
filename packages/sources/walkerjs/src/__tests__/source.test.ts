@@ -1,4 +1,4 @@
-import type { SourceWalkerjs } from '..';
+import type { Elb, SourceWalkerjs } from '..';
 import type { Data } from '@elbwalker/types';
 import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
@@ -31,7 +31,7 @@ describe('Walkerjs', () => {
   });
 
   test('go', () => {
-    w.elbLayer = undefined as unknown as SourceWalkerjs.ElbLayer;
+    w.elbLayer = undefined as unknown as Elb.Layer;
     expect(window.elbLayer).toBeUndefined();
     const instance = Walkerjs();
     expect(instance.config.elbLayer).toBeDefined();

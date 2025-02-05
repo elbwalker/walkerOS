@@ -1,13 +1,17 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { SourceWalkerjs } from '../types';
-import { isArgument, isCommand, isElementOrDocument } from './helper';
+import type { Elb, SourceWalkerjs } from '../types';
+import { isCommand, isElementOrDocument } from './helper';
 import { handleCommand, handleEvent } from './handle';
 import {
   Const,
   assign,
   getGrantedConsent,
   getMappingValue,
+  isArguments,
+  isArray,
+  isObject,
   isSameType,
+  isString,
   setByPath,
   tryCatch,
   useHooks,
@@ -15,34 +19,46 @@ import {
 import { getEntities } from './walker';
 import { destinationInit, destinationPush } from './destination';
 
-export function createPush(
-  instance: SourceWalkerjs.Instance,
-): SourceWalkerjs.Elb {
+export function createPush(instance: SourceWalkerjs.Instance): Elb.Fn {
   const push = (
     nameOrEvent?: unknown,
-    pushData: SourceWalkerjs.PushData = {},
-    options: SourceWalkerjs.PushOptions = '',
-    pushContext: SourceWalkerjs.PushContext = {},
+    pushData: Elb.PushData = {},
+    options: Elb.PushOptions = '',
+    pushContext: Elb.PushContext = {},
     nested: WalkerOS.Entities = [],
     custom: WalkerOS.Properties = {},
   ) => {
-    const { event, command } = createEventOrCommand(
-      instance,
-      nameOrEvent,
-      pushData,
-      pushContext,
-      nested,
-      custom,
-      options,
-    );
+    return tryCatch(
+      (
+        nameOrEvent: unknown,
+        pushData: Elb.PushData,
+        options: Elb.PushOptions,
+        pushContext: Elb.PushContext,
+        nested: WalkerOS.Entities,
+        custom: WalkerOS.Properties,
+      ) => {
+        const { event, command } = createEventOrCommand(
+          instance,
+          nameOrEvent,
+          pushData,
+          pushContext,
+          nested,
+          custom,
+          options,
+        );
 
-    if (command) {
-      // Command event
-      handleCommand(instance, command, pushData, options);
-    } else if (event) {
-      // Regular event
-      handleEvent(instance, event);
-    }
+        if (command) {
+          // Command event
+          handleCommand(instance, command, pushData, options);
+        } else if (event) {
+          // Regular event
+          handleEvent(instance, event);
+        }
+      },
+      () => {
+        // @TODO custom error handling
+      },
+    )(nameOrEvent, pushData, options, pushContext, nested, custom);
   };
 
   return useHooks(push, 'Push', instance.hooks);
@@ -51,14 +67,12 @@ export function createPush(
 export function elbLayerInit(instance: SourceWalkerjs.Instance) {
   const elbLayer = instance.config.elbLayer;
 
-  elbLayer.push = function (...args: SourceWalkerjs.ElbLayer) {
+  elbLayer.push = function (...args: Elb.Layer) {
     // Pushed as Arguments
-    if (isArgument(args[0])) {
-      args = args[0] as unknown as SourceWalkerjs.ElbLayer;
-    }
+    if (isArguments(args[0])) args = [...Array.from(args[0])];
 
     const i = Array.prototype.push.apply(this, [args]);
-    instance.push(...args);
+    instance.push(...(args as Parameters<Elb.Fn>));
 
     return i;
   };
@@ -76,31 +90,40 @@ export function pushPredefined(
   // walker events gets prioritized before others
   // this guarantees a fully configuration before the first run
   const walkerCommand = `${Const.Commands.Walker} `; // Space on purpose
-  const events: Array<SourceWalkerjs.ElbLayer> = [];
+  const events: Array<Parameters<Elb.Fn>> = [];
   let isFirstRunEvent = true;
 
   // At that time the elbLayer was not yet initialized
-  instance.config.elbLayer.map((pushedEvent) => {
-    const event = [
-      ...Array.from(pushedEvent as IArguments),
-    ] as SourceWalkerjs.ElbLayer;
+  instance.config.elbLayer.map((pushedItem) => {
+    const item = isArguments(pushedItem)
+      ? [...Array.from(pushedItem)]
+      : isArray(pushedItem)
+      ? pushedItem
+      : [pushedItem];
 
-    if (!isSameType(event[0], '')) return;
+    const firstParam = item[0];
+    const isCommand =
+      !isObject(firstParam) && String(firstParam).startsWith(walkerCommand);
 
-    // Skip the first stacked run event since it's the reason we're here
-    // and to prevent duplicate execution which we don't want
-    const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
-    if (isFirstRunEvent && event[0] == runCommand) {
-      isFirstRunEvent = false; // Next time it's on
-      return;
+    if (!isObject(firstParam)) {
+      const args = Array.from(item);
+      if (!isString(args[0])) return;
+
+      // Skip the first stacked run event since it's the reason we're here
+      // and to prevent duplicate execution which we don't want
+      const runCommand = `${Const.Commands.Walker} ${Const.Commands.Run}`;
+      if (isFirstRunEvent && args[0] == runCommand) {
+        isFirstRunEvent = false; // Next time it's on
+        return;
+      }
     }
 
     // Handle commands and events separately
     if (
-      (commandsOnly && event[0].startsWith(walkerCommand)) || // Only commands
-      (!commandsOnly && !event[0].startsWith(walkerCommand)) // Only events
+      (commandsOnly && isCommand) || // Only commands
+      (!commandsOnly && !isCommand) // Only events
     )
-      events.push(event);
+      events.push(item as Parameters<Elb.Fn>);
   });
 
   events.map((item) => {
@@ -185,11 +208,11 @@ export function pushToDestinations(
 function createEventOrCommand(
   instance: SourceWalkerjs.Instance,
   nameOrEvent: unknown,
-  pushData: SourceWalkerjs.PushData,
-  pushContext: SourceWalkerjs.PushContext,
+  pushData: Elb.PushData,
+  pushContext: Elb.PushContext,
   initialNested: WalkerOS.Entities,
   initialCustom: WalkerOS.Properties,
-  initialTrigger: SourceWalkerjs.PushOptions = '',
+  initialTrigger: Elb.PushOptions = '',
 ): { event?: WalkerOS.Event; command?: string } {
   // Determine the partial event
   const partialEvent: WalkerOS.PartialEvent = isSameType(

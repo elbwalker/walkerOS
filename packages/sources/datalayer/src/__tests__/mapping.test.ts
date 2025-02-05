@@ -1,15 +1,15 @@
 import type { WalkerOS } from '@elbwalker/types';
-import { clone } from '@elbwalker/utils';
-import { gtagToObj } from '../mapping';
+import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
 
 describe('mapping', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
+  let dataLayer: DataLayer;
 
-  function gtag(...args: unknown[]) {
+  const gtag: Gtag.Gtag & WalkerOS.AnyFunction = function () {
     // eslint-disable-next-line prefer-rest-params
-    return clone(arguments as unknown as WalkerOS.AnyObject) || args;
-  }
+    dataLayer.push(arguments);
+  };
 
   const product1 = {
     item_id: 'abc',
@@ -28,20 +28,72 @@ describe('mapping', () => {
     price: 42,
   };
 
-  beforeEach(() => {});
+  beforeEach(() => {
+    jest.clearAllMocks();
+    window.dataLayer = [];
+    dataLayer = window.dataLayer as DataLayer;
+  });
+
+  test('init dataLayer', () => {
+    window.dataLayer = undefined;
+    expect(window.dataLayer).toBeUndefined();
+
+    sourceDataLayer({ elb });
+    expect(window.dataLayer).toBeDefined();
+  });
+
+  test('gtag call', () => {
+    sourceDataLayer({ elb });
+
+    gtag('event', 'foo', { bar: 'baz' });
+    expect(elb).toHaveBeenCalledWith({
+      event: 'dataLayer foo',
+      id: expect.any(String),
+      data: {
+        event: 'foo',
+        bar: 'baz',
+      },
+      source: { type: 'dataLayer' },
+    });
+  });
+
+  test('dataLayer push', () => {
+    sourceDataLayer({ elb });
+
+    dataLayer.push({ event: 'foo', bar: 'baz' });
+    expect(elb).toHaveBeenCalledWith({
+      event: 'dataLayer foo',
+      id: expect.any(String),
+      data: {
+        event: 'foo',
+        bar: 'baz',
+      },
+      source: { type: 'dataLayer' },
+    });
+  });
+
+  test('default values', () => {
+    sourceDataLayer({ elb })!;
+
+    dataLayer.push({ event: 'foo this' });
+    expect(elb).toHaveBeenCalledWith({
+      event: 'dataLayer foo_this',
+      id: expect.any(String),
+      data: {
+        event: 'foo this',
+      },
+      source: { type: 'dataLayer' },
+    });
+  });
 
   test('mapping name', () => {
-    const { dataLayer } = sourceDataLayer({
+    sourceDataLayer({
       elb,
       mapping: {
-        foo: {
-          name: 'bar',
-        },
+        foo: { name: 'bar' },
         baz: {
-          name: 'nope',
-          custom: {
-            event: { value: 'prioritize' },
-          },
+          name: 'prioritize',
+          data: { map: { event: { value: 'nope' } } },
         },
       },
     })!;
@@ -55,7 +107,7 @@ describe('mapping', () => {
   });
 
   test('mapping ignore', () => {
-    const { dataLayer } = sourceDataLayer({
+    sourceDataLayer({
       elb,
       mapping: {
         foo: {
@@ -68,103 +120,132 @@ describe('mapping', () => {
     expect(elb).toHaveBeenCalledTimes(0);
   });
 
-  test('mapping foo', () => {
-    const { dataLayer } = sourceDataLayer({
+  test('mapping *', () => {
+    sourceDataLayer({
+      elb,
+      mapping: {
+        '*': { ignore: true },
+        foo: {},
+      },
+    })!;
+
+    dataLayer.push({ event: 'foo' });
+    expect(elb).toHaveBeenCalledTimes(1);
+
+    jest.resetAllMocks();
+    dataLayer.push({ event: 'bar' });
+    expect(elb).toHaveBeenCalledTimes(0);
+  });
+
+  test('mapping all', () => {
+    sourceDataLayer({
       elb,
       mapping: {
         foo: {
-          custom: {
-            event: { value: 'entity action' },
-            data: {
-              some: {
-                value: 'thing',
+          name: 'all_mapped',
+          data: {
+            map: {
+              event: { value: 'entity action' },
+              data: {
+                map: {
+                  some: { value: 'thing' },
+                  key: 'dynamic',
+                },
               },
-              key: 'dynamic',
-            },
-            context: {
-              foo: { value: 'bar' },
-            },
-            globals: { foo: { value: 'bar' } },
-            custom: { completely: { value: 'random' } },
-            user: { hash: { value: 'h4sh' } },
-            consent: { demo: { value: true } },
-            id: { value: '1d' },
-            trigger: { value: 'push' },
-            entity: { value: 'entity' },
-            action: { value: 'action' },
-            timestamp: { value: 1626780000 },
-            timing: { value: 3.14 },
-            group: { value: 'group' },
-            count: { value: 1 },
-            version: {
-              source: { value: '0.0.7' },
-              tagging: { value: 1 },
-            },
-            source: {
-              type: { value: 'test' },
-              id: { value: 'https://localhost:80' },
-              previous_id: { value: 'http://remotehost:9001' },
+              context: {
+                map: { foo: { value: 'bar' } },
+              },
+              globals: { map: { foo: { value: 'bar' } } },
+              custom: { map: { completely: { value: 'random' } } },
+              user: { map: { hash: { value: 'h4sh' } } },
+              nested: {
+                loop: ['this', { map: { type: { value: 'foo' } } }],
+              },
+              consent: { map: { demo: { value: true } } },
+              id: { value: '1d' },
+              trigger: { value: 'push' },
+              entity: { value: 'entity' },
+              action: { value: 'action' },
+              timestamp: { value: 1626780000 },
+              timing: { value: 3.14 },
+              group: { value: 'group' },
+              count: { value: 1 },
+              version: {
+                map: {
+                  source: { value: '0.0.7' },
+                  tagging: { value: 1 },
+                },
+              },
+              source: {
+                map: {
+                  type: { value: 'test' },
+                  id: { value: 'https://localhost:80' },
+                  previous_id: { value: 'http://remotehost:9001' },
+                },
+              },
             },
           },
         },
       },
-    })!;
+    });
 
     dataLayer.push({ event: 'foo', dynamic: 'value', id: '1d' });
-    expect(elb).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: 'entity action',
-        data: {
-          some: 'thing',
-          key: 'value',
-        },
-        context: {
-          foo: ['bar', 0],
-        },
-        globals: { foo: 'bar' },
-        custom: { completely: 'random' },
-        user: { hash: 'h4sh' },
-        consent: { demo: true },
-        id: '1d',
-        trigger: 'push',
-        entity: 'entity',
-        action: 'action',
-        timestamp: 1626780000,
-        timing: 3.14,
-        group: 'group',
-        count: 1,
-        version: {
-          source: '0.0.7',
-          tagging: 1,
-        },
-        source: {
-          type: 'test',
-          id: 'https://localhost:80',
-          previous_id: 'http://remotehost:9001',
-        },
-        // @TODO context, nested
-      }),
-    );
+    expect(elb).toHaveBeenCalledWith({
+      event: 'all_mapped',
+      data: {
+        some: 'thing',
+        key: 'value',
+      },
+      context: {
+        foo: ['bar', 0],
+      },
+      globals: { foo: 'bar' },
+      custom: { completely: 'random' },
+      user: { hash: 'h4sh' },
+      nested: [{ type: 'foo', data: {}, context: {}, nested: [] }],
+      consent: { demo: true },
+      id: '1d',
+      trigger: 'push',
+      entity: 'entity',
+      action: 'action',
+      timestamp: 1626780000,
+      timing: 3.14,
+      group: 'group',
+      count: 1,
+      version: {
+        source: '0.0.7',
+        tagging: 1,
+      },
+      source: {
+        type: 'test',
+        id: 'https://localhost:80',
+        previous_id: 'http://remotehost:9001',
+      },
+    });
   });
 
   test('mapping add_to_cart', () => {
-    const { dataLayer } = sourceDataLayer({
+    sourceDataLayer({
       elb,
       mapping: {
         add_to_cart: {
           name: 'product add',
-          custom: {
-            data: {
-              id: 'items.0.item_id',
-              name: 'items.0.item_name',
-              discount: 'items.0.discount',
-              brand: 'items.0.item_brand',
-              category: 'items.0.item_category',
-              color: 'items.0.item_variant',
-              currency: 'currency',
-              price: 'items.0.price',
-              quantity: 'items.0.quantity',
-              total: 'value',
+          data: {
+            map: {
+              data: {
+                map: {
+                  id: 'items.0.item_id',
+                  name: 'items.0.item_name',
+                  discount: 'items.0.discount',
+                  brand: 'items.0.item_brand',
+                  category: 'items.0.item_category',
+                  color: 'items.0.item_variant',
+                  currency: 'currency',
+                  price: 'items.0.price',
+                  quantity: 'items.0.quantity',
+                  total: 'value',
+                },
+              },
             },
             // context list
           },
@@ -199,26 +280,38 @@ describe('mapping', () => {
   });
 
   test('mapping purchase', () => {
-    const { dataLayer } = sourceDataLayer({
+    sourceDataLayer({
       elb,
       mapping: {
         purchase: {
           name: 'order complete',
-          custom: {
-            data: {
-              id: 'transaction_id',
-              currency: 'currency',
-              shipping: 'shipping',
-              taxes: 'tax',
-              total: 'value',
-              coupon: 'coupon',
-            },
-            nested: {
-              type: { value: 'product' },
+          data: {
+            map: {
               data: {
-                id: 'items.*.item_id',
-                name: 'items.*.item_name',
-                price: 'items.*.price',
+                map: {
+                  id: 'transaction_id',
+                  currency: 'currency',
+                  shipping: 'shipping',
+                  taxes: 'tax',
+                  total: 'value',
+                  coupon: 'coupon',
+                },
+              },
+              nested: {
+                loop: [
+                  'items',
+                  {
+                    map: {
+                      data: {
+                        map: {
+                          id: 'item_id',
+                          name: 'item_name',
+                          price: 'price',
+                        },
+                      },
+                    },
+                  },
+                ],
               },
             },
           },
@@ -274,129 +367,149 @@ describe('mapping', () => {
     );
   });
 
-  test('gtagToObj no arguments', () => {
-    expect(gtagToObj(gtag())).toBeUndefined();
-    expect(gtagToObj(gtag('e'))).toBeUndefined();
+  test('gtag no arguments', () => {
+    sourceDataLayer({ elb })!;
+    gtag();
+    expect(elb).toHaveBeenCalledTimes(0);
+
+    gtag('e');
+    expect(elb).toHaveBeenCalledTimes(0);
   });
 
-  test('gtagToObj event', () => {
-    expect(gtagToObj(gtag('event'))).toStrictEqual({
-      event: undefined,
-    });
+  test('gtag event', () => {
+    sourceDataLayer({ elb })!;
 
-    expect(gtagToObj(gtag('event', 'foo'))).toStrictEqual({
-      event: 'foo',
-    });
+    gtag('event');
+    expect(elb).toHaveBeenCalledTimes(0);
 
-    expect(gtagToObj(gtag('event', 'foo', { foo: 'bar' }))).toStrictEqual({
-      event: 'foo',
-      foo: 'bar',
-    });
-
-    expect(gtagToObj(gtag('event', 'foo', { count: 5 }))).toStrictEqual({
-      event: 'foo',
-      count: 5,
-    });
-
-    expect(
-      gtagToObj(gtag('event', 'foo', { foo: 'bar', count: 3 })),
-    ).toStrictEqual({
-      event: 'foo',
-      foo: 'bar',
-      count: 3,
-    });
-
-    expect(gtagToObj(gtag('event', 'foo', 'not-an-object'))).toStrictEqual({
-      event: 'foo',
-    });
-  });
-
-  test('gtagToObj config', () => {
-    expect(gtagToObj(gtag('config', 'GA-XXXXXXXXXX'))).toStrictEqual({
-      event: 'config GA-XXXXXXXXXX',
-    });
-
-    expect(
-      gtagToObj(gtag('config', 'GA-XXXXXXXXXX', { send_page_view: false })),
-    ).toStrictEqual({
-      event: 'config GA-XXXXXXXXXX',
-      send_page_view: false,
-    });
-
-    expect(
-      gtagToObj(gtag('config', 'GA-XXXXXXXXXX', 'non-object')),
-    ).toStrictEqual({
-      event: 'config GA-XXXXXXXXXX',
-    });
-
-    expect(gtagToObj(gtag('config'))).toStrictEqual({
-      event: undefined,
-    });
-  });
-
-  test('gtagToObj consent', () => {
-    expect(
-      gtagToObj(
-        gtag('consent', 'default', {
-          ad_storage: true,
-          analytics_storage: false,
-          wait_for_update: 500,
-        }),
-      ),
-    ).toStrictEqual({
-      event: 'consent default',
-      ad_storage: true,
-      analytics_storage: false,
-      wait_for_update: 500,
-    });
-
-    expect(
-      gtagToObj(gtag('consent', 'update', { ad_storage: 'granted' })),
-    ).toStrictEqual({
-      event: 'consent update',
-      ad_storage: true,
-    });
-
-    expect(
-      gtagToObj(gtag('consent', 'update', { analytics_storage: 'denied' })),
-    ).toStrictEqual({
-      event: 'consent update',
-      analytics_storage: false,
-    });
-
-    expect(gtagToObj(gtag('consent', 'update', 'invalid-param'))).toStrictEqual(
-      { event: 'consent update' },
+    gtag('event', 'foo');
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'dataLayer foo',
+      }),
     );
-    expect(gtagToObj(gtag('consent', 'update'))).toStrictEqual({
-      event: 'consent update',
-    });
-    expect(gtagToObj(gtag('consent'))).toStrictEqual({
-      event: undefined,
-    });
+
+    gtag('event', 'foo', { foo: 'bar' });
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'dataLayer foo',
+        data: { event: 'foo', foo: 'bar' },
+      }),
+    );
+
+    gtag('event', 'foo', { count: 5 });
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'dataLayer foo',
+        data: { event: 'foo', count: 5 },
+      }),
+    );
+
+    gtag('event', 'foo', { foo: 'bar', count: 3 });
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'dataLayer foo',
+        data: { event: 'foo', foo: 'bar', count: 3 },
+      }),
+    );
+
+    gtag('event', 'foo', 'not-an-object');
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'dataLayer foo',
+      }),
+    );
   });
 
-  test('gtagToObj get', () => {
-    expect(gtagToObj(gtag('get', 'campaign'))).toBeUndefined();
+  test('gtag config', () => {
+    sourceDataLayer({ elb });
+
+    gtag('config', 'GA-XXXXXXXXXX');
+    expect(elb).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'dataLayer config_GA-XXXXXXXXXX',
+      }),
+    );
+
+    gtag('config', 'GA-XXXXXXXXXX', { send_page_view: false });
+    expect(elb).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'dataLayer config_GA-XXXXXXXXXX',
+        data: {
+          event: 'config GA-XXXXXXXXXX',
+          send_page_view: false,
+        },
+      }),
+    );
+
+    gtag('config', 'GA-XXXXXXXXXX', 'non-object');
+    expect(elb).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'dataLayer config_GA-XXXXXXXXXX',
+        data: { event: 'config GA-XXXXXXXXXX' },
+      }),
+    );
+
+    jest.clearAllMocks();
+    gtag('config');
+    expect(elb).toHaveBeenCalledTimes(0);
   });
 
-  test('gtagToObj set', () => {
-    expect(
-      gtagToObj(
-        gtag('set', 'campaign', {
+  test('gtag get', () => {
+    sourceDataLayer({ elb });
+
+    gtag('get', 'campaign');
+    expect(elb).toHaveBeenCalledTimes(0);
+  });
+
+  test('gtag set', () => {
+    sourceDataLayer({ elb });
+
+    gtag('set', 'campaign', { id: 'abc' });
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'dataLayer set_campaign',
+        data: {
+          event: 'set campaign',
           id: 'abc',
-        }),
-      ),
-    ).toStrictEqual({
-      event: 'set campaign',
-      id: 'abc',
-    });
+        },
+      }),
+    );
 
-    expect(gtagToObj(gtag('set', { currency: 'USD' }))).toStrictEqual({
-      event: undefined,
-    });
+    gtag('set', { currency: 'EUR' });
+    expect(elb).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'dataLayer set_custom',
+        data: {
+          event: 'set custom',
+          currency: 'EUR',
+        },
+      }),
+    );
 
-    expect(gtagToObj(gtag('set', 'user_properties', 'invalid'))).toStrictEqual({
-      event: 'set user_properties',
+    gtag('set', 'user_properties', 'invalid');
+    expect(elb).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        event: 'dataLayer set_user_properties',
+      }),
+    );
+  });
+
+  test('filter parameters', () => {
+    sourceDataLayer({ elb });
+
+    gtag('event', 'foo', {
+      elem: document.createElement('div'),
+      fn: jest.fn(),
+      a: '',
     });
+    expect(elb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          event: 'foo',
+          a: '',
+        },
+      }),
+    );
   });
 });

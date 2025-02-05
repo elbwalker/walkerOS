@@ -1,19 +1,20 @@
-/* eslint-disable prefer-rest-params */
 import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
+import { isArray, isObject } from '@elbwalker/utils';
 
 describe('source dataLayer', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);
   let dataLayer: DataLayer;
 
-  beforeEach(() => {
-    window.dataLayer = [];
-    dataLayer = window.dataLayer;
-  });
-
   const gtag: Gtag.Gtag = function () {
+    // eslint-disable-next-line prefer-rest-params
     dataLayer.push(arguments);
   };
+
+  beforeEach(() => {
+    window.dataLayer = [];
+    dataLayer = window.dataLayer as DataLayer;
+  });
 
   test('init new', () => {
     window.dataLayer = undefined;
@@ -24,8 +25,8 @@ describe('source dataLayer', () => {
     expect(window.dataLayer).toBeUndefined();
 
     sourceDataLayer({ elb });
-    expect(Array.isArray(window.dataLayer)).toBe(true);
-    expect(window.dataLayer!.length).toBe(0);
+    expect(isArray(window.dataLayer)).toBe(true);
+    expect((window.dataLayer as DataLayer).length).toBe(0);
   });
 
   test('init existing', () => {
@@ -36,20 +37,11 @@ describe('source dataLayer', () => {
     expect(originalPush).not.toBe(dataLayer!.push);
   });
 
-  test('config dataLayer', () => {
-    const dataLayer: DataLayer = [];
-
-    sourceDataLayer({ elb, dataLayer, name: 'foo' });
-    expect(window.foo).toBeUndefined(); // Prefer dataLayer over name
-    dataLayer.push({ event: 'foo' });
-    expect(elb).toHaveBeenCalledTimes(1);
-  });
-
   test('config name', () => {
     expect(window.foo).toBeUndefined();
 
     sourceDataLayer({ elb, name: 'foo' });
-    expect(Array.isArray(window.foo)).toBe(true);
+    expect(isArray(window.foo)).toBe(true);
   });
 
   test('original arguments', () => {
@@ -68,6 +60,27 @@ describe('source dataLayer', () => {
       id: expect.any(String),
       source: { type: 'dataLayer' },
     });
+  });
+
+  test('filter', () => {
+    const mockFn = jest.fn();
+    sourceDataLayer({
+      elb,
+      filter: (event) => {
+        mockFn(event);
+        return isObject(event) && event.event !== 'foo';
+      },
+    });
+
+    let event = { event: 'foo' };
+    dataLayer.push(event);
+    expect(elb).toHaveBeenCalledTimes(0);
+    expect(mockFn).toHaveBeenCalledWith(event);
+
+    event = { event: 'bar' };
+    dataLayer.push(event);
+    expect(elb).toHaveBeenCalledTimes(1);
+    expect(mockFn).toHaveBeenCalledWith(event);
   });
 
   test('prefix', () => {
@@ -89,20 +102,24 @@ describe('source dataLayer', () => {
   });
 
   test('arguments', () => {
-    dataLayer = [
+    window.dataLayer = [
       {
         event: 'gtm.js',
         'gtm.start': 1730909886667,
         'gtm.uniqueEventId': 1,
       },
       (function (...args: unknown[]) {
+        // eslint-disable-next-line prefer-rest-params
         return arguments || args;
       })('event', 'arg', {
         foo: 'bar',
       }),
     ];
 
-    sourceDataLayer({ elb, dataLayer });
+    // Reassign the dataLayer to the window.dataLayer
+    dataLayer = window.dataLayer as DataLayer;
+
+    sourceDataLayer({ elb });
 
     gtag('event', 'another_arg', {
       bar: 'baz',
@@ -136,6 +153,52 @@ describe('source dataLayer', () => {
     );
   });
 
+  test('processing', () => {
+    const loopFn = jest.fn().mockImplementation(() => {
+      // Create an infinite loop
+      dataLayer.push({ event: 'loop' });
+    });
+
+    dataLayer.push({ event: 'foo' });
+    dataLayer.push({ event: 'bar' });
+
+    const source = sourceDataLayer({ elb: loopFn });
+    dataLayer.push({ event: 'baz' });
+
+    expect(JSON.stringify(dataLayer)).toBe(
+      JSON.stringify([
+        { event: 'foo' },
+        { event: 'bar' },
+        { event: 'loop' },
+        { event: 'loop' },
+        { event: 'loop' },
+        { event: 'baz' },
+      ]),
+    );
+
+    expect(JSON.stringify(source!.skipped)).toBe(
+      JSON.stringify([
+        [{ event: 'loop' }],
+        [{ event: 'loop' }],
+        [{ event: 'loop' }],
+      ]),
+    );
+
+    expect(loopFn).toHaveBeenCalledTimes(3);
+    expect(loopFn).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ event: 'dataLayer foo' }),
+    );
+    expect(loopFn).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ event: 'dataLayer bar' }),
+    );
+    expect(loopFn).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ event: 'dataLayer baz' }),
+    );
+  });
+
   test('mutation prevention', () => {
     const elb = jest.fn();
     const originalObj = {};
@@ -153,34 +216,6 @@ describe('source dataLayer', () => {
     expect(dataLayer[1]).toStrictEqual([]);
     expect(originalObj).toEqual({});
     expect(originalArr).toEqual([]);
-  });
-
-  test('duplicate prevention', () => {
-    const processedEvents = new Set<string>();
-    processedEvents.add('foo');
-    sourceDataLayer({ elb, processedEvents });
-
-    dataLayer.push({ event: 'foo', id: 'foo' });
-    expect(elb).toHaveBeenCalledTimes(0);
-
-    dataLayer.push({ event: 'bar', id: 'bar' });
-    expect(elb).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'bar',
-      }),
-    );
-    expect(elb).toHaveBeenCalledTimes(1);
-
-    dataLayer.push({ event: 'foo', id: 'bar' });
-    expect(elb).toHaveBeenCalledTimes(1);
-
-    processedEvents.delete('foo');
-    dataLayer.push({ event: 'foo', id: 'foo' });
-    expect(elb).toHaveBeenCalledTimes(2);
-
-    expect(processedEvents.has('foo')).toBeTruthy();
-    expect(processedEvents.has('bar')).toBeTruthy();
-    expect(processedEvents.size).toBe(2);
   });
 
   test('error handling', () => {

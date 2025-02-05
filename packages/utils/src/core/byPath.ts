@@ -1,5 +1,5 @@
 import { WalkerOS } from '@elbwalker/types';
-import { isDefined } from './is';
+import { isArray, isDefined } from './is';
 
 export function getByPath(
   event: unknown,
@@ -14,7 +14,7 @@ export function getByPath(
   for (let index = 0; index < keys.length; index++) {
     const k = keys[index];
 
-    if (k === '*' && Array.isArray(values)) {
+    if (k === '*' && isArray(values)) {
       const remainingKeys = keys.slice(index + 1).join('.');
       const result: unknown[] = [];
 

@@ -1,5 +1,18 @@
 # @elbwalker/destination-node-bigquery
 
+## 2.1.3
+
+### Patch Changes
+
+- Updated dependencies [10d3cde]
+- Updated dependencies [97bb90d]
+- Updated dependencies [bd9f490]
+- Updated dependencies [97bb90d]
+- Updated dependencies [927ab8c]
+- Updated dependencies [c4196a4]
+  - @elbwalker/utils@3.7.0
+  - @elbwalker/source-node@3.3.0
+
 ## 2.1.2
 
 ### Patch Changes

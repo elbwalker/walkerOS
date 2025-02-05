@@ -713,6 +713,21 @@ describe('Destination', () => {
     expect(mockPushLatest).toHaveBeenCalledTimes(0);
   });
 
+  test('dataLayer source', () => {
+    walkerjs = Walkerjs({
+      dataLayer: true,
+      run: true,
+      session: false,
+    });
+    jest.resetAllMocks();
+
+    elb({ ...event, source: { type: 'dataLayer' } });
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
+
+    elb({ ...event, source: { type: 'web' } });
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
+  });
+
   test('id namings', () => {
     elb('walker run');
     elb('walker destination', destination, { id: 'foo' });

@@ -1,5 +1,4 @@
-import type { SourceNode } from './types';
-import { handleCommand, handleEvent } from './lib/handle';
+import type { Elb, SourceNode } from './types';
 import { run } from './lib/run';
 import { getState } from './lib/state';
 import { createPush } from './lib/push';
@@ -17,16 +16,16 @@ export function createSourceNode(customConfig?: SourceNode.InitConfig) {
 export function sourceNode(
   customConfig: SourceNode.PartialConfig = {},
 ): SourceNode.Instance {
-  const version = '3.2.0'; // Source version
+  const version = '3.3.0'; // Source version
   const state = getState(customConfig);
   const instance: SourceNode.Instance = {
     version,
     ...state,
-    push: (() => {}) as unknown as SourceNode.Elb, // Placeholder for the actual push function
+    push: (() => {}) as unknown as Elb.Fn, // Placeholder for the actual push function
   };
 
   // Overwrite the push function with the instance-reference
-  instance.push = createPush(instance, handleCommand, handleEvent);
+  instance.push = createPush(instance);
 
   // That's when the party starts
   run(instance);

@@ -168,6 +168,7 @@ function resolveMappingData(
 ): Destination.Data {
   if (!data) return;
 
+  // @TODO update
   return Array.isArray(data)
     ? data.map((item) => getMappingValue(event, item))
     : getMappingValue(event, data);

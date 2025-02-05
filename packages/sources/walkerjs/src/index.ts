@@ -1,4 +1,4 @@
-import type { SourceWalkerjs } from './types';
+import type { Elb, SourceWalkerjs } from './types';
 import { sessionStart } from '@elbwalker/utils';
 import { addDestination } from './lib/destination';
 import { onApply } from './lib/on';
@@ -19,13 +19,13 @@ const elb = createElb();
 export function Walkerjs(
   customConfig: SourceWalkerjs.InitConfig = {},
 ): SourceWalkerjs.Instance {
-  const version = '3.2.0'; // Source version
+  const version = '3.3.0'; // Source version
   const state = getState(customConfig);
   const instance: SourceWalkerjs.Instance = {
     version,
     ...state,
     // Placeholder functions to be overwritten with instance-reference
-    push: (() => {}) as unknown as SourceWalkerjs.Elb,
+    push: (() => {}) as unknown as Elb.Fn,
     getAllEvents,
     getEvents,
     getGlobals,

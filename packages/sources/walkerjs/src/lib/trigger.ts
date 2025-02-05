@@ -1,4 +1,4 @@
-import { Walker, SourceWalkerjs } from '../types';
+import { Walker, SourceWalkerjs, Elb } from '../types';
 import { onApply } from './on';
 import {
   getElbAttributeName,
@@ -19,15 +19,15 @@ let visibleObserver: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
 
-export const createElb: (
-  customLayer?: SourceWalkerjs.ElbLayer,
-) => SourceWalkerjs.Elb = (customLayer?) => {
+export const createElb: (customLayer?: Elb.Layer) => Elb.Fn = (
+  customLayer?,
+) => {
   return customLayer
     ? function () {
         // eslint-disable-next-line prefer-rest-params
         customLayer.push(arguments);
       }
-    : (elbOrg as SourceWalkerjs.Elb);
+    : (elbOrg as Elb.Fn);
 };
 
 export const Trigger: { [key: string]: Walker.Trigger } = {
@@ -89,7 +89,7 @@ export function initGlobalTrigger(instance: SourceWalkerjs.Instance): void {
 
 export function initScopeTrigger(
   instance: SourceWalkerjs.Instance,
-  scope: SourceWalkerjs.Scope = document,
+  scope: Elb.Scope = document,
 ) {
   // Reset all scroll events @TODO check if it's right here
   scrollElements = [];

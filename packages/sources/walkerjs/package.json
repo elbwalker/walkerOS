@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/walker.js",
   "description": "Lightweight & vendor-agnostic tracking implementation layer for data-collection by simply adding attributes to your markup.",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,7 +20,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/utils": "3.6.0"
+    "@elbwalker/utils": "3.7.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

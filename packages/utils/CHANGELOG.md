@@ -1,5 +1,24 @@
 # @elbwalker/utils
 
+## 3.7.0
+
+### Minor Changes
+
+- 10d3cde: immediate debounce
+  [#488](https://github.com/elbwalker/walkerOS/issues/488)
+- 97bb90d: is checks [#482](https://github.com/elbwalker/walkerOS/issues/482)
+- bd9f490: loop with primitive values
+  [#473](https://github.com/elbwalker/walkerOS/issues/473)
+- 97bb90d: Process predefined events
+  [#487](https://github.com/elbwalker/walkerOS/issues/487)
+- 927ab8c: set option for mapping
+  [#483](https://github.com/elbwalker/walkerOS/issues/483)
+
+### Patch Changes
+
+- Updated dependencies [97bb90d]
+  - @elbwalker/types@3.3.0
+
 ## 3.6.0
 
 ### Minor Changes

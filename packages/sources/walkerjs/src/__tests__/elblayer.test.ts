@@ -1,9 +1,9 @@
 import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import type { SourceWalkerjs, DestinationWeb } from '..';
+import type { SourceWalkerjs, DestinationWeb, Elb } from '..';
 import type { WalkerOS } from '@elbwalker/types';
 
-describe('ElbLayer', () => {
+describe('elbLayer', () => {
   const w = window;
   let walkerjs: SourceWalkerjs.Instance;
 
@@ -100,28 +100,31 @@ describe('ElbLayer', () => {
   });
 
   test('predefined stack with run', () => {
-    walkerjs = Walkerjs();
+    w.elbLayer = [{ event: 'pre event' }];
+    elb('pre argument');
+
+    walkerjs = Walkerjs({ session: false, pageview: false });
 
     elb('walker destination', destination);
-    elb('ingest argument', { a: 1 }, 'a'); // Push as arguments
-    w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
+    elb('ingest argument', { a: 1 }); // Push as arguments
+    elb({ event: 'event object' }); // Push as event
+    w.elbLayer.push({ event: 'event push' });
     elb('walker run');
 
-    expect(mockDestinationPush).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: 'ingest argument',
-      }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+    expect(walkerjs.queue).toContainEqual(
+      expect.objectContaining({ event: 'pre event' }),
     );
-    expect(mockDestinationPush).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: 'ingest event',
-      }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+    expect(walkerjs.queue).toContainEqual(
+      expect.objectContaining({ event: 'pre argument' }),
+    );
+    expect(walkerjs.queue).toContainEqual(
+      expect.objectContaining({ event: 'ingest argument', data: { a: 1 } }),
+    );
+    expect(walkerjs.queue).toContainEqual(
+      expect.objectContaining({ event: 'event object' }),
+    );
+    expect(walkerjs.queue).toContainEqual(
+      expect.objectContaining({ event: 'event push' }),
     );
   });
 
@@ -168,7 +171,7 @@ describe('ElbLayer', () => {
   });
 
   test('elbLayer initialization', () => {
-    w.elbLayer = undefined as unknown as SourceWalkerjs.ElbLayer;
+    w.elbLayer = undefined as unknown as Elb.Layer;
 
     walkerjs = Walkerjs();
 
@@ -240,8 +243,8 @@ describe('ElbLayer', () => {
   test('custom elbLayer', () => {
     w.dataLayer = [];
     const dataLayer = w.dataLayer as unknown[];
-    const customLayer1 = [] as SourceWalkerjs.ElbLayer;
-    const customLayer2 = [] as SourceWalkerjs.ElbLayer;
+    const customLayer1: Elb.Layer = [];
+    const customLayer2: Elb.Layer = [];
     const instance1 = Walkerjs({
       elbLayer: customLayer1,
       default: true,
@@ -328,7 +331,7 @@ describe('ElbLayer', () => {
   });
 
   test('elbLayer push override', () => {
-    const layer: SourceWalkerjs.ElbLayer = [];
+    const layer: Elb.Layer = [];
 
     walkerjs = Walkerjs({ elbLayer: layer, pageview: false });
     layer.push('walker run'); // Overwrites push function
@@ -355,9 +358,7 @@ describe('ElbLayer', () => {
     elb('walker run');
 
     // Arguments
-    expect(JSON.stringify(w.elbLayer[0])).toEqual(
-      JSON.stringify({ '0': 'walker run' }),
-    );
+    expect(w.elbLayer[0]).toStrictEqual(['walker run']);
 
     // Parameters
     expect(pushSpy).toHaveBeenCalledWith('walker user', expect.any(Object));

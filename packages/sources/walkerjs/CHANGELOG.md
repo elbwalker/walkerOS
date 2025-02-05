@@ -1,5 +1,23 @@
 # @elbwalker/walker.js
 
+## 3.3.0
+
+### Minor Changes
+
+- 97bb90d: Process predefined events
+  [#487](https://github.com/elbwalker/walkerOS/issues/487)
+- c4196a4: loop prevention
+  [#484](https://github.com/elbwalker/walkerOS/issues/484)
+
+### Patch Changes
+
+- Updated dependencies [10d3cde]
+- Updated dependencies [97bb90d]
+- Updated dependencies [bd9f490]
+- Updated dependencies [97bb90d]
+- Updated dependencies [927ab8c]
+  - @elbwalker/utils@3.7.0
+
 ## 3.2.0
 
 ### Minor Changes

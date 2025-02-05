@@ -1,6 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { tryCatch } from './tryCatch';
 import { castValue } from './castValue';
+import { isArray, isObject } from './is';
 
 export function requestToData(
   parameter: unknown,
@@ -19,7 +20,7 @@ export function requestToData(
       keys.forEach((k, i) => {
         const isLast = i === keys.length - 1;
 
-        if (Array.isArray(current)) {
+        if (isArray(current)) {
           const index = parseInt(k, 10);
           if (isLast) {
             (current as Array<unknown>)[index] = castValue(value);
@@ -29,7 +30,7 @@ export function requestToData(
               (isNaN(parseInt(keys[i + 1], 10)) ? {} : []);
             current = (current as Array<unknown>)[index];
           }
-        } else if (typeof current === 'object' && current !== null) {
+        } else if (isObject(current)) {
           if (isLast) {
             (current as WalkerOS.AnyObject)[k] = castValue(value);
           } else {
@@ -57,9 +58,9 @@ export function requestToParameter(
   function addParam(key: string, value: unknown) {
     if (value === undefined || value === null) return;
 
-    if (Array.isArray(value)) {
+    if (isArray(value)) {
       value.forEach((item, index) => addParam(`${key}[${index}]`, item));
-    } else if (typeof value === 'object' && value !== null) {
+    } else if (isObject(value)) {
       Object.entries(value).forEach(([subKey, subValue]) =>
         addParam(`${key}[${subKey}]`, subValue),
       );

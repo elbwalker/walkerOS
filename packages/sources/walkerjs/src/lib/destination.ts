@@ -4,7 +4,6 @@ import {
   debounce,
   getMappingEvent,
   getId,
-  tryCatch,
   useHooks,
   getMappingValue,
   isDefined,
@@ -51,6 +50,9 @@ export function dataLayerDestination() {
   };
   const destination: DestinationWeb.DestinationInit = {
     push: (event, config, mapping, options = {}) => {
+      // Do not process events from dataLayer source
+      if (event.source?.type === 'dataLayer') return;
+
       const data = options.data || event;
       dataLayerPush(data);
     },
@@ -98,9 +100,7 @@ function resolveMappingData(
 ): Destination.Data {
   if (!data) return;
 
-  return Array.isArray(data)
-    ? data.map((item) => getMappingValue(event, item))
-    : getMappingValue(event, data);
+  return getMappingValue(event, data);
 }
 
 export function destinationPush(
@@ -132,42 +132,40 @@ export function destinationPush(
 
   const options = { data, instance };
 
-  return !!tryCatch(() => {
-    if (eventMapping?.batch && destination.pushBatch) {
-      const batched = eventMapping.batched || {
-        key: mappingKey || '',
-        events: [],
-        data: [],
-      };
-      batched.events.push(event);
-      if (isDefined(data)) batched.data.push(data);
+  if (eventMapping?.batch && destination.pushBatch) {
+    const batched = eventMapping.batched || {
+      key: mappingKey || '',
+      events: [],
+      data: [],
+    };
+    batched.events.push(event);
+    if (isDefined(data)) batched.data.push(data);
 
-      eventMapping.batchFn =
-        eventMapping.batchFn ||
-        debounce((destination, instance) => {
-          useHooks(
-            destination.pushBatch!,
-            'DestinationPushBatch',
-            instance.hooks,
-          )(batched, destination.config, options);
+    eventMapping.batchFn =
+      eventMapping.batchFn ||
+      debounce((destination, instance) => {
+        useHooks(
+          destination.pushBatch!,
+          'DestinationPushBatch',
+          instance.hooks,
+        )(batched, destination.config, options);
 
-          // Reset the batched queues
-          batched.events = [];
-          batched.data = [];
-        }, eventMapping.batch);
+        // Reset the batched queues
+        batched.events = [];
+        batched.data = [];
+      }, eventMapping.batch);
 
-      eventMapping.batched = batched;
-      eventMapping.batchFn(destination, instance);
-    } else {
-      // It's time to go to the destination's side now
-      useHooks(destination.push, 'DestinationPush', instance.hooks)(
-        event,
-        destination.config,
-        eventMapping,
-        options,
-      );
-    }
+    eventMapping.batched = batched;
+    eventMapping.batchFn(destination, instance);
+  } else {
+    // It's time to go to the destination's side now
+    useHooks(destination.push, 'DestinationPush', instance.hooks)(
+      event,
+      destination.config,
+      eventMapping,
+      options,
+    );
+  }
 
-    return true;
-  })();
+  return true;
 }

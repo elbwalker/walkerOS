@@ -1,16 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
-import { isObject } from '@elbwalker/utils';
-
-export function isString(value: unknown): value is string {
-  return typeof value === 'string';
-}
-
-export function wasArguments(obj: unknown): obj is WalkerOS.AnyObject {
-  return (
-    isObject(obj) &&
-    Object.keys(obj).every((key, index) => key === String(index))
-  );
-}
+import type { DataLayer } from './types';
 
 export function convertConsentStates(
   obj: Record<string, unknown>,
@@ -23,4 +11,11 @@ export function convertConsentStates(
   }
 
   return consent;
+}
+
+export function getDataLayer(name = 'dataLayer'): DataLayer | undefined {
+  // Ensure the dataLayer exists
+  if (!window[name]) window[name] = [];
+
+  return window[name] || [];
 }

@@ -26,6 +26,7 @@ export interface EventMapping {
   mappingKey?: string;
 }
 
+export type Data = Value | Values;
 export type Value = ValueType | Array<ValueType>;
 export type Values = Array<Value>;
 export type ValueType = string | ValueConfig;
@@ -37,23 +38,22 @@ export interface ValueConfig {
   key?: string;
   loop?: Loop;
   map?: Map;
+  set?: Value[];
   validate?: Validate;
   value?: WalkerOS.PropertyType;
 }
 
 export type Condition = (
-  obj: WalkerOS.AnyObject,
+  value: WalkerOS.DeepPartialEvent | unknown,
   mapping?: Value,
   instance?: WalkerOS.Instance,
 ) => boolean;
 
-export type Data = Value | Values;
-
 export type Fn = (
-  event: WalkerOS.PartialEvent,
+  value: WalkerOS.DeepPartialEvent | unknown,
   mapping: Value,
   options: Options,
-) => WalkerOS.Property | void;
+) => WalkerOS.Property | unknown;
 
 export type Loop = [Value, Value];
 

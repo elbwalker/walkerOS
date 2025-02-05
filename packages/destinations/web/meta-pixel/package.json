@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-meta-pixel",
   "description": "Meta pixel web destination for walkerOS",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,11 +20,11 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/walker.js": "3.2.0"
+    "@elbwalker/walker.js": "3.3.0"
   },
   "devDependencies": {
     "@elbwalker/tsup": "0.0.1",
-    "@elbwalker/types": "3.2.0",
+    "@elbwalker/types": "3.3.0",
     "@types/facebook-pixel": "^0.0.31"
   },
   "repository": {

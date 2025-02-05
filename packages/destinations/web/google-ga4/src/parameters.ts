@@ -2,7 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { Include, Parameters } from './types';
 
 export function getParamsInclude(
-  event: WalkerOS.Event,
+  event: WalkerOS.DeepPartialEvent,
   include: Include,
 ): Parameters {
   const params: Parameters = {};
@@ -20,7 +20,7 @@ export function getParamsInclude(
     ];
 
   include.forEach((groupName) => {
-    let group = event[groupName as keyof Omit<WalkerOS.Event, 'all'>];
+    let group = event[groupName as keyof Omit<WalkerOS.Event, 'all'>] || {};
 
     // Create a fake group for event properties
     if (groupName == 'event')

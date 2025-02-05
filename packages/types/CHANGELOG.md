@@ -1,5 +1,12 @@
 # @elbwalker/types
 
+## 3.3.0
+
+### Minor Changes
+
+- 97bb90d: Process predefined events
+  [#487](https://github.com/elbwalker/walkerOS/issues/487)
+
 ## 3.2.0
 
 ### Minor Changes

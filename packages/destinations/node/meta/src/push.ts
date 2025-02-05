@@ -7,7 +7,7 @@ import {
   ServerEvent,
   UserData,
 } from 'facebook-nodejs-business-sdk';
-import { getMappingValue } from '@elbwalker/utils';
+import { getMappingValue, isString } from '@elbwalker/utils';
 
 export const push: PushFn = async function (event, config, mapping) {
   const {
@@ -53,7 +53,7 @@ export const mapEvent = (
   if (user) {
     // IDs
     const ids = [user.id, user.device, user.session, user.hash]
-      .filter((id) => typeof id === 'string')
+      .filter(isString)
       .map(lower);
 
     if (ids.length) userData = userData.setExternalIds(ids);

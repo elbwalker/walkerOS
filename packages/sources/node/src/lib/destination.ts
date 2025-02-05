@@ -73,9 +73,7 @@ function resolveMappingData(
 ): Destination.Data {
   if (!data) return;
 
-  return Array.isArray(data)
-    ? data.map((item) => getMappingValue(event, item))
-    : getMappingValue(event, data);
+  return getMappingValue(event, data);
 }
 
 export async function destinationPush(
@@ -118,7 +116,7 @@ export async function destinationPush(
 
     eventMapping.batchFn =
       eventMapping.batchFn ||
-      debounce(async (destination, instance) => {
+      debounce((destination, instance) => {
         useHooks(
           destination.pushBatch!,
           'DestinationPushBatch',

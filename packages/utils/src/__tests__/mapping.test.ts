@@ -4,6 +4,8 @@ import {
   getEvent,
   getMappingEvent,
   getMappingValue,
+  isObject,
+  isString,
 } from '../core';
 
 describe('getMappingEvent', () => {
@@ -81,8 +83,10 @@ describe('getMappingEvent', () => {
       order: {
         complete: [
           {
-            condition: (event: WalkerOS.PartialEvent) =>
-              event.globals?.env === 'prod',
+            condition: (event) =>
+              isObject(event) &&
+              isObject(event.globals) &&
+              event.globals.env === 'prod',
             ignore: true,
           },
           {
@@ -152,17 +156,21 @@ describe('getMappingValue', () => {
 
   test('key default', () => {
     const event = createEvent();
+
     expect(
       getMappingValue(event, { key: 'data.string', value: 'static' }),
     ).toBe(event.data.string);
+
     expect(
       getMappingValue(event, { key: 'does.not.exist', value: 'fallback' }),
     ).toBe('fallback');
+
     expect(getMappingValue(event, { value: 'static' })).toBe('static');
   });
 
   test('empty', () => {
-    expect(getMappingValue(createEvent(), {})).toBeUndefined();
+    const event = createEvent();
+    expect(getMappingValue(event)).toStrictEqual(event);
   });
 
   test('false', () => {
@@ -210,7 +218,8 @@ describe('getMappingValue', () => {
         loop: [
           'nested',
           {
-            condition: (entity) => entity.type === 'product',
+            condition: (entity) =>
+              isObject(entity) && entity.type === 'product',
             key: 'data.name',
           },
         ],
@@ -227,6 +236,16 @@ describe('getMappingValue', () => {
         ],
       }),
     ).toStrictEqual([event.event]);
+  });
+
+  test('set', () => {
+    const event = getEvent('order complete');
+
+    expect(
+      getMappingValue(event, {
+        set: ['event', 'data', { value: 'static' }, { fn: () => 'fn' }],
+      }),
+    ).toStrictEqual(['order complete', event.data, 'static', 'fn']);
   });
 
   test('map', () => {
@@ -253,9 +272,7 @@ describe('getMappingValue', () => {
 
   test('validate', () => {
     const event = createEvent();
-    const mockValidate = jest.fn((value) => {
-      return typeof value === 'string';
-    });
+    const mockValidate = jest.fn(isString);
 
     // validation passed
     expect(
@@ -281,6 +298,27 @@ describe('getMappingValue', () => {
         value: 'fallback',
       }),
     ).toBe('fallback');
+  });
+
+  test('values', () => {
+    expect(
+      getMappingValue(
+        { arr: [1, 'foo', false] },
+        {
+          loop: [
+            'arr',
+            {
+              fn: (i: unknown) => {
+                return i;
+              },
+            },
+          ],
+        },
+      ),
+    ).toStrictEqual([1, 'foo', false]);
+
+    expect(getMappingValue('string')).toEqual('string');
+    expect(getMappingValue(1)).toEqual(1);
   });
 
   test('consent', () => {

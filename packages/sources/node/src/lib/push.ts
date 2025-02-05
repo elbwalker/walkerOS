@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { SourceNode, DestinationNode } from '../types';
+import type { SourceNode, DestinationNode, Elb } from '../types';
 import {
   assign,
   getGrantedConsent,
@@ -10,18 +10,15 @@ import {
 } from '@elbwalker/utils';
 import { isCommand } from './helper';
 import { destinationInit, destinationPush } from './destination';
+import { handleCommand, handleEvent } from './handle';
 
-export function createPush(
-  instance: SourceNode.Instance,
-  handleCommand: SourceNode.HandleCommand,
-  handleEvent: SourceNode.HandleEvent,
-): SourceNode.Elb {
-  const push: SourceNode.Elb = async (
-    nameOrEvent: string | WalkerOS.DeepPartialEvent,
-    data?: SourceNode.PushData,
-    options?: SourceNode.PushOptions,
-  ): Promise<SourceNode.PushResult> => {
-    let result: SourceNode.PushResult = {
+export function createPush(instance: SourceNode.Instance): Elb.Fn {
+  const push = async (
+    nameOrEvent: unknown,
+    data: Elb.PushData = {},
+    options?: Elb.PushOptions,
+  ) => {
+    let result: Elb.PushResult = {
       status: { ok: false },
       successful: [],
       queued: [],
@@ -30,10 +27,10 @@ export function createPush(
 
     return await tryCatchAsync(
       async (
-        nameOrEvent: string | WalkerOS.DeepPartialEvent,
-        data?: SourceNode.PushData,
-        options?: SourceNode.PushOptions,
-      ): Promise<SourceNode.PushResult> => {
+        nameOrEvent: unknown,
+        data: Elb.PushData,
+        options?: Elb.PushOptions,
+      ): Elb.Return => {
         const { event, command } = createEventOrCommand(
           instance,
           nameOrEvent,
@@ -208,8 +205,8 @@ export async function pushToDestinations(
 
 function createEventOrCommand(
   instance: SourceNode.Instance,
-  nameOrEvent: string | WalkerOS.DeepPartialEvent,
-  pushData: unknown,
+  nameOrEvent: unknown,
+  pushData: Elb.PushData,
 ): { event?: WalkerOS.Event; command?: string } {
   // Determine the partial event
   const partialEvent: WalkerOS.PartialEvent = isSameType(

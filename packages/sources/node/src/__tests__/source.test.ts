@@ -1,4 +1,4 @@
-import type { SourceNode, DestinationNode } from '../types';
+import type { SourceNode, DestinationNode, Elb } from '../types';
 import type { WalkerOS } from '@elbwalker/types';
 import { createSourceNode } from '../';
 import { createEvent } from '@elbwalker/utils/src';
@@ -10,7 +10,7 @@ describe('Source Node', () => {
     push: mockDestinationPush,
   };
   let mockEvent: WalkerOS.Event;
-  let result: SourceNode.PushResult;
+  let result: Elb.PushResult;
 
   function getSource(custom?: Partial<SourceNode.InitConfig>) {
     const config = custom || {
@@ -121,8 +121,7 @@ describe('Source Node', () => {
 
   test('push failure', async () => {
     const { elb } = getSource();
-    const elbWithZeroParams =
-      elb as unknown as () => Promise<SourceNode.PushResult>;
+    const elbWithZeroParams = elb as unknown as () => Promise<Elb.PushResult>;
 
     result = await elbWithZeroParams();
 
