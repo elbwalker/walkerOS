@@ -8,6 +8,7 @@ import Sparring from '../components/services/sparring';
 import Projects from '../components/services/projects';
 import Principle from '../components/services/principles';
 import Principles from '../components/services/principles';
+import CollectionPrinciples from '../components/services/CollectionPrinciples';
 
 export default function Services(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
@@ -19,6 +20,7 @@ export default function Services(): JSX.Element {
         <Sparring />
         <Projects />
         <Team />
+        <CollectionPrinciples />
         <CTAServices />
       </main>
     </Layout>
