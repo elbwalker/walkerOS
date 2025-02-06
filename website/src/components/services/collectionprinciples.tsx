@@ -9,39 +9,39 @@ type CollectionPrinciple = {
 const collectionPrinciples: CollectionPrinciple[] = [
   // Changed to lowercase 'c'
   {
-    name: 'Step-by-step',
-    description:
-      'While everyone can become an AI expert in no time, we should remember everything that has to be done before going there. It is a journey that requires lots of work from the ground up. No shortcuts.',
-  },
-  {
     name: 'Do not build on rented land',
     description:
-      'In the ever-evolving world of data, relying solely on external platforms can be risky. Prioritize building your own robust data infrastructures to maintain control and adaptability. Sunsets are inevitable, also for features.',
+      'In the ever-evolving world of data, relying solely on external platforms is risky. Prioritize building your own robust data infrastructure to maintain control and adaptability. Sunsets are inevitable — even for features.',
   },
   {
-    name: 'Resilience is key',
+    name: 'Step-by-step',
     description:
-      'As data environments are dynamic, designing resilient systems can help withstand changes and unexpected challenges, ensuring continuous data flow and integrity. Yes, more legal requirements are coming.',
-  },
-  {
-    name: 'Focus on what you can control',
-    description:
-      'In data management, focusing on elements within your control, like data quality and security, can lead to more reliable and effective outcomes. It is your responsibility and a great chance to set the rules.',
+      'While anyone can become an AI expert in no time, it is essential to remember the groundwork required to get there. Data development is a journey that demands effort from the ground up. No shortcuts.',
   },
   {
     name: 'Use tools only for what they are made for',
     description:
-      'Utilize each data tool for its intended purpose to maximize efficiency and avoid unnecessary complications in data processes. No misusage.',
+      'Utilize each data tool for its intended purpose to maximize efficiency and avoid unnecessary complications. Misusage leads to inefficiencies and potential risks.',
   },
   {
-    name: 'Data is never done',
+    name: 'Focus on what you can control',
     description:
-      'The journey of data is ongoing. Continuous analysis, refinement, and updating are crucial to keep data relevant and actionable. Build-measure-learn-grow.',
+      'In data management, focusing on factors within your control, like data quality and security, can lead to more reliable and effective outcomes. It is your responsibility and a huge opportunity to set the rules.',
   },
   {
     name: 'Internalize data',
     description:
-      'Embrace data as a core part of your strategy and operations. Integrating data into your processes ensures it becomes an intrinsic part of decision-making.',
+      'Treat data as a fundamental part of your strategy and operations. By fully integrating it into your processes, data becomes intrinsic to decision-making.',
+  },
+  {
+    name: 'Data is never done',
+    description:
+      'The data journey is ongoing. Continuous analysis, refinement, and updates are essential to keeping data relevant and actionable. Build. Measure. Learn. Grow.',
+  },
+  {
+    name: 'Resilience is key',
+    description:
+      'Data environments are dynamic. Designing resilient systems ensures they can withstand changes and unexpected challenges while maintaining continuous data flow and integrity. And yes, probably more legal requirements are coming.',
   },
 ];
 
@@ -55,7 +55,7 @@ export default function CollectionPrinciples() {
             Data collection principles{' '}
           </h2>
           <p className="mt-6 text-lg/8 text-gray-50">
-            Seven principles we are following while working on data projects.
+            Seven principles we follow when working on data projects.
           </p>
         </div>
         <dl className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 text-base/7 sm:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-3">
