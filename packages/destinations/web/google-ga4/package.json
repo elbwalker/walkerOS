@@ -3,9 +3,6 @@
   "description": "Google GA4 web destination for walkerOS",
   "version": "3.1.3",
   "license": "MIT",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
