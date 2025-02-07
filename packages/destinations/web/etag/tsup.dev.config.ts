@@ -1,21 +1,13 @@
-import { config, defineConfig } from '@elbwalker/tsup';
+import { defineConfig, buildModules, buildBrowser } from '@elbwalker/tsup';
 
 const globalName = 'Destination';
 
 export default defineConfig([
-  {
-    entry: ['src/index.ts'],
+  buildModules({
     minify: false,
-    dts: true,
-    format: ['cjs', 'esm'],
     sourcemap: false,
-  },
-  {
-    ...config,
-    format: ['iife'],
+  }),
+  buildBrowser({
     globalName,
-    outExtension() {
-      return { js: `.browser.js` };
-    },
-  },
+  }),
 ]);

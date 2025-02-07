@@ -1,10 +1,3 @@
-import { config, defineConfig } from '@elbwalker/tsup';
+import { buildModules, defineConfig } from '@elbwalker/tsup';
 
-export default defineConfig([
-  {
-    ...config,
-    dts: true,
-    format: ['cjs', 'esm'],
-    sourcemap: true,
-  },
-]);
+export default defineConfig([buildModules()]);

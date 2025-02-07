@@ -20,7 +20,7 @@ export default defineConfig([
     clean: false,
     dts: true,
     treeshake: true,
-    // platform: 'browser',
+    // platform: 'browser', // @TODO reactivate this
   }), // Core and Web files
   // Browser
   buildBrowser({
