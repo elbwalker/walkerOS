@@ -1,7 +1,12 @@
-import { config, defineConfig } from '@elbwalker/tsup';
+import {
+  defineConfig,
+  buildModules,
+  buildBrowser,
+  buildES5,
+} from '@elbwalker/tsup';
 
 const globalName = 'Utils';
-const filesCoreWeb = [
+const webFiles = [
   'src/core.ts',
   'src/core/index.ts',
   'src/web.ts',
@@ -9,38 +14,19 @@ const filesCoreWeb = [
 ];
 
 export default defineConfig([
-  // Full index bundle with definitions
-  {
-    ...config,
+  buildModules(), // Modules
+  buildModules({
+    entry: webFiles,
+    clean: false,
     dts: true,
-    format: ['cjs', 'esm'],
-    sourcemap: true,
-  },
-  // Core and Web files
-  {
-    ...config,
-    entry: filesCoreWeb,
-    format: ['cjs', 'esm'],
-  },
+    treeshake: true,
+    // platform: 'browser',
+  }), // Core and Web files
   // Browser
-  {
-    ...config,
-    entry: filesCoreWeb.concat('src/core/**/*.ts', 'src/web/**/*.ts'),
-    format: ['iife'],
+  buildBrowser({
     globalName,
-    outExtension() {
-      return { js: `.browser.js` };
-    },
-  },
+    entry: webFiles.concat('src/core/**/*.ts', 'src/web/**/*.ts'),
+  }),
   // Web ES5 files
-  {
-    ...config,
-    entry: filesCoreWeb,
-    format: ['iife'],
-    globalName,
-    outExtension() {
-      return { js: `.es5.js` };
-    },
-    target: 'es5',
-  },
+  buildES5({ globalName, entry: webFiles }),
 ]);
