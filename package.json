@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.6",
-    "@elbwalker/eslint-config": "*",
+    "@elbwalker/eslint": "*",
     "@elbwalker/jest": "*",
     "@elbwalker/tsconfig": "*",
     "@elbwalker/tsup": "*",

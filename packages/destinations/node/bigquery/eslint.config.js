@@ -1,4 +1,4 @@
-import baseConfig from '@elbwalker/eslint-config/node';
+import baseConfig from '@elbwalker/eslint/node';
 
 export default [
   ...baseConfig,
