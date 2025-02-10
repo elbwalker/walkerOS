@@ -4,7 +4,6 @@
   "extends": "./base.json",
   "compilerOptions": {
     "lib": ["dom", "es2018"],
-    "module": "node16",
     "target": "es2018"
   }
 }
