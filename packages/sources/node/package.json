@@ -2,6 +2,7 @@
   "name": "@elbwalker/source-node",
   "description": "Node source for walkerOS for sending events from the server-side",
   "version": "3.3.0",
+  "type": "module",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

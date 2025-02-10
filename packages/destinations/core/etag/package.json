@@ -2,6 +2,7 @@
   "name": "@elbwalker/destination-core-etag",
   "description": "etag core destination for walkerOS",
   "version": "0.0.8",
+  "type": "module",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

@@ -11,6 +11,9 @@ const buildModules = (customConfig = {}) => ({
   ...baseConfig,
   clean: true,
   format: ['cjs', 'esm'],
+  outExtension({ format }) {
+    return { js: format === 'esm' ? '.mjs' : '.js' };
+  },
   dts: true,
   sourcemap: true,
   ...customConfig,

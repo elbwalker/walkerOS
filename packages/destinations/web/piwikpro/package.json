@@ -2,6 +2,7 @@
   "name": "@elbwalker/destination-web-piwikpro",
   "description": "Piwik PRO destination for walkerOS",
   "version": "2.0.1",
+  "type": "module",
   "license": "MIT",
   "exports": {
     ".": {

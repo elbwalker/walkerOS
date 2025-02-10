@@ -2,6 +2,7 @@
   "name": "@elbwalker/destination-web-plausible",
   "description": "Plausible web destination for walkerOS",
   "version": "4.0.1",
+  "type": "module",
   "license": "MIT",
   "exports": {
     ".": {

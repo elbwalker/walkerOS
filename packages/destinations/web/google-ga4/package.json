@@ -2,6 +2,7 @@
   "name": "@elbwalker/destination-web-google-ga4",
   "description": "Google GA4 web destination for walkerOS",
   "version": "3.1.3",
+  "type": "module",
   "license": "MIT",
   "exports": {
     ".": {

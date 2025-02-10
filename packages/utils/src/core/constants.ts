@@ -1,5 +1,4 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { StorageType } from '../web';
 
 export type CommandTypes =
   | 'Action'
@@ -42,6 +41,8 @@ export const Commands: Record<CommandTypes, WalkerOS.Commands> = {
   User: 'user',
   Walker: 'walker',
 } as const;
+
+export type StorageType = 'cookie' | 'local' | 'session';
 
 const UtilsStorage: { [key: string]: StorageType } = {
   Cookie: 'cookie',

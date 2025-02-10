@@ -2,6 +2,7 @@
   "name": "@elbwalker/destination-web-etag",
   "description": "etag web destination for walkerOS",
   "version": "0.1.6",
+  "type": "module",
   "license": "MIT",
   "exports": {
     ".": {

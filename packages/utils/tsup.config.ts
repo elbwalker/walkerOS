@@ -6,26 +6,25 @@ import {
 } from '@elbwalker/tsup';
 
 const globalName = 'Utils';
-const webFiles = [
-  'src/core.ts',
-  'src/core/index.ts',
-  'src/web.ts',
-  'src/web/index.ts',
-];
+const webFiles = ['src/web.ts'];
+const nodeFiles = ['src/node.ts'];
 
 export default defineConfig([
-  buildModules(), // Modules
+  buildModules(),
   buildModules({
-    entry: webFiles,
     clean: false,
-    dts: true,
-    treeshake: true,
-    // platform: 'browser', // @TODO reactivate this
-  }), // Core and Web files
+    entry: webFiles,
+    platform: 'browser',
+  }),
+  buildModules({
+    clean: false,
+    entry: nodeFiles,
+    platform: 'node',
+  }),
   // Browser
   buildBrowser({
     globalName,
-    entry: webFiles.concat('src/core/**/*.ts', 'src/web/**/*.ts'),
+    entry: webFiles,
   }),
   // Web ES5 files
   buildES5({ globalName, entry: webFiles }),

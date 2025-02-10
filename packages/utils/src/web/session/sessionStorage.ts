@@ -1,7 +1,8 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { StorageType, SessionWindowConfig } from '../../web';
-import { storageRead, storageWrite } from '../../web/storage';
-import { sessionWindow } from '../../web/session/sessionWindow';
+import type { SessionWindowConfig } from '.';
+import type { StorageType } from '../../core/constants';
+import { storageRead, storageWrite } from '../storage';
+import { sessionWindow } from '.';
 import { tryCatch } from '../../core/tryCatch';
 import { getId } from '../../core/getId';
 

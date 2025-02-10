@@ -2,6 +2,7 @@
   "name": "@elbwalker/destination-web-google-ads",
   "description": "Google Ads web destination for walkerOS",
   "version": "3.0.1",
+  "type": "module",
   "license": "MIT",
   "exports": {
     ".": {

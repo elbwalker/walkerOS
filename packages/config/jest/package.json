@@ -1,13 +1,23 @@
 {
   "name": "@elbwalker/jest",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
+  "type": "module",
   "license": "MIT",
-  "main": "index.js",
-  "devDependencies": {
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./web.config": "./web.config.js",
+    "./web.setup": "./web.setup.ts",
+    "./node.config": "./node.config.js",
+    "./node.setup": "./node.setup.ts"
+  },
+  "dependencies": {
+    "@swc/core": "^1.4.0",
+    "@swc/jest": "^0.2.36",
+    "@testing-library/jest-dom": "^6.4.2",
     "@types/jest": "^29.5.14",
     "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
-    "ts-jest": "^29.2.5"
+    "jest-environment-jsdom": "^29.7.0"
   }
 }

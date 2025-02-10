@@ -9,13 +9,16 @@
     "forceConsistentCasingInFileNames": true,
     "inlineSources": false,
     "isolatedModules": true,
-    "moduleResolution": "Node16",
-    "module": "Node16",
+    "moduleResolution": "bundler",
+    "module": "es2015",
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "preserveWatchOutput": true,
     "skipLibCheck": true,
-    "strict": true
+    "strict": true,
+    "target": "es2022",
+    "allowJs": true,
+    "resolveJsonModule": true
   },
-  "exclude": ["node_modules", "dist", "**/*.test.*"]
+  "exclude": ["node_modules"]
 }

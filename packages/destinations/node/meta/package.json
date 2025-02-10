@@ -2,6 +2,7 @@
   "name": "@elbwalker/destination-node-meta",
   "description": "Meta node destination for walkerOS",
   "version": "2.1.3",
+  "type": "module",
   "license": "MIT",
   "exports": {
     ".": {

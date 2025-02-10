@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { MarketingParameters } from '../../core';
+import type { MarketingParameters } from '../../core/getMarketingParameters';
 import { getMarketingParameters } from '../../core/getMarketingParameters';
 import { getId } from '../../core/getId';
 
