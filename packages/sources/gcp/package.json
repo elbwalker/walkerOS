@@ -13,7 +13,6 @@
   ],
   "scripts": {
     "build": "tsup",
-    "build:dev": "tsup --config tsup.dev.config.ts",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "lint": "tsc && eslint \"**/*.ts*\"",
