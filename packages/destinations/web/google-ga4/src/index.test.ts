@@ -299,71 +299,33 @@ describe('Destination Google GA4', () => {
 
   test('event add_to_cart', () => {
     const event = getEvent('product add');
+    const custom = { measurementId, include: [] };
+
     const config: DestinationGoogleGA4.Config = {
-      custom: { measurementId },
+      custom,
       init: true,
-      mapping: {
-        product: {
-          add: {
-            name: 'add_to_cart',
-            data: {
-              map: {
-                currency: { value: 'EUR', key: 'data.currency' },
-                override: 'data.old',
-                value: 'data.price',
-                items: {
-                  loop: [
-                    'this',
-                    {
-                      map: {
-                        item_id: 'data.id',
-                        item_variant: 'data.color',
-                        quantity: { value: 1, key: 'data.quantity' },
-                      },
-                    },
-                  ],
-                },
-              },
-            },
-          },
-        },
-      },
+      mapping: mapping.config,
     };
     elb('walker destination', destination, config);
 
     elb(event);
 
-    expect(mockFn).toHaveBeenCalledWith(
-      'event',
-      'add_to_cart',
-      expect.objectContaining({
-        currency: 'EUR',
-        value: event.data.price,
-        items: [
-          {
-            item_id: event.data.id,
-            item_variant: event.data.color,
-            quantity: 1,
-          },
-        ],
-      }),
-    );
+    expect(mockFn).toHaveBeenCalledWith(...events.add_to_cart(custom));
   });
 
   test('event purchase', () => {
     const event = getEvent('order complete');
+    const custom = { measurementId, include: [] };
 
     const config: DestinationGoogleGA4.Config = {
-      custom: { measurementId },
+      custom,
       init: true,
-      mapping,
+      mapping: mapping.config,
     };
     elb('walker destination', destination, config);
 
     elb(event);
-    const product1 = event.nested[0].data;
-    const product2 = event.nested[1].data;
-    expect(mockFn).toHaveBeenCalledWith(...events.purchase);
+    expect(mockFn).toHaveBeenCalledWith(...events.purchase(custom));
   });
 
   test('snake case disabled', () => {

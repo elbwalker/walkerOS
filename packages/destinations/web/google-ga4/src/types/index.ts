@@ -23,6 +23,8 @@ export interface Custom {
   transport_url?: string;
 }
 
+export type EventConfig = Mapping.EventConfig<CustomEvent>;
+
 export interface CustomEvent {
   include?: Include;
 }

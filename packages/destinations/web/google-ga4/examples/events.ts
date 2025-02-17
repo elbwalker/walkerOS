@@ -1,21 +1,58 @@
-export const purchase = [
-  'event',
-  'purchase',
-  {
-    data_id: '0rd3r1d',
-    data_currency: 'EUR',
-    data_shipping: 5.22,
-    data_taxes: 73.76,
-    data_total: 555,
-    transaction_id: '0rd3r1d',
-    value: 555,
-    tax: 73.76,
-    shipping: 5.22,
-    currency: 'EUR',
-    items: [
-      { item_id: 'ers', item_name: 'Everyday Ruck Snack', quantity: 1 },
-      { item_id: 'cc', item_name: 'Cool Cap', quantity: 1 },
-    ],
-    send_to: 'G-XXXXXX-1',
-  },
-];
+import type { DestinationGoogleGA4 } from '../src';
+import { getEvent } from '@elbwalker/utils';
+
+const customDefault: DestinationGoogleGA4.Custom = {
+  measurementId: 'G-XXXXXX-1',
+};
+
+function useCustom(custom: DestinationGoogleGA4.Custom = customDefault) {
+  return {
+    send_to: custom.measurementId,
+  };
+}
+
+export function purchase(custom: DestinationGoogleGA4.Custom = customDefault) {
+  const event = getEvent('order complete');
+  const product1 = event.nested[0].data;
+  const product2 = event.nested[1].data;
+
+  return [
+    'event',
+    'purchase',
+    {
+      transaction_id: event.data.id,
+      value: event.data.total,
+      tax: event.data.taxes,
+      shipping: event.data.shipping,
+      currency: 'EUR',
+      items: [
+        { item_id: product1.id, item_name: product1.name, quantity: 1 },
+        { item_id: product2.id, item_name: product2.name, quantity: 1 },
+      ],
+      ...useCustom(custom),
+    },
+  ];
+}
+
+export function add_to_cart(
+  custom: DestinationGoogleGA4.Custom = customDefault,
+) {
+  const event = getEvent('product add');
+
+  return [
+    'event',
+    'add_to_cart',
+    {
+      currency: 'EUR',
+      value: event.data.price,
+      items: [
+        {
+          item_id: event.data.id,
+          item_variant: event.data.color,
+          quantity: 1,
+        },
+      ],
+      ...useCustom(custom),
+    },
+  ];
+}

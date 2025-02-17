@@ -1,2 +1,2 @@
 export * as events from './events';
-export { mapping } from './mapping';
+export * as mapping from './mapping';
