@@ -1,4 +1,4 @@
-import { getLanguage, getTimezone, getScreenSize } from '../..';
+import { getLanguage, getTimezone, getScreenSize } from '../../web';
 
 describe('Browser', () => {
   const window = {

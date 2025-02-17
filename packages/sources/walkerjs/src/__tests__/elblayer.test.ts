@@ -1,7 +1,7 @@
-import { elb, Walkerjs } from '..';
-import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { SourceWalkerjs, DestinationWeb, Elb } from '..';
 import type { WalkerOS } from '@elbwalker/types';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
+import { elb, Walkerjs } from '..';
 
 describe('elbLayer', () => {
   const w = window;

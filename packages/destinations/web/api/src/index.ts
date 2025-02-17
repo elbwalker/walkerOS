@@ -1,6 +1,6 @@
 import type { Custom, Destination } from './types';
-import { isArray, isDefined, sendWeb } from '@elbwalker/utils';
-
+import { isArray, isDefined } from '@elbwalker/utils';
+import { sendWeb } from '@elbwalker/utils/web';
 // Types
 export * as DestinationWebAPI from './types';
 

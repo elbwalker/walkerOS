@@ -1,9 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type {
-  SendDataValue,
-  SendHeaders,
-  SendWebTransport,
-} from '@elbwalker/utils';
+import type { SendDataValue, SendHeaders } from '@elbwalker/utils';
+import type { SendWebTransport } from '@elbwalker/utils/web';
+
 import type { DestinationWeb } from '@elbwalker/walker.js';
 
 export interface Destination

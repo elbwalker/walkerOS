@@ -1,5 +1,5 @@
-import { elb, Walkerjs } from '@elbwalker/walker.js';
 import type { DestinationPlausible } from '.';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
 
 describe('destination plausible', () => {

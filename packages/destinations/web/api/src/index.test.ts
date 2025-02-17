@@ -3,8 +3,8 @@ import type { DestinationWebAPI } from '.';
 
 describe('Destination API', () => {
   const mockSendWeb = jest.fn();
-  jest.mock('@elbwalker/utils', () => ({
-    ...jest.requireActual('@elbwalker/utils'),
+  jest.mock('@elbwalker/utils/web', () => ({
+    ...jest.requireActual('@elbwalker/utils/web'),
     sendWeb: mockSendWeb,
   }));
 

@@ -22,7 +22,7 @@ function getModuleMapper() {
   return {
     '^@elbwalker/jest$1': getDirectory('config/jest$1', ''),
     '^@elbwalker/types': getDirectory('types', 'src'),
-    '^@elbwalker/utils': getDirectory('utils'),
+    '^@elbwalker/utils$1': getDirectory('utils$1'),
     '^@elbwalker/walker.js': getDirectory('sources/walkerjs'),
     '^@elbwalker/destination-web-(.*)$': getDirectory('destinations/web/$1'),
     '^@elbwalker/destination-node-(.*)$': getDirectory('destinations/node/$1'),

@@ -7,7 +7,6 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "browser": "./dist/web.mjs",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },

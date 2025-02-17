@@ -1,6 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Custom, PushFn } from './types';
-import { requestToParameter, sendNode } from '@elbwalker/utils';
+import { requestToParameter } from '@elbwalker/utils';
+import { sendNode } from '@elbwalker/utils/node';
 import { getParameters } from '@elbwalker/destination-core-etag';
 
 export const push: PushFn = async function (pushEvent, config) {

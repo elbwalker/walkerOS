@@ -1,4 +1,4 @@
-import { isVisible } from '../..';
+import { isVisible } from '../../web';
 
 describe('isVisible', () => {
   const w = window;

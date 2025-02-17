@@ -1,4 +1,4 @@
-import { sendWeb } from '../../';
+import { sendWeb } from '../../web';
 
 describe('sendWeb', () => {
   const data = { key: 'value' };
