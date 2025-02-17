@@ -10,16 +10,10 @@ declare global {
     elbwalker: Instance;
     walkerjs: Instance;
     elbLayer: Layer;
-    dataLayer: WalkerEvent | unknown;
+    dataLayer: WalkerOS.Events | unknown;
     elb: Fn;
   }
 }
-
-type WalkerEvent = Array<
-  WalkerOS.Event & {
-    walkerjs: true;
-  }
->;
 
 export interface Instance extends State, WalkerOS.Instance {
   config: Config;
