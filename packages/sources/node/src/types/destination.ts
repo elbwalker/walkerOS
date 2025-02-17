@@ -3,7 +3,7 @@ import type {
   Mapping as WalkerOSMapping,
   WalkerOS,
 } from '@elbwalker/types';
-import type { SourceNode } from '.';
+import type { Instance } from './source';
 
 export interface Destination<Custom = unknown, CustomEvent = unknown>
   extends WalkerOSDestination.Destination<Custom, CustomEvent> {
@@ -20,7 +20,7 @@ export type DestinationInit = Partial<Omit<Destination, 'push'>> &
 
 export type InitFn<PartialConfig = unknown, Config = unknown> = (
   config: PartialConfig,
-  instance?: SourceNode.Instance,
+  instance?: Instance,
 ) => Promise<void | Config | false>;
 
 export type PushFn<Custom, CustomEvent> = (
@@ -41,7 +41,7 @@ export interface EventMapping<CustomEvent = unknown>
 
 export interface Options {
   data?: WalkerOSDestination.Data;
-  instance?: SourceNode.Instance;
+  instance?: Instance;
 }
 
 export type PushEvent<CustomEvent = unknown> =
