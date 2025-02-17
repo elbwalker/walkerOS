@@ -40,7 +40,6 @@ export const destinationGoogleGA4: Destination = {
     let func = fn || w.gtag;
     if (!w.gtag) {
       w.gtag = function () {
-        // eslint-disable-next-line prefer-rest-params
         (w.dataLayer as unknown[]).push(arguments);
       };
       func = func || w.gtag;

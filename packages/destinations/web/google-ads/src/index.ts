@@ -25,7 +25,6 @@ export const destinationGoogleAds: Destination = {
     let func = fn || w.gtag;
     if (!w.gtag) {
       w.gtag = function gtag() {
-        // eslint-disable-next-line prefer-rest-params
         (w.dataLayer as unknown[]).push(arguments);
       };
       func = func || w.gtag;

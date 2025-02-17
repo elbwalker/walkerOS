@@ -24,7 +24,6 @@ export const createElb: (customLayer?: Elb.Layer) => Elb.Fn = (
 ) => {
   return customLayer
     ? function () {
-        // eslint-disable-next-line prefer-rest-params
         customLayer.push(arguments);
       }
     : (elbOrg as Elb.Fn);

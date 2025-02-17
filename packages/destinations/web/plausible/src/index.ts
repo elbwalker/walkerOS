@@ -18,7 +18,6 @@ export const destinationPlausible: Destination = {
     w.plausible =
       w.plausible ||
       function () {
-        // eslint-disable-next-line prefer-rest-params
         (w.plausible!.q = w.plausible!.q || []).push(arguments);
       };
   },

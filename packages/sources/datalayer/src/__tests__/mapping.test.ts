@@ -7,7 +7,6 @@ describe('mapping', () => {
   let dataLayer: DataLayer;
 
   const gtag: Gtag.Gtag & WalkerOS.AnyFunction = function () {
-    // eslint-disable-next-line prefer-rest-params
     dataLayer.push(arguments);
   };
 
