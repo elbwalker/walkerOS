@@ -210,7 +210,6 @@ export function getTriggerActions(str: string): Walker.TriggersActionGroups {
 
     if (!trigger) return;
 
-    // eslint-disable-next-line prefer-const
     let [action, actionParams] = parseAttribute(actionAttr || '');
 
     // Shortcut if trigger and action are the same (click:click)
