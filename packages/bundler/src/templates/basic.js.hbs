@@ -1,4 +1,23 @@
+import { elb } from '@elbwalker/utils/web';
+import { debounce } from '@elbwalker/utils';
+
 console.log('Project configuration:', {
   name: '{{name}}',
   message: '{{message}}'
-}); 
+});
+
+(function() {
+  // Initialize tags
+  {{#each tags}}
+    {{#if active}}
+      // Initialize {{type}} tag
+      {{#if (eq type "walkerjs")}}
+        {{> snippets/walkerjs config=config}}
+      {{else if (eq type "destination")}}
+        {{> snippets/destination config=config}}
+      {{else if (eq type "customCode")}}
+        {{> snippets/customCode config=config}}
+      {{/if}}
+    {{/if}}
+  {{/each}}
+})(); 

@@ -12,7 +12,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc && mkdir -p dist/templates && cp src/templates/*.hbs dist/templates/ && chmod +x dist/cli.js",
+    "build": "tsc && copyfiles -u 1 \"src/**/*.hbs\" dist && chmod +x dist/cli.js",
     "start": "npm run build && node dist/cli.js"
   },
   "dependencies": {
@@ -20,6 +20,9 @@
     "@elbwalker/utils": "^3.7.0",
     "esbuild": "^0.25.0",
     "handlebars": "^4.7.8"
+  },
+  "devDependencies": {
+    "copyfiles": "^2.4.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

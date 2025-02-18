@@ -16,11 +16,6 @@ async function main() {
     const configContent = fs.readFileSync(path.resolve(configPath), 'utf-8');
     const config = JSON.parse(configContent);
 
-    // Validate config
-    if (!config.name || !config.message) {
-      throw new Error('Config must include "name" and "message" fields');
-    }
-
     // Generate bundle
     const output = await bundler(config);
 

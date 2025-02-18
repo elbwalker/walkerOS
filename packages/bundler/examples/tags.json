@@ -1,0 +1,36 @@
+{
+  "tags": [
+    {
+      "type": "walkerjs",
+      "active": true,
+      "config": {
+        "run": true,
+        "globalsStatic": {
+          "timeId": "123456"
+        }
+      }
+    },
+    {
+      "type": "destination",
+      "active": true,
+      "config": {
+        "url": "localhost:9001",
+        "transport": "beacon"
+      }
+    },
+    {
+      "type": "customCode",
+      "active": true,
+      "config": {
+        "code": "elb('foo'); console.log('Hello from custom code!');"
+      }
+    },
+    {
+      "type": "customCode",
+      "active": false,
+      "config": {
+        "code": "console.log('This should not appear - inactive tag');"
+      }
+    }
+  ]
+}
