@@ -1,0 +1,10 @@
+{
+  "extends": "@elbwalker/tsconfig/web.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "sourceMap": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*", "src/**/*.hbs"],
+  "exclude": ["node_modules", "dist", "**/*.test.*"]
+}

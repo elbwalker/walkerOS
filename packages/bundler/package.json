@@ -1,0 +1,39 @@
+{
+  "name": "@elbwalker/bundler",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "bin": {
+    "bundler": "./dist/cli.js"
+  },
+  "files": [
+    "dist/**",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc && mkdir -p dist/templates && cp src/templates/*.hbs dist/templates/ && chmod +x dist/cli.js",
+    "start": "npm run build && node dist/cli.js"
+  },
+  "dependencies": {
+    "@elbwalker/types": "3.3.0",
+    "@elbwalker/utils": "^3.7.0",
+    "esbuild": "^0.25.0",
+    "handlebars": "^4.7.8"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/bundler"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}
