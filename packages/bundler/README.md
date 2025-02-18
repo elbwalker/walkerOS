@@ -1,48 +1,95 @@
-# walkerOS Bundler
+# @elbwalker/bundler
 
-The walkerOS Bundler is a tool that bundles your individual project
-configuration into a single file.
+A lightweight tool that bundles your project configuration into a single, optimized JavaScript file.
 
-It is a simple tool. It can be used via CLI or as a library. There is a
-`template` file that works as a boilerplate for the output file. Pass a json
-configuration file to the tool to customize the output. The output file will be
-saved in the current working directory. It takes the json configuration file and
-the template file and outputs a single file. The compiled file can be run in a
-browser environment. It is minified and optimized for the browser.
+## Features
 
-Currently, the supported fields in the json configuration file are:
+- Simple configuration using JSON
+- Handlebars templating support
+- Minified output using esbuild
+- Use via CLI or as a package
+- ESM support
 
-- `name`: The name of the project.
-- `message`: The version of the project.
+## Installation
 
-Both fields are required.
+```bash
+# Install globally for CLI usage
+npm install -g @elbwalker/bundler
+
+# Or install as a package dependency
+npm install @elbwalker/bundler
+```
 
 ## Usage
 
-### CLI
+### CLI Usage
+
+1. Create a configuration file (e.g., `config.json`):
+```json
+{
+  "name": "My Project",
+  "message": "v1.0.0"
+}
+```
+
+2. Run the bundler:
+```bash
+# Using npx
+npx @elbwalker/bundler config.json
+
+# Or if installed globally
+bundler config.json
+```
+
+This will create a `bundle.js` file in your current directory.
+
+### Package Usage
+
+```javascript
+import { bundler } from '@elbwalker/bundler';
+
+const config = {
+  name: 'My Project',
+  message: 'v1.0.0'
+};
+
+// Generate bundle
+const output = await bundler(config);
+
+// Use the output directly
+console.log(output);
+
+// Or save to a file
+import { writeFileSync } from 'fs';
+writeFileSync('bundle.js', output);
+```
+
+### Configuration
+
+The configuration object requires two fields:
+- `name`: The name of your project
+- `message`: A version or message string
+
+## Output
+
+The bundler generates a minified JavaScript file that includes your configuration. When executed, it will output your configuration in a standardized format.
+
+Example output when running the generated bundle:
+```javascript
+// Console output
+Project configuration: { name: "My Project", message: "v1.0.0" }
+```
+
+## Development
 
 ```bash
-npx walker-bundler @TODO
+# Build the project
+npm run build
+
+# Run with example
+npm start
 ```
 
-### Library
+## License
 
-```ts
-import { bundler } from '@elbwalker/bundler';
-@TODO
-```
-
-## Tools
-
-The bundler uses
-
-- `handlebars` to render the template.
-- `esbuild` to bundle the output file.
-
-## Organization
-
-The project is organized in the following way:
-
-- `src/`: The source code of the project.
-- `src/templates/`: For all the templates.
-- `dist/`: The compiled output of the project.
+MIT
