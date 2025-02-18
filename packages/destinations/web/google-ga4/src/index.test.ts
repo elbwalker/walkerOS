@@ -299,10 +299,9 @@ describe('Destination Google GA4', () => {
 
   test('event add_to_cart', () => {
     const event = getEvent('product add');
-    const custom = { measurementId, include: [] };
 
     const config: DestinationGoogleGA4.Config = {
-      custom,
+      custom: { measurementId, include: [] },
       init: true,
       mapping: mapping.config,
     };
@@ -310,22 +309,21 @@ describe('Destination Google GA4', () => {
 
     elb(event);
 
-    expect(mockFn).toHaveBeenCalledWith(...events.add_to_cart(custom));
+    expect(mockFn).toHaveBeenCalledWith(...events.add_to_cart());
   });
 
   test('event purchase', () => {
     const event = getEvent('order complete');
-    const custom = { measurementId, include: [] };
 
     const config: DestinationGoogleGA4.Config = {
-      custom,
+      custom: { measurementId, include: [] },
       init: true,
       mapping: mapping.config,
     };
     elb('walker destination', destination, config);
 
     elb(event);
-    expect(mockFn).toHaveBeenCalledWith(...events.purchase(custom));
+    expect(mockFn).toHaveBeenCalledWith(...events.purchase());
   });
 
   test('snake case disabled', () => {

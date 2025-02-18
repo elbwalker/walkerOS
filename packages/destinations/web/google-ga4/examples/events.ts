@@ -1,17 +1,7 @@
-import type { DestinationGoogleGA4 } from '../src';
+import type { WalkerOS } from '@elbwalker/types';
 import { getEvent } from '@elbwalker/utils';
 
-const customDefault: DestinationGoogleGA4.Custom = {
-  measurementId: 'G-XXXXXX-1',
-};
-
-function useCustom(custom: DestinationGoogleGA4.Custom = customDefault) {
-  return {
-    send_to: custom.measurementId,
-  };
-}
-
-export function purchase(custom: DestinationGoogleGA4.Custom = customDefault) {
+export function purchase(custom: WalkerOS.AnyObject = {}) {
   const event = getEvent('order complete');
   const product1 = event.nested[0].data;
   const product2 = event.nested[1].data;
@@ -29,14 +19,13 @@ export function purchase(custom: DestinationGoogleGA4.Custom = customDefault) {
         { item_id: product1.id, item_name: product1.name, quantity: 1 },
         { item_id: product2.id, item_name: product2.name, quantity: 1 },
       ],
-      ...useCustom(custom),
+      send_to: 'G-XXXXXX-1',
+      ...custom,
     },
   ];
 }
 
-export function add_to_cart(
-  custom: DestinationGoogleGA4.Custom = customDefault,
-) {
+export function add_to_cart(custom: WalkerOS.AnyObject = {}) {
   const event = getEvent('product add');
 
   return [
@@ -52,7 +41,8 @@ export function add_to_cart(
           quantity: 1,
         },
       ],
-      ...useCustom(custom),
+      send_to: 'G-XXXXXX-1',
+      ...custom,
     },
   ];
 }
