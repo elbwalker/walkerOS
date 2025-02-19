@@ -15,7 +15,6 @@ Handlebars.registerHelper('json', function (context) {
 });
 
 export async function bundler(config: BundlerConfig): Promise<string> {
-  // Get current file's directory path in ESM
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 
@@ -37,11 +36,27 @@ export async function bundler(config: BundlerConfig): Promise<string> {
   const compiledTemplate = Handlebars.compile(template);
   const compiledCode = compiledTemplate(config);
 
-  // Bundle with esbuild
-  const result = await esbuild.transform(compiledCode, {
-    minify: true,
+  // Bundle with esbuild using stdin
+  const result = await esbuild.build({
+    stdin: {
+      contents: compiledCode,
+      loader: 'js',
+      resolveDir: path.resolve(__dirname, '..'),
+    },
+    bundle: true,
+    write: false,
     format: 'iife',
+    minify: true,
+    treeShaking: true,
+    platform: 'node', // TODO: Add browser support
+    target: 'es2015',
+    splitting: false,
+    metafile: true, // Helps with tree-shaking analysis
+    mainFields: ['module'], // Prefer ESM versions for better tree-shaking
   });
 
-  return result.code;
+  // Optionally log bundle analysis
+  console.log(await esbuild.analyzeMetafile(result.metafile));
+
+  return result.outputFiles[0].text;
 }
