@@ -1,10 +1,36 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { getEvent } from '@elbwalker/utils';
 
-export function Purchase(custom: WalkerOS.AnyObject = {}) {
+function getProduct(entity: WalkerOS.Entity | WalkerOS.Event) {
+  return {
+    sku: entity.data.id,
+    name: entity.data.name,
+    price: entity.data.price,
+    quantity: 1,
+    variant: entity.data.color,
+    customDimensions: {
+      1: entity.data.size,
+    },
+  };
+}
+
+export function ecommerceOrder(custom: WalkerOS.AnyObject = {}) {
   const event = getEvent('order complete');
 
-  return [];
+  return [
+    [
+      'ecommerceOrder',
+      event.nested.filter((item) => item.type === 'product').map(getProduct),
+      {
+        orderId: event.data.id,
+        grandTotal: event.data.total,
+        tax: event.data.taxes,
+        shipping: event.data.shipping,
+        ...custom,
+      },
+      { currencyCode: 'EUR' },
+    ],
+  ];
 }
 
 export function ecommerceAddToCart(custom: WalkerOS.AnyObject = {}) {
@@ -15,14 +41,7 @@ export function ecommerceAddToCart(custom: WalkerOS.AnyObject = {}) {
       'ecommerceAddToCart',
       [
         {
-          sku: event.data.id,
-          name: event.data.name,
-          price: event.data.price,
-          quantity: 1,
-          variant: event.data.color,
-          customDimensions: {
-            1: event.data.size,
-          },
+          ...getProduct(event),
           ...custom,
         },
       ],
