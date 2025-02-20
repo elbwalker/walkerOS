@@ -139,4 +139,16 @@ describe('Destination Meta Pixel', () => {
     elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.InitiateCheckout());
   });
+
+  test('event ViewContent', () => {
+    const event = getEvent('product view');
+
+    elb('walker destination', destination, {
+      custom: { pixelId },
+      mapping: mapping.config,
+    });
+
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(...events.ViewContent());
+  });
 });

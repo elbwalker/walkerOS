@@ -82,8 +82,29 @@ export const InitiateCheckout: DestinationMetaPixel.EventConfig = {
   },
 };
 
+export const ViewContent: DestinationMetaPixel.EventConfig = {
+  name: 'ViewContent',
+  data: {
+    map: {
+      value: 'data.value',
+      currency: { value: 'EUR' },
+      content_type: { value: 'product' },
+      contents: {
+        set: [
+          {
+            map: {
+              id: 'data.id',
+              quantity: { key: 'data.quantity', value: 1 },
+            },
+          },
+        ],
+      },
+    },
+  },
+};
+
 export const config = {
   order: { complete: Purchase },
-  product: { add: AddToCart },
+  product: { view: ViewContent, add: AddToCart },
   cart: { view: InitiateCheckout },
 } satisfies Mapping.Config;

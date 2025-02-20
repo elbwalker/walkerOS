@@ -56,3 +56,19 @@ export function InitiateCheckout(custom: WalkerOS.AnyObject = {}) {
     },
   ];
 }
+
+export function ViewContent(custom: WalkerOS.AnyObject = {}) {
+  const event = getEvent('product view');
+
+  return [
+    'track',
+    'ViewContent',
+    {
+      currency: 'EUR',
+      value: event.data.value,
+      contents: [{ id: event.data.id, quantity: 1 }],
+      content_type: 'product',
+      ...custom,
+    },
+  ];
+}
