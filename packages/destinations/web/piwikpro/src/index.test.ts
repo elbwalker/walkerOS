@@ -1,6 +1,7 @@
 import type { DestinationPiwikPro } from '.';
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
+import { events, mapping } from '../examples';
 
 describe('Destination PiwikPro', () => {
   const w = window;
@@ -56,6 +57,16 @@ describe('Destination PiwikPro', () => {
     destination.config.mapping = { page: { view: { ignore: true } } };
     elb(page_view);
     expect(mockFn).toHaveBeenCalledTimes(0);
+  });
+
+  test('event ecommerceAddToCart', () => {
+    const event = getEvent('product add');
+    elb('walker destination', destination, {
+      custom,
+      mapping: mapping.config,
+    });
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceAddToCart());
   });
 
   test('event trackEcommerceOrder', () => {
