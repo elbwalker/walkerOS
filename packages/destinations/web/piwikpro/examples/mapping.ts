@@ -86,13 +86,32 @@ export const ecommerceProductDetailView: DestinationPiwikPro.EventConfig = {
   },
 };
 
-export const InitiateCheckout: DestinationPiwikPro.EventConfig = {
-  name: 'InitiateCheckout',
-  data: {},
+export const ecommerceCartUpdate: DestinationPiwikPro.EventConfig = {
+  name: 'ecommerceCartUpdate',
+  data: {
+    set: [
+      {
+        loop: [
+          'nested',
+          {
+            condition: (entity) =>
+              isObject(entity) && entity.type === 'product',
+            map: productMap,
+          },
+        ],
+      },
+      'data.total',
+      {
+        map: {
+          currencyCode: { value: 'EUR' },
+        },
+      },
+    ],
+  },
 };
 
 export const config = {
   order: { complete: ecommerceOrder },
   product: { add: ecommerceAddToCart, view: ecommerceProductDetailView },
-  cart: { view: InitiateCheckout },
+  cart: { view: ecommerceCartUpdate },
 } satisfies Mapping.Config;
