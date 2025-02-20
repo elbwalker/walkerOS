@@ -50,6 +50,23 @@ export function ecommerceAddToCart(custom: WalkerOS.AnyObject = {}) {
   ];
 }
 
+export function ecommerceProductDetailView(custom: WalkerOS.AnyObject = {}) {
+  const event = getEvent('product view');
+
+  return [
+    [
+      'ecommerceProductDetailView',
+      [
+        {
+          ...getProduct(event),
+          ...custom,
+        },
+      ],
+      { currencyCode: 'EUR' },
+    ],
+  ];
+}
+
 export function InitiateCheckout(custom: WalkerOS.AnyObject = {}) {
   const event = getEvent('cart view');
 

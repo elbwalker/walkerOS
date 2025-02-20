@@ -78,4 +78,14 @@ describe('Destination PiwikPro', () => {
     elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceAddToCart());
   });
+
+  test('event ecommerceProductDetailView', () => {
+    const event = getEvent('product view');
+    elb('walker destination', destination, {
+      custom,
+      mapping: mapping.config,
+    });
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceProductDetailView());
+  });
 });
