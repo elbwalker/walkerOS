@@ -3,8 +3,6 @@ import { getEvent } from '@elbwalker/utils';
 
 export function Purchase(custom: WalkerOS.AnyObject = {}) {
   const event = getEvent('order complete');
-  const product1 = event.nested[0].data;
-  const product2 = event.nested[1].data;
 
   return [
     'track',
@@ -12,10 +10,9 @@ export function Purchase(custom: WalkerOS.AnyObject = {}) {
     {
       value: event.data.total,
       currency: 'EUR',
-      contents: [
-        { id: product1.id, quantity: 1 },
-        { id: product2.id, quantity: 1 },
-      ],
+      contents: event.nested
+        .filter((item) => item.type === 'product')
+        .map((item) => ({ id: item.data.id, quantity: 1 })),
       content_type: 'product',
       num_items: 2,
       ...custom,
@@ -34,6 +31,27 @@ export function AddToCart(custom: WalkerOS.AnyObject = {}) {
       value: event.data.price,
       contents: [{ id: event.data.id, quantity: 1 }],
       content_type: 'product',
+      ...custom,
+    },
+  ];
+}
+
+export function InitiateCheckout(custom: WalkerOS.AnyObject = {}) {
+  const event = getEvent('cart view');
+
+  return [
+    'track',
+    'InitiateCheckout',
+    {
+      currency: 'EUR',
+      value: event.data.value,
+      contents: event.nested
+        .filter((entity) => entity.type === 'product')
+        .map((entity) => ({
+          id: entity.data.id,
+          quantity: entity.data.quantity,
+        })),
+      num_items: event.nested.filter((item) => item.type === 'product').length,
       ...custom,
     },
   ];

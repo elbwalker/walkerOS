@@ -76,6 +76,7 @@ export function getEvent(
 ): WalkerOS.Event {
   const timestamp = props.timestamp || new Date().setHours(0, 13, 37, 0);
 
+  const quantity = 2;
   const product1 = {
     data: {
       id: 'ers',
@@ -98,14 +99,14 @@ export function getEvent(
     'cart view': {
       data: {
         currency: 'EUR',
-        value: product1.data.price,
+        value: product1.data.price * quantity,
       },
       context: { shopping: ['cart', 0] },
       globals: { pagegroup: 'shop' },
       nested: [
         {
           type: 'product',
-          ...product1,
+          ...assign(product1, { data: { quantity } }),
           context: { shopping: ['cart', 0] },
           nested: [],
         },

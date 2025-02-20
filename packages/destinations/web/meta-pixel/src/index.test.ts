@@ -127,4 +127,16 @@ describe('Destination Meta Pixel', () => {
     elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.AddToCart());
   });
+
+  test('event InitiateCheckout', () => {
+    const event = getEvent('cart view');
+
+    elb('walker destination', destination, {
+      custom: { pixelId },
+      mapping: mapping.config,
+    });
+
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(...events.InitiateCheckout());
+  });
 });

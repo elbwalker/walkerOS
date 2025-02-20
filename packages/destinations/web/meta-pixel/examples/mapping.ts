@@ -53,7 +53,37 @@ export const AddToCart: DestinationMetaPixel.EventConfig = {
   },
 };
 
+export const InitiateCheckout: DestinationMetaPixel.EventConfig = {
+  name: 'InitiateCheckout',
+  data: {
+    map: {
+      value: 'data.value',
+      currency: { value: 'EUR' },
+      contents: {
+        loop: [
+          'nested',
+          {
+            condition: (entity) =>
+              isObject(entity) && entity.type === 'product',
+            map: {
+              id: 'data.id',
+              quantity: { key: 'data.quantity', value: 1 },
+            },
+          },
+        ],
+      },
+      num_items: {
+        fn: (event) =>
+          (event as WalkerOS.Event).nested.filter(
+            (item) => item.type === 'product',
+          ).length,
+      },
+    },
+  },
+};
+
 export const config = {
   order: { complete: Purchase },
   product: { add: AddToCart },
+  cart: { view: InitiateCheckout },
 } satisfies Mapping.Config;
