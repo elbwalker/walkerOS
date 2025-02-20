@@ -1,5 +1,5 @@
 import type { DestinationGoogleGA4 } from '.';
-import { getEvent, isObject } from '@elbwalker/utils';
+import { getEvent } from '@elbwalker/utils';
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { events, mapping } from '../examples';
 
