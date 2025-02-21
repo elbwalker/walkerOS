@@ -81,22 +81,6 @@ describe('destination Google Ads', () => {
     expect(elem).toBeTruthy();
   });
 
-  test('dataLayer source', () => {
-    elb('walker destination', destination);
-    destination.config.mapping = {
-      order: { complete: { name: label } },
-    };
-    elb(event);
-    jest.resetAllMocks();
-    event.source.type = 'dataLayer';
-    elb(event);
-    expect(mockFn).toHaveBeenCalledTimes(0);
-
-    event.source.type = 'web';
-    elb(event);
-    expect(mockFn).toHaveBeenCalledTimes(1);
-  });
-
   test('event conversion', () => {
     elb('walker destination', destination, {
       custom: { conversionId },

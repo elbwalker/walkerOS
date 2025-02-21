@@ -39,9 +39,6 @@ export const destinationGoogleAds: Destination = {
   },
 
   push(event, config, mapping = {}, options = {}): void {
-    // Do not process events from dataLayer source
-    if (event.source?.type === 'dataLayer') return;
-
     const { custom = {}, fn } = config;
     const { name } = mapping;
     const data = isObject(options.data) ? options.data : {};
