@@ -126,18 +126,6 @@ describe('Destination Google GA4', () => {
     });
   });
 
-  test('dataLayer source', () => {
-    elb('walker destination', destination);
-    elb(event);
-    jest.resetAllMocks();
-
-    elb(getEvent('entity action', { source: { type: 'dataLayer' } }));
-    expect(mockFn).toHaveBeenCalledTimes(0);
-
-    elb(getEvent('entity action', { source: { type: 'web' } }));
-    expect(mockFn).toHaveBeenCalledTimes(1);
-  });
-
   test('settings', () => {
     elb('walker destination', destination, {
       custom: {

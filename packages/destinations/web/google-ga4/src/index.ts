@@ -51,9 +51,6 @@ export const destinationGoogleGA4: Destination = {
   },
 
   push(event, config, mapping = {}, options = {}) {
-    // Do not process events from dataLayer source
-    if (event.source?.type === 'dataLayer') return;
-
     const { custom, fn } = config;
     const customEvent = mapping.custom || {};
     if (!custom) return;
