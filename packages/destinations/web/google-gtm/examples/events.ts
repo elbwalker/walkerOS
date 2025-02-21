@@ -1,17 +1,15 @@
-import type { WalkerOS } from '@elbwalker/types';
 import { getEvent } from '@elbwalker/utils';
 
-export function entity_action(custom: WalkerOS.AnyObject = {}) {
+export function entity_action() {
   const event = getEvent('entity action');
 
   return {
     event: 'entity_action',
     data: event.data,
-    ...custom,
   };
 }
 
-export function purchase(custom: WalkerOS.AnyObject = {}) {
+export function purchase() {
   const event = getEvent('order complete');
 
   return {
@@ -28,11 +26,10 @@ export function purchase(custom: WalkerOS.AnyObject = {}) {
         item_name: item.data.name,
         quantity: 1,
       })),
-    ...custom,
   };
 }
 
-export function add_to_cart(custom: WalkerOS.AnyObject = {}) {
+export function add_to_cart() {
   const event = getEvent('product add');
 
   return {
@@ -46,6 +43,5 @@ export function add_to_cart(custom: WalkerOS.AnyObject = {}) {
         quantity: 1,
       },
     ],
-    ...custom,
   };
 }

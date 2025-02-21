@@ -14,7 +14,7 @@ function getProduct(entity: WalkerOS.Entity | WalkerOS.Event) {
   };
 }
 
-export function ecommerceOrder(custom: WalkerOS.AnyObject = {}) {
+export function ecommerceOrder() {
   const event = getEvent('order complete');
 
   return [
@@ -26,48 +26,33 @@ export function ecommerceOrder(custom: WalkerOS.AnyObject = {}) {
         grandTotal: event.data.total,
         tax: event.data.taxes,
         shipping: event.data.shipping,
-        ...custom,
       },
       { currencyCode: 'EUR' },
     ],
   ];
 }
 
-export function ecommerceAddToCart(custom: WalkerOS.AnyObject = {}) {
+export function ecommerceAddToCart() {
   const event = getEvent('product add');
 
   return [
-    [
-      'ecommerceAddToCart',
-      [
-        {
-          ...getProduct(event),
-          ...custom,
-        },
-      ],
-      { currencyCode: 'EUR' },
-    ],
+    ['ecommerceAddToCart', [getProduct(event), ,], { currencyCode: 'EUR' }],
   ];
 }
 
-export function ecommerceProductDetailView(custom: WalkerOS.AnyObject = {}) {
+export function ecommerceProductDetailView() {
   const event = getEvent('product view');
 
   return [
     [
       'ecommerceProductDetailView',
-      [
-        {
-          ...getProduct(event),
-          ...custom,
-        },
-      ],
+      [getProduct(event), ,],
       { currencyCode: 'EUR' },
     ],
   ];
 }
 
-export function ecommerceCartUpdate(custom: WalkerOS.AnyObject = {}) {
+export function ecommerceCartUpdate() {
   const event = getEvent('cart view');
 
   return [

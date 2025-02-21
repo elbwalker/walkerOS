@@ -1,7 +1,6 @@
-import type { WalkerOS } from '@elbwalker/types';
 import { getEvent } from '@elbwalker/utils';
 
-export function Purchase(custom: WalkerOS.AnyObject = {}) {
+export function Purchase() {
   const event = getEvent('order complete');
 
   return [
@@ -15,12 +14,11 @@ export function Purchase(custom: WalkerOS.AnyObject = {}) {
         .map((item) => ({ id: item.data.id, quantity: 1 })),
       content_type: 'product',
       num_items: 2,
-      ...custom,
     },
   ];
 }
 
-export function AddToCart(custom: WalkerOS.AnyObject = {}) {
+export function AddToCart() {
   const event = getEvent('product add');
 
   return [
@@ -31,12 +29,11 @@ export function AddToCart(custom: WalkerOS.AnyObject = {}) {
       value: event.data.price,
       contents: [{ id: event.data.id, quantity: 1 }],
       content_type: 'product',
-      ...custom,
     },
   ];
 }
 
-export function InitiateCheckout(custom: WalkerOS.AnyObject = {}) {
+export function InitiateCheckout() {
   const event = getEvent('cart view');
 
   return [
@@ -52,12 +49,11 @@ export function InitiateCheckout(custom: WalkerOS.AnyObject = {}) {
           quantity: entity.data.quantity,
         })),
       num_items: event.nested.filter((item) => item.type === 'product').length,
-      ...custom,
     },
   ];
 }
 
-export function ViewContent(custom: WalkerOS.AnyObject = {}) {
+export function ViewContent() {
   const event = getEvent('product view');
 
   return [
@@ -68,7 +64,6 @@ export function ViewContent(custom: WalkerOS.AnyObject = {}) {
       value: event.data.value,
       contents: [{ id: event.data.id, quantity: 1 }],
       content_type: 'product',
-      ...custom,
     },
   ];
 }

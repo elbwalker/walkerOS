@@ -1,7 +1,6 @@
-import type { WalkerOS } from '@elbwalker/types';
 import { getEvent } from '@elbwalker/utils';
 
-export function conversion(custom: WalkerOS.AnyObject = {}) {
+export function conversion() {
   const event = getEvent('order complete');
 
   return [
@@ -12,7 +11,6 @@ export function conversion(custom: WalkerOS.AnyObject = {}) {
       value: event.data.total,
       currency: 'EUR',
       transaction_id: event.data.id,
-      ...custom,
     },
   ];
 }
