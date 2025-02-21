@@ -1,4 +1,5 @@
-import { Destination } from './types';
+import type { Destination } from './types';
+import { isObject } from '@elbwalker/utils';
 
 // Types
 export * as DestinationGoogleAds from './types';
@@ -37,37 +38,24 @@ export const destinationGoogleAds: Destination = {
     return config;
   },
 
-  push(event, config, mapping = {}): void {
+  push(event, config, mapping = {}, options = {}): void {
     // Do not process events from dataLayer source
     if (event.source?.type === 'dataLayer') return;
 
     const { custom = {}, fn } = config;
-    const customMapping = mapping.custom;
+    const { name } = mapping;
+    const data = isObject(options.data) ? options.data : {};
 
-    if (!customMapping) return;
+    if (!name) return;
 
-    if (!customMapping.label) return;
-
-    // Basic conversion parameters
-    const eventParams: Gtag.CustomParams = {
-      send_to: `${custom.conversionId}/${customMapping.label}`,
+    const params: Gtag.CustomParams = {
+      send_to: `${custom.conversionId}/${name}`,
       currency: custom.currency,
+      ...data,
     };
 
-    // value
-    if (customMapping.value)
-      eventParams.value = event.data[customMapping.value];
-
-    // default value
-    if (custom.defaultValue && !eventParams.value)
-      eventParams.value = custom.defaultValue;
-
-    // transaction_id
-    if (customMapping.id)
-      eventParams.transaction_id = event.data[customMapping.id];
-
     const func = fn || window.gtag;
-    func('event', 'conversion', eventParams);
+    func('event', 'conversion', params);
   },
 };
 
