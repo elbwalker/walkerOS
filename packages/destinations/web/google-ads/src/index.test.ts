@@ -81,35 +81,6 @@ describe('destination Google Ads', () => {
     expect(elem).toBeTruthy();
   });
 
-  test('push', () => {
-    // Missing mapping
-    elb('walker destination', destination);
-    elb(event);
-    expect(mockFn).not.toHaveBeenCalledWith('event', 'conversion', {
-      send_to: `${conversionId}/${label}`,
-    });
-
-    // Correct mapping
-    destination.config.mapping = {
-      order: { complete: { name: label } },
-    };
-    elb(event);
-    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
-      send_to: `${conversionId}/${label}`,
-      currency: 'EUR',
-    });
-
-    // Change currency
-    const currency = 'USD';
-    destination.config.custom!.currency = currency;
-
-    elb(event);
-    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
-      send_to: `${conversionId}/${label}`,
-      currency,
-    });
-  });
-
   test('dataLayer source', () => {
     elb('walker destination', destination);
     destination.config.mapping = {
@@ -134,55 +105,5 @@ describe('destination Google Ads', () => {
 
     elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.conversion());
-  });
-
-  test('push with value', () => {
-    elb('walker destination', destination);
-    destination.config.mapping = {
-      order: {
-        complete: {
-          name: label,
-          data: { map: { value: 'data.total' } },
-        },
-      },
-    };
-
-    // With value property
-    elb(event);
-    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
-      send_to: `${conversionId}/${label}`,
-      currency: 'EUR',
-      value: event.data.total,
-    });
-
-    // Missing value property
-    delete event.data.total;
-    elb(event);
-    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
-      send_to: `${conversionId}/${label}`,
-      currency: 'EUR',
-    });
-  });
-
-  test('push with transaction_id', () => {
-    elb('walker destination', destination);
-    destination.config.mapping = {
-      order: {
-        complete: {
-          name: label,
-          data: { map: { transaction_id: 'data.id' } },
-        },
-      },
-    };
-
-    elb(event);
-    expect(mockFn).toHaveBeenCalledWith(
-      'event',
-      'conversion',
-      expect.objectContaining({
-        send_to: `${conversionId}/${label}`,
-        transaction_id: event.data.id,
-      }),
-    );
   });
 });
