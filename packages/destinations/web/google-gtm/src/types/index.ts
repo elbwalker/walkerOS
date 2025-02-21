@@ -1,3 +1,4 @@
+import type { Mapping } from '@elbwalker/types';
 import type { DestinationWeb } from '@elbwalker/walker.js';
 
 declare global {
@@ -16,5 +17,7 @@ export interface Custom {
   dataLayer?: string; // dataLayer
   domain?: string; // Source domain of the GTM
 }
+
+export type EventConfig = Mapping.EventConfig<CustomEvent>;
 
 export interface CustomEvent {}

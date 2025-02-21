@@ -31,9 +31,6 @@ export const destinationGoogleGTM: Destination = {
   },
 
   push(event, config, mapping, options = {}) {
-    // Do not process events from dataLayer source
-    if (event.source?.type === 'dataLayer') return;
-
     const func = config.fn || (window.dataLayer as unknown[]).push;
     func(options.data ?? event);
   },

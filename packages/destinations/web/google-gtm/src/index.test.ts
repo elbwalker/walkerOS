@@ -81,18 +81,6 @@ describe('destination google-tag-manager', () => {
     expect(mockDataLayer).toHaveBeenLastCalledWith(event);
   });
 
-  test('dataLayer source', () => {
-    elb('walker destination', destination);
-    elb(event);
-    jest.resetAllMocks();
-
-    elb({ ...event, source: { type: 'dataLayer' } });
-    expect(mockDataLayer).toHaveBeenCalledTimes(0);
-
-    elb({ ...event, source: { type: 'web' } });
-    expect(mockDataLayer).toHaveBeenCalledTimes(1);
-  });
-
   test('push mapping data', () => {
     elb('walker destination', destination, {
       mapping: {
