@@ -3,8 +3,6 @@ import { getEvent } from '@elbwalker/utils';
 
 export function purchase(custom: WalkerOS.AnyObject = {}) {
   const event = getEvent('order complete');
-  const product1 = event.nested[0].data;
-  const product2 = event.nested[1].data;
 
   return [
     'event',
@@ -15,10 +13,13 @@ export function purchase(custom: WalkerOS.AnyObject = {}) {
       tax: event.data.taxes,
       shipping: event.data.shipping,
       currency: 'EUR',
-      items: [
-        { item_id: product1.id, item_name: product1.name, quantity: 1 },
-        { item_id: product2.id, item_name: product2.name, quantity: 1 },
-      ],
+      items: event.nested
+        .filter((item) => item.type === 'product')
+        .map((item) => ({
+          item_id: item.data.id,
+          item_name: item.data.name,
+          quantity: 1,
+        })),
       send_to: 'G-XXXXXX-1',
       ...custom,
     },

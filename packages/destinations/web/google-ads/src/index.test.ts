@@ -12,7 +12,6 @@ describe('destination Google Ads', () => {
 
   const event = getEvent('order complete');
   const conversionId = 'AW-123456789';
-  const label = 'abc';
 
   beforeEach(() => {
     config = {
