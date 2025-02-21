@@ -1,6 +1,7 @@
 import type { DestinationGoogleAds } from '.';
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
+import { events, mapping } from '../examples';
 
 describe('destination Google Ads', () => {
   const w = window;
@@ -123,6 +124,16 @@ describe('destination Google Ads', () => {
     event.source.type = 'web';
     elb(event);
     expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  test('event conversion', () => {
+    elb('walker destination', destination, {
+      custom: { conversionId },
+      mapping: mapping.config,
+    });
+
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(...events.conversion());
   });
 
   test('push with value', () => {
