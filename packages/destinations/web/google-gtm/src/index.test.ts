@@ -2,7 +2,8 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { DestinationGoogleGTM } from '.';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import { elb, Walkerjs } from '@elbwalker/walker.js';
-import { createEvent } from '@elbwalker/utils';
+import { createEvent, getEvent } from '@elbwalker/utils';
+import { events, mapping } from '../examples';
 
 describe('destination google-tag-manager', () => {
   const w = window;
@@ -81,23 +82,27 @@ describe('destination google-tag-manager', () => {
     expect(mockDataLayer).toHaveBeenLastCalledWith(event);
   });
 
-  test('push mapping data', () => {
-    elb('walker destination', destination, {
-      mapping: {
-        entity: {
-          action: {
-            data: {
-              map: {
-                foo: { value: 'bar' },
-              },
-            },
-          },
-        },
-      },
-    });
+  test('event entity_action', () => {
+    const event = getEvent();
+    elb('walker destination', destination, { mapping: mapping.config });
     elb(event);
-    expect(w.dataLayer).toBeDefined();
 
-    expect(mockDataLayer).toHaveBeenLastCalledWith({ foo: 'bar' });
+    expect(mockDataLayer).toHaveBeenLastCalledWith(events.entity_action());
+  });
+
+  test('event add_to_cart', () => {
+    const event = getEvent('product add');
+    elb('walker destination', destination, { mapping: mapping.config });
+    elb(event);
+
+    expect(mockDataLayer).toHaveBeenLastCalledWith(events.add_to_cart());
+  });
+
+  test('event purchase', () => {
+    const event = getEvent('order complete');
+    elb('walker destination', destination, { mapping: mapping.config });
+    elb(event);
+
+    expect(mockDataLayer).toHaveBeenLastCalledWith(events.purchase());
   });
 });

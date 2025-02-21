@@ -1,4 +1,5 @@
 import type { Custom, Destination } from './types';
+import { isObject } from '@elbwalker/utils';
 
 const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
@@ -32,7 +33,13 @@ export const destinationGoogleGTM: Destination = {
 
   push(event, config, mapping, options = {}) {
     const func = config.fn || (window.dataLayer as unknown[]).push;
-    func(options.data ?? event);
+    const { data } = options;
+    const obj = { event: event.event }; // Use the name mapping by default
+
+    func({
+      ...obj,
+      ...(isObject(data) ? data : event),
+    });
   },
 };
 
