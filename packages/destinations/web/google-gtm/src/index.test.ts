@@ -19,8 +19,7 @@ describe('destination google-tag-manager', () => {
     destination = jest.requireActual('.').default;
     destination.config = config;
     event = createEvent();
-    Walkerjs({ pageview: false, session: false });
-    elb('walker run');
+    Walkerjs({ pageview: false, session: false, run: true });
   });
 
   test('init', () => {
