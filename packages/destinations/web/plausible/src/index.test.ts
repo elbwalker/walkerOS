@@ -1,6 +1,7 @@
 import type { DestinationPlausible } from '.';
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
+import { events, mapping } from '../examples';
 
 describe('destination plausible', () => {
   const w = window;
@@ -67,31 +68,30 @@ describe('destination plausible', () => {
     expect(elem.dataset.domain).toBe(domain);
   });
 
-  test('push', () => {
-    elb('walker destination', destination);
-    const data = { a: 1 };
-    elb(event.event, data, 'manual');
-
-    expect(w.plausible).toBeDefined();
-    expect(mockFn).toHaveBeenCalledWith(event.event, { props: data });
-  });
-
-  test('mapping data', () => {
+  test('event entity action', () => {
     elb('walker destination', destination, {
-      mapping: {
-        entity: {
-          action: {
-            data: {
-              map: {
-                foo: { value: 'bar' },
-              },
-            },
-          },
-        },
-      },
+      mapping: mapping.config,
     });
 
     elb(event);
-    expect(mockFn).toHaveBeenCalledWith(event.event, { props: { foo: 'bar' } });
+    expect(mockFn).toHaveBeenCalledWith(mapping.entity_action.name, {
+      props: event.data,
+      revenue: event.data.number,
+    });
+  });
+
+  test('event purchase', () => {
+    const event = getEvent('order complete');
+    elb('walker destination', destination, {
+      mapping: mapping.config,
+    });
+
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(mapping.purchase.name, {
+      revenue: {
+        currency: 'EUR',
+        amount: event.data.total,
+      },
+    });
   });
 });

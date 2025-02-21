@@ -24,10 +24,10 @@ export const destinationPlausible: Destination = {
 
   push(event, config, mapping, options = {}) {
     const { fn } = config;
-    const props = isObject(options.data) ? options.data : event.data;
+    const params = isObject(options.data) ? options.data : {};
 
     const func = fn || window.plausible!;
-    func(`${event.event}`, { props });
+    func(`${event.event}`, params);
   },
 };
 
