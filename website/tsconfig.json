@@ -4,6 +4,6 @@
   "compilerOptions": {
     "baseUrl": ".",
     "esModuleInterop": true,
-    "moduleResolution": "node"
+    "moduleResolution": "bundler"
   }
 }

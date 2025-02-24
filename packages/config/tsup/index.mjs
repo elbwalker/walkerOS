@@ -26,6 +26,9 @@ const buildExamples = (customConfig = {}) => ({
   dts: true,
   sourcemap: false,
   format: ['cjs', 'esm'],
+  outExtension({ format }) {
+    return { js: format === 'esm' ? '.mjs' : '.js' };
+  },
   ...customConfig,
 });
 
