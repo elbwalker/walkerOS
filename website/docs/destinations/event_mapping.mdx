@@ -4,7 +4,22 @@ description: How to transform events into another required format.
 sidebar_position: 3
 ---
 
+import { DestinationContextProvider } from '@site/src/components/templates/destination';
+import {
+  destination,
+  DataString,
+  DataKey,
+  DataMap,
+  DataSet,
+  DataComplete,
+} from '@site/src/components/templates/mappings/eventConfig';
 import Link from '@docusaurus/Link';
+
+<DestinationContextProvider
+  destination={destination}
+>
+
+<DataComplete />
 
 Mapping is used to translate walkerOS events into a required format of another
 tool. The mapping also defines how to process events like renaming, bundling, or
@@ -27,7 +42,7 @@ const mapping: Mapping.Config = {
   entity: { action: {} }, // Basic structure
   page: {
     view: { name: 'pageview' }, // Rename the event name
-    click: { custom: { language: 'globals.language' } }, // Custom settings
+    click: { data: { language: 'globals.language' } }, // Custom settings
     '*': { ignore: true }, // Ignore all other page events
   },
   order: { complete: { consent: { marketing: true } } }, // Require marketing consent
@@ -35,22 +50,139 @@ const mapping: Mapping.Config = {
 };
 ```
 
-#### Event
+@TODO evtl noch ein Type Baum um zu zeigen wann Config, EventConfig,
+ValueConfig, etc. verwendet wird.
+
+# EventConfig
 
 The `Destination.Event` mapping for each event supports standardized default
 options. The `custom` option can be used to set up custom properties for the
 event and destination's individual settings.
 
-| Property    | Value   | Description                                                              |
-| ----------- | ------- | ------------------------------------------------------------------------ |
-| **name**    | string  | Renaming of the event (e.g. `product add` to `add_to_cart`)              |
-| **ignore**  | boolean | If set to `true` the event won't get pushed to the destination.          |
-| **consent** | object  | Required states to process the event.                                    |
-| **custom**  | object  | Individual settings for a custom destination.                            |
-| **batch**   | number  | Time in ms to bundle the events before calling `pushBatch` if available. |
+| Property      | Value    | Description                                                              |
+| ------------- | -------- | ------------------------------------------------------------------------ |
+| **name**      | string   | Renaming of the event (e.g. `product add` to `add_to_cart`)              |
+| **data**      | object   | How to transform the event data.                                         |
+| **ignore**    | boolean  | If set to `true` the event won't get pushed to the destination.          |
+| **condition** | function | A function to check if the mapping should be used.                       |
+| **consent**   | object   | Required states to process the event.                                    |
+| **custom**    | object   | Individual settings for a custom destination.                            |
+| **batch**     | number   | Time in ms to bundle the events before calling `pushBatch` if available. |
 
 To disable processing of other events, add `{'*': {'*': { ignore: true }}}` to
 the mapping.
+
+@TODO nicht nur auf event Ebene, auch auf value Ebene nutzbar.
+
+@TODO It can be an array of multiple mappings. If a a condition isn't met, the
+next mapping will be tried. This enables the usage of multiple mappings for the
+same event.
+
+@TODO it uses the&nbsp;<Link to="/docs/utils/mapping">mapping utils</Link> to
+create the event structure.
+
+## Name
+
+The `name` property is used to rename the event.
+
+## Data
+
+The `data` property is used to transform the event data. It is used to create
+the required data structure for the destination.
+
+It can create any structure of data. With support for recursive data structures.
+
+### string
+
+A simple string is short for `{key: 'value'}`. And accesses a property from the
+event context.
+
+<DataString />
+
+### key
+
+A key accesses a property from the event context.
+
+<DataKey />
+
+### map
+
+Used to create an object. The keys are the property names and the values are
+again `Mapping.Data` which are `ValueConfig` resolving to a `WalkerOS.Property`.
+
+<DataMap />
+
+### set
+
+Used to create an array of fixed values. Each item is a `ValueConfig` resolving
+to a `WalkerOS.Property`.
+
+<DataSet />
+
+### loop
+
+Loops over the first parameter and maps the second to the current value. It is
+used for creating an array of dynamic length.
+
+### condition
+
+Is a function to check if the mapping should be used. It returns a boolean, if
+it's `true` the mapping will be used.
+
+### consent
+
+Some values may require an explicit consent state. It can be used to redact
+value and protect a users privacy by hiding information.
+
+### fn
+
+A function that returns the value. It receives the current event context, the
+mapping configuration and the options about the current instance with additional
+properties.
+
+### validate
+
+A final check to validate the value. After `key`, `loop`, `map` or `set`
+resolved the value, it will be validated with the `validate` function.
+
+### value
+
+Used for creating a static value. Can also be used as a fallback if no other
+mapping resolves a value.
+
+## ignore
+
+The `ignore` property is used to ignore the event.
+
+## consent
+
+The `consent` property is used to require a specific state to process the event.
+
+## custom
+
+The `custom` property is used to set up custom properties for the event and
+destination's individual settings.
+
+## batch
+
+The `batch` property is used to bundle the events before calling `pushBatch` if
+available.
+
+## Execution order
+
+If the `data` property is an array, the mappings will be executed in the order
+until a first value is resolved. Usually, a `condition` is used to check if the
+mapping should be used. If permission is denied, the static default `value`
+would be returned. Then the `consent` checks if the user granted permission to
+process the event or value. First, `value` is used to set the static/default
+value. Next, `fn` gets executed. Then a given `key` or `string`. If set, either
+`loop`, `map` or `loop`, `map` or `set` is processed. After that, the value gets
+checked with the `validate` function. Finally, the value is casted to the
+correct type. If the validation or casting fails, the value will be either the
+static default `value` or the next mapping would be used or ultimately
+`undefined`.
+
+## Example
 
 :::warning
 
@@ -71,3 +203,5 @@ If you need professional support with your walkerOS implementation, check out
 our&nbsp;<Link to="/services">services</Link>.
 
 :::
+
+</DestinationContextProvider>
