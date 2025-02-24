@@ -1,4 +1,4 @@
-import { isObject, tryCatch } from '@elbwalker/utils';
+import { isString, tryCatch } from '@elbwalker/utils';
 import { Highlight, themes as prismThemes } from 'prism-react-renderer';
 import Editor from 'react-simple-code-editor';
 
@@ -10,15 +10,16 @@ interface FormatValueProps {
 export const formatValue = (value: unknown, options: FormatValueProps = {}) => {
   const { intent = 2, quotes = false } = options;
 
-  let str = isObject(value)
-    ? JSON.stringify(value, null, intent)
-    : String(value).trim();
+  let str = isString(value)
+    ? `"${value}"`
+    : JSON.stringify(value, null, intent);
 
   if (intent === 0)
     str = str
       .replace(/([:,])\s*(?=\S)/g, '$1 ')
       .replace(/{\s*/, '{ ')
       .replace(/\s*}/, ' }');
+
   if (!quotes) str = str.replace(/"([^"]+)":/g, '$1:'); // Remove quotes from keys
 
   return str;
@@ -28,6 +29,7 @@ interface CodeBoxProps {
   value: string;
   label?: string;
   format?: FormatValueProps;
+  prettify?: boolean;
   onChange?: (code: string) => void;
   disabled?: boolean;
   language?: string;
@@ -39,12 +41,15 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   value = '',
   label,
   format,
+  prettify = true,
   onChange,
   disabled = false,
   language = 'javascript',
   className = '',
 }) => {
-  const prettyValue = formatValue(tryCatch(JSON.parse)(value) || value, format);
+  const prettyValue = prettify
+    ? formatValue(tryCatch(JSON.parse)(value) || value, format)
+    : value;
 
   const highlightCode = (code: string) => (
     <Highlight theme={prismThemes.palenight} code={code} language={language}>
@@ -66,7 +71,9 @@ const CodeBox: React.FC<CodeBoxProps> = ({
     <div
       className={`border border-base-300 rounded-lg overflow-hidden bg-gray-800 text-sm ${className}`}
     >
-      {label && <div className="font-bold px-2 py-1 bg-base-100 text-base">{label}</div>}
+      {label && (
+        <div className="font-bold px-2 py-1 bg-base-100 text-base">{label}</div>
+      )}
       <div className="flex-1 overflow-auto">
         <Editor
           value={prettyValue}

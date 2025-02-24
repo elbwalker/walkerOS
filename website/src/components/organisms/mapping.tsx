@@ -29,7 +29,7 @@ const Mapping: React.FC<MappingProps> = memo(
     right: initRight = '',
     options,
     fn,
-    fnName = 'push',
+    fnName,
     labelLeft = 'Event',
     labelMiddle = 'Custom Config',
     labelRight = 'Result',
@@ -42,10 +42,9 @@ const Mapping: React.FC<MappingProps> = memo(
     const [right, setRight] = useState<string[]>([initRight]);
 
     const log = useRef((...args: unknown[]) => {
-      const params = args.map((arg) =>
-        isObject(arg) ? formatValue(arg) : `"${arg}"`,
-      );
-      setRight([`${fnName}(${params.join(', ')})`]);
+      const params = args.map((arg) => formatValue(arg)).join(', ');
+
+      setRight([fnName ? `${fnName}(${params})` : params]);
     }).current;
 
     const parseInput = useCallback((code: string): unknown => {
@@ -67,6 +66,7 @@ const Mapping: React.FC<MappingProps> = memo(
           }
         },
         500,
+        true,
       ),
     ).current;
 
@@ -97,6 +97,7 @@ const Mapping: React.FC<MappingProps> = memo(
 
           <CodeBox
             label={labelRight}
+            prettify={false}
             disabled
             value={right[0] || 'No event yet.'}
             className={boxClassNames}

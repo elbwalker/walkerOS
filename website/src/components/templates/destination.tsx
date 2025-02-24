@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import type { Destination, Mapping, WalkerOS } from '@elbwalker/types';
 import { createEvent } from '@elbwalker/utils';
-import EventMapping from '../organisms/mapping';
+import MappingConfig from '../organisms/mapping';
 
 interface DestinationContextValue {
   customConfig: WalkerOS.AnyObject;
@@ -29,7 +29,7 @@ interface DestinationContextProviderProps {
 
 export const DestinationContextProvider: React.FC<
   DestinationContextProviderProps
-> = ({ children, destination, initialConfig = {}, fnName = 'push' }) => {
+> = ({ children, destination, initialConfig = {}, fnName }) => {
   const [customConfig, setConfig] = useState<WalkerOS.AnyObject>(initialConfig);
 
   const value = useMemo(() => {
@@ -86,7 +86,7 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
   };
 
   return (
-    <EventMapping
+    <MappingConfig
       fnName={fnName}
       left={custom}
       fn={mappingFn}
@@ -140,7 +140,7 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
   );
 
   return (
-    <EventMapping
+    <MappingConfig
       fnName={fnName}
       left={event}
       middle={mapping}
