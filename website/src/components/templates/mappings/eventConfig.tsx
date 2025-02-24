@@ -1,3 +1,4 @@
+import type { Mapping } from '@elbwalker/types';
 import { getEvent } from '@elbwalker/utils';
 import { DestinationPush } from '../destination';
 
@@ -9,22 +10,24 @@ export const destination = {
   },
 };
 
-const string = 'data.total';
+const string: Mapping.Data = 'data.total';
 
-const key = {
+const key: Mapping.Data = {
   key: 'data.id',
 };
 
-const map = {
+const map: Mapping.Data = {
   map: {
     pageGroup: 'globals.pagegroup',
     shoppingStage: 'context.shopping.0',
   },
 };
 
-const set = {
+const set: Mapping.Data = {
   set: ['trigger', 'entity', 'action'],
 };
+
+const loop: Mapping.Data = { loop: ['nested', 'data.name'] };
 
 export const DataString: React.FC = () => {
   return (
@@ -56,6 +59,15 @@ export const DataSet: React.FC = () => {
         action: event.action,
       }}
       mapping={{ data: set }}
+    />
+  );
+};
+
+export const DataLoop: React.FC = () => {
+  return (
+    <DestinationPush
+      event={{ nested: event.nested }}
+      mapping={{ data: loop }}
     />
   );
 };
