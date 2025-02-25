@@ -29,7 +29,6 @@ interface CodeBoxProps {
   value: string;
   label?: string;
   format?: FormatValueProps;
-  prettify?: boolean;
   onChange?: (code: string) => void;
   disabled?: boolean;
   language?: string;
@@ -41,16 +40,11 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   value = '',
   label,
   format,
-  prettify = true,
   onChange,
   disabled = false,
   language = 'javascript',
   className = '',
 }) => {
-  const prettyValue = prettify
-    ? formatValue(tryCatch(JSON.parse)(value) || value, format)
-    : value;
-
   const highlightCode = (code: string) => (
     <Highlight theme={prismThemes.palenight} code={code} language={language}>
       {({ tokens, getLineProps, getTokenProps }) => (
@@ -76,7 +70,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
       )}
       <div className="flex-1 overflow-auto">
         <Editor
-          value={prettyValue}
+          value={value}
           disabled={disabled}
           onValueChange={(newCode) => onChange?.(newCode)}
           highlight={highlightCode}

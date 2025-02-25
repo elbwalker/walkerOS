@@ -35,10 +35,8 @@ const Mapping: React.FC<MappingProps> = memo(
     labelRight = 'Result',
     showMiddle = true,
   }) => {
-    const toString = (value: unknown) =>
-      isObject(value) ? JSON.stringify(value) : String(value);
-    const [left, setLeft] = useState(toString(initLeft));
-    const [middle, setMiddle] = useState(toString(initMiddle));
+    const [left, setLeft] = useState(formatValue(initLeft));
+    const [middle, setMiddle] = useState(formatValue(initMiddle));
     const [right, setRight] = useState<string[]>([initRight]);
 
     const log = useRef((...args: unknown[]) => {
@@ -97,7 +95,6 @@ const Mapping: React.FC<MappingProps> = memo(
 
           <CodeBox
             label={labelRight}
-            prettify={false}
             disabled
             value={right[0] || 'No event yet.'}
             className={boxClassNames}
