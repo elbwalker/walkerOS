@@ -1,3 +1,4 @@
+import type { Destination, Mapping, WalkerOS } from '@elbwalker/types';
 import React, {
   createContext,
   useCallback,
@@ -5,10 +6,9 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import type { Destination, Mapping, WalkerOS } from '@elbwalker/types';
-import { createEvent } from '@elbwalker/utils';
+import { createEvent, isString } from '@elbwalker/utils';
 import MappingConfig from '../organisms/mapping';
-
+import { formatValue, parseInput } from '../molecules/codeBox';
 interface DestinationContextValue {
   customConfig: WalkerOS.AnyObject;
   setConfig: (config: WalkerOS.AnyObject) => void;
@@ -61,6 +61,7 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
   custom = {},
 }) => {
   const { destination, setConfig, fnName } = useDestinationContext();
+  const left = formatValue(custom);
 
   const mappingFn = (
     left: never,
@@ -88,7 +89,7 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
   return (
     <MappingConfig
       fnName={fnName}
-      left={custom}
+      left={left}
       fn={mappingFn}
       labelLeft="Custom Config"
       showMiddle={false}
@@ -100,13 +101,16 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
 interface DestinationPushProps {
   event: WalkerOS.PartialEvent;
   mapping?: Mapping.EventConfig | string;
+  children?: React.ReactNode;
 }
 
 export const DestinationPush: React.FC<DestinationPushProps> = ({
   event,
   mapping = {},
+  children,
 }) => {
   const { customConfig, destination, fnName } = useDestinationContext();
+  const middleValue = children ?? mapping;
 
   const mappingFn = useCallback(
     (
@@ -118,10 +122,12 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
       try {
         const event = createEvent(left);
         const [entity, action] = event.event.split(' ');
-        const finalMapping = { [entity]: { [action]: middle } };
+        const finalMapping = {
+          [entity]: { [action]: middle },
+        };
 
         destinationPush(
-          { hooks: {} } as never, // Fake instance
+          { hooks: {}, consent: event.consent } as never, // Fake instance
           {
             ...destination,
             config: {
@@ -142,8 +148,8 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
   return (
     <MappingConfig
       fnName={fnName}
-      left={event}
-      middle={mapping}
+      left={formatValue(event)}
+      middle={formatValue(middleValue)}
       fn={mappingFn}
       options={customConfig}
     />
@@ -161,17 +167,19 @@ import {
   tryCatch,
   useHooks,
 } from '@elbwalker/utils';
+import { EventMapping } from '@elbwalker/types/src/mapping';
 
 function resolveMappingData(
   event: WalkerOS.Event,
   data?: Mapping.Data,
+  options?: Mapping.Options,
 ): Destination.Data {
   if (!data) return;
 
   // @TODO update
   return Array.isArray(data)
-    ? data.map((item) => getMappingValue(event, item))
-    : getMappingValue(event, data);
+    ? data.map((item) => getMappingValue(event, item, options))
+    : getMappingValue(event, data, options);
 }
 
 export function destinationPush(
@@ -182,7 +190,7 @@ export function destinationPush(
   const { config } = destination;
   const { eventMapping, mappingKey } = getMappingEvent(event, config.mapping);
 
-  let data = resolveMappingData(event, config.data);
+  let data = resolveMappingData(event, config.data, { instance });
 
   if (eventMapping) {
     // Check if event should be processed or ignored
@@ -193,7 +201,9 @@ export function destinationPush(
 
     // Transform event to a custom data
     if (eventMapping.data) {
-      const dataEvent = resolveMappingData(event, eventMapping.data);
+      const dataEvent = resolveMappingData(event, eventMapping.data, {
+        instance,
+      });
       data =
         isObject(data) && isObject(dataEvent) // Only merge objects
           ? assign(data, dataEvent)

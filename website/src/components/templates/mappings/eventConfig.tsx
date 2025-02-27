@@ -1,5 +1,5 @@
 import type { Mapping } from '@elbwalker/types';
-import { getEvent } from '@elbwalker/utils';
+import { getEvent, isObject } from '@elbwalker/utils';
 import { DestinationPush } from '../destination';
 
 const event = getEvent('order complete');
@@ -11,9 +11,17 @@ export const destination = {
 };
 
 const string: Mapping.Data = 'data.total';
+export const DataString: React.FC = () => {
+  return (
+    <DestinationPush event={{ data: event.data }} mapping={{ data: string }} />
+  );
+};
 
-const key: Mapping.Data = {
-  key: 'data.id',
+const key: Mapping.Data = { key: 'data.id' };
+export const DataKey: React.FC = () => {
+  return (
+    <DestinationPush event={{ data: event.data }} mapping={{ data: key }} />
+  );
 };
 
 const map: Mapping.Data = {
@@ -22,25 +30,6 @@ const map: Mapping.Data = {
     shoppingStage: 'context.shopping.0',
   },
 };
-
-const set: Mapping.Data = {
-  set: ['trigger', 'entity', 'action'],
-};
-
-const loop: Mapping.Data = { loop: ['nested', 'data.name'] };
-
-export const DataString: React.FC = () => {
-  return (
-    <DestinationPush event={{ data: event.data }} mapping={{ data: string }} />
-  );
-};
-
-export const DataKey: React.FC = () => {
-  return (
-    <DestinationPush event={{ data: event.data }} mapping={{ data: key }} />
-  );
-};
-
 export const DataMap: React.FC = () => {
   return (
     <DestinationPush
@@ -50,6 +39,9 @@ export const DataMap: React.FC = () => {
   );
 };
 
+const set: Mapping.Data = {
+  set: ['trigger', 'entity', 'action'],
+};
 export const DataSet: React.FC = () => {
   return (
     <DestinationPush
@@ -63,12 +55,62 @@ export const DataSet: React.FC = () => {
   );
 };
 
+const loop: Mapping.Data = { loop: ['nested', 'data.name'] };
 export const DataLoop: React.FC = () => {
   return (
     <DestinationPush
       event={{ nested: event.nested }}
       mapping={{ data: loop }}
     />
+  );
+};
+
+const condition: Mapping.Data = [
+  {
+    condition: (event) => isObject(event) && event.event === 'order complete',
+    value: 'first',
+  },
+  {
+    value: 'second',
+  },
+];
+
+export const DataCondition: React.FC = () => {
+  return (
+    <DestinationPush
+      event={{ event: event.event }}
+      mapping={{ data: condition }}
+    />
+  );
+};
+
+const consent: Mapping.Data = {
+  consent: {
+    // functional: true,
+    marketing: true,
+  },
+  key: 'data.id',
+  value: 'redacted',
+};
+export const DataConsent: React.FC = () => {
+  return (
+    <DestinationPush
+      event={{ consent: { marketing: true }, data: event.data }}
+      mapping={{ data: consent }}
+    />
+  );
+};
+
+const fn = {
+  fn: (event) => {
+    console.log('🚀 ~ event:', isObject(event), event);
+    return 123;
+  },
+} as unknown as Mapping.Data;
+
+export const DataFn: React.FC = () => {
+  return (
+    <DestinationPush event={{ data: event.data }} mapping={{ data: fn }} />
   );
 };
 

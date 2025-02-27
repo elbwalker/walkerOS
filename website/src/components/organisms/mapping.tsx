@@ -1,11 +1,11 @@
 import type { Mapping as WalkerOSMapping, WalkerOS } from '@elbwalker/types';
-import { useEffect, useState, useRef, useCallback, memo } from 'react';
-import { debounce, isObject } from '@elbwalker/utils';
-import CodeBox, { formatValue } from '../molecules/codeBox';
+import { useEffect, useState, useRef, memo } from 'react';
+import { debounce } from '@elbwalker/utils';
+import CodeBox, { formatValue, parseInput } from '../molecules/codeBox';
 
 interface MappingProps {
-  left: unknown;
-  middle?: unknown;
+  left: string;
+  middle?: string;
   right?: string;
   options?: WalkerOS.AnyObject;
   mapping?: WalkerOSMapping.Config;
@@ -24,8 +24,8 @@ interface MappingProps {
 
 const Mapping: React.FC<MappingProps> = memo(
   ({
-    left: initLeft = {},
-    middle: initMiddle = {},
+    left: initLeft = '{}',
+    middle: initMiddle = '{}',
     right: initRight = '',
     options,
     fn,
@@ -35,19 +35,17 @@ const Mapping: React.FC<MappingProps> = memo(
     labelRight = 'Result',
     showMiddle = true,
   }) => {
-    const [left, setLeft] = useState(formatValue(initLeft));
-    const [middle, setMiddle] = useState(formatValue(initMiddle));
+    const [left, setLeft] = useState(initLeft);
+    const [middle, setMiddle] = useState(initMiddle);
     const [right, setRight] = useState<string[]>([initRight]);
 
     const log = useRef((...args: unknown[]) => {
-      const params = args.map((arg) => formatValue(arg)).join(', ');
+      const params = args
+        .map((arg) => formatValue(arg, { quotes: true }))
+        .join(', ');
 
       setRight([fnName ? `${fnName}(${params})` : params]);
     }).current;
-
-    const parseInput = useCallback((code: string): unknown => {
-      return Function('"use strict"; return (' + code + ')')();
-    }, []);
 
     const updateRight = useRef(
       debounce(

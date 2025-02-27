@@ -1,4 +1,4 @@
-import { isString, tryCatch } from '@elbwalker/utils';
+import { isString } from '@elbwalker/utils';
 import { Highlight, themes as prismThemes } from 'prism-react-renderer';
 import Editor from 'react-simple-code-editor';
 
@@ -11,8 +11,10 @@ export const formatValue = (value: unknown, options: FormatValueProps = {}) => {
   const { intent = 2, quotes = false } = options;
 
   let str = isString(value)
-    ? `"${value}"`
-    : JSON.stringify(value, null, intent);
+    ? quotes
+      ? `"${value}"`
+      : value
+    : JSON.stringify(value, null, 2);
 
   if (intent === 0)
     str = str
@@ -20,15 +22,18 @@ export const formatValue = (value: unknown, options: FormatValueProps = {}) => {
       .replace(/{\s*/, '{ ')
       .replace(/\s*}/, ' }');
 
-  if (!quotes) str = str.replace(/"([^"]+)":/g, '$1:'); // Remove quotes from keys
+  str = str.replace(/"([^"]+)":/g, '$1:'); // Remove quotes from keys
 
   return str;
+};
+
+export const parseInput = (code: unknown): unknown => {
+  return Function('"use strict"; return (' + code + ')')();
 };
 
 interface CodeBoxProps {
   value: string;
   label?: string;
-  format?: FormatValueProps;
   onChange?: (code: string) => void;
   disabled?: boolean;
   language?: string;
@@ -39,7 +44,6 @@ interface CodeBoxProps {
 const CodeBox: React.FC<CodeBoxProps> = ({
   value = '',
   label,
-  format,
   onChange,
   disabled = false,
   language = 'javascript',

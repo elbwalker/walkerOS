@@ -13,8 +13,15 @@ import {
   DataSet,
   DataComplete,
   DataLoop,
+  DataCondition,
+  DataConsent,
+  DataFn,
 } from '@site/src/components/templates/mappings/eventConfig';
+import { DestinationPush } from '@site/src/components/templates/destination';
 import Link from '@docusaurus/Link';
+import { getEvent } from '@elbwalker/utils';
+
+export const event = getEvent('order complete');
 
 <DestinationContextProvider
   destination={destination}
@@ -132,16 +139,32 @@ used for creating an array of dynamic length.
 Is a function to check if the mapping should be used. It returns a boolean, if
 it's `true` the mapping will be used.
 
+<DataCondition />
+
 ### consent
 
 Some values may require an explicit consent state. It can be used to redact
 value and protect a users privacy by hiding information.
+
+<DataConsent />
 
 ### fn
 
 A function that returns the value. It receives the current event context, the
 mapping configuration and the options about the current instance with additional
 properties.
+
+<DestinationPush event={{ data: event.data }}>
+  {`{
+    data: {
+      fn: (event) => {
+        console.log("🚀 ~ event:", event)
+        return Date.now() + event.data.id;
+      },
+      value: "fallback"
+    }
+  }`}
+</DestinationPush>
 
 ### validate
 
