@@ -20,6 +20,7 @@ interface MappingProps {
   labelMiddle?: string;
   labelRight?: string;
   showMiddle?: boolean;
+  height?: number;
 }
 
 const Mapping: React.FC<MappingProps> = memo(
@@ -34,6 +35,7 @@ const Mapping: React.FC<MappingProps> = memo(
     labelMiddle = 'Custom Config',
     labelRight = 'Result',
     showMiddle = true,
+    height,
   }) => {
     const [left, setLeft] = useState(initLeft);
     const [middle, setMiddle] = useState(initMiddle);
@@ -80,6 +82,7 @@ const Mapping: React.FC<MappingProps> = memo(
             value={left}
             onChange={setLeft}
             className={boxClassNames}
+            height={height}
           />
 
           {showMiddle && (
@@ -88,6 +91,7 @@ const Mapping: React.FC<MappingProps> = memo(
               value={middle}
               onChange={setMiddle}
               className={boxClassNames}
+              height={height}
             />
           )}
 
@@ -96,6 +100,7 @@ const Mapping: React.FC<MappingProps> = memo(
             disabled
             value={right[0] || 'No event yet.'}
             className={boxClassNames}
+            height={height}
           />
         </div>
       </div>

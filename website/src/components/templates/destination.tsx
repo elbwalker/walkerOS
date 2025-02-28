@@ -102,12 +102,14 @@ interface DestinationPushProps {
   event: WalkerOS.PartialEvent;
   mapping?: Mapping.EventConfig | string;
   children?: React.ReactNode;
+  height?: number;
 }
 
 export const DestinationPush: React.FC<DestinationPushProps> = ({
   event,
   mapping = {},
   children,
+  height,
 }) => {
   const { customConfig, destination, fnName } = useDestinationContext();
   const middleValue = children ?? mapping;
@@ -152,6 +154,7 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
       middle={formatValue(middleValue)}
       fn={mappingFn}
       options={customConfig}
+      height={height}
     />
   );
 };
