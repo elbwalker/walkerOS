@@ -5,18 +5,6 @@ sidebar_position: 3
 ---
 
 import { DestinationContextProvider } from '@site/src/components/templates/destination';
-import {
-  destination,
-  DataString,
-  DataKey,
-  DataMap,
-  DataSet,
-  DataComplete,
-  DataLoop,
-  DataCondition,
-  DataConsent,
-  DataFn,
-} from '@site/src/components/templates/mappings/eventConfig';
 import { DestinationPush } from '@site/src/components/templates/destination';
 import Link from '@docusaurus/Link';
 import { getEvent } from '@elbwalker/utils';
@@ -24,10 +12,12 @@ import { getEvent } from '@elbwalker/utils';
 export const event = getEvent('order complete');
 
 <DestinationContextProvider
-  destination={destination}
+  destination={{
+    push: (event, config, mapping, options) => {
+      return config.fn(options.data);
+    },
+  }}
 >
-
-<DataComplete />
 
 Mapping is used to translate walkerOS events into a required format of another
 tool. The mapping also defines how to process events like renaming, bundling, or
@@ -105,48 +95,104 @@ It can create any structure of data. With support for recursive data structures.
 A simple string is short for `{key: 'value'}`. And accesses a property from the
 event context.
 
-<DataString />
+<DestinationPush event={{ data: event.data }}>
+  {`{
+    data: "data.total"
+  }`}
+</DestinationPush>
 
 ### key
 
 A key accesses a property from the event context.
 
-<DataKey />
+<DestinationPush event={{ data: event.data }}>
+  {`{
+    data: {
+      key: 'data.id'
+    }
+  }`}
+</DestinationPush>
 
 ### map
 
 Used to create an object. The keys are the property names and the values are
 again `Mapping.Data` which are `ValueConfig` resolving to a `WalkerOS.Property`.
 
-<DataMap />
+<DestinationPush event={{ globals: event.globals, context: event.context }}>
+  {`{
+    data: {
+      map: {
+        pageGroup: 'globals.pagegroup',
+        shoppingStage: 'context.shopping.0',
+      }
+    }
+  }`}
+</DestinationPush>
 
 ### set
 
 Used to create an array of fixed values. Each item is a `ValueConfig` resolving
 to a `WalkerOS.Property`.
 
-<DataSet />
+<DestinationPush
+  event={{
+    trigger: event.trigger,
+    entity: event.entity,
+    action: event.action,
+  }}
+>
+  {`{
+    data: {
+      set: ['trigger', 'entity', 'action']
+    }
+  }`}
+</DestinationPush>
 
 ### loop
 
 Loops over the first parameter and maps the second to the current value. It is
 used for creating an array of dynamic length.
 
-<DataLoop />
+<DestinationPush event={{ nested: event.nested }}>
+  {`{
+    data: {
+      loop: ['nested', 'data.name']
+    }
+  }`}
+</DestinationPush>
 
 ### condition
 
 Is a function to check if the mapping should be used. It returns a boolean, if
 it's `true` the mapping will be used.
 
-<DataCondition />
+<DestinationPush event={{ event: event.event }}>
+  {`{
+    data: [{
+      condition: (event) => {
+        return event.event === 'order complete';
+      },
+      value: 'first'
+    },
+    { value: 'second' }
+  ]
+  }`}
+</DestinationPush>
 
 ### consent
 
 Some values may require an explicit consent state. It can be used to redact
 value and protect a users privacy by hiding information.
 
-<DataConsent />
+<DestinationPush event={{ consent: { marketing: true }, data: event.data }}>
+  {`{
+    data: {
+      consent: { marketing: true },
+      key: 'data.id',
+      value: 'redacted',
+    }
+  }`}
+</DestinationPush>
 
 ### fn
 
@@ -158,10 +204,8 @@ properties.
   {`{
     data: {
       fn: (event) => {
-        console.log("🚀 ~ event:", event)
-        return Date.now() + event.data.id;
-      },
-      value: "fallback"
+        return "id is " + event.data.id;
+      }
     }
   }`}
 </DestinationPush>
@@ -171,7 +215,25 @@ properties.
 A final check to validate the value. After `key`, `loop`, `map` or `set`
 resolved the value, it will be validated with the `validate` function.
 
+<DestinationPush event={{ data: event.data }}>
+  {`{
+    data: {
+      validate: (value) => value == "0rd3r1d",
+      key: "data.id",
+      value: "fallback"
+    }
+  }`}
+</DestinationPush>
+
 ### value
+
+<DestinationPush event={{ data: event.event }}>
+  {`{
+    data: {
+      value: 'static'
+    }
+  }`}
+</DestinationPush>
 
 Used for creating a static value. Can also be used as a fallback if no other
 mapping resolves a value.
