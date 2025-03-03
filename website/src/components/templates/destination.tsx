@@ -6,9 +6,9 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { createEvent, isString } from '@elbwalker/utils';
+import { createEvent } from '@elbwalker/utils';
 import MappingConfig from '../organisms/mapping';
-import { formatValue, parseInput } from '../molecules/codeBox';
+import { formatValue } from '../molecules/codeBox';
 interface DestinationContextValue {
   customConfig: WalkerOS.AnyObject;
   setConfig: (config: WalkerOS.AnyObject) => void;
@@ -106,6 +106,7 @@ interface DestinationPushProps {
   labelLeft?: string;
   labelMiddle?: string;
   labelRight?: string;
+  eventConfig?: boolean;
 }
 
 export const DestinationPush: React.FC<DestinationPushProps> = ({
@@ -116,6 +117,7 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
   labelLeft,
   labelMiddle = 'Event Config',
   labelRight,
+  eventConfig = true,
 }) => {
   const { customConfig, destination, fnName } = useDestinationContext();
   const middleValue = children ?? mapping;
@@ -130,9 +132,11 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
       try {
         const event = createEvent(left);
         const [entity, action] = event.event.split(' ');
-        const finalMapping = {
-          [entity]: { [action]: middle },
-        };
+        const finalMapping = eventConfig
+          ? {
+              [entity]: { [action]: middle },
+            }
+          : middle;
 
         destinationPush(
           { hooks: {}, consent: event.consent } as never, // Fake instance
@@ -141,7 +145,7 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
             config: {
               custom: options,
               fn: log,
-              mapping: finalMapping,
+              mapping: finalMapping as Mapping.Config,
             },
           },
           event,
@@ -179,7 +183,6 @@ import {
   tryCatch,
   useHooks,
 } from '@elbwalker/utils';
-import { EventMapping } from '@elbwalker/types/src/mapping';
 
 function resolveMappingData(
   event: WalkerOS.Event,

@@ -16,75 +16,81 @@ export const event = getEvent('order complete');
     push: (event, config, mapping, options) => {
       return config.fn(options.data);
     },
+    pushBatch: (batched, config, options) => {
+      return config.fn(batched);
+    }
   }}
 >
 
-Mapping is used to translate walkerOS events into a required format of another
-tool. The mapping also defines how to process events like renaming, bundling, or
-ignoring them. It's also checking for consent or validating a value.
+Mapping is used to configure and translate walkerOS events for destinations. It
+defines if and how to process events, by renaming, structuring, bundling, or
+ignoring them. It's also checking for consent and validate values.
 
-There are common event rules for destinations like `name` to rename an event
-(e.g. `product add` to `add_to_cart`) or `ignore` to not process an event at
-all. There are settings, that are individual for each destination (e.g. a GA4
-destination might require a `measurement_id` while a Meta destination requires a
-`pixel_id`).
+## Config
+
+Besides a general destination configuration, a mapping config is set for a
+specific event. Therefore it is defined as
+`{ [entity]: { [action]: EventConfig }}`.
 
 A `*` can be used to match all entities or actions and set up common rules. Each
 destination requires specific settings which can be configured in the `custom`
 section of the mapping.
 
 ```ts
-import type { Mapping } from '@elbwalker/types';
-
-// @TODO UPDATE
-
-const mapping: Mapping.Config = {
-  entity: { action: {} }, // Basic structure
-  page: {
-    view: { name: 'pageview' }, // Rename the event name
-    click: { data: { language: 'globals.language' } }, // Custom settings
-    '*': { ignore: true }, // Ignore all other page events
-  },
-  order: { complete: { consent: { marketing: true } } }, // Require marketing consent
-  '*': { visible: { batch: 2000 } }, // Bundle all visible events every 2 seconds
-};
+{
+  // Config
+  [entity]: {
+    [action]: {
+      // EventConfig
+      name: "event name",
+      data: {
+        // ValueConfig
+      }
+    }
+  }
+}
 ```
 
-<DestinationPush event={event} height={'666px'}>
+<DestinationPush event={event} height={'666px'} eventConfig={false}>
   {`{
-    data: {
-      map: {
-        id: 'data.id',
-        event: { fn: (e) => e.event.replace(" ", "_") },
-        pageGroup: 'globals.pagegroup',
-        products: {
-          loop: ['nested', 'data.name']
-        },
-        user_id: {
-          consent: { marketing: true },
-          key: "user.id",
-          value: "anonymous",
-        },
-        vip: {
-          condition: (e) => e.data.total > 500,
-          value: true,
-        },
-        journeyShopping: {
-          key: 'context.shopping.0',
-          validate: (value) => typeof value == "string",
-        },
-        timings: {
-          set: ['timestamp', 'timing']
+    order: {
+      complete: {
+        name: "purchase",
+        data: {
+          map: {
+            event: "event",
+            id: 'data.id',
+            pageGroup: 'globals.pagegroup',
+            quantity: { fn: (e) => e.nested.length },
+            products: {
+            loop: ['nested', 'data.name']
+            },
+            user_id: {
+              consent: { marketing: true },
+              key: "user.id",
+              value: "anonymous",
+            },
+            vip: {
+              condition: (e) => e.data.total > 500,
+              value: true,
+            },
+            journeyShopping: {
+              key: 'context.shopping.0',
+              validate: (value) => typeof value == "string",
+            },
+            timings: {
+              set: ['timestamp', 'timing']
+            }
+          }
         }
       },
+      visible: { batch: 1000, data: "event" },
+      '*' : { ignore: true }
     }
   }`}
 </DestinationPush>
 
-@TODO evtl noch ein Type Baum um zu zeigen wann Config, EventConfig,
-ValueConfig, etc. verwendet wird.
-
-# EventConfig
+## EventConfig
 
 The `Destination.Event` mapping for each event supports standardized default
 options. The `custom` option can be used to set up custom properties for the
@@ -103,16 +109,13 @@ event and destination's individual settings.
 To disable processing of other events, add `{'*': {'*': { ignore: true }}}` to
 the mapping.
 
-@TODO nicht nur auf event Ebene, auch auf value Ebene nutzbar.
+The destination event mapping technically uses
+the&nbsp;<Link to="/docs/utils/mapping">mapping utils</Link> to create the
+desired event structure. And
+the&nbsp;<Link to="/docs/utils/helper#getbypath">getByPath</Link> dot notation
+to access event properties (e.g. `event.data.total`).
 
-@TODO It can be an array of multiple mappings. If a a condition isn't met, the
-next mapping will be tried. This enables the usage of multiple mappings for the
-same event.
-
-@TODO it uses the&nbsp;<Link to="/docs/utils/mapping">mapping utils</Link> to
-create the event structure.
-
-## name
+### name
 
 The `name` property is used to rename the event. It overrides the original event
 name.
@@ -124,12 +127,33 @@ name.
   }`}
 </DestinationPush>
 
-## data
+Example: A walkerOS `order complete` usually becomes a `purchase` event in GA4
+or an `order` event in Piwik PRO.
+
+### data
+
+### ignore
+
+The `ignore` property is used to ignore the event.
+
+### consent
+
+The `consent` property is used to require a specific state to process the event.
+
+### custom
+
+The `custom` property is used to set up custom properties for the event and
+destination's individual settings.
+
+### batch
+
+The `batch` property is used to bundle the events before calling `pushBatch` if
+available.
+
+## ValueConfig
 
 The `data` property is used to transform the event data. It is used to create
 the required data structure for the destination.
-
-@TODO add note: it uses byPath syntax. In short.
 
 It can create any structure of data. With support for recursive data structures.
 
@@ -279,24 +303,6 @@ resolved the value, it will be validated with the `validate` function.
     }
   }`}
 </DestinationPush>
-
-## ignore
-
-The `ignore` property is used to ignore the event.
-
-## consent
-
-The `consent` property is used to require a specific state to process the event.
-
-## custom
-
-The `custom` property is used to set up custom properties for the event and
-destination's individual settings.
-
-## batch
-
-The `batch` property is used to bundle the events before calling `pushBatch` if
-available.
 
 ## Execution order
 
