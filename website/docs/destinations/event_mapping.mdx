@@ -36,6 +36,8 @@ section of the mapping.
 ```ts
 import type { Mapping } from '@elbwalker/types';
 
+// @TODO UPDATE
+
 const mapping: Mapping.Config = {
   entity: { action: {} }, // Basic structure
   page: {
@@ -47,6 +49,37 @@ const mapping: Mapping.Config = {
   '*': { visible: { batch: 2000 } }, // Bundle all visible events every 2 seconds
 };
 ```
+
+<DestinationPush event={event} height={'666px'}>
+  {`{
+    data: {
+      map: {
+        id: 'data.id',
+        event: { fn: (e) => e.event.replace(" ", "_") },
+        pageGroup: 'globals.pagegroup',
+        products: {
+          loop: ['nested', 'data.name']
+        },
+        user_id: {
+          consent: { marketing: true },
+          key: "user.id",
+          value: "anonymous",
+        },
+        vip: {
+          condition: (e) => e.data.total > 500,
+          value: true,
+        },
+        journeyShopping: {
+          key: 'context.shopping.0',
+          validate: (value) => typeof value == "string",
+        },
+        timings: {
+          set: ['timestamp', 'timing']
+        }
+      },
+    }
+  }`}
+</DestinationPush>
 
 @TODO evtl noch ein Type Baum um zu zeigen wann Config, EventConfig,
 ValueConfig, etc. verwendet wird.
@@ -79,27 +112,26 @@ same event.
 @TODO it uses the&nbsp;<Link to="/docs/utils/mapping">mapping utils</Link> to
 create the event structure.
 
-## Name
+## name
 
-The `name` property is used to rename the event.
+The `name` property is used to rename the event. It overrides the original event
+name.
 
-## Data
+<DestinationPush event={{ event: event.event }}>
+  {`{
+    name: "purchase",
+    data: "event"
+  }`}
+</DestinationPush>
+
+## data
 
 The `data` property is used to transform the event data. It is used to create
 the required data structure for the destination.
 
+@TODO add note: it uses byPath syntax. In short.
+
 It can create any structure of data. With support for recursive data structures.
-
-### string
-
-A simple string is short for `{key: 'value'}`. And accesses a property from the
-event context.
-
-<DestinationPush event={{ data: event.data }}>
-  {`{
-    data: "data.total"
-  }`}
-</DestinationPush>
 
 ### key
 
@@ -113,10 +145,35 @@ A key accesses a property from the event context.
   }`}
 </DestinationPush>
 
+### string
+
+A simple string is short for `{key: 'value'}`. And accesses a property from the
+event context.
+
+<DestinationPush event={{ data: event.data }}>
+  {`{
+    data: "data.total"
+  }`}
+</DestinationPush>
+
+### value
+
+Used for creating a static value. Can also be used as a fallback if no other
+mapping resolves a value.
+
+<DestinationPush event={{ data: event.event }}>
+  {`{
+    data: {
+      value: 'static'
+    }
+  }`}
+</DestinationPush>
+
 ### map
 
 Used to create an object. The keys are the property names and the values are
-again `Mapping.Data` which are `ValueConfig` resolving to a `WalkerOS.Property`.
+again `Mapping.Data` which are `ValueConfig` (@TODO was ist das) resolving to a
+`WalkerOS.Property`.
 
 <DestinationPush event={{ globals: event.globals, context: event.context }}>
   {`{
@@ -166,23 +223,19 @@ used for creating an array of dynamic length.
 Is a function to check if the mapping should be used. It returns a boolean, if
 it's `true` the mapping will be used.
 
-<DestinationPush event={{ event: event.event }}>
+<DestinationPush event={{ event: event.event, data: event.data }}>
   {`{
-    data: [{
-      condition: (event) => {
-        return event.event === 'order complete';
-      },
-      value: 'first'
+    data: {
+      condition: (e) => e.data.total > 100,
+      key: "event"
     },
-    { value: 'second' }
-  ]
   }`}
 </DestinationPush>
 
 ### consent
 
 Some values may require an explicit consent state. It can be used to redact
-value and protect a users privacy by hiding information.
+values and protect a users privacy by hiding information.
 
 <DestinationPush event={{ consent: { marketing: true }, data: event.data }}>
   {`{
@@ -194,11 +247,13 @@ value and protect a users privacy by hiding information.
   }`}
 </DestinationPush>
 
+This can be used to e.g. redact PII like clickIds from a `session start` event.
+
 ### fn
 
-A function that returns the value. It receives the current event context, the
-mapping configuration and the options about the current instance with additional
-properties.
+A function that returns the value. It receives the current `event` context, the
+`mapping` configuration and the `options` about the current instance with
+additional properties as parameters.
 
 <DestinationPush event={{ data: event.data }}>
   {`{
@@ -218,25 +273,12 @@ resolved the value, it will be validated with the `validate` function.
 <DestinationPush event={{ data: event.data }}>
   {`{
     data: {
-      validate: (value) => value == "0rd3r1d",
+      validate: (value) => typeof value == "string",
       key: "data.id",
       value: "fallback"
     }
   }`}
 </DestinationPush>
-
-### value
-
-<DestinationPush event={{ data: event.event }}>
-  {`{
-    data: {
-      value: 'static'
-    }
-  }`}
-</DestinationPush>
-
-Used for creating a static value. Can also be used as a fallback if no other
-mapping resolves a value.
 
 ## ignore
 
