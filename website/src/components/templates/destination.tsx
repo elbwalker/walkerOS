@@ -103,6 +103,9 @@ interface DestinationPushProps {
   mapping?: Mapping.EventConfig | string;
   children?: React.ReactNode;
   height?: number;
+  labelLeft?: string;
+  labelMiddle?: string;
+  labelRight?: string;
 }
 
 export const DestinationPush: React.FC<DestinationPushProps> = ({
@@ -110,6 +113,9 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
   mapping = {},
   children,
   height,
+  labelLeft,
+  labelMiddle = 'Event Config',
+  labelRight,
 }) => {
   const { customConfig, destination, fnName } = useDestinationContext();
   const middleValue = children ?? mapping;
@@ -155,6 +161,9 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
       fn={mappingFn}
       options={customConfig}
       height={height}
+      labelLeft={labelLeft}
+      labelMiddle={labelMiddle}
+      labelRight={labelRight}
     />
   );
 };
