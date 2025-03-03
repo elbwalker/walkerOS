@@ -40,6 +40,7 @@ interface CodeBoxProps {
   inline?: boolean;
   className?: string;
   height?: number;
+  smallText?: boolean;
 }
 
 const CodeBox: React.FC<CodeBoxProps> = ({
@@ -50,6 +51,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   language = 'javascript',
   className = '',
   height,
+  smallText = false,
 }) => {
   const highlightCode = (code: string) => (
     <Highlight theme={prismThemes.palenight} code={code} language={language}>
@@ -69,7 +71,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
 
   return (
     <div
-      className={`border border-base-300 rounded-lg overflow-hidden bg-gray-800 text-sm ${className}`}
+      className={`border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${smallText ? 'text-xs' : 'text-sm'} ${className}`}
       style={height && { height: `${height}` }}
     >
       {label && (

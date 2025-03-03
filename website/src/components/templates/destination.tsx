@@ -103,6 +103,8 @@ interface DestinationPushProps {
   mapping?: Mapping.EventConfig | string;
   children?: React.ReactNode;
   height?: number;
+  smallText?: boolean;
+  className?: string;
   labelLeft?: string;
   labelMiddle?: string;
   labelRight?: string;
@@ -114,6 +116,8 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
   mapping = {},
   children,
   height,
+  smallText,
+  className,
   labelLeft,
   labelMiddle = 'Event Config',
   labelRight,
@@ -165,6 +169,8 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
       fn={mappingFn}
       options={customConfig}
       height={height}
+      smallText={smallText}
+      className={className}
       labelLeft={labelLeft}
       labelMiddle={labelMiddle}
       labelRight={labelRight}

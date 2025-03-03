@@ -21,6 +21,8 @@ interface MappingProps {
   labelRight?: string;
   showMiddle?: boolean;
   height?: number;
+  smallText?: boolean;
+  className?: string;
 }
 
 const Mapping: React.FC<MappingProps> = memo(
@@ -36,6 +38,8 @@ const Mapping: React.FC<MappingProps> = memo(
     labelRight = 'Result',
     showMiddle = true,
     height,
+    smallText,
+    className,
   }) => {
     const [left, setLeft] = useState(initLeft);
     const [middle, setMiddle] = useState(initMiddle);
@@ -72,7 +76,7 @@ const Mapping: React.FC<MappingProps> = memo(
       updateRight(left, middle, options);
     }, [left, middle, options]);
 
-    const boxClassNames = 'flex-1 resize max-h-96 xl:max-h-full flex flex-col';
+    const boxClassNames = `flex-1 resize max-h-96 xl:max-h-full flex flex-col ${className}`;
 
     return (
       <div className="my-4">
@@ -83,6 +87,7 @@ const Mapping: React.FC<MappingProps> = memo(
             onChange={setLeft}
             className={boxClassNames}
             height={height}
+            smallText={smallText}
           />
 
           {showMiddle && (
@@ -92,6 +97,7 @@ const Mapping: React.FC<MappingProps> = memo(
               onChange={setMiddle}
               className={boxClassNames}
               height={height}
+              smallText={smallText}
             />
           )}
 
@@ -101,6 +107,7 @@ const Mapping: React.FC<MappingProps> = memo(
             value={right[0] || 'No event yet.'}
             className={boxClassNames}
             height={height}
+            smallText={smallText}
           />
         </div>
       </div>
