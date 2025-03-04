@@ -1,5 +1,6 @@
 import { getEvent } from '@elbwalker/utils';
 import { DestinationInit, DestinationPush } from '../destination';
+import { mapping } from '@elbwalker/destination-web-google-ga4/examples';
 
 export const GoogleGA4Init: React.FC = () => {
   return (
@@ -28,62 +29,22 @@ export const GoogleGA4Init: React.FC = () => {
 export const GoogleGA4ProductAdd: React.FC = () => {
   return (
     <DestinationPush
-      event={getEvent('product add', { custom: {} })}
-      mapping={{
-        name: 'add_to_cart',
-        data: {
-          map: {
-            currency: { value: 'EUR', key: 'data.currency' },
-            value: 'data.price',
-            items: {
-              loop: [
-                'this',
-                {
-                  map: {
-                    item_id: 'data.id',
-                    item_variant: 'data.color',
-                    quantity: { value: 1, key: 'data.quantity' },
-                  },
-                },
-              ],
-            },
-          },
-        },
-      }}
+      event={getEvent('product add')}
+      mapping={mapping.add_to_cart}
     />
   );
 };
 
 export const GoogleGA4OrderComplete: React.FC = () => {
   return (
-    <DestinationPush
-      event={getEvent('order complete', { custom: {} })}
-      // As string to preserve the condition function
-      mapping={`{
-    name: 'purchase',
-    data: {
-      map: {
-        transaction_id: 'data.id',
-        value: 'data.total',
-        tax: 'data.taxes',
-        shipping: 'data.shipping',
-        currency: { key: 'data.currency', value: 'EUR' },
-        items: {
-          loop: [
-            'nested',
-            {
-              condition: (entity) => entity.type === 'product',
-              map: {
-                item_id: 'data.id',
-                item_name: 'data.name',
-                quantity: { key: 'data.quantity', value: 1 },
-              },
-            },
-          ],
-        },
-      },
-    },
-  }`}
-    />
+    <>
+      <pre className="language-typescript">
+        <code>{mapping.lol}</code>
+      </pre>
+      <DestinationPush
+        event={getEvent('order complete')}
+        mapping={mapping.purchase}
+      />
+    </>
   );
 };
