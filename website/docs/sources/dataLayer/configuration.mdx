@@ -63,8 +63,8 @@ Use `console.log` for the `elb` function to inspect events.
 
 ### Commands
 
-The `custom.command` property is used to map the event to a walkerOS command and
-call `elb(name, data)` with the two parameters `name` and `data`.
+The `custom.command` mapping property is used to map the event to a walkerOS
+command and call `elb(name, data)` with the two parameters `name` and `data`.
 
 <LMRCodeBoxes
   smallText={true}
@@ -114,50 +114,176 @@ might have been pushed by a walker.js destination.
 
 ## Examples
 
-### purchase
+### add_to_cart
 
-@TODO use codeBox with the push and the expected result.
-
-```ts
-sourceDataLayer({
-  elb,
-  mapping: {
-    purchase: {
-      name: 'order complete',
-      data: {
-        map: {
-          data: {
-            map: {
-              id: 'transaction_id',
-              currency: 'currency',
-              shipping: 'shipping',
-              taxes: 'tax',
-              total: 'value',
-              coupon: 'coupon',
-            },
-          },
-          nested: {
-            loop: [
-              'items',
-              {
-                map: {
-                  data: {
-                    map: {
-                      id: 'item_id',
-                      name: 'item_name',
-                      price: 'price',
-                    },
-                  },
-                },
+<LMRCodeBoxes
+  smallText={true}
+  labelLeft="Configuration"
+  disabledLeft={true}
+  left={`sourceDataLayer({
+    elb,
+    mapping: {
+      add_to_cart: {
+        name: 'product add',
+        data: {
+          map: {
+            data: {
+              map: {
+                id: 'items.0.item_id',
+                name: 'items.0.item_name',
+                discount: 'items.0.discount',
+                brand: 'items.0.item_brand',
+                category: 'items.0.item_category',
+                color: 'items.0.item_variant',
+                currency: 'currency',
+                price: 'items.0.price',
+                quantity: 'items.0.quantity',
+                total: 'value',
               },
-            ],
+            },
           },
         },
       },
     },
-  },
-});
-```
+  });`}
+  labelMiddle="Event"
+  disabledMiddle={true}
+  middle={`dataLayer.push({
+    event: 'add_to_cart',
+    currency: 'EUR',
+    value: 840,
+    items: [{
+      item_id: 'abc',
+      item_name: 'Everyday Ruck Snack',
+      discount: 10,
+      item_brand: 'Fictive',
+      item_category: 'Apparel',
+      item_list_id: 'related_products',
+      item_variant: 'black',
+      price: 420,
+      quantity: 2,
+    }],
+  });`}
+  right={`elb({
+    event: 'product add',
+    data: {
+      currency: 'EUR',
+      id: 'abc',
+      name: 'Everyday Ruck Snack',
+      discount: 10,
+      brand: 'Fictive',
+      category: 'Apparel',
+      color: 'black',
+      price: 420,
+      quantity: 2,
+      total: 840,
+    },
+  });`}
+/>
+
+### purchase
+
+<LMRCodeBoxes
+  smallText={true}
+  labelLeft="Configuration"
+  disabledLeft={true}
+  left={`sourceDataLayer({
+    elb,
+    mapping: {
+      purchase: {
+        name: 'order complete',
+        data: {
+          map: {
+            data: {
+              map: {
+                id: 'transaction_id',
+                currency: 'currency',
+                shipping: 'shipping',
+                taxes: 'tax',
+                total: 'value',
+                coupon: 'coupon',
+              },
+            },
+            nested: {
+              loop: [
+                'items',
+                {
+                  map: {
+                    data: {
+                      map: {
+                        id: 'item_id',
+                        name: 'item_name',
+                        price: 'price',
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+  });`}
+  labelMiddle="Event"
+  disabledMiddle={true}
+  middle={`gtag('event', 'purchase', {
+    transaction_id: '0rd3r1d',
+    currency: 'EUR',
+    shipping: 5.22,
+    tax: 73.76,
+    value: 555,
+    coupon: 'SUMM3RS4L3',
+    items: [{
+      item_id: 'abc',
+      item_name: 'Everyday Ruck Snack',
+      discount: 10,
+      item_brand: 'Fictive',
+      item_category: 'Apparel',
+      item_list_id: 'related_products',
+      item_variant: 'black',
+      price: 420,
+      quantity: 2,
+    }, {
+      item_id: 'xyz',
+      item_name: 'Cool Cap',
+      price: 42,
+    }],
+  })`}
+  right={`elb({
+    event: 'order complete',
+    data: {
+      id: '0rd3r1d',
+      currency: 'EUR',
+      shipping: 5.22,
+      taxes: 73.76,
+      total: 555,
+      coupon: 'SUMM3RS4L3',
+    },
+    nested: [
+      {
+        type: 'product',
+        data: {
+          id: 'abc',
+          name: 'Everyday Ruck Snack',
+          price: 420,
+        },
+        nested: [],
+        context: {},
+      },
+      {
+        type: 'product',
+        data: {
+          id: 'xyz',
+          name: 'Cool Cap',
+          price: 42,
+        },
+        nested: [],
+        context: {},
+      },
+    ],
+  });`}
+/>
 
 :::info
 
