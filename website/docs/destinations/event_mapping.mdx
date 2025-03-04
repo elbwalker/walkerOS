@@ -28,13 +28,12 @@ ignoring them. It's also checking for consent and validate values.
 
 ## Config
 
-Besides a general destination configuration, a mapping config is set for a
-specific event. Therefore it is defined as
+Besides the destinations general configuration, a mapping config is set to
+process events individually. The `EventConfig` is defined as
 `{ [entity]: { [action]: EventConfig }}`.
 
-A `*` can be used to match all entities or actions and set up common rules. Each
-destination requires specific settings which can be configured in the `custom`
-section of the mapping.
+A generic `"*"` can be used to match all entities and/or actions that are not
+explicitly matched.
 
 ```ts
 {
@@ -51,7 +50,15 @@ section of the mapping.
 }
 ```
 
-<DestinationPush event={event} height={'666px'} labelMiddle={'Config'} eventConfig={false} smallText={true}>
+### Example
+
+<DestinationPush
+  event={event}
+  height={'666px'}
+  labelMiddle={'Config'}
+  eventConfig={false}
+  smallText={true}
+>
   {`{
     order: {
       complete: {
@@ -85,10 +92,17 @@ section of the mapping.
         }
       },
       visible: { batch: 1000, data: "event" },
-      '*' : { ignore: true }
+    },
+    '*' : { // Match all other entities
+      '*' : { // Match all other actions
+        ignore: true
+      }
     }
   }`}
 </DestinationPush>
+
+Change the `event` name to `order visible` and see how the batched mapping is
+applied after 1 second.
 
 ## EventConfig
 
@@ -132,9 +146,14 @@ or an `order` event in Piwik PRO.
 
 ### data
 
+The `data` property is used to transform the event data. It fully describes the
+data structure for the destination.
+See&nbsp;<Link to="#valueconfig">ValueConfig</Link> for detailed usage.
+
 ### ignore
 
-The `ignore` property is used to ignore the event.
+The `ignore` property is used to ignore the event. If set to `true`, the event
+won't get pushed to the destination.
 
 ### consent
 
@@ -142,13 +161,19 @@ The `consent` property is used to require a specific state to process the event.
 
 ### custom
 
-The `custom` property is used to set up custom properties for the event and
-destination's individual settings.
+The `custom` property is used for individual destination settings. In most cases
+the `data` property is enough. But in special cases a `custom` mapping might
+simplify the configuration.
 
 ### batch
 
-The `batch` property is used to bundle the events before calling `pushBatch` if
-available.
+The `batch` property is used to bundle the events before pushing them to the
+destination. A destination must offer a `pushBatch` method to use this feature.
+The pushed event(s) are an object with the following properties:
+
+- `key`: Name of the used mapping rule
+- `events`: An array of the actual events
+- `data`: The transformed event data
 
 ## ValueConfig
 
@@ -196,8 +221,7 @@ mapping resolves a value.
 ### map
 
 Used to create an object. The keys are the property names and the values are
-again `Mapping.Data` which are `ValueConfig` (@TODO was ist das) resolving to a
-`WalkerOS.Property`.
+again a&nbsp;<Link to="#valueconfig">ValueConfig</Link> resolving to a value.
 
 <DestinationPush event={{ globals: event.globals, context: event.context }}>
   {`{
