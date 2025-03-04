@@ -9,7 +9,7 @@ interface MappingProps {
   right?: string;
   options?: WalkerOS.AnyObject;
   mapping?: WalkerOSMapping.Config;
-  fn: (
+  fn?: (
     left: unknown,
     middle: unknown,
     log: (...args: unknown[]) => void,
@@ -19,6 +19,9 @@ interface MappingProps {
   labelLeft?: string;
   labelMiddle?: string;
   labelRight?: string;
+  disabledLeft?: boolean;
+  disabledMiddle?: boolean;
+  disabledRight?: boolean;
   showMiddle?: boolean;
   height?: number;
   smallText?: boolean;
@@ -37,6 +40,9 @@ const Mapping: React.FC<MappingProps> = memo(
     labelMiddle = 'Custom Config',
     labelRight = 'Result',
     showMiddle = true,
+    disabledLeft = false,
+    disabledMiddle = false,
+    disabledRight = true,
     height,
     smallText,
     className,
@@ -56,6 +62,8 @@ const Mapping: React.FC<MappingProps> = memo(
     const updateRight = useRef(
       debounce(
         (leftStr: string, middleStr: string, options: WalkerOS.AnyObject) => {
+          if (!fn) return;
+
           setRight([]);
 
           try {
@@ -83,6 +91,7 @@ const Mapping: React.FC<MappingProps> = memo(
         <div className={`flex flex-col xl:flex-row gap-2 scroll`}>
           <CodeBox
             label={labelLeft}
+            disabled={disabledLeft}
             value={left}
             onChange={setLeft}
             className={boxClassNames}
@@ -93,6 +102,7 @@ const Mapping: React.FC<MappingProps> = memo(
           {showMiddle && (
             <CodeBox
               label={labelMiddle}
+              disabled={disabledMiddle}
               value={middle}
               onChange={setMiddle}
               className={boxClassNames}
@@ -103,7 +113,7 @@ const Mapping: React.FC<MappingProps> = memo(
 
           <CodeBox
             label={labelRight}
-            disabled
+            disabled={disabledRight}
             value={right[0] || 'No event yet.'}
             className={boxClassNames}
             height={height}

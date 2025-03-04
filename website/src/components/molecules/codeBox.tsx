@@ -71,7 +71,9 @@ const CodeBox: React.FC<CodeBoxProps> = ({
 
   return (
     <div
-      className={`border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${smallText ? 'text-xs' : 'text-sm'} ${className}`}
+      className={`border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${
+        smallText ? 'text-xs' : 'text-sm'
+      } ${className}`}
       style={height && { height: `${height}` }}
     >
       {label && (

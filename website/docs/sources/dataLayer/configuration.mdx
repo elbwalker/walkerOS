@@ -5,6 +5,7 @@ description: How to configure walkerOS node source.
 ---
 
 import Link from '@docusaurus/Link';
+import { LMRCodeBoxes } from '@site/src/components/templates/lmrCodeBoxes';
 
 There are a few configuration options when creating a dataLayer source instance:
 
@@ -65,37 +66,40 @@ Use `console.log` for the `elb` function to inspect events.
 The `custom.command` property is used to map the event to a walkerOS command and
 call `elb(name, data)` with the two parameters `name` and `data`.
 
-```ts
-sourceDataLayer({
-  elb,
-  mapping: {
-    'consent update': {
-      name: 'walker consent',
-      custom: {
-        command: {
-          map: {
-            marketing: 'ad_storage',
-            analytics: 'analytics_storage',
+<LMRCodeBoxes
+  smallText={true}
+  labelLeft="Configuration"
+  disabledLeft={true}
+  left={`sourceDataLayer({
+    elb,
+    mapping: {
+      'consent update': {
+        name: 'walker consent',
+        custom: {
+          command: {
+            map: {
+              marketing: 'ad_storage',
+              analytics: 'analytics_storage',
+            },
           },
         },
       },
     },
-  },
-});
-
-gtag('consent', 'update', {
-  ad_user_data: 'denied',
-  ad_personalization: 'denied',
-  ad_storage: 'denied',
-  analytics_storage: 'granted',
-  wait_for_update: 500,
-});
-
-expect(elb).toHaveBeenCalledWith('walker consent', {
-  marketing: false,
-  analytics: true,
-});
-```
+  });`}
+  labelMiddle="Event"
+  disabledMiddle={true}
+  middle={`gtag('consent', 'update', {
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    ad_storage: 'denied',
+    analytics_storage: 'granted',
+    wait_for_update: 500,
+  });`}
+  right={`elb('walker consent', {
+    analytics: true,
+    marketing: false,
+  });`}
+/>
 
 ### Infinite loops
 
