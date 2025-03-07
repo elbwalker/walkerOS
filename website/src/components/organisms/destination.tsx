@@ -1,3 +1,4 @@
+import type { Destination, Mapping, WalkerOS } from '@elbwalker/types';
 import React, {
   createContext,
   useCallback,
@@ -5,10 +6,9 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import type { Destination, Mapping, WalkerOS } from '@elbwalker/types';
 import { createEvent } from '@elbwalker/utils';
 import { LiveCode } from '../organisms/liveCode';
-import { parseInput } from '../molecules/codeBox';
+import { formatValue, parseInput } from '../molecules/codeBox';
 
 interface DestinationContextValue {
   customConfig: WalkerOS.AnyObject;
@@ -30,7 +30,7 @@ interface DestinationContextProviderProps {
 
 export const DestinationContextProvider: React.FC<
   DestinationContextProviderProps
-> = ({ children, destination, initialConfig = {}, fnName = 'push' }) => {
+> = ({ children, destination, initialConfig = {}, fnName }) => {
   const [customConfig, setConfig] = useState<WalkerOS.AnyObject>(initialConfig);
 
   const value = useMemo(() => {
@@ -55,20 +55,22 @@ export function useDestinationContext(): DestinationContextValue {
 }
 
 interface DestinationInitProps {
-  custom?: WalkerOS.AnyObject;
+  custom?: unknown;
 }
 
 export const DestinationInit: React.FC<DestinationInitProps> = ({
   custom = {},
 }) => {
   const { destination, setConfig, fnName } = useDestinationContext();
+  const left = formatValue(custom);
 
   const mappingFn = (
     left: never,
     middle: never,
     log: (...args: unknown[]) => void,
   ) => {
-    setConfig(left);
+    const leftValue = parseInput(left);
+    setConfig(leftValue);
     try {
       // @TODO this is ugly af
       (
@@ -76,7 +78,7 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
           .init as WalkerOS.AnyFunction
       )(
         {
-          custom: left,
+          custom: leftValue,
           fn: log,
         },
         {},
@@ -89,7 +91,7 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
   return (
     <LiveCode
       fnName={fnName}
-      input={parseInput(custom)}
+      input={left}
       fn={mappingFn}
       labelInput="Custom Config"
       showMiddle={false}
@@ -100,14 +102,31 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
 
 interface DestinationPushProps {
   event: WalkerOS.PartialEvent;
-  mapping?: Mapping.Config;
+  mapping?: Mapping.EventConfig | string;
+  children?: React.ReactNode;
+  height?: number;
+  smallText?: boolean;
+  className?: string;
+  labelLeft?: string;
+  labelMiddle?: string;
+  labelRight?: string;
+  eventConfig?: boolean;
 }
 
 export const DestinationPush: React.FC<DestinationPushProps> = ({
   event,
   mapping = {},
+  children,
+  height,
+  smallText,
+  className,
+  labelLeft,
+  labelMiddle = 'Event Config',
+  labelRight,
+  eventConfig = true,
 }) => {
   const { customConfig, destination, fnName } = useDestinationContext();
+  const middleValue = children ?? mapping;
 
   const mappingFn = useCallback(
     (
@@ -117,18 +136,24 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
       options: WalkerOS.AnyObject,
     ) => {
       try {
-        const event = createEvent(left);
+        const leftValue = parseInput(left);
+        const middleValue = parseInput(middle);
+        const event = createEvent(leftValue);
         const [entity, action] = event.event.split(' ');
-        const finalMapping = { [entity]: { [action]: middle } };
+        const finalMapping = eventConfig
+          ? {
+              [entity]: { [action]: middleValue },
+            }
+          : middleValue;
 
         destinationPush(
-          { hooks: {} } as never, // Fake instance
+          { hooks: {}, consent: event.consent } as never, // Fake instance
           {
             ...destination,
             config: {
               custom: options,
               fn: log,
-              mapping: finalMapping,
+              mapping: finalMapping as Mapping.Config,
             },
           },
           event,
@@ -143,10 +168,16 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
   return (
     <LiveCode
       fnName={fnName}
-      input={parseInput(event)}
-      config={parseInput(mapping)}
+      input={formatValue(event)}
+      config={formatValue(middleValue)}
       fn={mappingFn}
       options={customConfig}
+      height={height}
+      smallText={smallText}
+      className={className}
+      labelInput={labelLeft}
+      labelConfig={labelMiddle}
+      labelOutput={labelRight}
     />
   );
 };
@@ -166,13 +197,14 @@ import {
 function resolveMappingData(
   event: WalkerOS.Event,
   data?: Mapping.Data,
+  options?: Mapping.Options,
 ): Destination.Data {
   if (!data) return;
 
   // @TODO update
   return Array.isArray(data)
-    ? data.map((item) => getMappingValue(event, item))
-    : getMappingValue(event, data);
+    ? data.map((item) => getMappingValue(event, item, options))
+    : getMappingValue(event, data, options);
 }
 
 export function destinationPush(
@@ -183,7 +215,7 @@ export function destinationPush(
   const { config } = destination;
   const { eventMapping, mappingKey } = getMappingEvent(event, config.mapping);
 
-  let data = resolveMappingData(event, config.data);
+  let data = resolveMappingData(event, config.data, { instance });
 
   if (eventMapping) {
     // Check if event should be processed or ignored
@@ -194,7 +226,9 @@ export function destinationPush(
 
     // Transform event to a custom data
     if (eventMapping.data) {
-      const dataEvent = resolveMappingData(event, eventMapping.data);
+      const dataEvent = resolveMappingData(event, eventMapping.data, {
+        instance,
+      });
       data =
         isObject(data) && isObject(dataEvent) // Only merge objects
           ? assign(data, dataEvent)

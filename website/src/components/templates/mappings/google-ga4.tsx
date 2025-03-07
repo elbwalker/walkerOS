@@ -1,5 +1,8 @@
 import { getEvent } from '@elbwalker/utils';
-import { DestinationInit, DestinationPush } from '../destination';
+import {
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/destination';
 import { mapping } from '@elbwalker/destination-web-google-ga4/examples';
 
 export const GoogleGA4Init: React.FC = () => {

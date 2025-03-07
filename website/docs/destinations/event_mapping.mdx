@@ -4,10 +4,12 @@ description: How to transform events into another required format.
 sidebar_position: 3
 ---
 
-import { DestinationContextProvider } from '@site/src/components/templates/destination';
-import { DestinationPush } from '@site/src/components/templates/destination';
 import Link from '@docusaurus/Link';
 import { getEvent } from '@elbwalker/utils';
+import {
+  DestinationContextProvider,
+  DestinationPush,
+} from '@site/src/components/organisms/destination';
 
 export const event = getEvent('order complete');
 
