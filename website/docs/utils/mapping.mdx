@@ -95,7 +95,8 @@ to standard fields of the destination.
     { a: 0, b: 1, c: 2 },
     'b',
   )`}
-  output={`0`}
+  output={`1`}
+  emptyText={`undefined`}
   fn={logValue}
 />
 
@@ -107,6 +108,7 @@ to standard fields of the destination.
     'arr.1',
   );`}
   output={`"bar"`}
+  emptyText={`undefined`}
   fn={logValue}
 />
 
@@ -120,6 +122,7 @@ to standard fields of the destination.
     { key: 'foo' },
   );`}
   output={`"bar"`}
+  emptyText={`undefined`}
   fn={logValue}
 />
 
@@ -130,6 +133,7 @@ to standard fields of the destination.
   labelInput="Configuration"
   input={`getMappingValue({}, { value: 'foo' });`}
   output={`"foo"`}
+  emptyText={`undefined`}
   fn={logValue}
 />
 
@@ -143,6 +147,7 @@ to standard fields of the destination.
     { fn: (obj) => obj.foo.toUpperCase() },
   );`}
   output={`"BAR"`}
+  emptyText={`undefined`}
   fn={logValue}
 />
 
@@ -166,6 +171,7 @@ to standard fields of the destination.
     bar: 'baz',
     obj: { recursive: true },
   }`}
+  emptyText={`undefined`}
   fn={logValue}
 />
 
@@ -179,6 +185,7 @@ to standard fields of the destination.
     { loop: ['arr', 'id'] },
   );`}
   output={`['foo', 'bar']`}
+  emptyText={`undefined`}
   fn={logValue}
 />
 
@@ -187,8 +194,15 @@ to standard fields of the destination.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue({ foo: 'bar' }, { key: 'foo', validate: (v) => v === 'bar' });`}
+  input={`getMappingValue(
+    { foo: 'bar' },
+    {
+      key: 'foo',
+      validate: (v) => v === 'bar',
+    },
+  );`}
   output={`"bar"`}
+  emptyText={`undefined`}
   fn={logValue}
 />
 
@@ -198,11 +212,20 @@ to standard fields of the destination.
   showMiddle={false}
   labelInput="Configuration"
   input={`getMappingValue(
-    { name: 'foo', consent: { functional: true } }, // event with consent state
-    { key: 'name', consent: { marketing: true } }, // required consent
-    { instance }, // instance with consent state
+    {
+      name: 'foo',
+      consent: {
+        functional: true,
+        // marketing: true
+      },
+    },
+    {
+      key: 'name',
+      consent: { marketing: true }, // required consent
+    },
   );`}
-  output={`undefined (no marketing required consent)`}
+  output={`undefined (no marketing consent)`}
+  emptyText={`undefined (no marketing consent)`}
   fn={logValue}
 />
 

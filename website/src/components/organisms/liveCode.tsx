@@ -18,6 +18,7 @@ export interface LiveCodeProps {
   labelInput?: string;
   labelConfig?: string;
   labelOutput?: string;
+  emptyText?: string;
   disableInput?: boolean;
   disableConfig?: boolean;
   showMiddle?: boolean;
@@ -37,6 +38,7 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
     labelInput = 'Event',
     labelConfig = 'Custom Config',
     labelOutput = 'Result',
+    emptyText = 'No event yet.',
     disableInput = false,
     disableConfig = false,
     height,
@@ -112,7 +114,7 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
 
           <CodeBox
             label={labelOutput}
-            value={output[0] || 'No event yet.'}
+            value={output[0] || emptyText}
             className={boxClassNames}
             height={height}
             smallText={smallText}
