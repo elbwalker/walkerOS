@@ -1,4 +1,5 @@
 import type { Destination, Mapping, WalkerOS } from '@elbwalker/types';
+import type { DestinationWeb } from '@elbwalker/walker.js';
 import React, {
   createContext,
   useCallback,
@@ -13,7 +14,7 @@ import { formatValue, parseInput } from '../molecules/codeBox';
 interface DestinationContextValue {
   customConfig: WalkerOS.AnyObject;
   setConfig: (config: WalkerOS.AnyObject) => void;
-  destination: Destination.Destination;
+  destination: DestinationWeb.Destination;
   fnName: string;
 }
 
@@ -23,7 +24,7 @@ const DestinationContext = createContext<DestinationContextValue | undefined>(
 
 interface DestinationContextProviderProps {
   children: React.ReactNode;
-  destination: Destination.Destination;
+  destination: DestinationWeb.Destination;
   initialConfig?: WalkerOS.AnyObject;
   fnName?: string;
 }
@@ -62,39 +63,34 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
   custom = {},
 }) => {
   const { destination, setConfig, fnName } = useDestinationContext();
-  const left = formatValue(custom);
+  const input = formatValue(custom);
 
   const mappingFn = (
-    left: never,
+    input: never,
     middle: never,
     log: (...args: unknown[]) => void,
   ) => {
-    const leftValue = parseInput(left);
-    setConfig(leftValue);
-    try {
-      // @TODO this is ugly af
-      (
-        (destination as unknown as WalkerOS.AnyObject)
-          .init as WalkerOS.AnyFunction
-      )(
-        {
-          custom: leftValue,
-          fn: log,
-        },
-        {},
-      );
-    } catch (error) {
-      log(`Error mappingFn: ${error}`);
-    }
+    const inputValue = parseInput(input);
+    setConfig(inputValue);
+
+    tryCatch(destination.init)(
+      {
+        custom: inputValue,
+        fn: log,
+      },
+      {} as never,
+    ),
+      (error) => {
+        log(`Error mappingFn: ${error}`);
+      };
   };
 
   return (
     <LiveCode
       fnName={fnName}
-      input={left}
+      input={input}
       fn={mappingFn}
       labelInput="Custom Config"
-      showMiddle={false}
       labelOutput="Result"
     />
   );
@@ -209,7 +205,7 @@ function resolveMappingData(
 
 export function destinationPush(
   instance: WalkerOS.Instance,
-  destination: Destination.Destination,
+  destination: DestinationWeb.Destination,
   event: WalkerOS.Event,
 ): boolean {
   const { config } = destination;

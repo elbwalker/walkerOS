@@ -9,22 +9,22 @@ export const GoogleGA4Init: React.FC = () => {
   return (
     <DestinationInit
       custom={`{
-    measurementId: 'G-XXXXXXXXXX', // Required
-    debug: false,
-    include: ['globals'],
-    pageview: false,
-    data: {
-      map: {
-        currency: {
-          value: 'EUR',
-          key: 'data.currency',
-        },
+  measurementId: 'G-XXXXXXXXXX', // Required
+  debug: false,
+  include: ['globals'],
+  pageview: false,
+  data: {
+    map: {
+      currency: {
+        value: 'EUR',
+        key: 'data.currency',
       },
     },
-    server_container_url: 'https://server.example.com',
-    snakeCase: true,
-    transport_url: 'https://www.google-analytics.com/g/collect',
-  }`}
+  },
+  server_container_url: 'https://server.example.com',
+  snakeCase: true,
+  transport_url: 'https://www.google-analytics.com/g/collect',
+}`}
     />
   );
 };
@@ -40,14 +40,9 @@ export const GoogleGA4ProductAdd: React.FC = () => {
 
 export const GoogleGA4OrderComplete: React.FC = () => {
   return (
-    <>
-      <pre className="language-typescript">
-        <code>{mapping.lol}</code>
-      </pre>
-      <DestinationPush
-        event={getEvent('order complete')}
-        mapping={mapping.purchase}
-      />
-    </>
+    <DestinationPush
+      event={getEvent('order complete')}
+      mapping={mapping.purchase}
+    />
   );
 };
