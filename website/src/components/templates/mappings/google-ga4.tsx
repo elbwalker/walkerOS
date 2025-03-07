@@ -2,7 +2,7 @@ import { getEvent } from '@elbwalker/utils';
 import {
   DestinationInit,
   DestinationPush,
-} from '@site/src/components/organisms/destination';
+} from '@site/src/components/organisms/liveDestination';
 import { mapping } from '@elbwalker/destination-web-google-ga4/examples';
 
 export const GoogleGA4Init: React.FC = () => {

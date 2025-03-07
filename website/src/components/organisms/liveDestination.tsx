@@ -7,7 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { createEvent } from '@elbwalker/utils';
-import { LiveCode } from '../organisms/liveCode';
+import { LiveCode } from './liveCode';
 import { formatValue, parseInput } from '../molecules/codeBox';
 
 interface DestinationContextValue {
