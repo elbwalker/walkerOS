@@ -194,7 +194,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
           </div>
         </div>
       )}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto max-h-[calc(100vh-16rem)]">
         {!disabled && (
           <div className="absolute bottom-2 right-2 text-gray-500">
             <svg

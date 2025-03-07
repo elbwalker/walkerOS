@@ -55,8 +55,10 @@ const FullScreenOverlay: React.FC<FullScreenOverlayProps> = ({
             />
           </svg>
         </button>
-        <div className="w-full h-full items-center justify-center p-16">
-          {children}
+        <div className="w-full h-full flex items-center justify-center p-16">
+          <div className="w-full max-w-[90vw] max-h-[calc(100vh-8rem)] flex flex-col gap-2">
+            {children}
+          </div>
         </div>
       </div>
     </div>
