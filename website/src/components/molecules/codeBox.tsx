@@ -1,5 +1,5 @@
 import { WalkerOS } from '@elbwalker/types';
-import { isString } from '@elbwalker/utils';
+import { isString, isDefined } from '@elbwalker/utils';
 import { Highlight, themes as prismThemes } from 'prism-react-renderer';
 import Editor from 'react-simple-code-editor';
 
@@ -9,7 +9,7 @@ interface FormatValueProps {
 }
 
 export const formatValue = (value: unknown, options: FormatValueProps = {}) => {
-  if (!value) return;
+  if (!isDefined(value)) return;
 
   const { intent = 2, quotes = false } = options;
 

@@ -5,7 +5,7 @@ description: How to configure walkerOS node source.
 ---
 
 import Link from '@docusaurus/Link';
-import { LMRCodeBoxes } from '@site/src/components/templates/lmrCodeBoxes';
+import { LiveCode } from '@site/src/components/templates/liveCode';
 
 There are a few configuration options when creating a dataLayer source instance:
 
@@ -66,11 +66,11 @@ Use `console.log` for the `elb` function to inspect events.
 The `custom.command` mapping property is used to map the event to a walkerOS
 command and call `elb(name, data)` with the two parameters `name` and `data`.
 
-<LMRCodeBoxes
+<LiveCode
   smallText={true}
   labelInput="Configuration"
   disableInput={true}
-  left={`sourceDataLayer({
+  input={`sourceDataLayer({
     elb,
     mapping: {
       'consent update': {
@@ -88,14 +88,14 @@ command and call `elb(name, data)` with the two parameters `name` and `data`.
   });`}
   labelConfig="Event"
   inputConfig={true}
-  middle={`gtag('consent', 'update', {
+  config={`gtag('consent', 'update', {
     ad_user_data: 'denied',
     ad_personalization: 'denied',
     ad_storage: 'denied',
     analytics_storage: 'granted',
     wait_for_update: 500,
   });`}
-  right={`elb('walker consent', {
+  output={`elb('walker consent', {
     analytics: true,
     marketing: false,
   });`}
@@ -116,11 +116,11 @@ might have been pushed by a walker.js destination.
 
 ### add_to_cart
 
-<LMRCodeBoxes
+<LiveCode
   smallText={true}
   labelInput="Configuration"
   disableInput={true}
-  left={`sourceDataLayer({
+  input={`sourceDataLayer({
     elb,
     mapping: {
       add_to_cart: {
@@ -148,7 +148,7 @@ might have been pushed by a walker.js destination.
   });`}
   labelConfig="Event"
   inputConfig={true}
-  middle={`dataLayer.push({
+  config={`dataLayer.push({
     event: 'add_to_cart',
     currency: 'EUR',
     value: 840,
@@ -164,7 +164,7 @@ might have been pushed by a walker.js destination.
       quantity: 2,
     }],
   });`}
-  right={`elb({
+  output={`elb({
     event: 'product add',
     data: {
       currency: 'EUR',
@@ -183,11 +183,11 @@ might have been pushed by a walker.js destination.
 
 ### purchase
 
-<LMRCodeBoxes
+<LiveCode
   smallText={true}
   labelInput="Configuration"
   disableInput={true}
-  left={`sourceDataLayer({
+  input={`sourceDataLayer({
     elb,
     mapping: {
       purchase: {
@@ -227,7 +227,7 @@ might have been pushed by a walker.js destination.
   });`}
   labelConfig="Event"
   inputConfig={true}
-  middle={`gtag('event', 'purchase', {
+  config={`gtag('event', 'purchase', {
     transaction_id: '0rd3r1d',
     currency: 'EUR',
     shipping: 5.22,
@@ -250,7 +250,7 @@ might have been pushed by a walker.js destination.
       price: 42,
     }],
   })`}
-  right={`elb({
+  output={`elb({
     event: 'order complete',
     data: {
       id: '0rd3r1d',
