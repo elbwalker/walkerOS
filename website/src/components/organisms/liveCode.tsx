@@ -1,12 +1,12 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { useEffect, useState, useRef, memo } from 'react';
-import { debounce } from '@elbwalker/utils';
+import { debounce, isString } from '@elbwalker/utils';
 import CodeBox, { formatValue } from '../molecules/codeBox';
 
 export interface LiveCodeProps {
-  input: string;
-  config?: string;
-  output?: string;
+  input: unknown;
+  config?: unknown;
+  output?: unknown;
   options?: WalkerOS.AnyObject;
   fn?: (
     input: unknown,
@@ -43,9 +43,15 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
     smallText,
     className,
   }) => {
-    const [input, setInput] = useState(initInput);
-    const [config, setConfig] = useState(initConfig);
-    const [output, setOutput] = useState<string[]>([initOutput]);
+    const [input, setInput] = useState(
+      isString(initInput) ? initInput : formatValue(initInput),
+    );
+    const [config, setConfig] = useState(
+      isString(initConfig) ? initConfig : formatValue(initConfig),
+    );
+    const [output, setOutput] = useState<string[]>([
+      isString(initOutput) ? initOutput : formatValue(initOutput),
+    ]);
 
     const log = useRef((...args: unknown[]) => {
       const params = args

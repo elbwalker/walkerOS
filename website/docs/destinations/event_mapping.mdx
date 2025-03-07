@@ -5,11 +5,20 @@ sidebar_position: 3
 ---
 
 import Link from '@docusaurus/Link';
-import { getEvent } from '@elbwalker/utils';
+import { getEvent, getMappingValue } from '@elbwalker/utils';
+import {
+  formatValue,
+  parseInput,
+} from '@site/src/components/molecules/codeBox';
+import { LiveCode } from '@site/src/components/organisms/liveCode';
 import {
   DestinationContextProvider,
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
+
+export const logFn = (input, config, log) => {
+  log(getMappingValue(parseInput(input), parseInput(config)));
+};
 
 export const event = getEvent('order complete');
 
@@ -135,12 +144,13 @@ to access event properties (e.g. `event.data.total`).
 The `name` property is used to rename the event. It overrides the original event
 name.
 
-<DestinationPush event={{ event: event.event }}>
-  {`{
-    name: "purchase",
-    data: "event"
-  }`}
-</DestinationPush>
+<DestinationPush
+  event={{ event: event.event }}
+  mapping={{
+    name: 'purchase',
+    data: 'event',
+  }}
+/>
 
 Example: A walkerOS `order complete` usually becomes a `purchase` event in GA4
 or an `order` event in Piwik PRO.
@@ -151,7 +161,28 @@ The `data` property is used to transform the event data. It fully describes the
 data structure for the destination.
 See&nbsp;<Link to="#valueconfig">ValueConfig</Link> for detailed usage.
 
+<DestinationPush
+  event={{ event: event.event }}
+  mapping={`{
+    data: {
+      map: {
+        event: 'event',
+        for: { value: 'more info' },
+        read: { value: 'ValueConfig' },
+      },
+    },
+  }`}
+/>
+
 ### ignore
+
+<DestinationPush
+  event={{ event: event.event }}
+  mapping={`{
+    ignore: true, // Comment me
+    data: 'event',
+  }`}
+/>
 
 The `ignore` property is used to ignore the event. If set to `true`, the event
 won't get pushed to the destination.
@@ -176,6 +207,15 @@ The pushed event(s) are an object with the following properties:
 - `events`: An array of the actual events
 - `data`: The transformed event data
 
+<DestinationPush
+  event={{ event: event.event }}
+  height={'256px'}
+  mapping={`{
+    batch: 1000,
+    data: 'event'
+  }`}
+/>
+
 ## ValueConfig
 
 The `data` property is used to transform the event data. It is used to create
@@ -187,72 +227,84 @@ It can create any structure of data. With support for recursive data structures.
 
 A key accesses a property from the event context.
 
-<DestinationPush event={{ data: event.data }}>
-  {`{
-    data: {
-      key: 'data.id'
-    }
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ data: event.data }}
+  config={`{
+    key: 'data.id'
   }`}
-</DestinationPush>
+  fn={logFn}
+/>
 
 ### string
 
 A simple string is short for `{key: 'value'}`. And accesses a property from the
 event context.
 
-<DestinationPush event={{ data: event.data }}>
-  {`{
-    data: "data.total"
-  }`}
-</DestinationPush>
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ data: event.data }}
+  config={`'data.total'`}
+  fn={logFn}
+/>
 
 ### value
 
 Used for creating a static value. Can also be used as a fallback if no other
 mapping resolves a value.
 
-<DestinationPush event={{ data: event.event }}>
-  {`{
-    data: {
-      value: 'static'
-    }
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ event: event.event }}
+  config={`{
+    value: 'static'
   }`}
-</DestinationPush>
+  fn={logFn}
+/>
 
 ### map
 
 Used to create an object. The keys are the property names and the values are
 again a&nbsp;<Link to="#valueconfig">ValueConfig</Link> resolving to a value.
 
-<DestinationPush event={{ globals: event.globals, context: event.context }}>
-  {`{
-    data: {
-      map: {
-        pageGroup: 'globals.pagegroup',
-        shoppingStage: 'context.shopping.0',
-      }
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ globals: event.globals, context: event.context }}
+  config={`{
+    map: {
+      pageGroup: 'globals.pagegroup',
+      shoppingStage: 'context.shopping.0',
     }
   }`}
-</DestinationPush>
+  fn={logFn}
+/>
 
 ### set
 
 Used to create an array of fixed values. Each item is a `ValueConfig` resolving
 to a `WalkerOS.Property`.
 
-<DestinationPush
-  event={{
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{
     trigger: event.trigger,
     entity: event.entity,
     action: event.action,
   }}
->
-  {`{
-    data: {
-      set: ['trigger', 'entity', 'action']
-    }
+  config={`{
+    set: [
+      'trigger',
+      'entity',
+      'action'
+    ]
   }`}
-</DestinationPush>
+  fn={logFn}
+/>
 
 ### loop
 
@@ -260,42 +312,56 @@ Loops over the first parameter and maps the second to the current value. It is
 used for creating an array of dynamic length. Use `this` to loop over the
 current event.
 
-<DestinationPush event={{ nested: event.nested }} height={'256px'}>
-  {`{
-    data: {
-      loop: ['nested', 'data.name']
-    }
+<LiveCode
+  showMiddle={false}
+  height={'256px'}
+  labelConfig="Data config"
+  input={{ nested: event.nested }}
+  config={`{
+    loop: [
+      'nested',
+      'data.name'
+    ]
   }`}
-</DestinationPush>
+  fn={logFn}
+/>
 
 ### condition
 
 Is a function to check if the mapping should be used. It returns a boolean, if
 it's `true` the mapping will be used.
 
-<DestinationPush event={{ event: event.event, data: event.data }}>
-  {`{
-    data: {
-      condition: (e) => e.data.total > 100,
-      key: "event"
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ event: event.event, data: event.data }}
+  config={`{
+    condition: (e) => {
+      return e.data.total > 100
     },
+    key: "event"
   }`}
-</DestinationPush>
+  fn={logFn}
+/>
 
 ### consent
 
 Some values may require an explicit consent state. It can be used to redact
 values and protect a users privacy by hiding information.
 
-<DestinationPush event={{ consent: { marketing: true }, data: event.data }}>
-  {`{
-    data: {
-      consent: { marketing: true },
-      key: 'data.id',
-      value: 'redacted',
-    }
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ consent: { marketing: true }, data: event.data }}
+  config={`{
+    consent: {
+      marketing: true
+    },
+    key: 'data.id',
+    value: 'redacted',
   }`}
-</DestinationPush>
+  fn={logFn}
+/>
 
 This can be used to e.g. redact PII like clickIds from a `session start` event.
 
@@ -305,30 +371,36 @@ A function that returns the value. It receives the current `event` context, the
 `mapping` configuration and the `options` about the current instance with
 additional properties as parameters.
 
-<DestinationPush event={{ data: event.data }}>
-  {`{
-    data: {
-      fn: (event) => {
-        return "id is " + event.data.id;
-      }
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ data: event.data }}
+  config={`{
+    fn: (event) => {
+      return "id is " + event.data.id;
     }
   }`}
-</DestinationPush>
+  fn={logFn}
+/>
 
 ### validate
 
 A final check to validate the value. After `key`, `loop`, `map` or `set`
 resolved the value, it will be validated with the `validate` function.
 
-<DestinationPush event={{ data: event.data }}>
-  {`{
-    data: {
-      validate: (value) => typeof value == "string",
-      key: "data.id",
-      value: "fallback"
-    }
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ data: event.data }}
+  config={`{
+    validate: (value) => {
+      return typeof value == "string"
+    },
+    key: "data.id",
+    value: "fallback"
   }`}
-</DestinationPush>
+  fn={logFn}
+/>
 
 ## Execution order
 
@@ -343,14 +415,6 @@ checked with the `validate` function. Finally, the value is casted to the
 correct type. If the validation or casting fails, the value will be either the
 static default `value` or the next mapping would be used or ultimately
 `undefined`.
-
-## Example
-
-:::warning
-
-Make sure to not list duplicate keys in the mapping, since this is an object.
-
-:::
 
 :::tip
 

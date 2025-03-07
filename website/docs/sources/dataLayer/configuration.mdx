@@ -87,7 +87,7 @@ command and call `elb(name, data)` with the two parameters `name` and `data`.
     },
   });`}
   labelConfig="Event"
-  inputConfig={true}
+  disableConfig={true}
   config={`gtag('consent', 'update', {
     ad_user_data: 'denied',
     ad_personalization: 'denied',
@@ -147,7 +147,7 @@ might have been pushed by a walker.js destination.
     },
   });`}
   labelConfig="Event"
-  inputConfig={true}
+  disableConfig={true}
   config={`dataLayer.push({
     event: 'add_to_cart',
     currency: 'EUR',
@@ -226,7 +226,7 @@ might have been pushed by a walker.js destination.
     },
   });`}
   labelConfig="Event"
-  inputConfig={true}
+  disableConfig={true}
   config={`gtag('event', 'purchase', {
     transaction_id: '0rd3r1d',
     currency: 'EUR',

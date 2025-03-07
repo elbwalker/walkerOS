@@ -30,9 +30,14 @@ export const formatValue = (value: unknown, options: FormatValueProps = {}) => {
   return str;
 };
 
-export const parseInput = (code: unknown, scope: WalkerOS.AnyObject = {}) => {
+export const parseInput = (
+  code: unknown,
+  scope: WalkerOS.AnyObject = {},
+  ...args: unknown[]
+) => {
   return new Function(...Object.keys(scope), `"use strict"; return ${code}`)(
     ...Object.values(scope), // Scope as arguments
+    ...args,
   );
 };
 
