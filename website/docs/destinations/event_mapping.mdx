@@ -56,12 +56,7 @@ explicitly matched.
 
 <DestinationPush
   event={event}
-  height={'666px'}
-  labelMiddle={'Config'}
-  eventConfig={false}
-  smallText={true}
->
-  {`{
+  mapping={`{
     order: {
       complete: {
         name: "purchase",
@@ -101,7 +96,11 @@ explicitly matched.
       }
     }
   }`}
-</DestinationPush>
+  height={'666px'}
+  labelMiddle={'Config'}
+  eventConfig={false}
+  smallText={true}
+/>
 
 Change the `event` name to `order visible` and see how the batched mapping is
 applied after 1 second.
