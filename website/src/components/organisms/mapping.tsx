@@ -26,6 +26,7 @@ interface MappingProps {
   height?: number;
   smallText?: boolean;
   className?: string;
+  fnScope?: Record<string, unknown>;
 }
 
 const Mapping: React.FC<MappingProps> = memo(
@@ -46,6 +47,7 @@ const Mapping: React.FC<MappingProps> = memo(
     height,
     smallText,
     className,
+    fnScope = {},
   }) => {
     const [left, setLeft] = useState(initLeft);
     const [middle, setMiddle] = useState(initMiddle);
@@ -67,10 +69,7 @@ const Mapping: React.FC<MappingProps> = memo(
           setRight([]);
 
           try {
-            const parsedLeft = parseInput(leftStr);
-            const parsedMiddle = parseInput(middleStr);
-
-            fn(parsedLeft, parsedMiddle, log, options);
+            fn(leftStr, middleStr, log, options);
           } catch (e) {
             setRight([`Preview error: ${String(e)}`]);
           }

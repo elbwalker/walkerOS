@@ -1,3 +1,4 @@
+import { WalkerOS } from '@elbwalker/types';
 import { isString } from '@elbwalker/utils';
 import { Highlight, themes as prismThemes } from 'prism-react-renderer';
 import Editor from 'react-simple-code-editor';
@@ -27,8 +28,10 @@ export const formatValue = (value: unknown, options: FormatValueProps = {}) => {
   return str;
 };
 
-export const parseInput = (code: unknown): unknown => {
-  return Function('"use strict"; return (' + code + ')')();
+export const parseInput = (code: unknown, scope: WalkerOS.AnyObject = {}) => {
+  return new Function(...Object.keys(scope), `"use strict"; return ${code}`)(
+    ...Object.values(scope), // Scope as arguments
+  );
 };
 
 interface CodeBoxProps {

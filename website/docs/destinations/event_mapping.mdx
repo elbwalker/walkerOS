@@ -256,7 +256,8 @@ to a `WalkerOS.Property`.
 ### loop
 
 Loops over the first parameter and maps the second to the current value. It is
-used for creating an array of dynamic length.
+used for creating an array of dynamic length. Use `this` to loop over the
+current event.
 
 <DestinationPush event={{ nested: event.nested }} height={'256px'}>
   {`{

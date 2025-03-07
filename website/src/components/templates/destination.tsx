@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import { createEvent } from '@elbwalker/utils';
 import MappingConfig from '../organisms/mapping';
-import { formatValue } from '../molecules/codeBox';
+import { formatValue, parseInput } from '../molecules/codeBox';
 interface DestinationContextValue {
   customConfig: WalkerOS.AnyObject;
   setConfig: (config: WalkerOS.AnyObject) => void;
@@ -68,7 +68,8 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
     middle: never,
     log: (...args: unknown[]) => void,
   ) => {
-    setConfig(left);
+    const leftValue = parseInput(left);
+    setConfig(leftValue);
     try {
       // @TODO this is ugly af
       (
@@ -76,7 +77,7 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
           .init as WalkerOS.AnyFunction
       )(
         {
-          custom: left,
+          custom: leftValue,
           fn: log,
         },
         {},
@@ -134,13 +135,15 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
       options: WalkerOS.AnyObject,
     ) => {
       try {
-        const event = createEvent(left);
+        const leftValue = parseInput(left);
+        const middleValue = parseInput(middle);
+        const event = createEvent(leftValue);
         const [entity, action] = event.event.split(' ');
         const finalMapping = eventConfig
           ? {
-              [entity]: { [action]: middle },
+              [entity]: { [action]: middleValue },
             }
-          : middle;
+          : middleValue;
 
         destinationPush(
           { hooks: {}, consent: event.consent } as never, // Fake instance

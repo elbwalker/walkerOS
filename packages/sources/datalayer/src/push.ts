@@ -49,7 +49,6 @@ export function push(config: Config, ...args: unknown[]) {
         if (mappedObj) {
           const { command, event } = mappedObj;
 
-          // @TODO remove command and use set like in Piwik PRO
           if (command) {
             if (command.name)
               config.elb(command.name, command.data as Elb.PushData);
