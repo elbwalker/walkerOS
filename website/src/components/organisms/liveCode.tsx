@@ -91,8 +91,8 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
 
     const renderCodeBoxes = (isFullScreenMode = false) => (
       <div
-        className={`flex flex-col xl:flex-row gap-2 ${
-          isFullScreenMode ? 'h-full' : 'scroll'
+        className={`flex flex-col xl:flex-row gap-2 scroll ${
+          isFullScreenMode ? 'h-full' : ''
         }`}
         onClick={(e) => e.stopPropagation()}
       >
