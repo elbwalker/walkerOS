@@ -99,7 +99,6 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
 interface DestinationPushProps {
   event: WalkerOS.PartialEvent;
   mapping?: Mapping.EventConfig | string;
-  children?: React.ReactNode;
   height?: number;
   smallText?: boolean;
   className?: string;
@@ -112,7 +111,6 @@ interface DestinationPushProps {
 export const DestinationPush: React.FC<DestinationPushProps> = ({
   event,
   mapping = {},
-  children,
   height,
   smallText,
   className,
@@ -122,25 +120,24 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
   eventConfig = true,
 }) => {
   const { customConfig, destination, fnName } = useDestinationContext();
-  const middleValue = children ?? mapping;
+  const inputValue = formatValue(event);
+  const mappingValue = formatValue(mapping);
 
   const mappingFn = useCallback(
     (
-      left: unknown,
-      middle: unknown,
+      input: unknown,
+      config: unknown,
       log: (...args: unknown[]) => void,
       options: WalkerOS.AnyObject,
     ) => {
       try {
-        const leftValue = parseInput(left);
-        const middleValue = parseInput(middle);
-        const event = createEvent(leftValue);
+        const inputValue = parseInput(input);
+        const configValue = parseInput(config);
+        const event = createEvent(inputValue);
         const [entity, action] = event.event.split(' ');
         const finalMapping = eventConfig
-          ? {
-              [entity]: { [action]: middleValue },
-            }
-          : middleValue;
+          ? { [entity]: { [action]: configValue } }
+          : configValue;
 
         destinationPush(
           { hooks: {}, consent: event.consent } as never, // Fake instance
@@ -164,8 +161,8 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
   return (
     <LiveCode
       fnName={fnName}
-      input={formatValue(event)}
-      config={formatValue(middleValue)}
+      input={inputValue}
+      config={mappingValue}
       fn={mappingFn}
       options={customConfig}
       height={height}
