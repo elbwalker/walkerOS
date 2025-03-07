@@ -1,77 +1,72 @@
 import type { Mapping as WalkerOSMapping, WalkerOS } from '@elbwalker/types';
 import { useEffect, useState, useRef, memo } from 'react';
 import { debounce } from '@elbwalker/utils';
-import CodeBox, { formatValue, parseInput } from '../molecules/codeBox';
+import CodeBox, { formatValue } from '../molecules/codeBox';
 
 interface MappingProps {
-  left: string;
-  middle?: string;
-  right?: string;
+  input: string;
+  config?: string;
+  output?: string;
   options?: WalkerOS.AnyObject;
   mapping?: WalkerOSMapping.Config;
   fn?: (
-    left: unknown,
-    middle: unknown,
+    input: unknown,
+    config: unknown,
     log: (...args: unknown[]) => void,
     options?: WalkerOS.AnyObject,
   ) => void;
   fnName?: string;
-  labelLeft?: string;
-  labelMiddle?: string;
-  labelRight?: string;
-  disabledLeft?: boolean;
-  disabledMiddle?: boolean;
-  disabledRight?: boolean;
+  labelInput?: string;
+  labelConfig?: string;
+  labelOutput?: string;
+  disableInput?: boolean;
+  disableConfig?: boolean;
   showMiddle?: boolean;
   height?: number;
   smallText?: boolean;
   className?: string;
-  fnScope?: Record<string, unknown>;
 }
 
 const Mapping: React.FC<MappingProps> = memo(
   ({
-    left: initLeft = '{}',
-    middle: initMiddle = '{}',
-    right: initRight = '',
+    input: initInput,
+    config: initConfig,
+    output: initOutput = '',
     options,
     fn,
     fnName,
-    labelLeft = 'Event',
-    labelMiddle = 'Custom Config',
-    labelRight = 'Result',
-    showMiddle = true,
-    disabledLeft = false,
-    disabledMiddle = false,
-    disabledRight = true,
+    labelInput = 'Event',
+    labelConfig = 'Custom Config',
+    labelOutput = 'Result',
+    disableInput = false,
+    disableConfig = false,
     height,
     smallText,
     className,
-    fnScope = {},
   }) => {
-    const [left, setLeft] = useState(initLeft);
-    const [middle, setMiddle] = useState(initMiddle);
-    const [right, setRight] = useState<string[]>([initRight]);
+    const [input, setInput] = useState(initInput);
+    const [config, setConfig] = useState(initConfig);
+    const [output, setOutput] = useState<string[]>([initOutput]);
 
     const log = useRef((...args: unknown[]) => {
       const params = args
         .map((arg) => formatValue(arg, { quotes: true }))
         .join(', ');
 
-      setRight([fnName ? `${fnName}(${params})` : params]);
+      setOutput([fnName ? `${fnName}(${params})` : params]);
     }).current;
 
     const updateRight = useRef(
       debounce(
-        (leftStr: string, middleStr: string, options: WalkerOS.AnyObject) => {
+        (inputStr: string, configStr: string, options: WalkerOS.AnyObject) => {
           if (!fn) return;
 
-          setRight([]);
+          setOutput([]);
 
           try {
-            fn(leftStr, middleStr, log, options);
+            fn(inputStr, configStr, log, options);
           } catch (e) {
-            setRight([`Preview error: ${String(e)}`]);
+            setOutput([`Preview error: ${String(e)}`]);
           }
         },
         500,
@@ -80,8 +75,8 @@ const Mapping: React.FC<MappingProps> = memo(
     ).current;
 
     useEffect(() => {
-      updateRight(left, middle, options);
-    }, [left, middle, options]);
+      updateRight(input, config, options);
+    }, [input, config, options]);
 
     const boxClassNames = `flex-1 resize max-h-96 xl:max-h-full flex flex-col ${className}`;
 
@@ -89,21 +84,21 @@ const Mapping: React.FC<MappingProps> = memo(
       <div className="my-4">
         <div className={`flex flex-col xl:flex-row gap-2 scroll`}>
           <CodeBox
-            label={labelLeft}
-            disabled={disabledLeft}
-            value={left}
-            onChange={setLeft}
+            label={labelInput}
+            disabled={disableInput}
+            value={input}
+            onChange={setInput}
             className={boxClassNames}
             height={height}
             smallText={smallText}
           />
 
-          {showMiddle && (
+          {config && (
             <CodeBox
-              label={labelMiddle}
-              disabled={disabledMiddle}
-              value={middle}
-              onChange={setMiddle}
+              label={labelConfig}
+              disabled={disableConfig}
+              value={config}
+              onChange={setConfig}
               className={boxClassNames}
               height={height}
               smallText={smallText}
@@ -111,9 +106,8 @@ const Mapping: React.FC<MappingProps> = memo(
           )}
 
           <CodeBox
-            label={labelRight}
-            disabled={disabledRight}
-            value={right[0] || 'No event yet.'}
+            label={labelOutput}
+            value={output[0] || 'No event yet.'}
             className={boxClassNames}
             height={height}
             smallText={smallText}

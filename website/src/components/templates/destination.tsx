@@ -90,11 +90,11 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
   return (
     <MappingConfig
       fnName={fnName}
-      left={left}
+      input={left}
       fn={mappingFn}
-      labelLeft="Custom Config"
+      labelInput="Custom Config"
       showMiddle={false}
-      labelRight="Result"
+      labelOutput="Result"
     />
   );
 };
@@ -167,16 +167,16 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
   return (
     <MappingConfig
       fnName={fnName}
-      left={formatValue(event)}
-      middle={formatValue(middleValue)}
+      input={formatValue(event)}
+      config={formatValue(middleValue)}
       fn={mappingFn}
       options={customConfig}
       height={height}
       smallText={smallText}
       className={className}
-      labelLeft={labelLeft}
-      labelMiddle={labelMiddle}
-      labelRight={labelRight}
+      labelInput={labelLeft}
+      labelConfig={labelMiddle}
+      labelOutput={labelRight}
     />
   );
 };

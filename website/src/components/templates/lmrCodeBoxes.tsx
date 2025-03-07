@@ -1,55 +1,49 @@
 import React from 'react';
 import MappingConfig from '../organisms/mapping';
-import { formatValue, parseInput } from '../molecules/codeBox';
+import { formatValue } from '../molecules/codeBox';
 
 interface LMRCodeBoxesProps {
-  left: string;
-  middle: string;
-  right?: string;
+  input: string;
+  config: string;
+  output?: string;
   height?: number;
   smallText?: boolean;
   className?: string;
-  showMiddle?: boolean; // @TODO remove
-  labelLeft?: string;
-  labelMiddle?: string;
-  labelRight?: string;
-  disabledLeft?: boolean;
-  disabledMiddle?: boolean;
-  disabledRight?: boolean;
-  fn?: (left, middle, log, options) => void;
+  labelInput?: string;
+  labelConfig?: string;
+  labelOutput?: string;
+  disableInput?: boolean;
+  inputConfig?: boolean;
+  fn?: (input, config, log, options) => void;
 }
 
 export const LMRCodeBoxes: React.FC<LMRCodeBoxesProps> = ({
-  left,
-  middle = '',
-  right,
+  input,
+  config,
+  output,
   height,
   smallText,
   className,
-  showMiddle,
-  labelLeft,
-  labelMiddle = 'Event Config',
-  labelRight,
-  disabledLeft,
-  disabledMiddle,
-  disabledRight,
+  labelInput,
+  labelConfig = 'Event Config',
+  labelOutput,
+  disableInput,
+  inputConfig,
   fn,
 }) => {
   return (
     <MappingConfig
-      left={formatValue(left)}
-      middle={formatValue(middle)}
-      right={formatValue(right)}
+      input={formatValue(input)}
+      config={formatValue(config)}
+      output={formatValue(output)}
       height={height}
       smallText={smallText}
       className={className}
-      showMiddle={showMiddle}
-      labelLeft={labelLeft}
-      labelMiddle={labelMiddle}
-      labelRight={labelRight}
-      disabledLeft={disabledLeft}
-      disabledMiddle={disabledMiddle}
-      disabledRight={disabledRight}
+      labelInput={labelInput}
+      labelConfig={labelConfig}
+      labelOutput={labelOutput}
+      disableInput={disableInput}
+      disableConfig={inputConfig}
       fn={fn}
     />
   );

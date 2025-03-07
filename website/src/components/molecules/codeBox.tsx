@@ -9,6 +9,8 @@ interface FormatValueProps {
 }
 
 export const formatValue = (value: unknown, options: FormatValueProps = {}) => {
+  if (!value) return;
+
   const { intent = 2, quotes = false } = options;
 
   let str = isString(value)

@@ -68,8 +68,8 @@ command and call `elb(name, data)` with the two parameters `name` and `data`.
 
 <LMRCodeBoxes
   smallText={true}
-  labelLeft="Configuration"
-  disabledLeft={true}
+  labelInput="Configuration"
+  disableInput={true}
   left={`sourceDataLayer({
     elb,
     mapping: {
@@ -86,8 +86,8 @@ command and call `elb(name, data)` with the two parameters `name` and `data`.
       },
     },
   });`}
-  labelMiddle="Event"
-  disabledMiddle={true}
+  labelConfig="Event"
+  inputConfig={true}
   middle={`gtag('consent', 'update', {
     ad_user_data: 'denied',
     ad_personalization: 'denied',
@@ -118,8 +118,8 @@ might have been pushed by a walker.js destination.
 
 <LMRCodeBoxes
   smallText={true}
-  labelLeft="Configuration"
-  disabledLeft={true}
+  labelInput="Configuration"
+  disableInput={true}
   left={`sourceDataLayer({
     elb,
     mapping: {
@@ -146,8 +146,8 @@ might have been pushed by a walker.js destination.
       },
     },
   });`}
-  labelMiddle="Event"
-  disabledMiddle={true}
+  labelConfig="Event"
+  inputConfig={true}
   middle={`dataLayer.push({
     event: 'add_to_cart',
     currency: 'EUR',
@@ -185,8 +185,8 @@ might have been pushed by a walker.js destination.
 
 <LMRCodeBoxes
   smallText={true}
-  labelLeft="Configuration"
-  disabledLeft={true}
+  labelInput="Configuration"
+  disableInput={true}
   left={`sourceDataLayer({
     elb,
     mapping: {
@@ -225,8 +225,8 @@ might have been pushed by a walker.js destination.
       },
     },
   });`}
-  labelMiddle="Event"
-  disabledMiddle={true}
+  labelConfig="Event"
+  inputConfig={true}
   middle={`gtag('event', 'purchase', {
     transaction_id: '0rd3r1d',
     currency: 'EUR',
