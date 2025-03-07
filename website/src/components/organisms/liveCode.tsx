@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, memo } from 'react';
 import { debounce } from '@elbwalker/utils';
 import CodeBox, { formatValue } from '../molecules/codeBox';
 
-interface LiveCodeProps {
+export interface LiveCodeProps {
   input: string;
   config?: string;
   output?: string;

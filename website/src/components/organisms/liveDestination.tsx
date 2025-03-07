@@ -1,5 +1,6 @@
 import type { Destination, Mapping, WalkerOS } from '@elbwalker/types';
 import type { DestinationWeb } from '@elbwalker/walker.js';
+import type { LiveCodeProps } from './liveCode';
 import React, {
   createContext,
   useCallback,
@@ -96,28 +97,18 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
   );
 };
 
-interface DestinationPushProps {
+interface DestinationPushProps
+  extends Omit<LiveCodeProps, 'input' | 'config' | 'fn' | 'options'> {
   event: WalkerOS.PartialEvent;
   mapping?: Mapping.EventConfig | string;
-  height?: number;
-  smallText?: boolean;
-  className?: string;
-  labelLeft?: string;
-  labelMiddle?: string;
-  labelRight?: string;
   eventConfig?: boolean;
 }
 
 export const DestinationPush: React.FC<DestinationPushProps> = ({
   event,
   mapping = {},
-  height,
-  smallText,
-  className,
-  labelLeft,
-  labelMiddle = 'Event Config',
-  labelRight,
   eventConfig = true,
+  ...liveCodeProps
 }) => {
   const { customConfig, destination, fnName } = useDestinationContext();
   const inputValue = formatValue(event);
@@ -165,12 +156,7 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
       config={mappingValue}
       fn={mappingFn}
       options={customConfig}
-      height={height}
-      smallText={smallText}
-      className={className}
-      labelInput={labelLeft}
-      labelConfig={labelMiddle}
-      labelOutput={labelRight}
+      {...liveCodeProps}
     />
   );
 };
