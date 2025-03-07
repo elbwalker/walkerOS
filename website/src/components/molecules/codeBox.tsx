@@ -1,7 +1,8 @@
 import { WalkerOS } from '@elbwalker/types';
-import { isString, isDefined } from '@elbwalker/utils';
+import { isString, isDefined, tryCatch } from '@elbwalker/utils';
 import { Highlight, themes as prismThemes } from 'prism-react-renderer';
 import Editor from 'react-simple-code-editor';
+import { useState } from 'react';
 
 interface FormatValueProps {
   intent?: number;
@@ -63,6 +64,17 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   height,
   smallText = false,
 }) => {
+  const [copied, setCopied] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleCopy = async () => {
+    tryCatch(async () => {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    })();
+  };
+
   const highlightCode = (code: string) => (
     <Highlight theme={prismThemes.palenight} code={code} language={language}>
       {({ tokens, getLineProps, getTokenProps }) => (
@@ -87,7 +99,37 @@ const CodeBox: React.FC<CodeBoxProps> = ({
       style={height && { height: `${height}` }}
     >
       {label && (
-        <div className="font-bold px-2 py-1 bg-base-100 text-base">{label}</div>
+        <div className="font-bold px-2 py-1 bg-base-100 text-base flex justify-between items-center">
+          <span>{label}</span>
+          <div className="relative">
+            <button
+              onClick={handleCopy}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              className="text-gray-500 hover:text-gray-300 transition-colors border-none bg-transparent p-1"
+              aria-label="Copy code"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
+              </svg>
+            </button>
+            {(isHovered || copied) && (
+              <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded shadow-sm border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                {copied ? 'Copied!' : 'Copy'}
+              </div>
+            )}
+          </div>
+        </div>
       )}
       <div className="flex-1 overflow-auto">
         {!disabled && (
