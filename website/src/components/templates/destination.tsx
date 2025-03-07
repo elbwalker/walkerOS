@@ -7,7 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { createEvent } from '@elbwalker/utils';
-import MappingConfig from '../organisms/mapping';
+import MappingConfig from '../organisms/liveCode';
 import { formatValue, parseInput } from '../molecules/codeBox';
 interface DestinationContextValue {
   customConfig: WalkerOS.AnyObject;

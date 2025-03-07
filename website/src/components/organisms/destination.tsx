@@ -7,7 +7,8 @@ import React, {
 } from 'react';
 import type { Destination, Mapping, WalkerOS } from '@elbwalker/types';
 import { createEvent } from '@elbwalker/utils';
-import EventMapping from '../organisms/mapping';
+import { LiveCode } from '../organisms/liveCode';
+import { parseInput } from '../molecules/codeBox';
 
 interface DestinationContextValue {
   customConfig: WalkerOS.AnyObject;
@@ -86,9 +87,9 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
   };
 
   return (
-    <EventMapping
+    <LiveCode
       fnName={fnName}
-      input={custom}
+      input={parseInput(custom)}
       fn={mappingFn}
       labelInput="Custom Config"
       showMiddle={false}
@@ -140,10 +141,10 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
   );
 
   return (
-    <EventMapping
+    <LiveCode
       fnName={fnName}
-      input={event}
-      config={mapping}
+      input={parseInput(event)}
+      config={parseInput(mapping)}
       fn={mappingFn}
       options={customConfig}
     />
