@@ -81,7 +81,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
 
   return (
     <div
-      className={`border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${
+      className={`border border-base-300 rounded-lg overflow-hidden bg-gray-800 relative ${
         smallText ? 'text-xs' : 'text-sm'
       } ${className}`}
       style={height && { height: `${height}` }}
@@ -90,6 +90,23 @@ const CodeBox: React.FC<CodeBoxProps> = ({
         <div className="font-bold px-2 py-1 bg-base-100 text-base">{label}</div>
       )}
       <div className="flex-1 overflow-auto">
+        {!disabled && (
+          <div className="absolute bottom-2 right-2 text-gray-500">
+            <svg
+              className="w-5 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+              />
+            </svg>
+          </div>
+        )}
         <Editor
           value={value}
           disabled={disabled}
