@@ -5,9 +5,12 @@ sidebar_position: 5
 
 import Link from '@docusaurus/Link';
 import { LiveCode } from '@site/src/components/organisms/liveCode';
-import { getMappingValue } from '@elbwalker/utils';
+import { getMappingEvent, getMappingValue } from '@elbwalker/utils';
 import { parseInput } from '@site/src/components/molecules/codeBox';
-export const logFn = (input, config, log) => {
+export const logEvent = (input, config, log) => {
+  log(parseInput(input, { getMappingEvent }));
+};
+export const logValue = (input, config, log) => {
   log(parseInput(input, { getMappingValue }));
 };
 
@@ -22,28 +25,6 @@ a `Mapping.Value` settings for a specific property to return an actual value.
 The `custom` property is used by
 each&nbsp;<Link to="/docs/destinations/">destination</Link> individually.
 
-```ts
-// @TODO update me
-const mapping: Config = {
-  entity: {
-    action: { name: 'entity_action' }, // Explicit EventConfig
-    '*': {}, // Generic EventConfig for all entity entities
-  },
-  order: {
-    complete: [
-      {
-        // EventConfig only for production
-        condition: (event: WalkerOS.PartialEvent) =>
-          event.globals?.env === 'prod',
-        ignore: true,
-      },
-      { name: 'purchase' }, // Fallback EventConfig
-    ],
-  },
-  '*': { '*': { ignore: true } },
-};
-```
-
 ## getMappingEvent
 
 `getMappingEvent(event: string, mapping?: Mapping.Config<unknown>): EventMapping`
@@ -53,28 +34,49 @@ empty object. An explicit key is favored over an asterisk `*` key. If available
 a `condition` will be checked to determine if the `EventConfig` applies. It's
 used by the&nbsp;<Link to="/docs/sources/">sources</Link>.
 
-```ts
-// @TODO remove the types?
-interface EventMapping {
-  eventMapping?: Event;
-  mappingKey?: string;
-}
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingEvent(
+    { event: 'entity action' },
+    {
+      entity: {
+        action: { name: 'entity_action' },
+      },
+    }
+  );`}
+  output={`0`}
+  fn={logEvent}
+/>
 
-getMappingEvent({ event: 'entity action' }, mapping);
-// { eventMapping: { name: 'entity_action' }, mappingKey: 'entity action' }
+Specify multiple `Mapping.EventConfig` as an array and use `condition` to check
+which `EventConfig` should be used. To test uncomment the `globals` property.
 
-getMappingEvent({ event: 'entity action' }, mapping);
-// { eventMapping: { }, mappingKey: 'entity action' }
-
-getMappingEvent({ event: 'order complete' }, mapping);
-// { eventMapping: { name: 'purchase' }, mappingKey: 'order complete' }
-
-getMappingEvent({ event: 'order complete', globals: { env: 'prod' } }, mapping);
-// { eventMapping: { ignore: true, condition: Function }, mappingKey: 'order complete' }
-
-getMappingEvent({ event: 'page view' }, mapping);
-// { eventMapping: { ignore: true }, mappingKey: 'page view' }
-```
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingEvent(
+    {
+      event: 'order complete',
+      // globals: { env: 'prod' },
+    },
+    {
+      order: {
+        complete: [
+          {
+            // EventConfig only for production
+            condition: (event) =>
+              event.globals?.env === 'prod',
+            ignore: true,
+          },
+          { name: 'purchase' }, // Fallback EventConfig
+        ],
+      },
+    }
+  );`}
+  output={`0`}
+  fn={logEvent}
+/>
 
 ## getMappingValue
 
@@ -94,7 +96,7 @@ to standard fields of the destination.
     'b',
   )`}
   output={`0`}
-  fn={logFn}
+  fn={logValue}
 />
 
 <LiveCode
@@ -105,7 +107,7 @@ to standard fields of the destination.
     'arr.1',
   );`}
   output={`"bar"`}
-  fn={logFn}
+  fn={logValue}
 />
 
 ### key
@@ -118,7 +120,7 @@ to standard fields of the destination.
     { key: 'foo' },
   );`}
   output={`"bar"`}
-  fn={logFn}
+  fn={logValue}
 />
 
 ### value
@@ -128,7 +130,7 @@ to standard fields of the destination.
   labelInput="Configuration"
   input={`getMappingValue({}, { value: 'foo' });`}
   output={`"foo"`}
-  fn={logFn}
+  fn={logValue}
 />
 
 ### fn
@@ -141,7 +143,7 @@ to standard fields of the destination.
     { fn: (obj) => obj.foo.toUpperCase() },
   );`}
   output={`"BAR"`}
-  fn={logFn}
+  fn={logValue}
 />
 
 ### map
@@ -164,7 +166,7 @@ to standard fields of the destination.
     bar: 'baz',
     obj: { recursive: true },
   }`}
-  fn={logFn}
+  fn={logValue}
 />
 
 ### loop
@@ -177,7 +179,7 @@ to standard fields of the destination.
     { loop: ['arr', 'id'] },
   );`}
   output={`['foo', 'bar']`}
-  fn={logFn}
+  fn={logValue}
 />
 
 ### validate
@@ -187,7 +189,7 @@ to standard fields of the destination.
   labelInput="Configuration"
   input={`getMappingValue({ foo: 'bar' }, { key: 'foo', validate: (v) => v === 'bar' });`}
   output={`"bar"`}
-  fn={logFn}
+  fn={logValue}
 />
 
 ### consent
@@ -201,7 +203,7 @@ to standard fields of the destination.
     { instance }, // instance with consent state
   );`}
   output={`undefined (no marketing required consent)`}
-  fn={logFn}
+  fn={logValue}
 />
 
 First the `condition` is checked to determine if the `ValueConfig` should be
