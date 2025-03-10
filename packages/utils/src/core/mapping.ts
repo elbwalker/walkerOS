@@ -61,7 +61,7 @@ export function getMappingValue(
   const mappings = isArray(data) ? data : [data];
 
   for (const mapping of mappings) {
-    const result = processMappingValue(value, mapping, options);
+    const result = tryCatch(processMappingValue)(value, mapping, options);
     if (isDefined(result)) return result;
   }
 }
