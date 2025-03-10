@@ -185,35 +185,26 @@ describe('getMappingValue', () => {
   });
 
   test('fn', () => {
+    const pageView = createEvent({ event: 'page view' });
+    const pageClick = createEvent({ event: 'page click' });
+
     const mockFn = jest.fn((event) => {
       if (event.event === 'page view') return 'foo';
       return 'bar';
     });
 
-    expect(
-      getMappingValue(createEvent({ event: 'page view' }), {
-        fn: mockFn,
-      }),
-    ).toBe('foo');
-    expect(
-      getMappingValue(createEvent({ event: 'page click' }), {
-        fn: mockFn,
-      }),
-    ).toBe('bar');
+    expect(getMappingValue(pageView, { fn: mockFn })).toBe('foo');
+    expect(getMappingValue(pageClick, { fn: mockFn })).toBe('bar');
     expect(mockFn).toHaveBeenCalledTimes(2);
 
     // Props
-    getMappingValue(
-      createEvent({ event: 'page click' }),
-      { fn: mockFn },
-      { props: 'random' },
-    );
+    getMappingValue(pageClick, { fn: mockFn }, { props: 'random' });
 
     expect(mockFn).toHaveBeenNthCalledWith(
       3,
       expect.any(Object),
       { fn: mockFn },
-      { props: 'random' },
+      { props: 'random', consent: pageClick.consent },
     );
   });
 
