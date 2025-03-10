@@ -1,10 +1,11 @@
 import { WalkerOS } from '@elbwalker/types';
-import { isString, isDefined, tryCatch } from '@elbwalker/utils';
+import { isString, isDefined, tryCatch, tryCatchAsync } from '@elbwalker/utils';
 import { Highlight, themes as prismThemes } from 'prism-react-renderer';
 import Editor from 'react-simple-code-editor';
 import { useState } from 'react';
-import prettier from 'prettier/standalone';
-import parserBabel from 'prettier/parser-babel';
+import * as prettier from 'prettier/standalone';
+import * as parserBabel from 'prettier/parser-babel';
+import estree from 'prettier/plugins/estree';
 
 interface FormatValueProps {
   intent?: number;
@@ -77,7 +78,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
     })();
   };
 
-  const handleFormat = tryCatch(() => {
+  const handleFormat = tryCatchAsync(async () => {
     // Check if the content is a complete statement
     const isCompleteStatement = /^[a-zA-Z_$][a-zA-Z0-9_$]*\s*=/.test(
       value.trim(),
@@ -86,9 +87,9 @@ const CodeBox: React.FC<CodeBoxProps> = ({
     // If it's not a complete statement, wrap it in a return statement
     const contentToFormat = isCompleteStatement ? value : `return ${value}`;
 
-    const formattedValue = prettier.format(contentToFormat, {
+    const formattedValue = await prettier.format(contentToFormat, {
       parser: 'babel',
-      plugins: [parserBabel],
+      plugins: [parserBabel, estree],
       semi: true,
       singleQuote: true,
       trailingComma: 'es5',
