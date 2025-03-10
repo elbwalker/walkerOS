@@ -1,13 +1,11 @@
 import React from 'react';
 
 type CollectionPrinciple = {
-  // Changed to singular form
   name: string;
   description: string;
 };
 
 const collectionPrinciples: CollectionPrinciple[] = [
-  // Changed to lowercase 'c'
   {
     name: 'Do not build on rented land',
     description:
@@ -46,7 +44,6 @@ const collectionPrinciples: CollectionPrinciple[] = [
 ];
 
 export default function CollectionPrinciples() {
-  // Changed component name to PascalCase
   return (
     <div className="py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -59,16 +56,12 @@ export default function CollectionPrinciples() {
           </p>
         </div>
         <dl className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 text-base/7 sm:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-3">
-          {collectionPrinciples.map(
-            (
-              principle, // Used lowercase variable
-            ) => (
-              <div key={principle.name}>
-                <dt className="font-semibold text-gray-50">{principle.name}</dt>
-                <dt className="mt-1 text-gray-300">{principle.description}</dt>
-              </div>
-            ),
-          )}
+          {collectionPrinciples.map((principle) => (
+            <div key={principle.name}>
+              <dt className="font-semibold text-gray-50">{principle.name}</dt>
+              <dt className="mt-1 text-gray-300">{principle.description}</dt>
+            </div>
+          ))}
         </dl>
       </div>
     </div>

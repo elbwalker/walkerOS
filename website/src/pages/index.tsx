@@ -4,7 +4,7 @@ import Hero from '@site/src/components/home/hero';
 import Features from '@site/src/components/home/features';
 import CTAStart from '@site/src/components/ctas/start';
 
-export default function Home(): JSX.Element {
+export default function Home() {
   const { siteConfig } = useDocusaurusContext();
   return (
     <Layout
