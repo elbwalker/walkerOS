@@ -3,6 +3,7 @@ import { getGrantedConsent } from './consent';
 import { getByPath } from './byPath';
 import { isArray, isDefined, isString } from './is';
 import { castToProperty } from './property';
+import { tryCatch } from './tryCatch';
 
 export function getMappingEvent(
   event: WalkerOS.PartialEvent,
@@ -94,7 +95,7 @@ function processMappingValue(
     } = mapping;
 
     // Check if this mapping should be used
-    if (condition && !condition(value, mappingItem, instance)) return;
+    if (condition && !tryCatch(condition)(value, mappingItem, instance)) return;
 
     // Check if consent is required and granted
     if (consent && !getGrantedConsent(consent, instance?.consent))
@@ -104,7 +105,7 @@ function processMappingValue(
 
     if (fn) {
       // Use a custom function to get the value
-      mappingValue = fn(value, mappingItem, options);
+      mappingValue = tryCatch(fn)(value, mappingItem, options);
     }
 
     if (key) {
@@ -140,7 +141,7 @@ function processMappingValue(
     }
 
     // Validate the value
-    if (validate && !validate(mappingValue)) mappingValue = undefined;
+    if (validate && !tryCatch(validate)(mappingValue)) mappingValue = undefined;
 
     const property = castToProperty(mappingValue);
 

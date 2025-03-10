@@ -397,4 +397,18 @@ describe('getMappingValue', () => {
     expect(getMappingValue(event, mappings)).toBe(event.data.string);
     expect(mockFn).not.toHaveBeenCalled();
   });
+
+  test('error functions', () => {
+    const mockErrorFn = jest.fn(() => {
+      throw new Error('test');
+    });
+
+    expect(getMappingValue(createEvent(), { fn: mockErrorFn })).toBeUndefined();
+    expect(
+      getMappingValue(createEvent(), { condition: mockErrorFn }),
+    ).toBeUndefined();
+    expect(
+      getMappingValue(createEvent(), { validate: mockErrorFn }),
+    ).toBeUndefined();
+  });
 });
