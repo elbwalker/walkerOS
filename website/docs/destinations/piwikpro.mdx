@@ -89,38 +89,6 @@ Configure your PiwikPro destination with
 your&nbsp;<Link to="https://help.piwik.pro/support/questions/find-website-id/#:~:text=Navigate%20to%20Sites%20%26%20apps.,the%20site%20or%20app%20name.">App
 ID</Link> and URL.
 
-#### Example
-
-```js
-const config = {
-  mapping: {
-    order: {
-      complete: {
-        name: 'trackEcommerceOrder',
-        custom: {
-          // CustomEvent
-          goalId: 'xxx-xxx-...', // Count the event as a goal
-          goalValue: 'data.total', // Property to be used as goal value
-        },
-        data: [
-          'data.id',
-          'data.total',
-          {
-            fn: (event) => {
-              const total = Number(event.data?.total ?? 0);
-              const taxes = Number(event.data?.taxes ?? 0);
-              const shipping = Number(event.data?.shipping ?? 0);
-
-              return total - taxes - shipping;
-            },
-          },
-        ],
-      },
-    },
-  },
-};
-```
-
 <DestinationInit
   custom={`{
     appId: 'XXX-XXX-XXX-XXX-XXX', // Id of the site
