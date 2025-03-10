@@ -9,6 +9,7 @@
     "declaration": true,
     "declarationMap": true,
     "paths": {
+      "@site/*": ["./*"],
       "@elbwalker/*": ["../packages/*/src"],
       "@elbwalker/destination-web-*": ["../packages/destinations/web/*/src"],
       "@elbwalker/destination-node-*": ["../packages/destinations/node/*/src"],
