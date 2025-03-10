@@ -328,41 +328,84 @@ describe('getMappingValue', () => {
   });
 
   test('consent', () => {
-    const event = createEvent({ consent: { functional: true } });
     const instance = {
-      consent: { functional: true },
+      consent: { instanceLevel: true },
     } as unknown as WalkerOS.Instance;
 
-    // Granted
-    expect(
-      getMappingValue(
-        event,
-        {
-          key: 'data.string',
-          consent: { functional: true },
-        },
-        { instance },
-      ),
-    ).toBe(event.data.string);
+    expect(instance.consent.instanceLevel).toBeTruthy();
 
     // Denied
     expect(
       getMappingValue(
-        event,
+        { foo: 'bar' },
         {
-          key: 'data.string',
-          consent: { marketing: true },
+          key: 'foo',
+          consent: { notGranted: true },
+        },
+      ),
+    ).toBeUndefined();
+
+    // eventsLevel
+    expect(
+      getMappingValue(
+        { foo: 'bar', consent: { eventLevel: true } },
+        {
+          key: 'foo',
+          consent: { eventLevel: true },
+        },
+        { instance },
+      ),
+    ).toBe('bar');
+
+    // optionsLevel
+    expect(
+      getMappingValue(
+        { foo: 'bar' },
+        { key: 'foo', consent: { optionsLevel: true } },
+        { consent: { optionsLevel: true } },
+      ),
+    ).toBe('bar');
+
+    // instanceLevel
+    expect(
+      getMappingValue(
+        { foo: 'bar' },
+        {
+          key: 'foo',
+          consent: { instanceLevel: true },
+        },
+        { instance },
+      ),
+    ).toBe('bar');
+
+    // eventsLevel override optionsLevel
+    expect(
+      getMappingValue(
+        { foo: 'bar', consent: { eventLevel: false } },
+        { key: 'foo', consent: { eventLevel: true } },
+        { instance },
+      ),
+    ).toBeUndefined();
+
+    // eventLevel overrides instanceLevel
+    expect(
+      getMappingValue(
+        { foo: 'bar', consent: { instanceLevel: false } },
+        {
+          key: 'foo',
+          consent: { instanceLevel: true },
         },
         { instance },
       ),
     ).toBeUndefined();
 
-    // Denied automatically if no instance is provided
+    // optionsLevel overrides instanceLevel
     expect(
-      getMappingValue(event, {
-        key: 'data.string',
-        consent: { functional: true },
-      }),
+      getMappingValue(
+        { foo: 'bar' },
+        { key: 'foo', consent: { instanceLevel: true } },
+        { instance, consent: { optionsLevel: false } },
+      ),
     ).toBeUndefined();
   });
 

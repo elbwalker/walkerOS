@@ -60,6 +60,7 @@ export type Loop = [Value, Value];
 export type Map = { [key: string]: Value };
 
 export interface Options {
+  consent?: WalkerOS.Consent;
   instance?: WalkerOS.Instance;
   props?: unknown;
 }

@@ -1,7 +1,7 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import { getGrantedConsent } from './consent';
 import { getByPath } from './byPath';
-import { isArray, isDefined, isString } from './is';
+import { isArray, isDefined, isString, isObject } from './is';
 import { castToProperty } from './property';
 import { tryCatch } from './tryCatch';
 
@@ -58,10 +58,20 @@ export function getMappingValue(
 ): WalkerOS.Property | undefined {
   if (!isDefined(value)) return;
 
+  // Get consent state in priority order: value.consent > options.consent > instance?.consent
+  const consentState =
+    ((isObject(value) && value.consent) as WalkerOS.Consent) ||
+    options.consent ||
+    options.instance?.consent;
+
   const mappings = isArray(data) ? data : [data];
 
   for (const mapping of mappings) {
-    const result = tryCatch(processMappingValue)(value, mapping, options);
+    const result = tryCatch(processMappingValue)(value, mapping, {
+      ...options,
+      consent: consentState,
+    });
+
     if (isDefined(result)) return result;
   }
 }
@@ -71,7 +81,7 @@ function processMappingValue(
   mapping: Mapping.Value,
   options: Mapping.Options = {},
 ): WalkerOS.Property | undefined {
-  const { instance } = options;
+  const { instance, consent: consentState } = options;
 
   // Ensure mapping is an array for uniform processing
   const mappings = isArray(mapping) ? mapping : [mapping];
@@ -100,7 +110,7 @@ function processMappingValue(
     if (condition && !tryCatch(condition)(value, mappingItem, instance)) return;
 
     // Check if consent is required and granted
-    if (consent && !getGrantedConsent(consent, instance?.consent))
+    if (consent && !getGrantedConsent(consent, consentState))
       return staticValue;
 
     let mappingValue: unknown = staticValue || value;
