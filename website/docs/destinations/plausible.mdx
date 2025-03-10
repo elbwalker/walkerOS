@@ -7,6 +7,19 @@ import PackageLink from '/src/components/docs/package-link';
 import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import { getEvent } from '@elbwalker/utils';
+import {
+  DestinationContextProvider,
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationPlausible from '@elbwalker/destination-web-plausible';
+import { mapping } from '@elbwalker/destination-web-plausible/examples';
+
+<DestinationContextProvider
+  destination={destinationPlausible}
+  fnName='plausible'
+>
 
 <PackageLink
   browser="@elbwalker/destination-web-plausible"
@@ -16,7 +29,9 @@ import TabItem from '@theme/TabItem';
 />
 
 [Plausible Analytics](https://plausible.io/) is a simple, and privacy-friendly
-Google Analytics Alternative.
+Google Analytics Alternative. The destination sends events to Plausible via
+the&nbsp;<Link to="https://plausible.io/docs/custom-event-goals#trigger-custom-events-manually-with-a-javascript-function">`plausible`
+function</Link>.
 
 ## Installation
 
@@ -73,15 +88,11 @@ Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/de
 
 Configure your Plausible destination.
 
-#### Example
-
-```js
-const config = {
-  custom: {
+<DestinationInit
+  custom={`{
     domain: 'elbwalker.com', // Optional, domain of your site as registered
-  },
-};
-```
+  }`}
+/>
 
 ### Custom
 
@@ -89,9 +100,38 @@ const config = {
 | -------- | ------ | -------------------------------------------------- |
 | domain   | string | The domain of your site as registered in Plausible |
 
+## Mapping
+
+Send&nbsp;<Link to="https://plausible.io/docs/custom-event-goals#trigger-custom-events-manually-with-a-javascript-function">custom
+events</Link> manually using the JavaScript function
+
+### CustomEvent
+
+<DestinationPush
+  smallText={true}
+  height={'256px'}
+  event={getEvent()}
+  mapping={mapping.customEvent}
+/>
+
+### Purchase
+
+Follow
+the&nbsp;<Link to="https://plausible.io/docs/ecommerce-revenue-tracking">Ecommerce
+revenue tracking</Link> guide to setup the `purchase` event.
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('order complete')}
+  mapping={mapping.purchase}
+/>
+
 :::info
 
 If you need professional support with your walkerOS implementation, check out
 our&nbsp;<Link to="/services">services</Link>.
 
 :::
+
+</DestinationContextProvider>

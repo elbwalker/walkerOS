@@ -74,10 +74,7 @@ describe('destination plausible', () => {
     });
 
     elb(event);
-    expect(mockFn).toHaveBeenCalledWith(mapping.entity_action.name, {
-      props: event.data,
-      revenue: event.data.number,
-    });
+    expect(mockFn).toHaveBeenCalledWith(...events.customEvent());
   });
 
   test('event purchase', () => {
@@ -87,11 +84,6 @@ describe('destination plausible', () => {
     });
 
     elb(event);
-    expect(mockFn).toHaveBeenCalledWith(mapping.purchase.name, {
-      revenue: {
-        currency: 'EUR',
-        amount: event.data.total,
-      },
-    });
+    expect(mockFn).toHaveBeenCalledWith(...events.purchase());
   });
 });

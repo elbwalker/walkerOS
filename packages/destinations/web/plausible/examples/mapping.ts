@@ -1,8 +1,8 @@
 import type { Mapping } from '@elbwalker/types';
 import type { DestinationPlausible } from '../src';
 
-export const entity_action: DestinationPlausible.EventConfig = {
-  name: 'EntityAction',
+export const customEvent: DestinationPlausible.EventConfig = {
+  name: 'Custom Event',
   data: {
     map: {
       props: 'data',
@@ -26,6 +26,6 @@ export const purchase: DestinationPlausible.EventConfig = {
 };
 
 export const config = {
-  entity: { action: entity_action },
+  entity: { action: customEvent },
   order: { complete: purchase },
 } satisfies Mapping.Config;

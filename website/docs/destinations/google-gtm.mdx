@@ -7,6 +7,19 @@ import PackageLink from '/src/components/docs/package-link';
 import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import { getEvent } from '@elbwalker/utils';
+import {
+  DestinationContextProvider,
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationGoogleGTM from '@elbwalker/destination-web-google-gtm';
+import { mapping } from '@elbwalker/destination-web-google-gtm/examples';
+
+<DestinationContextProvider
+  destination={destinationGoogleGTM}
+  fnName='dataLayer.push'
+>
 
 <PackageLink
   browser="@elbwalker/destination-web-google-gtm"
@@ -74,15 +87,13 @@ Configure your Google Tag Manager destination.
 
 #### Example
 
-```js
-const config = {
-  custom: {
-    containerId: "GTM-XXXXXXX",
-    dataLayer: "dataLayer",
-    domain: "https://www.googletagmanager.com/gtm.js?id=";
-  },
-};
-```
+<DestinationInit
+  custom={`{
+    containerId: 'GTM-XXXXXXX', // Required
+    dataLayer: 'dataLayer',
+    domain: 'https://www.googletagmanager.com/gtm.js?id=',
+  }`}
+/>
 
 ### Custom
 
@@ -94,9 +105,35 @@ const config = {
 
 When using `loadScript: true` the `containerId` is required.
 
+## Mapping
+
+Using
+the&nbsp;<Link to="https://developers.google.com/tag-platform/tag-manager/datalayer">`dataLayer.push`</Link>
+function to send events to Google Tag Manager.
+
+### add_to_cart
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product add')}
+  mapping={mapping.add_to_cart}
+/>
+
+### purchase
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('order complete')}
+  mapping={mapping.purchase}
+/>
+
 :::info
 
 If you need professional support with your walkerOS implementation, check out
 our&nbsp;<Link to="/services">services</Link>.
 
 :::
+
+</DestinationContextProvider>
