@@ -106,7 +106,7 @@ export function getEvent(
       nested: [
         {
           type: 'product',
-          ...assign(product1, { data: { quantity } }),
+          data: { ...product1.data, quantity },
           context: { shopping: ['cart', 0] },
           nested: [],
         },
@@ -198,9 +198,7 @@ export function getEvent(
       trigger: 'load',
     },
     'product visible': {
-      ...assign(product1, {
-        data: { ...product1.data, position: 3, promo: true },
-      }),
+      data: { ...product1.data, position: 3, promo: true },
       context: { shopping: ['discover', 0] },
       globals: { pagegroup: 'shop' },
       nested: [],

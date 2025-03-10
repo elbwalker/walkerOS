@@ -171,7 +171,7 @@ individual event mapping.
 
 :::
 
-### ecommerceProductDetailView
+### ProductDetailView
 
 Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceproductdetailview#examples">ecommerceProductDetailView</Link>
@@ -184,7 +184,7 @@ event.
   mapping={mapping.ecommerceProductDetailView}
 />
 
-### ecommerceAddToCart
+### AddToCart
 
 Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceaddtocart#examples">ecommerceAddToCart</Link>
@@ -197,7 +197,20 @@ event.
   mapping={mapping.ecommerceAddToCart}
 />
 
-### ecommerceOrder
+### CartUpdate
+
+Map your walkerOS event to get
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommercecartupdate#examples">ecommerceCartUpdate</Link>
+event.
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('cart view')}
+  mapping={mapping.ecommerceCartUpdate}
+/>
+
+### Order
 
 Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceorder#examples">ecommerceOrder</Link>

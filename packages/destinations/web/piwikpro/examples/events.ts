@@ -59,7 +59,7 @@ export function ecommerceCartUpdate() {
     [
       'ecommerceCartUpdate',
       event.nested.filter((item) => item.type === 'product').map(getProduct),
-      event.data.total,
+      event.data.value,
       { currencyCode: 'EUR' },
     ],
   ];

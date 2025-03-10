@@ -65,11 +65,14 @@ explicitly matched.
 
 <DestinationPush
   event={event}
+  emptyText='Event ignored'
   mapping={`{
-    order: {
-      complete: {
+    order: { // Entity
+      complete: { // Action
+        // EventConfig
         name: "purchase",
         data: {
+          // ValueConfig
           map: {
             event: "event",
             id: 'data.id',
@@ -105,7 +108,6 @@ explicitly matched.
       }
     }
   }`}
-  height={'666px'}
   labelMiddle={'Config'}
   eventConfig={false}
   smallText={true}

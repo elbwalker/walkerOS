@@ -100,7 +100,7 @@ export const ecommerceCartUpdate: DestinationPiwikPro.EventConfig = {
           },
         ],
       },
-      'data.total',
+      'data.value',
       {
         map: {
           currencyCode: { value: 'EUR' },
