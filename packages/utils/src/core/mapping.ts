@@ -82,6 +82,8 @@ function processMappingValue(
 
     const mapping = isString(mappingItem) ? { key: mappingItem } : mappingItem;
 
+    if (!Object.keys(mapping).length) return;
+
     const {
       condition,
       consent,

@@ -169,8 +169,15 @@ describe('getMappingValue', () => {
   });
 
   test('empty', () => {
-    const event = createEvent();
-    expect(getMappingValue(event)).toStrictEqual(event);
+    expect(
+      getMappingValue(createEvent(), {
+        map: {
+          set: { set: [{}] },
+          map: {},
+          loop: [],
+        },
+      }),
+    ).toEqual({ map: undefined, set: [undefined], loop: undefined });
   });
 
   test('false', () => {
@@ -317,8 +324,7 @@ describe('getMappingValue', () => {
       ),
     ).toStrictEqual([1, 'foo', false]);
 
-    expect(getMappingValue('string')).toEqual('string');
-    expect(getMappingValue(1)).toEqual(1);
+    expect(getMappingValue('string')).toBeUndefined();
   });
 
   test('consent', () => {
