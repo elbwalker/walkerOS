@@ -19,8 +19,8 @@ mapped to walkerOS events.
 Use the source to integrate single events, migrate a whole existing setup to
 walkerOS or to only use the Google Consent Mode configuration.
 
-The dataLayer source intercepts all dataLayer.pushes. Every event is cloned and
-processed in a tryCatch-block to guarantee a stable default behavior and
-preventing data mutation.
+The dataLayer source intercepts all `dataLayer.pushes` and `gtag` calls. Every
+event is cloned and processed in a tryCatch-block to guarantee a stable default
+behavior and preventing data mutation.
 
 <DocCardList />
