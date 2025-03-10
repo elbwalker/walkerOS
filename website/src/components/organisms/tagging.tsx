@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { debounce, getId } from '@elbwalker/utils';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { elb } from '@elbwalker/walker.js';
 import CodeBox from '../molecules/codeBox';
 
@@ -25,12 +25,8 @@ interface PreviewProps {
   hideCode?: boolean;
   hidePreview?: boolean;
   hideConsole?: boolean;
+  previewId?: string;
 }
-
-const initPreview = debounce(
-  (elem?: HTMLElement) => elb('walker init', elem),
-  2000,
-);
 
 const Tagging: React.FC<PreviewProps> = ({
   code,
@@ -38,14 +34,28 @@ const Tagging: React.FC<PreviewProps> = ({
   hideCode = false,
   hidePreview = false,
   hideConsole = false,
+  previewId = 'preview',
 }) => {
-  const previewId = useRef(getId()).current;
   const [logs, setLogs] = useState<unknown[]>([]);
   const previewRef = useRef<HTMLDivElement>(null);
   const [liveCode, setLiveCode] = useState(code.trim());
+  const isFirstRender = useRef(true);
+
+  const initPreview = useCallback(
+    debounce((elem: HTMLElement) => {
+      if (isFirstRender.current) {
+        isFirstRender.current = false;
+        return;
+      }
+      elb('walker init', elem);
+    }, 2000),
+    []
+  );
 
   useEffect(() => {
-    initPreview(previewRef?.current);
+    if (previewRef.current) {
+      initPreview(previewRef.current);
+    }
   }, [liveCode]);
 
   useEffect(() => {
@@ -76,7 +86,9 @@ const Tagging: React.FC<PreviewProps> = ({
 
         {!hidePreview && (
           <div className="flex-1 border border-base-300 rounded-lg overflow-hidden bg-gray-800">
-            <div className="font-bold px-2 py-1 bg-base-100 text-base">Preview</div>
+            <div className="font-bold px-2 py-1 bg-base-100 text-base">
+              Preview
+            </div>
             <div
               ref={previewRef}
               className="p-4 bg-white dark:bg-gray-900"
@@ -89,9 +101,14 @@ const Tagging: React.FC<PreviewProps> = ({
         {!hideConsole && (
           <CodeBox
             label="Console"
-            value={logs.length === 0 ? 'No events yet.' : JSON.stringify(logs, null, 2)}
+            value={
+              logs.length === 0
+                ? 'No events yet.'
+                : JSON.stringify(logs, null, 2)
+            }
             disabled={true}
             className="flex-1"
+            isConsole={true}
           />
         )}
       </div>

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import * as prettier from 'prettier/standalone';
 import * as parserBabel from 'prettier/parser-babel';
 import estree from 'prettier/plugins/estree';
+import { ObjectInspector, chromeDark } from 'react-inspector';
 
 interface FormatValueProps {
   intent?: number;
@@ -54,6 +55,7 @@ interface CodeBoxProps {
   inline?: boolean;
   className?: string;
   smallText?: boolean;
+  isConsole?: boolean;
 }
 
 const CodeBox: React.FC<CodeBoxProps> = ({
@@ -64,6 +66,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   language = 'javascript',
   className = '',
   smallText = false,
+  isConsole = false,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -122,6 +125,54 @@ const CodeBox: React.FC<CodeBoxProps> = ({
     </Highlight>
   );
 
+  const consoleTheme = {
+    ...chromeDark,
+    ...{
+      BASE_BACKGROUND_COLOR: 'transparent',
+      TREENODE_FONT_SIZE: '14px',
+      OBJECT_NAME_COLOR: '#01b5e2',
+      OBJECT_VALUE_STRING_COLOR: '#01b5e2',
+    },
+  } as unknown as string;
+
+  const renderContent = () => {
+    if (isConsole) {
+      try {
+        const parsedValue = value === 'No events yet.' ? [] : JSON.parse(value);
+        return (
+          <div className="p-4">
+            {value === 'No events yet.' ? (
+              <div className="text-gray-500">No events yet.</div>
+            ) : (
+              <ObjectInspector
+                data={parsedValue}
+                theme={consoleTheme}
+                expandLevel={3}
+                expandPaths={['$', '$.data']}
+              />
+            )}
+          </div>
+        );
+      } catch (e) {
+        return (
+          <div className="p-4 text-red-500">Error parsing console data: {String(e)}</div>
+        );
+      }
+    }
+
+    return (
+      <Editor
+        value={value}
+        disabled={disabled}
+        onValueChange={(newCode) => onChange?.(newCode)}
+        highlight={highlightCode}
+        padding={4}
+        className="code-editor font-mono min-h-full"
+        style={{ overflow: 'auto' }}
+      />
+    );
+  };
+
   return (
     <div
       className={`border border-base-300 rounded-lg overflow-hidden bg-gray-800 relative ${
@@ -133,34 +184,36 @@ const CodeBox: React.FC<CodeBoxProps> = ({
           <span>{label}</span>
           <div className="relative">
             <div className="relative flex items-center gap-1">
-              <div className="relative">
-                <button
-                  onClick={handleFormat}
-                  onMouseEnter={() => setIsFormatHovered(true)}
-                  onMouseLeave={() => setIsFormatHovered(false)}
-                  className="text-gray-500 hover:text-gray-300 transition-colors border-none bg-transparent p-1"
-                  aria-label="Format code"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              {!isConsole && (
+                <div className="relative">
+                  <button
+                    onClick={handleFormat}
+                    onMouseEnter={() => setIsFormatHovered(true)}
+                    onMouseLeave={() => setIsFormatHovered(false)}
+                    className="text-gray-500 hover:text-gray-300 transition-colors border-none bg-transparent p-1"
+                    aria-label="Format code"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16m-7 6h7"
-                    />
-                  </svg>
-                </button>
-                {isFormatHovered && (
-                  <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded shadow-sm border border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                    Format
-                  </div>
-                )}
-              </div>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6h16M4 12h16m-7 6h7"
+                      />
+                    </svg>
+                  </button>
+                  {isFormatHovered && (
+                    <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded shadow-sm border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                      Format
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="relative">
                 <button
                   onClick={handleCopy}
@@ -194,7 +247,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
         </div>
       )}
       <div className="flex-1 overflow-auto max-h-[calc(100vh-16rem)]">
-        {isEditable && (
+        {isEditable && !isConsole && (
           <div className="absolute bottom-2 right-2 text-gray-500">
             <svg
               className="w-5 h-4"
@@ -211,15 +264,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
             </svg>
           </div>
         )}
-        <Editor
-          value={value}
-          disabled={disabled}
-          onValueChange={(newCode) => onChange?.(newCode)}
-          highlight={highlightCode}
-          padding={4}
-          className="code-editor font-mono min-h-full"
-          style={{ overflow: 'auto' }}
-        />
+        {renderContent()}
       </div>
     </div>
   );
