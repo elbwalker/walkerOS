@@ -8,6 +8,9 @@ describe('Destination node etag', () => {
   jest.mock('@elbwalker/utils', () => ({
     ...jest.requireActual('@elbwalker/utils'),
     getId: () => 1337,
+  }));
+  jest.mock('@elbwalker/utils/node', () => ({
+    ...jest.requireActual('@elbwalker/utils/node'),
     sendNode: mockSend,
   }));
 

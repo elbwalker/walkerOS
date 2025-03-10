@@ -1,5 +1,6 @@
 import type { Custom, Destination } from './types';
-import { isArray, isDefined, sendWeb } from '@elbwalker/utils';
+import { isDefined } from '@elbwalker/utils';
+import { sendWeb } from '@elbwalker/utils/web';
 
 // Types
 export * as DestinationWebAPI from './types';
@@ -16,10 +17,9 @@ export const destinationWebAPI: Destination = {
     if (!url) return;
 
     const data = isDefined(options.data) ? options.data : event;
-    const value = isArray(data) ? data[0] : data;
     const body = transform
-      ? transform(value, config, mapping) // Transform event data
-      : JSON.stringify(value);
+      ? transform(data, config, mapping) // Transform event data
+      : JSON.stringify(data);
 
     const func = fn || sendWeb;
     func(url, body, { headers, method, transport });

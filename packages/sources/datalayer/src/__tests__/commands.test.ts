@@ -6,7 +6,6 @@ describe('commands', () => {
   let dataLayer: DataLayer;
 
   const gtag: Gtag.Gtag = function () {
-    // eslint-disable-next-line prefer-rest-params
     dataLayer.push(arguments);
   };
 

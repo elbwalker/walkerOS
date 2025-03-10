@@ -2,6 +2,7 @@ import type { DestinationMetaPixel } from '.';
 import type { DestinationWeb } from '@elbwalker/walker.js';
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
+import { events, mapping } from '../examples';
 
 describe('Destination Meta Pixel', () => {
   const w = window;
@@ -106,49 +107,13 @@ describe('Destination Meta Pixel', () => {
 
     const config: DestinationWeb.Config = {
       custom: { pixelId },
-      mapping: {
-        order: {
-          complete: {
-            name: 'Purchase',
-            data: {
-              map: {
-                currency: { value: 'EUR' },
-                value: 'data.total',
-                contents: {
-                  loop: [
-                    'nested',
-                    {
-                      condition: (entity) => entity.type === 'product',
-                      map: {
-                        id: 'data.id',
-                        quantity: { key: 'data.quantity', value: 1 },
-                      },
-                    },
-                  ],
-                },
-                content_type: { value: 'product' },
-              },
-            },
-          },
-        },
-      },
+      mapping: mapping.config,
     };
 
     elb('walker destination', destination, config);
 
     elb(event);
-    expect(mockFn).toHaveBeenCalledWith(
-      'track',
-      'Purchase',
-      expect.objectContaining({
-        contents: [
-          { id: 'ers', quantity: 1 },
-          { id: 'cc', quantity: 1 },
-        ],
-        currency: 'EUR',
-        value: 555,
-      }),
-    );
+    expect(mockFn).toHaveBeenCalledWith(...events.Purchase());
   });
 
   test('event AddToCart', () => {
@@ -156,38 +121,34 @@ describe('Destination Meta Pixel', () => {
 
     elb('walker destination', destination, {
       custom: { pixelId },
-      mapping: {
-        product: {
-          add: {
-            name: 'AddToCart',
-            data: {
-              map: {
-                currency: { value: 'EUR' },
-                value: 'data.price',
-                content_ids: {
-                  fn: (event) =>
-                    [event].map(
-                      (product) => product.data!.id || product.data!.name,
-                    ),
-                },
-                content_type: { value: 'product' },
-              },
-            },
-          },
-        },
-      },
+      mapping: mapping.config,
     });
 
     elb(event);
-    expect(mockFn).toHaveBeenCalledWith(
-      'track',
-      'AddToCart',
-      expect.objectContaining({
-        content_ids: [event.data.id],
-        content_type: 'product',
-        currency: 'EUR',
-        value: event.data.price,
-      }),
-    );
+    expect(mockFn).toHaveBeenCalledWith(...events.AddToCart());
+  });
+
+  test('event InitiateCheckout', () => {
+    const event = getEvent('cart view');
+
+    elb('walker destination', destination, {
+      custom: { pixelId },
+      mapping: mapping.config,
+    });
+
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(...events.InitiateCheckout());
+  });
+
+  test('event ViewContent', () => {
+    const event = getEvent('product view');
+
+    elb('walker destination', destination, {
+      custom: { pixelId },
+      mapping: mapping.config,
+    });
+
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(...events.ViewContent());
   });
 });

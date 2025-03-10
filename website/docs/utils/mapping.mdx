@@ -4,6 +4,15 @@ sidebar_position: 5
 ---
 
 import Link from '@docusaurus/Link';
+import { LiveCode } from '@site/src/components/organisms/liveCode';
+import { getMappingEvent, getMappingValue } from '@elbwalker/utils';
+import { parseInput } from '@site/src/components/molecules/codeBox';
+export const logEvent = (input, config, log) => {
+  log(parseInput(input, { getMappingEvent }));
+};
+export const logValue = (input, config, log) => {
+  log(parseInput(input, { getMappingValue }));
+};
 
 The `Mapping.Config` stores all
 individual&nbsp;<Link to="/docs/destinations/event_mapping#eventconfig">`Mapping.EventConfig`</Link>
@@ -16,34 +25,7 @@ a `Mapping.Value` settings for a specific property to return an actual value.
 The `custom` property is used by
 each&nbsp;<Link to="/docs/destinations/">destination</Link> individually.
 
-```ts
-interface Config<CustomEvent = unknown> {
-  [entity: string]:
-    | Record<string, EventConfig<CustomEvent> | Array<EventConfig<CustomEvent>>>
-    | undefined;
-}
-
-const mapping: Config = {
-  entity: {
-    action: { name: 'entity_action' }, // Explicit EventConfig
-    '*': {}, // Generic EventConfig for all entity entities
-  },
-  order: {
-    complete: [
-      {
-        // EventConfig only for production
-        condition: (event: WalkerOS.PartialEvent) =>
-          event.globals?.env === 'prod',
-        ignore: true,
-      },
-      { name: 'purchase' }, // Fallback EventConfig
-    ],
-  },
-  '*': { '*': { ignore: true } },
-};
-```
-
-### getMappingEvent
+## getMappingEvent
 
 `getMappingEvent(event: string, mapping?: Mapping.Config<unknown>): EventMapping`
 returns the matching `eventMapping` configuration and the used `mappingKey` for
@@ -52,29 +34,51 @@ empty object. An explicit key is favored over an asterisk `*` key. If available
 a `condition` will be checked to determine if the `EventConfig` applies. It's
 used by the&nbsp;<Link to="/docs/sources/">sources</Link>.
 
-```ts
-interface EventMapping {
-  eventMapping?: Event;
-  mappingKey?: string;
-}
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingEvent(
+    { event: 'entity action' },
+    {
+      entity: {
+        action: { name: 'entity_action' },
+      },
+    }
+  );`}
+  output={`0`}
+  fn={logEvent}
+/>
 
-getMappingEvent({ event: 'entity action' }, mapping);
-// { eventMapping: { name: 'entity_action' }, mappingKey: 'entity action' }
+Specify multiple `Mapping.EventConfig` as an array and use `condition` to check
+which `EventConfig` should be used. To test uncomment the `globals` property.
 
-getMappingEvent({ event: 'entity action' }, mapping);
-// { eventMapping: { }, mappingKey: 'entity action' }
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingEvent(
+    {
+      event: 'order complete',
+      // globals: { env: 'prod' },
+    },
+    {
+      order: {
+        complete: [
+          {
+            // EventConfig only for production
+            condition: (event) =>
+              event.globals?.env === 'prod',
+            ignore: true,
+          },
+          { name: 'purchase' }, // Fallback EventConfig
+        ],
+      },
+    }
+  );`}
+  output={`0`}
+  fn={logEvent}
+/>
 
-getMappingEvent({ event: 'order complete' }, mapping);
-// { eventMapping: { name: 'purchase' }, mappingKey: 'order complete' }
-
-getMappingEvent({ event: 'order complete', globals: { env: 'prod' } }, mapping);
-// { eventMapping: { ignore: true, condition: Function }, mappingKey: 'order complete' }
-
-getMappingEvent({ event: 'page view' }, mapping);
-// { eventMapping: { ignore: true }, mappingKey: 'page view' }
-```
-
-### getMappingValue
+## getMappingValue
 
 `getMappingValue(event: WalkerOS.Event, mapping: Mapping.Value, options?: Mapping.Options): WalkerOS.Property | undefined`
 primarily used by&nbsp;<Link to="/docs/destinations/">destinations</Link> to
@@ -82,72 +86,148 @@ process values from the original event. This offers flexibility to configure
 individual&nbsp;<Link to="/docs/sources/walkerjs/tagging">tagging setups</Link>
 to standard fields of the destination.
 
-```ts
-type Value = ValueType | Array<ValueType>;
-type ValueType = string | ValueConfig;
+### string
 
-interface ValueConfig {
-  condition?: Condition;
-  consent?: WalkerOS.Consent;
-  fn?: Fn;
-  key?: string;
-  loop?: Loop;
-  map?: Map;
-  validate?: Validate;
-  value?: WalkerOS.PropertyType;
-}
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingValue(
+    { a: 0, b: 1, c: 2 },
+    'b',
+  )`}
+  output={`1`}
+  emptyText={`undefined`}
+  fn={logValue}
+/>
 
-getMappingValue({ foo: 'bar' }, 'foo');
-// bar
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingValue(
+    { arr: ['foo', 'bar'] },
+    'arr.1',
+  );`}
+  output={`"bar"`}
+  emptyText={`undefined`}
+  fn={logValue}
+/>
 
-// key
-getMappingValue({ foo: 'bar' }, { key: 'foo' });
-// bar
+### key
 
-// value
-getMappingValue({}, { value: 'foo' });
-// foo
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingValue(
+    { foo: 'bar' },
+    { key: 'foo' },
+  );`}
+  output={`"bar"`}
+  emptyText={`undefined`}
+  fn={logValue}
+/>
 
-// array notation
-getMappingValue({ arr: ['foo', 'bar'] }, 'arr.0');
-// foo
+### value
 
-// fn
-getMappingValue({ foo: 'bar' }, { fn: (obj) => obj.foo.toUpperCase() });
-// BAR
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingValue({}, { value: 'foo' });`}
+  output={`"foo"`}
+  emptyText={`undefined`}
+  fn={logValue}
+/>
 
-// map
-getMappingValue(
-  { foo: 'bar' },
-  {
-    map: {
-      foo: 'foo',
-      bar: { value: 'baz' },
-      obj: { map: { recursive: { value: true } } },
+### fn
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingValue(
+    { foo: 'bar' },
+    { fn: (obj) => obj.foo.toUpperCase() },
+  );`}
+  output={`"BAR"`}
+  emptyText={`undefined`}
+  fn={logValue}
+/>
+
+### map
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingValue(
+    { foo: 'bar' },
+    {
+      map: {
+        foo: 'foo',
+        bar: { value: 'baz' },
+        obj: { map: { recursive: { value: true } } },
+      },
     },
-  },
-);
-// { foo: 'bar', bar: 'baz', obj: { recursive: true } }
+  );`}
+  output={`{
+    foo: 'bar',
+    bar: 'baz',
+    obj: { recursive: true },
+  }`}
+  emptyText={`undefined`}
+  fn={logValue}
+/>
 
-// loop
-getMappingValue(
-  { arr: [{ id: 'foo' }, { id: 'bar' }] },
-  { loop: ['arr', { key: 'id' }] },
-);
-// ['foo', 'bar']
+### loop
 
-// condition
-getMappingValue({ foo: 'bar' }, { key: 'foo', validate: (v) => v === 'bar' });
-// bar
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingValue(
+    { arr: [{ id: 'foo' }, { id: 'bar' }] },
+    { loop: ['arr', 'id'] },
+  );`}
+  output={`['foo', 'bar']`}
+  emptyText={`undefined`}
+  fn={logValue}
+/>
 
-// consent
-getMappingValue(
-  { name: 'foo', consent: { functional: true } }, // event with consent state
-  { key: 'name', consent: { marketing: true } }, // required consent
-  { instance }, // instance with consent state
-);
-// undefined (no marketing required consent)
-```
+### validate
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingValue(
+    { foo: 'bar' },
+    {
+      key: 'foo',
+      validate: (v) => v === 'bar',
+    },
+  );`}
+  output={`"bar"`}
+  emptyText={`undefined`}
+  fn={logValue}
+/>
+
+### consent
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`getMappingValue(
+    {
+      name: 'foo',
+      consent: {
+        functional: true,
+        // marketing: true // uncomment me
+      },
+    },
+    {
+      key: 'name',
+      consent: { marketing: true }, // required consent
+    },
+  );`}
+  output={`undefined (no marketing consent)`}
+  emptyText={`undefined (no marketing consent)`}
+  fn={logValue}
+/>
 
 First the `condition` is checked to determine if the `ValueConfig` should be
 used. Second, the `consent` state gets checked if an `instance` is provided. If

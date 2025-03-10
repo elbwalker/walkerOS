@@ -3,7 +3,8 @@ import type {
   Mapping as WalkerOSMapping,
   WalkerOS,
 } from '@elbwalker/types';
-import type { On, SourceWalkerjs } from '.';
+import type { Instance } from './source';
+import type { Config as OnConfig } from './on';
 
 export interface Destination<Custom = unknown, CustomEvent = unknown>
   extends WalkerOSDestination.Destination<Custom, CustomEvent> {
@@ -17,7 +18,7 @@ export type DestinationInit = Partial<Omit<Destination, 'push'>> &
 
 export type InitFn<Custom, CustomEvent> = (
   config: Config<Custom, CustomEvent>,
-  instance: SourceWalkerjs.Instance,
+  instance: Instance,
 ) => void | Config | false;
 
 export type PushFn<Custom, CustomEvent> = (
@@ -35,7 +36,7 @@ export type PushBatchFn<Custom, CustomEvent> = (
 
 export interface Config<Custom = unknown, CustomEvent = unknown>
   extends WalkerOSDestination.Config<Custom, CustomEvent> {
-  on?: On.Config; // On events listener rules
+  on?: OnConfig; // On events listener rules
 }
 
 export interface Mapping<CustomEvent = unknown>
@@ -46,5 +47,5 @@ export interface EventMapping<CustomEvent = unknown>
 
 export interface Options {
   data?: WalkerOSDestination.Data;
-  instance?: SourceWalkerjs.Instance;
+  instance?: Instance;
 }

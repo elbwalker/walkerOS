@@ -1,8 +1,9 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import { getGrantedConsent } from './consent';
 import { getByPath } from './byPath';
-import { isArray, isDefined, isString } from './is';
+import { isArray, isDefined, isString, isObject } from './is';
 import { castToProperty } from './property';
+import { tryCatch } from './tryCatch';
 
 export function getMappingEvent(
   event: WalkerOS.PartialEvent,
@@ -57,10 +58,20 @@ export function getMappingValue(
 ): WalkerOS.Property | undefined {
   if (!isDefined(value)) return;
 
+  // Get consent state in priority order: value.consent > options.consent > instance?.consent
+  const consentState =
+    ((isObject(value) && value.consent) as WalkerOS.Consent) ||
+    options.consent ||
+    options.instance?.consent;
+
   const mappings = isArray(data) ? data : [data];
 
   for (const mapping of mappings) {
-    const result = processMappingValue(value, mapping, options);
+    const result = tryCatch(processMappingValue)(value, mapping, {
+      ...options,
+      consent: consentState,
+    });
+
     if (isDefined(result)) return result;
   }
 }
@@ -70,7 +81,7 @@ function processMappingValue(
   mapping: Mapping.Value,
   options: Mapping.Options = {},
 ): WalkerOS.Property | undefined {
-  const { instance } = options;
+  const { instance, consent: consentState } = options;
 
   // Ensure mapping is an array for uniform processing
   const mappings = isArray(mapping) ? mapping : [mapping];
@@ -80,6 +91,8 @@ function processMappingValue(
     if (acc) return acc; // A valid result was already found
 
     const mapping = isString(mappingItem) ? { key: mappingItem } : mappingItem;
+
+    if (!Object.keys(mapping).length) return;
 
     const {
       condition,
@@ -94,17 +107,17 @@ function processMappingValue(
     } = mapping;
 
     // Check if this mapping should be used
-    if (condition && !condition(value, mappingItem, instance)) return;
+    if (condition && !tryCatch(condition)(value, mappingItem, instance)) return;
 
     // Check if consent is required and granted
-    if (consent && !getGrantedConsent(consent, instance?.consent))
+    if (consent && !getGrantedConsent(consent, consentState))
       return staticValue;
 
     let mappingValue: unknown = staticValue || value;
 
     if (fn) {
       // Use a custom function to get the value
-      mappingValue = fn(value, mappingItem, options);
+      mappingValue = tryCatch(fn)(value, mappingItem, options);
     }
 
     if (key) {
@@ -140,7 +153,7 @@ function processMappingValue(
     }
 
     // Validate the value
-    if (validate && !validate(mappingValue)) mappingValue = undefined;
+    if (validate && !tryCatch(validate)(mappingValue)) mappingValue = undefined;
 
     const property = castToProperty(mappingValue);
 

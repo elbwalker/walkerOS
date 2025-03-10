@@ -7,7 +7,6 @@ describe('source dataLayer', () => {
   let dataLayer: DataLayer;
 
   const gtag: Gtag.Gtag = function () {
-    // eslint-disable-next-line prefer-rest-params
     dataLayer.push(arguments);
   };
 
@@ -109,7 +108,6 @@ describe('source dataLayer', () => {
         'gtm.uniqueEventId': 1,
       },
       (function (...args: unknown[]) {
-        // eslint-disable-next-line prefer-rest-params
         return arguments || args;
       })('event', 'arg', {
         foo: 'bar',

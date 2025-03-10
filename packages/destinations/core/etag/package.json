@@ -2,6 +2,7 @@
   "name": "@elbwalker/destination-core-etag",
   "description": "etag core destination for walkerOS",
   "version": "0.0.8",
+  "type": "module",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -12,7 +13,6 @@
   ],
   "scripts": {
     "build": "tsup",
-    "build:dev": "tsup --config tsup.dev.config.ts",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "lint": "tsc && eslint \"**/*.ts*\"",

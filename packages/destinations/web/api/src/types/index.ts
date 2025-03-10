@@ -1,9 +1,7 @@
-import type { WalkerOS } from '@elbwalker/types';
-import type {
-  SendDataValue,
-  SendHeaders,
-  SendWebTransport,
-} from '@elbwalker/utils';
+import type { Mapping } from '@elbwalker/types';
+import type { SendDataValue, SendHeaders } from '@elbwalker/utils';
+import type { SendWebTransport } from '@elbwalker/utils/web';
+
 import type { DestinationWeb } from '@elbwalker/walker.js';
 
 export interface Destination
@@ -21,8 +19,10 @@ export interface Custom {
 
 export interface CustomEvent {}
 
+export type EventConfig = Mapping.EventConfig<CustomEvent>;
+
 export type Transform = (
-  event?: WalkerOS.Event | WalkerOS.Property,
+  data?: unknown,
   config?: Config,
   mapping?: DestinationWeb.EventMapping<CustomEvent>,
 ) => SendDataValue;

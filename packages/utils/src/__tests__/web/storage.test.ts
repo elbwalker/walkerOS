@@ -1,4 +1,5 @@
-import { Const, storageDelete, storageRead, storageWrite } from '../../';
+import { Const } from '../..';
+import { storageDelete, storageRead, storageWrite } from '../../web';
 
 describe('Storage', () => {
   const w = window;

@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { Mapping, WalkerOS } from '@elbwalker/types';
 import type { DestinationWeb } from '@elbwalker/walker.js';
 
 declare global {
@@ -20,5 +20,7 @@ export type Config = DestinationWeb.Config<Custom, CustomEvent>;
 export interface Custom {
   domain?: string; // Name of the domain to be tracked
 }
+
+export type EventConfig = Mapping.EventConfig<CustomEvent>;
 
 export interface CustomEvent {}

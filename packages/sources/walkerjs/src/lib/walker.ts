@@ -1,14 +1,7 @@
 import type { Walker } from '../types';
 import type { WalkerOS } from '@elbwalker/types';
-import {
-  Const,
-  assign,
-  castValue,
-  getAttribute,
-  isArray,
-  trim,
-} from '@elbwalker/utils';
-
+import { Const, assign, castValue, isArray, trim } from '@elbwalker/utils';
+import { getAttribute } from '@elbwalker/utils/web';
 export function getElbAttributeName(
   prefix: string,
   name?: string,
@@ -210,7 +203,6 @@ export function getTriggerActions(str: string): Walker.TriggersActionGroups {
 
     if (!trigger) return;
 
-    // eslint-disable-next-line prefer-const
     let [action, actionParams] = parseAttribute(actionAttr || '');
 
     // Shortcut if trigger and action are the same (click:click)

@@ -2,6 +2,7 @@
   "name": "@elbwalker/source-datalayer",
   "description": "datalayer source for walkerOS",
   "version": "0.1.0",
+  "type": "module",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -12,7 +13,6 @@
   ],
   "scripts": {
     "build": "tsup",
-    "build:dev": "tsup --config tsup.dev.config.ts",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "lint": "tsc && eslint \"**/*.ts*\"",
@@ -24,7 +24,8 @@
   },
   "devDependencies": {
     "@elbwalker/tsup": "0.0.1",
-    "@elbwalker/types": "3.3.0"
+    "@elbwalker/types": "3.3.0",
+    "@elbwalker/utils": "^3.7.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

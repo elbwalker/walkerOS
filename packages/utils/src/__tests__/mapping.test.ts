@@ -169,8 +169,15 @@ describe('getMappingValue', () => {
   });
 
   test('empty', () => {
-    const event = createEvent();
-    expect(getMappingValue(event)).toStrictEqual(event);
+    expect(
+      getMappingValue(createEvent(), {
+        map: {
+          set: { set: [{}] },
+          map: {},
+          loop: [],
+        },
+      }),
+    ).toEqual({ map: undefined, set: [undefined], loop: undefined });
   });
 
   test('false', () => {
@@ -178,35 +185,26 @@ describe('getMappingValue', () => {
   });
 
   test('fn', () => {
+    const pageView = createEvent({ event: 'page view' });
+    const pageClick = createEvent({ event: 'page click' });
+
     const mockFn = jest.fn((event) => {
       if (event.event === 'page view') return 'foo';
       return 'bar';
     });
 
-    expect(
-      getMappingValue(createEvent({ event: 'page view' }), {
-        fn: mockFn,
-      }),
-    ).toBe('foo');
-    expect(
-      getMappingValue(createEvent({ event: 'page click' }), {
-        fn: mockFn,
-      }),
-    ).toBe('bar');
+    expect(getMappingValue(pageView, { fn: mockFn })).toBe('foo');
+    expect(getMappingValue(pageClick, { fn: mockFn })).toBe('bar');
     expect(mockFn).toHaveBeenCalledTimes(2);
 
     // Props
-    getMappingValue(
-      createEvent({ event: 'page click' }),
-      { fn: mockFn },
-      { props: 'random' },
-    );
+    getMappingValue(pageClick, { fn: mockFn }, { props: 'random' });
 
     expect(mockFn).toHaveBeenNthCalledWith(
       3,
       expect.any(Object),
       { fn: mockFn },
-      { props: 'random' },
+      { props: 'random', consent: pageClick.consent },
     );
   });
 
@@ -317,46 +315,88 @@ describe('getMappingValue', () => {
       ),
     ).toStrictEqual([1, 'foo', false]);
 
-    expect(getMappingValue('string')).toEqual('string');
-    expect(getMappingValue(1)).toEqual(1);
+    expect(getMappingValue('string')).toBeUndefined();
   });
 
   test('consent', () => {
-    const event = createEvent({ consent: { functional: true } });
     const instance = {
-      consent: { functional: true },
+      consent: { instanceLevel: true },
     } as unknown as WalkerOS.Instance;
 
-    // Granted
-    expect(
-      getMappingValue(
-        event,
-        {
-          key: 'data.string',
-          consent: { functional: true },
-        },
-        { instance },
-      ),
-    ).toBe(event.data.string);
+    expect(instance.consent.instanceLevel).toBeTruthy();
 
     // Denied
     expect(
       getMappingValue(
-        event,
+        { foo: 'bar' },
         {
-          key: 'data.string',
-          consent: { marketing: true },
+          key: 'foo',
+          consent: { notGranted: true },
+        },
+      ),
+    ).toBeUndefined();
+
+    // eventsLevel
+    expect(
+      getMappingValue(
+        { foo: 'bar', consent: { eventLevel: true } },
+        {
+          key: 'foo',
+          consent: { eventLevel: true },
+        },
+        { instance },
+      ),
+    ).toBe('bar');
+
+    // optionsLevel
+    expect(
+      getMappingValue(
+        { foo: 'bar' },
+        { key: 'foo', consent: { optionsLevel: true } },
+        { consent: { optionsLevel: true } },
+      ),
+    ).toBe('bar');
+
+    // instanceLevel
+    expect(
+      getMappingValue(
+        { foo: 'bar' },
+        {
+          key: 'foo',
+          consent: { instanceLevel: true },
+        },
+        { instance },
+      ),
+    ).toBe('bar');
+
+    // eventsLevel override optionsLevel
+    expect(
+      getMappingValue(
+        { foo: 'bar', consent: { eventLevel: false } },
+        { key: 'foo', consent: { eventLevel: true } },
+        { instance },
+      ),
+    ).toBeUndefined();
+
+    // eventLevel overrides instanceLevel
+    expect(
+      getMappingValue(
+        { foo: 'bar', consent: { instanceLevel: false } },
+        {
+          key: 'foo',
+          consent: { instanceLevel: true },
         },
         { instance },
       ),
     ).toBeUndefined();
 
-    // Denied automatically if no instance is provided
+    // optionsLevel overrides instanceLevel
     expect(
-      getMappingValue(event, {
-        key: 'data.string',
-        consent: { functional: true },
-      }),
+      getMappingValue(
+        { foo: 'bar' },
+        { key: 'foo', consent: { instanceLevel: true } },
+        { instance, consent: { optionsLevel: false } },
+      ),
     ).toBeUndefined();
   });
 
@@ -396,5 +436,19 @@ describe('getMappingValue', () => {
 
     expect(getMappingValue(event, mappings)).toBe(event.data.string);
     expect(mockFn).not.toHaveBeenCalled();
+  });
+
+  test('error functions', () => {
+    const mockErrorFn = jest.fn(() => {
+      throw new Error('test');
+    });
+
+    expect(getMappingValue(createEvent(), { fn: mockErrorFn })).toBeUndefined();
+    expect(
+      getMappingValue(createEvent(), { condition: mockErrorFn }),
+    ).toBeUndefined();
+    expect(
+      getMappingValue(createEvent(), { validate: mockErrorFn }),
+    ).toBeUndefined();
   });
 });

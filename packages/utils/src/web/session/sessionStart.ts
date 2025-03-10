@@ -1,7 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { SessionStorageConfig } from './';
-import { sessionStorage } from './sessionStorage';
-import { sessionWindow } from './sessionWindow';
+import { sessionStorage, sessionWindow } from './';
 import { elb as elbOrg } from '../elb';
 
 export interface SessionConfig extends SessionStorageConfig {

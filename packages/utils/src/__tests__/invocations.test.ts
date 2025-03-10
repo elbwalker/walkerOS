@@ -42,19 +42,25 @@ describe('Invocations', () => {
     test('immediate execution', async () => {
       const fn = debounce(mockFn, 50, true);
 
-      fn('immediate');
-      expect(mockFn).toHaveBeenCalledWith('immediate');
+      fn('immediately');
+      expect(mockFn).toHaveBeenCalledWith('immediately');
       expect(mockFn).toHaveBeenCalledTimes(1);
 
+      fn('delayed');
+      jest.advanceTimersByTime(10);
       fn('delayed');
       expect(mockFn).toHaveBeenCalledTimes(1);
 
       jest.advanceTimersByTime(50);
-      expect(mockFn).toHaveBeenCalledTimes(1);
+      expect(mockFn).toHaveBeenCalledTimes(2);
+      expect(mockFn).toHaveBeenCalledWith('delayed');
 
       fn('reloaded');
+      fn('reloaded');
+      fn('reloaded');
+      jest.advanceTimersByTime(50);
       expect(mockFn).toHaveBeenCalledWith('reloaded');
-      expect(mockFn).toHaveBeenCalledTimes(2);
+      expect(mockFn).toHaveBeenCalledTimes(3);
     });
   });
 

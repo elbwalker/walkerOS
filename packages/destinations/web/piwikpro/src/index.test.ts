@@ -1,6 +1,7 @@
 import type { DestinationPiwikPro } from '.';
 import { elb, Walkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
+import { events, mapping } from '../examples';
 
 describe('Destination PiwikPro', () => {
   const w = window;
@@ -58,40 +59,43 @@ describe('Destination PiwikPro', () => {
     expect(mockFn).toHaveBeenCalledTimes(0);
   });
 
-  test('event trackEcommerceOrder', () => {
-    const order_complete = getEvent('order complete');
+  test('event ecommerceOrder', () => {
+    const event = getEvent('order complete');
     elb('walker destination', destination, {
       custom,
-      mapping: {
-        order: {
-          complete: {
-            name: 'trackEcommerceOrder',
-            data: {
-              set: [
-                'data.id',
-                'data.total',
-                {
-                  fn: (event) => {
-                    const total = Number(event.data?.total ?? 0);
-                    const taxes = Number(event.data?.taxes ?? 0);
-                    const shipping = Number(event.data?.shipping ?? 0);
-
-                    return total - taxes - shipping;
-                  },
-                },
-              ],
-            },
-          },
-        },
-      },
+      mapping: mapping.config,
     });
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceOrder());
+  });
 
-    elb(order_complete);
-    expect(mockFn).toHaveBeenCalledWith([
-      'trackEcommerceOrder',
-      order_complete.data.id,
-      order_complete.data.total,
-      expect.any(Number),
-    ]);
+  test('event ecommerceAddToCart', () => {
+    const event = getEvent('product add');
+    elb('walker destination', destination, {
+      custom,
+      mapping: mapping.config,
+    });
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceAddToCart());
+  });
+
+  test('event ecommerceProductDetailView', () => {
+    const event = getEvent('product view');
+    elb('walker destination', destination, {
+      custom,
+      mapping: mapping.config,
+    });
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceProductDetailView());
+  });
+
+  test('event ecommerceCartUpdate', () => {
+    const event = getEvent('cart view');
+    elb('walker destination', destination, {
+      custom,
+      mapping: mapping.config,
+    });
+    elb(event);
+    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceCartUpdate());
   });
 });

@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
-import { castValue, Const } from '..';
-
-export type StorageType = 'cookie' | 'local' | 'session';
+import type { StorageType } from '../core/constants';
+import Const from '../core/constants';
+import { castValue } from '../core/castValue';
 
 export interface StorageValue {
   e: number; // Expiration timestamp

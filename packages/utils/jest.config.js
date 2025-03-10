@@ -1,7 +1,7 @@
-const commonConfig = require('@elbwalker/jest/web.config');
+import baseConfig from '@elbwalker/jest/web.config';
 
 const config = {
-  testEnvironment: 'jsdom', // @TODO edit for node utils
+  testEnvironment: 'jsdom',
 };
 
-module.exports = { ...commonConfig, ...config };
+export default { ...baseConfig, ...config };

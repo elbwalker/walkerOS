@@ -1,5 +1,5 @@
-const commonConfig = require('@elbwalker/jest/node.config');
+import baseConfig from '@elbwalker/jest';
 
 const config = {};
 
-module.exports = { ...commonConfig, ...config };
+export default { ...baseConfig, ...config };

@@ -8,6 +8,19 @@ import PackageLink from '/src/components/docs/package-link';
 import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import { getEvent } from '@elbwalker/utils';
+import {
+  DestinationContextProvider,
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationMetaPixel from '@elbwalker/destination-web-meta-pixel';
+import { mapping } from '@elbwalker/destination-web-meta-pixel/examples';
+
+<DestinationContextProvider
+  destination={destinationMetaPixel}
+  fnName='fbq'
+>
 
 <PackageLink
   browser="@elbwalker/destination-web-meta-pixel"
@@ -79,38 +92,11 @@ ID</Link>.
 
 #### Example
 
-```js
-const config = {
-  custom: {
+<DestinationInit
+  custom={`{
     pixelId: '1234567890', // Required
-  },
-  mapping: {
-    order: {
-      complete: {
-        name: 'Purchase',
-        data: {
-          map: {
-            currency: { value: 'EUR' },
-            value: 'data.total',
-            contents: {
-              loop: [
-                'nested',
-                {
-                  map: {
-                    id: 'data.id',
-                    quantity: { key: 'data.quantity', value: 1 },
-                  },
-                },
-              ],
-            },
-            content_type: { value: 'product' },
-          },
-        },
-      },
-    },
-  },
-};
-```
+  }`}
+/>
 
 ### Custom
 
@@ -145,9 +131,49 @@ otherwise `trackCustom` will be used.
 - `quantity`: PropertyMapping (`string` or object with `key` and optional
   `default`)
 
+## Mapping
+
+### ViewContent
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product add')}
+  mapping={mapping.ViewContent}
+/>
+
+### AddToCart
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product add')}
+  mapping={mapping.AddToCart}
+/>
+
+### InitiateCheckout
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('cart view')}
+  mapping={mapping.InitiateCheckout}
+/>
+
+### Purchase
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('order complete')}
+  mapping={mapping.Purchase}
+/>
+
 :::info
 
 If you need professional support with your walkerOS implementation, check out
 our&nbsp;<Link to="/services">services</Link>.
 
 :::
+
+</DestinationContextProvider>

@@ -1,5 +1,5 @@
 import type { Elb, SourceWalkerjs } from './types';
-import { sessionStart } from '@elbwalker/utils';
+import { sessionStart } from '@elbwalker/utils/web';
 import { addDestination } from './lib/destination';
 import { onApply } from './lib/on';
 import { createPush, elbLayerInit } from './lib/push';
@@ -12,9 +12,8 @@ import { dataLayerDestination } from './lib/destination';
 
 // Export types and elb
 export * from './types';
-export { elb };
 
-const elb = createElb();
+export const elb = createElb();
 
 export function Walkerjs(
   customConfig: SourceWalkerjs.InitConfig = {},

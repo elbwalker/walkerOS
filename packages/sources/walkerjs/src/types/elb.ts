@@ -1,5 +1,8 @@
 import type { Elb, WalkerOS } from '@elbwalker/types';
-import type { On, DestinationWeb, Walker, SourceWalkerjs } from '.';
+import type { Destination, DestinationInit, Config } from './destination';
+import type { ConsentConfig, Options } from './on';
+import type { State } from './source';
+import type { Trigger } from './walker';
 
 export interface Fn<R = void, D = PushData, O = PushOptions, C = PushContext>
   extends Elb.Fn<R, D, O, C>,
@@ -15,36 +18,38 @@ export type CommandInit<R = void> = (
 
 export type CommandDestination<R = void> = (
   event: 'walker destination',
-  destination: DestinationWeb.Destination | DestinationWeb.DestinationInit,
-  config?: DestinationWeb.Config,
+  destination: Destination | DestinationInit,
+  config?: Config,
 ) => R;
 
 export type CommandRun<R = void> = (
   event: 'walker run',
-  state?: Partial<SourceWalkerjs.State>,
+  state?: Partial<State>,
 ) => R;
 
 export type CommandOn<R = void> = (
   event: 'walker on',
   type: 'consent',
-  rules: WalkerOS.SingleOrArray<On.ConsentConfig>,
+  rules: WalkerOS.SingleOrArray<ConsentConfig>,
 ) => R;
 
 export type Layer = Elb.Layer;
 
 export type PushData =
   | Elb.PushData
-  | DestinationWeb.Destination
-  | DestinationWeb.DestinationInit
-  | Partial<SourceWalkerjs.State>
+  | Destination
+  | DestinationInit
+  | Partial<State>
   | ScopeType;
 
 export type PushOptions =
   | Elb.PushOptions
-  | Walker.Trigger
-  | WalkerOS.SingleOrArray<On.Options>
-  | DestinationWeb.Config;
+  | Trigger
+  | WalkerOS.SingleOrArray<Options>
+  | Config;
 
 export type PushContext = Elb.PushContext | Element;
+
 export type Scope = Element | Document;
+
 export type ScopeType = Scope | Scope[];

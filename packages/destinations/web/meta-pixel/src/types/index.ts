@@ -1,3 +1,4 @@
+import type { Mapping } from '@elbwalker/types';
 import type { DestinationWeb } from '@elbwalker/walker.js';
 
 declare global {
@@ -21,6 +22,8 @@ export interface CustomEvent {
   track?: StandardEventNames; // Name of a standard event to track
   trackCustom?: string; // Name of a custom event to track
 }
+
+export type EventConfig = Mapping.EventConfig<CustomEvent>;
 
 export type StandardEventNames =
   | 'PageView'

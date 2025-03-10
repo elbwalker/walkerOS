@@ -1,3 +1,5 @@
+import { Const, throttle, tryCatch } from '@elbwalker/utils';
+import { elb as elbOrg, getAttribute, isVisible } from '@elbwalker/utils/web';
 import { Walker, SourceWalkerjs, Elb } from '../types';
 import { onApply } from './on';
 import {
@@ -6,14 +8,6 @@ import {
   getPageViewData,
   getTriggerActions,
 } from './walker';
-import {
-  elb as elbOrg,
-  Const,
-  getAttribute,
-  isVisible,
-  throttle,
-  tryCatch,
-} from '@elbwalker/utils';
 
 let visibleObserver: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];
@@ -24,7 +18,6 @@ export const createElb: (customLayer?: Elb.Layer) => Elb.Fn = (
 ) => {
   return customLayer
     ? function () {
-        // eslint-disable-next-line prefer-rest-params
         customLayer.push(arguments);
       }
     : (elbOrg as Elb.Fn);

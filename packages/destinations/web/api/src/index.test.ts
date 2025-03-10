@@ -1,41 +1,43 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { DestinationWebAPI } from '.';
+import { createEvent } from '@elbwalker/utils';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
+import { events, mapping } from '../examples';
 
 describe('Destination API', () => {
-  const mockSendWeb = jest.fn();
-  jest.mock('@elbwalker/utils', () => ({
-    ...jest.requireActual('@elbwalker/utils'),
+  const mockSendWeb = jest.fn(); //.mockImplementation(console.log);
+
+  jest.mock('@elbwalker/utils/web', () => ({
+    ...jest.requireActual('@elbwalker/utils/web'),
     sendWeb: mockSendWeb,
   }));
 
   let destination: DestinationWebAPI.Destination;
-  const event = { event: 'entity action' } as WalkerOS.Event;
-  const data = JSON.stringify(event);
+  let event: WalkerOS.Event;
   const url = 'https://api.example.com/';
 
-  function push(
-    event: WalkerOS.Event,
-    custom: DestinationWebAPI.Custom = { url },
-    mapping = {},
-    options = {},
-  ) {
-    destination.push(event, { custom }, mapping, options);
-  }
-
-  beforeEach(async () => {
+  beforeEach(() => {
     destination = jest.requireActual('.').default;
+    event = createEvent();
+    Walkerjs({ pageview: false, session: false, run: true });
+    jest.clearAllMocks();
   });
 
   test('init', () => {
-    push(event, { url: '' }); // No url
+    destination.config = {};
+    elb('walker destination', destination);
+
+    elb(event); // No url
     expect(mockSendWeb).not.toHaveBeenCalled();
 
-    push(event);
-
+    destination.config.custom = { url };
+    elb(event);
     expect(mockSendWeb).toHaveBeenCalledTimes(1);
-    expect(mockSendWeb).toHaveBeenCalledWith(
-      url,
-      data,
+
+    const [calledUrl, calledData, calledOptions] = mockSendWeb.mock.calls[0];
+    expect(calledUrl).toBe(url);
+    expect(JSON.parse(calledData)).toEqual(event);
+    expect(calledOptions).toEqual(
       expect.objectContaining({
         transport: 'fetch',
       }),
@@ -49,7 +51,10 @@ describe('Destination API', () => {
   });
 
   test('transform', () => {
-    push(event, { url, transform: () => 'transformed' });
+    elb('walker destination', destination, {
+      custom: { url, transform: () => 'transformed' },
+    });
+    elb(event);
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
       'transformed',
@@ -58,10 +63,13 @@ describe('Destination API', () => {
   });
 
   test('headers', () => {
-    push(event, { url, headers: { foo: 'bar' } });
+    elb('walker destination', destination, {
+      custom: { url, headers: { foo: 'bar' } },
+    });
+    elb(event);
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
-      data,
+      expect.any(String),
       expect.objectContaining({
         headers: { foo: 'bar' },
       }),
@@ -69,24 +77,30 @@ describe('Destination API', () => {
   });
 
   test('method', () => {
-    push(event, { url, method: 'POST' });
+    elb('walker destination', destination, {
+      custom: { url, method: 'POST' },
+    });
+    elb(event);
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
-      data,
+      expect.any(String),
       expect.objectContaining({
         method: 'POST',
       }),
     );
   });
 
-  test('mapping data', () => {
-    push(event, { url, method: 'POST' }, {}, { data: { foo: 'bar' } });
+  test('event entity action', () => {
+    elb('walker destination', destination, {
+      custom: { url },
+      mapping: mapping.config,
+    });
+    elb(event);
+
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
-      JSON.stringify({ foo: 'bar' }),
-      expect.objectContaining({
-        method: 'POST',
-      }),
+      events.entity_action(),
+      expect.any(Object),
     );
   });
 });

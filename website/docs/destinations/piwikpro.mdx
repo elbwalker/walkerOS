@@ -7,6 +7,19 @@ import PackageLink from '/src/components/docs/package-link';
 import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import { getEvent } from '@elbwalker/utils';
+import {
+  DestinationContextProvider,
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationPiwikPro from '@elbwalker/destination-web-piwikpro';
+import { mapping } from '@elbwalker/destination-web-piwikpro/examples';
+
+<DestinationContextProvider
+  destination={destinationPiwikPro}
+  fnName='_paq.push'
+>
 
 <PackageLink
   browser="@elbwalker/destination-web-piwikpro"
@@ -76,42 +89,13 @@ Configure your PiwikPro destination with
 your&nbsp;<Link to="https://help.piwik.pro/support/questions/find-website-id/#:~:text=Navigate%20to%20Sites%20%26%20apps.,the%20site%20or%20app%20name.">App
 ID</Link> and URL.
 
-#### Example
-
-```js
-const config = {
-  custom: {
+<DestinationInit
+  custom={`{
     appId: 'XXX-XXX-XXX-XXX-XXX', // Id of the site
     // linkTracking: false, // Disable download and outlink tracking
     url: 'https://your_account_name.piwik.pro/', // Same address as the login
-  },
-  mapping: {
-    order: {
-      complete: {
-        name: 'trackEcommerceOrder',
-        custom: {
-          // CustomEvent
-          goalId: 'xxx-xxx-...', // Count the event as a goal
-          goalValue: 'data.total', // Property to be used as goal value
-        },
-        data: [
-          'data.id',
-          'data.total',
-          {
-            fn: (event) => {
-              const total = Number(event.data?.total ?? 0);
-              const taxes = Number(event.data?.taxes ?? 0);
-              const shipping = Number(event.data?.shipping ?? 0);
-
-              return total - taxes - shipping;
-            },
-          },
-        ],
-      },
-    },
-  },
-};
-```
+  }`}
+/>
 
 ### Custom
 
@@ -141,3 +125,70 @@ If you need professional support with your walkerOS implementation, check out
 our&nbsp;<Link to="/services">services</Link>.
 
 :::
+
+## Mapping
+
+You are able to map your walkerOS events to match the respective requirements of
+each vendor. The `mapping` examples are using a
+live&nbsp;<Link to="#configuration">configuration</Link>.
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+### ProductDetailView
+
+Map your walkerOS event to get
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceproductdetailview#examples">ecommerceProductDetailView</Link>
+event.
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product view')}
+  mapping={mapping.ecommerceProductDetailView}
+/>
+
+### AddToCart
+
+Map your walkerOS event to get
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceaddtocart#examples">ecommerceAddToCart</Link>
+event.
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product add')}
+  mapping={mapping.ecommerceAddToCart}
+/>
+
+### CartUpdate
+
+Map your walkerOS event to get
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommercecartupdate#examples">ecommerceCartUpdate</Link>
+event.
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('cart view')}
+  mapping={mapping.ecommerceCartUpdate}
+/>
+
+### Order
+
+Map your walkerOS event to get
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceorder#examples">ecommerceOrder</Link>
+event.
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('order complete')}
+  mapping={mapping.ecommerceOrder}
+/>
+
+</DestinationContextProvider>

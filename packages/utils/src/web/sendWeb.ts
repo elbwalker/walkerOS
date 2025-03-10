@@ -1,4 +1,4 @@
-import type { SendDataValue, SendHeaders, SendResponse } from '../';
+import type { SendDataValue, SendHeaders, SendResponse } from '../core/send';
 import { getHeaders, transformData } from '../core/send';
 import { tryCatch, tryCatchAsync } from '../core/tryCatch';
 

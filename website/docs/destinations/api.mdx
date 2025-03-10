@@ -7,6 +7,19 @@ import PackageLink from '/src/components/docs/package-link';
 import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import { getEvent } from '@elbwalker/utils';
+import {
+  DestinationContextProvider,
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationWebAPI from '@elbwalker/destination-web-api';
+import { mapping } from '@elbwalker/destination-web-api/examples';
+
+<DestinationContextProvider
+  destination={destinationWebAPI}
+  fnName="sendWeb"
+>
 
 <PackageLink
   browser="@elbwalker/destination-web-api"
@@ -75,17 +88,15 @@ Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/de
 
 Set up the config for the destination.
 
-```js
-const config = {
-  custom: {
-    url: 'https://httpbin.org/anything',
+<DestinationInit
+  custom={`{
+    url: 'https://localhost:3000/api',
     transform: (event, config, mapping) => {
       return JSON.stringify(event);
     },
     transport: 'fetch',
-  },
-};
-```
+  }`}
+/>
 
 | Property  | Type                                   | Description                                                        |
 | --------- | -------------------------------------- | ------------------------------------------------------------------ |
@@ -95,9 +106,26 @@ const config = {
 
 Properties with a `*` are required.
 
+If no `transform` function is provided, the event data will be transformed using
+`JSON.stringify`.
+
+## Mapping
+
+By default the&nbsp;<Link to="/docs/utils/helper#sendweb">`sendWeb`</Link>
+function is used to send the events to an API.
+
+<DestinationPush
+  smallText={true}
+  height={'128px'}
+  event={getEvent()}
+  mapping={mapping.entity_action}
+/>
+
 :::info
 
 If you need professional support with your walkerOS implementation, check out
 our&nbsp;<Link to="/services">services</Link>.
 
 :::
+
+</DestinationContextProvider>

@@ -1,3 +1,4 @@
+import type { Mapping } from '@elbwalker/types';
 import type { DestinationWeb } from '@elbwalker/walker.js';
 
 declare global {
@@ -15,11 +16,8 @@ export type Config = DestinationWeb.Config<Custom, CustomEvent>;
 export interface Custom {
   conversionId?: string; // The ads accounts id used for every conversion
   currency?: string; // Default currency is EUR
-  defaultValue?: number; // Used default value for conversions
 }
 
-export interface CustomEvent {
-  id?: string; // Name of data property key to use as transaction id
-  label?: string; // Conversion label
-  value?: string; // Name of data property key to use for value}
-}
+export type EventConfig = Mapping.EventConfig<CustomEvent>;
+
+export interface CustomEvent {}

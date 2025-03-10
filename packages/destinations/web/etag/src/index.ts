@@ -1,7 +1,8 @@
 import type { Custom, Destination } from './types';
 import type { DestinationCoreEtag } from '@elbwalker/destination-core-etag';
 import { getParameters } from '@elbwalker/destination-core-etag';
-import { requestToParameter, sendWebAsFetch } from '@elbwalker/utils';
+import { requestToParameter } from '@elbwalker/utils';
+import { sendWebAsFetch } from '@elbwalker/utils/web';
 
 // Types
 export * as DestinationWebEtag from './types';

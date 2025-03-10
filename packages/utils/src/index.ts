@@ -1,3 +1,1 @@
-export * from './core';
-export * from './node';
-export * from './web';
+export * from './core/index';

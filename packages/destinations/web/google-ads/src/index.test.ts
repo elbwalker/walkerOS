@@ -1,5 +1,7 @@
-import { elb, Walkerjs } from '@elbwalker/walker.js';
 import type { DestinationGoogleAds } from '.';
+import { elb, Walkerjs } from '@elbwalker/walker.js';
+import { getEvent } from '@elbwalker/utils';
+import { events, mapping } from '../examples';
 
 describe('destination Google Ads', () => {
   const w = window;
@@ -8,9 +10,8 @@ describe('destination Google Ads', () => {
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
-  const event = 'entity action';
+  const event = getEvent('order complete');
   const conversionId = 'AW-123456789';
-  const label = 'abc';
 
   beforeEach(() => {
     config = {
@@ -49,7 +50,7 @@ describe('destination Google Ads', () => {
     const fn = jest.fn();
     elb('walker destination', destination, {
       ...config,
-      mapping: { entity: { action: { custom: { label } } } },
+      mapping: { order: { complete: { name: 'label' } } },
       fn,
     });
     elb(event);
@@ -79,94 +80,13 @@ describe('destination Google Ads', () => {
     expect(elem).toBeTruthy();
   });
 
-  test('push', () => {
-    // Missing mapping
-    elb('walker destination', destination);
-    elb(event);
-    expect(mockFn).not.toHaveBeenCalledWith('event', 'conversion', {
-      send_to: `${conversionId}/${label}`,
+  test('event conversion', () => {
+    elb('walker destination', destination, {
+      custom: { conversionId },
+      mapping: mapping.config,
     });
-
-    // Correct mapping
-    destination.config.mapping = { entity: { action: { custom: { label } } } };
-    elb(event);
-    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
-      send_to: `${conversionId}/${label}`,
-      currency: 'EUR',
-    });
-
-    // Change currency
-    const currency = 'USD';
-    destination.config.custom!.currency = currency;
 
     elb(event);
-    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
-      send_to: `${conversionId}/${label}`,
-      currency,
-    });
-  });
-
-  test('dataLayer source', () => {
-    elb('walker destination', destination);
-    destination.config.mapping = {
-      entity: { action: { custom: { label } } },
-    };
-    elb(event);
-    jest.resetAllMocks();
-
-    elb({ event, source: { type: 'dataLayer' } });
-    expect(mockFn).toHaveBeenCalledTimes(0);
-
-    elb({ event, source: { type: 'web' } });
-    expect(mockFn).toHaveBeenCalledTimes(1);
-  });
-
-  test('push with value', () => {
-    elb('walker destination', destination);
-    destination.config.mapping = {
-      entity: { action: { custom: { label, value: 'revenue' } } },
-    };
-
-    // Missing value property
-    elb(event, {});
-    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
-      send_to: `${conversionId}/${label}`,
-      currency: 'EUR',
-    });
-
-    // Use a default conversion value
-    destination.config.custom!.defaultValue = 3.14;
-    elb(event, {});
-    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
-      send_to: `${conversionId}/${label}`,
-      currency: 'EUR',
-      value: 3.14,
-    });
-
-    // With value property
-    elb(event, { revenue: 42 });
-    expect(mockFn).toHaveBeenCalledWith('event', 'conversion', {
-      send_to: `${conversionId}/${label}`,
-      currency: 'EUR',
-      value: 42,
-    });
-  });
-
-  test('push with transaction_id', () => {
-    elb('walker destination', destination);
-    const transaction_id = '0rd3r1d';
-    destination.config.mapping = {
-      entity: { action: { custom: { label, id: 'order_id' } } },
-    };
-
-    elb(event, { order_id: transaction_id });
-    expect(mockFn).toHaveBeenCalledWith(
-      'event',
-      'conversion',
-      expect.objectContaining({
-        send_to: `${conversionId}/${label}`,
-        transaction_id,
-      }),
-    );
+    expect(mockFn).toHaveBeenCalledWith(...events.conversion());
   });
 });

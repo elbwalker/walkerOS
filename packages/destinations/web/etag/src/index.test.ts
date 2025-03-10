@@ -8,6 +8,10 @@ describe('Destination web etag', () => {
   jest.mock('@elbwalker/utils', () => ({
     ...jest.requireActual('@elbwalker/utils'),
     getId: () => 1337,
+  }));
+
+  jest.mock('@elbwalker/utils/web', () => ({
+    ...jest.requireActual('@elbwalker/utils/web'),
     sendWebAsFetch: mockSend,
   }));
 

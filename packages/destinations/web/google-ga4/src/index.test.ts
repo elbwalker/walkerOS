@@ -1,6 +1,7 @@
-import { getEvent } from '@elbwalker/utils';
 import type { DestinationGoogleGA4 } from '.';
+import { getEvent } from '@elbwalker/utils';
 import { elb, Walkerjs } from '@elbwalker/walker.js';
+import { events, mapping } from '../examples';
 
 describe('Destination Google GA4', () => {
   const w = window;
@@ -123,18 +124,6 @@ describe('Destination Google GA4', () => {
       data_foo: 'bar',
       send_to: measurementId,
     });
-  });
-
-  test('dataLayer source', () => {
-    elb('walker destination', destination);
-    elb(event);
-    jest.resetAllMocks();
-
-    elb(getEvent('entity action', { source: { type: 'dataLayer' } }));
-    expect(mockFn).toHaveBeenCalledTimes(0);
-
-    elb(getEvent('entity action', { source: { type: 'web' } }));
-    expect(mockFn).toHaveBeenCalledTimes(1);
   });
 
   test('settings', () => {
@@ -298,112 +287,31 @@ describe('Destination Google GA4', () => {
 
   test('event add_to_cart', () => {
     const event = getEvent('product add');
+
     const config: DestinationGoogleGA4.Config = {
-      custom: { measurementId },
+      custom: { measurementId, include: [] },
       init: true,
-      mapping: {
-        product: {
-          add: {
-            name: 'add_to_cart',
-            data: {
-              map: {
-                currency: { value: 'EUR', key: 'data.currency' },
-                override: 'data.old',
-                value: 'data.price',
-                items: {
-                  loop: [
-                    'this',
-                    {
-                      map: {
-                        item_id: 'data.id',
-                        item_variant: 'data.color',
-                        quantity: { value: 1, key: 'data.quantity' },
-                      },
-                    },
-                  ],
-                },
-              },
-            },
-          },
-        },
-      },
+      mapping: mapping.config,
     };
     elb('walker destination', destination, config);
 
     elb(event);
 
-    expect(mockFn).toHaveBeenCalledWith(
-      'event',
-      'add_to_cart',
-      expect.objectContaining({
-        currency: 'EUR',
-        value: event.data.price,
-        items: [
-          {
-            item_id: event.data.id,
-            item_variant: event.data.color,
-            quantity: 1,
-          },
-        ],
-      }),
-    );
+    expect(mockFn).toHaveBeenCalledWith(...events.add_to_cart());
   });
 
   test('event purchase', () => {
     const event = getEvent('order complete');
+
     const config: DestinationGoogleGA4.Config = {
-      custom: { measurementId },
+      custom: { measurementId, include: [] },
       init: true,
-      mapping: {
-        order: {
-          complete: {
-            name: 'purchase',
-            data: {
-              map: {
-                transaction_id: 'data.id',
-                value: 'data.total',
-                tax: 'data.taxes',
-                shipping: 'data.shipping',
-                currency: { key: 'data.currency', value: 'EUR' },
-                items: {
-                  loop: [
-                    'nested',
-                    {
-                      condition: (entity) => entity.type === 'product',
-                      map: {
-                        item_id: 'data.id',
-                        item_name: 'data.name',
-                        quantity: { key: 'data.quantity', value: 1 },
-                      },
-                    },
-                  ],
-                },
-              },
-            },
-          },
-        },
-      },
+      mapping: mapping.config,
     };
     elb('walker destination', destination, config);
 
     elb(event);
-    const product1 = event.nested[0].data;
-    const product2 = event.nested[1].data;
-    expect(mockFn).toHaveBeenCalledWith(
-      'event',
-      'purchase',
-      expect.objectContaining({
-        transaction_id: event.data.id,
-        value: event.data.total,
-        tax: event.data.taxes,
-        shipping: event.data.shipping,
-        currency: 'EUR',
-        items: [
-          { item_id: product1.id, item_name: product1.name, quantity: 1 },
-          { item_id: product2.id, item_name: product2.name, quantity: 1 },
-        ],
-      }),
-    );
+    expect(mockFn).toHaveBeenCalledWith(...events.purchase());
   });
 
   test('snake case disabled', () => {

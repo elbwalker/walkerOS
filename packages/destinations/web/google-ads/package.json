@@ -2,17 +2,26 @@
   "name": "@elbwalker/destination-web-google-ads",
   "description": "Google Ads web destination for walkerOS",
   "version": "3.0.1",
+  "type": "module",
   "license": "MIT",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "import": "./dist/examples/index.mjs",
+      "require": "./dist/examples/index.js"
+    }
+  },
   "files": [
     "dist/**",
     "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup",
-    "build:dev": "tsup --config tsup.dev.config.ts",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "lint": "tsc && eslint \"**/*.ts*\"",

@@ -1,3 +1,4 @@
+import type { Mapping } from '@elbwalker/types';
 import type { DestinationWeb } from '@elbwalker/walker.js';
 
 declare global {
@@ -23,6 +24,8 @@ export interface CustomEvent {
   goalId?: string;
   goalValue?: string;
 }
+
+export type EventConfig = Mapping.EventConfig<CustomEvent>;
 
 export interface Dimensions {
   [i: number]: string;

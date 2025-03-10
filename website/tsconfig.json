@@ -4,6 +4,16 @@
   "compilerOptions": {
     "baseUrl": ".",
     "esModuleInterop": true,
-    "moduleResolution": "node"
+    "moduleResolution": "bundler",
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "paths": {
+      "@elbwalker/*": ["../packages/*/src"],
+      "@elbwalker/destination-web-*": ["../packages/destinations/web/*/src"],
+      "@elbwalker/destination-node-*": ["../packages/destinations/node/*/src"],
+      "@elbwalker/source-*": ["../packages/sources/*/src"],
+      "@elbwalker/walker.js": ["../packages/sources/walkerjs/src"]
+    }
   }
 }
