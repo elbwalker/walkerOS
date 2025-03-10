@@ -86,7 +86,7 @@ export const ViewContent: DestinationMetaPixel.EventConfig = {
   name: 'ViewContent',
   data: {
     map: {
-      value: 'data.value',
+      value: 'data.price',
       currency: { value: 'EUR' },
       content_type: { value: 'product' },
       contents: {

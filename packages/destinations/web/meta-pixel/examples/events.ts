@@ -61,7 +61,7 @@ export function ViewContent() {
     'ViewContent',
     {
       currency: 'EUR',
-      value: event.data.value,
+      value: event.data.price,
       contents: [{ id: event.data.id, quantity: 1 }],
       content_type: 'product',
     },
