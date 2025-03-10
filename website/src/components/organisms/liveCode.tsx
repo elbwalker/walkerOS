@@ -95,6 +95,7 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
           isFullScreenMode ? 'h-full' : ''
         }`}
         onClick={(e) => e.stopPropagation()}
+        style={height && { height: isFullScreenMode ? undefined : `${height}` }}
       >
         <CodeBox
           label={labelInput}
@@ -102,7 +103,6 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
           value={input}
           onChange={setInput}
           className={boxClassNames}
-          height={isFullScreenMode ? undefined : height}
           smallText={isFullScreenMode ? false : smallText}
         />
 
@@ -113,7 +113,6 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
             value={config}
             onChange={setConfig}
             className={boxClassNames}
-            height={isFullScreenMode ? undefined : height}
             smallText={isFullScreenMode ? false : smallText}
           />
         )}
@@ -122,14 +121,13 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
           label={labelOutput}
           value={output[0] || emptyText}
           className={boxClassNames}
-          height={isFullScreenMode ? undefined : height}
           smallText={isFullScreenMode ? false : smallText}
         />
       </div>
     );
 
     return (
-      <div className="live-code">
+      <div className="live-code mb-4">
         <div className="flex flex-col gap-2">
           <div className="flex justify-end">
             <button

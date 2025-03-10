@@ -52,7 +52,6 @@ interface CodeBoxProps {
   language?: string;
   inline?: boolean;
   className?: string;
-  height?: number;
   smallText?: boolean;
 }
 
@@ -63,7 +62,6 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   disabled = false,
   language = 'javascript',
   className = '',
-  height,
   smallText = false,
 }) => {
   const [copied, setCopied] = useState(false);
@@ -127,7 +125,6 @@ const CodeBox: React.FC<CodeBoxProps> = ({
       className={`border border-base-300 rounded-lg overflow-hidden bg-gray-800 relative ${
         smallText ? 'text-xs' : 'text-sm'
       } ${className}`}
-      style={height && { height: `${height}` }}
     >
       {label && (
         <div className="font-bold px-2 py-1 bg-base-100 text-base flex justify-between items-center">
