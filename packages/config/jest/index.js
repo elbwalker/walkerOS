@@ -5,9 +5,6 @@ function getModuleMapper() {
   // Check if we're in watch mode (dev) or regular test mode
   const isWatchMode = process.argv.includes('--watchAll');
 
-  // Use either src or dist folder based on watch mode
-  const targetDir = isWatchMode ? '/src' : '/dist';
-
   const packagesDir = path.join(
     path.dirname(fileURLToPath(import.meta.url)),
     '..',
@@ -15,13 +12,16 @@ function getModuleMapper() {
     '/',
   );
 
-  function getDirectory(dir, target = targetDir) {
-    return path.join(packagesDir, dir, target);
+  function getDirectory(dir, useDist = true) {
+    // For packages without dist (like jest and types), always use src
+    // For other packages, use src in watch mode and dist otherwise
+    const targetDir = useDist ? (isWatchMode ? 'src' : 'dist') : 'src';
+    return path.join(packagesDir, dir, targetDir);
   }
 
   return {
-    '^@elbwalker/jest$1': getDirectory('config/jest$1', ''),
-    '^@elbwalker/types': getDirectory('types', 'src'),
+    '^@elbwalker/jest$1': getDirectory('config/jest$1', false),
+    '^@elbwalker/types': getDirectory('types', false),
     '^@elbwalker/utils$1': getDirectory('utils$1'),
     '^@elbwalker/walker.js': getDirectory('sources/walkerjs'),
     '^@elbwalker/destination-web-(.*)$': getDirectory('destinations/web/$1'),

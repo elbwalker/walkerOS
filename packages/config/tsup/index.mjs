@@ -16,6 +16,8 @@ const buildModules = (customConfig = {}) => ({
   },
   dts: true,
   sourcemap: true,
+  declaration: true,
+  declarationMap: true,
   ...customConfig,
 });
 

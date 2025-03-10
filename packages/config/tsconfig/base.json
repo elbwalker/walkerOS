@@ -7,7 +7,6 @@
     "declarationMap": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "inlineSources": false,
     "isolatedModules": true,
     "moduleResolution": "bundler",
     "module": "es2015",
@@ -18,7 +17,16 @@
     "strict": true,
     "target": "es2022",
     "allowJs": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@elbwalker/*": ["packages/*/src"],
+      "@elbwalker/destination-web-*": ["packages/destinations/web/*/src"],
+      "@elbwalker/destination-node-*": ["packages/destinations/node/*/src"],
+      "@elbwalker/source-*": ["packages/sources/*/src"],
+      "@elbwalker/walker.js": ["packages/sources/walkerjs"]
+    }
   },
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "**/dist", "**/*.d.ts"]
 }
