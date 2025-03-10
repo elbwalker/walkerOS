@@ -5,25 +5,26 @@ export function debounce<P extends unknown[], R>(
 ) {
   let timer: number | NodeJS.Timeout | null = null;
   let result: R;
+  let hasCalledImmediately = false;
 
   return (...args: P): Promise<R> => {
     // Return value as promise
     return new Promise((resolve) => {
-      const callNow = immediate && !timer;
+      const callNow = immediate && !hasCalledImmediately;
 
       // abort previous invocation
       if (timer) clearTimeout(timer);
 
       timer = setTimeout(() => {
         timer = null;
-
-        if (!immediate) {
+        if (!immediate || hasCalledImmediately) {
           result = fn(...args);
           resolve(result);
         }
       }, wait);
 
       if (callNow) {
+        hasCalledImmediately = true;
         result = fn(...args);
         resolve(result);
       }
