@@ -7,6 +7,19 @@ import PackageLink from '/src/components/docs/package-link';
 import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import {
+  DestinationContextProvider,
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationGoogleAds from '@elbwalker/destination-web-google-ads';
+import { mapping } from '@elbwalker/destination-web-google-ads/examples';
+import { getEvent } from '@elbwalker/utils';
+
+<DestinationContextProvider
+  destination={destinationGoogleAds}
+  fnName='gtag'
+>
 
 <PackageLink
   browser="@elbwalker/destination-web-google-ads"
@@ -74,30 +87,14 @@ Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/de
 
 Configure the Google Ads destination with a Conversion ID and Conversion label.
 
-#### Example
-
-```js
-const config = {
-  custom: {
+<DestinationInit
+  custom={`{
     conversionId: 'AW-123456789', // Required
     currency: 'EUR',
     defaultValue: 1,
-  },
-  mapping: {
-    // e.g. order
-    entity: {
-      // e.g. complete
-      action: {
-        custom: {
-          label: 'abc', // Required
-          id: 'order_id',
-          value: 'revenue',
-        },
-      },
-    },
-  },
-};
-```
+  }`}
+/>
+
 ### Custom
 
 | Property       | Type   | Description                                      |
@@ -115,6 +112,19 @@ For the custom event mapping (`mapping.entity.action.custom`):
 | label\*  | string | Google Ads Conversion label.                    |
 | id       | string | Property key to use as transaction ID.          |
 | value    | string | Name of the data property key to use for value. |
+
+## Examples
+
+### Order
+
+<DestinationPush
+  smallText={true}
+  height={'256px'}
+  event={getEvent('order complete')}
+  mapping={mapping.conversion}
+/>
+
+</DestinationContextProvider>
 
 :::info
 
