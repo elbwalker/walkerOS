@@ -67,6 +67,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   const [copied, setCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isFormatHovered, setIsFormatHovered] = useState(false);
+  const isEditable = onChange && !disabled;
 
   const handleCopy = async () => {
     tryCatch(async () => {
@@ -192,7 +193,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
         </div>
       )}
       <div className="flex-1 overflow-auto max-h-[calc(100vh-16rem)]">
-        {!disabled && (
+        {isEditable && (
           <div className="absolute bottom-2 right-2 text-gray-500">
             <svg
               className="w-5 h-4"
