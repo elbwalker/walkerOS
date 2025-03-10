@@ -1,5 +1,3 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/typescript-node
 {
   "name": "walkerOS dev container",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
@@ -15,7 +13,9 @@
       "extensions": [
         "unifiedjs.vscode-mdx",
         "esbenp.prettier-vscode",
-        "streetsidesoftware.code-spell-checker"
+        "streetsidesoftware.code-spell-checker",
+        "chakrounanas.turbo-console-log",
+        "openai.chatgpt"
       ],
       "settings": {
         "[typescript]": {
@@ -38,7 +38,7 @@
   // "forwardPorts": [],
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "npm install && npm run build",
+  "postCreateCommand": "npm install && ln -s /workspaces/walkerOS/node_modules /workspaces/walkerOS/website/node_modules && npm run build",
   "portsAttributes": {
     "3000": {
       "label": "3000 - website"
