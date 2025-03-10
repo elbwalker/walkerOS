@@ -14,6 +14,12 @@ in any environment, the web-helpers are are made for the browser.
 
 ## Core
 
+Import the core utils from the `@elbwalker/utils` package.
+
+```ts
+import { assign, anonymizeIP } from '@elbwalker/utils';
+```
+
 ### anonymizeIP
 
 `anonymizeIP(ip: string): string` is used to anonymize IP addresses (v4) by
@@ -376,6 +382,12 @@ the&nbsp;<Link to="/docs/utils/hooks">Hooks</Link> page.
 
 ## Node
 
+Import the core utils from the `@elbwalker/utils/node` package.
+
+```ts
+import { getHashNode, sendNode } from '@elbwalker/utils/node';
+```
+
 ### getHashNode
 
 `async getHashNode(str: string, length?: number): Promise<string>` generates a
@@ -409,6 +421,12 @@ interface SendResponse {
 ```
 
 ## Web
+
+Import the web utils from the `@elbwalker/utils/web` package.
+
+```ts
+import { getHashWeb, sendWeb } from '@elbwalker/utils/web';
+```
 
 ### Browser
 
