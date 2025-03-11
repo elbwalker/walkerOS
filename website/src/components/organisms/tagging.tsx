@@ -5,6 +5,7 @@ import { elb } from '@elbwalker/walker.js';
 import CodeBox from '../molecules/codeBox';
 import FullScreenOverlay from '../molecules/codeBoxOverlay';
 import FullScreenButton from '../molecules/fullScreenButton';
+import type { TypewriterOptions } from '../molecules/typewriterCode';
 
 export const taggingRegistry = (() => {
   const registry = new Map<string, (message: WalkerOS.Event) => void>();
@@ -28,6 +29,7 @@ interface PreviewProps {
   hidePreview?: boolean;
   hideConsole?: boolean;
   previewId?: string;
+  typewriter?: TypewriterOptions;
 }
 
 const Tagging: React.FC<PreviewProps> = ({
@@ -37,6 +39,7 @@ const Tagging: React.FC<PreviewProps> = ({
   hidePreview = false,
   hideConsole = false,
   previewId = 'preview',
+  typewriter,
 }) => {
   const [logs, setLogs] = useState<unknown[]>([]);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -110,6 +113,7 @@ const Tagging: React.FC<PreviewProps> = ({
           onReset={() => setLiveCode(initialCode.current)}
           className={boxClassNames}
           smallText={isFullScreenMode ? false : undefined}
+          typewriter={typewriter}
         />
       )}
 

@@ -2,11 +2,12 @@ import { WalkerOS } from '@elbwalker/types';
 import { isString, isDefined, tryCatch, tryCatchAsync } from '@elbwalker/utils';
 import { Highlight, themes as prismThemes } from 'prism-react-renderer';
 import Editor from 'react-simple-code-editor';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import * as prettier from 'prettier/standalone';
 import * as parserBabel from 'prettier/parser-babel';
 import estree from 'prettier/plugins/estree';
 import { ObjectInspector, chromeDark } from 'react-inspector';
+import { simulateEdits, TypewriterOptions } from './typewriterCode';
 
 interface FormatValueProps {
   intent?: number;
@@ -58,6 +59,7 @@ interface CodeBoxProps {
   isConsole?: boolean;
   onReset?: () => void;
   showReset?: boolean;
+  typewriter?: TypewriterOptions;
 }
 
 const CodeBox: React.FC<CodeBoxProps> = ({
@@ -71,12 +73,37 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   isConsole = false,
   onReset,
   showReset = false,
+  typewriter,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isFormatHovered, setIsFormatHovered] = useState(false);
   const [isResetHovered, setIsResetHovered] = useState(false);
+  const [currentValue, setCurrentValue] = useState(value);
+  const latestValueRef = useRef(value);
   const isEditable = onChange && !disabled;
+
+  // Update ref when value changes
+  useEffect(() => {
+    latestValueRef.current = value;
+  }, [value]);
+
+  // Handle typewriter edits
+  useEffect(() => {
+    if (typewriter) {
+      const cleanup = simulateEdits(
+        latestValueRef.current,
+        typewriter,
+        (newValue) => {
+          setCurrentValue(newValue);
+          onChange?.(newValue);
+        },
+      );
+      return cleanup;
+    } else {
+      setCurrentValue(value);
+    }
+  }, [value, typewriter, onChange]);
 
   const handleCopy = async () => {
     tryCatch(async () => {
@@ -147,16 +174,21 @@ const CodeBox: React.FC<CodeBoxProps> = ({
         );
       } catch (e) {
         return (
-          <div className="p-4 text-red-500">Error parsing console data: {String(e)}</div>
+          <div className="p-4 text-red-500">
+            Error parsing console data: {String(e)}
+          </div>
         );
       }
     }
 
     return (
       <Editor
-        value={value}
+        value={currentValue}
         disabled={disabled}
-        onValueChange={(newCode) => onChange?.(newCode)}
+        onValueChange={(newCode) => {
+          setCurrentValue(newCode);
+          onChange?.(newCode);
+        }}
         highlight={highlightCode}
         padding={4}
         className="code-editor font-mono min-h-full"
