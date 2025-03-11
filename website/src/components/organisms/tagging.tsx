@@ -110,7 +110,7 @@ const Tagging: React.FC<PreviewProps> = ({
               .forEach((el) => {
                 el.setAttribute('data-elbproperty', '');
               });
-          });
+          })();
         });
       }
     }, [liveCode]);
