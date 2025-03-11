@@ -73,6 +73,41 @@
       0 0 0 4px var(--highlight-entity),
       0 0 0 6px var(--highlight-context);
   }
+
+  /* Triple combinations with property */
+  .highlight-entity.highlight-action.highlight-property
+    [data-elb][data-elbaction][data-elbproperty] {
+    box-shadow:
+      0 0 0 2px var(--highlight-action),
+      0 0 0 4px var(--highlight-entity),
+      0 0 0 6px var(--highlight-property);
+  }
+
+  .highlight-entity.highlight-context.highlight-property
+    [data-elb][data-elbcontext][data-elbproperty] {
+    box-shadow:
+      0 0 0 2px var(--highlight-context),
+      0 0 0 4px var(--highlight-entity),
+      0 0 0 6px var(--highlight-property);
+  }
+
+  .highlight-action.highlight-context.highlight-property
+    [data-elbaction][data-elbcontext][data-elbproperty] {
+    box-shadow:
+      0 0 0 2px var(--highlight-action),
+      0 0 0 4px var(--highlight-context),
+      0 0 0 6px var(--highlight-property);
+  }
+
+  /* Quadruple combination */
+  .highlight-entity.highlight-action.highlight-context.highlight-property
+    [data-elb][data-elbaction][data-elbcontext][data-elbproperty] {
+    box-shadow:
+      0 0 0 2px var(--highlight-action),
+      0 0 0 4px var(--highlight-entity),
+      0 0 0 6px var(--highlight-context),
+      0 0 0 8px var(--highlight-property);
+  }
 }
 
 /* Button styles - separated from highlight effects */
