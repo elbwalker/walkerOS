@@ -20,7 +20,7 @@
     box-shadow: 0 0 0 2px var(--highlight-entity);
   }
 
-  .highlight-property .is-property {
+  .highlight-property [data-elbproperty] {
     box-shadow: 0 0 0 2px var(--highlight-property);
   }
 
@@ -41,7 +41,7 @@
       0 0 0 4px var(--highlight-context);
   }
 
-  .highlight-entity.highlight-property [data-elb].is-property {
+  .highlight-entity.highlight-property [data-elb][data-elbproperty] {
     box-shadow:
       0 0 0 2px var(--highlight-entity),
       0 0 0 4px var(--highlight-property);
@@ -53,13 +53,13 @@
       0 0 0 4px var(--highlight-context);
   }
 
-  .highlight-context.highlight-property [data-elbcontext].is-property {
+  .highlight-context.highlight-property [data-elbcontext][data-elbproperty] {
     box-shadow:
       0 0 0 2px var(--highlight-context),
       0 0 0 4px var(--highlight-property);
   }
 
-  .highlight-action.highlight-property [data-elbaction].is-property {
+  .highlight-action.highlight-property [data-elbaction][data-elbproperty] {
     box-shadow:
       0 0 0 2px var(--highlight-action),
       0 0 0 4px var(--highlight-property);

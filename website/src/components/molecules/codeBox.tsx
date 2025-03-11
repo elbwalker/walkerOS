@@ -1,6 +1,5 @@
 import { WalkerOS } from '@elbwalker/types';
 import { isString, isDefined, tryCatch, tryCatchAsync } from '@elbwalker/utils';
-import { Highlight, themes as prismThemes } from 'prism-react-renderer';
 import Editor from 'react-simple-code-editor';
 import { useState, useEffect, useRef } from 'react';
 import * as prettier from 'prettier/standalone';
@@ -231,7 +230,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
                     onMouseEnter={() => setIsPauseHovered(true)}
                     onMouseLeave={() => setIsPauseHovered(false)}
                     className="text-gray-500 hover:text-gray-300 transition-colors border-none bg-transparent p-1"
-                    aria-label={isPaused ? "Play animation" : "Stop animation"}
+                    aria-label={isPaused ? 'Play animation' : 'Stop animation'}
                   >
                     {isPaused ? (
                       <svg
@@ -253,7 +252,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
                   </button>
                   {isPauseHovered && (
                     <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded shadow-sm border border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                      {isPaused ? "Play" : "Stop"}
+                      {isPaused ? 'Play' : 'Stop'}
                     </div>
                   )}
                 </div>

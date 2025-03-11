@@ -91,30 +91,25 @@ const Tagging: React.FC<PreviewProps> = ({
     }));
   };
 
-  const addPropertyClass = useCallback(
-    debounce(() => {
-      if (!previewRef.current) return;
-
-      previewRef.current.querySelectorAll('[data-elb]').forEach((entity) => {
-        const entityType = entity.getAttribute('data-elb');
-
-        if (!entityType) return;
-
-        previewRef.current
-          .querySelectorAll(`[data-elb-${entityType}]`)
-          .forEach((prop) => {
-            prop.classList.add('is-property');
-          });
-      });
-    }, 200),
-    [],
-  );
-
   const PreviewContent = () => {
     useEffect(() => {
       if (previewRef.current) {
         previewRef.current.innerHTML = liveCode.trim().replace(/;$/, '');
-        addPropertyClass();
+
+        // Then find all entities and mark their properties
+        const entities = Array.from(
+          previewRef.current.querySelectorAll('[data-elb]'),
+        )
+          .map((el) => el.getAttribute('data-elb'))
+          .filter((entity): entity is string => !!entity);
+
+        entities.forEach((entity) => {
+          previewRef.current
+            ?.querySelectorAll(`[data-elb-${entity}]`)
+            .forEach((el) => {
+              el.setAttribute('data-elbproperty', '');
+            });
+        });
       }
     }, [liveCode]);
 
