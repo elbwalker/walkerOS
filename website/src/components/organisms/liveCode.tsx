@@ -95,7 +95,6 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
         className={`flex flex-col xl:flex-row gap-2 scroll ${
           isFullScreenMode ? 'h-full' : ''
         }`}
-        // onClick={(e) => e.stopPropagation()}
         style={height && { height: isFullScreenMode ? undefined : `${height}` }}
       >
         <CodeBox

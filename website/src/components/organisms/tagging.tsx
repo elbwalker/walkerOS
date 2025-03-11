@@ -100,7 +100,6 @@ const Tagging: React.FC<PreviewProps> = ({
     <div
       className={`flex flex-col xl:flex-row gap-2 scroll ${isFullScreenMode ? 'h-full' : ''}`}
       style={!isFullScreenMode ? { height: '400px' } : undefined}
-      // onClick={(e) => e.stopPropagation()}
     >
       {!hideCode && (
         <CodeBox
