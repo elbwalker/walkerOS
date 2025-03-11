@@ -44,12 +44,7 @@ const SyntaxHighlighter: React.FC<SyntaxHighlighterProps> = ({
                             <React.Fragment key={key}>
                               <span style={tokenProps.style}>{parts[0]}</span>
                               <span
-                                style={{
-                                  ...tokenProps.style,
-                                  color: '#01b5e2',
-                                  fontWeight: 'bold',
-                                }}
-                                className={`${tokenProps.className} elb-attribute`}
+                                className={`${tokenProps.className} elb-attribute text-elbwalker font-bold`}
                               >
                                 data
                               </span>
@@ -88,12 +83,7 @@ const SyntaxHighlighter: React.FC<SyntaxHighlighterProps> = ({
                         <span
                           {...tokenProps}
                           key={key}
-                          className={`${tokenProps.className} elb-attribute`}
-                          style={{
-                            ...tokenProps.style,
-                            color: '#01b5e2',
-                            fontWeight: 'bold',
-                          }}
+                          className={`${tokenProps.className} elb-attribute text-elbwalker font-bold`}
                         />
                       );
                     }
@@ -104,12 +94,7 @@ const SyntaxHighlighter: React.FC<SyntaxHighlighterProps> = ({
                         <span
                           {...tokenProps}
                           key={key}
-                          className={`${tokenProps.className} elb-attribute`}
-                          style={{
-                            ...tokenProps.style,
-                            color: '#01b5e2',
-                            fontWeight: 'bold',
-                          }}
+                          className={`${tokenProps.className} elb-attribute text-elbwalker font-bold`}
                         />
                       );
                     }
