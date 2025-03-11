@@ -1,10 +1,10 @@
 /* Highlight colors */
 :root {
-  --highlight-globals: #4fc3f7;
-  --highlight-context: #ffbd44;
-  --highlight-entity: #00ca4e;
-  --highlight-property: #ff605c;
-  --highlight-action: #9900ff;
+  --highlight-globals: #4fc3f7cc;
+  --highlight-context: #ffbd44cc;
+  --highlight-entity: #00ca4ecc;
+  --highlight-property: #ff605ccc;
+  --highlight-action: #9900ffcc;
 }
 
 /* Element highlighting */
@@ -19,53 +19,69 @@
     transition: box-shadow 0.3s ease;
   }
 
-  /* Individual highlight styles */
+  /* Individual highlight styles with distinct layers */
   .highlight-globals [data-elbglobals] {
-    box-shadow: 0 0 20px 5px rgba(79, 195, 247, 0.5);
+    box-shadow: 0 0 0 2px var(--highlight-globals),
+                0 0 12px var(--highlight-globals);
   }
 
   .highlight-context [data-elbcontext] {
-    box-shadow: 0 0 18px 4px rgba(255, 189, 68, 0.5);
+    box-shadow: 0 0 0 2px var(--highlight-context),
+                0 0 12px var(--highlight-context);
   }
 
   .highlight-entity [data-elb] {
-    box-shadow: 0 0 16px 3px rgba(0, 202, 78, 0.5);
+    box-shadow: 0 0 0 2px var(--highlight-entity),
+                0 0 8px var(--highlight-entity);
   }
 
   .highlight-property [data-elb-property] {
-    box-shadow: 0 0 14px 2px rgba(255, 96, 92, 0.5);
+    box-shadow: 0 0 0 2px var(--highlight-property),
+                0 0 8px var(--highlight-property);
   }
 
   .highlight-action [data-elbaction] {
-    box-shadow: 0 0 12px 1px rgba(153, 0, 255, 0.5);
+    box-shadow: 0 0 0 2px var(--highlight-action),
+                0 0 10px var(--highlight-action);
   }
 
-  /* Combined highlights */
+  /* Combined highlights with layered solid borders */
   .highlight-entity.highlight-action [data-elb][data-elbaction] {
-    box-shadow: 0 0 16px 3px rgba(0, 202, 78, 0.5),
-                0 0 12px 1px rgba(153, 0, 255, 0.5);
+    box-shadow: 0 0 0 2px var(--highlight-action),
+                0 0 0 4px var(--highlight-entity),
+                0 0 8px var(--highlight-action),
+                0 0 12px var(--highlight-entity);
   }
 
   .highlight-entity.highlight-context [data-elb][data-elbcontext] {
-    box-shadow: 0 0 16px 3px rgba(0, 202, 78, 0.5),
-                0 0 18px 4px rgba(255, 189, 68, 0.5);
+    box-shadow: 0 0 0 2px var(--highlight-entity),
+                0 0 0 4px var(--highlight-context),
+                0 0 8px var(--highlight-entity),
+                0 0 16px var(--highlight-context);
   }
 
   .highlight-entity.highlight-property [data-elb][data-elb-property] {
-    box-shadow: 0 0 16px 3px rgba(0, 202, 78, 0.5),
-                0 0 14px 2px rgba(255, 96, 92, 0.5);
+    box-shadow: 0 0 0 2px var(--highlight-entity),
+                0 0 0 4px var(--highlight-property),
+                0 0 8px var(--highlight-entity),
+                0 0 12px var(--highlight-property);
   }
 
   .highlight-action.highlight-context [data-elbaction][data-elbcontext] {
-    box-shadow: 0 0 12px 1px rgba(153, 0, 255, 0.5),
-                0 0 18px 4px rgba(255, 189, 68, 0.5);
+    box-shadow: 0 0 0 2px var(--highlight-action),
+                0 0 0 4px var(--highlight-context),
+                0 0 10px var(--highlight-action),
+                0 0 16px var(--highlight-context);
   }
 
-  /* Triple combinations */
+  /* Triple combinations with distinct layers */
   .highlight-entity.highlight-action.highlight-context [data-elb][data-elbaction][data-elbcontext] {
-    box-shadow: 0 0 16px 3px rgba(0, 202, 78, 0.5),
-                0 0 12px 1px rgba(153, 0, 255, 0.5),
-                0 0 18px 4px rgba(255, 189, 68, 0.5);
+    box-shadow: 0 0 0 2px var(--highlight-action),
+                0 0 0 4px var(--highlight-entity),
+                0 0 0 6px var(--highlight-context),
+                0 0 8px var(--highlight-action),
+                0 0 12px var(--highlight-entity),
+                0 0 16px var(--highlight-context);
   }
 }
 
