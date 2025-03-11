@@ -104,11 +104,13 @@ const Tagging: React.FC<PreviewProps> = ({
           .filter((entity): entity is string => !!entity);
 
         entities.forEach((entity) => {
-          previewRef.current
-            ?.querySelectorAll(`[data-elb-${entity}]`)
-            .forEach((el) => {
-              el.setAttribute('data-elbproperty', '');
-            });
+          tryCatch(() => {
+            previewRef.current
+              ?.querySelectorAll(`[data-elb-${entity}]`)
+              .forEach((el) => {
+                el.setAttribute('data-elbproperty', '');
+              });
+          });
         });
       }
     }, [liveCode]);
@@ -163,12 +165,6 @@ const Tagging: React.FC<PreviewProps> = ({
             </div>
           </div>
           <div className="flex bg-base-100 border-t border-base-300 elb-highlight-buttons">
-            <button
-              onClick={() => toggleHighlight('globals')}
-              className={`flex-1 px-2 py-1.5 text-xs font-medium btn-globals ${highlightGlobals}`}
-            >
-              Globals
-            </button>
             <button
               onClick={() => toggleHighlight('context')}
               className={`flex-1 px-2 py-1.5 text-xs font-medium btn-context ${highlightContext}`}
