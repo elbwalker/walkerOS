@@ -42,16 +42,11 @@ const Tagging: React.FC<PreviewProps> = ({
   const previewRef = useRef<HTMLDivElement>(null);
   const initialCode = useRef(code.trim());
   const [liveCode, setLiveCode] = useState(initialCode.current);
-  const isFirstRender = useRef(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
   const initPreview = useCallback(
     debounce(
       (elem: HTMLElement) => {
-        if (isFirstRender.current) {
-          isFirstRender.current = false;
-          return;
-        }
         elb('walker init', elem);
       },
       2000,
@@ -99,18 +94,19 @@ const Tagging: React.FC<PreviewProps> = ({
     );
   };
 
-  const boxClassNames = `flex-1 resize max-h-96 xl:max-h-full flex flex-col`;
+  const boxClassNames = `flex-1 resize flex flex-col ${isFullScreen ? 'max-h-[calc(100vh-12rem)]' : 'max-h-96 xl:max-h-full'}`;
 
   const renderBoxes = (isFullScreenMode = false) => (
     <div
       className={`flex flex-col xl:flex-row gap-2 scroll ${isFullScreenMode ? 'h-full' : ''}`}
       style={!isFullScreenMode ? { height: '400px' } : undefined}
+      // onClick={(e) => e.stopPropagation()}
     >
       {!hideCode && (
-        <CodeBox 
-          label="Code" 
-          value={liveCode} 
-          onChange={setLiveCode} 
+        <CodeBox
+          label="Code"
+          value={liveCode}
+          onChange={setLiveCode}
           showReset={true}
           onReset={() => setLiveCode(initialCode.current)}
           className={boxClassNames}
@@ -119,7 +115,9 @@ const Tagging: React.FC<PreviewProps> = ({
       )}
 
       {!hidePreview && (
-        <div className={`flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${boxClassNames}`}>
+        <div
+          className={`flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${boxClassNames}`}
+        >
           <div className="font-bold px-2 py-1.5 bg-base-100 text-base flex justify-between items-center">
             <span>Preview</span>
             <div className="w-[68px]" />

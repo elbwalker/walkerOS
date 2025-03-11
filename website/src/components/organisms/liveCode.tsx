@@ -88,14 +88,14 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
       updateRight(input, config, options);
     }, [input, config, options]);
 
-    const boxClassNames = `flex-1 resize max-h-96 xl:max-h-full flex flex-col ${className}`;
+    const boxClassNames = `flex-1 resize flex flex-col ${isFullScreen ? 'max-h-[calc(100vh-12rem)]' : 'max-h-96 xl:max-h-full'} ${className}`;
 
     const renderCodeBoxes = (isFullScreenMode = false) => (
       <div
         className={`flex flex-col xl:flex-row gap-2 scroll ${
           isFullScreenMode ? 'h-full' : ''
         }`}
-        onClick={(e) => e.stopPropagation()}
+        // onClick={(e) => e.stopPropagation()}
         style={height && { height: isFullScreenMode ? undefined : `${height}` }}
       >
         <CodeBox
