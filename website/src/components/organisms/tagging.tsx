@@ -94,6 +94,7 @@ const Tagging: React.FC<PreviewProps> = ({
   const addPropertyClass = useCallback(
     debounce(() => {
       if (!previewRef.current) return;
+
       previewRef.current.querySelectorAll('[data-elb]').forEach((entity) => {
         const entityType = entity.getAttribute('data-elb');
 
@@ -121,12 +122,11 @@ const Tagging: React.FC<PreviewProps> = ({
   };
 
   const boxClassNames = `flex-1 resize flex flex-col ${isFullScreen ? 'max-h-[calc(100vh-12rem)]' : 'max-h-96 xl:max-h-full'}`;
-
-  const highlightGlobals = highlights.globals && 'highlight-globals';
-  const highlightContext = highlights.context && 'highlight-context';
-  const highlightEntity = highlights.entity && 'highlight-entity';
-  const highlightProperty = highlights.property && 'highlight-property';
-  const highlightAction = highlights.action && 'highlight-action';
+  const highlightGlobals = highlights.globals ? 'highlight-globals' : '';
+  const highlightContext = highlights.context ? 'highlight-context' : '';
+  const highlightEntity = highlights.entity ? 'highlight-entity' : '';
+  const highlightProperty = highlights.property ? 'highlight-property' : '';
+  const highlightAction = highlights.action ? 'highlight-action' : '';
 
   const renderBoxes = (isFullScreenMode = false) => (
     <div

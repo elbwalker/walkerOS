@@ -67,3 +67,23 @@ article h3 {
   overflow: auto !important;
   width: 200% !important;
 }
+
+.dui-btn,
+.dui-btn:active,
+.dui-btn:focus,
+.dui-btn:hover {
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
+  color: white !important;
+}
+
+.dui-btn {
+  background-color: theme('colors.gray.600') !important;
+  border-color: theme('colors.gray.600') !important;
+}
+
+.dui-btn.dui-btn-primary {
+  background-color: var(--ifm-color-primary) !important;
+  border-color: var(--ifm-color-primary) !important;
+}

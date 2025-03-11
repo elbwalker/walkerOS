@@ -7,106 +7,90 @@
   --highlight-action: #9900ffcc;
 }
 
-/* Element highlighting */
 .elb-highlight {
-  /* Base styles for highlighted elements */
-  [data-elbglobals],
-  [data-elbcontext],
-  [data-elb],
-  [data-elb-property],
-  [data-elbaction],
-  .is-property {
-    position: relative;
-    transition: box-shadow 0.3s ease;
-  }
-
-  /* Individual highlight styles with distinct layers */
   .highlight-globals [data-elbglobals] {
-    box-shadow: 0 0 0 2px var(--highlight-globals),
-                0 0 12px var(--highlight-globals);
+    box-shadow: 0 0 0 2px var(--highlight-globals);
   }
 
   .highlight-context [data-elbcontext] {
-    box-shadow: 0 0 0 2px var(--highlight-context),
-                0 0 12px var(--highlight-context);
+    box-shadow: 0 0 0 2px var(--highlight-context);
   }
 
   .highlight-entity [data-elb] {
-    box-shadow: 0 0 0 2px var(--highlight-entity),
-                0 0 8px var(--highlight-entity);
+    box-shadow: 0 0 0 2px var(--highlight-entity);
   }
 
   .highlight-property .is-property {
-    box-shadow: 0 0 0 2px var(--highlight-property),
-                0 0 8px var(--highlight-property);
+    box-shadow: 0 0 0 2px var(--highlight-property);
   }
 
   .highlight-action [data-elbaction] {
-    box-shadow: 0 0 0 2px var(--highlight-action),
-                0 0 10px var(--highlight-action);
+    box-shadow: 0 0 0 2px var(--highlight-action);
   }
 
   /* Combined highlights with layered solid borders */
   .highlight-entity.highlight-action [data-elb][data-elbaction] {
-    box-shadow: 0 0 0 2px var(--highlight-action),
-                0 0 0 4px var(--highlight-entity),
-                0 0 8px var(--highlight-action),
-                0 0 12px var(--highlight-entity);
+    box-shadow:
+      0 0 0 2px var(--highlight-action),
+      0 0 0 4px var(--highlight-entity);
   }
 
   .highlight-entity.highlight-context [data-elb][data-elbcontext] {
-    box-shadow: 0 0 0 2px var(--highlight-entity),
-                0 0 0 4px var(--highlight-context),
-                0 0 8px var(--highlight-entity),
-                0 0 16px var(--highlight-context);
+    box-shadow:
+      0 0 0 2px var(--highlight-entity),
+      0 0 0 4px var(--highlight-context);
   }
 
   .highlight-entity.highlight-property [data-elb][data-elb-property] {
-    box-shadow: 0 0 0 2px var(--highlight-entity),
-                0 0 0 4px var(--highlight-property),
-                0 0 8px var(--highlight-entity),
-                0 0 12px var(--highlight-property);
+    box-shadow:
+      0 0 0 2px var(--highlight-entity),
+      0 0 0 4px var(--highlight-property);
   }
 
   .highlight-action.highlight-context [data-elbaction][data-elbcontext] {
-    box-shadow: 0 0 0 2px var(--highlight-action),
-                0 0 0 4px var(--highlight-context),
-                0 0 10px var(--highlight-action),
-                0 0 16px var(--highlight-context);
+    box-shadow:
+      0 0 0 2px var(--highlight-action),
+      0 0 0 4px var(--highlight-context);
   }
 
   /* Triple combinations with distinct layers */
-  .highlight-entity.highlight-action.highlight-context [data-elb][data-elbaction][data-elbcontext] {
-    box-shadow: 0 0 0 2px var(--highlight-action),
-                0 0 0 4px var(--highlight-entity),
-                0 0 0 6px var(--highlight-context),
-                0 0 8px var(--highlight-action),
-                0 0 12px var(--highlight-entity),
-                0 0 16px var(--highlight-context);
+  .highlight-entity.highlight-action.highlight-context
+    [data-elb][data-elbaction][data-elbcontext] {
+    box-shadow:
+      0 0 0 2px var(--highlight-action),
+      0 0 0 4px var(--highlight-entity),
+      0 0 0 6px var(--highlight-context);
   }
 }
 
-/* Button styles */
+/* Button styles - separated from highlight effects */
 .elb-highlight-buttons {
-  color: white;
+  button {
+    color: white;
 
-  .highlight-globals {
-    color: var(--highlight-globals);
-  }
+    &.highlight-globals,
+    &.btn-globals.highlight-globals {
+      color: var(--highlight-globals);
+    }
 
-  .highlight-context {
-    color: var(--highlight-context);
-  }
+    &.highlight-context,
+    &.btn-context.highlight-context {
+      color: var(--highlight-context);
+    }
 
-  .highlight-entity {
-    color: var(--highlight-entity);
-  }
+    &.highlight-entity,
+    &.btn-entity.highlight-entity {
+      color: var(--highlight-entity);
+    }
 
-  .highlight-property {
-    color: var(--highlight-property);
-  }
+    &.highlight-property,
+    &.btn-property.highlight-property {
+      color: var(--highlight-property);
+    }
 
-  .highlight-action {
-    color: var(--highlight-action);
+    &.highlight-action,
+    &.btn-action.highlight-action {
+      color: var(--highlight-action);
+    }
   }
 }
