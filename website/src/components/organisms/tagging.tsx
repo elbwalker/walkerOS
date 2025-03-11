@@ -26,7 +26,7 @@ export const taggingRegistry = (() => {
 
 interface PreviewProps {
   code: string;
-  height?: number;
+  height?: string;
   hideCode?: boolean;
   hidePreview?: boolean;
   hideConsole?: boolean;
@@ -36,7 +36,7 @@ interface PreviewProps {
 
 const Tagging: React.FC<PreviewProps> = ({
   code,
-  height = 400,
+  height = '400px',
   hideCode = false,
   hidePreview = false,
   hideConsole = false,
@@ -134,7 +134,7 @@ const Tagging: React.FC<PreviewProps> = ({
   const renderBoxes = (isFullScreenMode = false) => (
     <div
       className={`flex flex-col xl:flex-row gap-2 scroll ${isFullScreenMode ? 'h-full' : ''}`}
-      style={!isFullScreenMode ? { height: '400px' } : undefined}
+      style={!isFullScreenMode ? { height } : undefined}
     >
       {!hideCode && (
         <CodeBox
