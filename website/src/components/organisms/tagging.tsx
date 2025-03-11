@@ -62,41 +62,18 @@ const Tagging: React.FC<PreviewProps> = ({
       (elem: HTMLElement) => {
         elb('walker init', elem);
       },
-      2000,
+      1000,
       true,
     ),
     [],
   );
 
-  useEffect(() => {
-    if (previewRef.current) {
-      initPreview(previewRef.current);
-    }
-  }, [liveCode]);
+  const updatePreviewContent = useCallback(
+    debounce(
+      (code: string) => {
+        if (!previewRef.current) return;
 
-  useEffect(() => {
-    taggingRegistry.add(previewId, (event) => {
-      // This gets called by a custom walker.js destination
-      delete event.context.previewId;
-      setLogs(JSON.stringify(event, null, 2));
-    });
-
-    return () => {
-      taggingRegistry.delete(previewId);
-    };
-  }, [previewId]);
-
-  const toggleHighlight = (type: keyof typeof highlights) => {
-    setHighlights((prev) => ({
-      ...prev,
-      [type]: !prev[type],
-    }));
-  };
-
-  const PreviewContent = () => {
-    useEffect(() => {
-      if (previewRef.current) {
-        previewRef.current.innerHTML = liveCode.trim().replace(/;$/, '');
+        previewRef.current.innerHTML = code.trim().replace(/;$/, '');
 
         // Then find all entities and mark their properties
         const entities = Array.from(
@@ -114,10 +91,37 @@ const Tagging: React.FC<PreviewProps> = ({
               });
           })();
         });
-      }
-    }, [liveCode]);
 
-    return <div ref={previewRef} className="h-full" />;
+        // Initialize walker
+        initPreview(previewRef.current);
+      },
+      200,
+      true,
+    ),
+    [initPreview],
+  );
+
+  useEffect(() => {
+    updatePreviewContent(liveCode);
+    setLogs(undefined);
+  }, [liveCode, updatePreviewContent]);
+
+  useEffect(() => {
+    taggingRegistry.add(previewId, (event) => {
+      delete event.context.previewId;
+      setLogs(JSON.stringify(event, null, 2));
+    });
+
+    return () => {
+      taggingRegistry.delete(previewId);
+    };
+  }, [previewId]);
+
+  const toggleHighlight = (type: keyof typeof highlights) => {
+    setHighlights((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
   };
 
   const boxClassNames = `flex-1 resize flex flex-col ${isFullScreen ? 'max-h-[calc(100vh-12rem)]' : 'max-h-96 xl:max-h-full'}`;
@@ -162,7 +166,7 @@ const Tagging: React.FC<PreviewProps> = ({
             <div
               className={`p-6 h-full ${highlightGlobals} ${highlightContext} ${highlightEntity} ${highlightProperty} ${highlightAction}`}
             >
-              <PreviewContent />
+              <div ref={previewRef} className="h-full" />
             </div>
           </div>
           <div className="flex bg-base-100 border-t border-base-300 elb-highlight-buttons">
