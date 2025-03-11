@@ -1,0 +1,68 @@
+/* Highlight colors */
+:root {
+  --highlight-globals: #4fc3f7;
+  --highlight-context: #ffbd44;
+  --highlight-entity: #00ca4e;
+  --highlight-property: #ff605c;
+  --highlight-action: #9900ff;
+}
+
+/* Element highlighting */
+.elb-highlight {
+  .highlight-globals {
+    [data-elbglobals],
+    btn-globals {
+      outline: 2px solid var(--highlight-globals);
+    }
+  }
+
+  .highlight-context {
+    [data-elbcontext],
+    .btn-context {
+      outline: 2px solid var(--highlight-context);
+    }
+  }
+
+  .highlight-entity {
+    [data-elb] {
+      outline: 2px solid var(--highlight-entity);
+    }
+  }
+
+  .highlight-property {
+    [data-elb-property] {
+      outline: 2px solid var(--highlight-property);
+    }
+  }
+
+  .highlight-action {
+    [data-elbaction] {
+      outline: 2px solid var(--highlight-action);
+    }
+  }
+}
+
+/* Button styles */
+.elb-highlight-buttons {
+  color: white;
+
+  .highlight-globals {
+    background-color: var(--highlight-globals);
+  }
+
+  .highlight-context {
+    background-color: var(--highlight-context);
+  }
+
+  .highlight-entity {
+    background-color: var(--highlight-entity);
+  }
+
+  .highlight-property {
+    background-color: var(--highlight-property);
+  }
+
+  .highlight-action {
+    background-color: var(--highlight-action);
+  }
+}

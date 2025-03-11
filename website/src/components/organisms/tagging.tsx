@@ -7,6 +7,7 @@ import FullScreenOverlay from '../molecules/codeBoxOverlay';
 import FullScreenButton from '../molecules/fullScreenButton';
 import type { TypewriterOptions } from '../molecules/typewriterCode';
 import { resetTypewriter, pauseTypewriter } from '../molecules/typewriterCode';
+import '../../css/highlighting.scss';
 
 export const taggingRegistry = (() => {
   const registry = new Map<string, (message: WalkerOS.Event) => void>();
@@ -48,6 +49,13 @@ const Tagging: React.FC<PreviewProps> = ({
   const [liveCode, setLiveCode] = useState(initialCode.current);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [highlights, setHighlights] = useState({
+    globals: false,
+    context: false,
+    entity: false,
+    property: false,
+    action: false,
+  });
 
   const initPreview = useCallback(
     debounce(
@@ -83,6 +91,13 @@ const Tagging: React.FC<PreviewProps> = ({
       .replace(/;$/, '');
   };
 
+  const toggleHighlight = (type: keyof typeof highlights) => {
+    setHighlights((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  };
+
   const PreviewContent = () => {
     useEffect(() => {
       if (previewRef.current) {
@@ -90,16 +105,16 @@ const Tagging: React.FC<PreviewProps> = ({
       }
     }, [liveCode]);
 
-    return (
-      <div
-        ref={previewRef}
-        data-elbcontext={`previewId:${previewId}`}
-        className="h-full"
-      />
-    );
+    return <div ref={previewRef} className="h-full" />;
   };
 
   const boxClassNames = `flex-1 resize flex flex-col ${isFullScreen ? 'max-h-[calc(100vh-12rem)]' : 'max-h-96 xl:max-h-full'}`;
+
+  const highlightGlobals = highlights.globals && 'highlight-globals';
+  const highlightContext = highlights.context && 'highlight-context';
+  const highlightEntity = highlights.entity && 'highlight-entity';
+  const highlightProperty = highlights.property && 'highlight-property';
+  const highlightAction = highlights.action && 'highlight-action';
 
   const renderBoxes = (isFullScreenMode = false) => (
     <div
@@ -125,16 +140,52 @@ const Tagging: React.FC<PreviewProps> = ({
 
       {!hidePreview && (
         <div
-          className={`flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${boxClassNames}`}
+          className={`flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800 elb-highlight ${boxClassNames}`}
         >
           <div className="font-bold px-2 py-1.5 bg-base-100 text-base flex justify-between items-center">
             <span>Preview</span>
-            <div className="w-[68px]" />
           </div>
-          <div className="flex-1 bg-gray-800 overflow-auto">
-            <div className="p-6 h-full">
+          <div
+            data-elbcontext={`previewId:${previewId}`}
+            className="flex-1 bg-gray-800 overflow-auto"
+          >
+            <div
+              className={`p-6 h-full ${highlightGlobals} ${highlightContext} ${highlightEntity} ${highlightProperty} ${highlightAction}`}
+            >
               <PreviewContent />
             </div>
+          </div>
+          <div className="flex bg-base-100 border-t border-base-300 elb-highlight-buttons">
+            <button
+              onClick={() => toggleHighlight('globals')}
+              className={`flex-1 px-2 py-1.5 text-xs font-medium btn-globals ${highlightGlobals}`}
+            >
+              Globals
+            </button>
+            <button
+              onClick={() => toggleHighlight('context')}
+              className={`flex-1 px-2 py-1.5 text-xs font-medium btn-context ${highlightContext}`}
+            >
+              Context
+            </button>
+            <button
+              onClick={() => toggleHighlight('entity')}
+              className={`flex-1 px-2 py-1.5 text-xs font-medium btn-entity ${highlightEntity}`}
+            >
+              Entity
+            </button>
+            <button
+              onClick={() => toggleHighlight('property')}
+              className={`flex-1 px-2 py-1.5 text-xs font-medium btn-property ${highlightProperty}`}
+            >
+              Property
+            </button>
+            <button
+              onClick={() => toggleHighlight('action')}
+              className={`flex-1 px-2 py-1.5 text-xs font-medium btn-action ${highlightAction}`}
+            >
+              Action
+            </button>
           </div>
         </div>
       )}

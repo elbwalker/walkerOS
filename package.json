@@ -24,6 +24,10 @@
     "@elbwalker/jest": "*",
     "@elbwalker/tsconfig": "*",
     "@elbwalker/tsup": "*",
+    "css-loader": "^7.1.2",
+    "sass": "^1.85.1",
+    "sass-loader": "^16.0.5",
+    "style-loader": "^4.0.0",
     "turbo": "^2.0.5",
     "typescript": "^5.5.2"
   },
