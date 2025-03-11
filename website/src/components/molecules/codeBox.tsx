@@ -2,6 +2,7 @@ import { WalkerOS } from '@elbwalker/types';
 import { isString, isDefined, tryCatch, tryCatchAsync } from '@elbwalker/utils';
 import Editor from 'react-simple-code-editor';
 import { useState, useEffect, useRef } from 'react';
+import type { MouseEvent } from 'react';
 import * as prettier from 'prettier/standalone';
 import * as parserBabel from 'prettier/parser-babel';
 import estree from 'prettier/plugins/estree';
@@ -110,9 +111,14 @@ const CodeBox: React.FC<CodeBoxProps> = ({
       );
       return cleanup;
     } else {
-      setCurrentValue(value);
+      if (isConsole && value !== 'No events yet.') {
+        setCurrentValue(value);
+        handleFormat(value, setCurrentValue);
+      } else {
+        setCurrentValue(value);
+      }
     }
-  }, [value, typewriter, onChange, autoStart, isPaused]);
+  }, [value, typewriter, onChange, autoStart, isPaused, isConsole]);
 
   const handleCopy = async () => {
     tryCatch(async () => {
@@ -122,20 +128,39 @@ const CodeBox: React.FC<CodeBoxProps> = ({
     })();
   };
 
-  const handleFormat = tryCatchAsync(async () => {
-    const formattedValue = await prettier.format(value, {
-      parser: language === 'html' ? 'html' : 'babel',
-      plugins: [parserBabel, estree],
-      semi: true,
-      singleQuote: true,
-      trailingComma: 'es5',
-      printWidth: 80,
-      tabWidth: 2,
-      useTabs: false,
-    });
+  const handleFormat = tryCatchAsync(
+    async (value: string, onChangeHandler: (code: string) => void) => {
+      // Check if the content is a complete statement
+      const isCompleteStatement = /^[a-zA-Z_$][a-zA-Z0-9_$]*\s*=/.test(
+        value.trim(),
+      );
 
-    onChange?.(formattedValue);
-  });
+      // If it's not a complete statement, wrap it in a return statement
+      const contentToFormat = isCompleteStatement ? value : `return ${value}`;
+
+      const formattedValue = await prettier.format(contentToFormat, {
+        parser: language === 'html' ? 'html' : 'babel',
+        plugins: [parserBabel, estree],
+        semi: true,
+        singleQuote: true,
+        trailingComma: 'es5',
+        printWidth: 80,
+        tabWidth: 2,
+        useTabs: false,
+      });
+
+      // Remove the 'return ' prefix if we added it
+      const finalValue = isCompleteStatement
+        ? formattedValue
+        : formattedValue.replace(/^return\s+/, '');
+
+      onChangeHandler?.(finalValue);
+    },
+  );
+
+  const handleFormatClick = () => {
+    handleFormat(value, onChange);
+  };
 
   const handlePauseResume = () => {
     if (isPaused) {
@@ -159,24 +184,9 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   );
 
   const renderContent = () => {
-    let displayValue = currentValue;
-    
-    if (isConsole) {
-      try {
-        if (value === 'No events yet.') {
-          displayValue = 'No events yet.';
-        } else {
-          const parsedValue = JSON.parse(value);
-          displayValue = JSON.stringify(parsedValue, null, 2);
-        }
-      } catch (e) {
-        displayValue = `Error parsing console data: ${String(e)}`;
-      }
-    }
-
     return (
       <Editor
-        value={displayValue}
+        value={currentValue}
         disabled={disabled}
         onValueChange={(newCode) => {
           setCurrentValue(newCode);
@@ -273,7 +283,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
               {!isConsole && (
                 <div className="relative">
                   <button
-                    onClick={handleFormat}
+                    onClick={handleFormatClick}
                     onMouseEnter={() => setIsFormatHovered(true)}
                     onMouseLeave={() => setIsFormatHovered(false)}
                     className="text-gray-500 hover:text-gray-300 transition-colors border-none bg-transparent p-1"

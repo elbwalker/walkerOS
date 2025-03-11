@@ -53,7 +53,7 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
     const [config, setConfig] = useState(
       isString(initConfig) ? initConfig : formatValue(initConfig),
     );
-    const [output, setOutput] = useState<string[]>([
+    const [output, setOutput] = useState([
       isString(initOutput) ? initOutput : formatValue(initOutput),
     ]);
     const [isFullScreen, setIsFullScreen] = useState(false);
