@@ -4,7 +4,10 @@ import Hero from '@site/src/components/home/hero';
 import Features from '@site/src/components/home/features';
 import CTAStart from '@site/src/components/ctas/start';
 
-export default function Home(): JSX.Element {
+import PromotionLive, {
+  PromotionReady,
+} from '@site/src/components/templates/promotionLive';
+export default function Home() {
   const { siteConfig } = useDocusaurusContext();
   return (
     <Layout
@@ -12,8 +15,10 @@ export default function Home(): JSX.Element {
       description="Open-source event data collection platform"
     >
       <Hero />
+      <PromotionReady />
       <main>
         <Features />
+        <PromotionLive />
         <CTAStart />
       </main>
     </Layout>
