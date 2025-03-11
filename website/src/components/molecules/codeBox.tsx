@@ -5,7 +5,6 @@ import { useState, useEffect, useRef } from 'react';
 import * as prettier from 'prettier/standalone';
 import * as parserBabel from 'prettier/parser-babel';
 import estree from 'prettier/plugins/estree';
-import { ObjectInspector, chromeDark } from 'react-inspector';
 import {
   simulateEdits,
   TypewriterOptions,
@@ -159,46 +158,25 @@ const CodeBox: React.FC<CodeBoxProps> = ({
     <SyntaxHighlighter code={code} language={language} />
   );
 
-  const consoleTheme = {
-    ...chromeDark,
-    ...{
-      BASE_BACKGROUND_COLOR: 'transparent',
-      TREENODE_FONT_SIZE: '14px',
-      OBJECT_NAME_COLOR: '#01b5e2',
-      OBJECT_VALUE_STRING_COLOR: '#01b5e2',
-    },
-  } as unknown as string;
-
   const renderContent = () => {
+    let displayValue = currentValue;
+    
     if (isConsole) {
       try {
-        const parsedValue = value === 'No events yet.' ? [] : JSON.parse(value);
-        return (
-          <div className="p-4 max-h-full overflow-auto">
-            {value === 'No events yet.' ? (
-              <div className="text-gray-500">No events yet.</div>
-            ) : (
-              <ObjectInspector
-                data={parsedValue}
-                theme={consoleTheme}
-                expandLevel={3}
-                expandPaths={['$', '$.data']}
-              />
-            )}
-          </div>
-        );
+        if (value === 'No events yet.') {
+          displayValue = 'No events yet.';
+        } else {
+          const parsedValue = JSON.parse(value);
+          displayValue = JSON.stringify(parsedValue, null, 2);
+        }
       } catch (e) {
-        return (
-          <div className="p-4 text-red-500">
-            Error parsing console data: {String(e)}
-          </div>
-        );
+        displayValue = `Error parsing console data: ${String(e)}`;
       }
     }
 
     return (
       <Editor
-        value={currentValue}
+        value={displayValue}
         disabled={disabled}
         onValueChange={(newCode) => {
           setCurrentValue(newCode);
