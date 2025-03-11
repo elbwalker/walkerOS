@@ -1,12 +1,12 @@
 import type { WalkerOS } from '@elbwalker/types';
-import { debounce, getId, tryCatch } from '@elbwalker/utils';
+import { debounce, tryCatch } from '@elbwalker/utils';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { elb } from '@elbwalker/walker.js';
 import CodeBox from '../molecules/codeBox';
 import FullScreenOverlay from '../molecules/codeBoxOverlay';
 import FullScreenButton from '../molecules/fullScreenButton';
 import type { TypewriterOptions } from '../molecules/typewriterCode';
-import { resetTypewriter, pauseTypewriter } from '../molecules/typewriterCode';
+import { resetTypewriter } from '../molecules/typewriterCode';
 import '../../css/highlighting.scss';
 
 export const taggingRegistry = (() => {
@@ -75,8 +75,10 @@ const Tagging: React.FC<PreviewProps> = ({
   }, [liveCode]);
 
   useEffect(() => {
-    taggingRegistry.add(previewId, (log) => {
-      setLogs(JSON.stringify(log, null, 2));
+    taggingRegistry.add(previewId, (event) => {
+      // This gets called by a custom walker.js destination
+      delete event.context.previewId;
+      setLogs(JSON.stringify(event, null, 2));
     });
 
     return () => {
@@ -142,7 +144,6 @@ const Tagging: React.FC<PreviewProps> = ({
             setIsPaused(false);
           }}
           className={boxClassNames}
-          smallText={isFullScreenMode ? false : undefined}
           typewriter={typewriter}
         />
       )}
@@ -201,7 +202,6 @@ const Tagging: React.FC<PreviewProps> = ({
             disabled={true}
             isConsole={true}
             className={boxClassNames}
-            smallText={isFullScreenMode ? false : undefined}
             showReset={true}
             onReset={() => setLogs('')}
           />
