@@ -140,14 +140,14 @@ const Tagging: React.FC<PreviewProps> = ({
 
       {!hidePreview && (
         <div
-          className={`flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800 elb-highlight ${boxClassNames}`}
+          className={`flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${boxClassNames}`}
         >
           <div className="font-bold px-2 py-1.5 bg-base-100 text-base flex justify-between items-center">
             <span>Preview</span>
           </div>
           <div
             data-elbcontext={`previewId:${previewId}`}
-            className="flex-1 bg-gray-800 overflow-auto"
+            className="flex-1 bg-gray-800 overflow-auto elb-highlight"
           >
             <div
               className={`p-6 h-full ${highlightGlobals} ${highlightContext} ${highlightEntity} ${highlightProperty} ${highlightAction}`}

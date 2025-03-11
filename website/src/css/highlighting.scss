@@ -9,36 +9,63 @@
 
 /* Element highlighting */
 .elb-highlight {
-  .highlight-globals {
-    [data-elbglobals],
-    btn-globals {
-      outline: 2px solid var(--highlight-globals);
-    }
+  /* Base styles for highlighted elements */
+  [data-elbglobals],
+  [data-elbcontext],
+  [data-elb],
+  [data-elb-property],
+  [data-elbaction] {
+    position: relative;
+    transition: box-shadow 0.3s ease;
   }
 
-  .highlight-context {
-    [data-elbcontext],
-    .btn-context {
-      outline: 2px solid var(--highlight-context);
-    }
+  /* Individual highlight styles */
+  .highlight-globals [data-elbglobals] {
+    box-shadow: 0 0 20px 5px rgba(79, 195, 247, 0.5);
   }
 
-  .highlight-entity {
-    [data-elb] {
-      outline: 2px solid var(--highlight-entity);
-    }
+  .highlight-context [data-elbcontext] {
+    box-shadow: 0 0 18px 4px rgba(255, 189, 68, 0.5);
   }
 
-  .highlight-property {
-    [data-elb-property] {
-      outline: 2px solid var(--highlight-property);
-    }
+  .highlight-entity [data-elb] {
+    box-shadow: 0 0 16px 3px rgba(0, 202, 78, 0.5);
   }
 
-  .highlight-action {
-    [data-elbaction] {
-      outline: 2px solid var(--highlight-action);
-    }
+  .highlight-property [data-elb-property] {
+    box-shadow: 0 0 14px 2px rgba(255, 96, 92, 0.5);
+  }
+
+  .highlight-action [data-elbaction] {
+    box-shadow: 0 0 12px 1px rgba(153, 0, 255, 0.5);
+  }
+
+  /* Combined highlights */
+  .highlight-entity.highlight-action [data-elb][data-elbaction] {
+    box-shadow: 0 0 16px 3px rgba(0, 202, 78, 0.5),
+                0 0 12px 1px rgba(153, 0, 255, 0.5);
+  }
+
+  .highlight-entity.highlight-context [data-elb][data-elbcontext] {
+    box-shadow: 0 0 16px 3px rgba(0, 202, 78, 0.5),
+                0 0 18px 4px rgba(255, 189, 68, 0.5);
+  }
+
+  .highlight-entity.highlight-property [data-elb][data-elb-property] {
+    box-shadow: 0 0 16px 3px rgba(0, 202, 78, 0.5),
+                0 0 14px 2px rgba(255, 96, 92, 0.5);
+  }
+
+  .highlight-action.highlight-context [data-elbaction][data-elbcontext] {
+    box-shadow: 0 0 12px 1px rgba(153, 0, 255, 0.5),
+                0 0 18px 4px rgba(255, 189, 68, 0.5);
+  }
+
+  /* Triple combinations */
+  .highlight-entity.highlight-action.highlight-context [data-elb][data-elbaction][data-elbcontext] {
+    box-shadow: 0 0 16px 3px rgba(0, 202, 78, 0.5),
+                0 0 12px 1px rgba(153, 0, 255, 0.5),
+                0 0 18px 4px rgba(255, 189, 68, 0.5);
   }
 }
 
@@ -47,22 +74,22 @@
   color: white;
 
   .highlight-globals {
-    background-color: var(--highlight-globals);
+    color: var(--highlight-globals);
   }
 
   .highlight-context {
-    background-color: var(--highlight-context);
+    color: var(--highlight-context);
   }
 
   .highlight-entity {
-    background-color: var(--highlight-entity);
+    color: var(--highlight-entity);
   }
 
   .highlight-property {
-    background-color: var(--highlight-property);
+    color: var(--highlight-property);
   }
 
   .highlight-action {
-    background-color: var(--highlight-action);
+    color: var(--highlight-action);
   }
 }
