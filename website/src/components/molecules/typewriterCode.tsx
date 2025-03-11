@@ -22,9 +22,6 @@ export interface TypewriterOptions {
 let activeTimeoutId: NodeJS.Timeout | undefined;
 let isFirstRun = true;
 let isPaused = false;
-let currentEditIndex = 0;
-let currentCharIndex = 0;
-let savedLines: string[] = [];
 
 export const resetTypewriter = () => {
   if (activeTimeoutId) {
@@ -33,9 +30,6 @@ export const resetTypewriter = () => {
   }
   isFirstRun = true;
   isPaused = false;
-  currentEditIndex = 0;
-  currentCharIndex = 0;
-  savedLines = [];
 };
 
 export const pauseTypewriter = () => {
@@ -45,8 +39,6 @@ export const pauseTypewriter = () => {
     activeTimeoutId = undefined;
   }
 };
-
-export const isTypewriterPaused = () => isPaused;
 
 const scheduleNextChar = (
   editIndex: number,
@@ -70,9 +62,6 @@ const type = (
   onUpdate: (newCode: string) => void,
 ) => {
   if (isPaused) {
-    savedLines = [...lines];
-    currentEditIndex = editIndex;
-    currentCharIndex = charIndex;
     return;
   }
 
