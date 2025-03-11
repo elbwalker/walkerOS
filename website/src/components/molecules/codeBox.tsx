@@ -8,6 +8,7 @@ import * as parserBabel from 'prettier/parser-babel';
 import estree from 'prettier/plugins/estree';
 import { ObjectInspector, chromeDark } from 'react-inspector';
 import { simulateEdits, TypewriterOptions } from './typewriterCode';
+import SyntaxHighlighter from './syntaxHighlighter';
 
 interface FormatValueProps {
   intent?: number;
@@ -129,19 +130,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   });
 
   const highlightCode = (code: string) => (
-    <Highlight theme={prismThemes.palenight} code={code} language={language}>
-      {({ tokens, getLineProps, getTokenProps }) => (
-        <>
-          {tokens.map((line, i) => (
-            <div {...getLineProps({ line, key: i })} key={i}>
-              {line.map((token, key) => (
-                <span {...getTokenProps({ token, key })} key={key} />
-              ))}
-            </div>
-          ))}
-        </>
-      )}
-    </Highlight>
+    <SyntaxHighlighter code={code} language={language} />
   );
 
   const consoleTheme = {

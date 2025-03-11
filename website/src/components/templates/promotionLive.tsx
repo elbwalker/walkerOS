@@ -42,7 +42,7 @@ const typewriterEdits: TypeEdit[] = [
     line: 7,
     position: 9,
     content: ' data-elb-promotion="name:#innerText"',
-    delay: 3000,
+    delay: 300,
     mode: EditMode.INSERT,
   },
 ];
