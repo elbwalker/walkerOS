@@ -2,7 +2,6 @@ import { WalkerOS } from '@elbwalker/types';
 import { isString, isDefined, tryCatch, tryCatchAsync } from '@elbwalker/utils';
 import Editor from 'react-simple-code-editor';
 import { useState, useEffect, useRef } from 'react';
-import type { MouseEvent } from 'react';
 import * as prettier from 'prettier/standalone';
 import * as parserBabel from 'prettier/parser-babel';
 import estree from 'prettier/plugins/estree';
@@ -140,7 +139,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
       const formattedValue = await prettier.format(contentToFormat, {
         parser: language === 'html' ? 'html' : 'babel',
         plugins: [parserBabel, estree],
-        semi: true,
+        semi: false,
         singleQuote: true,
         trailingComma: 'es5',
         printWidth: 80,
@@ -148,10 +147,9 @@ const CodeBox: React.FC<CodeBoxProps> = ({
         useTabs: false,
       });
 
-      // Remove the 'return ' prefix if we added it
       const finalValue = isCompleteStatement
         ? formattedValue
-        : formattedValue.replace(/^return\s+/, '');
+        : formattedValue.replace(/^return\s+/, '').replace(/[\r\n]+$/, '');
 
       onChangeHandler?.(finalValue);
     },

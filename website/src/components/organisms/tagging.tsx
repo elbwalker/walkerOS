@@ -197,7 +197,7 @@ const Tagging: React.FC<PreviewProps> = ({
         <div className="flex-1 flex flex-col overflow-hidden">
           <CodeBox
             label="Console"
-            value={logs || 'No events yet.'}
+            value={logs || 'No event yet.'}
             disabled={true}
             isConsole={true}
             className={boxClassNames}
