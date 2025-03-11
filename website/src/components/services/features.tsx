@@ -1,3 +1,4 @@
+import { JSX } from 'react';
 import clsx from 'clsx';
 import Heading from '@theme/Heading';
 import {
@@ -10,7 +11,7 @@ import Link from '@docusaurus/Link';
 
 type FeatureItem = {
   title: string;
-  link: string;
+  link?: string;
   icon: JSX.Element;
   children: React.ReactNode;
 };

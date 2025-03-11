@@ -1,13 +1,13 @@
+import { JSX } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import Hero from '@site/src/components/services/hero';
 import Features from '@site/src/components/services/features';
 import CTAServices from '@site/src/components/ctas/services';
-import Team from '../components/services/team';
-import Sparring from '../components/services/sparring';
-import Projects from '../components/services/projects';
-import Principle from '../components/services/principles';
-import Principles from '../components/services/principles';
+import Team from '@site/src/components/services/team';
+import Sparring from '@site/src/components/services/sparring';
+import Projects from '@site/src/components/services/projects';
+import CollectionPrinciples from '@site/src/components/services/collectionPrinciples';
 
 export default function Services(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
@@ -19,6 +19,7 @@ export default function Services(): JSX.Element {
         <Sparring />
         <Projects />
         <Team />
+        <CollectionPrinciples />
         <CTAServices />
       </main>
     </Layout>
