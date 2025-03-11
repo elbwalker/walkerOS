@@ -49,7 +49,7 @@ const Tagging: React.FC<PreviewProps> = ({
       }
       elb('walker init', elem);
     }, 2000),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -69,47 +69,62 @@ const Tagging: React.FC<PreviewProps> = ({
   }, [previewId]);
 
   const transformCode = (inputCode: string) => {
-    return inputCode.replace(/class=/g, 'className=');
+    return inputCode
+      .trim()
+      .replace(/class=/g, 'className=')
+      .replace(/;$/, '');
+  };
+
+  const PreviewContent = () => {
+    useEffect(() => {
+      if (previewRef.current) {
+        previewRef.current.innerHTML = transformCode(liveCode);
+      }
+    }, [liveCode]);
+
+    return (
+      <div
+        ref={previewRef}
+        data-elbcontext={`previewId:${previewId}`}
+        className="h-full"
+      />
+    );
   };
 
   return (
-    <div className="my-4" data-elbcontext={`previewId:${previewId}`}>
-      <div className="flex flex-col xl:flex-row gap-2">
+    <div className="m-2">
+      <div className="flex flex-col xl:flex-row gap-2" style={{ height: '400px' }}>
         {!hideCode && (
-          <CodeBox
-            label="Code"
-            value={liveCode}
-            onChange={setLiveCode}
-            className="flex-1"
-          />
+          <CodeBox label="Code" value={liveCode} onChange={setLiveCode} />
         )}
 
         {!hidePreview && (
-          <div className="flex-1 border border-base-300 rounded-lg overflow-hidden bg-gray-800">
+          <div className="flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800">
             <div className="font-bold px-2 py-1 bg-base-100 text-base">
               Preview
             </div>
-            <div
-              ref={previewRef}
-              className="p-4 bg-white dark:bg-gray-900"
-              style={{ height: `${height - 40}px`, overflowY: 'auto' }}
-              dangerouslySetInnerHTML={{ __html: transformCode(liveCode) }}
-            />
+            <div className="flex-1 bg-gray-800 overflow-auto">
+              <div className="p-6 h-full">
+                <PreviewContent />
+              </div>
+            </div>
           </div>
         )}
 
         {!hideConsole && (
-          <CodeBox
-            label="Console"
-            value={
-              logs.length === 0
-                ? 'No events yet.'
-                : JSON.stringify(logs, null, 2)
-            }
-            disabled={true}
-            className="flex-1"
-            isConsole={true}
-          />
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <CodeBox
+              label="Console"
+              value={
+                logs.length === 0
+                  ? 'No events yet.'
+                  : JSON.stringify(logs, null, 2)
+              }
+              disabled={true}
+              isConsole={true}
+              className="flex-1"
+            />
+          </div>
         )}
       </div>
     </div>

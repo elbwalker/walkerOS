@@ -140,7 +140,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
       try {
         const parsedValue = value === 'No events yet.' ? [] : JSON.parse(value);
         return (
-          <div className="p-4">
+          <div className="p-4 max-h-full overflow-auto">
             {value === 'No events yet.' ? (
               <div className="text-gray-500">No events yet.</div>
             ) : (
@@ -175,7 +175,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
 
   return (
     <div
-      className={`border border-base-300 rounded-lg overflow-hidden bg-gray-800 relative ${
+      className={`flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800 relative ${
         smallText ? 'text-xs' : 'text-sm'
       } ${className}`}
     >
@@ -246,7 +246,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
           </div>
         </div>
       )}
-      <div className="flex-1 overflow-auto max-h-[calc(100vh-16rem)]">
+      <div className="flex-1 overflow-auto">
         {isEditable && !isConsole && (
           <div className="absolute bottom-2 right-2 text-gray-500">
             <svg
