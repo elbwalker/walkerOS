@@ -24,7 +24,7 @@ const code = `<div
       </button>
     </div>
   </div>
-</div>;
+</div>
 `;
 
 const PromotionLive: React.FC = () => {

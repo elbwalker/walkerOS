@@ -3,6 +3,8 @@ import { debounce, getId } from '@elbwalker/utils';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { elb } from '@elbwalker/walker.js';
 import CodeBox from '../molecules/codeBox';
+import FullScreenOverlay from '../molecules/codeBoxOverlay';
+import FullScreenButton from '../molecules/fullScreenButton';
 
 export const taggingRegistry = (() => {
   const registry = new Map<string, (message: WalkerOS.Event) => void>();
@@ -41,6 +43,7 @@ const Tagging: React.FC<PreviewProps> = ({
   const initialCode = useRef(code.trim());
   const [liveCode, setLiveCode] = useState(initialCode.current);
   const isFirstRender = useRef(true);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const initPreview = useCallback(
     debounce(
@@ -96,54 +99,74 @@ const Tagging: React.FC<PreviewProps> = ({
     );
   };
 
-  return (
-    <div className="m-2">
-      <div
-        className="flex flex-col xl:flex-row gap-2"
-        style={{ height: '400px' }}
-      >
-        {!hideCode && (
-          <CodeBox 
-            label="Code" 
-            value={liveCode} 
-            onChange={setLiveCode} 
+  const boxClassNames = `flex-1 resize max-h-96 xl:max-h-full flex flex-col`;
+
+  const renderBoxes = (isFullScreenMode = false) => (
+    <div
+      className={`flex flex-col xl:flex-row gap-2 scroll ${isFullScreenMode ? 'h-full' : ''}`}
+      style={!isFullScreenMode ? { height: '400px' } : undefined}
+    >
+      {!hideCode && (
+        <CodeBox 
+          label="Code" 
+          value={liveCode} 
+          onChange={setLiveCode} 
+          showReset={true}
+          onReset={() => setLiveCode(initialCode.current)}
+          className={boxClassNames}
+          smallText={isFullScreenMode ? false : undefined}
+        />
+      )}
+
+      {!hidePreview && (
+        <div className={`flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${boxClassNames}`}>
+          <div className="font-bold px-2 py-1.5 bg-base-100 text-base flex justify-between items-center">
+            <span>Preview</span>
+            <div className="w-[68px]" />
+          </div>
+          <div className="flex-1 bg-gray-800 overflow-auto">
+            <div className="p-6 h-full">
+              <PreviewContent />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!hideConsole && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <CodeBox
+            label="Console"
+            value={
+              logs.length === 0
+                ? 'No events yet.'
+                : JSON.stringify(logs, null, 2)
+            }
+            disabled={true}
+            isConsole={true}
+            className={boxClassNames}
+            smallText={isFullScreenMode ? false : undefined}
             showReset={true}
-            onReset={() => setLiveCode(initialCode.current)}
+            onReset={() => setLogs([])}
           />
-        )}
+        </div>
+      )}
+    </div>
+  );
 
-        {!hidePreview && (
-          <div className="flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800">
-            <div className="font-bold px-2 py-1.5 bg-base-100 text-base flex justify-between items-center">
-              <span>Preview</span>
-              <div className="w-[68px]"></div>
-            </div>
-            <div className="flex-1 bg-gray-800 overflow-auto">
-              <div className="p-6 h-full">
-                <PreviewContent />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {!hideConsole && (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <CodeBox
-              label="Console"
-              value={
-                logs.length === 0
-                  ? 'No events yet.'
-                  : JSON.stringify(logs, null, 2)
-              }
-              disabled={true}
-              isConsole={true}
-              className="flex-1"
-              showReset={true}
-              onReset={() => setLogs([])}
-            />
-          </div>
-        )}
+  return (
+    <div className="my-4">
+      <div className="flex flex-col gap-2">
+        <div className="flex justify-end">
+          <FullScreenButton onClick={() => setIsFullScreen(true)} />
+        </div>
+        {renderBoxes()}
       </div>
+      <FullScreenOverlay
+        isOpen={isFullScreen}
+        onClose={() => setIsFullScreen(false)}
+      >
+        {renderBoxes(true)}
+      </FullScreenOverlay>
     </div>
   );
 };
