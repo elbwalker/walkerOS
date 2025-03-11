@@ -87,16 +87,8 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   };
 
   const handleFormat = tryCatchAsync(async () => {
-    // Check if the content is a complete statement
-    const isCompleteStatement = /^[a-zA-Z_$][a-zA-Z0-9_$]*\s*=/.test(
-      value.trim(),
-    );
-
-    // If it's not a complete statement, wrap it in a return statement
-    const contentToFormat = isCompleteStatement ? value : `return ${value}`;
-
-    const formattedValue = await prettier.format(contentToFormat, {
-      parser: 'babel',
+    const formattedValue = await prettier.format(value, {
+      parser: language === 'html' ? 'html' : 'babel',
       plugins: [parserBabel, estree],
       semi: true,
       singleQuote: true,
@@ -106,12 +98,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
       useTabs: false,
     });
 
-    // Remove the 'return ' prefix if we added it
-    const finalValue = isCompleteStatement
-      ? formattedValue
-      : formattedValue.replace(/^return\s+/, '');
-
-    onChange?.(finalValue);
+    onChange?.(formattedValue);
   });
 
   const highlightCode = (code: string) => (
