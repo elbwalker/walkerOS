@@ -43,7 +43,7 @@ const Tagging: React.FC<PreviewProps> = ({
   previewId = 'preview',
   typewriter,
 }) => {
-  const [logs, setLogs] = useState<unknown[]>([]);
+  const [logs, setLogs] = useState<string>();
   const previewRef = useRef<HTMLDivElement>(null);
   const initialCode = useRef(code.trim());
   const [liveCode, setLiveCode] = useState(initialCode.current);
@@ -75,8 +75,8 @@ const Tagging: React.FC<PreviewProps> = ({
   }, [liveCode]);
 
   useEffect(() => {
-    taggingRegistry.add(previewId, (log: WalkerOS.Event) => {
-      setLogs((prevLogs) => [...prevLogs, log]);
+    taggingRegistry.add(previewId, (log) => {
+      setLogs(JSON.stringify(log, null, 2));
     });
 
     return () => {
@@ -197,17 +197,13 @@ const Tagging: React.FC<PreviewProps> = ({
         <div className="flex-1 flex flex-col overflow-hidden">
           <CodeBox
             label="Console"
-            value={
-              logs.length === 0
-                ? 'No events yet.'
-                : JSON.stringify(logs, null, 2)
-            }
+            value={logs || 'No events yet.'}
             disabled={true}
             isConsole={true}
             className={boxClassNames}
             smallText={isFullScreenMode ? false : undefined}
             showReset={true}
-            onReset={() => setLogs([])}
+            onReset={() => setLogs('')}
           />
         </div>
       )}

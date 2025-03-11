@@ -112,7 +112,6 @@ const CodeBox: React.FC<CodeBoxProps> = ({
       return cleanup;
     } else {
       if (isConsole && value !== 'No events yet.') {
-        setCurrentValue(value);
         handleFormat(value, setCurrentValue);
       } else {
         setCurrentValue(value);
@@ -343,7 +342,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
         </div>
       )}
       <div className="flex-1 overflow-auto">
-        {isEditable && !isConsole && (
+        {isEditable && (
           <div className="absolute bottom-2 right-2 text-gray-500">
             <svg
               className="w-5 h-4"
