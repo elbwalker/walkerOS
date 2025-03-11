@@ -54,8 +54,8 @@ const typewriterEdits: TypeEdit[] = [
   },
   {
     line: 9,
-    position: 10,
-    content: 'data-elb-promotion="name:#innerText"',
+    position: 9,
+    content: ' data-elb-promotion="name:#innerText"',
     delay: 1,
     mode: EditMode.INSERT,
   },
