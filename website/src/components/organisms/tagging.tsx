@@ -6,6 +6,7 @@ import CodeBox from '../molecules/codeBox';
 import FullScreenOverlay from '../molecules/codeBoxOverlay';
 import FullScreenButton from '../molecules/fullScreenButton';
 import type { TypewriterOptions } from '../molecules/typewriterCode';
+import { resetTypewriter } from '../molecules/typewriterCode';
 
 export const taggingRegistry = (() => {
   const registry = new Map<string, (message: WalkerOS.Event) => void>();
@@ -110,7 +111,10 @@ const Tagging: React.FC<PreviewProps> = ({
           value={liveCode}
           onChange={setLiveCode}
           showReset={true}
-          onReset={() => setLiveCode(initialCode.current)}
+          onReset={() => {
+            setLiveCode(initialCode.current);
+            resetTypewriter();
+          }}
           className={boxClassNames}
           smallText={isFullScreenMode ? false : undefined}
           typewriter={typewriter}

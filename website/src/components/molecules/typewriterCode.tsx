@@ -22,6 +22,14 @@ export interface TypewriterOptions {
 let activeTimeoutId: NodeJS.Timeout | undefined;
 let isFirstRun = true;
 
+export const resetTypewriter = () => {
+  if (activeTimeoutId) {
+    clearTimeout(activeTimeoutId);
+    activeTimeoutId = undefined;
+  }
+  isFirstRun = true;
+};
+
 export const simulateEdits = (
   initialCode: string,
   options: TypewriterOptions,
