@@ -5,6 +5,10 @@
   --highlight-entity: #00ca4ecc;
   --highlight-property: #ff605ccc;
   --highlight-action: #9900ffcc;
+  --highlight-background: #1f2937;
+  --highlight-text: #9ca3af;
+  --highlight-hover: rgba(255, 255, 255, 0.05);
+  --highlight-separator: rgba(255, 255, 255, 0.05);
 }
 
 .elb-highlight {
@@ -112,8 +116,35 @@
 
 /* Button styles - separated from highlight effects */
 .elb-highlight-buttons {
+  display: flex;
+  background: var(--highlight-background);
+
   button {
-    color: white;
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--highlight-text);
+    border: 0;
+    background: transparent;
+    transition: all 0.2s ease;
+    position: relative;
+    border-radius: 6px;
+
+    &:hover {
+      color: white;
+      background: var(--highlight-hover);
+    }
+
+    &:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 20%;
+      height: 60%;
+      width: 1px;
+      background: var(--highlight-separator);
+    }
 
     &.highlight-globals,
     &.btn-globals.highlight-globals {

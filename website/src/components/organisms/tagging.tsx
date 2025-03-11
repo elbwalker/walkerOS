@@ -169,28 +169,28 @@ const Tagging: React.FC<PreviewProps> = ({
               <div ref={previewRef} className="h-full" />
             </div>
           </div>
-          <div className="flex bg-base-100 border-t border-base-300 elb-highlight-buttons">
+          <div className="elb-highlight-buttons">
             <button
               onClick={() => toggleHighlight('context')}
-              className={`flex-1 px-2 py-1.5 text-xs font-medium btn-context ${highlightContext}`}
+              className={`btn-context ${highlightContext}`}
             >
               Context
             </button>
             <button
               onClick={() => toggleHighlight('entity')}
-              className={`flex-1 px-2 py-1.5 text-xs font-medium btn-entity ${highlightEntity}`}
+              className={`btn-entity ${highlightEntity}`}
             >
               Entity
             </button>
             <button
               onClick={() => toggleHighlight('property')}
-              className={`flex-1 px-2 py-1.5 text-xs font-medium btn-property ${highlightProperty}`}
+              className={`btn-property ${highlightProperty}`}
             >
               Property
             </button>
             <button
               onClick={() => toggleHighlight('action')}
-              className={`flex-1 px-2 py-1.5 text-xs font-medium btn-action ${highlightAction}`}
+              className={`btn-action ${highlightAction}`}
             >
               Action
             </button>
