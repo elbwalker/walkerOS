@@ -6,7 +6,7 @@ import CodeBox from '../molecules/codeBox';
 import FullScreenOverlay from '../molecules/codeBoxOverlay';
 import FullScreenButton from '../molecules/fullScreenButton';
 import type { TypewriterOptions } from '../molecules/typewriterCode';
-import { resetTypewriter } from '../molecules/typewriterCode';
+import { resetTypewriter, pauseTypewriter } from '../molecules/typewriterCode';
 
 export const taggingRegistry = (() => {
   const registry = new Map<string, (message: WalkerOS.Event) => void>();
@@ -47,6 +47,7 @@ const Tagging: React.FC<PreviewProps> = ({
   const initialCode = useRef(code.trim());
   const [liveCode, setLiveCode] = useState(initialCode.current);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   const initPreview = useCallback(
     debounce(
@@ -114,6 +115,7 @@ const Tagging: React.FC<PreviewProps> = ({
           onReset={() => {
             setLiveCode(initialCode.current);
             resetTypewriter();
+            setIsPaused(false);
           }}
           className={boxClassNames}
           smallText={isFullScreenMode ? false : undefined}
@@ -159,7 +161,7 @@ const Tagging: React.FC<PreviewProps> = ({
   );
 
   return (
-    <div className="my-4">
+    <div className="m-4">
       <div className="flex flex-col gap-2">
         <div className="flex justify-end">
           <FullScreenButton onClick={() => setIsFullScreen(true)} />

@@ -21,6 +21,10 @@ export interface TypewriterOptions {
 
 let activeTimeoutId: NodeJS.Timeout | undefined;
 let isFirstRun = true;
+let isPaused = false;
+let currentEditIndex = 0;
+let currentCharIndex = 0;
+let savedLines: string[] = [];
 
 export const resetTypewriter = () => {
   if (activeTimeoutId) {
@@ -28,6 +32,106 @@ export const resetTypewriter = () => {
     activeTimeoutId = undefined;
   }
   isFirstRun = true;
+  isPaused = false;
+  currentEditIndex = 0;
+  currentCharIndex = 0;
+  savedLines = [];
+};
+
+export const pauseTypewriter = () => {
+  isPaused = true;
+  if (activeTimeoutId) {
+    clearTimeout(activeTimeoutId);
+    activeTimeoutId = undefined;
+  }
+};
+
+export const isTypewriterPaused = () => isPaused;
+
+const scheduleNextChar = (
+  editIndex: number,
+  charIndex: number,
+  delay: number,
+  lines: string[],
+  options: TypewriterOptions,
+  onUpdate: (newCode: string) => void,
+) => {
+  activeTimeoutId = setTimeout(
+    () => type(editIndex, charIndex, lines, options, onUpdate),
+    delay,
+  );
+};
+
+const type = (
+  editIndex: number,
+  charIndex: number,
+  lines: string[],
+  options: TypewriterOptions,
+  onUpdate: (newCode: string) => void,
+) => {
+  if (isPaused) {
+    savedLines = [...lines];
+    currentEditIndex = editIndex;
+    currentCharIndex = charIndex;
+    return;
+  }
+
+  const edit = options.edits[editIndex];
+  const { content, mode = EditMode.NEW } = edit;
+  const typingSpeed = options.typingSpeed || 30;
+
+  switch (mode) {
+    case EditMode.NEW:
+      if (charIndex === 0) {
+        const newLine = ' '.repeat(edit.position);
+        lines.splice(edit.line, 0, newLine);
+      }
+
+      if (charIndex < content.length) {
+        const currentLine = lines[edit.line];
+        lines[edit.line] =
+          currentLine.substring(0, edit.position + charIndex) +
+          content[charIndex] +
+          currentLine.substring(edit.position + charIndex + 1);
+
+        scheduleNextChar(
+          editIndex,
+          charIndex + 1,
+          typingSpeed,
+          lines,
+          options,
+          onUpdate,
+        );
+      }
+      break;
+
+    case EditMode.INSERT:
+      if (charIndex < content.length) {
+        const currentLine = lines[edit.line];
+        const insertPosition = edit.position + charIndex;
+        lines[edit.line] =
+          currentLine.substring(0, insertPosition) +
+          content[charIndex] +
+          currentLine.substring(insertPosition);
+
+        scheduleNextChar(
+          editIndex,
+          charIndex + 1,
+          typingSpeed,
+          lines,
+          options,
+          onUpdate,
+        );
+      }
+      break;
+  }
+
+  onUpdate(lines.join('\n'));
+
+  if (charIndex >= content.length && editIndex < options.edits.length - 1) {
+    const nextDelay = options.edits[editIndex + 1].delay || typingSpeed;
+    scheduleNextChar(editIndex + 1, 0, nextDelay, lines, options, onUpdate);
+  }
 };
 
 export const simulateEdits = (
@@ -35,75 +139,13 @@ export const simulateEdits = (
   options: TypewriterOptions,
   onUpdate: (newCode: string) => void,
 ) => {
-  const scheduleNextChar = (
-    editIndex: number,
-    charIndex: number,
-    delay: number,
-  ) => {
-    activeTimeoutId = setTimeout(() => type(editIndex, charIndex), delay);
-  };
-
-  // If there's already an active simulation stop here
   if (activeTimeoutId) return;
 
   const lines = initialCode.split('\n');
 
-  const type = (editIndex: number, charIndex: number) => {
-    const edit = options.edits[editIndex];
-    const { content, mode = EditMode.NEW } = edit;
-    const typingSpeed = options.typingSpeed || 30;
-
-    switch (mode) {
-      case EditMode.NEW:
-        if (charIndex === 0) {
-          // On first character, create the new line with proper spacing
-          const newLine = ' '.repeat(edit.position);
-          lines.splice(edit.line, 0, newLine);
-        }
-
-        // Add the current character to the line
-        if (charIndex < content.length) {
-          const currentLine = lines[edit.line];
-          lines[edit.line] =
-            currentLine.substring(0, edit.position + charIndex) +
-            content[charIndex] +
-            currentLine.substring(edit.position + charIndex + 1);
-
-          // Schedule next character if there are more
-          scheduleNextChar(editIndex, charIndex + 1, typingSpeed);
-        }
-        break;
-
-      case EditMode.INSERT:
-        // Add the current character to the line at the specified position
-        if (charIndex < content.length) {
-          const currentLine = lines[edit.line];
-          const insertPosition = edit.position + charIndex;
-          lines[edit.line] = 
-            currentLine.substring(0, insertPosition) + 
-            content[charIndex] + 
-            currentLine.substring(insertPosition);
-          
-          // Schedule next character if there are more
-          scheduleNextChar(editIndex, charIndex + 1, typingSpeed);
-        }
-        break;
-    }
-
-    // Update the display
-    onUpdate(lines.join('\n'));
-
-    // Move to next edit if we're done with current edit
-    if (charIndex >= content.length && editIndex < options.edits.length - 1) {
-      const nextDelay = options.edits[editIndex + 1].delay || typingSpeed;
-      scheduleNextChar(editIndex + 1, 0, nextDelay);
-    }
-  };
-
-  // Start the simulation if we have edits and it's the first run
   if (isFirstRun) {
     isFirstRun = false;
     const firstDelay = options.edits[0].delay || 0;
-    scheduleNextChar(0, 0, firstDelay);
+    scheduleNextChar(0, 0, firstDelay, lines, options, onUpdate);
   }
 };

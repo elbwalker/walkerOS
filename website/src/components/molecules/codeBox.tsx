@@ -7,7 +7,12 @@ import * as prettier from 'prettier/standalone';
 import * as parserBabel from 'prettier/parser-babel';
 import estree from 'prettier/plugins/estree';
 import { ObjectInspector, chromeDark } from 'react-inspector';
-import { simulateEdits, TypewriterOptions } from './typewriterCode';
+import {
+  simulateEdits,
+  TypewriterOptions,
+  pauseTypewriter,
+  resetTypewriter,
+} from './typewriterCode';
 import SyntaxHighlighter from './syntaxHighlighter';
 
 interface FormatValueProps {
@@ -61,6 +66,7 @@ interface CodeBoxProps {
   onReset?: () => void;
   showReset?: boolean;
   typewriter?: TypewriterOptions;
+  autoStart?: boolean;
 }
 
 const CodeBox: React.FC<CodeBoxProps> = ({
@@ -75,13 +81,17 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   onReset,
   showReset = false,
   typewriter,
+  autoStart = true,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isFormatHovered, setIsFormatHovered] = useState(false);
   const [isResetHovered, setIsResetHovered] = useState(false);
+  const [isPauseHovered, setIsPauseHovered] = useState(false);
   const [currentValue, setCurrentValue] = useState(value);
+  const [isPaused, setIsPaused] = useState(false);
   const latestValueRef = useRef(value);
+  const initialValueRef = useRef(value);
   const isEditable = onChange && !disabled;
 
   // Update ref when value changes
@@ -91,7 +101,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
 
   // Handle typewriter edits
   useEffect(() => {
-    if (typewriter) {
+    if (typewriter && autoStart && !isPaused) {
       const cleanup = simulateEdits(
         latestValueRef.current,
         typewriter,
@@ -104,7 +114,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
     } else {
       setCurrentValue(value);
     }
-  }, [value, typewriter, onChange]);
+  }, [value, typewriter, onChange, autoStart, isPaused]);
 
   const handleCopy = async () => {
     tryCatch(async () => {
@@ -128,6 +138,23 @@ const CodeBox: React.FC<CodeBoxProps> = ({
 
     onChange?.(formattedValue);
   });
+
+  const handlePauseResume = () => {
+    if (isPaused) {
+      // Play button clicked - reset and start animation from beginning
+      resetTypewriter();
+      setCurrentValue(initialValueRef.current);
+      setIsPaused(false);
+      simulateEdits(initialValueRef.current, typewriter, (newValue) => {
+        setCurrentValue(newValue);
+        onChange?.(newValue);
+      });
+    } else {
+      // Stop button clicked - just stop animation
+      pauseTypewriter();
+      setIsPaused(true);
+    }
+  };
 
   const highlightCode = (code: string) => (
     <SyntaxHighlighter code={code} language={language} />
@@ -197,10 +224,49 @@ const CodeBox: React.FC<CodeBoxProps> = ({
           <span>{label}</span>
           <div className="relative">
             <div className="relative flex items-center gap-1">
+              {typewriter && (
+                <div className="relative">
+                  <button
+                    onClick={handlePauseResume}
+                    onMouseEnter={() => setIsPauseHovered(true)}
+                    onMouseLeave={() => setIsPauseHovered(false)}
+                    className="text-gray-500 hover:text-gray-300 transition-colors border-none bg-transparent p-1"
+                    aria-label={isPaused ? "Play animation" : "Stop animation"}
+                  >
+                    {isPaused ? (
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M6 6h12v12H6z" />
+                      </svg>
+                    )}
+                  </button>
+                  {isPauseHovered && (
+                    <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded shadow-sm border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                      {isPaused ? "Play" : "Stop"}
+                    </div>
+                  )}
+                </div>
+              )}
               {showReset && onReset && (
                 <div className="relative">
                   <button
-                    onClick={onReset}
+                    onClick={() => {
+                      setCurrentValue(initialValueRef.current);
+                      pauseTypewriter();
+                      setIsPaused(true);
+                      onReset?.();
+                    }}
                     onMouseEnter={() => setIsResetHovered(true)}
                     onMouseLeave={() => setIsResetHovered(false)}
                     className="text-gray-500 hover:text-gray-300 transition-colors border-none bg-transparent p-1"
