@@ -14,7 +14,8 @@
   [data-elbcontext],
   [data-elb],
   [data-elb-property],
-  [data-elbaction] {
+  [data-elbaction],
+  .is-property {
     position: relative;
     transition: box-shadow 0.3s ease;
   }
@@ -35,7 +36,7 @@
                 0 0 8px var(--highlight-entity);
   }
 
-  .highlight-property [data-elb-property] {
+  .highlight-property .is-property {
     box-shadow: 0 0 0 2px var(--highlight-property),
                 0 0 8px var(--highlight-property);
   }

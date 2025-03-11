@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import { debounce, getId } from '@elbwalker/utils';
+import { debounce, getId, tryCatch } from '@elbwalker/utils';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { elb } from '@elbwalker/walker.js';
 import CodeBox from '../molecules/codeBox';
@@ -84,13 +84,6 @@ const Tagging: React.FC<PreviewProps> = ({
     };
   }, [previewId]);
 
-  const transformCode = (inputCode: string) => {
-    return inputCode
-      .trim()
-      .replace(/class=/g, 'className=')
-      .replace(/;$/, '');
-  };
-
   const toggleHighlight = (type: keyof typeof highlights) => {
     setHighlights((prev) => ({
       ...prev,
@@ -98,10 +91,29 @@ const Tagging: React.FC<PreviewProps> = ({
     }));
   };
 
+  const addPropertyClass = useCallback(
+    debounce(() => {
+      if (!previewRef.current) return;
+      previewRef.current.querySelectorAll('[data-elb]').forEach((entity) => {
+        const entityType = entity.getAttribute('data-elb');
+
+        if (!entityType) return;
+
+        previewRef.current
+          .querySelectorAll(`[data-elb-${entityType}]`)
+          .forEach((prop) => {
+            prop.classList.add('is-property');
+          });
+      });
+    }, 200),
+    [],
+  );
+
   const PreviewContent = () => {
     useEffect(() => {
       if (previewRef.current) {
-        previewRef.current.innerHTML = transformCode(liveCode);
+        previewRef.current.innerHTML = liveCode.trim().replace(/;$/, '');
+        addPropertyClass();
       }
     }, [liveCode]);
 
