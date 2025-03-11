@@ -28,7 +28,7 @@ const typewriterEdits: TypeEdit[] = [
     line: 1,
     position: 2,
     content: 'data-elb="promotion"',
-    delay: 2000,
+    delay: 200,
     mode: EditMode.NEW,
   },
   {
@@ -38,12 +38,19 @@ const typewriterEdits: TypeEdit[] = [
     delay: 100,
     mode: EditMode.NEW,
   },
+  {
+    line: 7,
+    position: 9,
+    content: ' data-elb-promotion="name:#innerText"',
+    delay: 3000,
+    mode: EditMode.INSERT,
+  },
 ];
 
 const PromotionLive: React.FC = () => {
   return (
     <div className="my-8">
-      <Tagging 
+      <Tagging
         code={baseCode}
         typewriter={{
           edits: typewriterEdits,

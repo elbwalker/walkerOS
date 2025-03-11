@@ -63,16 +63,33 @@ export const simulateEdits = (
 
           // Schedule next character if there are more
           scheduleNextChar(editIndex, charIndex + 1, typingSpeed);
-        } else if (editIndex < options.edits.length - 1) {
-          // Move to next edit if available
-          const nextDelay = options.edits[editIndex + 1].delay || typingSpeed;
-          scheduleNextChar(editIndex + 1, 0, nextDelay);
+        }
+        break;
+
+      case EditMode.INSERT:
+        // Add the current character to the line at the specified position
+        if (charIndex < content.length) {
+          const currentLine = lines[edit.line];
+          const insertPosition = edit.position + charIndex;
+          lines[edit.line] = 
+            currentLine.substring(0, insertPosition) + 
+            content[charIndex] + 
+            currentLine.substring(insertPosition);
+          
+          // Schedule next character if there are more
+          scheduleNextChar(editIndex, charIndex + 1, typingSpeed);
         }
         break;
     }
 
     // Update the display
     onUpdate(lines.join('\n'));
+
+    // Move to next edit if we're done with current edit
+    if (charIndex >= content.length && editIndex < options.edits.length - 1) {
+      const nextDelay = options.edits[editIndex + 1].delay || typingSpeed;
+      scheduleNextChar(editIndex + 1, 0, nextDelay);
+    }
   };
 
   // Start the simulation if we have edits and it's the first run
