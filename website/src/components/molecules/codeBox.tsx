@@ -56,6 +56,8 @@ interface CodeBoxProps {
   className?: string;
   smallText?: boolean;
   isConsole?: boolean;
+  onReset?: () => void;
+  showReset?: boolean;
 }
 
 const CodeBox: React.FC<CodeBoxProps> = ({
@@ -67,10 +69,13 @@ const CodeBox: React.FC<CodeBoxProps> = ({
   className = '',
   smallText = false,
   isConsole = false,
+  onReset,
+  showReset = false,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isFormatHovered, setIsFormatHovered] = useState(false);
+  const [isResetHovered, setIsResetHovered] = useState(false);
   const isEditable = onChange && !disabled;
 
   const handleCopy = async () => {
@@ -184,6 +189,36 @@ const CodeBox: React.FC<CodeBoxProps> = ({
           <span>{label}</span>
           <div className="relative">
             <div className="relative flex items-center gap-1">
+              {showReset && onReset && (
+                <div className="relative">
+                  <button
+                    onClick={onReset}
+                    onMouseEnter={() => setIsResetHovered(true)}
+                    onMouseLeave={() => setIsResetHovered(false)}
+                    className="text-gray-500 hover:text-gray-300 transition-colors border-none bg-transparent p-1"
+                    aria-label="Reset content"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  </button>
+                  {isResetHovered && (
+                    <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded shadow-sm border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                      Reset
+                    </div>
+                  )}
+                </div>
+              )}
               {!isConsole && (
                 <div className="relative">
                   <button

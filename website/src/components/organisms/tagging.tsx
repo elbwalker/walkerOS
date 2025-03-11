@@ -38,17 +38,22 @@ const Tagging: React.FC<PreviewProps> = ({
 }) => {
   const [logs, setLogs] = useState<unknown[]>([]);
   const previewRef = useRef<HTMLDivElement>(null);
-  const [liveCode, setLiveCode] = useState(code.trim());
+  const initialCode = useRef(code.trim());
+  const [liveCode, setLiveCode] = useState(initialCode.current);
   const isFirstRender = useRef(true);
 
   const initPreview = useCallback(
-    debounce((elem: HTMLElement) => {
-      if (isFirstRender.current) {
-        isFirstRender.current = false;
-        return;
-      }
-      elb('walker init', elem);
-    }, 2000),
+    debounce(
+      (elem: HTMLElement) => {
+        if (isFirstRender.current) {
+          isFirstRender.current = false;
+          return;
+        }
+        elb('walker init', elem);
+      },
+      2000,
+      true,
+    ),
     [],
   );
 
@@ -93,15 +98,25 @@ const Tagging: React.FC<PreviewProps> = ({
 
   return (
     <div className="m-2">
-      <div className="flex flex-col xl:flex-row gap-2" style={{ height: '400px' }}>
+      <div
+        className="flex flex-col xl:flex-row gap-2"
+        style={{ height: '400px' }}
+      >
         {!hideCode && (
-          <CodeBox label="Code" value={liveCode} onChange={setLiveCode} />
+          <CodeBox 
+            label="Code" 
+            value={liveCode} 
+            onChange={setLiveCode} 
+            showReset={true}
+            onReset={() => setLiveCode(initialCode.current)}
+          />
         )}
 
         {!hidePreview && (
           <div className="flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800">
-            <div className="font-bold px-2 py-1 bg-base-100 text-base">
-              Preview
+            <div className="font-bold px-2 py-1.5 bg-base-100 text-base flex justify-between items-center">
+              <span>Preview</span>
+              <div className="w-[68px]"></div>
             </div>
             <div className="flex-1 bg-gray-800 overflow-auto">
               <div className="p-6 h-full">
@@ -123,6 +138,8 @@ const Tagging: React.FC<PreviewProps> = ({
               disabled={true}
               isConsole={true}
               className="flex-1"
+              showReset={true}
+              onReset={() => setLogs([])}
             />
           </div>
         )}
