@@ -2,6 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { SessionStorageConfig } from './';
 import { sessionStorage, sessionWindow } from './';
 import { elb as elbOrg } from '../elb';
+import { isDefined } from '../../core/is';
 
 export interface SessionConfig extends SessionStorageConfig {
   consent?: string;
@@ -47,7 +48,17 @@ function callFuncAndCb(
 }
 
 function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
+  // Track the last processed group to prevent duplicate processing
+  let lastProcessedGroup: string | undefined;
+
   const func = (instance: WalkerOS.Instance, consent: WalkerOS.Consent) => {
+    // Skip if we've already processed this group
+    if (isDefined(lastProcessedGroup) && lastProcessedGroup === instance?.group)
+      return;
+
+    // Remember this group has been processed
+    lastProcessedGroup = instance?.group;
+
     let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
 
     if (config.consent && consent[config.consent])

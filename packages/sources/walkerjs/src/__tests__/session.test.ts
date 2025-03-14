@@ -94,12 +94,24 @@ describe('Session', () => {
     expect(mockDataLayer).toHaveBeenCalledTimes(0);
     elb('walker consent', { marketing: true });
     elb('walker consent', { marketing: true });
+    elb('walker consent', { marketing: true });
 
     expect(mockDataLayer).toHaveBeenCalledTimes(1);
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'session start',
         data: expect.any(Object),
+      }),
+    );
+
+    elb('walker run');
+    expect(mockDataLayer).toHaveBeenCalledTimes(2);
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'session start',
+        data: expect.objectContaining({
+          count: 2,
+        }),
       }),
     );
 
