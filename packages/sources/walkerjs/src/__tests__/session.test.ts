@@ -1,7 +1,7 @@
-import { Walkerjs } from '..';
+import type { SourceWalkerjs } from '..';
+import { elb, Walkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import { sessionStart } from '@elbwalker/utils/web';
-import type { SourceWalkerjs } from '..';
 
 jest.mock('@elbwalker/utils/web', () => {
   const utilsOrg = jest.requireActual('@elbwalker/utils/web');
@@ -77,5 +77,34 @@ describe('Session', () => {
     );
 
     expect(mockFn).toHaveBeenCalledTimes(2);
+  });
+
+  test('multiple consent updates', () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      value: new URL('https://www.elbwalker.com/?utm_campaign=foo'),
+    });
+
+    walkerjs = Walkerjs({
+      default: true,
+      session: { consent: 'marketing', storage: true },
+      pageview: false,
+    });
+
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
+    elb('walker consent', { marketing: true });
+    elb('walker consent', { marketing: true });
+
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'session start',
+        data: expect.any(Object),
+      }),
+    );
+
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+    });
   });
 });

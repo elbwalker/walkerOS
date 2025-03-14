@@ -26,19 +26,28 @@ export function sessionStart(
   const sessionConfig = assign(instance.config.session || {}, options.config);
   const sessionData = assign(instance.config.sessionStatic, options.data);
 
+  // Track the last processed group to prevent duplicate processing
+  let lastProcessedGroup: string;
+
   // A wrapper for the callback
   const cb: SessionCallback = (session, instance, defaultCb) => {
+    // Skip if we've already processed this group
+    if (instance && instance.group === lastProcessedGroup) return;
+
     let result: void | undefined | WalkerOS.SessionData;
     if (sessionConfig.cb !== false)
       // Run either the default callback or the provided one
       result = (sessionConfig.cb || defaultCb)(session, instance, defaultCb);
 
     if (isSameType(instance, {} as SourceWalkerjs.Instance)) {
+      // Remember this group has been processed
+      lastProcessedGroup = instance.group;
+
       // Assign the session
       instance.session = session;
 
       // Run on session events
-      onApply(instance as SourceWalkerjs.Instance, 'session');
+      onApply(instance, 'session');
     }
 
     return result;
