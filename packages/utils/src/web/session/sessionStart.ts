@@ -28,9 +28,12 @@ export function sessionStart(
 
   // Consent
   if (consent) {
-    const consentConfig = (isArray(consent) ? consent : [consent]).reduce<
-      Record<string, ReturnType<typeof onConsentFn>>
-    >((acc, key) => ({ ...acc, [key]: onConsentFn(config, cb) }), {});
+    const consentConfig = (
+      isArray(consent) ? consent : [consent]
+    ).reduce<WalkerOS.AnyObject>(
+      (acc, key) => ({ ...acc, [key]: onConsentFn(config, cb) }),
+      {},
+    );
     elb('walker on', 'consent', consentConfig);
   } else {
     // just do it
@@ -62,16 +65,15 @@ function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
 
     let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
 
-    const consentKeys = config.consent
-      ? (isArray(config.consent)
-          ? config.consent
-          : [config.consent]
-        ).reduce<WalkerOS.Consent>((acc, key) => ({ ...acc, [key]: true }), {})
-      : {};
+    if (config.consent) {
+      const consentKeys = (
+        isArray(config.consent) ? config.consent : [config.consent]
+      ).reduce<WalkerOS.Consent>((acc, key) => ({ ...acc, [key]: true }), {});
 
-    if (getGrantedConsent(consentKeys, consent))
-      // Use storage if consent is granted
-      sessionFn = () => sessionStorage(config);
+      if (getGrantedConsent(consentKeys, consent))
+        // Use storage if consent is granted
+        sessionFn = () => sessionStorage(config);
+    }
 
     return callFuncAndCb(sessionFn(), instance, cb);
   };
