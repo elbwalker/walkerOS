@@ -79,6 +79,27 @@ describe('Session', () => {
     expect(mockFn).toHaveBeenCalledTimes(2);
   });
 
+  test('different consent keys', () => {
+    walkerjs = Walkerjs({
+      default: true,
+      session: { consent: ['marketing', 'analytics'], storage: true },
+      pageview: false,
+    });
+
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
+    elb('walker consent', { marketing: false, analytics: true });
+
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'session start',
+        data: expect.objectContaining({
+          storage: true, // Prefer granted consent
+        }),
+      }),
+    );
+  });
+
   test('multiple consent updates', () => {
     const originalLocation = window.location;
     Object.defineProperty(window, 'location', {
