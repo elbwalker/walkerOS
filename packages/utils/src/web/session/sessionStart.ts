@@ -28,10 +28,12 @@ export function sessionStart(
 
   // Consent
   if (consent) {
+    const consentHandler = onConsentFn(config, cb);
+
     const consentConfig = (
       isArray(consent) ? consent : [consent]
     ).reduce<WalkerOS.AnyObject>(
-      (acc, key) => ({ ...acc, [key]: onConsentFn(config, cb) }),
+      (acc, key) => ({ ...acc, [key]: consentHandler }),
       {},
     );
     elb('walker on', 'consent', consentConfig);
