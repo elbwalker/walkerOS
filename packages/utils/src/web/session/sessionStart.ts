@@ -2,9 +2,11 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { SessionStorageConfig } from './';
 import { sessionStorage, sessionWindow } from './';
 import { elb as elbOrg } from '../elb';
+import { isArray, isDefined, isString } from '../../core/is';
+import { getGrantedConsent } from '../../core';
 
 export interface SessionConfig extends SessionStorageConfig {
-  consent?: string;
+  consent?: string | string[];
   storage?: boolean;
   cb?: SessionCallback | false;
   instance?: WalkerOS.Instance;
@@ -26,10 +28,15 @@ export function sessionStart(
 
   // Consent
   if (consent) {
-    // require consent
-    elb('walker on', 'consent', {
-      [consent]: onConsentFn(config, cb),
-    });
+    const consentHandler = onConsentFn(config, cb);
+
+    const consentConfig = (
+      isArray(consent) ? consent : [consent]
+    ).reduce<WalkerOS.AnyObject>(
+      (acc, key) => ({ ...acc, [key]: consentHandler }),
+      {},
+    );
+    elb('walker on', 'consent', consentConfig);
   } else {
     // just do it
     return callFuncAndCb(sessionFn(config), instance, cb);
@@ -47,12 +54,28 @@ function callFuncAndCb(
 }
 
 function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
+  // Track the last processed group to prevent duplicate processing
+  let lastProcessedGroup: string | undefined;
+
   const func = (instance: WalkerOS.Instance, consent: WalkerOS.Consent) => {
+    // Skip if we've already processed this group
+    if (isDefined(lastProcessedGroup) && lastProcessedGroup === instance?.group)
+      return;
+
+    // Remember this group has been processed
+    lastProcessedGroup = instance?.group;
+
     let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
 
-    if (config.consent && consent[config.consent])
-      // Use storage if consent is granted
-      sessionFn = () => sessionStorage(config);
+    if (config.consent) {
+      const consentKeys = (
+        isArray(config.consent) ? config.consent : [config.consent]
+      ).reduce<WalkerOS.Consent>((acc, key) => ({ ...acc, [key]: true }), {});
+
+      if (getGrantedConsent(consentKeys, consent))
+        // Use storage if consent is granted
+        sessionFn = () => sessionStorage(config);
+    }
 
     return callFuncAndCb(sessionFn(), instance, cb);
   };

@@ -38,7 +38,7 @@ export function sessionStart(
       instance.session = session;
 
       // Run on session events
-      onApply(instance as SourceWalkerjs.Instance, 'session');
+      onApply(instance, 'session');
     }
 
     return result;
