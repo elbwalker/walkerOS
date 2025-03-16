@@ -1,5 +1,8 @@
 import type { DestinationNode } from '@elbwalker/source-node';
-import type { Handler } from '@elbwalker/types';
+import type {
+  Handler,
+  Destination as WalkerOSDestination,
+} from '@elbwalker/types';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Destination
@@ -7,7 +10,7 @@ export interface Destination
   init: InitFn;
 }
 
-export type PushFn = DestinationNode.PushFn<Custom, CustomEvent>;
+export type PushFn = WalkerOSDestination.PushFn<Custom, CustomEvent>;
 export type InitFn = DestinationNode.InitFn<PartialConfig, Config>;
 
 export type Config = {

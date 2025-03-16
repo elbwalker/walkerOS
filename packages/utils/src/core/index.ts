@@ -5,6 +5,7 @@ export * from './castValue';
 export * from './clone';
 export * from './consent';
 export * from './constants';
+export * from './destination';
 export * from './eventGenerator';
 export * from './getId';
 export * from './getMarketingParameters';

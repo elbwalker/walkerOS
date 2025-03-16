@@ -22,6 +22,7 @@ export function sourceNode(
     version,
     ...state,
     push: (() => {}) as unknown as Elb.Fn, // Placeholder for the actual push function
+    on: {}, // Initialize empty on handlers
   };
 
   // Overwrite the push function with the instance-reference

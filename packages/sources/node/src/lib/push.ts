@@ -2,6 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { SourceNode, DestinationNode, Elb } from '../types';
 import {
   assign,
+  destinationPush,
   getGrantedConsent,
   getMappingValue,
   isSameType,
@@ -9,7 +10,7 @@ import {
   tryCatchAsync,
 } from '@elbwalker/utils';
 import { isCommand } from './helper';
-import { destinationInit, destinationPush } from './destination';
+import { destinationInit } from './destination';
 import { handleCommand, handleEvent } from './handle';
 
 export function createPush(instance: SourceNode.Instance): Elb.Fn {

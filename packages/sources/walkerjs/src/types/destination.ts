@@ -9,7 +9,7 @@ import type { Config as OnConfig } from './on';
 export interface Destination<Custom = unknown, CustomEvent = unknown>
   extends WalkerOSDestination.Destination<Custom, CustomEvent> {
   config: Config<Custom, CustomEvent>;
-  push: PushFn<Custom, CustomEvent>;
+  push: WalkerOSDestination.PushFn<Custom, CustomEvent>;
   init?: InitFn<Custom, CustomEvent>;
 }
 
@@ -21,17 +21,11 @@ export type InitFn<Custom, CustomEvent> = (
   instance: Instance,
 ) => void | Config | false;
 
-export type PushFn<Custom, CustomEvent> = (
-  event: WalkerOS.Event,
-  config: Config<Custom, CustomEvent>,
-  mapping?: EventMapping<CustomEvent>,
-  options?: Options,
-) => void;
-
+// @TODO move to WalkerOSDestination
 export type PushBatchFn<Custom, CustomEvent> = (
   batch: WalkerOSDestination.Batch<CustomEvent>,
   config: Config<Custom, CustomEvent>,
-  options?: Options,
+  options?: WalkerOSDestination.Options,
 ) => void;
 
 export interface Config<Custom = unknown, CustomEvent = unknown>
@@ -44,8 +38,3 @@ export interface Mapping<CustomEvent = unknown>
 
 export interface EventMapping<CustomEvent = unknown>
   extends WalkerOSMapping.EventConfig<CustomEvent> {}
-
-export interface Options {
-  data?: WalkerOSDestination.Data;
-  instance?: Instance;
-}

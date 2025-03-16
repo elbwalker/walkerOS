@@ -1,12 +1,16 @@
 import type { DestinationNode } from '@elbwalker/source-node';
-import type { Handler, Mapping } from '@elbwalker/types';
+import type {
+  Handler,
+  Mapping,
+  Destination as WalkerOSDestination,
+} from '@elbwalker/types';
 
 export interface Destination
   extends DestinationNode.Destination<Custom, CustomEvent> {
   init: InitFn;
 }
 
-export type PushFn = DestinationNode.PushFn<Custom, CustomEvent>;
+export type PushFn = WalkerOSDestination.PushFn<Custom, CustomEvent>;
 export type InitFn = DestinationNode.InitFn<PartialConfig, Config>;
 
 export type Config = {

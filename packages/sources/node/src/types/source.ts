@@ -1,9 +1,8 @@
 import type { WalkerOS, Schema, Handler, Hooks } from '@elbwalker/types';
 import type { Fn, PushData, PushOptions, PushResult } from './elb';
 import type { Destination } from './destination';
-import type { Config as OnConfig } from './on';
 
-export interface Instance extends State, WalkerOS.Instance {
+export interface Instance extends WalkerOS.Instance {
   config: Config;
   destinations: Destinations;
   version: string;
@@ -13,9 +12,6 @@ export interface Instance extends State, WalkerOS.Instance {
 export interface State extends WalkerOS.State {
   config: Config;
   destinations: Destinations;
-  on: OnConfig;
-  session: undefined | WalkerOS.SessionData;
-  timing: number;
 }
 
 export interface Config extends WalkerOS.Config {
@@ -32,7 +28,7 @@ export interface InitConfig extends Partial<Config> {
   custom?: WalkerOS.Properties;
   destinations?: Destinations;
   hooks?: Hooks.Functions;
-  on?: Config;
+  on?: WalkerOS.OnConfig;
   tagging?: number;
   user?: WalkerOS.User;
 }

@@ -5,6 +5,7 @@ export interface Destination<Custom = unknown, CustomEvent = unknown> {
   queue?: WalkerOS.Events; // Non processed events yet and reset with each new run
   type?: string; // The type of the destination
   pushBatch?: PushBatchFn<Custom, CustomEvent>;
+  push: PushFn<Custom, CustomEvent>;
 }
 
 export interface Config<Custom = unknown, CustomEvent = unknown> {
@@ -27,6 +28,13 @@ export interface Policy {
   [key: string]: Mapping.Value;
 }
 
+export type PushFn<Custom, CustomEvent> = (
+  event: WalkerOS.Event,
+  config: Config<Custom, CustomEvent>,
+  mapping?: Mapping.EventConfig<CustomEvent>,
+  options?: Options,
+) => void | Promise<void>;
+
 export type PushEvent<CustomEvent = unknown> = {
   event: WalkerOS.Event;
   mapping?: Mapping.EventConfig<CustomEvent>;
@@ -48,6 +56,7 @@ export interface Batch<CustomEvent> {
 
 export interface Options {
   instance?: WalkerOS.Instance;
+  data?: Data;
 }
 
 export type Data =

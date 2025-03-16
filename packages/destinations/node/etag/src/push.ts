@@ -7,7 +7,7 @@ import { getParameters } from '@elbwalker/destination-core-etag';
 export const push: PushFn = async function (pushEvent, config) {
   const { custom } = config;
 
-  if (!custom) return {};
+  if (!custom) return;
 
   // @TODO
   let pageTitle;
@@ -33,8 +33,6 @@ export const push: PushFn = async function (pushEvent, config) {
       );
     }),
   );
-
-  return { queue: [] }; // @TODO
 };
 
 async function sendRequest(custom: Custom, path: string, body?: string) {

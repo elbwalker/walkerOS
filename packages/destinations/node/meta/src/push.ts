@@ -34,7 +34,7 @@ export const push: PushFn = async function (event, config, mapping) {
 
   return eventRequest.execute().then(
     () => {
-      return {};
+      return;
     },
     (err: unknown) => {
       throw err;

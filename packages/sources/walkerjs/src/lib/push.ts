@@ -5,6 +5,7 @@ import { handleCommand, handleEvent } from './handle';
 import {
   Const,
   assign,
+  destinationPush,
   getGrantedConsent,
   getMappingValue,
   isArguments,
@@ -14,10 +15,11 @@ import {
   isString,
   setByPath,
   tryCatch,
+  tryCatchAsync,
   useHooks,
 } from '@elbwalker/utils';
 import { getEntities } from './walker';
-import { destinationInit, destinationPush } from './destination';
+import { destinationInit } from './destination';
 
 export function createPush(instance: SourceWalkerjs.Instance): Elb.Fn {
   const push = (
@@ -193,7 +195,7 @@ export function pushToDestinations(
       event.globals = assign(globals, event.globals);
       event.user = assign(user, event.user);
 
-      return !tryCatch(destinationPush, (err) => {
+      return !tryCatchAsync(destinationPush, (err) => {
         // @TODO custom error handling
 
         error = err; // Captured error from destination

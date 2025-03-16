@@ -18,9 +18,11 @@ export interface State {
   globals: Properties;
   group: string;
   hooks: Hooks.Functions;
+  on: OnConfig;
   queue: Events;
   round: number;
   session: undefined | SessionData;
+  timing: number;
   user: User;
 }
 
@@ -153,6 +155,18 @@ export interface Entity {
   data: Properties;
   nested: Entities;
   context: OrderedProperties;
+}
+
+export type ConsentHandler = Record<string, AnyFunction>;
+export type ActionHandler = AnyFunction;
+
+// @TODO standardize on config in node and walker.js sources
+export interface OnConfig {
+  consent?: ConsentHandler[];
+  ready?: ActionHandler[];
+  run?: ActionHandler[];
+  session?: ActionHandler[];
+  [key: string]: ConsentHandler[] | ActionHandler[] | undefined;
 }
 
 export type DeepPartial<T> = {
