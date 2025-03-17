@@ -6,6 +6,7 @@ export interface Destination<Custom = unknown, CustomEvent = unknown> {
   type?: string; // The type of the destination
   pushBatch?: PushBatchFn<Custom, CustomEvent>;
   push: PushFn<Custom, CustomEvent>;
+  init?: InitFn<Custom, CustomEvent>;
 }
 
 export interface Config<Custom = unknown, CustomEvent = unknown> {
@@ -34,6 +35,11 @@ export type PushFn<Custom, CustomEvent> = (
   mapping?: Mapping.EventConfig<CustomEvent>,
   options?: Options,
 ) => void | Promise<void>;
+
+export type InitFn<Custom, CustomEvent> = (
+  config: Config<Custom, CustomEvent>,
+  instance: WalkerOS.Instance,
+) => Promise<Config<Custom, CustomEvent> | false>;
 
 export type PushEvent<CustomEvent = unknown> = {
   event: WalkerOS.Event;

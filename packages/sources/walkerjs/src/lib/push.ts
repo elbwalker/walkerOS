@@ -5,6 +5,7 @@ import { handleCommand, handleEvent } from './handle';
 import {
   Const,
   assign,
+  destinationInit,
   destinationPush,
   getGrantedConsent,
   getMappingValue,
@@ -19,7 +20,6 @@ import {
   useHooks,
 } from '@elbwalker/utils';
 import { getEntities } from './walker';
-import { destinationInit } from './destination';
 
 export function createPush(instance: SourceWalkerjs.Instance): Elb.Fn {
   const push = (
@@ -133,14 +133,14 @@ export function pushPredefined(
   });
 }
 
-export function pushToDestinations(
+export async function pushToDestinations(
   instance: SourceWalkerjs.Instance,
   destinations: SourceWalkerjs.Destinations,
   event?: WalkerOS.Event,
 ) {
   const { consent, globals, user } = instance;
 
-  Object.values(destinations).forEach((destination) => {
+  Object.values(destinations).forEach(async (destination) => {
     destination.queue = destination.queue || [];
 
     if (event) {
@@ -177,30 +177,36 @@ export function pushToDestinations(
     if (!allowedEvents.length) return;
 
     // Initialize the destination if needed
-    const isInitialized = tryCatch(destinationInit)(instance, destination);
+    const isInitialized = await tryCatchAsync(destinationInit)(
+      instance,
+      destination,
+    );
+
     if (!isInitialized) return;
 
     // Process the destinations event queue
     let error: unknown;
 
     // Process allowed events and store failed ones in the dead letter queue (dlq)
-    const dlq = allowedEvents.filter((event) => {
-      if (error) {
-        // Skip if an error occurred
-        destination.queue?.push(event); // Add back to queue
-      }
+    const dlq = await Promise.all(
+      allowedEvents.filter(async (event) => {
+        if (error) {
+          // Skip if an error occurred
+          destination.queue?.push(event); // Add back to queue
+        }
 
-      // Merge event with instance state, prioritizing event properties
-      event = assign({}, event);
-      event.globals = assign(globals, event.globals);
-      event.user = assign(user, event.user);
+        // Merge event with instance state, prioritizing event properties
+        event = assign({}, event);
+        event.globals = assign(globals, event.globals);
+        event.user = assign(user, event.user);
 
-      return !tryCatchAsync(destinationPush, (err) => {
-        // @TODO custom error handling
+        return !(await tryCatchAsync(destinationPush, (err) => {
+          // @TODO custom error handling
 
-        error = err; // Captured error from destination
-      })(instance, destination, event);
-    });
+          error = err; // Captured error from destination
+        })(instance, destination, event));
+      }),
+    );
 
     // Concatenate failed events with unprocessed ones in the queue
     destination.queue.concat(dlq);

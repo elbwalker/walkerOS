@@ -3,25 +3,16 @@ import type {
   Mapping as WalkerOSMapping,
   WalkerOS,
 } from '@elbwalker/types';
-import type { Instance } from './source';
 
 export interface Destination<Custom = unknown, CustomEvent = unknown>
   extends WalkerOSDestination.Destination<Custom, CustomEvent> {
   config: Config<Custom, CustomEvent>;
   push: WalkerOSDestination.PushFn<Custom, CustomEvent>;
-  init?: InitFn<
-    Partial<Config<Custom, CustomEvent>>,
-    Config<Custom, CustomEvent>
-  >;
+  init?: WalkerOSDestination.InitFn<Custom, CustomEvent>;
 }
 
 export type DestinationInit = Partial<Omit<Destination, 'push'>> &
   Pick<Destination, 'push'>;
-
-export type InitFn<PartialConfig = unknown, Config = unknown> = (
-  config: PartialConfig,
-  instance?: Instance,
-) => Promise<void | Config | false>;
 
 export interface Config<Custom = unknown, CustomEvent = unknown>
   extends WalkerOSDestination.Config<Custom, CustomEvent> {}

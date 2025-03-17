@@ -13,22 +13,30 @@ import {
   debounce,
 } from './index';
 
-// Minimal instance interface required for destination push
-export interface MinimalInstance {
-  hooks: Record<string, unknown>;
-  destinations: { [key: string]: WalkerOSDestination.Destination };
-  push: unknown;
-  allowed: unknown;
-  config: unknown;
-  consent: unknown;
-  count: number;
-  custom: unknown;
-  globals: unknown;
-  group: string;
-  queue: unknown;
-  timing: number;
-  user: unknown;
-  version: string;
+export async function destinationInit<
+  Destination extends WalkerOSDestination.Destination,
+>(instance: WalkerOS.Instance, destination: Destination): Promise<boolean> {
+  // Check if the destination was initialized properly or try to do so
+  if (destination.init && !destination.config.init) {
+    const configResult = await useHooks(
+      destination.init,
+      'DestinationInit',
+      instance.hooks,
+    )(destination.config, instance);
+
+    // Actively check for errors (when false)
+    if (configResult === false) return configResult; // don't push if init is false
+
+    // Update the destination config if it was returned
+    if (configResult) {
+      destination.config = configResult;
+    }
+
+    // Remember that the destination was initialized
+    destination.config.init = true;
+  }
+
+  return true; // Destination is ready to push
 }
 
 export async function destinationPush<

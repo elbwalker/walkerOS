@@ -34,24 +34,3 @@ export async function addDestination(
   if (config.queue !== false) destination.queue = [...instance.queue];
   return await pushToDestinations(instance, undefined, { [id]: destination });
 }
-
-export async function destinationInit(
-  instance: SourceNode.Instance,
-  destination: DestinationNode.Destination,
-) {
-  // Check if the destination was initialized properly or try to do so
-  if (destination.init && !destination.config.init) {
-    const config = await destination.init(destination.config, instance);
-
-    // Actively check for errors (when false)
-    if (config === false) return config; // don't push if init is false
-
-    // Update the destination config if it was returned
-    if (config) destination.config = config;
-
-    // Remember that the destination was initialized
-    destination.config.init = true;
-  }
-
-  return true; // Destination is ready to push
-}

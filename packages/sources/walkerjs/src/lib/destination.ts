@@ -1,9 +1,9 @@
-import type { Destination, WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import type { SourceWalkerjs, DestinationWeb } from '../types';
-import { getId, useHooks } from '@elbwalker/utils';
+import { getId } from '@elbwalker/utils';
 import { pushToDestinations } from './push';
 
-export function addDestination(
+export async function addDestination(
   instance: SourceWalkerjs.Instance,
   data: DestinationWeb.DestinationInit,
   options?: DestinationWeb.Config,
@@ -28,10 +28,8 @@ export function addDestination(
   instance.destinations[id] = destination;
 
   // Process previous events if not disabled
-  if (config.queue !== false) {
-    destination.queue = ([] as WalkerOS.Events).concat(instance.queue); // Copy the queue
-    pushToDestinations(instance, { destination });
-  }
+  if (config.queue !== false) destination.queue = [...instance.queue];
+  return await pushToDestinations(instance, { destination });
 }
 
 export function dataLayerDestination() {
@@ -58,29 +56,4 @@ export function dataLayerDestination() {
   };
 
   return destination;
-}
-
-export function destinationInit(
-  instance: SourceWalkerjs.Instance,
-  destination: DestinationWeb.Destination,
-) {
-  // Check if the destination was initialized properly or try to do so
-  if (destination.init && !destination.config.init) {
-    const config = useHooks(
-      destination.init,
-      'DestinationInit',
-      instance.hooks,
-    )(destination.config, instance);
-
-    // Actively check for errors (when false)
-    if (config === false) return config; // don't push if init is false
-
-    // Update the destination config if it was returned
-    if (config) destination.config = config;
-
-    // Remember that the destination was initialized
-    destination.config.init = true;
-  }
-
-  return true; // Destination is ready to push
 }
