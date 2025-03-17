@@ -1,5 +1,5 @@
-import type { WalkerOS, Schema, Handler, Hooks } from '@elbwalker/types';
-import type { Fn, PushData, PushOptions, PushResult } from './elb';
+import type { Elb, Hooks, Schema, WalkerOS } from '@elbwalker/types';
+import type { Fn, PushData, PushOptions } from './elb';
 import type { Destination } from './destination';
 
 export interface Instance extends WalkerOS.Instance {
@@ -18,8 +18,6 @@ export interface Config extends WalkerOS.Config {
   contracts?: Schema.Contracts;
   globalsStatic: WalkerOS.Properties;
   sessionStatic: Partial<WalkerOS.SessionData>;
-  onError?: Handler.Error;
-  onLog?: Handler.Log;
 }
 export type PartialConfig = Partial<Config>;
 
@@ -42,21 +40,16 @@ export type HandleCommand = (
   action: string,
   data?: PushData,
   options?: PushOptions,
-) => Promise<PushResult>;
+) => Promise<Elb.PushResult>;
 
 export type HandleEvent = (
   instance: Instance,
   event: WalkerOS.Event,
-) => Promise<PushResult>;
+) => Promise<Elb.PushResult>;
 
 export interface Command {
   name: string;
   data: unknown;
-}
-
-export interface Status {
-  ok: boolean;
-  error?: string;
 }
 
 export interface Destinations {

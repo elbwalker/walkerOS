@@ -1,4 +1,7 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type {
+  WalkerOS,
+  Destination as WalkerOSDestination,
+} from '@elbwalker/types';
 import type { SourceNode, DestinationNode, Elb } from '../types';
 import {
   assign,
@@ -73,7 +76,7 @@ export async function pushToDestinations(
   instance: SourceNode.Instance,
   event?: WalkerOS.Event,
   destination?: SourceNode.Destinations,
-): Promise<DestinationNode.PushResult> {
+): Promise<WalkerOSDestination.Result> {
   const { consent, globals, user } = instance;
 
   // Push to all destinations if no destination was given
@@ -175,9 +178,9 @@ export async function pushToDestinations(
     }),
   );
 
-  const successful: DestinationNode.PushSuccess = [];
-  const queued: DestinationNode.PushSuccess = [];
-  const failed: DestinationNode.PushFailure = [];
+  const successful: WalkerOSDestination.PushSuccess = [];
+  const queued: WalkerOSDestination.PushSuccess = [];
+  const failed: WalkerOSDestination.PushFailure = [];
 
   for (const result of results) {
     if (result.skipped) continue;

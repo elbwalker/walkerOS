@@ -14,10 +14,8 @@ export async function addDestination(
   const config = options || data.config || { init: false };
 
   const destination: DestinationNode.Destination = {
-    init: data.init,
-    push: data.push,
+    ...data,
     config,
-    type: data.type,
   };
 
   let id = config.id; // Use given id

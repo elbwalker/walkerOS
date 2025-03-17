@@ -1,4 +1,4 @@
-import type { Hooks, WalkerOS } from '.';
+import type { Destination, Hooks, WalkerOS } from '.';
 
 export interface Fn<R = void, D = PushData, O = PushOptions, C = PushContext>
   extends Event<R>,
@@ -51,6 +51,16 @@ export type PushData =
 export type PushOptions = Hooks.AnyFunction | object;
 
 export type PushContext = WalkerOS.OrderedProperties;
+
+export interface PushResult extends Destination.Result {
+  event?: WalkerOS.Event;
+  status: Status;
+}
+
+export interface Status {
+  ok: boolean;
+  error?: string;
+}
 
 type FnParameters<T> = T extends (...args: unknown[]) => unknown
   ? Parameters<T>[number]

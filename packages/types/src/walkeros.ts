@@ -1,4 +1,4 @@
-import type { Destination, Elb, Hooks } from '.';
+import type { Destination, Elb, Handler, Hooks } from '.';
 
 export type AnyObject<T = unknown> = Record<string, T>;
 export type AnyFunction = (...args: unknown[]) => unknown;
@@ -30,6 +30,8 @@ export interface Config {
   tagging: number;
   default?: boolean;
   verbose?: boolean; // Enable verbose logging
+  onError?: Handler.Error;
+  onLog?: Handler.Log;
 }
 
 export interface Destinations {

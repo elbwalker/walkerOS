@@ -1,7 +1,6 @@
 import type {
   Destination as WalkerOSDestination,
   Mapping as WalkerOSMapping,
-  WalkerOS,
 } from '@elbwalker/types';
 
 export interface Destination<Custom = unknown, CustomEvent = unknown>
@@ -27,30 +26,3 @@ export type PushEvent<CustomEvent = unknown> =
   WalkerOSDestination.PushEvent<CustomEvent>;
 export type PushEvents<CustomEvent = unknown> =
   WalkerOSDestination.PushEvents<CustomEvent>;
-
-export type Ref = {
-  id: string;
-  destination: Destination;
-};
-
-export type Push = {
-  queue?: WalkerOS.Events;
-  error?: unknown;
-};
-
-export type PushSuccess = Array<Ref>;
-
-export type PushFailure = Array<Ref & { error: PushError }>;
-
-export type PushError = string;
-
-export type PushResult = {
-  successful: PushSuccess;
-  queued: PushSuccess;
-  failed: PushFailure;
-};
-
-export type SetupResult = {
-  successful: PushSuccess;
-  failed: PushFailure;
-};

@@ -69,3 +69,25 @@ export type Data =
   | WalkerOS.Property
   | undefined
   | Array<WalkerOS.Property | undefined>;
+
+export type Ref = {
+  id: string;
+  destination: Destination;
+};
+
+export type Push = {
+  queue?: WalkerOS.Events;
+  error?: unknown;
+};
+
+export type PushSuccess = Array<Ref>;
+
+export type PushFailure = Array<Ref & { error: PushError }>;
+
+export type PushError = string;
+
+export type Result = {
+  successful: PushSuccess;
+  queued: PushSuccess;
+  failed: PushFailure;
+};
