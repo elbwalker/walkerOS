@@ -1,7 +1,6 @@
-import { Const, throttle, tryCatch, tryCatchAsync } from '@elbwalker/utils';
+import { Const, onApply, throttle, tryCatch } from '@elbwalker/utils';
 import { elb as elbOrg, getAttribute, isVisible } from '@elbwalker/utils/web';
 import { Walker, SourceWalkerjs, Elb } from '../types';
-import { onApply } from './on';
 import {
   getElbAttributeName,
   getEvents,

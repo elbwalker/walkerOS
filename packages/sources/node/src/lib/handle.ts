@@ -6,12 +6,12 @@ import {
   isObject,
   isSameType,
   pushToDestinations,
+  setConsent,
 } from '@elbwalker/utils';
 import { addDestination } from './destination';
 import { createResult } from './helper';
 import { run } from './run';
 import { getState } from './state';
-import { setConsent } from './consent';
 
 export const handleCommand: SourceNode.HandleCommand = async (
   instance,

@@ -1,4 +1,4 @@
-import type { Handler, Mapping, WalkerOS } from '.';
+import type { Handler, Mapping, On, WalkerOS } from '.';
 
 export interface Destination<Custom = unknown, CustomEvent = unknown> {
   config: Config<Custom, CustomEvent>; // Configuration settings for the destination
@@ -17,6 +17,7 @@ export interface Config<Custom = unknown, CustomEvent = unknown> {
   init?: boolean; // If the destination has been initialized by calling the init method
   loadScript?: boolean; // If an additional script to work should be loaded
   mapping?: Mapping.Config<CustomEvent>; // A map to handle events individually
+  on?: On.Config; // On events listener rules
   policy?: Policy; // Rules for processing events
   queue?: boolean; // Disable processing of previously pushed events
   verbose?: boolean; // Enable verbose logging

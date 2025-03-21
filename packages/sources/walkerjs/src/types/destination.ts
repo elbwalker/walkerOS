@@ -2,7 +2,6 @@ import type {
   Destination as WalkerOSDestination,
   Mapping as WalkerOSMapping,
 } from '@elbwalker/types';
-import type { Config as OnConfig } from './on';
 
 export interface Destination<Custom = unknown, CustomEvent = unknown>
   extends WalkerOSDestination.Destination<Custom, CustomEvent> {
@@ -23,9 +22,7 @@ export type PushBatchFn<Custom, CustomEvent> = (
 ) => void;
 
 export interface Config<Custom = unknown, CustomEvent = unknown>
-  extends WalkerOSDestination.Config<Custom, CustomEvent> {
-  on?: OnConfig; // On events listener rules
-}
+  extends WalkerOSDestination.Config<Custom, CustomEvent> {}
 
 export interface Mapping<CustomEvent = unknown>
   extends WalkerOSMapping.Config<CustomEvent> {}

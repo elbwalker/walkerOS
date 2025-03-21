@@ -183,7 +183,10 @@ function createEventOrCommand(
     timestamp = Date.now(),
     group = instance.group,
     count = instance.count,
-    version = { source: instance.version, tagging: instance.config.tagging },
+    version = {
+      source: instance.version,
+      tagging: instance.config.tagging || 0,
+    },
     source = {
       type: 'web',
       id: window.location.href,

@@ -12,6 +12,7 @@ export * from './getMarketingParameters';
 export * from './invocations';
 export * from './is';
 export * from './mapping';
+export * from './on';
 export * from './onLog';
 export * from './property';
 export * from './request';

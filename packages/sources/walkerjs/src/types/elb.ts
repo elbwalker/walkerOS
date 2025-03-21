@@ -1,6 +1,6 @@
-import type { Elb, WalkerOS } from '@elbwalker/types';
+import type { Elb, On, WalkerOS } from '@elbwalker/types';
 import type { Destination, DestinationInit, Config } from './destination';
-import type { ConsentConfig, Options } from './on';
+
 import type { State } from './source';
 import type { Trigger } from './walker';
 
@@ -30,7 +30,7 @@ export type CommandRun<R = void> = (
 export type CommandOn<R = void> = (
   event: 'walker on',
   type: 'consent',
-  rules: WalkerOS.SingleOrArray<ConsentConfig>,
+  rules: WalkerOS.SingleOrArray<On.ConsentConfig>,
 ) => R;
 
 export type Layer = Elb.Layer;
@@ -45,7 +45,7 @@ export type PushData =
 export type PushOptions =
   | Elb.PushOptions
   | Trigger
-  | WalkerOS.SingleOrArray<Options>
+  | WalkerOS.SingleOrArray<On.Options>
   | Config;
 
 export type PushContext = Elb.PushContext | Element;

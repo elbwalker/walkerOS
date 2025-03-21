@@ -111,7 +111,7 @@ function createEventOrCommand(
     timing = Math.round((Date.now() - instance.timing) / 10) / 100,
     version = {
       source: instance.version,
-      tagging: instance.config.tagging,
+      tagging: instance.config.tagging || 0,
     },
     source = { type: 'node', id: '', previous_id: '' },
   } = partialEvent;

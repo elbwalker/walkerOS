@@ -1,22 +1,22 @@
-import type { Hooks, WalkerOS } from '@elbwalker/types';
-import type { On, SourceWalkerjs, DestinationWeb, Elb } from '../types';
+import type { Hooks, On, WalkerOS } from '@elbwalker/types';
+import type { SourceWalkerjs, DestinationWeb, Elb } from '../types';
 import {
   Const,
   assign,
   isArray,
   isObject,
   isSameType,
+  on,
   pushToDestinations,
+  setConsent,
   tryCatchAsync,
 } from '@elbwalker/utils';
 import { isElementOrDocument } from './helper';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';
 import { addDestination } from './destination';
-import { on } from './on';
 import { run } from './run';
 import { addHook } from './hooks';
-import { setConsent } from './consent';
 
 export async function handleCommand(
   instance: SourceWalkerjs.Instance,

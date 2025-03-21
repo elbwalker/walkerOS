@@ -27,7 +27,8 @@ export interface State {
 }
 
 export interface Config {
-  tagging: number;
+  tagging?: number;
+  session?: false | unknown;
   default?: boolean;
   verbose?: boolean; // Enable verbose logging
   onError?: Handler.Error;
