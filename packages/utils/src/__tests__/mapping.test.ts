@@ -9,11 +9,11 @@ import {
 } from '../core';
 
 describe('getMappingEvent', () => {
-  test('basic', () => {
+  test('basic', async () => {
     const pageViewConfig = { name: 'page_view' };
 
     expect(
-      getMappingEvent(
+      await getMappingEvent(
         { event: 'page view' },
         { page: { view: pageViewConfig } },
       ),
@@ -23,10 +23,10 @@ describe('getMappingEvent', () => {
     });
   });
 
-  test('asterisk', () => {
+  test('asterisk', async () => {
     const entityAsterisksConfig = { name: 'entity_*' };
     expect(
-      getMappingEvent(
+      await getMappingEvent(
         { event: 'page random' },
         { page: { '*': entityAsterisksConfig } },
       ),
@@ -37,7 +37,7 @@ describe('getMappingEvent', () => {
 
     const asterisksActionConfig = { name: '*_view' };
     expect(
-      getMappingEvent(
+      await getMappingEvent(
         { event: 'random view' },
         { '*': { view: asterisksActionConfig } },
       ),
@@ -55,30 +55,36 @@ describe('getMappingEvent', () => {
       bar: { baz: { name: 'irrelevant' } },
     };
 
-    expect(getMappingEvent({ event: 'not existing' }, mapping)).toStrictEqual({
+    expect(
+      await getMappingEvent({ event: 'not existing' }, mapping),
+    ).toStrictEqual({
       eventMapping: { name: 'asterisk' },
       mappingKey: '* *',
     });
 
     expect(
-      getMappingEvent({ event: 'asterisk action' }, mapping),
+      await getMappingEvent({ event: 'asterisk action' }, mapping),
     ).toStrictEqual({
       eventMapping: { name: 'action' },
       mappingKey: '* action',
     });
 
-    expect(getMappingEvent({ event: 'foo something' }, mapping)).toStrictEqual({
+    expect(
+      await getMappingEvent({ event: 'foo something' }, mapping),
+    ).toStrictEqual({
       eventMapping: { name: 'foo_asterisk' },
       mappingKey: 'foo *',
     });
 
-    expect(getMappingEvent({ event: 'bar something' }, mapping)).toStrictEqual({
+    expect(
+      await getMappingEvent({ event: 'bar something' }, mapping),
+    ).toStrictEqual({
       eventMapping: { name: 'asterisk' },
       mappingKey: '* *',
     });
   });
 
-  test('condition', () => {
+  test('condition', async () => {
     const mapping: Mapping.Config = {
       order: {
         complete: [
@@ -96,15 +102,15 @@ describe('getMappingEvent', () => {
       },
     };
 
-    expect(getMappingEvent({ event: 'order complete' }, mapping)).toStrictEqual(
-      {
-        eventMapping: mapping.order!.complete[1],
-        mappingKey: 'order complete',
-      },
-    );
+    expect(
+      await getMappingEvent({ event: 'order complete' }, mapping),
+    ).toStrictEqual({
+      eventMapping: mapping.order!.complete[1],
+      mappingKey: 'order complete',
+    });
 
     expect(
-      getMappingEvent(
+      await getMappingEvent(
         { event: 'order complete', globals: { env: 'prod' } },
         mapping,
       ),
@@ -116,21 +122,25 @@ describe('getMappingEvent', () => {
 });
 
 describe('getMappingValue', () => {
-  test('string', () => {
+  test('string', async () => {
     const event = createEvent();
-    expect(getMappingValue(event, 'timing')).toBe(event.timing);
-    expect(getMappingValue(event, 'data')).toBe(event.data);
-    expect(getMappingValue(event, 'data.string')).toBe(event.data.string);
-    expect(getMappingValue(event, 'context.dev.0')).toBe(event.context.dev![0]);
-    expect(getMappingValue(event, 'globals.lang')).toBe(event.globals.lang);
+    expect(await getMappingValue(event, 'timing')).toBe(event.timing);
+    expect(await getMappingValue(event, 'data')).toBe(event.data);
+    expect(await getMappingValue(event, 'data.string')).toBe(event.data.string);
+    expect(await getMappingValue(event, 'context.dev.0')).toBe(
+      event.context.dev![0],
+    );
+    expect(await getMappingValue(event, 'globals.lang')).toBe(
+      event.globals.lang,
+    );
   });
 
-  test('nested', () => {
+  test('nested', async () => {
     const event = createEvent();
-    expect(getMappingValue(event, 'nested.0.data.is')).toBe(
+    expect(await getMappingValue(event, 'nested.0.data.is')).toBe(
       event.nested[0].data.is,
     );
-    expect(getMappingValue(event, 'nested.*.data.is')).toStrictEqual([
+    expect(await getMappingValue(event, 'nested.*.data.is')).toStrictEqual([
       event.nested[0].data.is,
     ]);
 
@@ -148,29 +158,32 @@ describe('getMappingValue', () => {
       getNested({ a: 'bar' }),
     ];
     expect(
-      getMappingValue({ nested } as WalkerOS.Event, {
+      await getMappingValue({ nested } as WalkerOS.Event, {
         key: 'nested.*.data.a',
       }),
     ).toStrictEqual(['foo', undefined, 'bar']);
   });
 
-  test('key default', () => {
+  test('key default', async () => {
     const event = createEvent();
 
     expect(
-      getMappingValue(event, { key: 'data.string', value: 'static' }),
+      await getMappingValue(event, { key: 'data.string', value: 'static' }),
     ).toBe(event.data.string);
 
     expect(
-      getMappingValue(event, { key: 'does.not.exist', value: 'fallback' }),
+      await getMappingValue(event, {
+        key: 'does.not.exist',
+        value: 'fallback',
+      }),
     ).toBe('fallback');
 
-    expect(getMappingValue(event, { value: 'static' })).toBe('static');
+    expect(await getMappingValue(event, { value: 'static' })).toBe('static');
   });
 
-  test('empty', () => {
+  test('empty', async () => {
     expect(
-      getMappingValue(createEvent(), {
+      await getMappingValue(createEvent(), {
         map: {
           set: { set: [{}] },
           map: {},
@@ -180,11 +193,11 @@ describe('getMappingValue', () => {
     ).toEqual({ map: undefined, set: [undefined], loop: undefined });
   });
 
-  test('false', () => {
-    expect(getMappingValue(createEvent(), 'data.array.2')).toBe(false);
+  test('false', async () => {
+    expect(await getMappingValue(createEvent(), 'data.array.2')).toBe(false);
   });
 
-  test('fn', () => {
+  test('fn', async () => {
     const pageView = createEvent({ event: 'page view' });
     const pageClick = createEvent({ event: 'page click' });
 
@@ -193,12 +206,12 @@ describe('getMappingValue', () => {
       return 'bar';
     });
 
-    expect(getMappingValue(pageView, { fn: mockFn })).toBe('foo');
-    expect(getMappingValue(pageClick, { fn: mockFn })).toBe('bar');
+    expect(await getMappingValue(pageView, { fn: mockFn })).toBe('foo');
+    expect(await getMappingValue(pageClick, { fn: mockFn })).toBe('bar');
     expect(mockFn).toHaveBeenCalledTimes(2);
 
     // Props
-    getMappingValue(pageClick, { fn: mockFn }, { props: 'random' });
+    await getMappingValue(pageClick, { fn: mockFn }, { props: 'random' });
 
     expect(mockFn).toHaveBeenNthCalledWith(
       3,
@@ -208,11 +221,11 @@ describe('getMappingValue', () => {
     );
   });
 
-  test('loop', () => {
+  test('loop', async () => {
     const event = getEvent('order complete');
 
     expect(
-      getMappingValue(event, {
+      await getMappingValue(event, {
         loop: [
           'nested',
           {
@@ -225,7 +238,7 @@ describe('getMappingValue', () => {
     ).toStrictEqual([event.nested[0].data.name, event.nested[1].data.name]);
 
     expect(
-      getMappingValue(event, {
+      await getMappingValue(event, {
         loop: [
           'this',
           {
@@ -236,21 +249,21 @@ describe('getMappingValue', () => {
     ).toStrictEqual([event.event]);
   });
 
-  test('set', () => {
+  test('set', async () => {
     const event = getEvent('order complete');
 
     expect(
-      getMappingValue(event, {
+      await getMappingValue(event, {
         set: ['event', 'data', { value: 'static' }, { fn: () => 'fn' }],
       }),
     ).toStrictEqual(['order complete', event.data, 'static', 'fn']);
   });
 
-  test('map', () => {
+  test('map', async () => {
     const event = createEvent();
 
     expect(
-      getMappingValue(event, {
+      await getMappingValue(event, {
         map: {
           foo: 'data.string',
           bar: { value: 'bar' },
@@ -268,13 +281,13 @@ describe('getMappingValue', () => {
     });
   });
 
-  test('validate', () => {
+  test('validate', async () => {
     const event = createEvent();
     const mockValidate = jest.fn(isString);
 
     // validation passed
     expect(
-      getMappingValue(event, {
+      await getMappingValue(event, {
         key: 'data.string',
         validate: mockValidate,
       }),
@@ -282,7 +295,7 @@ describe('getMappingValue', () => {
 
     // validation failed
     expect(
-      getMappingValue(event, {
+      await getMappingValue(event, {
         key: 'data.number',
         validate: mockValidate,
       }),
@@ -290,7 +303,7 @@ describe('getMappingValue', () => {
 
     // Use value as a fallback
     expect(
-      getMappingValue(event, {
+      await getMappingValue(event, {
         key: 'data.number',
         validate: mockValidate,
         value: 'fallback',
@@ -298,9 +311,9 @@ describe('getMappingValue', () => {
     ).toBe('fallback');
   });
 
-  test('values', () => {
+  test('values', async () => {
     expect(
-      getMappingValue(
+      await getMappingValue(
         { arr: [1, 'foo', false] },
         {
           loop: [
@@ -315,10 +328,10 @@ describe('getMappingValue', () => {
       ),
     ).toStrictEqual([1, 'foo', false]);
 
-    expect(getMappingValue('string')).toBeUndefined();
+    expect(await getMappingValue('string')).toBeUndefined();
   });
 
-  test('consent', () => {
+  test('consent', async () => {
     const instance = {
       consent: { instanceLevel: true },
     } as unknown as WalkerOS.Instance;
@@ -327,7 +340,7 @@ describe('getMappingValue', () => {
 
     // Denied
     expect(
-      getMappingValue(
+      await getMappingValue(
         { foo: 'bar' },
         {
           key: 'foo',
@@ -338,7 +351,7 @@ describe('getMappingValue', () => {
 
     // eventsLevel
     expect(
-      getMappingValue(
+      await getMappingValue(
         { foo: 'bar', consent: { eventLevel: true } },
         {
           key: 'foo',
@@ -350,7 +363,7 @@ describe('getMappingValue', () => {
 
     // optionsLevel
     expect(
-      getMappingValue(
+      await getMappingValue(
         { foo: 'bar' },
         { key: 'foo', consent: { optionsLevel: true } },
         { consent: { optionsLevel: true } },
@@ -359,7 +372,7 @@ describe('getMappingValue', () => {
 
     // instanceLevel
     expect(
-      getMappingValue(
+      await getMappingValue(
         { foo: 'bar' },
         {
           key: 'foo',
@@ -371,7 +384,7 @@ describe('getMappingValue', () => {
 
     // eventsLevel override optionsLevel
     expect(
-      getMappingValue(
+      await getMappingValue(
         { foo: 'bar', consent: { eventLevel: false } },
         { key: 'foo', consent: { eventLevel: true } },
         { instance },
@@ -380,7 +393,7 @@ describe('getMappingValue', () => {
 
     // eventLevel overrides instanceLevel
     expect(
-      getMappingValue(
+      await getMappingValue(
         { foo: 'bar', consent: { instanceLevel: false } },
         {
           key: 'foo',
@@ -392,7 +405,7 @@ describe('getMappingValue', () => {
 
     // optionsLevel overrides instanceLevel
     expect(
-      getMappingValue(
+      await getMappingValue(
         { foo: 'bar' },
         { key: 'foo', consent: { instanceLevel: true } },
         { instance, consent: { optionsLevel: false } },
@@ -400,14 +413,14 @@ describe('getMappingValue', () => {
     ).toBeUndefined();
   });
 
-  test('condition', () => {
+  test('condition', async () => {
     const mockCondition = jest.fn((event) => {
       return event.event === 'page view';
     });
 
     // Condition met
     expect(
-      getMappingValue(createEvent({ event: 'page view' }), {
+      await getMappingValue(createEvent({ event: 'page view' }), {
         key: 'data.string',
         condition: mockCondition,
       }),
@@ -415,7 +428,7 @@ describe('getMappingValue', () => {
 
     // Condition not met
     expect(
-      getMappingValue(createEvent(), {
+      await getMappingValue(createEvent(), {
         key: 'data.string',
         condition: mockCondition,
         value: 'fallback', // Should not be used
@@ -423,7 +436,7 @@ describe('getMappingValue', () => {
     ).toBeUndefined();
   });
 
-  test('mapping array', () => {
+  test('mapping array', async () => {
     const event = createEvent();
     const mockFn = jest.fn();
 
@@ -434,21 +447,23 @@ describe('getMappingValue', () => {
       { fn: mockFn },
     ];
 
-    expect(getMappingValue(event, mappings)).toBe(event.data.string);
+    expect(await getMappingValue(event, mappings)).toBe(event.data.string);
     expect(mockFn).not.toHaveBeenCalled();
   });
 
-  test('error functions', () => {
+  test('error functions', async () => {
     const mockErrorFn = jest.fn(() => {
       throw new Error('test');
     });
 
-    expect(getMappingValue(createEvent(), { fn: mockErrorFn })).toBeUndefined();
     expect(
-      getMappingValue(createEvent(), { condition: mockErrorFn }),
+      await getMappingValue(createEvent(), { fn: mockErrorFn }),
     ).toBeUndefined();
     expect(
-      getMappingValue(createEvent(), { validate: mockErrorFn }),
+      await getMappingValue(createEvent(), { condition: mockErrorFn }),
+    ).toBeUndefined();
+    expect(
+      await getMappingValue(createEvent(), { validate: mockErrorFn }),
     ).toBeUndefined();
   });
 });
