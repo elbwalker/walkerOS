@@ -1,8 +1,13 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Elb, SourceNode } from '../types';
-import { Const, assign, isObject, isSameType } from '@elbwalker/utils';
+import {
+  Const,
+  assign,
+  isObject,
+  isSameType,
+  pushToDestinations,
+} from '@elbwalker/utils';
 import { addDestination } from './destination';
-import { pushToDestinations } from './push';
 import { createResult } from './helper';
 import { run } from './run';
 import { getState } from './state';
@@ -22,7 +27,7 @@ export const handleCommand: SourceNode.HandleCommand = async (
         instance.config = getState(data as SourceNode.Config, instance).config;
       break;
     case Const.Commands.Consent:
-      result = await setConsent(instance, data);
+      result = await setConsent(instance, data as WalkerOS.Consent);
       break;
     case Const.Commands.Custom:
       if (isSameType(data, {} as WalkerOS.Properties))
@@ -53,5 +58,7 @@ export const handleEvent: SourceNode.HandleEvent = async (instance, event) => {
   // Add event to internal queue
   instance.queue.push(event);
 
-  return createResult(await pushToDestinations(instance, event));
+  return createResult(
+    await pushToDestinations(instance, instance.destinations, event),
+  );
 };

@@ -1,6 +1,5 @@
 import type { SourceNode, DestinationNode } from '../types';
-import { getId, isSameType } from '@elbwalker/utils';
-import { pushToDestinations } from './push';
+import { getId, isSameType, pushToDestinations } from '@elbwalker/utils';
 
 export async function addDestination(
   instance: SourceNode.Instance,
@@ -30,5 +29,5 @@ export async function addDestination(
 
   // Process previous events if not disabled
   if (config.queue !== false) destination.queue = [...instance.queue];
-  return await pushToDestinations(instance, undefined, { [id]: destination });
+  return await pushToDestinations(instance, { [id]: destination });
 }
