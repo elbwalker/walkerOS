@@ -1,7 +1,7 @@
 import type { SourceWalkerjs, DestinationWeb, Elb } from '..';
 import type { WalkerOS } from '@elbwalker/types';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { elb as elbOrg, Walkerjs, createInstance, elb } from '..';
+import { elb as elbOrg, Walkerjs, createSourceWalkerjs, elb } from '..';
 
 describe('elbLayer', () => {
   const w = window;
@@ -364,7 +364,7 @@ describe('elbLayer', () => {
   });
 
   test('command order', async () => {
-    const { instance } = createInstance();
+    const { instance } = createSourceWalkerjs();
     const pushSpy = jest.spyOn(instance, 'push');
 
     elb('walker run');
@@ -388,7 +388,7 @@ describe('elbLayer', () => {
       { any: 'thing' }, // custom
     );
 
-    const { elb } = createInstance({ default: true, pageview: false });
+    const { elb } = createSourceWalkerjs({ default: true, pageview: false });
 
     await jest.runAllTimersAsync();
     expect(mockDataLayer).toHaveBeenCalledWith(

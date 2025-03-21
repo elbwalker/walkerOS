@@ -1,7 +1,7 @@
 import type { SourceWalkerjs, DestinationWeb } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import { getEvent } from '@elbwalker/utils';
-import { createInstance, elb as elbOrg } from '..';
+import { createSourceWalkerjs, elb as elbOrg } from '..';
 
 describe('Destination', () => {
   let instance: SourceWalkerjs.Instance;
@@ -15,7 +15,7 @@ describe('Destination', () => {
   let config: DestinationWeb.Config;
 
   beforeEach(() => {
-    ({ elb, instance } = createInstance({
+    ({ elb, instance } = createSourceWalkerjs({
       pageview: false,
       session: false,
     }));
@@ -372,7 +372,7 @@ describe('Destination', () => {
 
   test('consent', async () => {
     jest.clearAllMocks();
-    const { elb } = createInstance({
+    const { elb } = createSourceWalkerjs({
       consent: { functional: true, marketing: false },
       pageview: false,
       session: false,
@@ -447,7 +447,7 @@ describe('Destination', () => {
   });
 
   test('queue', async () => {
-    const { elb } = createInstance({
+    const { elb } = createSourceWalkerjs({
       consent: { functional: true },
       pageview: false,
       session: false,
@@ -654,7 +654,7 @@ describe('Destination', () => {
   });
 
   test('temp async queue', async () => {
-    const { elb } = createInstance({ elbLayer: [], pageview: false });
+    const { elb } = createSourceWalkerjs({ elbLayer: [], pageview: false });
     elb('walker run');
     elb('walker destination', destination);
 
@@ -821,7 +821,7 @@ describe('Destination', () => {
   });
 
   test('dataLayer config', async () => {
-    const { elb } = createInstance({
+    const { elb } = createSourceWalkerjs({
       default: true,
       pageview: false,
       session: false,
@@ -889,7 +889,7 @@ describe('Destination', () => {
       },
     };
 
-    const { elb } = createInstance({
+    const { elb } = createSourceWalkerjs({
       run: true,
       pageview: false,
       session: false,
@@ -937,7 +937,7 @@ describe('Destination', () => {
       },
     };
 
-    const { elb } = createInstance({
+    const { elb } = createSourceWalkerjs({
       run: true,
       pageview: false,
       session: false,

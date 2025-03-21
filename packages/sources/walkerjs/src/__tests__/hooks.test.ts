@@ -1,7 +1,7 @@
 import type { Hooks } from '@elbwalker/types';
 import type { SourceWalkerjs, DestinationWeb } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { Walkerjs, createInstance } from '..';
+import { Walkerjs, createSourceWalkerjs } from '..';
 
 describe('Hooks', () => {
   let walkerjs: SourceWalkerjs.Instance;
@@ -44,7 +44,7 @@ describe('Hooks', () => {
         return params.fn(...args);
       });
 
-    const { elb, instance } = createInstance({
+    const { elb, instance } = createSourceWalkerjs({
       pageview: false,
       session: false,
     });
@@ -105,7 +105,7 @@ describe('Hooks', () => {
     });
     const postPush: Hooks.AnyFunction = jest.fn();
 
-    const { elb, instance } = createInstance({
+    const { elb, instance } = createSourceWalkerjs({
       dataLayer: true,
       pageview: false,
       session: false,

@@ -1,7 +1,7 @@
 import type { Data } from '@elbwalker/types';
 import type { Elb, SourceWalkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { Walkerjs, createInstance } from '..';
+import { Walkerjs, createSourceWalkerjs } from '..';
 import fs from 'fs';
 
 describe('Walkerjs', () => {
@@ -16,7 +16,7 @@ describe('Walkerjs', () => {
       .fn()
       .mockReturnValue([{ type: 'navigate' }]);
 
-    const { elb: elbFn, instance } = createInstance({
+    const { elb: elbFn, instance } = createSourceWalkerjs({
       default: true,
       consent: { test: true },
       pageview: false,
@@ -160,7 +160,7 @@ describe('Walkerjs', () => {
 
     jest.clearAllMocks(); // skip previous init
     w.elbLayer = [];
-    const { elb } = createInstance({
+    const { elb } = createSourceWalkerjs({
       default: true,
       pageview: false,
       session: false,
@@ -234,7 +234,7 @@ describe('Walkerjs', () => {
   test('timing', async () => {
     jest.clearAllMocks();
     jest.advanceTimersByTime(2500); // 2.5 sec load time
-    const { elb } = createInstance({ default: true });
+    const { elb } = createSourceWalkerjs({ default: true });
 
     await jest.runAllTimersAsync();
     expect(mockDataLayer.mock.calls[0][0].timing).toEqual(2.5);

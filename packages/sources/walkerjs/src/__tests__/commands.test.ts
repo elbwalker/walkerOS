@@ -1,7 +1,7 @@
 import type { SourceWalkerjs } from '..';
 import type { Elb, WalkerOS } from '@elbwalker/types';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { createInstance } from '..';
+import { createSourceWalkerjs } from '..';
 
 describe('Commands', () => {
   let elb: Elb.Fn;
@@ -12,7 +12,7 @@ describe('Commands', () => {
       .fn()
       .mockReturnValue([{ type: 'navigate' }]);
 
-    const { elb: elbFn, instance } = createInstance({
+    const { elb: elbFn, instance } = createSourceWalkerjs({
       default: true,
       consent: { test: true },
       pageview: false,
@@ -114,7 +114,7 @@ describe('Commands', () => {
 
   test('walker consent', async () => {
     jest.clearAllMocks();
-    const { elb, instance } = createInstance({
+    const { elb, instance } = createSourceWalkerjs({
       consent: { functional: true },
       default: true,
       pageview: false,
@@ -160,7 +160,7 @@ describe('Commands', () => {
   });
 
   test('walker globals', async () => {
-    const { elb } = createInstance({
+    const { elb } = createSourceWalkerjs({
       default: true,
       globalsStatic: { static: 'value' },
     });
@@ -188,7 +188,7 @@ describe('Commands', () => {
   });
 
   test('walker custom', async () => {
-    const { elb, instance } = createInstance({
+    const { elb, instance } = createSourceWalkerjs({
       default: true,
       custom: { static: 'value' },
     });

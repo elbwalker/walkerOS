@@ -1,6 +1,6 @@
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import { Trigger } from '../lib/trigger';
-import { createInstance } from '..';
+import { createSourceWalkerjs } from '..';
 
 describe('Trigger', () => {
   const w = window;
@@ -25,7 +25,7 @@ describe('Trigger', () => {
 
   test('elb', async () => {
     w.elbLayer = undefined as never;
-    const { elb } = createInstance({ default: true, session: false });
+    const { elb } = createSourceWalkerjs({ default: true, session: false });
 
     expect(w.elbLayer).toBeDefined();
 
@@ -39,7 +39,7 @@ describe('Trigger', () => {
   test('init global', () => {
     expect(mockAddEventListener).toHaveBeenCalledTimes(0);
 
-    createInstance({ default: true, session: false });
+    createSourceWalkerjs({ default: true, session: false });
     expect(mockAddEventListener).toHaveBeenCalledWith(
       Trigger.Click,
       expect.any(Function),
@@ -52,7 +52,7 @@ describe('Trigger', () => {
 
   test('init scope', async () => {
     document.body.innerHTML = `<div id="init" data-elb="e" data-elbaction="load:all"><div data-elbaction="load:init"></div></div>`;
-    const { elb } = createInstance({ default: true, session: false });
+    const { elb } = createSourceWalkerjs({ default: true, session: false });
 
     // Both e load events should be triggered
     await elb('walker init');
@@ -81,7 +81,7 @@ describe('Trigger', () => {
   });
 
   test('load page view', async () => {
-    const { elb } = createInstance({ dataLayer: true, session: false });
+    const { elb } = createSourceWalkerjs({ dataLayer: true, session: false });
     document.body.setAttribute('data-elb-page', 'foo:bar');
     document.body.setAttribute('data-elbcontext', 'baz:qux');
     await elb('walker run');
@@ -120,7 +120,7 @@ describe('Trigger', () => {
     });
 
     // New page run on new page
-    const { elb } = createInstance({ dataLayer: true, session: false });
+    const { elb } = createSourceWalkerjs({ dataLayer: true, session: false });
 
     await elb('walker run');
     expect(mockDataLayer).toHaveBeenCalledWith(
@@ -158,7 +158,7 @@ describe('Trigger', () => {
   });
 
   test('load readyState loading', async () => {
-    const { elb } = createInstance({
+    const { elb } = createSourceWalkerjs({
       dataLayer: true,
       session: false,
     });
@@ -190,7 +190,7 @@ describe('Trigger', () => {
 
   test('click', async () => {
     document.body.innerHTML = `<div id="click" data-elb="e" data-elbaction="click"></div>`;
-    createInstance({ default: true, session: false, pageview: false });
+    createSourceWalkerjs({ default: true, session: false, pageview: false });
 
     const elem = document.getElementById('click');
 
@@ -214,7 +214,7 @@ describe('Trigger', () => {
         <button type="submit">Submit</button>
       </form>
     `;
-    createInstance({ default: true, session: false, pageview: false });
+    createSourceWalkerjs({ default: true, session: false, pageview: false });
 
     // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/submit_event
     const form = document.getElementById('form');
@@ -233,7 +233,7 @@ describe('Trigger', () => {
 
   test('hover', async () => {
     document.body.innerHTML = `<div id="hover" data-elb="mouse" data-elbaction="hover"></div>`;
-    createInstance({ default: true, session: false, pageview: false });
+    createSourceWalkerjs({ default: true, session: false, pageview: false });
 
     const elem = document.getElementById('hover') as Element;
     const hoverEvent = new MouseEvent('mouseenter', {
@@ -267,7 +267,7 @@ describe('Trigger', () => {
 
   test('wait', async () => {
     document.body.innerHTML = `<div data-elb="timer" data-elb-timer="its:time" data-elbaction="wait(4000):alarm"></div>`;
-    createInstance({ default: true, session: false, pageview: false });
+    createSourceWalkerjs({ default: true, session: false, pageview: false });
 
     expect(setTimeout).toHaveBeenLastCalledWith(expect.any(Function), 4000);
 
@@ -294,7 +294,7 @@ describe('Trigger', () => {
 
   test('pulse', async () => {
     document.body.innerHTML = `<div id="pulse" data-elb="pulse" data-elbaction="pulse(5000):beat"></div>`;
-    createInstance({ default: true, session: false, pageview: false });
+    createSourceWalkerjs({ default: true, session: false, pageview: false });
 
     expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 5000);
 
@@ -356,7 +356,7 @@ describe('Trigger', () => {
   test('scroll', async () => {
     // New instance without cached scroll listener
     document.body.innerHTML = `<div id="scroll" data-elb="scroll" data-elbaction="scroll(80):80percent"></div>`;
-    createInstance({ default: true, session: false, pageview: false });
+    createSourceWalkerjs({ default: true, session: false, pageview: false });
 
     const innerHeight = window.innerHeight;
     const elem = document.getElementById('scroll') as HTMLElement;
@@ -441,8 +441,8 @@ describe('Trigger', () => {
 
     // Reimport with the mocked isVisible
     document.body.innerHTML = `<div id="visible" data-elb="visible" data-elbaction="visible:impression"></div>`;
-    const { createInstance } = jest.requireActual('../');
-    createInstance({ default: true, session: false, pageview: false });
+    const { createSourceWalkerjs } = jest.requireActual('../');
+    createSourceWalkerjs({ default: true, session: false, pageview: false });
 
     const target = document.getElementById('visible');
     const [observer] = (window.IntersectionObserver as jest.Mock).mock.calls[0];
