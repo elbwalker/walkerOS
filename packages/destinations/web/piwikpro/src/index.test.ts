@@ -1,9 +1,10 @@
 import type { DestinationPiwikPro } from '.';
-import { elb, Walkerjs } from '@elbwalker/walker.js';
+import Walkerjs, { createInstance, Elb } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
 import { events, mapping } from '../examples';
 
 describe('Destination PiwikPro', () => {
+  let elb: Elb.Fn;
   const w = window;
   let destination: DestinationPiwikPro.Destination,
     custom: DestinationPiwikPro.Custom;
@@ -23,31 +24,35 @@ describe('Destination PiwikPro', () => {
     w._paq = [];
     w._paq.push = mockFn;
 
-    Walkerjs({ pageview: false, run: true, session: false });
+    ({ elb } = createInstance({
+      pageview: false,
+      run: true,
+      session: false,
+    }));
   });
 
   afterEach(() => {});
 
-  test('init', () => {
+  test('init', async () => {
     elb('walker destination', destination);
 
-    expect(true).toBeTruthy();
+    expect(true).toBeTruthy(); // @TODO: Add tests
   });
 
-  test('fn', () => {
+  test('fn', async () => {
     (w._paq as unknown) = undefined;
     const fn = jest.fn();
     destination.config.fn = fn;
     elb('walker destination', destination);
-    elb(event);
+    await elb(event);
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  test('pageview', () => {
+  test('pageview', async () => {
     const page_view = getEvent('page view');
     elb('walker destination', destination);
 
-    elb(page_view);
+    await elb(page_view);
     expect(mockFn).toHaveBeenCalledWith([
       'trackPageView',
       page_view.data.title,
@@ -55,47 +60,47 @@ describe('Destination PiwikPro', () => {
 
     jest.clearAllMocks();
     destination.config.mapping = { page: { view: { ignore: true } } };
-    elb(page_view);
+    await elb(page_view);
     expect(mockFn).toHaveBeenCalledTimes(0);
   });
 
-  test('event ecommerceOrder', () => {
+  test('event ecommerceOrder', async () => {
     const event = getEvent('order complete');
     elb('walker destination', destination, {
       custom,
       mapping: mapping.config,
     });
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceOrder());
   });
 
-  test('event ecommerceAddToCart', () => {
+  test('event ecommerceAddToCart', async () => {
     const event = getEvent('product add');
     elb('walker destination', destination, {
       custom,
       mapping: mapping.config,
     });
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceAddToCart());
   });
 
-  test('event ecommerceProductDetailView', () => {
+  test('event ecommerceProductDetailView', async () => {
     const event = getEvent('product view');
     elb('walker destination', destination, {
       custom,
       mapping: mapping.config,
     });
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceProductDetailView());
   });
 
-  test('event ecommerceCartUpdate', () => {
+  test('event ecommerceCartUpdate', async () => {
     const event = getEvent('cart view');
     elb('walker destination', destination, {
       custom,
       mapping: mapping.config,
     });
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceCartUpdate());
   });
 });

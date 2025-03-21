@@ -1,9 +1,10 @@
 import type { DestinationGoogleAds } from '.';
-import { elb, Walkerjs } from '@elbwalker/walker.js';
+import { createInstance, Elb } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
 import { events, mapping } from '../examples';
 
 describe('destination Google Ads', () => {
+  let elb: Elb.Fn;
   const w = window;
   let destination: DestinationGoogleAds.Destination,
     config: DestinationGoogleAds.Config;
@@ -23,7 +24,11 @@ describe('destination Google Ads', () => {
 
     w.gtag = mockFn;
 
-    Walkerjs({ pageview: false, run: true, session: false });
+    ({ elb } = createInstance({
+      session: false,
+      pageview: false,
+      run: true,
+    }));
   });
 
   afterEach(() => {});
@@ -45,7 +50,7 @@ describe('destination Google Ads', () => {
     expect(w.gtag).toBeDefined();
   });
 
-  test('fn', () => {
+  test('fn', async () => {
     (w.gtag as unknown) = undefined;
     const fn = jest.fn();
     elb('walker destination', destination, {
@@ -53,7 +58,8 @@ describe('destination Google Ads', () => {
       mapping: { order: { complete: { name: 'label' } } },
       fn,
     });
-    elb(event);
+
+    await elb(event);
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
@@ -80,13 +86,13 @@ describe('destination Google Ads', () => {
     expect(elem).toBeTruthy();
   });
 
-  test('event conversion', () => {
+  test('event conversion', async () => {
     elb('walker destination', destination, {
       custom: { conversionId },
       mapping: mapping.config,
     });
 
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.conversion());
   });
 });
