@@ -5,14 +5,16 @@ import type { Destination as WalkerOSDestination } from '@elbwalker/types';
 export interface Destination
   extends DestinationNode.Destination<Custom, CustomEvent> {}
 
-export type Config = DestinationNode.Config<Custom, CustomEvent>;
+export interface Destination
+  extends DestinationNode.Destination<Custom, CustomEvent> {
+  init: InitFn;
+  push: PushFn;
+}
 
-export type PartialConfig = DestinationNode.Config<
-  Partial<Custom>,
-  Partial<CustomEvent>
->;
-
+export type InitFn = WalkerOSDestination.InitFn<Custom, CustomEvent>;
 export type PushFn = WalkerOSDestination.PushFn<Custom, CustomEvent>;
+
+export type Config = DestinationNode.Config<Custom, CustomEvent>;
 
 export interface Custom extends DestinationCoreEtag.Config {}
 

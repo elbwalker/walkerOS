@@ -9,7 +9,7 @@ export * as DestinationBigQuery from './types';
 export const destinationBigQuery: Destination = {
   config: {},
 
-  async init(partialConfig) {
+  async init(partialConfig = {}) {
     const config = await tryCatchAsync(getConfig, (error) => {
       log('Init error', partialConfig.verbose);
 

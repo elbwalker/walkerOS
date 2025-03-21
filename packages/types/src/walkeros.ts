@@ -174,3 +174,5 @@ export interface OnConfig {
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
+
+export type PromiseOrValue<T> = T | Promise<T>;

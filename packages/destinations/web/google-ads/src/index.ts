@@ -9,7 +9,7 @@ export const destinationGoogleAds: Destination = {
 
   config: {},
 
-  init(config) {
+  init(config = {}) {
     const { custom = {}, fn, loadScript } = config;
     const w = window;
 

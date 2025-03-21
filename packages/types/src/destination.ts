@@ -4,9 +4,9 @@ export interface Destination<Custom = unknown, CustomEvent = unknown> {
   config: Config<Custom, CustomEvent>; // Configuration settings for the destination
   queue?: WalkerOS.Events; // Non processed events yet and reset with each new run
   type?: string; // The type of the destination
-  pushBatch?: PushBatchFn<Custom, CustomEvent>;
-  push: PushFn<Custom, CustomEvent>;
   init?: InitFn<Custom, CustomEvent>;
+  push: PushFn<Custom, CustomEvent>;
+  pushBatch?: PushBatchFn<Custom, CustomEvent>;
 }
 
 export interface Config<Custom = unknown, CustomEvent = unknown> {
@@ -25,33 +25,38 @@ export interface Config<Custom = unknown, CustomEvent = unknown> {
   onLog?: Handler.Log; // Custom log handler
 }
 
+export type PartialConfig<Custom = unknown, CustomEvent = unknown> = Config<
+  Partial<Custom> | Custom,
+  Partial<CustomEvent> | CustomEvent
+>;
+
 export interface Policy {
   [key: string]: Mapping.Value;
 }
+
+export type InitFn<Custom, CustomEvent> = (
+  config?: PartialConfig<Custom, CustomEvent>,
+  instance?: WalkerOS.Instance,
+) => WalkerOS.PromiseOrValue<void | false | Config<Custom, CustomEvent>>;
 
 export type PushFn<Custom, CustomEvent> = (
   event: WalkerOS.Event,
   config: Config<Custom, CustomEvent>,
   mapping?: Mapping.EventConfig<CustomEvent>,
   options?: Options,
-) => void | Promise<void>;
-
-export type InitFn<Custom, CustomEvent> = (
-  config: Config<Custom, CustomEvent>,
-  instance: WalkerOS.Instance,
-) => Promise<Config<Custom, CustomEvent> | false>;
-
-export type PushEvent<CustomEvent = unknown> = {
-  event: WalkerOS.Event;
-  mapping?: Mapping.EventConfig<CustomEvent>;
-};
-export type PushEvents<CustomEvent = unknown> = Array<PushEvent<CustomEvent>>;
+) => WalkerOS.PromiseOrValue<void>;
 
 export type PushBatchFn<Custom, CustomEvent> = (
   batch: Batch<CustomEvent>,
   config: Config<Custom, CustomEvent>,
   options?: Options,
 ) => void; // @TODO Promise
+
+export type PushEvent<CustomEvent = unknown> = {
+  event: WalkerOS.Event;
+  mapping?: Mapping.EventConfig<CustomEvent>;
+};
+export type PushEvents<CustomEvent = unknown> = Array<PushEvent<CustomEvent>>;
 
 export interface Batch<CustomEvent> {
   key: string;

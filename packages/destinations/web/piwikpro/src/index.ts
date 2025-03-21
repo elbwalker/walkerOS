@@ -9,7 +9,7 @@ export const destinationPiwikPro: Destination = {
 
   config: {},
 
-  init(config) {
+  init(config = {}) {
     const w = window;
     const { custom = {} as Partial<Custom>, fn, loadScript } = config;
     const { appId, url } = custom;

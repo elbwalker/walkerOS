@@ -1,4 +1,5 @@
-import type { Config, Destination, PartialConfig } from '../types';
+import { WalkerOS } from '@elbwalker/types';
+import type { Config, Destination, Custom } from '../types';
 import { createEvent } from '@elbwalker/utils';
 
 describe('Node Destination BigQuery', () => {
@@ -14,14 +15,14 @@ describe('Node Destination BigQuery', () => {
 
   let destination: Destination;
 
-  const credentials: string = 'psst';
+  const credentials = { type: 'service_account', private_key: 'secret' };
 
-  function getMockFn(config: PartialConfig) {
+  function getMockFn(config: Partial<Config>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (config.custom?.client || ({} as any)).mockFn;
   }
 
-  async function getConfig(custom = {}) {
+  async function getConfig(custom: Partial<Custom>) {
     return (await destination.init({ custom })) as Config;
   }
 

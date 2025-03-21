@@ -11,17 +11,16 @@ import type {
 export interface Destination
   extends DestinationNode.Destination<Custom, CustomEvent> {
   init: InitFn;
+  push: PushFn;
 }
 
+export type InitFn = WalkerOSDestination.InitFn<Custom, CustomEvent>;
 export type PushFn = WalkerOSDestination.PushFn<Custom, CustomEvent>;
-export type InitFn = DestinationNode.InitFn<PartialConfig, Config>;
 
 export type Config = {
   custom: Custom;
   onLog: Handler.Log;
 } & DestinationNode.Config<Custom, CustomEvent>;
-
-export type PartialConfig = Partial<Config>;
 
 export interface Custom {
   firehose?: FirehoseConfig;
