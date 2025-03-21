@@ -4,6 +4,7 @@ import {
   Const,
   assign,
   isArray,
+  isElementOrDocument,
   isObject,
   isSameType,
   on,
@@ -11,7 +12,6 @@ import {
   setConsent,
   tryCatchAsync,
 } from '@elbwalker/utils';
-import { isElementOrDocument } from './helper';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';
 import { addDestination } from './destination';

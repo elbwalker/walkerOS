@@ -1,12 +1,13 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Elb, SourceWalkerjs } from '../types';
-import { isCommand, isElementOrDocument } from './helper';
 import { handleCommand, handleEvent } from './handle';
 import {
   Const,
   assign,
   isArguments,
   isArray,
+  isCommand,
+  isElementOrDocument,
   isObject,
   isSameType,
   isString,
