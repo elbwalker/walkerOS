@@ -2,6 +2,7 @@ import type {
   Destination as WalkerOSDestination,
   Mapping,
   WalkerOS,
+  Elb,
 } from '@elbwalker/types';
 import {
   getMappingEvent,
@@ -11,7 +12,143 @@ import {
   isObject,
   useHooks,
   debounce,
+  setByPath,
+  getGrantedConsent,
+  tryCatchAsync,
 } from './index';
+
+export async function pushToDestinations(
+  instance: WalkerOS.Instance,
+  destinations: WalkerOS.Destinations,
+  event?: WalkerOS.Event,
+): Promise<Elb.PushResult> {
+  const { consent, globals, user } = instance;
+  const results: Array<{
+    id: string;
+    destination: WalkerOSDestination.Destination;
+    skipped?: boolean;
+    queue?: WalkerOS.Events;
+    error?: unknown;
+  }> = [];
+
+  return Promise.all(
+    // Process all destinations in parallel
+    Object.entries(destinations).map(async ([id, destination]) => {
+      // Setup queue of events to be processed
+      let queue = ([] as WalkerOS.Events).concat(destination.queue || []);
+      destination.queue = []; // Reset original queue while processing
+
+      // Add event to queue stack
+      if (event) {
+        // Policy check
+        Object.entries(destination.config.policy || []).forEach(
+          ([key, mapping]) => {
+            setByPath(
+              event,
+              key,
+              getMappingValue(event, mapping, { instance }),
+            );
+          },
+        );
+
+        queue.push(event);
+      }
+
+      // Nothing to do here if the queue is empty
+      if (!queue.length) return { id, destination, skipped: true };
+
+      const allowedEvents: WalkerOS.Events = [];
+      queue = queue.filter((queuedEvent) => {
+        const grantedConsent = getGrantedConsent(
+          destination.config.consent, // Required
+          consent, // Destination state
+          queuedEvent.consent, // Individual event state
+        );
+
+        if (grantedConsent) {
+          queuedEvent.consent = grantedConsent; // Save granted consent states only
+          allowedEvents.push(queuedEvent); // Add to allowed queue
+          return false; // Remove from destination queue
+        }
+
+        return true; // Keep denied events in the queue
+      });
+
+      // Execution shall not pass if no events are allowed
+      if (!allowedEvents.length) {
+        return { id, destination, queue }; // Don't push if not allowed
+      }
+
+      // Initialize the destination if needed
+      const isInitialized = await tryCatchAsync(destinationInit)(
+        instance,
+        destination,
+      );
+      if (!isInitialized) return { id, destination, queue };
+
+      // Process the destinations event queue
+      let error: unknown;
+
+      // Process allowed events and store failed ones in the dead letter queue (dlq)
+      const dlq = await Promise.all(
+        allowedEvents.filter(async (event) => {
+          if (error) {
+            // Skip if an error occurred
+            destination.queue?.push(event); // Add back to queue
+          }
+
+          // Merge event with instance state, prioritizing event properties
+          event = assign({}, event);
+          event.globals = assign(globals, event.globals);
+          event.user = assign(user, event.user);
+
+          return !(await tryCatchAsync(destinationPush, (err) => {
+            // Call custom error handling if available
+            if (instance.config.onError) instance.config.onError(err, instance);
+            error = err; // Captured error from destination
+          })(instance, destination, event));
+        }),
+      );
+
+      // Concatenate failed events with unprocessed ones in the queue
+      queue.concat(dlq);
+
+      return { id, destination, queue, error };
+    }),
+  ).then((results) => {
+    const successful: WalkerOSDestination.PushSuccess = [];
+    const queued: WalkerOSDestination.PushSuccess = [];
+    const failed: WalkerOSDestination.PushFailure = [];
+
+    for (const result of results) {
+      if (result.skipped) continue;
+
+      const id = result.id;
+      const destination = result.destination;
+
+      if (result.error) {
+        failed.push({
+          id,
+          destination,
+          error: String(result.error),
+        });
+      } else if (result.queue && result.queue.length) {
+        // Merge queue with existing queue
+        destination.queue = (destination.queue || []).concat(result.queue);
+        queued.push({ id, destination });
+      } else {
+        successful.push({ id, destination });
+      }
+    }
+
+    return {
+      status: { ok: true },
+      successful,
+      queued,
+      failed,
+    };
+  });
+}
 
 export async function destinationInit<
   Destination extends WalkerOSDestination.Destination,

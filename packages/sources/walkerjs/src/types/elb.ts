@@ -4,7 +4,7 @@ import type { ConsentConfig, Options } from './on';
 import type { State } from './source';
 import type { Trigger } from './walker';
 
-export interface Fn<R = void, D = PushData, O = PushOptions, C = PushContext>
+export interface Fn<R = Return, D = PushData, O = PushOptions, C = PushContext>
   extends Elb.Fn<R, D, O, C>,
     CommandInit<R>,
     CommandDestination<R>,
@@ -53,3 +53,7 @@ export type PushContext = Elb.PushContext | Element;
 export type Scope = Element | Document;
 
 export type ScopeType = Scope | Scope[];
+
+export type PushResult = Elb.PushResult;
+
+export type Return<R = Promise<PushResult>> = R;

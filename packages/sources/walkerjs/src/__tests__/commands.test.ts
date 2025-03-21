@@ -1,9 +1,10 @@
 import type { SourceWalkerjs } from '..';
-import type { WalkerOS } from '@elbwalker/types';
-import { elb, Walkerjs } from '..';
+import type { Elb, WalkerOS } from '@elbwalker/types';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
+import { createInstance } from '..';
 
 describe('Commands', () => {
+  let elb: Elb.Fn;
   let walkerjs: SourceWalkerjs.Instance;
 
   beforeEach(() => {
@@ -11,12 +12,14 @@ describe('Commands', () => {
       .fn()
       .mockReturnValue([{ type: 'navigate' }]);
 
-    walkerjs = Walkerjs({
+    const { elb: elbFn, instance } = createInstance({
       default: true,
       consent: { test: true },
       pageview: false,
       session: false,
     });
+    elb = elbFn;
+    walkerjs = instance;
   });
 
   test('walker action', () => {
@@ -27,12 +30,12 @@ describe('Commands', () => {
     expect(mockDataLayer).not.toHaveBeenCalled();
   });
 
-  test('walker user', () => {
+  test('walker user', async () => {
     elb('walker run');
 
     // Missing argument
     elb('walker user');
-    elb('entity action');
+    await elb('entity action');
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
@@ -41,7 +44,7 @@ describe('Commands', () => {
     );
 
     elb('walker user', { id: 'userId' });
-    elb('entity action');
+    await elb('entity action');
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
@@ -50,7 +53,7 @@ describe('Commands', () => {
     );
 
     elb('walker user', { device: 'userId' });
-    elb('entity action');
+    await elb('entity action');
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
@@ -59,7 +62,7 @@ describe('Commands', () => {
     );
 
     elb('walker user', { session: 'sessionid' });
-    elb('entity action');
+    await elb('entity action');
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
@@ -68,7 +71,7 @@ describe('Commands', () => {
     );
 
     elb('walker user', { hash: 'h4sh' });
-    elb('entity action');
+    await elb('entity action');
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'entity action',
@@ -109,19 +112,18 @@ describe('Commands', () => {
     );
   });
 
-  test('walker consent', () => {
+  test('walker consent', async () => {
     jest.clearAllMocks();
-    walkerjs = Walkerjs({
+    const { elb, instance } = createInstance({
       consent: { functional: true },
       default: true,
       pageview: false,
     });
 
-    elb('walker run');
-
-    expect(walkerjs.consent.functional).toBeTruthy();
-    expect(walkerjs.consent.marketing).not.toBeTruthy();
-    elb('consent check');
+    await jest.runAllTimersAsync();
+    expect(instance.consent.functional).toBeTruthy();
+    expect(instance.consent.marketing).not.toBeTruthy();
+    await elb('consent check');
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'consent check',
@@ -131,13 +133,13 @@ describe('Commands', () => {
 
     // Missing argument
     elb('walker consent');
-    expect(walkerjs.consent.functional).toBeTruthy();
-    expect(walkerjs.consent.marketing).not.toBeTruthy();
+    expect(instance.consent.functional).toBeTruthy();
+    expect(instance.consent.marketing).not.toBeTruthy();
 
     // Grant permissions
     elb('walker consent', { marketing: true });
-    expect(walkerjs.consent.marketing).toBeTruthy();
-    elb('consent check');
+    expect(instance.consent.marketing).toBeTruthy();
+    await elb('consent check');
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'consent check',
@@ -147,8 +149,8 @@ describe('Commands', () => {
 
     // Revoke permissions
     elb('walker consent', { marketing: false });
-    expect(walkerjs.consent.marketing).not.toBeTruthy();
-    elb('consent check');
+    expect(instance.consent.marketing).not.toBeTruthy();
+    await elb('consent check');
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'consent check',
@@ -157,8 +159,13 @@ describe('Commands', () => {
     );
   });
 
-  test('walker globals', () => {
-    walkerjs = Walkerjs({ default: true, globalsStatic: { static: 'value' } });
+  test('walker globals', async () => {
+    const { elb } = createInstance({
+      default: true,
+      globalsStatic: { static: 'value' },
+    });
+
+    await jest.runAllTimersAsync();
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         globals: { static: 'value' },
@@ -168,7 +175,7 @@ describe('Commands', () => {
     elb('walker globals', { foo: 'bar' });
     elb('walker globals', { another: 'value' });
     elb('walker globals', { static: 'override' });
-    elb('foo bar');
+    await elb('foo bar');
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         globals: {
@@ -180,9 +187,13 @@ describe('Commands', () => {
     );
   });
 
-  test('walker custom', () => {
-    walkerjs = Walkerjs({ default: true, custom: { static: 'value' } });
-    expect(walkerjs).toStrictEqual(
+  test('walker custom', async () => {
+    const { elb, instance } = createInstance({
+      default: true,
+      custom: { static: 'value' },
+    });
+
+    expect(instance).toStrictEqual(
       expect.objectContaining({
         custom: { static: 'value' },
       }),
@@ -191,8 +202,8 @@ describe('Commands', () => {
     elb('walker custom', { foo: 'bar' });
     elb('walker custom', { another: 'value' });
     elb('walker custom', { static: 'override' });
-    elb('foo bar');
-    expect(walkerjs).toStrictEqual(
+    await elb('foo bar');
+    expect(instance).toStrictEqual(
       expect.objectContaining({
         custom: {
           static: 'override',

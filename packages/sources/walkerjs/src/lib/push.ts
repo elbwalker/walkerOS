@@ -5,24 +5,18 @@ import { handleCommand, handleEvent } from './handle';
 import {
   Const,
   assign,
-  destinationInit,
-  destinationPush,
-  getGrantedConsent,
-  getMappingValue,
   isArguments,
   isArray,
   isObject,
   isSameType,
   isString,
-  setByPath,
-  tryCatch,
   tryCatchAsync,
   useHooks,
 } from '@elbwalker/utils';
 import { getEntities } from './walker';
 
 export function createPush(instance: SourceWalkerjs.Instance): Elb.Fn {
-  const push = (
+  const push = async (
     nameOrEvent?: unknown,
     pushData: Elb.PushData = {},
     options: Elb.PushOptions = '',
@@ -30,15 +24,22 @@ export function createPush(instance: SourceWalkerjs.Instance): Elb.Fn {
     nested: WalkerOS.Entities = [],
     custom: WalkerOS.Properties = {},
   ) => {
-    return tryCatch(
-      (
+    let result: Elb.PushResult = {
+      status: { ok: false },
+      successful: [],
+      queued: [],
+      failed: [],
+    };
+
+    return await tryCatchAsync(
+      async (
         nameOrEvent: unknown,
         pushData: Elb.PushData,
         options: Elb.PushOptions,
         pushContext: Elb.PushContext,
         nested: WalkerOS.Entities,
         custom: WalkerOS.Properties,
-      ) => {
+      ): Promise<Elb.PushResult> => {
         const { event, command } = createEventOrCommand(
           instance,
           nameOrEvent,
@@ -51,14 +52,20 @@ export function createPush(instance: SourceWalkerjs.Instance): Elb.Fn {
 
         if (command) {
           // Command event
-          handleCommand(instance, command, pushData, options);
+          await handleCommand(instance, command, pushData, options);
         } else if (event) {
           // Regular event
-          handleEvent(instance, event);
+          await handleEvent(instance, event);
         }
+
+        return assign({ status: { ok: true } }, result);
       },
-      () => {
-        // @TODO custom error handling
+      (error) => {
+        // Call custom error handling
+        if (instance.config.onError) instance.config.onError(error, instance);
+
+        result.status.error = String(error);
+        return result;
       },
     )(nameOrEvent, pushData, options, pushContext, nested, custom);
   };
@@ -130,86 +137,6 @@ export function pushPredefined(
 
   events.map((item) => {
     instance.push(...item);
-  });
-}
-
-export async function pushToDestinations(
-  instance: SourceWalkerjs.Instance,
-  destinations: SourceWalkerjs.Destinations,
-  event?: WalkerOS.Event,
-) {
-  const { consent, globals, user } = instance;
-
-  Object.values(destinations).forEach(async (destination) => {
-    destination.queue = destination.queue || [];
-
-    if (event) {
-      // Policy check
-      Object.entries(destination.config.policy || []).forEach(
-        ([key, mapping]) => {
-          setByPath(event, key, getMappingValue(event, mapping, { instance }));
-        },
-      );
-
-      // Add event to queue stack
-      destination.queue.push(event);
-    }
-
-    const allowedEvents: WalkerOS.Events = [];
-    destination.queue = destination.queue.filter((queuedEvent) => {
-      const grantedConsent = getGrantedConsent(
-        destination.config.consent, // Required
-        consent, // Destination state
-        queuedEvent.consent, // Individual event state
-      );
-
-      if (grantedConsent) {
-        queuedEvent.consent = grantedConsent; // Save granted consent states only
-
-        allowedEvents.push(queuedEvent); // Add to allowed queue
-        return false; // Remove from destination queue
-      }
-
-      return true; // Keep denied events in the queue
-    });
-
-    // Execution shall not pass if no events are allowed
-    if (!allowedEvents.length) return;
-
-    // Initialize the destination if needed
-    const isInitialized = await tryCatchAsync(destinationInit)(
-      instance,
-      destination,
-    );
-
-    if (!isInitialized) return;
-
-    // Process the destinations event queue
-    let error: unknown;
-
-    // Process allowed events and store failed ones in the dead letter queue (dlq)
-    const dlq = await Promise.all(
-      allowedEvents.filter(async (event) => {
-        if (error) {
-          // Skip if an error occurred
-          destination.queue?.push(event); // Add back to queue
-        }
-
-        // Merge event with instance state, prioritizing event properties
-        event = assign({}, event);
-        event.globals = assign(globals, event.globals);
-        event.user = assign(user, event.user);
-
-        return !(await tryCatchAsync(destinationPush, (err) => {
-          // @TODO custom error handling
-
-          error = err; // Captured error from destination
-        })(instance, destination, event));
-      }),
-    );
-
-    // Concatenate failed events with unprocessed ones in the queue
-    destination.queue.concat(dlq);
   });
 }
 

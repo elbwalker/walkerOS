@@ -1,7 +1,7 @@
-import { elb, Walkerjs } from '..';
-import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import type { SourceWalkerjs, DestinationWeb } from '..';
 import type { Hooks } from '@elbwalker/types';
+import type { SourceWalkerjs, DestinationWeb } from '..';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
+import { Walkerjs, createInstance } from '..';
 
 describe('Hooks', () => {
   let walkerjs: SourceWalkerjs.Instance;
@@ -12,7 +12,7 @@ describe('Hooks', () => {
       .mockReturnValue([{ type: 'navigate' }]);
   });
 
-  test('Destinations', () => {
+  test('Destinations', async () => {
     // Destination mocks
     const mockInit = jest.fn();
     const mockPush = jest.fn();
@@ -44,7 +44,7 @@ describe('Hooks', () => {
         return params.fn(...args);
       });
 
-    walkerjs = Walkerjs({
+    const { elb, instance } = createInstance({
       pageview: false,
       session: false,
     });
@@ -61,7 +61,7 @@ describe('Hooks', () => {
     elb('walker hook', 'preDestinationPushBatch', preDestinationPushBatch);
     elb('walker hook', 'postDestinationPushBatch', postDestinationPushBatch);
 
-    expect(walkerjs.hooks).toEqual(
+    expect(instance.hooks).toEqual(
       expect.objectContaining({
         preDestinationInit: expect.any(Function),
         postDestinationInit: expect.any(Function),
@@ -72,7 +72,7 @@ describe('Hooks', () => {
       }),
     );
 
-    elb('e a', { a: 1 }, 't', { c: ['v', 0] }, []);
+    await elb('e a', { a: 1 }, 't', { c: ['v', 0] }, []);
 
     // Destination calls
     expect(mockInit).toHaveBeenCalledTimes(1);
@@ -85,20 +85,19 @@ describe('Hooks', () => {
       expect.objectContaining({ event: 'e a' }), // event
       { init: true, mapping: { bundle: { me: { batch: 100 } } } }, // destination config
       undefined, // custom event mapping
-      {
-        instance: walkerjs,
-      }, // options
+      { instance }, // options
     );
 
     elb('bundle me', { on: 'ce' });
-    elb('bundle me', { tw: 'ice' });
+    await elb('bundle me', { tw: 'ice' });
+
     expect(preDestinationPushBatch).toHaveBeenCalledTimes(0);
     jest.advanceTimersByTime(100);
 
     expect(preDestinationPushBatch).toHaveBeenCalledTimes(1);
   });
 
-  test('Push', () => {
+  test('Push', async () => {
     // Hook mocks
     const prePush = jest.fn().mockImplementation(function (params, ...args) {
       params.fn(...args); // Regular call
@@ -106,7 +105,7 @@ describe('Hooks', () => {
     });
     const postPush: Hooks.AnyFunction = jest.fn();
 
-    walkerjs = Walkerjs({
+    const { elb, instance } = createInstance({
       dataLayer: true,
       pageview: false,
       session: false,
@@ -128,7 +127,7 @@ describe('Hooks', () => {
       expect.any(Function),
     );
 
-    expect(walkerjs.hooks).toEqual(
+    expect(instance.hooks).toEqual(
       expect.objectContaining({
         prePush: expect.any(Function),
         postPush: expect.any(Function),
@@ -138,7 +137,7 @@ describe('Hooks', () => {
     (prePush as jest.Mock).mockClear();
     (postPush as jest.Mock).mockClear();
 
-    elb('e a', { a: 1 }, 't', { c: ['v', 0] }, []);
+    await elb('e a', { a: 1 }, 't', { c: ['v', 0] }, []);
     expect(prePush).toHaveBeenNthCalledWith(
       1,
       { fn: expect.any(Function), result: undefined },
@@ -148,6 +147,9 @@ describe('Hooks', () => {
       { c: ['v', 0] },
       [],
     );
+
+    // @TODO async return with await
+    await jest.runAllTimersAsync();
     expect(mockDataLayer).toHaveBeenCalledTimes(1);
 
     expect(postPush).toHaveBeenCalledTimes(1);

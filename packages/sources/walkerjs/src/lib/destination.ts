@@ -1,7 +1,5 @@
-import type { WalkerOS } from '@elbwalker/types';
 import type { SourceWalkerjs, DestinationWeb } from '../types';
-import { getId } from '@elbwalker/utils';
-import { pushToDestinations } from './push';
+import { getId, pushToDestinations } from '@elbwalker/utils';
 
 export async function addDestination(
   instance: SourceWalkerjs.Instance,

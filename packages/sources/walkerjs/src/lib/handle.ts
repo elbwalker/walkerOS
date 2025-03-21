@@ -1,22 +1,36 @@
 import type { Hooks, WalkerOS } from '@elbwalker/types';
 import type { On, SourceWalkerjs, DestinationWeb, Elb } from '../types';
-import { Const, assign, isArray, isObject, isSameType } from '@elbwalker/utils';
+import {
+  Const,
+  assign,
+  isArray,
+  isObject,
+  isSameType,
+  pushToDestinations,
+  tryCatchAsync,
+} from '@elbwalker/utils';
 import { isElementOrDocument } from './helper';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';
 import { addDestination } from './destination';
 import { on } from './on';
 import { run } from './run';
-import { pushToDestinations } from './push';
 import { addHook } from './hooks';
 import { setConsent } from './consent';
 
-export function handleCommand(
+export async function handleCommand(
   instance: SourceWalkerjs.Instance,
   action: string,
   data?: Elb.PushData,
   options?: Elb.PushOptions,
-) {
+): Promise<Elb.PushResult> {
+  let result: Elb.PushResult = {
+    status: { ok: false },
+    successful: [],
+    queued: [],
+    failed: [],
+  };
+
   switch (action) {
     case Const.Commands.Config:
       if (isObject(data))
@@ -65,17 +79,45 @@ export function handleCommand(
     default:
       break;
   }
+  result.status.ok = true;
+
+  return result;
 }
 
-export function handleEvent(
+export async function handleEvent(
   instance: SourceWalkerjs.Instance,
   event: WalkerOS.Event,
-) {
-  // Check if walker is allowed to run
-  if (!instance.allowed) return;
+): Promise<Elb.PushResult> {
+  let result: Elb.PushResult = {
+    status: { ok: false },
+    successful: [],
+    queued: [],
+    failed: [],
+  };
 
-  // Add event to internal queue
-  instance.queue.push(event);
+  await tryCatchAsync(async () => {
+    // Check if walker is allowed to run
+    if (!instance.allowed) {
+      result.status.error = 'Walker is not allowed to run';
+      return result;
+    }
 
-  pushToDestinations(instance, instance.destinations, event);
+    // Add event to internal queue
+    instance.queue.push(event);
+
+    const foo = await pushToDestinations(
+      instance,
+      instance.destinations,
+      event,
+    );
+
+    result.status.ok = true;
+  })();
+
+  return {
+    status: { ok: true },
+    successful: [],
+    queued: [],
+    failed: [],
+  };
 }

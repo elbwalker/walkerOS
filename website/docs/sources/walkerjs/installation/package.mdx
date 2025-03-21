@@ -44,9 +44,9 @@ location change in your app:
 ```js
 import React from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
-import { elb, Walkerjs } from '@elbwalker/walker.js';
+import { createInstance } from '@elbwalker/walker.js';
 
-window.walkerjs = Walkerjs({ default: true });
+const { elb } = createInstance({ default: true });
 
 export default function App() {
   const location = useLocation();

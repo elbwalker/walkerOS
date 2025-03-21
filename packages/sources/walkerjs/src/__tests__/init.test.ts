@@ -1,6 +1,6 @@
-import { Walkerjs } from '..';
-import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import type { SourceWalkerjs } from '..';
+import { mockDataLayer } from '@elbwalker/jest/web.setup';
+import { Walkerjs } from '..';
 
 describe('Init', () => {
   let walkerjs: SourceWalkerjs.Instance;
@@ -72,9 +72,10 @@ describe('Init', () => {
     );
   });
 
-  test('disable page view', () => {
+  test('disable page view', async () => {
     // First default beforeEach call with pageview true by default
     walkerjs = Walkerjs({ default: true });
+    await jest.runAllTimersAsync();
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page view',

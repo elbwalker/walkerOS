@@ -1,8 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { SourceWalkerjs } from '../types';
-import { assign } from '@elbwalker/utils';
+import { assign, pushToDestinations } from '@elbwalker/utils';
 import { onApply } from './on';
-import { pushToDestinations } from './push';
 
 export function setConsent(
   instance: SourceWalkerjs.Instance,
@@ -28,5 +27,5 @@ export function setConsent(
   onApply(instance, 'consent', undefined, update);
 
   // Process previous events if not disabled
-  if (runQueue) pushToDestinations(instance, destinations);
+  if (runQueue) return pushToDestinations(instance, destinations);
 }

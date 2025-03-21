@@ -15,6 +15,13 @@ export * from './types';
 
 export const elb = createElb();
 
+export function createInstance(customConfig?: SourceWalkerjs.InitConfig) {
+  const instance = Walkerjs(customConfig);
+  const elb = instance.push;
+
+  return { elb, instance };
+}
+
 export function Walkerjs(
   customConfig: SourceWalkerjs.InitConfig = {},
 ): SourceWalkerjs.Instance {
