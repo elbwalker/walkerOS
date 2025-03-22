@@ -2,6 +2,7 @@ import type { Hooks, On, WalkerOS } from '@elbwalker/types';
 import type { SourceWalkerjs, DestinationWeb, Elb } from '../types';
 import {
   Const,
+  addDestination,
   assign,
   isArray,
   isElementOrDocument,
@@ -14,7 +15,6 @@ import {
 } from '@elbwalker/utils';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';
-import { addDestination } from './destination';
 import { run } from './run';
 import { addHook } from './hooks';
 
@@ -40,18 +40,21 @@ export async function handleCommand(
         ).config;
       break;
     case Const.Commands.Consent:
-      if (isObject(data)) setConsent(instance, data as WalkerOS.Consent);
+      if (isObject(data)) {
+        const foo = await setConsent(instance, data as WalkerOS.Consent);
+      }
       break;
     case Const.Commands.Custom:
       if (isObject(data)) instance.custom = assign(instance.custom, data);
       break;
     case Const.Commands.Destination:
-      isObject(data) &&
-        addDestination(
+      if (isObject(data)) {
+        await addDestination(
           instance,
           data as DestinationWeb.Destination,
           options as DestinationWeb.Config,
         );
+      }
       break;
     case Const.Commands.Globals:
       if (isObject(data)) instance.globals = assign(instance.globals, data);
@@ -71,7 +74,12 @@ export async function handleCommand(
       on(instance, data as On.Types, options as On.Options);
       break;
     case Const.Commands.Run:
-      ready(instance, run, instance, data as Partial<SourceWalkerjs.State>);
+      await ready(
+        instance,
+        run,
+        instance,
+        data as Partial<SourceWalkerjs.State>,
+      );
       break;
     case Const.Commands.User:
       if (isObject(data)) assign(instance.user, data, { shallow: false });
@@ -79,8 +87,10 @@ export async function handleCommand(
     default:
       break;
   }
+
   result.status.ok = true;
 
+  // @TODO return result
   return result;
 }
 
@@ -105,11 +115,7 @@ export async function handleEvent(
     // Add event to internal queue
     instance.queue.push(event);
 
-    const foo = await pushToDestinations(
-      instance,
-      instance.destinations,
-      event,
-    );
+    await pushToDestinations(instance, instance.destinations, event);
 
     result.status.ok = true;
   })();

@@ -4,18 +4,44 @@ import type {
   WalkerOS,
   Elb,
 } from '@elbwalker/types';
-import {
-  getMappingEvent,
-  getMappingValue,
-  isDefined,
-  assign,
-  isObject,
-  useHooks,
-  debounce,
-  setByPath,
-  getGrantedConsent,
-  tryCatchAsync,
-} from './index';
+import { getId } from './getId';
+import { setByPath } from './byPath';
+import { getMappingEvent, getMappingValue } from './mapping';
+import { getGrantedConsent } from './consent';
+import { tryCatchAsync } from './tryCatch';
+import { assign } from './assign';
+import { useHooks } from './useHooks';
+import { isDefined, isObject } from './is';
+import { debounce } from './invocations';
+
+export async function addDestination(
+  instance: WalkerOS.Instance,
+  data: WalkerOSDestination.DestinationInit,
+  options?: WalkerOSDestination.Config,
+) {
+  // Prefer explicit given config over default config
+  const config = options || data.config || { init: false };
+
+  const destination: WalkerOSDestination.Destination = {
+    ...data,
+    config,
+  };
+
+  let id = config.id; // Use given id
+  if (!id) {
+    // Generate a new id if none was given
+    do {
+      id = getId(4);
+    } while (instance.destinations[id]);
+  }
+
+  // Add the destination
+  instance.destinations[id] = destination;
+
+  // Process previous events if not disabled
+  if (config.queue !== false) destination.queue = [...instance.queue];
+  return pushToDestinations(instance, { destination });
+}
 
 export async function pushToDestinations(
   instance: WalkerOS.Instance,
@@ -41,14 +67,13 @@ export async function pushToDestinations(
       // Add event to queue stack
       if (event) {
         // Policy check
-        Object.entries(destination.config.policy || []).forEach(
-          ([key, mapping]) => {
-            setByPath(
-              event,
-              key,
-              getMappingValue(event, mapping, { instance }),
-            );
-          },
+        await Promise.all(
+          Object.entries(destination.config.policy || []).map(
+            async ([key, mapping]) => {
+              const value = await getMappingValue(event, mapping, { instance });
+              setByPath(event, key, value);
+            },
+          ),
         );
 
         queue.push(event);

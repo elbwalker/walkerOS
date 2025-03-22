@@ -1,7 +1,6 @@
 import type { Elb, SourceWalkerjs } from './types';
-import { onApply } from '@elbwalker/utils';
+import { addDestination, onApply } from '@elbwalker/utils';
 import { sessionStart } from '@elbwalker/utils/web';
-import { addDestination } from './lib/destination';
 import { createPush, elbLayerInit } from './lib/push';
 import { run } from './lib/run';
 import { createSessionStart } from './lib/session';

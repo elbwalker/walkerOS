@@ -1,34 +1,4 @@
-import type { SourceWalkerjs, DestinationWeb } from '../types';
-import { getId, pushToDestinations } from '@elbwalker/utils';
-
-export async function addDestination(
-  instance: SourceWalkerjs.Instance,
-  data: DestinationWeb.DestinationInit,
-  options?: DestinationWeb.Config,
-) {
-  // Prefer explicit given config over default config
-  const config = options || data.config || { init: false };
-
-  const destination: DestinationWeb.Destination = {
-    ...data,
-    config,
-  };
-
-  let id = config.id; // Use given id
-  if (!id) {
-    // Generate a new id if none was given
-    do {
-      id = getId(4);
-    } while (instance.destinations[id]);
-  }
-
-  // Add the destination
-  instance.destinations[id] = destination;
-
-  // Process previous events if not disabled
-  if (config.queue !== false) destination.queue = [...instance.queue];
-  return await pushToDestinations(instance, { destination });
-}
+import type { DestinationWeb } from '../types';
 
 export function dataLayerDestination() {
   window.dataLayer = window.dataLayer || [];

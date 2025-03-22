@@ -3,7 +3,7 @@ import { getGrantedConsent } from './consent';
 import { getByPath } from './byPath';
 import { isArray, isDefined, isString, isObject } from './is';
 import { castToProperty } from './property';
-import { tryCatch, tryCatchAsync } from './tryCatch';
+import { tryCatchAsync } from './tryCatch';
 
 export async function getMappingEvent(
   event: WalkerOS.PartialEvent,
@@ -71,7 +71,6 @@ export async function getMappingValue(
       ...options,
       consent: consentState,
     });
-
     if (isDefined(result)) return result;
   }
 }

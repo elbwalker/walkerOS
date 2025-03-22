@@ -314,7 +314,8 @@ describe('Destination', () => {
     elb('foo bar');
 
     const eventMapping = { data: { value: 'bar' } };
-    await elb(
+
+    elb(
       'walker destination',
       { push: mockPush },
       {
@@ -322,6 +323,8 @@ describe('Destination', () => {
         mapping: { foo: { bar: eventMapping } },
       },
     );
+
+    await jest.runAllTimersAsync();
 
     // Event data
     expect(mockPush).toHaveBeenCalledWith(
@@ -347,7 +350,7 @@ describe('Destination', () => {
     elb('foo bar');
 
     const eventMapping = { data: { map: { foo: { value: 'bar' } } } };
-    await elb(
+    elb(
       'walker destination',
       { push: mockPush },
       {
@@ -356,6 +359,7 @@ describe('Destination', () => {
       },
     );
 
+    await jest.runAllTimersAsync();
     expect(mockPush).toHaveBeenCalledWith(
       expect.any(Object),
       expect.any(Object),
@@ -838,6 +842,7 @@ describe('Destination', () => {
 
     await elb('entity action');
     expect(mockDataLayer).toHaveBeenCalledTimes(0);
+
     await elb('walker consent', { functional: true });
     expect(mockDataLayer).toHaveBeenCalledTimes(1);
 
@@ -945,7 +950,6 @@ describe('Destination', () => {
     });
 
     await elb(event);
-
     expect(mockPush).toHaveBeenCalledWith({
       ...event,
       event: 'new name',

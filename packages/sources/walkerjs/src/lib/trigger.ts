@@ -36,21 +36,21 @@ export const Trigger: { [key: string]: Walker.Trigger } = {
   Wait: 'wait',
 } as const;
 
-export function ready<T extends (...args: never[]) => R, R>(
+export async function ready<T extends (...args: never[]) => R, R>(
   instance: SourceWalkerjs.Instance,
   fn: T,
   ...args: Parameters<T>
-): void {
+): Promise<R | undefined> {
   const readyFn = () => {
-    fn(...args);
+    const result = fn(...args);
     onApply(instance, 'ready');
+    return result;
   };
 
   if (document.readyState !== 'loading') {
-    readyFn();
+    return readyFn();
   } else {
     document.addEventListener('DOMContentLoaded', readyFn);
-    return;
   }
 }
 

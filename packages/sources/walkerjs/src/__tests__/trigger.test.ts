@@ -55,7 +55,8 @@ describe('Trigger', () => {
     const { elb } = createSourceWalkerjs({ default: true, session: false });
 
     // Both e load events should be triggered
-    await elb('walker init');
+    elb('walker init');
+    await jest.runAllTimersAsync();
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e all',
@@ -72,6 +73,7 @@ describe('Trigger', () => {
 
     // Only the e init event should be triggered
     await elb('walker init', elem);
+    await jest.runAllTimersAsync();
     expect(mockDataLayer).not.toHaveBeenCalledWith(
       expect.objectContaining({ event: 'e all' }),
     );

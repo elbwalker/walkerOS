@@ -10,8 +10,7 @@ export interface Destination<Custom = unknown, CustomEvent = unknown>
   init?: WalkerOSDestination.InitFn<Custom, CustomEvent>;
 }
 
-export type DestinationInit = Partial<Omit<Destination, 'push'>> &
-  Pick<Destination, 'push'>;
+export type DestinationInit = WalkerOSDestination.DestinationInit;
 
 // @TODO move to WalkerOSDestination
 // check if used
