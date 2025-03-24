@@ -235,10 +235,12 @@ describe('source dataLayer', () => {
       throw new Error();
     });
 
-    sourceDataLayer(elb);
+    const instance = sourceDataLayer({ elb });
+    await jest.runAllTimersAsync();
     dataLayer.push('foo');
     await jest.runAllTimersAsync();
     expect(elb).toThrow();
     expect(mockOrg).toHaveBeenCalledTimes(1);
+    expect(instance?.processing).toBe(false);
   });
 });
