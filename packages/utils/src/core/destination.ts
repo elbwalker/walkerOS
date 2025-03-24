@@ -49,15 +49,8 @@ export async function pushToDestinations(
   event?: WalkerOS.Event,
 ): Promise<Elb.PushResult> {
   const { consent, globals, user } = instance;
-  const results: Array<{
-    id: string;
-    destination: WalkerOSDestination.Destination;
-    skipped?: boolean;
-    queue?: WalkerOS.Events;
-    error?: unknown;
-  }> = [];
 
-  return Promise.all(
+  const results = await Promise.all(
     // Process all destinations in parallel
     Object.entries(destinations).map(async ([id, destination]) => {
       // Setup queue of events to be processed
@@ -115,11 +108,15 @@ export async function pushToDestinations(
       let error: unknown;
 
       // Process allowed events and store failed ones in the dead letter queue (dlq)
-      const dlq = await Promise.all(
-        allowedEvents.filter(async (event) => {
+      const pushes = await Promise.all(
+        allowedEvents.map(async (event) => {
           if (error) {
-            // Skip if an error occurred
-            destination.queue?.push(event); // Add back to queue
+            // Add back to queue
+            destination.queue?.push(event);
+
+            // Skip further processing
+            // @TODO do we really want to skip?
+            return;
           }
 
           // Merge event with instance state, prioritizing event properties
@@ -127,52 +124,59 @@ export async function pushToDestinations(
           event.globals = assign(globals, event.globals);
           event.user = assign(user, event.user);
 
-          return !(await tryCatchAsync(destinationPush, (err) => {
+          await tryCatchAsync(destinationPush, (err) => {
             // Call custom error handling if available
             if (instance.config.onError) instance.config.onError(err, instance);
             error = err; // Captured error from destination
-          })(instance, destination, event));
+
+            return false;
+          })(instance, destination, event);
+
+          return event;
         }),
       );
 
+      const dlq = pushes.filter(isDefined);
+
       // Concatenate failed events with unprocessed ones in the queue
+      // @TODO add to destination.dlq with error
       queue.concat(dlq);
 
       return { id, destination, queue, error };
     }),
-  ).then((results) => {
-    const successful: WalkerOSDestination.PushSuccess = [];
-    const queued: WalkerOSDestination.PushSuccess = [];
-    const failed: WalkerOSDestination.PushFailure = [];
+  );
 
-    for (const result of results) {
-      if (result.skipped) continue;
+  const successful: WalkerOSDestination.PushSuccess = [];
+  const queued: WalkerOSDestination.PushSuccess = [];
+  const failed: WalkerOSDestination.PushFailure = [];
 
-      const id = result.id;
-      const destination = result.destination;
+  for (const result of results) {
+    if (result.skipped) continue;
 
-      if (result.error) {
-        failed.push({
-          id,
-          destination,
-          error: String(result.error),
-        });
-      } else if (result.queue && result.queue.length) {
-        // Merge queue with existing queue
-        destination.queue = (destination.queue || []).concat(result.queue);
-        queued.push({ id, destination });
-      } else {
-        successful.push({ id, destination });
-      }
+    const id = result.id;
+    const destination = result.destination;
+
+    if (result.error) {
+      failed.push({
+        id,
+        destination,
+        error: String(result.error),
+      });
+    } else if (result.queue && result.queue.length) {
+      // Merge queue with existing queue
+      destination.queue = (destination.queue || []).concat(result.queue);
+      queued.push({ id, destination });
+    } else {
+      successful.push({ id, destination });
     }
+  }
 
-    return {
-      status: { ok: true },
-      successful,
-      queued,
-      failed,
-    };
-  });
+  return {
+    status: { ok: true },
+    successful,
+    queued,
+    failed,
+  };
 }
 
 export async function destinationInit<
