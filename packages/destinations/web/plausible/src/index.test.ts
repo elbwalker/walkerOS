@@ -1,5 +1,6 @@
+import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationPlausible } from '.';
-import { createInstance, Elb } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
 import { events, mapping } from '../examples';
 
@@ -18,7 +19,7 @@ describe('destination plausible', () => {
 
     w.plausible = mockFn;
 
-    ({ elb } = createInstance({
+    ({ elb } = createSourceWalkerjs({
       pageview: false,
       run: true,
       session: false,

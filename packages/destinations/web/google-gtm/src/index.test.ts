@@ -1,7 +1,8 @@
 import type { WalkerOS } from '@elbwalker/types';
+import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationGoogleGTM } from '.';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { createInstance, Elb } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { createEvent, getEvent } from '@elbwalker/utils';
 import { events, mapping } from '../examples';
 
@@ -20,7 +21,7 @@ describe('destination google-tag-manager', () => {
     destination = jest.requireActual('.').default;
     destination.config = config;
     event = createEvent();
-    ({ elb } = createInstance({
+    ({ elb } = createSourceWalkerjs({
       session: false,
       pageview: false,
       run: true,

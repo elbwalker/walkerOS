@@ -1,6 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
+import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationWebAPI } from '.';
-import { createInstance, Elb } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { createEvent } from '@elbwalker/utils';
 import { events, mapping } from '../examples';
 
@@ -22,7 +23,7 @@ describe('Destination API', () => {
 
     destination = jest.requireActual('.').default;
     event = createEvent();
-    ({ elb } = createInstance({
+    ({ elb } = createSourceWalkerjs({
       session: false,
       pageview: false,
       run: true,

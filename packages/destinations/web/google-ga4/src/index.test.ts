@@ -1,5 +1,6 @@
+import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationGoogleGA4 } from '.';
-import Walkerjs, { createInstance, Elb } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
 import { events, mapping } from '../examples';
 
@@ -23,7 +24,7 @@ describe('Destination Google GA4', () => {
     destination = jest.requireActual('.').default;
     destination.config = config;
 
-    ({ elb } = createInstance({
+    ({ elb } = createSourceWalkerjs({
       pageview: false,
       session: false,
       tagging: 2,

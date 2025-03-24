@@ -1,5 +1,6 @@
+import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationPiwikPro } from '.';
-import Walkerjs, { createInstance, Elb } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
 import { events, mapping } from '../examples';
 
@@ -24,7 +25,7 @@ describe('Destination PiwikPro', () => {
     w._paq = [];
     w._paq.push = mockFn;
 
-    ({ elb } = createInstance({
+    ({ elb } = createSourceWalkerjs({
       pageview: false,
       run: true,
       session: false,
@@ -84,23 +85,23 @@ describe('Destination PiwikPro', () => {
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceAddToCart());
   });
 
-  test('event ecommerceProductDetailView', async () => {
+  test('event ecommerceProductDetailView', () => {
     const event = getEvent('product view');
     elb('walker destination', destination, {
       custom,
       mapping: mapping.config,
     });
-    await elb(event);
+    elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceProductDetailView());
   });
 
-  test('event ecommerceCartUpdate', async () => {
+  test('event ecommerceCartUpdate', () => {
     const event = getEvent('cart view');
     elb('walker destination', destination, {
       custom,
       mapping: mapping.config,
     });
-    await elb(event);
+    elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceCartUpdate());
   });
 });

@@ -1,5 +1,6 @@
+import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationGoogleAds } from '.';
-import { createInstance, Elb } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
 import { events, mapping } from '../examples';
 
@@ -24,7 +25,7 @@ describe('destination Google Ads', () => {
 
     w.gtag = mockFn;
 
-    ({ elb } = createInstance({
+    ({ elb } = createSourceWalkerjs({
       session: false,
       pageview: false,
       run: true,
