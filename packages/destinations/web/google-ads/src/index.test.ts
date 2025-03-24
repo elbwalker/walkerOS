@@ -34,7 +34,7 @@ describe('destination Google Ads', () => {
 
   afterEach(() => {});
 
-  test('init', () => {
+  test('init', async () => {
     (w.dataLayer as unknown) = undefined;
     (w.gtag as unknown) = undefined;
 
@@ -46,7 +46,7 @@ describe('destination Google Ads', () => {
     expect(w.dataLayer).not.toBeDefined();
     expect(w.gtag).not.toBeDefined();
 
-    elb(event);
+    await elb(event);
     expect(w.dataLayer).toBeDefined();
     expect(w.gtag).toBeDefined();
   });
@@ -64,15 +64,15 @@ describe('destination Google Ads', () => {
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
-  test('Init calls', () => {
+  test('Init calls', async () => {
     elb('walker destination', destination);
 
-    elb(event);
+    await elb(event);
 
     expect(mockFn).toHaveBeenNthCalledWith(1, 'config', conversionId);
   });
 
-  test('init with load script', () => {
+  test('init with load script', async () => {
     destination.config.loadScript = true;
     elb('walker destination', destination);
 
@@ -81,7 +81,7 @@ describe('destination Google Ads', () => {
     let elem = document.querySelector(scriptSelector);
     expect(elem).not.toBeTruthy();
 
-    elb(event);
+    await elb(event);
 
     elem = document.querySelector(scriptSelector);
     expect(elem).toBeTruthy();

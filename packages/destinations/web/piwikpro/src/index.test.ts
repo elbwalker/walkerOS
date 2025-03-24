@@ -85,23 +85,23 @@ describe('Destination PiwikPro', () => {
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceAddToCart());
   });
 
-  test('event ecommerceProductDetailView', () => {
+  test('event ecommerceProductDetailView', async () => {
     const event = getEvent('product view');
     elb('walker destination', destination, {
       custom,
       mapping: mapping.config,
     });
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceProductDetailView());
   });
 
-  test('event ecommerceCartUpdate', () => {
+  test('event ecommerceCartUpdate', async () => {
     const event = getEvent('cart view');
     elb('walker destination', destination, {
       custom,
       mapping: mapping.config,
     });
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceCartUpdate());
   });
 });
