@@ -31,10 +31,6 @@ export interface InitConfig extends Partial<Config> {
   user?: WalkerOS.User;
 }
 
-export interface AddDestination {
-  (id: string, destination: Destination): void;
-}
-
 export type HandleCommand = (
   instance: Instance,
   action: string,

@@ -40,7 +40,7 @@ export async function addDestination(
 
   // Process previous events if not disabled
   if (config.queue !== false) destination.queue = [...instance.queue];
-  return pushToDestinations(instance, { destination });
+  return pushToDestinations(instance, { [id]: destination });
 }
 
 export async function pushToDestinations(
