@@ -320,7 +320,7 @@ describe('Destination', () => {
 
     expect(result).toEqual({
       event: expect.any(Object),
-      status: { ok: false },
+      ok: false,
       successful: [
         {
           id: 'mockDestination',
@@ -361,7 +361,7 @@ describe('Destination', () => {
     result = await elb(mockEvent);
     expect(result).toStrictEqual(
       expect.objectContaining({
-        status: { ok: true },
+        ok: true,
         successful: [expect.objectContaining({ id: 'mockDestination' })],
         queued: [expect.objectContaining({ id: 'destinationConsent' })],
       }),
@@ -370,7 +370,7 @@ describe('Destination', () => {
     result = await elb('walker consent', { test: false });
     expect(result).toStrictEqual(
       expect.objectContaining({
-        status: { ok: true },
+        ok: true,
         successful: [],
         queued: [],
         failed: [],
@@ -386,7 +386,7 @@ describe('Destination', () => {
     );
     expect(result).toStrictEqual(
       expect.objectContaining({
-        status: { ok: true },
+        ok: true,
         successful: [expect.objectContaining({ id: 'destinationConsent' })],
         queued: [],
       }),

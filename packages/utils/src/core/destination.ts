@@ -52,7 +52,7 @@ export async function pushToDestinations(
   const { allowed, consent, globals, user } = instance;
 
   // Check if instance is allowed to push
-  if (!allowed) return createPushResult({ status: { ok: false } });
+  if (!allowed) return createPushResult({ ok: false });
 
   // Add event to the instance queue
   if (event) instance.queue.push(event);
@@ -194,12 +194,13 @@ export async function pushToDestinations(
     }
   }
 
-  return {
-    status: { ok },
+  return createPushResult({
+    ok,
+    event,
     successful,
     queued,
     failed,
-  };
+  });
 }
 
 export async function destinationInit<
@@ -310,19 +311,13 @@ export async function resolveMappingData(
 export function createPushResult(
   partialResult?: Partial<Elb.PushResult>,
 ): Elb.PushResult {
-  const result: Elb.PushResult = assign(
+  return assign(
     {
+      ok: !partialResult?.failed?.length,
       successful: [],
       queued: [],
       failed: [],
-      status: {},
     },
     partialResult,
   );
-
-  // Check if some destinations failed
-  if (!isDefined(result.status.ok))
-    result.status.ok = result.failed.length === 0;
-
-  return result;
 }

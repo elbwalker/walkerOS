@@ -54,12 +54,7 @@ export type PushContext = WalkerOS.OrderedProperties;
 
 export interface PushResult extends Destination.Result {
   event?: WalkerOS.Event;
-  status: Status;
-}
-
-export interface Status {
   ok: boolean;
-  error?: string;
 }
 
 type FnParameters<T> = T extends (...args: unknown[]) => unknown

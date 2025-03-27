@@ -2,6 +2,7 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { SourceNode, Elb } from '../types';
 import {
   assign,
+  createPushResult,
   isCommand,
   isSameType,
   pushToDestinations,
@@ -15,12 +16,7 @@ export function createPush(instance: SourceNode.Instance): Elb.Fn {
     data: Elb.PushData = {},
     options?: Elb.PushOptions,
   ) => {
-    let result: Elb.PushResult = {
-      status: { ok: false },
-      successful: [],
-      queued: [],
-      failed: [],
-    };
+    let result: Elb.PushResult;
 
     return await tryCatchAsync(
       async (
@@ -36,28 +32,19 @@ export function createPush(instance: SourceNode.Instance): Elb.Fn {
 
         if (command) {
           // Command event
-          const commandResult = await handleCommand(
-            instance,
-            command,
-            data,
-            options,
-          );
-          result = assign(result, commandResult);
+          result = await handleCommand(instance, command, data, options);
         } else if (event) {
           // Regular event
-          const eventResult = await pushToDestinations(instance, event);
-          result = assign(result, eventResult);
-          result.event = event;
+          result = await pushToDestinations(instance, event);
         }
 
-        return assign({ status: { ok: true } }, result);
+        return createPushResult(result);
       },
       (error) => {
         // Call custom error handling
         if (instance.config.onError) instance.config.onError(error, instance);
 
-        result.status.error = String(error);
-        return result;
+        return createPushResult({ ok: false });
       },
     )(nameOrEvent, data, options);
   };

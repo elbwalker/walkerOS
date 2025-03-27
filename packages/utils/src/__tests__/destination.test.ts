@@ -53,11 +53,11 @@ describe('Destination', () => {
   test('allowed', async () => {
     const instance = createInstance({ allowed: false });
     let result = await pushToDestinations(instance, event);
-    expect(result.status.ok).toBeFalsy();
+    expect(result.ok).toBeFalsy();
 
     instance.allowed = true;
     result = await pushToDestinations(instance, event);
-    expect(result.status.ok).toBeTruthy();
+    expect(result.ok).toBeTruthy();
   });
 
   test('preventing data manipulation', async () => {
@@ -108,7 +108,7 @@ describe('Destination', () => {
       destination,
     });
     expect(result.failed).toHaveLength(1);
-    expect(result.status.ok).toBeFalsy();
+    expect(result.ok).toBeFalsy();
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(destination.dlq).toContainEqual([event, new Error('kaputt')]);
   });
