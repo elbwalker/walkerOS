@@ -59,10 +59,5 @@ export const handleEvent: SourceNode.HandleEvent = async (instance, event) => {
   // Check if walker is allowed to run
   if (!instance.allowed) return createResult({ status: { ok: false } });
 
-  // Add event to internal queue
-  instance.queue.push(event);
-
-  return createResult(
-    await pushToDestinations(instance, instance.destinations, event),
-  );
+  return createResult(await pushToDestinations(instance, event));
 };

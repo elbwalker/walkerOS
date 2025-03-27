@@ -31,7 +31,7 @@ export function setConsent(
   instance: WalkerOS.Instance,
   data: WalkerOS.Consent,
 ) {
-  const { consent, destinations } = instance;
+  const { consent } = instance;
 
   let runQueue = false;
   const update: WalkerOS.Consent = {};
@@ -51,5 +51,5 @@ export function setConsent(
   onApply(instance, 'consent', undefined, update);
 
   // Process previous events if not disabled
-  if (runQueue) return pushToDestinations(instance, destinations);
+  if (runQueue) return pushToDestinations(instance);
 }

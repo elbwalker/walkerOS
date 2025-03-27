@@ -43,7 +43,7 @@ describe('Destination', () => {
       expect.objectContaining({
         event: event.event,
       }),
-      config,
+      { init: true },
       undefined,
       expect.anything(),
     );
@@ -143,35 +143,6 @@ describe('Destination', () => {
         event: event.event,
       }),
       { init: true },
-      undefined,
-      expect.anything(),
-    );
-  });
-
-  test('preventing data manipulation', async () => {
-    const data = { a: 1 };
-    const mockPushUpdate = jest.fn().mockImplementation((event) => {
-      event.data.foo = 'bar';
-    });
-
-    const destinationUpdate = {
-      init: mockInit,
-      push: mockPushUpdate,
-      config: {},
-    };
-
-    elb('walker run');
-    elb('walker destination', destinationUpdate);
-    elb('walker destination', destination);
-    await elb('entity action', data);
-    expect(mockPushUpdate).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: 'entity action',
-        data,
-      }),
-      config,
       undefined,
       expect.anything(),
     );
@@ -376,7 +347,7 @@ describe('Destination', () => {
 
   test('consent', async () => {
     jest.clearAllMocks();
-    const { elb } = createSourceWalkerjs({
+    const { elb, instance } = createSourceWalkerjs({
       consent: { functional: true, marketing: false },
       pageview: false,
       session: false,

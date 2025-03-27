@@ -3,6 +3,7 @@ import type { Handler, Mapping, On, WalkerOS } from '.';
 export interface Destination<Custom = unknown, CustomEvent = unknown> {
   config: Config<Custom, CustomEvent>; // Configuration settings for the destination
   queue?: WalkerOS.Events; // Non processed events yet and reset with each new run
+  dlq?: DLQ; // Failed events
   type?: string; // The type of the destination
   init?: InitFn<Custom, CustomEvent>;
   push: PushFn<Custom, CustomEvent>;
@@ -91,9 +92,11 @@ export type Push = {
 
 export type PushSuccess = Array<Ref>;
 
+export type PushError = string; // @TODO should be an error object
+
 export type PushFailure = Array<Ref & { error: PushError }>;
 
-export type PushError = string;
+export type DLQ = Array<[WalkerOS.Event, unknown]>; // @TODO should be PushError
 
 export type Result = {
   successful: PushSuccess;

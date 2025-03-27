@@ -51,18 +51,25 @@ describe('Destination PiwikPro', () => {
 
   test('pageview', async () => {
     const page_view = getEvent('page view');
+    const mockFnIgnorePageView = jest.fn();
     elb('walker destination', destination);
+    elb('walker destination', {
+      push: mockFnIgnorePageView,
+      config: { mapping: { page: { view: { ignore: true } } } },
+    });
 
     await elb(page_view);
     expect(mockFn).toHaveBeenCalledWith([
       'trackPageView',
       page_view.data.title,
     ]);
+    expect(mockFnIgnorePageView).toHaveBeenCalledTimes(0);
 
-    jest.clearAllMocks();
-    destination.config.mapping = { page: { view: { ignore: true } } };
-    await elb(page_view);
-    expect(mockFn).toHaveBeenCalledTimes(0);
+    // Make sure that mockFnIgnorePageView is called for other events
+    mockFn.mockClear();
+    await elb('foo bar');
+    expect(mockFn).toHaveBeenCalledTimes(1);
+    expect(mockFnIgnorePageView).toHaveBeenCalledTimes(1);
   });
 
   test('event ecommerceOrder', async () => {

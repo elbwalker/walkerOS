@@ -291,7 +291,7 @@ describe('Destination', () => {
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush.mock.calls[0][0]).toEqual(
       expect.objectContaining({
-        consent: { client: true, demo: true },
+        consent: { demo: true },
         user: { id: 'us3r', session: 's3ss10n' },
         globals: { foo: 'bar' },
       }),
@@ -378,9 +378,10 @@ describe('Destination', () => {
     );
 
     result = await elb('walker consent', { test: true });
+
     expect(mockPushConsent.mock.calls[0][0]).toEqual(
       expect.objectContaining({
-        consent: { client: true, test: true },
+        consent: { test: true },
       }),
     );
     expect(result).toStrictEqual(

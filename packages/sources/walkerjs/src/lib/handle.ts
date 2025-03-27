@@ -41,7 +41,7 @@ export async function handleCommand(
       break;
     case Const.Commands.Consent:
       if (isObject(data)) {
-        const foo = await setConsent(instance, data as WalkerOS.Consent);
+        await setConsent(instance, data as WalkerOS.Consent);
       }
       break;
     case Const.Commands.Custom:
@@ -112,10 +112,7 @@ export async function handleEvent(
       return result;
     }
 
-    // Add event to internal queue
-    instance.queue.push(event);
-
-    await pushToDestinations(instance, instance.destinations, event);
+    await pushToDestinations(instance, event);
 
     result.status.ok = true;
   })();

@@ -13,6 +13,7 @@ import { assign } from './assign';
 import { useHooks } from './useHooks';
 import { isDefined, isObject } from './is';
 import { debounce } from './invocations';
+import { clone } from './clone';
 
 export async function addDestination(
   instance: WalkerOS.Instance,
@@ -40,51 +41,67 @@ export async function addDestination(
 
   // Process previous events if not disabled
   if (config.queue !== false) destination.queue = [...instance.queue];
-  return pushToDestinations(instance, { [id]: destination });
+  return pushToDestinations(instance, undefined, { [id]: destination });
 }
 
 export async function pushToDestinations(
   instance: WalkerOS.Instance,
-  destinations: WalkerOS.Destinations,
   event?: WalkerOS.Event,
+  destinations?: WalkerOS.Destinations,
 ): Promise<Elb.PushResult> {
   const { consent, globals, user } = instance;
+
+  // Add event to the instance queue
+  if (event) instance.queue.push(event);
+
+  // Use given destinations or use internal destinations
+  if (!destinations) destinations = instance.destinations;
 
   const results = await Promise.all(
     // Process all destinations in parallel
     Object.entries(destinations).map(async ([id, destination]) => {
-      // Setup queue of events to be processed
-      let queue = ([] as WalkerOS.Events).concat(destination.queue || []);
-      destination.queue = []; // Reset original queue while processing
+      // Create a queue of events to be processed
+      let currentQueue = (destination.queue || []).map((event) => ({
+        ...event,
+        consent,
+      }));
+
+      // Reset original queue while processing to enable async processing
+      destination.queue = [];
 
       // Add event to queue stack
       if (event) {
+        // Clone the event to avoid mutating the original event
+        let currentEvent = clone(event);
+
         // Policy check
         await Promise.all(
           Object.entries(destination.config.policy || []).map(
             async ([key, mapping]) => {
               const value = await getMappingValue(event, mapping, { instance });
-              setByPath(event, key, value);
+              currentEvent = setByPath(currentEvent, key, value);
             },
           ),
         );
 
-        queue.push(event);
+        // Add event to queue stack
+        currentQueue.push(currentEvent);
       }
 
       // Nothing to do here if the queue is empty
-      if (!queue.length) return { id, destination, skipped: true };
+      if (!currentQueue.length) return { id, destination, skipped: true };
 
       const allowedEvents: WalkerOS.Events = [];
-      queue = queue.filter((queuedEvent) => {
+      const skippedEvents = currentQueue.filter((queuedEvent) => {
         const grantedConsent = getGrantedConsent(
           destination.config.consent, // Required
-          consent, // Destination state
+          consent, // Current instance state
           queuedEvent.consent, // Individual event state
         );
 
         if (grantedConsent) {
           queuedEvent.consent = grantedConsent; // Save granted consent states only
+
           allowedEvents.push(queuedEvent); // Add to allowed queue
           return false; // Remove from destination queue
         }
@@ -92,9 +109,12 @@ export async function pushToDestinations(
         return true; // Keep denied events in the queue
       });
 
+      // Add skipped events back to the queue
+      destination.queue.concat(skippedEvents);
+
       // Execution shall not pass if no events are allowed
       if (!allowedEvents.length) {
-        return { id, destination, queue }; // Don't push if not allowed
+        return { id, destination, queue: currentQueue }; // Don't push if not allowed
       }
 
       // Initialize the destination if needed
@@ -102,13 +122,15 @@ export async function pushToDestinations(
         instance,
         destination,
       );
-      if (!isInitialized) return { id, destination, queue };
+
+      if (!isInitialized) return { id, destination, queue: currentQueue };
 
       // Process the destinations event queue
       let error: unknown;
+      if (!destination.dlq) destination.dlq = [];
 
       // Process allowed events and store failed ones in the dead letter queue (dlq)
-      const pushes = await Promise.all(
+      await Promise.all(
         allowedEvents.map(async (event) => {
           if (error) {
             // Add back to queue
@@ -120,7 +142,6 @@ export async function pushToDestinations(
           }
 
           // Merge event with instance state, prioritizing event properties
-          event = assign({}, event);
           event.globals = assign(globals, event.globals);
           event.user = assign(user, event.user);
 
@@ -129,6 +150,9 @@ export async function pushToDestinations(
             if (instance.config.onError) instance.config.onError(err, instance);
             error = err; // Captured error from destination
 
+            // Add failed event to destinations DLQ
+            destination.dlq!.push([event, err]);
+
             return false;
           })(instance, destination, event);
 
@@ -136,13 +160,7 @@ export async function pushToDestinations(
         }),
       );
 
-      const dlq = pushes.filter(isDefined);
-
-      // Concatenate failed events with unprocessed ones in the queue
-      // @TODO add to destination.dlq with error
-      queue.concat(dlq);
-
-      return { id, destination, queue, error };
+      return { id, destination, error };
     }),
   );
 
@@ -150,29 +168,31 @@ export async function pushToDestinations(
   const queued: WalkerOSDestination.PushSuccess = [];
   const failed: WalkerOSDestination.PushFailure = [];
 
+  let ok = true;
   for (const result of results) {
     if (result.skipped) continue;
 
-    const id = result.id;
     const destination = result.destination;
 
+    const ref = { id: result.id, destination };
+
     if (result.error) {
+      ok = false;
       failed.push({
-        id,
-        destination,
+        ...ref,
         error: String(result.error),
       });
     } else if (result.queue && result.queue.length) {
       // Merge queue with existing queue
       destination.queue = (destination.queue || []).concat(result.queue);
-      queued.push({ id, destination });
+      queued.push(ref);
     } else {
-      successful.push({ id, destination });
+      successful.push(ref);
     }
   }
 
   return {
-    status: { ok: true },
+    status: { ok },
     successful,
     queued,
     failed,
@@ -194,12 +214,10 @@ export async function destinationInit<
     if (configResult === false) return configResult; // don't push if init is false
 
     // Update the destination config if it was returned
-    if (configResult) {
-      destination.config = configResult;
-    }
-
-    // Remember that the destination was initialized
-    destination.config.init = true;
+    destination.config = {
+      ...(configResult || destination.config),
+      init: true, // Remember that the destination was initialized
+    };
   }
 
   return true; // Destination is ready to push
@@ -255,7 +273,7 @@ export async function destinationPush<
           destination.pushBatch!,
           'DestinationPushBatch',
           instance.hooks,
-        )(batched, destination.config, options);
+        )(batched, config, options);
 
         // Reset the batched queues
         batched.events = [];
@@ -268,7 +286,7 @@ export async function destinationPush<
     // It's time to go to the destination's side now
     await useHooks(destination.push, 'DestinationPush', instance.hooks)(
       event,
-      destination.config,
+      config,
       eventMapping,
       options,
     );
