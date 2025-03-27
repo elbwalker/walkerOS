@@ -27,7 +27,7 @@ export function getGrantedConsent(
   return hasRequiredConsent ? grantedStates : false;
 }
 
-export function setConsent(
+export async function setConsent(
   instance: WalkerOS.Instance,
   data: WalkerOS.Consent,
 ) {

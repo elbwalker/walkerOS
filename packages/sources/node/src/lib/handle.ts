@@ -4,12 +4,11 @@ import {
   Const,
   addDestination,
   assign,
+  createPushResult,
   isObject,
-  isSameType,
   pushToDestinations,
   setConsent,
 } from '@elbwalker/utils';
-import { createResult } from './helper';
 import { run } from './run';
 import { getState } from './state';
 
@@ -27,22 +26,22 @@ export const handleCommand: SourceNode.HandleCommand = async (
         instance.config = getState(data as SourceNode.Config, instance).config;
       break;
     case Const.Commands.Consent:
-      result = await setConsent(instance, data as WalkerOS.Consent);
+      if (isObject(data))
+        result = await setConsent(instance, data as WalkerOS.Consent);
       break;
     case Const.Commands.Custom:
-      if (isSameType(data, {} as WalkerOS.Properties))
-        instance.custom = assign(instance.custom, data);
+      if (isObject(data)) instance.custom = assign(instance.custom, data);
       break;
     case Const.Commands.Destination:
-      result = await addDestination(
-        instance,
-        data as DestinationNode.Destination,
-        options as DestinationNode.Config,
-      );
+      if (isObject(data))
+        result = await addDestination(
+          instance,
+          data as DestinationNode.Destination,
+          options as DestinationNode.Config,
+        );
       break;
     case Const.Commands.Globals:
-      if (isSameType(data, {} as WalkerOS.Properties))
-        instance.globals = assign(instance.globals, data);
+      if (isObject(data)) instance.globals = assign(instance.globals, data);
       break;
     case Const.Commands.Run:
       run(instance, data as Partial<SourceNode.State>);
@@ -52,12 +51,9 @@ export const handleCommand: SourceNode.HandleCommand = async (
       break;
   }
 
-  return createResult(result);
+  return createPushResult(result);
 };
 
 export const handleEvent: SourceNode.HandleEvent = async (instance, event) => {
-  // Check if walker is allowed to run
-  if (!instance.allowed) return createResult({ status: { ok: false } });
-
-  return createResult(await pushToDestinations(instance, event));
+  return await pushToDestinations(instance, event);
 };

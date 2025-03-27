@@ -4,6 +4,7 @@ import {
   Const,
   addDestination,
   assign,
+  createPushResult,
   isArray,
   isElementOrDocument,
   isObject,
@@ -11,7 +12,6 @@ import {
   on,
   pushToDestinations,
   setConsent,
-  tryCatchAsync,
 } from '@elbwalker/utils';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';
@@ -24,12 +24,7 @@ export async function handleCommand(
   data?: Elb.PushData,
   options?: Elb.PushOptions,
 ): Promise<Elb.PushResult> {
-  let result: Elb.PushResult = {
-    status: { ok: false },
-    successful: [],
-    queued: [],
-    failed: [],
-  };
+  let result: Partial<Elb.PushResult> | undefined = {};
 
   switch (action) {
     case Const.Commands.Config:
@@ -40,21 +35,19 @@ export async function handleCommand(
         ).config;
       break;
     case Const.Commands.Consent:
-      if (isObject(data)) {
-        await setConsent(instance, data as WalkerOS.Consent);
-      }
+      if (isObject(data))
+        result = await setConsent(instance, data as WalkerOS.Consent);
       break;
     case Const.Commands.Custom:
       if (isObject(data)) instance.custom = assign(instance.custom, data);
       break;
     case Const.Commands.Destination:
-      if (isObject(data)) {
-        await addDestination(
+      if (isObject(data))
+        return await addDestination(
           instance,
           data as DestinationWeb.Destination,
           options as DestinationWeb.Config,
         );
-      }
       break;
     case Const.Commands.Globals:
       if (isObject(data)) instance.globals = assign(instance.globals, data);
@@ -88,39 +81,12 @@ export async function handleCommand(
       break;
   }
 
-  result.status.ok = true;
-
-  // @TODO return result
-  return result;
+  return createPushResult(result);
 }
 
 export async function handleEvent(
   instance: SourceWalkerjs.Instance,
   event: WalkerOS.Event,
 ): Promise<Elb.PushResult> {
-  let result: Elb.PushResult = {
-    status: { ok: false },
-    successful: [],
-    queued: [],
-    failed: [],
-  };
-
-  await tryCatchAsync(async () => {
-    // Check if walker is allowed to run
-    if (!instance.allowed) {
-      result.status.error = 'Walker is not allowed to run';
-      return result;
-    }
-
-    await pushToDestinations(instance, event);
-
-    result.status.ok = true;
-  })();
-
-  return {
-    status: { ok: true },
-    successful: [],
-    queued: [],
-    failed: [],
-  };
+  return await pushToDestinations(instance, event);
 }

@@ -24,6 +24,7 @@ describe('Destination', () => {
     args?: Partial<WalkerOS.Instance>,
   ): WalkerOS.Instance {
     return {
+      allowed: true,
       config: {},
       destinations: { foo: destination },
       globals: {},
@@ -47,6 +48,16 @@ describe('Destination', () => {
       push: mockPush,
       config,
     };
+  });
+
+  test('allowed', async () => {
+    const instance = createInstance({ allowed: false });
+    let result = await pushToDestinations(instance, event);
+    expect(result.status.ok).toBeFalsy();
+
+    instance.allowed = true;
+    result = await pushToDestinations(instance, event);
+    expect(result.status.ok).toBeTruthy();
   });
 
   test('preventing data manipulation', async () => {

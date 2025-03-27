@@ -49,7 +49,10 @@ export async function pushToDestinations(
   event?: WalkerOS.Event,
   destinations?: WalkerOS.Destinations,
 ): Promise<Elb.PushResult> {
-  const { consent, globals, user } = instance;
+  const { allowed, consent, globals, user } = instance;
+
+  // Check if instance is allowed to push
+  if (!allowed) return createPushResult({ status: { ok: false } });
 
   // Add event to the instance queue
   if (event) instance.queue.push(event);
@@ -295,7 +298,7 @@ export async function destinationPush<
   return true;
 }
 
-async function resolveMappingData(
+export async function resolveMappingData(
   event: WalkerOS.Event,
   data?: Mapping.Data,
 ): Promise<WalkerOSDestination.Data> {
@@ -304,4 +307,22 @@ async function resolveMappingData(
   return await getMappingValue(event, data);
 }
 
-export { resolveMappingData };
+export function createPushResult(
+  partialResult?: Partial<Elb.PushResult>,
+): Elb.PushResult {
+  const result: Elb.PushResult = assign(
+    {
+      successful: [],
+      queued: [],
+      failed: [],
+      status: {},
+    },
+    partialResult,
+  );
+
+  // Check if some destinations failed
+  if (!isDefined(result.status.ok))
+    result.status.ok = result.failed.length === 0;
+
+  return result;
+}
