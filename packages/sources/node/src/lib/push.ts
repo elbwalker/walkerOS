@@ -1,7 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { SourceNode, Elb } from '../types';
-import { assign, isSameType, tryCatchAsync } from '@elbwalker/utils';
-import { isCommand } from './helper';
+import { assign, isCommand, isSameType, tryCatchAsync } from '@elbwalker/utils';
 import { handleCommand, handleEvent } from './handle';
 
 export function createPush(instance: SourceNode.Instance): Elb.Fn {
