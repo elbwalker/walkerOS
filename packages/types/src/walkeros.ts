@@ -24,6 +24,7 @@ export interface State {
   session: undefined | SessionData;
   timing: number;
   user: User;
+  version: string;
 }
 
 export interface Config {

@@ -19,8 +19,8 @@ export function sourceNode(
   const version = '3.3.0'; // Source version
   const state = getState(customConfig);
   const instance: SourceNode.Instance = {
-    version,
     ...state,
+    version,
     push: (() => {}) as unknown as Elb.Fn, // Placeholder for the actual push function
     on: {}, // Initialize empty on handlers
   };

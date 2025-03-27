@@ -1,11 +1,10 @@
-import type { Elb, Hooks, Schema, WalkerOS } from '@elbwalker/types';
-import type { Fn, PushData, PushOptions } from './elb';
+import type { Hooks, Schema, WalkerOS } from '@elbwalker/types';
+import type { Fn } from './elb';
 import type { Destination } from './destination';
 
 export interface Instance extends WalkerOS.Instance {
   config: Config;
   destinations: Destinations;
-  version: string;
   push: Fn;
 }
 

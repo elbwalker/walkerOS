@@ -3,10 +3,10 @@ import type { Elb, SourceWalkerjs } from '../types';
 import { handleCommand } from './handle';
 import {
   Const,
+  createEventOrCommand,
   createPushResult,
   isArguments,
   isArray,
-  isCommand,
   isElementOrDocument,
   isObject,
   isSameType,
@@ -37,15 +37,58 @@ export function createPush(instance: SourceWalkerjs.Instance): Elb.Fn {
         nested: WalkerOS.Entities,
         custom: WalkerOS.Properties,
       ): Promise<Elb.PushResult> => {
-        const { event, command } = createEventOrCommand(
-          instance,
-          nameOrEvent,
-          pushData,
-          pushContext,
+        const [entity] = String(
+          isObject(nameOrEvent) ? nameOrEvent.event : nameOrEvent,
+        ).split(' ');
+
+        // Get data and context either from elements or parameters
+        let data = isSameType(pushData, {} as WalkerOS.Properties)
+          ? pushData
+          : {};
+
+        let eventContext: WalkerOS.OrderedProperties = {};
+
+        let elemParameter: undefined | Element;
+        let dataIsElem = false;
+        if (isElementOrDocument(pushData)) {
+          elemParameter = pushData;
+          dataIsElem = true;
+        }
+
+        if (isElementOrDocument(pushContext)) {
+          elemParameter = pushContext;
+        } else if (Object.keys(pushContext).length) {
+          eventContext = pushContext;
+        }
+
+        if (elemParameter) {
+          const entityObj = getEntities(
+            instance.config.prefix,
+            elemParameter,
+          ).find((obj) => obj.type === entity);
+          if (entityObj) {
+            if (dataIsElem) data = entityObj.data;
+            eventContext = entityObj.context;
+          }
+        }
+
+        if (entity === 'page') {
+          data.id = data.id || window.location.pathname;
+        }
+
+        const { event, command } = createEventOrCommand(instance, nameOrEvent, {
+          data,
+          context: eventContext,
           nested,
           custom,
-          options,
-        );
+          trigger: options ? String(options) : '',
+          timing: Math.round((performance.now() - instance.timing) / 10) / 100,
+          source: {
+            type: 'web',
+            id: window.location.href,
+            previous_id: document.referrer,
+          },
+        });
 
         if (command) {
           // Command event
@@ -134,128 +177,4 @@ export function pushPredefined(
   events.map((item) => {
     instance.push(...item);
   });
-}
-
-function createEventOrCommand(
-  instance: SourceWalkerjs.Instance,
-  nameOrEvent: unknown,
-  pushData: Elb.PushData,
-  pushContext: Elb.PushContext,
-  initialNested: WalkerOS.Entities,
-  initialCustom: WalkerOS.Properties,
-  initialTrigger: Elb.PushOptions = '',
-): { event?: WalkerOS.Event; command?: string } {
-  // Determine the partial event
-  const partialEvent: WalkerOS.PartialEvent = isSameType(
-    nameOrEvent,
-    '' as string,
-  )
-    ? { event: nameOrEvent }
-    : ((nameOrEvent || {}) as WalkerOS.PartialEvent);
-
-  if (!partialEvent.event) throw new Error('Event name is required');
-
-  // Check for valid entity and action event format
-  const [entityValue, actionValue] = partialEvent.event.split(' ');
-  if (!entityValue || !actionValue) throw new Error('Event name is invalid');
-
-  // It's a walker command
-  if (isCommand(entityValue)) return { command: actionValue };
-
-  // Regular event
-
-  // Increase event counter
-  ++instance.count;
-
-  // Values that are eventually used by other properties
-  const {
-    timestamp = Date.now(),
-    group = instance.group,
-    count = instance.count,
-  } = partialEvent;
-
-  // Extract properties with default fallbacks
-  const {
-    event = `${entityValue} ${actionValue}`,
-    context = {},
-    globals = instance.globals,
-    custom = initialCustom || {},
-    user = instance.user,
-    nested = initialNested || [],
-    consent = instance.consent,
-    id = `${timestamp}-${group}-${count}`,
-    trigger = initialTrigger ? String(initialTrigger) : '',
-    entity = entityValue,
-    action = actionValue,
-    version = {
-      source: instance.version,
-      tagging: instance.config.tagging || 0,
-    },
-    source = {
-      type: 'web',
-      id: window.location.href,
-      previous_id: document.referrer,
-    },
-  } = partialEvent;
-
-  // Get data and context either from elements or parameters
-  let data: WalkerOS.Properties =
-    partialEvent.data ||
-    (isSameType(pushData, {} as WalkerOS.Properties) ? pushData : {});
-
-  let eventContext: WalkerOS.OrderedProperties = context;
-
-  let elemParameter: undefined | Element;
-  let dataIsElem = false;
-  if (isElementOrDocument(pushData)) {
-    elemParameter = pushData;
-    dataIsElem = true;
-  }
-
-  if (isElementOrDocument(pushContext)) {
-    elemParameter = pushContext;
-  } else if (Object.keys(pushContext).length) {
-    eventContext = pushContext;
-  }
-
-  if (elemParameter) {
-    const entityObj = getEntities(instance.config.prefix, elemParameter).find(
-      (obj) => obj.type == entityValue,
-    );
-    if (entityObj) {
-      if (dataIsElem) data = entityObj.data;
-      eventContext = entityObj.context;
-    }
-  }
-
-  if (entityValue === 'page') {
-    data.id = data.id || window.location.pathname;
-  }
-
-  const timing =
-    partialEvent.timing ||
-    Math.round((performance.now() - instance.timing) / 10) / 100;
-
-  const fullEvent: WalkerOS.Event = {
-    event,
-    data,
-    context: eventContext,
-    globals,
-    custom,
-    user,
-    nested,
-    consent,
-    id,
-    trigger,
-    entity,
-    action,
-    timestamp,
-    timing,
-    group,
-    count,
-    version,
-    source,
-  };
-
-  return { event: fullEvent };
 }

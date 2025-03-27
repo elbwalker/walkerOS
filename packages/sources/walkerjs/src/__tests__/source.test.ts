@@ -267,7 +267,6 @@ describe('Walkerjs', () => {
     const elem = document.getElementById('e') as HTMLElement;
 
     await elb('e custom', elem, 'custom');
-
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e custom',

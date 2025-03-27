@@ -17,7 +17,6 @@ declare global {
 export interface Instance extends WalkerOS.Instance {
   config: Config;
   destinations: Destinations;
-  version: string;
   push: Fn;
   getAllEvents: (scope: Element, prefix: string) => Events;
   getEvents: (target: Element, trigger: Trigger, prefix: string) => Events;

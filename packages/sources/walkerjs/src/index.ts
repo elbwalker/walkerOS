@@ -27,8 +27,8 @@ export function Walkerjs(
   const version = '3.3.0'; // Source version
   const state = getState(customConfig);
   const instance: SourceWalkerjs.Instance = {
-    version,
     ...state,
+    version,
     // Placeholder functions to be overwritten with instance-reference
     push: (() => {}) as unknown as Elb.Fn,
     getAllEvents,
