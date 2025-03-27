@@ -4,6 +4,7 @@ import { handleCommand } from './handle';
 import {
   Const,
   assign,
+  createPushResult,
   isArguments,
   isArray,
   isCommand,
@@ -26,12 +27,7 @@ export function createPush(instance: SourceWalkerjs.Instance): Elb.Fn {
     nested: WalkerOS.Entities = [],
     custom: WalkerOS.Properties = {},
   ) => {
-    let result: Elb.PushResult = {
-      status: { ok: false },
-      successful: [],
-      queued: [],
-      failed: [],
-    };
+    let result: Elb.PushResult;
 
     return await tryCatchAsync(
       async (
@@ -54,20 +50,19 @@ export function createPush(instance: SourceWalkerjs.Instance): Elb.Fn {
 
         if (command) {
           // Command event
-          await handleCommand(instance, command, pushData, options);
+          result = await handleCommand(instance, command, pushData, options);
         } else if (event) {
           // Regular event
-          await pushToDestinations(instance, event);
+          result = await pushToDestinations(instance, event);
         }
 
-        return assign({ status: { ok: true } }, result);
+        return createPushResult(result);
       },
       (error) => {
         // Call custom error handling
         if (instance.config.onError) instance.config.onError(error, instance);
 
-        result.status.error = String(error);
-        return result;
+        return createPushResult({ ok: false });
       },
     )(nameOrEvent, pushData, options, pushContext, nested, custom);
   };
