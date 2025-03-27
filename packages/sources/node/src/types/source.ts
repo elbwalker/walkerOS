@@ -38,11 +38,6 @@ export type HandleCommand = (
   options?: PushOptions,
 ) => Promise<Elb.PushResult>;
 
-export type HandleEvent = (
-  instance: Instance,
-  event: WalkerOS.Event,
-) => Promise<Elb.PushResult>;
-
 export interface Command {
   name: string;
   data: unknown;

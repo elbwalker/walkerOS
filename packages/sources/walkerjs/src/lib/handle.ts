@@ -83,10 +83,3 @@ export async function handleCommand(
 
   return createPushResult(result);
 }
-
-export async function handleEvent(
-  instance: SourceWalkerjs.Instance,
-  event: WalkerOS.Event,
-): Promise<Elb.PushResult> {
-  return await pushToDestinations(instance, event);
-}

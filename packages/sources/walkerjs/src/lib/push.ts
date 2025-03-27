@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Elb, SourceWalkerjs } from '../types';
-import { handleCommand, handleEvent } from './handle';
+import { handleCommand } from './handle';
 import {
   Const,
   assign,
@@ -11,6 +11,7 @@ import {
   isObject,
   isSameType,
   isString,
+  pushToDestinations,
   tryCatchAsync,
   useHooks,
 } from '@elbwalker/utils';
@@ -56,7 +57,7 @@ export function createPush(instance: SourceWalkerjs.Instance): Elb.Fn {
           await handleCommand(instance, command, pushData, options);
         } else if (event) {
           // Regular event
-          await handleEvent(instance, event);
+          await pushToDestinations(instance, event);
         }
 
         return assign({ status: { ok: true } }, result);

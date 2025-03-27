@@ -1,7 +1,13 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { SourceNode, Elb } from '../types';
-import { assign, isCommand, isSameType, tryCatchAsync } from '@elbwalker/utils';
-import { handleCommand, handleEvent } from './handle';
+import {
+  assign,
+  isCommand,
+  isSameType,
+  pushToDestinations,
+  tryCatchAsync,
+} from '@elbwalker/utils';
+import { handleCommand } from './handle';
 
 export function createPush(instance: SourceNode.Instance): Elb.Fn {
   const push = async (
@@ -39,7 +45,7 @@ export function createPush(instance: SourceNode.Instance): Elb.Fn {
           result = assign(result, commandResult);
         } else if (event) {
           // Regular event
-          const eventResult = await handleEvent(instance, event);
+          const eventResult = await pushToDestinations(instance, event);
           result = assign(result, eventResult);
           result.event = event;
         }

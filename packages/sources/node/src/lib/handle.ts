@@ -53,7 +53,3 @@ export const handleCommand: SourceNode.HandleCommand = async (
 
   return createPushResult(result);
 };
-
-export const handleEvent: SourceNode.HandleEvent = async (instance, event) => {
-  return await pushToDestinations(instance, event);
-};
