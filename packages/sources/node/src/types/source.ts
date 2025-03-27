@@ -31,13 +31,6 @@ export interface InitConfig extends Partial<Config> {
   user?: WalkerOS.User;
 }
 
-export type HandleCommand = (
-  instance: Instance,
-  action: string,
-  data?: PushData,
-  options?: PushOptions,
-) => Promise<Elb.PushResult>;
-
 export interface Command {
   name: string;
   data: unknown;

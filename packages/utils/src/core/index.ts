@@ -9,6 +9,7 @@ export * from './destination';
 export * from './eventGenerator';
 export * from './getId';
 export * from './getMarketingParameters';
+export * from './handle';
 export * from './invocations';
 export * from './is';
 export * from './mapping';

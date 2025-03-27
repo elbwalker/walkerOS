@@ -1,22 +1,16 @@
-import type { Hooks, On, WalkerOS } from '@elbwalker/types';
-import type { SourceWalkerjs, DestinationWeb, Elb } from '../types';
-import {
-  Const,
-  addDestination,
-  assign,
-  createPushResult,
-  isArray,
-  isElementOrDocument,
-  isObject,
-  isSameType,
-  on,
-  pushToDestinations,
-  setConsent,
-} from '@elbwalker/utils';
+import type { Hooks, On } from '@elbwalker/types';
+import type { SourceWalkerjs, Elb } from '../types';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';
 import { run } from './run';
 import { addHook } from './hooks';
+import {
+  commonHandleCommand,
+  Const,
+  createPushResult,
+  isObject,
+  on,
+} from '@elbwalker/utils';
 
 export async function handleCommand(
   instance: SourceWalkerjs.Instance,
@@ -24,7 +18,7 @@ export async function handleCommand(
   data?: Elb.PushData,
   options?: Elb.PushOptions,
 ): Promise<Elb.PushResult> {
-  let result: Partial<Elb.PushResult> | undefined = {};
+  let result: Elb.PushResult | undefined;
 
   switch (action) {
     case Const.Commands.Config:
@@ -34,38 +28,32 @@ export async function handleCommand(
           instance,
         ).config;
       break;
-    case Const.Commands.Consent:
-      if (isObject(data))
-        result = await setConsent(instance, data as WalkerOS.Consent);
-      break;
-    case Const.Commands.Custom:
-      if (isObject(data)) instance.custom = assign(instance.custom, data);
-      break;
-    case Const.Commands.Destination:
-      if (isObject(data))
-        return await addDestination(
-          instance,
-          data as DestinationWeb.Destination,
-          options as DestinationWeb.Config,
-        );
-      break;
-    case Const.Commands.Globals:
-      if (isObject(data)) instance.globals = assign(instance.globals, data);
-      break;
+
     case Const.Commands.Hook:
-      if (isSameType(data, '') && isSameType(options, isSameType))
-        addHook(instance, data as keyof Hooks.Functions, options);
+      if (typeof data === 'string' && typeof options === 'function') {
+        addHook(
+          instance,
+          data as keyof Hooks.Functions,
+          options as Hooks.AnyFunction,
+        );
+      }
       break;
-    case Const.Commands.Init: {
-      const elems: unknown[] = isArray(data) ? data : [data || document];
+
+    case Const.Commands.Init:
+      const elems: unknown[] = Array.isArray(data) ? data : [data || document];
       elems.forEach((elem) => {
-        isElementOrDocument(elem) && initScopeTrigger(instance, elem);
+        if (elem instanceof Element || elem instanceof Document) {
+          initScopeTrigger(instance, elem);
+        }
       });
       break;
-    }
+
     case Const.Commands.On:
-      on(instance, data as On.Types, options as On.Options);
+      if (data && options) {
+        on(instance, data as On.Types, options as On.Options);
+      }
       break;
+
     case Const.Commands.Run:
       await ready(
         instance,
@@ -74,11 +62,9 @@ export async function handleCommand(
         data as Partial<SourceWalkerjs.State>,
       );
       break;
-    case Const.Commands.User:
-      if (isObject(data)) assign(instance.user, data, { shallow: false });
-      break;
+
     default:
-      break;
+      result = await commonHandleCommand(instance, action, data, options);
   }
 
   return createPushResult(result);
