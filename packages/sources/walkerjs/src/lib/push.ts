@@ -3,7 +3,6 @@ import type { Elb, SourceWalkerjs } from '../types';
 import { handleCommand } from './handle';
 import {
   Const,
-  assign,
   createPushResult,
   isArguments,
   isArray,
@@ -154,32 +153,40 @@ function createEventOrCommand(
     ? { event: nameOrEvent }
     : ((nameOrEvent || {}) as WalkerOS.PartialEvent);
 
-  if (!partialEvent.event) return {};
+  if (!partialEvent.event) throw new Error('Event name is required');
 
   // Check for valid entity and action event format
-  const [entity, action] = partialEvent.event.split(' ');
-  if (!entity || !action) return {};
+  const [entityValue, actionValue] = partialEvent.event.split(' ');
+  if (!entityValue || !actionValue) throw new Error('Event name is invalid');
 
   // It's a walker command
-  if (isCommand(entity)) return { command: action };
+  if (isCommand(entityValue)) return { command: actionValue };
 
   // Regular event
 
   // Increase event counter
   ++instance.count;
 
+  // Values that are eventually used by other properties
+  const {
+    timestamp = Date.now(),
+    group = instance.group,
+    count = instance.count,
+  } = partialEvent;
+
   // Extract properties with default fallbacks
   const {
+    event = `${entityValue} ${actionValue}`,
     context = {},
     globals = instance.globals,
     custom = initialCustom || {},
     user = instance.user,
     nested = initialNested || [],
     consent = instance.consent,
+    id = `${timestamp}-${group}-${count}`,
     trigger = initialTrigger ? String(initialTrigger) : '',
-    timestamp = Date.now(),
-    group = instance.group,
-    count = instance.count,
+    entity = entityValue,
+    action = actionValue,
     version = {
       source: instance.version,
       tagging: instance.config.tagging || 0,
@@ -213,7 +220,7 @@ function createEventOrCommand(
 
   if (elemParameter) {
     const entityObj = getEntities(instance.config.prefix, elemParameter).find(
-      (obj) => obj.type == entity,
+      (obj) => obj.type == entityValue,
     );
     if (entityObj) {
       if (dataIsElem) data = entityObj.data;
@@ -221,7 +228,7 @@ function createEventOrCommand(
     }
   }
 
-  if (entity === 'page') {
+  if (entityValue === 'page') {
     data.id = data.id || window.location.pathname;
   }
 
@@ -229,8 +236,8 @@ function createEventOrCommand(
     partialEvent.timing ||
     Math.round((performance.now() - instance.timing) / 10) / 100;
 
-  const event: WalkerOS.Event = {
-    event: `${entity} ${action}`,
+  const fullEvent: WalkerOS.Event = {
+    event,
     data,
     context: eventContext,
     globals,
@@ -238,6 +245,7 @@ function createEventOrCommand(
     user,
     nested,
     consent,
+    id,
     trigger,
     entity,
     action,
@@ -245,10 +253,9 @@ function createEventOrCommand(
     timing,
     group,
     count,
-    id: `${timestamp}-${group}-${count}`,
     version,
     source,
   };
 
-  return { event };
+  return { event: fullEvent };
 }
