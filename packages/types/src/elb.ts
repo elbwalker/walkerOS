@@ -1,5 +1,13 @@
 import type { Destination, Hooks, WalkerOS } from '.';
 
+export interface Fn<R = void, D = PushData, O = PushOptions, C = PushContext>
+  extends Event<R>,
+    Arguments<R, D, O, C>,
+    CommandConfig<R>,
+    CommandConsent<R>,
+    CommandHook<R>,
+    CommandUser<R> {}
+
 export type Arguments<
   R = void,
   D = PushData,
@@ -37,14 +45,6 @@ export type CommandUser<R = void> = (
 
 export type Event<R = void> = (partialEvent: WalkerOS.DeepPartialEvent) => R;
 
-export interface Fn<R = void, D = PushData, O = PushOptions, C = PushContext>
-  extends Event<R>,
-    Arguments<R, D, O, C>,
-    CommandConfig<R>,
-    CommandConsent<R>,
-    CommandHook<R>,
-    CommandUser<R> {}
-
 export type PushData =
   | string
   | object
@@ -62,13 +62,6 @@ export interface PushResult extends Destination.Result {
   ok: boolean;
 }
 
-type FnParameters<T> = T extends (...args: unknown[]) => unknown
-  ? Parameters<T>[number]
-  : never;
-
 export type Layer = Array<
-  | IArguments
-  | WalkerOS.DeepPartialEvent
-  | FnParameters<Fn[keyof Fn]>
-  | Parameters<Arguments>[number]
+  IArguments | WalkerOS.DeepPartialEvent | Parameters<Arguments>[number]
 >;

@@ -213,6 +213,7 @@ describe('elbLayer', () => {
       session: expect.objectContaining({ storage: false }),
       timing: expect.any(Number),
       user: { session: expect.any(String) },
+      version: expect.any(String),
     };
 
     const defaultInterface: SourceWalkerjs.Instance = {
@@ -221,7 +222,6 @@ describe('elbLayer', () => {
       getEvents: expect.any(Function),
       getGlobals: expect.any(Function),
       sessionStart: expect.any(Function),
-      version: expect.any(String),
       ...defaultState,
     };
 
