@@ -176,21 +176,12 @@ export async function pushToDestinations(
       if (!isInitialized) return { id, destination, queue: currentQueue };
 
       // Process the destinations event queue
-      let error: unknown;
+      let error = false;
       if (!destination.dlq) destination.dlq = [];
 
-      // Process allowed events and store failed ones in the dead letter queue (dlq)
+      // Process allowed events and store failed ones in the dead letter queue (DLQ)
       await Promise.all(
         allowedEvents.map(async (event) => {
-          if (error) {
-            // Add back to queue
-            destination.queue?.push(event);
-
-            // Skip further processing
-            // @TODO do we really want to skip?
-            return;
-          }
-
           // Merge event with instance state, prioritizing event properties
           event.globals = assign(globals, event.globals);
           event.user = assign(user, event.user);
@@ -198,7 +189,7 @@ export async function pushToDestinations(
           await tryCatchAsync(destinationPush, (err) => {
             // Call custom error handling if available
             if (instance.config.onError) instance.config.onError(err, instance);
-            error = err; // Captured error from destination
+            error = true; // oh no
 
             // Add failed event to destinations DLQ
             destination.dlq!.push([event, err]);
@@ -214,11 +205,10 @@ export async function pushToDestinations(
     }),
   );
 
-  const successful: WalkerOSDestination.PushSuccess = [];
-  const queued: WalkerOSDestination.PushSuccess = [];
-  const failed: WalkerOSDestination.PushFailure = [];
+  const successful = [];
+  const queued = [];
+  const failed = [];
 
-  let ok = true;
   for (const result of results) {
     if (result.skipped) continue;
 
@@ -227,11 +217,7 @@ export async function pushToDestinations(
     const ref = { id: result.id, destination };
 
     if (result.error) {
-      ok = false;
-      failed.push({
-        ...ref,
-        error: String(result.error),
-      });
+      failed.push(ref);
     } else if (result.queue && result.queue.length) {
       // Merge queue with existing queue
       destination.queue = (destination.queue || []).concat(result.queue);
@@ -242,7 +228,7 @@ export async function pushToDestinations(
   }
 
   return createPushResult({
-    ok,
+    ok: !failed.length,
     event,
     successful,
     queued,

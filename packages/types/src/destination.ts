@@ -90,16 +90,10 @@ export type Push = {
   error?: unknown;
 };
 
-export type PushSuccess = Array<Ref>;
-
-export type PushError = string; // @TODO should be an error object
-
-export type PushFailure = Array<Ref & { error: PushError }>;
-
-export type DLQ = Array<[WalkerOS.Event, unknown]>; // @TODO should be PushError
+export type DLQ = Array<[WalkerOS.Event, unknown]>;
 
 export type Result = {
-  successful: PushSuccess;
-  queued: PushSuccess;
-  failed: PushFailure;
+  successful: Array<Ref>;
+  queued: Array<Ref>;
+  failed: Array<Ref>;
 };

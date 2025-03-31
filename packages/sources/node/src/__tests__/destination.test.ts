@@ -313,9 +313,10 @@ describe('Destination', () => {
       }),
     };
 
-    const { elb } = getSource({
+    const { elb, instance } = getSource({
       destinations: { mockDestination, initFail, pushFail },
     });
+
     result = await elb('entity action');
 
     expect(result).toEqual({
@@ -332,17 +333,23 @@ describe('Destination', () => {
         {
           id: 'initFail',
           destination: initFail,
-          error: expect.any(String),
         },
         {
           id: 'pushFail',
           destination: pushFail,
-          error: expect.any(String),
         },
       ],
     });
-    expect(result.failed[0].error).toBe('Error: init kaputt');
-    expect(result.failed[1].error).toBe('Error: push kaputt');
+
+    // DLQ
+    expect(instance.destinations['initFail'].dlq).toContainEqual([
+      expect.objectContaining({ event: mockEvent.event }),
+      new Error('init kaputt'),
+    ]);
+    expect(instance.destinations['pushFail'].dlq).toContainEqual([
+      expect.objectContaining({ event: mockEvent.event }),
+      new Error('push kaputt'),
+    ]);
   });
 
   // @TODO test.skip('queue', async () => {});
