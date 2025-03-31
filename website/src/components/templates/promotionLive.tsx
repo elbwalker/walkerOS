@@ -75,7 +75,7 @@ const typewriterEdits: TypeEdit[] = [
   },
 ];
 
-const PromotionLive: React.FC = () => {
+export const PromotionLive: React.FC = () => {
   return (
     <div className="my-8">
       <Tagging
@@ -124,5 +124,3 @@ export const PromotionReady: React.FC = () => {
     </div>
   );
 };
-
-export default PromotionLive;
