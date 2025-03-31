@@ -4,9 +4,13 @@ import Hero from '@site/src/components/home/hero';
 import Features from '@site/src/components/home/features';
 import CTAStart from '@site/src/components/ctas/start';
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 import PromotionLive, {
   PromotionReady,
 } from '@site/src/components/templates/promotionLive';
+=======
+import PromotionLive from '../components/templates/promotionLive';
+>>>>>>> Stashed changes
 =======
 import PromotionLive from '../components/templates/promotionLive';
 >>>>>>> Stashed changes
@@ -20,7 +24,11 @@ export default function Home() {
     >
       <Hero />
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       <PromotionReady />
+=======
+      <PromotionLive />
+>>>>>>> Stashed changes
 =======
       <PromotionLive />
 >>>>>>> Stashed changes
