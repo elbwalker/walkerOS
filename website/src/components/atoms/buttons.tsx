@@ -10,12 +10,7 @@ type ButtonProps = {
   isSecondary?: boolean;
   elbaction?: string; // @TODO
 };
-export function Button({
-  children,
-  link,
-  text,
-  isSecondary,
-}: ButtonProps): JSX.Element {
+export function Button({ children, link, text, isSecondary }: ButtonProps) {
   const classColor = !isSecondary
     ? 'bg-elbwalker hover:bg-elbwalker-400'
     : 'bg-gray-800 hover:bg-gray-700 ';
@@ -35,7 +30,7 @@ export function ButtonCentered({
   link,
   text,
   isSecondary,
-}: ButtonProps): JSX.Element {
+}: ButtonProps) {
   return (
     <div className="mx-auto mt-5 max-w-md sm:flex sm:justify-center md:mt-8">
       <Button link={link} text={text} isSecondary={isSecondary}>
