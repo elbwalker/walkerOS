@@ -3,113 +3,81 @@ import type { Elb, SourceWalkerjs } from '../types';
 import { handleCommand } from './handle';
 import {
   Const,
-  createEventOrCommand,
-  createPushResult,
   isArguments,
   isArray,
   isElementOrDocument,
   isObject,
   isSameType,
   isString,
-  pushToDestinations,
-  tryCatchAsync,
-  useHooks,
+  createPush,
 } from '@elbwalker/utils';
 import { getEntities } from './walker';
 
-export function createPush(instance: SourceWalkerjs.Instance): Elb.Fn {
-  const push = async (
-    nameOrEvent?: unknown,
-    pushData: Elb.PushData = {},
-    options: Elb.PushOptions = '',
-    pushContext: Elb.PushContext = {},
-    nested: WalkerOS.Entities = [],
-    custom: WalkerOS.Properties = {},
+export function getPush(instance: SourceWalkerjs.Instance): Elb.Fn {
+  const prepareEvent: Elb.Arguments<WalkerOS.PartialEvent> = (
+    nameOrEvent,
+    pushData,
+    options,
+    pushContext,
+    nested,
+    custom,
   ) => {
-    let result: Elb.PushResult;
+    const [entity] = String(
+      isObject(nameOrEvent) ? nameOrEvent.event : nameOrEvent,
+    ).split(' ');
 
-    return await tryCatchAsync(
-      async (
-        nameOrEvent: unknown,
-        pushData: Elb.PushData,
-        options: Elb.PushOptions,
-        pushContext: Elb.PushContext,
-        nested: WalkerOS.Entities,
-        custom: WalkerOS.Properties,
-      ): Promise<Elb.PushResult> => {
-        const [entity] = String(
-          isObject(nameOrEvent) ? nameOrEvent.event : nameOrEvent,
-        ).split(' ');
+    // Get data and context either from elements or parameters
+    let data = isSameType(pushData, {} as WalkerOS.Properties) ? pushData : {};
 
-        // Get data and context either from elements or parameters
-        let data = isSameType(pushData, {} as WalkerOS.Properties)
-          ? pushData
-          : {};
+    let eventContext: WalkerOS.OrderedProperties = {};
 
-        let eventContext: WalkerOS.OrderedProperties = {};
+    let elemParameter: undefined | Element;
+    let dataIsElem = false;
+    if (isElementOrDocument(pushData)) {
+      elemParameter = pushData;
+      dataIsElem = true;
+    }
 
-        let elemParameter: undefined | Element;
-        let dataIsElem = false;
-        if (isElementOrDocument(pushData)) {
-          elemParameter = pushData;
-          dataIsElem = true;
-        }
+    if (isElementOrDocument(pushContext)) {
+      elemParameter = pushContext;
+    } else if (isObject(pushContext) && Object.keys(pushContext).length) {
+      eventContext = pushContext;
+    }
 
-        if (isElementOrDocument(pushContext)) {
-          elemParameter = pushContext;
-        } else if (Object.keys(pushContext).length) {
-          eventContext = pushContext;
-        }
+    if (elemParameter) {
+      const entityObj = getEntities(instance.config.prefix, elemParameter).find(
+        (obj) => obj.type === entity,
+      );
+      if (entityObj) {
+        if (dataIsElem) data = entityObj.data;
+        eventContext = entityObj.context;
+      }
+    }
 
-        if (elemParameter) {
-          const entityObj = getEntities(
-            instance.config.prefix,
-            elemParameter,
-          ).find((obj) => obj.type === entity);
-          if (entityObj) {
-            if (dataIsElem) data = entityObj.data;
-            eventContext = entityObj.context;
-          }
-        }
+    if (entity === 'page') {
+      data.id = data.id || window.location.pathname;
+    }
 
-        if (entity === 'page') {
-          data.id = data.id || window.location.pathname;
-        }
-
-        const { event, command } = createEventOrCommand(instance, nameOrEvent, {
-          data,
-          context: eventContext,
-          nested,
-          custom,
-          trigger: options ? String(options) : '',
-          timing: Math.round((performance.now() - instance.timing) / 10) / 100,
-          source: {
-            type: 'web',
-            id: window.location.href,
-            previous_id: document.referrer,
-          },
-        });
-
-        if (command) {
-          // Command event
-          result = await handleCommand(instance, command, pushData, options);
-        } else if (event) {
-          // Regular event
-          result = await pushToDestinations(instance, event);
-        }
-
-        return createPushResult(result);
+    return {
+      data,
+      context: eventContext,
+      nested,
+      custom,
+      trigger: options ? String(options) : '',
+      timing: Math.round((performance.now() - instance.timing) / 10) / 100,
+      source: {
+        type: 'web',
+        id: window.location.href,
+        previous_id: document.referrer,
       },
-      (error) => {
-        // Call custom error handling
-        if (instance.config.onError) instance.config.onError(error, instance);
-
-        return createPushResult({ ok: false });
-      },
-    )(nameOrEvent, pushData, options, pushContext, nested, custom);
+    };
   };
 
-  return useHooks(push, 'Push', instance.hooks);
+  return createPush<SourceWalkerjs.Instance, Elb.Fn>(
+    instance,
+    handleCommand,
+    prepareEvent,
+  );
 }
 
 export function elbLayerInit(instance: SourceWalkerjs.Instance) {

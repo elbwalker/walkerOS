@@ -1,7 +1,7 @@
 import type { Elb, SourceWalkerjs } from './types';
 import { addDestination, onApply } from '@elbwalker/utils';
 import { sessionStart } from '@elbwalker/utils/web';
-import { createPush, elbLayerInit } from './lib/push';
+import { getPush, elbLayerInit } from './lib/push';
 import { run } from './lib/run';
 import { createSessionStart } from './lib/session';
 import { getState } from './lib/state';
@@ -40,7 +40,7 @@ export function Walkerjs(
   const { config } = instance;
 
   // Overwrite the push function with the instance-reference
-  instance.push = createPush(instance);
+  instance.push = getPush(instance);
   instance.sessionStart = createSessionStart(instance);
 
   // Setup pushes via elbLayer

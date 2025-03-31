@@ -4,6 +4,13 @@ import type { Destination, DestinationInit, Config } from './destination';
 import type { State } from './source';
 import type { Trigger } from './walker';
 
+export type Arguments<R = void> = Elb.Arguments<
+  R,
+  PushData,
+  PushOptions,
+  PushContext
+>;
+
 export interface Fn<R = Return, D = PushData, O = PushOptions, C = PushContext>
   extends Elb.Fn<R, D, O, C>,
     CommandInit<R>,

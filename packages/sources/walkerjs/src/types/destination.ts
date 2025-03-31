@@ -12,14 +12,6 @@ export interface Destination<Custom = unknown, CustomEvent = unknown>
 
 export type DestinationInit = WalkerOSDestination.DestinationInit;
 
-// @TODO move to WalkerOSDestination
-// check if used
-export type PushBatchFn<Custom, CustomEvent> = (
-  batch: WalkerOSDestination.Batch<CustomEvent>,
-  config: Config<Custom, CustomEvent>,
-  options?: WalkerOSDestination.Options,
-) => void;
-
 export interface Config<Custom = unknown, CustomEvent = unknown>
   extends WalkerOSDestination.Config<Custom, CustomEvent> {}
 

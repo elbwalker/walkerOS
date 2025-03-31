@@ -14,6 +14,51 @@ import { useHooks } from './useHooks';
 import { isDefined, isObject } from './is';
 import { debounce } from './invocations';
 import { clone } from './clone';
+import { createEventOrCommand } from './handle';
+
+export type HandleCommandFn<T extends WalkerOS.Instance> = (
+  instance: T,
+  action: string,
+  data?: Elb.PushData,
+  options?: Elb.PushOptions,
+) => Promise<Elb.PushResult>;
+
+export function createPush<T extends WalkerOS.Instance, F extends Elb.Fn>(
+  instance: T,
+  handleCommand: HandleCommandFn<T>,
+  prepareEvent: Elb.Fn<WalkerOS.PartialEvent>,
+): F {
+  return useHooks(
+    async (...args) => {
+      return await tryCatchAsync(
+        async (...args: Parameters<Elb.Arguments>): Promise<Elb.PushResult> => {
+          const [nameOrEvent, pushData, options] = args;
+          const partialEvent = prepareEvent(...args);
+
+          const { event, command } = createEventOrCommand(
+            instance,
+            nameOrEvent,
+            partialEvent,
+          );
+
+          const result = command
+            ? await handleCommand(instance, command, pushData, options)
+            : await pushToDestinations(instance, event);
+
+          return result;
+        },
+        (error) => {
+          // Call custom error handling
+          if (instance.config.onError) instance.config.onError(error, instance);
+
+          return createPushResult({ ok: false });
+        },
+      )(...args);
+    },
+    'Push',
+    instance.hooks,
+  ) as unknown as F;
+}
 
 export async function addDestination(
   instance: WalkerOS.Instance,
@@ -22,6 +67,7 @@ export async function addDestination(
 ) {
   // Prefer explicit given config over default config
   const config = options || data.config || { init: false };
+  // @TODO might not be the best solution to use options || data.config
 
   const destination: WalkerOSDestination.Destination = {
     ...data,
@@ -41,6 +87,7 @@ export async function addDestination(
 
   // Process previous events if not disabled
   if (config.queue !== false) destination.queue = [...instance.queue];
+
   return pushToDestinations(instance, undefined, { [id]: destination });
 }
 

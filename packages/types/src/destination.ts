@@ -55,7 +55,7 @@ export type PushBatchFn<Custom, CustomEvent> = (
   batch: Batch<CustomEvent>,
   config: Config<Custom, CustomEvent>,
   options?: Options,
-) => void; // @TODO Promise
+) => void;
 
 export type PushEvent<CustomEvent = unknown> = {
   event: WalkerOS.Event;
