@@ -1,6 +1,6 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS, Elb } from '@elbwalker/types';
 import { assign } from './assign';
-import { pushToDestinations } from './destination';
+import { pushToDestinations, createPushResult } from './destination';
 import { onApply } from './on';
 
 export function getGrantedConsent(
@@ -30,7 +30,7 @@ export function getGrantedConsent(
 export async function setConsent(
   instance: WalkerOS.Instance,
   data: WalkerOS.Consent,
-) {
+): Promise<Elb.PushResult> {
   const { consent } = instance;
 
   let runQueue = false;
@@ -51,5 +51,7 @@ export async function setConsent(
   onApply(instance, 'consent', undefined, update);
 
   // Process previous events if not disabled
-  if (runQueue) return pushToDestinations(instance);
+  return runQueue
+    ? pushToDestinations(instance)
+    : createPushResult({ ok: true });
 }

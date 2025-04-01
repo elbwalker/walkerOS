@@ -273,7 +273,8 @@ export async function destinationPush<
     config.mapping,
   );
 
-  let data = await resolveMappingData(event, config.data);
+  let data =
+    config.data && (await getMappingValue(event, config.data, { instance }));
 
   if (eventMapping) {
     // Check if event should be processed or ignored
@@ -284,7 +285,9 @@ export async function destinationPush<
 
     // Transform event to a custom data
     if (eventMapping.data) {
-      const dataEvent = await resolveMappingData(event, eventMapping.data);
+      const dataEvent =
+        eventMapping.data &&
+        (await getMappingValue(event, eventMapping.data, { instance }));
       data =
         isObject(data) && isObject(dataEvent) // Only merge objects
           ? assign(data, dataEvent)
@@ -330,15 +333,6 @@ export async function destinationPush<
   }
 
   return true;
-}
-
-export async function resolveMappingData(
-  event: WalkerOS.Event,
-  data?: Mapping.Data,
-): Promise<WalkerOSDestination.Data> {
-  if (!data) return;
-
-  return await getMappingValue(event, data);
 }
 
 export function createPushResult(
