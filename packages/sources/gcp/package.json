@@ -2,11 +2,19 @@
   "name": "@elbwalker/source-gcp",
   "description": "GCP source for walkerOS",
   "version": "0.0.3",
-  "type": "module",
   "license": "MIT",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    }
+  },
   "files": [
     "dist/**",
     "CHANGELOG.md"
