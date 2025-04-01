@@ -10,7 +10,7 @@ export const destinationMetaPixel: Destination = {
 
   config: {},
 
-  init(config) {
+  init(config = {}) {
     const { custom = {} as Partial<Custom>, fn, loadScript } = config;
     const { pixelId } = custom;
 

@@ -1,10 +1,9 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { SessionCallback } from '@elbwalker/utils/web';
-import { assign, isSameType, useHooks } from '@elbwalker/utils';
+import { assign, isSameType, onApply, useHooks } from '@elbwalker/utils';
 import { sessionStart as sessionStartOrg } from '@elbwalker/utils/web';
 import { SourceWalkerjs } from '../types';
 import { SessionStartOptions } from '../types/source';
-import { onApply } from './on';
 
 export function createSessionStart(instance: SourceWalkerjs.Instance) {
   return function (

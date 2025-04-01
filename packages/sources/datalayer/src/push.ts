@@ -6,7 +6,7 @@ import {
   isArguments,
   isArray,
   isObject,
-  tryCatch,
+  tryCatchAsync,
 } from '@elbwalker/utils';
 import { objToEvent, gtagToObj } from './mapping';
 import { getDataLayer } from './helper';
@@ -20,50 +20,48 @@ export function intercept(config: Config) {
   const dataLayerPush = dataLayer.push.bind(dataLayer);
 
   dataLayer.push = function (...args: unknown[]): number {
-    push(config, ...args);
+    tryCatchAsync(push)(config, true, ...args);
     return dataLayerPush(...args); // Call the original push function
   };
 }
 
-export function push(config: Config, ...args: unknown[]) {
-  return tryCatch(
-    (...args: unknown[]) => {
-      // Clone the arguments to avoid mutation
-      const clonedArgs = clone(args);
-      const entries = getEntries(clonedArgs);
+export async function push(config: Config, live: boolean, ...args: unknown[]) {
+  // Clone the arguments to avoid mutation
+  const clonedArgs = clone(args);
+  const entries = getEntries(clonedArgs);
 
-      // Prevent infinite loops
-      if (config.processing) {
-        config.skipped?.push(entries);
-        return;
-      }
+  // Prevent infinite loops
+  if (live && config.processing) {
+    config.skipped?.push(entries);
+    return;
+  }
 
-      config.processing = true;
-      entries.forEach((obj) => {
-        // Filter out unwanted events
-        if (config.filter && !tryCatch(config.filter)(obj)) return;
+  // Get busy
+  config.processing = true;
 
-        // Map the incoming event to a WalkerOS event
-        const mappedObj = objToEvent(filterValues(obj), config);
+  await Promise.all(
+    entries.map(async (obj) => {
+      // Filter out unwanted events
+      if (config.filter && !(await tryCatchAsync(config.filter)(obj))) return;
 
-        if (mappedObj) {
-          const { command, event } = mappedObj;
+      // Map the incoming event to a WalkerOS event
+      const mappedObj = await objToEvent(filterValues(obj), config);
 
-          if (command) {
-            if (command.name)
-              config.elb(command.name, command.data as Elb.PushData);
-          } else if (event) {
-            if (event.event) config.elb(event);
-          }
+      if (mappedObj) {
+        const { command, event } = mappedObj;
+
+        if (command) {
+          if (command.name)
+            config.elb(command.name, command.data as Elb.PushData);
+        } else if (event) {
+          if (event.event) config.elb(event);
         }
-      });
+      }
+    }),
+  );
 
-      // Finished processing
-      config.processing = false;
-    },
-    // eslint-disable-next-line no-console
-    console.error,
-  )(...args);
+  // Finished processing
+  config.processing = false;
 }
 
 function getEntries(args: unknown): unknown[] {

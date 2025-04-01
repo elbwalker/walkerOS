@@ -1,7 +1,6 @@
-import { Const, throttle, tryCatch } from '@elbwalker/utils';
+import { Const, onApply, throttle, tryCatch } from '@elbwalker/utils';
 import { elb as elbOrg, getAttribute, isVisible } from '@elbwalker/utils/web';
 import { Walker, SourceWalkerjs, Elb } from '../types';
-import { onApply } from './on';
 import {
   getElbAttributeName,
   getEvents,
@@ -16,11 +15,13 @@ let scrollListener: EventListenerOrEventListenerObject | undefined;
 export const createElb: (customLayer?: Elb.Layer) => Elb.Fn = (
   customLayer?,
 ) => {
-  return customLayer
-    ? function () {
-        customLayer.push(arguments);
-      }
-    : (elbOrg as Elb.Fn);
+  return (
+    customLayer
+      ? function () {
+          customLayer.push(arguments);
+        }
+      : elbOrg
+  ) as Elb.Fn;
 };
 
 export const Trigger: { [key: string]: Walker.Trigger } = {
@@ -35,21 +36,21 @@ export const Trigger: { [key: string]: Walker.Trigger } = {
   Wait: 'wait',
 } as const;
 
-export function ready<T extends (...args: never[]) => R, R>(
+export async function ready<T extends (...args: never[]) => R, R>(
   instance: SourceWalkerjs.Instance,
   fn: T,
   ...args: Parameters<T>
-): void {
+): Promise<R | undefined> {
   const readyFn = () => {
-    fn(...args);
+    const result = fn(...args);
     onApply(instance, 'ready');
+    return result;
   };
 
   if (document.readyState !== 'loading') {
-    readyFn();
+    return readyFn();
   } else {
     document.addEventListener('DOMContentLoaded', readyFn);
-    return;
   }
 }
 
@@ -117,22 +118,22 @@ export function initScopeTrigger(
   if (scrollElements.length) scroll(instance);
 }
 
-function handleTrigger(
+async function handleTrigger(
   instance: SourceWalkerjs.Instance,
   element: Element,
   trigger: Walker.Trigger,
   // @TODO add triggerParams to filter for specific trigger
 ) {
   const events = getEvents(element, trigger, instance.config.prefix);
-  events.forEach((event: Walker.Event) => {
-    instance.config.elbLayer.push(
-      `${event.entity} ${event.action}`,
-      event.data,
-      trigger,
-      event.context,
-      event.nested,
-    );
-  });
+  return Promise.all(
+    events.map((event: Walker.Event) =>
+      instance.push({
+        event: `${event.entity} ${event.action}`,
+        ...event,
+        trigger,
+      }),
+    ),
+  );
 }
 
 function handleActionElem(
@@ -306,9 +307,14 @@ function observerVisible(
             // Take existing scheduled function or create a new one
             timer =
               timer ||
-              window.setTimeout(function () {
+              window.setTimeout(async function () {
                 if (isVisible(target)) {
-                  handleTrigger(instance, target as Element, Trigger.Visible);
+                  await handleTrigger(
+                    instance,
+                    target as Element,
+                    Trigger.Visible,
+                  );
+
                   // Just count once
                   delete target.dataset[timerId];
                   if (visibleObserver) visibleObserver.unobserve(target);

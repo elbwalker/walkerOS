@@ -1,7 +1,7 @@
 import type { SourceWalkerjs, DestinationWeb, Elb } from '..';
 import type { WalkerOS } from '@elbwalker/types';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { elb, Walkerjs } from '..';
+import { elb as elbOrg, Walkerjs, createSourceWalkerjs, elb } from '..';
 
 describe('elbLayer', () => {
   const w = window;
@@ -17,11 +17,12 @@ describe('elbLayer', () => {
 
   beforeEach(() => {});
 
-  test('arguments and event pushes', () => {
+  test('arguments and event pushes', async () => {
     walkerjs = Walkerjs({ default: true });
     elb('ingest argument', { a: 1 }, 'a', {}); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
+    await jest.runAllTimersAsync();
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'ingest argument',
@@ -40,15 +41,15 @@ describe('elbLayer', () => {
     );
   });
 
-  test('predefined stack without run', () => {
+  test('predefined stack without run', async () => {
     walkerjs = Walkerjs();
     elb('walker destination', destination);
     elb('entity action');
-
+    await jest.runAllTimersAsync();
     expect(mockDestinationPush).not.toHaveBeenCalled();
   });
 
-  test('walker push pre and post go', () => {
+  test('walker push pre and post go', async () => {
     elb('e 1');
     elb('walker destination', destination);
 
@@ -57,6 +58,8 @@ describe('elbLayer', () => {
     elb('walker run');
     // auto call: elb('page view');
     elb('e 4');
+
+    await jest.runAllTimersAsync();
 
     expect(mockDestinationPush).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -128,7 +131,7 @@ describe('elbLayer', () => {
     );
   });
 
-  test('prioritize walker commands before run', () => {
+  test('prioritize walker commands before run', async () => {
     walkerjs = Walkerjs({ session: false });
 
     (elb as () => void)();
@@ -137,6 +140,8 @@ describe('elbLayer', () => {
     elb('walker user', { id: 'userId' });
     elb('walker run');
     elb('event later');
+
+    await jest.runAllTimersAsync();
 
     expect(mockDestinationPush).toHaveBeenNthCalledWith(
       1,
@@ -208,6 +213,7 @@ describe('elbLayer', () => {
       session: expect.objectContaining({ storage: false }),
       timing: expect.any(Number),
       user: { session: expect.any(String) },
+      version: expect.any(String),
     };
 
     const defaultInterface: SourceWalkerjs.Instance = {
@@ -216,7 +222,6 @@ describe('elbLayer', () => {
       getEvents: expect.any(Function),
       getGlobals: expect.any(Function),
       sessionStart: expect.any(Function),
-      version: expect.any(String),
       ...defaultState,
     };
 
@@ -240,7 +245,7 @@ describe('elbLayer', () => {
     expect(walkerjs.config).toStrictEqual(expect.objectContaining(update));
   });
 
-  test('custom elbLayer', () => {
+  test('custom elbLayer', async () => {
     w.dataLayer = [];
     const dataLayer = w.dataLayer as unknown[];
     const customLayer1: Elb.Layer = [];
@@ -267,6 +272,7 @@ describe('elbLayer', () => {
       push: mockDest2,
     });
 
+    await jest.runAllTimersAsync();
     // Regular session start calls to both
     expect(mockDest1).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'session start' }),
@@ -278,21 +284,25 @@ describe('elbLayer', () => {
     jest.clearAllMocks();
 
     customLayer1.push('e a');
+    await jest.runAllTimersAsync();
     expect(mockDest1).toHaveBeenCalled();
     expect(mockDest2).not.toHaveBeenCalled();
 
     jest.clearAllMocks();
     customLayer2.push('e a');
+    await jest.runAllTimersAsync();
     expect(mockDest1).not.toHaveBeenCalled();
     expect(mockDest2).toHaveBeenCalled();
 
     jest.clearAllMocks();
     instance1.push('foo bar');
+    await jest.runAllTimersAsync();
     expect(mockDest1).toHaveBeenCalled();
     expect(mockDest2).not.toHaveBeenCalled();
 
     jest.clearAllMocks();
     instance2.push('bar foo');
+    await jest.runAllTimersAsync();
     expect(mockDest1).not.toHaveBeenCalled();
     expect(mockDest2).toHaveBeenCalled();
 
@@ -312,6 +322,7 @@ describe('elbLayer', () => {
     document.body.innerHTML = `<div data-elb="e" data-elbaction="load"></div>`;
     instance1.push('walker run');
     instance2.push('walker run');
+    await jest.runAllTimersAsync();
     expect(mockDest1).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e load',
@@ -330,10 +341,10 @@ describe('elbLayer', () => {
     );
   });
 
-  test('elbLayer push override', () => {
+  test('elbLayer push override', async () => {
     const layer: Elb.Layer = [];
 
-    walkerjs = Walkerjs({ elbLayer: layer, pageview: false });
+    Walkerjs({ elbLayer: layer, pageview: false });
     layer.push('walker run'); // Overwrites push function
     layer.push('walker destination', destination, {
       init: true,
@@ -341,6 +352,7 @@ describe('elbLayer', () => {
     });
     layer.push('e a');
 
+    await jest.runAllTimersAsync();
     expect(mockDestinationPush).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e a',
@@ -351,11 +363,12 @@ describe('elbLayer', () => {
     );
   });
 
-  test('command order', () => {
-    walkerjs = Walkerjs();
-    const pushSpy = jest.spyOn(walkerjs, 'push');
+  test('command order', async () => {
+    const { instance } = createSourceWalkerjs();
+    const pushSpy = jest.spyOn(instance, 'push');
 
     elb('walker run');
+    await jest.runAllTimersAsync();
 
     // Arguments
     expect(w.elbLayer[0]).toStrictEqual(['walker run']);
@@ -365,8 +378,8 @@ describe('elbLayer', () => {
     expect(pushSpy).toHaveBeenCalledWith('session start', expect.any(Object));
   });
 
-  test('custom push', () => {
-    elb(
+  test('custom push', async () => {
+    elbOrg(
       'e 1', // event
       {}, // data
       '', // trigger
@@ -375,8 +388,9 @@ describe('elbLayer', () => {
       { any: 'thing' }, // custom
     );
 
-    walkerjs = Walkerjs({ default: true, pageview: false });
+    const { elb } = createSourceWalkerjs({ default: true, pageview: false });
 
+    await jest.runAllTimersAsync();
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e 1',
@@ -384,7 +398,7 @@ describe('elbLayer', () => {
       }),
     );
 
-    elb(
+    await elb(
       'e 2', // event
       {}, // data
       '', // trigger

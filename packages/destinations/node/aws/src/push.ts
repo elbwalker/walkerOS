@@ -6,5 +6,5 @@ export const push: PushFn = async function (event, config) {
 
   if (firehose) pushFirehose([{ event }], firehose);
 
-  return { queue: [] }; // @TODO
+  return;
 };

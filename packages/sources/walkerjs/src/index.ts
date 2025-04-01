@@ -1,8 +1,7 @@
 import type { Elb, SourceWalkerjs } from './types';
+import { addDestination, onApply } from '@elbwalker/utils';
 import { sessionStart } from '@elbwalker/utils/web';
-import { addDestination } from './lib/destination';
-import { onApply } from './lib/on';
-import { createPush, elbLayerInit } from './lib/push';
+import { getPush, elbLayerInit } from './lib/push';
 import { run } from './lib/run';
 import { createSessionStart } from './lib/session';
 import { getState } from './lib/state';
@@ -15,14 +14,21 @@ export * from './types';
 
 export const elb = createElb();
 
+export function createSourceWalkerjs(customConfig?: SourceWalkerjs.InitConfig) {
+  const instance = Walkerjs(customConfig);
+  const elb = instance.push;
+
+  return { elb, instance };
+}
+
 export function Walkerjs(
   customConfig: SourceWalkerjs.InitConfig = {},
 ): SourceWalkerjs.Instance {
   const version = '3.3.0'; // Source version
   const state = getState(customConfig);
   const instance: SourceWalkerjs.Instance = {
-    version,
     ...state,
+    version,
     // Placeholder functions to be overwritten with instance-reference
     push: (() => {}) as unknown as Elb.Fn,
     getAllEvents,
@@ -34,7 +40,7 @@ export function Walkerjs(
   const { config } = instance;
 
   // Overwrite the push function with the instance-reference
-  instance.push = createPush(instance);
+  instance.push = getPush(instance);
   instance.sessionStart = createSessionStart(instance);
 
   // Setup pushes via elbLayer

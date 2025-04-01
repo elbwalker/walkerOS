@@ -29,7 +29,10 @@ function getMapping(name: string, mapping: Mapping): EventConfig {
   return mapping[name] || mapping['*'] || {};
 }
 
-export function objToEvent(obj: unknown, config: Config): MappedEvent | void {
+export async function objToEvent(
+  obj: unknown,
+  config: Config,
+): Promise<MappedEvent | void> {
   if (!(isObject(obj) && isString(obj.event))) return;
 
   const mapping = getMapping(obj.event, {
@@ -46,12 +49,12 @@ export function objToEvent(obj: unknown, config: Config): MappedEvent | void {
 
   // Command
   if (custom?.command) {
-    const data = getMappingValue(obj, custom.command);
+    const data = await getMappingValue(obj, custom.command);
     return data ? { command: { name: eventName, data } } : undefined;
   }
 
   // Mapping values
-  const values = data ? getMappingValue(obj, data) : {};
+  const values = data ? await getMappingValue(obj, data) : {};
 
   // id for duplicate detection
   const id = obj.id ? String(obj.id) : getId();

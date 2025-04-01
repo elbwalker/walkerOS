@@ -3,12 +3,12 @@ import { getGrantedConsent } from './consent';
 import { getByPath } from './byPath';
 import { isArray, isDefined, isString, isObject } from './is';
 import { castToProperty } from './property';
-import { tryCatch } from './tryCatch';
+import { tryCatchAsync } from './tryCatch';
 
-export function getMappingEvent(
+export async function getMappingEvent(
   event: WalkerOS.PartialEvent,
   mapping?: Mapping.Config<unknown>,
-): Mapping.EventMapping {
+): Promise<Mapping.EventMapping> {
   const [entity, action] = (event.event || '').split(' ');
   if (!mapping || !entity || !action) return {};
 
@@ -51,11 +51,11 @@ export function getMappingEvent(
   return { eventMapping, mappingKey };
 }
 
-export function getMappingValue(
+export async function getMappingValue(
   value: WalkerOS.DeepPartialEvent | unknown | undefined,
   data: Mapping.Data = {},
   options: Mapping.Options = {},
-): WalkerOS.Property | undefined {
+): Promise<WalkerOS.Property | undefined> {
   if (!isDefined(value)) return;
 
   // Get consent state in priority order: value.consent > options.consent > instance?.consent
@@ -67,27 +67,27 @@ export function getMappingValue(
   const mappings = isArray(data) ? data : [data];
 
   for (const mapping of mappings) {
-    const result = tryCatch(processMappingValue)(value, mapping, {
+    const result = await tryCatchAsync(processMappingValue)(value, mapping, {
       ...options,
       consent: consentState,
     });
-
     if (isDefined(result)) return result;
   }
 }
 
-function processMappingValue(
+async function processMappingValue(
   value: WalkerOS.DeepPartialEvent | unknown,
   mapping: Mapping.Value,
   options: Mapping.Options = {},
-): WalkerOS.Property | undefined {
+): Promise<WalkerOS.Property | undefined> {
   const { instance, consent: consentState } = options;
 
   // Ensure mapping is an array for uniform processing
   const mappings = isArray(mapping) ? mapping : [mapping];
 
   // Loop over each mapping and return the first valid result
-  return mappings.reduce((acc, mappingItem) => {
+  return mappings.reduce(async (accPromise, mappingItem) => {
+    const acc = await accPromise;
     if (acc) return acc; // A valid result was already found
 
     const mapping = isString(mappingItem) ? { key: mappingItem } : mappingItem;
@@ -107,7 +107,11 @@ function processMappingValue(
     } = mapping;
 
     // Check if this mapping should be used
-    if (condition && !tryCatch(condition)(value, mappingItem, instance)) return;
+    if (
+      condition &&
+      !(await tryCatchAsync(condition)(value, mappingItem, instance))
+    )
+      return;
 
     // Check if consent is required and granted
     if (consent && !getGrantedConsent(consent, consentState))
@@ -117,7 +121,7 @@ function processMappingValue(
 
     if (fn) {
       // Use a custom function to get the value
-      mappingValue = tryCatch(fn)(value, mappingItem, options);
+      mappingValue = await tryCatchAsync(fn)(value, mappingItem, options);
     }
 
     if (key) {
@@ -129,35 +133,40 @@ function processMappingValue(
       const [scope, itemMapping] = loop;
 
       const data =
-        scope === 'this' ? [value] : getMappingValue(value, scope, options);
+        scope === 'this'
+          ? [value]
+          : await getMappingValue(value, scope, options);
 
       if (isArray(data)) {
-        mappingValue = data
-          .map((item) => getMappingValue(item, itemMapping, options))
-          .filter(isDefined);
+        mappingValue = (
+          await Promise.all(
+            data.map((item) => getMappingValue(item, itemMapping, options)),
+          )
+        ).filter(isDefined);
       }
     } else if (map) {
-      mappingValue = Object.entries(map).reduce(
-        (mappedObj, [mapKey, mapValue]) => {
-          const result = getMappingValue(value, mapValue, options);
+      mappingValue = await Object.entries(map).reduce(
+        async (mappedObjPromise, [mapKey, mapValue]) => {
+          const mappedObj = await mappedObjPromise;
+          const result = await getMappingValue(value, mapValue, options);
           if (isDefined(result)) mappedObj[mapKey] = result;
-
           return mappedObj;
         },
-        {} as WalkerOS.AnyObject,
+        Promise.resolve({} as WalkerOS.AnyObject),
       );
     } else if (set) {
-      mappingValue = set.map((item) =>
-        processMappingValue(value, item, options),
+      mappingValue = await Promise.all(
+        set.map((item) => processMappingValue(value, item, options)),
       );
     }
 
     // Validate the value
-    if (validate && !tryCatch(validate)(mappingValue)) mappingValue = undefined;
+    if (validate && !(await tryCatchAsync(validate)(mappingValue)))
+      mappingValue = undefined;
 
     const property = castToProperty(mappingValue);
 
     // Finally, check and convert the type
     return isDefined(property) ? property : castToProperty(staticValue); // Always use value as a fallback
-  }, undefined as WalkerOS.Property | undefined);
+  }, Promise.resolve(undefined as WalkerOS.Property | undefined));
 }

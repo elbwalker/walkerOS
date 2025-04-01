@@ -16,7 +16,7 @@ describe('consent', () => {
     dataLayer = window.dataLayer as DataLayer;
   });
 
-  test('consent default', () => {
+  test('consent default', async () => {
     sourceDataLayer({ elb });
 
     gtag('consent', 'default', {
@@ -27,10 +27,11 @@ describe('consent', () => {
       wait_for_update: 500,
     });
 
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(0);
   });
 
-  test('consent update', () => {
+  test('consent update', async () => {
     sourceDataLayer({ elb });
 
     gtag('consent', 'update', {
@@ -41,33 +42,39 @@ describe('consent', () => {
       wait_for_update: 500,
     });
 
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith('walker consent', {
       marketing: false,
       analytics: true,
     });
 
     gtag('consent', 'update', { analytics_storage: 'granted' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenLastCalledWith('walker consent', {
       analytics: true,
     });
 
     gtag('consent', 'update', { ad_storage: 'denied' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenLastCalledWith('walker consent', {
       marketing: false,
     });
 
     jest.clearAllMocks();
     gtag('consent', 'update', 'invalid-param');
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenLastCalledWith('walker consent', {});
 
     gtag('consent', 'update');
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenLastCalledWith('walker consent', {});
 
     gtag('consent');
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenLastCalledWith('walker consent', {});
   });
 
-  test('usercentrics', () => {
+  test('usercentrics', async () => {
     sourceDataLayer({
       elb,
       mapping: {
@@ -106,6 +113,7 @@ describe('consent', () => {
       'gtm.uniqueEventId': 1,
     });
 
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith('walker consent', {
       essential: true,
       functional: true,

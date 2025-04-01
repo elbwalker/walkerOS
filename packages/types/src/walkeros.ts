@@ -1,4 +1,4 @@
-import type { Destination, Elb, Hooks } from '.';
+import type { Destination, Elb, Handler, Hooks } from '.';
 
 export type AnyObject<T = unknown> = Record<string, T>;
 export type AnyFunction = (...args: unknown[]) => unknown;
@@ -18,16 +18,22 @@ export interface State {
   globals: Properties;
   group: string;
   hooks: Hooks.Functions;
+  on: OnConfig;
   queue: Events;
   round: number;
   session: undefined | SessionData;
+  timing: number;
   user: User;
+  version: string;
 }
 
 export interface Config {
-  tagging: number;
+  tagging?: number;
+  session?: false | unknown;
   default?: boolean;
   verbose?: boolean; // Enable verbose logging
+  onError?: Handler.Error;
+  onLog?: Handler.Log;
 }
 
 export interface Destinations {
@@ -155,6 +161,20 @@ export interface Entity {
   context: OrderedProperties;
 }
 
+export type ConsentHandler = Record<string, AnyFunction>;
+export type ActionHandler = AnyFunction;
+
+// @TODO standardize on config in node and walker.js sources
+export interface OnConfig {
+  consent?: ConsentHandler[];
+  ready?: ActionHandler[];
+  run?: ActionHandler[];
+  session?: ActionHandler[];
+  [key: string]: ConsentHandler[] | ActionHandler[] | undefined;
+}
+
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
+
+export type PromiseOrValue<T> = T | Promise<T>;

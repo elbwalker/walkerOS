@@ -9,7 +9,7 @@ export const destinationPlausible: Destination = {
 
   config: {},
 
-  init(config: Config) {
+  init(config = {}) {
     const w = window;
     const custom = config.custom || {};
 

@@ -1,9 +1,10 @@
-import type { WalkerOS } from '@elbwalker/types';
-import type { On, SourceWalkerjs } from '../';
-import { Const, isArray, tryCatch } from '@elbwalker/utils';
+import type { On, WalkerOS } from '@elbwalker/types';
+import { isArray } from './is';
+import { Const } from './constants';
+import { tryCatch } from './tryCatch';
 
 export function on(
-  instance: SourceWalkerjs.Instance,
+  instance: WalkerOS.Instance,
   type: On.Types,
   option: WalkerOS.SingleOrArray<On.Options>,
 ) {
@@ -23,7 +24,7 @@ export function on(
 }
 
 export function onApply(
-  instance: SourceWalkerjs.Instance,
+  instance: WalkerOS.Instance,
   type: On.Types,
   options?: Array<On.Options>,
   config?: WalkerOS.Consent,
@@ -63,7 +64,7 @@ export function onApply(
 }
 
 function onConsent(
-  instance: SourceWalkerjs.Instance,
+  instance: WalkerOS.Instance,
   onConfig: Array<On.ConsentConfig>,
   currentConsent?: WalkerOS.Consent,
 ): void {
@@ -82,7 +83,7 @@ function onConsent(
 }
 
 function onReady(
-  instance: SourceWalkerjs.Instance,
+  instance: WalkerOS.Instance,
   onConfig: Array<On.ReadyConfig>,
 ): void {
   if (instance.allowed)
@@ -92,7 +93,7 @@ function onReady(
 }
 
 function onRun(
-  instance: SourceWalkerjs.Instance,
+  instance: WalkerOS.Instance,
   onConfig: Array<On.RunConfig>,
 ): void {
   if (instance.allowed)
@@ -102,7 +103,7 @@ function onRun(
 }
 
 function onSession(
-  instance: SourceWalkerjs.Instance,
+  instance: WalkerOS.Instance,
   onConfig: Array<On.SessionConfig>,
 ): void {
   if (!instance.config.session) return; // Session handling is disabled

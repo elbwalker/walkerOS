@@ -24,8 +24,8 @@ export function sourceDataLayer(
   // Override the original push function to intercept incoming events
   intercept(config);
 
-  // Process already existing events in the dataLayer
-  dataLayer.forEach((item) => push(config, item));
+  // Process already existing events in the dataLayer (ignore Promise handling)
+  dataLayer.map((item) => push(config, false, item));
 
   return config;
 }

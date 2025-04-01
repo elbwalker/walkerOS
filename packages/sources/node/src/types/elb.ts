@@ -1,7 +1,6 @@
-import type { Elb, WalkerOS } from '@elbwalker/types';
+import type { Elb } from '@elbwalker/types';
 import type { Destination, DestinationInit, Config } from './destination';
-import { PushResult as PushResultDest } from './destination';
-import { State, Status } from './source';
+import type { State } from './source';
 
 export interface Fn<R = Return, D = PushData, O = PushOptions>
   extends Elb.Fn<R, D, O>,
@@ -13,6 +12,7 @@ export type CommandDestination<R = void> = (
   destination: Destination | DestinationInit,
   config?: Config,
 ) => R;
+
 export type CommandRun<R = void> = (event: 'walker run') => R;
 
 export type PushData =
@@ -23,9 +23,6 @@ export type PushData =
 
 export type PushOptions = Elb.PushOptions | Config;
 
-export interface PushResult extends PushResultDest {
-  event?: WalkerOS.Event;
-  status: Status;
-}
+export type PushResult = Elb.PushResult;
 
 export type Return<R = Promise<PushResult>> = R;

@@ -11,7 +11,7 @@ export const destinationGoogleGA4: Destination = {
 
   config: { custom: { measurementId: '' } },
 
-  init(config) {
+  init(config = {}) {
     const w = window;
     const { custom = {} as Partial<Custom>, fn, loadScript } = config;
     const { measurementId, transport_url, server_container_url, pageview } =

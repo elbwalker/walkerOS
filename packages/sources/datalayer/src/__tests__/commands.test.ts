@@ -14,7 +14,7 @@ describe('commands', () => {
     dataLayer = window.dataLayer as DataLayer;
   });
 
-  test('set', () => {
+  test('set', async () => {
     sourceDataLayer({
       elb,
       mapping: {
@@ -34,7 +34,7 @@ describe('commands', () => {
     gtag('set', 'campaign', {
       term: 'running+shoes',
     });
-
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith('walker globals', {
       term: 'running+shoes',
     });

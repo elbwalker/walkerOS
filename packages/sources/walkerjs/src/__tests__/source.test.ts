@@ -1,13 +1,14 @@
-import type { Elb, SourceWalkerjs } from '..';
 import type { Data } from '@elbwalker/types';
-import { elb, Walkerjs } from '..';
+import type { Elb, SourceWalkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
+import { Walkerjs, createSourceWalkerjs } from '..';
 import fs from 'fs';
 
 describe('Walkerjs', () => {
   const w = window;
   const version = { source: expect.any(String), tagging: expect.any(Number) };
 
+  let elb: Elb.Fn;
   let walkerjs: SourceWalkerjs.Instance;
 
   beforeEach(() => {
@@ -15,12 +16,14 @@ describe('Walkerjs', () => {
       .fn()
       .mockReturnValue([{ type: 'navigate' }]);
 
-    walkerjs = Walkerjs({
+    const { elb: elbFn, instance } = createSourceWalkerjs({
       default: true,
       consent: { test: true },
       pageview: false,
       session: false,
     });
+    elb = elbFn;
+    walkerjs = instance;
   });
 
   test('version equals package.json version', () => {
@@ -56,11 +59,11 @@ describe('Walkerjs', () => {
     expect(mockDataLayer).toHaveBeenCalledTimes(0);
   });
 
-  test('push regular', () => {
+  test('push regular', async () => {
     elb('walker run');
 
     elb('entity action');
-    elb('entity action', { foo: 'bar' });
+    await elb('entity action', { foo: 'bar' });
 
     expect(mockDataLayer).toHaveBeenNthCalledWith(1, {
       event: 'entity action',
@@ -113,9 +116,9 @@ describe('Walkerjs', () => {
     });
   });
 
-  test('push event', () => {
+  test('push event', async () => {
     (walkerjs as unknown as string[]).push();
-    elb({ event: 'e a', timing: 42 });
+    await elb({ event: 'e a', timing: 42 });
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'e a', timing: 42, data: {} }),
     );
@@ -149,7 +152,7 @@ describe('Walkerjs', () => {
     expect(walkerjs.allowed).toBeTruthy();
   });
 
-  test('globalsStatic', () => {
+  test('globalsStatic', async () => {
     const html: string = fs
       .readFileSync(__dirname + '/html/walker.html')
       .toString();
@@ -157,13 +160,14 @@ describe('Walkerjs', () => {
 
     jest.clearAllMocks(); // skip previous init
     w.elbLayer = [];
-    walkerjs = Walkerjs({
+    const { elb } = createSourceWalkerjs({
       default: true,
       pageview: false,
       session: false,
       globalsStatic: { be: 'water', random: 'value' },
     });
 
+    await jest.runAllTimersAsync();
     expect(mockDataLayer).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
@@ -172,7 +176,7 @@ describe('Walkerjs', () => {
     );
 
     jest.clearAllMocks(); // skip previous init
-    elb('walker run');
+    await elb('walker run');
     expect(mockDataLayer).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
@@ -181,19 +185,19 @@ describe('Walkerjs', () => {
     );
   });
 
-  test('group ids', () => {
+  test('group ids', async () => {
     elb('entity action');
-    elb('entity action');
+    await elb('entity action');
     const groupId = mockDataLayer.mock.calls[0][0].group;
     expect(mockDataLayer.mock.calls[1][0].group).toEqual(groupId);
 
     // Start a new initialization with a new group ip
     elb('walker run');
-    elb('entity action');
+    await elb('entity action');
     expect(mockDataLayer.mock.calls[2][0].group).not.toEqual(groupId); // page view
   });
 
-  test('source', () => {
+  test('source', async () => {
     const location = document.location;
     const referrer = document.referrer;
 
@@ -208,7 +212,7 @@ describe('Walkerjs', () => {
       writable: true,
     });
 
-    elb('entity source');
+    await elb('entity source');
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'entity source',
@@ -227,15 +231,16 @@ describe('Walkerjs', () => {
     });
   });
 
-  test('timing', () => {
+  test('timing', async () => {
     jest.clearAllMocks();
     jest.advanceTimersByTime(2500); // 2.5 sec load time
-    walkerjs = Walkerjs({ default: true });
+    const { elb } = createSourceWalkerjs({ default: true });
 
+    await jest.runAllTimersAsync();
     expect(mockDataLayer.mock.calls[0][0].timing).toEqual(2.5);
 
     jest.advanceTimersByTime(1000); // 1 sec to new run
-    elb('walker run');
+    await elb('walker run');
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         timing: 0,
@@ -243,7 +248,7 @@ describe('Walkerjs', () => {
     ); // Start from 0 not 3.5
 
     jest.advanceTimersByTime(5000); // wait 5 sec
-    elb('e a');
+    await elb('e action');
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         timing: 5,
@@ -251,7 +256,7 @@ describe('Walkerjs', () => {
     );
   });
 
-  test('Element parameter', () => {
+  test('Element parameter', async () => {
     document.body.innerHTML = `
       <div data-elbcontext="c:o">
         <div id="e" data-elb="e" data-elbaction="load">
@@ -261,8 +266,7 @@ describe('Walkerjs', () => {
     `;
     const elem = document.getElementById('e') as HTMLElement;
 
-    elb('e custom', elem, 'custom');
-
+    await elb('e custom', elem, 'custom');
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e custom',
@@ -272,7 +276,7 @@ describe('Walkerjs', () => {
       }),
     );
 
-    elb('e context', { a: 1 }, 'custom', elem);
+    await elb('e context', { a: 1 }, 'custom', elem);
 
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
