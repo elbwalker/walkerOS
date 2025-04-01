@@ -117,7 +117,7 @@ async function processMappingValue(
     if (consent && !getGrantedConsent(consent, consentState))
       return staticValue;
 
-    let mappingValue: unknown = staticValue || value;
+    let mappingValue: unknown = isDefined(staticValue) ? staticValue : value;
 
     if (fn) {
       // Use a custom function to get the value

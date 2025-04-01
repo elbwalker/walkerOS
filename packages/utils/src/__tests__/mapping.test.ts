@@ -181,6 +181,12 @@ describe('getMappingValue', () => {
     expect(await getMappingValue(event, { value: 'static' })).toBe('static');
   });
 
+  test('value', async () => {
+    expect(await getMappingValue({}, { value: 'static' })).toBe('static');
+    expect(await getMappingValue({}, { value: 0 })).toBe(0);
+    expect(await getMappingValue({}, { value: false })).toBe(false);
+  });
+
   test('empty', async () => {
     expect(
       await getMappingValue(createEvent(), {
