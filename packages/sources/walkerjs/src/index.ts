@@ -29,7 +29,7 @@ export function createSourceWalkerjs(
 export function Walkerjs(
   customConfig: SourceWalkerjs.InitConfig = {},
 ): SourceWalkerjs.Instance {
-  const version = '3.3.0'; // Source version
+  const version = '3.4.0'; // Source version
   const state = getState(customConfig);
   const instance: SourceWalkerjs.Instance = {
     ...state,

@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-google-ga4",
   "description": "Google GA4 web destination for walkerOS",
-  "version": "3.1.3",
+  "version": "3.1.4",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -34,12 +34,12 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/walker.js": "3.3.0"
+    "@elbwalker/walker.js": "3.4.0"
   },
   "devDependencies": {
     "@elbwalker/tsup": "0.0.1",
     "@elbwalker/types": "3.3.0",
-    "@elbwalker/utils": "^3.7.0"
+    "@elbwalker/utils": "^3.8.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
