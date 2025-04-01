@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "main": "./index.js",
+  "main": "./src/index.js",
   "exports": {
-    ".": "./index.js",
-    "./web.config": "./web.config.js",
-    "./web.setup": "./web.setup.ts",
-    "./node.config": "./node.config.js",
-    "./node.setup": "./node.setup.ts"
+    ".": "./src/index.js",
+    "./web.config": "./src/web.config.js",
+    "./web.setup": "./src/web.setup.ts",
+    "./node.config": "./src/node.config.js",
+    "./node.setup": "./src/node.setup.ts"
   },
   "dependencies": {
     "@swc/core": "^1.11.13",
