@@ -1,6 +1,6 @@
 import { getEvent } from '@elbwalker/utils';
 
-export function conversion() {
+export function conversion(): unknown[] {
   const event = getEvent('order complete');
 
   return [

@@ -24,9 +24,9 @@ const buildModules = (customConfig = {}) => ({
 // Examples
 const buildExamples = (customConfig = {}) => ({
   ...baseConfig,
-  entry: { 'examples/index': 'examples/index.ts' },
+  entry: { 'examples/index': 'src/examples/index.ts' },
   dts: true,
-  sourcemap: false,
+  minify: false,
   format: ['cjs', 'esm'],
   outExtension({ format }) {
     return { js: format === 'esm' ? '.mjs' : '.js' };

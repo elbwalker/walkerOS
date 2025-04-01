@@ -1,5 +1,5 @@
-import type { Mapping, WalkerOS } from '@elbwalker/types';
-import type { DestinationPiwikPro } from '../src';
+import type { Mapping } from '@elbwalker/types';
+import type { DestinationPiwikPro } from '..';
 import { isObject } from '@elbwalker/utils';
 
 const productMap = {

@@ -1,6 +1,6 @@
 import type { DestinationWeb } from '../types';
 
-export function dataLayerDestination() {
+export function dataLayerDestination(): DestinationWeb.DestinationInit {
   window.dataLayer = window.dataLayer || [];
   const dataLayerPush = (event: unknown) => {
     (window.dataLayer as unknown[]).push(event);

@@ -1,5 +1,5 @@
 import type { Mapping } from '@elbwalker/types';
-import type { DestinationGoogleAds } from '../src';
+import type { DestinationGoogleAds } from '..';
 
 export const conversion: DestinationGoogleAds.EventConfig = {
   name: 'labelId',

@@ -8,7 +8,7 @@ export const handleCommand = async (
   action: string,
   data?: Elb.PushData,
   options?: Elb.PushOptions,
-) => {
+): Promise<Elb.PushResult> => {
   let result: Elb.PushResult | undefined;
 
   switch (action) {

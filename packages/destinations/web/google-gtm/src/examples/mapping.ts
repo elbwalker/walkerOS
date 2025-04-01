@@ -1,5 +1,5 @@
 import type { Mapping } from '@elbwalker/types';
-import type { DestinationGoogleGTM } from '../src';
+import type { DestinationGoogleGTM } from '..';
 import { isObject } from '@elbwalker/utils';
 
 export const entity_action: DestinationGoogleGTM.EventConfig = {

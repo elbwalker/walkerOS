@@ -3,7 +3,7 @@ import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationWebAPI } from '.';
 import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { createEvent } from '@elbwalker/utils';
-import { events, mapping } from '../examples';
+import { events, mapping } from './examples';
 
 describe('Destination API', () => {
   let elb: Elb.Fn;

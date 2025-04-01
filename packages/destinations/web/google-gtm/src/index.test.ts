@@ -4,7 +4,7 @@ import type { DestinationGoogleGTM } from '.';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { createEvent, getEvent } from '@elbwalker/utils';
-import { events, mapping } from '../examples';
+import { events, mapping } from './examples';
 
 describe('destination google-tag-manager', () => {
   let elb: Elb.Fn;

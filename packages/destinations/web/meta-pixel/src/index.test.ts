@@ -1,8 +1,8 @@
-import type { Elb } from '@elbwalker/walker.js';
+import type { DestinationWeb, Elb } from '@elbwalker/walker.js';
 import type { DestinationMetaPixel } from '.';
 import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
-import { events, mapping } from '../examples';
+import { events, mapping } from './examples';
 
 describe('Destination Meta Pixel', () => {
   let elb: Elb.Fn;

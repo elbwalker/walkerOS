@@ -1,8 +1,8 @@
 {
-  "extends": "@elbwalker/tsconfig/web.json",
+  "extends": "@elbwalker/tsconfig/base.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "sourceMap": true
+    "rootDir": "src"
   },
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.*"]
 }

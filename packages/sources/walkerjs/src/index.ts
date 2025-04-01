@@ -12,9 +12,14 @@ import { dataLayerDestination } from './lib/destination';
 // Export types and elb
 export * from './types';
 
-export const elb = createElb();
+export const elb: Elb.Fn = createElb();
 
-export function createSourceWalkerjs(customConfig?: SourceWalkerjs.InitConfig) {
+export function createSourceWalkerjs(
+  customConfig?: SourceWalkerjs.InitConfig,
+): {
+  elb: Elb.Fn;
+  instance: SourceWalkerjs.Instance;
+} {
   const instance = Walkerjs(customConfig);
   const elb = instance.push;
 

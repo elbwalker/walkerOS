@@ -2,7 +2,7 @@ import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationGoogleAds } from '.';
 import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
-import { events, mapping } from '../examples';
+import { events, mapping } from './examples';
 
 describe('destination Google Ads', () => {
   let elb: Elb.Fn;

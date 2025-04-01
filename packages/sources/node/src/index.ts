@@ -6,7 +6,10 @@ import { getPush } from './lib/push';
 // Types
 export * from './types';
 
-export function createSourceNode(customConfig?: SourceNode.InitConfig) {
+export function createSourceNode(customConfig?: SourceNode.InitConfig): {
+  elb: Elb.Fn;
+  instance: SourceNode.Instance;
+} {
   const instance = sourceNode(customConfig);
   const elb = instance.push;
 
