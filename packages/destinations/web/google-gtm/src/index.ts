@@ -12,7 +12,7 @@ export const destinationGoogleGTM: Destination = {
 
   config: {},
 
-  init(config) {
+  init(config = {}) {
     const w = window as unknown as Record<string, unknown[]>;
     const { custom = {} as Partial<Custom>, fn, loadScript } = config;
     const { containerId, dataLayer, domain } = custom;

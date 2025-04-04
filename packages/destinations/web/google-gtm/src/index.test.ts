@@ -1,11 +1,13 @@
 import type { WalkerOS } from '@elbwalker/types';
+import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationGoogleGTM } from '.';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { elb, Walkerjs } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { createEvent, getEvent } from '@elbwalker/utils';
-import { events, mapping } from '../examples';
+import { events, mapping } from './examples';
 
 describe('destination google-tag-manager', () => {
+  let elb: Elb.Fn;
   const w = window;
   let destination: DestinationGoogleGTM.Destination,
     config: DestinationGoogleGTM.Config;
@@ -19,28 +21,32 @@ describe('destination google-tag-manager', () => {
     destination = jest.requireActual('.').default;
     destination.config = config;
     event = createEvent();
-    Walkerjs({ pageview: false, session: false, run: true });
+    ({ elb } = createSourceWalkerjs({
+      session: false,
+      pageview: false,
+      run: true,
+    }));
   });
 
-  test('init', () => {
+  test('init', async () => {
     elb('walker destination', destination);
 
     w.dataLayer = undefined as unknown;
     expect(w.dataLayer).toBeUndefined();
 
-    elb(event);
+    await elb(event);
     expect(w.dataLayer).toBeDefined();
   });
 
-  test('fn', () => {
+  test('fn', async () => {
     w.dataLayer = undefined as unknown;
     const fn = jest.fn();
     elb('walker destination', destination, { fn });
-    elb(event);
+    await elb(event);
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  test('init with load script', () => {
+  test('init with load script', async () => {
     destination.config = {
       loadScript: true,
       custom: { containerId },
@@ -53,13 +59,13 @@ describe('destination google-tag-manager', () => {
     let elem = document.querySelector(scriptSelector);
     expect(elem).not.toBeTruthy();
 
-    elb(event);
+    await elb(event);
 
     elem = document.querySelector(scriptSelector);
     expect(elem).toBeTruthy();
   });
 
-  test('custom dataLayer name', () => {
+  test('custom dataLayer name', async () => {
     const customLayer = 'customLayer';
 
     elb('walker destination', destination, {
@@ -68,39 +74,39 @@ describe('destination google-tag-manager', () => {
 
     expect(w[customLayer]).toBeFalsy();
 
-    elb(event);
+    await elb(event);
 
     expect(w[customLayer]).toBeTruthy();
   });
 
-  test('push', () => {
+  test('push', async () => {
     elb('walker destination', destination);
-    elb(event);
+    await elb(event);
     expect(w.dataLayer).toBeDefined();
 
     expect(mockDataLayer).toHaveBeenLastCalledWith(event);
   });
 
-  test('event entity_action', () => {
+  test('event entity_action', async () => {
     const event = getEvent();
     elb('walker destination', destination, { mapping: mapping.config });
-    elb(event);
+    await elb(event);
 
     expect(mockDataLayer).toHaveBeenLastCalledWith(events.entity_action());
   });
 
-  test('event add_to_cart', () => {
+  test('event add_to_cart', async () => {
     const event = getEvent('product add');
     elb('walker destination', destination, { mapping: mapping.config });
-    elb(event);
+    await elb(event);
 
     expect(mockDataLayer).toHaveBeenLastCalledWith(events.add_to_cart());
   });
 
-  test('event purchase', () => {
+  test('event purchase', async () => {
     const event = getEvent('order complete');
     elb('walker destination', destination, { mapping: mapping.config });
-    elb(event);
+    await elb(event);
 
     expect(mockDataLayer).toHaveBeenLastCalledWith(events.purchase());
   });

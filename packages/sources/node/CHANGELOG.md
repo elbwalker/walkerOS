@@ -1,5 +1,22 @@
 # @elbwalker/source-node
 
+## 3.4.0
+
+### Minor Changes
+
+- f4bbbc6: on support for node source
+  [#507](https://github.com/elbwalker/walkerOS/issues/507)
+- 63d6199: onError handler for node client
+  [#290](https://github.com/elbwalker/walkerOS/issues/290)
+
+### Patch Changes
+
+- Updated dependencies [63d6199]
+- Updated dependencies [63d6199]
+- Updated dependencies [15e8ecf]
+- Updated dependencies [149379d]
+  - @elbwalker/utils@3.8.0
+
 ## 3.3.0
 
 ### Minor Changes

@@ -6,8 +6,8 @@
   "private": true,
   "license": "MIT",
   "devDependencies": {
-    "@swc/core": "^1.4.8",
-    "terser": "^5.29.2",
-    "tsup": "^8.0.2"
+    "@swc/core": "^1.11.13",
+    "tsup": "^8.4.0",
+    "terser": "^5.39.0"
   }
 }

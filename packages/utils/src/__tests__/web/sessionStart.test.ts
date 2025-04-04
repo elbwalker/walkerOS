@@ -169,4 +169,12 @@ describe('sessionStart', () => {
     const session = sessionStart({ data: { isNew: true, isStart: true } });
     expect(mockElb).toHaveBeenCalledWith('session start', session);
   });
+
+  test('multiple consent keys', () => {
+    sessionStart({ consent: ['foo', 'bar'] });
+    expect(mockElb).toHaveBeenCalledWith('walker on', 'consent', {
+      foo: expect.any(Function),
+      bar: expect.any(Function),
+    });
+  });
 });

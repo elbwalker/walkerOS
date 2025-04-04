@@ -41,10 +41,11 @@ describe('mapping', () => {
     expect(window.dataLayer).toBeDefined();
   });
 
-  test('gtag call', () => {
+  test('gtag call', async () => {
     sourceDataLayer({ elb });
 
     gtag('event', 'foo', { bar: 'baz' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith({
       event: 'dataLayer foo',
       id: expect.any(String),
@@ -56,10 +57,11 @@ describe('mapping', () => {
     });
   });
 
-  test('dataLayer push', () => {
+  test('dataLayer push', async () => {
     sourceDataLayer({ elb });
 
     dataLayer.push({ event: 'foo', bar: 'baz' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith({
       event: 'dataLayer foo',
       id: expect.any(String),
@@ -71,10 +73,11 @@ describe('mapping', () => {
     });
   });
 
-  test('default values', () => {
+  test('default values', async () => {
     sourceDataLayer({ elb })!;
 
     dataLayer.push({ event: 'foo this' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith({
       event: 'dataLayer foo_this',
       id: expect.any(String),
@@ -85,7 +88,7 @@ describe('mapping', () => {
     });
   });
 
-  test('mapping name', () => {
+  test('mapping name', async () => {
     sourceDataLayer({
       elb,
       mapping: {
@@ -98,14 +101,16 @@ describe('mapping', () => {
     })!;
 
     dataLayer.push({ event: 'foo' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith(expect.objectContaining({ event: 'bar' }));
     dataLayer.push({ event: 'baz' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'prioritize' }),
     );
   });
 
-  test('mapping ignore', () => {
+  test('mapping ignore', async () => {
     sourceDataLayer({
       elb,
       mapping: {
@@ -116,10 +121,11 @@ describe('mapping', () => {
     })!;
 
     dataLayer.push({ event: 'foo' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(0);
   });
 
-  test('mapping *', () => {
+  test('mapping *', async () => {
     sourceDataLayer({
       elb,
       mapping: {
@@ -129,14 +135,16 @@ describe('mapping', () => {
     })!;
 
     dataLayer.push({ event: 'foo' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(1);
 
     jest.resetAllMocks();
     dataLayer.push({ event: 'bar' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(0);
   });
 
-  test('mapping all', () => {
+  test('mapping all', async () => {
     sourceDataLayer({
       elb,
       mapping: {
@@ -189,6 +197,7 @@ describe('mapping', () => {
     });
 
     dataLayer.push({ event: 'foo', dynamic: 'value', id: '1d' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith({
       event: 'all_mapped',
       data: {
@@ -223,7 +232,7 @@ describe('mapping', () => {
     });
   });
 
-  test('mapping add_to_cart', () => {
+  test('mapping add_to_cart', async () => {
     sourceDataLayer({
       elb,
       mapping: {
@@ -258,6 +267,7 @@ describe('mapping', () => {
       items: [product1],
     });
 
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'product add',
@@ -277,7 +287,7 @@ describe('mapping', () => {
     );
   });
 
-  test('mapping purchase', () => {
+  test('mapping purchase', async () => {
     sourceDataLayer({
       elb,
       mapping: {
@@ -328,6 +338,8 @@ describe('mapping', () => {
       items: [product1, product2],
     });
 
+    await jest.runAllTimersAsync();
+
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'order complete',
@@ -365,22 +377,26 @@ describe('mapping', () => {
     );
   });
 
-  test('gtag no arguments', () => {
+  test('gtag no arguments', async () => {
     sourceDataLayer({ elb })!;
     gtag();
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(0);
 
     gtag('e');
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(0);
   });
 
-  test('gtag event', () => {
+  test('gtag event', async () => {
     sourceDataLayer({ elb })!;
 
     gtag('event');
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(0);
 
     gtag('event', 'foo');
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'dataLayer foo',
@@ -388,6 +404,7 @@ describe('mapping', () => {
     );
 
     gtag('event', 'foo', { foo: 'bar' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'dataLayer foo',
@@ -396,6 +413,7 @@ describe('mapping', () => {
     );
 
     gtag('event', 'foo', { count: 5 });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'dataLayer foo',
@@ -404,6 +422,7 @@ describe('mapping', () => {
     );
 
     gtag('event', 'foo', { foo: 'bar', count: 3 });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'dataLayer foo',
@@ -412,6 +431,7 @@ describe('mapping', () => {
     );
 
     gtag('event', 'foo', 'not-an-object');
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'dataLayer foo',
@@ -419,10 +439,11 @@ describe('mapping', () => {
     );
   });
 
-  test('gtag config', () => {
+  test('gtag config', async () => {
     sourceDataLayer({ elb });
 
     gtag('config', 'GA-XXXXXXXXXX');
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'dataLayer config_GA-XXXXXXXXXX',
@@ -430,6 +451,7 @@ describe('mapping', () => {
     );
 
     gtag('config', 'GA-XXXXXXXXXX', { send_page_view: false });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'dataLayer config_GA-XXXXXXXXXX',
@@ -441,6 +463,7 @@ describe('mapping', () => {
     );
 
     gtag('config', 'GA-XXXXXXXXXX', 'non-object');
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'dataLayer config_GA-XXXXXXXXXX',
@@ -450,20 +473,23 @@ describe('mapping', () => {
 
     jest.clearAllMocks();
     gtag('config');
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(0);
   });
 
-  test('gtag get', () => {
+  test('gtag get', async () => {
     sourceDataLayer({ elb });
 
     gtag('get', 'campaign');
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(0);
   });
 
-  test('gtag set', () => {
+  test('gtag set', async () => {
     sourceDataLayer({ elb });
 
     gtag('set', 'campaign', { id: 'abc' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'dataLayer set_campaign',
@@ -475,6 +501,7 @@ describe('mapping', () => {
     );
 
     gtag('set', { currency: 'EUR' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'dataLayer set_custom',
@@ -486,6 +513,7 @@ describe('mapping', () => {
     );
 
     gtag('set', 'user_properties', 'invalid');
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenLastCalledWith(
       expect.objectContaining({
         event: 'dataLayer set_user_properties',
@@ -493,7 +521,7 @@ describe('mapping', () => {
     );
   });
 
-  test('filter parameters', () => {
+  test('filter parameters', async () => {
     sourceDataLayer({ elb });
 
     gtag('event', 'foo', {
@@ -501,6 +529,7 @@ describe('mapping', () => {
       fn: jest.fn(),
       a: '',
     });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({
         data: {

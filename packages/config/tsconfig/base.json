@@ -19,14 +19,8 @@
     "allowJs": true,
     "resolveJsonModule": true,
     "sourceMap": true,
-    "baseUrl": ".",
-    "paths": {
-      "@elbwalker/*": ["packages/*/src"],
-      "@elbwalker/destination-web-*": ["packages/destinations/web/*/src"],
-      "@elbwalker/destination-node-*": ["packages/destinations/node/*/src"],
-      "@elbwalker/source-*": ["packages/sources/*/src"],
-      "@elbwalker/walker.js": ["packages/sources/walkerjs"]
-    }
+    "outDir": "dist",
+    "baseUrl": "."
   },
   "exclude": ["node_modules", "**/dist", "**/*.d.ts"]
 }

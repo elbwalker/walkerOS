@@ -291,7 +291,7 @@ describe('Destination', () => {
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush.mock.calls[0][0]).toEqual(
       expect.objectContaining({
-        consent: { client: true, demo: true },
+        consent: { demo: true },
         user: { id: 'us3r', session: 's3ss10n' },
         globals: { foo: 'bar' },
       }),
@@ -313,14 +313,15 @@ describe('Destination', () => {
       }),
     };
 
-    const { elb } = getSource({
+    const { elb, instance } = getSource({
       destinations: { mockDestination, initFail, pushFail },
     });
+
     result = await elb('entity action');
 
     expect(result).toEqual({
       event: expect.any(Object),
-      status: { ok: false },
+      ok: false,
       successful: [
         {
           id: 'mockDestination',
@@ -332,17 +333,23 @@ describe('Destination', () => {
         {
           id: 'initFail',
           destination: initFail,
-          error: expect.any(String),
         },
         {
           id: 'pushFail',
           destination: pushFail,
-          error: expect.any(String),
         },
       ],
     });
-    expect(result.failed[0].error).toBe('Error: init kaputt');
-    expect(result.failed[1].error).toBe('Error: push kaputt');
+
+    // DLQ
+    expect(instance.destinations['initFail'].dlq).toContainEqual([
+      expect.objectContaining({ event: mockEvent.event }),
+      new Error('init kaputt'),
+    ]);
+    expect(instance.destinations['pushFail'].dlq).toContainEqual([
+      expect.objectContaining({ event: mockEvent.event }),
+      new Error('push kaputt'),
+    ]);
   });
 
   // @TODO test.skip('queue', async () => {});
@@ -361,7 +368,7 @@ describe('Destination', () => {
     result = await elb(mockEvent);
     expect(result).toStrictEqual(
       expect.objectContaining({
-        status: { ok: true },
+        ok: true,
         successful: [expect.objectContaining({ id: 'mockDestination' })],
         queued: [expect.objectContaining({ id: 'destinationConsent' })],
       }),
@@ -370,7 +377,7 @@ describe('Destination', () => {
     result = await elb('walker consent', { test: false });
     expect(result).toStrictEqual(
       expect.objectContaining({
-        status: { ok: true },
+        ok: true,
         successful: [],
         queued: [],
         failed: [],
@@ -378,14 +385,15 @@ describe('Destination', () => {
     );
 
     result = await elb('walker consent', { test: true });
+
     expect(mockPushConsent.mock.calls[0][0]).toEqual(
       expect.objectContaining({
-        consent: { client: true, test: true },
+        consent: { test: true },
       }),
     );
     expect(result).toStrictEqual(
       expect.objectContaining({
-        status: { ok: true },
+        ok: true,
         successful: [expect.objectContaining({ id: 'destinationConsent' })],
         queued: [],
       }),

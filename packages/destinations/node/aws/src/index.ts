@@ -11,7 +11,7 @@ export const destinationFirehose: Destination = {
 
   config: {},
 
-  async init(partialConfig) {
+  async init(partialConfig = {}) {
     const config = await tryCatchAsync(getConfig, (error) => {
       config.onLog('Init error', partialConfig.verbose);
 

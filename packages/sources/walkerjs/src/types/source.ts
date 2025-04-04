@@ -2,7 +2,6 @@ import type { Hooks, WalkerOS } from '@elbwalker/types';
 import type { SessionConfig } from '@elbwalker/utils/web';
 import type { Destination, Config as DestConfig } from './destination';
 import type { Fn, Layer } from './elb';
-import type { Config as OnConfig } from './on';
 import type { Events, Trigger } from './walker';
 
 declare global {
@@ -15,10 +14,9 @@ declare global {
   }
 }
 
-export interface Instance extends State, WalkerOS.Instance {
+export interface Instance extends WalkerOS.Instance {
   config: Config;
   destinations: Destinations;
-  version: string;
   push: Fn;
   getAllEvents: (scope: Element, prefix: string) => Events;
   getEvents: (target: Element, trigger: Trigger, prefix: string) => Events;
@@ -29,8 +27,6 @@ export interface Instance extends State, WalkerOS.Instance {
 export interface State extends WalkerOS.State {
   config: Config;
   destinations: Destinations;
-  on: OnConfig;
-  timing: number;
 }
 
 export interface Config extends WalkerOS.Config {
@@ -52,7 +48,7 @@ export interface InitConfig extends Partial<Config> {
   custom?: WalkerOS.Properties;
   destinations?: Destinations;
   hooks?: Hooks.Functions;
-  on?: OnConfig;
+  on?: WalkerOS.OnConfig;
   tagging?: number;
   user?: WalkerOS.User;
 }

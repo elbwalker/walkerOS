@@ -37,7 +37,7 @@ access permissions.
 
 ## Session Data
 
-Depending on enabling the `storage` parameter, the `sessionStart` function
+Depending on the `storage` parameter `consent`, the `sessionStart` function
 returns an object with several properties. If a new session is detected,
 `isStart` is set to `true`, otherwise `false`.
 
@@ -50,8 +50,8 @@ returns an object with several properties. If a new session is detected,
 | marketing | true    | If the session was started by a marketing parameter |
 | referrer  | string  | Hostname of the referring site if available         |
 
-With `storage: true` and eventually granted `consent`, the returning object will
-be extended with the following:
+With `storage: true` and granted `consent`, the returning object will be
+extended with the following:
 
 | Property | Type    | Description                                       |
 | -------- | ------- | ------------------------------------------------- |
@@ -104,7 +104,7 @@ are optional for customization:
 
 | Parameter           | Type                   | Description                                                                                          |
 | ------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------- |
-| [consent](#consent) | string                 | The consent state to permit or deny storage access                                                   |
+| [consent](#consent) | Array&lt;string&gt;    | The consent state to permit or deny storage access                                                   |
 | [storage](#storage) | boolean                | If the storage should be used                                                                        |
 | [cb](#callback)     | false or<br />function | Callback function that gets called after the detection process. <br />Or to disable default callback |
 
@@ -119,8 +119,8 @@ There are additional config parameters [for storage](#sessionstorage) and
 
 Setting a consent state to wait for before detecting a new session is used to
 decide if storage access is allowed or not. If set, it registers an
-[on consent event](/docs/sources/walkerjs/commands#on) and won't start until
-that consent choice is available. If permission was granted, the
+[on consent event](/docs/sources/walkerjs/commands#on) and won't start until a
+consent choice is available. If at least one permission was granted, the
 `sessionStorage` detects a new session; otherwise, the `sessionWindow`.
 
 ```js
@@ -164,7 +164,7 @@ Based on the [storage](#storage) option either the
 [sessionStorage](#sessionstorage) or the [sessionWindow](#sessionwindow) is used
 to detect a new session. If a [consent](#consent) state is set, the session
 detection gets scheduled via an [on-consent](/docs/sources/walkerjs/commands#on)
-command.
+command. It will only run once per `run`.
 
 ```mermaid
 ---

@@ -1,9 +1,11 @@
+import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationGoogleAds } from '.';
-import { elb, Walkerjs } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
-import { events, mapping } from '../examples';
+import { events, mapping } from './examples';
 
 describe('destination Google Ads', () => {
+  let elb: Elb.Fn;
   const w = window;
   let destination: DestinationGoogleAds.Destination,
     config: DestinationGoogleAds.Config;
@@ -23,12 +25,16 @@ describe('destination Google Ads', () => {
 
     w.gtag = mockFn;
 
-    Walkerjs({ pageview: false, run: true, session: false });
+    ({ elb } = createSourceWalkerjs({
+      session: false,
+      pageview: false,
+      run: true,
+    }));
   });
 
   afterEach(() => {});
 
-  test('init', () => {
+  test('init', async () => {
     (w.dataLayer as unknown) = undefined;
     (w.gtag as unknown) = undefined;
 
@@ -40,12 +46,12 @@ describe('destination Google Ads', () => {
     expect(w.dataLayer).not.toBeDefined();
     expect(w.gtag).not.toBeDefined();
 
-    elb(event);
+    await elb(event);
     expect(w.dataLayer).toBeDefined();
     expect(w.gtag).toBeDefined();
   });
 
-  test('fn', () => {
+  test('fn', async () => {
     (w.gtag as unknown) = undefined;
     const fn = jest.fn();
     elb('walker destination', destination, {
@@ -53,19 +59,20 @@ describe('destination Google Ads', () => {
       mapping: { order: { complete: { name: 'label' } } },
       fn,
     });
-    elb(event);
+
+    await elb(event);
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
-  test('Init calls', () => {
+  test('Init calls', async () => {
     elb('walker destination', destination);
 
-    elb(event);
+    await elb(event);
 
     expect(mockFn).toHaveBeenNthCalledWith(1, 'config', conversionId);
   });
 
-  test('init with load script', () => {
+  test('init with load script', async () => {
     destination.config.loadScript = true;
     elb('walker destination', destination);
 
@@ -74,19 +81,19 @@ describe('destination Google Ads', () => {
     let elem = document.querySelector(scriptSelector);
     expect(elem).not.toBeTruthy();
 
-    elb(event);
+    await elb(event);
 
     elem = document.querySelector(scriptSelector);
     expect(elem).toBeTruthy();
   });
 
-  test('event conversion', () => {
+  test('event conversion', async () => {
     elb('walker destination', destination, {
       custom: { conversionId },
       mapping: mapping.config,
     });
 
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.conversion());
   });
 });

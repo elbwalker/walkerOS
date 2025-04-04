@@ -12,8 +12,8 @@ export const destinationEtag: Destination = {
 
   config: {},
 
-  init(config, instance) {
-    if (!config.custom || !config.custom.measurementId || !instance.session)
+  init(config = {}, instance) {
+    if (!config.custom || !config.custom.measurementId || !instance?.session)
       return false;
   },
 

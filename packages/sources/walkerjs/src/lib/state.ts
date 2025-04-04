@@ -69,5 +69,6 @@ export function getState(
     session: undefined, // Session data
     timing: 0, // Offset counter to calculate timing property
     user,
+    version: '',
   };
 }

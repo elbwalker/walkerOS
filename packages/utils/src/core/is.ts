@@ -1,4 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
+import { Const } from './constants';
 
 export function isArguments(value: unknown): value is IArguments {
   return Object.prototype.toString.call(value) === '[object Arguments]';
@@ -12,8 +13,16 @@ export function isBoolean(value: unknown): value is boolean {
   return typeof value === 'boolean';
 }
 
+export function isCommand(entity: string) {
+  return entity === Const.Commands.Walker;
+}
+
 export function isDefined<T>(val: T | undefined): val is T {
   return typeof val !== 'undefined';
+}
+
+export function isElementOrDocument(elem: unknown): elem is Element {
+  return elem === document || elem instanceof Element;
 }
 
 export function isNumber(value: unknown): value is number {

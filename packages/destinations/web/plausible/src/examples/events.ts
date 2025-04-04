@@ -1,6 +1,6 @@
 import { getEvent } from '@elbwalker/utils';
 
-export function purchase() {
+export function purchase(): unknown[] {
   const event = getEvent('order complete');
 
   return [
@@ -14,7 +14,7 @@ export function purchase() {
   ];
 }
 
-export function customEvent() {
+export function customEvent(): unknown[] {
   const event = getEvent();
 
   return [

@@ -1,10 +1,11 @@
+import type { DestinationWeb, Elb } from '@elbwalker/walker.js';
 import type { DestinationMetaPixel } from '.';
-import type { DestinationWeb } from '@elbwalker/walker.js';
-import { elb, Walkerjs } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { getEvent } from '@elbwalker/utils';
-import { events, mapping } from '../examples';
+import { events, mapping } from './examples';
 
 describe('Destination Meta Pixel', () => {
+  let elb: Elb.Fn;
   const w = window;
   let destination: DestinationMetaPixel.Destination,
     config: DestinationMetaPixel.Config;
@@ -24,40 +25,44 @@ describe('Destination Meta Pixel', () => {
 
     w.fbq = mockFn;
 
-    Walkerjs({ pageview: false, run: true, session: false });
+    ({ elb } = createSourceWalkerjs({
+      pageview: false,
+      run: true,
+      session: false,
+    }));
   });
 
   afterEach(() => {});
 
-  test('init', () => {
+  test('init', async () => {
     (w.fbq as unknown) = undefined;
 
     expect(w.fbq).not.toBeDefined();
 
     elb('walker destination', destination);
 
-    elb(event);
+    await elb(event);
     expect(w.fbq).toBeDefined();
   });
 
-  test('fn', () => {
+  test('fn', async () => {
     (w.fbq as unknown) = undefined;
     const fn = jest.fn();
     destination.config.fn = fn;
     elb('walker destination', destination);
-    elb(event);
+    await elb(event);
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  test('Init calls', () => {
+  test('Init calls', async () => {
     elb('walker destination', destination);
 
-    elb(event);
+    await elb(event);
 
     expect(mockFn).toHaveBeenNthCalledWith(1, 'init', pixelId);
   });
 
-  test('init with load script', () => {
+  test('init with load script', async () => {
     destination.config.loadScript = true;
     elb('walker destination', destination);
 
@@ -66,43 +71,43 @@ describe('Destination Meta Pixel', () => {
     let elem = document.querySelector(scriptSelector);
     expect(elem).not.toBeTruthy();
 
-    elb(event);
+    await elb(event);
 
     elem = document.querySelector(scriptSelector);
     expect(elem).toBeTruthy();
   });
 
-  test('push', () => {
+  test('push', async () => {
     elb('walker destination', destination);
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith('track', event.event, {});
   });
 
-  test('pageview', () => {
+  test('pageview', async () => {
     const page_view = getEvent('page view');
     elb('walker destination', destination);
 
-    elb(page_view);
+    await elb(page_view);
     expect(mockFn).toHaveBeenCalledWith('track', 'PageView', {});
 
     jest.clearAllMocks();
     destination.config.mapping = { page: { view: { ignore: true } } };
-    elb(page_view);
+    await elb(page_view);
     expect(mockFn).not.toHaveBeenCalledWith('track', 'PageView');
   });
 
-  test('push standard event', () => {
+  test('push standard event', async () => {
     elb('walker destination', destination, {
       custom: { pixelId },
       mapping: {
         entity: { action: { custom: { trackCustom: 'foo' } } },
       },
     });
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith('trackCustom', 'foo', {});
   });
 
-  test('event Purchase', () => {
+  test('event Purchase', async () => {
     const event = getEvent('order complete');
 
     const config: DestinationWeb.Config = {
@@ -112,11 +117,11 @@ describe('Destination Meta Pixel', () => {
 
     elb('walker destination', destination, config);
 
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.Purchase());
   });
 
-  test('event AddToCart', () => {
+  test('event AddToCart', async () => {
     const event = getEvent('product add');
 
     elb('walker destination', destination, {
@@ -124,11 +129,11 @@ describe('Destination Meta Pixel', () => {
       mapping: mapping.config,
     });
 
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.AddToCart());
   });
 
-  test('event InitiateCheckout', () => {
+  test('event InitiateCheckout', async () => {
     const event = getEvent('cart view');
 
     elb('walker destination', destination, {
@@ -136,11 +141,11 @@ describe('Destination Meta Pixel', () => {
       mapping: mapping.config,
     });
 
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.InitiateCheckout());
   });
 
-  test('event ViewContent', () => {
+  test('event ViewContent', async () => {
     const event = getEvent('product view');
 
     elb('walker destination', destination, {
@@ -148,7 +153,7 @@ describe('Destination Meta Pixel', () => {
       mapping: mapping.config,
     });
 
-    elb(event);
+    await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ViewContent());
   });
 });

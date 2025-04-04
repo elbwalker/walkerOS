@@ -1,5 +1,5 @@
 import type { Mapping } from '@elbwalker/types';
-import type { DestinationGoogleGA4 } from '../src';
+import type { DestinationGoogleGA4 } from '..';
 import { isObject } from '@elbwalker/utils';
 
 export const purchase: DestinationGoogleGA4.EventConfig = {

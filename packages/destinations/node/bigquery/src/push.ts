@@ -8,7 +8,7 @@ export const push: PushFn = async function (event, config) {
 
   await client.dataset(datasetId).table(tableId).insert(rows);
 
-  return { queue: [] };
+  return;
 };
 
 export const mapEvent = (event: WalkerOS.Event): Row => {

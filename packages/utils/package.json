@@ -1,24 +1,30 @@
 {
   "name": "@elbwalker/utils",
   "description": "Shared utils for walkerOS packages",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "license": "MIT",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
     },
     "./node": {
       "types": "./dist/node.d.ts",
       "import": "./dist/node.mjs",
-      "require": "./dist/node.js"
+      "require": "./dist/node.js",
+      "default": "./dist/index.mjs"
     },
     "./web": {
       "types": "./dist/web.d.ts",
       "import": "./dist/web.mjs",
-      "require": "./dist/web.js"
+      "require": "./dist/web.js",
+      "default": "./dist/index.mjs"
     }
   },
   "files": [

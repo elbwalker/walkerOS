@@ -15,17 +15,19 @@ const walkerjs = Walkerjs({
     consent: 'functional', // Require functional consent
   },
   elb: 'elb', // Assign the elb function to the window
-  globals: {
+  globalsStatic: {
     tagged: false, // A static global attribute
   },
   pageview: true, // Trigger a page view event with each run
   run: true, // Automatically start running
   session: {
     storage: true, // Use the storage for session detection
-    consent: 'marketing', // Require marketing consent to access storage
+    consent: ['analytics', 'marketing'], // Required consent states to access storage
     length: 60, // Session length in minutes
   },
+  sessionStatic: { id: 's3ss10n', device: 'd3v1c3' }, // Static session data
   tagging: 1, // Current version of the tagging
+  user: { id: '1d', device: 'overruled' }, // Static user data
 });
 ```
 
@@ -37,12 +39,13 @@ const walkerjs = Walkerjs({
 | default         | boolean                     | Add dataLayer destination and run automatically        |
 | elb             | string                      | Name of assign the elb function to the window          |
 | elbLayer        | object                      | Public elbwalker API for async communication           |
-| globals         | object                      | Static attributes added to each event                  |
+| globalsStatic   | object                      | Static default attributes added to each event          |
 | instance        | string                      | Name of the walker.js instance to assign to the window |
 | pageview        | boolean                     | Trigger a page view event by default                   |
 | prefix          | string                      | Attributes prefix used by walker                       |
 | run             | boolean                     | Automatically start running                            |
 | session         | false or<br />SessionConfig | Configuration for session detection                    |
+| sessionStatic   | object                      | Static default session data                            |
 | tagging         | number                      | Current version of the tagging setup                   |
 | user            | object                      | Setting the user ids including id, device, and session |
 

@@ -15,43 +15,49 @@ describe('source dataLayer', () => {
     dataLayer = window.dataLayer as DataLayer;
   });
 
-  test('init new', () => {
+  test('init new', async () => {
     window.dataLayer = undefined;
     expect(window.dataLayer).toBeUndefined();
 
     sourceDataLayer();
     sourceDataLayer({});
+    await jest.runAllTimersAsync();
     expect(window.dataLayer).toBeUndefined();
 
     sourceDataLayer({ elb });
+    await jest.runAllTimersAsync();
     expect(isArray(window.dataLayer)).toBe(true);
-    expect((window.dataLayer as DataLayer).length).toBe(0);
+    expect((window.dataLayer as unknown as DataLayer).length).toBe(0);
   });
 
-  test('init existing', () => {
+  test('init existing', async () => {
     const originalPush = dataLayer.push;
     expect(originalPush).toBe(dataLayer.push);
 
     sourceDataLayer({ elb });
+    await jest.runAllTimersAsync();
     expect(originalPush).not.toBe(dataLayer!.push);
   });
 
-  test('config name', () => {
+  test('config name', async () => {
     expect(window.foo).toBeUndefined();
 
     sourceDataLayer({ elb, name: 'foo' });
+    await jest.runAllTimersAsync();
     expect(isArray(window.foo)).toBe(true);
   });
 
-  test('original arguments', () => {
+  test('original arguments', async () => {
     sourceDataLayer({ elb, name: 'foo' });
     dataLayer.push('foo');
+    await jest.runAllTimersAsync();
     expect(dataLayer).toEqual(['foo']);
   });
 
-  test('push', () => {
+  test('push', async () => {
     sourceDataLayer({ elb });
     dataLayer.push({ event: 'foo' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(1);
     expect(elb).toHaveBeenCalledWith({
       event: 'dataLayer foo',
@@ -61,7 +67,7 @@ describe('source dataLayer', () => {
     });
   });
 
-  test('filter', () => {
+  test('filter', async () => {
     const mockFn = jest.fn();
     sourceDataLayer({
       elb,
@@ -73,18 +79,21 @@ describe('source dataLayer', () => {
 
     let event = { event: 'foo' };
     dataLayer.push(event);
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(0);
     expect(mockFn).toHaveBeenCalledWith(event);
 
     event = { event: 'bar' };
     dataLayer.push(event);
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(1);
     expect(mockFn).toHaveBeenCalledWith(event);
   });
 
-  test('prefix', () => {
+  test('prefix', async () => {
     sourceDataLayer({ elb, prefix: 'foo' });
     dataLayer.push({ event: 'bar baz' });
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'foo bar_baz',
@@ -92,15 +101,15 @@ describe('source dataLayer', () => {
     );
   });
 
-  test('existing events', () => {
+  test('existing events', async () => {
     dataLayer.push({ event: 'add_to_cart' });
     dataLayer.push({ event: 'purchase' });
     sourceDataLayer({ elb });
-
+    await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(2);
   });
 
-  test('arguments', () => {
+  test('arguments', async () => {
     window.dataLayer = [
       {
         event: 'gtm.js',
@@ -118,10 +127,10 @@ describe('source dataLayer', () => {
     dataLayer = window.dataLayer as DataLayer;
 
     sourceDataLayer({ elb });
+    await jest.runAllTimersAsync();
 
-    gtag('event', 'another_arg', {
-      bar: 'baz',
-    });
+    gtag('event', 'another_arg', { bar: 'baz' });
+    await jest.runAllTimersAsync();
 
     expect(elb).toHaveBeenCalledTimes(3);
     expect(elb).toHaveBeenNthCalledWith(
@@ -151,7 +160,7 @@ describe('source dataLayer', () => {
     );
   });
 
-  test('processing', () => {
+  test('processing', async () => {
     const loopFn = jest.fn().mockImplementation(() => {
       // Create an infinite loop
       dataLayer.push({ event: 'loop' });
@@ -160,8 +169,11 @@ describe('source dataLayer', () => {
     dataLayer.push({ event: 'foo' });
     dataLayer.push({ event: 'bar' });
 
-    const source = sourceDataLayer({ elb: loopFn });
+    const source = await sourceDataLayer({ elb: loopFn });
+    await jest.runAllTimersAsync();
+
     dataLayer.push({ event: 'baz' });
+    await jest.runAllTimersAsync();
 
     expect(JSON.stringify(dataLayer)).toBe(
       JSON.stringify([
@@ -169,8 +181,8 @@ describe('source dataLayer', () => {
         { event: 'bar' },
         { event: 'loop' },
         { event: 'loop' },
-        { event: 'loop' },
         { event: 'baz' },
+        { event: 'loop' },
       ]),
     );
 
@@ -197,7 +209,7 @@ describe('source dataLayer', () => {
     );
   });
 
-  test('mutation prevention', () => {
+  test('mutation prevention', async () => {
     const elb = jest.fn();
     const originalObj = {};
     const originalArr: unknown[] = [];
@@ -216,16 +228,19 @@ describe('source dataLayer', () => {
     expect(originalArr).toEqual([]);
   });
 
-  test('error handling', () => {
+  test('error handling', async () => {
     const mockOrg = jest.fn();
     dataLayer.push = mockOrg;
     elb.mockImplementation(() => {
       throw new Error();
     });
 
-    sourceDataLayer(elb);
+    const instance = sourceDataLayer({ elb });
+    await jest.runAllTimersAsync();
     dataLayer.push('foo');
+    await jest.runAllTimersAsync();
     expect(elb).toThrow();
     expect(mockOrg).toHaveBeenCalledTimes(1);
+    expect(instance?.processing).toBe(false);
   });
 });

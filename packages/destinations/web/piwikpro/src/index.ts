@@ -9,7 +9,7 @@ export const destinationPiwikPro: Destination = {
 
   config: {},
 
-  init(config) {
+  init(config = {}) {
     const w = window;
     const { custom = {} as Partial<Custom>, fn, loadScript } = config;
     const { appId, url } = custom;
@@ -36,14 +36,14 @@ export const destinationPiwikPro: Destination = {
     if (custom.linkTracking !== false) func(['enableLinkTracking']);
   },
 
-  push(event, config, mapping = {}, options = {}) {
+  async push(event, config, mapping = {}, options = {}) {
     const { fn } = config;
     const { data } = options;
     const func = fn || window._paq!.push;
 
     // Send pageviews if not disabled
     if (event.event === 'page view' && !mapping.custom) {
-      func(['trackPageView', getMappingValue(event, 'data.title')]);
+      func(['trackPageView', await getMappingValue(event, 'data.title')]);
       return;
     }
 

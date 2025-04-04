@@ -1,8 +1,8 @@
-import type { Config, Custom, PartialConfig } from './types';
+import type { Config, Custom, InitFn } from './types';
 import { onLog, throwError } from '@elbwalker/utils';
 
-export function getConfig(partialConfig: PartialConfig = {}): Config {
-  const custom = partialConfig.custom || {};
+export function getConfig(partialConfig: Parameters<InitFn>[0] = {}): Config {
+  const custom = (partialConfig.custom || {}) as Partial<Custom>;
   const { accessToken, pixelId } = custom;
 
   if (!accessToken) throwError('Config custom accessToken missing');

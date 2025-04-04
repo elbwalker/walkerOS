@@ -1,15 +1,22 @@
-import type { Elb, WalkerOS } from '@elbwalker/types';
+import type { Elb, On, WalkerOS } from '@elbwalker/types';
 import type { Destination, DestinationInit, Config } from './destination';
-import type { ConsentConfig, Options } from './on';
 import type { State } from './source';
 import type { Trigger } from './walker';
 
-export interface Fn<R = void, D = PushData, O = PushOptions, C = PushContext>
+export interface Fn<R = Return, D = PushData, O = PushOptions, C = PushContext>
   extends Elb.Fn<R, D, O, C>,
+    Arguments<R>,
     CommandInit<R>,
     CommandDestination<R>,
     CommandOn<R>,
     CommandRun<R> {}
+
+export type Arguments<R = void> = Elb.Arguments<
+  R,
+  PushData,
+  PushOptions,
+  PushContext
+>;
 
 export type CommandInit<R = void> = (
   event: 'walker init',
@@ -30,10 +37,8 @@ export type CommandRun<R = void> = (
 export type CommandOn<R = void> = (
   event: 'walker on',
   type: 'consent',
-  rules: WalkerOS.SingleOrArray<ConsentConfig>,
+  rules: WalkerOS.SingleOrArray<On.ConsentConfig>,
 ) => R;
-
-export type Layer = Elb.Layer;
 
 export type PushData =
   | Elb.PushData
@@ -45,7 +50,7 @@ export type PushData =
 export type PushOptions =
   | Elb.PushOptions
   | Trigger
-  | WalkerOS.SingleOrArray<Options>
+  | WalkerOS.SingleOrArray<On.Options>
   | Config;
 
 export type PushContext = Elb.PushContext | Element;
@@ -53,3 +58,9 @@ export type PushContext = Elb.PushContext | Element;
 export type Scope = Element | Document;
 
 export type ScopeType = Scope | Scope[];
+
+export type PushResult = Elb.PushResult;
+
+export type Return<R = Promise<PushResult>> = R;
+
+export type Layer = Elb.Layer;

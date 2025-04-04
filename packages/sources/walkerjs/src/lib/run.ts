@@ -1,7 +1,6 @@
 import type { SourceWalkerjs } from '../types';
-import { assign, getId, tryCatch } from '@elbwalker/utils';
+import { assign, getId, onApply, tryCatch } from '@elbwalker/utils';
 import { getGlobals } from './walker';
-import { onApply } from './on';
 import { pushPredefined } from './push';
 import { load } from './trigger';
 import { sessionStart } from './session';

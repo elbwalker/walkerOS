@@ -1,7 +1,7 @@
-import { Walkerjs } from '..';
+import type { SourceWalkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import { sessionStart } from '@elbwalker/utils/web';
-import type { SourceWalkerjs } from '..';
+import { elb, Walkerjs } from '..';
 
 jest.mock('@elbwalker/utils/web', () => {
   const utilsOrg = jest.requireActual('@elbwalker/utils/web');
@@ -20,7 +20,7 @@ describe('Session', () => {
     jest.clearAllMocks();
   });
 
-  test('default state', () => {
+  test('default state', async () => {
     walkerjs = Walkerjs();
     expect(walkerjs.config.session).toEqual({ storage: false });
 
@@ -31,6 +31,8 @@ describe('Session', () => {
       storage: false,
     });
     expect(sessionStart).toHaveBeenCalledTimes(1);
+
+    await jest.runAllTimersAsync();
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'session start',
@@ -77,5 +79,70 @@ describe('Session', () => {
     );
 
     expect(mockFn).toHaveBeenCalledTimes(2);
+  });
+
+  test('different consent keys', async () => {
+    walkerjs = Walkerjs({
+      default: true,
+      session: { consent: ['marketing', 'analytics'], storage: true },
+      pageview: false,
+    });
+
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
+    elb('walker consent', { marketing: false, analytics: true });
+
+    await jest.runAllTimersAsync();
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'session start',
+        data: expect.objectContaining({
+          storage: true, // Prefer granted consent
+        }),
+      }),
+    );
+  });
+
+  test('multiple consent updates', async () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      value: new URL('https://www.elbwalker.com/?utm_campaign=foo'),
+    });
+
+    walkerjs = Walkerjs({
+      default: true,
+      session: { consent: 'marketing', storage: true },
+      pageview: false,
+    });
+
+    expect(mockDataLayer).toHaveBeenCalledTimes(0);
+    elb('walker consent', { marketing: true });
+    elb('walker consent', { marketing: true });
+    elb('walker consent', { marketing: true });
+
+    await jest.runAllTimersAsync();
+    expect(mockDataLayer).toHaveBeenCalledTimes(1);
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'session start',
+        data: expect.any(Object),
+      }),
+    );
+
+    elb('walker run');
+    await jest.runAllTimersAsync();
+    expect(mockDataLayer).toHaveBeenCalledTimes(2);
+    expect(mockDataLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'session start',
+        data: expect.objectContaining({
+          count: 2,
+        }),
+      }),
+    );
+
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+    });
   });
 });

@@ -14,7 +14,7 @@ function getProduct(entity: WalkerOS.Entity | WalkerOS.Event) {
   };
 }
 
-export function ecommerceOrder() {
+export function ecommerceOrder(): unknown[] {
   const event = getEvent('order complete');
 
   return [
@@ -32,7 +32,7 @@ export function ecommerceOrder() {
   ];
 }
 
-export function ecommerceAddToCart() {
+export function ecommerceAddToCart(): unknown[] {
   const event = getEvent('product add');
 
   return [
@@ -40,7 +40,7 @@ export function ecommerceAddToCart() {
   ];
 }
 
-export function ecommerceProductDetailView() {
+export function ecommerceProductDetailView(): unknown[] {
   const event = getEvent('product view');
 
   return [
@@ -52,7 +52,7 @@ export function ecommerceProductDetailView() {
   ];
 }
 
-export function ecommerceCartUpdate() {
+export function ecommerceCartUpdate(): unknown[] {
   const event = getEvent('cart view');
 
   return [

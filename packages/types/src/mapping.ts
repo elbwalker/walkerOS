@@ -47,13 +47,13 @@ export type Condition = (
   value: WalkerOS.DeepPartialEvent | unknown,
   mapping?: Value,
   instance?: WalkerOS.Instance,
-) => boolean;
+) => WalkerOS.PromiseOrValue<boolean>;
 
 export type Fn = (
   value: WalkerOS.DeepPartialEvent | unknown,
   mapping: Value,
   options: Options,
-) => WalkerOS.Property | unknown;
+) => WalkerOS.PromiseOrValue<WalkerOS.Property | unknown>;
 
 export type Loop = [Value, Value];
 
@@ -65,4 +65,4 @@ export interface Options {
   props?: unknown;
 }
 
-export type Validate = (value?: unknown) => boolean;
+export type Validate = (value?: unknown) => WalkerOS.PromiseOrValue<boolean>;

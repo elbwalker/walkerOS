@@ -1,5 +1,14 @@
 # @elbwalker/destination-web-etag
 
+## 0.1.7
+
+### Patch Changes
+
+- Updated dependencies [63d6199]
+- Updated dependencies [15e8ecf]
+- Updated dependencies [149379d]
+  - @elbwalker/walker.js@3.4.0
+
 ## 0.1.6
 
 ### Patch Changes

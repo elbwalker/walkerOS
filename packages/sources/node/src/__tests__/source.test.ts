@@ -65,8 +65,8 @@ describe('Source Node', () => {
       expect.anything(),
     );
     expect(result).toEqual({
+      ok: true,
       event: mockEvent,
-      status: { ok: true },
       successful: [{ id: 'mock', destination: mockDestination }],
       queued: [],
       failed: [],
@@ -124,13 +124,10 @@ describe('Source Node', () => {
     const elbWithZeroParams = elb as unknown as () => Promise<Elb.PushResult>;
 
     result = await elbWithZeroParams();
-
-    expect(result.status).toHaveProperty('ok', false);
-    expect(result.status.error).toBe('Error: Event name is required');
+    expect(result.ok).toBeFalsy();
 
     result = await elb('foo');
-    expect(result.status).toHaveProperty('ok', false);
-    expect(result.status.error).toBe('Error: Event name is invalid');
+    expect(result.ok).toBeFalsy();
   });
 
   test('globals', async () => {

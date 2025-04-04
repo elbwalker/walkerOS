@@ -1,5 +1,23 @@
 # @elbwalker/walker.js
 
+## 3.4.0
+
+### Minor Changes
+
+- 63d6199: async pushes [#373](https://github.com/elbwalker/walkerOS/issues/373)
+
+### Patch Changes
+
+- 15e8ecf: Support multiple consent states for session detection
+  [#497](https://github.com/elbwalker/walkerOS/issues/497)
+- 149379d: Duplicate session starts on multiple consent updates
+  [#496](https://github.com/elbwalker/walkerOS/issues/496)
+- Updated dependencies [63d6199]
+- Updated dependencies [63d6199]
+- Updated dependencies [15e8ecf]
+- Updated dependencies [149379d]
+  - @elbwalker/utils@3.8.0
+
 ## 3.3.0
 
 ### Minor Changes

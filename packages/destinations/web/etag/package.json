@@ -1,19 +1,24 @@
 {
   "name": "@elbwalker/destination-web-etag",
   "description": "etag web destination for walkerOS",
-  "version": "0.1.6",
-  "type": "module",
+  "version": "0.1.7",
   "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
     },
     "./examples": {
       "types": "./dist/examples/index.d.ts",
       "import": "./dist/examples/index.mjs",
-      "require": "./dist/examples/index.js"
+      "require": "./dist/examples/index.js",
+      "default": "./dist/examples/index.mjs"
     }
   },
   "files": [
@@ -28,13 +33,13 @@
     "test": "jest --colors --coverage"
   },
   "dependencies": {
-    "@elbwalker/walker.js": "3.3.0"
+    "@elbwalker/walker.js": "3.4.0"
   },
   "devDependencies": {
-    "@elbwalker/destination-core-etag": "0.0.8",
+    "@elbwalker/destination-core-etag": "0.0.9",
     "@elbwalker/tsup": "0.0.1",
     "@elbwalker/types": "3.3.0",
-    "@elbwalker/utils": "^3.7.0"
+    "@elbwalker/utils": "^3.8.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

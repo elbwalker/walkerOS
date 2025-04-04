@@ -1,5 +1,18 @@
 # @elbwalker/destination-node-meta
 
+## 2.1.4
+
+### Patch Changes
+
+- Updated dependencies [f4bbbc6]
+- Updated dependencies [63d6199]
+- Updated dependencies [63d6199]
+- Updated dependencies [63d6199]
+- Updated dependencies [15e8ecf]
+- Updated dependencies [149379d]
+  - @elbwalker/source-node@3.4.0
+  - @elbwalker/utils@3.8.0
+
 ## 2.1.3
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 import { getEvent } from '@elbwalker/utils';
 
-export function Purchase() {
+export function Purchase(): unknown[] {
   const event = getEvent('order complete');
 
   return [
@@ -18,7 +18,7 @@ export function Purchase() {
   ];
 }
 
-export function AddToCart() {
+export function AddToCart(): unknown[] {
   const event = getEvent('product add');
 
   return [
@@ -33,7 +33,7 @@ export function AddToCart() {
   ];
 }
 
-export function InitiateCheckout() {
+export function InitiateCheckout(): unknown[] {
   const event = getEvent('cart view');
 
   return [
@@ -53,7 +53,7 @@ export function InitiateCheckout() {
   ];
 }
 
-export function ViewContent() {
+export function ViewContent(): unknown[] {
   const event = getEvent('product view');
 
   return [

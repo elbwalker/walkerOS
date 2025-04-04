@@ -1,12 +1,20 @@
 {
   "name": "@elbwalker/source-datalayer",
   "description": "datalayer source for walkerOS",
-  "version": "0.1.0",
-  "type": "module",
+  "version": "0.1.1",
   "license": "MIT",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    }
+  },
   "files": [
     "dist/**",
     "CHANGELOG.md"
@@ -20,12 +28,12 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/walker.js": "3.3.0"
+    "@elbwalker/walker.js": "3.4.0"
   },
   "devDependencies": {
     "@elbwalker/tsup": "0.0.1",
     "@elbwalker/types": "3.3.0",
-    "@elbwalker/utils": "^3.7.0"
+    "@elbwalker/utils": "^3.8.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
