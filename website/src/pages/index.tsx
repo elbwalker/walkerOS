@@ -16,8 +16,6 @@ export default function Home() {
       description="Open-source event data collection platform"
     >
       <Hero />
-      <PromotionReady />
-      <PromotionLive />
       <main>
         <Features />
         <PromotionLive />

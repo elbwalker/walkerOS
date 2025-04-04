@@ -11,8 +11,7 @@ const baseCode = `<div
         Setting up tracking easily
       </h2>
       <p class="py-6">
-        Provident cupiditate voluptatem et in.
-      </p>
+       Click a button to trigger more events.      </p>
       <button class="dui-btn dui-btn-primary">
         Get Started
       </button>
@@ -109,8 +108,7 @@ export const PromotionReady: React.FC = () => {
           Setting up tracking easily
         </h2>
         <p class="py-6">
-          Provident cupiditate voluptatem et in.
-        </p>
+        Click a button to trigger more events.         </p>
         <button data-elbaction="click:start" class="dui-btn dui-btn-primary">
           Get Started
         </button>
