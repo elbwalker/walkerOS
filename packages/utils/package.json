@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/utils",
   "description": "Shared utils for walkerOS packages",
-  "version": "3.8.0",
+  "version": "3.8.1",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -18,13 +18,13 @@
       "types": "./dist/node.d.ts",
       "import": "./dist/node.mjs",
       "require": "./dist/node.js",
-      "default": "./dist/index.mjs"
+      "default": "./dist/node.mjs"
     },
     "./web": {
       "types": "./dist/web.d.ts",
       "import": "./dist/web.mjs",
       "require": "./dist/web.js",
-      "default": "./dist/index.mjs"
+      "default": "./dist/web.mjs"
     }
   },
   "files": [
@@ -40,7 +40,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/types": "3.3.0"
+    "@elbwalker/types": "3.4.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

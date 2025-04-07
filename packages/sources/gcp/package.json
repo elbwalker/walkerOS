@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/source-gcp",
   "description": "GCP source for walkerOS",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -28,11 +28,10 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/walker.js": "3.4.0"
+    "@elbwalker/walker.js": "3.4.1"
   },
   "devDependencies": {
-    "@elbwalker/tsup": "0.0.1",
-    "@elbwalker/types": "3.3.0",
+    "@elbwalker/types": "3.4.0",
     "@google-cloud/functions-framework": "^3.4.2"
   },
   "repository": {

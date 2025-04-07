@@ -1,5 +1,11 @@
 # @elbwalker/source-gcp
 
+## 0.0.5
+
+### Patch Changes
+
+- @elbwalker/walker.js@3.4.1
+
 ## 0.0.4
 
 ### Patch Changes

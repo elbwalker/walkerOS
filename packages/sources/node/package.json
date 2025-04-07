@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/source-node",
   "description": "Node source for walkerOS for sending events from the server-side",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -28,7 +28,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/utils": "3.8.0"
+    "@elbwalker/utils": "3.8.1"
   },
   "devDependencies": {},
   "repository": {
