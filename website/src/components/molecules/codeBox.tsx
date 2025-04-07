@@ -236,7 +236,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
                     )}
                   </button>
                   {isPauseHovered && (
-                    <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded shadow-sm border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                    <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded-sm shadow-xs border border-gray-200 dark:border-gray-600 whitespace-nowrap">
                       {isPaused ? 'Play' : 'Stop'}
                     </div>
                   )}
@@ -271,7 +271,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
                     </svg>
                   </button>
                   {isResetHovered && (
-                    <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded shadow-sm border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                    <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded-sm shadow-xs border border-gray-200 dark:border-gray-600 whitespace-nowrap">
                       Reset
                     </div>
                   )}
@@ -301,7 +301,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
                     </svg>
                   </button>
                   {isFormatHovered && (
-                    <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded shadow-sm border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                    <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded-sm shadow-xs border border-gray-200 dark:border-gray-600 whitespace-nowrap">
                       Format
                     </div>
                   )}
@@ -330,7 +330,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
                   </svg>
                 </button>
                 {(isHovered || copied) && (
-                  <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded shadow-sm border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                  <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded-sm shadow-xs border border-gray-200 dark:border-gray-600 whitespace-nowrap">
                     {copied ? 'Copied!' : 'Copy'}
                   </div>
                 )}

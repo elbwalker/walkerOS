@@ -4,28 +4,74 @@
  * work well for content-centric websites.
  */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-/* You can override the default Infima variables here. */
+/* DaisyUI plugin configuration */
+@plugin "daisyui" {
+  themes:
+    light --default,
+    dark --prefersdark;
+  root: ':root';
+  base: false;
+  prefix: 'dui-';
+  logs: false;
+}
+
+/* Define CSS variables for colors */
 :root {
-  --ifm-background-color: theme('colors.gray.100');
-  --ifm-background-surface-color: theme('colors.gray.100');
-  --ifm-color-primary: theme('colors.elbwalker.DEFAULT');
-  --ifm-color-primary-dark: theme('colors.elbwalker.700');
-  --ifm-color-primary-darker: theme('colors.elbwalker.800');
-  --ifm-color-primary-darkest: theme('colors.elbwalker.900');
-  --ifm-color-primary-light: theme('colors.elbwalker.300');
-  --ifm-color-primary-lighter: theme('colors.elbwalker.200');
-  --ifm-color-primary-lightest: theme('colors.elbwalker.100');
+  /* Gray color scale */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+
+  /* Elbwalker color scale */
+  --color-elbwalker: #01b5e2;
+  --color-elbwalker-50: #ffffff;
+  --color-elbwalker-100: #edfeff;
+  --color-elbwalker-200: #abf8ff;
+  --color-elbwalker-300: #69ecfe;
+  --color-elbwalker-400: #27dbfe;
+  --color-elbwalker-500: #01b5e2;
+  --color-elbwalker-600: #01b5e2;
+  --color-elbwalker-700: #015372;
+  --color-elbwalker-800: #00283a;
+  --color-elbwalker-900: #000203;
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+:root {
+  --ifm-background-color: var(--color-gray-100);
+  --ifm-background-surface-color: var(--color-gray-100);
+  --ifm-color-primary: var(--color-elbwalker);
+  --ifm-color-primary-dark: var(--color-elbwalker-700);
+  --ifm-color-primary-darker: var(--color-elbwalker-800);
+  --ifm-color-primary-darkest: var(--color-elbwalker-900);
+  --ifm-color-primary-light: var(--color-elbwalker-300);
+  --ifm-color-primary-lighter: var(--color-elbwalker-200);
+  --ifm-color-primary-lightest: var(--color-elbwalker-100);
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
 html[data-theme='dark'] {
-  --ifm-background-color: theme('colors.gray.900');
-  --ifm-background-surface-color: theme('colors.gray.900');
+  --ifm-background-color: var(--color-gray-900);
+  --ifm-background-surface-color: var(--color-gray-900);
 }
 
 [data-theme='dark'] {
@@ -33,7 +79,7 @@ html[data-theme='dark'] {
 }
 
 a {
-  color: theme('colors.elbwalker.DEFAULT');
+  color: var(--color-elbwalker);
 }
 
 svg {
@@ -46,7 +92,7 @@ h3,
 h4,
 h5,
 h6 {
-  color: theme('colors.elbwalker.DEFAULT');
+  color: var(--color-elbwalker);
 }
 
 h1 {
@@ -79,8 +125,8 @@ article h3 {
 }
 
 .dui-btn {
-  background-color: theme('colors.gray.600') !important;
-  border-color: theme('colors.gray.600') !important;
+  background-color: var(--color-gray-600) !important;
+  border-color: var(--color-gray-600) !important;
 }
 
 .dui-btn.dui-btn-primary {

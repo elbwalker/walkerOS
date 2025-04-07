@@ -29,7 +29,7 @@ const FullScreenButton: React.FC<FullScreenButtonProps> = ({ onClick }) => {
       </svg>
       Full screen
       {isHovered && (
-        <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded shadow-sm border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+        <div className="absolute right-full mr-1 top-1/2 -translate-y-1/2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs py-1 px-1 rounded-sm shadow-xs border border-gray-200 dark:border-gray-600 whitespace-nowrap">
           Toggle full screen
         </div>
       )}

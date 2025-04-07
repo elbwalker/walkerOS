@@ -44,7 +44,7 @@ export default function Team() {
               <img
                 alt=""
                 src={person.imageUrl}
-                className="aspect-[4/5] w-52 flex-none rounded-2xl object-cover"
+                className="aspect-4/5 w-52 flex-none rounded-2xl object-cover"
               />
               <div className="max-w-xl flex-auto">
                 <h3 className="text-lg/8 font-semibold tracking-tight text-gray-50">

@@ -58,7 +58,7 @@ export default function Sparring() {
                 </p>
                 <a
                   href="https://calendar.app.google/iY7L57quiZPBtmxR6"
-                  className="mt-10 block w-full rounded-md bg-elbwalker-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-elbwalker-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-elbwalker-600"
+                  className="mt-10 block w-full rounded-md bg-elbwalker-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-xs hover:bg-elbwalker-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-elbwalker-600"
                 >
                   Schedule now
                 </a>

@@ -39,7 +39,7 @@ const FullScreenOverlay: React.FC<FullScreenOverlayProps> = ({
 
   return (
     <div
-      className="overlay fixed inset-0 z-[9999] flex items-center justify-center bg-black/80"
+      className="overlay fixed inset-0 z-9999 flex items-center justify-center bg-black/80"
       onClick={handleOverlayClick}
     >
       <div className="w-full max-w-[90vw] max-h-[calc(100vh-8rem)]">
