@@ -17,21 +17,8 @@
   logs: false;
 }
 
-/* Define CSS variables for colors */
 :root {
-  /* Gray color scale */
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
-
-  /* Elbwalker color scale */
+  /* Brand colors */
   --color-elbwalker: #01b5e2;
   --color-elbwalker-50: #ffffff;
   --color-elbwalker-100: #edfeff;
@@ -43,43 +30,65 @@
   --color-elbwalker-700: #015372;
   --color-elbwalker-800: #00283a;
   --color-elbwalker-900: #000203;
-}
 
-@layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
-  }
-}
+  /* Gray scale */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
 
-:root {
-  --ifm-background-color: var(--color-gray-100);
-  --ifm-background-surface-color: var(--color-gray-100);
-  --ifm-color-primary: var(--color-elbwalker);
+  /* DaisyUI semantic colors */
+  --color-primary: var(--color-elbwalker);
+  --color-primary-content: var(--color-gray-50);
+  --color-secondary: var(--color-gray-600);
+  --color-secondary-content: var(--color-gray-50);
+  --color-base-100: var(--color-gray-100);
+  --color-base-200: var(--color-gray-200);
+  --color-base-300: var(--color-gray-300);
+  --color-base-content: var(--color-gray-900);
+
+  /* Infima integration */
+  --ifm-background-color: var(--color-base-100);
+  --ifm-background-surface-color: var(--color-base-100);
+  --ifm-color-primary: var(--color-primary);
   --ifm-color-primary-dark: var(--color-elbwalker-700);
   --ifm-color-primary-darker: var(--color-elbwalker-800);
   --ifm-color-primary-darkest: var(--color-elbwalker-900);
   --ifm-color-primary-light: var(--color-elbwalker-300);
   --ifm-color-primary-lighter: var(--color-elbwalker-200);
   --ifm-color-primary-lightest: var(--color-elbwalker-100);
+  --ifm-link-color: var(--color-elbwalker);
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --ifm-link-hover-decoration: none;
 }
 
 html[data-theme='dark'] {
-  --ifm-background-color: var(--color-gray-900);
-  --ifm-background-surface-color: var(--color-gray-900);
+  --color-primary: var(--color-elbwalker);
+  --color-primary-content: var(--color-gray-900);
+  --color-secondary: var(--color-gray-400);
+  --color-secondary-content: var(--color-gray-900);
+  --color-base-100: var(--color-gray-900);
+  --color-base-200: var(--color-gray-800);
+  --color-base-300: var(--color-gray-700);
+  --color-base-content: var(--color-gray-50);
+  --ifm-background-color: var(--color-base-100);
+  --ifm-background-surface-color: var(--color-base-100);
 }
 
-[data-theme='dark'] {
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+@theme {
+  --color-elbwalker: var(--color-elbwalker);
 }
 
+/* Base styles */
 a {
-  color: var(--color-elbwalker);
+  color: var(--color-primary);
 }
 
 svg {
@@ -92,19 +101,7 @@ h3,
 h4,
 h5,
 h6 {
-  color: var(--color-elbwalker);
-}
-
-h1 {
-  font-size: 2.5rem;
-}
-
-article h2 {
-  font-size: var(--ifm-h2-font-size);
-}
-
-article h3 {
-  font-size: var(--ifm-h3-font-size);
+  color: var(--color-primary);
 }
 
 .scroll .code-editor pre,
@@ -114,22 +111,21 @@ article h3 {
   width: 200% !important;
 }
 
-.dui-btn,
-.dui-btn:active,
-.dui-btn:focus,
-.dui-btn:hover {
-  transition: none !important;
-  animation: none !important;
-  transform: none !important;
-  color: white !important;
-}
+/* Override text colors */
+@layer base {
+  .text-black {
+    color: var(--color-base-content) !important;
+  }
 
-.dui-btn {
-  background-color: var(--color-gray-600) !important;
-  border-color: var(--color-gray-600) !important;
-}
+  .text-white {
+    color: var(--color-white) !important;
+  }
 
-.dui-btn.dui-btn-primary {
-  background-color: var(--ifm-color-primary) !important;
-  border-color: var(--ifm-color-primary) !important;
+  [data-theme='dark'] .dark\:text-white {
+    color: var(--color-base-content) !important;
+  }
+
+  [data-theme='dark'] {
+    --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  }
 }

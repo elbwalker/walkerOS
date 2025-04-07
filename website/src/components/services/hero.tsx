@@ -23,11 +23,11 @@ export default function Hero() {
 
   return (
     <main className="relative mx-3 mt-16 max-w-7xl sm:mt-24 lg:mx-auto">
-      <div className="text-center	">
+      <div className="text-center">
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
           <div className="block text-elbwalker-600 block">walkerOS</div>
           <div className="block xl:inline text-black dark:text-white">
-            Professional services{' '}
+            Professional services
           </div>
         </h1>
         <p className="mx-auto mt-3 max-w-md text-base sm:text-lg md:mt-5 md:max-w-3xl md:text-xl">
@@ -38,7 +38,7 @@ export default function Hero() {
           <Button link="https://calendly.com/elb-alexander/30min">
             Schedule free call
           </Button>
-          <Button link="mailto:hello@elbwalker.com" isSecondary>
+          <Button link="mailto:hello@elbwalker.com" variant="secondary">
             Write an email
           </Button>
         </div>

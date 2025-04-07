@@ -25,19 +25,22 @@ export default function Hero() {
     <main className="relative mx-3 mt-16 max-w-7xl sm:mt-24 lg:mx-auto">
       <div className="text-center	">
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
-          <div className="block text-elbwalker-600 block">walkerOS</div>
+          <div className="block text-elbwalker block">walkerOS</div>
           <div className="block xl:inline text-black dark:text-white">
             Open-source event data collection
           </div>
         </h1>
-        <p className="mx-auto mt-3 max-w-md text-base sm:text-lg md:mt-5 md:max-w-3xl md:text-xl">
+        <p className="mx-auto mt-3 text-base sm:text-lg md:mt-5 md:text-xl">
           Collect event data for digital analytics in a unified and
           privacy-centric way.
         </p>
         <div className="mx-auto mt-5 max-w-md sm:flex sm:justify-center md:mt-8">
           <Button link="/docs/getting_started/quick_start">Get started</Button>
-          <Button link="https://tagging.demo.elbwalker.com/" isSecondary>
-            Live Demo
+          <Button
+            link="https://tagging.demo.elbwalker.com/"
+            variant="secondary"
+          >
+            Playground
           </Button>
         </div>
       </div>
