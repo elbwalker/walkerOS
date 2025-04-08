@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-node-bigquery",
   "description": "BigQuery node destination for walkerOS",
-  "version": "2.1.4",
+  "version": "2.1.5",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -34,11 +34,11 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/source-node": "3.4.0",
-    "@elbwalker/utils": "^3.8.0"
+    "@elbwalker/source-node": "3.4.1",
+    "@elbwalker/utils": "^3.8.1"
   },
   "devDependencies": {
-    "@elbwalker/types": "3.3.0",
+    "@elbwalker/types": "3.4.0",
     "@google-cloud/bigquery": "^7.8.0"
   },
   "repository": {

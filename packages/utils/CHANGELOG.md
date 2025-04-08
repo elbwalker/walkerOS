@@ -1,5 +1,13 @@
 # @elbwalker/utils
 
+## 3.8.1
+
+### Patch Changes
+
+- export update
+- Updated dependencies
+  - @elbwalker/types@3.3.1
+
 ## 3.8.0
 
 ### Minor Changes
