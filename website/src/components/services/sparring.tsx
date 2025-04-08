@@ -24,7 +24,7 @@ export default function Sparring() {
               answers to your questions.
             </p>
             <div className="mt-10 flex items-center gap-x-4">
-              <h4 className="flex-none text-sm/6 font-semibold text-elbwalker-600">
+              <h4 className="flex-none text-sm/6 font-semibold text-elbwalker">
                 What's included
               </h4>
               <div className="h-px flex-auto bg-gray-800" />
@@ -37,7 +37,7 @@ export default function Sparring() {
                 <li key={feature} className="flex gap-x-3">
                   <CheckIcon
                     aria-hidden="true"
-                    className="h-6 w-5 flex-none text-elbwalker-600"
+                    className="h-6 w-5 flex-none text-elbwalker"
                   />
                   {feature}
                 </li>

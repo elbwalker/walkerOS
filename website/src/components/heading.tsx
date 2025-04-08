@@ -1,3 +1,5 @@
+import React from 'react';
+
 type HeadingProps = {
   title: string;
   description?: string;
@@ -6,11 +8,11 @@ type HeadingProps = {
 export default function Heading({
   title,
   description,
-}: HeadingProps): JSX.Element {
+}: HeadingProps): React.JSX.Element {
   return (
     <div className="lg:text-center">
       {description && (
-        <p className="text-base font-semibold uppercase tracking-wide text-elbwalker-600">
+        <p className="text-base font-semibold uppercase tracking-wide text-elbwalker">
           {description}
         </p>
       )}

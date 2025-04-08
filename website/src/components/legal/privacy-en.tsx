@@ -247,7 +247,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   Privacy policy:{' '}
                   <a
-                    className="text-elbwalker-600"
+                    className="text-elbwalker"
                     href="https://www.facebook.com/about/privacy/"
                     rel="nofollow"
                     target="_blank"
@@ -258,7 +258,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   Opt-Out:{' '}
                   <a
-                    className="text-elbwalker-600"
+                    className="text-elbwalker"
                     href="https://www.facebook.com/settings?tab=ads"
                     rel="nofollow"
                     target="_blank"
@@ -276,7 +276,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   Privacy policy and opt-out:{' '}
                   <a
-                    className="text-elbwalker-600"
+                    className="text-elbwalker"
                     href="http://instagram.com/about/legal/privacy/"
                     rel="nofollow"
                     target="_blank"
@@ -294,7 +294,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   Privacy Policy:{' '}
                   <a
-                    className="text-elbwalker-600"
+                    className="text-elbwalker"
                     href="https://www.linkedin.com/legal/privacy-policy"
                     rel="nofollow"
                     target="_blank"
@@ -305,7 +305,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   Opt-Out:{' '}
                   <a
-                    className="text-elbwalker-600"
+                    className="text-elbwalker"
                     href="https://www.linkedin.com/psettings/guest-controls/retargeting-opt-out"
                     rel="nofollow"
                     target="_blank"
@@ -323,7 +323,7 @@ export default function LegalPrivacyContentEN() {
                 <p>
                   Privacy policy and opt-out:{' '}
                   <a
-                    className="text-elbwalker-600"
+                    className="text-elbwalker"
                     href="https://privacy.xing.com/de/datenschutzerklaerung"
                     rel="nofollow"
                     target="_blank"

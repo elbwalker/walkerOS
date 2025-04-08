@@ -11,7 +11,7 @@ export default function CTAServices() {
             className="block text-black dark:text-white"
           >
             Let's discuss how
-            <span className="inline px-2 text-elbwalker-600">walkerOS</span>
+            <span className="inline px-2 text-elbwalker">walkerOS</span>
             <br />
             can elevate your analytics.
           </span>
@@ -20,8 +20,8 @@ export default function CTAServices() {
           <Button link="https://calendly.com/elb-alexander/30min">
             Schedule free call
           </Button>
-          <Button link="mailto:hello@elbwalker.com" isSecondary>
-            Write us an email{' '}
+          <Button link="mailto:hello@elbwalker.com" variant="secondary">
+            Write us
           </Button>
         </div>
       </div>

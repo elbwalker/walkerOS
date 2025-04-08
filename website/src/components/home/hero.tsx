@@ -24,7 +24,7 @@ export default function Hero() {
   return (
     <main className="relative mx-3 mt-16 max-w-7xl sm:mt-24 lg:mx-auto">
       <div className="text-center	">
-        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
+        <h1 className="text-6xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
           <div className="block text-elbwalker block">walkerOS</div>
           <div className="block xl:inline text-black dark:text-white">
             Open-source event data collection

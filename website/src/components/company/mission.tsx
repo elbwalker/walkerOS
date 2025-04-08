@@ -90,7 +90,7 @@ export default function CompanyMission() {
               <p>
                 <Link
                   to="/docs/"
-                  className="text-base font-medium text-elbwalker-600"
+                  className="text-base font-medium text-elbwalker"
                 >
                   Learn more about our software
                   <span aria-hidden="true">&rarr;</span>

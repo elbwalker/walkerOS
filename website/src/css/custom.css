@@ -63,10 +63,12 @@
   --ifm-color-primary-light: var(--color-elbwalker-300);
   --ifm-color-primary-lighter: var(--color-elbwalker-200);
   --ifm-color-primary-lightest: var(--color-elbwalker-100);
+  --ifm-h1-font-size: 3rem;
+  --ifm-h2-font-size: 2rem;
   --ifm-link-color: var(--color-elbwalker);
+  --ifm-link-hover-decoration: none;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
-  --ifm-link-hover-decoration: none;
 }
 
 html[data-theme='dark'] {
