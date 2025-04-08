@@ -87,6 +87,7 @@ const config: Config = {
           position: 'left',
           label: 'Documentation',
         },
+        { to: '/playground', label: 'Playground', position: 'left' },
         { to: '/services', label: 'Services', position: 'left' },
         { to: '/blog', label: 'Blog', position: 'left' },
         {
@@ -105,6 +106,10 @@ const config: Config = {
             {
               label: 'Documentation',
               to: '/docs/',
+            },
+            {
+              label: 'Playground',
+              to: '/playground',
             },
             {
               label: 'walker.js',
