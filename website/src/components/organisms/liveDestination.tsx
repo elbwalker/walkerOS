@@ -8,7 +8,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { createEvent } from '@elbwalker/utils';
+import { createEvent, destinationPush, tryCatchAsync } from '@elbwalker/utils';
 import { LiveCode } from './liveCode';
 import { formatValue, parseInput } from '../molecules/codeBox';
 
@@ -74,7 +74,7 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
     const inputValue = parseInput(input);
     setConfig(inputValue);
 
-    tryCatch(destination.init)(
+    tryCatchAsync(destination.init)(
       {
         custom: inputValue,
         fn: log,
@@ -160,100 +160,3 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
     />
   );
 };
-
-// Should be moved to utils
-import {
-  assign,
-  debounce,
-  getMappingEvent,
-  getMappingValue,
-  isDefined,
-  isObject,
-  tryCatch,
-  useHooks,
-} from '@elbwalker/utils';
-
-function resolveMappingData(
-  event: WalkerOS.Event,
-  data?: Mapping.Data,
-  options?: Mapping.Options,
-): Destination.Data {
-  if (!data) return;
-
-  // @TODO update
-  return Array.isArray(data)
-    ? data.map((item) => getMappingValue(event, item, options))
-    : getMappingValue(event, data, options);
-}
-
-export function destinationPush(
-  instance: WalkerOS.Instance,
-  destination: DestinationWeb.Destination,
-  event: WalkerOS.Event,
-): boolean {
-  const { config } = destination;
-  const { eventMapping, mappingKey } = getMappingEvent(event, config.mapping);
-
-  let data = resolveMappingData(event, config.data, { instance });
-
-  if (eventMapping) {
-    // Check if event should be processed or ignored
-    if (eventMapping.ignore) return false;
-
-    // Check to use specific event names
-    if (eventMapping.name) event.event = eventMapping.name;
-
-    // Transform event to a custom data
-    if (eventMapping.data) {
-      const dataEvent = resolveMappingData(event, eventMapping.data, {
-        instance,
-      });
-      data =
-        isObject(data) && isObject(dataEvent) // Only merge objects
-          ? assign(data, dataEvent)
-          : dataEvent;
-    }
-  }
-
-  const options = { data, instance };
-
-  return !!tryCatch(() => {
-    if (eventMapping?.batch && destination.pushBatch) {
-      const batched = eventMapping.batched || {
-        key: mappingKey || '',
-        events: [],
-        data: [],
-      };
-      batched.events.push(event);
-      if (isDefined(data)) batched.data.push(data);
-
-      eventMapping.batchFn =
-        eventMapping.batchFn ||
-        debounce((destination, instance) => {
-          useHooks(
-            destination.pushBatch!,
-            'DestinationPushBatch',
-            instance.hooks,
-          )(batched, destination.config, options);
-
-          // Reset the batched queues
-          batched.events = [];
-          batched.data = [];
-        }, eventMapping.batch);
-
-      eventMapping.batched = batched;
-      eventMapping.batchFn(destination, instance);
-    } else {
-      // It's time to go to the destination's side now
-      useHooks(
-        // @TODO this is ugly af
-        (destination as unknown as WalkerOS.AnyObject)
-          .push as WalkerOS.AnyFunction,
-        'DestinationPush',
-        instance.hooks,
-      )(event, destination.config, eventMapping, options);
-    }
-
-    return true;
-  })();
-}

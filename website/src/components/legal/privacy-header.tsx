@@ -21,7 +21,7 @@ export default function LegalPrivacyHeader({ changeLanguage }) {
             <select
               id="currency"
               name="currency"
-              className="block w-full appearance-none rounded-md border border-transparent bg-gray-700 bg-none py-2 pl-3 pr-10 text-base text-white focus:border-white focus:outline-none focus:ring-1 focus:ring-white sm:text-sm"
+              className="block w-full appearance-none rounded-md border border-transparent bg-gray-700 bg-none py-2 pl-3 pr-10 text-base text-white focus:border-white focus:outline-hidden focus:ring-1 focus:ring-white sm:text-sm"
               defaultValue="EN"
               onChange={(event) => changeLanguage(event.target.value)}
             >

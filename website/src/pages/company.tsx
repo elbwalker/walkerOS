@@ -1,3 +1,4 @@
+import { JSX } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import CompanyValues from '../components/company/values';
@@ -8,7 +9,7 @@ export default function Home(): JSX.Element {
 
   return (
     <Layout
-      title={`About ${siteConfig.title}`}
+      title="About"
       description="elbwalker creates a new and open standard to measure user behavior."
     >
       <main>

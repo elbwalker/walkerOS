@@ -1,5 +1,4 @@
 import { JSX } from 'react';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import Hero from '@site/src/components/services/hero';
 import Features from '@site/src/components/services/features';
@@ -10,9 +9,8 @@ import Projects from '@site/src/components/services/projects';
 import CollectionPrinciples from '@site/src/components/services/collectionPrinciples';
 
 export default function Services(): JSX.Element {
-  const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout title={`${siteConfig.title}`} description="Professional services">
+    <Layout title="Services" description="Professional services">
       <Hero />
       <main>
         <Features />

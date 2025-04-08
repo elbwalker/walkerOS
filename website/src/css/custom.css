@@ -4,36 +4,93 @@
  * work well for content-centric websites.
  */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-/* You can override the default Infima variables here. */
+/* DaisyUI plugin configuration */
+@plugin "daisyui" {
+  themes:
+    light --default,
+    dark --prefersdark;
+  root: ':root';
+  base: false;
+  prefix: 'dui-';
+  logs: false;
+}
+
 :root {
-  --ifm-background-color: theme('colors.gray.100');
-  --ifm-background-surface-color: theme('colors.gray.100');
-  --ifm-color-primary: theme('colors.elbwalker.DEFAULT');
-  --ifm-color-primary-dark: theme('colors.elbwalker.700');
-  --ifm-color-primary-darker: theme('colors.elbwalker.800');
-  --ifm-color-primary-darkest: theme('colors.elbwalker.900');
-  --ifm-color-primary-light: theme('colors.elbwalker.300');
-  --ifm-color-primary-lighter: theme('colors.elbwalker.200');
-  --ifm-color-primary-lightest: theme('colors.elbwalker.100');
+  /* Brand colors */
+  --color-elbwalker: #01b5e2;
+  --color-elbwalker-50: #ffffff;
+  --color-elbwalker-100: #edfeff;
+  --color-elbwalker-200: #abf8ff;
+  --color-elbwalker-300: #69ecfe;
+  --color-elbwalker-400: #27dbfe;
+  --color-elbwalker-500: #01b5e2;
+  --color-elbwalker-600: #01b5e2;
+  --color-elbwalker-700: #015372;
+  --color-elbwalker-800: #00283a;
+  --color-elbwalker-900: #000203;
+
+  /* Gray scale */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+
+  /* DaisyUI semantic colors */
+  --color-primary: var(--color-elbwalker);
+  --color-primary-content: var(--color-gray-50);
+  --color-secondary: var(--color-gray-600);
+  --color-secondary-content: var(--color-gray-50);
+  --color-base-100: var(--color-gray-100);
+  --color-base-200: var(--color-gray-200);
+  --color-base-300: var(--color-gray-300);
+  --color-base-content: var(--color-gray-900);
+
+  /* Infima integration */
+  --ifm-background-color: var(--color-base-100);
+  --ifm-background-surface-color: var(--color-base-100);
+  --ifm-color-primary: var(--color-primary);
+  --ifm-color-primary-dark: var(--color-elbwalker-700);
+  --ifm-color-primary-darker: var(--color-elbwalker-800);
+  --ifm-color-primary-darkest: var(--color-elbwalker-900);
+  --ifm-color-primary-light: var(--color-elbwalker-300);
+  --ifm-color-primary-lighter: var(--color-elbwalker-200);
+  --ifm-color-primary-lightest: var(--color-elbwalker-100);
+  --ifm-h1-font-size: 3rem;
+  --ifm-h2-font-size: 2rem;
+  --ifm-link-color: var(--color-elbwalker);
+  --ifm-link-hover-decoration: none;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
 html[data-theme='dark'] {
-  --ifm-background-color: theme('colors.gray.900');
-  --ifm-background-surface-color: theme('colors.gray.900');
+  --color-primary: var(--color-elbwalker);
+  --color-primary-content: var(--color-gray-900);
+  --color-secondary: var(--color-gray-400);
+  --color-secondary-content: var(--color-gray-900);
+  --color-base-100: var(--color-gray-900);
+  --color-base-200: var(--color-gray-800);
+  --color-base-300: var(--color-gray-700);
+  --color-base-content: var(--color-gray-50);
+  --ifm-background-color: var(--color-base-100);
+  --ifm-background-surface-color: var(--color-base-100);
 }
 
-[data-theme='dark'] {
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+@theme {
+  --color-elbwalker: var(--color-elbwalker);
 }
 
+/* Base styles */
 a {
-  color: theme('colors.elbwalker.DEFAULT');
+  color: var(--color-primary);
 }
 
 svg {
@@ -46,19 +103,7 @@ h3,
 h4,
 h5,
 h6 {
-  color: theme('colors.elbwalker.DEFAULT');
-}
-
-h1 {
-  font-size: 2.5rem;
-}
-
-article h2 {
-  font-size: var(--ifm-h2-font-size);
-}
-
-article h3 {
-  font-size: var(--ifm-h3-font-size);
+  color: var(--color-primary);
 }
 
 .scroll .code-editor pre,
@@ -66,4 +111,23 @@ article h3 {
   white-space: pre !important;
   overflow: auto !important;
   width: 200% !important;
+}
+
+/* Override text colors */
+@layer base {
+  .text-black {
+    color: var(--color-base-content) !important;
+  }
+
+  .text-white {
+    color: var(--color-white) !important;
+  }
+
+  [data-theme='dark'] .dark\:text-white {
+    color: var(--color-base-content) !important;
+  }
+
+  [data-theme='dark'] {
+    --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  }
 }

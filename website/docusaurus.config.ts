@@ -87,6 +87,7 @@ const config: Config = {
           position: 'left',
           label: 'Documentation',
         },
+        { to: '/playground', label: 'Playground', position: 'left' },
         { to: '/services', label: 'Services', position: 'left' },
         { to: '/blog', label: 'Blog', position: 'left' },
         {
@@ -105,6 +106,10 @@ const config: Config = {
             {
               label: 'Documentation',
               to: '/docs/',
+            },
+            {
+              label: 'Playground',
+              to: '/playground',
             },
             {
               label: 'walker.js',
@@ -177,12 +182,23 @@ async function tailwindPlugin() {
   return {
     name: 'docusaurus-tailwindcss-plugin',
     configurePostCss(postcssOptions) {
-      // Appends TailwindCSS and AutoPrefixer.
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      postcssOptions.plugins.push(require('tailwindcss'));
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      postcssOptions.plugins.push(require('autoprefixer'));
+      postcssOptions.plugins = [
+        ...postcssOptions.plugins,
+        require('@tailwindcss/postcss'),
+      ];
       return postcssOptions;
+    },
+    configureWebpack(config) {
+      return {
+        module: {
+          rules: [
+            {
+              test: /\.scss$/,
+              use: ['style-loader', 'css-loader', 'sass-loader'],
+            },
+          ],
+        },
+      };
     },
   };
 }

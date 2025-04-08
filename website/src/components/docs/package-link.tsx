@@ -15,7 +15,7 @@ export function PackageButton({ icon, to, text, style = '' }): JSX.Element {
     'inline-flex items-center justify-center h-9 mr-3 px-3 mb-6 gap-x-2 bg-white',
     'text-xs font-medium text-gray-900',
     'border border-gray-200 rounded-lg',
-    'focus:outline-none hover:no-underline hover:bg-gray-100 hover:text-gray-700',
+    'focus:outline-hidden hover:no-underline hover:bg-gray-100 hover:text-gray-700',
     'dark:focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700',
     style,
   );

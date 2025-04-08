@@ -10,8 +10,8 @@ export default function CTAStart() {
             data-elb-cta={`title:start your trial`}
             className="block text-black dark:text-white"
           >
-            Start your trial run of
-            <span className="inline px-2 text-elbwalker-600">walkerOS</span> now
+            Start your trial run of{' '}
+            <span className="inline text-elbwalker">walkerOS</span> now
             <br />
             and see how easy it is to set up
           </span>

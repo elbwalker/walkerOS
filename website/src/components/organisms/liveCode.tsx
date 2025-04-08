@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, memo } from 'react';
 import { debounce, isString } from '@elbwalker/utils';
 import CodeBox, { formatValue } from '../molecules/codeBox';
 import FullScreenOverlay from '../molecules/codeBoxOverlay';
+import FullScreenButton from '../molecules/fullScreenButton';
 
 export interface LiveCodeProps {
   input: unknown;
@@ -52,7 +53,7 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
     const [config, setConfig] = useState(
       isString(initConfig) ? initConfig : formatValue(initConfig),
     );
-    const [output, setOutput] = useState<string[]>([
+    const [output, setOutput] = useState([
       isString(initOutput) ? initOutput : formatValue(initOutput),
     ]);
     const [isFullScreen, setIsFullScreen] = useState(false);
@@ -87,14 +88,13 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
       updateRight(input, config, options);
     }, [input, config, options]);
 
-    const boxClassNames = `flex-1 resize max-h-96 xl:max-h-full flex flex-col ${className}`;
+    const boxClassNames = `flex-1 resize flex flex-col ${isFullScreen ? 'max-h-[calc(100vh-12rem)]' : 'max-h-96 xl:max-h-full'} ${className}`;
 
     const renderCodeBoxes = (isFullScreenMode = false) => (
       <div
         className={`flex flex-col xl:flex-row gap-2 scroll ${
           isFullScreenMode ? 'h-full' : ''
         }`}
-        onClick={(e) => e.stopPropagation()}
         style={height && { height: isFullScreenMode ? undefined : `${height}` }}
       >
         <CodeBox
@@ -130,25 +130,7 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
       <div className="live-code mb-4">
         <div className="flex flex-col gap-2">
           <div className="flex justify-end">
-            <button
-              className="inline-flex items-center text-xs text-gray-500 dark:text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors border-none bg-transparent"
-              onClick={() => setIsFullScreen(true)}
-            >
-              <svg
-                className="w-4 h-4 mr-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                />
-              </svg>
-              Full screen
-            </button>
+            <FullScreenButton onClick={() => setIsFullScreen(true)} />
           </div>
           {renderCodeBoxes()}
         </div>
