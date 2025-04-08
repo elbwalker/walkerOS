@@ -36,10 +36,7 @@ export default function Hero() {
         </p>
         <div className="mx-auto mt-5 max-w-md sm:flex sm:justify-center md:mt-8">
           <Button link="/docs/getting_started/quick_start">Get started</Button>
-          <Button
-            link="https://tagging.demo.elbwalker.com/"
-            variant="secondary"
-          >
+          <Button link="/playground" variant="secondary">
             Playground
           </Button>
         </div>
