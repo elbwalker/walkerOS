@@ -57,4 +57,4 @@ export const DataCollection = () => {
   return null;
 };
 
-export const tagger = Tagger();
+export const tagger = Tagger({ prefix: 'data-alst' });

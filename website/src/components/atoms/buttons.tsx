@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from '@docusaurus/Link';
+import { tagger } from '@site/src/components/walkerjs';
 
 type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 type ButtonVariant =
@@ -13,14 +14,14 @@ type ButtonVariant =
   | 'ghost'
   | 'link';
 
-type ButtonProps = {
+export type ButtonProps = {
   children: React.ReactNode;
   link?: string;
   text?: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
   className?: string;
-  elbaction?: string; // @TODO
+  elbAction?: string;
 };
 
 export function Button({
@@ -30,16 +31,19 @@ export function Button({
   variant = 'primary',
   size = 'md',
   className = '',
+  elbAction = 'click',
 }: ButtonProps) {
   const buttonClasses = `dui-btn dui-btn-${variant} dui-btn-${size} mx-2 text-white ${className}`;
   const content = text || children;
 
   return link ? (
-    <Link className={buttonClasses} to={link}>
+    <Link className={buttonClasses} to={link} {...tagger.action(elbAction)}>
       {content}
     </Link>
   ) : (
-    <button className={buttonClasses}>{content}</button>
+    <button className={buttonClasses} {...tagger.action(elbAction)}>
+      {content}
+    </button>
   );
 }
 
