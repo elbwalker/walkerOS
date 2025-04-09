@@ -48,16 +48,38 @@ const registry: Registry[] = [
   {
     id: 'product',
     name: 'Product',
-    code: `<div data-elb="product" data-elbaction="load:view" class="dui-card w-96 bg-base-100 shadow-xl">
-  <figure><img src="https://placehold.co/400x300" alt="Product" /></figure>
+    code: `<div
+  data-elb="product"
+  data-elbaction="load:visible"
+  class="dui-card w-80 bg-base-100 shadow-xl mx-auto"
+>
+  <figure class="relative">
+    <img src="/img/examples/everyday_ruck_snack.png" alt="Product" />
+    <div class="absolute top-2 right-2">
+      <div data-elb-product="badge:delicious" class="dui-badge dui-badge-primary text-white">delicious</div>
+    </div>
+  </figure>
   <div class="dui-card-body">
-    <h2 data-elb-product="name:#innerText" class="dui-card-title">Product Name</h2>
-    <p data-elb-product="description:#innerText">Product description goes here</p>
+    <h2 data-elb-product="name:#innerText" class="dui-card-title text-lg">
+      Everyday Ruck Snack
+    </h2>
+    <p data-elb-product="description:#innerText">
+      Product description goes here
+    </p>
+    <p data-elb-product="price:2.50" class="text-xl font-bold">
+      € 2.50 <span data-elb-product="old_price:3.14" class="text-base text-base-300 line-through">€ 3.14</span>
+    </p>
     <div class="dui-card-actions justify-end">
-      <button data-elbaction="click:add" class="dui-btn dui-btn-primary">Add to Cart</button>
+      <button
+        data-elbaction="click:add"
+        class="dui-btn dui-btn-primary text-white"
+      >
+        Add to Cart
+      </button>
     </div>
   </div>
-</div>`,
+</div>
+`,
     fn: (event) => {
       delete event.globals;
       delete event.custom;
