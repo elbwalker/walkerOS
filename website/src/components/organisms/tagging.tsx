@@ -30,6 +30,7 @@ interface PreviewProps {
   hidePreview?: boolean;
   hideConsole?: boolean;
   previewId?: string;
+  fn?: (event: WalkerOS.Event) => void;
   typewriter?: TypewriterOptions;
 }
 
@@ -40,6 +41,7 @@ const Tagging: FC<PreviewProps> = ({
   hidePreview = false,
   hideConsole = false,
   previewId = 'preview',
+  fn,
   typewriter,
 }) => {
   const [logs, setLogs] = useState<string>();
@@ -107,7 +109,7 @@ const Tagging: FC<PreviewProps> = ({
   useEffect(() => {
     taggingRegistry.add(previewId, (event) => {
       delete event.context.previewId;
-      setLogs(JSON.stringify(event, null, 2));
+      setLogs(JSON.stringify(fn ? fn(event) : event, null, 2));
     });
 
     return () => {

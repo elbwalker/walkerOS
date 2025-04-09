@@ -97,15 +97,24 @@ export const PromotionReady: React.FC = () => {
     <div className="my-8">
       <Tagging
         previewId="ready"
+        fn={(event) => {
+          delete event.globals;
+          delete event.custom;
+          delete event.user;
+          delete event.nested;
+          delete event.consent;
+          delete event.version;
+          return event;
+        }}
         height="640px"
         code={`<div
   data-elb="promotion"
   data-elbaction="visible"
-  data-elbcontext="test:live_demo"
+  data-elbcontext="playground:tagging"
   class="dui-hero p-4"
 >
   <div class="dui-hero-content max-w-md text-center">
-    <div class="max-w-md">
+    <div data-elbcontext="stage:interested" class="max-w-md">
       <h2 data-elb-promotion="name:#innerText" class="text-xl font-bold">
         Quick and simple tracking setup
       </h2>
