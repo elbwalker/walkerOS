@@ -128,28 +128,42 @@ const CodeBox: React.FC<CodeBoxProps> = ({
 
   const handleFormat = tryCatchAsync(
     async (value: string, onChangeHandler: (code: string) => void) => {
+      const trimmedValue = value.trim();
+
       // Check if the content is a complete statement
       const isCompleteStatement = /^[a-zA-Z_$][a-zA-Z0-9_$]*\s*=/.test(
-        value.trim(),
+        trimmedValue,
       );
 
       // If it's not a complete statement, wrap it in a return statement
-      const contentToFormat = isCompleteStatement ? value : `return ${value}`;
+      const contentToFormat = isCompleteStatement
+        ? trimmedValue
+        : `return ${trimmedValue}`;
 
       const formattedValue = await prettier.format(contentToFormat, {
-        parser: language === 'html' ? 'html' : 'babel',
-        plugins: [parserBabel, estree],
-        semi: false,
-        singleQuote: true,
-        trailingComma: 'es5',
         printWidth: 80,
         tabWidth: 2,
         useTabs: false,
+        plugins: [parserBabel, estree],
+        parser: 'babel',
+        semi: false,
+        singleQuote: true,
+        trailingComma: 'es5',
       });
 
-      const finalValue = isCompleteStatement
+      let finalValue = isCompleteStatement
         ? formattedValue
         : formattedValue.replace(/^return\s+/, '').replace(/[\r\n]+$/, '');
+
+      // Clean up the formatted value
+      finalValue = finalValue
+        .trim()
+        .replace(/^\(|\)$/g, ''); // Remove parentheses
+
+      // Only remove indentation if it looks like HTML
+      if (finalValue.match(/<[^>]+>/)) {
+        finalValue = finalValue.replace(/^\s{2}/gm, '').replace(/^\s/, '');
+      }
 
       onChangeHandler?.(finalValue);
     },
