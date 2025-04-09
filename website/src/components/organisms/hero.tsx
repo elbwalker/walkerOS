@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Button, ButtonProps } from '@site/src/components/atoms/buttons';
+import { Check } from '@site/src/components/atoms/icons';
 import { tagger } from '@site/src/components/walkerjs';
 
 interface HeroProps {
@@ -9,7 +10,7 @@ interface HeroProps {
   primaryButton?: ButtonProps;
   secondaryButton?: ButtonProps;
   elbTitle?: string;
-  badges?: ReactNode;
+  badges?: string[];
 }
 
 export default function Hero({
@@ -22,12 +23,12 @@ export default function Hero({
   badges,
 }: HeroProps) {
   // Set default variant for secondaryButton if not provided
-  const secondaryButtonWithDefault = secondaryButton 
-    ? { ...secondaryButton, variant: secondaryButton.variant || 'secondary' } 
+  const secondaryButtonWithDefault = secondaryButton
+    ? { ...secondaryButton, variant: secondaryButton.variant || 'secondary' }
     : undefined;
 
   return (
-    <main 
+    <main
       className="relative mx-3 mt-16 max-w-7xl sm:mt-24 lg:mx-auto"
       {...tagger.entity('hero')}
       {...tagger.action('visible:impression')}
@@ -43,7 +44,7 @@ export default function Hero({
           )}
         </h1>
         {text && (
-          <p 
+          <p
             className="mx-auto mt-3 text-base sm:text-lg md:mt-5 md:text-xl"
             {...(elbTitle && tagger.property('title', elbTitle))}
           >
@@ -57,11 +58,13 @@ export default function Hero({
           )}
         </div>
       </div>
-      {badges && (
+      {badges && badges.length && (
         <div className="mt-10 text-center">
-          {badges}
+          {badges.map((badge, index) => (
+            <Check key={index}>{badge}</Check>
+          ))}
         </div>
       )}
     </main>
   );
-} 
+}

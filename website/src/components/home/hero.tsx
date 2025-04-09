@@ -1,6 +1,5 @@
 import React from 'react';
 import Hero from '@site/src/components/organisms/hero';
-import { Check } from '@site/src/components/atoms/icons';
 
 export default function HomeHero() {
   return (
@@ -17,13 +16,11 @@ export default function HomeHero() {
         children: "Playground"
       }}
       elbTitle="hero section"
-      badges={
-        <>
-          <Check>runs in your own infrastructure</Check>
-          <Check>integrates with various analytics & marketing tools</Check>
-          <Check>in-built consent mode</Check>
-        </>
-      }
+      badges={[
+        "runs in your own infrastructure",
+        "integrates with various analytics & marketing tools",
+        "in-built consent mode"
+      ]}
     />
   );
 }

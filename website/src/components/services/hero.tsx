@@ -1,6 +1,5 @@
 import React from 'react';
 import Hero from '@site/src/components/organisms/hero';
-import { Check } from '@site/src/components/atoms/icons';
 
 export default function ServicesHero() {
   return (
@@ -23,13 +22,11 @@ export default function ServicesHero() {
         children: 'Write an email',
       }}
       elbTitle="services hero section"
-      badges={
-        <>
-          <Check>direct support from the creators</Check>
-          <Check>initial setup in 5 days</Check>
-          <Check>fully integrated into your infrastructure</Check>
-        </>
-      }
+      badges={[
+        "direct support from the creators",
+        "initial setup in 5 days",
+        "fully integrated into your infrastructure"
+      ]}
     />
   );
 }
