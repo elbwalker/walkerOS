@@ -60,9 +60,9 @@ const registry: Registry[] = [
     </div>
   </figure>
   <div class="dui-card-body">
-    <h2 data-elb-product="name:#innerText" class="dui-card-title text-lg">
+    <h3 data-elb-product="name:#innerText" class="dui-card-title text-lg">
       Everyday Ruck Snack
-    </h2>
+    </h3>
     <p data-elb-product="description:#innerText">
       Product description goes here
     </p>
