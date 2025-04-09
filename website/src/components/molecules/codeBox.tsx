@@ -1,4 +1,4 @@
-import { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@elbwalker/types';
 import { isString, isDefined, tryCatch, tryCatchAsync } from '@elbwalker/utils';
 import Editor from 'react-simple-code-editor';
 import { useState, useEffect, useRef } from 'react';
@@ -10,8 +10,8 @@ import {
   TypewriterOptions,
   pauseTypewriter,
   resetTypewriter,
-} from './typewriterCode';
-import SyntaxHighlighter from './syntaxHighlighter';
+} from '@site/src/components/molecules/typewriterCode';
+import SyntaxHighlighter from '@site/src/components/molecules/syntaxHighlighter';
 
 interface FormatValueProps {
   intent?: number;

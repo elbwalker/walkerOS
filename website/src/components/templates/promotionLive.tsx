@@ -109,12 +109,12 @@ export const PromotionReady: React.FC = () => {
       <h2 data-elb-promotion="name:#innerText" class="text-xl font-bold">
         Quick and simple tracking setup
       </h2>
-      <p class="py-6">Click a button to trigger more events.</p>
-      <button data-elbaction="click:start" class="dui-btn dui-btn-primary">
-        Get Started
+      <p class="py-6">Seeing me triggers a visible event after a second.</p>
+      <button data-elbaction="click:primary" class="dui-btn dui-btn-primary">
+        Click me
       </button>
-      <button data-elbaction="click:more" class="dui-btn">
-        Learn more
+      <button data-elbaction="click:secondary" class="dui-btn">
+        Or me
       </button>
     </div>
   </div>

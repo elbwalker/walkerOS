@@ -1,24 +1,60 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { elb, Walkerjs } from '@elbwalker/walker.js';
+import type { Elb, SourceWalkerjs } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@elbwalker/walker.js';
 import { destinationWebAPI } from '@elbwalker/destination-web-api';
+import { taggingRegistry } from '@site/src/components/organisms/tagging';
 import Tagger from '@elbwalker/tagger';
-import { taggingRegistry } from './organisms/tagging';
+
+declare global {
+  interface Window {
+    alst: Elb.Fn;
+    alstLayer: Elb.Layer;
+    runnerjs: SourceWalkerjs.Instance;
+  }
+}
 
 export const DataCollection = () => {
   const location = useLocation();
 
   useEffect(() => {
+    // Setup demo walkerjs
     if (!window.walkerjs) {
-      // Setup walkerjs
-      window.elb = elb;
-      window.walkerjs = Walkerjs({
-        default: true,
+      const { elb, instance } = createSourceWalkerjs({
+        run: true,
         session: {},
       });
 
+      window.elb = elb;
+      window.walkerjs = instance;
+
+      // Destination Preview
+      elb('walker destination', {
+        push: (e) => {
+          const previewId = e.context?.previewId?.[0];
+          if (previewId) taggingRegistry.get(String(previewId))?.(e);
+        },
+      });
+    } else {
+      // new page load
+      window.elb('walker run');
+    }
+
+    // Setup internal walkerjs
+    if (!window.runnerjs) {
+      window.alstLayer = [];
+      const { elb: alst, instance } = createSourceWalkerjs({
+        default: true,
+        session: {},
+        prefix: 'data-alst',
+        elbLayer: window.alstLayer,
+      });
+
+      window.alst = alst;
+      window.runnerjs = instance;
+
       // Destination Lama
-      elb('walker destination', destinationWebAPI, {
+      alst('walker destination', destinationWebAPI, {
         custom: {
           url: 'https://moin.p.elbwalkerapis.com/lama',
           transform: (event) => {
@@ -34,27 +70,21 @@ export const DataCollection = () => {
       });
 
       // Destination API
-      elb('walker destination', destinationWebAPI, {
+      alst('walker destination', destinationWebAPI, {
         custom: {
           url: 'https://europe-west1-walkeros-firebase-stack.cloudfunctions.net/ingest',
           transport: 'beacon',
         },
       });
-
-      // Destination Preview
-      elb('walker destination', {
-        push: (e) => {
-          const previewId = e.context?.previewId?.[0];
-          if (previewId) taggingRegistry.get(String(previewId))?.(e);
-        },
-      });
     } else {
       // new page load
-      elb('walker run');
+      window.alst('walker run');
     }
   }, [location]);
 
   return null;
 };
 
-export const tagger = Tagger({ prefix: 'data-alst' });
+export const tagger: ReturnType<typeof Tagger> = Tagger({
+  prefix: 'data-alst',
+});

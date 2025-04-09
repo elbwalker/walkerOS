@@ -18,22 +18,43 @@ npm i @elbwalker/walker.js
 Then run the following code once to create an instance:
 
 ```js
-import { Walkerjs } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@elbwalker/walker.js';
 
-window.walkerjs = Walkerjs({
+const { elb, instance } = createSourceWalkerjs({
   /* custom config */
 });
 ```
 
-To configure and communicate with the walker.js instance load the `elb`-helper
-function:
+## elb
+
+To configure and communicate with the walker.js instance asynchronously either
+load the `elb`-helper function:
 
 ```js
 import { elb } from '@elbwalker/walker.js';
+```
 
-window.elb = elb;
-elb('entity action', data, trigger, context, nested); // push events
-elb('walker <command>', data); // configure walker, see Commands
+Or define the `elb`-helper function yourself:
+
+```ts
+// Typescript
+import type { Elb } from '@elbwalker/walker.js';
+const elb: Elb.Fn = (...args: unknown[]) => {
+  (window.elbLayer = window.elbLayer || []).push(args);
+};
+
+// JavaScript
+function elb() {
+  (window.elbLayer = window.elbLayer || []).push(arguments);
+}
+```
+
+or use the `elb` returned from `createSourceWalkerjs` which returns the `async`
+result of the call:
+
+```js
+const { elb } = createSourceWalkerjs();
+await elb('entity action');
 ```
 
 ## Single Page Applications
