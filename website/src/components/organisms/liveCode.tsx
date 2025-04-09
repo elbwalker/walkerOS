@@ -1,9 +1,8 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { useEffect, useState, useRef, memo } from 'react';
 import { debounce, isString } from '@elbwalker/utils';
-import CodeBox, { formatValue } from '../molecules/codeBox';
-import FullScreenOverlay from '../molecules/codeBoxOverlay';
-import FullScreenButton from '../molecules/fullScreenButton';
+import CodeBox, { formatValue } from '@site/src/components/molecules/codeBox';
+import FullScreenMode from '@site/src/components/organisms/fullScreenMode';
 
 export interface LiveCodeProps {
   input: unknown;
@@ -56,7 +55,6 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
     const [output, setOutput] = useState([
       isString(initOutput) ? initOutput : formatValue(initOutput),
     ]);
-    const [isFullScreen, setIsFullScreen] = useState(false);
 
     const log = useRef((...args: unknown[]) => {
       const params = args
@@ -88,14 +86,12 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
       updateRight(input, config, options);
     }, [input, config, options]);
 
-    const boxClassNames = `flex-1 resize flex flex-col ${isFullScreen ? 'max-h-[calc(100vh-12rem)]' : 'max-h-96 xl:max-h-full'} ${className}`;
+    const boxClassNames = `flex-1 resize flex flex-col max-h-96 xl:max-h-full ${className}`;
 
-    const renderCodeBoxes = (isFullScreenMode = false) => (
+    const renderCodeBoxes = () => (
       <div
-        className={`flex flex-col xl:flex-row gap-2 scroll ${
-          isFullScreenMode ? 'h-full' : ''
-        }`}
-        style={height && { height: isFullScreenMode ? undefined : `${height}` }}
+        className="flex flex-col xl:flex-row gap-2 scroll"
+        style={height ? { height: `${height}` } : undefined}
       >
         <CodeBox
           label={labelInput}
@@ -103,7 +99,7 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
           value={input}
           onChange={setInput}
           className={boxClassNames}
-          smallText={isFullScreenMode ? false : smallText}
+          smallText={smallText}
         />
 
         {config && (
@@ -113,7 +109,7 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
             value={config}
             onChange={setConfig}
             className={boxClassNames}
-            smallText={isFullScreenMode ? false : smallText}
+            smallText={smallText}
           />
         )}
 
@@ -121,26 +117,15 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
           label={labelOutput}
           value={output[0] || emptyText}
           className={boxClassNames}
-          smallText={isFullScreenMode ? false : smallText}
+          smallText={smallText}
         />
       </div>
     );
 
     return (
-      <div className="live-code mb-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex justify-end">
-            <FullScreenButton onClick={() => setIsFullScreen(true)} />
-          </div>
-          {renderCodeBoxes()}
-        </div>
-        <FullScreenOverlay
-          isOpen={isFullScreen}
-          onClose={() => setIsFullScreen(false)}
-        >
-          {renderCodeBoxes(true)}
-        </FullScreenOverlay>
-      </div>
+      <FullScreenMode className="live-code mb-4">
+        {renderCodeBoxes()}
+      </FullScreenMode>
     );
   },
 );

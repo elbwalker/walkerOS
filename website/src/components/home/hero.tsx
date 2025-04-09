@@ -13,7 +13,7 @@ export default function HomeHero() {
         elbAction: 'start',
       }}
       secondaryButton={{
-        link: "/playground",
+        link: "/playground/",
         children: "Playground",
         elbAction: 'playground',
       }}

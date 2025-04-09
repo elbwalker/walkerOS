@@ -1,6 +1,9 @@
 import React from 'react';
-import Tagging from '../organisms/tagging';
-import { TypeEdit, EditMode } from '../molecules/typewriterCode';
+import Tagging from '@site/src/components/organisms/tagging';
+import {
+  TypeEdit,
+  EditMode,
+} from '@site/src/components/molecules/typewriterCode';
 
 const baseCode = `<div
   class="dui-hero p-4"
