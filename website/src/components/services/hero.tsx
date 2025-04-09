@@ -16,16 +16,18 @@ export default function ServicesHero() {
       primaryButton={{
         link: 'https://calendly.com/elb-alexander/30min',
         children: 'Schedule free call',
+        elbAction: 'call',
       }}
       secondaryButton={{
         link: 'mailto:hello@elbwalker.com',
         children: 'Write an email',
+        elbAction: 'mail',
       }}
-      elbTitle="services hero section"
+      elbTitle="services"
       badges={[
-        "direct support from the creators",
-        "initial setup in 5 days",
-        "fully integrated into your infrastructure"
+        'direct support from the creators',
+        'initial setup in 5 days',
+        'fully integrated into your infrastructure',
       ]}
     />
   );

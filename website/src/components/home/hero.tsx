@@ -9,13 +9,15 @@ export default function HomeHero() {
       text="Collect event data for digital analytics in a unified and privacy-centric way."
       primaryButton={{
         link: "/docs/getting_started/quick_start",
-        children: "Get started"
+        children: "Get started",
+        elbAction: 'start',
       }}
       secondaryButton={{
         link: "/playground",
-        children: "Playground"
+        children: "Playground",
+        elbAction: 'playground',
       }}
-      elbTitle="hero section"
+      elbTitle="home"
       badges={[
         "runs in your own infrastructure",
         "integrates with various analytics & marketing tools",
