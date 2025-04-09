@@ -46,8 +46,7 @@ const Tagging: FC<PreviewProps> = ({
 }) => {
   const [logs, setLogs] = useState<string>();
   const previewRef = useRef<HTMLDivElement>(null);
-  const initialCode = useRef(code.trim());
-  const [liveCode, setLiveCode] = useState(initialCode.current);
+  const [liveCode, setLiveCode] = useState(code.trim());
   const [isPaused, setIsPaused] = useState(false);
   const [highlights, setHighlights] = useState({
     globals: false,
@@ -56,6 +55,12 @@ const Tagging: FC<PreviewProps> = ({
     property: false,
     action: false,
   });
+
+  useEffect(() => {
+    setLiveCode(code.trim());
+  }, [code]);
+
+  const initialCode = useRef(code.trim());
 
   const initPreview = useCallback(
     debounce(
