@@ -157,98 +157,108 @@ export const EventFlow: FC<EventFlowProps> = ({
   return (
     <FullScreenMode className="m-4">
       <div
-        className="flex flex-row gap-2 overflow-x-auto scrollbar-hide"
+        className="flex flex-row gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
         style={{ height }}
       >
-        <CodeBox
-          label="HTML"
-          value={liveCode}
-          onChange={setLiveCode}
-          showReset={true}
-          onReset={() => {
-            setLiveCode(code.trim());
-            resetTypewriter();
-            setIsPaused(false);
-          }}
-          className={boxClassNames}
-          typewriter={typewriter}
-        />
+        <div className="w-1/3 flex-shrink-0 snap-start">
+          <CodeBox
+            label="HTML"
+            value={liveCode}
+            onChange={setLiveCode}
+            showReset={true}
+            onReset={() => {
+              setLiveCode(code.trim());
+              resetTypewriter();
+              setIsPaused(false);
+            }}
+            className={boxClassNames}
+            typewriter={typewriter}
+          />
+        </div>
 
-        <div
-          className={`flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${boxClassNames}`}
-        >
-          <div className="font-bold px-2 py-1.5 bg-base-100 text-base flex justify-between items-center">
-            <span>Preview</span>
-          </div>
+        <div className="w-1/3 flex-shrink-0 snap-start">
           <div
-            data-elbcontext={`previewId:${previewId}`}
-            className="flex-1 bg-gray-800 overflow-auto elb-highlight"
+            className={`flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${boxClassNames}`}
           >
-            <div
-              className={`p-6 h-full ${highlightGlobals} ${highlightContext} ${highlightEntity} ${highlightProperty} ${highlightAction}`}
-            >
-              <div ref={previewRef} className="h-full" />
+            <div className="font-bold px-2 py-1.5 bg-base-100 text-base flex justify-between items-center">
+              <span>Preview</span>
             </div>
-          </div>
-          <div className="elb-highlight-buttons">
-            <button
-              onClick={() => toggleHighlight('context')}
-              className={`btn-context ${highlightContext}`}
+            <div
+              data-elbcontext={`previewId:${previewId}`}
+              className="flex-1 bg-gray-800 overflow-auto elb-highlight"
             >
-              Context
-            </button>
-            <button
-              onClick={() => toggleHighlight('entity')}
-              className={`btn-entity ${highlightEntity}`}
-            >
-              Entity
-            </button>
-            <button
-              onClick={() => toggleHighlight('property')}
-              className={`btn-property ${highlightProperty}`}
-            >
-              Property
-            </button>
-            <button
-              onClick={() => toggleHighlight('action')}
-              className={`btn-action ${highlightAction}`}
-            >
-              Action
-            </button>
+              <div
+                className={`p-6 h-full ${highlightGlobals} ${highlightContext} ${highlightEntity} ${highlightProperty} ${highlightAction}`}
+              >
+                <div ref={previewRef} className="h-full" />
+              </div>
+            </div>
+            <div className="elb-highlight-buttons">
+              <button
+                onClick={() => toggleHighlight('context')}
+                className={`btn-context ${highlightContext}`}
+              >
+                Context
+              </button>
+              <button
+                onClick={() => toggleHighlight('entity')}
+                className={`btn-entity ${highlightEntity}`}
+              >
+                Entity
+              </button>
+              <button
+                onClick={() => toggleHighlight('property')}
+                className={`btn-property ${highlightProperty}`}
+              >
+                Property
+              </button>
+              <button
+                onClick={() => toggleHighlight('action')}
+                className={`btn-action ${highlightAction}`}
+              >
+                Action
+              </button>
+            </div>
           </div>
         </div>
 
-        <CodeBox
-          label="Event"
-          value={logs || 'No event yet.'}
-          disabled={true}
-          isConsole={true}
-          className={boxClassNames}
-          showReset={true}
-          onReset={() => setLogs('')}
-        />
+        <div className="w-1/3 flex-shrink-0 snap-start">
+          <CodeBox
+            label="Event"
+            value={logs || 'No event yet.'}
+            disabled={true}
+            isConsole={true}
+            className={boxClassNames}
+            showReset={true}
+            onReset={() => setLogs('')}
+          />
+        </div>
 
-        <CodeBox
-          label="Mapping"
-          value={formatValue({})}
-          onChange={(value) => {
-            try {
-              const parsed = parseInput(value);
-              setConfig(parsed);
-            } catch (error) {
-              console.error('Error parsing mapping:', error);
-            }
-          }}
-          className={boxClassNames}
-        />
+        <div className="w-1/3 flex-shrink-0 snap-start">
+          <CodeBox
+            label="Mapping"
+            value={formatValue({})}
+            onChange={(value) => {
+              try {
+                const parsed = parseInput(value);
+                setConfig(parsed);
+              } catch (error) {
+                console.error('Error parsing mapping:', error);
+              }
+            }}
+            className={boxClassNames}
+          />
+        </div>
 
-        <CodeBox
-          label="Command"
-          value={formatValue({})}
-          disabled={true}
-          isConsole={true}
-          className={boxClassNames}
-        />
+        <div className="w-1/3 flex-shrink-0 snap-start">
+          <CodeBox
+            label="Command"
+            value={formatValue({})}
+            disabled={true}
+            isConsole={true}
+            className={boxClassNames}
+          />
+        </div>
       </div>
     </FullScreenMode>
   );
