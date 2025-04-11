@@ -16,8 +16,8 @@ import {
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 
-export const logFn = (input, config, log) => {
-  log(getMappingValue(parseInput(input), parseInput(config)));
+export const logFn = async (input, config, log) => {
+  log(await getMappingValue(parseInput(input), parseInput(config)));
 };
 
 export const event = getEvent('order complete');
@@ -65,7 +65,7 @@ explicitly matched.
 
 <DestinationPush
   event={event}
-  emptyText='Event ignored'
+  emptyText="Event ignored"
   mapping={`{
     order: { // Entity
       complete: { // Action
