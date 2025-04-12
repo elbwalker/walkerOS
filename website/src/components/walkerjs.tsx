@@ -22,6 +22,7 @@ export const DataCollection = () => {
     if (!window.walkerjs) {
       const { elb, instance } = createSourceWalkerjs({
         run: true,
+        pageview: false,
         session: {},
       });
 

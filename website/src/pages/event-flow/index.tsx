@@ -1,11 +1,10 @@
 import { JSX } from 'react';
 import Layout from '@theme/Layout';
 import EventFlow from '@site/src/components/organisms/eventFlow';
-import { destinationWebAPI } from '@elbwalker/destination-web-api';
 
 const exampleCode = `<div
   data-elb="product"
-  data-elbaction="load:visible"
+  data-elbaction="load:view"
   class="dui-card w-80 bg-base-100 shadow-xl mx-auto"
 >
   <figure class="relative">
@@ -40,29 +39,38 @@ export default function EventFlowPage(): JSX.Element {
     <Layout title="Event Flow" description="Test the event flow component">
       <EventFlow
         code={exampleCode}
+        mapping={{
+          product: {
+            view: {
+              name: 'view_item',
+              data: {
+                map: {
+                  event: 'event',
+                  price: { value: '100' },
+                },
+              },
+            },
+            add: {
+              name: 'add_to_cart',
+              data: {
+                map: {
+                  event: 'event',
+                  price: { value: '100' },
+                },
+              },
+            },
+          },
+        }}
         height="640px"
         previewId="event-flow"
-        fn={(event) => {
-          delete event.globals;
+        eventFn={(event) => {
           delete event.custom;
           return event;
         }}
-        destination={destinationWebAPI}
-        initialConfig={{
-          custom: {
-            url: 'https://moin.p.elbwalkerapis.com/lama',
-            transform: (event) => {
-              return JSON.stringify({
-                ...event,
-                ...{
-                  projectId: 'RQGM6XJ',
-                },
-              });
-            },
-            transport: 'xhr',
-          },
+        resultFn={(output) => {
+          return `dataLayer.push(${JSON.stringify(output, null, 2)});`;
         }}
       />
     </Layout>
   );
-} 
+}

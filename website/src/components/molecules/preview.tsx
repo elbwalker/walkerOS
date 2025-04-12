@@ -69,7 +69,7 @@ export const Preview: FC<PreviewProps> = ({
         initPreview(previewRef.current);
       },
       200,
-      false,
+      true,
     ),
     [initPreview],
   );
@@ -148,4 +148,4 @@ export const Preview: FC<PreviewProps> = ({
   );
 };
 
-export default Preview; 
+export default Preview;

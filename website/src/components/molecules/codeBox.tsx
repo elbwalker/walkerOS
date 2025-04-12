@@ -156,9 +156,7 @@ const CodeBox: React.FC<CodeBoxProps> = ({
         : formattedValue.replace(/^return\s+/, '').replace(/[\r\n]+$/, '');
 
       // Clean up the formatted value
-      finalValue = finalValue
-        .trim()
-        .replace(/^\(|\)$/g, ''); // Remove parentheses
+      finalValue = finalValue.trim().replace(/^\(|\)$/g, ''); // Remove parentheses
 
       // Only remove indentation if it looks like HTML
       if (finalValue.match(/<[^>]+>/)) {
