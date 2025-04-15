@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { useEffect, useState, useRef, memo } from 'react';
-import { debounce, isString } from '@elbwalker/utils';
+import { debounce, isString, tryCatchAsync } from '@elbwalker/utils';
 import CodeBox, { formatValue } from '../molecules/codeBox';
 import FullScreenOverlay from '../molecules/codeBoxOverlay';
 import FullScreenButton from '../molecules/fullScreenButton';
@@ -73,11 +73,9 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
 
           setOutput([]);
 
-          try {
-            fn(inputStr, configStr, log, options);
-          } catch (e) {
+          tryCatchAsync(fn, (e) => {
             setOutput([`Preview error: ${String(e)}`]);
-          }
+          })(inputStr, configStr, log, options);
         },
         500,
         true,
