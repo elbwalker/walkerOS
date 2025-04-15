@@ -38,7 +38,7 @@ used by the&nbsp;<Link to="/docs/sources/">sources</Link>.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingEvent(
+  input={`await getMappingEvent(
     { event: 'entity action' },
     {
       entity: {
@@ -46,7 +46,12 @@ used by the&nbsp;<Link to="/docs/sources/">sources</Link>.
       },
     }
   );`}
-  output={`0`}
+  output={`{
+    eventMapping: {
+      name: "entity_action"
+    },
+    mappingKey: "entity action"
+  }`}
   fn={logEvent}
 />
 
@@ -56,7 +61,7 @@ which `EventConfig` should be used. To test uncomment the `globals` property.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingEvent(
+  input={`await getMappingEvent(
     {
       event: 'order complete',
       // globals: { env: 'prod' },
@@ -75,7 +80,12 @@ which `EventConfig` should be used. To test uncomment the `globals` property.
       },
     }
   );`}
-  output={`0`}
+  output={`{
+    eventMapping: {
+      name: "purchase"
+    },
+    mappingKey: "order complete"
+  }`}
   fn={logEvent}
 />
 
@@ -95,7 +105,7 @@ return the value of the property specified by the string key.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { a: 0, b: 1, c: 2 },
     'b',
   )`}
@@ -109,7 +119,7 @@ To access items in an array, use the dot notation.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { arr: ['foo', 'bar'] },
     'arr.1',
   );`}
@@ -125,7 +135,7 @@ The `key` option is used to access a property of an object.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { foo: 'bar' },
     { key: 'foo' },
   );`}
@@ -142,7 +152,7 @@ fallback if no other mapping option is applicable.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue({}, { value: 'foo' });`}
+  input={`await getMappingValue({}, { value: 'foo' });`}
   output={`"foo"`}
   emptyText={`undefined`}
   fn={logValue}
@@ -156,7 +166,7 @@ called with the `event` object as the first argument.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { foo: 'bar' },
     { fn: (obj) => obj.foo.toUpperCase() },
   );`}
@@ -173,7 +183,7 @@ using the `getMappingValue` function recursively.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { foo: 'bar' },
     {
       map: {
@@ -184,9 +194,11 @@ using the `getMappingValue` function recursively.
     },
   );`}
   output={`{
-    foo: 'bar',
-    bar: 'baz',
-    obj: { recursive: true },
+    foo: "bar",
+    bar: "baz",
+    obj: {
+      recursive: true
+    }
   }`}
   emptyText={`undefined`}
   fn={logValue}
@@ -201,11 +213,14 @@ first parameter is the array to iterate over. The second parameter is again a
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { arr: [{ id: 'foo' }, { id: 'bar' }] },
     { loop: ['arr', 'id'] },
   );`}
-  output={`['foo', 'bar']`}
+  output={`[
+    "foo",
+    "bar"
+  ]`}
   emptyText={`undefined`}
   fn={logValue}
 />
@@ -219,7 +234,7 @@ the static fallback `value`.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { foo: 'bar' },
     {
       key: 'foo',
@@ -240,7 +255,7 @@ the static fallback `value`.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     {
       name: 'foo',
       consent: {

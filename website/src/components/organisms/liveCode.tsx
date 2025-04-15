@@ -15,7 +15,7 @@ export interface LiveCodeProps {
     config: unknown,
     log: (...args: unknown[]) => void,
     options?: WalkerOS.AnyObject,
-  ) => void;
+  ) => Promise<void>;
   fnName?: string;
   labelInput?: string;
   labelConfig?: string;
@@ -68,12 +68,16 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
 
     const updateRight = useRef(
       debounce(
-        (inputStr: string, configStr: string, options: WalkerOS.AnyObject) => {
+        async (
+          inputStr: string,
+          configStr: string,
+          options: WalkerOS.AnyObject,
+        ) => {
           if (!fn) return;
 
           setOutput([]);
 
-          tryCatchAsync(fn, (e) => {
+          await tryCatchAsync(fn, (e) => {
             setOutput([`Preview error: ${String(e)}`]);
           })(inputStr, configStr, log, options);
         },
