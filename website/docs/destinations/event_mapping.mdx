@@ -196,15 +196,23 @@ See&nbsp;<Link to="#valueconfig">ValueConfig</Link> for detailed usage.
 The `ignore` property is used to ignore the event. If set to `true`, the event
 won't get pushed to the destination.
 
-### consent
-
-The `consent` property is used to require a specific state to process the event.
-
 ### custom
 
 The `custom` property is used for individual destination settings. In most cases
 the `data` property is enough. But in special cases a `custom` mapping might
 simplify the configuration.
+
+<DestinationPush
+  event={{ event: event.event }}
+  mapping={`{
+    data: "event",
+    custom: {
+      // Individual settings
+      foo: "bar",
+    }
+  }`}
+  output={`"order complete"`}
+/>
 
 ### batch
 
