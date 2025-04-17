@@ -45,14 +45,10 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
           editUrl: `${vars.github}edit/main/website/`,
         },
         blog: {
           showReadingTime: true,
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
           editUrl: `${vars.github}edit/main/website/`,
         },
         theme: {
@@ -86,6 +82,11 @@ const config: Config = {
           sidebarId: 'docsSidebar',
           position: 'left',
           label: 'Documentation',
+        },
+        {
+          to: '/guides/',
+          label: 'Guides',
+          position: 'left',
         },
         { to: '/playground', label: 'Playground', position: 'left' },
         { to: '/services', label: 'Services', position: 'left' },
@@ -175,7 +176,21 @@ const config: Config = {
     },
   } satisfies Preset.ThemeConfig,
 
-  plugins: [tailwindPlugin],
+  plugins: [
+    tailwindPlugin,
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'guides',
+        path: './guides',
+        routeBasePath: '/guides/',
+        sidebarPath: './guides/sidebars.ts',
+        editUrl: `${vars.github}edit/main/website/`,
+        include: ['**/*.{md,mdx}'],
+        exclude: ['**/_*.{js,jsx,ts,tsx,md,mdx}'],
+      },
+    ],
+  ],
 };
 
 async function tailwindPlugin() {
