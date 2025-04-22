@@ -54,33 +54,13 @@ describe('source dataLayer', () => {
     expect(dataLayer).toEqual(['foo']);
   });
 
-  test('failing filter', async () => {
-    const filterFn = jest
-      .fn()
-      .mockImplementationOnce(() => {
-        throw new Error();
-      })
-      .mockImplementation(() => true);
-
-    sourceDataLayer({ elb, filter: filterFn });
-    dataLayer.push({ event: 'foo' });
-
-    await jest.runAllTimersAsync();
-    expect(filterFn).toHaveBeenCalledTimes(1);
-    expect(elb).toHaveBeenCalledTimes(0);
-
-    dataLayer.push({ event: 'bar' });
-    await jest.runAllTimersAsync();
-    expect(elb).toHaveBeenCalledTimes(1);
-  });
-
   test('filter', async () => {
     const mockFn = jest.fn();
     sourceDataLayer({
       elb,
       filter: (event) => {
         mockFn(event);
-        return isObject(event) && event.event !== 'foo';
+        return isObject(event) && event.event === 'foo';
       },
     });
 
@@ -242,12 +222,31 @@ describe('source dataLayer', () => {
       throw new Error();
     });
 
-    const instance = sourceDataLayer({ elb });
-    await jest.runAllTimersAsync();
+    const source = sourceDataLayer({ elb });
     dataLayer.push('foo');
     await jest.runAllTimersAsync();
     expect(elb).toThrow();
     expect(mockOrg).toHaveBeenCalledTimes(1);
-    expect(instance?.processing).toBe(false);
+    expect(source?.processing).toBe(false);
+  });
+
+  test('failing filter', async () => {
+    const filterFn = jest
+      .fn()
+      .mockImplementationOnce(() => {
+        throw new Error();
+      })
+      .mockImplementation(() => false);
+
+    sourceDataLayer({ elb, filter: filterFn });
+    dataLayer.push({ event: 'foo' });
+
+    await jest.runAllTimersAsync();
+    expect(filterFn).toHaveBeenCalledTimes(1);
+    expect(elb).toHaveBeenCalledTimes(0);
+
+    dataLayer.push({ event: 'bar' });
+    await jest.runAllTimersAsync();
+    expect(elb).toHaveBeenCalledTimes(1);
   });
 });

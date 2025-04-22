@@ -43,7 +43,7 @@ export async function push(config: Config, live: boolean, ...args: unknown[]) {
     entries.map(
       tryCatchAsync(async (obj) => {
         // Filter out unwanted events
-        if (config.filter && !(await config.filter(obj))) return;
+        if (config.filter && (await config.filter(obj))) return;
 
         // Map the incoming event to a WalkerOS event
         const mappedObj = await objToEvent(filterValues(obj), config);
