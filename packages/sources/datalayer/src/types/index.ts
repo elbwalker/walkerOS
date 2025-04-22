@@ -19,7 +19,7 @@ export interface Config {
   name?: string;
   prefix: string;
   processing?: boolean;
-  skipped?: unknown[];
+  skipped: unknown[];
 }
 
 export interface Mapping {

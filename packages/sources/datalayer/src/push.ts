@@ -34,14 +34,14 @@ export async function push(config: Config, live: boolean, ...args: unknown[]) {
 
   // Prevent infinite loops
   if (live && config.processing) {
-    config.skipped?.push(event);
+    config.skipped.push(event);
     return;
   }
 
   // Get busy
   config.processing = true;
 
-  const foo = tryCatchAsync(async (obj) => {
+  await tryCatchAsync(async (obj) => {
     // Filter out unwanted events
     if (config.filter && (await config.filter(obj))) return;
 
@@ -59,8 +59,6 @@ export async function push(config: Config, live: boolean, ...args: unknown[]) {
       }
     }
   })(event);
-
-  await foo;
 
   // Finished processing
   config.processing = false;

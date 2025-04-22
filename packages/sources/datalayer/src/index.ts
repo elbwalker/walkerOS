@@ -24,8 +24,13 @@ export function sourceDataLayer(
   // Override the original push function to intercept incoming events
   intercept(config);
 
-  // Process already existing events in the dataLayer (ignore Promise handling)
-  dataLayer.map((item) => push(config, false, item));
+  // Process existing events (and only those)
+  const length = dataLayer.length;
+  for (let i = 0; i < length; i++) {
+    push(config, false, dataLayer[i]);
+  }
+
+  config.processing = false;
 
   return config;
 }
