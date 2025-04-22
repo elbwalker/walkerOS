@@ -54,17 +54,24 @@ describe('source dataLayer', () => {
     expect(dataLayer).toEqual(['foo']);
   });
 
-  test('push', async () => {
-    sourceDataLayer({ elb });
+  test('failing filter', async () => {
+    const filterFn = jest
+      .fn()
+      .mockImplementationOnce(() => {
+        throw new Error();
+      })
+      .mockImplementation(() => true);
+
+    sourceDataLayer({ elb, filter: filterFn });
     dataLayer.push({ event: 'foo' });
+
+    await jest.runAllTimersAsync();
+    expect(filterFn).toHaveBeenCalledTimes(1);
+    expect(elb).toHaveBeenCalledTimes(0);
+
+    dataLayer.push({ event: 'bar' });
     await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(1);
-    expect(elb).toHaveBeenCalledWith({
-      event: 'dataLayer foo',
-      data: { event: 'foo' },
-      id: expect.any(String),
-      source: { type: 'dataLayer' },
-    });
   });
 
   test('filter', async () => {

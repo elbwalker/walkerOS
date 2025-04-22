@@ -40,24 +40,26 @@ export async function push(config: Config, live: boolean, ...args: unknown[]) {
   config.processing = true;
 
   await Promise.all(
-    entries.map(async (obj) => {
-      // Filter out unwanted events
-      if (config.filter && !(await tryCatchAsync(config.filter)(obj))) return;
+    entries.map(
+      tryCatchAsync(async (obj) => {
+        // Filter out unwanted events
+        if (config.filter && !(await config.filter(obj))) return;
 
-      // Map the incoming event to a WalkerOS event
-      const mappedObj = await objToEvent(filterValues(obj), config);
+        // Map the incoming event to a WalkerOS event
+        const mappedObj = await objToEvent(filterValues(obj), config);
 
-      if (mappedObj) {
-        const { command, event } = mappedObj;
+        if (mappedObj) {
+          const { command, event } = mappedObj;
 
-        if (command) {
-          if (command.name)
-            config.elb(command.name, command.data as Elb.PushData);
-        } else if (event) {
-          if (event.event) config.elb(event);
+          if (command) {
+            if (command.name)
+              await config.elb(command.name, command.data as Elb.PushData);
+          } else if (event) {
+            if (event.event) await config.elb(event);
+          }
         }
-      }
-    }),
+      }),
+    ),
   );
 
   // Finished processing
