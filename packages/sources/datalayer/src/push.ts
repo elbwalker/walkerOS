@@ -28,50 +28,48 @@ export function intercept(config: Config) {
 export async function push(config: Config, live: boolean, ...args: unknown[]) {
   // Clone the arguments to avoid mutation
   const clonedArgs = clone(args);
-  const entries = getEntries(clonedArgs);
+  const event = getEvent(clonedArgs);
+
+  if (!isObject(event)) return;
 
   // Prevent infinite loops
   if (live && config.processing) {
-    config.skipped?.push(entries);
+    config.skipped?.push(event);
     return;
   }
 
   // Get busy
   config.processing = true;
 
-  await Promise.all(
-    entries.map(
-      tryCatchAsync(async (obj) => {
-        // Filter out unwanted events
-        if (config.filter && (await config.filter(obj))) return;
+  const foo = tryCatchAsync(async (obj) => {
+    // Filter out unwanted events
+    if (config.filter && (await config.filter(obj))) return;
 
-        // Map the incoming event to a WalkerOS event
-        const mappedObj = await objToEvent(filterValues(obj), config);
+    // Map the incoming event to a WalkerOS event
+    const mappedObj = await objToEvent(filterValues(obj), config);
 
-        if (mappedObj) {
-          const { command, event } = mappedObj;
+    if (mappedObj) {
+      const { command, event } = mappedObj;
 
-          if (command) {
-            if (command.name)
-              await config.elb(command.name, command.data as Elb.PushData);
-          } else if (event) {
-            if (event.event) await config.elb(event);
-          }
-        }
-      }),
-    ),
-  );
+      if (command) {
+        if (command.name)
+          await config.elb(command.name, command.data as Elb.PushData);
+      } else if (event) {
+        if (event.event) await config.elb(event);
+      }
+    }
+  })(event);
+
+  await foo;
 
   // Finished processing
   config.processing = false;
 }
 
-function getEntries(args: unknown): unknown[] {
-  if (isObject(args)) return [args]; // dataLayer.push
+function getEvent(args: unknown): void | unknown {
+  if (isObject(args)) return args; // dataLayer.push
   if (isArray(args)) {
     if (isArguments(args[0])) return gtagToObj(args[0]); // gtag
-    return args;
+    return args[0];
   }
-
-  return [];
 }

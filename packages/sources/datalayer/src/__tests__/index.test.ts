@@ -156,7 +156,7 @@ describe('source dataLayer', () => {
     dataLayer.push({ event: 'foo' });
     dataLayer.push({ event: 'bar' });
 
-    const source = await sourceDataLayer({ elb: loopFn });
+    const source = sourceDataLayer({ elb: loopFn });
     await jest.runAllTimersAsync();
 
     dataLayer.push({ event: 'baz' });
@@ -174,11 +174,7 @@ describe('source dataLayer', () => {
     );
 
     expect(JSON.stringify(source!.skipped)).toBe(
-      JSON.stringify([
-        [{ event: 'loop' }],
-        [{ event: 'loop' }],
-        [{ event: 'loop' }],
-      ]),
+      JSON.stringify([{ event: 'loop' }, { event: 'loop' }, { event: 'loop' }]),
     );
 
     expect(loopFn).toHaveBeenCalledTimes(3);
@@ -223,8 +219,9 @@ describe('source dataLayer', () => {
     });
 
     const source = sourceDataLayer({ elb });
-    dataLayer.push('foo');
+    dataLayer.push({ event: 'foo' });
     await jest.runAllTimersAsync();
+
     expect(elb).toThrow();
     expect(mockOrg).toHaveBeenCalledTimes(1);
     expect(source?.processing).toBe(false);
@@ -238,7 +235,7 @@ describe('source dataLayer', () => {
       })
       .mockImplementation(() => false);
 
-    sourceDataLayer({ elb, filter: filterFn });
+    const source = sourceDataLayer({ elb, filter: filterFn });
     dataLayer.push({ event: 'foo' });
 
     await jest.runAllTimersAsync();
@@ -248,5 +245,7 @@ describe('source dataLayer', () => {
     dataLayer.push({ event: 'bar' });
     await jest.runAllTimersAsync();
     expect(elb).toHaveBeenCalledTimes(1);
+
+    expect(source?.processing).toBe(false);
   });
 });
