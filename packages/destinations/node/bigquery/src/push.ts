@@ -1,10 +1,12 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { PushFn, Row } from './types';
+import { isObject } from '@elbwalker/utils';
 
-export const push: PushFn = async function (event, config) {
+export const push: PushFn = async function (event, config, mapping, options) {
   const { client, datasetId, tableId } = config.custom!;
 
-  const rows = [mapEvent(event)];
+  const row = options?.data ? options.data : mapEvent(event);
+  const rows = [row];
 
   await client.dataset(datasetId).table(tableId).insert(rows);
 
@@ -40,5 +42,5 @@ export const mapEvent = (event: WalkerOS.Event): Row => {
 };
 
 function stringify(obj?: WalkerOS.AnyObject): undefined | string {
-  return obj && Object.keys(obj).length ? JSON.stringify(obj) : undefined;
+  return isObject(obj) ? JSON.stringify(obj) : undefined;
 }
