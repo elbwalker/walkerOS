@@ -3,7 +3,7 @@ title: BigQuery
 description: Streaming events directly to Google BigQuery.
 ---
 
-import PackageLink from '/src/components/docs/package-link';
+import PackageLink from '@site/src/components/docs/package-link';
 import Link from '@docusaurus/Link';
 
 <PackageLink
@@ -15,7 +15,15 @@ The BigQuery destination allows you to send server-side events from walkerOS to
 Google BigQuery. It handles the data transformation and ensures that your events
 are correctly formatted for BigQuery tables.
 
-## Dependencies
+## Installation
+
+To get started, install the package via npm:
+
+```sh
+npm install @elbwalker/destination-node-bigquery
+```
+
+### Dependencies
 
 Before using the BigQuery destination, ensure you have:
 
@@ -23,6 +31,36 @@ Before using the BigQuery destination, ensure you have:
 - walkerOS Node source installed
 - Permissions to write to BigQuery
 - Run the setup function to create the table
+
+## Configuration
+
+Configure the BigQuery destination with your `projectId`.
+
+#### Example
+
+```ts
+import { destinationBigQuery } from '@elbwalker/destination-node-bigquery';
+
+await elb('walker destination', destinationBigQuery, {
+  custom: {
+    projectId: 'PR0J3CT1D', // Required
+    // client: BigQuery; // A BigQuery instance from @google-cloud/bigquery
+    // datasetId: string; // 'walkerOS' as default
+    // tableId: string; // 'events' as default
+    // location: string; // 'EU' as default
+    // bigquery?: BigQueryOptions; // BigQueryOptions from @google-cloud/bigquery
+  },
+  // data: { map: { event: 'event', data: 'data' } }, // Customize the event format
+});
+```
+
+:::tip
+
+Learn how to
+[authenticate with a service account key file](https://cloud.google.com/bigquery/docs/authentication/service-account-file)
+using the custom `bigquery` options.
+
+:::
 
 ### Permissions
 
@@ -48,9 +86,17 @@ For more detailed information, refer to the official
 
 :::
 
+## Schema
+
+By default, the BigQuery destination will use the `WalkerOS.Event` format. It
+can be customized using `data` config. Both, array and object fields get
+stringified.
+
 ### Create table
 
-The destination requires an existing dataset and table to ingest data into.
+The destination requires an existing dataset and table to ingest data into. This
+schema is used for the default `WalkerOS.Event` format.
+
 Replace `PR0J3CT1D.walkerOS.events` with your actual project ID, dataset, and
 table's name. Adjust the options if necessary, and run a query to create it.
 
@@ -93,66 +139,29 @@ costs.
 
 :::
 
-## Installation
+### Example table
 
-To get started, install the package via npm:
-
-```sh
-npm install @elbwalker/destination-node-bigquery
-```
-
-## Configuration
-
-Configure the BigQuery destination with your `projectId`.
-
-#### Example
-
-```ts
-import { destinationBigQuery } from '@elbwalker/destination-node-bigquery';
-
-await elb('walker destination', destinationBigQuery, {
-  custom: {
-    projectId: 'PR0J3CT1D', // Required
-    // client: BigQuery; // A BigQuery instance from @google-cloud/bigquery
-    // datasetId: string; // 'walkerOS' as default
-    // tableId: string; // 'events' as default
-    // location: string; // 'EU' as default
-    // bigquery?: BigQueryOptions; // BigQueryOptions from @google-cloud/bigquery
-  },
-});
-```
-
-:::tip
-
-Learn how to
-[authenticate with a service account key file](https://cloud.google.com/bigquery/docs/authentication/service-account-file)
-using the custom `bigquery` options.
-
-:::
-
-## Schema
-
-| Field name  | Type      | Description                                                      | Example value                                                                                               |
-| ----------- | --------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `timestamp` | TIMESTAMP | Time when the event fired                                        | `2024-09-09 13:19:48.462000 UTC`                                                                            |
-| `event`     | STRING    | Name of the event as a combination of entity and action          | `promotion visible`                                                                                         |
-| `data`      | JSON      | Arbitrary properties related to the entity                       | `{"name":"Set up tracking easily","interactive":false}`                                                     |
-| `context`   | JSON      | Provides additional information about the state during the event | `{"stage":["learning",1],"test":["engagement",0]}`                                                          |
-| `custom`    | JSON      | Additional space for individual setups                           | `null`                                                                                                      |
-| `globals`   | JSON      | General properties that apply to every event                     | `{"language":"en"}`                                                                                         |
-| `user`      | JSON      | Contains user identifiers for different identification levels    | `{"id":"us3r1d","device":"c00k131d","session":"s3ss10n1d"}`                                                 |
-| `nested`    | JSON      | All nested entities within the main entity                       | `[{"type":"github",data:{"repo": "walkerOS"}}]`                                                             |
-| `consent`   | JSON      | Status of the granted consent state(s)                           | `{"functional": true }`                                                                                     |
-| `id`        | STRING    | Timestamp, group & count of the event                            | `1725887988462-u7jpt6-2`                                                                                    |
-| `trigger`   | STRING    | Name of the trigger that fired                                   | `load`                                                                                                      |
-| `entity`    | STRING    | Name of the entity                                               | `promotion`                                                                                                 |
-| `action`    | STRING    | Name of the action                                               | `visible`                                                                                                   |
-| `timing`    | NUMERIC   | Duration how long it took to trigger this event                  | `1.77`                                                                                                      |
-| `group`     | STRING    | Random identifier for all events during a run                    | `u7jpt6`                                                                                                    |
-| `count`     | NUMERIC   | Incremental counter of the events in the same run                | `2`                                                                                                         |
-| `version`   | JSON      | Information about the used implementation setup                  | `{"source": "X.X.X", "tagging": 42}`                                                                        |
-| `source`    | JSON      | Details about the origin of the event                            | `{"type": "web","id": "https://github.com/elbwalker/walkerOS","previous_id": "https://www.elbwalker.com/"}` |
-| `createdAt` | TIMESTAMP | Time when the event was received                                 | `2024-09-09 13:19:48.880000 UTC`                                                                            |
+| Field name  | Type      | Description                                                      | Example value                                                                                                |
+| ----------- | --------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `timestamp` | TIMESTAMP | Time when the event fired                                        | `2024-09-09 13:19:48.462000 UTC`                                                                             |
+| `event`     | STRING    | Name of the event as a combination of entity and action          | `promotion visible`                                                                                          |
+| `data`      | JSON      | Arbitrary properties related to the entity                       | `{"name":"Set up tracking easily", "interactive":false}`                                                     |
+| `context`   | JSON      | Provides additional information about the state during the event | `{"stage":["learning",1], "test":["engagement",0]}`                                                          |
+| `custom`    | JSON      | Additional space for individual setups                           | `null`                                                                                                       |
+| `globals`   | JSON      | General properties that apply to every event                     | `{"language":"en"}`                                                                                          |
+| `user`      | JSON      | Contains user identifiers for different identification levels    | `{"id":"us3r1d", "device":"c00k131d", "session":"s3ss10n1d"}`                                                |
+| `nested`    | JSON      | All nested entities within the main entity                       | `[{"type":"github", data:{"repo": "walkerOS"}}]`                                                             |
+| `consent`   | JSON      | Status of the granted consent state(s)                           | `{"functional": true }`                                                                                      |
+| `id`        | STRING    | Timestamp, group & count of the event                            | `1725887988462-u7jpt6-2`                                                                                     |
+| `trigger`   | STRING    | Name of the trigger that fired                                   | `load`                                                                                                       |
+| `entity`    | STRING    | Name of the entity                                               | `promotion`                                                                                                  |
+| `action`    | STRING    | Name of the action                                               | `visible`                                                                                                    |
+| `timing`    | NUMERIC   | Duration how long it took to trigger this event                  | `1.77`                                                                                                       |
+| `group`     | STRING    | Random identifier for all events during a run                    | `u7jpt6`                                                                                                     |
+| `count`     | NUMERIC   | Incremental counter of the events in the same run                | `2`                                                                                                          |
+| `version`   | JSON      | Information about the used implementation setup                  | `{"source": "X.X.X", "tagging": 42}`                                                                         |
+| `source`    | JSON      | Details about the origin of the event                            | `{"type": "web","id": "https://github.com/elbwalker/walkerOS", "previous_id": "https://www.elbwalker.com/"}` |
+| `createdAt` | TIMESTAMP | Time when the event was received                                 | `2024-09-09 13:19:48.880000 UTC`                                                                             |
 
 :::tip
 

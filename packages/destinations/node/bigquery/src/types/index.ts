@@ -33,25 +33,3 @@ export interface Custom {
 export interface CustomEvent {
   // Custom destination event mapping properties
 }
-
-export interface Row {
-  timestamp: Date;
-  event: string;
-  createdAt: Date;
-  data?: string; // stringified
-  context?: string; // stringified
-  globals?: string; // stringified
-  custom?: string; // stringified
-  user?: string; // stringified
-  nested?: string; // stringified
-  consent?: string; // stringified
-  id?: string;
-  trigger?: string;
-  entity?: string;
-  action?: string;
-  timing?: number;
-  group?: string;
-  count?: number;
-  version?: string; // stringified
-  source?: string; // stringified
-}
