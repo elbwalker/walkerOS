@@ -4,9 +4,9 @@ import { getDataLayer } from './helper';
 
 export * as SourceDataLayer from './types';
 
-export function sourceDataLayer(
+export async function sourceDataLayer(
   partialConfig: Partial<Config> = {},
-): Config | undefined {
+): Promise<Config | undefined> {
   const { elb, name, prefix = 'dataLayer', skipped = [] } = partialConfig;
   if (!elb) return;
 
@@ -27,7 +27,7 @@ export function sourceDataLayer(
   // Process existing events (and only those)
   const length = dataLayer.length;
   for (let i = 0; i < length; i++) {
-    push(config, false, dataLayer[i]);
+    await push(config, false, dataLayer[i]);
   }
 
   config.processing = false;

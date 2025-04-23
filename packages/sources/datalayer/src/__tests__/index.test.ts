@@ -156,7 +156,7 @@ describe('source dataLayer', () => {
     dataLayer.push({ event: 'foo' });
     dataLayer.push({ event: 'bar' });
 
-    const source = sourceDataLayer({ elb: loopFn });
+    const source = await sourceDataLayer({ elb: loopFn });
     await jest.runAllTimersAsync();
 
     dataLayer.push({ event: 'baz' });
@@ -218,7 +218,7 @@ describe('source dataLayer', () => {
       throw new Error();
     });
 
-    const source = sourceDataLayer({ elb });
+    const source = await sourceDataLayer({ elb });
     dataLayer.push({ event: 'foo' });
     await jest.runAllTimersAsync();
 
@@ -235,7 +235,7 @@ describe('source dataLayer', () => {
       })
       .mockImplementation(() => false);
 
-    const source = sourceDataLayer({ elb, filter: filterFn });
+    const source = await sourceDataLayer({ elb, filter: filterFn });
     dataLayer.push({ event: 'foo' });
 
     await jest.runAllTimersAsync();
