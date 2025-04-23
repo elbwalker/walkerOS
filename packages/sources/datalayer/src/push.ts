@@ -41,27 +41,30 @@ export async function push(config: Config, live: boolean, ...args: unknown[]) {
   // Get busy
   config.processing = true;
 
-  await tryCatchAsync(async (obj) => {
-    // Filter out unwanted events
-    if (config.filter && (await config.filter(obj))) return;
+  tryCatchAsync(
+    async (obj) => {
+      // Filter out unwanted events
+      if (config.filter && (await config.filter(obj))) return;
 
-    // Map the incoming event to a WalkerOS event
-    const mappedObj = await objToEvent(filterValues(obj), config);
+      // Map the incoming event to a WalkerOS event
+      const mappedObj = await objToEvent(filterValues(obj), config);
 
-    if (mappedObj) {
-      const { command, event } = mappedObj;
+      if (mappedObj) {
+        const { command, event } = mappedObj;
 
-      if (command) {
-        if (command.name)
+        if (command && command.name) {
           await config.elb(command.name, command.data as Elb.PushData);
-      } else if (event) {
-        if (event.event) await config.elb(event);
+        } else if (event && event.event) {
+          await config.elb(event);
+        }
       }
-    }
-  })(event);
-
-  // Finished processing
-  config.processing = false;
+    },
+    undefined, // Error handler
+    () => {
+      // Finished processing
+      config.processing = false;
+    },
+  )(event);
 }
 
 function getEvent(args: unknown): void | unknown {
