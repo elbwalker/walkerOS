@@ -54,26 +54,13 @@ describe('source dataLayer', () => {
     expect(dataLayer).toEqual(['foo']);
   });
 
-  test('push', async () => {
-    sourceDataLayer({ elb });
-    dataLayer.push({ event: 'foo' });
-    await jest.runAllTimersAsync();
-    expect(elb).toHaveBeenCalledTimes(1);
-    expect(elb).toHaveBeenCalledWith({
-      event: 'dataLayer foo',
-      data: { event: 'foo' },
-      id: expect.any(String),
-      source: { type: 'dataLayer' },
-    });
-  });
-
   test('filter', async () => {
     const mockFn = jest.fn();
     sourceDataLayer({
       elb,
       filter: (event) => {
         mockFn(event);
-        return isObject(event) && event.event !== 'foo';
+        return isObject(event) && event.event === 'foo';
       },
     });
 
@@ -187,11 +174,7 @@ describe('source dataLayer', () => {
     );
 
     expect(JSON.stringify(source!.skipped)).toBe(
-      JSON.stringify([
-        [{ event: 'loop' }],
-        [{ event: 'loop' }],
-        [{ event: 'loop' }],
-      ]),
+      JSON.stringify([{ event: 'loop' }, { event: 'loop' }, { event: 'loop' }]),
     );
 
     expect(loopFn).toHaveBeenCalledTimes(3);
@@ -235,12 +218,34 @@ describe('source dataLayer', () => {
       throw new Error();
     });
 
-    const instance = sourceDataLayer({ elb });
+    const source = await sourceDataLayer({ elb });
+    dataLayer.push({ event: 'foo' });
     await jest.runAllTimersAsync();
-    dataLayer.push('foo');
-    await jest.runAllTimersAsync();
+
     expect(elb).toThrow();
     expect(mockOrg).toHaveBeenCalledTimes(1);
-    expect(instance?.processing).toBe(false);
+    expect(source?.processing).toBe(false);
+  });
+
+  test('failing filter', async () => {
+    const filterFn = jest
+      .fn()
+      .mockImplementationOnce(() => {
+        throw new Error();
+      })
+      .mockImplementation(() => false);
+
+    const source = await sourceDataLayer({ elb, filter: filterFn });
+    dataLayer.push({ event: 'foo' });
+
+    await jest.runAllTimersAsync();
+    expect(filterFn).toHaveBeenCalledTimes(1);
+    expect(elb).toHaveBeenCalledTimes(0);
+
+    dataLayer.push({ event: 'bar' });
+    await jest.runAllTimersAsync();
+    expect(elb).toHaveBeenCalledTimes(1);
+
+    expect(source?.processing).toBe(false);
   });
 });
