@@ -12,7 +12,7 @@ There are a few configuration options when creating a dataLayer source instance:
 ```ts
 import { sourceDataLayer } from '@elbwalker/source-datalayer';
 
-sourceDataLayer({
+await sourceDataLayer({
   elb: elb, // The elb function to use (required)
   filter: (event) => {
     // Filter out internal GTM events
@@ -71,7 +71,7 @@ command and call `elb(name, data)` with the two parameters `name` and `data`.
   smallText={true}
   labelInput="Configuration"
   disableInput={true}
-  input={`sourceDataLayer({
+  input={`await sourceDataLayer({
     elb,
     mapping: {
       'consent update': {
@@ -125,7 +125,7 @@ pushed by a walker.js destination.
   smallText={true}
   labelInput="Configuration"
   disableInput={true}
-  input={`sourceDataLayer({
+  input={`await sourceDataLayer({
     elb,
     mapping: {
       add_to_cart: {
@@ -192,7 +192,7 @@ pushed by a walker.js destination.
   smallText={true}
   labelInput="Configuration"
   disableInput={true}
-  input={`sourceDataLayer({
+  input={`await sourceDataLayer({
     elb,
     mapping: {
       purchase: {
