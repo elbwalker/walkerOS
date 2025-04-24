@@ -1,8 +1,8 @@
 import { JSX } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
-import CompanyValues from '../components/company/values';
-import CompanyMission from '../components/company/mission';
+import Mission from './mission';
+import Values from './values';
 
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
@@ -13,8 +13,8 @@ export default function Home(): JSX.Element {
       description="elbwalker creates a new and open standard to measure user behavior."
     >
       <main>
-        <CompanyMission />
-        <CompanyValues />
+        <Mission />
+        <Values />
       </main>
     </Layout>
   );
