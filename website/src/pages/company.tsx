@@ -1,12 +1,10 @@
 import { JSX } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
-import Mission from './mission';
-import Values from './values';
+import Mission from '@site/src/components/pages/company/mission';
+import Values from '@site/src/components/pages/company/values';
 
 export default function Home(): JSX.Element {
-  const { siteConfig } = useDocusaurusContext();
-
   return (
     <Layout
       title="About"

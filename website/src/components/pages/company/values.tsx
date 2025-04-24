@@ -6,7 +6,7 @@ import {
   HeartIcon,
   LightBulbIcon,
 } from '@heroicons/react/24/outline';
-import Heading from '../heading';
+import Heading from '@site/src/components/heading';
 
 export default function CompanyValues() {
   return (

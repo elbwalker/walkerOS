@@ -1,7 +1,7 @@
 import Layout from '@theme/Layout';
-import Hero from './home/hero';
-import Features from './home/features';
-import CTA from './home/cta';
+import Hero from '@site/src/components/pages/home/hero';
+import Features from '@site/src/components/pages/home/features';
+import CTA from '@site/src/components/pages/home/cta';
 
 export default function Home() {
   return (

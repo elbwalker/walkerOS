@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '../atoms/buttons';
+import { Button } from '@site/src/components/atoms/buttons';
 
 export default function Hero() {
   const CheckSVG = ({ children }) => (
@@ -23,28 +23,30 @@ export default function Hero() {
 
   return (
     <main className="relative mx-3 mt-16 max-w-7xl sm:mt-24 lg:mx-auto">
-      <div className="text-center	">
-        <h1 className="text-6xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
+      <div className="text-center">
+        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
           <div className="block text-elbwalker block">walkerOS</div>
           <div className="block xl:inline text-black dark:text-white">
-            Open-source event data collection
+            Professional services
           </div>
         </h1>
-        <p className="mx-auto mt-3 text-base sm:text-lg md:mt-5 md:text-xl">
-          Collect event data for digital analytics in a unified and
-          privacy-centric way.
+        <p className="mx-auto mt-3 max-w-md text-base sm:text-lg md:mt-5 md:max-w-3xl md:text-xl">
+          We help you set up and leverage walkerOS. Go from tracking chaos to
+          tracking excellence in record speed.
         </p>
         <div className="mx-auto mt-5 max-w-md sm:flex sm:justify-center md:mt-8">
-          <Button link="/docs/getting_started/quick_start">Get started</Button>
-          <Button link="/playground" variant="secondary">
-            Playground
+          <Button link="https://calendly.com/elb-alexander/30min">
+            Schedule free call
+          </Button>
+          <Button link="mailto:hello@elbwalker.com" variant="secondary">
+            Write an email
           </Button>
         </div>
       </div>
       <div className="mt-10 text-center">
-        <CheckSVG>runs in your own infrastructure</CheckSVG>
-        <CheckSVG>integrates with various analytics & marketing tools</CheckSVG>
-        <CheckSVG>in-built consent mode</CheckSVG>
+        <CheckSVG>direct support from the creators</CheckSVG>
+        <CheckSVG>initial setup in 5 days</CheckSVG>
+        <CheckSVG>fully integrated into your infrastructure</CheckSVG>
       </div>
     </main>
   );

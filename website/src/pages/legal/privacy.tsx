@@ -1,7 +1,7 @@
 import React from 'react';
 import Layout from '@theme/Layout';
-import LegalPrivacyHeader from '@site/src/components/legal/privacy-header';
-import LegalPrivacyContent from '@site/src/components/legal/privacy-content';
+import Header from '@site/src/components/pages/legal/privacy-header';
+import Content from '@site/src/components/pages/legal/privacy-content';
 
 export default function LegalPrivacy() {
   const [language, changeLanguage] = React.useState('EN');
@@ -11,8 +11,8 @@ export default function LegalPrivacy() {
       title={`Privacy Policy`}
       description="read carefully, that's important"
     >
-      <LegalPrivacyHeader changeLanguage={changeLanguage} />
-      <LegalPrivacyContent language={language} />
+      <Header changeLanguage={changeLanguage} />
+      <Content language={language} />
     </Layout>
   );
 }
