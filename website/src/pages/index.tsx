@@ -1,7 +1,7 @@
 import Layout from '@theme/Layout';
-import Hero from '@site/src/components/home/hero';
-import Features from '@site/src/components/home/features';
-import CTAStart from '@site/src/components/ctas/start';
+import Hero from './home/hero';
+import Features from './home/features';
+import CTA from './home/cta';
 
 export default function Home() {
   return (
@@ -12,7 +12,7 @@ export default function Home() {
       <Hero />
       <main>
         <Features />
-        <CTAStart />
+        <CTA />
       </main>
     </Layout>
   );
