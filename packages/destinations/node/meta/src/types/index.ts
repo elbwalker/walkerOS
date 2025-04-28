@@ -42,3 +42,5 @@ export interface CustomEvent {
   };
   value?: Mapping.Value;
 }
+
+export type EventConfig = Mapping.EventConfig<CustomEvent>;
