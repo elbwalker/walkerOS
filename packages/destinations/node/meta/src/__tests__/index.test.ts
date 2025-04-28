@@ -96,12 +96,21 @@ describe('Node Destination Meta', () => {
     await destination.push(event, config, {}, { data });
   });
 
-  test.only('Currency', async () => {
+  test('Currency', async () => {
     const config = await getConfig({ accessToken, pixelId });
     const data = { currency: 'EUR' };
 
     await destination.push(event, config, {}, { data });
 
     expect(mockFn).toHaveBeenCalledWith('CustomData.setCurrency', 'EUR');
+  });
+
+  test('Value', async () => {
+    const config = await getConfig({ accessToken, pixelId });
+    const data = { value: 42 };
+
+    await destination.push(event, config, {}, { data });
+
+    expect(mockFn).toHaveBeenCalledWith('CustomData.setValue', 42);
   });
 });

@@ -33,14 +33,12 @@ export interface Custom {
 
 export interface CustomEvent {
   // Custom destination event mapping properties
-  currency?: Mapping.Value;
   content?: {
     id?: Mapping.Value;
     name?: Mapping.Value;
     price?: Mapping.Value;
     quantity?: Mapping.Value;
   };
-  value?: Mapping.Value;
 }
 
 export type EventConfig = Mapping.EventConfig<CustomEvent>;

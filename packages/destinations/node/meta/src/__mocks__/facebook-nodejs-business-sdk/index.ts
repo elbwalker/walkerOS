@@ -29,6 +29,11 @@ export class CustomData {
     mockFn('CustomData.setCurrency', currency);
     return this;
   }
+
+  setValue(value: number) {
+    mockFn('CustomData.setValue', value);
+    return this;
+  }
 }
 
 export class EventRequest {

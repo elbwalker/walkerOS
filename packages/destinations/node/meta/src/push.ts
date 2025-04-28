@@ -41,8 +41,8 @@ export const mapEvent = async (
   data: Destination.Data = {},
 ): Promise<ServerEvent> => {
   const { data: eventData, user, source } = event;
-  const { content, value } = mapping.custom || {};
-  const { currency } = isObject(data) ? data : {};
+  const { content } = mapping.custom || {};
+  const { currency, value } = isObject(data) ? data : {};
 
   let userData = new UserData();
   if (user) {
@@ -78,8 +78,7 @@ export const mapEvent = async (
   if (currency) customData.setCurrency(String(currency));
 
   // Value
-  const valueValue = value && (await getMappingValue(event, value));
-  if (valueValue) customData.setValue(parseFloat(String(valueValue)));
+  if (value) customData.setValue(parseFloat(String(value)));
 
   // Content
   if (content) {
