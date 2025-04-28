@@ -7,7 +7,7 @@ import {
   ServerEvent,
   UserData,
 } from 'facebook-nodejs-business-sdk';
-import { isObject, isString } from '@elbwalker/utils';
+import { isArray, isObject, isString } from '@elbwalker/utils';
 
 export const push: PushFn = async function (event, config, mapping, options) {
   const {
@@ -80,20 +80,19 @@ export const mapEvent = async (
   if (value) customData.setValue(parseFloat(String(value)));
 
   // Content
-  if (contents) {
-    const { id, title, price, quantity } = isObject(contents) ? contents : {};
-    const item = new Content();
-    if (id) item.setId(String(id));
-    if (title) item.setTitle(String(title));
-    if (price) item.setItemPrice(parseFloat(String(price)));
-    if (quantity) item.setQuantity(parseFloat(String(quantity)));
+  if (isArray(contents)) {
+    const items = contents
+      .map((item) => {
+        const { id, price, quantity } = isObject(item) ? item : {};
+        const content = new Content();
+        if (id) content.setId(String(id));
+        if (price) content.setItemPrice(parseFloat(String(price)));
+        if (quantity) content.setQuantity(parseFloat(String(quantity)));
+        return content;
+      })
+      .filter((value) => value !== undefined);
 
-    // Check if at least one value is defined
-    const definedValues = Object.values(item).filter(
-      (value) => value !== undefined,
-    ).length;
-
-    if (definedValues) customData.setContents([item]);
+    if (items.length) customData.setContents(items);
   }
 
   const timestamp = Math.floor(

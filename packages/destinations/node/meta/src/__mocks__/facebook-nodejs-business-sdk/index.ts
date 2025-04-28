@@ -25,11 +25,6 @@ export class Content {
     return this;
   }
 
-  setTitle(title: string) {
-    mockFn('Content.setTitle', title);
-    return this;
-  }
-
   setItemPrice(price: number) {
     mockFn('Content.setItemPrice', price);
     return this;
