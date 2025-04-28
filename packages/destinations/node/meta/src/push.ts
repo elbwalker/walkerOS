@@ -18,7 +18,7 @@ export const push: PushFn = async function (event, config, mapping) {
     testCode,
   } = config.custom!;
 
-  const events = [mapEvent(event, mapping)];
+  const events = [await mapEvent(event, mapping)];
 
   const eventRequest = new EventRequest(
     accessToken,
@@ -42,10 +42,10 @@ export const push: PushFn = async function (event, config, mapping) {
   );
 };
 
-export const mapEvent = (
+export const mapEvent = async (
   event: WalkerOS.Event,
   mapping: EventMapping = {},
-): ServerEvent => {
+): Promise<ServerEvent> => {
   const { data, user, source } = event;
   const { currency, content, value } = mapping.custom || {};
 
@@ -80,20 +80,20 @@ export const mapEvent = (
   const customData = new CustomData();
 
   // Currency
-  const currencyValue = currency && getMappingValue(event, currency);
+  const currencyValue = currency && (await getMappingValue(event, currency));
   if (currencyValue) customData.setCurrency(String(currencyValue));
 
   // Value
-  const valueValue = value && getMappingValue(event, value);
+  const valueValue = value && (await getMappingValue(event, value));
   if (valueValue) customData.setValue(parseFloat(String(valueValue)));
 
   // Content
   if (content) {
     const { id, price, quantity } = content;
     const item = new Content();
-    const idValue = id && getMappingValue(event, id);
-    const priceValue = price && getMappingValue(event, price);
-    const quantityValue = quantity && getMappingValue(event, quantity);
+    const idValue = id && (await getMappingValue(event, id));
+    const priceValue = price && (await getMappingValue(event, price));
+    const quantityValue = quantity && (await getMappingValue(event, quantity));
     if (idValue) item.setId(String(idValue));
     if (priceValue) item.setItemPrice(parseFloat(String(priceValue)));
     if (quantityValue) item.setQuantity(parseFloat(String(quantityValue)));
