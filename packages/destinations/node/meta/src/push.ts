@@ -7,7 +7,7 @@ import {
   ServerEvent,
   UserData,
 } from 'facebook-nodejs-business-sdk';
-import { getMappingValue, isObject, isString } from '@elbwalker/utils';
+import { isObject, isString } from '@elbwalker/utils';
 
 export const push: PushFn = async function (event, config, mapping, options) {
   const {
@@ -41,8 +41,7 @@ export const mapEvent = async (
   data: Destination.Data = {},
 ): Promise<ServerEvent> => {
   const { data: eventData, user, source } = event;
-  const { content } = mapping.custom || {};
-  const { currency, value } = isObject(data) ? data : {};
+  const { content, currency, value } = isObject(data) ? data : {};
 
   let userData = new UserData();
   if (user) {
@@ -82,14 +81,12 @@ export const mapEvent = async (
 
   // Content
   if (content) {
-    const { id, price, quantity } = content;
+    const { id, title, price, quantity } = isObject(content) ? content : {};
     const item = new Content();
-    const idValue = id && (await getMappingValue(event, id));
-    const priceValue = price && (await getMappingValue(event, price));
-    const quantityValue = quantity && (await getMappingValue(event, quantity));
-    if (idValue) item.setId(String(idValue));
-    if (priceValue) item.setItemPrice(parseFloat(String(priceValue)));
-    if (quantityValue) item.setQuantity(parseFloat(String(quantityValue)));
+    if (id) item.setId(String(id));
+    if (title) item.setTitle(String(title));
+    if (price) item.setItemPrice(parseFloat(String(price)));
+    if (quantity) item.setQuantity(parseFloat(String(quantity)));
 
     // Check if at least one value is defined
     const definedValues = Object.values(item).filter(

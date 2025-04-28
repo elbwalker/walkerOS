@@ -96,6 +96,20 @@ describe('Node Destination Meta', () => {
     await destination.push(event, config, {}, { data });
   });
 
+  test('Content', async () => {
+    const config = await getConfig({ accessToken, pixelId });
+    const data = {
+      content: { id: '123', title: 'Test', price: 10, quantity: 2 },
+    };
+
+    await destination.push(event, config, {}, { data });
+
+    expect(mockFn).toHaveBeenCalledWith('Content.setId', '123');
+    expect(mockFn).toHaveBeenCalledWith('Content.setTitle', 'Test');
+    expect(mockFn).toHaveBeenCalledWith('Content.setItemPrice', 10);
+    expect(mockFn).toHaveBeenCalledWith('Content.setQuantity', 2);
+  });
+
   test('Currency', async () => {
     const config = await getConfig({ accessToken, pixelId });
     const data = { currency: 'EUR' };

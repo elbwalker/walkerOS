@@ -18,11 +18,36 @@ export class Content {
   constructor(...args: ConstructorParameters<typeof ContentOrg>) {
     mockFn('Content', args);
   }
+
+  setId(id: string) {
+    mockFn('Content.setId', id);
+    return this;
+  }
+
+  setTitle(title: string) {
+    mockFn('Content.setTitle', title);
+    return this;
+  }
+
+  setItemPrice(price: number) {
+    mockFn('Content.setItemPrice', price);
+    return this;
+  }
+
+  setQuantity(quantity: number) {
+    mockFn('Content.setQuantity', quantity);
+    return this;
+  }
 }
 
 export class CustomData {
   constructor(...args: ConstructorParameters<typeof CustomDataOrg>) {
     mockFn('CustomData', args);
+  }
+
+  setContents(contents: Content[]) {
+    mockFn('CustomData.setContents', contents);
+    return this;
   }
 
   setCurrency(currency: string) {

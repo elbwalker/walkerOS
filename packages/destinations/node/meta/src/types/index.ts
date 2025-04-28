@@ -31,14 +31,6 @@ export interface Custom {
   testCode?: string;
 }
 
-export interface CustomEvent {
-  // Custom destination event mapping properties
-  content?: {
-    id?: Mapping.Value;
-    name?: Mapping.Value;
-    price?: Mapping.Value;
-    quantity?: Mapping.Value;
-  };
-}
+export interface CustomEvent {}
 
 export type EventConfig = Mapping.EventConfig<CustomEvent>;
