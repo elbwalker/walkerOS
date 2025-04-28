@@ -65,6 +65,30 @@ describe('Node Destination Meta', () => {
     expect(mockFn).toHaveBeenCalledWith('EventRequest.execute');
   });
 
+  test('testCode', async () => {
+    const testCode = 'TESTNNNNN';
+    const config = await getConfig({ accessToken, pixelId, testCode });
+    await destination.push(event, config);
+
+    expect(mockFn).toHaveBeenCalledWith(
+      'EventRequest',
+      accessToken,
+      pixelId,
+      expect.any(Array),
+      expect.any(String),
+      testCode, // testCode
+      pixelId,
+      expect.any(String),
+    );
+  });
+
+  test('Debug', async () => {
+    const config = await getConfig({ accessToken, pixelId, debug: true });
+    await destination.push(event, config);
+
+    expect(mockFn).toHaveBeenCalledWith('EventRequest.setDebugMode', true);
+  });
+
   test('AddToCart', async () => {
     const config = await getConfig({ accessToken, pixelId });
     const data = { foo: 'bar' };

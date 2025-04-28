@@ -32,6 +32,11 @@ export class EventRequest {
     return this;
   }
 
+  setDebugMode(debug: boolean) {
+    mockFn('EventRequest.setDebugMode', debug);
+    return this;
+  }
+
   execute() {
     mockFn('EventRequest.execute');
     return this;
