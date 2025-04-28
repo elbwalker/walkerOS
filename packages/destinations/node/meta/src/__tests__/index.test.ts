@@ -95,4 +95,13 @@ describe('Node Destination Meta', () => {
 
     await destination.push(event, config, {}, { data });
   });
+
+  test.only('Currency', async () => {
+    const config = await getConfig({ accessToken, pixelId });
+    const data = { currency: 'EUR' };
+
+    await destination.push(event, config, {}, { data });
+
+    expect(mockFn).toHaveBeenCalledWith('CustomData.setCurrency', 'EUR');
+  });
 });

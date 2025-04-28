@@ -24,6 +24,11 @@ export class CustomData {
   constructor(...args: ConstructorParameters<typeof CustomDataOrg>) {
     mockFn('CustomData', args);
   }
+
+  setCurrency(currency: string) {
+    mockFn('CustomData.setCurrency', currency);
+    return this;
+  }
 }
 
 export class EventRequest {

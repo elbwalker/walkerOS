@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS, Destination } from '@elbwalker/types';
 import type { EventMapping, PushFn } from './types';
 import {
   Content,
@@ -7,9 +7,9 @@ import {
   ServerEvent,
   UserData,
 } from 'facebook-nodejs-business-sdk';
-import { getMappingValue, isString } from '@elbwalker/utils';
+import { getMappingValue, isObject, isString } from '@elbwalker/utils';
 
-export const push: PushFn = async function (event, config, mapping) {
+export const push: PushFn = async function (event, config, mapping, options) {
   const {
     accessToken,
     pixelId,
@@ -18,7 +18,7 @@ export const push: PushFn = async function (event, config, mapping) {
     testCode,
   } = config.custom!;
 
-  const events = [await mapEvent(event, mapping)];
+  const events = [await mapEvent(event, mapping, options?.data)];
 
   const eventRequest = new EventRequest(
     accessToken,
@@ -32,22 +32,17 @@ export const push: PushFn = async function (event, config, mapping) {
 
   if (debug) eventRequest.setDebugMode(true);
 
-  return eventRequest.execute().then(
-    () => {
-      return;
-    },
-    (err: unknown) => {
-      throw err;
-    },
-  );
+  await eventRequest.execute();
 };
 
 export const mapEvent = async (
   event: WalkerOS.Event,
   mapping: EventMapping = {},
+  data: Destination.Data = {},
 ): Promise<ServerEvent> => {
-  const { data, user, source } = event;
-  const { currency, content, value } = mapping.custom || {};
+  const { data: eventData, user, source } = event;
+  const { content, value } = mapping.custom || {};
+  const { currency } = isObject(data) ? data : {};
 
   let userData = new UserData();
   if (user) {
@@ -69,19 +64,18 @@ export const mapEvent = async (
     if (user.ip) userData = userData.setClientIpAddress(user.ip);
   }
 
-  if (data.fbclid) {
+  if (eventData.fbclid) {
     let time;
     if (event.event == 'session start') time = event.timestamp;
 
-    userData = userData.setFbc(formatClickId(data.fbclid, time));
+    userData = userData.setFbc(formatClickId(eventData.fbclid, time));
     // @TODO userData.setFbp('fb.1.1558571054389.1098115397') // _fbp cookie
   }
 
   const customData = new CustomData();
 
   // Currency
-  const currencyValue = currency && (await getMappingValue(event, currency));
-  if (currencyValue) customData.setCurrency(String(currencyValue));
+  if (currency) customData.setCurrency(String(currency));
 
   // Value
   const valueValue = value && (await getMappingValue(event, value));
