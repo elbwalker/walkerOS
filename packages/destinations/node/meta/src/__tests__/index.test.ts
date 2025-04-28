@@ -1,7 +1,9 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Config, Destination } from '../types';
-import { createEvent } from '@elbwalker/utils';
+import { createEvent, getEvent } from '@elbwalker/utils';
 import { mockFn } from '../__mocks__/facebook-nodejs-business-sdk';
+import createSourceNode from '@elbwalker/source-node';
+import { mapping } from '../examples';
 
 describe('Node Destination Meta', () => {
   let destination: Destination;
@@ -118,5 +120,29 @@ describe('Node Destination Meta', () => {
     await destination.push(event, config, {}, { data });
 
     expect(mockFn).toHaveBeenCalledWith('CustomData.setValue', 42);
+  });
+
+  test('event AddToCart', async () => {
+    const { elb } = createSourceNode({});
+    const event = getEvent('product add');
+
+    elb('walker destination', destination, {
+      custom: { accessToken, pixelId },
+      mapping: mapping.config,
+    });
+
+    await elb(event);
+
+    expect(mockFn).toHaveBeenCalledWith(
+      'ServerEvent.setEventName',
+      'AddToCart',
+    );
+    expect(mockFn).toHaveBeenCalledWith(
+      'CustomData.setValue',
+      event.data.price,
+    );
+    expect(mockFn).toHaveBeenCalledWith('CustomData.setCurrency', 'EUR');
+    expect(mockFn).toHaveBeenCalledWith('Content.setId', event.data.id);
+    expect(mockFn).toHaveBeenCalledWith('Content.setQuantity', 1);
   });
 });
