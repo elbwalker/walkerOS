@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config, CustomEvent, Destination } from '../types';
+import type { Config, Destination } from '../types';
 import { createEvent } from '@elbwalker/utils';
 import { mockFn } from '../__mocks__/facebook-nodejs-business-sdk';
 
@@ -89,17 +89,10 @@ describe('Node Destination Meta', () => {
     expect(mockFn).toHaveBeenCalledWith('EventRequest.setDebugMode', true);
   });
 
-  test('AddToCart', async () => {
-    const config = await getConfig({ accessToken, pixelId });
-    const data = { foo: 'bar' };
-
-    await destination.push(event, config, {}, { data });
-  });
-
-  test('Content', async () => {
+  test('Contents', async () => {
     const config = await getConfig({ accessToken, pixelId });
     const data = {
-      content: { id: '123', title: 'Test', price: 10, quantity: 2 },
+      contents: { id: '123', title: 'Test', price: 10, quantity: 2 },
     };
 
     await destination.push(event, config, {}, { data });

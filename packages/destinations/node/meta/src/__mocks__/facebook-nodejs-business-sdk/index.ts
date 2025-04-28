@@ -7,7 +7,8 @@ import {
 } from 'facebook-nodejs-business-sdk';
 
 // Create a global mock function that can be accessed from tests
-const globalMockFn = (global as any).__facebookMockFn || jest.fn();
+const globalMockFn = (global as any).__facebookMockFn || jest.fn(); //.mockImplementation(console.log);
+
 (global as any).__facebookMockFn = globalMockFn;
 
 // Export the mock function

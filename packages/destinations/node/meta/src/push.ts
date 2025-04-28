@@ -41,7 +41,7 @@ export const mapEvent = async (
   data: Destination.Data = {},
 ): Promise<ServerEvent> => {
   const { data: eventData, user, source } = event;
-  const { content, currency, value } = isObject(data) ? data : {};
+  const { contents, currency, value } = isObject(data) ? data : {};
 
   let userData = new UserData();
   if (user) {
@@ -80,8 +80,8 @@ export const mapEvent = async (
   if (value) customData.setValue(parseFloat(String(value)));
 
   // Content
-  if (content) {
-    const { id, title, price, quantity } = isObject(content) ? content : {};
+  if (contents) {
+    const { id, title, price, quantity } = isObject(contents) ? contents : {};
     const item = new Content();
     if (id) item.setId(String(id));
     if (title) item.setTitle(String(title));
