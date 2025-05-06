@@ -40,11 +40,15 @@ export const mapEvent = async (
   mapping: EventMapping = {},
   data: Destination.Data = {},
 ): Promise<ServerEvent> => {
-  const { data: eventData, user, source } = event;
-  const { contents, currency, value } = isObject(data) ? data : {};
+  const { data: eventData, source } = event;
+  const { contents, currency, user, value } = isObject(data) ? data : {};
+
+  const fbclid = eventData.fbclid;
 
   let userData = new UserData();
-  if (user) {
+  console.log('🚀 ~ user:', user);
+
+  if (isObject(user)) {
     // IDs
     const ids = [user.id, user.device, user.session, user.hash]
       .filter(isString)
@@ -54,20 +58,21 @@ export const mapEvent = async (
 
     // Customer Information Parameters
     if (user.email) userData = userData.setEmail(lower(user.email));
-    if (user.phone && user.phone.length > 6)
+    if (user.phone && String(user.phone).length > 6)
       userData = userData.setPhone(lower(user.phone));
     if (user.city) userData = userData.setCity(lower(user.city));
     if (user.country) userData = userData.setCountry(lower(user.country));
     if (user.zip) userData = userData.setZip(lower(user.zip));
-    if (user.userAgent) userData = userData.setClientUserAgent(user.userAgent);
-    if (user.ip) userData = userData.setClientIpAddress(user.ip);
+    if (user.userAgent)
+      userData = userData.setClientUserAgent(String(user.userAgent));
+    if (user.ip) userData = userData.setClientIpAddress(String(user.ip));
   }
 
-  if (eventData.fbclid) {
+  if (fbclid) {
     let time;
     if (event.event == 'session start') time = event.timestamp;
 
-    userData = userData.setFbc(formatClickId(eventData.fbclid, time));
+    userData = userData.setFbc(formatClickId(fbclid, time));
     // @TODO userData.setFbp('fb.1.1558571054389.1098115397') // _fbp cookie
   }
 

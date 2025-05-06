@@ -113,6 +113,42 @@ describe('Node Destination Meta', () => {
     expect(mockFn).toHaveBeenCalledWith('CustomData.setCurrency', 'EUR');
   });
 
+  test('User', async () => {
+    const { elb } = createSourceNode({});
+
+    elb('walker destination', destination, {
+      custom: { accessToken, pixelId },
+      data: {
+        map: {
+          user: {
+            map: {
+              id: { value: '123' },
+              email: { value: 'test@test.com' },
+              phone: { value: '1234567890' },
+            },
+          },
+        },
+      },
+      mapping: {
+        entity: {
+          action: {
+            data: {
+              map: {
+                user: {
+                  map: {},
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    await elb(event);
+
+    expect(mockFn).toHaveBeenCalledWith('ServerEvent.setEventName', 'Foo');
+  });
+
   test('Value', async () => {
     const config = await getConfig({ accessToken, pixelId });
     const data = { value: 42 };
