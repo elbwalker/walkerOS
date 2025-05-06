@@ -38,9 +38,7 @@
     "@elbwalker/utils": "^3.8.1"
   },
   "devDependencies": {
-    "@elbwalker/types": "3.4.0",
-    "@types/facebook-nodejs-business-sdk": "^20.0.3",
-    "facebook-nodejs-business-sdk": "^22.0.1"
+    "@elbwalker/types": "3.4.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

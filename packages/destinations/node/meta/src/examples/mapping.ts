@@ -1,26 +1,15 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import type { DestinationMeta } from '..';
 
-export const AddToCart: DestinationMeta.EventConfig = {
-  name: 'AddToCart',
+export const Purchase: DestinationMeta.EventConfig = {
+  name: 'Purchase',
   data: {
     map: {
-      value: 'data.price',
-      currency: { value: 'EUR' },
-      contents: {
-        set: [
-          {
-            map: {
-              id: 'data.id',
-              quantity: { key: 'data.quantity', value: 1 },
-            },
-          },
-        ],
-      },
+      event_id: 'id',
     },
   },
 };
 
 export const config = {
-  product: { add: AddToCart },
+  order: { complete: Purchase },
 } satisfies Mapping.Config;

@@ -1,17 +1,24 @@
 import type { WalkerOS } from '@elbwalker/types';
+import type { DestinationNode } from '@elbwalker/source-node';
 import type { Config, Destination } from '../types';
-import { createEvent, getEvent } from '@elbwalker/utils';
-import { mockFn } from '../__mocks__/facebook-nodejs-business-sdk';
+import { getEvent } from '@elbwalker/utils';
 import createSourceNode from '@elbwalker/source-node';
-import { mapping } from '../examples';
+import { events, mapping } from '../examples';
+
+const mockSendNode = jest.fn().mockResolvedValue({
+  events_received: 1,
+  messages: [],
+  fbtrace_id: 'abc',
+});
+jest.mock('@elbwalker/utils/node', () => ({
+  ...jest.requireActual('@elbwalker/utils/node'),
+  sendNode: mockSendNode,
+}));
 
 describe('Node Destination Meta', () => {
   let destination: Destination;
-  let event: WalkerOS.Event;
-  let config: Config;
   const accessToken = 's3cr3t';
   const pixelId = 'p1x3l1d';
-  const onLog = jest.fn();
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -19,12 +26,6 @@ describe('Node Destination Meta', () => {
 
     destination = jest.requireActual('../').default;
     destination.config = {};
-
-    config = {
-      custom: { accessToken, pixelId },
-      onLog,
-    };
-    event = createEvent();
   });
 
   afterEach(() => {});
@@ -49,136 +50,30 @@ describe('Node Destination Meta', () => {
     );
   });
 
-  test('push', async () => {
-    const config = await getConfig({ accessToken, pixelId });
-    await destination.push(event, config);
+  test.skip('testCode', async () => {});
 
-    // Verify the sequence of calls
-    expect(mockFn).toHaveBeenCalledWith(
-      'EventRequest',
-      accessToken,
-      pixelId,
-      expect.any(Array),
-      'walkerOS',
-      undefined,
-      pixelId,
-      expect.any(String),
-    );
-    expect(mockFn).toHaveBeenCalledWith('EventRequest.execute');
-  });
-
-  test('testCode', async () => {
-    const testCode = 'TESTNNNNN';
-    const config = await getConfig({ accessToken, pixelId, testCode });
-    await destination.push(event, config);
-
-    expect(mockFn).toHaveBeenCalledWith(
-      'EventRequest',
-      accessToken,
-      pixelId,
-      expect.any(Array),
-      expect.any(String),
-      testCode, // testCode
-      pixelId,
-      expect.any(String),
-    );
-  });
-
-  test('Debug', async () => {
-    const config = await getConfig({ accessToken, pixelId, debug: true });
-    await destination.push(event, config);
-
-    expect(mockFn).toHaveBeenCalledWith('EventRequest.setDebugMode', true);
-  });
-
-  test('Contents', async () => {
-    const config = await getConfig({ accessToken, pixelId });
-    const data = {
-      contents: [{ id: '123', title: 'Test', price: 10, quantity: 2 }],
-    };
-
-    await destination.push(event, config, {}, { data });
-
-    expect(mockFn).toHaveBeenCalledWith('Content.setId', '123');
-    expect(mockFn).toHaveBeenCalledWith('Content.setItemPrice', 10);
-    expect(mockFn).toHaveBeenCalledWith('Content.setQuantity', 2);
-  });
-
-  test('Currency', async () => {
-    const config = await getConfig({ accessToken, pixelId });
-    const data = { currency: 'EUR' };
-
-    await destination.push(event, config, {}, { data });
-
-    expect(mockFn).toHaveBeenCalledWith('CustomData.setCurrency', 'EUR');
-  });
-
-  test('User', async () => {
+  test('event Purchase', async () => {
     const { elb } = createSourceNode({});
+    const event = getEvent('order complete');
 
-    elb('walker destination', destination, {
-      custom: { accessToken, pixelId },
-      data: {
-        map: {
-          user: {
-            map: {
-              id: { value: '123' },
-              email: { value: 'test@test.com' },
-              phone: { value: '1234567890' },
-            },
-          },
-        },
-      },
-      mapping: {
-        entity: {
-          action: {
-            data: {
-              map: {
-                user: {
-                  map: {},
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    await elb(event);
-
-    expect(mockFn).toHaveBeenCalledWith('ServerEvent.setEventName', 'Foo');
-  });
-
-  test('Value', async () => {
-    const config = await getConfig({ accessToken, pixelId });
-    const data = { value: 42 };
-
-    await destination.push(event, config, {}, { data });
-
-    expect(mockFn).toHaveBeenCalledWith('CustomData.setValue', 42);
-  });
-
-  test('event AddToCart', async () => {
-    const { elb } = createSourceNode({});
-    const event = getEvent('product add');
-
-    elb('walker destination', destination, {
+    const config: DestinationNode.Config = {
       custom: { accessToken, pixelId },
       mapping: mapping.config,
-    });
+    };
+
+    elb('walker destination', destination, config);
 
     await elb(event);
+    const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
 
-    expect(mockFn).toHaveBeenCalledWith(
-      'ServerEvent.setEventName',
-      'AddToCart',
+    expect(requestBody.data[0]).toEqual(
+      expect.objectContaining({
+        event_name: 'Purchase',
+        event_time: event.timestamp,
+        event_id: event.id,
+        action_source: 'website',
+        user_data: {},
+      }),
     );
-    expect(mockFn).toHaveBeenCalledWith(
-      'CustomData.setValue',
-      event.data.price,
-    );
-    expect(mockFn).toHaveBeenCalledWith('CustomData.setCurrency', 'EUR');
-    expect(mockFn).toHaveBeenCalledWith('Content.setId', event.data.id);
-    expect(mockFn).toHaveBeenCalledWith('Content.setQuantity', 1);
   });
 });

@@ -25,56 +25,9 @@ Learn more about the
 the detailed
 [Meta Conversion API](https://developers.facebook.com/docs/marketing-api/conversions-api).
 
-```js
-import type { Custom } from '@elbwalker/destination-node-meta';
+## Resources
 
-const config: Custom = {
-  custom: {
-    accessToken: 's3cr3tc0d3',
-    pixelId: '1234567890',
-    // debug: true,
-    // partner: 'walkerOS',
-    // testCode: 'TEST00000',
-  },
-  mapping: {
-    // e.g. order
-    entity: {
-      // e.g. complete
-      action: {
-        name: 'Purchase',
-        custom: {
-          id: 'data.id',
-          name: 'data.title',
-          value: 'data.total',
-        },
-      },
-    },
-  },
-};
-```
-
-### Node usage
-
-```sh
-npm i --save @elbwalker/destination-node-meta
-```
-
-```ts
-import destinationMeta from '@elbwalker/destination-node-meta';
-
-elb('walker destination', destinationMeta, config);
-```
-
-Mapping Mock
-
-For easier debugging add
-
-```js
-if (response.error) console.log('🚀 ~ response:', response);
-```
-
-to the `node_modules/facebook-nodejs-business-sdk/dist/cjs` on line 261 within
-the `xmlHttpRequest`.
+[Meta Payload Helper](https://developers.facebook.com/docs/marketing-api/conversions-api/payload-helper)
 
 ## Contribute
 
