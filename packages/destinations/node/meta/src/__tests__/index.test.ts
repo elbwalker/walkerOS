@@ -69,6 +69,15 @@ describe('Node Destination Meta', () => {
     const event = getEvent();
     const config: DestinationNode.Config = {
       custom: mapping.InitUserData,
+      data: {
+        map: {
+          user_data: {
+            map: {
+              fn: { value: 'elb' },
+            },
+          },
+        },
+      },
       mapping: {
         entity: {
           action: {
@@ -90,8 +99,9 @@ describe('Node Destination Meta', () => {
     await elb(event);
     const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
     expect(requestBody.data[0].user_data).toEqual({
-      em: expect.any(String),
-      ph: '123',
+      fn: 'elb', // from destination config data
+      em: expect.any(String), // from custom user_data
+      ph: '123', // from mapping
     });
   });
 

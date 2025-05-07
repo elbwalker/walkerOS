@@ -18,12 +18,21 @@ export const push: PushFn = async function (event, config, mapping, options) {
   } = config.custom!;
 
   const data = isObject(options?.data) ? options?.data : {};
-  const staticUserData = user_data
+  const configData = config.data
+    ? await getMappingValue(event, config.data)
+    : {};
+  const userDataCustom = user_data
     ? await getMappingValue(event, { map: user_data })
     : {};
 
   let userData: CustomerInformationParameters = {
-    ...(isObject(staticUserData) ? staticUserData : {}),
+    // Destination config
+    ...(isObject(configData) && isObject(configData.user_data)
+      ? configData.user_data
+      : {}),
+    // Custom user_data
+    ...(isObject(userDataCustom) ? userDataCustom : {}),
+    // Event mapping
     ...(isObject(data.user_data) ? data.user_data : {}),
   };
 

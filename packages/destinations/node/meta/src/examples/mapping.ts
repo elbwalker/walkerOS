@@ -2,8 +2,8 @@ import type { Mapping, WalkerOS } from '@elbwalker/types';
 import type { DestinationMeta } from '..';
 
 export const InitUserData: DestinationMeta.Custom = {
-  pixelId: 'data.pixelId',
-  accessToken: 'data.accessToken',
+  pixelId: 'p1x3l1d',
+  accessToken: 's3cr3t',
   user_data: {
     em: { value: 'foo@bar.com' },
   },
