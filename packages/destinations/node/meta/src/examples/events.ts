@@ -12,7 +12,12 @@ export function Purchase(): BodyParameters {
         event_id: event.id,
         event_source_url: event.source.id,
         action_source: 'website',
-        user_data: {},
+        user_data: {
+          external_id: [
+            'cc8e27118413234d4297ed00a02711365312c79325df9b5b8f4199cbd0b96e7e',
+            '9176e6f336dbdb4f99b0e45cbd7e41e0e2323812b236822842a61ffbd362ac8c',
+          ],
+        },
         order_id: String(event.data.id),
         currency: 'EUR',
         value: Number(event.data.total),

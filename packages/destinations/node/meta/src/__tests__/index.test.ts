@@ -193,7 +193,7 @@ describe('Node Destination Meta', () => {
     const event = getEvent('order complete');
 
     const config: DestinationNode.Config = {
-      custom: { accessToken, pixelId },
+      custom: mapping.InitUserData,
       mapping: mapping.config,
     };
 
@@ -201,7 +201,6 @@ describe('Node Destination Meta', () => {
 
     await elb(event);
     const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
-
     expect(requestBody).toEqual(events.Purchase());
   });
 });

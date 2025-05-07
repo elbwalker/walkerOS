@@ -10,24 +10,20 @@ Made to be used with
 [source node](https://www.npmjs.com/package/@elbwalker/source-node) from
 [walkerOS](https://github.com/elbwalker/walkerOS).
 
-More detailed information and examples can be found in the
-[documentation](https://www.elbwalker.com/docs/destinations/meta).
-
-## 🤓 Usage
-
-Start by setting up the config for the destination. Optional fields as comments.
-Destinations can be used via node or directly in the browser.
-
-## Configuration
-
-Learn more about the
-[destinations](https://www.elbwalker.com/docs/destinations/) in general and read
-the detailed
-[Meta Conversion API](https://developers.facebook.com/docs/marketing-api/conversions-api).
+Detailed information and examples can be found in the
+[walkerOS Meta Conversion API destination](https://www.elbwalker.com/docs/destinations/meta)
+documentation.
 
 ## Resources
 
-[Meta Payload Helper](https://developers.facebook.com/docs/marketing-api/conversions-api/payload-helper)
+Learn more about the
+
+- [walkerOS destinations](https://www.elbwalker.com/docs/destinations/) in
+  general
+- [Meta Conversion API](https://developers.facebook.com/docs/marketing-api/conversions-api)
+- [Meta Conversion API Parameters](https://developers.facebook.com/docs/marketing-api/conversions-api/parameters)
+- [Meta Graph API Explorer](https://developers.facebook.com/tools/explorer/)
+- [Meta Payload Helper](https://developers.facebook.com/docs/marketing-api/conversions-api/payload-helper)
 
 ## Contribute
 

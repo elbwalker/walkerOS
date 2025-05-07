@@ -5,6 +5,9 @@ description: Meta Conversion API (CAPI) destination for walkerOS
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
+import { LiveCode } from '@site/src/components/organisms/liveCode';
+import { getEvent } from '@elbwalker/utils';
+import { mapping } from '@elbwalker/destination-node-meta/examples';
 
 <PackageLink
   github="packages/destinations/node/meta"
@@ -37,33 +40,77 @@ npm install @elbwalker/destination-meta
 
 #### Example
 
-```ts
-import { destinationMeta } from '@elbwalker/destination-node-meta';
-
-await elb('walker destination', destinationMeta, {
-  custom: {
-    accessToken: 's3cr3tc0d3',
-    pixelId: '1234567890',
-    // debug: true,
-    // partner: 'walkerOS',
-    // testCode: 'TEST00000',
-  },
-  mapping: {
-    // e.g. order
-    entity: {
-      // e.g. complete
-      action: {
-        name: 'Purchase',
-        custom: {
-          id: 'data.id',
-          name: 'data.title',
-          value: 'data.total',
+<LiveCode
+  smallText={true}
+  labelInput="Configuration"
+  disableInput={true}
+  input={mapping.InitUserData}
+  output={`sendNode('https://graph.facebook.com/v22.0/${mapping.InitUserData.pixelId}/events?access_token=${mapping.InitUserData.accessToken}', {
+    data: [
+      {
+        event_id: "1746576817000-gr0up-1",
+        event_time: 1746576817,
+        action_source: "website",
+        user_data: {
+          external_id: [
+            "cc8e27118413234d4297ed00a02711365312c79325df9b5b8f4199cbd0b96e7e",
+            "9176e6f336dbdb4f99b0e45cbd7e41e0e2323812b236822842a61ffbd362ac8c",
+          ],
         },
+        event_source_url: "https://localhost:80",
+        // ... event data
       },
-    },
-  },
-});
-```
+    ],
+  });`}
+/>
+
+## Mapping
+
+### Purchase
+
+<LiveCode
+  smallText={true}
+  height={'512px'}
+  disableInput={true}
+  labelInput="Event"
+  input={getEvent('order complete')}
+  disableConfig={true}
+  labelConfig="Custom Config"
+  config={mapping.Purchase}
+  output={`sendNode('https://graph.facebook.com/v22.0/${mapping.InitUserData.pixelId}/events?access_token=${mapping.InitUserData.accessToken}', {
+    data: [
+      {
+        event_name: "Purchase",
+        event_id: "1746576817000-gr0up-1",
+        event_time: 1746576817,
+        action_source: "website",
+        order_id: "0rd3r1d",
+        currency: "EUR",
+        value: 555,
+        contents: [
+          {
+            id: "ers",
+            item_price: 420,
+            quantity: 1,
+          },
+          {
+            id: "cc",
+            item_price: 42,
+            quantity: 1,
+          },
+        ],
+        num_items: 2,
+        user_data: {
+          external_id: [
+            "cc8e27118413234d4297ed00a02711365312c79325df9b5b8f4199cbd0b96e7e",
+            "9176e6f336dbdb4f99b0e45cbd7e41e0e2323812b236822842a61ffbd362ac8c",
+          ],
+        },
+        event_source_url: "https://localhost:80",
+      },
+    ],
+  });`}
+/>
 
 :::info
 
