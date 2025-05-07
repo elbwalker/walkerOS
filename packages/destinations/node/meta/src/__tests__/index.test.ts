@@ -177,9 +177,7 @@ describe('Node Destination Meta', () => {
       },
     );
     expect(
-      await hashEvent({ user_data: { em: 'm@i.l', foo: 'bar' } }, [
-        'user_data.em',
-      ]),
+      await hashEvent({ user_data: { em: 'm@i.l', foo: 'bar' } }, ['em']),
     ).toEqual({
       user_data: {
         em: 'm@i.l',

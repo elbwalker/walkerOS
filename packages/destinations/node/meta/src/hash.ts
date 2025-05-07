@@ -2,60 +2,57 @@ import { WalkerOS } from '@elbwalker/types';
 import { isArray, isObject, isString } from '@elbwalker/utils';
 import { getHashNode } from '@elbwalker/utils/node';
 
+const keysToHash = [
+  'em',
+  'ph',
+  'fn',
+  'ln',
+  'db',
+  'ge',
+  'ct',
+  'st',
+  'zp',
+  'country',
+  'external_id',
+];
+
+function shouldBeHashed(key: string, doNotHash: string[] = []): boolean {
+  return keysToHash.includes(key) && !doNotHash.includes(key);
+}
+
 type HashableValue = WalkerOS.AnyObject | unknown | unknown[];
+
+async function processValue(
+  value: unknown,
+  shouldHash: boolean,
+): Promise<unknown> {
+  if (!shouldHash) return value;
+  if (isArray(value)) {
+    return Promise.all(value.map((item) => getHashNode(String(item))));
+  }
+  return getHashNode(String(value));
+}
 
 export async function hashEvent<T extends HashableValue>(
   value: T,
-  keysToIgnore: string[] = [],
-  key?: string,
-  path: string = '',
+  doNotHash: string[] = [],
 ): Promise<T> {
-  if (isObject(value)) {
-    const entries = await Promise.all(
-      Object.entries(value).map(async ([k, v]) => {
-        const currentPath = path ? `${path}.${k}` : k;
-        return [
-          k,
-          await hashEvent(v as HashableValue, keysToIgnore, k, currentPath),
-        ];
-      }),
-    );
+  if (!isObject(value)) return value;
 
-    return entries.reduce(
-      (acc, [k, v]) => (isString(k) ? { ...acc, [k]: v } : acc),
-      {},
-    ) as T;
-  }
+  const isUserData = 'user_data' in value;
+  const target = (isUserData ? value.user_data : value) as WalkerOS.AnyObject;
 
-  if (isArray(value)) {
-    return Promise.all(
-      value.map((item) =>
-        hashEvent(item as HashableValue, keysToIgnore, key, path),
-      ),
-    ) as Promise<T>;
-  }
+  const entries = await Promise.all(
+    Object.entries(target).map(async ([k, v]) => [
+      k,
+      await processValue(v, isUserData && shouldBeHashed(k, doNotHash)),
+    ]),
+  );
 
-  if (isString(value) && path && shouldBeHashed(path, keysToIgnore)) {
-    return getHashNode(value) as Promise<T>;
-  }
+  const result = entries.reduce((acc, [k, v]) => {
+    if (isString(k)) acc[k] = v;
+    return acc;
+  }, {} as WalkerOS.AnyObject);
 
-  return value;
-}
-
-const keysToHash = [
-  'user_data.em',
-  'user_data.ph',
-  'user_data.fn',
-  'user_data.ln',
-  'user_data.db',
-  'user_data.ge',
-  'user_data.ct',
-  'user_data.st',
-  'user_data.zp',
-  'user_data.country',
-  'user_data.external_id',
-];
-
-function shouldBeHashed(key: string, keysToIgnore: string[] = []): boolean {
-  return keysToHash.includes(key) && !keysToIgnore.includes(key);
+  return isUserData ? { ...value, user_data: result } : (result as T);
 }
