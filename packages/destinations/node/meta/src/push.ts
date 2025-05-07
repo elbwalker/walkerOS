@@ -43,6 +43,7 @@ export const push: PushFn = async function (event, config, mapping, options) {
 
   const serverEvent: ServerEventParameters = {
     event_name: event.event,
+    event_id: event.id,
     event_time: event.timestamp || Date.now(),
     action_source,
     ...data,
