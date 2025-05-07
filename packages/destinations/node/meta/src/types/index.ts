@@ -27,6 +27,7 @@ export interface Custom {
   accessToken: string;
   pixelId: string;
   action_source?: ActionSource;
+  doNotHash?: string[];
   fbclid?: string;
   test_event_code?: string;
   url?: string;
@@ -181,7 +182,7 @@ export interface CustomerInformationParameters {
   /** Country code(s), SHA-256 hashed, lowercase (ISO 3166-1 alpha-2) */
   country?: string | string[];
 
-  /** External IDs, unique per user. SHA-256 recommended */
+  /** External IDs, unique per user. SHA-256 hash recommended */
   external_id?: string | string[];
 
   /** IPv4 or IPv6 address of client. Do NOT hash. */

@@ -14,6 +14,7 @@ export const push: PushFn = async function (event, config, mapping, options) {
     accessToken,
     pixelId,
     action_source = 'website',
+    doNotHash,
     fbclid,
     test_event_code,
     url = 'https://graph.facebook.com/v22.0/',
@@ -54,14 +55,12 @@ export const push: PushFn = async function (event, config, mapping, options) {
   if (action_source === 'website')
     serverEvent.event_source_url = event.source.id;
 
-  const hashedServerEvent = await hashEvent(serverEvent);
+  const hashedServerEvent = await hashEvent(serverEvent, doNotHash);
 
   const body: BodyParameters = { data: [hashedServerEvent] };
 
   // Test event code
   if (test_event_code) body.test_event_code = test_event_code;
-
-  // @TODO: hash recommended parameters
 
   const result = await sendNode(
     `${url}${pixelId}/events?access_token=${accessToken}`,

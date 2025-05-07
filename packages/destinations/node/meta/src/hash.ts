@@ -1,27 +1,8 @@
-import type { ServerEventParameters } from './types';
+import { WalkerOS } from '@elbwalker/types';
 import { isArray, isObject, isString } from '@elbwalker/utils';
 import { getHashNode } from '@elbwalker/utils/node';
 
-const keysToHash = [
-  'user_data.em',
-  'user_data.ph',
-  'user_data.fn',
-  'user_data.ln',
-  'user_data.db',
-  'user_data.ge',
-  'user_data.ct',
-];
-
-function shouldBeHashed(key: string, keysToIgnore: string[] = []): boolean {
-  return keysToHash.includes(key) && !keysToIgnore.includes(key);
-}
-
-type HashableValue =
-  | ServerEventParameters
-  | string
-  | string[]
-  | Record<string, unknown>
-  | unknown[];
+type HashableValue = WalkerOS.AnyObject | unknown | unknown[];
 
 export async function hashEvent<T extends HashableValue>(
   value: T,
@@ -42,7 +23,7 @@ export async function hashEvent<T extends HashableValue>(
 
     return entries.reduce(
       (acc, [k, v]) => (isString(k) ? { ...acc, [k]: v } : acc),
-      {} as Record<string, unknown>,
+      {},
     ) as T;
   }
 
@@ -59,4 +40,22 @@ export async function hashEvent<T extends HashableValue>(
   }
 
   return value;
+}
+
+const keysToHash = [
+  'user_data.em',
+  'user_data.ph',
+  'user_data.fn',
+  'user_data.ln',
+  'user_data.db',
+  'user_data.ge',
+  'user_data.ct',
+  'user_data.st',
+  'user_data.zp',
+  'user_data.country',
+  'user_data.external_id',
+];
+
+function shouldBeHashed(key: string, keysToIgnore: string[] = []): boolean {
+  return keysToHash.includes(key) && !keysToIgnore.includes(key);
 }
