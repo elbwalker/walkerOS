@@ -38,7 +38,8 @@ export const push: PushFn = async function (event, config, mapping, options) {
     ...(isObject(data.user_data) ? data.user_data : {}),
   };
 
-  if (fbclid) userData.fbc = formatClickId(fbclid, event.timestamp);
+  if (fbclid)
+    userData.fbc = formatClickId(fbclid, options?.instance?.session?.start);
 
   const serverEvent: ServerEventParameters = {
     event_name: event.event,
