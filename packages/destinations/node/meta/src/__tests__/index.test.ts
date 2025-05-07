@@ -66,6 +66,34 @@ describe('Node Destination Meta', () => {
     expect(requestBody.test_event_code).toEqual('TEST');
   });
 
+  test('error', async () => {
+    const onError = jest.fn();
+    mockSendNode.mockReturnValue({
+      ok: false,
+      data: {
+        error: {
+          message: 'Invalid',
+          type: 'OAuthException',
+          code: 190,
+          fbtrace_id: 'abc',
+        },
+      },
+      error: '400 Bad Request',
+    });
+    const { elb } = createSourceNode({});
+    const event = getEvent();
+    const config: DestinationNode.Config = {
+      custom: { accessToken, pixelId, test_event_code: 'TEST' },
+      mapping: mapping.config,
+      onError,
+    };
+
+    elb('walker destination', destination, config);
+    const result = await elb(event);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(result.failed.length).toEqual(1);
+  });
+
   test('fbclid', async () => {
     const { elb } = createSourceNode({});
     const event = getEvent();

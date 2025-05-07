@@ -66,6 +66,9 @@ export const push: PushFn = async function (event, config, mapping, options) {
     `${url}${pixelId}/events?access_token=${accessToken}`,
     JSON.stringify(body),
   );
+
+  if (isObject(result) && result.ok === false)
+    throw new Error(JSON.stringify(result));
 };
 
 function formatClickId(clickId: WalkerOS.Property, time?: number): string {

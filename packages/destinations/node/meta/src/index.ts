@@ -23,8 +23,7 @@ export const destinationMeta: Destination = {
 
   async push(event, config, mapping, options) {
     return await tryCatchAsync(push, (error) => {
-      if (config.onLog) config.onLog('Push error');
-      // @TODO queue handling
+      if (config.onError) config.onError(error);
       throwError(error);
     })(event, config, mapping, options);
   },
