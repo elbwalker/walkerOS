@@ -144,7 +144,10 @@ describe('Node Destination Meta', () => {
     const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
     expect(requestBody.data[0].user_data).toEqual({
       fn: expect.any(String), // from destination config data
-      em: expect.any(String), // from custom user_data
+      external_id: [
+        'cc8e27118413234d4297ed00a02711365312c79325df9b5b8f4199cbd0b96e7e',
+        '9176e6f336dbdb4f99b0e45cbd7e41e0e2323812b236822842a61ffbd362ac8c',
+      ], // from custom user_data
       ph: expect.any(String), // from mapping
     });
   });

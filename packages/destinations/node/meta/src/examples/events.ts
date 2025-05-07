@@ -13,8 +13,9 @@ export function Purchase(): BodyParameters {
         event_source_url: event.source.id,
         action_source: 'website',
         user_data: {},
-        num_items: 2,
         order_id: String(event.data.id),
+        currency: 'EUR',
+        value: Number(event.data.total),
         contents: event.nested
           .filter((item) => item.type === 'product')
           .map((item) => ({
@@ -22,6 +23,7 @@ export function Purchase(): BodyParameters {
             quantity: Number(item.data.quantity) || 1,
             item_price: Number(item.data.price),
           })),
+        num_items: 2,
       },
     ],
   };

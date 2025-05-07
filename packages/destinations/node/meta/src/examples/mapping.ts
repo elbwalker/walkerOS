@@ -6,7 +6,7 @@ export const InitUserData: DestinationMeta.Custom = {
   pixelId: 'p1x3l1d',
   accessToken: 's3cr3t',
   user_data: {
-    em: { value: 'foo@bar.com' },
+    external_id: { set: ['user.device', 'user.session'] },
   },
 };
 
