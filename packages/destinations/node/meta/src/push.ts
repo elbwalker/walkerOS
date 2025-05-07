@@ -12,6 +12,7 @@ export const push: PushFn = async function (event, config, mapping, options) {
   const {
     accessToken,
     pixelId,
+    action_source = 'website',
     test_event_code,
     url = 'https://graph.facebook.com/v22.0/',
     user_data,
@@ -39,11 +40,13 @@ export const push: PushFn = async function (event, config, mapping, options) {
   const serverEvent: ServerEventParameters = {
     event_name: event.event,
     event_time: event.timestamp || Date.now(),
-    event_source_url: event.source.id,
-    action_source: 'website',
+    action_source,
     ...data,
     user_data: userData,
   };
+
+  if (action_source === 'website')
+    serverEvent.event_source_url = event.source.id;
 
   const body: BodyParameters = { data: [serverEvent] };
 

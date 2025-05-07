@@ -26,6 +26,7 @@ export type PushEvents = DestinationNode.PushEvents<CustomEvent>;
 export interface Custom {
   accessToken: string;
   pixelId: string;
+  action_source?: ActionSource;
   clickId?: string; // @TODO
   test_event_code?: string;
   url?: string;
