@@ -12,7 +12,7 @@ export const push: PushFn = async function (event, config, mapping, options) {
   const {
     accessToken,
     pixelId,
-    testCode,
+    test_event_code,
     url = 'https://graph.facebook.com/v22.0/',
     // user_data,
   } = config.custom!;
@@ -34,7 +34,7 @@ export const push: PushFn = async function (event, config, mapping, options) {
   const body: BodyParameters = { data: [serverEvent] };
 
   // Test event code
-  if (testCode) body.test_event_code = testCode;
+  if (test_event_code) body.test_event_code = test_event_code;
 
   const result = await sendNode(
     `${url}${pixelId}/events?access_token=${accessToken}`,

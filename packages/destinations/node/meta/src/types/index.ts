@@ -27,7 +27,7 @@ export interface Custom {
   accessToken: string;
   pixelId: string;
   clickId?: string; // @TODO
-  testCode?: string;
+  test_event_code?: string;
   url?: string;
   user_data?: CustomerInformationParameters;
 }

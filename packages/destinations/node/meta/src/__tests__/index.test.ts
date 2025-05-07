@@ -50,7 +50,19 @@ describe('Node Destination Meta', () => {
     );
   });
 
-  test.skip('testCode', async () => {});
+  test('testCode', async () => {
+    const { elb } = createSourceNode({});
+    const event = getEvent();
+    const config: DestinationNode.Config = {
+      custom: { accessToken, pixelId, test_event_code: 'TEST' },
+      mapping: mapping.config,
+    };
+
+    elb('walker destination', destination, config);
+    await elb(event);
+    const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
+    expect(requestBody.test_event_code).toEqual('TEST');
+  });
 
   test('event Purchase', async () => {
     const { elb } = createSourceNode({});
