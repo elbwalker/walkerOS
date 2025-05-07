@@ -5,7 +5,7 @@ import type {
   PushFn,
   ServerEventParameters,
 } from './types';
-import { assign, getMappingValue, isObject } from '@elbwalker/utils';
+import { getMappingValue, isObject } from '@elbwalker/utils';
 import { sendNode } from '@elbwalker/utils/node';
 
 export const push: PushFn = async function (event, config, mapping, options) {

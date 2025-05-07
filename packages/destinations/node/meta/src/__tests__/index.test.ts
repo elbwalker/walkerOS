@@ -69,6 +69,21 @@ describe('Node Destination Meta', () => {
     const event = getEvent();
     const config: DestinationNode.Config = {
       custom: mapping.InitUserData,
+      mapping: {
+        entity: {
+          action: {
+            data: {
+              map: {
+                user_data: {
+                  map: {
+                    ph: { value: '123' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     };
 
     elb('walker destination', destination, config);
@@ -76,6 +91,7 @@ describe('Node Destination Meta', () => {
     const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
     expect(requestBody.data[0].user_data).toEqual({
       em: expect.any(String),
+      ph: '123',
     });
   });
 
