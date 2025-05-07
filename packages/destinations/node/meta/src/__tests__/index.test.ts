@@ -66,6 +66,20 @@ describe('Node Destination Meta', () => {
     expect(requestBody.test_event_code).toEqual('TEST');
   });
 
+  test('fn', async () => {
+    const mockFn = jest.fn();
+    const { elb } = createSourceNode({});
+    const event = getEvent();
+    const config: DestinationNode.Config = {
+      fn: mockFn,
+      custom: { accessToken, pixelId },
+    };
+
+    elb('walker destination', destination, config);
+    await elb(event);
+    expect(mockFn).toHaveBeenCalled();
+  });
+
   test('error', async () => {
     const onError = jest.fn();
     mockSendNode.mockReturnValue({
@@ -152,23 +166,6 @@ describe('Node Destination Meta', () => {
     });
   });
 
-  test('event Purchase', async () => {
-    const { elb } = createSourceNode({});
-    const event = getEvent('order complete');
-
-    const config: DestinationNode.Config = {
-      custom: { accessToken, pixelId },
-      mapping: mapping.config,
-    };
-
-    elb('walker destination', destination, config);
-
-    await elb(event);
-    const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
-
-    expect(requestBody).toEqual(events.Purchase());
-  });
-
   test('hashing', async () => {
     expect(await hashEvent('test')).toEqual('test');
     expect(await hashEvent({ user_data: { em: 'm@i.l', foo: 'bar' } })).toEqual(
@@ -189,5 +186,22 @@ describe('Node Destination Meta', () => {
         foo: 'bar',
       },
     });
+  });
+
+  test('event Purchase', async () => {
+    const { elb } = createSourceNode({});
+    const event = getEvent('order complete');
+
+    const config: DestinationNode.Config = {
+      custom: { accessToken, pixelId },
+      mapping: mapping.config,
+    };
+
+    elb('walker destination', destination, config);
+
+    await elb(event);
+    const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
+
+    expect(requestBody).toEqual(events.Purchase());
   });
 });

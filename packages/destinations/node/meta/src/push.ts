@@ -62,7 +62,8 @@ export const push: PushFn = async function (event, config, mapping, options) {
   // Test event code
   if (test_event_code) body.test_event_code = test_event_code;
 
-  const result = await sendNode(
+  const func = config.fn || sendNode;
+  const result = await func(
     `${url}${pixelId}/events?access_token=${accessToken}`,
     JSON.stringify(body),
   );
