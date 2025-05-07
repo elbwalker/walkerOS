@@ -29,7 +29,7 @@ export interface Custom {
   clickId?: string; // @TODO
   test_event_code?: string;
   url?: string;
-  user_data?: CustomerInformationParameters;
+  user_data?: Mapping.Map;
 }
 
 export interface CustomEvent {}

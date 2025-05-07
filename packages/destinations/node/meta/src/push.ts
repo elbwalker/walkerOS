@@ -5,7 +5,7 @@ import type {
   PushFn,
   ServerEventParameters,
 } from './types';
-import { assign, isObject } from '@elbwalker/utils';
+import { assign, getMappingValue, isObject } from '@elbwalker/utils';
 import { sendNode } from '@elbwalker/utils/node';
 
 export const push: PushFn = async function (event, config, mapping, options) {
@@ -14,27 +14,34 @@ export const push: PushFn = async function (event, config, mapping, options) {
     pixelId,
     test_event_code,
     url = 'https://graph.facebook.com/v22.0/',
-    // user_data,
+    user_data,
   } = config.custom!;
 
   const data = isObject(options?.data) ? options?.data : {};
-  // let userData: CustomerInformationParameters = {
-  //   ...user_data,
-  //   ...(isObject(data.user_data) ? data.user_data : {}),
-  // };
+  const staticUserData = user_data
+    ? await getMappingValue(event, { map: user_data })
+    : {};
+
+  let userData: CustomerInformationParameters = {
+    ...(isObject(staticUserData) ? staticUserData : {}),
+    ...(isObject(data.user_data) ? data.user_data : {}),
+  };
 
   const serverEvent: ServerEventParameters = {
     event_name: event.event,
     event_time: event.timestamp || Date.now(),
     event_source_url: event.source.id,
-    user_data: {},
     action_source: 'website',
     ...data,
+    user_data: userData,
   };
+
   const body: BodyParameters = { data: [serverEvent] };
 
   // Test event code
   if (test_event_code) body.test_event_code = test_event_code;
+
+  // @TODO: hash recommended parameters
 
   const result = await sendNode(
     `${url}${pixelId}/events?access_token=${accessToken}`,

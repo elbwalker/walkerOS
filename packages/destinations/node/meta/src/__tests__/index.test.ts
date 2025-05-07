@@ -64,6 +64,21 @@ describe('Node Destination Meta', () => {
     expect(requestBody.test_event_code).toEqual('TEST');
   });
 
+  test('userData', async () => {
+    const { elb } = createSourceNode({});
+    const event = getEvent();
+    const config: DestinationNode.Config = {
+      custom: mapping.InitUserData,
+    };
+
+    elb('walker destination', destination, config);
+    await elb(event);
+    const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
+    expect(requestBody.data[0].user_data).toEqual({
+      em: expect.any(String),
+    });
+  });
+
   test('event Purchase', async () => {
     const { elb } = createSourceNode({});
     const event = getEvent('order complete');
