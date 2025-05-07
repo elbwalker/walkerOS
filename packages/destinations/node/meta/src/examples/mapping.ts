@@ -15,6 +15,8 @@ export const Purchase: DestinationMeta.EventConfig = {
   data: {
     map: {
       order_id: 'data.id',
+      currency: { key: 'data.currency', value: 'EUR' },
+      value: 'data.total',
       contents: {
         loop: [
           'nested',
