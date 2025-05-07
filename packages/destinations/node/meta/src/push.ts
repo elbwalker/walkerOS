@@ -1,127 +1,75 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { EventMapping, PushFn } from './types';
-import {
-  Content,
-  CustomData,
-  EventRequest,
-  ServerEvent,
-  UserData,
-} from 'facebook-nodejs-business-sdk';
-import { getMappingValue, isString } from '@elbwalker/utils';
+import type {
+  BodyParameters,
+  CustomerInformationParameters,
+  PushFn,
+  ServerEventParameters,
+} from './types';
+import { getMappingValue, isObject } from '@elbwalker/utils';
+import { sendNode } from '@elbwalker/utils/node';
+import { hashEvent } from './hash';
 
-export const push: PushFn = async function (event, config, mapping) {
+export const push: PushFn = async function (event, config, mapping, options) {
   const {
     accessToken,
     pixelId,
-    debug,
-    partner = 'walkerOS',
-    testCode,
+    action_source = 'website',
+    doNotHash,
+    fbclid,
+    test_event_code,
+    url = 'https://graph.facebook.com/v22.0/',
+    user_data,
   } = config.custom!;
 
-  const events = [mapEvent(event, mapping)];
+  const data = isObject(options?.data) ? options?.data : {};
+  const configData = config.data
+    ? await getMappingValue(event, config.data)
+    : {};
+  const userDataCustom = user_data
+    ? await getMappingValue(event, { map: user_data })
+    : {};
 
-  const eventRequest = new EventRequest(
-    accessToken,
-    pixelId,
-    events,
-    partner,
-    testCode,
-    pixelId,
-    String(new Date().getTime()),
+  let userData: CustomerInformationParameters = {
+    // Destination config
+    ...(isObject(configData) && isObject(configData.user_data)
+      ? configData.user_data
+      : {}),
+    // Custom user_data
+    ...(isObject(userDataCustom) ? userDataCustom : {}),
+    // Event mapping
+    ...(isObject(data.user_data) ? data.user_data : {}),
+  };
+
+  if (fbclid)
+    userData.fbc = formatClickId(fbclid, options?.instance?.session?.start);
+
+  const serverEvent: ServerEventParameters = {
+    event_name: event.event,
+    event_id: event.id,
+    event_time: (event.timestamp || Date.now()) / 1000,
+    action_source,
+    ...data,
+    user_data: userData,
+  };
+
+  if (action_source === 'website')
+    serverEvent.event_source_url = event.source.id;
+
+  const hashedServerEvent = await hashEvent(serverEvent, doNotHash);
+
+  const body: BodyParameters = { data: [hashedServerEvent] };
+
+  // Test event code
+  if (test_event_code) body.test_event_code = test_event_code;
+
+  const func = config.fn || sendNode;
+  const result = await func(
+    `${url}${pixelId}/events?access_token=${accessToken}`,
+    JSON.stringify(body),
   );
 
-  if (debug) eventRequest.setDebugMode(true);
-
-  return eventRequest.execute().then(
-    () => {
-      return;
-    },
-    (err: unknown) => {
-      throw err;
-    },
-  );
-};
-
-export const mapEvent = (
-  event: WalkerOS.Event,
-  mapping: EventMapping = {},
-): ServerEvent => {
-  const { data, user, source } = event;
-  const { currency, content, value } = mapping.custom || {};
-
-  let userData = new UserData();
-  if (user) {
-    // IDs
-    const ids = [user.id, user.device, user.session, user.hash]
-      .filter(isString)
-      .map(lower);
-
-    if (ids.length) userData = userData.setExternalIds(ids);
-
-    // Customer Information Parameters
-    if (user.email) userData = userData.setEmail(lower(user.email));
-    if (user.phone && user.phone.length > 6)
-      userData = userData.setPhone(lower(user.phone));
-    if (user.city) userData = userData.setCity(lower(user.city));
-    if (user.country) userData = userData.setCountry(lower(user.country));
-    if (user.zip) userData = userData.setZip(lower(user.zip));
-    if (user.userAgent) userData = userData.setClientUserAgent(user.userAgent);
-    if (user.ip) userData = userData.setClientIpAddress(user.ip);
-  }
-
-  if (data.fbclid) {
-    let time;
-    if (event.event == 'session start') time = event.timestamp;
-
-    userData = userData.setFbc(formatClickId(data.fbclid, time));
-    // @TODO userData.setFbp('fb.1.1558571054389.1098115397') // _fbp cookie
-  }
-
-  const customData = new CustomData();
-
-  // Currency
-  const currencyValue = currency && getMappingValue(event, currency);
-  if (currencyValue) customData.setCurrency(String(currencyValue));
-
-  // Value
-  const valueValue = value && getMappingValue(event, value);
-  if (valueValue) customData.setValue(parseFloat(String(valueValue)));
-
-  // Content
-  if (content) {
-    const { id, price, quantity } = content;
-    const item = new Content();
-    const idValue = id && getMappingValue(event, id);
-    const priceValue = price && getMappingValue(event, price);
-    const quantityValue = quantity && getMappingValue(event, quantity);
-    if (idValue) item.setId(String(idValue));
-    if (priceValue) item.setItemPrice(parseFloat(String(priceValue)));
-    if (quantityValue) item.setQuantity(parseFloat(String(quantityValue)));
-
-    // Check if at least one value is defined
-    const definedValues = Object.values(item).filter(
-      (value) => value !== undefined,
-    ).length;
-
-    if (definedValues) customData.setContents([item]);
-  }
-
-  const timestamp = Math.floor(
-    (event.timestamp || new Date().getTime()) / 1000,
-  );
-
-  const actionSource = source.type === 'web' ? 'website' : 'server';
-
-  const serverEvent = new ServerEvent()
-    .setEventId(event.id)
-    .setEventName(event.event)
-    .setEventTime(timestamp)
-    .setUserData(userData)
-    .setCustomData(customData)
-    .setEventSourceUrl(source.id)
-    .setActionSource(actionSource);
-
-  return serverEvent;
+  if (isObject(result) && result.ok === false)
+    throw new Error(JSON.stringify(result));
 };
 
 function formatClickId(clickId: WalkerOS.Property, time?: number): string {

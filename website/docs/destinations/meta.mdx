@@ -5,6 +5,9 @@ description: Meta Conversion API (CAPI) destination for walkerOS
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
+import { LiveCode } from '@site/src/components/organisms/liveCode';
+import { getEvent } from '@elbwalker/utils';
+import { mapping } from '@elbwalker/destination-node-meta/examples';
 
 <PackageLink
   github="packages/destinations/node/meta"
@@ -30,40 +33,215 @@ Before using the Meta destination, ensure you have:
 To get started, install the package via npm:
 
 ```sh
-npm install @elbwalker/destination-meta
+npm install @elbwalker/destination-node-meta
 ```
 
 ## Configuration
 
 #### Example
 
-```ts
-import { destinationMeta } from '@elbwalker/destination-node-meta';
+<LiveCode
+  smallText={true}
+  labelInput="Configuration"
+  disableInput={true}
+  input={mapping.InitUserData}
+  output={`sendNode('https://graph.facebook.com/v22.0/${mapping.InitUserData.pixelId}/events?access_token=${mapping.InitUserData.accessToken}', {
+    data: [
+      {
+        event_id: "1746576817000-gr0up-1",
+        event_time: 1746576817,
+        action_source: "website",
+        user_data: {
+          external_id: [
+            "cc8e27118413234d4297ed00a02711365312c79325df9b5b8f4199cbd0b96e7e",
+            "9176e6f336dbdb4f99b0e45cbd7e41e0e2323812b236822842a61ffbd362ac8c",
+          ],
+        },
+        event_source_url: "https://localhost:80",
+        // ... event data
+      },
+    ],
+  });`}
+/>
 
-await elb('walker destination', destinationMeta, {
-  custom: {
-    accessToken: 's3cr3tc0d3',
-    pixelId: '1234567890',
-    // debug: true,
-    // partner: 'walkerOS',
-    // testCode: 'TEST00000',
-  },
-  mapping: {
-    // e.g. order
-    entity: {
-      // e.g. complete
-      action: {
-        name: 'Purchase',
-        custom: {
-          id: 'data.id',
-          name: 'data.title',
-          value: 'data.total',
+The parameters `event_name`, `event_id`, `event_time`, `action_source`, and
+`user_data` (and `event_source_url` for website events) are set automatically.
+
+### Custom
+
+| Property        | Type     | Description                                                                                                                                      |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| accessToken\*   | string   | Ads account ID used for every conversion                                                                                                         |
+| pixelId\*       | string   | Ads account ID used for every conversion                                                                                                         |
+| action_source   | string   | The source of the event (e.g., website, app)                                                                                                     |
+| doNotHash       | string[] | List of properties to not hash                                                                                                                   |
+| fbclid          | string   | Facebook click ID parameter (will be formatted)                                                                                                  |
+| test_event_code | string   | Test event code                                                                                                                                  |
+| url             | string   | The URL of the page where the event occurred                                                                                                     |
+| user_data       | object   | [Customer Information Parameters](https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/customer-information-parameters) |
+
+## Mapping
+
+The complete list of all parameters can be found in the
+[Server Event Parameters](https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/server-event)
+documentation. Some events require specific parameters.
+
+### User Data
+
+At least one `user_data` parameter is required. It can be set on
+`custom.user_data` level, with the `data.map.user_data` config, or on the event
+level with `mapping.entity.action.user_data`. All values will be merged
+together.
+
+<LiveCode
+  smallText={true}
+  disableInput={true}
+  labelInput="Destination Config"
+  input={`{
+    custom: {
+      pixelId: 'p1x3l1d',
+      accessToken: 's3cr3t',
+      user_data: {
+        external_id: { set: ['user.device', 'user.session'] },
+      },
+      doNotHash: ['external_id'],
+    },
+    data: {
+      map: {
+        user_data: {
+          map: {
+            fn: { value: 'elb' },
+          },
         },
       },
     },
-  },
-});
-```
+    mapping: {
+      entity: {
+        action: {
+          data: {
+            map: {
+              user_data: {
+                map: {
+                  ph: { value: '123' },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+  }`}
+  disableConfig={true}
+  output={`{
+    user_data: {
+      // from custom user_data
+      external_id: ['c00k13', 's3ss10n'],
+      // from destination config data
+      fn: '3534f80438f9c1175a229f952c99c2232a24c423a392bdaf116cad54d9d9676c',
+      // from mapping
+      ph: 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3',
+      // more available customer information parameters to set
+      // em (email)
+      // ln (last name)
+      // db (date of birth)
+      // ge (gender)
+      // ct (city)
+      // st (state)
+      // zp (zip)
+      // country (country)
+      // client_ip_address (client ip address)
+      // client_user_agent (client user agent)
+      // fbc (facebook click id)
+      // fbp (facebook browser id)
+      // subscription_id (subscription id)
+      // fb_login_id (facebook login id)
+      // ig_account_id (instagram account id)
+      // ig_sid (instagram scoped user id)
+      // lead_id (lead id)
+      // anon_id (anonymous id)
+      // madid (mobile advertiser id)
+      // page_id (page id)
+      // page_scoped_user_id (page scoped user id)
+      // ctwa_clid (click to whatsapp ad click id)
+    },
+    // ... other parameters
+  }`}
+/>
+
+### Purchase
+
+<LiveCode
+  smallText={true}
+  height={'512px'}
+  disableInput={true}
+  labelInput="Event"
+  input={getEvent('order complete')}
+  disableConfig={true}
+  labelConfig="Custom Config"
+  config={`{
+    name: 'Purchase',
+    data: {
+      map: {
+        order_id: 'data.id',
+        currency: {
+          key: 'data.currency',
+          value: 'EUR'
+        },
+        value: 'data.total',
+        contents: {
+          loop: [
+            'nested',
+            {
+              condition: (entity) =>
+                isObject(entity) && entity.type === 'product',
+              map: {
+                id: 'data.id',
+                item_price: 'data.price',
+                quantity: {
+                  key: 'data.quantity',
+                  value: 1,
+                },
+              },
+            },
+          ],
+        },
+        num_items: {
+          fn: (event) =>
+            (event as WalkerOS.Event).nested.filter(
+              (item) => item.type === 'product',
+            ).length,
+        },
+      },
+    },
+  }`}
+  output={`sendNode('https://graph.facebook.com/v22.0/${mapping.InitUserData.pixelId}/events?access_token=${mapping.InitUserData.accessToken}', {
+    data: [
+      {
+        event_name: "Purchase",
+        event_id: "1746576817000-gr0up-1",
+        event_time: 1746576817,
+        action_source: "website",
+        order_id: "0rd3r1d",
+        currency: "EUR",
+        value: 555,
+        contents: [
+          {
+            id: "ers",
+            item_price: 420,
+            quantity: 1,
+          },
+          {
+            id: "cc",
+            item_price: 42,
+            quantity: 1,
+          },
+        ],
+        num_items: 2,
+        event_source_url: "https://localhost:80",
+      },
+    ],
+  });`}
+/>
 
 :::info
 
