@@ -7,6 +7,7 @@ import type {
 } from './types';
 import { getMappingValue, isObject } from '@elbwalker/utils';
 import { sendNode } from '@elbwalker/utils/node';
+import { hashEvent } from './hash';
 
 export const push: PushFn = async function (event, config, mapping, options) {
   const {
@@ -53,7 +54,9 @@ export const push: PushFn = async function (event, config, mapping, options) {
   if (action_source === 'website')
     serverEvent.event_source_url = event.source.id;
 
-  const body: BodyParameters = { data: [serverEvent] };
+  const hashedServerEvent = await hashEvent(serverEvent);
+
+  const body: BodyParameters = { data: [hashedServerEvent] };
 
   // Test event code
   if (test_event_code) body.test_event_code = test_event_code;

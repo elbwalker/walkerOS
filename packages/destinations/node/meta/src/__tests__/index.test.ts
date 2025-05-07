@@ -115,9 +115,9 @@ describe('Node Destination Meta', () => {
     await elb(event);
     const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
     expect(requestBody.data[0].user_data).toEqual({
-      fn: 'elb', // from destination config data
+      fn: expect.any(String), // from destination config data
       em: expect.any(String), // from custom user_data
-      ph: '123', // from mapping
+      ph: expect.any(String), // from mapping
     });
   });
 
@@ -140,9 +140,21 @@ describe('Node Destination Meta', () => {
 
   test('hashing', async () => {
     expect(await hashEvent('test')).toEqual('test');
-    expect(await hashEvent({ user_data: { em: 'foo', foo: 'bar' } })).toEqual({
+    expect(await hashEvent({ user_data: { em: 'm@i.l', foo: 'bar' } })).toEqual(
+      {
+        user_data: {
+          em: 'd42649b85459f1140acba6d88f5325256ad2519782c520b7666c51390d9744f0',
+          foo: 'bar',
+        },
+      },
+    );
+    expect(
+      await hashEvent({ user_data: { em: 'm@i.l', foo: 'bar' } }, [
+        'user_data.em',
+      ]),
+    ).toEqual({
       user_data: {
-        em: '2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae',
+        em: 'm@i.l',
         foo: 'bar',
       },
     });

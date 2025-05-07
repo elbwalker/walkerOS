@@ -1,3 +1,4 @@
+import type { ServerEventParameters } from './types';
 import { isArray, isObject, isString } from '@elbwalker/utils';
 import { getHashNode } from '@elbwalker/utils/node';
 
@@ -11,14 +12,20 @@ const keysToHash = [
   'user_data.ct',
 ];
 
-function shouldBeHashed(key: string): boolean {
-  return keysToHash.includes(key);
+function shouldBeHashed(key: string, keysToIgnore: string[] = []): boolean {
+  return keysToHash.includes(key) && !keysToIgnore.includes(key);
 }
 
-type HashableValue = string | string[] | Record<string, unknown> | unknown[];
+type HashableValue =
+  | ServerEventParameters
+  | string
+  | string[]
+  | Record<string, unknown>
+  | unknown[];
 
 export async function hashEvent<T extends HashableValue>(
   value: T,
+  keysToIgnore: string[] = [],
   key?: string,
   path: string = '',
 ): Promise<T> {
@@ -26,7 +33,10 @@ export async function hashEvent<T extends HashableValue>(
     const entries = await Promise.all(
       Object.entries(value).map(async ([k, v]) => {
         const currentPath = path ? `${path}.${k}` : k;
-        return [k, await hashEvent(v as HashableValue, k, currentPath)];
+        return [
+          k,
+          await hashEvent(v as HashableValue, keysToIgnore, k, currentPath),
+        ];
       }),
     );
 
@@ -38,11 +48,13 @@ export async function hashEvent<T extends HashableValue>(
 
   if (isArray(value)) {
     return Promise.all(
-      value.map((item) => hashEvent(item as HashableValue, key, path)),
+      value.map((item) =>
+        hashEvent(item as HashableValue, keysToIgnore, key, path),
+      ),
     ) as Promise<T>;
   }
 
-  if (isString(value) && path && shouldBeHashed(path)) {
+  if (isString(value) && path && shouldBeHashed(path, keysToIgnore)) {
     return getHashNode(value) as Promise<T>;
   }
 
