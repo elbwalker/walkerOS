@@ -27,7 +27,7 @@ export interface Custom {
   accessToken: string;
   pixelId: string;
   action_source?: ActionSource;
-  clickId?: string; // @TODO
+  fbclid?: string;
   test_event_code?: string;
   url?: string;
   user_data?: Mapping.Map;

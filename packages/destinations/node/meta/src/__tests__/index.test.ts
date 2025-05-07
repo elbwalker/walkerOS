@@ -64,6 +64,20 @@ describe('Node Destination Meta', () => {
     expect(requestBody.test_event_code).toEqual('TEST');
   });
 
+  test('fbclid', async () => {
+    const { elb } = createSourceNode({});
+    const event = getEvent();
+    const config: DestinationNode.Config = {
+      custom: { accessToken, pixelId, fbclid: 'abc' },
+      mapping: mapping.config,
+    };
+
+    elb('walker destination', destination, config);
+    await elb(event);
+    const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
+    expect(requestBody.data[0].user_data.fbc).toContain('.abc');
+  });
+
   test('userData', async () => {
     const { elb } = createSourceNode({});
     const event = getEvent();

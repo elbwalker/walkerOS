@@ -13,6 +13,7 @@ export const push: PushFn = async function (event, config, mapping, options) {
     accessToken,
     pixelId,
     action_source = 'website',
+    fbclid,
     test_event_code,
     url = 'https://graph.facebook.com/v22.0/',
     user_data,
@@ -36,6 +37,8 @@ export const push: PushFn = async function (event, config, mapping, options) {
     // Event mapping
     ...(isObject(data.user_data) ? data.user_data : {}),
   };
+
+  if (fbclid) userData.fbc = formatClickId(fbclid, event.timestamp);
 
   const serverEvent: ServerEventParameters = {
     event_name: event.event,
