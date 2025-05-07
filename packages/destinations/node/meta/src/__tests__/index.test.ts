@@ -66,14 +66,6 @@ describe('Node Destination Meta', () => {
     await elb(event);
     const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
 
-    expect(requestBody.data[0]).toEqual(
-      expect.objectContaining({
-        event_name: 'Purchase',
-        event_time: event.timestamp,
-        event_id: event.id,
-        action_source: 'website',
-        user_data: {},
-      }),
-    );
+    expect(requestBody).toEqual(events.Purchase());
   });
 });

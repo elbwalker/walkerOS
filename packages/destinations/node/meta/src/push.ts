@@ -26,6 +26,7 @@ export const push: PushFn = async function (event, config, mapping, options) {
   const serverEvent: ServerEventParameters = {
     event_name: event.event,
     event_time: event.timestamp || Date.now(),
+    event_source_url: event.source.id,
     user_data: {},
     action_source: 'website',
     ...data,
