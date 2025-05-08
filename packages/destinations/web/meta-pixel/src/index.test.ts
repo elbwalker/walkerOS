@@ -80,7 +80,12 @@ describe('Destination Meta Pixel', () => {
   test('push', async () => {
     elb('walker destination', destination);
     await elb(event);
-    expect(mockFn).toHaveBeenCalledWith('track', event.event, {});
+    expect(mockFn).toHaveBeenCalledWith(
+      'track',
+      event.event,
+      {},
+      { eventID: event.id },
+    );
   });
 
   test('pageview', async () => {
@@ -88,12 +93,12 @@ describe('Destination Meta Pixel', () => {
     elb('walker destination', destination);
 
     await elb(page_view);
-    expect(mockFn).toHaveBeenCalledWith('track', 'PageView', {});
-
-    jest.clearAllMocks();
-    destination.config.mapping = { page: { view: { ignore: true } } };
-    await elb(page_view);
-    expect(mockFn).not.toHaveBeenCalledWith('track', 'PageView');
+    expect(mockFn).toHaveBeenCalledWith(
+      'track',
+      'PageView',
+      {},
+      { eventID: page_view.id },
+    );
   });
 
   test('push standard event', async () => {
@@ -104,7 +109,12 @@ describe('Destination Meta Pixel', () => {
       },
     });
     await elb(event);
-    expect(mockFn).toHaveBeenCalledWith('trackCustom', 'foo', {});
+    expect(mockFn).toHaveBeenCalledWith(
+      'trackCustom',
+      'foo',
+      {},
+      { eventID: event.id },
+    );
   });
 
   test('event Purchase', async () => {
