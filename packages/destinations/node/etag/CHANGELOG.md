@@ -1,5 +1,12 @@
 # @elbwalker/destination-node-etag
 
+## 0.1.6
+
+### Patch Changes
+
+- @elbwalker/source-node@3.4.2
+- @elbwalker/destination-core-etag@0.0.11
+
 ## 0.1.5
 
 ### Patch Changes

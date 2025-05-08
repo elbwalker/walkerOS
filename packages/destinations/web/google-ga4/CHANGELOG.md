@@ -1,5 +1,11 @@
 # @elbwalker/destination-web-google-ga4
 
+## 3.1.6
+
+### Patch Changes
+
+- @elbwalker/walker.js@3.4.2
+
 ## 3.1.5
 
 ### Patch Changes

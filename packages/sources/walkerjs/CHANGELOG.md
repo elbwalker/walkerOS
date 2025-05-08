@@ -1,5 +1,12 @@
 # @elbwalker/walker.js
 
+## 3.4.2
+
+### Patch Changes
+
+- Updated dependencies [fef7fa7]
+  - @elbwalker/utils@3.8.2
+
 ## 3.4.1
 
 ### Patch Changes

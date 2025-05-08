@@ -1,5 +1,13 @@
 # @elbwalker/destination-node-firehose
 
+## 1.1.6
+
+### Patch Changes
+
+- Updated dependencies [fef7fa7]
+  - @elbwalker/utils@3.8.2
+  - @elbwalker/source-node@3.4.2
+
 ## 1.1.5
 
 ### Patch Changes

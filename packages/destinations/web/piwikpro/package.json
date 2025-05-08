@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-piwikpro",
   "description": "Piwik PRO destination for walkerOS",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -33,8 +33,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/walker.js": "3.4.1",
-    "@elbwalker/utils": "3.8.1"
+    "@elbwalker/walker.js": "3.4.2",
+    "@elbwalker/utils": "3.8.2"
   },
   "devDependencies": {
     "@elbwalker/types": "3.4.0"

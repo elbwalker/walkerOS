@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-web-etag",
   "description": "etag web destination for walkerOS",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -32,12 +32,12 @@
     "test": "jest --colors --coverage"
   },
   "dependencies": {
-    "@elbwalker/walker.js": "3.4.1"
+    "@elbwalker/walker.js": "3.4.2"
   },
   "devDependencies": {
-    "@elbwalker/destination-core-etag": "0.0.10",
+    "@elbwalker/destination-core-etag": "0.0.11",
     "@elbwalker/types": "3.4.0",
-    "@elbwalker/utils": "^3.8.1"
+    "@elbwalker/utils": "^3.8.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
