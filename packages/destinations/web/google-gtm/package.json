@@ -3,7 +3,6 @@
   "description": "Google Tag Manager (GTM) web destination for walkerOS",
   "version": "3.0.3",
   "license": "MIT",
-  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

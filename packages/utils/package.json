@@ -2,7 +2,6 @@
   "name": "@elbwalker/utils",
   "description": "Shared utils for walkerOS packages",
   "version": "3.8.1",
-  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

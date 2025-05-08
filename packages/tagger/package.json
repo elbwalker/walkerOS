@@ -2,7 +2,6 @@
   "name": "@elbwalker/tagger",
   "description": "A helper to set up tracking based on walkerOS",
   "version": "2.1.5",
-  "type": "module",
   "license": "MIT",
   "exports": {
     ".": {

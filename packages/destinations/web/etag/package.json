@@ -3,7 +3,6 @@
   "description": "etag web destination for walkerOS",
   "version": "0.1.8",
   "license": "MIT",
-  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

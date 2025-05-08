@@ -3,7 +3,6 @@
   "description": "Node source for walkerOS for sending events from the server-side",
   "version": "3.4.1",
   "license": "MIT",
-  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

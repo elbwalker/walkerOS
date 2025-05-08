@@ -3,7 +3,6 @@
   "description": "Plausible web destination for walkerOS",
   "version": "4.0.3",
   "license": "MIT",
-  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

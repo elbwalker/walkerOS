@@ -2,7 +2,6 @@
   "name": "@elbwalker/jest",
   "version": "0.0.1",
   "private": true,
-  "type": "module",
   "license": "MIT",
   "main": "./src/index.js",
   "exports": {
