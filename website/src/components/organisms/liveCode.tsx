@@ -1,9 +1,8 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { useEffect, useState, useRef, memo } from 'react';
 import { debounce, isString, tryCatchAsync } from '@elbwalker/utils';
-import CodeBox, { formatValue } from '../molecules/codeBox';
-import FullScreenOverlay from '../molecules/codeBoxOverlay';
-import FullScreenButton from '../molecules/fullScreenButton';
+import CodeBox, { formatValue } from '@site/src/components/molecules/codeBox';
+import FullScreenMode from '@site/src/components/organisms/fullScreenMode';
 
 export interface LiveCodeProps {
   input: unknown;
@@ -129,20 +128,9 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
     );
 
     return (
-      <div className="live-code mb-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex justify-end">
-            <FullScreenButton onClick={() => setIsFullScreen(true)} />
-          </div>
-          {renderCodeBoxes()}
-        </div>
-        <FullScreenOverlay
-          isOpen={isFullScreen}
-          onClose={() => setIsFullScreen(false)}
-        >
-          {renderCodeBoxes(true)}
-        </FullScreenOverlay>
-      </div>
+      <FullScreenMode className="live-code mb-4">
+        {renderCodeBoxes()}
+      </FullScreenMode>
     );
   },
 );
