@@ -1,7 +1,7 @@
 {
   "name": "@elbwalker/destination-node-meta",
   "description": "Meta node destination for walkerOS",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

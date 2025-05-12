@@ -28,7 +28,6 @@ export interface Custom {
   pixelId: string;
   action_source?: ActionSource;
   doNotHash?: string[];
-  fbclid?: string;
   test_event_code?: string;
   url?: string;
   user_data?: Mapping.Map;
@@ -190,6 +189,9 @@ export interface CustomerInformationParameters {
 
   /** User agent string from browser. Do NOT hash. */
   client_user_agent?: string;
+
+  /** fbclid parameter value from the URL. Do NOT hash. */
+  fbclid?: string;
 
   /** Facebook click ID (_fbc cookie). Do NOT hash. */
   fbc?: string;

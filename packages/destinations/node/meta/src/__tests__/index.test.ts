@@ -112,7 +112,11 @@ describe('Node Destination Meta', () => {
     const { elb } = createSourceNode({});
     const event = getEvent();
     const config: DestinationNode.Config = {
-      custom: { accessToken, pixelId, fbclid: 'abc' },
+      custom: {
+        accessToken,
+        pixelId,
+        user_data: { fbclid: { value: 'abc' } },
+      },
       mapping: mapping.config,
     };
 

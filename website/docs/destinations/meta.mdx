@@ -75,7 +75,6 @@ The parameters `event_name`, `event_id`, `event_time`, `action_source`, and
 | pixelId\*       | string   | Ads account ID used for every conversion                                                                                                         |
 | action_source   | string   | The source of the event (e.g., website, app)                                                                                                     |
 | doNotHash       | string[] | List of properties to not hash                                                                                                                   |
-| fbclid          | string   | Facebook click ID parameter (will be formatted)                                                                                                  |
 | test_event_code | string   | Test event code                                                                                                                                  |
 | url             | string   | The URL of the page where the event occurred                                                                                                     |
 | user_data       | object   | [Customer Information Parameters](https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/customer-information-parameters) |
@@ -88,10 +87,13 @@ documentation. Some events require specific parameters.
 
 ### User Data
 
-At least one `user_data` parameter is required. It can be set on
-`custom.user_data` level, with the `data.map.user_data` config, or on the event
-level with `mapping.entity.action.user_data`. All values will be merged
-together.
+At least one `user_data` parameter is required. These are crucial for matching
+events to the correct user. It can be set on `custom.user_data` level, with the
+`data.map.user_data` config, or on the event level with
+`mapping.entity.action.user_data`. All values will be merged together.
+
+The `user_data.fbclid` parameter is automatically formatted the `fbc` value. It
+is usually available with `session start` events in `data.fbclid`.
 
 <LiveCode
   smallText={true}
@@ -167,6 +169,10 @@ together.
     // ... other parameters
   }`}
 />
+
+The values `em`, `ph`, `fn`, `ln`, `db`, `ge`, `ct`, `st`, `zp`, `country`, and
+`external_id` are automatically hashed. The `doNotHash` property can be used to
+exclude specific parameters from being hashed.
 
 ### Purchase
 

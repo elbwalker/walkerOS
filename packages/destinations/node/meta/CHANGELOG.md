@@ -1,5 +1,11 @@
 # @elbwalker/destination-node-meta
 
+## 2.2.1
+
+### Patch Changes
+
+- fbclid parameter [#523](https://github.com/elbwalker/walkerOS/issues/523)
+
 ## 2.2.0
 
 ### Minor Changes

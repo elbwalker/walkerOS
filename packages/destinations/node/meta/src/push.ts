@@ -15,7 +15,6 @@ export const push: PushFn = async function (event, config, mapping, options) {
     pixelId,
     action_source = 'website',
     doNotHash,
-    fbclid,
     test_event_code,
     url = 'https://graph.facebook.com/v22.0/',
     user_data,
@@ -29,7 +28,7 @@ export const push: PushFn = async function (event, config, mapping, options) {
     ? await getMappingValue(event, { map: user_data })
     : {};
 
-  let userData: CustomerInformationParameters = {
+  const userData: CustomerInformationParameters = {
     // Destination config
     ...(isObject(configData) && isObject(configData.user_data)
       ? configData.user_data
@@ -40,13 +39,17 @@ export const push: PushFn = async function (event, config, mapping, options) {
     ...(isObject(data.user_data) ? data.user_data : {}),
   };
 
-  if (fbclid)
-    userData.fbc = formatClickId(fbclid, options?.instance?.session?.start);
-
+  if (userData.fbclid) {
+    userData.fbc = formatClickId(
+      userData.fbclid,
+      options?.instance?.session?.start || event.timestamp,
+    );
+    delete userData.fbclid;
+  }
   const serverEvent: ServerEventParameters = {
     event_name: event.event,
     event_id: event.id,
-    event_time: (event.timestamp || Date.now()) / 1000,
+    event_time: Math.round((event.timestamp || Date.now()) / 1000),
     action_source,
     ...data,
     user_data: userData,
@@ -72,8 +75,10 @@ export const push: PushFn = async function (event, config, mapping, options) {
     throw new Error(JSON.stringify(result));
 };
 
-function formatClickId(clickId: WalkerOS.Property, time?: number): string {
+function formatClickId(clickId: unknown, time?: number): string | undefined {
   // https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/fbp-and-fbc#2--format-clickid
+
+  if (!clickId) return;
 
   // Version is always "fb"
   const version = 'fb';
