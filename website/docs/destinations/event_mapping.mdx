@@ -16,8 +16,8 @@ import {
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 
-export const logFn = (input, config, log) => {
-  log(getMappingValue(parseInput(input), parseInput(config)));
+export const logFn = async (input, config, log) => {
+  log(await getMappingValue(await parseInput(input), await parseInput(config)));
 };
 
 export const event = getEvent('order complete');
@@ -65,7 +65,7 @@ explicitly matched.
 
 <DestinationPush
   event={event}
-  emptyText='Event ignored'
+  emptyText="Event ignored"
   mapping={`{
     order: { // Entity
       complete: { // Action
@@ -153,6 +153,7 @@ name.
     name: 'purchase',
     data: 'event',
   }}
+  output={`"purchase"`}
 />
 
 Example: A walkerOS `order complete` usually becomes a `purchase` event in GA4
@@ -175,6 +176,11 @@ See&nbsp;<Link to="#valueconfig">ValueConfig</Link> for detailed usage.
       },
     },
   }`}
+  output={`{
+    event: "order complete",
+    for: "more info",
+    read: "ValueConfig"
+  }`}
 />
 
 ### ignore
@@ -182,7 +188,7 @@ See&nbsp;<Link to="#valueconfig">ValueConfig</Link> for detailed usage.
 <DestinationPush
   event={{ event: event.event }}
   mapping={`{
-    ignore: true, // Comment me
+    ignore: true, // remove me
     data: 'event',
   }`}
 />
@@ -190,15 +196,23 @@ See&nbsp;<Link to="#valueconfig">ValueConfig</Link> for detailed usage.
 The `ignore` property is used to ignore the event. If set to `true`, the event
 won't get pushed to the destination.
 
-### consent
-
-The `consent` property is used to require a specific state to process the event.
-
 ### custom
 
 The `custom` property is used for individual destination settings. In most cases
 the `data` property is enough. But in special cases a `custom` mapping might
 simplify the configuration.
+
+<DestinationPush
+  event={{ event: event.event }}
+  mapping={`{
+    data: "event",
+    custom: {
+      // Individual settings
+      foo: "bar",
+    }
+  }`}
+  output={`"order complete"`}
+/>
 
 ### batch
 
@@ -237,6 +251,7 @@ A key accesses a property from the event context.
   config={`{
     key: 'data.id'
   }`}
+  output={`"0rd3r1d"`}
   fn={logFn}
 />
 
@@ -250,6 +265,7 @@ event context.
   labelConfig="Data config"
   input={{ data: event.data }}
   config={`'data.total'`}
+  output={`555`}
   fn={logFn}
 />
 
@@ -265,6 +281,7 @@ mapping resolves a value.
   config={`{
     value: 'static'
   }`}
+  output={`"static"`}
   fn={logFn}
 />
 
@@ -282,6 +299,10 @@ again a&nbsp;<Link to="#valueconfig">ValueConfig</Link> resolving to a value.
       pageGroup: 'globals.pagegroup',
       shoppingStage: 'context.shopping.0',
     }
+  }`}
+  output={`{
+    pageGroup: "shop",
+    shoppingStage: "complete"
   }`}
   fn={logFn}
 />
@@ -306,6 +327,11 @@ to a `WalkerOS.Property`.
       'action'
     ]
   }`}
+  output={`[
+    "load",
+    "order",
+    "complete"
+  ]`}
   fn={logFn}
 />
 
@@ -326,6 +352,11 @@ current event.
       'data.name'
     ]
   }`}
+  output={`[
+    "Everyday Ruck Snack",
+    "Cool Cap",
+    "Surprise"
+  ]`}
   fn={logFn}
 />
 
@@ -344,6 +375,7 @@ it's `true` the mapping will be used.
     },
     key: "event"
   }`}
+  output={`"order complete"`}
   fn={logFn}
 />
 
@@ -363,6 +395,7 @@ values and protect a users privacy by hiding information.
     key: 'data.id',
     value: 'redacted',
   }`}
+  output={`"0rd3r1d"`}
   fn={logFn}
 />
 
@@ -383,6 +416,7 @@ additional properties as parameters.
       return "id is " + event.data.id;
     }
   }`}
+  output={`"id is 0rd3r1d"`}
   fn={logFn}
 />
 
@@ -402,6 +436,7 @@ resolved the value, it will be validated with the `validate` function.
     key: "data.id",
     value: "fallback"
   }`}
+  output={`"0rd3r1d"`}
   fn={logFn}
 />
 

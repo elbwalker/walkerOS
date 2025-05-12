@@ -45,6 +45,7 @@ export const destinationMetaPixel: Destination = {
       trackCustom ? 'trackCustom' : 'track',
       String(eventName),
       isObject(data) ? data : {},
+      { eventID: event.id },
     );
   },
 };

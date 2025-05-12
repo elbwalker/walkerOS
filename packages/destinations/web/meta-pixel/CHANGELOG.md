@@ -1,5 +1,18 @@
 # @elbwalker/destination-web-meta-pixel
 
+## 3.1.0
+
+### Minor Changes
+
+- 033e5a9: Use data mapping
+  [#520](https://github.com/elbwalker/walkerOS/issues/520)
+
+### Patch Changes
+
+- 1a0bb30:
+  [event_id parameter #522](https://github.com/elbwalker/walkerOS/issues/522)
+  - @elbwalker/walker.js@3.4.2
+
 ## 3.0.3
 
 ### Patch Changes

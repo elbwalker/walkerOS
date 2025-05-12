@@ -347,10 +347,11 @@ stability and reliability of code.
 
 #### tryCatch
 
-`tryCatch(tryFn: Function, catchFn: Function)` is a higher-order function
-designed to handle errors gracefully in JavaScript. It takes two functions as
-arguments: tryFn, which is the function to be executed, and catchFn, which is
-the function to be executed if tryFn throws an error.
+`tryCatch(tryFn: Function, catchFn?: Function, finallyFn?: Function)` is a
+higher-order function designed to handle errors gracefully in JavaScript. It
+takes three functions as arguments: tryFn, which is the function to be executed,
+catchFn, which is the function to be executed if tryFn throws an error, and
+finallyFn, which is the function to be executed after tryFn and catchFn.
 
 ```js
 const safeParse = tryCatch(JSON.parse, () => ({}));
@@ -360,9 +361,10 @@ safeParse('invalid json'); // Returns {} instead of throwing an error
 
 #### tryCatchAsync
 
-`tryCatchAsync(tryFn: Function, catchFn: Function)` is similar to tryCatch but
-tailored for asynchronous operations. It wraps an async function (tryFn) and a
-fallback (catchFn) for handling errors in async processes.
+`tryCatchAsync(tryFn: Function, catchFn?: Function, finallyFn?: Function)` is
+similar to tryCatch but tailored for asynchronous operations. It wraps an async
+function (tryFn), a fallback (catchFn) for handling errors in async processes,
+and a finallyFn, which is the function to be executed after tryFn and catchFn.
 
 ```js
 const safeCall = tryCatchAsync(

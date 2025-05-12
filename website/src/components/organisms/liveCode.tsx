@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import { useEffect, useState, useRef, memo } from 'react';
-import { debounce, isString } from '@elbwalker/utils';
+import { debounce, isString, tryCatchAsync } from '@elbwalker/utils';
 import CodeBox, { formatValue } from '@site/src/components/molecules/codeBox';
 import FullScreenMode from '@site/src/components/organisms/fullScreenMode';
 
@@ -14,7 +14,7 @@ export interface LiveCodeProps {
     config: unknown,
     log: (...args: unknown[]) => void,
     options?: WalkerOS.AnyObject,
-  ) => void;
+  ) => Promise<void>;
   fnName?: string;
   labelInput?: string;
   labelConfig?: string;
@@ -66,16 +66,18 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
 
     const updateRight = useRef(
       debounce(
-        (inputStr: string, configStr: string, options: WalkerOS.AnyObject) => {
+        async (
+          inputStr: string,
+          configStr: string,
+          options: WalkerOS.AnyObject,
+        ) => {
           if (!fn) return;
 
           setOutput([]);
 
-          try {
-            fn(inputStr, configStr, log, options);
-          } catch (e) {
+          await tryCatchAsync(fn, (e) => {
             setOutput([`Preview error: ${String(e)}`]);
-          }
+          })(inputStr, configStr, log, options);
         },
         500,
         true,

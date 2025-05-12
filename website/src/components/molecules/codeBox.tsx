@@ -44,8 +44,12 @@ export const parseInput = (
   code: unknown,
   scope: WalkerOS.AnyObject = {},
   ...args: unknown[]
-) => {
-  return new Function(...Object.keys(scope), `"use strict"; return ${code}`)(
+): Promise<unknown> => {
+  const codeStr = String(code);
+  return new Function(
+    ...Object.keys(scope),
+    `"use strict"; return (async () => { return ${codeStr} })()`,
+  )(
     ...Object.values(scope), // Scope as arguments
     ...args,
   );

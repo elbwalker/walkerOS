@@ -1,5 +1,11 @@
 # @elbwalker/destination-web-google-gtm
 
+## 3.0.4
+
+### Patch Changes
+
+- @elbwalker/walker.js@3.4.2
+
 ## 3.0.3
 
 ### Patch Changes

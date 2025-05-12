@@ -1,5 +1,26 @@
 # @elbwalker/destination-node-meta
 
+## 2.2.1
+
+### Patch Changes
+
+- fbclid parameter [#523](https://github.com/elbwalker/walkerOS/issues/523)
+
+## 2.2.0
+
+### Minor Changes
+
+- 033e5a9: Use data mapping
+  [#520](https://github.com/elbwalker/walkerOS/issues/520)
+
+### Patch Changes
+
+- 033e5a9: Await mapping
+  [#519](https://github.com/elbwalker/walkerOS/issues/519)
+- Updated dependencies [fef7fa7]
+  - @elbwalker/utils@3.8.2
+  - @elbwalker/source-node@3.4.2
+
 ## 2.1.5
 
 ### Patch Changes

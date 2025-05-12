@@ -3,7 +3,7 @@ title: Google Analytics 4 (GA4)
 description: How to send events to Google Analytics 4 (GA4) with walker.js
 ---
 
-import PackageLink from '/src/components/docs/package-link';
+import PackageLink from '@site/src/components/docs/package-link';
 import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -96,14 +96,6 @@ ID</Link>.
     debug: false,
     include: ['globals'],
     pageview: false,
-    data: {
-      map: {
-        currency: {
-          value: 'EUR',
-          key: 'data.currency',
-        },
-      },
-    },
     server_container_url: 'https://server.example.com',
     snakeCase: true,
     transport_url: 'https://www.google-analytics.com/g/collect',
@@ -123,6 +115,15 @@ ID</Link>.
 | transport_url        | string  | URL used for sending events to GA4                                                                         |
 
 Properties with a `*` are required.
+
+:::info
+
+The `data` option is available at both, the config and event level. For
+E-Commerce setup the required `currency` property can be set at the config level
+by default with
+`data: { map: { currency: { value: 'EUR', key: 'data.currency' } } }`
+
+:::
 
 ### CustomEvent
 

@@ -7,11 +7,12 @@ import Link from '@docusaurus/Link';
 import { LiveCode } from '@site/src/components/organisms/liveCode';
 import { getMappingEvent, getMappingValue } from '@elbwalker/utils';
 import { parseInput } from '@site/src/components/molecules/codeBox';
-export const logEvent = (input, config, log) => {
-  log(parseInput(input, { getMappingEvent }));
+
+export const logEvent = async (input, config, log) => {
+  log(await parseInput(input, { getMappingEvent }));
 };
-export const logValue = (input, config, log) => {
-  log(parseInput(input, { getMappingValue }));
+export const logValue = async (input, config, log) => {
+  log(await parseInput(input, { getMappingValue }));
 };
 
 The `Mapping.Config` stores all
@@ -37,7 +38,7 @@ used by the&nbsp;<Link to="/docs/sources/">sources</Link>.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingEvent(
+  input={`await getMappingEvent(
     { event: 'entity action' },
     {
       entity: {
@@ -45,7 +46,12 @@ used by the&nbsp;<Link to="/docs/sources/">sources</Link>.
       },
     }
   );`}
-  output={`0`}
+  output={`{
+    eventMapping: {
+      name: "entity_action"
+    },
+    mappingKey: "entity action"
+  }`}
   fn={logEvent}
 />
 
@@ -55,7 +61,7 @@ which `EventConfig` should be used. To test uncomment the `globals` property.
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingEvent(
+  input={`await getMappingEvent(
     {
       event: 'order complete',
       // globals: { env: 'prod' },
@@ -74,7 +80,12 @@ which `EventConfig` should be used. To test uncomment the `globals` property.
       },
     }
   );`}
-  output={`0`}
+  output={`{
+    eventMapping: {
+      name: "purchase"
+    },
+    mappingKey: "order complete"
+  }`}
   fn={logEvent}
 />
 
@@ -88,10 +99,13 @@ to standard fields of the destination.
 
 ### string
 
+Using a `string` for the `mapping` is a shortcut for the `key` option. It will
+return the value of the property specified by the string key.
+
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { a: 0, b: 1, c: 2 },
     'b',
   )`}
@@ -100,10 +114,12 @@ to standard fields of the destination.
   fn={logValue}
 />
 
+To access items in an array, use the dot notation.
+
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { arr: ['foo', 'bar'] },
     'arr.1',
   );`}
@@ -114,10 +130,12 @@ to standard fields of the destination.
 
 ### key
 
+The `key` option is used to access a property of an object.
+
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { foo: 'bar' },
     { key: 'foo' },
   );`}
@@ -128,10 +146,13 @@ to standard fields of the destination.
 
 ### value
 
+The `value` option is used to return a static value. This can be used as a
+fallback if no other mapping option is applicable.
+
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue({}, { value: 'foo' });`}
+  input={`await getMappingValue({}, { value: 'foo' });`}
   output={`"foo"`}
   emptyText={`undefined`}
   fn={logValue}
@@ -139,10 +160,13 @@ to standard fields of the destination.
 
 ### fn
 
+The `fn` option is used to return a value from a function. The function will be
+called with the `event` object as the first argument.
+
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { foo: 'bar' },
     { fn: (obj) => obj.foo.toUpperCase() },
   );`}
@@ -153,10 +177,13 @@ to standard fields of the destination.
 
 ### map
 
+The `map` option is used to create a new object. The objects keys are defined
+using the `getMappingValue` function recursively.
+
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { foo: 'bar' },
     {
       map: {
@@ -167,9 +194,11 @@ to standard fields of the destination.
     },
   );`}
   output={`{
-    foo: 'bar',
-    bar: 'baz',
-    obj: { recursive: true },
+    foo: "bar",
+    bar: "baz",
+    obj: {
+      recursive: true
+    }
   }`}
   emptyText={`undefined`}
   fn={logValue}
@@ -177,24 +206,35 @@ to standard fields of the destination.
 
 ### loop
 
+The `loop` option is used to iterate over an array and return a new array. The
+first parameter is the array to iterate over. The second parameter is again a
+`getMappingValue` function to define the value of the new array.
+
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { arr: [{ id: 'foo' }, { id: 'bar' }] },
     { loop: ['arr', 'id'] },
   );`}
-  output={`['foo', 'bar']`}
+  output={`[
+    "foo",
+    "bar"
+  ]`}
   emptyText={`undefined`}
   fn={logValue}
 />
 
 ### validate
 
+The `validate` option is used to validate the value of the property. If the
+value does not match the validation function, it will be set to `undefined` or
+the static fallback `value`.
+
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     { foo: 'bar' },
     {
       key: 'foo',
@@ -208,10 +248,14 @@ to standard fields of the destination.
 
 ### consent
 
+The `consent` option is used to check if the user has given consent to the
+property. If the user has not given consent, the value will be `undefined` or
+the static fallback `value`.
+
 <LiveCode
   showMiddle={false}
   labelInput="Configuration"
-  input={`getMappingValue(
+  input={`await getMappingValue(
     {
       name: 'foo',
       consent: {
@@ -224,8 +268,8 @@ to standard fields of the destination.
       consent: { marketing: true }, // required consent
     },
   );`}
-  output={`undefined (no marketing consent)`}
-  emptyText={`undefined (no marketing consent)`}
+  output={`undefined // no marketing consent`}
+  emptyText={`undefined // no marketing consent`}
   fn={logValue}
 />
 

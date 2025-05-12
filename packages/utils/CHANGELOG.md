@@ -1,5 +1,12 @@
 # @elbwalker/utils
 
+## 3.8.2
+
+### Patch Changes
+
+- fef7fa7: tryCatch with finally
+  [#516](https://github.com/elbwalker/walkerOS/issues/516)
+
 ## 3.8.1
 
 ### Patch Changes

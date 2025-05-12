@@ -1,4 +1,4 @@
-import type { Destination, Mapping, WalkerOS } from '@elbwalker/types';
+import type { Mapping, WalkerOS } from '@elbwalker/types';
 import type { DestinationWeb } from '@elbwalker/walker.js';
 import type { LiveCodeProps } from './liveCode';
 import React, {
@@ -66,24 +66,28 @@ export const DestinationInit: React.FC<DestinationInitProps> = ({
   const { destination, setConfig, fnName } = useDestinationContext();
   const input = formatValue(custom);
 
-  const mappingFn = (
+  const mappingFn = async (
     input: never,
     middle: never,
     log: (...args: unknown[]) => void,
   ) => {
-    const inputValue = parseInput(input);
-    setConfig(inputValue);
+    tryCatchAsync(
+      async () => {
+        const inputValue = await parseInput(input);
+        setConfig(inputValue as WalkerOS.AnyObject);
 
-    tryCatchAsync(destination.init)(
-      {
-        custom: inputValue,
-        fn: log,
+        destination.init(
+          {
+            custom: inputValue,
+            fn: log,
+          },
+          {} as never,
+        );
       },
-      {} as never,
-    ),
       (error) => {
         log(`Error mappingFn: ${error}`);
-      };
+      },
+    )();
   };
 
   return (
@@ -115,15 +119,15 @@ export const DestinationPush: React.FC<DestinationPushProps> = ({
   const mappingValue = formatValue(mapping);
 
   const mappingFn = useCallback(
-    (
+    async (
       input: unknown,
       config: unknown,
       log: (...args: unknown[]) => void,
       options: WalkerOS.AnyObject,
     ) => {
       try {
-        const inputValue = parseInput(input);
-        const configValue = parseInput(config);
+        const inputValue = await parseInput(input);
+        const configValue = await parseInput(config);
         const event = createEvent(inputValue);
         const [entity, action] = event.event.split(' ');
         const finalMapping = eventConfig
