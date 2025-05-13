@@ -1,12 +1,13 @@
 import { JSX } from 'react';
 import Layout from '@theme/Layout';
 import EventFlow from '@site/src/components/organisms/eventFlow';
+import '@site/src/css/event-flow.scss';
 
 const exampleCode = `<div
   data-elb="product"
   data-elbaction="load:view"
   data-elbcontext="stage:inspire"
-  class="dui-card w-80 bg-base-100 shadow-xl mx-auto"
+  class="event-flow dui-card w-80 bg-base-100 shadow-xl mx-auto"
 >
   <figure class="relative">
     <img src="/img/examples/everyday_ruck_snack.png" alt="Product" />
@@ -18,11 +19,18 @@ const exampleCode = `<div
     <h3 data-elb-product="name:#innerText" class="dui-card-title text-lg">
       Everyday Ruck Snack
     </h3>
-    <p data-elb-product="description:#innerText">
-      Product description goes here
-    </p>
+    <div class="dui-form-control">
+      <label class="dui-label">Taste</label>
+      <select 
+        data-elb-product="taste:#value"
+        class="dui-select dui-select-bordered w-full"
+      >
+        <option value="sweet">Sweet</option>
+        <option value="spicy">Spicy</option>
+      </select>
+    </div>
     <p data-elb-product="price:2.50" class="text-xl font-bold">
-      € 2.50 <span data-elb-product="old_price:3.14" class="text-base text-base-300 line-through">€ 3.14</span>
+      € 2.50 <span data-elb-product="old_price:3.14" class="dui-label text-base line-through">€ 3.14</span>
     </p>
     <div class="dui-card-actions justify-end">
       <button
