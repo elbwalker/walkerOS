@@ -42,24 +42,12 @@ export const EventFlow: FC<EventFlowProps> = ({
     setResultCode('');
   }, [htmlCode]);
 
-  const updateHtmlCode = useCallback(debounce(setHtmlCode, 600, true), []);
-
   const updateEventCode = useCallback(
     debounce(
       (code: string) => {
         setEventCode(code);
       },
       1,
-      true,
-    ),
-    [],
-  );
-  const updateMappingCode = useCallback(
-    debounce(
-      (code: string) => {
-        setMappingCode(parseInput(code));
-      },
-      600,
       true,
     ),
     [],
@@ -71,8 +59,8 @@ export const EventFlow: FC<EventFlowProps> = ({
         async () => {
           if (!eventStr) return;
 
-          const event = parseInput(eventStr);
-          const mapping = parseInput(mappingStr);
+          const event = (await parseInput(eventStr)) as WalkerOS.Event;
+          const mapping = (await parseInput(mappingStr)) as Mapping.Config;
           await destinationPush(
             { hooks: {}, consent: event.consent || {} } as never, // Fake instance
             {
