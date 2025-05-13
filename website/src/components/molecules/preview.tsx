@@ -1,6 +1,5 @@
 import { FC, useRef, useState, useCallback, useEffect } from 'react';
 import { debounce, tryCatch } from '@elbwalker/utils';
-import { elb } from '@elbwalker/walker.js';
 import '@site/src/css/highlighting.scss';
 
 interface PreviewProps {
@@ -31,7 +30,11 @@ export const Preview: FC<PreviewProps> = ({
   };
 
   const initPreview = useCallback(
-    debounce((elem: HTMLElement) => elb('walker init', elem), 1000, true),
+    debounce(
+      (elem: HTMLElement) => window.elb('walker init', elem),
+      1000,
+      true,
+    ),
     [],
   );
 
@@ -70,7 +73,6 @@ export const Preview: FC<PreviewProps> = ({
 
   // Subsequent updates
   useEffect(() => {
-    console.log('🚀 ~ useEffect ~ code:', code.length);
     updatePreviewContent(code);
   }, [code]);
 

@@ -31,11 +31,16 @@ const exampleCode = `<div
     <p data-elb-product="price:2.50" class="text-xl font-bold">
       € 2.50 <span data-elb-product="old_price:3.14" class="dui-label text-base line-through">€ 3.14</span>
     </p>
-    <div class="dui-card-actions justify-end">
+    <div data-elbcontext="stage:hooked" class="dui-card-actions justify-between">
+      <button
+        data-elbaction="click:save"
+        class="dui-btn dui-btn-secondary"
+      >
+        Add to Wishlist
+      </button>
       <button
         data-elbaction="click:add"
-        data-elbcontext="stage:hooked"
-        class="dui-btn dui-btn-primary text-white"
+        class="dui-btn dui-btn-primary"
       >
         Add to Cart
       </button>
@@ -76,6 +81,14 @@ export default function EventFlowPage(): JSX.Element {
         },
       },
     },
+    save: {
+      data: {
+        map: {
+          event: 'event',
+          data: 'data'
+        }
+      }
+    }
   },
 }`}
         height="640px"

@@ -23,8 +23,9 @@ export const DataCollection = () => {
       const { elb, instance } = createSourceWalkerjs({
         run: true,
         pageview: false,
-        session: {},
-        consent: { marketing: true },
+        session: false,
+        consent: { functional: true, marketing: true },
+        user: { session: 's3ss10n' },
       });
 
       window.elb = elb;

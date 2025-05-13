@@ -37,11 +37,6 @@ export const EventFlow: FC<EventFlowProps> = ({
   );
   const [resultCode, setResultCode] = useState<string>('');
 
-  useEffect(() => {
-    setEventCode(undefined);
-    setResultCode('');
-  }, [htmlCode]);
-
   const updateEventCode = useCallback(
     debounce(
       (code: string) => {
@@ -62,7 +57,7 @@ export const EventFlow: FC<EventFlowProps> = ({
           const event = (await parseInput(eventStr)) as WalkerOS.Event;
           const mapping = (await parseInput(mappingStr)) as Mapping.Config;
           await destinationPush(
-            { hooks: {}, consent: event.consent || {} } as never, // Fake instance
+            window.walkerjs,
             {
               push: (event, config, mapping, options) => {
                 const value = options.data || event;
