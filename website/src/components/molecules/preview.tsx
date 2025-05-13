@@ -31,13 +31,7 @@ export const Preview: FC<PreviewProps> = ({
   };
 
   const initPreview = useCallback(
-    debounce(
-      (elem: HTMLElement) => {
-        elb('walker init', elem);
-      },
-      1000,
-      true,
-    ),
+    debounce((elem: HTMLElement) => elb('walker init', elem), 1000, true),
     [],
   );
 
@@ -71,29 +65,14 @@ export const Preview: FC<PreviewProps> = ({
       200,
       true,
     ),
-    [initPreview],
+    [],
   );
-
-  // Initial render
-  useEffect(() => {
-    if (previewRef.current) {
-      const initialRender = debounce(
-        (code: string) => {
-          if (!previewRef.current) return;
-          previewRef.current.innerHTML = code.trim().replace(/;$/, '');
-          initPreview(previewRef.current);
-        },
-        0,
-        true,
-      );
-      initialRender(code);
-    }
-  }, []);
 
   // Subsequent updates
   useEffect(() => {
+    console.log('🚀 ~ useEffect ~ code:', code.length);
     updatePreviewContent(code);
-  }, [code, updatePreviewContent]);
+  }, [code]);
 
   const highlightGlobals = highlights.globals ? 'highlight-globals' : '';
   const highlightContext = highlights.context ? 'highlight-context' : '';
