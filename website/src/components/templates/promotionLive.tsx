@@ -1,6 +1,9 @@
 import React from 'react';
-import Tagging from '../organisms/tagging';
-import { TypeEdit, EditMode } from '../molecules/typewriterCode';
+import Tagging from '@site/src/components/organisms/tagging';
+import {
+  TypeEdit,
+  EditMode,
+} from '@site/src/components/molecules/typewriterCode';
 
 const baseCode = `<div
   class="dui-hero p-4"
@@ -94,24 +97,33 @@ export const PromotionReady: React.FC = () => {
     <div className="my-8">
       <Tagging
         previewId="ready"
+        fn={(event) => {
+          delete event.globals;
+          delete event.custom;
+          delete event.user;
+          delete event.nested;
+          delete event.consent;
+          delete event.version;
+          return event;
+        }}
         height="640px"
         code={`<div
   data-elb="promotion"
   data-elbaction="visible"
-  data-elbcontext="test:live_demo"
+  data-elbcontext="playground:tagging"
   class="dui-hero p-4"
 >
   <div class="dui-hero-content max-w-md text-center">
-    <div class="max-w-md">
+    <div data-elbcontext="stage:interested" class="max-w-md">
       <h2 data-elb-promotion="name:#innerText" class="text-xl font-bold">
         Quick and simple tracking setup
       </h2>
-      <p class="py-6">Click a button to trigger more events.</p>
-      <button data-elbaction="click:start" class="dui-btn dui-btn-primary">
-        Get Started
+      <p class="py-6">Seeing me triggers a visible event after a second.</p>
+      <button data-elbaction="click:primary" class="dui-btn dui-btn-primary">
+        Click me
       </button>
-      <button data-elbaction="click:more" class="dui-btn">
-        Learn more
+      <button data-elbaction="click:secondary" class="dui-btn">
+        Or me
       </button>
     </div>
   </div>

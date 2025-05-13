@@ -70,8 +70,8 @@ static, their content can be defined dynamically with different value types.
     // All nested entities within the main entity
     { type: 'github', data: { repo: 'walkerOS' } },
   ],
-  consent: { functional: true }, // Status of the granted consent state(s)
-  id: '1647261462000-01b5e2-5', // Timestamp, group & count of the event
+  consent: { functional: true, marketing: true }, // Status of the granted consent state(s)
+  id: '1647261462000-01b5e2-2', // Timestamp, group & count of the event
   trigger: 'visible', // Name of the trigger that fired
   entity: 'promotion', // The entity name involved in the event
   action: 'view', // The specific action performed on the entity
@@ -120,20 +120,21 @@ is a `page view`, `session start`, `product visible`, or `order complete`.
 
 <Link to="/docs/sources/walkerjs/tagging#data">Data properties</Link>
 describe the entity in **more detail**. Depending on the entity (e.g. _product_,
-_order_, _content_) they can vary and provide specific insights relevant to the interaction.
+_order_, _content_) they can vary and provide specific insights relevant to the
+interaction.
 
 ### Context
 
-<Link to="/docs/sources/walkerjs/tagging#context">Context</Link> refers to the **state**
-or **environment** in which the event was triggered. It could be as simple as a page
-position or as complex as the logical stage in a user journey, like a shopping journey
-from inspiration to checkout stage.
+<Link to="/docs/sources/walkerjs/tagging#context">Context</Link> refers to the
+**state** or **environment** in which the event was triggered. It could be as
+simple as a page position or as complex as the logical stage in a user journey,
+like a shopping journey from inspiration to checkout stage.
 
 ### Globals
 
-<Link to="/docs/sources/walkerjs/tagging#globals">Globals</Link> describe the **overall
-state** influencing events or user behavior. These might include the theme used,
-page type for web, or cart value.
+<Link to="/docs/sources/walkerjs/tagging#globals">Globals</Link> describe the
+**overall state** influencing events or user behavior. These might include the
+theme used, page type for web, or cart value.
 
 ### Custom
 
@@ -177,9 +178,9 @@ interface User extends Properties {
 
 ### Consent
 
-<Link to="/docs/consent_management/overview">Consent</Link> captures the **permissions
-granted** by the user, which is crucial for subsequent data processing and helpful
-to comply with privacy regulations.
+<Link to="/docs/consent_management/overview">Consent</Link> captures the
+**permissions granted** by the user, which is crucial for subsequent data
+processing and helpful to comply with privacy regulations.
 
 ### Source
 

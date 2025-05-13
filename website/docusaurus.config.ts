@@ -87,9 +87,8 @@ const config: Config = {
           position: 'left',
           label: 'Documentation',
         },
-        { to: '/playground', label: 'Playground', position: 'left' },
+        { to: '/playground/', label: 'Playground', position: 'left' },
         { to: '/services', label: 'Services', position: 'left' },
-        { to: '/blog', label: 'Blog', position: 'left' },
         {
           href: vars.github,
           label: 'GitHub',
@@ -109,7 +108,7 @@ const config: Config = {
             },
             {
               label: 'Playground',
-              to: '/playground',
+              to: '/playground/',
             },
             {
               label: 'walker.js',
