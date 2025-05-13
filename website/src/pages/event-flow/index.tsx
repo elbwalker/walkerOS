@@ -5,6 +5,7 @@ import EventFlow from '@site/src/components/organisms/eventFlow';
 const exampleCode = `<div
   data-elb="product"
   data-elbaction="load:view"
+  data-elbcontext="stage:inspire"
   class="dui-card w-80 bg-base-100 shadow-xl mx-auto"
 >
   <figure class="relative">
@@ -26,6 +27,7 @@ const exampleCode = `<div
     <div class="dui-card-actions justify-end">
       <button
         data-elbaction="click:add"
+        data-elbcontext="stage:hooked"
         class="dui-btn dui-btn-primary text-white"
       >
         Add to Cart

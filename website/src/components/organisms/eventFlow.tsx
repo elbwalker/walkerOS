@@ -103,10 +103,10 @@ export const EventFlow: FC<EventFlowProps> = ({
   return (
     <FullScreenMode className="m-4">
       <div
-        className="flex flex-row gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+        className="flex flex-row gap-4 overflow-x-auto scrollbar-hide h-full"
         style={{ height }}
       >
-        <div className="w-1/3 flex-shrink-0 snap-start">
+        <div className="w-1/3 flex-shrink-0 flex flex-col">
           <CodeBox
             label="HTML"
             value={htmlCode}
@@ -119,7 +119,7 @@ export const EventFlow: FC<EventFlowProps> = ({
           />
         </div>
 
-        <div className="w-1/3 flex-shrink-0 snap-start">
+        <div className="w-1/3 flex-shrink-0 flex flex-col">
           <Preview
             code={htmlCode}
             previewId={previewId}
@@ -127,7 +127,7 @@ export const EventFlow: FC<EventFlowProps> = ({
           />
         </div>
 
-        <div className="w-1/3 flex-shrink-0 snap-start">
+        <div className="w-1/3 flex-shrink-0 flex flex-col">
           <CodeBox
             label="Event"
             value={eventCode || 'No event yet.'}
@@ -137,7 +137,7 @@ export const EventFlow: FC<EventFlowProps> = ({
           />
         </div>
 
-        <div className="w-1/3 flex-shrink-0 snap-start">
+        <div className="w-1/3 flex-shrink-0 flex flex-col">
           <CodeBox
             label="Mapping"
             value={formatValue(mappingCode)}
@@ -146,7 +146,7 @@ export const EventFlow: FC<EventFlowProps> = ({
           />
         </div>
 
-        <div className="w-1/3 flex-shrink-0 snap-start">
+        <div className="w-1/3 flex-shrink-0 flex flex-col">
           <CodeBox
             label="Result"
             value={resultCode || 'No result yet.'}
