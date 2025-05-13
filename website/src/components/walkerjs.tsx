@@ -24,6 +24,7 @@ export const DataCollection = () => {
         run: true,
         pageview: false,
         session: {},
+        consent: { marketing: true },
       });
 
       window.elb = elb;

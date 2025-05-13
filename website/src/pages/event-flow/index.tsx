@@ -7,8 +7,7 @@ const exampleCode = `<div
   data-elb="product"
   data-elbaction="load:view"
   data-elbcontext="stage:inspire"
-  class="event-flow dui-card w-80 bg-base-100 shadow-xl mx-auto"
->
+  class="event-flow dui-card w-80 bg-base-100 shadow-xl mx-auto">
   <figure class="relative">
     <img src="/img/examples/everyday_ruck_snack.png" alt="Product" />
     <div class="absolute top-2 right-2">
@@ -49,28 +48,36 @@ export default function EventFlowPage(): JSX.Element {
     <Layout title="Event Flow" description="Test the event flow component">
       <EventFlow
         code={exampleCode}
-        mapping={{
-          product: {
-            view: {
-              name: 'view_item',
-              data: {
-                map: {
-                  event: 'event',
-                  price: { value: '100' },
-                },
-              },
-            },
-            add: {
-              name: 'add_to_cart',
-              data: {
-                map: {
-                  event: 'event',
-                  price: { value: '100' },
-                },
-              },
-            },
+        mapping={`{
+  product: {
+    view: {
+      name: 'view_item',
+      data: {
+        map: {
+          event: 'event',
+          price: 'data.price',
+          stage: "context.stage.0"
+        },
+      },
+    },
+    add: {
+      name: 'add_to_cart',
+      data: {
+        map: {
+          event: 'event',
+          price: 'data.price',
+          user: {
+            consent: { marketing: true },
+            key: 'user.session'
           },
-        }}
+          isSale: {
+            fn: (e) => !!e.data.old_price
+          },
+        },
+      },
+    },
+  },
+}`}
         height="640px"
         previewId="event-flow"
         eventFn={(event) => {

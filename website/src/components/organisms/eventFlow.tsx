@@ -15,7 +15,7 @@ import { taggingRegistry } from './tagging';
 
 interface EventFlowProps {
   code: string;
-  mapping?: Mapping.Config;
+  mapping?: string | Mapping.Config;
   height?: string;
   previewId?: string;
   eventFn?: (event: WalkerOS.Event) => WalkerOS.Event;
