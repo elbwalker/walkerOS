@@ -10,71 +10,20 @@ Made to be used with
 [source node](https://www.npmjs.com/package/@elbwalker/source-node) from
 [walkerOS](https://github.com/elbwalker/walkerOS).
 
-More detailed information and examples can be found in the
-[documentation](https://www.elbwalker.com/docs/destinations/meta).
+Detailed information and examples can be found in the
+[walkerOS Meta Conversion API destination](https://www.elbwalker.com/docs/destinations/meta)
+documentation.
 
-## 🤓 Usage
-
-Start by setting up the config for the destination. Optional fields as comments.
-Destinations can be used via node or directly in the browser.
-
-## Configuration
+## Resources
 
 Learn more about the
-[destinations](https://www.elbwalker.com/docs/destinations/) in general and read
-the detailed
-[Meta Conversion API](https://developers.facebook.com/docs/marketing-api/conversions-api).
 
-```js
-import type { Custom } from '@elbwalker/destination-node-meta';
-
-const config: Custom = {
-  custom: {
-    accessToken: 's3cr3tc0d3',
-    pixelId: '1234567890',
-    // debug: true,
-    // partner: 'walkerOS',
-    // testCode: 'TEST00000',
-  },
-  mapping: {
-    // e.g. order
-    entity: {
-      // e.g. complete
-      action: {
-        name: 'Purchase',
-        custom: {
-          id: 'data.id',
-          name: 'data.title',
-          value: 'data.total',
-        },
-      },
-    },
-  },
-};
-```
-
-### Node usage
-
-```sh
-npm i --save @elbwalker/destination-node-meta
-```
-
-```ts
-import destinationMeta from '@elbwalker/destination-node-meta';
-
-elb('walker destination', destinationMeta, config);
-```
-
-Mapping Mock
-
-For easier debugging add
-
-```js
-if (response.error) console.log('🚀 ~ response:', response);
-```
-
-to the `node_modules/facebook-nodejs-business-sdk/dist/cjs` on line 261 within
-the `xmlHttpRequest`.
+- [walkerOS destinations](https://www.elbwalker.com/docs/destinations/) in
+  general
+- [Meta Conversion API](https://developers.facebook.com/docs/marketing-api/conversions-api)
+- [Meta Conversion API Parameters](https://developers.facebook.com/docs/marketing-api/conversions-api/parameters)
+- [Meta Graph API Explorer](https://developers.facebook.com/tools/explorer/)
+- [Meta Payload Helper](https://developers.facebook.com/docs/marketing-api/conversions-api/payload-helper)
 
 ## Contribute
 

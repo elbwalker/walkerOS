@@ -1,5 +1,11 @@
 # @elbwalker/destination-web-plausible
 
+## 4.0.4
+
+### Patch Changes
+
+- @elbwalker/walker.js@3.4.2
+
 ## 4.0.3
 
 ### Patch Changes

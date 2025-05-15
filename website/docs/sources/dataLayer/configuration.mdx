@@ -12,7 +12,7 @@ There are a few configuration options when creating a dataLayer source instance:
 ```ts
 import { sourceDataLayer } from '@elbwalker/source-datalayer';
 
-sourceDataLayer({
+await sourceDataLayer({
   elb: elb, // The elb function to use (required)
   filter: (event) => {
     // Filter out internal GTM events
@@ -39,7 +39,7 @@ sourceDataLayer({
 | Option  | Type     | Description                                                                                                 |
 | ------- | -------- | ----------------------------------------------------------------------------------------------------------- |
 | elb\*   | function | The function to push the events to                                                                          |
-| filter  | function | A check to filter specific events                                                                           |
+| filter  | function | A check to filter specific events (return `true` to abort processing)                                       |
 | mapping | object   | The&nbsp;<Link to="/docs/destinations/event_mapping#eventconfig">mapping configuration</Link> of the events |
 | name    | string   | Name of the dataLayer array (default: `dataLayer`)                                                          |
 | prefix  | string   | Prefix for the event name to match entity action format (default: `dataLayer`)                              |
@@ -56,7 +56,7 @@ gtag('set', 'campaign', { term: 'running+shoes' });
 // Will become "set campaign" as event name
 ```
 
-:::tip
+:::note
 
 Use `console.log` for the `elb` function to inspect events.
 
@@ -71,7 +71,7 @@ command and call `elb(name, data)` with the two parameters `name` and `data`.
   smallText={true}
   labelInput="Configuration"
   disableInput={true}
-  input={`sourceDataLayer({
+  input={`await sourceDataLayer({
     elb,
     mapping: {
       'consent update': {
@@ -110,8 +110,12 @@ walker.js instance, another dataLayer related destination might push that event
 to the dataLayer again (like GA4). Therefore, while processing an event, newly
 pushed events are ignored and stored in the `skipped` array.
 
-As a additional rule the `filter` function can be used to ignore events that
-might have been pushed by a walker.js destination.
+:::note
+
+The `filter` function can also be used to ignore events that might have been
+pushed by a walker.js destination.
+
+:::
 
 ## Examples
 
@@ -121,7 +125,7 @@ might have been pushed by a walker.js destination.
   smallText={true}
   labelInput="Configuration"
   disableInput={true}
-  input={`sourceDataLayer({
+  input={`await sourceDataLayer({
     elb,
     mapping: {
       add_to_cart: {
@@ -188,7 +192,7 @@ might have been pushed by a walker.js destination.
   smallText={true}
   labelInput="Configuration"
   disableInput={true}
-  input={`sourceDataLayer({
+  input={`await sourceDataLayer({
     elb,
     mapping: {
       purchase: {

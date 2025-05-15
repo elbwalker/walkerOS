@@ -14,12 +14,12 @@ declare global {
 export type DataLayer = Array<unknown>;
 export interface Config {
   elb: Elb.Fn | WalkerOS.AnyFunction;
-  filter?: (event: unknown) => boolean;
+  filter?: (event: unknown) => WalkerOS.PromiseOrValue<boolean>;
   mapping?: Mapping;
   name?: string;
   prefix: string;
   processing?: boolean;
-  skipped?: unknown[];
+  skipped: unknown[];
 }
 
 export interface Mapping {

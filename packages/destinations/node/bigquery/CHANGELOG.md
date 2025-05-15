@@ -1,5 +1,18 @@
 # @elbwalker/destination-node-bigquery
 
+## 2.2.0
+
+### Minor Changes
+
+- 62c3572: BigQuery custom schema
+  [#510](https://github.com/elbwalker/walkerOS/issues/510)
+
+### Patch Changes
+
+- Updated dependencies [fef7fa7]
+  - @elbwalker/utils@3.8.2
+  - @elbwalker/source-node@3.4.2
+
 ## 2.1.5
 
 ### Patch Changes

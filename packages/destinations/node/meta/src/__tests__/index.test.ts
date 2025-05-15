@@ -1,21 +1,26 @@
 import type { WalkerOS } from '@elbwalker/types';
-import type { Config, CustomEvent, Destination } from '../types';
-import { createEvent } from '@elbwalker/utils';
+import type { DestinationNode } from '@elbwalker/source-node';
+import type { Config, Destination } from '../types';
+import { getEvent } from '@elbwalker/utils';
+import createSourceNode from '@elbwalker/source-node';
+import { events, mapping } from '../examples';
+import { hashEvent } from '../hash';
+
+const mockSendNode = jest.fn().mockResolvedValue({
+  events_received: 1,
+  messages: [],
+  fbtrace_id: 'abc',
+});
 
 describe('Node Destination Meta', () => {
+  jest.mock('@elbwalker/utils/node', () => ({
+    ...jest.requireActual('@elbwalker/utils/node'),
+    sendNode: mockSendNode,
+  }));
+
   let destination: Destination;
-
-  const mockXHRSend = jest.fn().mockImplementation(function () {
-    this.status = 200;
-    this.response = JSON.stringify({ data: {} });
-    this.onload(); // Manually trigger onload to simulate the response
-  });
-
-  let event: WalkerOS.Event;
-  let config: Config;
   const accessToken = 's3cr3t';
   const pixelId = 'p1x3l1d';
-  const onLog = jest.fn();
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -23,12 +28,6 @@ describe('Node Destination Meta', () => {
 
     destination = jest.requireActual('../').default;
     destination.config = {};
-
-    config = {
-      custom: { accessToken, pixelId },
-      onLog,
-    };
-    event = createEvent();
   });
 
   afterEach(() => {});
@@ -53,112 +52,157 @@ describe('Node Destination Meta', () => {
     );
   });
 
-  test.skip('push', async () => {
-    await destination.push(event, config);
-
-    expect(mockXHRSend).toHaveBeenCalledWith(expect.any(String));
-    expect(getRequestStr(mockXHRSend)).toContain('"access_token":"s3cr3t"');
-    expect(getRequestStr(mockXHRSend)).toContain('"id":"p1x3l1d"');
-    expect(getRequestStr(mockXHRSend)).toContain(
-      '"event_name":"entity action"',
-    );
-  });
-
-  test.skip('testCode', async () => {
-    config.custom.testCode = 'TESTNNNNN';
-    await destination.push(event, config);
-
-    expect(getRequestObj(mockXHRSend)).toEqual(
-      expect.objectContaining({
-        test_event_code: 'TESTNNNNN',
-      }),
-    );
-  });
-
-  test.skip('IDs', async () => {
-    event.data.fbclid = 'abc...';
-
-    await destination.push(event, config);
-
-    const user_data = getRequestData(mockXHRSend).user_data;
-
-    expect(user_data).toEqual(
-      expect.objectContaining({
-        external_id: expect.arrayContaining(['us3r', 'c00k13', 's3ss10n']),
-        fbc: expect.any(String),
-      }),
-    );
-    expect(user_data.fbc).toContain('fb.1.');
-    expect(user_data.fbc).toContain('abc...');
-  });
-
-  test.skip('user data', async () => {
-    event.user.email = 'a@b.c';
-    event.user.phone = '0401337';
-    event.user.city = 'Hamburg';
-    event.user.country = 'DE';
-    event.user.zip = '20354';
-    event.user.userAgent = 'br0ws3r';
-    event.user.ip = '127.0.0.1';
-
-    await destination.push(event, config);
-
-    const user_data = getRequestData(mockXHRSend).user_data;
-
-    expect(user_data).toEqual(
-      expect.objectContaining({
-        em: expect.any(Array),
-        ph: expect.any(Array),
-        ct: expect.any(Array),
-        country: expect.any(Array),
-        zp: expect.any(Array),
-        client_ip_address: '127.0.0.1',
-        client_user_agent: 'br0ws3r',
-      }),
-    );
-  });
-
-  test.skip('Mapping', async () => {
-    event.data = { id: 'abc', quantity: 42, total: 9001 };
-    const custom: CustomEvent = {
-      currency: { value: 'EUR' },
-      content: {
-        id: 'data.id',
-        price: { value: 214.31 },
-        quantity: 'data.quantity',
-      },
-      value: 'data.total',
+  test('testCode', async () => {
+    const { elb } = createSourceNode({});
+    const event = getEvent();
+    const config: DestinationNode.Config = {
+      custom: { accessToken, pixelId, test_event_code: 'TEST' },
+      mapping: mapping.config,
     };
 
-    await destination.push(event, config, { custom });
-
-    const requestData = getRequestData(mockXHRSend);
-    const custom_data = requestData.custom_data;
-
-    expect(custom_data).toEqual(
-      expect.objectContaining({
-        currency: 'EUR',
-        value: 9001,
-        contents: expect.arrayContaining([
-          {
-            id: 'abc',
-            item_price: 214.31,
-            quantity: 42,
-          },
-        ]),
-      }),
-    );
+    elb('walker destination', destination, config);
+    await elb(event);
+    const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
+    expect(requestBody.test_event_code).toEqual('TEST');
   });
 
-  function getRequestStr(mock: jest.Mock, i = 0) {
-    return mock.mock.calls[i][0];
-  }
+  test('fn', async () => {
+    const mockFn = jest.fn();
+    const { elb } = createSourceNode({});
+    const event = getEvent();
+    const config: DestinationNode.Config = {
+      fn: mockFn,
+      custom: { accessToken, pixelId },
+    };
 
-  function getRequestObj(mock: jest.Mock, i = 0) {
-    return JSON.parse(getRequestStr(mock, i));
-  }
+    elb('walker destination', destination, config);
+    await elb(event);
+    expect(mockFn).toHaveBeenCalled();
+  });
 
-  function getRequestData(mock: jest.Mock, i = 0) {
-    return getRequestObj(mock, i).data[0];
-  }
+  test('error', async () => {
+    const onError = jest.fn();
+    mockSendNode.mockReturnValue({
+      ok: false,
+      data: {
+        error: {
+          message: 'Invalid',
+          type: 'OAuthException',
+          code: 190,
+          fbtrace_id: 'abc',
+        },
+      },
+      error: '400 Bad Request',
+    });
+    const { elb } = createSourceNode({});
+    const event = getEvent();
+    const config: DestinationNode.Config = {
+      custom: { accessToken, pixelId, test_event_code: 'TEST' },
+      mapping: mapping.config,
+      onError,
+    };
+
+    elb('walker destination', destination, config);
+    const result = await elb(event);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(result.failed.length).toEqual(1);
+  });
+
+  test('fbclid', async () => {
+    const { elb } = createSourceNode({});
+    const event = getEvent();
+    const config: DestinationNode.Config = {
+      custom: {
+        accessToken,
+        pixelId,
+        user_data: { fbclid: { value: 'abc' } },
+      },
+      mapping: mapping.config,
+    };
+
+    elb('walker destination', destination, config);
+    await elb(event);
+    const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
+    expect(requestBody.data[0].user_data.fbc).toContain('.abc');
+  });
+
+  test('userData', async () => {
+    const { elb } = createSourceNode({});
+    const event = getEvent();
+    const config: DestinationNode.Config = {
+      custom: mapping.InitUserData,
+      data: {
+        map: {
+          user_data: {
+            map: {
+              fn: { value: 'elb' },
+            },
+          },
+        },
+      },
+      mapping: {
+        entity: {
+          action: {
+            data: {
+              map: {
+                user_data: {
+                  map: {
+                    ph: { value: '123' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    elb('walker destination', destination, config);
+    await elb(event);
+    const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
+    expect(requestBody.data[0].user_data).toEqual({
+      fn: expect.any(String), // from destination config data
+      external_id: [
+        'cc8e27118413234d4297ed00a02711365312c79325df9b5b8f4199cbd0b96e7e',
+        '9176e6f336dbdb4f99b0e45cbd7e41e0e2323812b236822842a61ffbd362ac8c',
+      ], // from custom user_data
+      ph: expect.any(String), // from mapping
+    });
+  });
+
+  test('hashing', async () => {
+    expect(await hashEvent('test')).toEqual('test');
+    expect(await hashEvent({ user_data: { em: 'm@i.l', foo: 'bar' } })).toEqual(
+      {
+        user_data: {
+          em: 'd42649b85459f1140acba6d88f5325256ad2519782c520b7666c51390d9744f0',
+          foo: 'bar',
+        },
+      },
+    );
+    expect(
+      await hashEvent({ user_data: { em: 'm@i.l', foo: 'bar' } }, ['em']),
+    ).toEqual({
+      user_data: {
+        em: 'm@i.l',
+        foo: 'bar',
+      },
+    });
+  });
+
+  test('event Purchase', async () => {
+    const { elb } = createSourceNode({});
+    const event = getEvent('order complete');
+
+    const config: DestinationNode.Config = {
+      custom: mapping.InitUserData,
+      mapping: mapping.config,
+    };
+
+    elb('walker destination', destination, config);
+
+    await elb(event);
+    const requestBody = JSON.parse(mockSendNode.mock.calls[0][1]);
+    expect(requestBody).toEqual(events.Purchase());
+  });
 });

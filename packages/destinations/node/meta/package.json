@@ -1,9 +1,8 @@
 {
   "name": "@elbwalker/destination-node-meta",
   "description": "Meta node destination for walkerOS",
-  "version": "2.1.5",
+  "version": "2.2.1",
   "license": "MIT",
-  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -34,13 +33,11 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/source-node": "3.4.1",
-    "@elbwalker/utils": "^3.8.1"
+    "@elbwalker/source-node": "3.4.2",
+    "@elbwalker/utils": "^3.8.2"
   },
   "devDependencies": {
-    "@elbwalker/types": "3.4.0",
-    "@types/facebook-nodejs-business-sdk": "^20.0.2",
-    "facebook-nodejs-business-sdk": "^20.0.3"
+    "@elbwalker/types": "3.4.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

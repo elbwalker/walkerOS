@@ -19,25 +19,31 @@ const SyntaxHighlighter: React.FC<SyntaxHighlighterProps> = ({
               // Track the data-elb attribute state for each line
               let isProcessingElbAttribute = false;
               let isProcessingElbDash = false;
-              
+
               return (
                 <div {...getLineProps({ line, key: i })} key={i}>
                   {line.map((token, key) => {
                     const tokenProps = getTokenProps({ token, key });
-                    
+
                     // Check for the start of data-elb or data-elbaction
                     // Handle cases where 'data' might be part of a larger token
                     const hasDataToken = token.content.includes('data');
                     if (hasDataToken) {
                       const nextToken = line[key + 1]?.content;
                       const nextNextToken = line[key + 2]?.content;
-                      
+
                       // If this is a combined token (e.g. 'div data')
-                      if (token.content !== 'data' && token.content !== ' data') {
+                      if (
+                        token.content !== 'data' &&
+                        token.content !== ' data'
+                      ) {
                         // Check if the next parts form the attribute
-                        if (nextToken === '-' && nextNextToken?.startsWith('elb')) {
+                        if (
+                          nextToken === '-' &&
+                          nextNextToken?.startsWith('elb')
+                        ) {
                           isProcessingElbAttribute = true;
-                          
+
                           // Split and render the combined token
                           const parts = token.content.split('data');
                           return (
@@ -51,16 +57,19 @@ const SyntaxHighlighter: React.FC<SyntaxHighlighterProps> = ({
                             </React.Fragment>
                           );
                         }
-                      } else if (nextToken === '-' && nextNextToken?.startsWith('elb')) {
+                      } else if (
+                        nextToken === '-' &&
+                        nextNextToken?.startsWith('elb')
+                      ) {
                         isProcessingElbAttribute = true;
                       }
                     }
 
                     // Handle the rest of the attribute parts
-                    if (isProcessingElbAttribute && (
-                      token.content === '-' ||
-                      token.content.startsWith('elb')
-                    )) {
+                    if (
+                      isProcessingElbAttribute &&
+                      (token.content === '-' || token.content.startsWith('elb'))
+                    ) {
                       // Set flag when we see elb- to highlight what follows
                       if (token.content === 'elb-') {
                         isProcessingElbDash = true;
@@ -73,12 +82,15 @@ const SyntaxHighlighter: React.FC<SyntaxHighlighterProps> = ({
                           isProcessingElbDash = true;
                         }
                       }
-                      
-                      if (token.content === '=' || token.content.includes('=')) {
+
+                      if (
+                        token.content === '=' ||
+                        token.content.includes('=')
+                      ) {
                         isProcessingElbAttribute = false;
                         isProcessingElbDash = false;
                       }
-                      
+
                       return (
                         <span
                           {...tokenProps}
@@ -89,7 +101,11 @@ const SyntaxHighlighter: React.FC<SyntaxHighlighterProps> = ({
                     }
 
                     // Handle the promotion part after elb-
-                    if (isProcessingElbDash && token.content !== '=' && !token.content.includes('=')) {
+                    if (
+                      isProcessingElbDash &&
+                      token.content !== '=' &&
+                      !token.content.includes('=')
+                    ) {
                       return (
                         <span
                           {...tokenProps}

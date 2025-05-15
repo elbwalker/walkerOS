@@ -86,4 +86,13 @@ describe('Node Destination BigQuery', () => {
       },
     ]);
   });
+
+  test('data', async () => {
+    const config = await getConfig({ projectId, bigquery: { credentials } });
+    const data = { foo: 'bar' };
+    const mockFn = getMockFn(config);
+
+    await destination.push(event, config, {}, { data });
+    expect(mockFn).toHaveBeenCalledWith('insert', [{ foo: 'bar' }]);
+  });
 });

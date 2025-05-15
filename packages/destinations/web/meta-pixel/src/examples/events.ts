@@ -15,6 +15,7 @@ export function Purchase(): unknown[] {
       content_type: 'product',
       num_items: 2,
     },
+    { eventID: event.id },
   ];
 }
 
@@ -30,6 +31,7 @@ export function AddToCart(): unknown[] {
       contents: [{ id: event.data.id, quantity: 1 }],
       content_type: 'product',
     },
+    { eventID: event.id },
   ];
 }
 
@@ -50,6 +52,7 @@ export function InitiateCheckout(): unknown[] {
         })),
       num_items: event.nested.filter((item) => item.type === 'product').length,
     },
+    { eventID: event.id },
   ];
 }
 
@@ -65,5 +68,6 @@ export function ViewContent(): unknown[] {
       contents: [{ id: event.data.id, quantity: 1 }],
       content_type: 'product',
     },
+    { eventID: event.id },
   ];
 }

@@ -1,13 +1,12 @@
 import type { WalkerOS } from '@elbwalker/types';
+import type { TypewriterOptions } from '@site/src/components/molecules/typewriterCode';
 import { debounce, tryCatch } from '@elbwalker/utils';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, FC } from 'react';
 import { elb } from '@elbwalker/walker.js';
-import CodeBox from '../molecules/codeBox';
-import FullScreenOverlay from '../molecules/codeBoxOverlay';
-import FullScreenButton from '../molecules/fullScreenButton';
-import type { TypewriterOptions } from '../molecules/typewriterCode';
-import { resetTypewriter } from '../molecules/typewriterCode';
-import '../../css/highlighting.scss';
+import CodeBox from '@site/src/components/molecules/codeBox';
+import FullScreenMode from '@site/src/components/organisms/fullScreenMode';
+import { resetTypewriter } from '@site/src/components/molecules/typewriterCode';
+import '@site/src/css/highlighting.scss';
 
 export const taggingRegistry = (() => {
   const registry = new Map<string, (message: WalkerOS.Event) => void>();
@@ -31,23 +30,23 @@ interface PreviewProps {
   hidePreview?: boolean;
   hideConsole?: boolean;
   previewId?: string;
+  fn?: (event: WalkerOS.Event) => void;
   typewriter?: TypewriterOptions;
 }
 
-const Tagging: React.FC<PreviewProps> = ({
+const Tagging: FC<PreviewProps> = ({
   code,
   height = '400px',
   hideCode = false,
   hidePreview = false,
   hideConsole = false,
   previewId = 'preview',
+  fn,
   typewriter,
 }) => {
   const [logs, setLogs] = useState<string>();
   const previewRef = useRef<HTMLDivElement>(null);
-  const initialCode = useRef(code.trim());
-  const [liveCode, setLiveCode] = useState(initialCode.current);
-  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [liveCode, setLiveCode] = useState(code.trim());
   const [isPaused, setIsPaused] = useState(false);
   const [highlights, setHighlights] = useState({
     globals: false,
@@ -56,6 +55,12 @@ const Tagging: React.FC<PreviewProps> = ({
     property: false,
     action: false,
   });
+
+  useEffect(() => {
+    setLiveCode(code.trim());
+  }, [code]);
+
+  const initialCode = useRef(code.trim());
 
   const initPreview = useCallback(
     debounce(
@@ -109,7 +114,7 @@ const Tagging: React.FC<PreviewProps> = ({
   useEffect(() => {
     taggingRegistry.add(previewId, (event) => {
       delete event.context.previewId;
-      setLogs(JSON.stringify(event, null, 2));
+      setLogs(JSON.stringify(fn ? fn(event) : event, null, 2));
     });
 
     return () => {
@@ -124,111 +129,96 @@ const Tagging: React.FC<PreviewProps> = ({
     }));
   };
 
-  const boxClassNames = `flex-1 resize flex flex-col ${isFullScreen ? 'max-h-[calc(100vh-12rem)]' : 'max-h-96 xl:max-h-full'}`;
+  const boxClassNames = `flex-1 resize flex flex-col max-h-96 lg:max-h-full`;
   const highlightGlobals = highlights.globals ? 'highlight-globals' : '';
   const highlightContext = highlights.context ? 'highlight-context' : '';
   const highlightEntity = highlights.entity ? 'highlight-entity' : '';
   const highlightProperty = highlights.property ? 'highlight-property' : '';
   const highlightAction = highlights.action ? 'highlight-action' : '';
 
-  const renderBoxes = (isFullScreenMode = false) => (
-    <div
-      className={`flex flex-col xl:flex-row gap-2 scroll ${isFullScreenMode ? 'h-full' : ''}`}
-      style={!isFullScreenMode ? { height } : undefined}
-    >
-      {!hideCode && (
-        <CodeBox
-          label="Code"
-          value={liveCode}
-          onChange={setLiveCode}
-          showReset={true}
-          onReset={() => {
-            setLiveCode(initialCode.current);
-            resetTypewriter();
-            setIsPaused(false);
-          }}
-          className={boxClassNames}
-          typewriter={typewriter}
-        />
-      )}
+  return (
+    <FullScreenMode className="m-4">
+      <div
+        className="flex flex-col lg:flex-row gap-2 scroll"
+        style={{ height }}
+      >
+        {!hideCode && (
+          <CodeBox
+            label="Code"
+            value={liveCode}
+            onChange={setLiveCode}
+            showReset={true}
+            onReset={() => {
+              setLiveCode(initialCode.current);
+              resetTypewriter();
+              setIsPaused(false);
+            }}
+            className={boxClassNames}
+            typewriter={typewriter}
+          />
+        )}
 
-      {!hidePreview && (
-        <div
-          className={`flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${boxClassNames}`}
-        >
-          <div className="font-bold px-2 py-1.5 bg-base-100 text-base flex justify-between items-center">
-            <span>Preview</span>
-          </div>
+        {!hidePreview && (
           <div
-            data-elbcontext={`previewId:${previewId}`}
-            className="flex-1 bg-gray-800 overflow-auto elb-highlight"
+            className={`flex-1 flex flex-col border border-base-300 rounded-lg overflow-hidden bg-gray-800 ${boxClassNames}`}
           >
+            <div className="font-bold px-2 py-1.5 bg-base-100 text-base flex justify-between items-center">
+              <span>Preview</span>
+            </div>
             <div
-              className={`p-6 h-full ${highlightGlobals} ${highlightContext} ${highlightEntity} ${highlightProperty} ${highlightAction}`}
+              data-elbcontext={`previewId:${previewId}`}
+              className="flex-1 bg-gray-800 overflow-auto elb-highlight"
             >
-              <div ref={previewRef} className="h-full" />
+              <div
+                className={`p-6 h-full ${highlightGlobals} ${highlightContext} ${highlightEntity} ${highlightProperty} ${highlightAction}`}
+              >
+                <div ref={previewRef} className="h-full" />
+              </div>
+            </div>
+            <div className="elb-highlight-buttons">
+              <button
+                onClick={() => toggleHighlight('context')}
+                className={`btn-context ${highlightContext}`}
+              >
+                Context
+              </button>
+              <button
+                onClick={() => toggleHighlight('entity')}
+                className={`btn-entity ${highlightEntity}`}
+              >
+                Entity
+              </button>
+              <button
+                onClick={() => toggleHighlight('property')}
+                className={`btn-property ${highlightProperty}`}
+              >
+                Property
+              </button>
+              <button
+                onClick={() => toggleHighlight('action')}
+                className={`btn-action ${highlightAction}`}
+              >
+                Action
+              </button>
             </div>
           </div>
-          <div className="elb-highlight-buttons">
-            <button
-              onClick={() => toggleHighlight('context')}
-              className={`btn-context ${highlightContext}`}
-            >
-              Context
-            </button>
-            <button
-              onClick={() => toggleHighlight('entity')}
-              className={`btn-entity ${highlightEntity}`}
-            >
-              Entity
-            </button>
-            <button
-              onClick={() => toggleHighlight('property')}
-              className={`btn-property ${highlightProperty}`}
-            >
-              Property
-            </button>
-            <button
-              onClick={() => toggleHighlight('action')}
-              className={`btn-action ${highlightAction}`}
-            >
-              Action
-            </button>
+        )}
+
+        {!hideConsole && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <CodeBox
+              label="Console"
+              value={logs || 'No event yet.'}
+              disabled={true}
+              isConsole={true}
+              className={boxClassNames}
+              showReset={true}
+              onReset={() => setLogs('')}
+            />
           </div>
-        </div>
-      )}
-
-      {!hideConsole && (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <CodeBox
-            label="Console"
-            value={logs || 'No event yet.'}
-            disabled={true}
-            isConsole={true}
-            className={boxClassNames}
-            showReset={true}
-            onReset={() => setLogs('')}
-          />
-        </div>
-      )}
-    </div>
-  );
-
-  return (
-    <div className="m-4">
-      <div className="flex flex-col gap-2">
-        <div className="flex justify-end">
-          <FullScreenButton onClick={() => setIsFullScreen(true)} />
-        </div>
-        {renderBoxes()}
+        )}
       </div>
-      <FullScreenOverlay
-        isOpen={isFullScreen}
-        onClose={() => setIsFullScreen(false)}
-      >
-        {renderBoxes(true)}
-      </FullScreenOverlay>
-    </div>
+    </FullScreenMode>
   );
 };
 
