@@ -50,6 +50,8 @@ const config: Config = {
           editUrl: `${vars.github}edit/main/website/`,
         },
         blog: {
+          blogSidebarTitle: 'All posts',
+          blogSidebarCount: 'ALL',
           showReadingTime: true,
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
@@ -88,6 +90,7 @@ const config: Config = {
           label: 'Documentation',
         },
         { to: '/playground/', label: 'Playground', position: 'left' },
+        {to: '/blog/', label: 'Blog', position: 'left'}, 
         { to: '/services', label: 'Services', position: 'left' },
         {
           href: vars.github,
@@ -111,12 +114,12 @@ const config: Config = {
               to: '/playground/',
             },
             {
-              label: 'walker.js',
-              to: '/docs/sources/walkerjs/',
+              label: 'Blog',
+              to: '/blog',
             },
             {
-              label: 'Sources',
-              to: '/docs/sources/',
+              label: 'walker.js',
+              to: '/docs/sources/walkerjs/',
             },
             {
               label: 'Destinations',
@@ -127,10 +130,6 @@ const config: Config = {
         {
           title: 'Community',
           items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
             {
               label: 'GitHub',
               href: vars.github,
