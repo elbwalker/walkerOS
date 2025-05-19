@@ -4,6 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const vars = {
   github: 'https://github.com/elbwalker/walkerOS/',
+  linkedin:'https://www.linkedin.com/company/elbwalker/'
 };
 
 const config: Config = {
@@ -90,7 +91,6 @@ const config: Config = {
           label: 'Documentation',
         },
         { to: '/playground/', label: 'Playground', position: 'left' },
-        {to: '/blog/', label: 'Blog', position: 'left'}, 
         { to: '/services', label: 'Services', position: 'left' },
         {
           href: vars.github,
@@ -114,16 +114,8 @@ const config: Config = {
               to: '/playground/',
             },
             {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
-              label: 'walker.js',
-              to: '/docs/sources/walkerjs/',
-            },
-            {
-              label: 'Destinations',
-              to: '/docs/destinations/',
+              label: 'Comparisons',
+              to: '/docs/comparions/',
             },
           ],
         },
@@ -132,11 +124,11 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: vars.github,
+              href: `${vars.github}/discussions`,
             },
             {
-              label: 'Discussions',
-              href: `${vars.github}/discussions`,
+              label: 'LinkedIn',
+              href: `${vars.linkedin}`,
             },
           ],
         },
