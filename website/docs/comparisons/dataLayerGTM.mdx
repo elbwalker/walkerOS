@@ -26,20 +26,19 @@ been the go-to solution for pushing data to tools like
 The `dataLayer` is not a tracking tool by itself. Its a global array that acts
 as a messaging bus for Google Tag Manager (GTM).
 
-In this post we will compare the traditional approach to
+In this post we will compare the traditional approach (`dataLayer` + GTM) to
 [walker.js](https://github.com/elbwalker/walkerOS/tree/main/packages/sources/walkerjs/src),
 a modern JavaScript-based event source, that combines necessary and helpful
 features for today's web. Built as part of
-[walkerOS](https://github.com/elbwalker/walkerOS), walker.js rethinks how
-tracking should work in a modern, scalable, and developer-friendly way.
+[walkerOS](https://github.com/elbwalker/walkerOS), it rethinks how tracking
+should work in a modern, scalable, and developer-friendly way. walkerOS is both
+a tracking orchestrator and an event source. It captures, structures, queues,
+and routes events.
 
 {/* truncate */}
 
-walkerOS is both a tracking orchestrator and an event source. It captures,
-structures, queues, and routes events — including to GTM.
-
-Let's break down how walkerOS stacks up against the traditional way to track and
-why it might be time to reconsider your strategy.
+Depending on the feature we will compare both tools as event sources
+(`dataLayer` vs. walker.js) , and orchestrators (GTM vs. walkerOS).
 
 ## State management and race condition handling
 
@@ -52,44 +51,48 @@ At that time:
 - Most websites were multi-page apps (MPAs)
 - Page reloads were the norm
 - Tag firing was primarily **based on pageviews**
+- JavaScript-heavy front-ends and component-based frameworks like React, Vue, or
+  Svelte didn't dominate (or even existed).
 
-JavaScript-heavy front-ends and component-based frameworks like React, Vue, or
-Svelte didn't dominate (or were even around yet). So the dataLayer design was: A
-simple way to push events when pages loaded or user actions occurred.
+So the dataLayer design was: A simple way to push events when pages loaded or
+user actions occurred.
 
 It worked well for that era.
 
-The problems begin in SPAs & Dynamic Apps. To make dataLayer work reliably in
-SPAs or dynamic environments, developers must:
+The problems begin in SPAs & Dynamic Apps. To make the `dataLayer` work reliably
+in SPAs or dynamic environments, developers (depending on the setup) typically
+must:
 
-- Deal with asynchronously loading content
+- Ensure pushes occur after asynchronous content loads or after consent is given
 - Delay or wrap pushes to avoid timing issues
-- Build custom buffering logic or re-loop the dataLayer for late-loaded vendors
-  or consent updates
-- Use additional trigger configurations like trigger groups or custom events
+- Build custom buffering logic or re-loop the `dataLayer` for late-loaded
+  vendors or consent updates
+- Optionally use additional trigger configurations in GTM such like trigger
+  groups or custom events to manage firing conditions
 
 For sure these things aren't impossible — but they **require non-trivial effort
 and discipline** to maintain at scale.
 
 ### walker.js
 
-walker.js uses a structured event queue that immediately captures and holds
-events until the system is ready to process them. It was built for SPA's and
-modern websites by design. XXXXXXX
+walker.js uses a structured event queue designed for modern websites and
+dynamically loaded content.
 
-It automatically uses MutationObservers and event listeners to capture events
-immediately — even before tools or components are fully loaded. It queues events
-for late loading tools, and tracks context, consent, and state alongside each
-event.
+It offers pre-built
+[triggers](https://www.elbwalker.com/docs/sources/walkerjs/tagging#triggers)
+that automatically use MutationObservers and event listeners to capture events
+immediately — even before tools or components are fully loaded. It was designed
+to automatically buffer and manage events and state.
 
-Destination init
+It **automates what you must manually wire up** when using `dataLayer`.
 
-> > > > > >
+#### Summary table
 
-It **automates what you must manually wire up** when using dataLayer for
-tracking.
+| Feature                         | GTM                             | walkerOS                |
+| ------------------------------- | ------------------------------- | ----------------------- |
+| Dynamic content event capturing | Manual pushes, timing-sensitive | Automatic, and buffered |
 
-**✅ Advantage: Less hacky work for developers to handle state and race
+**✅ Advantage: Reduce hacky work for developers to handle state and race
 conditions.**
 
 ## Consent handling
@@ -121,6 +124,12 @@ processed in the correct order.
 This in-built
 [consent](https://www.elbwalker.com/docs/sources/walkerjs/commands#consent)
 feature helps to ensure users privacy and to comply with legal requirements.
+
+#### Summary table
+
+| Feature          | GTM                          | walkerOS                                     |
+| ---------------- | ---------------------------- | -------------------------------------------- |
+| Consent handling | Manual setup, fragile timing | Built-in consent state tracking and updating |
 
 **✅ Advantage: No accidentally shared data to vendors without the users'
 consent. Guaranteed peace of mind.**
@@ -162,6 +171,12 @@ component to start off with, walker.js decreases maintaining, debugging & QA
 efforts heavily on the long run. And practically adds tracking to new features
 on the fly.
 
+#### Summary table
+
+| Feature             | GTM                      | walkerOS                             |
+| ------------------- | ------------------------ | ------------------------------------ |
+| Tagging integration | Scattered, manual pushes | Component-level, DOM attribute based |
+
 **✅ Advantage: Tagging is integrated into your components, easy to add, ready
 to scale.**
 
@@ -169,31 +184,30 @@ to scale.**
 
 ### GTM
 
-@TODO relate to the problem
+Historically, GTM quickly became the go-to middleman for sending data also to
+non-Google tools — and that's where things started to get messy.
 
-While you can technically push any data into `dataLayer`, it was specifically
-designed for use within Google Tag Manager for Google products. For most
-companies it quickly became the middleman to also send data to non-Google tools,
-like Meta. And that's where things got fragile.
-
-#### 🛠 Example: Sending a ViewContent event to Meta Pixel
+**🛠 Example: Simplified workflow for sending a ViewContent event to Meta
+Pixel**
 
 Let's say a user views a product. You want Meta Pixel to receive this via the
 [`ViewContent` standard event](https://developers.facebook.com/docs/meta-pixel/reference).
 Now you must:
 
-- Go into the GTM web UI
-- Create a **custom trigger** for the `view_content` event
+- Go into the GTM web UI and create a **custom trigger** for the `view_content`
+  event
 - Add the Meta Pixel **tag template**
 - Manually map `product_id` and `product_name` from the dataLayer into the
   correct Meta fields like `content_ids` and `content_name` using **variables**.
 - Make sure the tag is configured to fire under the **right conditions** (e.g.
   after consent)
-- Debug and QA everything in **Preview Mode**
+- Debug and QA everything
 
-@TODO A lot of clicking back and forth screen-to-screen.
+It's a tedious, click-heavy process filled with constant screen-hopping and
+endless overlays, turning even simple tasks into a fragmented, time-consuming
+hassle.
 
-⚠️ Your tracking logic — including **vendor mapping, event logic, consent
+⚠️ Your whole tracking logic — including **vendor mapping, event logic, consent
 handling, firing rules** — is **spread across the GTM UI**, with limited
 versioning, visibility, and no developer control.
 
@@ -205,6 +219,10 @@ This makes it:
 - Easier to version, test, and debug
 - Fully integrated with CI/CD and source control
 - Predictable, portable, and developer-friendly
+
+You can map an event to Meta Pixel's format using a simple config file (in-built
+for each destination) — walkerOS then automatically generates the correct
+`fbq('track', ...)` call:
 
 <DestinationPush
   smallText={true}
@@ -231,14 +249,43 @@ reuse, and change.**
 
 ## Conclusion: time for an upgrade?
 
-**The dataLayer and GTM were designed for websites in 2012.**
+**The `dataLayer` and GTM were designed for websites in 2012.**
 
 They where not built for:
 
-- SPAs and dynamic content
+- Dynamically loaded content
 - Consent-dependent tracking
 - Modern developer workflows with components, CI/CD, and versioning
 
-**walkerOS is.**
+... **walkerOS is.**
+
+## Integration options for existing setups
+
+In case you are not fully ready to switch or not starting from scratch we offer
+several ways to integrate with GTM:
+
+- **Install walkerOS via GTM:** If you don't have access to the website's source
+  code you can use our official walkerOS
+  [Tag Template](https://www.elbwalker.com/docs/sources/walkerjs/installation/gtm/).
+  The setup is handled through Custom JavaScript variables for both
+  initialization and configuration of
+  [destinations](https://www.elbwalker.com//docs/destinations/).
+- **Use walker.js tagging with GTM UI:** If you'd like to use walker.js
+  [tagging](https://www.elbwalker.com/docs/sources/walkerjs/tagging) while
+  keeping GTM UI for other tasks, you can use the
+  [Google Tag Manager destination](https://www.elbwalker.com/docs/destinations/google-gtm)
+  to push walker events into the `dataLayer`
+- **Combine your existing `dataLayer` with code-based tagging:** If you already
+  have a mature `dataLayer` setup but prefer managing tags as code, use the
+  [dataLayer source](https://www.elbwalker.com//docs/sources/dataLayer/) along
+  with our [destinations](https://www.elbwalker.com//docs/destinations/) to
+  transform and route events to your vendors.
 
 </DestinationContextProvider>
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::
