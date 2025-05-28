@@ -115,7 +115,7 @@ const config: Config = {
             },
             {
               label: 'Comparisons',
-              to: '/docs/comparions/',
+              to: '/docs/comparisons/',
             },
           ],
         },
