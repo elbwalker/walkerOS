@@ -49,20 +49,17 @@ export default function Projects() {
               <div className="mx-auto max-w-xs px-8">
                 <p className="text-base font-semibold text-gray-200"></p>
                 <p className="mt-6 flex items-baseline justify-center gap-x-2">
-                  <span className="text-5xl font-semibold tracking-tight text-white">
-                    Custom
-                  </span>
-                  <span className="text-sm/6 font-semibold tracking-wide text-gray-200">
-                    EUR
+                  <span className="text-xl font-semibold tracking-tight text-white">
+                    Request a quote
                   </span>
                 </p>
                 <a
                   href="https://calendly.com/elb-alexander/30min"
-                  className="mt-10 block w-full rounded-md bg-elbwalker-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-xs hover:bg-elbwalker-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-elbwalker-600"
+                  className="mt-10 block w-full rounded-md bg-elbwalker px-3 py-2 text-center text-sm font-semibold text-white shadow-xs hover:bg-elbwalker-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-elbwalker-600"
                 >
-                  Schedule free call
+                  Schedule call
                 </a>
-                <p className="mt-6 text-xs/5 text-gray-800">
+                <p className="mt-6 text-xs/5 text-gray-200">
                   Invoices and receipts available for easy company reimbursement
                 </p>
               </div>

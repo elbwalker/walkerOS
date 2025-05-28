@@ -50,20 +50,18 @@ export default function Features(): JSX.Element {
     <section className="my-20">
       <div className="container">
         <div className="row">
-          <Feature title="Measurement plan meeting" icon={iconMeasurementplan}>
+          <Feature title="Measurement plan" icon={iconMeasurementplan}>
             We'll work with your team to blend your current tracking setup with
-            our proven best practices for measuring user behavior. Together
-            we'll define the events to track.
+            our proven best practices for measuring user behavior.
           </Feature>
-          <Feature title="Setup support" icon={iconSetup}>
-            Whether it's implementing walker.js, managing consent handling, or
-            setting up server-side data collection using Google Cloud Platform
-            and BigQuery, we'll tailor our support to your needs.
+          <Feature title="Technical setup" icon={iconSetup}>
+            Whether it's implementing walker.js, or setting up server-side data
+            collection, we'll tailor our support to your needs.
           </Feature>
           <Feature title="Ongoing support" icon={iconExperts}>
-            Stay connected with the elbwalker team through bi-weekly check-ins
-            after your initial setup. Access our developers to address
-            production-related challenges.
+            Stay connected with us beyond the initial implementation. Through
+            weekly check-ins, we'll help you refine, and expand your tracking
+            setup.
           </Feature>
         </div>
       </div>

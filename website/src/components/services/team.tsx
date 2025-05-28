@@ -28,8 +28,7 @@ export default function Team() {
             About the team
           </h2>
           <p className="mt-6 text-lg/8 text-white">
-            We're a fast data duo dedicated to privacy-friendly data collection
-            and actionable marketing and product data.
+            We're building and maintaining tracking setups since 2018.
           </p>
         </div>
         <ul

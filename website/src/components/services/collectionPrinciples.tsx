@@ -14,7 +14,7 @@ const collectionPrinciples: CollectionPrinciple[] = [
   {
     name: 'Step-by-step',
     description:
-      'While anyone can become an AI expert in no time, it is essential to remember the groundwork required to get there. Data development is a journey that demands effort from the ground up. No shortcuts.',
+      'While anyone can become an AI expert in no time, it is essential to remember the groundwork required to get there. Data development is a journey that demands effort from the ground up. There are no shortcuts.',
   },
   {
     name: 'Use tools only for what they are made for',
@@ -52,7 +52,7 @@ export default function CollectionPrinciples() {
             Data collection principles{' '}
           </h2>
           <p className="mt-6 text-lg/8 text-gray-50">
-            Seven principles we follow when working on data projects.
+            Seven principles we follow when working on projects.
           </p>
         </div>
         <dl className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 text-base/7 sm:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-3">
