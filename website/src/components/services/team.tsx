@@ -49,7 +49,7 @@ export default function Team() {
                 <h3 className="text-lg/8 font-semibold tracking-tight text-gray-50">
                   {person.name}
                 </h3>
-                <p className="text-base/7 text-elbwalker">{person.role}</p>
+                <p className="text-base/7 text-gray-50">{person.role}</p>
                 <p className="mt-6 text-base/7 text-gray-50">{person.bio}</p>
                 <ul role="list" className="mt-6 flex gap-x-6">
                   <li>
