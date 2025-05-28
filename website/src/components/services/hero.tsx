@@ -8,8 +8,7 @@ export default function ServicesHero() {
       subtitle="Professional services"
       text={
         <>
-          Get strategy sparring, technical support, and help funding our
-          development.
+          Get consultation, and technical support. Help funding our development.
         </>
       }
       primaryButton={{
@@ -24,8 +23,8 @@ export default function ServicesHero() {
       }}
       elbTitle="services"
       badges={[
-        'get robust and independent 1st party tracking',
-        'get direct support from the creators',
+        'robust and independent 1st party tracking',
+        'direct support from the creators',
         'help maintain and update library under MIT-licence',
       ]}
     />
