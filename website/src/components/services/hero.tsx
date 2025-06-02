@@ -8,7 +8,8 @@ export default function ServicesHero() {
       subtitle="Professional services"
       text={
         <>
-          Get consultation, and technical support. Help funding our development.
+          We help you build and maintain a robust, independent tracking
+          infrastructure.
         </>
       }
       primaryButton={{
@@ -18,13 +19,13 @@ export default function ServicesHero() {
       }}
       secondaryButton={{
         link: 'mailto:hello@elbwalker.com',
-        children: 'Write us',
+        children: 'Send an email',
         elbAction: 'mail',
       }}
       elbTitle="services"
       badges={[
-        'robust and independent tracking infrastructure',
         'direct support from the creators',
+        'prioritized Github issues',
         'help maintain and update library under MIT-licence',
       ]}
     />

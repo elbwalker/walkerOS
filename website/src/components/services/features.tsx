@@ -60,8 +60,7 @@ export default function Features(): JSX.Element {
           </Feature>
           <Feature title="Ongoing support" icon={iconExperts}>
             Stay connected with us beyond the initial implementation. Through
-            weekly check-ins, we'll help you refine, and expand your tracking
-            setup.
+            weekly check-ins, we'll help you maintain, and expand your setup.
           </Feature>
         </div>
       </div>
