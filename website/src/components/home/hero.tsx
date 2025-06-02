@@ -13,9 +13,9 @@ export default function HomeHero() {
         elbAction: 'start',
       }}
       secondaryButton={{
-        link: 'https://calendly.com/elb-alexander/30min',
-        children: 'Request demo',
-        elbAction: 'demo call',
+        link: '/services',
+        children: 'Services',
+        elbAction: 'services',
       }}
       elbTitle="home"
       badges={[
