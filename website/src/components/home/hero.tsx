@@ -8,20 +8,20 @@ export default function HomeHero() {
       subtitle="Open-source event data collection"
       text="Collect event data for digital analytics in a unified and privacy-centric way."
       primaryButton={{
-        link: "/docs/getting_started/quick_start",
-        children: "Get started",
+        link: '/docs/getting_started/quick_start',
+        children: 'Quickstart',
         elbAction: 'start',
       }}
       secondaryButton={{
-        link: "/playground/",
-        children: "Playground",
-        elbAction: 'playground',
+        link: 'https://calendly.com/elb-alexander/30min',
+        children: 'Request demo',
+        elbAction: 'demo call',
       }}
       elbTitle="home"
       badges={[
-        "runs in your own infrastructure",
-        "integrates with various analytics & marketing tools",
-        "in-built consent mode"
+        'runs in your own infrastructure',
+        'integrates with all analytics & marketing tools',
+        'in-built consent mode',
       ]}
     />
   );

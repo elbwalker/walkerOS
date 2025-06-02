@@ -6,15 +6,17 @@ export default function CTAStart() {
     <CTA
       text={
         <>
-          Start your trial run of{' '}
+          Get started with{' '}
           <span className="inline text-elbwalker">walkerOS</span> now
-          <br />
-          and see how easy it is to set up.
         </>
       }
       primaryButton={{
-        link: "/docs/",
-        children: "Learn more"
+        link: '/docs/getting_started/quick_start',
+        children: 'Quickstart',
+      }}
+      secondaryButton={{
+        link: 'https://calendly.com/elb-alexander/30min',
+        children: 'Request demo',
       }}
     />
   );
