@@ -23,7 +23,7 @@ export default function ServicesHero() {
       }}
       elbTitle="services"
       badges={[
-        'robust and independent 1st party tracking',
+        'robust and independent tracking infrastructure',
         'direct support from the creators',
         'help maintain and update library under MIT-licence',
       ]}

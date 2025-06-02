@@ -55,8 +55,8 @@ export default function Features(): JSX.Element {
             our proven best practices for measuring user behavior.
           </Feature>
           <Feature title="Technical setup" icon={iconSetup}>
-            Whether it's implementing walker.js, or setting up server-side data
-            collection, we'll tailor our support to your needs.
+            Whether it's implementing walker.js, and/or setting up server-side
+            data collection, we'll tailor our support to your needs.
           </Feature>
           <Feature title="Ongoing support" icon={iconExperts}>
             Stay connected with us beyond the initial implementation. Through
