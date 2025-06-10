@@ -1,0 +1,185 @@
+---
+title: dataLayer vs. walker.js
+sidebar_position: 2
+description: A comparison data caputuring with walker.js and dataLayer.
+---
+
+import Link from '@docusaurus/Link';
+import { getEvent } from '@elbwalker/utils';
+import {
+  DestinationContextProvider,
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationMetaPixel from '@elbwalker/destination-web-meta-pixel';
+import { mapping } from '@elbwalker/destination-web-meta-pixel/examples';
+
+---
+
+<DestinationContextProvider destination={destinationMetaPixel} fnName="fbq" >
+
+In the world of web analytics and tag management, Google's `dataLayer` has been
+the go-to solution for pushing data to tools like
+[Google Tag Manager](https://marketingplatform.google.com/about/tag-manager/).
+The `dataLayer` is not a tracking tool by itself. Its a global array that acts
+as a messaging bus for mainly Google Tag Manager (GTM).
+
+In this post we will compare the `dataLayer` to
+[walker.js](https://github.com/elbwalker/walkerOS/tree/main/packages/sources/walkerjs/src),
+a modern JavaScript-based event source, that combines necessary and helpful
+features for tracking today's web. Built as part of
+[walkerOS](https://github.com/elbwalker/walkerOS), it rethinks how tracking
+should work in a modern, scalable, and developer-friendly way. walker.js is an
+event source, that captures, structures, queues, and routes events.
+
+{/* truncate */}
+
+## The things that need to be done before `dataLayer.push`
+
+With `dataLayer`, you are responsible for collecting, formatting, and pushing
+every piece of data manually — often right before a user action occurs. This
+means you must:
+
+- Detect the DOM state or user interaction
+- Extract all relevant values (e.g. product ID, name, price)
+- Wait for consent or tool readiness
+- Build the correct structure
+- Call `dataLayer.push` manually
+
+walker.js automates all of this. It:
+
+1. Detects the interaction (e.g. button click)
+2. Reads the context from your HTML (e.g. data-elb-product="name:#innerText",
+   etc.)
+3. Waits for consent or other preconditions if needed
+4. Enriches the event with metadata (timing, version, session ID, etc.)
+5. Pushes a complete structured object — e.g., into the `dataLayer` or any
+   destination
+
+### Summary
+
+With `dataLayer`, you write the push.
+
+With walker.js, you describe the data, and the push just happens — at the right
+time, in the right format, and only if allowed.
+
+✅ Advantage: walker.js handles everything upstream of `dataLayer.push` —
+removing the need for boilerplate, timing logic, and error-prone setups.
+
+## Consent handling
+
+### dataLayer
+
+GTM supports consent — but only through manual setup and coordination. To handle
+consent correctly using `dataLayer` and GTM, developers typically must:
+
+1. Block or delay tag execution until consent is confirmed
+2. Configure trigger groups or write custom logic per tag
+3. Read storage (e.g. user id from cookies) and update events
+4. Hope events aren't missed or sent too early
+
+It's doable — but fragile. One small config issue, and a tag might fire before
+the user consented, leading to PII leakage.
+
+### walker.js
+
+walker.js **handles consent natively**. If you're conditionally loading
+analytics tools (like only loading Meta Pixel if a user consents to marketing
+tools), walker.js queues and delays sending until all requirements are met — but
+still capture events right when they happen. So an event is captured instantly.
+But only when the [destination](https://www.elbwalker.com/docs/destinations/)
+(can also be the dataLayer) is ready, and an eventually required consent state
+is explicitly granted, the event gets updated to the latest state and is
+processed in the correct order.
+
+This in-built
+[consent](https://www.elbwalker.com/docs/sources/walkerjs/commands#consent)
+feature helps to ensure users privacy and to comply with legal requirements.
+
+**✅ Advantage: Both tools can handle consent. walker.js has in-built features
+to reduce manual work and no data is accidentally shared to vendors without the
+users' consent.**
+
+## Tagging
+
+### dataLayer
+
+Tagging via `dataLayer` is often deeply hard-coded into the product or entirely
+managed through Google Tag Manager. This approach creates a disconnect between
+the website's actual content and the tracking logic. As a result, new features
+are frequently launched without proper tracking in place. Because tracking is
+decoupled from the core functionality, it's often treated as an afterthought
+rather than an integral part of the development and release process.
+
+### walker.js
+
+With walker.js, tagging can be **integrated directly into your HTML** using
+`data-elb` attributes. This means your tracking setup is closer to your actual
+DOM, making it easier to manage, understand, and version-control as part of your
+website codebase. It's a long-proven approach just like using CSS with classes.
+It's not entirely new, it's an established method.
+
+walker.js therefore is perfectly made to use with **composable components**. It
+creates a **current snapshot** of the site and state, and builds events on the
+fly. A component only has to be tagged once and can be tracked multiple times,
+in various settings, on multiple pages.
+
+E.g. you can add a
+[global attribute](https://www.elbwalker.com/docs/sources/walkerjs/tagging#globals)
+once and automatically have it available in every event. walker.js also captures
+[additional fields](https://www.elbwalker.com/docs/sources/walkerjs/) like event
+timings, consent-state, event count or the tagging version automatically. The
+states of the events are always up-to-date as a user interacts with certain
+components on the screen. Using the dataLayer you'll have to update every single
+event on its own.
+
+While it certainly is an effort to add new attributes to each (relevant)
+component to start off with, walker.js decreases maintaining, debugging & QA
+efforts heavily on the long run. And practically adds tracking to new features
+on the fly.
+
+**✅ Advantage: Tagging is integrated into your components, easy to add, ready
+to scale.**
+
+## Summary table
+
+| Feature                | `dataLayer` + GTM      | walkerOS                             |
+| ---------------------- | ---------------------- | ------------------------------------ |
+| Tagging integration    | Manual pushes          | Component-level, DOM attribute based |
+| Event state management | Manual updates         | Automatic, real-time state updating  |
+| Consent-safe execution | Yes, with manual setup | Built-in                             |
+
+## Conclusion: time for an upgrade?
+
+**The `dataLayer` was designed for websites and development workflows in 2012.**
+
+It was not built for:
+
+- Dynamically loaded content
+- Consent-dependent tracking
+- Modern developer workflows with components, CI/CD, and versioning
+
+... **walker.js is.**
+
+## Integration options
+
+We offer serveral ways to integrate with GTM and/or keep using the `dataLayer`:
+
+- **Install walker.js with the tag template:** If you'd like to install
+  walker.js using GTM you can use the
+  [Google Tag Manager tag template](https://www.elbwalker.com/docs/sources/walkerjs/installation/gtm/)
+
+- **Use GTM destination:** If you'd like to use
+  [walker.js](https://www.elbwalker.com/docs/sources/walkerjs/) as an event
+  source while keeping GTM for other tasks, you can use the
+  [Google Tag Manager destination](https://www.elbwalker.com/docs/destinations/google-gtm)
+  that automatically pushes walker events into the `dataLayer`
+
+</DestinationContextProvider>
+
+:::info
+
+Need help with walkerOS? Check out our&nbsp;<Link to="/services">services</Link>
+to get support straight from the creators.
+
+:::
