@@ -128,7 +128,7 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: `${vars.github}/discussions`,
+              href: `${vars.github}discussions`,
             },
             {
               label: 'LinkedIn',

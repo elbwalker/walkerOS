@@ -9,8 +9,8 @@ import Link from '@docusaurus/Link';
 
 # Welcome to walkerOS
 
-walkerOS is an **event data collection and tag management** solution **as
-code**. It captures, structures, queues, and routes events with built-in support
+walkerOS is an **event data collection and tag management solution as code**. It
+captures, structures, queues, and routes events with built-in support
 for&nbsp;<Link to="/docs/consent_management/overview">consent management</Link>
 — all directly in your code. No fragile UI configs. No black-box logic. Just
 tracking you can **version, test, and trust**.
@@ -67,9 +67,10 @@ flowchart LR
   click Destinations "/docs/destinations/"
 ```
 
-- <Link to="sources">**Sources**</Link>: Event collection and state management
-- <Link to="destinations">**Destinations**</Link>: Initializing, mapping, and
-  routing events to 3rd-party tools
+- <Link to="/docs/sources/">**Sources**</Link>: Event collection and state
+  management
+- <Link to="/docs/destinations/">**Destinations**</Link>: Initializing, mapping,
+  and routing events to 3rd-party tools
 
 ### Complete infrastructure
 
@@ -122,19 +123,18 @@ flowchart LR
   event listeners and
   interprets&nbsp;<Link to="/docs/sources/walkerjs/tagging">tagging</Link> on a
   page.
-- **b**:&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> ensures a
-  user&nbsp;<Link to="/docs/sources/walkerjs/commands#consent">granted
-  consent</Link>,
+- **b**:&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> verifies
+  that&nbsp;<Link to="/docs/sources/walkerjs/commands#consent">user
+  consent</Link> has been granted,
   eventually&nbsp;<Link to="/docs/destinations/configuration#init">initializes</Link>
-  and,&nbsp;<Link to="/docs/destinations/event_mapping">maps</Link> events
-  appropriately before pushing them
-  to&nbsp;<Link to="/docs/destinations/">destinations</Link>.
+  and&nbsp;<Link to="/docs/destinations/event_mapping">maps</Link> events to the
+  appropriate <Link to="/docs/destinations/">destinations</Link>.
 - **c**: Events are&nbsp;<Link to="/docs/destinations/configuration">formatted
   correctly</Link> and sent directly to the respective tools from the source.
 - **d**: Events can be sent to a (public) endpoint from various sources, running
   the&nbsp;<Link to="/docs/sources/node/">node source</Link>
 - **f**: Similar to client-side operations, consent gets verified,
-  a&nbsp;<Link to="/docs/destinations/">destination</Link>
+  a&nbsp;<Link to="/docs/destinations/">destination</Link> is
   eventually&nbsp;<Link to="/docs/destinations/configuration#init">initialized</Link>,
   and events are processed server-side.
 - **g**: Events are formatted correctly and sent to tools from the server.
