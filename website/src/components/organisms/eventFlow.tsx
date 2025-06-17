@@ -13,13 +13,14 @@ import {
 } from '@elbwalker/utils';
 import { taggingRegistry } from './tagging';
 
-interface EventFlowProps {
+export interface EventFlowProps {
   code: string;
   mapping?: string | Mapping.Config;
   height?: string;
   previewId?: string;
   eventFn?: (event: WalkerOS.Event) => WalkerOS.Event;
   resultFn?: (output: unknown) => string;
+  width?: string;
 }
 
 export const EventFlow: FC<EventFlowProps> = ({
@@ -29,6 +30,7 @@ export const EventFlow: FC<EventFlowProps> = ({
   previewId = 'preview',
   eventFn,
   resultFn,
+  width = 'w-1/3',
 }) => {
   const [htmlCode, setHtmlCode] = useState(code.trim());
   const [eventCode, setEventCode] = useState<string>(undefined);
@@ -101,7 +103,7 @@ export const EventFlow: FC<EventFlowProps> = ({
         className="flex flex-row gap-4 overflow-x-auto scrollbar-hide h-full"
         style={{ height }}
       >
-        <div className="w-1/3 flex-shrink-0 flex flex-col">
+        <div className={`${width} flex-shrink-0 flex flex-col`}>
           <CodeBox
             label="HTML"
             value={htmlCode}
@@ -114,7 +116,7 @@ export const EventFlow: FC<EventFlowProps> = ({
           />
         </div>
 
-        <div className="w-1/3 flex-shrink-0 flex flex-col">
+        <div className={`${width} flex-shrink-0 flex flex-col`}>
           <Preview
             code={htmlCode}
             previewId={previewId}
@@ -122,7 +124,7 @@ export const EventFlow: FC<EventFlowProps> = ({
           />
         </div>
 
-        <div className="w-1/3 flex-shrink-0 flex flex-col">
+        <div className={`${width} flex-shrink-0 flex flex-col`}>
           <CodeBox
             label="Event"
             value={eventCode || 'No event yet.'}
@@ -132,7 +134,7 @@ export const EventFlow: FC<EventFlowProps> = ({
           />
         </div>
 
-        <div className="w-1/3 flex-shrink-0 flex flex-col">
+        <div className={`${width} flex-shrink-0 flex flex-col`}>
           <CodeBox
             label="Mapping"
             value={formatValue(mappingCode)}
@@ -141,7 +143,7 @@ export const EventFlow: FC<EventFlowProps> = ({
           />
         </div>
 
-        <div className="w-1/3 flex-shrink-0 flex flex-col">
+        <div className={`${width} flex-shrink-0 flex flex-col`}>
           <CodeBox
             label="Result"
             value={resultCode || 'No result yet.'}

@@ -1,6 +1,7 @@
 import { JSX } from 'react';
 import EventFlow from '@site/src/components/organisms/eventFlow';
 import '@site/src/css/event-flow.scss';
+import type { EventFlowProps } from '@site/src/components/organisms/eventFlow';
 
 const exampleCode = `<div
   data-elb="product"
@@ -86,7 +87,7 @@ const mappingCode = `{
   },
 }`;
 
-export const PromotionReady: React.FC = () => {
+export const PromotionReady: React.FC<Partial<EventFlowProps>> = (props) => {
   return (
     <EventFlow
       code={exampleCode}
@@ -100,6 +101,7 @@ export const PromotionReady: React.FC = () => {
       resultFn={(output) => {
         return `dataLayer.push(${JSON.stringify(output, null, 2)});`;
       }}
+      {...props}
     />
   );
 };
