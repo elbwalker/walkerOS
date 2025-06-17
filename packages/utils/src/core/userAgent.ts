@@ -31,6 +31,8 @@ export function getBrowser(userAgent: string): string | undefined {
       return browser.name;
     }
   }
+
+  return;
 }
 
 export function getBrowserVersion(userAgent: string): string | undefined {
@@ -49,6 +51,8 @@ export function getBrowserVersion(userAgent: string): string | undefined {
       return match[1];
     }
   }
+
+  return;
 }
 
 export function getOS(userAgent: string): string | undefined {
@@ -65,6 +69,8 @@ export function getOS(userAgent: string): string | undefined {
       return os.name;
     }
   }
+
+  return;
 }
 
 export function getOSVersion(userAgent: string): string | undefined {

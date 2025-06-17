@@ -73,6 +73,8 @@ export async function getMappingValue(
     });
     if (isDefined(result)) return result;
   }
+
+  return;
 }
 
 async function processMappingValue(
