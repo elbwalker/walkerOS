@@ -9,36 +9,34 @@ import Link from '@docusaurus/Link';
 
 # Welcome to walkerOS
 
-walkerOS is a unified, privacy-centric data collection platform that creates a
-single source of truth for data, marketing and product teams. It offers features
-like&nbsp;<Link to="/docs/sources/overview">data
-capturing</Link>,&nbsp;<Link to="/docs/consent_management/overview">consent
-management</Link>,&nbsp;<Link to="/docs/destinations/overview">data
-integration</Link>, and&nbsp;<Link to="/docs/destinations/event_mapping">tag
-management</Link> enabling full data ownership. The project started as a web
-library called&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> and has
-evolved into a complete first-party tracking system.
+walkerOS is an **event data collection and tag management solution as code**. It
+captures, structures, queues, and routes events with built-in support
+for&nbsp;<Link to="/docs/consent_management/overview">consent management</Link>
+— all directly in your code. No fragile UI configs. No black-box logic. Just
+tracking you can **version, test, and trust**.
+
+The project started as the lightweight web tracking
+library&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link>, and has
+evolved into a **complete first-party tracking system** for modern teams and the
+modern web.
 
 ## Why walkerOS?
 
-- **Sustainability**: A robust infrastructure for continuous data collection,
-  even amidst evolving data landscapes.
-- **Privacy focus**: Emphasizing user privacy, with a strict privacy-by-design
-  approach, in-build&nbsp;<Link to="/docs/consent_management/overview">consent
-  management</Link> and various data protection features.
-- **Complete data ownership**: Gain full control with your first-party data,
-  avoid vendor lock-in and control data processing.
-- **Simplified data model**: The intuitive event model streamlines data
-  collection, making analytics straightforward and efficient.
-- **Flexible architecture**: Adapt walkerOS to your specific data needs with the
-  modular design and grow step-by-step.
+- **Full data ownership**: Your data stays yours. No vendor lock-in, no
+  third-party dependencies, complete control over how data is captured,
+  processed and shared.
+- **Scalable tagging**: DOM-based, component-level frontend tagging makes
+  tracking declarative, reusable, and easy to maintain.
+- **Privacy-first by design**: Built-in consent handling and privacy controls
+  help you meet compliance from day one.
+- **Tag management as code**: Replace complex UIs with clean, version-controlled
+  tracking logic.
 
 ## How walkerOS operates
 
-walkerOS is a streamlined framework with one
-standardized&nbsp;<Link to="/docs/getting_started/event-model">Event
-model</Link>. Components are designed to always be extensible for a steadily
-growing data journey.
+walkerOS is a streamlined framework with a
+standardized&nbsp;<Link to="/docs/getting_started/event-model">event
+model</Link>.
 
 ### Basic infrastructure
 
@@ -69,13 +67,10 @@ flowchart LR
   click Destinations "/docs/destinations/"
 ```
 
-- <Link to="sources">**Sources**</Link>: Event collection and state management
-  with complete control.
-- <Link to="destinations">**Destinations**</Link>: Data activation by
-  initializing,&nbsp;<Link to="/docs/destinations/event_mapping">mapping</Link> and
-  then sharing events to third-party tools.
-- <Link to="utils">**Utils**</Link>: Supporting helper function to standardize
-  and improve data collection.
+- <Link to="/docs/sources/">**Sources**</Link>: Event collection and state
+  management
+- <Link to="/docs/destinations/">**Destinations**</Link>: Initializing, mapping,
+  and routing events to 3rd-party tools
 
 ### Complete infrastructure
 
@@ -124,29 +119,24 @@ flowchart LR
 
 #### Example event journey
 
-- **a**: The&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> integrates
-  with the
-  website,&nbsp;<Link to="/docs/sources/walkerjs/commands#init">initializes</Link>
-  event listeners and interprets
-  the&nbsp;<Link to="/docs/sources/walkerjs/tagging">tagging</Link> on the page.
-- **b**: The&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> ensures a
-  user&nbsp;<Link to="/docs/sources/walkerjs/commands#consent">granted
-  consent</Link>,
+- **a**:&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> initializes
+  event listeners and
+  interprets&nbsp;<Link to="/docs/sources/walkerjs/tagging">tagging</Link> on a
+  page.
+- **b**:&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> verifies
+  that&nbsp;<Link to="/docs/sources/walkerjs/commands#consent">user
+  consent</Link> has been granted,
   eventually&nbsp;<Link to="/docs/destinations/configuration#init">initializes</Link>
-  and &nbsp;<Link to="/docs/destinations/event_mapping">maps</Link>
-  events&nbsp;<Link to="/docs/destinations/configuration">appropriately</Link>
-  before&nbsp;<Link to="/docs/destinations/configuration#push">pushing</Link>
-  them to&nbsp;<Link to="/docs/destinations/">destinations</Link>.
+  and&nbsp;<Link to="/docs/destinations/event_mapping">maps</Link> events to the
+  appropriate <Link to="/docs/destinations/">destinations</Link>.
 - **c**: Events are&nbsp;<Link to="/docs/destinations/configuration">formatted
-  correctly</Link> and get sent directly to the respective tools from the
-  source.
+  correctly</Link> and sent directly to the respective tools from the source.
 - **d**: Events can be sent to a (public) endpoint from various sources, running
-  a&nbsp;<Link to="/docs/sources/node/">Source Node</Link>
-- **f**: Similar to client-side operations, consent gets verified, a
-  &nbsp;<Link to="/docs/destinations/">destination</Link>
+  the&nbsp;<Link to="/docs/sources/node/">node source</Link>
+- **f**: Similar to client-side operations, consent gets verified,
+  a&nbsp;<Link to="/docs/destinations/">destination</Link> is
   eventually&nbsp;<Link to="/docs/destinations/configuration#init">initialized</Link>,
-  and event&nbsp;<Link to="/docs/destinations/configuration">preparation</Link>
-  are processed server-side.
+  and events are processed server-side.
 - **g**: Events are formatted correctly and sent to tools from the server.
 
 :::info

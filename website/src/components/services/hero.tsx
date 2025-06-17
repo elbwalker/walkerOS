@@ -8,26 +8,25 @@ export default function ServicesHero() {
       subtitle="Professional services"
       text={
         <>
-          We help you set up and leverage walkerOS.
-          <br />
-          Go from tracking chaos to tracking excellence in record speed.
+          We help you build and maintain a robust, independent tracking
+          infrastructure.
         </>
       }
       primaryButton={{
         link: 'https://calendly.com/elb-alexander/30min',
-        children: 'Schedule free call',
+        children: 'Schedule call',
         elbAction: 'call',
       }}
       secondaryButton={{
         link: 'mailto:hello@elbwalker.com',
-        children: 'Write an email',
+        children: 'Send an email',
         elbAction: 'mail',
       }}
       elbTitle="services"
       badges={[
         'direct support from the creators',
-        'initial setup in 5 days',
-        'fully integrated into your infrastructure',
+        'prioritized Github issues',
+        'help maintain and update library under MIT-licence',
       ]}
     />
   );

@@ -130,4 +130,20 @@ h6 {
   [data-theme='dark'] {
     --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
   }
+  /* Restore default list styling for Markdown content */
+  .markdown ul {
+    list-style-type: disc;
+    margin-left: 1.5rem;
+    padding-left: 1rem;
+  }
+
+  .markdown ol {
+    list-style-type: decimal;
+    margin-left: 1.5rem;
+    padding-left: 1rem;
+  }
+
+  .markdown li {
+    margin: 0.5em 0;
+  }
 }

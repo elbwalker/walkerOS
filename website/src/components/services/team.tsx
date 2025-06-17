@@ -5,14 +5,14 @@ const people = [
   {
     name: 'Alexander Kirtzel',
     role: 'Co-Founder / Developer',
-    imageUrl: '/img/author/alexander2.png',
+    imageUrl: '/img/author/alexander.png',
     bio: 'Alexander is the creator and head developer of walkerOS. He specializes in the technical setup of tracking and data collection and will help you get walkerOS running.',
     linkedinUrl: 'https://www.linkedin.com/in/alexanderkirtzel/',
   },
   {
     name: 'Ayla Prinz',
-    role: 'Co-Founder /  Analyst',
-    imageUrl: '/img/author/ayla2.png',
+    role: 'Co-Founder / Analyst',
+    imageUrl: '/img/author/ayla.png',
     bio: 'Ayla brings her expertise as an analytics consultant to create structured measurement plans and deliver the first insightful reports based on your walkerOS data.',
     linkedinUrl: 'https://www.linkedin.com/in/ayla-prinz/',
   },
@@ -28,8 +28,7 @@ export default function Team() {
             About the team
           </h2>
           <p className="mt-6 text-lg/8 text-white">
-            We're a fast data duo dedicated to privacy-friendly data collection
-            and actionable marketing and product data.
+            We're building and maintaining tracking setups since 2018.
           </p>
         </div>
         <ul
@@ -50,7 +49,7 @@ export default function Team() {
                 <h3 className="text-lg/8 font-semibold tracking-tight text-gray-50">
                   {person.name}
                 </h3>
-                <p className="text-base/7 text-elbwalker">{person.role}</p>
+                <p className="text-base/7 text-gray-50">{person.role}</p>
                 <p className="mt-6 text-base/7 text-gray-50">{person.bio}</p>
                 <ul role="list" className="mt-6 flex gap-x-6">
                   <li>

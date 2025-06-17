@@ -6,10 +6,9 @@ export default function CTAServices() {
     <CTA
       text={
         <>
-          Let's discuss how{' '}
+          Let's make your tracking setup future-proof with{' '}
           <span className="inline text-elbwalker">walkerOS</span>
           <br />
-          can elevate your analytics.
         </>
       }
       primaryButton={{

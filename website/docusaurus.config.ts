@@ -4,6 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const vars = {
   github: 'https://github.com/elbwalker/walkerOS/',
+  linkedin: 'https://www.linkedin.com/company/elbwalker/',
 };
 
 const config: Config = {
@@ -50,6 +51,8 @@ const config: Config = {
           editUrl: `${vars.github}edit/main/website/`,
         },
         blog: {
+          blogSidebarTitle: 'All posts',
+          blogSidebarCount: 'ALL',
           showReadingTime: true,
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
@@ -111,16 +114,12 @@ const config: Config = {
               to: '/playground/',
             },
             {
-              label: 'walker.js',
-              to: '/docs/sources/walkerjs/',
+              label: 'Comparisons',
+              to: '/docs/comparisons/',
             },
             {
-              label: 'Sources',
-              to: '/docs/sources/',
-            },
-            {
-              label: 'Destinations',
-              to: '/docs/destinations/',
+              label: 'Blog',
+              to: '/blog/',
             },
           ],
         },
@@ -128,16 +127,12 @@ const config: Config = {
           title: 'Community',
           items: [
             {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
               label: 'GitHub',
-              href: vars.github,
+              href: `${vars.github}discussions`,
             },
             {
-              label: 'Discussions',
-              href: `${vars.github}/discussions`,
+              label: 'LinkedIn',
+              href: `${vars.linkedin}`,
             },
           ],
         },
