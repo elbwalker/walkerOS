@@ -5,14 +5,14 @@ const people = [
   {
     name: 'Alexander Kirtzel',
     role: 'Co-Founder / Developer',
-    imageUrl: '/img/author/alexander2.png',
+    imageUrl: '/img/author/alexander.png',
     bio: 'Alexander is the creator and head developer of walkerOS. He specializes in the technical setup of tracking and data collection and will help you get walkerOS running.',
     linkedinUrl: 'https://www.linkedin.com/in/alexanderkirtzel/',
   },
   {
     name: 'Ayla Prinz',
-    role: 'Co-Founder /  Analyst',
-    imageUrl: '/img/author/ayla2.png',
+    role: 'Co-Founder / Analyst',
+    imageUrl: '/img/author/ayla.png',
     bio: 'Ayla brings her expertise as an analytics consultant to create structured measurement plans and deliver the first insightful reports based on your walkerOS data.',
     linkedinUrl: 'https://www.linkedin.com/in/ayla-prinz/',
   },
