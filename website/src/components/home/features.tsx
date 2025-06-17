@@ -55,7 +55,7 @@ export default function Features(): JSX.Element {
           </Feature>
           <Feature
             title="Handle consent"
-            link="/docs/consent_management/overview/commands"
+            link="/docs/consent_management/commands"
             icon={iconProcess}
           >
             Implement and manage consent to ensure user privacy and comply with
