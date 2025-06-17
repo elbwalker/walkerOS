@@ -19,7 +19,7 @@ export const DataCollection = () => {
 
   useEffect(() => {
     // Setup demo walkerjs
-    if (!window.walkerjs) {
+    if (typeof window.walkerjs !== 'function') {
       const { elb, instance } = createSourceWalkerjs({
         run: true,
         pageview: false,
