@@ -4,7 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const vars = {
   github: 'https://github.com/elbwalker/walkerOS/',
-  linkedin:'https://www.linkedin.com/company/elbwalker/'
+  linkedin: 'https://www.linkedin.com/company/elbwalker/',
 };
 
 const config: Config = {
@@ -116,6 +116,10 @@ const config: Config = {
             {
               label: 'Comparisons',
               to: '/docs/comparisons/',
+            },
+            {
+              label: 'Blog',
+              to: '/blog/',
             },
           ],
         },
