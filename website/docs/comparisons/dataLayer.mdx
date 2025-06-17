@@ -5,19 +5,7 @@ description: A comparison of data capturing with walker.js and dataLayer.
 ---
 
 import Link from '@docusaurus/Link';
-import { getEvent } from '@elbwalker/utils';
-import {
-  DestinationContextProvider,
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
-import destinationMetaPixel from '@elbwalker/destination-web-meta-pixel';
-import { mapping } from '@elbwalker/destination-web-meta-pixel/examples';
 import { PromotionReady } from '@site/src/components/templates/flow-complete';
-
----
-
-<DestinationContextProvider destination={destinationMetaPixel} fnName="fbq" >
 
 In the world of web analytics and tag management, Google's `dataLayer` has been
 the go-to solution for pushing data to tools like
@@ -139,7 +127,7 @@ All you had to do was tag the button.
 
 ## Summary table
 
-| Feature                | `dataLayer`                        | walkerOS                             |
+| Feature                | `dataLayer`                        | `walker.js`                          |
 | ---------------------- | ---------------------------------- | ------------------------------------ |
 | Tagging integration    | Manual pushes                      | Component-level, DOM attribute based |
 | Event state management | Manual updates                     | Automatic, real-time state updating  |
@@ -174,8 +162,6 @@ We offer serveral ways to integrate with GTM and/or keep using the `dataLayer`:
   source while keeping GTM for other tasks, you can use the
   [Google Tag Manager destination](https://www.elbwalker.com/docs/destinations/google-gtm)
   that automatically pushes walker events into the `dataLayer`
-
-</DestinationContextProvider>
 
 :::info
 
