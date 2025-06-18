@@ -1,5 +1,5 @@
 import type { Custom, CustomEvent, Destination } from './types';
-import { getMappingValue, isArray } from '@elbwalker/utils';
+import { getMappingValue, isArray } from '@walkerOS/utils';
 
 // Types
 export * as DestinationPiwikPro from './types';

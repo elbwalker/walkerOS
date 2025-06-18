@@ -1,6 +1,6 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import type { DestinationMeta } from '..';
-import { isObject } from '@elbwalker/utils';
+import { isObject } from '@walkerOS/utils';
 
 export const InitUserData: DestinationMeta.Custom = {
   pixelId: 'p1x3l1d',

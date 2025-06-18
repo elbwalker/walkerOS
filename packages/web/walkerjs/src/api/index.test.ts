@@ -2,15 +2,15 @@ import type { WalkerOS } from '@elbwalker/types';
 import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationWebAPI } from '.';
 import { createSourceWalkerjs } from '@elbwalker/walker.js';
-import { createEvent } from '@elbwalker/utils';
+import { createEvent } from '@walkerOS/utils';
 import { events, mapping } from './examples';
 
 describe('Destination API', () => {
   let elb: Elb.Fn;
   const mockSendWeb = jest.fn(); //.mockImplementation(console.log);
 
-  jest.mock('@elbwalker/utils/web', () => ({
-    ...jest.requireActual('@elbwalker/utils/web'),
+  jest.mock('@walkerOS/web', () => ({
+    ...jest.requireActual('@walkerOS/web'),
     sendWeb: mockSendWeb,
   }));
 

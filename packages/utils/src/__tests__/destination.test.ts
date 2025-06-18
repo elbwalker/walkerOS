@@ -1,5 +1,5 @@
 import type { Destination, WalkerOS } from '@elbwalker/types';
-import { createEvent, clone } from '@elbwalker/utils';
+import { createEvent, clone } from '@walkerOS/utils';
 import { pushToDestinations } from '../';
 
 describe('Destination', () => {

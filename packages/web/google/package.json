@@ -24,7 +24,7 @@
   "devDependencies": {
     "@elbwalker/tsup": "0.0.1",
     "@elbwalker/types": "3.4.0",
-    "@elbwalker/utils": "^3.8.2",
+    "@walkerOS/utils": "^3.8.2",
     "@types/gtag.js": "^0.0.20"
   },
   "repository": {

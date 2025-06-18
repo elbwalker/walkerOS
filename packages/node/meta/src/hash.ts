@@ -1,6 +1,6 @@
 import { WalkerOS } from '@elbwalker/types';
-import { isArray, isObject, isString } from '@elbwalker/utils';
-import { getHashNode } from '@elbwalker/utils/node';
+import { isArray, isObject, isString } from '@walkerOS/utils';
+import { getHashNode } from '@walkerOS/node';
 
 const keysToHash = [
   'em',

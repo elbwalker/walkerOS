@@ -1,5 +1,5 @@
 import type { SourceNode } from '../types';
-import { assign, onLog } from '@elbwalker/utils';
+import { assign, onLog } from '@walkerOS/utils';
 
 export function getState(
   initConfig: SourceNode.InitConfig,

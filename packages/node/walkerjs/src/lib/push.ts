@@ -1,5 +1,5 @@
 import type { SourceNode, Elb } from '../types';
-import { createPush } from '@elbwalker/utils';
+import { createPush } from '@walkerOS/utils';
 import { handleCommand } from './handle';
 
 export function getPush(instance: SourceNode.Instance): Elb.Fn {

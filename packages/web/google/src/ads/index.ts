@@ -1,5 +1,5 @@
 import type { Destination } from './types';
-import { isObject } from '@elbwalker/utils';
+import { isObject } from '@walkerOS/utils';
 
 // Types
 export * as DestinationAds from './types';

@@ -1,7 +1,7 @@
 import type { SourceNode, DestinationNode, Elb } from '../types';
 import type { WalkerOS } from '@elbwalker/types';
 import { createSourceNode } from '../';
-import { createEvent } from '@elbwalker/utils';
+import { createEvent } from '@walkerOS/utils';
 
 describe('Destination', () => {
   const eventCall = jest.fn();

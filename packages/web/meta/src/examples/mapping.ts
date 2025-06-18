@@ -1,6 +1,6 @@
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import type { DestinationMetaPixel } from '..';
-import { isObject } from '@elbwalker/utils';
+import { isObject } from '@walkerOS/utils';
 
 export const Purchase: DestinationMetaPixel.EventConfig = {
   name: 'Purchase',

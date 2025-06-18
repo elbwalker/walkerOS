@@ -1,5 +1,5 @@
 import type { Custom, Destination } from './types';
-import { isObject } from '@elbwalker/utils';
+import { isObject } from '@walkerOS/utils';
 
 const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';

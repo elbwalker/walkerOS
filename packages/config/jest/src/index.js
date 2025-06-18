@@ -18,9 +18,9 @@ function getModuleMapper() {
   if (!isWatchMode) return {};
 
   return {
-    '^@elbwalker/utils$': getDirectory('utils/src/'),
-    '^@elbwalker/utils/node$': getDirectory('utils/src/node/'),
-    '^@elbwalker/utils/web$': getDirectory('utils/src/web/'),
+    '^@walkerOS/utils$': getDirectory('utils/src/'),
+    '^@walkerOS/node$': getDirectory('node/walkerjs/src/'),
+    '^@walkerOS/web$': getDirectory('web/walkerjs/src/'),
     '^@elbwalker/walker.js$': getDirectory('sources/walkerjs'),
     '^@elbwalker/source-node$': getDirectory('sources/node'),
     '^@elbwalker/destination-web-(.*)$': getDirectory('destinations/web/$1'),

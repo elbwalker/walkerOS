@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import { isString, isDefined, tryCatch, tryCatchAsync } from '@elbwalker/utils';
+import { isString, isDefined, tryCatch, tryCatchAsync } from '@walkerOS/utils';
 import Editor from 'react-simple-code-editor';
 import { useState, useEffect, useRef } from 'react';
 import * as prettier from 'prettier/standalone';

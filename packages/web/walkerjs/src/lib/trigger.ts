@@ -1,5 +1,5 @@
-import { Const, onApply, throttle, tryCatch } from '@elbwalker/utils';
-import { elb as elbOrg, getAttribute, isVisible } from '@elbwalker/utils/web';
+import { Const, onApply, throttle, tryCatch } from '@walkerOS/utils';
+import { elb as elbOrg, getAttribute, isVisible } from '@walkerOS/web';
 import { Walker, SourceWalkerjs, Elb } from '../types';
 import {
   getElbAttributeName,

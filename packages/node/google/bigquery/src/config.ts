@@ -1,6 +1,6 @@
 import type { Config, Custom, InitFn } from './types';
 import type { BigQueryOptions } from '@google-cloud/bigquery';
-import { onLog, throwError } from '@elbwalker/utils';
+import { onLog, throwError } from '@walkerOS/utils';
 import { BigQuery } from '@google-cloud/bigquery';
 
 export function getConfig(partialConfig: Parameters<InitFn>[0] = {}): Config {

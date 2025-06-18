@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { PushFn } from './types';
-import { isObject, isArray } from '@elbwalker/utils';
+import { isObject, isArray } from '@walkerOS/utils';
 
 export const push: PushFn = async function (event, config, mapping, options) {
   const { client, datasetId, tableId } = config.custom!;

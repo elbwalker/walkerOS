@@ -1,6 +1,6 @@
 import type { SourceNode, DestinationNode, Elb } from '../types';
 import type { WalkerOS } from '@elbwalker/types';
-import { createEvent } from '@elbwalker/utils';
+import { createEvent } from '@walkerOS/utils';
 import { createSourceNode } from '../';
 
 describe('Source Node', () => {

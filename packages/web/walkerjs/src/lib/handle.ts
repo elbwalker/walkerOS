@@ -10,7 +10,7 @@ import {
   createPushResult,
   isObject,
   on,
-} from '@elbwalker/utils';
+} from '@walkerOS/utils';
 
 export async function handleCommand(
   instance: SourceWalkerjs.Instance,

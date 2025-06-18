@@ -1,6 +1,6 @@
 import type { Destination } from '@elbwalker/types';
 import type { FirehoseConfig } from '../types';
-import { throwError } from '@elbwalker/utils';
+import { throwError } from '@walkerOS/utils';
 import {
   FirehoseClient,
   PutRecordBatchCommand,

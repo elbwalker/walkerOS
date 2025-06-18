@@ -1,5 +1,5 @@
 import type { SourceWalkerjs } from '../types';
-import { assign, getId, onApply, tryCatch } from '@elbwalker/utils';
+import { assign, getId, onApply, tryCatch } from '@walkerOS/utils';
 import { getGlobals } from './walker';
 import { pushPredefined } from './push';
 import { load } from './trigger';

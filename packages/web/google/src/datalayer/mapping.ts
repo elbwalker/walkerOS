@@ -6,7 +6,7 @@ import {
   isDefined,
   isObject,
   isString,
-} from '@elbwalker/utils';
+} from '@walkerOS/utils';
 import { convertConsentStates } from './helper';
 
 const defaultMapping: Mapping = {

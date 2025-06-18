@@ -1,10 +1,10 @@
 import type { SourceWalkerjs } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { sessionStart } from '@elbwalker/utils/web';
+import { sessionStart } from '@walkerOS/web';
 import { elb, Walkerjs } from '..';
 
-jest.mock('@elbwalker/utils/web', () => {
-  const utilsOrg = jest.requireActual('@elbwalker/utils/web');
+jest.mock('@walkerOS/web', () => {
+  const utilsOrg = jest.requireActual('@walkerOS/web');
 
   return {
     ...utilsOrg,

@@ -1,4 +1,4 @@
-import { getEvent } from '@elbwalker/utils';
+import { getEvent } from '@walkerOS/utils';
 
 export function purchase(): unknown[] {
   const event = getEvent('order complete');

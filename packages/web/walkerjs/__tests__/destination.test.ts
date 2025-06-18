@@ -1,6 +1,6 @@
 import type { SourceWalkerjs, DestinationWeb } from '..';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { getEvent } from '@elbwalker/utils';
+import { getEvent } from '@walkerOS/utils';
 import { createSourceWalkerjs, elb as elbOrg } from '..';
 
 describe('Destination', () => {

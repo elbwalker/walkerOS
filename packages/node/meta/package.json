@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@elbwalker/source-node": "3.4.2",
-    "@elbwalker/utils": "^3.8.2"
+    "@walkerOS/utils": "^3.8.2"
   },
   "devDependencies": {
     "@elbwalker/types": "3.4.0"

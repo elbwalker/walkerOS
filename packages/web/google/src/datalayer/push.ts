@@ -7,7 +7,7 @@ import {
   isArray,
   isObject,
   tryCatchAsync,
-} from '@elbwalker/utils';
+} from '@walkerOS/utils';
 import { objToEvent, gtagToObj } from './mapping';
 import { getDataLayer } from './helper';
 

@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
-import { isObject } from '@elbwalker/utils';
+import { isObject } from '@walkerOS/utils';
 
 describe('consent', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);

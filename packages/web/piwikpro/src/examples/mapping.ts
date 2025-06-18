@@ -1,6 +1,6 @@
 import type { Mapping } from '@elbwalker/types';
 import type { DestinationPiwikPro } from '..';
-import { isObject } from '@elbwalker/utils';
+import { isObject } from '@walkerOS/utils';
 
 const productMap = {
   sku: 'data.id',

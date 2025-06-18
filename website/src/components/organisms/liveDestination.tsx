@@ -8,7 +8,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { createEvent, destinationPush, tryCatchAsync } from '@elbwalker/utils';
+import { createEvent, destinationPush, tryCatchAsync } from '@walkerOS/utils';
 import { LiveCode } from './liveCode';
 import { formatValue, parseInput } from '../molecules/codeBox';
 

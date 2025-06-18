@@ -3,7 +3,7 @@ import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationGoogleGTM } from '.';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import { createSourceWalkerjs } from '@elbwalker/walker.js';
-import { createEvent, getEvent } from '@elbwalker/utils';
+import { createEvent, getEvent } from '@walkerOS/utils';
 import { events, mapping } from './examples';
 
 describe('destination google-tag-manager', () => {

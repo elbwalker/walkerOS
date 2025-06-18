@@ -1,6 +1,6 @@
 import type { Custom, Destination } from './types';
-import { isDefined } from '@elbwalker/utils';
-import { sendWeb } from '@elbwalker/utils/web';
+import { isDefined } from '@walkerOS/utils';
+import { sendWeb } from '@walkerOS/web';
 
 // Types
 export * as DestinationWebAPI from './types';

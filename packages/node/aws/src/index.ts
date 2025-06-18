@@ -1,5 +1,5 @@
 import type { Custom, Destination } from './types';
-import { isSameType, throwError, tryCatchAsync } from '@elbwalker/utils';
+import { isSameType, throwError, tryCatchAsync } from '@walkerOS/utils';
 import { getConfig } from './config';
 import { push } from './push';
 

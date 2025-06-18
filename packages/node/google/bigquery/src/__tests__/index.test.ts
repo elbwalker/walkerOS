@@ -1,6 +1,6 @@
 import { WalkerOS } from '@elbwalker/types';
 import type { Config, Destination, Custom } from '../types';
-import { createEvent } from '@elbwalker/utils';
+import { createEvent } from '@walkerOS/utils';
 
 describe('Node Destination BigQuery', () => {
   // Mock the bigquery package with __mocks__ implementation

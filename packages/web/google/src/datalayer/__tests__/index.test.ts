@@ -1,6 +1,6 @@
 import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
-import { isArray, isObject } from '@elbwalker/utils';
+import { isArray, isObject } from '@walkerOS/utils';
 
 describe('source dataLayer', () => {
   const elb = jest.fn(); //.mockImplementation(console.log);

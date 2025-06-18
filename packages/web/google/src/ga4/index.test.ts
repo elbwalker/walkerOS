@@ -1,7 +1,7 @@
 import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationGoogleGA4 } from '.';
 import { createSourceWalkerjs } from '@elbwalker/walker.js';
-import { getEvent } from '@elbwalker/utils';
+import { getEvent } from '@walkerOS/utils';
 import { events, mapping } from './examples';
 
 describe('Destination Google GA4', () => {

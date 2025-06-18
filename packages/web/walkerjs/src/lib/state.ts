@@ -1,4 +1,4 @@
-import { Const, assign } from '@elbwalker/utils';
+import { Const, assign } from '@walkerOS/utils';
 import type { SourceWalkerjs } from '../types';
 
 export function getState(

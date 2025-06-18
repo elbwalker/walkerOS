@@ -1,6 +1,6 @@
 import type { Mapping } from '@elbwalker/types';
-import type { SendDataValue, SendHeaders } from '@elbwalker/utils';
-import type { SendWebTransport } from '@elbwalker/utils/web';
+import type { SendDataValue, SendHeaders } from '@walkerOS/utils';
+import type { SendWebTransport } from '@walkerOS/web';
 
 import type { DestinationWeb } from '@elbwalker/walker.js';
 

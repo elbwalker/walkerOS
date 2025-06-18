@@ -10,7 +10,7 @@ import {
   isSameType,
   isString,
   createPush,
-} from '@elbwalker/utils';
+} from '@walkerOS/utils';
 import { getEntities } from './walker';
 
 export function getPush(instance: SourceWalkerjs.Instance): Elb.Fn {

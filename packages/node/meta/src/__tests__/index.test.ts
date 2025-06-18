@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { DestinationNode } from '@elbwalker/source-node';
 import type { Config, Destination } from '../types';
-import { getEvent } from '@elbwalker/utils';
+import { getEvent } from '@walkerOS/utils';
 import createSourceNode from '@elbwalker/source-node';
 import { events, mapping } from '../examples';
 import { hashEvent } from '../hash';
@@ -13,8 +13,8 @@ const mockSendNode = jest.fn().mockResolvedValue({
 });
 
 describe('Node Destination Meta', () => {
-  jest.mock('@elbwalker/utils/node', () => ({
-    ...jest.requireActual('@elbwalker/utils/node'),
+  jest.mock('@walkerOS/node', () => ({
+    ...jest.requireActual('@walkerOS/node'),
     sendNode: mockSendNode,
   }));
 

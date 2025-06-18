@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@elbwalker/types';
-import { getEvent } from '@elbwalker/utils';
+import { getEvent } from '@walkerOS/utils';
 
 function getProduct(entity: WalkerOS.Entity | WalkerOS.Event) {
   return {

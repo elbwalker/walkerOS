@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@elbwalker/types';
 import type { Custom, Destination, Parameters } from './types';
 import { getParamsInclude } from './parameters';
-import { isObject } from '@elbwalker/utils';
+import { isObject } from '@walkerOS/utils';
 
 // Types
 export * as DestinationGA4 from './types';

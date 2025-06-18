@@ -1,5 +1,5 @@
 import type { Config, Custom, Destination } from '../types';
-import { createEvent } from '@elbwalker/utils';
+import { createEvent } from '@walkerOS/utils';
 import {
   FirehoseClient,
   PutRecordBatchCommand,

@@ -1,6 +1,6 @@
 import type { Custom, Destination } from './types';
 import { addScript, setup } from './setup';
-import { isObject } from '@elbwalker/utils';
+import { isObject } from '@walkerOS/utils';
 
 // Types
 export * as DestinationMetaPixel from './types';
