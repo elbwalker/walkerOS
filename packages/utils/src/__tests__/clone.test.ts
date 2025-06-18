@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@walkerOS/types';
-import { clone } from '../core';
+import { clone } from '..';
 
 describe('clone', () => {
   test('mutation prevention', () => {

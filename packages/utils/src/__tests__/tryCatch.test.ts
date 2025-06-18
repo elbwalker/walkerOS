@@ -1,4 +1,4 @@
-import { tryCatch, tryCatchAsync } from '../core';
+import { tryCatch, tryCatchAsync } from '..';
 
 describe('tryCatch', () => {
   test('tryCatch', () => {

@@ -1,4 +1,4 @@
-import { anonymizeIP } from '../core';
+import { anonymizeIP } from '..';
 
 describe('anonymizeIP', () => {
   test('regular', () => {

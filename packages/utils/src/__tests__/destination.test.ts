@@ -1,6 +1,6 @@
 import type { Destination, WalkerOS } from '@walkerOS/types';
-import { createEvent, clone } from '@walkerOS/utils';
-import { pushToDestinations } from '../';
+import { clone, createEvent } from '@walkerOS/utils';
+import { pushToDestinations } from '..';
 
 describe('Destination', () => {
   let event: WalkerOS.Event;

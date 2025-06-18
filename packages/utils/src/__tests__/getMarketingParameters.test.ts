@@ -1,4 +1,4 @@
-import { getMarketingParameters } from '../core';
+import { getMarketingParameters } from '..';
 
 describe('getMarketingParameters', () => {
   test('marketing parameters', () => {

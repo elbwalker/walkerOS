@@ -1,4 +1,4 @@
-import { createEvent, getEvent } from '../core';
+import { createEvent, getEvent } from '..';
 
 describe('createEvent', () => {
   const timestamp = new Date().setHours(0, 13, 37, 0);

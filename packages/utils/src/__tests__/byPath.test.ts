@@ -1,4 +1,4 @@
-import { createEvent, getByPath, setByPath } from '../core';
+import { createEvent, getByPath, setByPath } from '..';
 
 describe('byPath', () => {
   test('getByPath', () => {

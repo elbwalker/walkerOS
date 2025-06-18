@@ -6,7 +6,7 @@ import {
   getMappingValue,
   isObject,
   isString,
-} from '../core';
+} from '..';
 
 describe('getMappingEvent', () => {
   test('basic', async () => {

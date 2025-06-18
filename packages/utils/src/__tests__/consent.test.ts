@@ -1,4 +1,4 @@
-import { getGrantedConsent } from '../core';
+import { getGrantedConsent } from '..';
 
 describe('consent', () => {
   test('nothing required', () => {

@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@walkerOS/types';
-import { validateEvent } from '../core';
+import { validateEvent } from '..';
 
 describe('validate', () => {
   test('validateEvent', () => {

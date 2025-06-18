@@ -1,4 +1,4 @@
-import { requestToData, requestToParameter } from '../core';
+import { requestToData, requestToParameter } from '..';
 
 describe('request', () => {
   const str =
