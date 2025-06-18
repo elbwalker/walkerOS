@@ -420,8 +420,8 @@ describe('Trigger', () => {
 
   test('visible', async () => {
     // mock isVisible to return true
-    jest.mock('@walkerOS/web', () => ({
-      ...jest.requireActual('@walkerOS/web'),
+    jest.mock('../utils', () => ({
+      ...jest.requireActual('../utils'),
       isVisible: () => true,
     }));
 

@@ -9,8 +9,8 @@ describe('Destination API', () => {
   let elb: Elb.Fn;
   const mockSendWeb = jest.fn(); //.mockImplementation(console.log);
 
-  jest.mock('@walkerOS/web', () => ({
-    ...jest.requireActual('@walkerOS/web'),
+  jest.mock('../utils', () => ({
+    ...jest.requireActual('../utils'),
     sendWeb: mockSendWeb,
   }));
 

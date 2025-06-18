@@ -4,9 +4,13 @@
   "private": true,
   "license": "MIT",
   "main": "./src/index.js",
-  "files": [
-    "src/**"
-  ],
+  "exports": {
+    ".": "./src/index.js",
+    "./web.config": "./src/web.config.js",
+    "./web.setup": "./src/web.setup.ts",
+    "./node.config": "./src/node.config.js",
+    "./node.setup": "./src/node.setup.ts"
+  },
   "dependencies": {
     "@swc/core": "^1.11.13",
     "@swc/jest": "^0.2.37",
