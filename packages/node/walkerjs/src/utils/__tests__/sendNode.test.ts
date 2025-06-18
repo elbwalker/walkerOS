@@ -1,4 +1,4 @@
-import { sendNode } from '../../node';
+import { sendNode } from '..';
 import * as http from 'http';
 import * as https from 'https';
 

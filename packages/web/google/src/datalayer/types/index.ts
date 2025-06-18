@@ -6,8 +6,7 @@ import type {
 
 declare global {
   interface Window {
-    [key: string]: DataLayer | undefined;
-    dataLayer?: DataLayer;
+    [key: string]: DataLayer | unknown;
   }
 }
 

@@ -1,5 +1,5 @@
-import { Const } from '../..';
-import { storageDelete, storageRead, storageWrite } from '../../web';
+import { Const } from '@walkerOS/utils';
+import { storageDelete, storageRead, storageWrite } from '..';
 
 describe('Storage', () => {
   const w = window;

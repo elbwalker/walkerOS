@@ -1,8 +1,8 @@
-import { sessionStorage, storageRead, storageWrite } from '../../web';
+import { sessionStorage, storageRead, storageWrite } from '..';
 
 // Automatically mock the storage module
-jest.mock('../../web/storage', () => ({
-  ...jest.requireActual('../../web/storage'),
+jest.mock('../storage', () => ({
+  ...jest.requireActual('../storage'),
   storageRead: jest.fn(),
   storageWrite: jest.fn(),
 }));

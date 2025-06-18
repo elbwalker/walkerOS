@@ -1,4 +1,4 @@
-import { sessionWindow } from '../../web';
+import { sessionWindow } from '..';
 
 describe('SessionStart', () => {
   const w = window;

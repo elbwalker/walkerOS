@@ -1,10 +1,11 @@
 import type { Mapping } from '@walkerOS/types';
 import type { DestinationWeb } from '@walkerOS/web';
+// import type { Gtag } from '@types/gtag.js';
 
 declare global {
   interface Window {
     dataLayer: Array<unknown> | unknown;
-    gtag: Gtag.Gtag;
+    gtag?: Gtag.Gtag;
   }
 }
 

@@ -1,22 +1,21 @@
-import type { WalkerOS } from '@walkerOS/types';
-import type { On } from '@walkerOS/web';
-import { elb, sessionStart, sessionStorage, sessionWindow } from '../../web';
+import type { On, WalkerOS } from '@walkerOS/types';
+import { elb, sessionStart, sessionStorage, sessionWindow } from '..';
 
 let consent: On.ConsentConfig;
 
-jest.mock('../../web/elb', () => ({
+jest.mock('../elb', () => ({
   elb: jest.fn().mockImplementation((event, data, options) => {
     if (event === 'walker on' && data == 'consent') {
       consent = options;
     }
   }),
 }));
-jest.mock('../../web/session/sessionStorage', () => ({
+jest.mock('../session/sessionStorage', () => ({
   sessionStorage: jest.fn().mockImplementation((config) => {
     return { ...config.data, mock: 'storage' };
   }),
 }));
-jest.mock('../../web/session/sessionWindow', () => ({
+jest.mock('../session/sessionWindow', () => ({
   sessionWindow: jest.fn().mockImplementation((config) => {
     return { ...config.data, mock: 'window' };
   }),

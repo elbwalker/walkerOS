@@ -1,3 +1,3 @@
-const config = require('@walkerOS/jest/node');
+const config = require('@walkerOS/jest');
 
 module.exports = config;
