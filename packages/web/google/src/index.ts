@@ -1,21 +1,21 @@
 // Google Ads
-export { destinationAds } from './src/ads';
-export * as DestinationAds from './src/ads/types';
+export { destinationAds } from './ads';
+export * as DestinationAds from './ads/types';
 
 // Google Analytics 4
-export { destinationGA4 } from './src/ga4';
-export * as DestinationGA4 from './src/ga4/types';
+export { destinationGA4 } from './ga4';
+export * as DestinationGA4 from './ga4/types';
 
 // Google Tag Manager
-export { destinationGTM } from './src/gtm';
-export * as DestinationGTM from './src/gtm/types';
+export { destinationGTM } from './gtm';
+export * as DestinationGTM from './gtm/types';
 
 // Google DataLayer Source
-export { sourceDataLayer } from './src/datalayer';
-export * as SourceDataLayer from './src/datalayer/types';
+export { sourceDataLayer } from './datalayer';
+export * as SourceDataLayer from './datalayer/types';
 
 // Re-export everything for backward compatibility
-export * from './src/ads';
-export * from './src/ga4';
-export * from './src/gtm';
-export * from './src/datalayer';
+export * from './ads';
+export * from './ga4';
+export * from './gtm';
+export * from './datalayer';
