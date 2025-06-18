@@ -5,9 +5,9 @@ const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
 
 // Types
-export * as DestinationGoogleGTM from './types';
+export * as DestinationGTM from './types';
 
-export const destinationGoogleGTM: Destination = {
+export const destinationGTM: Destination = {
   type: 'google-gtm',
 
   config: {},
@@ -50,4 +50,4 @@ function addScript(containerId: string, src: string, dataLayerName: string) {
   document.head.appendChild(script);
 }
 
-export default destinationGoogleGTM;
+export default destinationGTM;
