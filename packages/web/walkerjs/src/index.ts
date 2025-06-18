@@ -17,7 +17,7 @@ export { default as tagger } from './tagger';
 export * from './tagger/types';
 
 // Web API destination
-export { destinationWebAPI as destinationAPI } from './api';
+export { destinationAPI } from './api';
 export * as DestinationAPI from './api/types';
 
 // Web utilities

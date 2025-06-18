@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@walkerOS/types';
 import type { Elb } from '@walkerOS/web';
-import type { DestinationWebAPI } from '.';
+import type { DestinationAPI } from '.';
 import { createWalkerjsWeb } from '@walkerOS/web';
 import { createEvent } from '@walkerOS/utils';
 import { events, mapping } from './examples';
@@ -14,7 +14,7 @@ describe('Destination API', () => {
     sendWeb: mockSendWeb,
   }));
 
-  let destination: DestinationWebAPI.Destination;
+  let destination: DestinationAPI.Destination;
   let event: WalkerOS.Event;
   const url = 'https://api.example.com/';
 

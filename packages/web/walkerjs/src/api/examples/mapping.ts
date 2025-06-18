@@ -1,7 +1,7 @@
 import type { Mapping } from '@walkerOS/types';
-import type { DestinationWebAPI } from '..';
+import type { DestinationAPI } from '..';
 
-export const entity_action: DestinationWebAPI.EventConfig = {
+export const entity_action: DestinationAPI.EventConfig = {
   data: 'data',
 };
 

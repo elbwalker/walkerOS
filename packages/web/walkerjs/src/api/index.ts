@@ -3,9 +3,9 @@ import { isDefined } from '@walkerOS/utils';
 import { sendWeb } from '@walkerOS/web';
 
 // Types
-export * as DestinationWebAPI from './types';
+export * as DestinationAPI from './types';
 
-export const destinationWebAPI: Destination = {
+export const destinationAPI: Destination = {
   type: 'api',
 
   config: {},
@@ -26,4 +26,4 @@ export const destinationWebAPI: Destination = {
   },
 };
 
-export default destinationWebAPI;
+export default destinationAPI;
