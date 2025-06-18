@@ -1,35 +1,6 @@
-import type { Custom, Destination } from './types';
-import { isSameType, throwError, tryCatchAsync } from '@walkerOS/utils';
-import { getConfig } from './config';
-import { push } from './push';
+// AWS Firehose
+export { destinationFirehose } from './firehose';
+export * as DestinationFirehose from './firehose/types';
 
-// Types
-export * as DestinationFirehose from './types';
-
-export const destinationFirehose: Destination = {
-  type: 'aws',
-
-  config: {},
-
-  async init(partialConfig = {}) {
-    const config = await tryCatchAsync(getConfig, (error) => {
-      config.onLog('Init error', partialConfig.verbose);
-
-      throwError(error);
-    })(partialConfig);
-
-    if (!isSameType(config.custom, {} as Custom)) return false;
-
-    return config;
-  },
-
-  async push(event, config) {
-    return await tryCatchAsync(push, (error) => {
-      if (config.onLog) config.onLog('Push error');
-
-      throwError(error);
-    })(event, config);
-  },
-};
-
-export default destinationFirehose;
+// Re-export everything for backward compatibility
+export * from './firehose';
