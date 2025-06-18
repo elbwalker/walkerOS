@@ -1,6 +1,6 @@
 import type { SourceWalkerjs, DestinationWeb, Elb } from '../';
 import type { WalkerOS } from '@elbwalker/types';
-import { mockDataLayer } from '@elbwalker/jest/web.setup';
+import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { elb as elbOrg, Walkerjs, createSourceWalkerjs, elb } from '../';
 
 describe('elbLayer', () => {

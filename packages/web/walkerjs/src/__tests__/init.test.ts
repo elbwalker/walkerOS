@@ -1,5 +1,5 @@
 import type { SourceWalkerjs } from '../';
-import { mockDataLayer } from '@elbwalker/jest/web.setup';
+import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { Walkerjs } from '../';
 
 describe('Init', () => {

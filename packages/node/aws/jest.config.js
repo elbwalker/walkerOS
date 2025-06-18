@@ -1,4 +1,4 @@
-import baseConfig from '@elbwalker/jest';
+import baseConfig from '@walkerOS/jest';
 
 const config = {};
 

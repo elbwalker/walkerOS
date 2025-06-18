@@ -4,7 +4,7 @@ import {
   buildExamples,
   buildBrowser,
   buildES5,
-} from '@elbwalker/tsup';
+} from '@walkerOS/tsup';
 
 const globalName = 'Destination';
 

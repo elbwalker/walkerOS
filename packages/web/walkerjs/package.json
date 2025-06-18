@@ -23,7 +23,7 @@
     "@elbwalker/types": "3.4.0"
   },
   "devDependencies": {
-    "@elbwalker/tsup": "0.0.1"
+    "@walkerOS/tsup": "0.0.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

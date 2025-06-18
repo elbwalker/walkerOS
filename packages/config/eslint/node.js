@@ -1,4 +1,4 @@
-import baseConfig from '@elbwalker/eslint';
+import baseConfig from '@walkerOS/eslint';
 import globals from 'globals';
 
 export default [

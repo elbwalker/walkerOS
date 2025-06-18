@@ -1,6 +1,6 @@
 import type { SourceWalkerjs } from '../';
 import type { Elb, WalkerOS } from '@elbwalker/types';
-import { mockDataLayer } from '@elbwalker/jest/web.setup';
+import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { createSourceWalkerjs } from '../';
 
 describe('Commands', () => {

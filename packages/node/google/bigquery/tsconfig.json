@@ -1,5 +1,5 @@
 {
-  "extends": "@elbwalker/tsconfig/node.json",
+  "extends": "@walkerOS/tsconfig/node.json",
   "compilerOptions": {
     "rootDir": "src"
   },

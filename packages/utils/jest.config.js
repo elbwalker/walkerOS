@@ -1,4 +1,4 @@
-import baseConfig from '@elbwalker/jest/web.config';
+import baseConfig from '@walkerOS/jest/web.config';
 
 const config = {
   testEnvironment: 'jsdom',

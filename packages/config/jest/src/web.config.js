@@ -1,7 +1,7 @@
-import baseConfig from '@elbwalker/jest';
+import baseConfig from '@walkerOS/jest';
 
 const config = {
-  setupFilesAfterEnv: ['@elbwalker/jest/web.setup'],
+  setupFilesAfterEnv: ['@walkerOS/jest/web.setup'],
   testEnvironment: 'jsdom',
 };
 

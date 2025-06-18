@@ -1,16 +1,12 @@
 {
-  "name": "@elbwalker/jest",
+  "name": "@walkerOS/jest",
   "version": "0.0.1",
   "private": true,
   "license": "MIT",
   "main": "./src/index.js",
-  "exports": {
-    ".": "./src/index.js",
-    "./web.config": "./src/web.config.js",
-    "./web.setup": "./src/web.setup.ts",
-    "./node.config": "./src/node.config.js",
-    "./node.setup": "./src/node.setup.ts"
-  },
+  "files": [
+    "src/**"
+  ],
   "dependencies": {
     "@swc/core": "^1.11.13",
     "@swc/jest": "^0.2.37",

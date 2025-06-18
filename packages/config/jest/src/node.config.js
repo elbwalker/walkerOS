@@ -1,7 +1,7 @@
-import baseConfig from '@elbwalker/jest';
+import baseConfig from '@walkerOS/jest';
 
 const config = {
-  setupFilesAfterEnv: ['@elbwalker/jest/node.setup'],
+  setupFilesAfterEnv: ['@walkerOS/jest/node.setup'],
 };
 
 export default { ...baseConfig, ...config };

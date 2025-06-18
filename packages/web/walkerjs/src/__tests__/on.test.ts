@@ -1,5 +1,5 @@
 import type { SourceWalkerjs, DestinationWeb } from '../';
-import { mockDataLayer } from '@elbwalker/jest/web.setup';
+import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { sessionStart } from '@walkerOS/web';
 import { elb, Walkerjs } from '../';
 

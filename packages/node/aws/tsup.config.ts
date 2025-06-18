@@ -1,4 +1,4 @@
-import { defineConfig, buildModules, buildExamples } from '@elbwalker/tsup';
+import { defineConfig, buildModules, buildExamples } from '@walkerOS/tsup';
 
 export default defineConfig([
   buildModules({

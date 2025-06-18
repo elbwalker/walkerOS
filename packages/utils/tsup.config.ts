@@ -3,7 +3,7 @@ import {
   buildModules,
   buildBrowser,
   buildES5,
-} from '@elbwalker/tsup';
+} from '@walkerOS/tsup';
 
 const globalName = 'Utils';
 const webFiles = ['src/web.ts'];

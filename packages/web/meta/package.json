@@ -22,7 +22,7 @@
     "@elbwalker/walker.js": "3.4.2"
   },
   "devDependencies": {
-    "@elbwalker/tsup": "0.0.1",
+    "@walkerOS/tsup": "0.0.1",
     "@elbwalker/types": "3.4.0",
     "@types/facebook-pixel": "^0.0.31"
   },

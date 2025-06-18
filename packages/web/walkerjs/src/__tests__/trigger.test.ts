@@ -1,4 +1,4 @@
-import { mockDataLayer } from '@elbwalker/jest/web.setup';
+import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { Trigger } from '../lib/trigger';
 import { createSourceWalkerjs } from '../';
 
