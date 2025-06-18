@@ -1,19 +1,11 @@
 {
-  "name": "@elbwalker/source-node",
-  "description": "Node source for walkerOS for sending events from the server-side",
-  "version": "3.4.2",
+  "name": "@walkerOS/node",
+  "description": "Server-side event collection for walkerOS",
+  "version": "0.0.1",
   "license": "MIT",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "default": "./dist/index.mjs"
-    }
-  },
+  "main": "./dist/src/index.js",
+  "module": "./dist/src/index.mjs",
+  "types": "./dist/src/index.d.ts",
   "files": [
     "dist/**",
     "CHANGELOG.md"
@@ -32,7 +24,7 @@
   "devDependencies": {},
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
-    "directory": "packages/sources/node"
+    "directory": "packages/node/walkerjs"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme",
