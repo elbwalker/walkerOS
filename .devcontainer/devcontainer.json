@@ -15,7 +15,8 @@
         "esbenp.prettier-vscode",
         "streetsidesoftware.code-spell-checker",
         "chakrounanas.turbo-console-log",
-        "openai.chatgpt"
+        "openai.chatgpt",
+        "anthropic.claude-code"
       ],
       "settings": {
         "[typescript]": {
