@@ -1,6 +1,6 @@
 {
   "name": "@walkerOS/web-google",
-  "description": "Google Ads web destination for walkerOS",
+  "description": "Google web destinations for walkerOS (Ads, GA4, GTM, DataLayer)",
   "version": "0.0.1",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -24,11 +24,12 @@
   "devDependencies": {
     "@elbwalker/tsup": "0.0.1",
     "@elbwalker/types": "3.4.0",
+    "@elbwalker/utils": "^3.8.2",
     "@types/gtag.js": "^0.0.20"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
-    "directory": "packages/web/google/ads"
+    "directory": "packages/web/google"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme",
@@ -43,7 +44,12 @@
     "walker destination",
     "analytics",
     "tracking",
-    "google ads"
+    "google ads",
+    "google analytics 4",
+    "ga4",
+    "google tag manager",
+    "gtm",
+    "datalayer"
   ],
   "funding": [
     {

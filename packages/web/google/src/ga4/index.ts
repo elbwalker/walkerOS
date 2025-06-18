@@ -4,9 +4,9 @@ import { getParamsInclude } from './parameters';
 import { isObject } from '@elbwalker/utils';
 
 // Types
-export * as DestinationGoogleGA4 from './types';
+export * as DestinationGA4 from './types';
 
-export const destinationGoogleGA4: Destination = {
+export const destinationGA4: Destination = {
   type: 'google-ga4',
 
   config: { custom: { measurementId: '' } },
@@ -96,4 +96,4 @@ function addScript(
   document.head.appendChild(script);
 }
 
-export default destinationGoogleGA4;
+export default destinationGA4;
