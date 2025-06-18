@@ -10,7 +10,12 @@ export * as DestinationGA4 from './src/ga4/types';
 export { destinationGTM } from './src/gtm';
 export * as DestinationGTM from './src/gtm/types';
 
+// Google DataLayer Source
+export { sourceDataLayer } from './src/datalayer';
+export * as SourceDataLayer from './src/datalayer/types';
+
 // Re-export everything for backward compatibility
 export * from './src/ads';
 export * from './src/ga4';
 export * from './src/gtm';
+export * from './src/datalayer';
