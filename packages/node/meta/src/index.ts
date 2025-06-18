@@ -4,9 +4,9 @@ import { getConfig, log } from './config';
 import { push } from './push';
 
 // Types
-export * as DestinationMeta from './types';
+export * as DestinationCAPI from './types';
 
-export const destinationMeta: Destination = {
+export const destinationCAPI: Destination = {
   type: 'meta',
 
   config: {},
@@ -29,4 +29,4 @@ export const destinationMeta: Destination = {
   },
 };
 
-export default destinationMeta;
+export default destinationCAPI;
