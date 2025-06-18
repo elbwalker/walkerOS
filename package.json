@@ -1,13 +1,13 @@
 {
-  "name": "@walkerOS/ts",
+  "name": "@walkerOS/monorepo",
   "private": true,
   "workspaces": [
     "packages/*",
     "packages/config/*",
-    "packages/destinations/core/*",
-    "packages/destinations/node/*",
-    "packages/destinations/web/*",
-    "packages/sources/*",
+    "packages/node/*",
+    "packages/web/*",
+    "packages/utils/*",
+    "packages/types/*",
     "website"
   ],
   "scripts": {

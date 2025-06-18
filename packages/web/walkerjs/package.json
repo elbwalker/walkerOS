@@ -7,7 +7,7 @@
   "module": "./dist/src/index.mjs",
   "types": "./dist/src/index.d.ts",
   "files": [
-    "dist/**",
+    "dist/**"
   ],
   "scripts": {
     "build": "tsup",
