@@ -1,7 +1,7 @@
 import type { Data } from '@elbwalker/types';
-import type { Elb, SourceWalkerjs } from '..';
+import type { Elb, SourceWalkerjs } from '../';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { Walkerjs, createSourceWalkerjs } from '..';
+import { Walkerjs, createSourceWalkerjs } from '../';
 import fs from 'fs';
 
 describe('Walkerjs', () => {

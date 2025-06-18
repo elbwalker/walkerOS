@@ -1,7 +1,7 @@
 import type { Hooks } from '@elbwalker/types';
-import type { SourceWalkerjs, DestinationWeb } from '..';
+import type { SourceWalkerjs, DestinationWeb } from '../';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { Walkerjs, createSourceWalkerjs } from '..';
+import { Walkerjs, createSourceWalkerjs } from '../';
 
 describe('Hooks', () => {
   let walkerjs: SourceWalkerjs.Instance;

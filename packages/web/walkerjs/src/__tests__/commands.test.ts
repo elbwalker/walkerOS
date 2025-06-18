@@ -1,7 +1,7 @@
-import type { SourceWalkerjs } from '..';
+import type { SourceWalkerjs } from '../';
 import type { Elb, WalkerOS } from '@elbwalker/types';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { createSourceWalkerjs } from '..';
+import { createSourceWalkerjs } from '../';
 
 describe('Commands', () => {
   let elb: Elb.Fn;

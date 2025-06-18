@@ -1,6 +1,6 @@
-import type { SourceWalkerjs } from '..';
+import type { SourceWalkerjs } from '../';
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
-import { Walkerjs } from '..';
+import { Walkerjs } from '../';
 
 describe('Init', () => {
   let walkerjs: SourceWalkerjs.Instance;

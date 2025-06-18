@@ -1,6 +1,6 @@
 import { mockDataLayer } from '@elbwalker/jest/web.setup';
 import { Trigger } from '../lib/trigger';
-import { createSourceWalkerjs } from '..';
+import { createSourceWalkerjs } from '../';
 
 describe('Trigger', () => {
   const w = window;
