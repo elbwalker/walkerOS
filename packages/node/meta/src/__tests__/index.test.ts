@@ -2,7 +2,7 @@ import type { WalkerOS } from '@walkerOS/types';
 import type { DestinationNode } from '@walkerOS/node';
 import type { Config, Destination } from '../types';
 import { getEvent } from '@walkerOS/utils';
-import createSourceNode from '@walkerOS/node';
+import createWalkerjsNode from '@walkerOS/node';
 import { events, mapping } from '../examples';
 import { hashEvent } from '../hash';
 
@@ -53,7 +53,7 @@ describe('Node Destination Meta', () => {
   });
 
   test('testCode', async () => {
-    const { elb } = createSourceNode({});
+    const { elb } = createWalkerjsNode({});
     const event = getEvent();
     const config: DestinationNode.Config = {
       custom: { accessToken, pixelId, test_event_code: 'TEST' },
@@ -68,7 +68,7 @@ describe('Node Destination Meta', () => {
 
   test('fn', async () => {
     const mockFn = jest.fn();
-    const { elb } = createSourceNode({});
+    const { elb } = createWalkerjsNode({});
     const event = getEvent();
     const config: DestinationNode.Config = {
       fn: mockFn,
@@ -94,7 +94,7 @@ describe('Node Destination Meta', () => {
       },
       error: '400 Bad Request',
     });
-    const { elb } = createSourceNode({});
+    const { elb } = createWalkerjsNode({});
     const event = getEvent();
     const config: DestinationNode.Config = {
       custom: { accessToken, pixelId, test_event_code: 'TEST' },
@@ -109,7 +109,7 @@ describe('Node Destination Meta', () => {
   });
 
   test('fbclid', async () => {
-    const { elb } = createSourceNode({});
+    const { elb } = createWalkerjsNode({});
     const event = getEvent();
     const config: DestinationNode.Config = {
       custom: {
@@ -127,7 +127,7 @@ describe('Node Destination Meta', () => {
   });
 
   test('userData', async () => {
-    const { elb } = createSourceNode({});
+    const { elb } = createWalkerjsNode({});
     const event = getEvent();
     const config: DestinationNode.Config = {
       custom: mapping.InitUserData,
@@ -191,7 +191,7 @@ describe('Node Destination Meta', () => {
   });
 
   test('event Purchase', async () => {
-    const { elb } = createSourceNode({});
+    const { elb } = createWalkerjsNode({});
     const event = getEvent('order complete');
 
     const config: DestinationNode.Config = {

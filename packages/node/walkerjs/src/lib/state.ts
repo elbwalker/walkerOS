@@ -1,11 +1,11 @@
-import type { SourceNode } from '../types';
+import type { WalkerjsNode } from '../types';
 import { assign, onLog } from '@walkerOS/utils';
 
 export function getState(
-  initConfig: SourceNode.InitConfig,
-  instance: Partial<SourceNode.Instance> = {},
-): SourceNode.State {
-  const defaultConfig: SourceNode.Config = {
+  initConfig: WalkerjsNode.InitConfig,
+  instance: Partial<WalkerjsNode.Instance> = {},
+): WalkerjsNode.State {
+  const defaultConfig: WalkerjsNode.Config = {
     contracts: undefined, // Contract schemas
     globalsStatic: {}, // Static global properties
     sessionStatic: {}, // Static session data
@@ -14,7 +14,7 @@ export function getState(
     onLog: log,
   };
 
-  const config: SourceNode.Config = assign(
+  const config: WalkerjsNode.Config = assign(
     defaultConfig,
     {
       ...(instance.config || {}), // current config

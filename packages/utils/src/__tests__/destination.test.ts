@@ -20,7 +20,7 @@ describe('Destination', () => {
     } as Destination.Destination;
   }
 
-  function createInstance(
+  function createWalkerjs(
     args?: Partial<WalkerOS.Instance>,
   ): WalkerOS.Instance {
     return {
@@ -51,7 +51,7 @@ describe('Destination', () => {
   });
 
   test('allowed', async () => {
-    const instance = createInstance({ allowed: false });
+    const instance = createWalkerjs({ allowed: false });
     let result = await pushToDestinations(instance, event);
     expect(result.ok).toBeFalsy();
 
@@ -72,7 +72,7 @@ describe('Destination', () => {
       config: {},
     };
 
-    await pushToDestinations(createInstance(), event, {
+    await pushToDestinations(createWalkerjs(), event, {
       destinationUpdate,
       destination,
     });
@@ -90,7 +90,7 @@ describe('Destination', () => {
     // Simulate a failed init
     mockInit.mockImplementation(() => false);
 
-    await pushToDestinations(createInstance(), event);
+    await pushToDestinations(createWalkerjs(), event);
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(0);
     expect(destination.config.init).toBeFalsy();
@@ -104,7 +104,7 @@ describe('Destination', () => {
     });
 
     const destination = createDestination();
-    const result = await pushToDestinations(createInstance(), event, {
+    const result = await pushToDestinations(createWalkerjs(), event, {
       destination,
     });
     expect(result.failed).toHaveLength(1);

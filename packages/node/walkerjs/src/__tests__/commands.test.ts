@@ -1,9 +1,9 @@
-import type { SourceNode } from '../types';
-import { createSourceNode } from '../';
+import type { WalkerjsNode } from '../types';
+import { createWalkerjsNode } from '../';
 
 describe('Commands', () => {
-  function getSource(custom?: Partial<SourceNode.InitConfig>) {
-    return createSourceNode(custom);
+  function getSource(custom?: Partial<WalkerjsNode.InitConfig>) {
+    return createWalkerjsNode(custom);
   }
 
   beforeEach(() => {

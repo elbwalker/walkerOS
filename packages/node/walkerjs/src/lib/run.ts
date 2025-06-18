@@ -1,9 +1,9 @@
-import type { SourceNode } from '../types';
+import type { WalkerjsNode } from '../types';
 import { assign, getId } from '@walkerOS/utils';
 
 export function run(
-  instance: SourceNode.Instance,
-  state: Partial<SourceNode.State> = {},
+  instance: WalkerjsNode.Instance,
+  state: Partial<WalkerjsNode.State> = {},
 ) {
   const { config, destinations } = instance;
 

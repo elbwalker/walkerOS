@@ -1,4 +1,4 @@
-import type { Elb, SourceNode } from './types';
+import type { Elb, WalkerjsNode } from './types';
 import { run } from './lib/run';
 import { getState } from './lib/state';
 import { getPush } from './lib/push';
@@ -9,22 +9,22 @@ export * from './types';
 // Node utilities
 export * from './utils';
 
-export function createSourceNode(customConfig?: SourceNode.InitConfig): {
+export function createWalkerjsNode(customConfig?: WalkerjsNode.InitConfig): {
   elb: Elb.Fn;
-  instance: SourceNode.Instance;
+  instance: WalkerjsNode.Instance;
 } {
-  const instance = sourceNode(customConfig);
+  const instance = Walkerjs(customConfig);
   const elb = instance.push;
 
   return { elb, instance };
 }
 
-export function sourceNode(
-  customConfig: SourceNode.PartialConfig = {},
-): SourceNode.Instance {
+export function Walkerjs(
+  customConfig: WalkerjsNode.PartialConfig = {},
+): WalkerjsNode.Instance {
   const version = '0.0.1'; // Source version
   const state = getState(customConfig);
-  const instance: SourceNode.Instance = {
+  const instance: WalkerjsNode.Instance = {
     ...state,
     version,
     push: (() => {}) as unknown as Elb.Fn, // Placeholder for the actual push function
@@ -40,4 +40,4 @@ export function sourceNode(
   return instance;
 }
 
-export default createSourceNode;
+export default createWalkerjsNode;
