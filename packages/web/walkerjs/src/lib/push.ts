@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@walkerOS/types';
-import type { Elb, SourceWalkerjs } from '../types';
+import type { Elb, WalkerjsWeb } from '../types';
 import { handleCommand } from './handle';
 import {
   Const,
@@ -13,7 +13,7 @@ import {
 } from '@walkerOS/utils';
 import { getEntities } from './walker';
 
-export function getPush(instance: SourceWalkerjs.Instance): Elb.Fn {
+export function getPush(instance: WalkerjsWeb.Instance): Elb.Fn {
   const prepareEvent: Elb.Arguments<WalkerOS.PartialEvent> = (
     nameOrEvent,
     pushData,
@@ -73,14 +73,14 @@ export function getPush(instance: SourceWalkerjs.Instance): Elb.Fn {
     };
   };
 
-  return createPush<SourceWalkerjs.Instance, Elb.Fn>(
+  return createPush<WalkerjsWeb.Instance, Elb.Fn>(
     instance,
     handleCommand,
     prepareEvent,
   );
 }
 
-export function elbLayerInit(instance: SourceWalkerjs.Instance) {
+export function elbLayerInit(instance: WalkerjsWeb.Instance) {
   const elbLayer = instance.config.elbLayer;
 
   elbLayer.push = function (...args: Elb.Layer) {
@@ -98,7 +98,7 @@ export function elbLayerInit(instance: SourceWalkerjs.Instance) {
 }
 
 export function pushPredefined(
-  instance: SourceWalkerjs.Instance,
+  instance: WalkerjsWeb.Instance,
   commandsOnly: boolean,
 ) {
   // Handle existing events in the elbLayer on first run

@@ -1,5 +1,5 @@
 import type { Hooks, On } from '@walkerOS/types';
-import type { SourceWalkerjs, Elb } from '../types';
+import type { WalkerjsWeb, Elb } from '../types';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';
 import { run } from './run';
@@ -13,7 +13,7 @@ import {
 } from '@walkerOS/utils';
 
 export async function handleCommand(
-  instance: SourceWalkerjs.Instance,
+  instance: WalkerjsWeb.Instance,
   action: string,
   data?: Elb.PushData,
   options?: Elb.PushOptions,
@@ -24,7 +24,7 @@ export async function handleCommand(
     case Const.Commands.Config:
       if (isObject(data))
         instance.config = getState(
-          data as SourceWalkerjs.Config,
+          data as WalkerjsWeb.Config,
           instance,
         ).config;
       break;
@@ -59,7 +59,7 @@ export async function handleCommand(
         instance,
         run,
         instance,
-        data as Partial<SourceWalkerjs.State>,
+        data as Partial<WalkerjsWeb.State>,
       );
       break;
 

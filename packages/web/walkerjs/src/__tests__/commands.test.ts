@@ -1,18 +1,18 @@
-import type { SourceWalkerjs } from '../';
+import type { WalkerjsWeb } from '../';
 import type { Elb, WalkerOS } from '@walkerOS/types';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
-import { createSourceWalkerjs } from '../';
+import { createWalkerjsWeb } from '../';
 
 describe('Commands', () => {
   let elb: Elb.Fn;
-  let walkerjs: SourceWalkerjs.Instance;
+  let walkerjs: WalkerjsWeb.Instance;
 
   beforeEach(() => {
     global.performance.getEntriesByType = jest
       .fn()
       .mockReturnValue([{ type: 'navigate' }]);
 
-    const { elb: elbFn, instance } = createSourceWalkerjs({
+    const { elb: elbFn, instance } = createWalkerjsWeb({
       default: true,
       consent: { test: true },
       pageview: false,
@@ -114,7 +114,7 @@ describe('Commands', () => {
 
   test('walker consent', async () => {
     jest.clearAllMocks();
-    const { elb, instance } = createSourceWalkerjs({
+    const { elb, instance } = createWalkerjsWeb({
       consent: { functional: true },
       default: true,
       pageview: false,
@@ -160,7 +160,7 @@ describe('Commands', () => {
   });
 
   test('walker globals', async () => {
-    const { elb } = createSourceWalkerjs({
+    const { elb } = createWalkerjsWeb({
       default: true,
       globalsStatic: { static: 'value' },
     });
@@ -188,7 +188,7 @@ describe('Commands', () => {
   });
 
   test('walker custom', async () => {
-    const { elb, instance } = createSourceWalkerjs({
+    const { elb, instance } = createWalkerjsWeb({
       default: true,
       custom: { static: 'value' },
     });

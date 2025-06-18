@@ -1,11 +1,11 @@
-import type { SourceWalkerjs, DestinationWeb, Elb } from '../';
+import type { WalkerjsWeb, DestinationWeb, Elb } from '../';
 import type { WalkerOS } from '@walkerOS/types';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
-import { elb as elbOrg, Walkerjs, createSourceWalkerjs, elb } from '../';
+import { elb as elbOrg, Walkerjs, createWalkerjsWeb, elb } from '../';
 
 describe('elbLayer', () => {
   const w = window;
-  let walkerjs: SourceWalkerjs.Instance;
+  let walkerjs: WalkerjsWeb.Instance;
 
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
   const mockDestinationInit = jest.fn(); //.mockImplementation(console.log);
@@ -184,7 +184,7 @@ describe('elbLayer', () => {
   });
 
   test('config update', () => {
-    const defaultConfig: SourceWalkerjs.Config = {
+    const defaultConfig: WalkerjsWeb.Config = {
       dataLayer: false,
       dataLayerConfig: {},
       elbLayer: expect.any(Array),
@@ -197,7 +197,7 @@ describe('elbLayer', () => {
       tagging: expect.any(Number),
     };
 
-    const defaultState: SourceWalkerjs.State = {
+    const defaultState: WalkerjsWeb.State = {
       allowed: true,
       consent: {},
       config: defaultConfig,
@@ -216,7 +216,7 @@ describe('elbLayer', () => {
       version: expect.any(String),
     };
 
-    const defaultInterface: SourceWalkerjs.Instance = {
+    const defaultInterface: WalkerjsWeb.Instance = {
       push: expect.any(Function),
       getAllEvents: expect.any(Function),
       getEvents: expect.any(Function),
@@ -230,7 +230,7 @@ describe('elbLayer', () => {
 
     expect(walkerjs).toStrictEqual(defaultInterface);
 
-    let update: WalkerOS.Properties | Partial<SourceWalkerjs.Config> = {
+    let update: WalkerOS.Properties | Partial<WalkerjsWeb.Config> = {
       prefix: 'data-custom',
     };
     const config = { ...defaultConfig, ...update };
@@ -364,7 +364,7 @@ describe('elbLayer', () => {
   });
 
   test('command order', async () => {
-    const { instance } = createSourceWalkerjs();
+    const { instance } = createWalkerjsWeb();
     const pushSpy = jest.spyOn(instance, 'push');
 
     elb('walker run');
@@ -388,7 +388,7 @@ describe('elbLayer', () => {
       { any: 'thing' }, // custom
     );
 
-    const { elb } = createSourceWalkerjs({ default: true, pageview: false });
+    const { elb } = createWalkerjsWeb({ default: true, pageview: false });
 
     await jest.runAllTimersAsync();
     expect(mockDataLayer).toHaveBeenCalledWith(

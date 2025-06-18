@@ -1,11 +1,11 @@
 import { Const, assign } from '@walkerOS/utils';
-import type { SourceWalkerjs } from '../types';
+import type { WalkerjsWeb } from '../types';
 
 export function getState(
-  initConfig: SourceWalkerjs.InitConfig,
-  instance: Partial<SourceWalkerjs.Instance> = {},
-): SourceWalkerjs.State {
-  const defaultConfig: SourceWalkerjs.Config = {
+  initConfig: WalkerjsWeb.InitConfig,
+  instance: Partial<WalkerjsWeb.Instance> = {},
+): WalkerjsWeb.State {
+  const defaultConfig: WalkerjsWeb.Config = {
     dataLayer: false, // Do not use dataLayer by default
     dataLayerConfig: {}, // Configuration for dataLayer
     elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
@@ -21,7 +21,7 @@ export function getState(
     tagging: 0, // Helpful to differentiate the used setup version
   };
 
-  const config: SourceWalkerjs.Config = assign(
+  const config: WalkerjsWeb.Config = assign(
     defaultConfig,
     {
       ...(instance.config || {}), // current config

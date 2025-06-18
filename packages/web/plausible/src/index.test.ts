@@ -1,6 +1,6 @@
 import type { Elb } from '@walkerOS/web';
 import type { DestinationPlausible } from '.';
-import { createSourceWalkerjs } from '@walkerOS/web';
+import { createWalkerjsWeb } from '@walkerOS/web';
 import { getEvent } from '@walkerOS/utils';
 import { events, mapping } from './examples';
 
@@ -19,7 +19,7 @@ describe('destination plausible', () => {
 
     w.plausible = mockFn;
 
-    ({ elb } = createSourceWalkerjs({
+    ({ elb } = createWalkerjsWeb({
       pageview: false,
       run: true,
       session: false,

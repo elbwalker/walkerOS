@@ -1,4 +1,4 @@
-import type { SourceWalkerjs } from '../types';
+import type { WalkerjsWeb } from '../types';
 import { assign, getId, onApply, tryCatch } from '@walkerOS/utils';
 import { getGlobals } from './walker';
 import { pushPredefined } from './push';
@@ -6,8 +6,8 @@ import { load } from './trigger';
 import { sessionStart } from './session';
 
 export function run(
-  instance: SourceWalkerjs.Instance,
-  state: Partial<SourceWalkerjs.State> = {},
+  instance: WalkerjsWeb.Instance,
+  state: Partial<WalkerjsWeb.State> = {},
 ) {
   const { config, destinations } = instance;
 

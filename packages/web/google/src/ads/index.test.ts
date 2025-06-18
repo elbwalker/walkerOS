@@ -1,6 +1,6 @@
 import type { Elb } from '@walkerOS/web';
 import type { DestinationGoogleAds } from '.';
-import { createSourceWalkerjs } from '@walkerOS/web';
+import { createWalkerjsWeb } from '@walkerOS/web';
 import { getEvent } from '@walkerOS/utils';
 import { events, mapping } from './examples';
 
@@ -25,7 +25,7 @@ describe('destination Google Ads', () => {
 
     w.gtag = mockFn;
 
-    ({ elb } = createSourceWalkerjs({
+    ({ elb } = createWalkerjsWeb({
       session: false,
       pageview: false,
       run: true,

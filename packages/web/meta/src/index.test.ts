@@ -1,6 +1,6 @@
 import type { DestinationWeb, Elb } from '@walkerOS/web';
 import type { DestinationMetaPixel } from '.';
-import { createSourceWalkerjs } from '@walkerOS/web';
+import { createWalkerjsWeb } from '@walkerOS/web';
 import { getEvent } from '@walkerOS/utils';
 import { events, mapping } from './examples';
 
@@ -25,7 +25,7 @@ describe('Destination Meta Pixel', () => {
 
     w.fbq = mockFn;
 
-    ({ elb } = createSourceWalkerjs({
+    ({ elb } = createWalkerjsWeb({
       pageview: false,
       run: true,
       session: false,

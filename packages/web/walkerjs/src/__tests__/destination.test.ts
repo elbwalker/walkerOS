@@ -1,10 +1,10 @@
-import type { SourceWalkerjs, DestinationWeb } from '../';
+import type { WalkerjsWeb, DestinationWeb } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { getEvent } from '@walkerOS/utils';
-import { createSourceWalkerjs, elb as elbOrg } from '../';
+import { createWalkerjsWeb, elb as elbOrg } from '../';
 
 describe('Destination', () => {
-  let instance: SourceWalkerjs.Instance;
+  let instance: WalkerjsWeb.Instance;
   let elb = elbOrg;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
@@ -15,7 +15,7 @@ describe('Destination', () => {
   let config: DestinationWeb.Config;
 
   beforeEach(() => {
-    ({ elb, instance } = createSourceWalkerjs({
+    ({ elb, instance } = createWalkerjsWeb({
       pageview: false,
       session: false,
     }));
@@ -347,7 +347,7 @@ describe('Destination', () => {
 
   test('consent', async () => {
     jest.clearAllMocks();
-    const { elb, instance } = createSourceWalkerjs({
+    const { elb, instance } = createWalkerjsWeb({
       consent: { functional: true, marketing: false },
       pageview: false,
       session: false,
@@ -422,7 +422,7 @@ describe('Destination', () => {
   });
 
   test('queue', async () => {
-    const { elb } = createSourceWalkerjs({
+    const { elb } = createWalkerjsWeb({
       consent: { functional: true },
       pageview: false,
       session: false,
@@ -629,7 +629,7 @@ describe('Destination', () => {
   });
 
   test('temp async queue', async () => {
-    const { elb } = createSourceWalkerjs({ elbLayer: [], pageview: false });
+    const { elb } = createWalkerjsWeb({ elbLayer: [], pageview: false });
     elb('walker run');
     elb('walker destination', destination);
 
@@ -796,7 +796,7 @@ describe('Destination', () => {
   });
 
   test('dataLayer config', async () => {
-    const { elb } = createSourceWalkerjs({
+    const { elb } = createWalkerjsWeb({
       default: true,
       pageview: false,
       session: false,
@@ -865,7 +865,7 @@ describe('Destination', () => {
       },
     };
 
-    const { elb } = createSourceWalkerjs({
+    const { elb } = createWalkerjsWeb({
       run: true,
       pageview: false,
       session: false,
@@ -913,7 +913,7 @@ describe('Destination', () => {
       },
     };
 
-    const { elb } = createSourceWalkerjs({
+    const { elb } = createWalkerjsWeb({
       run: true,
       pageview: false,
       session: false,

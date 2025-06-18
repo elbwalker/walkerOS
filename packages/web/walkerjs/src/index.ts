@@ -1,6 +1,6 @@
-import type { Elb, SourceWalkerjs } from './types';
+import type { Elb, WalkerjsWeb } from './types';
 import { addDestination, onApply } from '@walkerOS/utils';
-import { sessionStart } from '@walkerOS/web';
+import { sessionStart } from './utils/';
 import { getPush, elbLayerInit } from './lib/push';
 import { run } from './lib/run';
 import { createSessionStart } from './lib/session';
@@ -25,11 +25,11 @@ export * from './utils';
 
 export const elb: Elb.Fn = createElb();
 
-export function createSourceWalkerjs(
-  customConfig?: SourceWalkerjs.InitConfig,
+export function createWalkerjsWeb(
+  customConfig?: WalkerjsWeb.InitConfig,
 ): {
   elb: Elb.Fn;
-  instance: SourceWalkerjs.Instance;
+  instance: WalkerjsWeb.Instance;
 } {
   const instance = Walkerjs(customConfig);
   const elb = instance.push;
@@ -38,11 +38,11 @@ export function createSourceWalkerjs(
 }
 
 export function Walkerjs(
-  customConfig: SourceWalkerjs.InitConfig = {},
-): SourceWalkerjs.Instance {
+  customConfig: WalkerjsWeb.InitConfig = {},
+): WalkerjsWeb.Instance {
   const version = '0.0.1'; // Source version
   const state = getState(customConfig);
-  const instance: SourceWalkerjs.Instance = {
+  const instance: WalkerjsWeb.Instance = {
     ...state,
     version,
     // Placeholder functions to be overwritten with instance-reference

@@ -1,4 +1,4 @@
-import type { SourceWalkerjs } from '../types';
+import type { WalkerjsWeb } from '../types';
 import fs from 'fs';
 
 describe('Browser', () => {
@@ -19,7 +19,7 @@ describe('Browser', () => {
   });
 
   test('initialize walkerjs on window', () => {
-    w.walkerjs = undefined as unknown as SourceWalkerjs.Instance;
+    w.walkerjs = undefined as unknown as WalkerjsWeb.Instance;
     expect(w.walkerjs).toBeUndefined();
     jest.resetModules();
     const walkerjs = jest.requireActual('../walkerjs').default;
