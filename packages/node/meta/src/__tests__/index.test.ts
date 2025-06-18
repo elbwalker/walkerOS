@@ -1,8 +1,8 @@
 import type { WalkerOS } from '@walkerOS/types';
-import type { DestinationNode } from '@elbwalker/source-node';
+import type { DestinationNode } from '@walkerOS/node';
 import type { Config, Destination } from '../types';
 import { getEvent } from '@walkerOS/utils';
-import createSourceNode from '@elbwalker/source-node';
+import createSourceNode from '@walkerOS/node';
 import { events, mapping } from '../examples';
 import { hashEvent } from '../hash';
 

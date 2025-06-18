@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@walkerOS/types';
-import type { On } from '@elbwalker/walker.js';
+import type { On } from '@walkerOS/web';
 import { elb, sessionStart, sessionStorage, sessionWindow } from '../../web';
 
 let consent: On.ConsentConfig;

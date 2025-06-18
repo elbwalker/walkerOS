@@ -1,4 +1,4 @@
-import type { DestinationNode } from '@elbwalker/source-node';
+import type { DestinationNode } from '@walkerOS/node';
 import type {
   Handler,
   Mapping,

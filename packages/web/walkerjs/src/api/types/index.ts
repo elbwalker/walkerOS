@@ -2,7 +2,7 @@ import type { Mapping } from '@walkerOS/types';
 import type { SendDataValue, SendHeaders } from '@walkerOS/utils';
 import type { SendWebTransport } from '@walkerOS/web';
 
-import type { DestinationWeb } from '@elbwalker/walker.js';
+import type { DestinationWeb } from '@walkerOS/web';
 
 export interface Destination
   extends DestinationWeb.Destination<Custom, CustomEvent> {}

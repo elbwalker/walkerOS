@@ -21,10 +21,13 @@ function getModuleMapper() {
     '^@walkerOS/utils$': getDirectory('utils/src/'),
     '^@walkerOS/node$': getDirectory('node/walkerjs/src/'),
     '^@walkerOS/web$': getDirectory('web/walkerjs/src/'),
-    '^@elbwalker/walker.js$': getDirectory('sources/walkerjs'),
-    '^@elbwalker/source-node$': getDirectory('sources/node'),
-    '^@elbwalker/destination-web-(.*)$': getDirectory('destinations/web/$1'),
-    '^@elbwalker/destination-node-(.*)$': getDirectory('destinations/node/$1'),
+    '^@walkerOS/web-google$': getDirectory('web/google/src/'),
+    '^@walkerOS/web-meta$': getDirectory('web/meta/src/'),
+    '^@walkerOS/web-piwikpro$': getDirectory('web/piwikpro/src/'),
+    '^@walkerOS/web-plausible$': getDirectory('web/plausible/src/'),
+    '^@walkerOS/node-aws$': getDirectory('node/aws/src/'),
+    '^@walkerOS/node-google$': getDirectory('node/google/bigquery/src/'),
+    '^@walkerOS/node-meta$': getDirectory('node/meta/src/'),
   };
 }
 
@@ -46,7 +49,7 @@ const config = {
       },
     ],
   },
-  transformIgnorePatterns: ['/node_modules/(?!(@elbwalker)/)'],
+  transformIgnorePatterns: ['/node_modules/(?!(@walkerOS)/)'],
   testMatch: ['<rootDir>/**/*.test.(ts|tsx|js|jsx)'],
   moduleFileExtensions: ['js', 'ts', 'mjs'],
   rootDir: '.',

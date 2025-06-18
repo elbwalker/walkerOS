@@ -1,8 +1,8 @@
 import type { WalkerOS } from '@walkerOS/types';
-import type { Elb } from '@elbwalker/walker.js';
+import type { Elb } from '@walkerOS/web';
 import type { DestinationGoogleGTM } from '.';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
-import { createSourceWalkerjs } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@walkerOS/web';
 import { createEvent, getEvent } from '@walkerOS/utils';
 import { events, mapping } from './examples';
 

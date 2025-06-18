@@ -1,6 +1,6 @@
-import type { Elb } from '@elbwalker/walker.js';
+import type { Elb } from '@walkerOS/web';
 import type { DestinationGoogleAds } from '.';
-import { createSourceWalkerjs } from '@elbwalker/walker.js';
+import { createSourceWalkerjs } from '@walkerOS/web';
 import { getEvent } from '@walkerOS/utils';
 import { events, mapping } from './examples';
 

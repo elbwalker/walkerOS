@@ -1,5 +1,5 @@
 import type { Mapping } from '@walkerOS/types';
-import type { DestinationWeb } from '@elbwalker/walker.js';
+import type { DestinationWeb } from '@walkerOS/web';
 
 declare global {
   interface Window {
