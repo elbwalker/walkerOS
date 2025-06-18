@@ -1,11 +1,11 @@
 {
   "name": "@walkerOS/node-google",
-  "description": "BigQuery node destination for walkerOS",
+  "description": "Google node destinations for walkerOS (BigQuery)",
   "version": "0.0.1",
   "license": "MIT",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/src/index.js",
+  "module": "./dist/src/index.mjs",
+  "types": "./dist/src/index.d.ts",
   "files": [
     "dist/**",
   ],
@@ -22,12 +22,13 @@
     "@walkerOS/utils": "0.0.1"
   },
   "devDependencies": {
+    "@walkerOS/tsup": "0.0.1",
     "@walkerOS/types": "0.0.1",
     "@google-cloud/bigquery": "^7.8.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
-    "directory": "packages/node/google/bigquery"
+    "directory": "packages/node/google"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme",
