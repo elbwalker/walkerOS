@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@walkerOS/types';
-import type { Elb } from '@walkerOS/web';
+import type { Elb } from '../types';
 import type { DestinationAPI } from '.';
-import { createWalkerjsWeb } from '@walkerOS/web';
+import { createWalkerjsWeb } from '..';
 import { createEvent } from '@walkerOS/utils';
 import { events, mapping } from './examples';
 

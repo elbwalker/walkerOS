@@ -1,4 +1,4 @@
-import { isDefined } from '../core/is';
+import { isDefined } from '@walkerOS/utils';
 
 async function sha256(message: string): Promise<string | undefined> {
   const crypto: Crypto | undefined =

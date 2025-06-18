@@ -1,6 +1,6 @@
 import type { Custom, Destination } from './types';
 import { isDefined } from '@walkerOS/utils';
-import { sendWeb } from '@walkerOS/web';
+import { sendWeb } from '../utils';
 
 // Types
 export * as DestinationAPI from './types';

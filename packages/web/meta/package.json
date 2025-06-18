@@ -18,13 +18,13 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkerOS/web": "0.0.1"
+    "@walkerOS/web": "0.0.1",
+    "@walkerOS/utils": "^0.0.1"
   },
   "devDependencies": {
     "@types/facebook-pixel": "^0.0.31",
     "@walkerOS/tsup": "0.0.1",
-    "@walkerOS/types": "0.0.1",
-    "@walkerOS/utils": "^0.0.1"
+    "@walkerOS/types": "0.0.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

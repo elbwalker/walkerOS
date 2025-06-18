@@ -1,5 +1,5 @@
 import type { Hooks, WalkerOS } from '@walkerOS/types';
-import type { SessionConfig } from '@walkerOS/web';
+import type { SessionConfig } from '../utils';
 import type { Destination, Config as DestConfig } from './destination';
 import type { Fn, Layer } from './elb';
 import type { Events, Trigger } from './walker';

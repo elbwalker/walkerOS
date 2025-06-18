@@ -1,7 +1,6 @@
 import type { WalkerOS } from '@walkerOS/types';
-import type { StorageType } from '../core/constants';
-import Const from '../core/constants';
-import { castValue } from '../core/castValue';
+import type { StorageType } from '@walkerOS/utils';
+import { castValue, Const } from '@walkerOS/utils';
 
 export interface StorageValue {
   e: number; // Expiration timestamp

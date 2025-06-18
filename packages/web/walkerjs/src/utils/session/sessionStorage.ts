@@ -1,10 +1,8 @@
 import type { WalkerOS } from '@walkerOS/types';
+import { getId, tryCatch, type StorageType } from '@walkerOS/utils';
 import type { SessionWindowConfig } from '.';
-import type { StorageType } from '../../core/constants';
 import { storageRead, storageWrite } from '../storage';
 import { sessionWindow } from '.';
-import { tryCatch } from '../../core/tryCatch';
-import { getId } from '../../core/getId';
 
 export interface SessionStorageConfig extends SessionWindowConfig {
   deviceKey?: string;

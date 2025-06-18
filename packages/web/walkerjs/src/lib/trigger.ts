@@ -1,6 +1,6 @@
+import type { Walker, WalkerjsWeb, Elb } from '../types';
 import { Const, onApply, throttle, tryCatch } from '@walkerOS/utils';
-import { elb as elbOrg, getAttribute, isVisible } from '@walkerOS/web';
-import { Walker, WalkerjsWeb, Elb } from '../types';
+import { elb as elbOrg, getAttribute, isVisible } from '../utils';
 import {
   getElbAttributeName,
   getEvents,

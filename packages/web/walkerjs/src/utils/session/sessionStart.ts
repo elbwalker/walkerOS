@@ -2,8 +2,7 @@ import type { WalkerOS } from '@walkerOS/types';
 import type { SessionStorageConfig } from './';
 import { sessionStorage, sessionWindow } from './';
 import { elb as elbOrg } from '../elb';
-import { isArray, isDefined, isString } from '../../core/is';
-import { getGrantedConsent } from '../../core';
+import { getGrantedConsent, isArray, isDefined } from '@walkerOS/utils';
 
 export interface SessionConfig extends SessionStorageConfig {
   consent?: string | string[];

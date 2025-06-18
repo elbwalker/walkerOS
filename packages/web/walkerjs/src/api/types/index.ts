@@ -1,8 +1,7 @@
 import type { Mapping } from '@walkerOS/types';
 import type { SendDataValue, SendHeaders } from '@walkerOS/utils';
-import type { SendWebTransport } from '@walkerOS/web';
-
-import type { DestinationWeb } from '@walkerOS/web';
+import type { DestinationWeb } from '../../types';
+import type { SendWebTransport } from '../../utils';
 
 export interface Destination
   extends DestinationWeb.Destination<Custom, CustomEvent> {}

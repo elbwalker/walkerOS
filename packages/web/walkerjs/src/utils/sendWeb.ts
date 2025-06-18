@@ -1,6 +1,10 @@
-import type { SendDataValue, SendHeaders, SendResponse } from '../core/send';
-import { getHeaders, transformData } from '../core/send';
-import { tryCatch, tryCatchAsync } from '../core/tryCatch';
+import type { SendDataValue, SendHeaders, SendResponse } from '@walkerOS/utils';
+import {
+  getHeaders,
+  transformData,
+  tryCatch,
+  tryCatchAsync,
+} from '@walkerOS/utils';
 
 export type SendWebTransport = 'fetch' | 'beacon' | 'xhr';
 

@@ -2,9 +2,9 @@
   "name": "@walkerOS/utils",
   "description": "Shared utils for walkerOS packages",
   "version": "0.0.1",
-  "main": "./dist/src/index.js",
-  "module": "./dist/src/index.mjs",
-  "types": "./dist/src/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "license": "MIT",
   "files": [
     "dist/**"

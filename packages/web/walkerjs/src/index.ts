@@ -14,7 +14,7 @@ export * from './types';
 
 // Tagger utility
 export { default as tagger } from './tagger';
-export * from './tagger/types';
+export * from './tagger/types/index.d';
 
 // Web API destination
 export { destinationAPI } from './api';
@@ -25,9 +25,7 @@ export * from './utils';
 
 export const elb: Elb.Fn = createElb();
 
-export function createWalkerjsWeb(
-  customConfig?: WalkerjsWeb.InitConfig,
-): {
+export function createWalkerjsWeb(customConfig?: WalkerjsWeb.InitConfig): {
   elb: Elb.Fn;
   instance: WalkerjsWeb.Instance;
 } {

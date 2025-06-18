@@ -1,7 +1,9 @@
 import type { WalkerOS } from '@walkerOS/types';
-import type { MarketingParameters } from '../../core/getMarketingParameters';
-import { getMarketingParameters } from '../../core/getMarketingParameters';
-import { getId } from '../../core/getId';
+import {
+  getId,
+  getMarketingParameters,
+  type MarketingParameters,
+} from '@walkerOS/utils';
 
 export interface SessionWindowConfig {
   data?: WalkerOS.Properties;
