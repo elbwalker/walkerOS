@@ -2,9 +2,9 @@ import type { Destination } from './types';
 import { isObject } from '@elbwalker/utils';
 
 // Types
-export * as DestinationGoogleAds from './types';
+export * as DestinationAds from './types';
 
-export const destinationGoogleAds: Destination = {
+export const destinationAds: Destination = {
   type: 'google-ads',
 
   config: {},
@@ -65,4 +65,4 @@ function addScript(
   document.head.appendChild(script);
 }
 
-export default destinationGoogleAds;
+export default destinationAds;

@@ -1,25 +1,11 @@
 {
-  "name": "@elbwalker/destination-web-google-ads",
+  "name": "@walkerOS/web-google",
   "description": "Google Ads web destination for walkerOS",
-  "version": "3.0.4",
+  "version": "0.0.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "default": "./dist/index.mjs"
-    },
-    "./examples": {
-      "types": "./dist/examples/index.d.ts",
-      "import": "./dist/examples/index.mjs",
-      "require": "./dist/examples/index.js",
-      "default": "./dist/examples/index.mjs"
-    }
-  },
   "files": [
     "dist/**",
     "CHANGELOG.md"
@@ -42,7 +28,7 @@
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
-    "directory": "packages/destinations/web/google-ads"
+    "directory": "packages/web/google/ads"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme",
