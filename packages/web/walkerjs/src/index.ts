@@ -20,6 +20,9 @@ export * from './tagger/types';
 export { destinationWebAPI as destinationAPI } from './api';
 export * as DestinationAPI from './api/types';
 
+// Web utilities
+export * from './utils';
+
 export const elb: Elb.Fn = createElb();
 
 export function createSourceWalkerjs(

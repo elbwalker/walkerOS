@@ -1,31 +1,11 @@
 {
-  "name": "@elbwalker/utils",
+  "name": "@walkerOS/utils",
   "description": "Shared utils for walkerOS packages",
-  "version": "3.8.2",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "version": "0.0.1",
+  "main": "./dist/src/index.js",
+  "module": "./dist/src/index.mjs",
+  "types": "./dist/src/index.d.ts",
   "license": "MIT",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "default": "./dist/index.mjs"
-    },
-    "./node": {
-      "types": "./dist/node.d.ts",
-      "import": "./dist/node.mjs",
-      "require": "./dist/node.js",
-      "default": "./dist/node.mjs"
-    },
-    "./web": {
-      "types": "./dist/web.d.ts",
-      "import": "./dist/web.mjs",
-      "require": "./dist/web.js",
-      "default": "./dist/web.mjs"
-    }
-  },
   "files": [
     "dist/**",
     "CHANGELOG.md"
@@ -52,7 +32,6 @@
   },
   "keywords": [
     "walker",
-    "walkerOS",
     "walkerOS",
     "analytics",
     "tracking",

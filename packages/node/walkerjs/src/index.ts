@@ -6,6 +6,9 @@ import { getPush } from './lib/push';
 // Types
 export * from './types';
 
+// Node utilities
+export * from './utils';
+
 export function createSourceNode(customConfig?: SourceNode.InitConfig): {
   elb: Elb.Fn;
   instance: SourceNode.Instance;
