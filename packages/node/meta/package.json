@@ -8,7 +8,6 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist/**",
-    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup",
@@ -19,8 +18,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/source-node": "3.4.2",
-    "@walkerOS/utils": "^3.8.2"
+    "@walkerOS/node": "0.0.1",
+    "@walkerOS/utils": "0.0.1"
   },
   "devDependencies": {
     "@walkerOS/types": "0.0.1"

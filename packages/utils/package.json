@@ -8,7 +8,6 @@
   "license": "MIT",
   "files": [
     "dist/**",
-    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup",
