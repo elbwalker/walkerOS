@@ -1,4 +1,4 @@
-import type { Mapping, WalkerOS } from '@elbwalker/types';
+import type { Mapping, WalkerOS } from '@walkerOS/types';
 import type { DestinationWeb } from '@elbwalker/walker.js';
 
 declare global {

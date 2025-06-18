@@ -22,7 +22,7 @@
     "@elbwalker/walker.js": "3.4.2"
   },
   "devDependencies": {
-    "@elbwalker/types": "3.4.0"
+    "@walkerOS/types": "0.0.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

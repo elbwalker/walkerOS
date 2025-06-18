@@ -1,4 +1,4 @@
-import type { Mapping } from '@elbwalker/types';
+import type { Mapping } from '@walkerOS/types';
 import type { SendDataValue, SendHeaders } from '@walkerOS/utils';
 import type { SendWebTransport } from '@walkerOS/web';
 

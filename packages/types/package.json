@@ -1,19 +1,11 @@
 {
-  "name": "@elbwalker/types",
+  "name": "@walkerOS/types",
   "description": "Shared types for walkerOS",
-  "version": "3.4.0",
+  "version": "0.0.1",
   "license": "MIT",
   "main": "./src/index.ts",
   "module": "./src/index.ts",
   "types": "./src/index.ts",
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts",
-      "require": "./src/index.ts",
-      "default": "./src/index.ts"
-    }
-  },
   "files": [
     "src/**",
     "CHANGELOG.md"

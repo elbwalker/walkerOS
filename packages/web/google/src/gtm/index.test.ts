@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationGoogleGTM } from '.';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';

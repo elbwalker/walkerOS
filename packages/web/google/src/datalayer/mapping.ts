@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import type { Config, EventConfig, MappedEvent, Mapping } from './types';
 import {
   getId,

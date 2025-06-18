@@ -2,7 +2,7 @@ import type {
   Elb,
   Mapping as WalkerOSMapping,
   WalkerOS,
-} from '@elbwalker/types';
+} from '@walkerOS/types';
 
 declare global {
   interface Window {

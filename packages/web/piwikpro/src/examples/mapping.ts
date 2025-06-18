@@ -1,4 +1,4 @@
-import type { Mapping } from '@elbwalker/types';
+import type { Mapping } from '@walkerOS/types';
 import type { DestinationPiwikPro } from '..';
 import { isObject } from '@walkerOS/utils';
 

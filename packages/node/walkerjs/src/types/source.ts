@@ -1,4 +1,4 @@
-import type { Hooks, Schema, WalkerOS } from '@elbwalker/types';
+import type { Hooks, Schema, WalkerOS } from '@walkerOS/types';
 import type { Fn } from './elb';
 import type { Destination } from './destination';
 

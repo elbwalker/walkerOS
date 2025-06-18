@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import type { StorageType } from '../core/constants';
 import Const from '../core/constants';
 import { castValue } from '../core/castValue';

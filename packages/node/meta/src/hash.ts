@@ -1,4 +1,4 @@
-import { WalkerOS } from '@elbwalker/types';
+import { WalkerOS } from '@walkerOS/types';
 import { isArray, isObject, isString } from '@walkerOS/utils';
 import { getHashNode } from '@walkerOS/node';
 

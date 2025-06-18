@@ -1,4 +1,4 @@
-import type { Mapping } from '@elbwalker/types';
+import type { Mapping } from '@walkerOS/types';
 import type { DestinationWebAPI } from '..';
 
 export const entity_action: DestinationWebAPI.EventConfig = {

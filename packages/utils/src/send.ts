@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import { isSameType } from './is';
 import { assign } from './assign';
 

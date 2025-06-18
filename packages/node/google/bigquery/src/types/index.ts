@@ -2,7 +2,7 @@ import type { DestinationNode } from '@elbwalker/source-node';
 import type {
   Handler,
   Destination as WalkerOSDestination,
-} from '@elbwalker/types';
+} from '@walkerOS/types';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Destination

@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import type { ITagger } from './types';
 
 function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Instance {

@@ -1,7 +1,7 @@
 import type {
   Destination as WalkerOSDestination,
   Mapping as WalkerOSMapping,
-} from '@elbwalker/types';
+} from '@walkerOS/types';
 
 export interface Destination<Custom = unknown, CustomEvent = unknown>
   extends WalkerOSDestination.Destination<Custom, CustomEvent> {

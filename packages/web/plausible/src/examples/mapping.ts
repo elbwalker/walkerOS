@@ -1,4 +1,4 @@
-import type { Mapping } from '@elbwalker/types';
+import type { Mapping } from '@walkerOS/types';
 import type { DestinationPlausible } from '..';
 
 export const customEvent: DestinationPlausible.EventConfig = {

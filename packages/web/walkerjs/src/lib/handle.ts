@@ -1,4 +1,4 @@
-import type { Hooks, On } from '@elbwalker/types';
+import type { Hooks, On } from '@walkerOS/types';
 import type { SourceWalkerjs, Elb } from '../types';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';

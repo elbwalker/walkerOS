@@ -1,4 +1,4 @@
-import type { On, WalkerOS } from '@elbwalker/types';
+import type { On, WalkerOS } from '@walkerOS/types';
 import { isArray } from './is';
 import { Const } from './constants';
 import { tryCatch } from './tryCatch';

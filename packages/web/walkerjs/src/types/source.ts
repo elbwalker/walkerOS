@@ -1,4 +1,4 @@
-import type { Hooks, WalkerOS } from '@elbwalker/types';
+import type { Hooks, WalkerOS } from '@walkerOS/types';
 import type { SessionConfig } from '@walkerOS/web';
 import type { Destination, Config as DestConfig } from './destination';
 import type { Fn, Layer } from './elb';

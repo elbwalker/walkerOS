@@ -1,4 +1,4 @@
-import { WalkerOS } from '@elbwalker/types';
+import { WalkerOS } from '@walkerOS/types';
 import { isArray, isDefined } from './is';
 
 export function getByPath(

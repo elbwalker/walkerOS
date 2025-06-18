@@ -1,4 +1,4 @@
-import type { Data } from '@elbwalker/types';
+import type { Data } from '@walkerOS/types';
 import type { Elb, SourceWalkerjs } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { Walkerjs, createSourceWalkerjs } from '../';

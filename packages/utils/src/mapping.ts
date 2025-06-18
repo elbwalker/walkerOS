@@ -1,4 +1,4 @@
-import type { Mapping, WalkerOS } from '@elbwalker/types';
+import type { Mapping, WalkerOS } from '@walkerOS/types';
 import { getGrantedConsent } from './consent';
 import { getByPath } from './byPath';
 import { isArray, isDefined, isString, isObject } from './is';

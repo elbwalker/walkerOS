@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import type { Custom, Destination, Parameters } from './types';
 import { getParamsInclude } from './parameters';
 import { isObject } from '@walkerOS/utils';

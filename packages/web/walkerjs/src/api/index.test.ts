@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import type { Elb } from '@elbwalker/walker.js';
 import type { DestinationWebAPI } from '.';
 import { createSourceWalkerjs } from '@elbwalker/walker.js';

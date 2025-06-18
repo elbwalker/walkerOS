@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@walkerOS/utils": "3.8.2",
-    "@elbwalker/types": "3.4.0"
+    "@walkerOS/types": "0.0.1"
   },
   "devDependencies": {
     "@walkerOS/tsup": "0.0.1"

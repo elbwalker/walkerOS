@@ -1,4 +1,4 @@
-import { Walker } from '@elbwalker/types';
+import { Walker } from '@walkerOS/types';
 
 export namespace ITagger {
   interface Config {

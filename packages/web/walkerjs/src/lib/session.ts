@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import type { SessionCallback } from '@walkerOS/web';
 import { assign, isSameType, onApply, useHooks } from '@walkerOS/utils';
 import { sessionStart as sessionStartOrg } from '@walkerOS/web';

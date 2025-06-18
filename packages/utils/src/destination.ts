@@ -3,7 +3,7 @@ import type {
   Mapping,
   WalkerOS,
   Elb,
-} from '@elbwalker/types';
+} from '@walkerOS/types';
 import { getId } from './getId';
 import { setByPath } from './byPath';
 import { getMappingEvent, getMappingValue } from './mapping';

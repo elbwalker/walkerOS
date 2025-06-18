@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 
 export function castValue(value: unknown): WalkerOS.PropertyType {
   if (value === 'true') return true;

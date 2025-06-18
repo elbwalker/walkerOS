@@ -19,7 +19,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/types": "3.4.0"
+    "@walkerOS/types": "0.0.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

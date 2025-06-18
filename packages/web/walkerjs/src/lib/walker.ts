@@ -1,5 +1,5 @@
 import type { Walker } from '../types';
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import { Const, assign, castValue, isArray, trim } from '@walkerOS/utils';
 import { getAttribute } from '@walkerOS/web';
 export function getElbAttributeName(

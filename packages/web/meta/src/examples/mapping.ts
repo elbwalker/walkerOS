@@ -1,4 +1,4 @@
-import type { Mapping, WalkerOS } from '@elbwalker/types';
+import type { Mapping, WalkerOS } from '@walkerOS/types';
 import type { DestinationMetaPixel } from '..';
 import { isObject } from '@walkerOS/utils';
 

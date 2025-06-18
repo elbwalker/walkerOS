@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import { getEvent } from '@walkerOS/utils';
 
 export function entity_action(): WalkerOS.AnyObject {

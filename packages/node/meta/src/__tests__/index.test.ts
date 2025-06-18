@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import type { DestinationNode } from '@elbwalker/source-node';
 import type { Config, Destination } from '../types';
 import { getEvent } from '@walkerOS/utils';

@@ -1,6 +1,6 @@
-import type { WalkerOS } from '@elbwalker/types';
-import type { Destination } from '@elbwalker/types';
-import type { Elb } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
+import type { Destination } from '@walkerOS/types';
+import type { Elb } from '@walkerOS/types';
 import { Commands, Const } from './constants';
 import { addDestination } from './destination';
 import { assign } from './assign';

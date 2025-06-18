@@ -1,4 +1,4 @@
-import { Mapping, WalkerOS } from '@elbwalker/types';
+import { Mapping, WalkerOS } from '@walkerOS/types';
 import {
   createEvent,
   getEvent,

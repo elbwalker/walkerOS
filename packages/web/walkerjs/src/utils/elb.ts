@@ -1,4 +1,4 @@
-import type { Elb } from '@elbwalker/types';
+import type { Elb } from '@walkerOS/types';
 
 export const elb: Elb.Fn = function () {
   const w = window as unknown as Record<string, unknown[]>;

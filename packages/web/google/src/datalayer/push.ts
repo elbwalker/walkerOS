@@ -1,4 +1,4 @@
-import type { Elb } from '@elbwalker/types';
+import type { Elb } from '@walkerOS/types';
 import type { Config } from './types';
 import {
   clone,

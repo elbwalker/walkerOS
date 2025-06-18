@@ -1,4 +1,4 @@
-import type { Destination, WalkerOS } from '@elbwalker/types';
+import type { Destination, WalkerOS } from '@walkerOS/types';
 import { createEvent, clone } from '@walkerOS/utils';
 import { pushToDestinations } from '../';
 

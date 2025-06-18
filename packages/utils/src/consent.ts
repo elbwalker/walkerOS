@@ -1,4 +1,4 @@
-import type { WalkerOS, Elb } from '@elbwalker/types';
+import type { WalkerOS, Elb } from '@walkerOS/types';
 import { assign } from './assign';
 import { pushToDestinations, createPushResult } from './destination';
 import { onApply } from './on';

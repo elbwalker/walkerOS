@@ -1,4 +1,4 @@
-import type { Destination } from '@elbwalker/types';
+import type { Destination } from '@walkerOS/types';
 import type { FirehoseConfig } from '../types';
 import { throwError } from '@walkerOS/utils';
 import {

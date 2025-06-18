@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 
 export function parseUserAgent(userAgent?: string): WalkerOS.User {
   if (!userAgent) return {};

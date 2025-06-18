@@ -3,7 +3,7 @@ import type {
   Handler,
   Mapping,
   Destination as WalkerOSDestination,
-} from '@elbwalker/types';
+} from '@walkerOS/types';
 
 export interface Destination
   extends DestinationNode.Destination<Custom, CustomEvent> {

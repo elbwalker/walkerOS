@@ -1,4 +1,4 @@
-import type { Hooks } from '@elbwalker/types';
+import type { Hooks } from '@walkerOS/types';
 import type { SourceWalkerjs, DestinationWeb } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { Walkerjs, createSourceWalkerjs } from '../';

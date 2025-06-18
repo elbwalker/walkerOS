@@ -1,4 +1,4 @@
-import type { Elb } from '@elbwalker/types';
+import type { Elb } from '@walkerOS/types';
 import type { Destination, DestinationInit, Config } from './destination';
 import type { State } from './source';
 

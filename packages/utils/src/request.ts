@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import { tryCatch } from './tryCatch';
 import { castValue } from './castValue';
 import { isArray, isObject } from './is';

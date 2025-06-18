@@ -1,4 +1,4 @@
-import type { Schema, WalkerOS } from '@elbwalker/types';
+import type { Schema, WalkerOS } from '@walkerOS/types';
 import { isSameType } from './is';
 import { throwError } from './throwError';
 import { tryCatch } from './tryCatch';

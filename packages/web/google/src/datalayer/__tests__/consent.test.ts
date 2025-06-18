@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/types';
 import type { DataLayer } from '../types';
 import { sourceDataLayer } from '..';
 import { isObject } from '@walkerOS/utils';
