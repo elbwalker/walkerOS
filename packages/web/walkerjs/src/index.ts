@@ -12,6 +12,14 @@ import { dataLayerDestination } from './lib/destination';
 // Export types and elb
 export * from './types';
 
+// Tagger utility
+export { default as tagger } from './tagger';
+export * from './tagger/types';
+
+// Web API destination
+export { destinationWebAPI as destinationAPI } from './api';
+export * as DestinationAPI from './api/types';
+
 export const elb: Elb.Fn = createElb();
 
 export function createSourceWalkerjs(
@@ -29,7 +37,7 @@ export function createSourceWalkerjs(
 export function Walkerjs(
   customConfig: SourceWalkerjs.InitConfig = {},
 ): SourceWalkerjs.Instance {
-  const version = '3.4.2'; // Source version
+  const version = '0.0.1'; // Source version
   const state = getState(customConfig);
   const instance: SourceWalkerjs.Instance = {
     ...state,

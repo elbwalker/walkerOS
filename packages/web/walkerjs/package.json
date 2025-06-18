@@ -1,19 +1,11 @@
 {
-  "name": "@elbwalker/walker.js",
-  "description": "Lightweight & vendor-agnostic tracking implementation layer for data-collection by simply adding attributes to your markup.",
-  "version": "3.4.2",
+  "name": "@walkerOS/web",
+  "description": "Browser-based event collection, tagger, and API destination for walkerOS",
+  "version": "0.0.1",
   "license": "MIT",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "default": "./dist/index.mjs"
-    }
-  },
+  "main": "./dist/src/index.js",
+  "module": "./dist/src/index.mjs",
+  "types": "./dist/src/index.d.ts",
   "files": [
     "dist/**",
     "CHANGELOG.md"
@@ -27,11 +19,15 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/utils": "3.8.2"
+    "@elbwalker/utils": "3.8.2",
+    "@elbwalker/types": "3.4.0"
+  },
+  "devDependencies": {
+    "@elbwalker/tsup": "0.0.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
-    "directory": "packages/sources/walkerjs"
+    "directory": "packages/web/walkerjs"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme",
@@ -48,7 +44,10 @@
     "data privacy",
     "privacy friendly",
     "web analytics",
-    "product analytics"
+    "product analytics",
+    "tagger",
+    "api",
+    "endpoint"
   ],
   "funding": [
     {
