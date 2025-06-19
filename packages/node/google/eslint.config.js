@@ -1,3 +1,4 @@
-const config = require('@walkerOS/eslint/node');
-
-module.exports = config;
+module.exports = (async () => {
+  const { default: config } = await import('@walkerOS/eslint/node.mjs');
+  return config;
+})();

@@ -1,4 +1,4 @@
-import baseConfig from '@walkerOS/eslint';
+import baseConfig from '@walkerOS/eslint/index.mjs';
 import globals from 'globals';
 
 export default [
@@ -7,13 +7,11 @@ export default [
     files: ['**/*.{js,ts,tsx}'],
     languageOptions: {
       globals: {
-        ...globals.node,
+        ...globals.browser,
       },
     },
     rules: {
-      'no-process-exit': 'error',
-      'no-path-concat': 'error',
-      'no-buffer-constructor': 'error',
+      // web-specific rules
     },
   },
 ];

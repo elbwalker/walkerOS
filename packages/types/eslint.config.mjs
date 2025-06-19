@@ -1,4 +1,4 @@
-import baseConfig from '@walkerOS/eslint/web';
+import baseConfig from '@walkerOS/eslint/index.mjs';
 
 export default [
   ...baseConfig,

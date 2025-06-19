@@ -3,12 +3,15 @@
   "version": "0.0.1",
   "private": true,
   "license": "MIT",
-  "main": "./src/index.js",
+  "main": "./src/index.mjs",
   "exports": {
-    ".": "./src/index.js",
-    "./web.config": "./src/web.config.js",
+    ".": "./src/index.mjs",
+    "./index.mjs": "./src/index.mjs",
+    "./web.config": "./src/web.config.mjs",
+    "./web.config.mjs": "./src/web.config.mjs",
     "./web.setup": "./src/web.setup.ts",
-    "./node.config": "./src/node.config.js",
+    "./node.config": "./src/node.config.mjs",
+    "./node.config.mjs": "./src/node.config.mjs",
     "./node.setup": "./src/node.setup.ts"
   },
   "dependencies": {

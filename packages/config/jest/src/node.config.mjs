@@ -1,4 +1,4 @@
-import baseConfig from '@walkerOS/jest';
+import baseConfig from '@walkerOS/jest/index.mjs';
 
 const config = {
   setupFilesAfterEnv: ['@walkerOS/jest/node.setup'],

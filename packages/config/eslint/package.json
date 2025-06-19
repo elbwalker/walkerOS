@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "files": [
-    "*.js"
+    "*.mjs"
   ],
   "devDependencies": {
     "@eslint/js": "^9.23.0",
