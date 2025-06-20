@@ -1,4 +1,5 @@
 import type { DataLayer } from './types';
+import { isArray } from '@walkerOS/utils';
 
 export function convertConsentStates(
   obj: Record<string, unknown>,
@@ -13,9 +14,9 @@ export function convertConsentStates(
   return consent;
 }
 
-export function getDataLayer(name = 'dataLayer'): DataLayer | undefined {
+export function getDataLayer(name = 'dataLayer'): DataLayer | false {
   // Ensure the dataLayer exists
   if (!window[name]) window[name] = [];
 
-  return window[name] || [];
+  return isArray(window[name]) ? window[name] : false;
 }

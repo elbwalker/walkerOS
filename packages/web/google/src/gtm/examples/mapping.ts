@@ -1,8 +1,8 @@
 import type { Mapping } from '@walkerOS/types';
-import type { DestinationGoogleGTM } from '..';
+import type { DestinationGTM } from '..';
 import { isObject } from '@walkerOS/utils';
 
-export const entity_action: DestinationGoogleGTM.EventConfig = {
+export const entity_action: DestinationGTM.EventConfig = {
   name: 'entity_action',
   data: {
     map: {
@@ -11,7 +11,7 @@ export const entity_action: DestinationGoogleGTM.EventConfig = {
   },
 };
 
-export const purchase: DestinationGoogleGTM.EventConfig = {
+export const purchase: DestinationGTM.EventConfig = {
   name: 'purchase',
   data: {
     map: {
@@ -38,7 +38,7 @@ export const purchase: DestinationGoogleGTM.EventConfig = {
   },
 };
 
-export const add_to_cart: DestinationGoogleGTM.EventConfig = {
+export const add_to_cart: DestinationGTM.EventConfig = {
   name: 'add_to_cart',
   data: {
     map: {

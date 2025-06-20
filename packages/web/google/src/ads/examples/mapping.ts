@@ -1,7 +1,7 @@
 import type { Mapping } from '@walkerOS/types';
-import type { DestinationGoogleAds } from '..';
+import type { DestinationAds } from '..';
 
-export const conversion: DestinationGoogleAds.EventConfig = {
+export const conversion: DestinationAds.EventConfig = {
   name: 'labelId',
   data: {
     map: {

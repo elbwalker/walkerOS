@@ -1,8 +1,8 @@
 import type { Mapping } from '@walkerOS/types';
-import type { DestinationGoogleGA4 } from '..';
+import type { DestinationGA4 } from '..';
 import { isObject } from '@walkerOS/utils';
 
-export const purchase: DestinationGoogleGA4.EventConfig = {
+export const purchase: DestinationGA4.EventConfig = {
   name: 'purchase',
   data: {
     map: {
@@ -29,7 +29,7 @@ export const purchase: DestinationGoogleGA4.EventConfig = {
   },
 };
 
-export const add_to_cart: DestinationGoogleGA4.EventConfig = {
+export const add_to_cart: DestinationGA4.EventConfig = {
   name: 'add_to_cart',
   data: {
     map: {
