@@ -14,7 +14,7 @@ import {
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 import { destinationGA4 } from '@walkerOS/web-google';
-import { destinationGA4Examples } from '@walkerOS/web-google';
+import { destinationGA4Examples } from '@walkerOS/web-google/examples';
 
 <DestinationContextProvider
   destination={destinationGA4}
@@ -181,7 +181,7 @@ gtag.js event.
   smallText={true}
   height={'512px'}
   event={getEvent('product add')}
-  mapping={destinationGA4Examples.add_to_cart}
+  mapping={destinationGA4Examples.mapping.add_to_cart}
 />
 
 ### purchase
@@ -194,7 +194,7 @@ gtag.js event.
   smallText={true}
   height={'542px'}
   event={getEvent('order complete')}
-  mapping={destinationGA4Examples.purchase}
+  mapping={destinationGA4Examples.mapping.purchase}
 />
 
 :::info

@@ -14,10 +14,8 @@ import {
   DestinationInit,
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
-import {
-  destinationMetaPixel,
-  destinationMetaPixelExamples,
-} from '@walkerOS/web-meta';
+import { destinationMetaPixel } from '@walkerOS/web-meta';
+import { destinationMetaPixelExamples } from '@walkerOS/web-meta/examples';
 
 <DestinationContextProvider
   destination={destinationMetaPixel}
@@ -141,7 +139,7 @@ otherwise `trackCustom` will be used.
   smallText={true}
   height={'512px'}
   event={getEvent('product view')}
-  mapping={destinationMetaPixelExamples.ViewContent}
+  mapping={destinationMetaPixelExamples.mapping.ViewContent}
 />
 
 ### AddToCart
@@ -150,7 +148,7 @@ otherwise `trackCustom` will be used.
   smallText={true}
   height={'512px'}
   event={getEvent('product add')}
-  mapping={destinationMetaPixelExamples.AddToCart}
+  mapping={destinationMetaPixelExamples.mapping.AddToCart}
 />
 
 ### InitiateCheckout
@@ -159,7 +157,7 @@ otherwise `trackCustom` will be used.
   smallText={true}
   height={'512px'}
   event={getEvent('cart view')}
-  mapping={destinationMetaPixelExamples.InitiateCheckout}
+  mapping={destinationMetaPixelExamples.mapping.InitiateCheckout}
 />
 
 ### Purchase
@@ -168,7 +166,7 @@ otherwise `trackCustom` will be used.
   smallText={true}
   height={'512px'}
   event={getEvent('order complete')}
-  mapping={destinationMetaPixelExamples.Purchase}
+  mapping={destinationMetaPixelExamples.mapping.Purchase}
 />
 
 :::info

@@ -13,10 +13,8 @@ import {
   DestinationInit,
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
-import {
-  destinationPiwikPro,
-  destinationPiwikProExamples,
-} from '@walkerOS/web-piwikpro';
+import { destinationPiwikPro } from '@walkerOS/web-piwikpro';
+import { destinationPiwikProExamples } from '@walkerOS/web-piwikpro/examples';
 
 <DestinationContextProvider
   destination={destinationPiwikPro}
@@ -151,7 +149,7 @@ event.
   smallText={true}
   height={'512px'}
   event={getEvent('product view')}
-  mapping={destinationPiwikProExamples.ecommerceProductDetailView}
+  mapping={destinationPiwikProExamples.mapping.ecommerceProductDetailView}
 />
 
 ### AddToCart
@@ -164,7 +162,7 @@ event.
   smallText={true}
   height={'512px'}
   event={getEvent('product add')}
-  mapping={destinationPiwikProExamples.ecommerceAddToCart}
+  mapping={destinationPiwikProExamples.mapping.ecommerceAddToCart}
 />
 
 ### CartUpdate
@@ -175,9 +173,9 @@ event.
 
 <DestinationPush
   smallText={true}
-  height={'512px'}
+  height={'512px'}  
   event={getEvent('cart view')}
-  mapping={destinationPiwikProExamples.ecommerceCartUpdate}
+  mapping={destinationPiwikProExamples.mapping.ecommerceCartUpdate}
 />
 
 ### Order
@@ -190,7 +188,7 @@ event.
   smallText={true}
   height={'512px'}
   event={getEvent('order complete')}
-  mapping={destinationPiwikProExamples.ecommerceOrder}
+  mapping={destinationPiwikProExamples.mapping.ecommerceOrder}
 />
 
 </DestinationContextProvider>

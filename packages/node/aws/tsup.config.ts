@@ -4,4 +4,5 @@ export default defineConfig([
   buildModules({
     terserOptions: {}, // Don't mangle here
   }),
+  buildExamples(),
 ]);

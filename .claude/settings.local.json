@@ -10,7 +10,9 @@
       "Bash(mv:*)",
       "Bash(find:*)",
       "Bash(rg:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(npm run build:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

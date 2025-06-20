@@ -7,7 +7,7 @@ import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
 import { LiveCode } from '@site/src/components/organisms/liveCode';
 import { getEvent } from '@walkerOS/utils';
-// TODO import { destinationMetaExamples } from '@walkerOS/node-meta';
+import { destinationMetaExamples } from '@walkerOS/node-meta/examples';
 
 <PackageLink github="packages/node/meta" npm="@walkerOS/node-meta" />
 
@@ -41,8 +41,8 @@ npm install @walkerOS/node-meta
   smallText={true}
   labelInput="Configuration"
   disableInput={true}
-  input={destinationMetaExamples.InitUserData}
-  output={`sendNode('https://graph.facebook.com/v22.0/${destinationMetaExamples.InitUserData.pixelId}/events?access_token=${destinationMetaExamples.InitUserData.accessToken}', {
+  input={destinationMetaExamples.mapping.InitUserData}
+  output={`sendNode('https://graph.facebook.com/v22.0/${destinationMetaExamples.mapping.InitUserData.pixelId}/events?access_token=${destinationMetaExamples.mapping.InitUserData.accessToken}', {
     data: [
       {
         event_id: "1746576817000-gr0up-1",
@@ -217,7 +217,7 @@ exclude specific parameters from being hashed.
       },
     },
   }`}
-  output={`sendNode('https://graph.facebook.com/v22.0/${destinationMetaExamples.InitUserData.pixelId}/events?access_token=${destinationMetaExamples.InitUserData.accessToken}', {
+  output={`sendNode('https://graph.facebook.com/v22.0/${destinationMetaExamples.mapping.InitUserData.pixelId}/events?access_token=${destinationMetaExamples.mapping.InitUserData.accessToken}', {
     data: [
       {
         event_name: "Purchase",

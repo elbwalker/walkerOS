@@ -13,10 +13,11 @@ import {
   DestinationInit,
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
-import { destinationAPI, destinationAPIExamples } from '@walkerOS/web';
+import { destinationAPI } from '@walkerOS/web';
+import { destinationAPIExamples } from '@walkerOS/web/examples';
 
 <DestinationContextProvider
-  destination={destinationWebAPI}
+  destination={destinationAPI}
   fnName="sendWeb"
 >
 
@@ -117,7 +118,7 @@ function is used to send the events to an API.
   smallText={true}
   height={'128px'}
   event={getEvent()}
-  mapping={destinationAPIExamples.entity_action}
+  mapping={destinationAPIExamples.mapping.entity_action}
 />
 
 :::info

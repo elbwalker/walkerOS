@@ -12,7 +12,8 @@ import {
   DestinationInit,
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
-import { destinationAds, destinationAdsExamples } from '@walkerOS/web-google';
+import { destinationAds } from '@walkerOS/web-google';
+import { destinationAdsExamples } from '@walkerOS/web-google/examples';
 import { getEvent } from '@walkerOS/utils';
 
 <DestinationContextProvider
@@ -108,7 +109,7 @@ Use `name` to specify the conversion label and `data` for other parameters.
   smallText={true}
   height={'256px'}
   event={getEvent('order complete')}
-  mapping={destinationAdsExamples.conversion}
+  mapping={destinationAdsExamples.mapping.conversion}
 />
 
 </DestinationContextProvider>

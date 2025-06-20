@@ -13,10 +13,8 @@ import {
   DestinationInit,
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
-import {
-  destinationPlausible,
-  destinationPlausibleExamples,
-} from '@walkerOS/web-plausible';
+import { destinationPlausible } from '@walkerOS/web-plausible';
+import { destinationPlausibleExamples } from '@walkerOS/web-plausible/examples';
 
 <DestinationContextProvider
   destination={destinationPlausible}
@@ -113,7 +111,7 @@ events</Link> manually using the JavaScript function
   smallText={true}
   height={'256px'}
   event={getEvent()}
-  mapping={destinationPlausibleExamples.customEvent}
+  mapping={destinationPlausibleExamples.mapping.customEvent}
 />
 
 ### Purchase
@@ -126,7 +124,7 @@ revenue tracking</Link> guide to setup the `purchase` event.
   smallText={true}
   height={'512px'}
   event={getEvent('order complete')}
-  mapping={destinationPlausibleExamples.purchase}
+  mapping={destinationPlausibleExamples.mapping.purchase}
 />
 
 :::info
