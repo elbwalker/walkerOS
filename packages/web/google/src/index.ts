@@ -17,9 +17,3 @@ export * as destinationGTMExamples from './gtm/examples';
 export { sourceDataLayer } from './datalayer';
 export * as SourceDataLayer from './datalayer/types';
 export * as sourceDataLayerExamples from './datalayer/examples';
-
-// Re-export everything for backward compatibility
-export * from './ads';
-export * from './ga4';
-export * from './gtm';
-export * from './datalayer';
