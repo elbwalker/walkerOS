@@ -1,0 +1,94 @@
+---
+title: Package
+description: Install walker.js via package manager.
+sidebar_position: 1
+---
+
+import Link from '@docusaurus/Link';
+import PackageLink from '@site/src/components/docs/package-link';
+
+<PackageLink npm="@walkerOS/web" />
+
+To get started with the installation, run:
+
+```js
+npm i @walkerOS/web
+```
+
+Then run the following code once to create an instance:
+
+```js
+import { createWalkerjsWeb } from '@walkerOS/web';
+
+const { elb, instance } = createWalkerjsWeb({
+  /* custom config */
+});
+```
+
+## elb
+
+To configure and communicate with the walker.js instance asynchronously either
+load the `elb`-helper function:
+
+```js
+import { elb } from '@walkerOS/web';
+```
+
+Or define the `elb`-helper function yourself:
+
+```ts
+// Typescript
+import type { Elb } from '@walkerOS/web';
+const elb: Elb.Fn = (...args: unknown[]) => {
+  (window.elbLayer = window.elbLayer || []).push(args);
+};
+
+// JavaScript
+function elb() {
+  (window.elbLayer = window.elbLayer || []).push(arguments);
+}
+```
+
+or use the `elb` returned from `createWalkerjsWeb` which returns the `async`
+result of the call:
+
+```js
+const { elb } = createWalkerjsWeb();
+await elb('entity action');
+```
+
+## Single Page Applications
+
+When using a Single Page Application like React, tell the walker to run on each
+location change in your app:
+
+```js
+import React from 'react';
+import { Route, Routes, useLocation } from 'react-router-dom';
+import { createWalkerjsWeb } from '@walkerOS/web';
+
+const { elb } = createWalkerjsWeb({ default: true });
+
+export default function App() {
+  const location = useLocation();
+  React.useEffect(() => {
+    elb('walker run'); // party hard!
+  }, [location]);
+
+  return <Routes>// ...</Routes>;
+}
+```
+
+:::tip
+
+Check out the detailed react example on
+[Github](https://github.com/elbwalker/walkerOS/tree/main/apps/demos/react).
+
+:::
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

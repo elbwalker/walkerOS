@@ -18,7 +18,7 @@ npm run dev        # Development mode for all packages
 npm run clean      # Clean all build artifacts
 
 # Package level
-cd packages/sources/walkerjs
+cd packages/web/walkerjs
 npm run build      # Build individual package
 npm run dev        # Jest watch mode for development
 npm run test       # Run tests with coverage
@@ -37,22 +37,28 @@ npm run publish-packages  # Build, lint, test, version, and publish
 packages/
 ├── types/           # Core TypeScript definitions (foundation)
 ├── utils/           # Shared utilities (depends on types)
-├── sources/         # Data collection layer
-│   ├── walkerjs/    # Browser-based event collection
-│   ├── node/        # Server-side event collection
-│   └── datalayer/   # Data layer integration
-├── destinations/    # Data output layer
-│   ├── web/         # Browser destinations (GA4, GTM, etc.)
-│   └── node/        # Server destinations (AWS, BigQuery, etc.)
+├── web/             # Web-based packages
+│   ├── walkerjs/    # Browser-based event collection (source)
+│   ├── google/      # Google destinations (GA4, GTM, Ads, DataLayer)
+│   ├── meta/        # Meta Pixel destination
+│   ├── piwikpro/    # Piwik Pro destination
+│   └── plausible/   # Plausible destination
+├── node/            # Node-based packages
+│   ├── walkerjs/    # Server-side event collection (source)
+│   ├── aws/         # AWS Firehose destination
+│   ├── google/      # BigQuery destination
+│   └── meta/        # Meta CAPI destination
 ├── tagger/          # Implementation helper
 └── config/          # Shared build configurations
 ```
 
 ### Dependency Hierarchy
-- **@elbwalker/types**: Foundation types used by all packages
-- **@elbwalker/utils**: Shared utilities (depends on types)
-- **Sources**: Create and manage `WalkerOS.Events` (depend on utils)
-- **Destinations**: Process events from sources (depend on utils)
+- **@walkerOS/types**: Foundation types used by all packages
+- **@walkerOS/utils**: Shared utilities (depends on types)
+- **@walkerOS/web**: Browser source (depends on utils)
+- **@walkerOS/node**: Server source (depends on utils)
+- **Web destinations**: Depend on @walkerOS/web
+- **Node destinations**: Depend on @walkerOS/node
 
 ### Key Architectural Patterns
 
@@ -84,12 +90,12 @@ interface State {
 
 ### Type Safety
 - Never use `any` type - explicit typing is required
-- All packages must use types from `@elbwalker/types`
+- All packages must use types from `@walkerOS/types`
 - Maintain clear separation between web and node environments
 
 ### Code Organization
-- Check `@elbwalker/utils` before implementing new shared functionality
-- Follow environment separation: `packages/utils/src/{core,web,node}/`
+- Check `@walkerOS/utils` before implementing new shared functionality
+- Follow environment separation: web vs node packages
 - Prefer vanilla implementations over external dependencies
 
 ### Testing
@@ -104,7 +110,7 @@ interface State {
 
 ## Event Model
 
-Events follow the `WalkerOS.Events` format:
+Events follow the `WalkerOS.Event` format:
 ```typescript
 interface Event {
   event: string;           // Action name
@@ -120,7 +126,7 @@ interface Event {
   count: number;           // Event sequence
   version: Version;        // Walker version info
   user: User;             // User identification
-  session: Session;        // Session information
+  session: SessionData;    // Session information
   source: Source;          // Source information
 }
 ```
@@ -130,7 +136,7 @@ interface Event {
 - **Turbo**: Build orchestration and caching
 - **npm workspaces**: Package management
 - **Changeset**: Versioning and publishing
-- **TypeScript**: Shared tsconfig via `@elbwalker/tsconfig`
-- **ESLint**: Shared config via `@elbwalker/eslint`
-- **Jest**: Shared config via `@elbwalker/jest`
-- **tsup**: Build tool via `@elbwalker/tsup`
+- **TypeScript**: Shared tsconfig via `@walkerOS/tsconfig`
+- **ESLint**: Shared config via `@walkerOS/eslint`
+- **Jest**: Shared config via `@walkerOS/jest`
+- **tsup**: Build tool via `@walkerOS/tsup`

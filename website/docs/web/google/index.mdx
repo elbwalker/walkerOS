@@ -1,0 +1,36 @@
+---
+title: Google Web Package
+description: Google destinations and DataLayer source for web applications
+---
+
+# Google Web Package
+
+The `@walkerOS/web-google` package provides multiple Google integrations for web applications:
+
+## Sources
+
+- **[DataLayer](./datalayer)** - Integrate with existing Google DataLayer implementations
+
+## Destinations
+
+- **[Google Analytics 4 (GA4)](./ga4)** - Track events and conversions in Google Analytics 4
+- **[Google Tag Manager (GTM)](./gtm)** - Send events to Google Tag Manager  
+- **[Google Ads](./ads)** - Track conversions for Google Ads campaigns
+
+## Installation
+
+```bash
+npm install @walkerOS/web-google
+```
+
+## Basic Usage
+
+```javascript
+import { elb } from '@walkerOS/web';
+import { destinationGA4, destinationGTM, destinationAds } from '@walkerOS/web-google';
+
+// Add destinations
+elb('walker destination', destinationGA4, { measurementId: 'G-XXXXXXXXXX' });
+elb('walker destination', destinationGTM, { containerId: 'GTM-XXXXXX' });
+elb('walker destination', destinationAds, { conversionId: 'AW-XXXXXXXXX' });
+```

@@ -1,0 +1,130 @@
+---
+title: API
+description: How to send events to a custom API endpoint with walker.js
+---
+
+import PackageLink from '@site/src/components/docs/package-link';
+import Link from '@docusaurus/Link';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import { getEvent } from '@walkerOS/utils';
+import {
+  DestinationContextProvider,
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import { destinationAPI, destinationAPIExamples } from '@walkerOS/web';
+
+<DestinationContextProvider
+  destination={destinationWebAPI}
+  fnName="sendWeb"
+>
+
+<PackageLink
+  browser="@elbwalker/destination-web-api"
+  es5="@elbwalker/destination-web-api"
+  github="packages/destinations/web/api"
+  npm="@elbwalker/destination-web-api"
+/>
+
+The walker.js API destination allows you to send events to a custom API endpoint
+using&nbsp;<Link to="/docs/sources/walkerjs">walker.js</Link> library. This can
+be useful when you want to send data to a backend system for further processing
+or any external services.
+
+## Installation
+
+<Tabs>
+  <TabItem value="ts" label="TypeScript" default>
+Install the destination via npm
+
+```bash
+npm i @elbwalker/destination-web-api
+```
+
+```js
+import { elb } from '@elbwalker/walker.js';
+import destinationAPI from '@elbwalker/destination-web-api';
+
+elb('walker destination', destinationAPI, config);
+```
+
+  </TabItem>
+  <TabItem value="script" label="Script">
+
+Load the destination via dynamic import
+
+```html
+<script>
+  // Upload the dist/index.mjs on your own server
+  const destination = (
+    await import(
+      'https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api/dist/index.mjs'
+    )
+  ).default;
+
+  elb('walker destination', destination, config);
+</script>
+```
+
+  </TabItem>
+  <TabItem value="code" label="Code">
+Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-api@latest/dist/index.browser.js">index.browser.js</Link> file
+
+```js
+(function () {
+  'use strict';
+  var Destination = (() => {})(); // This is the copied code
+
+  elb('walker destination', Destination.default, config);
+})();
+```
+
+  </TabItem>
+</Tabs>
+
+## Configuration
+
+Set up the config for the destination.
+
+<DestinationInit
+  custom={`{
+    url: 'https://localhost:3000/api',
+    transform: (event, config, mapping) => {
+      return JSON.stringify(event);
+    },
+    transport: 'fetch',
+  }`}
+/>
+
+| Property  | Type                                   | Description                                                        |
+| --------- | -------------------------------------- | ------------------------------------------------------------------ |
+| url\*     | string                                 | URL to send the events to.                                         |
+| transform | function                               | A function to transform the events before sending them to the URL. |
+| transport | fetch (default),<br />xhr,<br />beacon | The transport method to use when sending events.                   |
+
+Properties with a `*` are required.
+
+If no `transform` function is provided, the event data will be transformed using
+`JSON.stringify`.
+
+## Mapping
+
+By default the&nbsp;<Link to="/docs/utils/helper#sendweb">`sendWeb`</Link>
+function is used to send the events to an API.
+
+<DestinationPush
+  smallText={true}
+  height={'128px'}
+  event={getEvent()}
+  mapping={destinationAPIExamples.entity_action}
+/>
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::
+
+</DestinationContextProvider>
