@@ -10,12 +10,12 @@
     "packages/types/*"
   ],
   "scripts": {
-    "build": "turbo run build --filter=!@walkerOS/website",
-    "clean": "turbo run clean --filter=!@walkerOS/website",
-    "dev": "turbo run dev --filter=!@walkerOS/website",
-    "lint": "turbo run lint --filter=!@walkerOS/website",
+    "build": "turbo run build",
+    "clean": "turbo run clean",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
     "publish-packages": "npm run build lint test && changeset version && changeset publish",
-    "test": "turbo run test --filter=!@walkerOS/website"
+    "test": "turbo run test"
   },
   "devDependencies": {
     "@changesets/cli": "^2.28.1",
