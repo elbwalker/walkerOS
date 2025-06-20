@@ -4,6 +4,9 @@ import { isObject } from '@walkerOS/utils';
 // Types
 export * as DestinationPlausible from './types';
 
+// Examples
+export * as destinationPlausibleExamples from './examples';
+
 export const destinationPlausible: Destination = {
   type: 'plausible',
 

@@ -4,6 +4,9 @@ import { getMappingValue, isArray } from '@walkerOS/utils';
 // Types
 export * as DestinationPiwikPro from './types';
 
+// Examples
+export * as destinationPiwikProExamples from './examples';
+
 export const destinationPiwikPro: Destination = {
   type: 'piwikpro',
 

@@ -5,6 +5,9 @@ import { isObject } from '@walkerOS/utils';
 // Types
 export * as DestinationMetaPixel from './types';
 
+// Examples
+export * as destinationMetaPixelExamples from './examples';
+
 export const destinationMetaPixel: Destination = {
   type: 'meta-pixel',
 

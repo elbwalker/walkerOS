@@ -20,6 +20,9 @@ export * from './tagger/types/index.d';
 export { destinationAPI } from './api';
 export * as DestinationAPI from './api/types';
 
+// Examples
+export * as destinationAPIExamples from './api/examples';
+
 // Web utilities
 export * from './utils';
 
