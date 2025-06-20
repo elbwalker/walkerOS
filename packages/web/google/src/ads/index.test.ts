@@ -1,14 +1,15 @@
 import type { Elb } from '@walkerOS/web';
-import type { DestinationGoogleAds } from '.';
+import type { DestinationAds } from '.';
 import { createWalkerjsWeb } from '@walkerOS/web';
 import { getEvent } from '@walkerOS/utils';
-import { events, mapping } from './examples';
+import { destinationAdsExamples } from '../examples';
+
+const { events, mapping } = destinationAdsExamples;
 
 describe('destination Google Ads', () => {
   let elb: Elb.Fn;
   const w = window;
-  let destination: DestinationGoogleAds.Destination,
-    config: DestinationGoogleAds.Config;
+  let destination: DestinationAds.Destination, config: DestinationAds.Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 

@@ -2,7 +2,9 @@ import type { DestinationWeb, Elb } from '@walkerOS/web';
 import type { DestinationMetaPixel } from '.';
 import { createWalkerjsWeb } from '@walkerOS/web';
 import { getEvent } from '@walkerOS/utils';
-import { events, mapping } from './examples';
+import { destinationMetaPixelExamples } from './examples';
+
+const { events, mapping } = destinationMetaPixelExamples;
 
 describe('Destination Meta Pixel', () => {
   let elb: Elb.Fn;

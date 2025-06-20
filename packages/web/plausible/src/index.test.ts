@@ -2,7 +2,9 @@ import type { Elb } from '@walkerOS/web';
 import type { DestinationPlausible } from '.';
 import { createWalkerjsWeb } from '@walkerOS/web';
 import { getEvent } from '@walkerOS/utils';
-import { events, mapping } from './examples';
+import { destinationPlausibleExamples } from './examples';
+
+const { events, mapping } = destinationPlausibleExamples;
 
 describe('destination plausible', () => {
   let elb: Elb.Fn;

@@ -1,14 +1,15 @@
 import type { Elb } from '@walkerOS/web';
-import type { DestinationGoogleGA4 } from '.';
+import type { DestinationGA4 } from '.';
 import { createWalkerjsWeb } from '@walkerOS/web';
 import { getEvent } from '@walkerOS/utils';
-import { events, mapping } from './examples';
+import { destinationGA4Examples } from '../examples';
+
+const { events, mapping } = destinationGA4Examples;
 
 describe('Destination Google GA4', () => {
   let elb: Elb.Fn;
   const w = window;
-  let destination: DestinationGoogleGA4.Destination,
-    config: DestinationGoogleGA4.Config;
+  let destination: DestinationGA4.Destination, config: DestinationGA4.Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   const event = getEvent();
@@ -157,7 +158,7 @@ describe('Destination Google GA4', () => {
 
   test('parameters', async () => {
     const event = getEvent();
-    const config: DestinationGoogleGA4.Config = {
+    const config: DestinationGA4.Config = {
       custom: { measurementId },
       init: true,
       mapping: {
@@ -295,7 +296,7 @@ describe('Destination Google GA4', () => {
   test('event add_to_cart', async () => {
     const event = getEvent('product add');
 
-    const config: DestinationGoogleGA4.Config = {
+    const config: DestinationGA4.Config = {
       custom: { measurementId, include: [] },
       init: true,
       mapping: mapping.config,
@@ -310,7 +311,7 @@ describe('Destination Google GA4', () => {
   test('event purchase', async () => {
     const event = getEvent('order complete');
 
-    const config: DestinationGoogleGA4.Config = {
+    const config: DestinationGA4.Config = {
       custom: { measurementId, include: [] },
       init: true,
       mapping: mapping.config,

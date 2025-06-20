@@ -1,16 +1,17 @@
 import type { WalkerOS } from '@walkerOS/types';
 import type { Elb } from '@walkerOS/web';
-import type { DestinationGoogleGTM } from '.';
+import type { DestinationGTM } from '.';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { createWalkerjsWeb } from '@walkerOS/web';
 import { createEvent, getEvent } from '@walkerOS/utils';
-import { events, mapping } from './examples';
+import { destinationGTMExamples } from '../examples';
+
+const { events, mapping } = destinationGTMExamples;
 
 describe('destination google-tag-manager', () => {
   let elb: Elb.Fn;
   const w = window;
-  let destination: DestinationGoogleGTM.Destination,
-    config: DestinationGoogleGTM.Config;
+  let destination: DestinationGTM.Destination, config: DestinationGTM.Config;
 
   const containerId = 'GTM-XXXXXXX';
   let event: WalkerOS.Event;

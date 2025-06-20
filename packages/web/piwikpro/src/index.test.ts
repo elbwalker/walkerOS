@@ -2,7 +2,9 @@ import type { Elb } from '@walkerOS/web';
 import type { DestinationPiwikPro } from '.';
 import { createWalkerjsWeb } from '@walkerOS/web';
 import { getEvent } from '@walkerOS/utils';
-import { events, mapping } from './examples';
+import { destinationPiwikProExamples } from './examples';
+
+const { events, mapping } = destinationPiwikProExamples;
 
 describe('Destination PiwikPro', () => {
   let elb: Elb.Fn;

@@ -7,8 +7,7 @@
     "packages/node/*",
     "packages/web/*",
     "packages/utils/*",
-    "packages/types/*",
-    "website"
+    "packages/types/*"
   ],
   "scripts": {
     "build": "turbo run build --filter=!@walkerOS/website",

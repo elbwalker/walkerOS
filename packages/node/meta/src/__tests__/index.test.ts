@@ -3,8 +3,10 @@ import type { DestinationNode } from '@walkerOS/node';
 import type { Config, Destination } from '../types';
 import { getEvent } from '@walkerOS/utils';
 import createWalkerjsNode from '@walkerOS/node';
-import { events, mapping } from '../examples';
+import { destinationMetaExamples } from '../examples';
 import { hashEvent } from '../hash';
+
+const { events, mapping } = destinationMetaExamples;
 
 const mockSendNode = jest.fn().mockResolvedValue({
   events_received: 1,
