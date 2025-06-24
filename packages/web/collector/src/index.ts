@@ -1,4 +1,4 @@
-import type { Elb, WalkerjsWeb } from './types';
+import type { Elb, WebCollector } from './types';
 import { addDestination, onApply } from '@walkerOS/utils';
 import { sessionStart } from './utils/';
 import { getPush, elbLayerInit } from './lib/push';
@@ -22,22 +22,30 @@ export * from './utils';
 
 export const elb: Elb.Fn = createElb();
 
-export function createWalkerjsWeb(customConfig?: WalkerjsWeb.InitConfig): {
+export function createWebCollector(customConfig?: WebCollector.InitConfig): {
   elb: Elb.Fn;
-  instance: WalkerjsWeb.Instance;
+  instance: WebCollector.Instance;
 } {
-  const instance = Walkerjs(customConfig);
+  const instance = webCollector(customConfig);
   const elb = instance.push;
 
   return { elb, instance };
 }
 
-export function Walkerjs(
-  customConfig: WalkerjsWeb.InitConfig = {},
-): WalkerjsWeb.Instance {
+// Legacy export for backward compatibility
+export function createWalkerjsWeb(customConfig?: WebCollector.InitConfig): {
+  elb: Elb.Fn;
+  instance: WebCollector.Instance;
+} {
+  return createWebCollector(customConfig);
+}
+
+export function webCollector(
+  customConfig: WebCollector.InitConfig = {},
+): WebCollector.Instance {
   const version = '0.0.1'; // Source version
   const state = getState(customConfig);
-  const instance: WalkerjsWeb.Instance = {
+  const instance: WebCollector.Instance = {
     ...state,
     version,
     // Placeholder functions to be overwritten with instance-reference
@@ -82,4 +90,11 @@ export function Walkerjs(
   return instance;
 }
 
-export default Walkerjs;
+// Legacy export for backward compatibility
+export function Walkerjs(
+  customConfig: WebCollector.InitConfig = {},
+): WebCollector.Instance {
+  return webCollector(customConfig);
+}
+
+export default webCollector;

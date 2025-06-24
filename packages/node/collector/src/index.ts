@@ -1,4 +1,4 @@
-import type { Elb, WalkerjsNode } from './types';
+import type { Elb, NodeCollector } from './types';
 import { run } from './lib/run';
 import { getState } from './lib/state';
 import { getPush } from './lib/push';
@@ -9,22 +9,30 @@ export * from './types';
 // Node utilities
 export * from './utils';
 
-export function createWalkerjsNode(customConfig?: WalkerjsNode.InitConfig): {
+export function createNodeCollector(customConfig?: NodeCollector.InitConfig): {
   elb: Elb.Fn;
-  instance: WalkerjsNode.Instance;
+  instance: NodeCollector.Instance;
 } {
-  const instance = Walkerjs(customConfig);
+  const instance = nodeCollector(customConfig);
   const elb = instance.push;
 
   return { elb, instance };
 }
 
-export function Walkerjs(
-  customConfig: WalkerjsNode.PartialConfig = {},
-): WalkerjsNode.Instance {
+// Legacy export for backward compatibility
+export function createWalkerjsNode(customConfig?: NodeCollector.InitConfig): {
+  elb: Elb.Fn;
+  instance: NodeCollector.Instance;
+} {
+  return createNodeCollector(customConfig);
+}
+
+export function nodeCollector(
+  customConfig: NodeCollector.PartialConfig = {},
+): NodeCollector.Instance {
   const version = '0.0.1'; // Source version
   const state = getState(customConfig);
-  const instance: WalkerjsNode.Instance = {
+  const instance: NodeCollector.Instance = {
     ...state,
     version,
     push: (() => {}) as unknown as Elb.Fn, // Placeholder for the actual push function
@@ -40,4 +48,11 @@ export function Walkerjs(
   return instance;
 }
 
-export default createWalkerjsNode;
+// Legacy export for backward compatibility
+export function Walkerjs(
+  customConfig: NodeCollector.PartialConfig = {},
+): NodeCollector.Instance {
+  return nodeCollector(customConfig);
+}
+
+export default createNodeCollector;

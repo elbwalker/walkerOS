@@ -1,0 +1,136 @@
+---
+title: Google Tag Manager (GTM)
+description: How to send events to Google Tag Manager (GTM) with walker.js
+---
+
+import PackageLink from '@site/src/components/docs/package-link';
+import Link from '@docusaurus/Link';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import { getEvent } from '@walkerOS/utils';
+import {
+  DestinationContextProvider,
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import { destinationGTM } from '@walkerOS/web-destination-gtm';
+import { destinationGTMExamples } from '@walkerOS/web-destination-gtm/examples';
+
+<DestinationContextProvider
+  destination={destinationGTM}
+  fnName='dataLayer.push'
+>
+
+<PackageLink
+  browser="@walkerOS/web-destination-gtm"
+  es5="@walkerOS/web-destination-gtm"
+  github="packages/web/destinations/gtm"
+  npm="@walkerOS/web-destination-gtm"
+/>
+
+[Google Tag Manager (GTM)](https://marketingplatform.google.com/about/tag-manager/)
+is a tag management solution that allows you to create and update tags for your
+web and mobile applications.
+
+## Installation
+
+<Tabs>
+  <TabItem value="ts" label="TypeScript" default>
+Install the destination via npm
+```js
+import { elb } from '@walkerOS/web-collector';
+import { destinationGTM } from '@walkerOS/web-destination-gtm';
+
+elb('walker destination', destinationGTM, config);
+
+````
+
+</TabItem>
+<TabItem value="script" label="Script">
+Load the destination via dynamic import
+
+```html
+<script>
+  // Upload the dist/index.mjs on your own server
+  const destination = (
+    await import(
+      'https://cdn.jsdelivr.net/npm/@walkerOS/web-destination-gtm/dist/index.mjs'
+    )
+  ).destinationGTM;
+
+  elb('walker destination', destination, config);
+</script>
+````
+
+</TabItem>
+  <TabItem value="code" label="Code">
+Copy the code from the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@walkerOS/web-destination-gtm@latest/dist/index.browser.js">index.browser.js</Link> file
+
+```js
+(function () {
+  'use strict';
+  var Destination = (() => {})(); // This is the copied code
+
+  elb('walker destination', Destination.destinationGTM, config);
+})();
+```
+
+  </TabItem>
+</Tabs>
+
+## Configuration
+
+Configure your Google Tag Manager destination.
+
+#### Example
+
+<DestinationInit
+  custom={`{
+    containerId: 'GTM-XXXXXXX', // Required
+    dataLayer: 'dataLayer',
+    domain: 'https://www.googletagmanager.com/gtm.js?id=',
+  }`}
+/>
+
+### Custom
+
+| Property    | Type   | Description                                                                                                         |
+| ----------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
+| containerId | string | Google Tag Manager&nbsp;<Link to="https://support.google.com/tagmanager/answer/14847097?hl=en">container ID</Link>. |
+| dataLayer   | string | Name of the dataLayer array.                                                                                        |
+| domain      | string | Source domain for the Google Tag Manager script.                                                                    |
+
+When using `loadScript: true` the `containerId` is required.
+
+## Mapping
+
+Using
+the&nbsp;<Link to="https://developers.google.com/tag-platform/tag-manager/datalayer">`dataLayer.push`</Link>
+function to send events to Google Tag Manager.
+
+### add_to_cart
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product add')}
+  mapping={destinationGTMExamples.mapping.add_to_cart}
+/>
+
+### purchase
+
+<DestinationPush
+  smallText={true}
+  height={'512px'}
+  event={getEvent('order complete')}
+  mapping={destinationGTMExamples.mapping.purchase}
+/>
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::
+
+</DestinationContextProvider>

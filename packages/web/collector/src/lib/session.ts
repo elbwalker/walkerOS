@@ -1,12 +1,12 @@
 import type { WalkerOS } from '@walkerOS/types';
-import type { WalkerjsWeb } from '../types';
+import type { WebCollector } from '../types';
 import type { SessionCallback } from '../utils';
 import { assign, isSameType, onApply, useHooks } from '@walkerOS/utils';
 import { sessionStart as sessionStartOrg } from '../utils';
 
-export function createSessionStart(instance: WalkerjsWeb.Instance) {
+export function createSessionStart(instance: WebCollector.Instance) {
   return function (
-    options: WalkerjsWeb.SessionStartOptions = {},
+    options: WebCollector.SessionStartOptions = {},
   ): void | WalkerOS.SessionData {
     const { config = {}, ...otherOptions } = options;
     return sessionStart(instance, {
@@ -18,8 +18,8 @@ export function createSessionStart(instance: WalkerjsWeb.Instance) {
 }
 
 export function sessionStart(
-  instance: WalkerjsWeb.Instance,
-  options: WalkerjsWeb.SessionStartOptions = {},
+  instance: WebCollector.Instance,
+  options: WebCollector.SessionStartOptions = {},
 ): void | WalkerOS.SessionData {
   const sessionConfig = assign(instance.config.session || {}, options.config);
   const sessionData = assign(instance.config.sessionStatic, options.data);
@@ -31,7 +31,7 @@ export function sessionStart(
       // Run either the default callback or the provided one
       result = (sessionConfig.cb || defaultCb)(session, instance, defaultCb);
 
-    if (isSameType(instance, {} as WalkerjsWeb.Instance)) {
+    if (isSameType(instance, {} as WebCollector.Instance)) {
       // Assign the session
       instance.session = session;
 

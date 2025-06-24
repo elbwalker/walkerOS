@@ -1,6 +1,6 @@
-import type { WalkerjsNode, DestinationNode, Elb } from '../types';
+import type { NodeCollector, DestinationNode, Elb } from '../types';
 import type { WalkerOS } from '@walkerOS/types';
-import { createWalkerjsNode } from '../';
+import { createNodeCollector } from '../';
 import { createEvent } from '@walkerOS/utils';
 
 describe('Destination', () => {
@@ -19,12 +19,12 @@ describe('Destination', () => {
   };
   let result: Elb.PushResult;
 
-  function getSource(custom?: Partial<WalkerjsNode.InitConfig>) {
+  function getSource(custom?: Partial<NodeCollector.InitConfig>) {
     const config = custom || {
       destinations: { mock: mockDestination },
     };
 
-    return createWalkerjsNode(config);
+    return createNodeCollector(config);
   }
 
   beforeEach(() => {

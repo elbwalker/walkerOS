@@ -1,11 +1,11 @@
 import { Const, assign } from '@walkerOS/utils';
-import type { WalkerjsWeb } from '../types';
+import type { WebCollector } from '../types';
 
 export function getState(
-  initConfig: WalkerjsWeb.InitConfig,
-  instance: Partial<WalkerjsWeb.Instance> = {},
-): WalkerjsWeb.State {
-  const defaultConfig: WalkerjsWeb.Config = {
+  initConfig: WebCollector.InitConfig,
+  instance: Partial<WebCollector.Instance> = {},
+): WebCollector.State {
+  const defaultConfig: WebCollector.Config = {
     dataLayer: false, // Do not use dataLayer by default
     dataLayerConfig: {}, // Configuration for dataLayer
     elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
@@ -21,7 +21,7 @@ export function getState(
     tagging: 0, // Helpful to differentiate the used setup version
   };
 
-  const config: WalkerjsWeb.Config = assign(
+  const config: WebCollector.Config = assign(
     defaultConfig,
     {
       ...(instance.config || {}), // current config

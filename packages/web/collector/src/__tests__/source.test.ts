@@ -1,7 +1,7 @@
 import type { Data } from '@walkerOS/types';
-import type { Elb, WalkerjsWeb } from '../';
+import type { Elb, WebCollector } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
-import { Walkerjs, createWalkerjsWeb } from '../';
+import { Walkerjs, createWebCollector } from '../';
 import fs from 'fs';
 
 describe('Walkerjs', () => {
@@ -9,14 +9,14 @@ describe('Walkerjs', () => {
   const version = { source: expect.any(String), tagging: expect.any(Number) };
 
   let elb: Elb.Fn;
-  let walkerjs: WalkerjsWeb.Instance;
+  let walkerjs: WebCollector.Instance;
 
   beforeEach(() => {
     global.performance.getEntriesByType = jest
       .fn()
       .mockReturnValue([{ type: 'navigate' }]);
 
-    const { elb: elbFn, instance } = createWalkerjsWeb({
+    const { elb: elbFn, instance } = createWebCollector({
       default: true,
       consent: { test: true },
       pageview: false,
@@ -160,7 +160,7 @@ describe('Walkerjs', () => {
 
     jest.clearAllMocks(); // skip previous init
     w.elbLayer = [];
-    const { elb } = createWalkerjsWeb({
+    const { elb } = createWebCollector({
       default: true,
       pageview: false,
       session: false,
@@ -234,7 +234,7 @@ describe('Walkerjs', () => {
   test('timing', async () => {
     jest.clearAllMocks();
     jest.advanceTimersByTime(2500); // 2.5 sec load time
-    const { elb } = createWalkerjsWeb({ default: true });
+    const { elb } = createWebCollector({ default: true });
 
     await jest.runAllTimersAsync();
     expect(mockDataLayer.mock.calls[0][0].timing).toEqual(2.5);

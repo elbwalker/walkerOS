@@ -13,10 +13,10 @@ how to collect and process event data.
 :::note
 
 There are multiple ways to get started. The implementation depends on
-which&nbsp;<Link to="/docs/sources/overview/">source</Link> you want to send
-data from and
-which&nbsp;<Link to="/docs/destinations/overview/">destination</Link> you want
-to send it.
+which&nbsp;<Link to="/docs/getting_started/sources">source</Link> you want to
+send data from and
+which&nbsp;<Link to="/docs/getting_started/destinations">destination</Link> you
+want to send it.
 
 :::
 
@@ -24,28 +24,46 @@ to send it.
 
 Before you start, read about
 the&nbsp;<Link to="/docs/getting_started/event-model">event model</Link>
-and&nbsp;<Link to="/docs/user_stitching">user stichting</Link>, especially if
+and&nbsp;<Link to="/docs/user_stitching">user stitching</Link>, especially if
 you want to work with walkerOS raw data.
 
 :::
 
 ## Step 1: Choose a source
 
-- <Link to="/docs/sources/walkerjs/installation">walker.js</Link>
-- <Link to="/docs/sources/node/installation">node</Link>
+- **Data creation**: Streamline the creation and formatting of events
+- **State management**: Keep user and session states consistent across events
+- **Consent handling**: Robustly manage user consent for privacy compliance
+- **Dynamic destinations**: Easily add destinations and map data
+
+- <Link to="/docs/collectors/web-collector/installation">**web**</Link>
+
+  - **Client-Side Tracking**: Capture detailed user interactions in the browser
+  - **Real-Time Analytics**: Gain instant insights into user behaviors
+  - **Race conditions**: Automatically handle the order and status of events
+  - **In-built triggers**: Optimized trigger initialization
+  - **Tagging method**: Simplify event tagging using HTML attributes
+
+- <Link to="/docs/collectors/node-collector/installation">**node**</Link>
+
+  - **Client-Side Tracking**: Capture detailed user interactions in the browser
+  - **Real-Time Analytics**: Gain instant insights into user behaviors
+  - **Race conditions**: Automatically handle the order and status of events
+  - **In-built triggers**: Optimized trigger initialization
+  - **Tagging method**: Simplify event tagging using HTML attributes
 
 ## Step 2: Add a destination
 
-- <Link to="/docs/destinations/api">API</Link>
-- <Link to="/docs/destinations/google-ads">Google Ads</Link>
-- <Link to="/docs/destinations/google-ga4">Google Analytics 4</Link>
-- <Link to="/docs/destinations/google-gtm">Google Tag Manager</Link>
-- <Link to="/docs/destinations/meta-pixel">Meta Pixel</Link>
-- <Link to="/docs/destinations/piwikpro">Piwik PRO</Link>
-- <Link to="/docs/destinations/plausible">Plausible Analytics</Link>
-- <Link to="/docs/destinations/aws">AWS</Link>
-- <Link to="/docs/destinations/bigquery">BigQuery</Link>
-- <Link to="/docs/destinations/meta">Meta Conversion API</Link>
+- <Link to="/docs/destinations/web/api">API</Link>
+- <Link to="/docs/destinations/web/google_ads">Google Ads</Link>
+- <Link to="/docs/destinations/web/ga4">Google Analytics 4</Link>
+- <Link to="/docs/destinations/web/gtm">Google Tag Manager</Link>
+- <Link to="/docs/destinations/web/meta">Meta Pixel</Link>
+- <Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>
+- <Link to="/docs/destinations/web/plausible">Plausible Analytics</Link>
+- <Link to="/docs/destinations/node/aws">AWS</Link>
+- <Link to="/docs/destinations/node/gcp">BigQuery</Link>
+- <Link to="/docs/destinations/node/meta">Meta Conversion API</Link>
 
 Congratulations! ✅ You have created your first event pipeline with walkerOS.
 

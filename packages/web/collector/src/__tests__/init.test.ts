@@ -1,14 +1,14 @@
-import type { WalkerjsWeb } from '../';
+import type { WebCollector } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { Walkerjs } from '../';
 
 describe('Init', () => {
-  let walkerjs: WalkerjsWeb.Instance;
+  let walkerjs: WebCollector.Instance;
 
   beforeEach(() => {});
 
   test('config', () => {
-    const config: WalkerjsWeb.InitConfig = {
+    const config: WebCollector.InitConfig = {
       consent: { functional: true },
       custom: { private: 'space' },
       dataLayer: true,

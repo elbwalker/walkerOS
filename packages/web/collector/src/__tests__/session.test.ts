@@ -1,4 +1,4 @@
-import type { WalkerjsWeb } from '../';
+import type { WebCollector } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { sessionStart } from '../utils';
 import { elb, Walkerjs } from '../';
@@ -13,7 +13,7 @@ jest.mock('../utils', () => {
 });
 
 describe('Session', () => {
-  let walkerjs: WalkerjsWeb.Instance;
+  let walkerjs: WebCollector.Instance;
   const mockFn = jest.fn();
 
   beforeEach(() => {

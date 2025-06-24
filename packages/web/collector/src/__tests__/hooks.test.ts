@@ -1,10 +1,10 @@
 import type { Hooks } from '@walkerOS/types';
-import type { WalkerjsWeb, DestinationWeb } from '../';
+import type { WebCollector, DestinationWeb } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
-import { Walkerjs, createWalkerjsWeb } from '../';
+import { Walkerjs, createWebCollector } from '../';
 
 describe('Hooks', () => {
-  let walkerjs: WalkerjsWeb.Instance;
+  let walkerjs: WebCollector.Instance;
 
   beforeEach(() => {
     global.performance.getEntriesByType = jest
@@ -44,7 +44,7 @@ describe('Hooks', () => {
         return params.fn(...args);
       });
 
-    const { elb, instance } = createWalkerjsWeb({
+    const { elb, instance } = createWebCollector({
       pageview: false,
       session: false,
     });
@@ -105,7 +105,7 @@ describe('Hooks', () => {
     });
     const postPush: Hooks.AnyFunction = jest.fn();
 
-    const { elb, instance } = createWalkerjsWeb({
+    const { elb, instance } = createWebCollector({
       dataLayer: true,
       pageview: false,
       session: false,

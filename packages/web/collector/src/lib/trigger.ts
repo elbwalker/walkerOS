@@ -1,4 +1,4 @@
-import type { Walker, WalkerjsWeb, Elb } from '../types';
+import type { Walker, WebCollector, Elb } from '../types';
 import { Const, onApply, throttle, tryCatch } from '@walkerOS/utils';
 import { elb as elbOrg, getAttribute, isVisible } from '../utils';
 import {
@@ -37,7 +37,7 @@ export const Trigger: { [key: string]: Walker.Trigger } = {
 } as const;
 
 export async function ready<T extends (...args: never[]) => R, R>(
-  instance: WalkerjsWeb.Instance,
+  instance: WebCollector.Instance,
   fn: T,
   ...args: Parameters<T>
 ): Promise<R | undefined> {
@@ -55,7 +55,7 @@ export async function ready<T extends (...args: never[]) => R, R>(
 }
 
 // Called for each new run to setup triggers
-export function load(instance: WalkerjsWeb.Instance) {
+export function load(instance: WebCollector.Instance) {
   const { pageview, prefix } = instance.config;
   // Trigger static page view if enabled
   if (pageview) {
@@ -66,7 +66,7 @@ export function load(instance: WalkerjsWeb.Instance) {
   initScopeTrigger(instance);
 }
 
-export function initGlobalTrigger(instance: WalkerjsWeb.Instance): void {
+export function initGlobalTrigger(instance: WebCollector.Instance): void {
   document.addEventListener(
     'click',
     tryCatch(function (this: Document, ev: MouseEvent) {
@@ -82,7 +82,7 @@ export function initGlobalTrigger(instance: WalkerjsWeb.Instance): void {
 }
 
 export function initScopeTrigger(
-  instance: WalkerjsWeb.Instance,
+  instance: WebCollector.Instance,
   scope: Elb.Scope = document,
 ) {
   // Reset all scroll events @TODO check if it's right here
@@ -119,7 +119,7 @@ export function initScopeTrigger(
 }
 
 async function handleTrigger(
-  instance: WalkerjsWeb.Instance,
+  instance: WebCollector.Instance,
   element: Element,
   trigger: Walker.Trigger,
   // @TODO add triggerParams to filter for specific trigger
@@ -137,7 +137,7 @@ async function handleTrigger(
 }
 
 function handleActionElem(
-  instance: WalkerjsWeb.Instance,
+  instance: WebCollector.Instance,
   elem: HTMLElement,
   selectorAction: string,
 ) {
@@ -174,11 +174,11 @@ function handleActionElem(
   );
 }
 
-function triggerClick(instance: WalkerjsWeb.Instance, ev: MouseEvent) {
+function triggerClick(instance: WebCollector.Instance, ev: MouseEvent) {
   handleTrigger(instance, ev.target as Element, Trigger.Click);
 }
 
-function triggerHover(instance: WalkerjsWeb.Instance, elem: HTMLElement) {
+function triggerHover(instance: WebCollector.Instance, elem: HTMLElement) {
   elem.addEventListener(
     'mouseenter',
     tryCatch(function (this: Document, ev: MouseEvent) {
@@ -188,12 +188,12 @@ function triggerHover(instance: WalkerjsWeb.Instance, elem: HTMLElement) {
   );
 }
 
-function triggerLoad(instance: WalkerjsWeb.Instance, elem: HTMLElement) {
+function triggerLoad(instance: WebCollector.Instance, elem: HTMLElement) {
   handleTrigger(instance, elem, Trigger.Load);
 }
 
 function triggerPulse(
-  instance: WalkerjsWeb.Instance,
+  instance: WebCollector.Instance,
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
@@ -213,7 +213,7 @@ function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
   scrollElements.push([elem, depth]);
 }
 
-function triggerSubmit(instance: WalkerjsWeb.Instance, ev: Event) {
+function triggerSubmit(instance: WebCollector.Instance, ev: Event) {
   handleTrigger(instance, ev.target as Element, Trigger.Submit);
 }
 
@@ -225,7 +225,7 @@ function triggerVisible(
 }
 
 function triggerWait(
-  instance: WalkerjsWeb.Instance,
+  instance: WebCollector.Instance,
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
@@ -235,10 +235,10 @@ function triggerWait(
   );
 }
 
-function scroll(instance: WalkerjsWeb.Instance) {
+function scroll(instance: WebCollector.Instance) {
   const scrolling = (
     scrollElements: Walker.ScrollElements,
-    instance: WalkerjsWeb.Instance,
+    instance: WebCollector.Instance,
   ) => {
     return scrollElements.filter(([element, depth]) => {
       // Distance from top to the bottom of the visible screen
@@ -283,7 +283,7 @@ function scroll(instance: WalkerjsWeb.Instance) {
 }
 
 function observerVisible(
-  instance: WalkerjsWeb.Instance,
+  instance: WebCollector.Instance,
   duration = 1000,
 ): IntersectionObserver | undefined {
   if (!window.IntersectionObserver) return;

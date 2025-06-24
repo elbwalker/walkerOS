@@ -1,10 +1,10 @@
 import { commonHandleCommand, Const, createPushResult } from '@walkerOS/utils';
-import type { Elb, WalkerjsNode } from '../types';
+import type { Elb, NodeCollector } from '../types';
 import { getState } from './state';
 import { run } from './run';
 
 export const handleCommand = async (
-  instance: WalkerjsNode.Instance,
+  instance: NodeCollector.Instance,
   action: string,
   data?: Elb.PushData,
   options?: Elb.PushOptions,
@@ -14,12 +14,12 @@ export const handleCommand = async (
   switch (action) {
     case Const.Commands.Config:
       if (data) {
-        instance.config = getState(data as WalkerjsNode.Config, instance).config;
+        instance.config = getState(data as NodeCollector.Config, instance).config;
       }
       break;
 
     case Const.Commands.Run:
-      run(instance, data as Partial<WalkerjsNode.State>);
+      run(instance, data as Partial<NodeCollector.State>);
       break;
 
     default:

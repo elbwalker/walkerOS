@@ -1,0 +1,33 @@
+---
+title: Node source
+description: Node source for server-side data collection with walkerOS.
+---
+
+import Link from '@docusaurus/Link';
+import DocCardList from '@theme/DocCardList';
+import PackageLink from '@site/src/components/docs/package-link';
+
+<PackageLink github="packages/node/collector/" npm="@walkerOS/node-collector" />
+
+walkerOS node source is build for being used in a node app or as a part of a
+serverless function. The goal is to capture user events, state management, and
+sending events to a node destination,
+like&nbsp;<Link to="/docs/destinations/node/gcp">BigQuery</Link>.
+
+## Event Lifecycle
+
+1. **Initialization**: Similar to a web page view, each run reinitialize the
+   source's state.
+2. **Event Creation**: Events are formulated and queued internally.
+3. **Consent Verification**: Consent is checked before pushing events.
+4. **Destination Management**: Events are sent to destinations based on consent
+   and configuration settings.
+
+<DocCardList />
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

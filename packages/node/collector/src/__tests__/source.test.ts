@@ -1,7 +1,7 @@
-import type { WalkerjsNode, DestinationNode, Elb } from '../types';
+import type { NodeCollector, DestinationNode, Elb } from '../types';
 import type { WalkerOS } from '@walkerOS/types';
 import { createEvent } from '@walkerOS/utils';
-import { createWalkerjsNode } from '../';
+import { createNodeCollector } from '../';
 
 describe('Source Node', () => {
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
@@ -12,12 +12,12 @@ describe('Source Node', () => {
   let mockEvent: WalkerOS.Event;
   let result: Elb.PushResult;
 
-  function getSource(custom?: Partial<WalkerjsNode.InitConfig>) {
+  function getSource(custom?: Partial<NodeCollector.InitConfig>) {
     const config = custom || {
       destinations: { mock: mockDestination },
     };
 
-    return createWalkerjsNode(config);
+    return createNodeCollector(config);
   }
 
   beforeEach(() => {

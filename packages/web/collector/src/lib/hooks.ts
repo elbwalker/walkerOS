@@ -1,8 +1,8 @@
 import type { Hooks } from '@walkerOS/types';
-import type { WalkerjsWeb } from '../types';
+import type { WebCollector } from '../types';
 
 export function addHook<Hook extends keyof Hooks.Functions>(
-  instance: WalkerjsWeb.Instance,
+  instance: WebCollector.Instance,
   name: Hook,
   hookFn: Hooks.Functions[Hook],
 ) {

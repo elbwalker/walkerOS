@@ -1,4 +1,4 @@
-import type { WalkerjsWeb, DestinationWeb } from '../';
+import type { WebCollector, DestinationWeb } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { sessionStart } from '../utils';
 import { elb, Walkerjs } from '../';
@@ -18,7 +18,7 @@ const mockOnReady = jest.fn();
 const mockOnRun = jest.fn();
 const mockOnSession = jest.fn();
 
-let walkerjs: WalkerjsWeb.Instance;
+let walkerjs: WebCollector.Instance;
 const destination: DestinationWeb.Destination = {
   config: {
     on: {

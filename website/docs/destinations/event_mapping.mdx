@@ -1,0 +1,471 @@
+---
+title: Event Mapping
+description: How to transform events into another required format.
+sidebar_position: 2
+---
+
+import Link from '@docusaurus/Link';
+import { getEvent, getMappingValue } from '@walkerOS/utils';
+import {
+  formatValue,
+  parseInput,
+} from '@site/src/components/molecules/codeBox';
+import { LiveCode } from '@site/src/components/organisms/liveCode';
+import {
+  DestinationContextProvider,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+
+export const logFn = async (input, config, log) => {
+  log(await getMappingValue(await parseInput(input), await parseInput(config)));
+};
+
+export const event = getEvent('order complete');
+
+<DestinationContextProvider
+  destination={{
+    push: (event, config, mapping, options) => {
+      return config.fn(options.data);
+    },
+    pushBatch: (batched, config, options) => {
+      return config.fn(batched);
+    }
+  }}
+>
+
+Mapping is used to configure and translate walkerOS events for destinations. It
+defines if and how to process events, by renaming, structuring, bundling, or
+ignoring them. It's also checking for consent and validate values.
+
+## Config
+
+Besides the destinations general configuration, a mapping config is set to
+process events individually. The `EventConfig` is defined as
+`{ [entity]: { [action]: EventConfig }}`.
+
+A generic `"*"` can be used to match all entities and/or actions that are not
+explicitly matched.
+
+```ts
+{
+  // Config
+  [entity]: {
+    [action]: {
+      // EventConfig
+      name: "event name",
+      data: {
+        // ValueConfig
+      }
+    }
+  }
+}
+```
+
+### Example
+
+<DestinationPush
+  event={event}
+  emptyText="Event ignored"
+  mapping={`{
+    order: { // Entity
+      complete: { // Action
+        // EventConfig
+        name: "purchase",
+        data: {
+          // ValueConfig
+          map: {
+            event: "event",
+            id: 'data.id',
+            pageGroup: 'globals.pagegroup',
+            quantity: { fn: (e) => e.nested.length },
+            products: {
+            loop: ['nested', 'data.name']
+            },
+            user_id: {
+              consent: { marketing: true },
+              key: "user.id",
+              value: "anonymous",
+            },
+            vip: {
+              condition: (e) => e.data.total > 500,
+              value: true,
+            },
+            journeyShopping: {
+              key: 'context.shopping.0',
+              validate: (value) => typeof value == "string",
+            },
+            timings: {
+              set: ['timestamp', 'timing']
+            }
+          }
+        }
+      },
+      visible: { batch: 1000, data: "event" },
+    },
+    '*' : { // Match all other entities
+      '*' : { // Match all other actions
+        ignore: true
+      }
+    }
+  }`}
+  showReset={true}
+  labelMiddle={'Config'}
+  eventConfig={false}
+  smallText={true}
+/>
+
+Change the `event` name to `order visible` and see how the batched mapping is
+applied after 1 second.
+
+## EventConfig
+
+The `Destination.Event` mapping for each event supports standardized default
+options. The `custom` option can be used to set up custom properties for the
+event and destination's individual settings.
+
+| Property      | Value    | Description                                                              |
+| ------------- | -------- | ------------------------------------------------------------------------ |
+| **name**      | string   | Renaming of the event (e.g. `product add` to `add_to_cart`)              |
+| **data**      | object   | How to transform the event data.                                         |
+| **ignore**    | boolean  | If set to `true` the event won't get pushed to the destination.          |
+| **condition** | function | A function to check if the mapping should be used.                       |
+| **consent**   | object   | Required states to process the event.                                    |
+| **custom**    | object   | Individual settings for a custom destination.                            |
+| **batch**     | number   | Time in ms to bundle the events before calling `pushBatch` if available. |
+
+To disable processing of other events, add `{'*': {'*': { ignore: true }}}` to
+the mapping.
+
+The destination event mapping technically uses
+the&nbsp;<Link to="/docs/utils/mapping">mapping utils</Link> to create the
+desired event structure. And
+the&nbsp;<Link to="/docs/utils/helper#getbypath">getByPath</Link> dot notation
+to access event properties (e.g. `event.data.total`).
+
+### name
+
+The `name` property is used to rename the event. It overrides the original event
+name.
+
+<DestinationPush
+  event={{ event: event.event }}
+  mapping={{
+    name: 'purchase',
+    data: 'event',
+  }}
+  output={`"purchase"`}
+/>
+
+Example: A walkerOS `order complete` usually becomes a `purchase` event in GA4
+or an `order` event in Piwik PRO.
+
+### data
+
+The `data` property is used to transform the event data. It fully describes the
+data structure for the destination.
+See&nbsp;<Link to="#valueconfig">ValueConfig</Link> for detailed usage.
+
+<DestinationPush
+  event={{ event: event.event }}
+  mapping={`{
+    data: {
+      map: {
+        event: 'event',
+        for: { value: 'more info' },
+        read: { value: 'ValueConfig' },
+      },
+    },
+  }`}
+  output={`{
+    event: "order complete",
+    for: "more info",
+    read: "ValueConfig"
+  }`}
+/>
+
+### ignore
+
+<DestinationPush
+  event={{ event: event.event }}
+  mapping={`{
+    ignore: true, // remove me
+    data: 'event',
+  }`}
+/>
+
+The `ignore` property is used to ignore the event. If set to `true`, the event
+won't get pushed to the destination.
+
+### custom
+
+The `custom` property is used for individual destination settings. In most cases
+the `data` property is enough. But in special cases a `custom` mapping might
+simplify the configuration.
+
+<DestinationPush
+  event={{ event: event.event }}
+  mapping={`{
+    data: "event",
+    custom: {
+      // Individual settings
+      foo: "bar",
+    }
+  }`}
+  output={`"order complete"`}
+/>
+
+### batch
+
+The `batch` property is used to bundle the events before pushing them to the
+destination. A destination must offer a `pushBatch` method to use this feature.
+The pushed event(s) are an object with the following properties:
+
+- `key`: Name of the used mapping rule
+- `events`: An array of the actual events
+- `data`: The transformed event data
+
+<DestinationPush
+  event={{ event: event.event }}
+  height={'256px'}
+  mapping={`{
+    batch: 1000,
+    data: 'event'
+  }`}
+/>
+
+## ValueConfig
+
+The `data` property is used to transform the event data. It is used to create
+the required data structure for the destination.
+
+It can create any structure of data. With support for recursive data structures.
+
+### key
+
+A key accesses a property from the event context.
+
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ data: event.data }}
+  config={`{
+    key: 'data.id'
+  }`}
+  output={`"0rd3r1d"`}
+  fn={logFn}
+/>
+
+### string
+
+A simple string is short for `{key: 'value'}`. And accesses a property from the
+event context.
+
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ data: event.data }}
+  config={`'data.total'`}
+  output={`555`}
+  fn={logFn}
+/>
+
+### value
+
+Used for creating a static value. Can also be used as a fallback if no other
+mapping resolves a value.
+
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ event: event.event }}
+  config={`{
+    value: 'static'
+  }`}
+  output={`"static"`}
+  fn={logFn}
+/>
+
+### map
+
+Used to create an object. The keys are the property names and the values are
+again a&nbsp;<Link to="#valueconfig">ValueConfig</Link> resolving to a value.
+
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ globals: event.globals, context: event.context }}
+  config={`{
+    map: {
+      pageGroup: 'globals.pagegroup',
+      shoppingStage: 'context.shopping.0',
+    }
+  }`}
+  output={`{
+    pageGroup: "shop",
+    shoppingStage: "complete"
+  }`}
+  fn={logFn}
+/>
+
+### set
+
+Used to create an array of fixed values. Each item is a `ValueConfig` resolving
+to a `WalkerOS.Property`.
+
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{
+    trigger: event.trigger,
+    entity: event.entity,
+    action: event.action,
+  }}
+  config={`{
+    set: [
+      'trigger',
+      'entity',
+      'action'
+    ]
+  }`}
+  output={`[
+    "load",
+    "order",
+    "complete"
+  ]`}
+  fn={logFn}
+/>
+
+### loop
+
+Loops over the first parameter and maps the second to the current value. It is
+used for creating an array of dynamic length. Use `this` to loop over the
+current event.
+
+<LiveCode
+  showMiddle={false}
+  height={'256px'}
+  labelConfig="Data config"
+  input={{ nested: event.nested }}
+  config={`{
+    loop: [
+      'nested',
+      'data.name'
+    ]
+  }`}
+  output={`[
+    "Everyday Ruck Snack",
+    "Cool Cap",
+    "Surprise"
+  ]`}
+  fn={logFn}
+/>
+
+### condition
+
+Is a function to check if the mapping should be used. It returns a boolean, if
+it's `true` the mapping will be used.
+
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ event: event.event, data: event.data }}
+  config={`{
+    condition: (e) => {
+      return e.data.total > 100
+    },
+    key: "event"
+  }`}
+  output={`"order complete"`}
+  fn={logFn}
+/>
+
+### consent
+
+Some values may require an explicit consent state. It can be used to redact
+values and protect a users privacy by hiding information.
+
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ consent: { marketing: true }, data: event.data }}
+  config={`{
+    consent: {
+      marketing: true
+    },
+    key: 'data.id',
+    value: 'redacted',
+  }`}
+  output={`"0rd3r1d"`}
+  fn={logFn}
+/>
+
+This can be used to e.g. redact PII like clickIds from a `session start` event.
+
+### fn
+
+A function that returns the value. It receives the current `event` context, the
+`mapping` configuration and the `options` about the current instance with
+additional properties as parameters.
+
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ data: event.data }}
+  config={`{
+    fn: (event) => {
+      return "id is " + event.data.id;
+    }
+  }`}
+  output={`"id is 0rd3r1d"`}
+  fn={logFn}
+/>
+
+### validate
+
+A final check to validate the value. After `key`, `loop`, `map` or `set`
+resolved the value, it will be validated with the `validate` function.
+
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ data: event.data }}
+  config={`{
+    validate: (value) => {
+      return typeof value == "string"
+    },
+    key: "data.id",
+    value: "fallback"
+  }`}
+  output={`"0rd3r1d"`}
+  fn={logFn}
+/>
+
+## Execution order
+
+If the `data` property is an array, the mappings will be executed in the order
+until a first value is resolved. Usually, a `condition` is used to check if the
+mapping should be used. If permission is denied, the static default `value`
+would be returned. Then the `consent` checks if the user granted permission to
+process the event or value. First, `value` is used to set the static/default
+value. Next, `fn` gets executed. Then a given `key` or `string`. If set, either
+`loop`, `map` or `loop`, `map` or `set` is processed. After that, the value gets
+checked with the `validate` function. Finally, the value is casted to the
+correct type. If the validation or casting fails, the value will be either the
+static default `value` or the next mapping would be used or ultimately
+`undefined`.
+
+:::tip
+
+Use&nbsp;<Link to="/docs/utils/hooks">hooks</Link> to modify events before
+processing.
+
+:::
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::
+
+</DestinationContextProvider>

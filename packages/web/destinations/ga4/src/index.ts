@@ -6,6 +6,9 @@ import { isObject } from '@walkerOS/utils';
 // Types
 export * as DestinationGA4 from './types';
 
+// Examples
+export * as examples from './examples';
+
 export const destinationGA4: Destination = {
   type: 'google-ga4',
 

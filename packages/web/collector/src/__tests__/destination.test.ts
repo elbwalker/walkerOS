@@ -1,10 +1,10 @@
-import type { WalkerjsWeb, DestinationWeb } from '../';
+import type { WebCollector, DestinationWeb } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { getEvent } from '@walkerOS/utils';
-import { createWalkerjsWeb, elb as elbOrg } from '../';
+import { createWebCollector, elb as elbOrg } from '../';
 
 describe('Destination', () => {
-  let instance: WalkerjsWeb.Instance;
+  let instance: WebCollector.Instance;
   let elb = elbOrg;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
@@ -15,7 +15,7 @@ describe('Destination', () => {
   let config: DestinationWeb.Config;
 
   beforeEach(() => {
-    ({ elb, instance } = createWalkerjsWeb({
+    ({ elb, instance } = createWebCollector({
       pageview: false,
       session: false,
     }));
@@ -347,7 +347,7 @@ describe('Destination', () => {
 
   test('consent', async () => {
     jest.clearAllMocks();
-    const { elb, instance } = createWalkerjsWeb({
+    const { elb, instance } = createWebCollector({
       consent: { functional: true, marketing: false },
       pageview: false,
       session: false,
@@ -422,7 +422,7 @@ describe('Destination', () => {
   });
 
   test('queue', async () => {
-    const { elb } = createWalkerjsWeb({
+    const { elb } = createWebCollector({
       consent: { functional: true },
       pageview: false,
       session: false,
@@ -629,7 +629,7 @@ describe('Destination', () => {
   });
 
   test('temp async queue', async () => {
-    const { elb } = createWalkerjsWeb({ elbLayer: [], pageview: false });
+    const { elb } = createWebCollector({ elbLayer: [], pageview: false });
     elb('walker run');
     elb('walker destination', destination);
 
@@ -796,7 +796,7 @@ describe('Destination', () => {
   });
 
   test('dataLayer config', async () => {
-    const { elb } = createWalkerjsWeb({
+    const { elb } = createWebCollector({
       default: true,
       pageview: false,
       session: false,
@@ -865,7 +865,7 @@ describe('Destination', () => {
       },
     };
 
-    const { elb } = createWalkerjsWeb({
+    const { elb } = createWebCollector({
       run: true,
       pageview: false,
       session: false,
@@ -913,7 +913,7 @@ describe('Destination', () => {
       },
     };
 
-    const { elb } = createWalkerjsWeb({
+    const { elb } = createWebCollector({
       run: true,
       pageview: false,
       session: false,

@@ -1,9 +1,9 @@
-import type { WalkerjsNode, Elb } from '../types';
+import type { NodeCollector, Elb } from '../types';
 import { createPush } from '@walkerOS/utils';
 import { handleCommand } from './handle';
 
-export function getPush(instance: WalkerjsNode.Instance): Elb.Fn {
-  return createPush<WalkerjsNode.Instance, Elb.Fn>(
+export function getPush(instance: NodeCollector.Instance): Elb.Fn {
+  return createPush<NodeCollector.Instance, Elb.Fn>(
     instance,
     handleCommand,
     () => ({

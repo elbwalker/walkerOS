@@ -1,4 +1,4 @@
-import type { WalkerjsWeb } from '../types';
+import type { WebCollector } from '../types';
 import fs from 'fs';
 
 describe('Browser', () => {
@@ -6,6 +6,7 @@ describe('Browser', () => {
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
   jest.mock('../', () => ({
+    webCollector: mockFn,
     Walkerjs: mockFn,
     default: mockFn,
   }));
@@ -19,7 +20,7 @@ describe('Browser', () => {
   });
 
   test('initialize walkerjs on window', () => {
-    w.walkerjs = undefined as unknown as WalkerjsWeb.Instance;
+    w.walkerjs = undefined as unknown as WebCollector.Instance;
     expect(w.walkerjs).toBeUndefined();
     jest.resetModules();
     const walkerjs = jest.requireActual('../walkerjs').default;
