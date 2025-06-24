@@ -12,7 +12,12 @@
       "Bash(rg:*)",
       "Bash(git rm:*)",
       "Bash(npm run build:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm install)",
+      "Bash(npm run lint)",
+      "Bash(npm run clean:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm test)"
     ],
     "deny": []
   }

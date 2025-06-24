@@ -1,0 +1,67 @@
+{
+  "name": "@walkerOS/web-destination-meta",
+  "description": "Meta pixel web destination for walkerOS",
+  "version": "0.0.1",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "import": "./dist/examples/index.mjs",
+      "require": "./dist/examples/index.js"
+    }
+  },
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "lint": "tsc && eslint \"**/*.ts*\"",
+    "test": "jest --colors --coverage",
+    "update": "npx npm-check-updates -u && npm update"
+  },
+  "dependencies": {
+    "@walkerOS/web-collector": "0.0.1",
+    "@walkerOS/utils": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/facebook-pixel": "^0.0.31",
+    "@walkerOS/tsup": "0.0.1",
+    "@walkerOS/types": "0.0.1"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/web/destinations/meta"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "keywords": [
+    "elb",
+    "elbwalker",
+    "walker",
+    "walkerOS",
+    "walker destination",
+    "analytics",
+    "tracking",
+    "meta pixel",
+    "facebook pixel"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

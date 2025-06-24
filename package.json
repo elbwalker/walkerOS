@@ -5,7 +5,10 @@
     "packages/*",
     "packages/config/*",
     "packages/node/*",
+    "packages/node/destinations/*",
     "packages/web/*",
+    "packages/web/destinations/*",
+    "packages/web/sources/*",
     "packages/utils/*",
     "packages/types/*"
   ],
