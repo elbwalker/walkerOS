@@ -1,0 +1,49 @@
+---
+title: Overview
+description: Implementation layer for event data creation and state management
+sidebar_position: 1
+---
+
+import Link from '@docusaurus/Link';
+
+There is a walkerOS source available whether you're working on a server-side
+application with Node.js or a client-side web application.
+
+## Source types
+
+- <Link to="/docs/collectors/web-collector/">**walker.js (web)**</Link>: Designed for
+  client-side web applications, SPAs, and websites
+- <Link to="/docs/collectors/node-collector/">**node (server)**</Link>: Perfect for
+  server-side applications, microservices, and serverless functions
+
+## Features
+
+### All Sources
+
+- **Data creation**: Streamline the creation and formatting of events
+- **State management**: Keep user and session states consistent across events
+- **Consent handling**: Robustly manage user consent for privacy compliance
+- **Dynamic destinations**: Easily add destinations and map data
+
+#### Walker.js
+
+- **Client-Side Tracking**: Capture detailed user interactions in the browser
+- **Real-Time Analytics**: Gain instant insights into user behaviors
+- **Race conditions**: Automatically handle the order and status of events
+- **In-built triggers**: Optimized trigger initialization
+- **Tagging method**: Simplify event tagging using HTML attributes
+
+#### Node
+
+- **Server-Side Tracking**: Track server-side events
+- **Batch Processing**: Efficiently manage large data volumes
+- **Data Validation**: Ensure only valid, high-quality data is processed
+- **Data Redaction**: Maintain user privacy by removing sensitive data
+- **Data Enrichment**: Add context to data before sending it to destinations
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our <Link to="/services">services</Link>.
+
+:::

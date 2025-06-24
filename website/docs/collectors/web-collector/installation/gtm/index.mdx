@@ -10,7 +10,7 @@ import { ButtonCentered } from '/src/components/atoms/buttons';
 import { PackageButton } from '/src/components/docs/package-link';
 
 The walkerOS tag template for Google Tag Manager allows an easy integration
-of&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> into a website. Once
+of&nbsp;<Link to="/docs/collectors/web-collector/">walker.js</Link> into a website. Once
 set up, a single `walkerOS` tag can load walker.js on all pages via GTM.
 [Configuration](#options), [destinations](#destinations) and
 [on-events](#on-events) can be registered.
@@ -153,7 +153,7 @@ Add static `globals` that will be added to every single event.
 :::tip
 
 Learn more about
-using&nbsp;<Link to="/docs/sources/walkerjs/tagging#globals">globals</Link>
+using&nbsp;<Link to="/docs/sources/html-tagging#globals">globals</Link>
 within walkerOS
 
 :::
@@ -205,7 +205,7 @@ To add a destination, **Code** is required, while Config is optional.
 
 <Tabs>
   <TabItem value="code-pre-build" label="Code (Pre-build)" default>
-Available&nbsp;<Link to="/docs/destinations/">destinations</Link> have a special ES5-build that can be used in the GTM.
+Available&nbsp;<Link to="/docs/getting_started/destinations">destinations</Link> have a special ES5-build that can be used in the GTM.
 
 1. Copy
    the&nbsp;<Link to="https://cdn.jsdelivr.net/npm/@elbwalker/destination-web-google-gtm@latest/dist/index.es5.js">ES5
@@ -283,7 +283,7 @@ On-events, listen to specific **Trigger** to execute **Code**. Use a
 
 :::tip
 
-Read more about how to use&nbsp;<Link to="/docs/sources/walkerjs/commands#on">on
+Read more about how to use&nbsp;<Link to="/docs/collectors/web-collector/commands#on">on
 events</Link> in general.
 
 :::
@@ -338,7 +338,7 @@ and runs a custom function defined in a **User-Defined Variable**.
 :::note
 
 Each call signature is the same as the original function,
-see&nbsp;<Link to="/docs/sources/walkerjs/commands#hook">walker commands</Link>.
+see&nbsp;<Link to="/docs/collectors/web-collector/commands#hook">walker commands</Link>.
 
 :::
 
@@ -359,7 +359,7 @@ function () {
 :::tip
 
 Learn more about the individual
-&nbsp;<Link to="/docs/sources/walkerjs/commands#function-signatures">function
+&nbsp;<Link to="/docs/collectors/web-collector/commands#function-signatures">function
 signatures</Link>.
 
 :::

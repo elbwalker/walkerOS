@@ -49,7 +49,7 @@ export default function Features(): JSX.Element {
     <section className="my-20">
       <div className="container">
         <div className="row">
-          <Feature title="Collect" link="/docs/sources/" icon={iconCollect}>
+          <Feature title="Collect" link="/docs/getting_started/sources" icon={iconCollect}>
             Capture events easily and privacy-compliant from your app or site
             with web and node sources.
           </Feature>
@@ -63,7 +63,7 @@ export default function Features(): JSX.Element {
           </Feature>
           <Feature
             title="Distribute"
-            link="/docs/destinations/"
+            link="/docs/getting_started/destinations"
             icon={iconActivate}
           >
             Feed you 3rd party analytics and marketing tools with reliable and

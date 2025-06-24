@@ -119,7 +119,7 @@ There are additional config parameters [for storage](#sessionstorage) and
 
 Setting a consent state to wait for before detecting a new session is used to
 decide if storage access is allowed or not. If set, it registers an
-[on consent event](/docs/sources/walkerjs/commands#on) and won't start until a
+[on consent event](/docs/collectors/web-collector/commands#on) and won't start until a
 consent choice is available. If at least one permission was granted, the
 `sessionStorage` detects a new session; otherwise, the `sessionWindow`.
 
@@ -163,7 +163,7 @@ sessionStart({
 Based on the [storage](#storage) option either the
 [sessionStorage](#sessionstorage) or the [sessionWindow](#sessionwindow) is used
 to detect a new session. If a [consent](#consent) state is set, the session
-detection gets scheduled via an [on-consent](/docs/sources/walkerjs/commands#on)
+detection gets scheduled via an [on-consent](/docs/collectors/web-collector/commands#on)
 command. It will only run once per `run`.
 
 ```mermaid

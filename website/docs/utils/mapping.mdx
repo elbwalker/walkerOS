@@ -24,7 +24,7 @@ function returns the matching event mapping while
 the&nbsp;<Link to="#getmappingvalue">`getMappingValue`</Link> is used to resolve
 a `Mapping.Value` settings for a specific property to return an actual value.
 The `custom` property is used by
-each&nbsp;<Link to="/docs/destinations/">destination</Link> individually.
+each&nbsp;<Link to="/docs/getting_started/destinations">destination</Link> individually.
 
 ## getMappingEvent
 
@@ -33,7 +33,7 @@ returns the matching `eventMapping` configuration and the used `mappingKey` for
 the given entity-action event name. If no mapping is found, it will return an
 empty object. An explicit key is favored over an asterisk `*` key. If available
 a `condition` will be checked to determine if the `EventConfig` applies. It's
-used by the&nbsp;<Link to="/docs/sources/">sources</Link>.
+used by the&nbsp;<Link to="/docs/getting_started/sources">sources</Link>.
 
 <LiveCode
   showMiddle={false}
@@ -92,9 +92,9 @@ which `EventConfig` should be used. To test uncomment the `globals` property.
 ## getMappingValue
 
 `getMappingValue(event: WalkerOS.Event, mapping: Mapping.Value, options?: Mapping.Options): WalkerOS.Property | undefined`
-primarily used by&nbsp;<Link to="/docs/destinations/">destinations</Link> to
+primarily used by&nbsp;<Link to="/docs/getting_started/destinations">destinations</Link> to
 process values from the original event. This offers flexibility to configure
-individual&nbsp;<Link to="/docs/sources/walkerjs/tagging">tagging setups</Link>
+individual&nbsp;<Link to="/docs/sources/html-tagging">tagging setups</Link>
 to standard fields of the destination.
 
 ### string

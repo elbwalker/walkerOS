@@ -16,7 +16,7 @@ for&nbsp;<Link to="/docs/consent_management/overview">consent management</Link>
 tracking you can **version, test, and trust**.
 
 The project started as the lightweight web tracking
-library&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link>, and has
+library&nbsp;<Link to="/docs/collectors/web-collector/">walker.js</Link>, and has
 evolved into a **complete first-party tracking system** for modern teams and the
 modern web.
 
@@ -63,13 +63,13 @@ flowchart LR
   end
   Sources --> Destinations
   Destinations --> Tools
-  click Sources "/docs/sources/"
-  click Destinations "/docs/destinations/"
+  click Sources "/docs/getting_started/sources"
+  click Destinations "/docs/getting_started/destinations"
 ```
 
-- <Link to="/docs/sources/">**Sources**</Link>: Event collection and state
+- <Link to="/docs/getting_started/sources">**Sources**</Link>: Event collection and state
   management
-- <Link to="/docs/destinations/">**Destinations**</Link>: Initializing, mapping,
+- <Link to="/docs/getting_started/destinations">**Destinations**</Link>: Initializing, mapping,
   and routing events to 3rd-party tools
 
 ### Complete infrastructure
@@ -111,31 +111,31 @@ flowchart LR
   SourceNode -- f --> DestinationsS
   DestinationsS -- g --> Tools
   click Utils "/docs/utils/"
-  click walker.js "/docs/sources/walkerjs/"
-  click SourceNode "/docs/sources/node/"
-  click DestinationsC "/docs/destinations/"
-  click DestinationsS "/docs/destinations/"
+  click walker.js "/docs/collectors/web-collector/"
+  click SourceNode "/docs/collectors/node-collector/"
+  click DestinationsC "/docs/getting_started/destinations"
+  click DestinationsS "/docs/getting_started/destinations"
 ```
 
 #### Example event journey
 
-- **a**:&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> initializes
+- **a**:&nbsp;<Link to="/docs/collectors/web-collector/">walker.js</Link> initializes
   event listeners and
-  interprets&nbsp;<Link to="/docs/sources/walkerjs/tagging">tagging</Link> on a
+  interprets&nbsp;<Link to="/docs/sources/html-tagging">tagging</Link> on a
   page.
-- **b**:&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> verifies
-  that&nbsp;<Link to="/docs/sources/walkerjs/commands#consent">user
+- **b**:&nbsp;<Link to="/docs/collectors/web-collector/">walker.js</Link> verifies
+  that&nbsp;<Link to="/docs/collectors/web-collector/commands#consent">user
   consent</Link> has been granted,
-  eventually&nbsp;<Link to="/docs/destinations/configuration#init">initializes</Link>
+  eventually&nbsp;<Link to="/docs/destinations/event_mapping#init">initializes</Link>
   and&nbsp;<Link to="/docs/destinations/event_mapping">maps</Link> events to the
-  appropriate <Link to="/docs/destinations/">destinations</Link>.
-- **c**: Events are&nbsp;<Link to="/docs/destinations/configuration">formatted
+  appropriate <Link to="/docs/getting_started/destinations">destinations</Link>.
+- **c**: Events are&nbsp;<Link to="/docs/destinations/event_mapping">formatted
   correctly</Link> and sent directly to the respective tools from the source.
 - **d**: Events can be sent to a (public) endpoint from various sources, running
-  the&nbsp;<Link to="/docs/sources/node/">node source</Link>
+  the&nbsp;<Link to="/docs/collectors/node-collector/">node source</Link>
 - **f**: Similar to client-side operations, consent gets verified,
-  a&nbsp;<Link to="/docs/destinations/">destination</Link> is
-  eventually&nbsp;<Link to="/docs/destinations/configuration#init">initialized</Link>,
+  a&nbsp;<Link to="/docs/getting_started/destinations">destination</Link> is
+  eventually&nbsp;<Link to="/docs/destinations/event_mapping#init">initialized</Link>,
   and events are processed server-side.
 - **g**: Events are formatted correctly and sent to tools from the server.
 

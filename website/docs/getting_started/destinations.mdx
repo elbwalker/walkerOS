@@ -7,7 +7,7 @@ sidebar_position: 1
 import Link from '@docusaurus/Link';
 
 WalkerOS is built **vendor-agnostically**.
-While&nbsp;<Link to="/docs/sources">sources</Link> create events, destinations
+While&nbsp;<Link to="/docs/getting_started/sources">sources</Link> create events, destinations
 are built to manage how events are processed and sent to various **analytics**,
 **marketing** or data **storage** tools.
 
@@ -23,11 +23,11 @@ Destinations are added to a source
 or&nbsp;<Link to="/docs/collectors/node-collector/commands#destination">node</Link>). Before
 receiving events from the source, the proper consent states are checked each
 time automatically. Destinations receive events through the
-[`push`](/docs/destinations/configuration#push) interface. Each destination can
+[`push`](/docs/destinations/event_mapping#push) interface. Each destination can
 have its own configuration, which is set up in the
-[`config`](/docs/destinations/configuration#example) object. This configuration
+[`config`](/docs/destinations/event_mapping#example) object. This configuration
 includes general settings for the destination and individual event settings. The
-optional [`init`](/docs/destinations/configuration#init) function in a
+optional [`init`](/docs/destinations/event_mapping#init) function in a
 destination gets called before actually pushing events. This function must
 return `true` upon successful initialization for the events to be processed.
 
@@ -54,10 +54,10 @@ flowchart LR
   end
 
   webD & nodeD --> tools
-  click webC "/docs/sources/walkerjs/"
-  click nodeC "/docs/sources/node/"
-  click webD "/docs/destinations/api/"
-  click nodeD "/docs/destinations/bigquery/"
+  click webC "/docs/collectors/web-collector/"
+  click nodeC "/docs/collectors/node-collector/"
+  click webD "/docs/destinations/web/api/"
+  click nodeD "/docs/destinations/node/gcp/"
 ```
 
 ## Categories
@@ -67,17 +67,17 @@ categorized in: **web** and **node**.
 
 ### Web
 
-Like&nbsp;<Link to="/docs/sources/walkerjs">walker.js</Link>, web destinations
+Like&nbsp;<Link to="/docs/collectors/web-collector">walker.js</Link>, web destinations
 run in the **browser** directly. Their purpose is to initialize, map event data
 to the vendors' requirements, and send them.
 
-- <Link to="/docs/destinations/api">API</Link>
-- <Link to="/docs/destinations/google-ads">Google Ads</Link>
-- <Link to="/docs/destinations/google-ga4">Google Analytics 4</Link>
-- <Link to="/docs/destinations/google-gtm">Google Tag Manager</Link>
-- <Link to="/docs/destinations/meta-pixel">Meta Pixel</Link>
-- <Link to="/docs/destinations/piwikpro">Piwik PRO</Link>
-- <Link to="/docs/destinations/plausible">Plausible Analytics</Link>
+- <Link to="/docs/destinations/web/api">API</Link>
+- <Link to="/docs/destinations/web/google_ads">Google Ads</Link>
+- <Link to="/docs/destinations/web/ga4">Google Analytics 4</Link>
+- <Link to="/docs/destinations/web/gtm">Google Tag Manager</Link>
+- <Link to="/docs/destinations/web/meta">Meta Pixel</Link>
+- <Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>
+- <Link to="/docs/destinations/web/plausible">Plausible Analytics</Link>
 
 ### Node
 
@@ -86,9 +86,9 @@ Node destinations offer a flexible and efficient way to handle your
 warehouse or to a custom API, they make it easy to configure, initialize, and
 push your events securely.
 
-- <Link to="/docs/destinations/aws">AWS</Link>
-- <Link to="/docs/destinations/bigquery">BigQuery</Link>
-- <Link to="/docs/destinations/meta">Meta Conversion API</Link>
+- <Link to="/docs/destinations/node/aws">AWS</Link>
+- <Link to="/docs/destinations/node/gcp">BigQuery</Link>
+- <Link to="/docs/destinations/node/meta">Meta Conversion API</Link>
 
 :::info
 
