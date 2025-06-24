@@ -7,7 +7,6 @@ describe('Browser', () => {
 
   jest.mock('../', () => ({
     webCollector: mockFn,
-    Walkerjs: mockFn,
     default: mockFn,
   }));
 

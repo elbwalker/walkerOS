@@ -12,10 +12,10 @@ if (elem) {
   tagging = parseInt(getAttribute(elem, 'data-version') || '1'); // tagging version
 }
 
-const instance = webCollector({ default: defaultMode, tagging });
+const collector = webCollector({ default: defaultMode, tagging });
 
 // Global object
-window.walkerjs = instance;
+window.walkerjs = collector;
 window.elb = elb;
 
-export default instance;
+export default collector;

@@ -1,7 +1,7 @@
 import type { WebCollector } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { sessionStart } from '../utils';
-import { elb, Walkerjs } from '../';
+import { elb, webCollector } from '../';
 
 jest.mock('../utils', () => {
   const utilsOrg = jest.requireActual('../utils');
@@ -21,10 +21,10 @@ describe('Session', () => {
   });
 
   test('default state', async () => {
-    walkerjs = Walkerjs();
+    walkerjs = webCollector();
     expect(walkerjs.config.session).toEqual({ storage: false });
 
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       default: true,
     });
     expect(walkerjs.config.session).toEqual({
@@ -44,10 +44,10 @@ describe('Session', () => {
   });
 
   test('session false', () => {
-    walkerjs = Walkerjs();
+    walkerjs = webCollector();
     expect(walkerjs.config.session).not.toBeFalsy();
 
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       default: true,
       session: false,
     });
@@ -56,7 +56,7 @@ describe('Session', () => {
   });
 
   test('on call', () => {
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       session: { storage: false },
       sessionStatic: { device: 'd3v1c3' },
       on: { session: [mockFn] },
@@ -82,7 +82,7 @@ describe('Session', () => {
   });
 
   test('different consent keys', async () => {
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       default: true,
       session: { consent: ['marketing', 'analytics'], storage: true },
       pageview: false,
@@ -109,7 +109,7 @@ describe('Session', () => {
       value: new URL('https://www.elbwalker.com/?utm_campaign=foo'),
     });
 
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       default: true,
       session: { consent: 'marketing', storage: true },
       pageview: false,

@@ -19,13 +19,6 @@ export function createNodeCollector(customConfig?: NodeCollector.InitConfig): {
   return { elb, instance };
 }
 
-// Legacy export for backward compatibility
-export function createWalkerjsNode(customConfig?: NodeCollector.InitConfig): {
-  elb: Elb.Fn;
-  instance: NodeCollector.Instance;
-} {
-  return createNodeCollector(customConfig);
-}
 
 export function nodeCollector(
   customConfig: NodeCollector.PartialConfig = {},
@@ -48,11 +41,5 @@ export function nodeCollector(
   return instance;
 }
 
-// Legacy export for backward compatibility
-export function Walkerjs(
-  customConfig: NodeCollector.PartialConfig = {},
-): NodeCollector.Instance {
-  return nodeCollector(customConfig);
-}
 
 export default createNodeCollector;

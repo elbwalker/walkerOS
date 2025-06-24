@@ -32,13 +32,6 @@ export function createWebCollector(customConfig?: WebCollector.InitConfig): {
   return { elb, instance };
 }
 
-// Legacy export for backward compatibility
-export function createWalkerjsWeb(customConfig?: WebCollector.InitConfig): {
-  elb: Elb.Fn;
-  instance: WebCollector.Instance;
-} {
-  return createWebCollector(customConfig);
-}
 
 export function webCollector(
   customConfig: WebCollector.InitConfig = {},
@@ -90,11 +83,5 @@ export function webCollector(
   return instance;
 }
 
-// Legacy export for backward compatibility
-export function Walkerjs(
-  customConfig: WebCollector.InitConfig = {},
-): WebCollector.Instance {
-  return webCollector(customConfig);
-}
 
 export default webCollector;

@@ -1,6 +1,6 @@
 import type { Elb } from '@walkerOS/web-collector';
 import type { DestinationPlausible } from '.';
-import { createWalkerjsWeb } from '@walkerOS/web-collector';
+import { createWebCollector } from '@walkerOS/web-collector';
 import { getEvent } from '@walkerOS/utils';
 import { destinationPlausibleExamples } from './examples';
 
@@ -21,7 +21,7 @@ describe('destination plausible', () => {
 
     w.plausible = mockFn;
 
-    ({ elb } = createWalkerjsWeb({
+    ({ elb } = createWebCollector({
       pageview: false,
       run: true,
       session: false,

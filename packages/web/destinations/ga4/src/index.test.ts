@@ -1,6 +1,6 @@
 import type { Elb } from '@walkerOS/web-collector';
 import type { DestinationGA4 } from '.';
-import { createWalkerjsWeb } from '@walkerOS/web-collector';
+import { createWebCollector } from '@walkerOS/web-collector';
 import { getEvent } from '@walkerOS/utils';
 import { events, mapping } from './examples';
 
@@ -23,7 +23,7 @@ describe('Destination Google GA4', () => {
     destination = jest.requireActual('.').default;
     destination.config = config;
 
-    ({ elb } = createWalkerjsWeb({
+    ({ elb } = createWebCollector({
       pageview: false,
       session: false,
       tagging: 2,

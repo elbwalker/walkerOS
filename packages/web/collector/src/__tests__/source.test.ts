@@ -1,10 +1,10 @@
 import type { Data } from '@walkerOS/types';
 import type { Elb, WebCollector } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
-import { Walkerjs, createWebCollector } from '../';
+import { webCollector, createWebCollector } from '../';
 import fs from 'fs';
 
-describe('Walkerjs', () => {
+describe('webCollector', () => {
   const w = window;
   const version = { source: expect.any(String), tagging: expect.any(Number) };
 
@@ -29,14 +29,14 @@ describe('Walkerjs', () => {
   test('version equals package.json version', () => {
     const packageJsonVersion = jest.requireActual('../../package.json').version;
 
-    walkerjs = Walkerjs();
+    walkerjs = webCollector();
     expect(walkerjs.version).toStrictEqual(packageJsonVersion);
   });
 
   test('go', () => {
     w.elbLayer = undefined as unknown as Elb.Layer;
     expect(window.elbLayer).toBeUndefined();
-    const instance = Walkerjs();
+    const instance = webCollector();
     expect(instance.config.elbLayer).toBeDefined();
   });
 
@@ -44,7 +44,7 @@ describe('Walkerjs', () => {
     const w = window as unknown as Record<string, unknown>;
     expect(window.elb).toBeUndefined();
     expect(window.walkerjs).toBeUndefined();
-    const instance = Walkerjs({
+    const instance = webCollector({
       elb: 'foo',
       instance: 'bar',
     });
@@ -125,29 +125,29 @@ describe('Walkerjs', () => {
   });
 
   test('run option', () => {
-    walkerjs = Walkerjs({ run: false });
+    walkerjs = webCollector({ run: false });
     expect(walkerjs.allowed).toBeFalsy();
 
-    walkerjs = Walkerjs({ run: true });
+    walkerjs = webCollector({ run: true });
     expect(walkerjs.allowed).toBeTruthy();
   });
 
   test('dataLayer option', () => {
     window.dataLayer = undefined;
-    walkerjs = Walkerjs({ dataLayer: false });
+    walkerjs = webCollector({ dataLayer: false });
     expect(window.dataLayer).toBeUndefined();
 
-    walkerjs = Walkerjs({ dataLayer: true });
+    walkerjs = webCollector({ dataLayer: true });
     expect(window.dataLayer).toBeDefined();
   });
 
   test('default option', () => {
     window.dataLayer = undefined;
-    walkerjs = Walkerjs({ default: false });
+    walkerjs = webCollector({ default: false });
     expect(window.dataLayer).toBeUndefined();
     expect(walkerjs.allowed).toBeFalsy();
 
-    walkerjs = Walkerjs({ default: true });
+    walkerjs = webCollector({ default: true });
     expect(window.dataLayer).toBeDefined();
     expect(walkerjs.allowed).toBeTruthy();
   });

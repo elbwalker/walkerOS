@@ -1,6 +1,6 @@
 import type { Elb } from '@walkerOS/web-collector';
 import type { DestinationPiwikPro } from '.';
-import { createWalkerjsWeb } from '@walkerOS/web-collector';
+import { createWebCollector } from '@walkerOS/web-collector';
 import { getEvent } from '@walkerOS/utils';
 import { destinationPiwikProExamples } from './examples';
 
@@ -27,7 +27,7 @@ describe('Destination PiwikPro', () => {
     w._paq = [];
     w._paq.push = mockFn;
 
-    ({ elb } = createWalkerjsWeb({
+    ({ elb } = createWebCollector({
       pageview: false,
       run: true,
       session: false,

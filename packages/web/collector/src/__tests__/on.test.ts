@@ -1,7 +1,7 @@
 import type { WebCollector, DestinationWeb } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { sessionStart } from '../utils';
-import { elb, Walkerjs } from '../';
+import { elb, webCollector } from '../';
 
 jest.mock('../utils', () => {
   const utilsOrg = jest.requireActual('../utils');
@@ -33,7 +33,7 @@ const destination: DestinationWeb.Destination = {
 
 describe('On Consent', () => {
   beforeEach(() => {
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       consent: { automatically: true },
       default: true,
       destinations: { destination },
@@ -68,7 +68,7 @@ describe('On Consent', () => {
   });
 
   test('consent by start', () => {
-    Walkerjs({
+    webCollector({
       consent: { marketing: false },
       on: { consent: [{ marketing: mockFn }] },
       default: true,
@@ -79,7 +79,7 @@ describe('On Consent', () => {
   });
 
   test('consent already granted', () => {
-    Walkerjs({
+    webCollector({
       consent: { marketing: false },
       on: { consent: [{ marketing: mockFn }] },
       default: true,
@@ -164,7 +164,7 @@ describe('On Consent', () => {
 
 describe('On Run', () => {
   beforeEach(() => {
-    walkerjs = Walkerjs({ destinations: { destination } });
+    walkerjs = webCollector({ destinations: { destination } });
   });
 
   test('basics', () => {
@@ -185,7 +185,7 @@ describe('On Run', () => {
   });
 
   test('run register init', () => {
-    Walkerjs({
+    webCollector({
       on: { run: [mockFn] },
       default: true,
       destinations: { destination },
@@ -199,7 +199,7 @@ describe('On Run', () => {
     const mockFnPost = jest.fn();
     elb('walker on', 'run', mockFnPre);
     expect(mockFnPre).toHaveBeenCalledTimes(0);
-    walkerjs = Walkerjs();
+    walkerjs = webCollector();
     expect(mockFnPre).toHaveBeenCalledTimes(0);
     elb('walker run');
     expect(mockFnPre).toHaveBeenCalledTimes(1);
@@ -210,7 +210,7 @@ describe('On Run', () => {
   });
 
   test('run register elbLayer', () => {
-    Walkerjs({
+    webCollector({
       on: { run: [mockFn] },
       default: true,
       destinations: { destination },
@@ -223,7 +223,7 @@ describe('On Run', () => {
     const mockBrokenFn = jest.fn(() => {
       throw new Error('kaputt');
     });
-    Walkerjs({
+    webCollector({
       on: { run: [mockBrokenFn, mockFn] },
       default: true,
     });
@@ -267,7 +267,7 @@ describe('On Ready', () => {
   });
 
   test('ready on load', () => {
-    Walkerjs({
+    webCollector({
       destinations: { destination },
       on: { ready: [mockFn] },
       run: true,
@@ -287,7 +287,7 @@ describe('On Ready', () => {
       writable: true,
     });
 
-    Walkerjs({
+    webCollector({
       destinations: { destination },
       on: { ready: [mockFn] },
       run: true,
@@ -312,7 +312,7 @@ describe('On Session', () => {
   });
 
   test('register', () => {
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       on: { session: [mockFn] },
       run: true,
     });
@@ -324,7 +324,7 @@ describe('On Session', () => {
   });
 
   test('session disabled', () => {
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       on: { session: [mockFn] },
       run: true,
       session: false,
@@ -333,7 +333,7 @@ describe('On Session', () => {
   });
 
   test('basics', () => {
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       destinations: { destination },
       run: true,
     });
@@ -345,7 +345,7 @@ describe('On Session', () => {
 
   test('async with storage', () => {
     jest.clearAllMocks();
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       destinations: { destination },
       on: { session: [mockFn] },
       run: true,
@@ -363,7 +363,7 @@ describe('On Session', () => {
 
   test('async with custom cb', () => {
     const mockCb = jest.fn();
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       destinations: { destination },
       on: { session: [mockFn] },
       run: true,
@@ -381,7 +381,7 @@ describe('On Session', () => {
   });
 
   test('async with disabled cb', () => {
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       destinations: { destination },
       on: { session: [mockFn] },
       run: true,

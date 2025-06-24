@@ -1,6 +1,6 @@
 import type { WebCollector } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
-import { Walkerjs } from '../';
+import { webCollector } from '../';
 
 describe('Init', () => {
   let walkerjs: WebCollector.Instance;
@@ -31,7 +31,7 @@ describe('Init', () => {
       user: { id: '1d', device: 'overruled' },
     };
 
-    const instance = Walkerjs(config);
+    const instance = webCollector(config);
 
     expect(instance).toStrictEqual(
       expect.objectContaining({
@@ -63,7 +63,7 @@ describe('Init', () => {
 
   test('custom prefix', () => {
     const prefix = 'data-prefix';
-    walkerjs = Walkerjs({ prefix });
+    walkerjs = webCollector({ prefix });
 
     expect(walkerjs.config).toStrictEqual(
       expect.objectContaining({
@@ -74,7 +74,7 @@ describe('Init', () => {
 
   test('disable page view', async () => {
     // First default beforeEach call with pageview true by default
-    walkerjs = Walkerjs({ default: true });
+    walkerjs = webCollector({ default: true });
     await jest.runAllTimersAsync();
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -84,7 +84,7 @@ describe('Init', () => {
 
     jest.clearAllMocks();
     window.elbLayer = [];
-    walkerjs = Walkerjs({ default: true, pageview: false });
+    walkerjs = webCollector({ default: true, pageview: false });
 
     expect(mockDataLayer).not.toHaveBeenCalledWith(
       expect.objectContaining({

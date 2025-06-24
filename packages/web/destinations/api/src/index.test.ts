@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@walkerOS/types';
 import type { Elb } from '@walkerOS/web-collector';
 import type { DestinationAPI } from '.';
-import { createWalkerjsWeb } from '@walkerOS/web-collector';
+import { createWebCollector } from '@walkerOS/web-collector';
 import { createEvent } from '@walkerOS/utils';
 import { events, mapping } from './examples';
 
@@ -23,7 +23,7 @@ describe('Destination API', () => {
 
     destination = jest.requireActual('.').default;
     event = createEvent();
-    ({ elb } = createWalkerjsWeb({
+    ({ elb } = createWebCollector({
       session: false,
       pageview: false,
       run: true,

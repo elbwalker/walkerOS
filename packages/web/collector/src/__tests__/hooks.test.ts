@@ -1,7 +1,7 @@
 import type { Hooks } from '@walkerOS/types';
 import type { WebCollector, DestinationWeb } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
-import { Walkerjs, createWebCollector } from '../';
+import { webCollector, createWebCollector } from '../';
 
 describe('Hooks', () => {
   let walkerjs: WebCollector.Instance;
@@ -173,7 +173,7 @@ describe('Hooks', () => {
       });
     const postSessionStart: Hooks.AnyFunction = jest.fn();
 
-    walkerjs = Walkerjs({
+    walkerjs = webCollector({
       dataLayer: true,
       pageview: false,
       run: true,

@@ -1,7 +1,7 @@
 import type { WebCollector, DestinationWeb, Elb } from '../';
 import type { WalkerOS } from '@walkerOS/types';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
-import { elb as elbOrg, Walkerjs, createWebCollector, elb } from '../';
+import { elb as elbOrg, webCollector, createWebCollector, elb } from '../';
 
 describe('elbLayer', () => {
   const w = window;
@@ -18,7 +18,7 @@ describe('elbLayer', () => {
   beforeEach(() => {});
 
   test('arguments and event pushes', async () => {
-    walkerjs = Walkerjs({ default: true });
+    walkerjs = webCollector({ default: true });
     elb('ingest argument', { a: 1 }, 'a', {}); // Push as arguments
     w.elbLayer.push('ingest event', { b: 2 }, 'e', []); // Push as event
 
@@ -42,7 +42,7 @@ describe('elbLayer', () => {
   });
 
   test('predefined stack without run', async () => {
-    walkerjs = Walkerjs();
+    walkerjs = webCollector();
     elb('walker destination', destination);
     elb('entity action');
     await jest.runAllTimersAsync();
@@ -53,7 +53,7 @@ describe('elbLayer', () => {
     elb('e 1');
     elb('walker destination', destination);
 
-    walkerjs = Walkerjs({ session: false });
+    walkerjs = webCollector({ session: false });
     elb('e 2');
     elb('walker run');
     // auto call: elb('page view');
@@ -106,7 +106,7 @@ describe('elbLayer', () => {
     w.elbLayer = [{ event: 'pre event' }];
     elb('pre argument');
 
-    walkerjs = Walkerjs({ session: false, pageview: false });
+    walkerjs = webCollector({ session: false, pageview: false });
 
     elb('walker destination', destination);
     elb('ingest argument', { a: 1 }); // Push as arguments
@@ -132,7 +132,7 @@ describe('elbLayer', () => {
   });
 
   test('prioritize walker commands before run', async () => {
-    walkerjs = Walkerjs({ session: false });
+    walkerjs = webCollector({ session: false });
 
     (elb as () => void)();
     elb('event postponed');
@@ -178,7 +178,7 @@ describe('elbLayer', () => {
   test('elbLayer initialization', () => {
     w.elbLayer = undefined as unknown as Elb.Layer;
 
-    walkerjs = Walkerjs();
+    walkerjs = webCollector();
 
     expect(w.elbLayer).toBeDefined();
   });
@@ -225,7 +225,7 @@ describe('elbLayer', () => {
       ...defaultState,
     };
 
-    walkerjs = Walkerjs();
+    walkerjs = webCollector();
     elb('walker run');
 
     expect(walkerjs).toStrictEqual(defaultInterface);
@@ -250,12 +250,12 @@ describe('elbLayer', () => {
     const dataLayer = w.dataLayer as unknown[];
     const customLayer1: Elb.Layer = [];
     const customLayer2: Elb.Layer = [];
-    const instance1 = Walkerjs({
+    const instance1 = webCollector({
       elbLayer: customLayer1,
       default: true,
       pageview: false,
     });
-    const instance2 = Walkerjs({
+    const instance2 = webCollector({
       elbLayer: customLayer2,
       default: true,
       pageview: false,
@@ -344,7 +344,7 @@ describe('elbLayer', () => {
   test('elbLayer push override', async () => {
     const layer: Elb.Layer = [];
 
-    Walkerjs({ elbLayer: layer, pageview: false });
+    webCollector({ elbLayer: layer, pageview: false });
     layer.push('walker run'); // Overwrites push function
     layer.push('walker destination', destination, {
       init: true,

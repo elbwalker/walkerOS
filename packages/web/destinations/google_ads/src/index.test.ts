@@ -1,6 +1,6 @@
 import type { Elb } from '@walkerOS/web-collector';
 import type { DestinationAds } from '.';
-import { createWalkerjsWeb } from '@walkerOS/web-collector';
+import { createWebCollector } from '@walkerOS/web-collector';
 import { getEvent } from '@walkerOS/utils';
 import { destinationAdsExamples } from './examples';
 
@@ -26,7 +26,7 @@ describe('destination Google Ads', () => {
 
     w.gtag = mockFn;
 
-    ({ elb } = createWalkerjsWeb({
+    ({ elb } = createWebCollector({
       session: false,
       pageview: false,
       run: true,
