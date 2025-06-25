@@ -1,15 +1,15 @@
 ---
-title: Overview
+title: Destinations
 description: Initialize and send events to any tool or service with walkerOS
-sidebar_position: 1
+sidebar_position: 5
 ---
 
 import Link from '@docusaurus/Link';
 
 WalkerOS is built **vendor-agnostically**.
-While&nbsp;<Link to="/docs/getting_started/sources">sources</Link> create events, destinations
-are built to manage how events are processed and sent to various **analytics**,
-**marketing** or data **storage** tools.
+While&nbsp;<Link to="/docs/getting_started/sources">sources</Link> create
+events, destinations are built to manage how events are processed and sent to
+various **analytics**, **marketing** or data **storage** tools.
 
 Destinations ensure that data captured from your website or application is
 best-organized to easily get integrated with different tools if proper consent
@@ -20,9 +20,9 @@ new tools.
 
 Destinations are added to a source
 (see&nbsp;<Link to="/docs/collectors/web-collector/commands#destination">walker.js</Link>
-or&nbsp;<Link to="/docs/collectors/node-collector/commands#destination">node</Link>). Before
-receiving events from the source, the proper consent states are checked each
-time automatically. Destinations receive events through the
+or&nbsp;<Link to="/docs/collectors/node-collector/commands#destination">node</Link>).
+Before receiving events from the source, the proper consent states are checked
+each time automatically. Destinations receive events through the
 [`push`](/docs/destinations/event_mapping#push) interface. Each destination can
 have its own configuration, which is set up in the
 [`config`](/docs/destinations/event_mapping#example) object. This configuration
@@ -67,9 +67,9 @@ categorized in: **web** and **node**.
 
 ### Web
 
-Like&nbsp;<Link to="/docs/collectors/web-collector">walker.js</Link>, web destinations
-run in the **browser** directly. Their purpose is to initialize, map event data
-to the vendors' requirements, and send them.
+Like&nbsp;<Link to="/docs/collectors/web-collector">walker.js</Link>, web
+destinations run in the **browser** directly. Their purpose is to initialize,
+map event data to the vendors' requirements, and send them.
 
 - <Link to="/docs/destinations/web/api">API</Link>
 - <Link to="/docs/destinations/web/google_ads">Google Ads</Link>

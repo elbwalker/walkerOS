@@ -14,15 +14,6 @@ serverless function. The goal is to capture user events, state management, and
 sending events to a node destination,
 like&nbsp;<Link to="/docs/destinations/node/gcp">BigQuery</Link>.
 
-## Event Lifecycle
-
-1. **Initialization**: Similar to a web page view, each run reinitialize the
-   source's state.
-2. **Event Creation**: Events are formulated and queued internally.
-3. **Consent Verification**: Consent is checked before pushing events.
-4. **Destination Management**: Events are sent to destinations based on consent
-   and configuration settings.
-
 <DocCardList />
 
 :::info

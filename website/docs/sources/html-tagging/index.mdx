@@ -1,5 +1,5 @@
 ---
-title: HTML Tagging
+title: HTML source (data-elb attributes)
 sidebar_position: 3
 description: How to tag a page with walker.js
 ---
@@ -7,13 +7,29 @@ description: How to tag a page with walker.js
 import Link from '@docusaurus/Link';
 import PromotionLive from '@site/src/components/templates/promotionLive';
 
-You can implement all sorts of front-end user events with walker.js. From
-product and UX events like promotion views, filter and search usage to
-e-commerce actions like product add to carts or order complete events.
+Tag your web components using `data-elb` attributes to enable structured event
+tracking — no custom JavaScript required.
 
-The walker.js handles all trigger initializations and race conditions, builds
-the events with context, and distributes them based on consent states and
-mapping definitions to any destinations.
+By adding a few simple attributes to your markup, you can track user behavior
+such as clicks, views, form submissions, and more.
+
+This technique is especially helpful for **component libraries** and **design
+systems**, where it is important to **scale** event tagging in a maintainable,
+reusable way. You can bake tracking into components once, then use them
+everywhere — without extra code or tracking configuration.
+
+You'll learn how to:
+
+- Define entities, actions, and triggers directly in your HTML
+- Add contextual and global properties
+- Handle dynamic values, arrays, and type casting
+- Link elements across DOM boundaries
+- Structure nested data automatically
+
+If you're looking for a **lightweight, declarative** way to implement analytics
+and event tracking, `data-elb` tagging is your foundation.
+
+## Concept
 
 Tag a page...
 
@@ -98,16 +114,6 @@ You are entirely **free** to define naming conventions.
 
 :::
 
-To get started you need to know **entity, action & trigger** attributes.
-
-:::tip
-
-Learn more about the
-[event model](https://www.elbwalker.com/blog/elbwalker-event-concept) in our
-blog.
-
-:::
-
 ## Entity & action
 
 You define the entity **scope** by setting the `data-elb` attribute with the
@@ -125,8 +131,8 @@ To define the entities' **properties**, set the **composited attribute**
 
 ## Triggers
 
-Walker.js comes with a bunch of pre-built triggers. You don't have to deal with
-event listener or mutation observer initialization.
+There is a bunch of pre-built triggers. You don't have to deal with event
+listener or mutation observer initialization.
 
 | **Trigger** | **Definition**                                                                       |
 | ----------- | ------------------------------------------------------------------------------------ |
@@ -359,7 +365,7 @@ get size:20L
 ### Arrays
 
 To use array types, add the `[]` suffix to a property's name, such as
-`size[]:m`. The walker.js will generate de-duplicated data properties.
+`size[]:m`. It will generate de-duplicated data properties.
 
 ```html
 <div data-elb="product">
@@ -490,9 +496,9 @@ events along a specific user journey in structured way.
 A `data-elb` entity within another `data-elb` entity is called a **nested
 entity**.
 
-The walker runs through nested entities and treats them like regular entities by
-gathering all related information. Nested entities are accessible in the nested
-array of each event. Each element is a regular entity.
+The walker algorithm runs through nested entities and treats them like regular
+entities by gathering all related information. Nested entities are accessible in
+the nested array of each event. Each element is a regular entity.
 
 ```html
 <div

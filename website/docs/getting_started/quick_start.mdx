@@ -29,28 +29,15 @@ you want to work with walkerOS raw data.
 
 :::
 
-## Step 1: Choose a source
+## Step 1: Choose a collector
 
-- **Data creation**: Streamline the creation and formatting of events
-- **State management**: Keep user and session states consistent across events
-- **Consent handling**: Robustly manage user consent for privacy compliance
-- **Dynamic destinations**: Easily add destinations and map data
-
-- <Link to="/docs/collectors/web-collector/installation">**web**</Link>
-
-  - **Client-Side Tracking**: Capture detailed user interactions in the browser
-  - **Real-Time Analytics**: Gain instant insights into user behaviors
-  - **Race conditions**: Automatically handle the order and status of events
-  - **In-built triggers**: Optimized trigger initialization
-  - **Tagging method**: Simplify event tagging using HTML attributes
-
-- <Link to="/docs/collectors/node-collector/installation">**node**</Link>
-
-  - **Client-Side Tracking**: Capture detailed user interactions in the browser
-  - **Real-Time Analytics**: Gain instant insights into user behaviors
-  - **Race conditions**: Automatically handle the order and status of events
-  - **In-built triggers**: Optimized trigger initialization
-  - **Tagging method**: Simplify event tagging using HTML attributes
+- <Link to="/docs/collectors/web-collector/installation">
+    {' '}
+    Web (Client-side)
+  </Link>
+- <Link to="/docs/collectors/node-collector/installation">
+    Node (Server-side)
+  </Link>
 
 ## Step 2: Add a destination
 
@@ -73,13 +60,10 @@ Depending on your use-case next steps are different but here is a list with the
 most common next steps after the intial setup:
 
 - Start&nbsp;<Link to="/docs/sources/html-tagging">tagging</Link>
-- Add more&nbsp;<Link to="/docs/getting_started/destinations">destinations</Link>
-- Define the&nbsp;<Link to="/docs/destinations/event_mapping">event
-  mapping</Link> for your destinations
+- Add
+  more&nbsp;<Link to="/docs/getting_started/destinations">destinations</Link>
 - Implement&nbsp;<Link to="/docs/consent_management/overview/">consent
   mangement</Link>
-- Enhance your data collection and use your
-  first&nbsp;<Link to="/docs/utils/">util</Link>
 
 :::info
 
