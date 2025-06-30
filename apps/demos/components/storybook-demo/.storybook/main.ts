@@ -21,6 +21,12 @@ const config: StorybookConfig = {
   "framework": {
     "name": getAbsolutePath('@storybook/react-vite'),
     "options": {}
+  },
+  docs: {
+    defaultName: 'Documentation',
+  },
+  core: {
+    disableTelemetry: true,
   }
 };
 export default config;

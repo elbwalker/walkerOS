@@ -1,0 +1,126 @@
+.storybook-publisher-article {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8f9fa;
+}
+
+.storybook-publisher-article__main {
+  flex: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 24px;
+}
+
+.storybook-publisher-article__nav {
+  padding: 24px 0;
+}
+
+.storybook-publisher-article__content {
+  background: white;
+  border-radius: 8px;
+  padding: 40px;
+  margin-bottom: 60px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.storybook-publisher-article__header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.storybook-publisher-article__category {
+  margin-bottom: 16px;
+}
+
+.storybook-publisher-article__title {
+  margin-bottom: 16px;
+  line-height: 1.2;
+}
+
+.storybook-publisher-article__meta {
+  margin-bottom: 20px;
+}
+
+.storybook-publisher-article__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.storybook-publisher-article__tag {
+  background: #f0f0f0;
+  padding: 4px 8px;
+  border-radius: 12px;
+  color: #666;
+}
+
+.storybook-publisher-article__image {
+  margin-bottom: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.storybook-publisher-article__image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.storybook-publisher-article__body {
+  line-height: 1.8;
+  font-size: 1.1rem;
+  color: #333;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.storybook-publisher-article__body p {
+  margin-bottom: 20px;
+}
+
+.storybook-publisher-article__recommended {
+  margin-bottom: 60px;
+}
+
+.storybook-publisher-article__footer {
+  background: white;
+  border-top: 1px solid #e0e0e0;
+  padding: 24px;
+  margin-top: auto;
+}
+
+@media (max-width: 768px) {
+  .storybook-publisher-article__main {
+    padding: 0 16px;
+  }
+
+  .storybook-publisher-article__content {
+    padding: 24px;
+    margin-bottom: 40px;
+  }
+
+  .storybook-publisher-article__title {
+    font-size: 1.8rem;
+  }
+
+  .storybook-publisher-article__body {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+
+  .storybook-publisher-article__tags {
+    justify-content: flex-start;
+  }
+
+  .storybook-publisher-article__nav {
+    padding: 16px 0;
+  }
+
+  .storybook-publisher-article__recommended {
+    margin-bottom: 40px;
+  }
+}

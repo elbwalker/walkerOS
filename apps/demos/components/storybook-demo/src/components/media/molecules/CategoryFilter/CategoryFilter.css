@@ -1,0 +1,20 @@
+.storybook-category-filter {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .storybook-category-filter {
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+  
+  .storybook-category-filter button {
+    flex-shrink: 0;
+  }
+}

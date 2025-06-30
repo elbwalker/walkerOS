@@ -6,7 +6,16 @@
       "Bash(mkdir:*)",
       "Bash(npm install)",
       "Bash(npx storybook:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(npm install:*)",
+      "Bash(rm:*)",
+      "Bash(timeout 10s npm run storybook)",
+      "Bash(mv:*)",
+      "Bash(true)",
+      "Bash(npm run storybook:*)"
     ],
     "deny": []
   }
