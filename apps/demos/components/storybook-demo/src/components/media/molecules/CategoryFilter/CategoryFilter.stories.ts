@@ -2,12 +2,12 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { CategoryFilter } from './CategoryFilter';
 
 const meta: Meta<typeof CategoryFilter> = {
-  title: 'Media/Molecules/CategoryFilter',
+  title: 'Molecules/CategoryFilter',
   component: CategoryFilter,
   parameters: {
     layout: 'centered',
   },
-  tags: ['autodocs'],
+  tags: ['media'],
 };
 
 export default meta;

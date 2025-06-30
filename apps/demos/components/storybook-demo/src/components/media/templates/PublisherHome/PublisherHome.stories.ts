@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { PublisherHome } from './PublisherHome';
 
 const meta: Meta<typeof PublisherHome> = {
-  title: 'Media/Templates/PublisherHome',
+  title: 'Templates/PublisherHome',
   component: PublisherHome,
   parameters: {
     layout: 'fullscreen',
@@ -10,7 +10,7 @@ const meta: Meta<typeof PublisherHome> = {
       story: { height: '800px' }
     }
   },
-  tags: ['autodocs'],
+  tags: ['media'],
 };
 
 export default meta;

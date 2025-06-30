@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ProductGrid } from './ProductGrid';
 
 const meta: Meta<typeof ProductGrid> = {
-  title: 'E-commerce/Organisms/ProductGrid',
+  title: 'Organisms/ProductGrid',
   component: ProductGrid,
   parameters: {
     layout: 'fullscreen',
@@ -10,7 +10,7 @@ const meta: Meta<typeof ProductGrid> = {
       story: { height: '600px' }
     }
   },
-  tags: ['autodocs'],
+  tags: ['ecommerce'],
 };
 
 export default meta;

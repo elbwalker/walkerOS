@@ -37,7 +37,7 @@ As the world continues to grapple with the effects of climate change, discoverie
 };
 
 const meta: Meta<typeof PublisherArticle> = {
-  title: 'Media/Templates/PublisherArticle',
+  title: 'Templates/PublisherArticle',
   component: PublisherArticle,
   parameters: {
     layout: 'fullscreen',
@@ -45,7 +45,7 @@ const meta: Meta<typeof PublisherArticle> = {
       story: { height: '800px' }
     }
   },
-  tags: ['autodocs'],
+  tags: ['media'],
 };
 
 export default meta;

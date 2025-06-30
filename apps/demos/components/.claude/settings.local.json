@@ -15,7 +15,10 @@
       "Bash(timeout 10s npm run storybook)",
       "Bash(mv:*)",
       "Bash(true)",
-      "Bash(npm run storybook:*)"
+      "Bash(npm run storybook:*)",
+      "WebFetch(domain:storybook.js.org)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

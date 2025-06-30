@@ -1,6 +1,29 @@
 import type { Preview } from '@storybook/react-vite'
+import React from 'react'
+
+export const globalTypes = {
+  domain: {
+    description: 'Switch between application domains',
+    toolbar: {
+      title: 'Domain',
+      icon: 'globe',
+      items: [
+        { value: 'ecommerce', title: 'E-commerce', right: '🛍️' },
+        { value: 'media', title: 'Media', right: '📰' },
+        { value: 'all', title: 'All Components', right: '🔧' },
+      ],
+      dynamicTitle: true,
+    },
+  },
+}
+
+export const initialGlobals = {
+  domain: 'ecommerce',
+}
 
 const preview: Preview = {
+  globalTypes,
+  initialGlobals,
   parameters: {
     controls: {
       matchers: {
@@ -27,16 +50,17 @@ const preview: Preview = {
       storySort: {
         order: [
           'Introduction',
-          'Design System',
-          ['Atoms', 'Organisms'],
-          'E-commerce',
-          ['Molecules', 'Organisms', 'Templates'],
-          'Media',
-          ['Molecules', 'Organisms', 'Templates'],
+          'Atoms',
+          'Molecules', 
+          'Organisms',
+          'Templates',
         ],
       },
     },
   },
+  decorators: [
+    (Story) => Story(),
+  ],
 };
 
 export default preview;

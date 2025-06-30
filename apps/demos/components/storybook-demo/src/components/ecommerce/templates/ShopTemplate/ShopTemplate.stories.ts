@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ShopTemplate } from './ShopTemplate';
 
 const meta: Meta<typeof ShopTemplate> = {
-  title: 'E-commerce/Templates/ShopTemplate',
+  title: 'Templates/ShopTemplate',
   component: ShopTemplate,
   parameters: {
     layout: 'fullscreen',
@@ -10,7 +10,7 @@ const meta: Meta<typeof ShopTemplate> = {
       story: { height: '800px' }
     }
   },
-  tags: ['autodocs'],
+  tags: ['ecommerce'],
 };
 
 export default meta;

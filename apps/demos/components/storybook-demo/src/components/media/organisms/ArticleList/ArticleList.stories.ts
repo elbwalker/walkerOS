@@ -65,7 +65,7 @@ const sampleArticles = [
 ];
 
 const meta: Meta<typeof ArticleList> = {
-  title: 'Media/Organisms/ArticleList',
+  title: 'Organisms/ArticleList',
   component: ArticleList,
   parameters: {
     layout: 'fullscreen',
@@ -73,7 +73,7 @@ const meta: Meta<typeof ArticleList> = {
       story: { height: '800px' }
     }
   },
-  tags: ['autodocs'],
+  tags: ['media'],
 };
 
 export default meta;

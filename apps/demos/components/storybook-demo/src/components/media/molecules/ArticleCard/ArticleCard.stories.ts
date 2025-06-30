@@ -2,12 +2,12 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ArticleCard } from './ArticleCard';
 
 const meta: Meta<typeof ArticleCard> = {
-  title: 'Media/Molecules/ArticleCard',
+  title: 'Molecules/ArticleCard',
   component: ArticleCard,
   parameters: {
     layout: 'centered',
   },
-  tags: ['autodocs'],
+  tags: ['media'],
 };
 
 export default meta;

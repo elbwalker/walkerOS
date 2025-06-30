@@ -2,12 +2,12 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { SearchBox } from './SearchBox';
 
 const meta: Meta<typeof SearchBox> = {
-  title: 'E-commerce/Molecules/SearchBox',
+  title: 'Molecules/SearchBox',
   component: SearchBox,
   parameters: {
     layout: 'centered',
   },
-  tags: ['autodocs'],
+  tags: ['ecommerce'],
 };
 
 export default meta;
