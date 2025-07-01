@@ -1,8 +1,9 @@
+import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { ShopTemplate } from './ShopTemplate';
 
 const meta: Meta<typeof ShopTemplate> = {
-  title: 'Templates/ShopTemplate',
+  title: 'Ecommerce/Templates/ShopTemplate',
   component: ShopTemplate,
   parameters: {
     layout: 'fullscreen',

@@ -1,5 +1,5 @@
 import { Card } from '../../molecules/Card';
-import { Typography } from '../../../shared/atoms/Typography';
+import { Typography } from '../../atoms/Typography';
 import './ProductGrid.css';
 
 export interface Product {

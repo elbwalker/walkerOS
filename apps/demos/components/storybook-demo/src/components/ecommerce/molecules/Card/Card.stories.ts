@@ -1,8 +1,9 @@
+import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { Card } from './Card';
 
 const meta: Meta<typeof Card> = {
-  title: 'Molecules/Card',
+  title: 'Ecommerce/Molecules/Card',
   component: Card,
   parameters: {
     layout: 'centered',

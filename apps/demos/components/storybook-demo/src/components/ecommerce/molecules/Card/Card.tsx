@@ -1,5 +1,5 @@
-import { Typography } from '../../../shared/atoms/Typography';
-import { Button } from '../../../shared/atoms/Button';
+import { Typography } from '../../atoms/Typography';
+import { Button } from '../../atoms/Button';
 import './Card.css';
 
 export interface CardProps {
@@ -31,13 +31,22 @@ export const Card = ({
           {title}
         </Typography>
         {description && (
-          <Typography variant="body2" color="secondary" className="storybook-card__description">
+          <Typography
+            variant="body2"
+            color="secondary"
+            className="storybook-card__description"
+          >
             {description}
           </Typography>
         )}
         {actionLabel && onAction && (
           <div className="storybook-card__actions">
-            <Button label={actionLabel} onClick={onAction} size="small" />
+            <Button
+              label={actionLabel}
+              onClick={onAction}
+              size="small"
+              elbAction="add"
+            />
           </div>
         )}
       </div>

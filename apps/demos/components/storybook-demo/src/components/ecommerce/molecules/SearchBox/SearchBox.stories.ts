@@ -1,8 +1,9 @@
+import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { SearchBox } from './SearchBox';
 
 const meta: Meta<typeof SearchBox> = {
-  title: 'Molecules/SearchBox',
+  title: 'Ecommerce/Molecules/SearchBox',
   component: SearchBox,
   parameters: {
     layout: 'centered',

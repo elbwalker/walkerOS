@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Header } from '../../../shared/organisms/Header';
+import { Header } from '../../organisms/Header';
 import { ProductGrid, type Product } from '../../organisms/ProductGrid';
-import { Typography } from '../../../shared/atoms/Typography';
+import { Typography } from '../../atoms/Typography';
 import './ShopTemplate.css';
 
 const sampleProducts: Product[] = [

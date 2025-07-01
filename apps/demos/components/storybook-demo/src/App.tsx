@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ShopTemplate } from './components/ecommerce/templates/ShopTemplate';
-import { PublisherHome } from './components/media/templates/PublisherHome';
-import { Button } from './components/shared/atoms/Button';
-import { Typography } from './components/shared/atoms/Typography';
+import { MediathekTemplate } from './components/media/templates/MediathekTemplate';
+import { Button } from './components/ecommerce/atoms/Button';
+import { Typography } from './components/ecommerce/atoms/Typography';
 import './App.css';
 
 type TemplateType = 'landing' | 'shop' | 'publisher';
@@ -44,7 +44,7 @@ function App() {
               onClick={() => setCurrentTemplate('shop')}
             />
             <Button
-              label="📰 Publisher Demo"
+              label="📺 Mediathek Demo"
               primary
               onClick={() => setCurrentTemplate('publisher')}
             />
@@ -96,14 +96,14 @@ function App() {
           onClick={() => setCurrentTemplate('shop')}
         />
         <Button
-          label="Publisher"
+          label="Mediathek"
           primary={currentTemplate === 'publisher'}
           size="small"
           onClick={() => setCurrentTemplate('publisher')}
         />
       </div>
       
-      {currentTemplate === 'shop' ? <ShopTemplate /> : <PublisherHome />}
+      {currentTemplate === 'shop' ? <ShopTemplate /> : <MediathekTemplate />}
     </div>
   );
 }

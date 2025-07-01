@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Button } from '../../../shared/atoms/Button';
-import { Input } from '../../../shared/atoms/Input';
+import { Button } from '../../atoms/Button';
+import { Input } from '../../atoms/Input';
 import './SearchBox.css';
 
 export interface SearchBoxProps {
