@@ -1,42 +1,82 @@
 export interface ImageProps {
-  type: 'thumbnail' | 'banner';
-  src?: string;
+  type: 'thumbnail' | 'banner' | 'postcard';
+  style?: number;
   alt: string;
   title?: string;
   className?: string;
 }
 
-export const Image = ({ type, src, alt, title, className = '' }: ImageProps) => {
-  const placeholderColor = type === 'banner' ? 'from-primary-700 to-primary-900' : 'from-surface-700 to-surface-900';
-  
+export const Image = ({
+  type,
+  style = 1,
+  alt,
+  title,
+  className = '',
+}: ImageProps) => {
+  const getPlaceholderColor = (
+    styleNum: number,
+    alt: string,
+    title: string = '',
+  ) => {
+    const colors = [
+      'from-blue-200 to-blue-800',
+      'from-purple-800 to-purple-500',
+      'from-green-200 to-green-400',
+      'from-orange-300 to-orange-200',
+      'from-pink-900 to-pink-300',
+      'from-teal-400 to-teal-700',
+      'from-red-800 to-red-300',
+      'from-blue-700 to-blue-300',
+      'from-indigo-600 to-indigo-800',
+      'from-gray-200 to-gray-800',
+      'from-yellow-200 to-yellow-800',
+      'from-cyan-200 to-cyan-800',
+      'from-emerald-200 to-emerald-800',
+      'from-fuchsia-200 to-fuchsia-800',
+      'from-violet-200 to-violet-800',
+      'from-rose-200 to-rose-800',
+      'from-amber-200 to-amber-800',
+      'from-sky-200 to-sky-800',
+      'from-lime-200 to-lime-800',
+
+    ];
+    return colors[(styleNum + title.length + alt.length) % colors.length];
+  };
+
+  const placeholderColor = getPlaceholderColor(style, alt, title);
+
+  const styles = [
+    ['text-base', 'text-lg', 'text-xl'], // sizes
+    ['font-light', 'font-normal', 'font-medium', 'font-semibold', 'font-bold', 'font-extrabold', 'font-black'], // weights
+    ['tracking-tight', 'tracking-normal', 'tracking-wide', 'tracking-wider', 'tracking-widest'], // spacing
+    ['font-sans', 'font-serif', 'font-mono'], // font families
+  ];
+
+  const getStyle = (styleNum: number, title: string = '', alt: string = '') => {
+    const seed = styleNum + title.length + alt.length;
+    const size = styles[0][seed % styles[0].length];
+    const weight = styles[1][seed % styles[1].length];
+    const spacing = styles[2][seed % styles[2].length];
+    const family = styles[3][seed % styles[3].length];
+    return `${size} ${weight} ${spacing} ${family}`;
+  };
+
+  const titleStyle = getStyle(style, title, alt);
+
   const typeClasses = {
     thumbnail: 'aspect-video rounded-lg',
     banner: 'aspect-[16/6] rounded-xl',
+    postcard: 'aspect-[16/20] rounded-xl',
   };
 
-  if (!src) {
-    return (
-      <div className={`${typeClasses[type]} bg-gradient-to-br ${placeholderColor} flex items-center justify-center ${className}`}>
-        <div className="text-center text-white dark:text-white">
-          {title && <div className="font-semibold text-lg mb-1">{title}</div>}
-          <div className="text-sm opacity-75">{alt}</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className={`${typeClasses[type]} overflow-hidden ${className}`}>
-      <img
-        src={src}
-        alt={alt}
-        className="w-full h-full object-cover"
-      />
-      {title && type === 'banner' && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
-          <h2 className="text-white text-2xl font-bold">{title}</h2>
-        </div>
-      )}
+    <div
+      className={`${typeClasses[type]} bg-gradient-to-br ${placeholderColor} flex items-center justify-center ${className}`}
+    >
+      <div className="text-center text-white dark:text-white">
+        {title && <div className={`${titleStyle} mb-1`}>{title}</div>}
+        <div className={`opacity-75`}>{alt}</div>
+      </div>
     </div>
   );
 };

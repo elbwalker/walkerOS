@@ -6,7 +6,7 @@ export interface HeroBannerProps {
   title: string;
   subtitle: string;
   buttonText: string;
-  backgroundSrc?: string;
+  style?: number;
   onButtonClick?: () => void;
 }
 
@@ -14,7 +14,7 @@ export const HeroBanner = ({
   title,
   subtitle,
   buttonText,
-  backgroundSrc,
+  style = 1,
   onButtonClick,
 }: HeroBannerProps) => {
   return (
@@ -23,7 +23,7 @@ export const HeroBanner = ({
       <div className="absolute inset-0">
         <Image
           type="banner"
-          src={backgroundSrc}
+          style={style}
           alt={title}
           className="w-full h-full"
         />

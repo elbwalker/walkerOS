@@ -12,17 +12,14 @@ const topSeriesItems = [
   {
     id: '1',
     title: 'Debugging Dreams',
-    src: 'https://picsum.photos/400/225?random=1',
   },
   {
     id: '2',
     title: 'Code Wars',
-    src: 'https://picsum.photos/400/225?random=2',
   },
   {
     id: '3',
     title: 'API Chronicles',
-    src: 'https://picsum.photos/400/225?random=3',
   },
   {
     id: '4',
@@ -31,7 +28,6 @@ const topSeriesItems = [
   {
     id: '5',
     title: 'Sleepless in Stack Overflow',
-    src: 'https://picsum.photos/400/225?random=5',
   },
 ];
 
@@ -39,17 +35,14 @@ const filmRecommendations = [
   {
     id: '6',
     title: 'The Art of Refactoring',
-    src: 'https://picsum.photos/400/225?random=6',
   },
   {
     id: '7',
     title: 'Inside Silicon Valley',
-    src: 'https://picsum.photos/400/225?random=7',
   },
   {
     id: '8',
     title: 'A Journey into Agile',
-    src: 'https://picsum.photos/400/225?random=8',
   },
   {
     id: '9',
@@ -58,7 +51,6 @@ const filmRecommendations = [
   {
     id: '10',
     title: 'The Pragmatic Programmer',
-    src: 'https://picsum.photos/400/225?random=10',
   },
 ];
 
@@ -78,7 +70,7 @@ export const MediathekTemplate = ({
           title="Life in Code"
           subtitle="Balancing Passion and Work"
           buttonText="Explore Now"
-          backgroundSrc="https://picsum.photos/1200/500?random=hero"
+          style={5}
         />
         
         <CarouselSection
@@ -89,6 +81,7 @@ export const MediathekTemplate = ({
         <CarouselSection
           title="Movie Recommendations"
           items={filmRecommendations}
+          type="postcard"
         />
         
         <PromotionBanner
@@ -104,12 +97,10 @@ export const MediathekTemplate = ({
             {
               id: '11',
               title: 'The Future of Tech',
-              src: 'https://picsum.photos/400/225?random=11',
             },
             {
               id: '12',
               title: 'AI Revolution',
-              src: 'https://picsum.photos/400/225?random=12',
             },
             {
               id: '13',
@@ -118,7 +109,6 @@ export const MediathekTemplate = ({
             {
               id: '14',
               title: 'Digital Transformation',
-              src: 'https://picsum.photos/400/225?random=14',
             },
           ]}
         />
