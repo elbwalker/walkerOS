@@ -10,47 +10,37 @@ export interface MediathekTemplateProps {
 
 const topSeriesItems = [
   {
-    id: '1',
     title: 'Debugging Dreams',
   },
   {
-    id: '2',
-    title: 'Code Wars',
-  },
-  {
-    id: '3',
-    title: 'API Chronicles',
-  },
-  {
-    id: '4',
     title: 'Return of the Bug',
   },
   {
-    id: '5',
+    title: 'Code Wars',
+  },
+  {
+    title: 'Data Diaries',
+  },
+  {
     title: 'Sleepless in Stack Overflow',
   },
 ];
 
 const filmRecommendations = [
   {
-    id: '6',
+    title: 'Inside Server-Side Valley',
+  },
+  {
+    title: 'A Beautiful Code',
+  },
+  {
     title: 'The Art of Refactoring',
   },
   {
-    id: '7',
-    title: 'Inside Silicon Valley',
-  },
-  {
-    id: '8',
-    title: 'A Journey into Agile',
-  },
-  {
-    id: '9',
-    title: 'Beautiful Code',
-  },
-  {
-    id: '10',
     title: 'The Pragmatic Programmer',
+  },
+  {
+    title: 'A Journey into Agile',
   },
 ];
 
@@ -64,7 +54,7 @@ export const MediathekTemplate = ({
         activeMenuItem={activeMenuItem}
         onMenuItemClick={onMenuItemClick}
       />
-      
+
       <main>
         <HeroBanner
           title="Life in Code"
@@ -72,42 +62,35 @@ export const MediathekTemplate = ({
           buttonText="Explore Now"
           style={5}
         />
-        
-        <CarouselSection
-          title="Our Top Series"
-          items={topSeriesItems}
-        />
-        
+
+        <CarouselSection title="Our Top Series" items={topSeriesItems} />
+
         <CarouselSection
           title="Movie Recommendations"
           items={filmRecommendations}
           type="postcard"
         />
-        
+
         <PromotionBanner
           headline="Activate Kids Mode"
           subtitle="Create a safe space for younger viewers."
           buttonText="Activate Now"
           backgroundGradient="from-primary-600 to-primary-800"
         />
-        
+
         <CarouselSection
           title="Exciting Documentaries and Reports"
           items={[
             {
-              id: '11',
               title: 'The Future of Tech',
             },
             {
-              id: '12',
               title: 'AI Revolution',
             },
             {
-              id: '13',
               title: 'Open Source Stories',
             },
             {
-              id: '14',
               title: 'Digital Transformation',
             },
           ]}

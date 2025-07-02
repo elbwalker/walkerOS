@@ -1,7 +1,7 @@
 export interface ImageProps {
   type: 'thumbnail' | 'banner' | 'postcard';
   style?: number;
-  alt: string;
+  alt?: string;
   title?: string;
   className?: string;
 }
@@ -15,7 +15,7 @@ export const Image = ({
 }: ImageProps) => {
   const getPlaceholderColor = (
     styleNum: number,
-    alt: string,
+    alt: string = '',
     title: string = '',
   ) => {
     const colors = [
@@ -38,7 +38,6 @@ export const Image = ({
       'from-amber-200 to-amber-800',
       'from-sky-200 to-sky-800',
       'from-lime-200 to-lime-800',
-
     ];
     return colors[(styleNum + title.length + alt.length) % colors.length];
   };
@@ -47,8 +46,22 @@ export const Image = ({
 
   const styles = [
     ['text-base', 'text-lg', 'text-xl'], // sizes
-    ['font-light', 'font-normal', 'font-medium', 'font-semibold', 'font-bold', 'font-extrabold', 'font-black'], // weights
-    ['tracking-tight', 'tracking-normal', 'tracking-wide', 'tracking-wider', 'tracking-widest'], // spacing
+    [
+      'font-light',
+      'font-normal',
+      'font-medium',
+      'font-semibold',
+      'font-bold',
+      'font-extrabold',
+      'font-black',
+    ], // weights
+    [
+      'tracking-tight',
+      'tracking-normal',
+      'tracking-wide',
+      'tracking-wider',
+      'tracking-widest',
+    ], // spacing
     ['font-sans', 'font-serif', 'font-mono'], // font families
   ];
 

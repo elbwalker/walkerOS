@@ -17,12 +17,15 @@ export const CarouselItem = ({
   type = 'thumbnail',
 }: CarouselItemProps) => {
   return (
-    <div className="flex-shrink-0 w-64 cursor-pointer group px-2 py-2" onClick={onClick}>
+    <div
+      className="flex-shrink-0 w-64 cursor-pointer group px-2 py-2"
+      onClick={onClick}
+    >
       <div className="transition-transform duration-200 group-hover:scale-105">
         <Image
           type={type}
           style={style}
-          alt={alt || title}
+          alt={alt}
           title={title}
           className="mb-3"
         />

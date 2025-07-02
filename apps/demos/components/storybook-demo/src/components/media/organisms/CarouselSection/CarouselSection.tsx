@@ -5,11 +5,10 @@ import { CarouselItem } from '../../molecules/CarouselItem';
 export interface CarouselSectionProps {
   title: string;
   items: Array<{
-    id: string;
     title: string;
     alt?: string;
   }>;
-  onItemClick?: (id: string) => void;
+  onItemClick?: (id: unknown) => void;
   type?: ImageProps['type'];
 }
 
@@ -29,12 +28,12 @@ export const CarouselSection = ({
         <div className="flex space-x-1 overflow-x-auto scrollbar-hide pb-4 -mx-2 -my-2">
           {items.map((item, index) => (
             <CarouselItem
-              key={item.id}
+              key={index}
               title={item.title}
               style={index}
               type={type}
               alt={item.alt}
-              onClick={() => onItemClick?.(item.id)}
+              onClick={() => onItemClick?.(index)}
             />
           ))}
         </div>
