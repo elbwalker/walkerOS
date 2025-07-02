@@ -15,7 +15,7 @@ const config: StorybookConfig = {
     getAbsolutePath('@storybook/addon-docs'),
     getAbsolutePath('@storybook/addon-onboarding'),
     getAbsolutePath('@storybook/addon-themes'),
-    '../src/addon-walkeros',
+    '../packages/storybook-addon-walkeros/src',
   ],
   framework: {
     name: getAbsolutePath('@storybook/react-vite'),

@@ -5,17 +5,32 @@ const ADDON_ID = 'walkeros';
 const PANEL_ID = `${ADDON_ID}/panel`;
 
 export const WalkerOSPanel: React.FC = () => {
+  const eventData = { event: "hello world" };
+  
   return (
     <div style={{ padding: '16px' }}>
       <h3>walkerOS events</h3>
-      <pre style={{ 
-        background: '#f5f5f5', 
+      <details style={{ 
+        background: '#f8f8f8', 
         padding: '8px', 
         borderRadius: '4px',
-        fontSize: '12px'
+        border: '1px solid #e0e0e0'
       }}>
-        {JSON.stringify({ event: "hello world" }, null, 2)}
-      </pre>
+        <summary style={{ 
+          cursor: 'pointer', 
+          fontWeight: 'bold',
+          marginBottom: '8px'
+        }}>
+          Event Object
+        </summary>
+        <pre style={{ 
+          margin: 0,
+          fontSize: '12px',
+          fontFamily: 'monospace'
+        }}>
+          {JSON.stringify(eventData, null, 2)}
+        </pre>
+      </details>
     </div>
   );
 };
