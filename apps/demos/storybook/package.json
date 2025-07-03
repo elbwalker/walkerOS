@@ -1,5 +1,5 @@
 {
-  "name": "storybook-demo",
+  "name": "@walkerOS/storybook-demo",
   "private": true,
   "version": "0.0.0",
   "type": "module",
