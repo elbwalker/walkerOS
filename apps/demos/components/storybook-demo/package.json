@@ -18,9 +18,9 @@
   "devDependencies": {
     "@eslint/js": "^9.29.0",
     "@storybook/addon-docs": "^9.0.14",
-    "@storybook/addon-onboarding": "^9.0.14",
     "@storybook/addon-themes": "^9.0.15",
     "@storybook/react-vite": "^9.0.14",
+    "@walkerOS/storybook-addon": "*",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.5.2",

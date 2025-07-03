@@ -39,6 +39,10 @@ const preview: Preview = {
   globalTypes,
   initialGlobals,
   parameters: {
+    walkerOS: {
+      autoRefresh: true,
+      prefix: 'data-elb',
+    },
     controls: {
       matchers: {
         color: /(background|color)$/i,

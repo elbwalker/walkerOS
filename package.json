@@ -8,6 +8,8 @@
     "packages/destinations/node/*",
     "packages/destinations/web/*",
     "packages/sources/*",
+    "packages/storybook/*",
+    "apps/demos/components/storybook-demo/*",
     "website"
   ],
   "scripts": {

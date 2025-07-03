@@ -26,6 +26,8 @@ export function createSourceWalkerjs(
   return { elb, instance };
 }
 
+export { getAllEvents, getEvents, getGlobals };
+
 export function Walkerjs(
   customConfig: SourceWalkerjs.InitConfig = {},
 ): SourceWalkerjs.Instance {

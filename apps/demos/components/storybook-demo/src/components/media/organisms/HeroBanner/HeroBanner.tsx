@@ -18,7 +18,7 @@ export const HeroBanner = ({
   onButtonClick,
 }: HeroBannerProps) => {
   return (
-    <div className="relative h-96 md:h-[500px] overflow-hidden">
+    <div className="relative h-96 md:h-[500px] overflow-hidden" data-elb="promotion" data-elbaction="visible">
       {/* Background Image */}
       <div className="absolute inset-0">
         <Image
