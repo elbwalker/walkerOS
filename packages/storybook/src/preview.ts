@@ -10,7 +10,7 @@
  */
 import type { ProjectAnnotations, Renderer } from "storybook/internal/types";
 
-import { KEY } from "./constants";
+import { ADDON_ID } from "./constants";
 import { withRoundTrip } from "./withRoundTrip";
 
 /**
@@ -20,8 +20,20 @@ import { withRoundTrip } from "./withRoundTrip";
 
 const preview: ProjectAnnotations<Renderer> = {
   decorators: [withRoundTrip],
+  globalTypes: {
+    [ADDON_ID]: {
+      description: 'walkerOS addon configuration',
+      defaultValue: {
+        autoRefresh: true,
+        prefix: 'data-elb',
+      },
+    },
+  },
   initialGlobals: {
-    [KEY]: false,
+    [ADDON_ID]: {
+      autoRefresh: true,
+      prefix: 'data-elb',
+    },
   },
 };
 
