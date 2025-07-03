@@ -1,25 +1,26 @@
-import type { WalkerOSAddon } from "src/types";
-import type { Walker } from "@elbwalker/walker.js";
-import React, { Fragment, memo, useCallback, useEffect, useState } from "react";
+import type { WalkerOSAddon } from 'src/types';
+import type { Walker } from '@elbwalker/walker.js';
+import React, { Fragment, memo, useCallback, useEffect, useState } from 'react';
 import {
   AddonPanel,
+  Placeholder,
+  TabsState,
+  SyntaxHighlighter,
   Button,
   Checkbox,
   Form,
-  SyntaxHighlighter,
-} from "storybook/internal/components";
-import { Placeholder, TabsState } from "storybook/internal/components";
-import { useChannel, useGlobals, useStorybookApi } from "storybook/manager-api";
-import { useTheme } from "storybook/theming";
+} from 'storybook/internal/components';
+import { useChannel, useGlobals, useStorybookApi } from 'storybook/manager-api';
+import { useTheme } from 'storybook/theming';
 import {
   STORY_ARGS_UPDATED,
   CURRENT_STORY_WAS_SET,
   SELECT_STORY,
   STORY_RENDERED,
-} from "storybook/internal/core-events";
+} from 'storybook/internal/core-events';
 
-import { ADDON_ID, EVENTS } from "../constants";
-import { List } from "./List";
+import { ADDON_ID, EVENTS } from '../constants';
+import { List } from './List';
 
 interface PanelProps {
   active: boolean;
@@ -34,7 +35,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
 
   const defaultConfig: WalkerOSAddon = {
     autoRefresh: true,
-    prefix: "data-elb",
+    prefix: 'data-elb',
   };
   const config = {
     ...defaultConfig,
@@ -44,11 +45,16 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
   const [events, setState] = useState<Walker.Events>([]);
 
   const updateConfig = (key: keyof WalkerOSAddon, value: any) => {
-    updateGlobals({ [ADDON_ID]: { ...config, [key]: value } });
+    const newConfig = { ...config, [key]: value };
+    updateGlobals({ [ADDON_ID]: newConfig });
   };
 
   // https://storybook.js.org/docs/react/addons/addons-api#usechannel
-  const emit = useChannel({ [EVENTS.RESULT]: setState });
+  const emit = useChannel({
+    [EVENTS.RESULT]: (newEvents: Walker.Events) => {
+      setState(newEvents);
+    },
+  });
 
   const updateEvents = useCallback(() => {
     emit(EVENTS.REQUEST, config);
@@ -80,17 +86,20 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
   }, [api, updateEvents, config.autoRefresh]);
 
   const getEventTitle = (events: Walker.Events) => {
-    const form = events.length == 1 ? "Event" : "Events";
+    const form = events.length == 1 ? 'Event' : 'Events';
     return `${events.length} ${form}`;
   };
 
   return (
     <AddonPanel {...props}>
-      <TabsState initial="events" backgroundColor={theme.background.hoverable}>
+      <TabsState
+        initial="events"
+        backgroundColor={theme.background.hoverable as string}
+      >
         <div id="events" title={getEventTitle(events)}>
           <Placeholder>
             <Fragment>
-              <Button onClick={updateEvents}>Update events</Button>
+              <Button onClick={updateEvents as any}>Update events</Button>
             </Fragment>
             {events.length > 0 ? (
               <List
@@ -121,7 +130,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
                   id="autoRefresh"
                   checked={config.autoRefresh}
                   onChange={(e) =>
-                    updateConfig("autoRefresh", e.target.checked)
+                    updateConfig('autoRefresh', e.target.checked)
                   }
                 />
               </Form.Field>
@@ -131,7 +140,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
                   value={config.prefix}
                   placeholder={config.prefix}
                   onChange={(e) =>
-                    updateConfig("prefix", (e.target as HTMLInputElement).value)
+                    updateConfig('prefix', (e.target as HTMLInputElement).value)
                   }
                   size="flex"
                 />

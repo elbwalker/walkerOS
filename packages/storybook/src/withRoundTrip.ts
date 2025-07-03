@@ -1,20 +1,31 @@
-import type { WalkerOSAddon } from "src/types";
-import type { DecoratorFunction } from "storybook/internal/types";
-import { useChannel } from "storybook/preview-api";
-import { getAllEvents } from "@elbwalker/walker.js";
+import type { WalkerOSAddon } from 'src/types';
+import type { DecoratorFunction } from 'storybook/internal/types';
+import { addons } from 'storybook/preview-api';
+import { getAllEvents } from '@elbwalker/walker.js';
 
-import { EVENTS } from "./constants";
+import { EVENTS } from './constants';
+
+// Set up the channel listener globally, not per story
+const channel = addons.getChannel();
+let currentCanvasElement: Element | null = null;
+
+// Global listener for the request events
+channel.addListener(EVENTS.REQUEST, (config: WalkerOSAddon) => {
+  // Try to find the canvas element if we don't have it yet
+  const canvasElement =
+    currentCanvasElement ||
+    document.querySelector('#storybook-root') ||
+    document.body;
+
+  const events = getAllEvents(canvasElement as Element, config.prefix);
+
+  // Send the result back to the manager
+  channel.emit(EVENTS.RESULT, events);
+});
 
 export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
-  const canvasElement = context.canvasElement as ParentNode;
-
-  // Manual request via button click
-  const emit = useChannel({
-    [EVENTS.REQUEST]: (config: WalkerOSAddon) => {
-      const events = getAllEvents(canvasElement as Element, config.prefix);
-      emit(EVENTS.RESULT, events);
-    },
-  });
+  // Update the current canvas element when a story renders
+  currentCanvasElement = context.canvasElement as Element;
 
   return storyFn();
 };
