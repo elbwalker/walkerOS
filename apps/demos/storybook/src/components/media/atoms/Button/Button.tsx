@@ -1,12 +1,7 @@
+import type { WalkerOSTagging } from '@walkerOS/storybook-addon';
 import './Button.css';
 
-export interface Tracking {
-  elbContext?: string;
-  elbAction?: string;
-  elbValue?: string;
-}
-
-export interface ButtonProps extends Tracking {
+export interface ButtonProps extends WalkerOSTagging {
   primary?: boolean;
   backgroundColor?: string;
   size?: 'small' | 'medium' | 'large';

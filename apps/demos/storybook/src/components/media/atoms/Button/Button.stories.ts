@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Button } from './Button';
+import { walkerOSArgTypes } from '@walkerOS/storybook-addon';
 
 const meta: Meta<typeof Button> = {
   title: 'Media/Atoms/Button',
@@ -10,6 +11,7 @@ const meta: Meta<typeof Button> = {
   tags: ['media'],
   argTypes: {
     backgroundColor: { control: 'color' },
+    ...walkerOSArgTypes,
   },
 };
 
