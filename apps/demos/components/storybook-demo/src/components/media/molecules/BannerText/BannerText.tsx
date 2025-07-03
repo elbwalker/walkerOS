@@ -1,5 +1,3 @@
-import { Typography } from '../../atoms/Typography';
-
 export interface BannerTextProps {
   headline: string;
   subtitle: string;

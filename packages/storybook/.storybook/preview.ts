@@ -1,4 +1,4 @@
-import type { Preview } from "@storybook/react-vite";
+import type { Preview } from '@storybook/react-vite';
 
 const preview: Preview = {
   parameters: {
@@ -10,7 +10,7 @@ const preview: Preview = {
     },
   },
   initialGlobals: {
-    background: { value: "light" },
+    background: { value: 'light' },
   },
 };
 

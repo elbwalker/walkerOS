@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { HeroBanner } from './HeroBanner';
 
@@ -19,7 +18,7 @@ export const LifeInCode: Story = {
     title: 'Life in Code',
     subtitle: 'Balancing Passion and Work',
     buttonText: 'Explore Now',
-    backgroundSrc: 'https://picsum.photos/1200/500?random=1',
+    style: 1,
   },
 };
 

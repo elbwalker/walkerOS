@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { CarouselItem } from './CarouselItem';
 
@@ -17,7 +16,7 @@ type Story = StoryObj<typeof meta>;
 export const WithImage: Story = {
   args: {
     title: 'Debugging Dreams',
-    src: 'https://picsum.photos/400/225?random=1',
+    alt: 'A mysterious debugging scene',
   },
 };
 

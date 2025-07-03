@@ -1,5 +1,5 @@
 // E-commerce Components
-export * from './ecommerce';
+export * as ECommerce from './ecommerce';
 
 // Media Components
-export * from './media';
+export * as Media from './media';
