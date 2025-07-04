@@ -9,7 +9,8 @@ export const TaggedButton = ({
   elbData,
   ...props
 }: TaggedButtonProps) => {
-  elbData = elbData + ';' + (props.primary ? 'type:primary' : 'type:secondary');
+  elbData =
+    elbData || '' + ';' + (props.primary ? 'type:primary' : 'type:secondary');
 
   return (
     <span

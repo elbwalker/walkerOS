@@ -20,7 +20,6 @@ type Story = StoryObj<typeof meta>;
 export const WatchNow: Story = {
   args: {
     label: 'Watch Now',
-    elbData: 'typeasdasd:primary',
     elbEntity: 'page',
     primary: true,
   },
