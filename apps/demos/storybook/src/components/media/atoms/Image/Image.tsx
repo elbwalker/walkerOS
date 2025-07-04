@@ -86,7 +86,10 @@ export const Image = ({
     <div
       className={`${typeClasses[type]} bg-gradient-to-br ${placeholderColor} flex items-center justify-center ${className}`}
     >
-      <div className="text-center text-white dark:text-white">
+      <div
+        className="text-center text-white dark:text-white"
+        data-elb-={'img:id-' + titleStyle.length}
+      >
         {title && <div className={`${titleStyle} mb-1`}>{title}</div>}
         <div className={`opacity-75`}>{alt}</div>
       </div>

@@ -16,12 +16,16 @@ export const Button = ({
   backgroundColor,
   disabled = false,
   label,
+  elbEntity,
   elbAction,
+  elbData,
   onClick,
 }: ButtonProps) => {
   const mode = primary
     ? 'storybook-button--primary'
     : 'storybook-button--secondary';
+  elbEntity = elbEntity || '';
+
   return (
     <button
       type="button"
@@ -29,6 +33,7 @@ export const Button = ({
         ' ',
       )}
       {...(elbAction ? { 'data-elbaction': 'click:' + elbAction } : {})}
+      {...(elbData && { [`data-elb-${elbEntity}`]: elbData })}
       style={{ backgroundColor }}
       disabled={disabled}
       onClick={onClick}

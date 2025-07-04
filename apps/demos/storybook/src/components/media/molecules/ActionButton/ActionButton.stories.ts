@@ -23,6 +23,7 @@ export const WatchNow: Story = {
   args: {
     text: 'Watch Now',
     action: 'watch',
+    elbEntity: 'page',
   },
 };
 
@@ -30,5 +31,6 @@ export const LearnMore: Story = {
   args: {
     text: 'Learn More',
     action: 'learn',
+    elbEntity: 'page',
   },
 };

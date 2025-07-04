@@ -49,7 +49,7 @@ export const MediathekTemplate = ({
   onMenuItemClick,
 }: MediathekTemplateProps) => {
   return (
-    <div className="min-h-screen bg-background">
+    <div data-elbcontext="stage:inspo" className="min-h-screen bg-background">
       <HeaderBar
         activeMenuItem={activeMenuItem}
         onMenuItemClick={onMenuItemClick}

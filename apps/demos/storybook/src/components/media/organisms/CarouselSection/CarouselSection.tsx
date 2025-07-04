@@ -19,7 +19,10 @@ export const CarouselSection = ({
   type = 'thumbnail',
 }: CarouselSectionProps) => {
   return (
-    <section className="py-6 overflow-visible">
+    <section
+      data-elbcontext={`list:${title}`}
+      className="py-6 overflow-visible"
+    >
       <div className="max-w-7xl mx-auto px-6 overflow-visible">
         <Typography variant="h3" className="mb-8 text-foreground">
           {title}
@@ -30,6 +33,7 @@ export const CarouselSection = ({
             <CarouselItem
               key={index}
               title={item.title}
+              position={++index}
               style={index}
               type={type}
               alt={item.alt}

@@ -7,6 +7,7 @@ export interface CarouselItemProps {
   type?: ImageProps['type'];
   alt?: string;
   onClick?: () => void;
+  position?: number;
 }
 
 export const CarouselItem = ({
@@ -15,9 +16,13 @@ export const CarouselItem = ({
   alt,
   onClick,
   type = 'thumbnail',
+  position,
 }: CarouselItemProps) => {
   return (
     <div
+      data-elb="content"
+      data-elbaction="visible;click"
+      {...(position && { 'data-elb-content': `position:${position}` })}
       className="flex-shrink-0 w-64 cursor-pointer group px-2 py-2"
       onClick={onClick}
     >
@@ -30,6 +35,7 @@ export const CarouselItem = ({
           className="mb-3"
         />
         <Typography
+          data-elb-content={`title:${title}`}
           variant="body2"
           className="text-foreground group-hover:text-primary-600 transition-colors duration-200"
         >

@@ -1,13 +1,21 @@
 import { Button } from '../../atoms/Button';
+import type { WalkerOSTagging } from '@walkerOS/storybook-addon';
 
-export interface ActionButtonProps {
+export interface ActionButtonProps extends WalkerOSTagging {
   text: string;
   action: 'watch' | 'learn' | 'activate';
   onClick?: () => void;
   disabled?: boolean;
 }
 
-export const ActionButton = ({ text, action, onClick, disabled }: ActionButtonProps) => {
+export const ActionButton = ({
+  text,
+  action,
+  onClick,
+  disabled,
+  elbEntity,
+}: ActionButtonProps) => {
+  console.log("🚀 ~ elbEntity:", elbEntity)
   const getPrimary = () => {
     switch (action) {
       case 'watch':
@@ -37,6 +45,9 @@ export const ActionButton = ({ text, action, onClick, disabled }: ActionButtonPr
       label={text}
       onClick={onClick}
       disabled={disabled}
+      elbEntity={elbEntity}
+      elbAction="click"
+      elbData={`type:primary;cta:${text}`}
     />
   );
 };

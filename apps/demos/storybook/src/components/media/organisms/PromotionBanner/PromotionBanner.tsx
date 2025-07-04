@@ -17,12 +17,20 @@ export const PromotionBanner = ({
   onButtonClick,
 }: PromotionBannerProps) => {
   return (
-    <div className={`bg-gradient-to-r ${backgroundGradient} rounded-xl p-8 md:p-12 mx-6 my-8`}>
+    <div
+      data-elb="teaser"
+      data-elbaction="visible"
+      data-elb-teaser="type:promo"
+      className={`bg-gradient-to-r ${backgroundGradient} rounded-xl p-8 md:p-12 mx-6 my-8`}
+    >
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0">
-        <div className="text-center md:text-left">
+        <div
+          data-elb-teaser={`title:${headline}`}
+          className="text-center md:text-left"
+        >
           <BannerText headline={headline} subtitle={subtitle} />
         </div>
-        
+
         <div className="flex-shrink-0">
           <ActionButton
             text={buttonText}

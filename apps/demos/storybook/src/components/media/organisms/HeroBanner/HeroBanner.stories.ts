@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { HeroBanner } from './HeroBanner';
+import { walkerOSArgTypes } from '@walkerOS/storybook-addon';
 
 const meta: Meta<typeof HeroBanner> = {
   title: 'Media/Organisms/HeroBanner',
@@ -8,6 +9,9 @@ const meta: Meta<typeof HeroBanner> = {
     layout: 'fullscreen',
   },
   tags: ['autodocs'],
+  argTypes: {
+    ...walkerOSArgTypes,
+  },
 };
 
 export default meta;
@@ -19,13 +23,5 @@ export const LifeInCode: Story = {
     subtitle: 'Balancing Passion and Work',
     buttonText: 'Explore Now',
     style: 1,
-  },
-};
-
-export const WithoutImage: Story = {
-  args: {
-    title: 'Life in Code',
-    subtitle: 'Balancing Passion and Work',
-    buttonText: 'Explore Now',
   },
 };
