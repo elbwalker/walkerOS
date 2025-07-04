@@ -1,6 +1,6 @@
 import { Image } from '../../atoms/Image';
 import { BannerText } from '../../molecules/BannerText';
-import { ActionButton } from '../../molecules/ActionButton';
+import { TaggedButton } from '../../molecules/TaggedButton';
 import type { WalkerOSTagging } from '@walkerOS/storybook-addon';
 
 export interface HeroBannerProps extends WalkerOSTagging {
@@ -45,7 +45,7 @@ export const HeroBanner = ({
       <div className="relative h-full max-w-7xl mx-auto px-6 flex items-center">
         <div className="max-w-2xl space-y-6">
           <BannerText headline={title} subtitle={subtitle} />
-          <ActionButton
+          <TaggedButton
             label={buttonText}
             primary={true}
             onClick={onButtonClick}

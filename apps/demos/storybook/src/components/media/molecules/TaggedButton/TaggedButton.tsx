@@ -1,14 +1,14 @@
 import { type ButtonProps, Button } from '../../atoms/Button';
 import type { WalkerOSTagging } from '@walkerOS/storybook-addon';
 
-export interface ActionButtonProps extends ButtonProps, WalkerOSTagging {}
+export interface TaggedButtonProps extends ButtonProps, WalkerOSTagging {}
 
-export const ActionButton = ({
+export const TaggedButton = ({
   elbEntity = '',
   elbAction,
   elbData,
   ...props
-}: ActionButtonProps) => {
+}: TaggedButtonProps) => {
   elbData = elbData + ';' + (props.primary ? 'type:primary' : 'type:secondary');
 
   return (

@@ -8,7 +8,7 @@ export * from './atoms/Typography';
 export * from './molecules/NavigationMenu';
 export * from './molecules/CarouselItem';
 export * from './molecules/BannerText';
-export * from './molecules/ActionButton';
+export * from './molecules/TaggedButton';
 
 // Organisms
 export * from './organisms/HeaderBar';

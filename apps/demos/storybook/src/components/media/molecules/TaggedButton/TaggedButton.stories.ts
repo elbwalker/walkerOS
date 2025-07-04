@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { ActionButton } from './ActionButton';
+import { TaggedButton } from './TaggedButton';
 import { walkerOSArgTypes } from '@walkerOS/storybook-addon';
 
-const meta: Meta<typeof ActionButton> = {
-  title: 'Media/Molecules/ActionButton',
-  component: ActionButton,
+const meta: Meta<typeof TaggedButton> = {
+  title: 'Media/Molecules/TaggedButton',
+  component: TaggedButton,
   parameters: {
     layout: 'centered',
   },

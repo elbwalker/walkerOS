@@ -1,4 +1,3 @@
-import type { WalkerOSTagging } from '@walkerOS/storybook-addon';
 import './Button.css';
 
 export interface ButtonProps {

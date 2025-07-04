@@ -1,5 +1,5 @@
 import { BannerText } from '../../molecules/BannerText';
-import { ActionButton } from '../../molecules/ActionButton';
+import { TaggedButton } from '../../molecules/TaggedButton';
 
 export interface PromotionBannerProps {
   headline: string;
@@ -32,7 +32,7 @@ export const PromotionBanner = ({
         </div>
 
         <div className="flex-shrink-0">
-          <ActionButton
+          <TaggedButton
             label={buttonText}
             primary={true}
             onClick={onButtonClick}
