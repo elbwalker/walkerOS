@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { ActionButton } from './ActionButton';
+import { walkerOSArgTypes } from '@walkerOS/storybook-addon';
 
 const meta: Meta<typeof ActionButton> = {
   title: 'Media/Molecules/ActionButton',
@@ -9,10 +10,7 @@ const meta: Meta<typeof ActionButton> = {
   },
   tags: ['autodocs'],
   argTypes: {
-    action: {
-      control: { type: 'select' },
-      options: ['watch', 'learn', 'activate'],
-    },
+    ...walkerOSArgTypes,
   },
 };
 
@@ -21,16 +19,16 @@ type Story = StoryObj<typeof meta>;
 
 export const WatchNow: Story = {
   args: {
-    text: 'Watch Now',
-    action: 'watch',
+    label: 'Watch Now',
+    elbData: 'typeasdasd:primary',
     elbEntity: 'page',
+    primary: true,
   },
 };
 
 export const LearnMore: Story = {
   args: {
-    text: 'Learn More',
-    action: 'learn',
+    label: 'Learn More',
     elbEntity: 'page',
   },
 };

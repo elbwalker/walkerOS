@@ -1,0 +1,21 @@
+version: 1
+applications:
+  - appRoot: apps/demos/storybook
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install
+            - npm run build --workspace=@walkerOS/storybook-addon
+        build:
+          commands:
+            - npm run build --workspace=@walkerOS/storybook-demo
+      artifacts:
+        baseDirectory: dist
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+          - apps/demos/storybook/node_modules/**/*
+          - packages/storybook/node_modules/**/*

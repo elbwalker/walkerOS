@@ -33,8 +33,8 @@ export const PromotionBanner = ({
 
         <div className="flex-shrink-0">
           <ActionButton
-            text={buttonText}
-            action="activate"
+            label={buttonText}
+            primary={true}
             onClick={onButtonClick}
           />
         </div>

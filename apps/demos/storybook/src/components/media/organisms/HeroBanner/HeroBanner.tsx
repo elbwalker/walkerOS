@@ -46,9 +46,11 @@ export const HeroBanner = ({
         <div className="max-w-2xl space-y-6">
           <BannerText headline={title} subtitle={subtitle} />
           <ActionButton
-            text={buttonText}
-            action="watch"
+            label={buttonText}
+            primary={true}
             onClick={onButtonClick}
+            elbEntity="teaser"
+            elbData="type:primary"
           />
         </div>
       </div>

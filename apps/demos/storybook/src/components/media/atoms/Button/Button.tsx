@@ -1,7 +1,7 @@
 import type { WalkerOSTagging } from '@walkerOS/storybook-addon';
 import './Button.css';
 
-export interface ButtonProps extends WalkerOSTagging {
+export interface ButtonProps {
   primary?: boolean;
   backgroundColor?: string;
   size?: 'small' | 'medium' | 'large';
@@ -13,18 +13,13 @@ export interface ButtonProps extends WalkerOSTagging {
 export const Button = ({
   primary = false,
   size = 'medium',
-  backgroundColor,
   disabled = false,
   label,
-  elbEntity,
-  elbAction,
-  elbData,
   onClick,
 }: ButtonProps) => {
   const mode = primary
     ? 'storybook-button--primary'
     : 'storybook-button--secondary';
-  elbEntity = elbEntity || '';
 
   return (
     <button
@@ -32,9 +27,6 @@ export const Button = ({
       className={['storybook-button', `storybook-button--${size}`, mode].join(
         ' ',
       )}
-      {...(elbAction ? { 'data-elbaction': 'click:' + elbAction } : {})}
-      {...(elbData && { [`data-elb-${elbEntity}`]: elbData })}
-      style={{ backgroundColor }}
       disabled={disabled}
       onClick={onClick}
     >
