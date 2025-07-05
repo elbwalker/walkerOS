@@ -10,7 +10,7 @@ This package provides a browser-based event collection for walkerOS. It's
 designed to be used in web environments to collect and process events before
 sending them to their destinations.
 
-[View documentation](https://www.elbwalker.com/docs/collectors/web-collector/)
+[View documentation](https://www.elbwalker.com/docs/collectors/web/)
 
 ## Installation
 

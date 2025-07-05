@@ -19,8 +19,8 @@ new tools.
 ## How it works
 
 Destinations are added to a source
-(see&nbsp;<Link to="/docs/collectors/web-collector/commands#destination">walker.js</Link>
-or&nbsp;<Link to="/docs/collectors/server-collector/commands#destination">server</Link>).
+(see&nbsp;<Link to="/docs/collectors/web/commands#destination">walker.js</Link>
+or&nbsp;<Link to="/docs/collectors/server/commands#destination">server</Link>).
 Before receiving events from the source, the proper consent states are checked
 each time automatically. Destinations receive events through the `push`
 interface. Each destination can have its own configuration, which is set up in
@@ -53,8 +53,8 @@ flowchart LR
   end
 
   webD & serverD --> tools
-  click webC "/docs/collectors/web-collector/"
-  click serverC "/docs/collectors/server-collector/"
+  click webC "/docs/collectors/web/"
+  click serverC "/docs/collectors/server/"
   click webD "/docs/destinations/web/api/"
   click serverD "/docs/destinations/server/gcp/"
 ```
@@ -66,7 +66,7 @@ categorized in: **web** and **server**.
 
 ### Web
 
-Like&nbsp;<Link to="/docs/collectors/web-collector">walker.js</Link>, web
+Like&nbsp;<Link to="/docs/collectors/web">walker.js</Link>, web
 destinations run in the **browser** directly. Their purpose is to initialize,
 map event data to the vendors' requirements, and send them.
 

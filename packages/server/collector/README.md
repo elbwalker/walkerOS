@@ -10,7 +10,7 @@ This package provides a server-side event collection for walkerOS. It's designed
 to be used in Node.js environments to collect and process events before sending
 them to their destinations.
 
-[View documentation](https://www.elbwalker.com/docs/collectors/server-collector/)
+[View documentation](https://www.elbwalker.com/docs/collectors/server/)
 
 ## Installation
 
