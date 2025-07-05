@@ -16,6 +16,8 @@ export * from './types';
 export { default as tagger } from './tagger';
 export * from './tagger/types/index.d';
 
+// Walker utilities
+export * from './lib/walker';
 
 // Web utilities
 export * from './utils';
@@ -31,7 +33,6 @@ export function createWebCollector(customConfig?: WebCollector.InitConfig): {
 
   return { elb, instance };
 }
-
 
 export function webCollector(
   customConfig: WebCollector.InitConfig = {},
@@ -82,6 +83,5 @@ export function webCollector(
   // Let's get it on!
   return instance;
 }
-
 
 export default webCollector;
