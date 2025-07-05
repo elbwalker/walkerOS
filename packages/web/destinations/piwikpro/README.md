@@ -9,6 +9,8 @@
 This package provides a Piwik PRO destination for walkerOS. It allows you to
 send events to Piwik PRO.
 
+[View documentation](https://www.elbwalker.com/docs/destinations/web/piwikpro/)
+
 ## Installation
 
 ```sh

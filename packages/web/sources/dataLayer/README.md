@@ -9,6 +9,8 @@
 This package provides a dataLayer source for walkerOS. It allows you to process
 events from a dataLayer and send them to the walkerOS collector.
 
+[View documentation](https://www.elbwalker.com/docs/sources/datalayer/)
+
 ## Installation
 
 ```sh

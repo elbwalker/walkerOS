@@ -9,6 +9,8 @@
 This package provides a Google Ads destination for walkerOS. It allows you to
 send conversion events to Google Ads.
 
+[View documentation](https://www.elbwalker.com/docs/destinations/web/google_ads/)
+
 ## Installation
 
 ```sh

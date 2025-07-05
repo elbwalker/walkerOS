@@ -10,44 +10,83 @@ There are several configuration options when creating a walker.js instance:
 
 ```ts
 const walkerjs = Walkerjs({
-  dataLayer: true, // Add the dataLayer destination
+  consent: {
+    functional: true,
+  },
+  contracts: { /* ... */ },
+  custom: {
+    foo: 'bar',
+  },
+  dataLayer: true,
   dataLayerConfig: {
-    consent: 'functional', // Require functional consent
+    consent: 'functional',
   },
-  elb: 'elb', // Assign the elb function to the window
+  default: true,
+  destinations: {
+    log: {
+      type: 'log',
+      push: console.log,
+    },
+  },
+  elb: 'elb',
+  elbLayer: window.elbLayer,
   globalsStatic: {
-    tagged: false, // A static global attribute
+    tagged: false,
   },
-  pageview: true, // Trigger a page view event with each run
-  run: true, // Automatically start running
+  hooks: {
+    prePush: (params, event) => {
+      console.log('prePush', event.event);
+      return params.fn(event);
+    },
+  },
+  instance: 'walkerjs',
+  on: {
+    run: [(instance) => console.log('run', instance.round)],
+  },
+  onError: (error) => {
+    console.error('web collector', error);
+  },
+  onLog: (message) => {
+    console.log('web source', message);
+  },
+  pageview: true,
+  prefix: 'data-elb',
+  run: true,
   session: {
-    storage: true, // Use the storage for session detection
-    consent: ['analytics', 'marketing'], // Required consent states to access storage
-    length: 60, // Session length in minutes
+    storage: true,
+    consent: ['analytics', 'marketing'],
+    length: 60,
   },
-  sessionStatic: { id: 's3ss10n', device: 'd3v1c3' }, // Static session data
-  tagging: 1, // Current version of the tagging
-  user: { id: '1d', device: 'overruled' }, // Static user data
+  sessionStatic: { id: 's3ss10n', device: 'd3v3c3' },
+  tagging: 1,
+  user: { id: '1d', device: 'overruled' },
 });
 ```
 
-| Option          | Type                        | Description                                            |
-| --------------- | --------------------------- | ------------------------------------------------------ |
-| consent         | object                      | Initial consent states                                 |
-| dataLayer       | boolean                     | Adds a dataLayer destination if enabled                |
-| dataLayerConfig | object                      | Config for dataLayer destination, e.g. for consent     |
-| default         | boolean                     | Add dataLayer destination and run automatically        |
-| elb             | string                      | Name of assign the elb function to the window          |
-| elbLayer        | object                      | Public elbwalker API for async communication           |
-| globalsStatic   | object                      | Static default attributes added to each event          |
-| instance        | string                      | Name of the walker.js instance to assign to the window |
-| pageview        | boolean                     | Trigger a page view event by default                   |
-| prefix          | string                      | Attributes prefix used by walker                       |
-| run             | boolean                     | Automatically start running                            |
-| session         | false or<br />SessionConfig | Configuration for session detection                    |
-| sessionStatic   | object                      | Static default session data                            |
-| tagging         | number                      | Current version of the tagging setup                   |
-| user            | object                      | Setting the user ids including id, device, and session |
+| Option          | Type                        | Description                                               |
+| --------------- | --------------------------- | --------------------------------------------------------- |
+| consent         | object                      | Initial consent states                                    |
+| contracts       | object                      | Contract schemas for event validation                     |
+| custom          | object                      | Individual custom data                                    |
+| dataLayer       | boolean                     | Adds a dataLayer destination if enabled                   |
+| dataLayerConfig | object                      | Config for dataLayer destination, e.g. for consent        |
+| default         | boolean                     | Add dataLayer destination and run automatically           |
+| destinations    | object                      | Destinations that might process the events                |
+| elb             | string                      | Name of assign the elb function to the window             |
+| elbLayer        | object                      | Public elbwalker API for async communication              |
+| globalsStatic   | object                      | Static default attributes added to each event             |
+| hooks           | object                      | Functions to customize default behavior                   |
+| instance        | string                      | Name of the walker.js instance to assign to the window    |
+| on              | object                      | Event listeners for specific walkerOS events              |
+| onError         | function                    | Custom error handler                                      |
+| onLog           | function                    | Custom logging for the verbose mode                       |
+| pageview        | boolean                     | Trigger a page view event by default                      |
+| prefix          | string                      | Attributes prefix used by walker                          |
+| run             | boolean                     | Automatically start running                               |
+| session         | false or<br />SessionConfig | Configuration for session detection                       |
+| sessionStatic   | object                      | Static default session data                               |
+| tagging         | number                      | Current version of the tagging                            |
+| user            | object                      | Setting the user IDs including id, device, and session    |
 
 :::note
 

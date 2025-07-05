@@ -282,9 +282,9 @@ integrity by verifying that operations are performed on matching data types.
 
 ### onLog
 
-`onLog(message: string, level: string)` is a function designed for consistent
+`onLog(message: unknown, verbose?: boolean)` is a function designed for consistent
 and customizable logging across your application. It allows you to log messages
-with with a verbose option, aiding in better monitoring and debugging of your
+with a verbose option, aiding in better monitoring and debugging of your
 code.
 
 ```js
@@ -292,13 +292,27 @@ onLog('Silent'); // Won't log anything
 onLog('Curious', true); // Logs a message
 ```
 
-This function is for maintaining a standardized logging format is crucial. I
+This function is for maintaining a standardized logging format is crucial.
 
 ### Request
 
-#### requestToURL
+#### requestToData
 
-### requestToData
+`requestToData(parameter: unknown): WalkerOS.AnyObject | undefined` converts a query string or URL-encoded string into a JavaScript object. It handles nested objects and arrays, and attempts to cast values to their appropriate types (numbers, booleans).
+
+```js
+requestToData('a=1&b=true&c=foo%20bar&d%5B0%5D=x&d%5B1%5D=y&e%5Bkey%5D=value');
+// Returns { a: 1, b: true, c: 'foo bar', d: ['x', 'y'], e: { key: 'value' } }
+```
+
+#### requestToParameter
+
+`requestToParameter(data: WalkerOS.AnyObject | WalkerOS.PropertyType): string` converts a JavaScript object or a primitive value into a URL-encoded query string. It handles nested objects and arrays, encoding all values appropriately for use in URLs.
+
+```js
+requestToParameter({ a: 1, b: true, c: 'foo bar' });
+// Returns 'a=1&b=true&c=foo%20bar'
+```
 
 ### sessionStart
 

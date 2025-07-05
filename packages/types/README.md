@@ -10,6 +10,8 @@ This package contains the shared TypeScript type definitions for the walkerOS
 ecosystem. It ensures data consistency and provides a common interface for all
 packages.
 
+[View documentation](https://www.elbwalker.com/docs/types/)
+
 ## Installation
 
 ```sh

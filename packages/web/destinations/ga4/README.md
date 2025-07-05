@@ -9,6 +9,8 @@
 This package provides a Google Analytics 4 (GA4) destination for walkerOS. It
 allows you to send events to GA4.
 
+[View documentation](https://www.elbwalker.com/docs/destinations/web/ga4/)
+
 ## Installation
 
 ```sh

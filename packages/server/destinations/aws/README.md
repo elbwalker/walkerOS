@@ -9,6 +9,8 @@
 This package provides an AWS destination for walkerOS. It allows you to send
 events to various AWS services. Currently, it supports AWS Firehose.
 
+[View documentation](https://www.elbwalker.com/docs/destinations/server/aws/)
+
 ## Installation
 
 ```sh

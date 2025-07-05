@@ -25,16 +25,24 @@ const { instance } = createServerCollector({
   globalsStatic: {
     version: '3.1.4',
   },
+  hooks: {
+    prePush: (params, event) => {
+      console.log('prePush', event.event);
+      return params.fn(event);
+    },
+  },
+  on: {
+    run: [(instance) => console.log('run', instance.round)],
+  },
   onError: (error) => {
     console.error('server collector', error);
   },
   onLog: (message) => {
     console.log('server source', message);
   },
-  source: {
-    type: 'server',
-    id: '',
-    previous_id: '',
+  tagging: 1,
+  user: {
+    id: 'user123',
   },
   verbose: true,
 });
@@ -43,12 +51,16 @@ const { instance } = createServerCollector({
 | Option        | Type     | Description                                               |
 | ------------- | -------- | --------------------------------------------------------- |
 | consent       | object   | Initial consent states                                    |
-| custom        | object   | Individual information                                    |
+| contracts     | object   | Contract schemas for event validation                     |
+| custom        | object   | Individual custom data                                    |
 | destinations  | object   | Destinations that might process the events                |
 | globalsStatic | object   | Static values for the globals that persist new runs       |
-| onError       | function | custom error handler                                      |
-| onLog         | function | custom logging for the verbose mode                       |
-| source        | object   | To define the events origin (`type`, `id`, `previous_id`) |
+| hooks         | object   | Functions to customize default behavior                   |
+| on            | object   | Event listeners for specific walkerOS events              |
+| onError       | function | Custom error handler                                      |
+| onLog         | function | Custom logging for the verbose mode                       |
+| tagging       | number   | Helpful to differentiate the used setup version           |
+| user          | object   | Handles the user IDs                                      |
 | verbose       | boolean  | To enable verbose mode                                    |
 
 :::info

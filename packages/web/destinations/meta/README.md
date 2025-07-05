@@ -9,6 +9,8 @@
 This package provides a Meta Pixel (formerly Facebook Pixel) destination for
 walkerOS. It allows you to send events to Meta Pixel.
 
+[View documentation](https://www.elbwalker.com/docs/destinations/web/meta/)
+
 ## Installation
 
 ```sh

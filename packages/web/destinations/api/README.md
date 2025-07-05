@@ -9,6 +9,8 @@
 This package provides a web API destination for walkerOS. It allows you to send
 events to a custom API endpoint.
 
+[View documentation](https://www.elbwalker.com/docs/destinations/web/api/)
+
 ## Installation
 
 ```sh

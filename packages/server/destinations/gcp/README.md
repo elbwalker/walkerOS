@@ -9,6 +9,8 @@
 This package provides a Google Cloud Platform (GCP) destination for walkerOS. It
 allows you to send events to Google BigQuery.
 
+[View documentation](https://www.elbwalker.com/docs/destinations/server/gcp/)
+
 ## Installation
 
 ```sh

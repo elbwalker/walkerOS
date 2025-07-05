@@ -9,6 +9,8 @@
 This package provides a Google Tag Manager (GTM) destination for walkerOS. It
 allows you to send events to GTM.
 
+[View documentation](https://www.elbwalker.com/docs/destinations/web/gtm/)
+
 ## Installation
 
 ```sh

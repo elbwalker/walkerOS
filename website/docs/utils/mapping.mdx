@@ -28,7 +28,7 @@ each&nbsp;<Link to="/docs/destinations">destination</Link> individually.
 
 ## getMappingEvent
 
-`getMappingEvent(event: string, mapping?: Mapping.Config<unknown>): EventMapping`
+`getMappingEvent(event: WalkerOS.PartialEvent, mapping?: Mapping.Config<unknown>): EventMapping`
 returns the matching `eventMapping` configuration and the used `mappingKey` for
 the given entity-action event name. If no mapping is found, it will return an
 empty object. An explicit key is favored over an asterisk `*` key. If available
@@ -91,7 +91,7 @@ which `EventConfig` should be used. To test uncomment the `globals` property.
 
 ## getMappingValue
 
-`getMappingValue(event: WalkerOS.Event, mapping: Mapping.Value, options?: Mapping.Options): WalkerOS.Property | undefined`
+`getMappingValue(event: WalkerOS.DeepPartialEvent | unknown | undefined, mapping: Mapping.Value, options?: Mapping.Options): WalkerOS.Property | undefined`
 primarily used by&nbsp;<Link to="/docs/destinations">destinations</Link> to
 process values from the original event. This offers flexibility to configure
 individual&nbsp;<Link to="/docs/sources/html-tagging">tagging setups</Link>

@@ -10,6 +10,8 @@ This package provides a set of shared utility functions for the walkerOS
 ecosystem. These utilities are used across various packages to ensure
 consistency and provide common functionality.
 
+[View documentation](https://www.elbwalker.com/docs/utils/)
+
 ## Installation
 
 ```sh

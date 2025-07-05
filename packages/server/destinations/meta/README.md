@@ -9,6 +9,8 @@
 This package provides a Meta Conversion API (CAPI) destination for walkerOS. It
 allows you to send events to the Meta Conversions API.
 
+[View documentation](https://www.elbwalker.com/docs/destinations/server/meta/)
+
 ## Installation
 
 ```sh

@@ -9,6 +9,8 @@
 This package provides a Plausible destination for walkerOS. It allows you to
 send events to Plausible Analytics.
 
+[View documentation](https://www.elbwalker.com/docs/destinations/web/plausible/)
+
 ## Installation
 
 ```sh
