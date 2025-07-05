@@ -4,28 +4,30 @@
   </a>
 </p>
 
-# walkerOS Types
+# Google Analytics 4 (GA4) Destination for walkerOS
 
-This package contains the shared TypeScript type definitions for the walkerOS
-ecosystem. It ensures data consistency and provides a common interface for all
-packages.
+This package provides a Google Analytics 4 (GA4) destination for walkerOS. It
+allows you to send events to GA4.
 
 ## Installation
 
 ```sh
-npm install @walkerOS/types
+npm install @walkerOS/web-destination-ga4
 ```
 
 ## Usage
 
-Here's an example of how to use a type from this package:
+Here's a basic example of how to use the GA4 destination:
 
 ```typescript
-import type { WalkerOS } from '@walkerOS/types';
+import { elb } from '@walkerOS/web-collector';
+import { destinationGA4 } from '@walkerOS/web-destination-ga4';
 
-const event: WalkerOS.Event = {
-  // ...
-};
+elb('walker destination', destinationGA4, {
+  custom: {
+    measurementId: 'G-XXXXXXXXXX',
+  },
+});
 ```
 
 ## Contribute

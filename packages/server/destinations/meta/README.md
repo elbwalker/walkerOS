@@ -4,30 +4,40 @@
   </a>
 </p>
 
-# Meta Conversion API (CAPI) destination for walkerOS
+# Meta (CAPI) Destination for walkerOS
 
-Made to be used with
-[server collector](https://www.npmjs.com/package/@elbwalker/server-collector) from
-[walkerOS](https://github.com/elbwalker/walkerOS).
+This package provides a Meta Conversion API (CAPI) destination for walkerOS. It
+allows you to send events to the Meta Conversions API.
 
-Detailed information and examples can be found in the
-[walkerOS Meta Conversion API destination](https://www.elbwalker.com/docs/destinations/meta)
-documentation.
+## Installation
 
-## Resources
+```sh
+npm install @walkerOS/server-destination-meta
+```
 
-Learn more about the
+## Usage
 
-- [walkerOS destinations](https://www.elbwalker.com/docs/destinations/) in
-  general
-- [Meta Conversion API](https://developers.facebook.com/docs/marketing-api/conversions-api)
-- [Meta Conversion API Parameters](https://developers.facebook.com/docs/marketing-api/conversions-api/parameters)
-- [Meta Graph API Explorer](https://developers.facebook.com/tools/explorer/)
-- [Meta Payload Helper](https://developers.facebook.com/docs/marketing-api/conversions-api/payload-helper)
+Here's a basic example of how to use the Meta CAPI destination:
+
+```typescript
+import { elb } from '@walkerOS/server-collector';
+import { destinationMeta } from '@walkerOS/server-destination-meta';
+
+elb('walker destination', destinationMeta, {
+  custom: {
+    accessToken: 'YOUR_ACCESS_TOKEN',
+    pixelId: 'YOUR_PIXEL_ID',
+  },
+});
+```
 
 ## Contribute
 
 Feel free to contribute by submitting an
 [issue](https://github.com/elbwalker/walkerOS/issues), starting a
-[discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
 [contact](https://calendly.com/elb-alexander/30min).
+
+## License
+
+This project is licensed under the MIT License.

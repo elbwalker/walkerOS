@@ -1,64 +1,43 @@
-# Piwik PRO web destination for walkerOS
+<p align="left">
+  <a href="https://elbwalker.com">
+    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
+  </a>
+</p>
 
-Made to be used with
-[walker.js](https://www.npmjs.com/package/@elbwalker/walker.js) from
-[walkerOS](https://github.com/elbwalker/walkerOS).
+# Piwik PRO Destination for walkerOS
 
-More detailed information and examples can be found in the
-[documentation](https://www.elbwalker.com/docs/destinations/piwikpro).
+This package provides a Piwik PRO destination for walkerOS. It allows you to
+send events to Piwik PRO.
 
-## 🤓 Usage
-
-Start by setting up the config for the destination. Optional fields as comments.
-Destinations can be used via node or directly in the browser.
-
-## Configuration
-
-Learn more about the
-[destinations](https://www.elbwalker.com/docs/destinations/) in general and read
-the detailed
-[Piwik PRO configuration](https://www.elbwalker.com/docs/destinations/piwikpro#configuration).
-
-```js
-const config = {
-  custom: {
-    appId: 'XXX-XXX-XXX-XXX-XXX', // Id of the site
-    // linkTracking: false, // Disable download and outlink tracking
-    // pageview: false, // Disable default pageview events
-    url: 'https://your_account_name.piwik.pro/', // Same address as the login
-  },
-  mapping: {
-    entity: {
-      action: {
-        custom: {
-          // CustomEvent
-          goalId: 'xxx-xxx-...', // Count the event as a goal
-          goalValue: '', // Property to be used as goal value
-          name: '', // Renaming the event
-          value: '', // Property to be used for the value
-        },
-      },
-    },
-  },
-};
-```
-
-### Server usage
+## Installation
 
 ```sh
-npm i --save @elbwalker/destination-web-piwikpro
+npm install @walkerOS/web-destination-piwikpro
 ```
 
-```ts
-import { elb } from '@elbwalker/walker.js';
-import destinationPiwikPro from '@elbwalker/destination-web-piwikpro';
+## Usage
 
-elb('walker destination', destinationPiwikPro, config);
+Here's a basic example of how to use the Piwik PRO destination:
+
+```typescript
+import { elb } from '@walkerOS/web-collector';
+import { destinationPiwikPro } from '@walkerOS/web-destination-piwikpro';
+
+elb('walker destination', destinationPiwikPro, {
+  custom: {
+    appId: 'YOUR_APP_ID',
+    url: 'https://your-account.piwik.pro/',
+  },
+});
 ```
 
 ## Contribute
 
 Feel free to contribute by submitting an
 [issue](https://github.com/elbwalker/walkerOS/issues), starting a
-[discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
 [contact](https://calendly.com/elb-alexander/30min).
+
+## License
+
+This project is licensed under the MIT License.

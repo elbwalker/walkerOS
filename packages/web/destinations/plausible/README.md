@@ -1,48 +1,42 @@
-# Plausible web destination for walkerOS
+<p align="left">
+  <a href="https://elbwalker.com">
+    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
+  </a>
+</p>
 
-Made to be used with
-[walker.js](https://www.npmjs.com/package/@elbwalker/walker.js) from
-[walkerOS](https://github.com/elbwalker/walkerOS).
+# Plausible Destination for walkerOS
 
-More detailed information and examples can be found in the
-[documentation](https://www.elbwalker.com/docs/destinations/plausible).
+This package provides a Plausible destination for walkerOS. It allows you to
+send events to Plausible Analytics.
 
-## 🤓 Usage
-
-Start by setting up the config for the destination. Optional fields as comments.
-Destinations can be used via node or directly in the browser.
-
-## Configuration
-
-Learn more about the
-[destinations](https://www.elbwalker.com/docs/destinations/) in general and read
-the detailled
-[Plausible Analytics configuration](https://www.elbwalker.com/docs/destinations/plausible#configuration).
-
-```js
-const config = {
-  custom: {
-    domain: 'elbwalker.com', // Optional, domain of your site as registered
-  },
-};
-```
-
-### Server usage
+## Installation
 
 ```sh
-npm i --save @elbwalker/destination-web-plausible
+npm install @walkerOS/web-destination-plausible
 ```
 
-```ts
-import { elb } from '@elbwalker/walker.js';
-import destinationPlausible from '@elbwalker/destination-web-plausible';
+## Usage
 
-elb('walker destination', destinationPlausible, config);
+Here's a basic example of how to use the Plausible destination:
+
+```typescript
+import { elb } from '@walkerOS/web-collector';
+import { destinationPlausible } from '@walkerOS/web-destination-plausible';
+
+elb('walker destination', destinationPlausible, {
+  custom: {
+    domain: 'your-domain.com',
+  },
+});
 ```
 
 ## Contribute
 
 Feel free to contribute by submitting an
 [issue](https://github.com/elbwalker/walkerOS/issues), starting a
-[discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
 [contact](https://calendly.com/elb-alexander/30min).
+
+## License
+
+This project is licensed under the MIT License.

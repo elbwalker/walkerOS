@@ -1,62 +1,42 @@
-# Meta Pixel (former Facebook Pixel) web destination for walkerOS
+<p align="left">
+  <a href="https://elbwalker.com">
+    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
+  </a>
+</p>
 
-Made to be used with
-[walker.js](https://www.npmjs.com/package/@elbwalker/walker.js) from
-[walkerOS](https://github.com/elbwalker/walkerOS).
+# Meta Pixel Destination for walkerOS
 
-More detailed information and examples can be found in the
-[documentation](https://www.elbwalker.com/docs/destinations/meta-pixel).
+This package provides a Meta Pixel (formerly Facebook Pixel) destination for
+walkerOS. It allows you to send events to Meta Pixel.
 
-## 🤓 Usage
+## Installation
 
-Start by setting up the config for the destination. Optional fields as comments.
-Destinations can be used via a server or directly in the browser.
+```sh
+npm install @walkerOS/web-destination-meta
+```
 
-## Configuration
+## Usage
 
-Learn more about the
-[destinations](https://www.elbwalker.com/docs/destinations/) in general and read
-the detailed
-[Meta Pixel configuration](https://www.elbwalker.com/docs/destinations/meta-pixel#configuration).
+Here's a basic example of how to use the Meta Pixel destination:
 
-```js
-const config = {
+```typescript
+import { elb } from '@walkerOS/web-collector';
+import { destinationMetaPixel } from '@walkerOS/web-destination-meta';
+
+elb('walker destination', destinationMetaPixel, {
   custom: {
     pixelId: '1234567890',
   },
-  mapping: {
-    // e.g. order
-    entity: {
-      // e.g. complete
-      action: {
-        custom: {
-          id: 'data.id',
-          name: 'data.title',
-          track: 'Purchase',
-          value: 'data.revenue',
-        },
-      },
-    },
-  },
-};
-```
-
-### Server usage
-
-```sh
-npm i --save @elbwalker/destination-web-meta-pixel
-```
-
-```ts
-import { elb } from '@elbwalker/walker.js';
-import destinationMetaPixel from '@elbwalker/destination-web-meta-pixel';
-
-elb('walker destination', destinationMetaPixel, config);
+});
 ```
 
 ## Contribute
 
 Feel free to contribute by submitting an
 [issue](https://github.com/elbwalker/walkerOS/issues), starting a
-[discussion](https://github.com/elbwalker/walkerOS/discussions) or getting in
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
 [contact](https://calendly.com/elb-alexander/30min).
+
+## License
+
+This project is licensed under the MIT License.

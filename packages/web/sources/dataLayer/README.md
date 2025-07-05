@@ -4,28 +4,26 @@
   </a>
 </p>
 
-# walkerOS Types
+# DataLayer Source for walkerOS
 
-This package contains the shared TypeScript type definitions for the walkerOS
-ecosystem. It ensures data consistency and provides a common interface for all
-packages.
+This package provides a dataLayer source for walkerOS. It allows you to process
+events from a dataLayer and send them to the walkerOS collector.
 
 ## Installation
 
 ```sh
-npm install @walkerOS/types
+npm install @walkerOS/web-source-dataLayer
 ```
 
 ## Usage
 
-Here's an example of how to use a type from this package:
+Here's a basic example of how to use the dataLayer source:
 
 ```typescript
-import type { WalkerOS } from '@walkerOS/types';
+import { elb } from '@walkerOS/web-collector';
+import { sourceDataLayer } from '@walkerOS/web-source-dataLayer';
 
-const event: WalkerOS.Event = {
-  // ...
-};
+sourceDataLayer({ elb });
 ```
 
 ## Contribute

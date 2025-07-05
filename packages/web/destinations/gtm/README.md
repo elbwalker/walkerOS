@@ -4,28 +4,30 @@
   </a>
 </p>
 
-# walkerOS Types
+# Google Tag Manager (GTM) Destination for walkerOS
 
-This package contains the shared TypeScript type definitions for the walkerOS
-ecosystem. It ensures data consistency and provides a common interface for all
-packages.
+This package provides a Google Tag Manager (GTM) destination for walkerOS. It
+allows you to send events to GTM.
 
 ## Installation
 
 ```sh
-npm install @walkerOS/types
+npm install @walkerOS/web-destination-gtm
 ```
 
 ## Usage
 
-Here's an example of how to use a type from this package:
+Here's a basic example of how to use the GTM destination:
 
 ```typescript
-import type { WalkerOS } from '@walkerOS/types';
+import { elb } from '@walkerOS/web-collector';
+import { destinationGTM } from '@walkerOS/web-destination-gtm';
 
-const event: WalkerOS.Event = {
-  // ...
-};
+elb('walker destination', destinationGTM, {
+  custom: {
+    containerId: 'GTM-XXXXXXX',
+  },
+});
 ```
 
 ## Contribute

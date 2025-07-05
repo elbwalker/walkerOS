@@ -4,28 +4,37 @@
   </a>
 </p>
 
-# walkerOS Utils - Streamlining Your Tracking Setup
+# walkerOS Utils
 
-walkerOS Utils offer a suite of reusable functions designed to standardize and
-simplify tracking setups. From straightforward utilities like `getId` to more
-advanced ones such as `sessionStart`, these tools are integral both within
-walkerOS and in custom tracking implementations.
+This package provides a set of shared utility functions for the walkerOS
+ecosystem. These utilities are used across various packages to ensure
+consistency and provide common functionality.
 
-## What Are Utils?
+## Installation
 
-The Utils package offers:
+```sh
+npm install @walkerOS/utils
+```
 
-- **Diverse Functionality**: A range of functions catering to various tracking
-  needs.
-- **Ease of Use**: Simplify your tracking setup with ready-to-use, standardized
-  functions.
-- **Versatility**: Applicable in multiple contexts, from walkerOS to custom
-  setups.
+## Usage
 
-> Explore the detailed functionalities in the
-> [Utils documentation](https://www.elbwalker.com/docs/utils/)
+Here's an example of how to use a utility function from this package:
 
-Simple functions are grouped on the
-[Helper page](https://www.elbwalker.com/docs/utils/helpers/), while more complex
-utilities have dedicated documentation pages for in-depth understanding and use
-cases.
+```typescript
+import { getId } from '@walkerOS/utils';
+
+const randomId = getId();
+
+console.log(randomId);
+```
+
+## Contribute
+
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
+
+## License
+
+This project is licensed under the MIT License.

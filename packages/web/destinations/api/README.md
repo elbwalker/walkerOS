@@ -4,28 +4,30 @@
   </a>
 </p>
 
-# walkerOS Types
+# Web API Destination for walkerOS
 
-This package contains the shared TypeScript type definitions for the walkerOS
-ecosystem. It ensures data consistency and provides a common interface for all
-packages.
+This package provides a web API destination for walkerOS. It allows you to send
+events to a custom API endpoint.
 
 ## Installation
 
 ```sh
-npm install @walkerOS/types
+npm install @walkerOS/web-destination-api
 ```
 
 ## Usage
 
-Here's an example of how to use a type from this package:
+Here's a basic example of how to use the web API destination:
 
 ```typescript
-import type { WalkerOS } from '@walkerOS/types';
+import { elb } from '@walkerOS/web-collector';
+import { destinationAPI } from '@walkerOS/web-destination-api';
 
-const event: WalkerOS.Event = {
-  // ...
-};
+elb('walker destination', destinationAPI, {
+  custom: {
+    url: 'https://api.example.com/events',
+  },
+});
 ```
 
 ## Contribute
