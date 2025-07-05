@@ -7,9 +7,9 @@ sidebar_position: 5
 import Link from '@docusaurus/Link';
 
 WalkerOS is built **vendor-agnostically**.
-While&nbsp;<Link to="/docs/getting_started/sources">sources</Link> create
-events, destinations are built to manage how events are processed and sent to
-various **analytics**, **marketing** or data **storage** tools.
+While&nbsp;<Link to="/docs/sources">sources</Link> create events, destinations
+are built to manage how events are processed and sent to various **analytics**,
+**marketing** or data **storage** tools.
 
 Destinations ensure that data captured from your website or application is
 best-organized to easily get integrated with different tools if proper consent
@@ -20,16 +20,15 @@ new tools.
 
 Destinations are added to a source
 (see&nbsp;<Link to="/docs/collectors/web-collector/commands#destination">walker.js</Link>
-or&nbsp;<Link to="/docs/collectors/node-collector/commands#destination">node</Link>).
+or&nbsp;<Link to="/docs/collectors/server-collector/commands#destination">server</Link>).
 Before receiving events from the source, the proper consent states are checked
-each time automatically. Destinations receive events through the
-[`push`](/docs/destinations/event_mapping#push) interface. Each destination can
-have its own configuration, which is set up in the
-[`config`](/docs/destinations/event_mapping#example) object. This configuration
-includes general settings for the destination and individual event settings. The
-optional [`init`](/docs/destinations/event_mapping#init) function in a
-destination gets called before actually pushing events. This function must
-return `true` upon successful initialization for the events to be processed.
+each time automatically. Destinations receive events through the `push`
+interface. Each destination can have its own configuration, which is set up in
+the [`config`](/docs/destinations/event_mapping#example) object. This
+configuration includes general settings for the destination and individual event
+settings. The optional `init` function in a destination gets called before
+actually pushing events. This function must return `true` upon successful
+initialization for the events to be processed.
 
 ```mermaid
 ---
@@ -42,9 +41,9 @@ flowchart LR
     webC -- consent<br>check --> webD
   end
   subgraph backend["Backend <small>(server-side)</small>"]
-    nodeC["Node<br>source"]
-    nodeD["<b>Node<br>Destinations</b>"]
-    nodeC -- consent<br>check --> nodeD
+    serverC["Server<br>source"]
+    serverD["<b>Server<br>Destinations</b>"]
+    serverC -- consent<br>check --> serverD
   end
   subgraph tools["Tools"]
     direction LR
@@ -53,17 +52,17 @@ flowchart LR
     analytics["Analytics"]
   end
 
-  webD & nodeD --> tools
+  webD & serverD --> tools
   click webC "/docs/collectors/web-collector/"
-  click nodeC "/docs/collectors/node-collector/"
+  click serverC "/docs/collectors/server-collector/"
   click webD "/docs/destinations/web/api/"
-  click nodeD "/docs/destinations/node/gcp/"
+  click serverD "/docs/destinations/server/gcp/"
 ```
 
 ## Categories
 
-There are two types of destinations within walkerSO that destinations are
-categorized in: **web** and **node**.
+There are two types of destinations within walkerOS that destinations are
+categorized in: **web** and **server**.
 
 ### Web
 
@@ -79,16 +78,16 @@ map event data to the vendors' requirements, and send them.
 - <Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>
 - <Link to="/docs/destinations/web/plausible">Plausible Analytics</Link>
 
-### Node
+### Server
 
-Node destinations offer a flexible and efficient way to handle your
+Server destinations offer a flexible and efficient way to handle your
 **server-side** event data. Whether you're sending data to a cloud-based data
 warehouse or to a custom API, they make it easy to configure, initialize, and
 push your events securely.
 
-- <Link to="/docs/destinations/node/aws">AWS</Link>
-- <Link to="/docs/destinations/node/gcp">BigQuery</Link>
-- <Link to="/docs/destinations/node/meta">Meta Conversion API</Link>
+- <Link to="/docs/destinations/server/aws">AWS</Link>
+- <Link to="/docs/destinations/server/gcp">BigQuery</Link>
+- <Link to="/docs/destinations/server/meta">Meta Conversion API</Link>
 
 :::info
 

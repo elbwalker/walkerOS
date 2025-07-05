@@ -382,34 +382,34 @@ handle errors gracefully without disrupting the application flow.
 As this is a more complex util learn more about it on
 the&nbsp;<Link to="/docs/utils/hooks">Hooks</Link> page.
 
-## Node
+## Server
 
-Import the core utils from the `@walkerOS/utils/node` package.
+Import the server utils from the `@walkerOS/utils/server` package.
 
 ```ts
-import { getHashNode, sendNode } from '@walkerOS/utils/node';
+import { getHashServer, sendServer } from '@walkerOS/utils/server';
 ```
 
-### getHashNode
+### getHashServer
 
-`async getHashNode(str: string, length?: number): Promise<string>` generates a
+`async getHashServer(str: string, length?: number): Promise<string>` generates a
 hash value from a string, usually used to anonymize or fingerprinting. To create
 a string concatenate all values. Use `length` to limit the output.
 
 ```js
-await getHashNode('' + userAgent + language + domain + dayOfMonth, 16);
+await getHashServer('' + userAgent + language + domain + dayOfMonth, 16);
 // Return a 16 character hash, like 47e0bdd10f04ef13
 ```
 
-### sendNode
+### sendServer
 
-`async sendNode(url: string, data?: SendDataValue, options: SendNodeOptions = {}): Promise<SendResponse>`
+`async sendServer(url: string, data?: SendDataValue, options: SendServerOptions = {}): Promise<SendResponse>`
 sends data to a specified `url` using the official Node.js HTTP/HTTPS modules.
 This function is useful for scenarios where you need to send data to a server or
-API endpoint from a Node.js environment.
+API endpoint from a server environment.
 
 ```ts
-interface SendNodeOptions {
+interface SendServerOptions {
   headers?: SendHeaders; // Custom headers to be sent with the request
   method?: string; // HTTP method to be used for the request (default: POST)
   timeout?: number; // Request timeout in milliseconds (default: 5000)

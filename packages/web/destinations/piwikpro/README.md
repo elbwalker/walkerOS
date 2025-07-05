@@ -43,7 +43,7 @@ const config = {
 };
 ```
 
-### Node usage
+### Server usage
 
 ```sh
 npm i --save @elbwalker/destination-web-piwikpro

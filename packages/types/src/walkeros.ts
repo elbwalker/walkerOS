@@ -136,7 +136,7 @@ export interface Source extends Properties {
   previous_id: string; // https://www.elbwalker.com/
 }
 
-export type SourceType = 'web' | 'node' | 'app' | 'other' | string;
+export type SourceType = 'web' | 'server' | 'app' | 'other' | string;
 
 export type PropertyType =
   | boolean
@@ -164,7 +164,7 @@ export interface Entity {
 export type ConsentHandler = Record<string, AnyFunction>;
 export type ActionHandler = AnyFunction;
 
-// @TODO standardize on config in node and walker.js sources
+// @TODO standardize on config in server and web collectors
 export interface OnConfig {
   consent?: ConsentHandler[];
   ready?: ActionHandler[];

@@ -1,0 +1,131 @@
+---
+title: Commands
+sidebar_position: 3
+description: Ways to configure the walkerOS server source using a function
+---
+
+import Link from '@docusaurus/Link';
+
+A server collector can either be created with a
+**custom&nbsp;<Link to="/docs/collectors/server-collector/configuration">config</Link>** during
+initialization or updated via **commands** using the `elb` function.
+
+## elb
+
+The `elb` function gets returned when creating a server collector. It pushes events
+and commands to the instance and runs asynchronously by returning a promise.
+
+```ts
+import { createServerCollector } from '@walkerOS/server-collector';
+const { elb } = createServerCollector();
+
+const result = await elb('entity action', { foo: 'bar' });
+```
+
+## config
+
+To&nbsp;<Link to="/docs/collectors/server-collector/configuration">configure</Link> the server
+collector either do it while creating an instance or use the `walker config`
+command:
+
+```js
+elb('walker config', {
+  globalsStatic: {}, // Static attributes added to each event
+  onError: console.log, // Custom error handler
+  onLog: console.error, // Custom logging
+});
+```
+
+## run
+
+A run can be seen like a cycle where all events are processed in the same
+`group`. A run is required to start the processing of events. Before starting a
+run all IDs and configurations should be set.
+
+```js
+elb('walker run');
+```
+
+## destination
+
+The `walker destination` command adds a destination to the server source.
+
+```js
+const destinationLog = { push: console.log };
+elb('walker destination', destinationLog, {
+  /* destination config */
+});
+```
+
+## consent
+
+Names can be defined arbitrarily, but common groups are functional, analytics,
+and marketing. Values are booleans, and once a value is set to `true` it's
+treated as consent being granted. Previously pushed events during a run are now
+shared with existing destinations and new ones.
+
+```js
+elb('walker consent', { marketing: true, randomTool: true });
+```
+
+Setting a consent state to `false` will immediately stop a destination from
+processing any events.
+
+:::tip
+
+Learn more about&nbsp;<Link to="/docs/consent_management/overview">consent
+management</Link>.
+
+:::
+
+## user
+
+There are three levels for user identification. Typically, the user is a
+company's internal ID. The device ID can be treated as a value stored in a
+cookie for a more extended period, and the session can be used for temporary
+identification.
+
+```js
+elb('walker user', {
+  id: 'us3r',
+  device: 'c00k13',
+  session: 's3ss10n',
+  hash: getHash(str),
+});
+```
+
+User IDs will be added to each event.
+
+```js
+{
+  "event": "entity action",
+  "user": {
+    "id": "us3r",
+    "device": "c00k13",
+    "session": "s3ss10n"
+    "hash": "h4sh3d"
+  }
+  // other properties omitted
+}
+```
+
+:::warning
+
+Only use fully anonymized & arbitrary IDs by default and check your options with
+persistent user IDs with your data protection officer.
+
+:::
+
+:::tip
+
+Learn more about identification and&nbsp;<Link to="/docs/user_stitching">user
+stitching</Link>
+
+:::
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

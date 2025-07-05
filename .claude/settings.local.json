@@ -20,7 +20,8 @@
       "Bash(npm test)",
       "Bash(for:*)",
       "Bash(do sed -i 's/Walkerjs/webCollector/g' \"$file\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(npm start)"
     ],
     "deny": []
   }

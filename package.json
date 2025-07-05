@@ -4,8 +4,8 @@
   "workspaces": [
     "packages/*",
     "packages/config/*",
-    "packages/node/*",
-    "packages/node/destinations/*",
+    "packages/server/*",
+    "packages/server/destinations/*",
     "packages/web/*",
     "packages/web/destinations/*",
     "packages/web/sources/*",

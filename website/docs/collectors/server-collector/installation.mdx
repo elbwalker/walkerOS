@@ -1,0 +1,33 @@
+---
+title: Installation
+sidebar_position: 1
+description: Installation walkerOS server source.
+---
+
+import Link from '@docusaurus/Link';
+import PackageLink from '@site/src/components/docs/package-link';
+
+<PackageLink github="packages/server/collector/" npm="@walkerOS/server-collector" />
+
+Install walkerOS server source via NPM:
+
+```bash
+npm install @walkerOS/server-collector
+```
+
+Use the `createServerCollector` function to create a new collector instance. It returns
+the `elb` function to
+use&nbsp;<Link to="/docs/collectors/server-collector/commands">commands</Link>, pushing events,
+and the `instance` itself.
+
+```ts
+import { createServerCollector } from '@walkerOS/server-collector';
+const { elb, instance } = createServerCollector({});
+```
+
+:::info
+
+If you need professional support with your walkerOS implementation, check out
+our&nbsp;<Link to="/services">services</Link>.
+
+:::

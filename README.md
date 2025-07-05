@@ -81,8 +81,8 @@ flowchart LR
 ## Installation
 
 Start collecting data with our
-[web](https://github.com/elbwalker/walkerOS/tree/main/packages/sources/walkerjs)
-or [node](https://github.com/elbwalker/walkerOS/tree/main/packages/sources/node)
+[web](https://github.com/elbwalker/walkerOS/tree/main/packages/web/collector/)
+or [server](https://github.com/elbwalker/walkerOS/tree/main/packages/server/collector/)
 source.
 
 ## Contributing

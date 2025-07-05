@@ -19,7 +19,7 @@ function getModuleMapper() {
 
   return {
     '^@walkerOS/utils$': getDirectory('utils/src/'),
-    '^@walkerOS/node-collector$': getDirectory('node/collector/src/'),
+    '^@walkerOS/server-collector$': getDirectory('server/collector/src/'),
     '^@walkerOS/web-collector$': getDirectory('web/collector/src/'),
     '^@walkerOS/web-destination-ga4$': getDirectory('web/destinations/ga4/src/'),
     '^@walkerOS/web-destination-gtm$': getDirectory('web/destinations/gtm/src/'),
@@ -29,9 +29,9 @@ function getModuleMapper() {
     '^@walkerOS/web-destination-piwikpro$': getDirectory('web/destinations/piwikpro/src/'),
     '^@walkerOS/web-destination-plausible$': getDirectory('web/destinations/plausible/src/'),
     '^@walkerOS/web-source-dataLayer$': getDirectory('web/sources/dataLayer/src/'),
-    '^@walkerOS/node-destination-aws$': getDirectory('node/destinations/aws/src/'),
-    '^@walkerOS/node-destination-gcp$': getDirectory('node/destinations/gcp/src/'),
-    '^@walkerOS/node-destination-meta$': getDirectory('node/destinations/meta/src/'),
+    '^@walkerOS/server-destination-aws$': getDirectory('server/destinations/aws/src/'),
+    '^@walkerOS/server-destination-gcp$': getDirectory('server/destinations/gcp/src/'),
+    '^@walkerOS/server-destination-meta$': getDirectory('server/destinations/meta/src/'),
   };
 }
 

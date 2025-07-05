@@ -10,7 +10,7 @@ More detailed information and examples can be found in the
 ## 🤓 Usage
 
 Start by setting up the config for the destination. Optional fields as comments.
-Destinations can be used via node or directly in the browser.
+Destinations can be used via a server or directly in the browser.
 
 ## Configuration
 
@@ -41,7 +41,7 @@ const config = {
 };
 ```
 
-### Node usage
+### Server usage
 
 ```sh
 npm i --save @elbwalker/destination-web-meta-pixel
