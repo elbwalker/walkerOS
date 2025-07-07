@@ -14,10 +14,18 @@ in any environment, the web-helpers are are made for the browser.
 
 ## Core
 
-Import the core utils from the `@walkerOS/utils` package.
+Import the core utils either directly from the `@walkerOS/utils` package or from
+the collectors:
 
 ```ts
+// Directly from the utils package
 import { assign, anonymizeIP } from '@walkerOS/utils';
+
+// Web environments
+import { assign, anonymizeIP } from '@walkerOS/web-collector';
+
+// Server environments
+import { assign, anonymizeIP } from '@walkerOS/server-collector';
 ```
 
 ### anonymizeIP
@@ -404,10 +412,10 @@ the&nbsp;<Link to="/docs/utils/hooks">Hooks</Link> page.
 
 ## Server
 
-Import the server utils from the `@walkerOS/utils/server` package.
+Import the server utils from the server collector:
 
 ```ts
-import { getHashServer, sendServer } from '@walkerOS/utils/server';
+import { getHashServer, sendServer } from '@walkerOS/server-collector';
 ```
 
 ### getHashServer
@@ -444,10 +452,10 @@ interface SendResponse {
 
 ## Web
 
-Import the web utils from the `@walkerOS/utils/web` package.
+Import the web utils from the web collector:
 
 ```ts
-import { getHashWeb, sendWeb } from '@walkerOS/utils/web';
+import { getHashWeb, sendWeb } from '@walkerOS/web-collector';
 ```
 
 ### Browser

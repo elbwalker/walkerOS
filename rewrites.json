@@ -1,3 +1,4 @@
+@ -0,0 +1,357 @@
 [
   {
     "source": "https://elbwalker.com",
@@ -5,79 +6,249 @@
     "target": "https://www.elbwalker.com"
   },
   {
+    "source": "/docs/sources/overview",
+    "status": "301",
+    "target": "/docs/collectors/"
+  },
+  {
+    "source": "/docs/sources/walkerjs/",
+    "status": "301",
+    "target": "/docs/collectors/web/"
+  },
+  {
+    "source": "/docs/sources/walkerjs/commands",
+    "status": "301",
+    "target": "/docs/collectors/web/commands"
+  },
+  {
+    "source": "/docs/sources/walkerjs/configuration",
+    "status": "301",
+    "target": "/docs/collectors/web/configuration"
+  },
+  {
+    "source": "/docs/sources/walkerjs/tagging",
+    "status": "301",
+    "target": "/docs/sources/html-tagging/"
+  },
+  {
+    "source": "/docs/sources/walkerjs/testing",
+    "status": "301",
+    "target": "/docs/collectors/web/testing"
+  },
+  {
+    "source": "/docs/sources/walkerjs/using-javascript",
+    "status": "301",
+    "target": "/docs/sources/javascript-elb/"
+  },
+  {
+    "source": "/docs/sources/walkerjs/versions",
+    "status": "301",
+    "target": "/docs/collectors/web/versions"
+  },
+  {
+    "source": "/docs/sources/walkerjs/installation/",
+    "status": "301",
+    "target": "/docs/collectors/web/installation/"
+  },
+  {
+    "source": "/docs/sources/walkerjs/installation",
+    "status": "301",
+    "target": "/docs/collectors/web/installation"
+  },
+  {
+    "source": "/docs/sources/walkerjs/installation/package/",
+    "status": "301",
+    "target": "/docs/collectors/web/installation/package/"
+  },
+  {
+    "source": "/docs/sources/walkerjs/installation/script/",
+    "status": "301",
+    "target": "/docs/collectors/web/installation/script/"
+  },
+  {
+    "source": "/docs/sources/walkerjs/installation/gtm/",
+    "status": "301",
+    "target": "/docs/collectors/web/installation/gtm/"
+  },
+  {
+    "source": "/docs/sources/walkerjs/installation/npm",
+    "status": "301",
+    "target": "/docs/collectors/web/installation/package"
+  },
+  {
+    "source": "/docs/sources/node/",
+    "status": "301",
+    "target": "/docs/collectors/server/"
+  },
+  {
+    "source": "/docs/sources/node",
+    "status": "301",
+    "target": "/docs/collectors/server"
+  },
+  {
+    "source": "/docs/sources/node/commands/",
+    "status": "301",
+    "target": "/docs/collectors/server/commands/"
+  },
+  {
+    "source": "/docs/sources/node/configuration/",
+    "status": "301",
+    "target": "/docs/collectors/server/configuration/"
+  },
+  {
+    "source": "/docs/sources/node/installation/",
+    "status": "301",
+    "target": "/docs/collectors/server/installation/"
+  },
+  {
+    "source": "/docs/sources/node/versions/",
+    "status": "301",
+    "target": "/docs/collectors/server/versions/"
+  },
+  {
+    "source": "/docs/sources/dataLayer/",
+    "status": "301",
+    "target": "/docs/sources/datalayer/"
+  },
+  {
+    "source": "/docs/sources/dataLayer/configuration/",
+    "status": "301",
+    "target": "/docs/sources/datalayer/"
+  },
+  {
+    "source": "/docs/sources/dataLayer/consent_mode/",
+    "status": "301",
+    "target": "/docs/sources/datalayer/"
+  },
+  {
+    "source": "/docs/sources/dataLayer/installation/",
+    "status": "301",
+    "target": "/docs/sources/datalayer/"
+  },
+  {
+    "source": "/docs/destinations/api",
+    "status": "301",
+    "target": "/docs/destinations/web/api/"
+  },
+  {
+    "source": "/docs/destinations/aws",
+    "status": "301",
+    "target": "/docs/destinations/server/aws/"
+  },
+  {
+    "source": "/docs/destinations/bigquery",
+    "status": "301",
+    "target": "/docs/destinations/server/gcp/bigquery"
+  },
+  {
+    "source": "/docs/destinations/google-ads",
+    "status": "301",
+    "target": "/docs/destinations/web/google_ads/"
+  },
+  {
+    "source": "/docs/destinations/google-ga4",
+    "status": "301",
+    "target": "/docs/destinations/web/ga4/"
+  },
+  {
+    "source": "/docs/destinations/google-gtm",
+    "status": "301",
+    "target": "/docs/destinations/web/gtm/"
+  },
+  {
+    "source": "/docs/destinations/meta",
+    "status": "301",
+    "target": "/docs/destinations/server/meta/"
+  },
+  {
+    "source": "/docs/destinations/meta-pixel",
+    "status": "301",
+    "target": "/docs/destinations/web/meta/"
+  },
+  {
+    "source": "/docs/destinations/piwikpro",
+    "status": "301",
+    "target": "/docs/destinations/web/piwikpro/"
+  },
+  {
+    "source": "/docs/destinations/plausible",
+    "status": "301",
+    "target": "/docs/destinations/web/plausible/"
+  },
+  {
     "source": "/docs/clients/",
     "status": "301",
-    "target": "/docs/sources/"
+    "target": "/docs/collectors/"
   },
   {
     "source": "/docs/clients/node/",
     "status": "301",
-    "target": "/docs/sources/node/"
+    "target": "/docs/collectors/server/"
   },
   {
     "source": "/docs/clients/node/commands/",
     "status": "301",
-    "target": "/docs/sources/node/commands/"
+    "target": "/docs/collectors/server/commands/"
   },
   {
     "source": "/docs/clients/node/installation/",
     "status": "301",
-    "target": "/docs/sources/node/installation/"
+    "target": "/docs/collectors/server/installation/"
   },
   {
     "source": "/docs/clients/walkerjs/",
     "status": "301",
-    "target": "/docs/sources/walkerjs/"
+    "target": "/docs/collectors/web/"
   },
   {
     "source": "/docs/clients/walkerjs/commands/",
     "status": "301",
-    "target": "/docs/sources/walkerjs/commands/"
+    "target": "/docs/collectors/web/commands/"
   },
   {
     "source": "/docs/clients/walkerjs/debugging",
     "status": "301",
-    "target": "/docs/sources/walkerjs/testing"
+    "target": "/docs/collectors/web/testing"
   },
   {
     "source": "/docs/clients/walkerjs/installation/",
     "status": "301",
-    "target": "/docs/sources/walkerjs/installation/"
+    "target": "/docs/collectors/web/installation/"
   },
   {
     "source": "/docs/clients/walkerjs/installation/gtm/",
     "status": "301",
-    "target": "/docs/sources/walkerjs/installation/gtm/"
+    "target": "/docs/collectors/web/installation/gtm/"
   },
   {
     "source": "/docs/clients/walkerjs/installation/npm/",
     "status": "301",
-    "target": "/docs/sources/walkerjs/installation/package/"
+    "target": "/docs/collectors/web/installation/package/"
   },
   {
     "source": "/docs/clients/walkerjs/tagging",
     "status": "301",
-    "target": "/docs/sources/walkerjs/tagging"
+    "target": "/docs/sources/html-tagging/"
   },
   {
     "source": "/docs/clients/walkerjs/tagging/",
     "status": "301",
-    "target": "/docs/sources/walkerjs/tagging/"
+    "target": "/docs/sources/html-tagging/"
   },
   {
     "source": "/docs/clients/walkerjs/testing/",
     "status": "301",
-    "target": "/docs/sources/walkerjs/testing/"
+    "target": "/docs/collectors/web/testing/"
   },
   {
     "source": "/docs/clients/walkerjs/using-javascript/",
     "status": "301",
-    "target": "/docs/sources/walkerjs/using-javascript/"
+    "target": "/docs/sources/javascript-elb/"
   },
   {
     "source": "/docs/clients/walkerjs/versions/",
     "status": "301",
-    "target": "/docs/sources/walkerjs/versions/"
+    "target": "/docs/collectors/web/versions/"
   },
   {
     "source": "/docs/destinations/mapping/",
@@ -87,82 +258,32 @@
   {
     "source": "/docs/destinations/node/",
     "status": "301",
-    "target": "/docs/destinations/overview/"
+    "target": "/docs/destinations/server/"
   },
   {
     "source": "/docs/destinations/node/aws/",
     "status": "301",
-    "target": "/docs/destinations/aws/"
+    "target": "/docs/destinations/server/aws/"
   },
   {
     "source": "/docs/destinations/node/bigquery/",
     "status": "301",
-    "target": "/docs/destinations/bigquery/"
-  },
-  {
-    "source": "/docs/destinations/node/meta",
-    "status": "301",
-    "target": "/docs/destinations/meta"
+    "target": "/docs/destinations/server/gcp/bigquery/"
   },
   {
     "source": "/docs/destinations/node/meta/",
     "status": "301",
-    "target": "/docs/destinations/meta/"
-  },
-  {
-    "source": "/docs/destinations/web/",
-    "status": "301",
-    "target": "/docs/destinations/overview/"
-  },
-  {
-    "source": "/docs/destinations/web/api/",
-    "status": "301",
-    "target": "/docs/destinations/api/"
-  },
-  {
-    "source": "/docs/destinations/web/ga4",
-    "status": "301",
-    "target": "/docs/destinations/google-ga4"
-  },
-  {
-    "source": "/docs/destinations/web/ga4/",
-    "status": "301",
-    "target": "/docs/destinations/google-ga4/"
-  },
-  {
-    "source": "/docs/destinations/web/gads",
-    "status": "301",
-    "target": "/docs/destinations/google-ads"
+    "target": "/docs/destinations/server/meta/"
   },
   {
     "source": "/docs/destinations/web/gads/",
     "status": "301",
-    "target": "/docs/destinations/google-ads/"
-  },
-  {
-    "source": "/docs/destinations/web/gtm",
-    "status": "301",
-    "target": "/docs/destinations/google-gtm"
-  },
-  {
-    "source": "/docs/destinations/web/gtm/",
-    "status": "301",
-    "target": "/docs/destinations/google-gtm/"
+    "target": "/docs/destinations/web/google_ads/"
   },
   {
     "source": "/docs/destinations/web/meta-pixel/",
     "status": "301",
-    "target": "/docs/destinations/meta-pixel/"
-  },
-  {
-    "source": "/docs/destinations/web/piwikpro/",
-    "status": "301",
-    "target": "/docs/destinations/piwikpro/"
-  },
-  {
-    "source": "/docs/destinations/web/plausible/",
-    "status": "301",
-    "target": "/docs/destinations/plausible/"
+    "target": "/docs/destinations/web/meta/"
   },
   {
     "source": "/docs/guides/",
@@ -177,47 +298,42 @@
   {
     "source": "/docs/guides/consent_management/cookiefirst/",
     "status": "301",
-    "target": "/docs/consent_management/cookiefirst/"
+    "target": "/docs/consent_management/cookiefirst"
   },
   {
     "source": "/docs/guides/consent_management/cookiepro/",
     "status": "301",
-    "target": "/docs/consent_management/cookiepro/"
+    "target": "/docs/consent_management/cookiepro"
   },
   {
     "source": "/docs/guides/consent_management/usercentrics/",
     "status": "301",
-    "target": "/docs/consent_management/usercentrics/"
+    "target": "/docs/consent_management/usercentrics"
   },
   {
     "source": "/docs/guides/user_stitching/",
     "status": "301",
-    "target": "/docs/user_stitching/"
-  },
-  {
-    "source": "/docs/sources/walkerjs/installation/npm",
-    "status": "301",
-    "target": "/docs/sources/walkerjs/installation/package"
+    "target": "/docs/user_stitching"
   },
   {
     "source": "/docs/stacks/",
     "status": "301",
-    "target": "/docs/sources/"
+    "target": "/docs/collectors/"
   },
   {
     "source": "/docs/stacks/firebase/",
     "status": "301",
-    "target": "/docs/sources"
+    "target": "/docs/collectors"
   },
   {
     "source": "/docs/stacks/gtm/",
     "status": "301",
-    "target": "/docs/sources/walkerjs/installation/gtm/"
+    "target": "/docs/collectors/web/installation/gtm/"
   },
   {
     "source": "/docs/stacks/gtm/tag_template/",
     "status": "301",
-    "target": "/docs/sources/walkerjs/installation/gtm/"
+    "target": "/docs/collectors/web/installation/gtm/"
   },
   {
     "source": "/docs/utils/versions/",
