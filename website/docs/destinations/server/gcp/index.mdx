@@ -1,15 +1,17 @@
 ---
-title: Google Server Package  
+title: Google Server Package
 description: Google destinations for server applications
 ---
 
 # GCP Server Package
 
-The `@walkerOS/server-destination-gcp` package provides BigQuery integration for server applications:
+The `@walkerOS/server-destination-gcp` package provides BigQuery integration for
+server applications:
 
 ## Destinations
 
-- **[BigQuery](./bigquery)** - Send events to Google BigQuery for data warehousing
+- **[BigQuery](./bigquery)** - Send events to Google BigQuery for data
+  warehousing
 
 ## Installation
 
@@ -27,6 +29,6 @@ import { destinationBigQuery } from '@walkerOS/server-destination-gcp';
 elb('walker destination', destinationBigQuery, {
   projectId: 'your-project-id',
   datasetId: 'your-dataset-id',
-  tableId: 'your-table-id'
+  tableId: 'your-table-id',
 });
 ```

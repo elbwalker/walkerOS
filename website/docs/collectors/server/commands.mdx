@@ -7,13 +7,14 @@ description: Ways to configure the walkerOS server source using a function
 import Link from '@docusaurus/Link';
 
 A server collector can either be created with a
-**custom&nbsp;<Link to="/docs/collectors/server/configuration">config</Link>** during
-initialization or updated via **commands** using the `elb` function.
+**custom&nbsp;<Link to="/docs/collectors/server/configuration">config</Link>**
+during initialization or updated via **commands** using the `elb` function.
 
 ## elb
 
-The `elb` function gets returned when creating a server collector. It pushes events
-and commands to the instance and runs asynchronously by returning a promise.
+The `elb` function gets returned when creating a server collector. It pushes
+events and commands to the instance and runs asynchronously by returning a
+promise.
 
 ```ts
 import { createServerCollector } from '@walkerOS/server-collector';
@@ -24,9 +25,9 @@ const result = await elb('entity action', { foo: 'bar' });
 
 ## config
 
-To&nbsp;<Link to="/docs/collectors/server/configuration">configure</Link> the server
-collector either do it while creating an instance or use the `walker config`
-command:
+To&nbsp;<Link to="/docs/collectors/server/configuration">configure</Link> the
+server collector either do it while creating an instance or use the
+`walker config` command:
 
 ```js
 elb('walker config', {
@@ -120,12 +121,5 @@ persistent user IDs with your data protection officer.
 
 Learn more about identification and&nbsp;<Link to="/docs/user_stitching">user
 stitching</Link>
-
-:::
-
-:::info
-
-If you need professional support with your walkerOS implementation, check out
-our&nbsp;<Link to="/services">services</Link>.
 
 :::

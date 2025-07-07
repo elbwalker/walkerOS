@@ -94,8 +94,8 @@ which `EventConfig` should be used. To test uncomment the `globals` property.
 `getMappingValue(event: WalkerOS.DeepPartialEvent | unknown | undefined, mapping: Mapping.Value, options?: Mapping.Options): WalkerOS.Property | undefined`
 primarily used by&nbsp;<Link to="/docs/destinations">destinations</Link> to
 process values from the original event. This offers flexibility to configure
-individual&nbsp;<Link to="/docs/sources/html-tagging">tagging setups</Link>
-to standard fields of the destination.
+individual&nbsp;<Link to="/docs/sources/html-tagging">tagging setups</Link> to
+standard fields of the destination.
 
 ### string
 
@@ -282,10 +282,3 @@ with&nbsp;<Link to="/docs/utils/helper#getbypath">byPath</Link>. The current
 value will be check using the `validate` function and set to `undefined` if it
 fails. Finally, the `value` will be cast to match the `WalkerOS.Property` type.
 An empty `ValueType` will return `undefined`.
-
-:::info
-
-If you need professional support with your walkerOS implementation, check out
-our&nbsp;<Link to="/services">services</Link>.
-
-:::

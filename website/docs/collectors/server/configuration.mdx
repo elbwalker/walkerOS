@@ -48,24 +48,17 @@ const { instance } = createServerCollector({
 });
 ```
 
-| Option        | Type     | Description                                               |
-| ------------- | -------- | --------------------------------------------------------- |
-| consent       | object   | Initial consent states                                    |
-| contracts     | object   | Contract schemas for event validation                     |
-| custom        | object   | Individual custom data                                    |
-| destinations  | object   | Destinations that might process the events                |
-| globalsStatic | object   | Static values for the globals that persist new runs       |
-| hooks         | object   | Functions to customize default behavior                   |
-| on            | object   | Event listeners for specific walkerOS events              |
-| onError       | function | Custom error handler                                      |
-| onLog         | function | Custom logging for the verbose mode                       |
-| tagging       | number   | Helpful to differentiate the used setup version           |
-| user          | object   | Handles the user IDs                                      |
-| verbose       | boolean  | To enable verbose mode                                    |
-
-:::info
-
-If you need professional support with your walkerOS implementation, check out
-our&nbsp;<Link to="/services">services</Link>.
-
-:::
+| Option        | Type     | Description                                         |
+| ------------- | -------- | --------------------------------------------------- |
+| consent       | object   | Initial consent states                              |
+| contracts     | object   | Contract schemas for event validation               |
+| custom        | object   | Individual custom data                              |
+| destinations  | object   | Destinations that might process the events          |
+| globalsStatic | object   | Static values for the globals that persist new runs |
+| hooks         | object   | Functions to customize default behavior             |
+| on            | object   | Event listeners for specific walkerOS events        |
+| onError       | function | Custom error handler                                |
+| onLog         | function | Custom logging for the verbose mode                 |
+| tagging       | number   | Helpful to differentiate the used setup version     |
+| user          | object   | Handles the user IDs                                |
+| verbose       | boolean  | To enable verbose mode                              |

@@ -33,8 +33,8 @@ destinations as well as new ones.
 
 With each event, the consent states get checked. Every event will be added to an
 ordered queue if consent isn't granted yet and the
-[destination's queue](/docs/destinations/event_mapping#eventconfig)
-isn't disabled. The queue resets with each `walker run` command. And will be
+[destination's queue](/docs/destinations/event_mapping#eventconfig) isn't
+disabled. The queue resets with each `walker run` command. And will be
 (re-)processed with each `walker consent` update. The key must match the key
 used in each `destination.config.consent`.
 
@@ -93,10 +93,3 @@ elb('walker on', 'consent', (instance, consent) => {
 
 The consent mode will be updated via `gtag` as soon as marketing consent is
 granted.
-
-:::info
-
-If you need professional support with your walkerOS implementation, check out
-our&nbsp;<Link to="/services">services</Link>.
-
-:::
