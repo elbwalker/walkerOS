@@ -1,0 +1,204 @@
+---
+title: '@elbwalker to @walkerOS'
+description: How to migrate from @elbwalker to @walkerOS
+position: 1
+---
+
+# Migration Guide: From @elbwalker to @walkerOS
+
+This guide helps you migrate from the old elbwalker packages to the new walkerOS
+packages. The migration involves package name changes, updated exports, and some
+structural reorganization.
+
+## Package Migration Map
+
+### Core Sources/Collectors
+
+| Old Package                  | New Package                  | Migration Notes                           |
+| ---------------------------- | ---------------------------- | ----------------------------------------- |
+| `@elbwalker/source-walkerjs` | `@walkerOS/web-collector`    | Core web source renamed to "collector"    |
+| `@elbwalker/source-node`     | `@walkerOS/server-collector` | Core server source renamed to "collector" |
+
+**Export Changes:**
+
+- Old: `Walkerjs()`, `createSourceWalkerjs()`, `SourceWalkerjs.*`, `Walker.*`
+- New: `webCollector()`, `createWebCollector()`, `WebCollector.*`, `elb`
+
+- Old: `sourceNode()`, `createSourceNode()`, `SourceNode.*`
+- New: `serverCollector()`, `createServerCollector()`, `ServerCollector.*`
+
+### Web Destinations
+
+| Old Package                             | New Package                            | Key Changes                                             |
+| --------------------------------------- | -------------------------------------- | ------------------------------------------------------- |
+| `@elbwalker/destination-web-api`        | `@walkerOS/web-destination-api`        | Export: `DestinationWebAPI` → `DestinationAPI`          |
+| `@elbwalker/destination-web-google-ga4` | `@walkerOS/web-destination-ga4`        | Export: `DestinationGoogleGA4` → `DestinationGA4`       |
+| `@elbwalker/destination-web-google-ads` | `@walkerOS/web-destination-google_ads` | Export: `DestinationGoogleAds` → `DestinationAds`       |
+| `@elbwalker/destination-web-google-gtm` | `@walkerOS/web-destination-gtm`        | Export: `DestinationGoogleGTM` → `DestinationGTM`       |
+| `@elbwalker/destination-web-meta-pixel` | `@walkerOS/web-destination-meta`       | Export: `DestinationMetaPixel` → `DestinationMetaPixel` |
+| `@elbwalker/destination-web-piwikpro`   | `@walkerOS/web-destination-piwikpro`   | Export: `DestinationPiwikPro` → `DestinationPiwikPro`   |
+| `@elbwalker/destination-web-plausible`  | `@walkerOS/web-destination-plausible`  | Export: `DestinationPlausible` → `DestinationPlausible` |
+
+### Server Destinations
+
+| Old Package                            | New Package                         | Key Changes                                           |
+| -------------------------------------- | ----------------------------------- | ----------------------------------------------------- |
+| `@elbwalker/destination-node-aws`      | `@walkerOS/server-destination-aws`  | Export: `DestinationFirehose` → `DestinationFirehose` |
+| `@elbwalker/destination-node-bigquery` | `@walkerOS/server-destination-gcp`  | Export: `DestinationBigQuery` → `DestinationBigQuery` |
+| `@elbwalker/destination-node-meta`     | `@walkerOS/server-destination-meta` | Export: `DestinationMeta` → `DestinationMeta`         |
+
+### Sources
+
+| Old Package                   | New Package                      | Key Changes                                   |
+| ----------------------------- | -------------------------------- | --------------------------------------------- |
+| `@elbwalker/source-datalayer` | `@walkerOS/web-source-dataLayer` | Export: `SourceDataLayer` → `SourceDataLayer` |
+
+### Utility Packages
+
+| Old Package         | New Package       | Key Changes                                                                           |
+| ------------------- | ----------------- | ------------------------------------------------------------------------------------- |
+| `@elbwalker/types`  | `@walkerOS/types` | Same exports, no changes                                                              |
+| `@elbwalker/utils`  | `@walkerOS/utils` | Some exports, bundled with `@walkerOS/web-collector` and `@walkerOS/server-collector` |
+| `@elbwalker/tagger` | ⚠️ **BUNDLED**    | Now included in `@walkerOS/web-collector`                                             |
+
+## Step-by-Step Migration
+
+### 1. Update Package Dependencies
+
+**Before:**
+
+```json
+{
+  "dependencies": {
+    "@elbwalker/source-walkerjs": "^2.0.0",
+    "@elbwalker/destination-web-google-ga4": "^2.0.0",
+    "@elbwalker/destination-web-api": "^2.0.0",
+    "@elbwalker/tagger": "^2.0.0"
+  }
+}
+```
+
+**After:**
+
+```json
+{
+  "dependencies": {
+    "@walkerOS/web-collector": "^0.0.1",
+    "@walkerOS/web-destination-ga4": "^0.0.1",
+    "@walkerOS/web-destination-api": "^0.0.1"
+  }
+}
+```
+
+### 2. Update Imports
+
+**Before:**
+
+```typescript
+import { Walkerjs, createSourceWalkerjs } from '@elbwalker/source-walkerjs';
+import { destinationGoogleGA4 } from '@elbwalker/destination-web-google-ga4';
+import { destinationWebAPI } from '@elbwalker/destination-web-api';
+import { default as tagger } from '@elbwalker/tagger';
+```
+
+**After:**
+
+```typescript
+import {
+  webCollector,
+  createWebCollector,
+  tagger,
+} from '@walkerOS/web-collector';
+import { destinationGA4 } from '@walkerOS/web-destination-ga4';
+import { destinationAPI } from '@walkerOS/web-destination-api';
+```
+
+### 3. Update Function Calls
+
+**Before:**
+
+```typescript
+const walker = Walkerjs({
+  destinations: [destinationGoogleGA4, destinationWebAPI],
+});
+
+const { elb, instance } = createSourceWalkerjs(config);
+```
+
+**After:**
+
+```typescript
+const walker = webCollector({
+  destinations: [destinationGA4, destinationAPI],
+});
+
+const { elb, instance } = createWebCollector(config);
+```
+
+### 4. Update Type References
+
+**Before:**
+
+```typescript
+import type { SourceWalkerjs } from '@elbwalker/source-walkerjs';
+import type { DestinationGoogleGA4 } from '@elbwalker/destination-web-google-ga4';
+
+const config: SourceWalkerjs.InitConfig = {};
+```
+
+**After:**
+
+```typescript
+import type { WebCollector } from '@walkerOS/web-collector';
+import type { DestinationGA4 } from '@walkerOS/web-destination-ga4';
+
+const config: WebCollector.InitConfig = {};
+```
+
+### 5. Server-Side Migration
+
+**Before:**
+
+```typescript
+import { createSourceNode } from '@elbwalker/source-node';
+import { destinationFirehose } from '@elbwalker/destination-node-aws';
+```
+
+**After:**
+
+```typescript
+import { createServerCollector } from '@walkerOS/server-collector';
+import { destinationFirehose } from '@walkerOS/server-destination-aws';
+```
+
+## Breaking Changes
+
+### 1. Tagger Integration
+
+- **Old:** Separate `@elbwalker/tagger` package
+- **New:** Bundled with `@walkerOS/web-collector`
+- **Migration:** Remove tagger dependency, import from web-collector
+
+### 2. Export Name Changes
+
+Major export renames across destinations:
+
+- `DestinationGoogleGA4` → `DestinationGA4`
+- `DestinationWebAPI` → `DestinationAPI`
+- `DestinationGoogleAds` → `DestinationAds`
+- `DestinationGoogleGTM` → `DestinationGTM`
+
+### 3. Package Structure Changes
+
+- **Node packages:** `destination-node-*` → `server-destination-*`
+- **Web packages:** `destination-web-*` → `web-destination-*`
+- **Sources:** `source-*` → `web-collector`/`server-collector`
+
+## Validation Steps
+
+1. **Update all package references** in package.json
+2. **Update all import statements** to use new package names
+3. **Update function calls** to use new export names
+4. **Update type references** to use new namespace names
+5. **Test functionality** to ensure destinations work correctly
+6. **Update documentation** to reference new package names
