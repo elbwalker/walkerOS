@@ -10,16 +10,16 @@ export const destinationAds: Destination = {
   config: {},
 
   init(config = {}) {
-    const { custom = {}, fn, loadScript } = config;
+    const { settings = {}, fn, loadScript } = config;
     const w = window;
 
     // required measurement id
-    if (!custom.conversionId) return false;
+    if (!settings.conversionId) return false;
 
     // Default currency value
-    custom.currency = custom.currency || 'EUR';
+    settings.currency = settings.currency || 'EUR';
 
-    if (loadScript) addScript(custom.conversionId);
+    if (loadScript) addScript(settings.conversionId);
 
     w.dataLayer = w.dataLayer || [];
 
@@ -33,21 +33,21 @@ export const destinationAds: Destination = {
     }
 
     // gtag init call
-    func('config', custom.conversionId);
+    func('config', settings.conversionId);
 
     return config;
   },
 
   push(event, config, mapping = {}, options = {}): void {
-    const { custom = {}, fn } = config;
+    const { settings = {}, fn } = config;
     const { name } = mapping;
     const data = isObject(options.data) ? options.data : {};
 
     if (!name) return;
 
     const params: Gtag.CustomParams = {
-      send_to: `${custom.conversionId}/${name}`,
-      currency: custom.currency,
+      send_to: `${settings.conversionId}/${name}`,
+      currency: settings.currency,
       ...data,
     };
 

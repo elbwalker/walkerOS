@@ -1,15 +1,15 @@
-import type { Config, Custom, InitFn } from './types';
+import type { Config, Settings, InitFn } from './types';
 import { onLog, throwError } from '@walkerOS/utils';
 
 export function getConfig(partialConfig: Parameters<InitFn>[0] = {}): Config {
-  const custom = (partialConfig.custom || {}) as Partial<Custom>;
-  const { accessToken, pixelId } = custom;
+  const settings = (partialConfig.settings || {}) as Partial<Settings>;
+  const { accessToken, pixelId } = settings;
 
-  if (!accessToken) throwError('Config custom accessToken missing');
-  if (!pixelId) throwError('Config custom pixelId missing');
+  if (!accessToken) throwError('Config settings accessToken missing');
+  if (!pixelId) throwError('Config settings pixelId missing');
 
-  const customConfig: Custom = {
-    ...custom,
+  const settingsConfig: Settings = {
+    ...settings,
     accessToken,
     pixelId,
   };
@@ -17,7 +17,7 @@ export function getConfig(partialConfig: Parameters<InitFn>[0] = {}): Config {
   // Log Handler
   const onLog = (message: string) => log(message, partialConfig.verbose);
 
-  return { ...partialConfig, custom: customConfig, onLog };
+  return { ...partialConfig, settings: settingsConfig, onLog };
 }
 
 export function log(message: string, verbose?: boolean) {

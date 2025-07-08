@@ -19,7 +19,7 @@ describe('Destination Meta Pixel', () => {
 
   beforeEach(() => {
     config = {
-      custom: { pixelId },
+      settings: { pixelId },
     };
 
     destination = jest.requireActual('.').default;
@@ -105,7 +105,7 @@ describe('Destination Meta Pixel', () => {
 
   test('push standard event', async () => {
     elb('walker destination', destination, {
-      custom: { pixelId },
+      settings: { pixelId },
       mapping: {
         entity: { action: { custom: { trackCustom: 'foo' } } },
       },
@@ -123,7 +123,7 @@ describe('Destination Meta Pixel', () => {
     const event = getEvent('order complete');
 
     const config: DestinationWeb.Config = {
-      custom: { pixelId },
+      settings: { pixelId },
       mapping: mapping.config,
     };
 
@@ -137,7 +137,7 @@ describe('Destination Meta Pixel', () => {
     const event = getEvent('product add');
 
     elb('walker destination', destination, {
-      custom: { pixelId },
+      settings: { pixelId },
       mapping: mapping.config,
     });
 
@@ -149,7 +149,7 @@ describe('Destination Meta Pixel', () => {
     const event = getEvent('cart view');
 
     elb('walker destination', destination, {
-      custom: { pixelId },
+      settings: { pixelId },
       mapping: mapping.config,
     });
 
@@ -161,7 +161,7 @@ describe('Destination Meta Pixel', () => {
     const event = getEvent('product view');
 
     elb('walker destination', destination, {
-      custom: { pixelId },
+      settings: { pixelId },
       mapping: mapping.config,
     });
 

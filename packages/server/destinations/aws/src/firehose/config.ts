@@ -1,16 +1,16 @@
-import type { Config, Custom, InitFn } from './types';
+import type { Config, Settings, InitFn } from './types';
 import { onLog } from '@walkerOS/utils';
 import { getConfigFirehose } from './lib/firehose';
 
 export function getConfig(partialConfig: Parameters<InitFn>[0] = {}): Config {
-  const custom = partialConfig.custom || ({} as Custom);
+  const settings = partialConfig.settings || ({} as Settings);
 
-  if (custom.firehose) custom.firehose = getConfigFirehose(custom.firehose);
+  if (settings.firehose) settings.firehose = getConfigFirehose(settings.firehose);
 
   // Log Handler
   const onLog = (message: string) => log(message, partialConfig.verbose);
 
-  return { custom, onLog };
+  return { settings, onLog };
 }
 
 export function log(message: string, verbose?: boolean) {

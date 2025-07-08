@@ -1,6 +1,5 @@
 import type { Mapping } from '@walkerOS/types';
 import type { DestinationWeb } from '@walkerOS/web-collector';
-// import type { Gtag } from '@types/gtag.js';
 
 declare global {
   interface Window {
@@ -9,12 +8,11 @@ declare global {
   }
 }
 
-export interface Destination
-  extends DestinationWeb.Destination<Custom, CustomEvent> {}
+export type Destination = DestinationWeb.Destination<Settings, EventMapping>;
+export type Config = DestinationWeb.Config<Settings, EventMapping>;
 
-export type Config = DestinationWeb.Config<Custom, CustomEvent>;
-
-export interface Custom {
+// Destination-specific settings (internal usage)
+export interface Settings {
   measurementId: string;
   debug?: boolean;
   include?: Include;
@@ -24,11 +22,12 @@ export interface Custom {
   transport_url?: string;
 }
 
-export type EventConfig = Mapping.EventConfig<CustomEvent>;
-
-export interface CustomEvent {
+// Single event transformation rule
+export interface EventMapping {
   include?: Include;
 }
+
+export type EventConfig = Mapping.EventConfig<EventMapping>;
 
 export type Param = Mapping.Value;
 export type Include = Array<

@@ -2,7 +2,7 @@ import type { Mapping, WalkerOS } from '@walkerOS/types';
 import type { DestinationMeta } from '..';
 import { isObject } from '@walkerOS/utils';
 
-export const InitUserData: DestinationMeta.Custom = {
+export const InitUserData: DestinationMeta.Settings = {
   pixelId: 'p1x3l1d',
   accessToken: 's3cr3t',
   user_data: {

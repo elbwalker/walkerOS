@@ -1,4 +1,4 @@
-import type { Custom, Destination } from './types';
+import type { Settings, Destination } from './types';
 import { addScript, setup } from './setup';
 import { isObject } from '@walkerOS/utils';
 
@@ -14,8 +14,8 @@ export const destinationMetaPixel: Destination = {
   config: {},
 
   init(config = {}) {
-    const { custom = {} as Partial<Custom>, fn, loadScript } = config;
-    const { pixelId } = custom;
+    const { settings = {} as Partial<Settings>, fn, loadScript } = config;
+    const { pixelId } = settings;
 
     // Load Meta Pixel script if required (fbevents.js)
     if (loadScript) addScript();

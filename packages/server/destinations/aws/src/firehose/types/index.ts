@@ -9,24 +9,24 @@ import type {
 } from '@aws-sdk/client-firehose';
 
 export interface Destination
-  extends DestinationServer.Destination<Custom, CustomEvent> {
+  extends DestinationServer.Destination<Settings, EventMapping> {
   init: InitFn;
   push: PushFn;
 }
 
-export type InitFn = WalkerOSDestination.InitFn<Custom, CustomEvent>;
-export type PushFn = WalkerOSDestination.PushFn<Custom, CustomEvent>;
+export type InitFn = WalkerOSDestination.InitFn<Settings, EventMapping>;
+export type PushFn = WalkerOSDestination.PushFn<Settings, EventMapping>;
 
 export type Config = {
-  custom: Custom;
+  settings: Settings;
   onLog: Handler.Log;
-} & DestinationServer.Config<Custom, CustomEvent>;
+} & DestinationServer.Config<Settings, EventMapping>;
 
-export interface Custom {
+export interface Settings {
   firehose?: FirehoseConfig;
 }
 
-export interface CustomEvent {
+export interface EventMapping {
   // Custom destination event mapping properties
 }
 

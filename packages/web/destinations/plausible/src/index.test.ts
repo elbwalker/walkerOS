@@ -65,7 +65,7 @@ describe('destination plausible', () => {
     const domain = 'elbwalker.com';
     elb('walker destination', destination, {
       loadScript: true,
-      custom: { domain },
+      settings: { domain },
     });
 
     const scriptSelector = `script[src="${script}"]`;

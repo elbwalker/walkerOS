@@ -348,7 +348,7 @@ describe('elbLayer', () => {
     layer.push('walker run'); // Overwrites push function
     layer.push('walker destination', destination, {
       init: true,
-      custom: { a: 1 },
+      settings: { a: 1 },
     });
     layer.push('e a');
 
@@ -357,7 +357,7 @@ describe('elbLayer', () => {
       expect.objectContaining({
         event: 'e a',
       }),
-      { init: true, custom: { a: 1 } },
+      { init: true, settings: { a: 1 } },
       undefined,
       expect.anything(),
     );

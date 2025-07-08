@@ -18,7 +18,7 @@ describe('destination Google Ads', () => {
 
   beforeEach(() => {
     config = {
-      custom: { conversionId },
+      settings: { conversionId },
     };
 
     destination = jest.requireActual('.').default;
@@ -90,7 +90,7 @@ describe('destination Google Ads', () => {
 
   test('event conversion', async () => {
     elb('walker destination', destination, {
-      custom: { conversionId },
+      settings: { conversionId },
       mapping: mapping.config,
     });
 

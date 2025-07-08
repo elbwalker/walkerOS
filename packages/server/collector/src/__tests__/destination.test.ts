@@ -104,7 +104,7 @@ describe('Destination', () => {
   test('push', async () => {
     const eventMapping = {
       name: 'NewEventName',
-      custom: { something: 'random' },
+      settings: { something: 'random' },
     };
     const mapping = {
       entity: {

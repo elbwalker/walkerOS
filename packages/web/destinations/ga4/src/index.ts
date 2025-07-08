@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@walkerOS/types';
-import type { Custom, Destination, Parameters } from './types';
+import type { Settings, Destination, Parameters } from './types';
 import { getParamsInclude } from './parameters';
 import { isObject } from '@walkerOS/utils';
 
@@ -12,30 +12,30 @@ export * as examples from './examples';
 export const destinationGA4: Destination = {
   type: 'google-ga4',
 
-  config: { custom: { measurementId: '' } },
+  config: { settings: { measurementId: '' } },
 
   init(config = {}) {
     const w = window;
-    const { custom = {} as Partial<Custom>, fn, loadScript } = config;
+    const { settings = {} as Partial<Settings>, fn, loadScript } = config;
     const { measurementId, transport_url, server_container_url, pageview } =
-      custom;
+      settings;
 
     if (!measurementId) return false;
 
     // Load the gtag script
     if (loadScript) addScript(measurementId);
 
-    const settings: WalkerOS.AnyObject = {};
+    const gtagSettings: WalkerOS.AnyObject = {};
 
     // custom transport_url
-    if (transport_url) settings.transport_url = transport_url;
+    if (transport_url) gtagSettings.transport_url = transport_url;
 
     // custom server_container_url
     if (server_container_url)
-      settings.server_container_url = server_container_url;
+      gtagSettings.server_container_url = server_container_url;
 
     // disable pageviews
-    if (pageview === false) settings.send_page_view = false;
+    if (pageview === false) gtagSettings.send_page_view = false;
 
     // setup required methods
     w.dataLayer = w.dataLayer || [];
@@ -50,22 +50,22 @@ export const destinationGA4: Destination = {
     }
 
     // gtag init call
-    func('config', measurementId, settings);
+    func('config', measurementId, gtagSettings);
   },
 
   push(event, config, mapping = {}, options = {}) {
-    const { custom, fn } = config;
-    const customEvent = mapping.custom || {};
-    if (!custom) return;
+    const { settings, fn } = config;
+    const eventMapping = mapping.custom || {};
+    if (!settings) return;
 
-    if (!custom.measurementId) return;
+    if (!settings.measurementId) return;
 
     const data = isObject(options.data) ? options.data : {};
 
     const paramsInclude = getParamsInclude(
       event,
       // Add data to include by default
-      customEvent.include || custom.include || ['data'],
+      eventMapping.include || settings.include || ['data'],
     );
 
     const eventParams: Parameters = {
@@ -75,15 +75,15 @@ export const destinationGA4: Destination = {
 
     // Event name (snake_case default)
     let eventName = event.event; // Assume custom mapped name
-    if (!mapping.name && custom.snakeCase !== false)
+    if (!mapping.name && settings.snakeCase !== false)
       // Use snake case if not mapped or disabled
       eventName = eventName.replace(' ', '_').toLowerCase();
 
     // Set the GA4 stream id
-    eventParams.send_to = custom.measurementId;
+    eventParams.send_to = settings.measurementId;
 
     // Debug mode
-    if (custom.debug) eventParams.debug_mode = true;
+    if (settings.debug) eventParams.debug_mode = true;
 
     const func = fn || window.gtag;
     func('event', eventName, eventParams);

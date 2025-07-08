@@ -1,4 +1,4 @@
-import type { Custom, Destination } from './types';
+import type { Settings, Destination } from './types';
 import { isSameType, throwError, tryCatchAsync } from '@walkerOS/utils';
 import { getConfig } from './config';
 import { push } from './push';
@@ -18,7 +18,7 @@ export const destinationFirehose: Destination = {
       throwError(error);
     })(partialConfig);
 
-    if (!isSameType(config.custom, {} as Custom)) return false;
+    if (!isSameType(config.settings, {} as Settings)) return false;
 
     return config;
   },

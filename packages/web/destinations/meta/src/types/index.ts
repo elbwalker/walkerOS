@@ -8,21 +8,21 @@ declare global {
   }
 }
 
-export interface Destination
-  extends DestinationWeb.Destination<Custom, CustomEvent> {}
+export type Destination = DestinationWeb.Destination<Settings, EventMapping>;
+export type Config = DestinationWeb.Config<Settings, EventMapping>;
 
-export type Config = DestinationWeb.Config<Custom, CustomEvent>;
-
-export interface Custom {
+// Destination-specific settings (internal usage)
+export interface Settings {
   pixelId?: string; // Required pixel id
 }
 
-export interface CustomEvent {
+// Single event transformation rule
+export interface EventMapping {
   track?: StandardEventNames; // Name of a standard event to track
   trackCustom?: string; // Name of a custom event to track
 }
 
-export type EventConfig = Mapping.EventConfig<CustomEvent>;
+export type EventConfig = Mapping.EventConfig<EventMapping>;
 
 export type StandardEventNames =
   | 'PageView'

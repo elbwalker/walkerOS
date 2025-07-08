@@ -224,7 +224,10 @@ describe('webCollector', () => {
       }),
     );
 
-    window.location = location;
+    Object.defineProperty(window, 'location', {
+      value: location,
+      writable: true,
+    });
     Object.defineProperty(document, 'referrer', {
       value: referrer,
       writable: true,

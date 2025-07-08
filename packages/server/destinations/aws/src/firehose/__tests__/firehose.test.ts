@@ -1,4 +1,4 @@
-import type { Config, Custom, Destination } from '../types';
+import type { Config, Settings, Destination } from '../types';
 import { createEvent } from '@walkerOS/utils';
 import {
   FirehoseClient,
@@ -7,20 +7,20 @@ import {
 
 describe('Firehose', () => {
   let destination: Destination;
-  let customConfig: Custom;
+  let settingsConfig: Settings;
 
   const event = createEvent();
 
   const streamName = 'demo';
 
-  async function getConfig(custom: Custom = {}) {
-    return (await destination.init({ custom })) as Config;
+  async function getConfig(settings: Settings = {}) {
+    return (await destination.init({ settings })) as Config;
   }
 
   beforeEach(() => {
     destination = jest.requireActual('../').default;
     destination.config = {};
-    customConfig = {
+    settingsConfig = {
       firehose: {
         region: 'eu-central-1',
         streamName,
@@ -29,9 +29,9 @@ describe('Firehose', () => {
   });
 
   test('init', async () => {
-    const config = await getConfig(customConfig);
+    const config = await getConfig(settingsConfig);
     expect(config).toEqual({
-      custom: {
+      settings: {
         firehose: {
           client: expect.any(FirehoseClient),
           region: 'eu-central-1',
@@ -44,7 +44,7 @@ describe('Firehose', () => {
 
   test('push', async () => {
     const spy = (FirehoseClient.prototype.send = jest.fn());
-    const config = await getConfig(customConfig);
+    const config = await getConfig(settingsConfig);
 
     await destination.push(event, config);
     expect(spy).toHaveBeenCalledWith(expect.any(PutRecordBatchCommand));

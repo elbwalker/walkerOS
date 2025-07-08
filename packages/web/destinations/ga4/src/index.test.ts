@@ -17,7 +17,7 @@ describe('Destination Google GA4', () => {
 
   beforeEach(async () => {
     config = {
-      custom: { measurementId, snakeCase: false },
+      settings: { measurementId, snakeCase: false },
     };
 
     destination = jest.requireActual('.').default;
@@ -56,11 +56,11 @@ describe('Destination Google GA4', () => {
 
     // Bad configs
     elb('walker destination', destination, {});
-    elb('walker destination', destination, { custom: {} });
-    elb('walker destination', destination, { custom: {} });
+    elb('walker destination', destination, { settings: {} });
+    elb('walker destination', destination, { settings: {} });
     elb('walker destination', destination, { init: true });
     elb('walker destination', destination, {
-      custom: {},
+      settings: {},
       init: true,
     });
 
@@ -98,7 +98,7 @@ describe('Destination Google GA4', () => {
   });
 
   test('debug mode', async () => {
-    destination.config.custom!.debug = true;
+    destination.config.settings!.debug = true;
     elb('walker destination', destination);
     await elb(event);
 
@@ -110,7 +110,7 @@ describe('Destination Google GA4', () => {
   });
 
   test('disable pageview', async () => {
-    config.custom!.pageview = false;
+    config.settings!.pageview = false;
     destination.config = config;
     elb('walker destination', destination);
     await elb(event);
@@ -134,7 +134,7 @@ describe('Destination Google GA4', () => {
 
   test('settings', async () => {
     elb('walker destination', destination, {
-      custom: {
+      settings: {
         measurementId,
         server_container_url,
         transport_url,
@@ -157,7 +157,7 @@ describe('Destination Google GA4', () => {
   test('parameters', async () => {
     const event = getEvent();
     const config: DestinationGA4.Config = {
-      custom: { measurementId },
+      settings: { measurementId },
       init: true,
       mapping: {
         entity: {
@@ -178,7 +178,7 @@ describe('Destination Google GA4', () => {
                 lang: 'globals.lang',
               },
             },
-            custom: {
+            settings: {
               include: [],
             },
           },
@@ -208,7 +208,7 @@ describe('Destination Google GA4', () => {
       user: { id: 'us3r1d' },
     });
     config = {
-      custom: { measurementId },
+      settings: { measurementId },
       init: true,
       mapping: {
         entity: {
@@ -295,7 +295,7 @@ describe('Destination Google GA4', () => {
     const event = getEvent('product add');
 
     const config: DestinationGA4.Config = {
-      custom: { measurementId, include: [] },
+      settings: { measurementId, include: [] },
       init: true,
       mapping: mapping.config,
     };
@@ -310,7 +310,7 @@ describe('Destination Google GA4', () => {
     const event = getEvent('order complete');
 
     const config: DestinationGA4.Config = {
-      custom: { measurementId, include: [] },
+      settings: { measurementId, include: [] },
       init: true,
       mapping: mapping.config,
     };
@@ -322,7 +322,7 @@ describe('Destination Google GA4', () => {
 
   test('snake case disabled', async () => {
     config = {
-      custom: { measurementId, snakeCase: false },
+      settings: { measurementId, snakeCase: false },
       init: true,
     };
     elb('walker destination', destination, config);

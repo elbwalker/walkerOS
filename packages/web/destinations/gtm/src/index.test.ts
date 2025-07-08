@@ -50,7 +50,7 @@ describe('destination google-tag-manager', () => {
   test('init with load script', async () => {
     destination.config = {
       loadScript: true,
-      custom: { containerId },
+      settings: { containerId },
     };
 
     elb('walker destination', destination);
@@ -70,7 +70,7 @@ describe('destination google-tag-manager', () => {
     const customLayer = 'customLayer';
 
     elb('walker destination', destination, {
-      custom: { dataLayer: customLayer },
+      settings: { dataLayer: customLayer },
     });
 
     expect(w[customLayer]).toBeFalsy();

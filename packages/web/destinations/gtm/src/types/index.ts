@@ -7,17 +7,17 @@ declare global {
   }
 }
 
-export interface Destination
-  extends DestinationWeb.Destination<Custom, CustomEvent> {}
+export type Destination = DestinationWeb.Destination<Settings, EventMapping>;
+export type Config = DestinationWeb.Config<Settings, EventMapping>;
 
-export type Config = DestinationWeb.Config<Custom, CustomEvent>;
-
-export interface Custom {
+// Destination-specific settings (internal usage)
+export interface Settings {
   containerId?: string; // GTM-XXXXXXX
   dataLayer?: string; // dataLayer
   domain?: string; // Source domain of the GTM
 }
 
-export type EventConfig = Mapping.EventConfig<CustomEvent>;
+// Single event transformation rule
+export interface EventMapping {}
 
-export interface CustomEvent {}
+export type EventConfig = Mapping.EventConfig<EventMapping>;

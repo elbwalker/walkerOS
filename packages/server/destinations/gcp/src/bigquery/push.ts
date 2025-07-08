@@ -3,7 +3,7 @@ import type { PushFn } from './types';
 import { isObject, isArray } from '@walkerOS/utils';
 
 export const push: PushFn = async function (event, config, mapping, options) {
-  const { client, datasetId, tableId } = config.custom!;
+  const { client, datasetId, tableId } = config.settings!;
 
   let row: WalkerOS.AnyObject | undefined;
 

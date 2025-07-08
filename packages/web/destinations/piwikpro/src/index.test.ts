@@ -10,7 +10,7 @@ describe('Destination PiwikPro', () => {
   let elb: Elb.Fn;
   const w = window;
   let destination: DestinationPiwikPro.Destination,
-    custom: DestinationPiwikPro.Custom;
+    settings: DestinationPiwikPro.Settings;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 
@@ -19,10 +19,10 @@ describe('Destination PiwikPro', () => {
   const url = 'https://your_account_name.piwik.pro/';
 
   beforeEach(() => {
-    custom = { appId, url };
+    settings = { appId, url };
 
     destination = jest.requireActual('.').default;
-    destination.config = { custom };
+    destination.config = { settings };
 
     w._paq = [];
     w._paq.push = mockFn;
@@ -77,7 +77,7 @@ describe('Destination PiwikPro', () => {
   test('event ecommerceOrder', async () => {
     const event = getEvent('order complete');
     elb('walker destination', destination, {
-      custom,
+      settings,
       mapping: mapping.config,
     });
     await elb(event);
@@ -87,7 +87,7 @@ describe('Destination PiwikPro', () => {
   test('event ecommerceAddToCart', async () => {
     const event = getEvent('product add');
     elb('walker destination', destination, {
-      custom,
+      settings,
       mapping: mapping.config,
     });
     await elb(event);
@@ -97,7 +97,7 @@ describe('Destination PiwikPro', () => {
   test('event ecommerceProductDetailView', async () => {
     const event = getEvent('product view');
     elb('walker destination', destination, {
-      custom,
+      settings,
       mapping: mapping.config,
     });
     await elb(event);
@@ -107,7 +107,7 @@ describe('Destination PiwikPro', () => {
   test('event ecommerceCartUpdate', async () => {
     const event = getEvent('cart view');
     elb('walker destination', destination, {
-      custom,
+      settings,
       mapping: mapping.config,
     });
     await elb(event);

@@ -1,23 +1,23 @@
 import type { Handler, Mapping, On, WalkerOS } from '.';
 
-export interface Destination<Custom = unknown, CustomEvent = unknown> {
-  config: Config<Custom, CustomEvent>; // Configuration settings for the destination
+export interface Destination<Settings = unknown, EventMapping = unknown> {
+  config: Config<Settings, EventMapping>; // Configuration settings for the destination
   queue?: WalkerOS.Events; // Non processed events yet and reset with each new run
   dlq?: DLQ; // Failed events
   type?: string; // The type of the destination
-  init?: InitFn<Custom, CustomEvent>;
-  push: PushFn<Custom, CustomEvent>;
-  pushBatch?: PushBatchFn<Custom, CustomEvent>;
+  init?: InitFn<Settings, EventMapping>;
+  push: PushFn<Settings, EventMapping>;
+  pushBatch?: PushBatchFn<Settings, EventMapping>;
 }
 
-export interface Config<Custom = unknown, CustomEvent = unknown> {
+export interface Config<Settings = unknown, EventMapping = unknown> {
   consent?: WalkerOS.Consent; // Required consent states to init and push events
-  custom?: Custom; // Arbitrary but protected configurations for custom enhancements
+  settings?: Settings; // Destination-specific configuration settings
   data?: Mapping.Value | Mapping.Values; // Mapping of event data
   id?: string; // A unique key for the destination
   init?: boolean; // If the destination has been initialized by calling the init method
   loadScript?: boolean; // If an additional script to work should be loaded
-  mapping?: Mapping.Config<CustomEvent>; // A map to handle events individually
+  mapping?: Mapping.Config<EventMapping>; // A map to handle events individually
   on?: On.Config; // On events listener rules
   policy?: Policy; // Rules for processing events
   queue?: boolean; // Disable processing of previously pushed events
@@ -27,9 +27,9 @@ export interface Config<Custom = unknown, CustomEvent = unknown> {
   onLog?: Handler.Log; // Custom log handler
 }
 
-export type PartialConfig<Custom = unknown, CustomEvent = unknown> = Config<
-  Partial<Custom> | Custom,
-  Partial<CustomEvent> | CustomEvent
+export type PartialConfig<Settings = unknown, EventMapping = unknown> = Config<
+  Partial<Settings> | Settings,
+  Partial<EventMapping> | EventMapping
 >;
 
 export interface Policy {
@@ -39,35 +39,35 @@ export interface Policy {
 export type DestinationInit = Partial<Omit<Destination, 'push'>> &
   Pick<Destination, 'push'>;
 
-export type InitFn<Custom, CustomEvent> = (
-  config?: PartialConfig<Custom, CustomEvent>,
+export type InitFn<Settings, EventMapping> = (
+  config?: PartialConfig<Settings, EventMapping>,
   instance?: WalkerOS.Instance,
-) => WalkerOS.PromiseOrValue<void | false | Config<Custom, CustomEvent>>;
+) => WalkerOS.PromiseOrValue<void | false | Config<Settings, EventMapping>>;
 
-export type PushFn<Custom, CustomEvent> = (
+export type PushFn<Settings, EventMapping> = (
   event: WalkerOS.Event,
-  config: Config<Custom, CustomEvent>,
-  mapping?: Mapping.EventConfig<CustomEvent>,
+  config: Config<Settings, EventMapping>,
+  mapping?: Mapping.EventConfig<EventMapping>,
   options?: Options,
 ) => WalkerOS.PromiseOrValue<void>;
 
-export type PushBatchFn<Custom, CustomEvent> = (
-  batch: Batch<CustomEvent>,
-  config: Config<Custom, CustomEvent>,
+export type PushBatchFn<Settings, EventMapping> = (
+  batch: Batch<EventMapping>,
+  config: Config<Settings, EventMapping>,
   options?: Options,
 ) => void;
 
-export type PushEvent<CustomEvent = unknown> = {
+export type PushEvent<EventMapping = unknown> = {
   event: WalkerOS.Event;
-  mapping?: Mapping.EventConfig<CustomEvent>;
+  mapping?: Mapping.EventConfig<EventMapping>;
 };
-export type PushEvents<CustomEvent = unknown> = Array<PushEvent<CustomEvent>>;
+export type PushEvents<EventMapping = unknown> = Array<PushEvent<EventMapping>>;
 
-export interface Batch<CustomEvent> {
+export interface Batch<EventMapping> {
   key: string;
   events: WalkerOS.Events;
   data: Array<Data>;
-  mapping?: Mapping.EventConfig<CustomEvent>;
+  mapping?: Mapping.EventConfig<EventMapping>;
 }
 
 export interface Options {

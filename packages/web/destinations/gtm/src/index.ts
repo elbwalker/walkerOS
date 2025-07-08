@@ -1,4 +1,4 @@
-import type { Custom, Destination } from './types';
+import type { Settings, Destination } from './types';
 import { isObject } from '@walkerOS/utils';
 
 const defaultDataLayer = 'dataLayer';
@@ -14,8 +14,8 @@ export const destinationGTM: Destination = {
 
   init(config = {}) {
     const w = window as unknown as Record<string, unknown[]>;
-    const { custom = {} as Partial<Custom>, fn, loadScript } = config;
-    const { containerId, dataLayer, domain } = custom;
+    const { settings = {} as Partial<Settings>, fn, loadScript } = config;
+    const { containerId, dataLayer, domain } = settings;
     const dataLayerName = dataLayer || defaultDataLayer;
 
     w[dataLayerName] = w[dataLayerName] || [];

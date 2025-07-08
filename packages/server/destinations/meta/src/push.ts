@@ -18,7 +18,7 @@ export const push: PushFn = async function (event, config, mapping, options) {
     test_event_code,
     url = 'https://graph.facebook.com/v22.0/',
     user_data,
-  } = config.custom!;
+  } = config.settings!;
 
   const data = isObject(options?.data) ? options?.data : {};
   const configData = config.data

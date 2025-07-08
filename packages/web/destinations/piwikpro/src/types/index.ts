@@ -7,25 +7,25 @@ declare global {
   }
 }
 
-export interface Destination
-  extends DestinationWeb.Destination<Custom, CustomEvent> {}
+export type Destination = DestinationWeb.Destination<Settings, EventMapping>;
+export type Config = DestinationWeb.Config<Settings, EventMapping>;
 
-export type Config = DestinationWeb.Config<Custom, CustomEvent>;
-
-export interface Custom {
+// Destination-specific settings (internal usage)
+export interface Settings {
   appId: string;
   // dimensions?: Dimensions;
   linkTracking?: boolean;
   url: string;
 }
 
-export interface CustomEvent {
+// Single event transformation rule
+export interface EventMapping {
   // dimensions?: Dimensions;
   goalId?: string;
   goalValue?: string;
 }
 
-export type EventConfig = Mapping.EventConfig<CustomEvent>;
+export type EventConfig = Mapping.EventConfig<EventMapping>;
 
 export interface Dimensions {
   [i: number]: string;

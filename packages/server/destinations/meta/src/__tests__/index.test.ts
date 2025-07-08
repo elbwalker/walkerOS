@@ -34,22 +34,22 @@ describe('Server Destination Meta', () => {
 
   afterEach(() => {});
 
-  async function getConfig(custom = {}) {
-    return (await destination.init({ custom })) as Config;
+  async function getConfig(settings = {}) {
+    return (await destination.init({ settings })) as Config;
   }
 
   test('init', async () => {
     await expect(destination.init({})).rejects.toThrow(
-      'Error: Config custom accessToken missing',
+      'Error: Config settings accessToken missing',
     );
-    await expect(destination.init({ custom: { accessToken } })).rejects.toThrow(
-      'Error: Config custom pixelId missing',
+    await expect(destination.init({ settings: { accessToken } })).rejects.toThrow(
+      'Error: Config settings pixelId missing',
     );
 
     const config = await getConfig({ accessToken, pixelId });
     expect(config).toEqual(
       expect.objectContaining({
-        custom: { accessToken, pixelId },
+        settings: { accessToken, pixelId },
       }),
     );
   });
@@ -58,7 +58,7 @@ describe('Server Destination Meta', () => {
     const { elb } = createServerCollector({});
     const event = getEvent();
     const config: DestinationServer.Config = {
-      custom: { accessToken, pixelId, test_event_code: 'TEST' },
+      settings: { accessToken, pixelId, test_event_code: 'TEST' },
       mapping: mapping.config,
     };
 
@@ -74,7 +74,7 @@ describe('Server Destination Meta', () => {
     const event = getEvent();
     const config: DestinationServer.Config = {
       fn: mockFn,
-      custom: { accessToken, pixelId },
+      settings: { accessToken, pixelId },
     };
 
     elb('walker destination', destination, config);
@@ -99,7 +99,7 @@ describe('Server Destination Meta', () => {
     const { elb } = createServerCollector({});
     const event = getEvent();
     const config: DestinationServer.Config = {
-      custom: { accessToken, pixelId, test_event_code: 'TEST' },
+      settings: { accessToken, pixelId, test_event_code: 'TEST' },
       mapping: mapping.config,
       onError,
     };
@@ -114,7 +114,7 @@ describe('Server Destination Meta', () => {
     const { elb } = createServerCollector({});
     const event = getEvent();
     const config: DestinationServer.Config = {
-      custom: {
+      settings: {
         accessToken,
         pixelId,
         user_data: { fbclid: { value: 'abc' } },
@@ -132,7 +132,7 @@ describe('Server Destination Meta', () => {
     const { elb } = createServerCollector({});
     const event = getEvent();
     const config: DestinationServer.Config = {
-      custom: mapping.InitUserData,
+      settings: mapping.InitUserData,
       data: {
         map: {
           user_data: {
@@ -197,7 +197,7 @@ describe('Server Destination Meta', () => {
     const event = getEvent('order complete');
 
     const config: DestinationServer.Config = {
-      custom: mapping.InitUserData,
+      settings: mapping.InitUserData,
       mapping: mapping.config,
     };
 

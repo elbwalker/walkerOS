@@ -6,22 +6,22 @@ import type {
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Destination
-  extends DestinationServer.Destination<Custom, CustomEvent> {
+  extends DestinationServer.Destination<Settings, EventMapping> {
   init: InitFn;
   push: PushFn;
 }
 
-export type InitFn = WalkerOSDestination.InitFn<Custom, CustomEvent>;
-export type PushFn = WalkerOSDestination.PushFn<Custom, CustomEvent>;
+export type InitFn = WalkerOSDestination.InitFn<Settings, EventMapping>;
+export type PushFn = WalkerOSDestination.PushFn<Settings, EventMapping>;
 
 export type Config = {
-  custom: Custom;
+  settings: Settings;
   onLog: Handler.Log;
-} & DestinationServer.Config<Custom, CustomEvent>;
+} & DestinationServer.Config<Settings, EventMapping>;
 
-export type PushEvents = DestinationServer.PushEvents<CustomEvent>;
+export type PushEvents = DestinationServer.PushEvents<EventMapping>;
 
-export interface Custom {
+export interface Settings {
   client: BigQuery;
   projectId: string;
   datasetId: string;
@@ -30,6 +30,6 @@ export interface Custom {
   bigquery?: BigQueryOptions;
 }
 
-export interface CustomEvent {
+export interface EventMapping {
   // Custom destination event mapping properties
 }

@@ -1,4 +1,4 @@
-import type { Custom, Destination } from './types';
+import type { Settings, Destination } from './types';
 import { isDefined } from '@walkerOS/utils';
 import { sendWeb } from '@walkerOS/web-collector';
 
@@ -14,8 +14,8 @@ export const destinationAPI: Destination = {
   config: {},
 
   push(event, config, mapping, options = {}) {
-    const { custom = {} as Custom, fn } = config;
-    const { url, headers, method, transform, transport = 'fetch' } = custom;
+    const { settings = {} as Settings, fn } = config;
+    const { url, headers, method, transform, transport = 'fetch' } = settings;
 
     if (!url) return;
 

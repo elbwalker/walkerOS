@@ -12,15 +12,15 @@ export type Plausible = (
   options?: { props?: WalkerOS.AnyObject },
 ) => void;
 
-export interface Destination
-  extends DestinationWeb.Destination<Custom, CustomEvent> {}
+export type Destination = DestinationWeb.Destination<Settings, EventMapping>;
+export type Config = DestinationWeb.Config<Settings, EventMapping>;
 
-export type Config = DestinationWeb.Config<Custom, CustomEvent>;
-
-export interface Custom {
+// Destination-specific settings (internal usage)
+export interface Settings {
   domain?: string; // Name of the domain to be tracked
 }
 
-export type EventConfig = Mapping.EventConfig<CustomEvent>;
+// Single event transformation rule
+export interface EventMapping {}
 
-export interface CustomEvent {}
+export type EventConfig = Mapping.EventConfig<EventMapping>;

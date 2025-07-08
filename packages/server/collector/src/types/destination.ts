@@ -3,26 +3,28 @@ import type {
   Mapping as WalkerOSMapping,
 } from '@walkerOS/types';
 
-export interface Destination<Custom = unknown, CustomEvent = unknown>
-  extends WalkerOSDestination.Destination<Custom, CustomEvent> {
-  config: Config<Custom, CustomEvent>;
-  push: WalkerOSDestination.PushFn<Custom, CustomEvent>;
-  init?: WalkerOSDestination.InitFn<Custom, CustomEvent>;
+export interface Destination<Settings = unknown, EventMapping = unknown>
+  extends WalkerOSDestination.Destination<Settings, EventMapping> {
+  config: Config<Settings, EventMapping>;
+  push: WalkerOSDestination.PushFn<Settings, EventMapping>;
+  init?: WalkerOSDestination.InitFn<Settings, EventMapping>;
 }
 
 export type DestinationInit = Partial<Omit<Destination, 'push'>> &
   Pick<Destination, 'push'>;
 
-export interface Config<Custom = unknown, CustomEvent = unknown>
-  extends WalkerOSDestination.Config<Custom, CustomEvent> {}
+export type Config<
+  Settings = unknown,
+  EventMapping = unknown,
+> = WalkerOSDestination.Config<Settings, EventMapping>;
 
-export interface Mapping<CustomEvent>
-  extends WalkerOSMapping.Config<CustomEvent> {}
+export type Mapping<EventMapping> = WalkerOSMapping.Config<EventMapping>;
 
-export interface EventMapping<CustomEvent = unknown>
-  extends WalkerOSMapping.EventConfig<CustomEvent> {}
+export type EventMapping<EventMappingType = unknown> =
+  WalkerOSMapping.EventConfig<EventMappingType>;
 
-export type PushEvent<CustomEvent = unknown> =
-  WalkerOSDestination.PushEvent<CustomEvent>;
-export type PushEvents<CustomEvent = unknown> =
-  WalkerOSDestination.PushEvents<CustomEvent>;
+export type PushEvent<EventMapping = unknown> =
+  WalkerOSDestination.PushEvent<EventMapping>;
+
+export type PushEvents<EventMapping = unknown> =
+  WalkerOSDestination.PushEvents<EventMapping>;

@@ -1,4 +1,4 @@
-import type { Custom, CustomEvent, Destination } from './types';
+import type { Settings, EventMapping, Destination } from './types';
 import { getMappingValue, isArray } from '@walkerOS/utils';
 
 // Types
@@ -14,8 +14,8 @@ export const destinationPiwikPro: Destination = {
 
   init(config = {}) {
     const w = window;
-    const { custom = {} as Partial<Custom>, fn, loadScript } = config;
-    const { appId, url } = custom;
+    const { settings = {} as Partial<Settings>, fn, loadScript } = config;
+    const { appId, url } = settings;
 
     // Required parameters
     if (!appId || !url) return false;
@@ -36,7 +36,7 @@ export const destinationPiwikPro: Destination = {
     }
 
     // Enable download and outlink tracking if not disabled
-    if (custom.linkTracking !== false) func(['enableLinkTracking']);
+    if (settings.linkTracking !== false) func(['enableLinkTracking']);
   },
 
   async push(event, config, mapping = {}, options = {}) {
@@ -50,20 +50,20 @@ export const destinationPiwikPro: Destination = {
       return;
     }
 
-    const customMapping: CustomEvent = mapping.custom || {};
+    const eventMapping: EventMapping = mapping.custom || {};
 
     const parameters = isArray(data) ? data : [data];
 
     func([event.event, ...parameters]);
 
-    if (customMapping.goalId) {
-      const goalValue = customMapping.goalValue
-        ? getMappingValue(event, customMapping.goalValue)
+    if (eventMapping.goalId) {
+      const goalValue = eventMapping.goalValue
+        ? getMappingValue(event, eventMapping.goalValue)
         : undefined;
 
       func([
         'trackGoal',
-        customMapping.goalId,
+        eventMapping.goalId,
         goalValue,
         // @TODO dimensions
       ]);

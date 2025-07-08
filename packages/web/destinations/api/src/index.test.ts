@@ -37,7 +37,7 @@ describe('Destination API', () => {
     await elb(event); // No url
     expect(mockSendWeb).not.toHaveBeenCalled();
 
-    destination.config.custom = { url };
+    destination.config.settings = { url };
     await elb(event);
     expect(mockSendWeb).toHaveBeenCalledTimes(1);
 
@@ -53,13 +53,13 @@ describe('Destination API', () => {
 
   test('fn', () => {
     const fn = jest.fn();
-    destination.push(event, { custom: { url }, fn });
+    destination.push(event, { settings: { url }, fn });
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
   test('transform', async () => {
     elb('walker destination', destination, {
-      custom: { url, transform: () => 'transformed' },
+      settings: { url, transform: () => 'transformed' },
     });
     await elb(event);
     expect(mockSendWeb).toHaveBeenCalledWith(
@@ -71,7 +71,7 @@ describe('Destination API', () => {
 
   test('headers', async () => {
     elb('walker destination', destination, {
-      custom: { url, headers: { foo: 'bar' } },
+      settings: { url, headers: { foo: 'bar' } },
     });
     await elb(event);
     expect(mockSendWeb).toHaveBeenCalledWith(
@@ -85,7 +85,7 @@ describe('Destination API', () => {
 
   test('method', async () => {
     elb('walker destination', destination, {
-      custom: { url, method: 'POST' },
+      settings: { url, method: 'POST' },
     });
     await elb(event);
     expect(mockSendWeb).toHaveBeenCalledWith(
@@ -99,7 +99,7 @@ describe('Destination API', () => {
 
   test('event entity action', async () => {
     elb('walker destination', destination, {
-      custom: { url },
+      settings: { url },
       mapping: mapping.config,
     });
     await elb(event);

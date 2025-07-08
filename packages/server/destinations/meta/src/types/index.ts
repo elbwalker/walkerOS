@@ -6,24 +6,24 @@ import type {
 } from '@walkerOS/types';
 
 export interface Destination
-  extends DestinationServer.Destination<Custom, CustomEvent> {
+  extends DestinationServer.Destination<Settings, EventMapping> {
   init: InitFn;
   push: PushFn;
 }
 
-export type InitFn = WalkerOSDestination.InitFn<Custom, CustomEvent>;
-export type PushFn = WalkerOSDestination.PushFn<Custom, CustomEvent>;
+export type InitFn = WalkerOSDestination.InitFn<Settings, EventMapping>;
+export type PushFn = WalkerOSDestination.PushFn<Settings, EventMapping>;
 
 export type Config = {
-  custom: Custom;
+  settings: Settings;
   onLog: Handler.Log;
-} & DestinationServer.Config<Custom, CustomEvent>;
+} & DestinationServer.Config<Settings, EventMapping>;
 
-export type EventMapping = DestinationServer.EventMapping<CustomEvent>;
+export type EventMappingConfig = DestinationServer.EventMapping<EventMapping>;
 
-export type PushEvents = DestinationServer.PushEvents<CustomEvent>;
+export type PushEvents = DestinationServer.PushEvents<EventMapping>;
 
-export interface Custom {
+export interface Settings {
   accessToken: string;
   pixelId: string;
   action_source?: ActionSource;
@@ -33,9 +33,9 @@ export interface Custom {
   user_data?: Mapping.Map;
 }
 
-export interface CustomEvent {}
+export interface EventMapping {}
 
-export type EventConfig = Mapping.EventConfig<CustomEvent>;
+export type EventConfig = Mapping.EventConfig<EventMapping>;
 
 // https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/main-body
 export interface BodyParameters {

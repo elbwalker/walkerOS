@@ -14,9 +14,9 @@ export const destinationPlausible: Destination = {
 
   init(config = {}) {
     const w = window;
-    const custom = config.custom || {};
+    const settings = config.settings || {};
 
-    if (config.loadScript) addScript(custom.domain);
+    if (config.loadScript) addScript(settings.domain);
 
     w.plausible =
       w.plausible ||

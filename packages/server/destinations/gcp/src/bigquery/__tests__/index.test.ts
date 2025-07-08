@@ -1,4 +1,4 @@
-import type { Config, Destination, Custom } from '../types';
+import type { Config, Destination, Settings } from '../types';
 import { createEvent } from '@walkerOS/utils';
 
 describe('Server Destination BigQuery', () => {
@@ -18,11 +18,11 @@ describe('Server Destination BigQuery', () => {
 
   function getMockFn(config: Partial<Config>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (config.custom?.client || ({} as any)).mockFn;
+    return (config.settings?.client || ({} as any)).mockFn;
   }
 
-  async function getConfig(custom: Partial<Custom>) {
-    return (await destination.init({ custom })) as Config;
+  async function getConfig(settings: Partial<Settings>) {
+    return (await destination.init({ settings })) as Config;
   }
 
   beforeEach(() => {
@@ -38,12 +38,12 @@ describe('Server Destination BigQuery', () => {
     if (!destination.init) return;
 
     await expect(
-      destination.init({ custom: { datasetId, tableId } }),
-    ).rejects.toThrow('Config custom projectId missing');
+      destination.init({ settings: { datasetId, tableId } }),
+    ).rejects.toThrow('Config settings projectId missing');
 
     const config = await getConfig({ projectId });
     expect(config).toEqual({
-      custom: {
+      settings: {
         client: expect.any(Object),
         projectId,
         location: 'EU',

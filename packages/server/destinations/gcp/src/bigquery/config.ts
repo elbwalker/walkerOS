@@ -1,14 +1,14 @@
-import type { Config, Custom, InitFn } from './types';
+import type { Config, Settings, InitFn } from './types';
 import type { BigQueryOptions } from '@google-cloud/bigquery';
 import { onLog, throwError } from '@walkerOS/utils';
 import { BigQuery } from '@google-cloud/bigquery';
 
 export function getConfig(partialConfig: Parameters<InitFn>[0] = {}): Config {
-  const custom = partialConfig.custom || ({} as Custom);
-  const { projectId, bigquery } = custom;
-  let { client, location, datasetId, tableId } = custom;
+  const settings = partialConfig.settings || ({} as Settings);
+  const { projectId, bigquery } = settings;
+  let { client, location, datasetId, tableId } = settings;
 
-  if (!projectId) throwError('Config custom projectId missing');
+  if (!projectId) throwError('Config settings projectId missing');
 
   location = location || 'EU';
   datasetId = datasetId || 'walkeros';
@@ -19,8 +19,8 @@ export function getConfig(partialConfig: Parameters<InitFn>[0] = {}): Config {
 
   client = client || new BigQuery(options);
 
-  const customConfig: Custom = {
-    ...custom,
+  const settingsConfig: Settings = {
+    ...settings,
     client,
     projectId,
     location,
@@ -31,7 +31,7 @@ export function getConfig(partialConfig: Parameters<InitFn>[0] = {}): Config {
   // Log Handler
   const onLog = (message: string) => log(message, partialConfig.verbose);
 
-  return { ...partialConfig, custom: customConfig, onLog };
+  return { ...partialConfig, settings: settingsConfig, onLog };
 }
 
 export function log(message: string, verbose?: boolean) {
