@@ -42,10 +42,6 @@ const EventFlow: FC<EventFlowProps> = ({
   const [isScrollEnd, setIsScrollEnd] = useState(false);
   const [isVertical, setIsVertical] = useState(false);
 
-  const handleResize = () => {
-    setIsVertical(window.innerWidth < 1024);
-  };
-
   const updateEventCode = useCallback(
     debounce(
       (code: string) => {
@@ -57,35 +53,15 @@ const EventFlow: FC<EventFlowProps> = ({
     [],
   );
 
-  const handleScroll = () => {
-    if (scrollContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight, scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-      if (isVertical) {
-        setIsScrollStart(scrollTop === 0);
-        setIsScrollEnd(scrollTop + clientHeight >= scrollHeight - 1);
-      } else {
-        setIsScrollStart(scrollLeft === 0);
-        setIsScrollEnd(scrollLeft + clientWidth >= scrollWidth - 1);
-      }
-    }
-  };
-
   const scroll = (direction: 'up' | 'down' | 'left' | 'right') => {
     if (scrollContainerRef.current) {
       const { clientHeight, clientWidth } = scrollContainerRef.current;
-      if (isVertical) {
-        const scrollAmount = clientHeight * 0.8;
-        scrollContainerRef.current.scrollBy({
-          top: direction === 'up' ? -scrollAmount : scrollAmount,
-          behavior: 'smooth',
-        });
-      } else {
-        const scrollAmount = clientWidth * 0.8;
-        scrollContainerRef.current.scrollBy({
-          left: direction === 'left' ? -scrollAmount : scrollAmount,
-          behavior: 'smooth',
-        });
-      }
+      const scrollAmount = isVertical ? clientHeight * 0.8 : clientWidth * 0.8;
+      scrollContainerRef.current.scrollBy({
+        top: isVertical && direction === 'up' ? -scrollAmount : isVertical && direction === 'down' ? scrollAmount : 0,
+        left: !isVertical && direction === 'left' ? -scrollAmount : !isVertical && direction === 'right' ? scrollAmount : 0,
+        behavior: 'smooth',
+      });
     }
   };
 
@@ -135,16 +111,23 @@ const EventFlow: FC<EventFlowProps> = ({
   }, [previewId]);
 
   useEffect(() => {
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initial check
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
-
-  useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
+
+    const handleScroll = () => {
+      if (scrollContainer) {
+        const { scrollTop, scrollHeight, clientHeight, scrollLeft, scrollWidth, clientWidth } = scrollContainer;
+        const vertical = window.innerWidth < 1024;
+        setIsVertical(vertical);
+        if (vertical) {
+          setIsScrollStart(scrollTop === 0);
+          setIsScrollEnd(scrollTop + clientHeight >= scrollHeight - 1);
+        } else {
+          setIsScrollStart(scrollLeft === 0);
+          setIsScrollEnd(scrollLeft + clientWidth >= scrollWidth - 1);
+        }
+      }
+    };
+
     if (scrollContainer) {
       handleScroll(); // Initial check
       scrollContainer.addEventListener('scroll', handleScroll);
@@ -155,7 +138,7 @@ const EventFlow: FC<EventFlowProps> = ({
         window.removeEventListener('resize', handleScroll);
       };
     }
-  }, [isVertical]);
+  }, []);
 
   const boxClassNames = `flex-1 resize flex flex-col max-h-96 lg:max-h-full`;
 
