@@ -11,6 +11,18 @@
   --highlight-separator: rgba(255, 255, 255, 0.05);
 }
 
+.token.attr-name {
+  color: white !important;
+}
+
+.token.attr-name[data-elb],
+.token.attr-name[data-elbaction],
+.token.attr-name[data-elbglobals],
+.token.attr-name[data-elbcontext],
+.token.attr-name[data-elbproperty] {
+  color: var(--highlight-property) !important;
+}
+
 .elb-highlight {
   .highlight-globals [data-elbglobals] {
     box-shadow: 0 0 0 2px var(--highlight-globals);

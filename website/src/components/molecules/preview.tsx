@@ -102,25 +102,25 @@ export const Preview: FC<PreviewProps> = ({
       <div className="elb-highlight-buttons">
         <button
           onClick={() => toggleHighlight('context')}
-          className={`btn-context ${highlightContext}`}
+          className={`btn-context ${highlightContext} bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded`}
         >
           Context
         </button>
         <button
           onClick={() => toggleHighlight('entity')}
-          className={`btn-entity ${highlightEntity}`}
+          className={`btn-entity ${highlightEntity} bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded`}
         >
           Entity
         </button>
         <button
           onClick={() => toggleHighlight('property')}
-          className={`btn-property ${highlightProperty}`}
+          className={`btn-property ${highlightProperty} bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded`}
         >
           Property
         </button>
         <button
           onClick={() => toggleHighlight('action')}
-          className={`btn-action ${highlightAction}`}
+          className={`btn-action ${highlightAction} bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded`}
         >
           Action
         </button>

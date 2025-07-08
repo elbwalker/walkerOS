@@ -7,7 +7,7 @@ const exampleCode = `<div
   data-elb="product"
   data-elbaction="load:view"
   data-elbcontext="stage:inspire"
-  class="event-flow dui-card w-80 bg-base-100 shadow-xl mx-auto">
+  class="event-flow dui-card w-72 bg-base-100 shadow-xl mx-auto">
   <figure class="relative">
     <img src="/img/examples/everyday_ruck_snack.png" alt="Product" />
     <div class="absolute top-2 right-2">

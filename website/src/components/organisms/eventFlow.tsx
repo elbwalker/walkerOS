@@ -2,7 +2,6 @@ import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import type { Mapping, WalkerOS } from '@elbwalker/types';
 import CodeBox, { formatValue } from '@site/src/components/molecules/codeBox';
 import Preview from '@site/src/components/molecules/preview';
-import FullScreenMode from '@site/src/components/organisms/fullScreenMode';
 import { parseInput } from '@site/src/components/molecules/codeBox';
 import '@site/src/css/highlighting.scss';
 import {
@@ -23,14 +22,14 @@ export interface EventFlowProps {
   width?: string;
 }
 
-export const EventFlow: FC<EventFlowProps> = ({
+const EventFlow: FC<EventFlowProps> = ({
   code,
   mapping,
   height = '400px',
   previewId = 'preview',
   eventFn,
   resultFn,
-  width = 'w-1/3',
+  width = 'w-full lg:w-1/4',
 }) => {
   const [htmlCode, setHtmlCode] = useState(code.trim());
   const [eventCode, setEventCode] = useState<string>(undefined);
@@ -38,6 +37,10 @@ export const EventFlow: FC<EventFlowProps> = ({
     isString(mapping) ? mapping : formatValue(mapping),
   );
   const [resultCode, setResultCode] = useState<string>('');
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isScrollStart, setIsScrollStart] = useState(true);
+  const [isScrollEnd, setIsScrollEnd] = useState(false);
+  const [isVertical, setIsVertical] = useState(false);
 
   const updateEventCode = useCallback(
     debounce(
@@ -49,6 +52,18 @@ export const EventFlow: FC<EventFlowProps> = ({
     ),
     [],
   );
+
+  const scroll = (direction: 'up' | 'down' | 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const { clientHeight, clientWidth } = scrollContainerRef.current;
+      const scrollAmount = isVertical ? clientHeight * 0.8 : clientWidth * 0.8;
+      scrollContainerRef.current.scrollBy({
+        top: isVertical && direction === 'up' ? -scrollAmount : isVertical && direction === 'down' ? scrollAmount : 0,
+        left: !isVertical && direction === 'left' ? -scrollAmount : !isVertical && direction === 'right' ? scrollAmount : 0,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   const createResult = useRef(
     debounce(async (eventStr: string, mappingStr: string) => {
@@ -95,65 +110,120 @@ export const EventFlow: FC<EventFlowProps> = ({
     };
   }, [previewId]);
 
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+
+    const handleScroll = () => {
+      if (scrollContainer) {
+        const { scrollTop, scrollHeight, clientHeight, scrollLeft, scrollWidth, clientWidth } = scrollContainer;
+        const vertical = window.innerWidth < 1024;
+        setIsVertical(vertical);
+        if (vertical) {
+          setIsScrollStart(scrollTop === 0);
+          setIsScrollEnd(scrollTop + clientHeight >= scrollHeight - 1);
+        } else {
+          setIsScrollStart(scrollLeft === 0);
+          setIsScrollEnd(scrollLeft + clientWidth >= scrollWidth - 1);
+        }
+      }
+    };
+
+    if (scrollContainer) {
+      handleScroll(); // Initial check
+      scrollContainer.addEventListener('scroll', handleScroll);
+      window.addEventListener('resize', handleScroll);
+
+      return () => {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+        window.removeEventListener('resize', handleScroll);
+      };
+    }
+  }, []);
+
   const boxClassNames = `flex-1 resize flex flex-col max-h-96 lg:max-h-full`;
 
   return (
-    <FullScreenMode className="m-4">
-      <div
-        className="flex flex-row gap-4 overflow-x-auto scrollbar-hide h-full"
-        style={{ height }}
-      >
-        <div className={`${width} flex-shrink-0 flex flex-col`}>
-          <CodeBox
-            label="HTML"
-            value={htmlCode}
-            onChange={setHtmlCode}
-            showReset={true}
-            onReset={() => {
-              setHtmlCode(code.trim());
-            }}
-            className={boxClassNames}
-          />
-        </div>
+      <div className="relative h-full m-4">
+        {!isScrollStart && (
+          <button
+            onClick={() => scroll(isVertical ? 'up' : 'left')}
+            className={`absolute z-10 bg-gray-700 bg-opacity-50 hover:bg-opacity-75 text-white p-2 rounded-full ${
+              isVertical
+                ? 'top-0 left-1/2 -translate-x-1/2'
+                : 'left-0 top-1/2 -translate-y-1/2'
+            }`}
+          >
+            {isVertical ? '↑' : '←'}
+          </button>
+        )}
+        <div
+          ref={scrollContainerRef}
+          className="flex lg:flex-row flex-col gap-4 overflow-auto scrollbar-hide h-full"
+          style={{ height }}
+        >
+          <div className={`${width} flex-shrink-0 flex flex-col`}>
+            <CodeBox
+              label="HTML"
+              value={htmlCode}
+              onChange={setHtmlCode}
+              showReset={true}
+              onReset={() => {
+                setHtmlCode(code.trim());
+              }}
+              className={boxClassNames}
+            />
+          </div>
 
-        <div className={`${width} flex-shrink-0 flex flex-col`}>
-          <Preview
-            code={htmlCode}
-            previewId={previewId}
-            boxClassNames={boxClassNames}
-          />
-        </div>
+          <div className={`${width} flex-shrink-0 flex flex-col`}>
+            <Preview
+              code={htmlCode}
+              previewId={previewId}
+              boxClassNames={boxClassNames}
+            />
+          </div>
 
-        <div className={`${width} flex-shrink-0 flex flex-col`}>
-          <CodeBox
-            label="Event"
-            value={eventCode || 'No event yet.'}
-            onChange={setEventCode}
-            isConsole={true}
-            className={boxClassNames}
-          />
-        </div>
+          <div className={`${width} flex-shrink-0 flex flex-col`}>
+            <CodeBox
+              label="Event"
+              value={eventCode || 'No event yet.'}
+              onChange={setEventCode}
+              isConsole={true}
+              className={boxClassNames}
+            />
+          </div>
 
-        <div className={`${width} flex-shrink-0 flex flex-col`}>
-          <CodeBox
-            label="Mapping"
-            value={formatValue(mappingCode)}
-            onChange={setMappingCode}
-            className={boxClassNames}
-          />
-        </div>
+          <div className={`${width} flex-shrink-0 flex flex-col`}>
+            <CodeBox
+              label="Mapping"
+              value={formatValue(mappingCode)}
+              onChange={setMappingCode}
+              className={boxClassNames}
+            />
+          </div>
 
-        <div className={`${width} flex-shrink-0 flex flex-col`}>
-          <CodeBox
-            label="Result"
-            value={resultCode || 'No result yet.'}
-            disabled={true}
-            isConsole={true}
-            className={boxClassNames}
-          />
+          <div className={`${width} flex-shrink-0 flex flex-col`}>
+            <CodeBox
+              label="Result"
+              value={resultCode || 'No result yet.'}
+              disabled={true}
+              isConsole={true}
+              className={boxClassNames}
+            />
+          </div>
         </div>
+        {!isScrollEnd && (
+          <button
+            onClick={() => scroll(isVertical ? 'down' : 'right')}
+            className={`absolute z-10 bg-gray-700 bg-opacity-50 hover:bg-opacity-75 text-white p-2 rounded-full ${
+              isVertical
+                ? 'bottom-0 left-1/2 -translate-x-1/2'
+                : 'right-0 top-1/2 -translate-y-1/2'
+            }`}
+          >
+            {isVertical ? '↓' : '→'}
+          </button>
+        )}
       </div>
-    </FullScreenMode>
   );
 };
 
