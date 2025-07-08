@@ -55,7 +55,7 @@ export const destinationGA4: Destination = {
 
   push(event, config, mapping = {}, options = {}) {
     const { settings, fn } = config;
-    const eventMapping = mapping.custom || {};
+    const eventMapping = mapping.settings || {};
     if (!settings) return;
 
     if (!settings.measurementId) return;

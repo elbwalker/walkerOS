@@ -2,7 +2,7 @@ import type { Mapping, WalkerOS } from '@walkerOS/types';
 import type { DestinationMetaPixel } from '..';
 import { isObject } from '@walkerOS/utils';
 
-export const Purchase: DestinationMetaPixel.EventConfig = {
+export const Purchase: DestinationMetaPixel.Rule = {
   name: 'Purchase',
   data: {
     map: {
@@ -32,7 +32,7 @@ export const Purchase: DestinationMetaPixel.EventConfig = {
   },
 };
 
-export const AddToCart: DestinationMetaPixel.EventConfig = {
+export const AddToCart: DestinationMetaPixel.Rule = {
   name: 'AddToCart',
   data: {
     map: {
@@ -53,7 +53,7 @@ export const AddToCart: DestinationMetaPixel.EventConfig = {
   },
 };
 
-export const InitiateCheckout: DestinationMetaPixel.EventConfig = {
+export const InitiateCheckout: DestinationMetaPixel.Rule = {
   name: 'InitiateCheckout',
   data: {
     map: {
@@ -82,7 +82,7 @@ export const InitiateCheckout: DestinationMetaPixel.EventConfig = {
   },
 };
 
-export const ViewContent: DestinationMetaPixel.EventConfig = {
+export const ViewContent: DestinationMetaPixel.Rule = {
   name: 'ViewContent',
   data: {
     map: {
@@ -107,4 +107,4 @@ export const config = {
   order: { complete: Purchase },
   product: { view: ViewContent, add: AddToCart },
   cart: { view: InitiateCheckout },
-} satisfies Mapping.Config;
+} satisfies Mapping.Rules;

@@ -1,4 +1,4 @@
-import type { Mapping } from '@walkerOS/types';
+import type { Mapping as WalkerOSMapping } from '@walkerOS/types';
 import type { DestinationWeb } from '@walkerOS/web-collector';
 
 declare global {
@@ -8,8 +8,8 @@ declare global {
   }
 }
 
-export type Destination = DestinationWeb.Destination<Settings, EventMapping>;
-export type Config = DestinationWeb.Config<Settings, EventMapping>;
+export type Destination = DestinationWeb.Destination<Settings, Mapping>;
+export type Config = DestinationWeb.Config<Settings, Mapping>;
 
 // Destination-specific settings (internal usage)
 export interface Settings {
@@ -17,12 +17,12 @@ export interface Settings {
 }
 
 // Single event transformation rule
-export interface EventMapping {
+export interface Mapping {
   track?: StandardEventNames; // Name of a standard event to track
   trackCustom?: string; // Name of a custom event to track
 }
 
-export type EventConfig = Mapping.EventConfig<EventMapping>;
+export type Rule = WalkerOSMapping.Rule<Mapping>;
 
 export type StandardEventNames =
   | 'PageView'

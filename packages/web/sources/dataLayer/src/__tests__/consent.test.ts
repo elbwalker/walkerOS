@@ -80,7 +80,7 @@ describe('consent', () => {
       mapping: {
         consent_status: {
           name: 'walker consent',
-          custom: {
+          settings: {
             command: {
               condition: (event) => isObject(event) && event.type == 'explicit', // Only process explicit consent
               map: {

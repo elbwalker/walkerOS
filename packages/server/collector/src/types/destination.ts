@@ -3,11 +3,11 @@ import type {
   Mapping as WalkerOSMapping,
 } from '@walkerOS/types';
 
-export interface Destination<Settings = unknown, EventMapping = unknown>
-  extends WalkerOSDestination.Destination<Settings, EventMapping> {
-  config: Config<Settings, EventMapping>;
-  push: WalkerOSDestination.PushFn<Settings, EventMapping>;
-  init?: WalkerOSDestination.InitFn<Settings, EventMapping>;
+export interface Destination<Settings = unknown, Mapping = unknown>
+  extends WalkerOSDestination.Destination<Settings, Mapping> {
+  config: Config<Settings, Mapping>;
+  push: WalkerOSDestination.PushFn<Settings, Mapping>;
+  init?: WalkerOSDestination.InitFn<Settings, Mapping>;
 }
 
 export type DestinationInit = Partial<Omit<Destination, 'push'>> &
@@ -15,16 +15,15 @@ export type DestinationInit = Partial<Omit<Destination, 'push'>> &
 
 export type Config<
   Settings = unknown,
-  EventMapping = unknown,
-> = WalkerOSDestination.Config<Settings, EventMapping>;
+  Mapping = unknown,
+> = WalkerOSDestination.Config<Settings, Mapping>;
 
-export type Mapping<EventMapping> = WalkerOSMapping.Config<EventMapping>;
+export type MappingRules<Mapping> = WalkerOSMapping.Rules<Mapping>;
 
-export type EventMapping<EventMappingType = unknown> =
-  WalkerOSMapping.EventConfig<EventMappingType>;
+export type MappingRule<T = unknown> = WalkerOSMapping.Rule<T>;
 
-export type PushEvent<EventMapping = unknown> =
-  WalkerOSDestination.PushEvent<EventMapping>;
+export type PushEvent<Mapping = unknown> =
+  WalkerOSDestination.PushEvent<Mapping>;
 
-export type PushEvents<EventMapping = unknown> =
-  WalkerOSDestination.PushEvents<EventMapping>;
+export type PushEvents<Mapping = unknown> =
+  WalkerOSDestination.PushEvents<Mapping>;

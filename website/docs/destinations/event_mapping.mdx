@@ -40,18 +40,18 @@ ignoring them. It's also checking for consent and validate values.
 ## Config
 
 Besides the destinations general configuration, a mapping config is set to
-process events individually. The `EventConfig` is defined as
-`{ [entity]: { [action]: EventConfig }}`.
+process events individually. The `Mapping.Rule` is defined as
+`{ [entity]: { [action]: Mapping.Rule }}`.
 
 A generic `"*"` can be used to match all entities and/or actions that are not
 explicitly matched.
 
 ```ts
 {
-  // Config
+  // Rules
   [entity]: {
     [action]: {
-      // EventConfig
+      // Rule
       name: "event name",
       data: {
         // ValueConfig
@@ -69,7 +69,7 @@ explicitly matched.
   mapping={`{
     order: { // Entity
       complete: { // Action
-        // EventConfig
+        // Rule
         name: "purchase",
         data: {
           // ValueConfig
@@ -117,10 +117,10 @@ explicitly matched.
 Change the `event` name to `order visible` and see how the batched mapping is
 applied after 1 second.
 
-## EventConfig
+## Mapping Rule
 
 The `Destination.Event` mapping for each event supports standardized default
-options. The `custom` option can be used to set up custom properties for the
+options. The `settings` option can be used to set up custom properties for the
 event and destination's individual settings.
 
 | Property      | Value    | Description                                                              |
@@ -130,7 +130,7 @@ event and destination's individual settings.
 | **ignore**    | boolean  | If set to `true` the event won't get pushed to the destination.          |
 | **condition** | function | A function to check if the mapping should be used.                       |
 | **consent**   | object   | Required states to process the event.                                    |
-| **custom**    | object   | Individual settings for a custom destination.                            |
+| **settings**  | object   | Individual settings for a custom destination.                            |
 | **batch**     | number   | Time in ms to bundle the events before calling `pushBatch` if available. |
 
 To disable processing of other events, add `{'*': {'*': { ignore: true }}}` to
@@ -240,7 +240,18 @@ the required data structure for the destination.
 
 It can create any structure of data. With support for recursive data structures.
 
-### key
+A `ValueConfig` is like a recipe to produce a single value in the final payload.
+This recipe can be broken down into three main parts:
+
+- **Sources**: Where to get the raw value from.
+- **Transformers**: How to shape or structure the value.
+- **Guards**: Rules to decide if the value should be included.
+
+### Sources
+
+Where to get the raw value from.
+
+#### key
 
 A key accesses a property from the event context.
 
@@ -255,7 +266,7 @@ A key accesses a property from the event context.
   fn={logFn}
 />
 
-### string
+#### string
 
 A simple string is short for `{key: 'value'}`. And accesses a property from the
 event context.
@@ -269,7 +280,7 @@ event context.
   fn={logFn}
 />
 
-### value
+#### value
 
 Used for creating a static value. Can also be used as a fallback if no other
 mapping resolves a value.
@@ -285,7 +296,30 @@ mapping resolves a value.
   fn={logFn}
 />
 
-### map
+#### fn
+
+A function that returns the value. It receives the current `event` context, the
+`mapping` configuration and the `options` about the current instance with
+additional properties as parameters.
+
+<LiveCode
+  showMiddle={false}
+  labelConfig="Data config"
+  input={{ data: event.data }}
+  config={`{
+    fn: (event) => {
+      return "id is " + event.data.id;
+    }
+  }`}
+  output={`"id is 0rd3r1d"`}
+  fn={logFn}
+/>
+
+### Transformers
+
+How to shape or structure the value.
+
+#### map
 
 Used to create an object. The keys are the property names and the values are
 again a&nbsp;<Link to="#valueconfig">ValueConfig</Link> resolving to a value.
@@ -307,7 +341,7 @@ again a&nbsp;<Link to="#valueconfig">ValueConfig</Link> resolving to a value.
   fn={logFn}
 />
 
-### set
+#### set
 
 Used to create an array of fixed values. Each item is a `ValueConfig` resolving
 to a `WalkerOS.Property`.
@@ -335,7 +369,7 @@ to a `WalkerOS.Property`.
   fn={logFn}
 />
 
-### loop
+#### loop
 
 Loops over the first parameter and maps the second to the current value. It is
 used for creating an array of dynamic length. Use `this` to loop over the
@@ -360,7 +394,11 @@ current event.
   fn={logFn}
 />
 
-### condition
+### Guards
+
+Rules to decide if the value should be included.
+
+#### condition
 
 Is a function to check if the mapping should be used. It returns a boolean, if
 it's `true` the mapping will be used.
@@ -379,7 +417,7 @@ it's `true` the mapping will be used.
   fn={logFn}
 />
 
-### consent
+#### consent
 
 Some values may require an explicit consent state. It can be used to redact
 values and protect a users privacy by hiding information.
@@ -401,26 +439,7 @@ values and protect a users privacy by hiding information.
 
 This can be used to e.g. redact PII like clickIds from a `session start` event.
 
-### fn
-
-A function that returns the value. It receives the current `event` context, the
-`mapping` configuration and the `options` about the current instance with
-additional properties as parameters.
-
-<LiveCode
-  showMiddle={false}
-  labelConfig="Data config"
-  input={{ data: event.data }}
-  config={`{
-    fn: (event) => {
-      return "id is " + event.data.id;
-    }
-  }`}
-  output={`"id is 0rd3r1d"`}
-  fn={logFn}
-/>
-
-### validate
+#### validate
 
 A final check to validate the value. After `key`, `loop`, `map` or `set`
 resolved the value, it will be validated with the `validate` function.

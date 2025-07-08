@@ -1,4 +1,4 @@
-import type { Settings, EventMapping, Destination } from './types';
+import type { Settings, Mapping, Destination } from './types';
 import { getMappingValue, isArray } from '@walkerOS/utils';
 
 // Types
@@ -45,12 +45,12 @@ export const destinationPiwikPro: Destination = {
     const func = fn || window._paq!.push;
 
     // Send pageviews if not disabled
-    if (event.event === 'page view' && !mapping.custom) {
+    if (event.event === 'page view' && !mapping.settings) {
       func(['trackPageView', await getMappingValue(event, 'data.title')]);
       return;
     }
 
-    const eventMapping: EventMapping = mapping.custom || {};
+    const eventMapping: Mapping = mapping.settings || {};
 
     const parameters = isArray(data) ? data : [data];
 

@@ -15,7 +15,7 @@ const productMap = {
   },
 };
 
-export const ecommerceOrder: DestinationPiwikPro.EventConfig = {
+export const ecommerceOrder: DestinationPiwikPro.Rule = {
   name: 'ecommerceOrder',
   data: {
     set: [
@@ -46,7 +46,7 @@ export const ecommerceOrder: DestinationPiwikPro.EventConfig = {
   },
 };
 
-export const ecommerceAddToCart: DestinationPiwikPro.EventConfig = {
+export const ecommerceAddToCart: DestinationPiwikPro.Rule = {
   name: 'ecommerceAddToCart',
   data: {
     set: [
@@ -66,7 +66,7 @@ export const ecommerceAddToCart: DestinationPiwikPro.EventConfig = {
   },
 };
 
-export const ecommerceProductDetailView: DestinationPiwikPro.EventConfig = {
+export const ecommerceProductDetailView: DestinationPiwikPro.Rule = {
   name: 'ecommerceProductDetailView',
   data: {
     set: [
@@ -86,7 +86,7 @@ export const ecommerceProductDetailView: DestinationPiwikPro.EventConfig = {
   },
 };
 
-export const ecommerceCartUpdate: DestinationPiwikPro.EventConfig = {
+export const ecommerceCartUpdate: DestinationPiwikPro.Rule = {
   name: 'ecommerceCartUpdate',
   data: {
     set: [
@@ -114,4 +114,4 @@ export const config = {
   order: { complete: ecommerceOrder },
   product: { add: ecommerceAddToCart, view: ecommerceProductDetailView },
   cart: { view: ecommerceCartUpdate },
-} satisfies Mapping.Config;
+} satisfies Mapping.Rules;

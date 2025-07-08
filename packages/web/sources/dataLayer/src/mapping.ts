@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@walkerOS/types';
-import type { Config, EventConfig, MappedEvent, Mapping } from './types';
+import type { Config, Rule, MappedEvent, Mapping } from './types';
 import {
   getId,
   getMappingValue,
@@ -13,7 +13,7 @@ const defaultMapping: Mapping = {
   'consent default': { ignore: true },
   'consent update': {
     name: 'walker consent',
-    custom: {
+    settings: {
       command: {
         map: {
           // @TODO update list
@@ -25,7 +25,7 @@ const defaultMapping: Mapping = {
   },
 };
 
-function getMapping(name: string, mapping: Mapping): EventConfig {
+function getMapping(name: string, mapping: Mapping): Rule {
   return mapping[name] || mapping['*'] || {};
 }
 
@@ -40,7 +40,7 @@ export async function objToEvent(
     ...config.mapping,
   });
 
-  const { custom, data, ignore, name } = mapping;
+  const { settings, data, ignore, name } = mapping;
   const eventName = isDefined(name)
     ? name
     : `${config.prefix} ${obj.event.replace(/ /g, '_')}`;
@@ -48,8 +48,8 @@ export async function objToEvent(
   if (ignore) return;
 
   // Command
-  if (custom?.command) {
-    const data = await getMappingValue(obj, custom.command);
+  if (settings?.command) {
+    const data = await getMappingValue(obj, settings.command);
     return data ? { command: { name: eventName, data } } : undefined;
   }
 

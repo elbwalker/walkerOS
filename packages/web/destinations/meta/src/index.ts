@@ -32,12 +32,12 @@ export const destinationMetaPixel: Destination = {
 
   push(event, config, mapping = {}, options = {}) {
     const { fn } = config;
-    const { track, trackCustom } = mapping.custom || {};
+    const { track, trackCustom } = mapping.settings || {};
     const { data } = options;
     const func = fn || window.fbq;
 
     // page view
-    if (event.event === 'page view' && !mapping.custom) {
+    if (event.event === 'page view' && !mapping.settings) {
       // Define a custom mapping
       event.event = 'PageView';
     }

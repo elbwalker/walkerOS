@@ -7,20 +7,20 @@ import { tryCatchAsync } from './tryCatch';
 
 export async function getMappingEvent(
   event: WalkerOS.PartialEvent,
-  mapping?: Mapping.Config<unknown>,
-): Promise<Mapping.EventMapping> {
+  mapping?: Mapping.Rules<unknown>,
+): Promise<Mapping.Mapping> {
   const [entity, action] = (event.event || '').split(' ');
   if (!mapping || !entity || !action) return {};
 
-  let eventMapping: Mapping.EventConfig | undefined;
+  let eventMapping: Mapping.Rule | undefined;
   let mappingKey = '';
   let entityKey = entity;
   let actionKey = action;
 
   const resolveEventMapping = (
     eventMapping?:
-      | Mapping.EventConfig<unknown>
-      | Mapping.EventConfig<unknown>[],
+      | Mapping.Rule<unknown>
+      | Mapping.Rule<unknown>[],
   ) => {
     if (!eventMapping) return;
     eventMapping = isArray(eventMapping) ? eventMapping : [eventMapping];

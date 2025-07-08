@@ -22,11 +22,11 @@ export interface Config {
 }
 
 export interface Mapping {
-  [event: string]: EventConfig | undefined;
+  [event: string]: Rule | undefined;
 }
 
-export type EventConfig<T = CustomEvent> = Omit<
-  WalkerOSMapping.EventConfig<T>,
+export type Rule<T = CustomEvent> = Omit<
+  WalkerOSMapping.Rule<T>,
   'batch' | 'batchFn' | 'batched' | 'consent'
 >;
 

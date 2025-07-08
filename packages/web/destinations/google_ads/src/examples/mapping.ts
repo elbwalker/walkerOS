@@ -1,7 +1,7 @@
 import type { Mapping } from '@walkerOS/types';
 import type { DestinationAds } from '..';
 
-export const conversion: DestinationAds.EventConfig = {
+export const conversion: DestinationAds.Rule = {
   name: 'labelId',
   data: {
     map: {
@@ -14,4 +14,4 @@ export const conversion: DestinationAds.EventConfig = {
 
 export const config = {
   order: { complete: conversion },
-} satisfies Mapping.Config;
+} satisfies Mapping.Rules;

@@ -1,7 +1,7 @@
 import type { Mapping } from '@walkerOS/types';
 import type { DestinationPlausible } from '..';
 
-export const customEvent: DestinationPlausible.EventConfig = {
+export const customEvent: DestinationPlausible.Rule = {
   name: 'Custom Event',
   data: {
     map: {
@@ -11,7 +11,7 @@ export const customEvent: DestinationPlausible.EventConfig = {
   },
 };
 
-export const purchase: DestinationPlausible.EventConfig = {
+export const purchase: DestinationPlausible.Rule = {
   name: 'purchase',
   data: {
     map: {
@@ -28,4 +28,4 @@ export const purchase: DestinationPlausible.EventConfig = {
 export const config = {
   entity: { action: customEvent },
   order: { complete: purchase },
-} satisfies Mapping.Config;
+} satisfies Mapping.Rules;

@@ -1,27 +1,27 @@
 import type { DestinationServer } from '@walkerOS/server-collector';
 import type {
   Handler,
-  Mapping,
+  Mapping as WalkerOSMapping,
   Destination as WalkerOSDestination,
 } from '@walkerOS/types';
 
 export interface Destination
-  extends DestinationServer.Destination<Settings, EventMapping> {
+  extends DestinationServer.Destination<Settings, Mapping> {
   init: InitFn;
   push: PushFn;
 }
 
-export type InitFn = WalkerOSDestination.InitFn<Settings, EventMapping>;
-export type PushFn = WalkerOSDestination.PushFn<Settings, EventMapping>;
+export type InitFn = WalkerOSDestination.InitFn<Settings, Mapping>;
+export type PushFn = WalkerOSDestination.PushFn<Settings, Mapping>;
 
 export type Config = {
   settings: Settings;
   onLog: Handler.Log;
-} & DestinationServer.Config<Settings, EventMapping>;
+} & DestinationServer.Config<Settings, Mapping>;
 
-export type EventMappingConfig = DestinationServer.EventMapping<EventMapping>;
+export type MappingRules = DestinationServer.MappingRules<Mapping>;
 
-export type PushEvents = DestinationServer.PushEvents<EventMapping>;
+export type PushEvents = DestinationServer.PushEvents<Mapping>;
 
 export interface Settings {
   accessToken: string;
@@ -30,12 +30,12 @@ export interface Settings {
   doNotHash?: string[];
   test_event_code?: string;
   url?: string;
-  user_data?: Mapping.Map;
+  user_data?: WalkerOSMapping.Map;
 }
 
-export interface EventMapping {}
+export interface Mapping {}
 
-export type EventConfig = Mapping.EventConfig<EventMapping>;
+export type Rule = WalkerOSMapping.Rule<Mapping>;
 
 // https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/main-body
 export interface BodyParameters {

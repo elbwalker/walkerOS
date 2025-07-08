@@ -2,7 +2,7 @@ import type { Mapping } from '@walkerOS/types';
 import type { DestinationGA4 } from '..';
 import { isObject } from '@walkerOS/utils';
 
-export const purchase: DestinationGA4.EventConfig = {
+export const purchase: DestinationGA4.Rule = {
   name: 'purchase',
   data: {
     map: {
@@ -29,7 +29,7 @@ export const purchase: DestinationGA4.EventConfig = {
   },
 };
 
-export const add_to_cart: DestinationGA4.EventConfig = {
+export const add_to_cart: DestinationGA4.Rule = {
   name: 'add_to_cart',
   data: {
     map: {
@@ -55,4 +55,4 @@ export const add_to_cart: DestinationGA4.EventConfig = {
 export const config = {
   order: { complete: purchase },
   product: { add: add_to_cart },
-} satisfies Mapping.Config;
+} satisfies Mapping.Rules;

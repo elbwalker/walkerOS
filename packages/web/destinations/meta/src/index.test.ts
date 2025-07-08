@@ -107,7 +107,7 @@ describe('Destination Meta Pixel', () => {
     elb('walker destination', destination, {
       settings: { pixelId },
       mapping: {
-        entity: { action: { custom: { trackCustom: 'foo' } } },
+        entity: { action: { settings: { trackCustom: 'foo' } } },
       },
     });
     await elb(event);

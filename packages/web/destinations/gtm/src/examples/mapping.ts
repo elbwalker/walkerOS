@@ -2,7 +2,7 @@ import type { Mapping } from '@walkerOS/types';
 import type { DestinationGTM } from '..';
 import { isObject } from '@walkerOS/utils';
 
-export const entity_action: DestinationGTM.EventConfig = {
+export const entity_action: DestinationGTM.Rule = {
   name: 'entity_action',
   data: {
     map: {
@@ -11,7 +11,7 @@ export const entity_action: DestinationGTM.EventConfig = {
   },
 };
 
-export const purchase: DestinationGTM.EventConfig = {
+export const purchase: DestinationGTM.Rule = {
   name: 'purchase',
   data: {
     map: {
@@ -38,7 +38,7 @@ export const purchase: DestinationGTM.EventConfig = {
   },
 };
 
-export const add_to_cart: DestinationGTM.EventConfig = {
+export const add_to_cart: DestinationGTM.Rule = {
   name: 'add_to_cart',
   data: {
     map: {
@@ -65,4 +65,4 @@ export const config = {
   entity: { action: entity_action },
   order: { complete: purchase },
   product: { add: add_to_cart },
-} satisfies Mapping.Config;
+} satisfies Mapping.Rules;

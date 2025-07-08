@@ -10,7 +10,7 @@ export const InitUserData: DestinationMeta.Settings = {
   },
 };
 
-export const Purchase: DestinationMeta.EventConfig = {
+export const Purchase: DestinationMeta.Rule = {
   name: 'Purchase',
   data: {
     map: {
@@ -43,4 +43,4 @@ export const Purchase: DestinationMeta.EventConfig = {
 
 export const config = {
   order: { complete: Purchase },
-} satisfies Mapping.Config;
+} satisfies Mapping.Rules;

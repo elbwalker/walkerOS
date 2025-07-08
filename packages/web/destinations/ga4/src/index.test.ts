@@ -178,9 +178,7 @@ describe('Destination Google GA4', () => {
                 lang: 'globals.lang',
               },
             },
-            settings: {
-              include: [],
-            },
+            settings: { include: [] },
           },
         },
       },
@@ -218,13 +216,13 @@ describe('Destination Google GA4', () => {
                 data_foo: 'data.override',
               },
             },
-            custom: {
+            settings: {
               include: ['data', 'globals'],
             },
           },
-          all: { custom: { include: ['all'] } },
-          event: { custom: { include: ['event'] } },
-          none: { custom: { include: [] } },
+          all: { settings: { include: ['all'] } },
+          event: { settings: { include: ['event'] } },
+          none: { settings: { include: [] } },
         },
       },
     };

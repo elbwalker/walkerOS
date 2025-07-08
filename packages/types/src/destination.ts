@@ -1,23 +1,23 @@
-import type { Handler, Mapping, On, WalkerOS } from '.';
+import type { Handler, Mapping as WalkerOSMapping, On, WalkerOS } from '.';
 
-export interface Destination<Settings = unknown, EventMapping = unknown> {
-  config: Config<Settings, EventMapping>; // Configuration settings for the destination
+export interface Destination<Settings = unknown, Mapping = unknown> {
+  config: Config<Settings, Mapping>; // Configuration settings for the destination
   queue?: WalkerOS.Events; // Non processed events yet and reset with each new run
   dlq?: DLQ; // Failed events
   type?: string; // The type of the destination
-  init?: InitFn<Settings, EventMapping>;
-  push: PushFn<Settings, EventMapping>;
-  pushBatch?: PushBatchFn<Settings, EventMapping>;
+  init?: InitFn<Settings, Mapping>;
+  push: PushFn<Settings, Mapping>;
+  pushBatch?: PushBatchFn<Settings, Mapping>;
 }
 
-export interface Config<Settings = unknown, EventMapping = unknown> {
+export interface Config<Settings = unknown, Mapping = unknown> {
   consent?: WalkerOS.Consent; // Required consent states to init and push events
   settings?: Settings; // Destination-specific configuration settings
-  data?: Mapping.Value | Mapping.Values; // Mapping of event data
+  data?: WalkerOSMapping.Value | WalkerOSMapping.Values; // Mapping of event data
   id?: string; // A unique key for the destination
   init?: boolean; // If the destination has been initialized by calling the init method
   loadScript?: boolean; // If an additional script to work should be loaded
-  mapping?: Mapping.Config<EventMapping>; // A map to handle events individually
+  mapping?: WalkerOSMapping.Rules<Mapping>; // A map to handle events individually
   on?: On.Config; // On events listener rules
   policy?: Policy; // Rules for processing events
   queue?: boolean; // Disable processing of previously pushed events
@@ -27,47 +27,47 @@ export interface Config<Settings = unknown, EventMapping = unknown> {
   onLog?: Handler.Log; // Custom log handler
 }
 
-export type PartialConfig<Settings = unknown, EventMapping = unknown> = Config<
+export type PartialConfig<Settings = unknown, Mapping = unknown> = Config<
   Partial<Settings> | Settings,
-  Partial<EventMapping> | EventMapping
+  Partial<Mapping> | Mapping
 >;
 
 export interface Policy {
-  [key: string]: Mapping.Value;
+  [key: string]: WalkerOSMapping.Value;
 }
 
 export type DestinationInit = Partial<Omit<Destination, 'push'>> &
   Pick<Destination, 'push'>;
 
-export type InitFn<Settings, EventMapping> = (
-  config?: PartialConfig<Settings, EventMapping>,
+export type InitFn<Settings, Mapping> = (
+  config?: PartialConfig<Settings, Mapping>,
   instance?: WalkerOS.Instance,
-) => WalkerOS.PromiseOrValue<void | false | Config<Settings, EventMapping>>;
+) => WalkerOS.PromiseOrValue<void | false | Config<Settings, Mapping>>;
 
-export type PushFn<Settings, EventMapping> = (
+export type PushFn<Settings, Mapping> = (
   event: WalkerOS.Event,
-  config: Config<Settings, EventMapping>,
-  mapping?: Mapping.EventConfig<EventMapping>,
+  config: Config<Settings, Mapping>,
+  mapping?: WalkerOSMapping.Rule<Mapping>,
   options?: Options,
 ) => WalkerOS.PromiseOrValue<void>;
 
-export type PushBatchFn<Settings, EventMapping> = (
-  batch: Batch<EventMapping>,
-  config: Config<Settings, EventMapping>,
+export type PushBatchFn<Settings, Mapping> = (
+  batch: Batch<Mapping>,
+  config: Config<Settings, Mapping>,
   options?: Options,
 ) => void;
 
-export type PushEvent<EventMapping = unknown> = {
+export type PushEvent<Mapping = unknown> = {
   event: WalkerOS.Event;
-  mapping?: Mapping.EventConfig<EventMapping>;
+  mapping?: WalkerOSMapping.Rule<Mapping>;
 };
-export type PushEvents<EventMapping = unknown> = Array<PushEvent<EventMapping>>;
+export type PushEvents<Mapping = unknown> = Array<PushEvent<Mapping>>;
 
-export interface Batch<EventMapping> {
+export interface Batch<Mapping> {
   key: string;
   events: WalkerOS.Events;
   data: Array<Data>;
-  mapping?: Mapping.EventConfig<EventMapping>;
+  mapping?: WalkerOSMapping.Rule<Mapping>;
 }
 
 export interface Options {
