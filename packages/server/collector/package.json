@@ -10,11 +10,11 @@
     "dist/**"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup --silent",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "lint": "tsc && eslint \"**/*.ts*\"",
-    "test": "jest --colors --coverage",
+    "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {

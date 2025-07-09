@@ -13,13 +13,13 @@
     "packages/types/*"
   ],
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build --output-logs=errors-only",
     "clean": "turbo run clean",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --output-logs=errors-only",
     "format": "prettier --write .",
-    "lint": "turbo run lint",
+    "lint": "turbo run lint --output-logs=errors-only",
     "publish-packages": "npm run build lint test && changeset version && changeset publish",
-    "test": "turbo run test",
+    "test": "turbo run test --output-logs=errors-only",
     "prepare": "husky"
   },
   "devDependencies": {
