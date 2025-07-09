@@ -86,7 +86,7 @@ export type Commands =
   | 'walker'
   | string;
 
-export interface SessionData {
+export interface SessionData extends Properties {
   isStart: boolean; // If this is a new session or a known one
   storage: boolean; // If the storage was used to determine the session
   id?: string; // Session ID
