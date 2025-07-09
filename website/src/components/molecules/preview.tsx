@@ -1,5 +1,5 @@
 import { FC, useRef, useState, useCallback, useEffect } from 'react';
-import { debounce, tryCatch } from '@walkerOS/utils';
+import { debounce, tryCatch } from '@walkerOS/core';
 import '@site/src/css/highlighting.scss';
 
 interface PreviewProps {

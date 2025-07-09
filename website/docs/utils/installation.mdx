@@ -23,7 +23,7 @@ For advanced use cases requiring only specific utils:
 ### NPM
 
 ```bash
-$ npm install @walkerOS/utils
+$ npm install @walkerOS/core
 ```
 
 ### CDN
@@ -35,7 +35,7 @@ can be used in older browsers as well as with Google Tag Manager.
 <Tabs>
   <TabItem value="script" label="Scripts" default>
     ```html
-    <script src="https://cdn.jsdelivr.net/npm/@walkerOS/utils@latest/dist/web.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walkerOS/core@latest/dist/web.js"></script>
     ```
   </TabItem>
   <TabItem value="module" label="Module">
@@ -43,7 +43,7 @@ can be used in older browsers as well as with Google Tag Manager.
     ```html
     <script type="module">
       const Utils = ( await import(
-      'https://cdn.jsdelivr.net/npm/@walkerOS/utils@latest/dist/web.mjs' ) );
+      'https://cdn.jsdelivr.net/npm/@walkerOS/core@latest/dist/web.mjs' ) );
       console.log('id', Utils.getId())
     </script>
     ```

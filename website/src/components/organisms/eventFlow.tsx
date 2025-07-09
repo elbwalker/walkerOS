@@ -10,7 +10,7 @@ import {
   debounce,
   isString,
   tryCatchAsync,
-} from '@walkerOS/utils';
+} from '@walkerOS/core';
 import { taggingRegistry } from './tagging';
 
 export interface EventFlowProps {

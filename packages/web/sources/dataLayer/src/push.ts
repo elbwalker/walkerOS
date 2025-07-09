@@ -1,4 +1,4 @@
-import type { Elb } from '@walkerOS/types';
+import type { Elb } from '@walkerOS/core';
 import type { Config } from './types';
 import {
   clone,
@@ -7,7 +7,7 @@ import {
   isArray,
   isObject,
   tryCatchAsync,
-} from '@walkerOS/utils';
+} from '@walkerOS/core';
 import { objToEvent, gtagToObj } from './mapping';
 import { getDataLayer } from './helper';
 

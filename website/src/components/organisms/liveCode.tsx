@@ -1,6 +1,6 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkerOS/core';
 import { useEffect, useState, useRef, memo } from 'react';
-import { debounce, isString, tryCatchAsync } from '@walkerOS/utils';
+import { debounce, isString, tryCatchAsync } from '@walkerOS/core';
 import CodeBox, { formatValue } from '@site/src/components/molecules/codeBox';
 import FullScreenMode from '@site/src/components/organisms/fullScreenMode';
 

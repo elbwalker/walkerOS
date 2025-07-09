@@ -37,7 +37,7 @@ export function createWebCollector(customConfig?: WebCollector.InitConfig): {
 export function webCollector(
   customConfig: WebCollector.InitConfig = {},
 ): WebCollector.Collector {
-  const version = '0.0.1'; // Source version
+  const version = '0.0.1';
   const state = getState(customConfig);
   const collector: WebCollector.Collector = {
     ...state,
