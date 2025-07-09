@@ -17,15 +17,17 @@ export function run(
       count: 0, // Reset the run counter
       queue: [], // Reset the queue for each run without merging
       group: getId(), // Generate a new group id for each run
-      globals: assign(
-        // Load globals properties
-        // Use the static globals and search for tagged ones
-        // Due to site performance only once every run
-        config.globalsStatic,
-        getGlobals(config.prefix),
-      ),
     },
     { ...state },
+  );
+
+  // Merge the globals instead of preferring the current state
+  newState.globals = assign(
+    // Load globals properties
+    // Use the static globals and search for tagged ones
+    // Due to site performance only once every run
+    assign(config.globalsStatic, state.globals),
+    getGlobals(config.prefix),
   );
 
   // Update the collector reference with the updated state

@@ -13,11 +13,13 @@ export function run(
       count: 0, // Reset the run counter
       queue: [], // Reset the queue for each run without merging
       group: getId(), // Generate a new group id for each run
-      globals: assign(config.globalsStatic, state.globals),
       timing: Date.now(), // Set the timing offset
     },
     { ...state },
   );
+
+  // Merge the globals instead of preferring the current state
+  newState.globals = assign(config.globalsStatic, state.globals);
 
   // Update the collector reference with the updated state
   assign(collector, newState, { merge: false, shallow: false, extend: false });

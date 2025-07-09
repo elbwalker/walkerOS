@@ -18,7 +18,6 @@ describe('Server Collector', () => {
     };
 
     return createServerCollector(config);
-    s;
   }
 
   beforeEach(() => {
