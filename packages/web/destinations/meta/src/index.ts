@@ -3,12 +3,12 @@ import { addScript, setup } from './setup';
 import { isObject } from '@walkerOS/core';
 
 // Types
-export * as DestinationMetaPixel from './types';
+export * as DestinationMeta from './types';
 
 // Examples
-export * as destinationMetaPixelExamples from './examples';
+export * as destinationMetaExamples from './examples';
 
-export const destinationMetaPixel: Destination = {
+export const destinationMeta: Destination = {
   type: 'meta-pixel',
 
   config: {},
@@ -53,4 +53,4 @@ export const destinationMetaPixel: Destination = {
   },
 };
 
-export default destinationMetaPixel;
+export default destinationMeta;

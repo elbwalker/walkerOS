@@ -1,8 +1,8 @@
 import type { Mapping, WalkerOS } from '@walkerOS/core';
-import type { DestinationMetaPixel } from '..';
+import type { DestinationMeta } from '..';
 import { isObject } from '@walkerOS/core';
 
-export const Purchase: DestinationMetaPixel.Rule = {
+export const Purchase: DestinationMeta.Rule = {
   name: 'Purchase',
   data: {
     map: {
@@ -32,7 +32,7 @@ export const Purchase: DestinationMetaPixel.Rule = {
   },
 };
 
-export const AddToCart: DestinationMetaPixel.Rule = {
+export const AddToCart: DestinationMeta.Rule = {
   name: 'AddToCart',
   data: {
     map: {
@@ -53,7 +53,7 @@ export const AddToCart: DestinationMetaPixel.Rule = {
   },
 };
 
-export const InitiateCheckout: DestinationMetaPixel.Rule = {
+export const InitiateCheckout: DestinationMeta.Rule = {
   name: 'InitiateCheckout',
   data: {
     map: {
@@ -82,7 +82,7 @@ export const InitiateCheckout: DestinationMetaPixel.Rule = {
   },
 };
 
-export const ViewContent: DestinationMetaPixel.Rule = {
+export const ViewContent: DestinationMeta.Rule = {
   name: 'ViewContent',
   data: {
     map: {
@@ -107,4 +107,4 @@ export const config = {
   order: { complete: Purchase },
   product: { view: ViewContent, add: AddToCart },
   cart: { view: InitiateCheckout },
-} satisfies DestinationMetaPixel.Rules;
+} satisfies DestinationMeta.Rules;

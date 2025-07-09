@@ -1,7 +1,7 @@
 import * as events from './events';
 import * as mapping from './mapping';
 
-export const destinationMetaPixelExamples = {
+export const destinationMetaExamples = {
   events,
-  mapping
+  mapping,
 };

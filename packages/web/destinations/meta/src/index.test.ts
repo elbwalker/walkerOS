@@ -1,16 +1,15 @@
 import type { DestinationWeb, Elb } from '@walkerOS/web-collector';
-import type { DestinationMetaPixel } from '.';
+import type { DestinationMeta } from '.';
 import { createWebCollector } from '@walkerOS/web-collector';
 import { getEvent } from '@walkerOS/core';
-import { destinationMetaPixelExamples } from './examples';
+import { destinationMetaExamples } from './examples';
 
-const { events, mapping } = destinationMetaPixelExamples;
+const { events, mapping } = destinationMetaExamples;
 
 describe('Destination Meta Pixel', () => {
   let elb: Elb.Fn;
   const w = window;
-  let destination: DestinationMetaPixel.Destination,
-    config: DestinationMetaPixel.Config;
+  let destination: DestinationMeta.Destination, config: DestinationMeta.Config;
 
   const mockFn = jest.fn(); //.mockImplementation(console.log);
 

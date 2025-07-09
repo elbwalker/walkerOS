@@ -23,9 +23,9 @@ Here's a basic example of how to use the Meta Pixel destination:
 
 ```typescript
 import { elb } from '@walkerOS/web-collector';
-import { destinationMetaPixel } from '@walkerOS/web-destination-meta';
+import { destinationMeta } from '@walkerOS/web-destination-meta';
 
-elb('walker destination', destinationMetaPixel, {
+elb('walker destination', destinationMeta, {
   custom: {
     pixelId: '1234567890',
   },
