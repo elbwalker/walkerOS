@@ -36,7 +36,7 @@ export interface Policy {
   [key: string]: WalkerOSMapping.Value;
 }
 
-export type DestinationInit = Partial<Omit<Destination, 'push'>> &
+export type Init = Partial<Omit<Destination, 'push'>> &
   Pick<Destination, 'push'>;
 
 export type InitFn<Settings, Mapping> = (

@@ -17,7 +17,7 @@ describe('Hooks', () => {
     const mockInit = jest.fn();
     const mockPush = jest.fn();
     const mockPushBatch = jest.fn();
-    const destination: DestinationWeb.DestinationInit = {
+    const destination: DestinationWeb.Init = {
       init: mockInit,
       push: mockPush,
       pushBatch: mockPushBatch,

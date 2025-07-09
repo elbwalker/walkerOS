@@ -1,5 +1,5 @@
 import type { Elb } from '@walkerOS/types';
-import type { Destination, DestinationInit, Config } from './destination';
+import type { Destination, Init, Config } from './destination';
 import type { State } from './source';
 
 export interface Fn<R = Return, D = PushData, O = PushOptions>
@@ -9,17 +9,13 @@ export interface Fn<R = Return, D = PushData, O = PushOptions>
 
 export type CommandDestination<R = void> = (
   event: 'walker destination',
-  destination: Destination | DestinationInit,
+  destination: Destination | Init,
   config?: Config,
 ) => R;
 
 export type CommandRun<R = void> = (event: 'walker run') => R;
 
-export type PushData =
-  | Elb.PushData
-  | Destination
-  | DestinationInit
-  | Partial<State>;
+export type PushData = Elb.PushData | Destination | Init | Partial<State>;
 
 export type PushOptions = Elb.PushOptions | Config;
 

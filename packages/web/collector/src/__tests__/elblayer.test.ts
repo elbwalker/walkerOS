@@ -185,6 +185,7 @@ describe('elbLayer', () => {
 
   test('config update', () => {
     const defaultConfig: WebCollector.Config = {
+      default: false,
       dataLayer: false,
       dataLayerConfig: {},
       elbLayer: expect.any(Array),
@@ -195,6 +196,7 @@ describe('elbLayer', () => {
       session: { storage: false },
       sessionStatic: {},
       tagging: expect.any(Number),
+      verbose: false,
     };
 
     const defaultState: WebCollector.State = {

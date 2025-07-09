@@ -62,7 +62,7 @@ export function createPush<T extends WalkerOS.Instance, F extends Elb.Fn>(
 
 export async function addDestination(
   instance: WalkerOS.Instance,
-  data: WalkerOSDestination.DestinationInit,
+  data: WalkerOSDestination.Init,
   options?: WalkerOSDestination.Config,
 ) {
   // Prefer explicit given config over default config

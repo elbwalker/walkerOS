@@ -1,11 +1,11 @@
 import type { DestinationWeb } from '../types';
 
-export function dataLayerDestination(): DestinationWeb.DestinationInit {
+export function dataLayerDestination(): DestinationWeb.Init {
   window.dataLayer = window.dataLayer || [];
   const dataLayerPush = (event: unknown) => {
     (window.dataLayer as unknown[]).push(event);
   };
-  const destination: DestinationWeb.DestinationInit = {
+  const destination: DestinationWeb.Init = {
     push: (event, config, mapping, options = {}) => {
       // Do not process events from dataLayer source
       if (event.source?.type === 'dataLayer') return;

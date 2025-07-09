@@ -32,7 +32,7 @@ export async function commonHandleCommand(
       if (isObject(data) && typeof data.push === 'function') {
         result = await addDestination(
           instance,
-          data as Destination.DestinationInit,
+          data as Destination.Init,
           options as Destination.Config,
         );
       }

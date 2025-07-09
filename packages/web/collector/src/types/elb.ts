@@ -1,5 +1,5 @@
 import type { Elb, On, WalkerOS } from '@walkerOS/types';
-import type { Destination, DestinationInit, Config } from './destination';
+import type { Destination, Init, Config } from './destination';
 import type { State } from './source';
 import type { Trigger } from './walker';
 
@@ -25,7 +25,7 @@ export type CommandInit<R = void> = (
 
 export type CommandDestination<R = void> = (
   event: 'walker destination',
-  destination: Destination | DestinationInit,
+  destination: Destination | Init,
   config?: Config,
 ) => R;
 
@@ -43,7 +43,7 @@ export type CommandOn<R = void> = (
 export type PushData =
   | Elb.PushData
   | Destination
-  | DestinationInit
+  | Init
   | Partial<State>
   | ScopeType;
 
