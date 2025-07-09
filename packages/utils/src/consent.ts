@@ -28,10 +28,10 @@ export function getGrantedConsent(
 }
 
 export async function setConsent(
-  instance: WalkerOS.Instance,
+  collector: WalkerOS.Collector,
   data: WalkerOS.Consent,
 ): Promise<Elb.PushResult> {
-  const { consent } = instance;
+  const { consent } = collector;
 
   let runQueue = false;
   const update: WalkerOS.Consent = {};
@@ -45,13 +45,13 @@ export async function setConsent(
   });
 
   // Update consent state
-  instance.consent = assign(consent, update);
+  collector.consent = assign(consent, update);
 
   // Run on consent events
-  onApply(instance, 'consent', undefined, update);
+  onApply(collector, 'consent', undefined, update);
 
   // Process previous events if not disabled
   return runQueue
-    ? pushToDestinations(instance)
+    ? pushToDestinations(collector)
     : createPushResult({ ok: true });
 }

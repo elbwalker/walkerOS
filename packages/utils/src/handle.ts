@@ -8,7 +8,7 @@ import { isObject, isSameType } from './is';
 import { setConsent } from './consent';
 
 export async function commonHandleCommand(
-  instance: WalkerOS.Instance,
+  collector: WalkerOS.Collector,
   action: string,
   data?: unknown,
   options?: unknown,
@@ -18,20 +18,23 @@ export async function commonHandleCommand(
   switch (action) {
     case Const.Commands.Consent:
       if (isObject(data)) {
-        result = await setConsent(instance, data as WalkerOS.Consent);
+        result = await setConsent(collector, data as WalkerOS.Consent);
       }
       break;
 
     case Const.Commands.Custom:
       if (isObject(data)) {
-        instance.custom = assign(instance.custom, data as WalkerOS.Properties);
+        collector.custom = assign(
+          collector.custom,
+          data as WalkerOS.Properties,
+        );
       }
       break;
 
     case Const.Commands.Destination:
       if (isObject(data) && typeof data.push === 'function') {
         result = await addDestination(
-          instance,
+          collector,
           data as Destination.Init,
           options as Destination.Config,
         );
@@ -40,8 +43,8 @@ export async function commonHandleCommand(
 
     case Const.Commands.Globals:
       if (isObject(data)) {
-        instance.globals = assign(
-          instance.globals,
+        collector.globals = assign(
+          collector.globals,
           data as WalkerOS.Properties,
         );
       }
@@ -49,7 +52,7 @@ export async function commonHandleCommand(
 
     case Const.Commands.User:
       if (isObject(data)) {
-        assign(instance.user, data as WalkerOS.User, { shallow: false });
+        assign(collector.user, data as WalkerOS.User, { shallow: false });
       }
       break;
   }
@@ -58,7 +61,7 @@ export async function commonHandleCommand(
 }
 
 export function createEventOrCommand(
-  instance: WalkerOS.Instance,
+  collector: WalkerOS.Collector,
   nameOrEvent: unknown,
   defaults: WalkerOS.PartialEvent = {},
 ): { event?: WalkerOS.Event; command?: string } {
@@ -80,13 +83,13 @@ export function createEventOrCommand(
   if (entityValue === Commands.Walker) return { command: actionValue };
 
   // Regular event
-  ++instance.count;
+  ++collector.count;
 
   // Values that are eventually used by other properties
   const {
     timestamp = Date.now(),
-    group = instance.group,
-    count = instance.count,
+    group = collector.group,
+    count = collector.count,
   } = partialEvent;
 
   // Extract properties with default fallbacks
@@ -94,19 +97,19 @@ export function createEventOrCommand(
     event = `${entityValue} ${actionValue}`,
     data = {},
     context = {},
-    globals = instance.globals,
+    globals = collector.globals,
     custom = {},
-    user = instance.user,
+    user = collector.user,
     nested = [],
-    consent = instance.consent,
+    consent = collector.consent,
     id = `${timestamp}-${group}-${count}`,
     trigger = '',
     entity = entityValue,
     action = actionValue,
     timing = 0,
     version = {
-      source: instance.version,
-      tagging: instance.config.tagging || 0,
+      source: collector.version,
+      tagging: collector.config.tagging || 0,
     },
     source = { type: '', id: '', previous_id: '' },
   } = partialEvent;

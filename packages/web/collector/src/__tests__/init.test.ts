@@ -3,7 +3,7 @@ import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { webCollector } from '../';
 
 describe('Init', () => {
-  let walkerjs: WebCollector.Instance;
+  let walkerjs: WebCollector.Collector;
 
   beforeEach(() => {});
 
@@ -31,9 +31,9 @@ describe('Init', () => {
       user: { id: '1d', device: 'overruled' },
     };
 
-    const instance = webCollector(config);
+    const collector = webCollector(config);
 
-    expect(instance).toStrictEqual(
+    expect(collector).toStrictEqual(
       expect.objectContaining({
         consent: { functional: true },
         custom: { private: 'space' },

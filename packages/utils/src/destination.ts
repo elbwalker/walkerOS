@@ -16,15 +16,15 @@ import { debounce } from './invocations';
 import { clone } from './clone';
 import { createEventOrCommand } from './handle';
 
-export type HandleCommandFn<T extends WalkerOS.Instance> = (
-  instance: T,
+export type HandleCommandFn<T extends WalkerOS.Collector> = (
+  collector: T,
   action: string,
   data?: Elb.PushData,
   options?: Elb.PushOptions,
 ) => Promise<Elb.PushResult>;
 
-export function createPush<T extends WalkerOS.Instance, F extends Elb.Fn>(
-  instance: T,
+export function createPush<T extends WalkerOS.Collector, F extends Elb.Fn>(
+  collector: T,
   handleCommand: HandleCommandFn<T>,
   prepareEvent: Elb.Fn<WalkerOS.PartialEvent>,
 ): F {
@@ -36,32 +36,33 @@ export function createPush<T extends WalkerOS.Instance, F extends Elb.Fn>(
           const partialEvent = prepareEvent(...args);
 
           const { event, command } = createEventOrCommand(
-            instance,
+            collector,
             nameOrEvent,
             partialEvent,
           );
 
           const result = command
-            ? await handleCommand(instance, command, pushData, options)
-            : await pushToDestinations(instance, event);
+            ? await handleCommand(collector, command, pushData, options)
+            : await pushToDestinations(collector, event);
 
           return result;
         },
         (error) => {
           // Call custom error handling
-          if (instance.config.onError) instance.config.onError(error, instance);
+          if (collector.config.onError)
+            collector.config.onError(error, collector);
 
           return createPushResult({ ok: false });
         },
       )(...args);
     },
     'Push',
-    instance.hooks,
+    collector.hooks,
   ) as unknown as F;
 }
 
 export async function addDestination(
-  instance: WalkerOS.Instance,
+  collector: WalkerOS.Collector,
   data: WalkerOSDestination.Init,
   options?: WalkerOSDestination.Config,
 ) {
@@ -79,33 +80,33 @@ export async function addDestination(
     // Generate a new id if none was given
     do {
       id = getId(4);
-    } while (instance.destinations[id]);
+    } while (collector.destinations[id]);
   }
 
   // Add the destination
-  instance.destinations[id] = destination;
+  collector.destinations[id] = destination;
 
   // Process previous events if not disabled
-  if (config.queue !== false) destination.queue = [...instance.queue];
+  if (config.queue !== false) destination.queue = [...collector.queue];
 
-  return pushToDestinations(instance, undefined, { [id]: destination });
+  return pushToDestinations(collector, undefined, { [id]: destination });
 }
 
 export async function pushToDestinations(
-  instance: WalkerOS.Instance,
+  collector: WalkerOS.Collector,
   event?: WalkerOS.Event,
   destinations?: WalkerOS.Destinations,
 ): Promise<Elb.PushResult> {
-  const { allowed, consent, globals, user } = instance;
+  const { allowed, consent, globals, user } = collector;
 
-  // Check if instance is allowed to push
+  // Check if collector is allowed to push
   if (!allowed) return createPushResult({ ok: false });
 
-  // Add event to the instance queue
-  if (event) instance.queue.push(event);
+  // Add event to the collector queue
+  if (event) collector.queue.push(event);
 
   // Use given destinations or use internal destinations
-  if (!destinations) destinations = instance.destinations;
+  if (!destinations) destinations = collector.destinations;
 
   const results = await Promise.all(
     // Process all destinations in parallel
@@ -128,7 +129,9 @@ export async function pushToDestinations(
         await Promise.all(
           Object.entries(destination.config.policy || []).map(
             async ([key, mapping]) => {
-              const value = await getMappingValue(event, mapping, { instance });
+              const value = await getMappingValue(event, mapping, {
+                collector,
+              });
               currentEvent = setByPath(currentEvent, key, value);
             },
           ),
@@ -145,7 +148,7 @@ export async function pushToDestinations(
       const skippedEvents = currentQueue.filter((queuedEvent) => {
         const grantedConsent = getGrantedConsent(
           destination.config.consent, // Required
-          consent, // Current instance state
+          consent, // Current collector state
           queuedEvent.consent, // Individual event state
         );
 
@@ -169,7 +172,7 @@ export async function pushToDestinations(
 
       // Initialize the destination if needed
       const isInitialized = await tryCatchAsync(destinationInit)(
-        instance,
+        collector,
         destination,
       );
 
@@ -182,20 +185,21 @@ export async function pushToDestinations(
       // Process allowed events and store failed ones in the dead letter queue (DLQ)
       await Promise.all(
         allowedEvents.map(async (event) => {
-          // Merge event with instance state, prioritizing event properties
+          // Merge event with collector state, prioritizing event properties
           event.globals = assign(globals, event.globals);
           event.user = assign(user, event.user);
 
           await tryCatchAsync(destinationPush, (err) => {
             // Call custom error handling if available
-            if (instance.config.onError) instance.config.onError(err, instance);
+            if (collector.config.onError)
+              collector.config.onError(err, collector);
             error = true; // oh no
 
             // Add failed event to destinations DLQ
             destination.dlq!.push([event, err]);
 
             return false;
-          })(instance, destination, event);
+          })(collector, destination, event);
 
           return event;
         }),
@@ -238,14 +242,14 @@ export async function pushToDestinations(
 
 export async function destinationInit<
   Destination extends WalkerOSDestination.Destination,
->(instance: WalkerOS.Instance, destination: Destination): Promise<boolean> {
+>(collector: WalkerOS.Collector, destination: Destination): Promise<boolean> {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
     const configResult = await useHooks(
       destination.init,
       'DestinationInit',
-      instance.hooks,
-    )(destination.config, instance);
+      collector.hooks,
+    )(destination.config, collector);
 
     // Actively check for errors (when false)
     if (configResult === false) return configResult; // don't push if init is false
@@ -263,7 +267,7 @@ export async function destinationInit<
 export async function destinationPush<
   Destination extends WalkerOSDestination.Destination,
 >(
-  instance: WalkerOS.Instance,
+  collector: WalkerOS.Collector,
   destination: Destination,
   event: WalkerOS.Event,
 ): Promise<boolean> {
@@ -274,7 +278,7 @@ export async function destinationPush<
   );
 
   let data =
-    config.data && (await getMappingValue(event, config.data, { instance }));
+    config.data && (await getMappingValue(event, config.data, { collector }));
 
   if (eventMapping) {
     // Check if event should be processed or ignored
@@ -287,7 +291,7 @@ export async function destinationPush<
     if (eventMapping.data) {
       const dataEvent =
         eventMapping.data &&
-        (await getMappingValue(event, eventMapping.data, { instance }));
+        (await getMappingValue(event, eventMapping.data, { collector }));
       data =
         isObject(data) && isObject(dataEvent) // Only merge objects
           ? assign(data, dataEvent)
@@ -295,7 +299,7 @@ export async function destinationPush<
     }
   }
 
-  const options = { data, instance };
+  const options = { data, collector };
 
   if (eventMapping?.batch && destination.pushBatch) {
     const batched = eventMapping.batched || {
@@ -308,11 +312,11 @@ export async function destinationPush<
 
     eventMapping.batchFn =
       eventMapping.batchFn ||
-      debounce((destination, instance) => {
+      debounce((destination, collector) => {
         useHooks(
           destination.pushBatch!,
           'DestinationPushBatch',
-          instance.hooks,
+          collector.hooks,
         )(batched, config, options);
 
         // Reset the batched queues
@@ -321,10 +325,10 @@ export async function destinationPush<
       }, eventMapping.batch);
 
     eventMapping.batched = batched;
-    eventMapping.batchFn(destination, instance);
+    eventMapping.batchFn(destination, collector);
   } else {
     // It's time to go to the destination's side now
-    await useHooks(destination.push, 'DestinationPush', instance.hooks)(
+    await useHooks(destination.push, 'DestinationPush', collector.hooks)(
       event,
       config,
       eventMapping,

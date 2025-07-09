@@ -13,7 +13,7 @@ import {
 } from '@walkerOS/utils';
 
 export async function handleCommand(
-  instance: WebCollector.Instance,
+  collector: WebCollector.Collector,
   action: string,
   data?: Elb.PushData,
   options?: Elb.PushOptions,
@@ -23,16 +23,16 @@ export async function handleCommand(
   switch (action) {
     case Const.Commands.Config:
       if (isObject(data))
-        instance.config = getState(
+        collector.config = getState(
           data as WebCollector.Config,
-          instance,
+          collector,
         ).config;
       break;
 
     case Const.Commands.Hook:
       if (typeof data === 'string' && typeof options === 'function') {
         addHook(
-          instance,
+          collector,
           data as keyof Hooks.Functions,
           options as Hooks.AnyFunction,
         );
@@ -43,28 +43,28 @@ export async function handleCommand(
       const elems: unknown[] = Array.isArray(data) ? data : [data || document];
       elems.forEach((elem) => {
         if (elem instanceof Element || elem instanceof Document) {
-          initScopeTrigger(instance, elem);
+          initScopeTrigger(collector, elem);
         }
       });
       break;
 
     case Const.Commands.On:
       if (data && options) {
-        on(instance, data as On.Types, options as On.Options);
+        on(collector, data as On.Types, options as On.Options);
       }
       break;
 
     case Const.Commands.Run:
       await ready(
-        instance,
+        collector,
         run,
-        instance,
+        collector,
         data as Partial<WebCollector.State>,
       );
       break;
 
     default:
-      result = await commonHandleCommand(instance, action, data, options);
+      result = await commonHandleCommand(collector, action, data, options);
   }
 
   return createPushResult(result);

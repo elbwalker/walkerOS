@@ -42,7 +42,7 @@ export const push: PushFn = async function (event, config, mapping, options) {
   if (userData.fbclid) {
     userData.fbc = formatClickId(
       userData.fbclid,
-      options?.instance?.session?.start || event.timestamp,
+      options?.collector?.session?.start || event.timestamp,
     );
     delete userData.fbclid;
   }

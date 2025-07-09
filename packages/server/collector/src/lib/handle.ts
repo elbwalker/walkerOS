@@ -4,7 +4,7 @@ import { getState } from './state';
 import { run } from './run';
 
 export const handleCommand = async (
-  instance: ServerCollector.Instance,
+  collector: ServerCollector.Collector,
   action: string,
   data?: Elb.PushData,
   options?: Elb.PushOptions,
@@ -14,16 +14,19 @@ export const handleCommand = async (
   switch (action) {
     case Const.Commands.Config:
       if (data) {
-        instance.config = getState(data as ServerCollector.Config, instance).config;
+        collector.config = getState(
+          data as ServerCollector.Config,
+          collector,
+        ).config;
       }
       break;
 
     case Const.Commands.Run:
-      run(instance, data as Partial<ServerCollector.State>);
+      run(collector, data as Partial<ServerCollector.State>);
       break;
 
     default:
-      result = await commonHandleCommand(instance, action, data, options);
+      result = await commonHandleCommand(collector, action, data, options);
   }
 
   return createPushResult(result);

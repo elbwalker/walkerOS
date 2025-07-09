@@ -2,7 +2,7 @@ import type { Hooks, Schema, WalkerOS } from '@walkerOS/types';
 import type { Fn } from './elb';
 import type { Destination } from './destination';
 
-export interface Instance extends WalkerOS.Instance {
+export interface Collector extends WalkerOS.Collector {
   config: Config;
   destinations: Destinations;
   push: Fn;
@@ -37,7 +37,7 @@ export interface Destinations {
   [key: string]: Destination;
 }
 
-export type PrependInstance<Fn extends (...args: never) => ReturnType<Fn>> = (
-  instance: Instance,
+export type PrependCollector<Fn extends (...args: never) => ReturnType<Fn>> = (
+  collector: Collector,
   ...args: Parameters<Fn>
 ) => ReturnType<Fn>;

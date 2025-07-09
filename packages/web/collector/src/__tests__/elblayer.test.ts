@@ -5,7 +5,7 @@ import { elb as elbOrg, webCollector, createWebCollector, elb } from '../';
 
 describe('elbLayer', () => {
   const w = window;
-  let walkerjs: WebCollector.Instance;
+  let walkerjs: WebCollector.Collector;
 
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
   const mockDestinationInit = jest.fn(); //.mockImplementation(console.log);
@@ -218,7 +218,7 @@ describe('elbLayer', () => {
       version: expect.any(String),
     };
 
-    const defaultInterface: WebCollector.Instance = {
+    const defaultInterface: WebCollector.Collector = {
       push: expect.any(Function),
       getAllEvents: expect.any(Function),
       getEvents: expect.any(Function),
@@ -252,12 +252,12 @@ describe('elbLayer', () => {
     const dataLayer = w.dataLayer as unknown[];
     const customLayer1: Elb.Layer = [];
     const customLayer2: Elb.Layer = [];
-    const instance1 = webCollector({
+    const collector1 = webCollector({
       elbLayer: customLayer1,
       default: true,
       pageview: false,
     });
-    const instance2 = webCollector({
+    const collector2 = webCollector({
       elbLayer: customLayer2,
       default: true,
       pageview: false,
@@ -297,13 +297,13 @@ describe('elbLayer', () => {
     expect(mockDest2).toHaveBeenCalled();
 
     jest.clearAllMocks();
-    instance1.push('foo bar');
+    collector1.push('foo bar');
     await jest.runAllTimersAsync();
     expect(mockDest1).toHaveBeenCalled();
     expect(mockDest2).not.toHaveBeenCalled();
 
     jest.clearAllMocks();
-    instance2.push('bar foo');
+    collector2.push('bar foo');
     await jest.runAllTimersAsync();
     expect(mockDest1).not.toHaveBeenCalled();
     expect(mockDest2).toHaveBeenCalled();
@@ -322,8 +322,8 @@ describe('elbLayer', () => {
 
     jest.clearAllMocks();
     document.body.innerHTML = `<div data-elb="e" data-elbaction="load"></div>`;
-    instance1.push('walker run');
-    instance2.push('walker run');
+    collector1.push('walker run');
+    collector2.push('walker run');
     await jest.runAllTimersAsync();
     expect(mockDest1).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -366,8 +366,8 @@ describe('elbLayer', () => {
   });
 
   test('command order', async () => {
-    const { instance } = createWebCollector();
-    const pushSpy = jest.spyOn(instance, 'push');
+    const { collector } = createWebCollector();
+    const pushSpy = jest.spyOn(collector, 'push');
 
     elb('walker run');
     await jest.runAllTimersAsync();

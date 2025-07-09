@@ -21,8 +21,8 @@ describe('Destination', () => {
   }
 
   function createWalkerjs(
-    args?: Partial<WalkerOS.Instance>,
-  ): WalkerOS.Instance {
+    args?: Partial<WalkerOS.Collector>,
+  ): WalkerOS.Collector {
     return {
       allowed: true,
       config: {},
@@ -33,7 +33,7 @@ describe('Destination', () => {
       consent: {},
       queue: [],
       ...args,
-    } as unknown as WalkerOS.Instance;
+    } as unknown as WalkerOS.Collector;
   }
 
   beforeEach(() => {
@@ -51,12 +51,12 @@ describe('Destination', () => {
   });
 
   test('allowed', async () => {
-    const instance = createWalkerjs({ allowed: false });
-    let result = await pushToDestinations(instance, event);
+    const collector = createWalkerjs({ allowed: false });
+    let result = await pushToDestinations(collector, event);
     expect(result.ok).toBeFalsy();
 
-    instance.allowed = true;
-    result = await pushToDestinations(instance, event);
+    collector.allowed = true;
+    result = await pushToDestinations(collector, event);
     expect(result.ok).toBeTruthy();
   });
 

@@ -25,8 +25,8 @@ Here's a basic example of how to use the server collector:
 ```typescript
 import { createServerCollector } from '@walkerOS/server-collector';
 
-// Create a new server collector instance
-const { elb, instance } = createServerCollector({
+// Create a new server collector collector
+const { elb, collector } = createServerCollector({
   // Optional configuration
 });
 

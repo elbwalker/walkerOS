@@ -19,7 +19,7 @@ describe('Browser', () => {
   });
 
   test('initialize walkerjs on window', () => {
-    w.walkerjs = undefined as unknown as WebCollector.Instance;
+    w.walkerjs = undefined as unknown as WebCollector.Collector;
     expect(w.walkerjs).toBeUndefined();
     jest.resetModules();
     const walkerjs = jest.requireActual('../walkerjs').default;

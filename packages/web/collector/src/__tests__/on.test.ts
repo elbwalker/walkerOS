@@ -18,7 +18,7 @@ const mockOnReady = jest.fn();
 const mockOnRun = jest.fn();
 const mockOnSession = jest.fn();
 
-let walkerjs: WebCollector.Instance;
+let walkerjs: WebCollector.Collector;
 const destination: DestinationWeb.Destination = {
   config: {
     on: {

@@ -30,22 +30,22 @@ describe('Server Collector', () => {
   test('version equals package.json version', () => {
     const packageJsonVersion = jest.requireActual('../../package.json').version;
 
-    const { instance } = getSource({});
-    expect(instance.version).toStrictEqual(packageJsonVersion);
+    const { collector } = getSource({});
+    expect(collector.version).toStrictEqual(packageJsonVersion);
   });
 
   test('create', () => {
-    const { elb, instance } = getSource();
+    const { elb, collector } = getSource();
     expect(elb).toBeDefined();
-    expect(instance).toBeDefined();
-    expect(elb).toBe(instance.push);
+    expect(collector).toBeDefined();
+    expect(elb).toBe(collector.push);
   });
 
   test('add destination', async () => {
-    const { elb, instance } = getSource({});
-    expect(instance.destinations).toEqual({});
+    const { elb, collector } = getSource({});
+    expect(collector.destinations).toEqual({});
     elb('walker destination', mockDestination, { id: 'mock' });
-    expect(instance.destinations).toEqual({
+    expect(collector.destinations).toEqual({
       mock: {
         config: { id: 'mock' },
         queue: [],
@@ -131,23 +131,23 @@ describe('Server Collector', () => {
   });
 
   test('globals', async () => {
-    let { instance } = getSource({});
-    expect(instance).toHaveProperty('globals', {});
-    expect(instance.config).toHaveProperty('globalsStatic', {});
+    let { collector } = getSource({});
+    expect(collector).toHaveProperty('globals', {});
+    expect(collector.config).toHaveProperty('globalsStatic', {});
 
-    ({ instance } = getSource({ globalsStatic: { foo: 'bar' } }));
-    expect(instance).toHaveProperty('globals', { foo: 'bar' });
-    expect(instance.config).toHaveProperty('globalsStatic', { foo: 'bar' });
+    ({ collector } = getSource({ globalsStatic: { foo: 'bar' } }));
+    expect(collector).toHaveProperty('globals', { foo: 'bar' });
+    expect(collector.config).toHaveProperty('globalsStatic', { foo: 'bar' });
 
-    ({ instance } = getSource({ globalsStatic: { foo: 'bar' } }));
-    instance.globals.a = 1;
-    await instance.push('walker globals', { b: 2 });
-    let result = await instance.push('e a');
+    ({ collector } = getSource({ globalsStatic: { foo: 'bar' } }));
+    collector.globals.a = 1;
+    await collector.push('walker globals', { b: 2 });
+    let result = await collector.push('e a');
     expect(result.event).toHaveProperty('count', 1);
     expect(result.event).toHaveProperty('globals', { foo: 'bar', a: 1, b: 2 });
 
-    await instance.push('walker run', { globals: { c: 3 } });
-    result = await instance.push('e a');
+    await collector.push('walker run', { globals: { c: 3 } });
+    result = await collector.push('e a');
     expect(result.event).toHaveProperty('count', 1);
     expect(result.event).toHaveProperty('globals', { foo: 'bar', c: 3 });
   });

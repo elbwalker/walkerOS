@@ -4,7 +4,7 @@ import { getEvent } from '@walkerOS/utils';
 import { createWebCollector, elb as elbOrg } from '../';
 
 describe('Destination', () => {
-  let instance: WebCollector.Instance;
+  let collector: WebCollector.Collector;
   let elb = elbOrg;
 
   const mockPush = jest.fn(); //.mockImplementation(console.log);
@@ -15,7 +15,7 @@ describe('Destination', () => {
   let config: DestinationWeb.Config;
 
   beforeEach(() => {
-    ({ elb, instance } = createWebCollector({
+    ({ elb, collector } = createWebCollector({
       pageview: false,
       session: false,
     }));
@@ -108,7 +108,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       undefined,
-      { instance },
+      { collector },
     );
 
     elb('walker run');
@@ -120,7 +120,7 @@ describe('Destination', () => {
       }),
       expect.anything(),
       undefined,
-      { instance },
+      { collector },
     );
   });
 
@@ -302,7 +302,7 @@ describe('Destination', () => {
       expect.objectContaining({ event: 'foo bar' }),
       expect.anything(),
       eventMapping,
-      { data: 'bar', instance: expect.anything() },
+      { data: 'bar', collector: expect.anything() },
     );
 
     // Destination data
@@ -312,7 +312,7 @@ describe('Destination', () => {
       expect.objectContaining({ event: event.event }),
       expect.anything(),
       undefined,
-      { data: 'foo', instance: expect.anything() },
+      { data: 'foo', collector: expect.anything() },
     );
   });
 
@@ -340,14 +340,14 @@ describe('Destination', () => {
           foo: 'bar',
           bar: 'baz',
         },
-        instance: expect.anything(),
+        collector: expect.anything(),
       },
     );
   });
 
   test('consent', async () => {
     jest.clearAllMocks();
-    const { elb, instance } = createWebCollector({
+    const { elb, collector } = createWebCollector({
       consent: { functional: true, marketing: false },
       pageview: false,
       session: false,
@@ -413,7 +413,7 @@ describe('Destination', () => {
 
     // Consent in event
     expect(mockPushD).toHaveBeenCalledTimes(0);
-    expect(instance.consent.via_event).not.toBeTruthy();
+    expect(collector.consent.via_event).not.toBeTruthy();
 
     jest.clearAllMocks();
     await elb({ event: 'via event', consent: { via_event: true } });
@@ -622,7 +622,7 @@ describe('Destination', () => {
       }),
       push: mockPush,
     });
-    const destinationSave = Object.values(instance.destinations).filter(
+    const destinationSave = Object.values(collector.destinations).filter(
       (item) => item.type === 'save',
     )[0];
     expect(destinationSave.config).toEqual({ foo: 'bar', init: true });
@@ -700,21 +700,21 @@ describe('Destination', () => {
     elb('walker destination', destination, { id: 'foo' }); // Override
     elb('walker destination', destination, { id: 'bar' });
 
-    expect(instance.destinations).toHaveProperty('foo');
-    expect(Object.keys(instance.destinations)).toHaveLength(2);
+    expect(collector.destinations).toHaveProperty('foo');
+    expect(Object.keys(collector.destinations)).toHaveLength(2);
 
     await elb('e a');
     expect(mockPush).toHaveBeenCalledTimes(2);
     mockPush.mockClear();
-    delete instance.destinations['foo']; // Delete destination
-    expect(instance.destinations).not.toHaveProperty('foo');
-    expect(Object.keys(instance.destinations)).toHaveLength(1);
+    delete collector.destinations['foo']; // Delete destination
+    expect(collector.destinations).not.toHaveProperty('foo');
+    expect(Object.keys(collector.destinations)).toHaveLength(1);
 
     await elb('e a');
     expect(mockPush).toHaveBeenCalledTimes(1);
 
     elb('walker destination', destination);
-    expect(Object.keys(instance.destinations)).toHaveLength(2);
+    expect(Object.keys(collector.destinations)).toHaveLength(2);
   });
 
   test('minimal init type', async () => {

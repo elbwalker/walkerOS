@@ -85,7 +85,7 @@ describe('getMappingEvent', () => {
   });
 
   test('condition', async () => {
-    const mapping: Mapping.Config = {
+    const mapping: Mapping.Rules = {
       order: {
         complete: [
           {
@@ -338,11 +338,11 @@ describe('getMappingValue', () => {
   });
 
   test('consent', async () => {
-    const instance = {
-      consent: { instanceLevel: true },
-    } as unknown as WalkerOS.Instance;
+    const collector = {
+      consent: { collectorLevel: true },
+    } as unknown as WalkerOS.Collector;
 
-    expect(instance.consent.instanceLevel).toBeTruthy();
+    expect(collector.consent.collectorLevel).toBeTruthy();
 
     // Denied
     expect(
@@ -363,7 +363,7 @@ describe('getMappingValue', () => {
           key: 'foo',
           consent: { eventLevel: true },
         },
-        { instance },
+        { collector },
       ),
     ).toBe('bar');
 
@@ -376,15 +376,15 @@ describe('getMappingValue', () => {
       ),
     ).toBe('bar');
 
-    // instanceLevel
+    // collectorLevel
     expect(
       await getMappingValue(
         { foo: 'bar' },
         {
           key: 'foo',
-          consent: { instanceLevel: true },
+          consent: { collectorLevel: true },
         },
-        { instance },
+        { collector },
       ),
     ).toBe('bar');
 
@@ -393,28 +393,28 @@ describe('getMappingValue', () => {
       await getMappingValue(
         { foo: 'bar', consent: { eventLevel: false } },
         { key: 'foo', consent: { eventLevel: true } },
-        { instance },
+        { collector },
       ),
     ).toBeUndefined();
 
-    // eventLevel overrides instanceLevel
+    // eventLevel overrides collectorLevel
     expect(
       await getMappingValue(
-        { foo: 'bar', consent: { instanceLevel: false } },
+        { foo: 'bar', consent: { collectorLevel: false } },
         {
           key: 'foo',
-          consent: { instanceLevel: true },
+          consent: { collectorLevel: true },
         },
-        { instance },
+        { collector },
       ),
     ).toBeUndefined();
 
-    // optionsLevel overrides instanceLevel
+    // optionsLevel overrides collectorLevel
     expect(
       await getMappingValue(
         { foo: 'bar' },
-        { key: 'foo', consent: { instanceLevel: true } },
-        { instance, consent: { optionsLevel: false } },
+        { key: 'foo', consent: { collectorLevel: true } },
+        { collector, consent: { optionsLevel: false } },
       ),
     ).toBeUndefined();
   });

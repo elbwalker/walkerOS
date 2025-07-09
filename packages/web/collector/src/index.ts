@@ -26,23 +26,23 @@ export const elb: Elb.Fn = createElb();
 
 export function createWebCollector(customConfig?: WebCollector.InitConfig): {
   elb: Elb.Fn;
-  instance: WebCollector.Instance;
+  collector: WebCollector.Collector;
 } {
-  const instance = webCollector(customConfig);
-  const elb = instance.push;
+  const collector = webCollector(customConfig);
+  const elb = collector.push;
 
-  return { elb, instance };
+  return { elb, collector };
 }
 
 export function webCollector(
   customConfig: WebCollector.InitConfig = {},
-): WebCollector.Instance {
+): WebCollector.Collector {
   const version = '0.0.1'; // Source version
   const state = getState(customConfig);
-  const instance: WebCollector.Instance = {
+  const collector: WebCollector.Collector = {
     ...state,
     version,
-    // Placeholder functions to be overwritten with instance-reference
+    // Placeholder functions to be overwritten with collector-reference
     push: (() => {}) as unknown as Elb.Fn,
     getAllEvents,
     getEvents,
@@ -50,38 +50,39 @@ export function webCollector(
     sessionStart: (() => {}) as unknown as typeof sessionStart,
   };
 
-  const { config } = instance;
+  const { config } = collector;
 
-  // Overwrite the push function with the instance-reference
-  instance.push = getPush(instance);
-  instance.sessionStart = createSessionStart(instance);
+  // Overwrite the push function with the collector-reference
+  collector.push = getPush(collector);
+  collector.sessionStart = createSessionStart(collector);
 
   // Setup pushes via elbLayer
-  elbLayerInit(instance);
+  elbLayerInit(collector);
 
-  // Assign instance and/or elb to the window object
+  // Assign collector and/or elb to the window object
   if (config.elb)
     (window as unknown as Record<string, unknown>)[config.elb] = createElb(
       config.elbLayer,
     );
-  if (config.instance)
-    (window as unknown as Record<string, unknown>)[config.instance] = instance;
+  if (config.collector)
+    (window as unknown as Record<string, unknown>)[config.collector] =
+      collector;
 
   // Run on events for default consent states
-  onApply(instance, 'consent');
+  onApply(collector, 'consent');
 
   // Add default destination to push events to dataLayer
   if (config.dataLayer)
-    addDestination(instance, dataLayerDestination(), config.dataLayerConfig);
+    addDestination(collector, dataLayerDestination(), config.dataLayerConfig);
 
   // Automatically start running
-  if (config.run) ready(instance, run, instance);
+  if (config.run) ready(collector, run, collector);
 
   // Register trigger like click, submit, etc.
-  initGlobalTrigger(instance);
+  initGlobalTrigger(collector);
 
   // Let's get it on!
-  return instance;
+  return collector;
 }
 
 export default webCollector;

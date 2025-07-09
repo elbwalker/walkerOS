@@ -4,7 +4,7 @@ import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { webCollector, createWebCollector } from '../';
 
 describe('Hooks', () => {
-  let walkerjs: WebCollector.Instance;
+  let walkerjs: WebCollector.Collector;
 
   beforeEach(() => {
     global.performance.getEntriesByType = jest
@@ -44,7 +44,7 @@ describe('Hooks', () => {
         return params.fn(...args);
       });
 
-    const { elb, instance } = createWebCollector({
+    const { elb, collector } = createWebCollector({
       pageview: false,
       session: false,
     });
@@ -61,7 +61,7 @@ describe('Hooks', () => {
     elb('walker hook', 'preDestinationPushBatch', preDestinationPushBatch);
     elb('walker hook', 'postDestinationPushBatch', postDestinationPushBatch);
 
-    expect(instance.hooks).toEqual(
+    expect(collector.hooks).toEqual(
       expect.objectContaining({
         preDestinationInit: expect.any(Function),
         postDestinationInit: expect.any(Function),
@@ -85,7 +85,7 @@ describe('Hooks', () => {
       expect.objectContaining({ event: 'e a' }), // event
       { init: true, mapping: { bundle: { me: { batch: 100 } } } }, // destination config
       undefined, // custom event mapping
-      { instance }, // options
+      { collector }, // options
     );
 
     elb('bundle me', { on: 'ce' });
@@ -105,7 +105,7 @@ describe('Hooks', () => {
     });
     const postPush: Hooks.AnyFunction = jest.fn();
 
-    const { elb, instance } = createWebCollector({
+    const { elb, collector } = createWebCollector({
       dataLayer: true,
       pageview: false,
       session: false,
@@ -127,7 +127,7 @@ describe('Hooks', () => {
       expect.any(Function),
     );
 
-    expect(instance.hooks).toEqual(
+    expect(collector.hooks).toEqual(
       expect.objectContaining({
         prePush: expect.any(Function),
         postPush: expect.any(Function),
@@ -202,7 +202,7 @@ describe('Hooks', () => {
       },
       expect.objectContaining({
         storage: true,
-        instance: expect.any(Object),
+        collector: expect.any(Object),
         data: expect.any(Object),
         cb: expect.any(Function),
       }),

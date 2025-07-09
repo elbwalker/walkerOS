@@ -13,7 +13,7 @@ jest.mock('../utils', () => {
 });
 
 describe('Session', () => {
-  let walkerjs: WebCollector.Instance;
+  let walkerjs: WebCollector.Collector;
   const mockFn = jest.fn();
 
   beforeEach(() => {

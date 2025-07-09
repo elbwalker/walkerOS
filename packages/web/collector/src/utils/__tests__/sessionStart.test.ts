@@ -61,26 +61,26 @@ describe('sessionStart', () => {
       foo: expect.any(Function),
     });
 
-    // Simulate granted consent call from walker.js instance
+    // Simulate granted consent call from walker.js collector
     // Granted
     expect(mockSessionStorage).toHaveBeenCalledTimes(0);
-    consent[consentName]({} as unknown as WalkerOS.Instance, {
+    consent[consentName]({} as unknown as WalkerOS.Collector, {
       [consentName]: true,
     });
     expect(mockSessionStorage).toHaveBeenCalledWith(config);
 
     // Denied
     expect(mockSessionWindow).toHaveBeenCalledTimes(0);
-    consent[consentName]({} as unknown as WalkerOS.Instance, {
+    consent[consentName]({} as unknown as WalkerOS.Collector, {
       [consentName]: false,
     });
     expect(mockSessionWindow).toHaveBeenCalledWith(config);
   });
 
   test('Callback without consent', () => {
-    const instance = {} as unknown as WalkerOS.Instance;
+    const collector = {} as unknown as WalkerOS.Collector;
     const mockCb = jest.fn();
-    const config = { cb: mockCb, instance, storage: false };
+    const config = { cb: mockCb, collector, storage: false };
     sessionStart(config);
 
     expect(mockCb).toHaveBeenCalledTimes(1);
@@ -88,20 +88,20 @@ describe('sessionStart', () => {
       {
         mock: 'window',
       },
-      instance,
+      collector,
       expect.any(Function),
     );
   });
 
   test('Callback with consent', () => {
     const consentName = 'foo';
-    const instance = {} as unknown as WalkerOS.Instance;
+    const collector = {} as unknown as WalkerOS.Collector;
     const mockCb = jest.fn();
     const config = { cb: mockCb, consent: consentName, storage: true };
     sessionStart(config);
 
     // Granted, use sessionStorage
-    consent[consentName](instance, {
+    consent[consentName](collector, {
       [consentName]: true,
     });
     expect(mockCb).toHaveBeenCalledTimes(1);
@@ -109,12 +109,12 @@ describe('sessionStart', () => {
       {
         mock: 'storage',
       },
-      instance,
+      collector,
       expect.any(Function),
     );
 
     // Denied, use sessionWindow
-    consent[consentName](instance, {
+    consent[consentName](collector, {
       [consentName]: false,
     });
     expect(mockCb).toHaveBeenCalledTimes(2);
@@ -122,7 +122,7 @@ describe('sessionStart', () => {
       {
         mock: 'window',
       },
-      instance,
+      collector,
       expect.any(Function),
     );
   });

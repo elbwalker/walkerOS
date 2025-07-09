@@ -9,37 +9,37 @@ export * from './types';
 // Server utilities
 export * from './utils';
 
-export function createServerCollector(customConfig?: ServerCollector.InitConfig): {
+export function createServerCollector(
+  customConfig?: ServerCollector.InitConfig,
+): {
   elb: Elb.Fn;
-  instance: ServerCollector.Instance;
+  collector: ServerCollector.Collector;
 } {
-  const instance = serverCollector(customConfig);
-  const elb = instance.push;
+  const collector = serverCollector(customConfig);
+  const elb = collector.push;
 
-  return { elb, instance };
+  return { elb, collector };
 }
-
 
 export function serverCollector(
   customConfig: ServerCollector.PartialConfig = {},
-): ServerCollector.Instance {
+): ServerCollector.Collector {
   const version = '0.0.1'; // Source version
   const state = getState(customConfig);
-  const instance: ServerCollector.Instance = {
+  const collector: ServerCollector.Collector = {
     ...state,
     version,
     push: (() => {}) as unknown as Elb.Fn, // Placeholder for the actual push function
     on: {}, // Initialize empty on handlers
   };
 
-  // Overwrite the push function with the instance-reference
-  instance.push = getPush(instance);
+  // Overwrite the push function with the collector-reference
+  collector.push = getPush(collector);
 
   // That's when the party starts
-  run(instance);
+  run(collector);
 
-  return instance;
+  return collector;
 }
-
 
 export default createServerCollector;

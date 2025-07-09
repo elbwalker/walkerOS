@@ -18,9 +18,7 @@ export async function getMappingEvent(
   let actionKey = action;
 
   const resolveEventMapping = (
-    eventMapping?:
-      | Mapping.Rule
-      | Mapping.Rule[],
+    eventMapping?: Mapping.Rule | Mapping.Rule[],
   ) => {
     if (!eventMapping) return;
     eventMapping = isArray(eventMapping) ? eventMapping : [eventMapping];
@@ -58,11 +56,11 @@ export async function getMappingValue(
 ): Promise<WalkerOS.Property | undefined> {
   if (!isDefined(value)) return;
 
-  // Get consent state in priority order: value.consent > options.consent > instance?.consent
+  // Get consent state in priority order: value.consent > options.consent > collector?.consent
   const consentState =
     ((isObject(value) && value.consent) as WalkerOS.Consent) ||
     options.consent ||
-    options.instance?.consent;
+    options.collector?.consent;
 
   const mappings = isArray(data) ? data : [data];
 
@@ -82,7 +80,7 @@ async function processMappingValue(
   mapping: Mapping.Value,
   options: Mapping.Options = {},
 ): Promise<WalkerOS.Property | undefined> {
-  const { instance, consent: consentState } = options;
+  const { collector, consent: consentState } = options;
 
   // Ensure mapping is an array for uniform processing
   const mappings = isArray(mapping) ? mapping : [mapping];
@@ -111,7 +109,7 @@ async function processMappingValue(
     // Check if this mapping should be used
     if (
       condition &&
-      !(await tryCatchAsync(condition)(value, mappingItem, instance))
+      !(await tryCatchAsync(condition)(value, mappingItem, collector))
     )
       return;
 

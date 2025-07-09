@@ -5,21 +5,21 @@ import { createWebCollector } from '../';
 
 describe('Commands', () => {
   let elb: Elb.Fn;
-  let walkerjs: WebCollector.Instance;
+  let walkerjs: WebCollector.Collector;
 
   beforeEach(() => {
     global.performance.getEntriesByType = jest
       .fn()
       .mockReturnValue([{ type: 'navigate' }]);
 
-    const { elb: elbFn, instance } = createWebCollector({
+    const { elb: elbFn, collector } = createWebCollector({
       default: true,
       consent: { test: true },
       pageview: false,
       session: false,
     });
     elb = elbFn;
-    walkerjs = instance;
+    walkerjs = collector;
   });
 
   test('walker action', () => {
@@ -114,15 +114,15 @@ describe('Commands', () => {
 
   test('walker consent', async () => {
     jest.clearAllMocks();
-    const { elb, instance } = createWebCollector({
+    const { elb, collector } = createWebCollector({
       consent: { functional: true },
       default: true,
       pageview: false,
     });
 
     await jest.runAllTimersAsync();
-    expect(instance.consent.functional).toBeTruthy();
-    expect(instance.consent.marketing).not.toBeTruthy();
+    expect(collector.consent.functional).toBeTruthy();
+    expect(collector.consent.marketing).not.toBeTruthy();
     await elb('consent check');
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -133,12 +133,12 @@ describe('Commands', () => {
 
     // Missing argument
     elb('walker consent');
-    expect(instance.consent.functional).toBeTruthy();
-    expect(instance.consent.marketing).not.toBeTruthy();
+    expect(collector.consent.functional).toBeTruthy();
+    expect(collector.consent.marketing).not.toBeTruthy();
 
     // Grant permissions
     elb('walker consent', { marketing: true });
-    expect(instance.consent.marketing).toBeTruthy();
+    expect(collector.consent.marketing).toBeTruthy();
     await elb('consent check');
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -149,7 +149,7 @@ describe('Commands', () => {
 
     // Revoke permissions
     elb('walker consent', { marketing: false });
-    expect(instance.consent.marketing).not.toBeTruthy();
+    expect(collector.consent.marketing).not.toBeTruthy();
     await elb('consent check');
     expect(mockDataLayer).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -188,12 +188,12 @@ describe('Commands', () => {
   });
 
   test('walker custom', async () => {
-    const { elb, instance } = createWebCollector({
+    const { elb, collector } = createWebCollector({
       default: true,
       custom: { static: 'value' },
     });
 
-    expect(instance).toStrictEqual(
+    expect(collector).toStrictEqual(
       expect.objectContaining({
         custom: { static: 'value' },
       }),
@@ -203,7 +203,7 @@ describe('Commands', () => {
     elb('walker custom', { another: 'value' });
     elb('walker custom', { static: 'override' });
     await elb('foo bar');
-    expect(instance).toStrictEqual(
+    expect(collector).toStrictEqual(
       expect.objectContaining({
         custom: {
           static: 'override',

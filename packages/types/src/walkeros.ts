@@ -4,7 +4,7 @@ export type AnyObject<T = unknown> = Record<string, T>;
 export type AnyFunction = (...args: unknown[]) => unknown;
 export type SingleOrArray<T> = T | Array<T>;
 
-export interface Instance extends State {
+export interface Collector extends State {
   push: Elb.Fn;
 }
 

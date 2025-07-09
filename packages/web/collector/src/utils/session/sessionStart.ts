@@ -8,21 +8,21 @@ export interface SessionConfig extends SessionStorageConfig {
   consent?: string | string[];
   storage?: boolean;
   cb?: SessionCallback | false;
-  instance?: WalkerOS.Instance;
+  collector?: WalkerOS.Collector;
 }
 
 export type SessionFunction = typeof sessionStorage | typeof sessionWindow;
 export type SessionCallback = (
   session: WalkerOS.SessionData,
-  instance: WalkerOS.Instance | undefined,
+  collector: WalkerOS.Collector | undefined,
   defaultCb: SessionCallback,
 ) => void;
 
 export function sessionStart(
   config: SessionConfig = {},
 ): WalkerOS.SessionData | void {
-  const { cb, consent, instance, storage } = config;
-  const elb = instance?.push || elbOrg;
+  const { cb, consent, collector, storage } = config;
+  const elb = collector?.push || elbOrg;
   const sessionFn: SessionFunction = storage ? sessionStorage : sessionWindow;
 
   // Consent
@@ -38,31 +38,34 @@ export function sessionStart(
     elb('walker on', 'consent', consentConfig);
   } else {
     // just do it
-    return callFuncAndCb(sessionFn(config), instance, cb);
+    return callFuncAndCb(sessionFn(config), collector, cb);
   }
 }
 
 function callFuncAndCb(
   session: WalkerOS.SessionData,
-  instance?: WalkerOS.Instance,
+  collector?: WalkerOS.Collector,
   cb?: SessionCallback | false,
 ) {
   if (cb === false) return session; // Callback is disabled
   if (!cb) cb = defaultCb; // Default callback if none is provided
-  return cb(session, instance, defaultCb);
+  return cb(session, collector, defaultCb);
 }
 
 function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
   // Track the last processed group to prevent duplicate processing
   let lastProcessedGroup: string | undefined;
 
-  const func = (instance: WalkerOS.Instance, consent: WalkerOS.Consent) => {
+  const func = (collector: WalkerOS.Collector, consent: WalkerOS.Consent) => {
     // Skip if we've already processed this group
-    if (isDefined(lastProcessedGroup) && lastProcessedGroup === instance?.group)
+    if (
+      isDefined(lastProcessedGroup) &&
+      lastProcessedGroup === collector?.group
+    )
       return;
 
     // Remember this group has been processed
-    lastProcessedGroup = instance?.group;
+    lastProcessedGroup = collector?.group;
 
     let sessionFn: SessionFunction = () => sessionWindow(config); // Window by default
 
@@ -76,7 +79,7 @@ function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
         sessionFn = () => sessionStorage(config);
     }
 
-    return callFuncAndCb(sessionFn(), instance, cb);
+    return callFuncAndCb(sessionFn(), collector, cb);
   };
 
   return func;
@@ -84,9 +87,9 @@ function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
 
 const defaultCb: SessionCallback = (
   session,
-  instance,
+  collector,
 ): WalkerOS.SessionData => {
-  const elb = instance?.push || elbOrg;
+  const elb = collector?.push || elbOrg;
   const user: WalkerOS.User = {};
 
   // User.session is the session ID

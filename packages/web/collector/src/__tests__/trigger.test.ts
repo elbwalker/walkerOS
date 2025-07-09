@@ -359,7 +359,7 @@ describe('Trigger', () => {
   });
 
   test('scroll', async () => {
-    // New instance without cached scroll listener
+    // New collector without cached scroll listener
     document.body.innerHTML = `<div id="scroll" data-elb="scroll" data-elbaction="scroll(80):80percent"></div>`;
     createWebCollector({ default: true, session: false, pageview: false });
 

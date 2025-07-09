@@ -3,7 +3,7 @@ import { assign, onLog } from '@walkerOS/utils';
 
 export function getState(
   initConfig: ServerCollector.InitConfig,
-  instance: Partial<ServerCollector.Instance> = {},
+  collector: Partial<ServerCollector.Collector> = {},
 ): ServerCollector.State {
   const defaultConfig: ServerCollector.Config = {
     default: false, // Run in default mode
@@ -19,7 +19,7 @@ export function getState(
   const config: ServerCollector.Config = assign(
     defaultConfig,
     {
-      ...(instance.config || {}), // current config
+      ...(collector.config || {}), // current config
       ...initConfig, // new config
     },
     { merge: false, extend: false },

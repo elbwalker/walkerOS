@@ -8,7 +8,7 @@ export interface Rule<Settings = unknown> {
   batch?: number; // Bundle events for batch processing
   batchFn?: (
     destination: Destination.Destination,
-    instance: WalkerOS.Instance,
+    collector: WalkerOS.Collector,
   ) => void;
   batched?: Destination.Batch<Settings>; // Batch of events to be processed
   condition?: Condition; // Added condition
@@ -44,7 +44,7 @@ export interface ValueConfig {
 export type Condition = (
   value: WalkerOS.DeepPartialEvent | unknown,
   mapping?: Value,
-  instance?: WalkerOS.Instance,
+  collector?: WalkerOS.Collector,
 ) => WalkerOS.PromiseOrValue<boolean>;
 
 export type Fn = (
@@ -59,7 +59,7 @@ export type Map = { [key: string]: Value };
 
 export interface Options {
   consent?: WalkerOS.Consent;
-  instance?: WalkerOS.Instance;
+  collector?: WalkerOS.Collector;
   props?: unknown;
 }
 

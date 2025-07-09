@@ -13,7 +13,7 @@ import {
 } from '@walkerOS/utils';
 import { getEntities } from './walker';
 
-export function getPush(instance: WebCollector.Instance): Elb.Fn {
+export function getPush(collector: WebCollector.Collector): Elb.Fn {
   const prepareEvent: Elb.Arguments<WalkerOS.PartialEvent> = (
     nameOrEvent,
     pushData,
@@ -45,9 +45,10 @@ export function getPush(instance: WebCollector.Instance): Elb.Fn {
     }
 
     if (elemParameter) {
-      const entityObj = getEntities(instance.config.prefix, elemParameter).find(
-        (obj) => obj.type === entity,
-      );
+      const entityObj = getEntities(
+        collector.config.prefix,
+        elemParameter,
+      ).find((obj) => obj.type === entity);
       if (entityObj) {
         if (dataIsElem) data = entityObj.data;
         eventContext = entityObj.context;
@@ -64,7 +65,7 @@ export function getPush(instance: WebCollector.Instance): Elb.Fn {
       nested,
       custom,
       trigger: options ? String(options) : '',
-      timing: Math.round((performance.now() - instance.timing) / 10) / 100,
+      timing: Math.round((performance.now() - collector.timing) / 10) / 100,
       source: {
         type: 'web',
         id: window.location.href,
@@ -73,32 +74,32 @@ export function getPush(instance: WebCollector.Instance): Elb.Fn {
     };
   };
 
-  return createPush<WebCollector.Instance, Elb.Fn>(
-    instance,
+  return createPush<WebCollector.Collector, Elb.Fn>(
+    collector,
     handleCommand,
     prepareEvent,
   );
 }
 
-export function elbLayerInit(instance: WebCollector.Instance) {
-  const elbLayer = instance.config.elbLayer;
+export function elbLayerInit(collector: WebCollector.Collector) {
+  const elbLayer = collector.config.elbLayer;
 
   elbLayer.push = function (...args: Elb.Layer) {
     // Pushed as Arguments
     if (isArguments(args[0])) args = [...Array.from(args[0])];
 
     const i = Array.prototype.push.apply(this, [args]);
-    instance.push(...(args as Parameters<Elb.Fn>));
+    collector.push(...(args as Parameters<Elb.Fn>));
 
     return i;
   };
 
   // Call all predefined commands
-  pushPredefined(instance, true);
+  pushPredefined(collector, true);
 }
 
 export function pushPredefined(
-  instance: WebCollector.Instance,
+  collector: WebCollector.Collector,
   commandsOnly: boolean,
 ) {
   // Handle existing events in the elbLayer on first run
@@ -110,7 +111,7 @@ export function pushPredefined(
   let isFirstRunEvent = true;
 
   // At that time the elbLayer was not yet initialized
-  instance.config.elbLayer.map((pushedItem) => {
+  collector.config.elbLayer.map((pushedItem) => {
     const item = isArguments(pushedItem)
       ? [...Array.from(pushedItem)]
       : isArray(pushedItem)
@@ -143,6 +144,6 @@ export function pushPredefined(
   });
 
   events.map((item) => {
-    instance.push(...item);
+    collector.push(...item);
   });
 }

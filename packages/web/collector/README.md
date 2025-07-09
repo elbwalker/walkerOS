@@ -25,8 +25,8 @@ Here's a basic example of how to use the web collector:
 ```typescript
 import { createWebCollector } from '@walkerOS/web-collector';
 
-// Create a new web collector instance
-const { elb, instance } = createWebCollector({
+// Create a new web collector
+const { elb, collector } = createWebCollector({
   // Optional configuration
 });
 

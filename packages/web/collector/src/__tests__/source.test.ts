@@ -9,21 +9,21 @@ describe('webCollector', () => {
   const version = { source: expect.any(String), tagging: expect.any(Number) };
 
   let elb: Elb.Fn;
-  let walkerjs: WebCollector.Instance;
+  let walkerjs: WebCollector.Collector;
 
   beforeEach(() => {
     global.performance.getEntriesByType = jest
       .fn()
       .mockReturnValue([{ type: 'navigate' }]);
 
-    const { elb: elbFn, instance } = createWebCollector({
+    const { elb: elbFn, collector } = createWebCollector({
       default: true,
       consent: { test: true },
       pageview: false,
       session: false,
     });
     elb = elbFn;
-    walkerjs = instance;
+    walkerjs = collector;
   });
 
   test('version equals package.json version', () => {
@@ -36,20 +36,20 @@ describe('webCollector', () => {
   test('go', () => {
     w.elbLayer = undefined as unknown as Elb.Layer;
     expect(window.elbLayer).toBeUndefined();
-    const instance = webCollector();
-    expect(instance.config.elbLayer).toBeDefined();
+    const collector = webCollector();
+    expect(collector.config.elbLayer).toBeDefined();
   });
 
   test('assign to window', () => {
     const w = window as unknown as Record<string, unknown>;
     expect(window.elb).toBeUndefined();
     expect(window.walkerjs).toBeUndefined();
-    const instance = webCollector({
+    const collector = webCollector({
       elb: 'foo',
-      instance: 'bar',
+      collector: 'bar',
     });
     expect(typeof w.foo).toBe('function');
-    expect(w.bar).toBe(instance);
+    expect(w.bar).toBe(collector);
   });
 
   test('push empty', () => {

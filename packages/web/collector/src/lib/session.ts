@@ -4,39 +4,39 @@ import type { SessionCallback } from '../utils';
 import { assign, isSameType, onApply, useHooks } from '@walkerOS/utils';
 import { sessionStart as sessionStartOrg } from '../utils';
 
-export function createSessionStart(instance: WebCollector.Instance) {
+export function createSessionStart(collector: WebCollector.Collector) {
   return function (
     options: WebCollector.SessionStartOptions = {},
   ): void | WalkerOS.SessionData {
     const { config = {}, ...otherOptions } = options;
-    return sessionStart(instance, {
+    return sessionStart(collector, {
       config: { pulse: true, ...config },
-      data: { ...instance.session, updated: Date.now() },
+      data: { ...collector.session, updated: Date.now() },
       ...otherOptions,
     });
   };
 }
 
 export function sessionStart(
-  instance: WebCollector.Instance,
+  collector: WebCollector.Collector,
   options: WebCollector.SessionStartOptions = {},
 ): void | WalkerOS.SessionData {
-  const sessionConfig = assign(instance.config.session || {}, options.config);
-  const sessionData = assign(instance.config.sessionStatic, options.data);
+  const sessionConfig = assign(collector.config.session || {}, options.config);
+  const sessionData = assign(collector.config.sessionStatic, options.data);
 
   // A wrapper for the callback
-  const cb: SessionCallback = (session, instance, defaultCb) => {
+  const cb: SessionCallback = (session, collector, defaultCb) => {
     let result: void | undefined | WalkerOS.SessionData;
     if (sessionConfig.cb !== false)
       // Run either the default callback or the provided one
-      result = (sessionConfig.cb || defaultCb)(session, instance, defaultCb);
+      result = (sessionConfig.cb || defaultCb)(session, collector, defaultCb);
 
-    if (isSameType(instance, {} as WebCollector.Instance)) {
+    if (isSameType(collector, {} as WebCollector.Collector)) {
       // Assign the session
-      instance.session = session;
+      collector.session = session;
 
       // Run on session events
-      onApply(instance, 'session');
+      onApply(collector, 'session');
     }
 
     return result;
@@ -45,12 +45,12 @@ export function sessionStart(
   const session = useHooks(
     sessionStartOrg,
     'SessionStart',
-    instance.hooks,
+    collector.hooks,
   )({
     ...sessionConfig, // Session detection configuration
     cb, // Custom wrapper callback
     data: sessionData, // Static default session data
-    instance,
+    collector,
   });
 
   return session;

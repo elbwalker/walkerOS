@@ -6,10 +6,10 @@ import { load } from './trigger';
 import { sessionStart } from './session';
 
 export function run(
-  instance: WebCollector.Instance,
+  collector: WebCollector.Collector,
   state: Partial<WebCollector.State> = {},
 ) {
-  const { config, destinations } = instance;
+  const { config, destinations } = collector;
 
   const newState = assign(
     {
@@ -28,8 +28,8 @@ export function run(
     { ...state },
   );
 
-  // Update the instance reference with the updated state
-  assign(instance, newState, { merge: false, shallow: false, extend: false });
+  // Update the collector reference with the updated state
+  assign(collector, newState, { merge: false, shallow: false, extend: false });
 
   // Reset all destination queues
   Object.values(destinations).forEach((destination) => {
@@ -37,29 +37,29 @@ export function run(
   });
 
   // Increase round counter
-  if (++instance.round == 1) {
+  if (++collector.round == 1) {
     // Run predefined elbLayer stack once for all non-command events
-    pushPredefined(instance, false);
+    pushPredefined(collector, false);
   } else {
     // Reset timing with each new run
-    instance.timing = performance.now();
+    collector.timing = performance.now();
   }
 
   // Session handling
   const sessionConfig = config.session;
   if (sessionConfig) {
     // Disable session start for window after first round (for SPAs)
-    if (!sessionConfig.storage && instance.round > 1)
+    if (!sessionConfig.storage && collector.round > 1)
       sessionConfig.isStart = false;
 
-    sessionStart(instance, {
+    sessionStart(collector, {
       ...sessionConfig, // Session detection configuration
       data: config.sessionStatic, // Static default session data
     });
   }
 
   // Call the predefined run events
-  onApply(instance, 'run');
+  onApply(collector, 'run');
 
-  tryCatch(load)(instance);
+  tryCatch(load)(collector);
 }

@@ -41,7 +41,7 @@ export type Init = Partial<Omit<Destination, 'push'>> &
 
 export type InitFn<Settings, Mapping> = (
   config?: PartialConfig<Settings, Mapping>,
-  instance?: WalkerOS.Instance,
+  collector?: WalkerOS.Collector,
 ) => WalkerOS.PromiseOrValue<void | false | Config<Settings, Mapping>>;
 
 export type PushFn<Settings, Mapping> = (
@@ -71,7 +71,7 @@ export interface Batch<Mapping> {
 }
 
 export interface Options {
-  instance?: WalkerOS.Instance;
+  collector?: WalkerOS.Collector;
   data?: Data;
 }
 

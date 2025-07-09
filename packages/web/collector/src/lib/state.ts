@@ -3,7 +3,7 @@ import type { WebCollector } from '../types';
 
 export function getState(
   initConfig: WebCollector.InitConfig,
-  instance: Partial<WebCollector.Instance> = {},
+  collector: Partial<WebCollector.Collector> = {},
 ): WebCollector.State {
   const defaultConfig: WebCollector.Config = {
     default: false, // Run in default mode
@@ -26,7 +26,7 @@ export function getState(
   const config: WebCollector.Config = assign(
     defaultConfig,
     {
-      ...(instance.config || {}), // current config
+      ...(collector.config || {}), // current config
       ...initConfig, // new config
     },
     { merge: false, extend: false },
@@ -34,7 +34,7 @@ export function getState(
 
   // Optional values
   if (initConfig.elb) config.elb = initConfig.elb;
-  if (initConfig.instance) config.instance = initConfig.instance;
+  if (initConfig.collector) config.collector = initConfig.collector;
 
   // Process default mode to enable both auto-run and dataLayer destination
   if (initConfig.default) {

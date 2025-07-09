@@ -37,13 +37,13 @@ export const Trigger: { [key: string]: Walker.Trigger } = {
 } as const;
 
 export async function ready<T extends (...args: never[]) => R, R>(
-  instance: WebCollector.Instance,
+  collector: WebCollector.Collector,
   fn: T,
   ...args: Parameters<T>
 ): Promise<R | undefined> {
   const readyFn = () => {
     const result = fn(...args);
-    onApply(instance, 'ready');
+    onApply(collector, 'ready');
     return result;
   };
 
@@ -55,34 +55,34 @@ export async function ready<T extends (...args: never[]) => R, R>(
 }
 
 // Called for each new run to setup triggers
-export function load(instance: WebCollector.Instance) {
-  const { pageview, prefix } = instance.config;
+export function load(collector: WebCollector.Collector) {
+  const { pageview, prefix } = collector.config;
   // Trigger static page view if enabled
   if (pageview) {
     const [data, context] = getPageViewData(prefix);
-    instance.push('page view', data, Trigger.Load, context);
+    collector.push('page view', data, Trigger.Load, context);
   }
 
-  initScopeTrigger(instance);
+  initScopeTrigger(collector);
 }
 
-export function initGlobalTrigger(instance: WebCollector.Instance): void {
+export function initGlobalTrigger(collector: WebCollector.Collector): void {
   document.addEventListener(
     'click',
     tryCatch(function (this: Document, ev: MouseEvent) {
-      triggerClick.call(this, instance, ev);
+      triggerClick.call(this, collector, ev);
     }),
   );
   document.addEventListener(
     'submit',
     tryCatch(function (this: Document, ev: SubmitEvent) {
-      triggerSubmit.call(this, instance, ev);
+      triggerSubmit.call(this, collector, ev);
     }),
   );
 }
 
 export function initScopeTrigger(
-  instance: WebCollector.Instance,
+  collector: WebCollector.Collector,
   scope: Elb.Scope = document,
 ) {
   // Reset all scroll events @TODO check if it's right here
@@ -93,11 +93,11 @@ export function initScopeTrigger(
     visibleObserver ||
     tryCatch(observerVisible, () => {
       return undefined;
-    })(instance, 1000);
+    })(collector, 1000);
 
   // default data-elbaction
   const selectorAction = getElbAttributeName(
-    instance.config.prefix,
+    collector.config.prefix,
     Const.Commands.Action,
     false,
   );
@@ -107,27 +107,27 @@ export function initScopeTrigger(
     visibleObserver && visibleObserver.disconnect();
   } else {
     // Handle the elements action(s), too
-    handleActionElem(instance, scope as HTMLElement, selectorAction);
+    handleActionElem(collector, scope as HTMLElement, selectorAction);
   }
 
   // Handle all children action(s)
   scope
     .querySelectorAll<HTMLElement>(`[${selectorAction}]`)
-    .forEach((elem) => handleActionElem(instance, elem, selectorAction));
+    .forEach((elem) => handleActionElem(collector, elem, selectorAction));
 
-  if (scrollElements.length) scroll(instance);
+  if (scrollElements.length) scroll(collector);
 }
 
 async function handleTrigger(
-  instance: WebCollector.Instance,
+  collector: WebCollector.Collector,
   element: Element,
   trigger: Walker.Trigger,
   // @TODO add triggerParams to filter for specific trigger
 ) {
-  const events = getEvents(element, trigger, instance.config.prefix);
+  const events = getEvents(element, trigger, collector.config.prefix);
   return Promise.all(
     events.map((event: Walker.Event) =>
-      instance.push({
+      collector.push({
         event: `${event.entity} ${event.action}`,
         ...event,
         trigger,
@@ -137,7 +137,7 @@ async function handleTrigger(
 }
 
 function handleActionElem(
-  instance: WebCollector.Instance,
+  collector: WebCollector.Collector,
   elem: HTMLElement,
   selectorAction: string,
 ) {
@@ -152,13 +152,13 @@ function handleActionElem(
       // TriggerAction ({ trigger, triggerParams, action, actionParams })
       switch (triggerAction.trigger) {
         case Trigger.Hover:
-          triggerHover(instance, elem);
+          triggerHover(collector, elem);
           break;
         case Trigger.Load:
-          triggerLoad(instance, elem);
+          triggerLoad(collector, elem);
           break;
         case Trigger.Pulse:
-          triggerPulse(instance, elem, triggerAction.triggerParams);
+          triggerPulse(collector, elem, triggerAction.triggerParams);
           break;
         case Trigger.Scroll:
           triggerScroll(elem, triggerAction.triggerParams);
@@ -167,39 +167,39 @@ function handleActionElem(
           triggerVisible(elem, visibleObserver);
           break;
         case Trigger.Wait:
-          triggerWait(instance, elem, triggerAction.triggerParams);
+          triggerWait(collector, elem, triggerAction.triggerParams);
           break;
       }
     }),
   );
 }
 
-function triggerClick(instance: WebCollector.Instance, ev: MouseEvent) {
-  handleTrigger(instance, ev.target as Element, Trigger.Click);
+function triggerClick(collector: WebCollector.Collector, ev: MouseEvent) {
+  handleTrigger(collector, ev.target as Element, Trigger.Click);
 }
 
-function triggerHover(instance: WebCollector.Instance, elem: HTMLElement) {
+function triggerHover(collector: WebCollector.Collector, elem: HTMLElement) {
   elem.addEventListener(
     'mouseenter',
     tryCatch(function (this: Document, ev: MouseEvent) {
       if (ev.target instanceof Element)
-        handleTrigger(instance, ev.target, Trigger.Hover);
+        handleTrigger(collector, ev.target, Trigger.Hover);
     }),
   );
 }
 
-function triggerLoad(instance: WebCollector.Instance, elem: HTMLElement) {
-  handleTrigger(instance, elem, Trigger.Load);
+function triggerLoad(collector: WebCollector.Collector, elem: HTMLElement) {
+  handleTrigger(collector, elem, Trigger.Load);
 }
 
 function triggerPulse(
-  instance: WebCollector.Instance,
+  collector: WebCollector.Collector,
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
   setInterval(() => {
     // Only trigger when tab is active
-    if (!document.hidden) handleTrigger(instance, elem, Trigger.Pulse);
+    if (!document.hidden) handleTrigger(collector, elem, Trigger.Pulse);
   }, parseInt(triggerParams || '') || 15000);
 }
 
@@ -213,8 +213,8 @@ function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
   scrollElements.push([elem, depth]);
 }
 
-function triggerSubmit(instance: WebCollector.Instance, ev: Event) {
-  handleTrigger(instance, ev.target as Element, Trigger.Submit);
+function triggerSubmit(collector: WebCollector.Collector, ev: Event) {
+  handleTrigger(collector, ev.target as Element, Trigger.Submit);
 }
 
 function triggerVisible(
@@ -225,20 +225,20 @@ function triggerVisible(
 }
 
 function triggerWait(
-  instance: WebCollector.Instance,
+  collector: WebCollector.Collector,
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
   setTimeout(
-    () => handleTrigger(instance, elem, Trigger.Wait),
+    () => handleTrigger(collector, elem, Trigger.Wait),
     parseInt(triggerParams || '') || 15000,
   );
 }
 
-function scroll(instance: WebCollector.Instance) {
+function scroll(collector: WebCollector.Collector) {
   const scrolling = (
     scrollElements: Walker.ScrollElements,
-    instance: WebCollector.Instance,
+    collector: WebCollector.Collector,
   ) => {
     return scrollElements.filter(([element, depth]) => {
       // Distance from top to the bottom of the visible screen
@@ -261,7 +261,7 @@ function scroll(instance: WebCollector.Instance) {
       // Check if the elements visibility skipped the required border
       if (scrollDepth >= depth) {
         // Enough scrolling, it's time
-        handleTrigger(instance, element, Trigger.Scroll);
+        handleTrigger(collector, element, Trigger.Scroll);
 
         // Remove the element from scrollEvents
         return false;
@@ -275,7 +275,7 @@ function scroll(instance: WebCollector.Instance) {
   // Don't add unnecessary scroll listeners
   if (!scrollListener) {
     scrollListener = throttle(function () {
-      scrollElements = scrolling.call(document, scrollElements, instance);
+      scrollElements = scrolling.call(document, scrollElements, collector);
     });
 
     document.addEventListener('scroll', scrollListener);
@@ -283,7 +283,7 @@ function scroll(instance: WebCollector.Instance) {
 }
 
 function observerVisible(
-  instance: WebCollector.Instance,
+  collector: WebCollector.Collector,
   duration = 1000,
 ): IntersectionObserver | undefined {
   if (!window.IntersectionObserver) return;
@@ -310,7 +310,7 @@ function observerVisible(
               window.setTimeout(async function () {
                 if (isVisible(target)) {
                   await handleTrigger(
-                    instance,
+                    collector,
                     target as Element,
                     Trigger.Visible,
                   );

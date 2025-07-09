@@ -113,7 +113,7 @@ describe('Destination', () => {
     };
     mockDestination.config.mapping = mapping;
 
-    const { elb, instance } = getSource({
+    const { elb, collector } = getSource({
       destinations: { mockDestination },
       user: { id: 'us3r' },
       globalsStatic: { foo: 'irrelevant', bar: 'baz' },
@@ -140,7 +140,7 @@ describe('Destination', () => {
       }),
       mockDestination.config,
       eventMapping,
-      { instance },
+      { collector },
     );
   });
 
@@ -148,7 +148,7 @@ describe('Destination', () => {
     const eventMapping = { name: 'custom' };
     const mapping = { entity: { action: eventMapping } };
 
-    const { elb, instance } = getSource({});
+    const { elb, collector } = getSource({});
     await elb('walker destination', mockDestination, { mapping });
     result = await elb(mockEvent);
 
@@ -159,7 +159,7 @@ describe('Destination', () => {
       }),
       expect.any(Object),
       eventMapping,
-      { instance },
+      { collector },
     );
   });
 
@@ -178,7 +178,7 @@ describe('Destination', () => {
       expect.objectContaining({ event: 'entity action' }),
       expect.anything(),
       eventMapping,
-      { data: 'bar', instance: expect.anything() },
+      { data: 'bar', collector: expect.anything() },
     );
   });
 
@@ -205,7 +205,7 @@ describe('Destination', () => {
           foo: 'bar',
           bar: 'baz',
         },
-        instance: expect.anything(),
+        collector: expect.anything(),
       },
     );
   });
@@ -266,13 +266,13 @@ describe('Destination', () => {
   });
 
   test('add with queue', async () => {
-    const { elb, instance } = getSource({});
+    const { elb, collector } = getSource({});
 
     result = await elb(mockEvent);
     expect(result.successful).toHaveProperty('length', 0);
     expect(result.queued).toHaveProperty('length', 0);
     expect(result.failed).toHaveProperty('length', 0);
-    expect(instance.queue[0]).toEqual(
+    expect(collector.queue[0]).toEqual(
       expect.objectContaining({
         consent: mockEvent.consent,
         user: mockEvent.user,
@@ -281,9 +281,9 @@ describe('Destination', () => {
     );
 
     // Update values after pushing the event
-    instance.consent = { demo: true };
-    instance.user = { id: 'us3r' };
-    instance.globals = { foo: 'bar' };
+    collector.consent = { demo: true };
+    collector.user = { id: 'us3r' };
+    collector.globals = { foo: 'bar' };
 
     result = await elb('walker destination', mockDestination, { id: 'later' });
     expect(result.successful).toHaveProperty('length', 1);
@@ -313,7 +313,7 @@ describe('Destination', () => {
       }),
     };
 
-    const { elb, instance } = getSource({
+    const { elb, collector } = getSource({
       destinations: { mockDestination, initFail, pushFail },
     });
 
@@ -342,11 +342,11 @@ describe('Destination', () => {
     });
 
     // DLQ
-    expect(instance.destinations['initFail'].dlq).toContainEqual([
+    expect(collector.destinations['initFail'].dlq).toContainEqual([
       expect.objectContaining({ event: mockEvent.event }),
       new Error('init kaputt'),
     ]);
-    expect(instance.destinations['pushFail'].dlq).toContainEqual([
+    expect(collector.destinations['pushFail'].dlq).toContainEqual([
       expect.objectContaining({ event: mockEvent.event }),
       new Error('push kaputt'),
     ]);

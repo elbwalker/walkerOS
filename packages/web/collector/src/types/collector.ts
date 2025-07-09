@@ -6,15 +6,15 @@ import type { Events, Trigger } from './walker';
 
 declare global {
   interface Window {
-    elbwalker: Instance;
-    walkerjs: Instance;
+    elbwalker: Collector;
+    walkerjs: Collector;
     elbLayer: Layer;
     dataLayer: WalkerOS.Events | unknown;
     elb: Fn;
   }
 }
 
-export interface Instance extends WalkerOS.Instance {
+export interface Collector extends WalkerOS.Collector {
   config: Config;
   destinations: Destinations;
   push: Fn;
@@ -38,7 +38,7 @@ export interface Config extends WalkerOS.Config {
   run: boolean;
   session: false | SessionConfig;
   elb?: string;
-  instance?: string;
+  collector?: string;
 }
 
 export interface InitConfig extends Partial<Config> {

@@ -4,11 +4,11 @@ import { Const } from './constants';
 import { tryCatch } from './tryCatch';
 
 export function on(
-  instance: WalkerOS.Instance,
+  collector: WalkerOS.Collector,
   type: On.Types,
   option: WalkerOS.SingleOrArray<On.Options>,
 ) {
-  const on = instance.on;
+  const on = collector.on;
   const onType: Array<On.Options> = on[type] || [];
   const options = isArray(option) ? option : [option];
 
@@ -16,15 +16,15 @@ export function on(
     onType.push(option);
   });
 
-  // Update instance on state
+  // Update collector on state
   (on[type] as typeof onType) = onType;
 
   // Execute the on function directly
-  onApply(instance, type, options);
+  onApply(collector, type, options);
 }
 
 export function onApply(
-  instance: WalkerOS.Instance,
+  collector: WalkerOS.Collector,
   type: On.Types,
   options?: Array<On.Options>,
   config?: WalkerOS.Consent,
@@ -33,11 +33,11 @@ export function onApply(
   let onConfig = options || [];
 
   if (!options) {
-    // Get the instance on events
-    onConfig = instance.on[type] || [];
+    // Get the collector on events
+    onConfig = collector.on[type] || [];
 
     // Add all available on events from the destinations
-    Object.values(instance.destinations).forEach((destination) => {
+    Object.values(collector.destinations).forEach((destination) => {
       const onTypeConfig = destination.config.on?.[type];
       if (onTypeConfig) onConfig = onConfig.concat(onTypeConfig);
     });
@@ -47,16 +47,16 @@ export function onApply(
 
   switch (type) {
     case Const.Commands.Consent:
-      onConsent(instance, onConfig as Array<On.ConsentConfig>, config);
+      onConsent(collector, onConfig as Array<On.ConsentConfig>, config);
       break;
     case Const.Commands.Ready:
-      onReady(instance, onConfig as Array<On.ReadyConfig>);
+      onReady(collector, onConfig as Array<On.ReadyConfig>);
       break;
     case Const.Commands.Run:
-      onRun(instance, onConfig as Array<On.RunConfig>);
+      onRun(collector, onConfig as Array<On.RunConfig>);
       break;
     case Const.Commands.Session:
-      onSession(instance, onConfig as Array<On.SessionConfig>);
+      onSession(collector, onConfig as Array<On.SessionConfig>);
       break;
     default:
       break;
@@ -64,11 +64,11 @@ export function onApply(
 }
 
 function onConsent(
-  instance: WalkerOS.Instance,
+  collector: WalkerOS.Collector,
   onConfig: Array<On.ConsentConfig>,
   currentConsent?: WalkerOS.Consent,
 ): void {
-  const consentState = currentConsent || instance.consent;
+  const consentState = currentConsent || collector.consent;
 
   onConfig.forEach((consentConfig) => {
     // Collect functions whose consent keys match the rule keys directly
@@ -77,38 +77,38 @@ function onConsent(
       .filter((consent) => consent in consentConfig) // check for matching rule keys
       .forEach((consent) => {
         // Execute the function
-        tryCatch(consentConfig[consent])(instance, consentState);
+        tryCatch(consentConfig[consent])(collector, consentState);
       });
   });
 }
 
 function onReady(
-  instance: WalkerOS.Instance,
+  collector: WalkerOS.Collector,
   onConfig: Array<On.ReadyConfig>,
 ): void {
-  if (instance.allowed)
+  if (collector.allowed)
     onConfig.forEach((func) => {
-      tryCatch(func)(instance);
+      tryCatch(func)(collector);
     });
 }
 
 function onRun(
-  instance: WalkerOS.Instance,
+  collector: WalkerOS.Collector,
   onConfig: Array<On.RunConfig>,
 ): void {
-  if (instance.allowed)
+  if (collector.allowed)
     onConfig.forEach((func) => {
-      tryCatch(func)(instance);
+      tryCatch(func)(collector);
     });
 }
 
 function onSession(
-  instance: WalkerOS.Instance,
+  collector: WalkerOS.Collector,
   onConfig: Array<On.SessionConfig>,
 ): void {
-  if (!instance.config.session) return; // Session handling is disabled
+  if (!collector.config.session) return; // Session handling is disabled
 
   onConfig.forEach((func) => {
-    tryCatch(func)(instance, instance.session);
+    tryCatch(func)(collector, collector.session);
   });
 }

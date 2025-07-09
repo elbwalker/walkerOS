@@ -69,7 +69,7 @@ describe('clone', () => {
 
     const cloned = clone(obj);
 
-    expect(cloned).not.toBe(obj); // Cloned object is a new instance
+    expect(cloned).not.toBe(obj); // Cloned object is a new collector
     expect(cloned.key).toBe('value'); // Key is correctly cloned
     expect(cloned.self).toBe(cloned); // Circular reference is preserved in the clone
   });
