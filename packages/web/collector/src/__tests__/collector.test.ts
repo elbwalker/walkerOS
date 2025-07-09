@@ -46,7 +46,7 @@ describe('webCollector', () => {
     expect(window.walkerjs).toBeUndefined();
     const collector = webCollector({
       elb: 'foo',
-      collector: 'bar',
+      name: 'bar',
     });
     expect(typeof w.foo).toBe('function');
     expect(w.bar).toBe(collector);

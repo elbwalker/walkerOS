@@ -64,9 +64,8 @@ export function webCollector(
     (window as unknown as Record<string, unknown>)[config.elb] = createElb(
       config.elbLayer,
     );
-  if (config.collector)
-    (window as unknown as Record<string, unknown>)[config.collector] =
-      collector;
+  if (config.name)
+    (window as unknown as Record<string, unknown>)[config.name] = collector;
 
   // Run on events for default consent states
   onApply(collector, 'consent');

@@ -34,7 +34,7 @@ export function getState(
 
   // Optional values
   if (initConfig.elb) config.elb = initConfig.elb;
-  if (initConfig.collector) config.collector = initConfig.collector;
+  if (initConfig.name) config.name = initConfig.name;
 
   // Process default mode to enable both auto-run and dataLayer destination
   if (initConfig.default) {

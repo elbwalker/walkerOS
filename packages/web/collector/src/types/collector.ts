@@ -38,7 +38,7 @@ export interface Config extends WalkerOS.Config {
   run: boolean;
   session: false | SessionConfig;
   elb?: string;
-  collector?: string;
+  name?: string;
 }
 
 export interface InitConfig extends Partial<Config> {
