@@ -1,7 +1,7 @@
-import type { Config, Settings, InitFn } from './types';
+import type { Config, Settings, PartialConfig } from './types';
 import { onLog, throwError } from '@walkerOS/utils';
 
-export function getConfig(partialConfig: Parameters<InitFn>[0] = {}): Config {
+export function getConfig(partialConfig: PartialConfig = {}): Config {
   const settings = (partialConfig.settings || {}) as Partial<Settings>;
   const { accessToken, pixelId } = settings;
 

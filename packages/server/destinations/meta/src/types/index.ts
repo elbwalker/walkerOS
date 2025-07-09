@@ -1,24 +1,18 @@
 import type { DestinationServer } from '@walkerOS/server-collector';
-import type {
-  Handler,
-  Mapping as WalkerOSMapping,
-  Destination as WalkerOSDestination,
-} from '@walkerOS/types';
+import type { Handler, Mapping as WalkerOSMapping } from '@walkerOS/types';
 
 export interface Destination
-  extends DestinationServer.Destination<Settings, Mapping> {
-  init: InitFn;
-  push: PushFn;
-}
-
-export type InitFn = WalkerOSDestination.InitFn<Settings, Mapping>;
-export type PushFn = WalkerOSDestination.PushFn<Settings, Mapping>;
+  extends DestinationServer.Destination<Settings, Mapping> {}
 
 export type Config = {
   settings: Settings;
   onLog: Handler.Log;
 } & DestinationServer.Config<Settings, Mapping>;
 
+export type InitFn = DestinationServer.InitFn<Settings, Mapping>;
+export type PushFn = DestinationServer.PushFn<Settings, Mapping>;
+
+export type PartialConfig = DestinationServer.PartialConfig<Settings, Mapping>;
 
 export type PushEvents = DestinationServer.PushEvents<Mapping>;
 
@@ -36,7 +30,6 @@ export interface Mapping {}
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;
-
 
 // https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/main-body
 export interface BodyParameters {

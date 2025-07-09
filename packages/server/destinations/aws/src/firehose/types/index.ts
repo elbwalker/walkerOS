@@ -1,22 +1,12 @@
 import type { DestinationServer } from '@walkerOS/server-collector';
-import type {
-  Handler,
-  Mapping as WalkerOSMapping,
-  Destination as WalkerOSDestination,
-} from '@walkerOS/types';
+import type { Handler, Mapping as WalkerOSMapping } from '@walkerOS/types';
 import type {
   FirehoseClient,
   FirehoseClientConfig,
 } from '@aws-sdk/client-firehose';
 
 export interface Destination
-  extends DestinationServer.Destination<Settings, Mapping> {
-  init: InitFn;
-  push: PushFn;
-}
-
-export type InitFn = WalkerOSDestination.InitFn<Settings, Mapping>;
-export type PushFn = WalkerOSDestination.PushFn<Settings, Mapping>;
+  extends DestinationServer.Destination<Settings, Mapping> {}
 
 export type Config = {
   settings: Settings;
@@ -30,6 +20,13 @@ export interface Settings {
 export interface Mapping {
   // Custom destination event mapping properties
 }
+
+export type InitFn = DestinationServer.InitFn<Settings, Mapping>;
+export type PushFn = DestinationServer.PushFn<Settings, Mapping>;
+
+export type PartialConfig = DestinationServer.PartialConfig<Settings, Mapping>;
+
+export type PushEvents = DestinationServer.PushEvents<Mapping>;
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;
