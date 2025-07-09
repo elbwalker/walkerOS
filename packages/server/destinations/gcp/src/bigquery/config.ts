@@ -1,9 +1,9 @@
-import type { Config, Settings, InitFn } from './types';
+import type { Config, PartialConfig, Settings } from './types';
 import type { BigQueryOptions } from '@google-cloud/bigquery';
 import { onLog, throwError } from '@walkerOS/utils';
 import { BigQuery } from '@google-cloud/bigquery';
 
-export function getConfig(partialConfig: Parameters<InitFn>[0] = {}): Config {
+export function getConfig(partialConfig: PartialConfig = {}): Config {
   const settings = partialConfig.settings || ({} as Settings);
   const { projectId, bigquery } = settings;
   let { client, location, datasetId, tableId } = settings;
