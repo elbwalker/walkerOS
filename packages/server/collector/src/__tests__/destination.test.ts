@@ -19,7 +19,7 @@ describe('Destination', () => {
   };
   let result: Elb.PushResult;
 
-  function getSource(custom?: Partial<ServerCollector.InitConfig>) {
+  function getCollector(custom?: Partial<ServerCollector.InitConfig>) {
     const config = custom || {
       destinations: { mock: mockDestination },
     };
@@ -39,7 +39,7 @@ describe('Destination', () => {
   });
 
   test('init call', async () => {
-    const { elb } = getSource();
+    const { elb } = getCollector();
 
     await elb(mockEvent);
     expect(mockInit).toHaveBeenCalledTimes(1);
@@ -113,7 +113,7 @@ describe('Destination', () => {
     };
     mockDestination.config.mapping = mapping;
 
-    const { elb, collector } = getSource({
+    const { elb, collector } = getCollector({
       destinations: { mockDestination },
       user: { id: 'us3r' },
       globalsStatic: { foo: 'irrelevant', bar: 'baz' },
@@ -148,7 +148,7 @@ describe('Destination', () => {
     const eventMapping = { name: 'custom' };
     const mapping = { entity: { action: eventMapping } };
 
-    const { elb, collector } = getSource({});
+    const { elb, collector } = getCollector({});
     await elb('walker destination', mockDestination, { mapping });
     result = await elb(mockEvent);
 
@@ -164,7 +164,7 @@ describe('Destination', () => {
   });
 
   test('mapping data', async () => {
-    const { elb } = getSource({});
+    const { elb } = getCollector({});
 
     const eventMapping = { data: { value: 'bar' } };
     elb(
@@ -183,7 +183,7 @@ describe('Destination', () => {
   });
 
   test('mapping data merge', async () => {
-    const { elb } = getSource({});
+    const { elb } = getCollector({});
 
     const eventMapping = { data: { map: { foo: { value: 'bar' } } } };
     elb(
@@ -213,7 +213,7 @@ describe('Destination', () => {
   test('ignore', async () => {
     mockDestination.config.mapping = { entity: { action: { ignore: true } } };
 
-    const { elb } = getSource({
+    const { elb } = getCollector({
       destinations: { mockDestination },
     });
     result = await elb(mockEvent);
@@ -250,7 +250,7 @@ describe('Destination', () => {
       },
     };
 
-    const { elb } = getSource({
+    const { elb } = getCollector({
       destinations: { fistDestination, secondDestination },
     });
     result = await elb(mockEvent);
@@ -266,7 +266,7 @@ describe('Destination', () => {
   });
 
   test('add with queue', async () => {
-    const { elb, collector } = getSource({});
+    const { elb, collector } = getCollector({});
 
     result = await elb(mockEvent);
     expect(result.successful).toHaveProperty('length', 0);
@@ -313,7 +313,7 @@ describe('Destination', () => {
       }),
     };
 
-    const { elb, collector } = getSource({
+    const { elb, collector } = getCollector({
       destinations: { mockDestination, initFail, pushFail },
     });
 
@@ -361,7 +361,7 @@ describe('Destination', () => {
       push: mockPushConsent,
     };
 
-    const { elb } = getSource({
+    const { elb } = getCollector({
       destinations: { mockDestination, destinationConsent },
     });
 
@@ -423,7 +423,7 @@ describe('Destination', () => {
       },
     };
 
-    const { elb } = getSource({
+    const { elb } = getCollector({
       destinations: { destination },
     });
 

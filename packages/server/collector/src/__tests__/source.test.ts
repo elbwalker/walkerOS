@@ -12,7 +12,7 @@ describe('Server Collector', () => {
   let mockEvent: WalkerOS.Event;
   let result: Elb.PushResult;
 
-  function getSource(custom?: Partial<ServerCollector.InitConfig>) {
+  function getCollector(custom?: Partial<ServerCollector.InitConfig>) {
     const config = custom || {
       destinations: { mock: mockDestination },
     };
@@ -30,19 +30,19 @@ describe('Server Collector', () => {
   test('version equals package.json version', () => {
     const packageJsonVersion = jest.requireActual('../../package.json').version;
 
-    const { collector } = getSource({});
+    const { collector } = getCollector({});
     expect(collector.version).toStrictEqual(packageJsonVersion);
   });
 
   test('create', () => {
-    const { elb, collector } = getSource();
+    const { elb, collector } = getCollector();
     expect(elb).toBeDefined();
     expect(collector).toBeDefined();
     expect(elb).toBe(collector.push);
   });
 
   test('add destination', async () => {
-    const { elb, collector } = getSource({});
+    const { elb, collector } = getCollector({});
     expect(collector.destinations).toEqual({});
     elb('walker destination', mockDestination, { id: 'mock' });
     expect(collector.destinations).toEqual({
@@ -55,7 +55,7 @@ describe('Server Collector', () => {
   });
 
   test('push regular', async () => {
-    const { elb } = getSource();
+    const { elb } = getCollector();
     result = await elb(mockEvent);
     expect(mockDestinationPush).toHaveBeenCalledTimes(1);
     expect(mockDestinationPush).toHaveBeenCalledWith(
@@ -74,7 +74,7 @@ describe('Server Collector', () => {
   });
 
   test('push event', async () => {
-    const { elb } = getSource({
+    const { elb } = getCollector({
       destinations: { mock: mockDestination },
       globalsStatic: { glow: 'balls' },
       user: { id: 'us3r1d' },
@@ -120,7 +120,7 @@ describe('Server Collector', () => {
   });
 
   test('push failure', async () => {
-    const { elb } = getSource();
+    const { elb } = getCollector();
     const elbWithZeroParams = elb as unknown as () => Promise<Elb.PushResult>;
 
     result = await elbWithZeroParams();
@@ -131,15 +131,15 @@ describe('Server Collector', () => {
   });
 
   test('globals', async () => {
-    let { collector } = getSource({});
+    let { collector } = getCollector({});
     expect(collector).toHaveProperty('globals', {});
     expect(collector.config).toHaveProperty('globalsStatic', {});
 
-    ({ collector } = getSource({ globalsStatic: { foo: 'bar' } }));
+    ({ collector } = getCollector({ globalsStatic: { foo: 'bar' } }));
     expect(collector).toHaveProperty('globals', { foo: 'bar' });
     expect(collector.config).toHaveProperty('globalsStatic', { foo: 'bar' });
 
-    ({ collector } = getSource({ globalsStatic: { foo: 'bar' } }));
+    ({ collector } = getCollector({ globalsStatic: { foo: 'bar' } }));
     collector.globals.a = 1;
     await collector.push('walker globals', { b: 2 });
     let result = await collector.push('e a');
@@ -153,7 +153,7 @@ describe('Server Collector', () => {
   });
 
   test('timing', async () => {
-    const { elb } = getSource();
+    const { elb } = getCollector();
 
     // Remove timing from event
     delete (mockEvent as unknown as WalkerOS.AnyObject).timing;
@@ -173,7 +173,7 @@ describe('Server Collector', () => {
   });
 
   test('source', async () => {
-    const { elb } = getSource();
+    const { elb } = getCollector();
 
     mockEvent.source = { type: 'server', id: '1d', previous_id: 'pr3v10us' };
     result = await elb(mockEvent);
@@ -186,7 +186,7 @@ describe('Server Collector', () => {
   });
 
   test('version', async () => {
-    const { elb } = getSource();
+    const { elb } = getCollector();
 
     mockEvent.version = { source: 'cl13nt', tagging: 42 };
     result = await elb(mockEvent);

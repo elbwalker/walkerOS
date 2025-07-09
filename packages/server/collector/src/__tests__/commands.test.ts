@@ -2,7 +2,7 @@ import type { ServerCollector } from '../types';
 import { createServerCollector } from '../';
 
 describe('Commands', () => {
-  function getSource(custom?: Partial<ServerCollector.InitConfig>) {
+  function getCollector(custom?: Partial<ServerCollector.InitConfig>) {
     return createServerCollector(custom);
   }
 
@@ -12,7 +12,7 @@ describe('Commands', () => {
   });
 
   test('walker config', async () => {
-    const { elb, collector } = getSource();
+    const { elb, collector } = getCollector();
     expect(collector).toHaveProperty('user', {});
 
     await elb('walker config', { tagging: 42 });
@@ -20,7 +20,7 @@ describe('Commands', () => {
   });
 
   test('walker custom', async () => {
-    const { elb, collector } = getSource({ custom: { static: 'value' } });
+    const { elb, collector } = getCollector({ custom: { static: 'value' } });
 
     expect(collector).toStrictEqual(
       expect.objectContaining({
@@ -44,7 +44,7 @@ describe('Commands', () => {
   });
 
   test('walker user', async () => {
-    const { elb, collector } = getSource();
+    const { elb, collector } = getCollector();
     expect(collector).toHaveProperty('user', {});
 
     let result = await elb('entity action');
