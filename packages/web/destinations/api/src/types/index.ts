@@ -19,9 +19,11 @@ export interface Settings {
 export interface Mapping {}
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
+export type Rules = WalkerOSMapping.Rules<Rule>;
+
 
 export type Transform = (
   data?: unknown,
   config?: Config,
-  mapping?: DestinationWeb.MappingRule<Mapping>,
+  mapping?: WalkerOSMapping.Rule<Mapping>,
 ) => SendDataValue;

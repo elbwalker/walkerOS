@@ -55,4 +55,4 @@ export const add_to_cart: DestinationGA4.Rule = {
 export const config = {
   order: { complete: purchase },
   product: { add: add_to_cart },
-} satisfies Mapping.Rules;
+} satisfies DestinationGA4.Rules;

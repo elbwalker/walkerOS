@@ -107,4 +107,4 @@ export const config = {
   order: { complete: Purchase },
   product: { view: ViewContent, add: AddToCart },
   cart: { view: InitiateCheckout },
-} satisfies Mapping.Rules;
+} satisfies DestinationMetaPixel.Rules;

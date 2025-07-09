@@ -19,7 +19,6 @@ export type Config = {
   onLog: Handler.Log;
 } & DestinationServer.Config<Settings, Mapping>;
 
-export type MappingRules = DestinationServer.MappingRules<Mapping>;
 
 export type PushEvents = DestinationServer.PushEvents<Mapping>;
 
@@ -36,6 +35,8 @@ export interface Settings {
 export interface Mapping {}
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
+export type Rules = WalkerOSMapping.Rules<Rule>;
+
 
 // https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/main-body
 export interface BodyParameters {

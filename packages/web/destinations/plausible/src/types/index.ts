@@ -24,3 +24,5 @@ export interface Settings {
 export interface Mapping {}
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
+export type Rules = WalkerOSMapping.Rules<Rule>;
+

@@ -7,4 +7,4 @@ export const entity_action: DestinationAPI.Rule = {
 
 export const config = {
   entity: { action: entity_action },
-} satisfies Mapping.Rules;
+} satisfies DestinationAPI.Rules;

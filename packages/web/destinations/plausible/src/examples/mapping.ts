@@ -28,4 +28,4 @@ export const purchase: DestinationPlausible.Rule = {
 export const config = {
   entity: { action: customEvent },
   order: { complete: purchase },
-} satisfies Mapping.Rules;
+} satisfies DestinationPlausible.Rules;

@@ -1,9 +1,7 @@
 import type { Destination, WalkerOS } from '.';
 
-export interface Rules<Settings = unknown> {
-  [entity: string]:
-    | Record<string, Rule<Settings> | Array<Rule<Settings>>>
-    | undefined;
+export interface Rules<T = Rule> {
+  [entity: string]: Record<string, T | Array<T>> | undefined;
 }
 
 export interface Rule<Settings = unknown> {
@@ -21,7 +19,7 @@ export interface Rule<Settings = unknown> {
   name?: string; // Use a custom event name
 }
 
-export interface Mapping {
+export interface Result {
   eventMapping?: Rule;
   mappingKey?: string;
 }

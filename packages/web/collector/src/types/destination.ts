@@ -17,6 +17,5 @@ export type Config<
   Mapping = unknown,
 > = WalkerOSDestination.Config<Settings, Mapping>;
 
-export type MappingRules<Mapping = unknown> = WalkerOSMapping.Rules<Mapping>;
-
-export type MappingRule<T = unknown> = WalkerOSMapping.Rule<T>;
+export type MappingRule = WalkerOSMapping.Rule;
+export type MappingRules = WalkerOSMapping.Rules;

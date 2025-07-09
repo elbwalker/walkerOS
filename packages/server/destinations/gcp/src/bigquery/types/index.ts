@@ -1,6 +1,7 @@
 import type { DestinationServer } from '@walkerOS/server-collector';
 import type {
   Handler,
+  Mapping as WalkerOSMapping,
   Destination as WalkerOSDestination,
 } from '@walkerOS/types';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
@@ -33,3 +34,6 @@ export interface Settings {
 export interface Mapping {
   // Custom destination event mapping properties
 }
+
+export type Rule = WalkerOSMapping.Rule<Mapping>;
+export type Rules = WalkerOSMapping.Rules<Rule>;

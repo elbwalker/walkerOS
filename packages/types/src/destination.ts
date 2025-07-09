@@ -17,7 +17,7 @@ export interface Config<Settings = unknown, Mapping = unknown> {
   id?: string; // A unique key for the destination
   init?: boolean; // If the destination has been initialized by calling the init method
   loadScript?: boolean; // If an additional script to work should be loaded
-  mapping?: WalkerOSMapping.Rules<Mapping>; // A map to handle events individually
+  mapping?: WalkerOSMapping.Rules<WalkerOSMapping.Rule<Mapping>>; // A map to handle events individually
   on?: On.Config; // On events listener rules
   policy?: Policy; // Rules for processing events
   queue?: boolean; // Disable processing of previously pushed events

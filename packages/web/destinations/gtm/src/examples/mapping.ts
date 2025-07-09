@@ -65,4 +65,4 @@ export const config = {
   entity: { action: entity_action },
   order: { complete: purchase },
   product: { add: add_to_cart },
-} satisfies Mapping.Rules;
+} satisfies DestinationGTM.Rules;

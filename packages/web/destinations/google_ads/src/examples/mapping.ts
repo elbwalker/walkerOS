@@ -14,4 +14,4 @@ export const conversion: DestinationAds.Rule = {
 
 export const config = {
   order: { complete: conversion },
-} satisfies Mapping.Rules;
+} satisfies DestinationAds.Rules;

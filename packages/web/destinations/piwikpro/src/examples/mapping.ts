@@ -114,4 +114,4 @@ export const config = {
   order: { complete: ecommerceOrder },
   product: { add: ecommerceAddToCart, view: ecommerceProductDetailView },
   cart: { view: ecommerceCartUpdate },
-} satisfies Mapping.Rules;
+} satisfies DestinationPiwikPro.Rules;

@@ -7,8 +7,8 @@ import { tryCatchAsync } from './tryCatch';
 
 export async function getMappingEvent(
   event: WalkerOS.PartialEvent,
-  mapping?: Mapping.Rules<unknown>,
-): Promise<Mapping.Mapping> {
+  mapping?: Mapping.Rules,
+): Promise<Mapping.Result> {
   const [entity, action] = (event.event || '').split(' ');
   if (!mapping || !entity || !action) return {};
 
@@ -19,8 +19,8 @@ export async function getMappingEvent(
 
   const resolveEventMapping = (
     eventMapping?:
-      | Mapping.Rule<unknown>
-      | Mapping.Rule<unknown>[],
+      | Mapping.Rule
+      | Mapping.Rule[],
   ) => {
     if (!eventMapping) return;
     eventMapping = isArray(eventMapping) ? eventMapping : [eventMapping];

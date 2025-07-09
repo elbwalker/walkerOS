@@ -43,4 +43,4 @@ export const Purchase: DestinationMeta.Rule = {
 
 export const config = {
   order: { complete: Purchase },
-} satisfies Mapping.Rules;
+} satisfies DestinationMeta.Rules;
