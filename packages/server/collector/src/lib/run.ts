@@ -13,7 +13,7 @@ export function run(
       count: 0, // Reset the run counter
       queue: [], // Reset the queue for each run without merging
       group: getId(), // Generate a new group id for each run
-      globals: assign(config.globalsStatic || {}, state.globals),
+      globals: assign(config.globalsStatic, state.globals),
       timing: Date.now(), // Set the timing offset
     },
     { ...state },

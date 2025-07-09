@@ -6,6 +6,8 @@ export function getState(
   instance: Partial<ServerCollector.Instance> = {},
 ): ServerCollector.State {
   const defaultConfig: ServerCollector.Config = {
+    default: false, // Run in default mode
+    session: false, // Do not use session by default
     contracts: undefined, // Contract schemas
     globalsStatic: {}, // Static global properties
     sessionStatic: {}, // Static session data

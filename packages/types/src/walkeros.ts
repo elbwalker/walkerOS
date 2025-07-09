@@ -28,12 +28,12 @@ export interface State {
 }
 
 export interface Config {
-  tagging?: number;
-  session?: false | unknown;
-  default?: boolean;
-  verbose?: boolean;
-  globalsStatic?: Properties;
-  sessionStatic?: Partial<SessionData>;
+  tagging: number;
+  session: false | unknown;
+  default: boolean;
+  verbose: boolean;
+  globalsStatic: Properties;
+  sessionStatic: Partial<SessionData>;
   onError?: Handler.Error;
   onLog?: Handler.Log;
 }

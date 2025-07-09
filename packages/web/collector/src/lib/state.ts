@@ -6,6 +6,7 @@ export function getState(
   instance: Partial<WebCollector.Instance> = {},
 ): WebCollector.State {
   const defaultConfig: WebCollector.Config = {
+    default: false, // Run in default mode
     dataLayer: false, // Do not use dataLayer by default
     dataLayerConfig: {}, // Configuration for dataLayer
     elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
@@ -19,6 +20,7 @@ export function getState(
     },
     sessionStatic: {}, // Static session data
     tagging: 0, // Helpful to differentiate the used setup version
+    verbose: false, // Disable verbose logging
   };
 
   const config: WebCollector.Config = assign(
