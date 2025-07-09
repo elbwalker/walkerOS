@@ -8,7 +8,7 @@ describe('getHash web', () => {
     Object.defineProperty(global, 'crypto', {
       value: {
         subtle: {
-          digest: (algorithm, data) => {
+          digest: (algorithm: string, data: Uint8Array) => {
             return new Uint8Array(data);
           },
         },
@@ -16,7 +16,7 @@ describe('getHash web', () => {
     });
     Object.defineProperty(global, 'TextEncoder', {
       value: class {
-        encode(input) {
+        encode(input: string) {
           return new Uint8Array([...Buffer.from(input)]);
         }
       },

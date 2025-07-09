@@ -21,7 +21,8 @@
       "Bash(for:*)",
       "Bash(do sed -i 's/Walkerjs/webCollector/g' \"$file\")",
       "Bash(done)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(npm run lint:*)"
     ],
     "deny": []
   }
