@@ -151,7 +151,10 @@ describe('Trigger', () => {
       }),
     );
 
-    window.location = location;
+    Object.defineProperty(window, 'location', {
+      value: location,
+      writable: true,
+    });
     document.title = title;
     Object.defineProperty(document, 'referrer', {
       value: referrer,

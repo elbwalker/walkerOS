@@ -251,8 +251,7 @@ The event mapping system has undergone significant refactoring to improve clarit
     settings?: Settings;
     ```
 
-4.  **Collector Type Aliases Renamed (`Mapping` to `MappingRule`):**
-    *   In collector packages (e.g., `@walkerOS/web-collector`, `@walkerOS/server-collector`), the type alias `Mapping` (which previously referred to `WalkerOSMapping.EventConfig`) has been renamed to `MappingRule`.
+
     *   **Impact:** This resolves a potential name shadowing issue and clearly indicates that this alias represents a single, resolved mapping rule, distinguishing it from the `Mapping` namespace from `@walkerOS/types`.
 
 ## Validation Steps

@@ -15,8 +15,6 @@ export interface State extends WalkerOS.State {
 
 export interface Config extends WalkerOS.Config {
   contracts?: Schema.Contracts;
-  globalsStatic: WalkerOS.Properties;
-  sessionStatic: Partial<WalkerOS.SessionData>;
 }
 export type PartialConfig = Partial<Config>;
 
