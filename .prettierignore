@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Cache and temp
+.turbo/
+.next/
+.nuxt/
+.vuepress/dist/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+
+# Other
+*.tgz
+*.tar
