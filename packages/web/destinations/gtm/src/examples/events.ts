@@ -1,5 +1,5 @@
-import type { WalkerOS } from '@walkerOS/types';
-import { getEvent } from '@walkerOS/utils';
+import type { WalkerOS } from '@walkerOS/core';
+import { getEvent } from '@walkerOS/core';
 
 export function entity_action(): WalkerOS.AnyObject {
   const event = getEvent('entity action');

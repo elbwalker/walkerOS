@@ -24,13 +24,10 @@ export function createServerCollector(
 export function serverCollector(
   customConfig: ServerCollector.PartialConfig = {},
 ): ServerCollector.Collector {
-  const version = '0.0.1'; // Source version
   const state = getState(customConfig);
   const collector: ServerCollector.Collector = {
     ...state,
-    version,
     push: (() => {}) as unknown as Elb.Fn, // Placeholder for the actual push function
-    on: {}, // Initialize empty on handlers
   };
 
   // Overwrite the push function with the collector-reference

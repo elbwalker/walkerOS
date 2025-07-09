@@ -1,5 +1,5 @@
 import type { Walker, WebCollector, Elb } from '../types';
-import { Const, onApply, throttle, tryCatch } from '@walkerOS/utils';
+import { Const, onApply, throttle, tryCatch } from '@walkerOS/core';
 import { elb as elbOrg, getAttribute, isVisible } from '../utils';
 import {
   getElbAttributeName,
@@ -197,10 +197,13 @@ function triggerPulse(
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
-  setInterval(() => {
-    // Only trigger when tab is active
-    if (!document.hidden) handleTrigger(collector, elem, Trigger.Pulse);
-  }, parseInt(triggerParams || '') || 15000);
+  setInterval(
+    () => {
+      // Only trigger when tab is active
+      if (!document.hidden) handleTrigger(collector, elem, Trigger.Pulse);
+    },
+    parseInt(triggerParams || '') || 15000,
+  );
 }
 
 function triggerScroll(elem: HTMLElement, triggerParams: string = '') {

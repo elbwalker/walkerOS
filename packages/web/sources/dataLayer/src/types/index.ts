@@ -1,8 +1,4 @@
-import type {
-  Elb,
-  Mapping as WalkerOSMapping,
-  WalkerOS,
-} from '@walkerOS/types';
+import type { Elb, Mapping as WalkerOSMapping, WalkerOS } from '@walkerOS/core';
 
 declare global {
   interface Window {

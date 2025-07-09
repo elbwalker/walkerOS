@@ -1,6 +1,6 @@
-import type { Mapping } from '@walkerOS/types';
+import type { Mapping } from '@walkerOS/core';
 import type { DestinationGA4 } from '..';
-import { isObject } from '@walkerOS/utils';
+import { isObject } from '@walkerOS/core';
 
 export const purchase: DestinationGA4.Rule = {
   name: 'purchase',

@@ -1,9 +1,9 @@
-import type { WalkerOS } from '@walkerOS/types';
+import type { WalkerOS } from '@walkerOS/core';
 import type { Elb } from '@walkerOS/web-collector';
 import type { DestinationGTM } from '.';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { createWebCollector } from '@walkerOS/web-collector';
-import { createEvent, getEvent } from '@walkerOS/utils';
+import { createEvent, getEvent } from '@walkerOS/core';
 import { destinationGTMExamples } from './examples';
 
 const { events, mapping } = destinationGTMExamples;

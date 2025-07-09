@@ -1,6 +1,6 @@
-import type { Mapping, WalkerOS } from '@walkerOS/types';
+import type { Mapping, WalkerOS } from '@walkerOS/core';
 import type { DestinationMetaPixel } from '..';
-import { isObject } from '@walkerOS/utils';
+import { isObject } from '@walkerOS/core';
 
 export const Purchase: DestinationMetaPixel.Rule = {
   name: 'Purchase',

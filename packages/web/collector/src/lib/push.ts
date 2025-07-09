@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/types';
+import type { WalkerOS } from '@walkerOS/core';
 import type { Elb, WebCollector } from '../types';
 import { handleCommand } from './handle';
 import {
@@ -10,7 +10,7 @@ import {
   isSameType,
   isString,
   createPush,
-} from '@walkerOS/utils';
+} from '@walkerOS/core';
 import { getEntities } from './walker';
 
 export function getPush(collector: WebCollector.Collector): Elb.Fn {
@@ -115,8 +115,8 @@ export function pushPredefined(
     const item = isArguments(pushedItem)
       ? [...Array.from(pushedItem)]
       : isArray(pushedItem)
-      ? pushedItem
-      : [pushedItem];
+        ? pushedItem
+        : [pushedItem];
 
     const firstParam = item[0];
     const isCommand =

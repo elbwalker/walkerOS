@@ -1,4 +1,4 @@
-import type { Hooks } from '@walkerOS/types';
+import type { Hooks } from '@walkerOS/core';
 import type { WebCollector, DestinationWeb } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { webCollector, createWebCollector } from '../';
@@ -23,26 +23,29 @@ describe('Hooks', () => {
       pushBatch: mockPushBatch,
     };
 
-    const preDestinationInit = jest
-      .fn()
-      .mockImplementation(function (params, ...args) {
-        return params.fn(...args);
-      });
+    const preDestinationInit = jest.fn().mockImplementation(function (
+      params,
+      ...args
+    ) {
+      return params.fn(...args);
+    });
     const postDestinationInit = jest.fn().mockImplementation(function (params) {
       return params.result; // Return result from previous call
     });
     const preDestinationPush = jest.fn();
-    const postDestinationPush = jest
-      .fn()
-      .mockImplementation(function (params, ...args) {
-        return params.fn(...args);
-      });
+    const postDestinationPush = jest.fn().mockImplementation(function (
+      params,
+      ...args
+    ) {
+      return params.fn(...args);
+    });
     const preDestinationPushBatch = jest.fn();
-    const postDestinationPushBatch = jest
-      .fn()
-      .mockImplementation(function (params, ...args) {
-        return params.fn(...args);
-      });
+    const postDestinationPushBatch = jest.fn().mockImplementation(function (
+      params,
+      ...args
+    ) {
+      return params.fn(...args);
+    });
 
     const { elb, collector } = createWebCollector({
       pageview: false,
@@ -166,11 +169,12 @@ describe('Hooks', () => {
 
   test('SessionStart', () => {
     // Hook mocks
-    const preSessionStart = jest
-      .fn()
-      .mockImplementation(function (params, ...args) {
-        return params.fn(...args); // Regular call
-      });
+    const preSessionStart = jest.fn().mockImplementation(function (
+      params,
+      ...args
+    ) {
+      return params.fn(...args); // Regular call
+    });
     const postSessionStart: Hooks.AnyFunction = jest.fn();
 
     walkerjs = webCollector({

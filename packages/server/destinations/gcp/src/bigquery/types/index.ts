@@ -1,5 +1,5 @@
 import type { DestinationServer } from '@walkerOS/server-collector';
-import type { Handler, Mapping as WalkerOSMapping } from '@walkerOS/types';
+import type { Handler, Mapping as WalkerOSMapping } from '@walkerOS/core';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Destination

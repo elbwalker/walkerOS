@@ -1,8 +1,8 @@
-import type { WalkerOS } from '@walkerOS/types';
+import type { WalkerOS } from '@walkerOS/core';
 import type { SessionStorageConfig } from './';
 import { sessionStorage, sessionWindow } from './';
 import { elb as elbOrg } from '../elb';
-import { getGrantedConsent, isArray, isDefined } from '@walkerOS/utils';
+import { getGrantedConsent, isArray, isDefined } from '@walkerOS/core';
 
 export interface SessionConfig extends SessionStorageConfig {
   consent?: string | string[];

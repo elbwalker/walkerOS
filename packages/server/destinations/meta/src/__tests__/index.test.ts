@@ -1,7 +1,7 @@
-import type { WalkerOS } from '@walkerOS/types';
+import type { WalkerOS } from '@walkerOS/core';
 import type { DestinationServer } from '@walkerOS/server-collector';
 import type { Config, Destination } from '../types';
-import { getEvent } from '@walkerOS/utils';
+import { getEvent } from '@walkerOS/core';
 import { createServerCollector } from '@walkerOS/server-collector';
 import { destinationMetaExamples } from '../examples';
 import { hashEvent } from '../hash';
@@ -42,9 +42,9 @@ describe('Server Destination Meta', () => {
     await expect(destination.init({})).rejects.toThrow(
       'Error: Config settings accessToken missing',
     );
-    await expect(destination.init({ settings: { accessToken } })).rejects.toThrow(
-      'Error: Config settings pixelId missing',
-    );
+    await expect(
+      destination.init({ settings: { accessToken } }),
+    ).rejects.toThrow('Error: Config settings pixelId missing');
 
     const config = await getConfig({ accessToken, pixelId });
     expect(config).toEqual(

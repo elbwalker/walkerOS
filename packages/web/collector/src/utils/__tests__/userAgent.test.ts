@@ -5,7 +5,7 @@ import {
   getOSVersion,
   getDeviceType,
   getBrowserVersion,
-} from '@walkerOS/utils';
+} from '@walkerOS/core';
 
 describe('UserAgent', () => {
   const userAgent =

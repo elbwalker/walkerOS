@@ -1,7 +1,7 @@
 import type { Elb } from '@walkerOS/web-collector';
 import type { DestinationGA4 } from '.';
 import { createWebCollector } from '@walkerOS/web-collector';
-import { getEvent } from '@walkerOS/utils';
+import { getEvent } from '@walkerOS/core';
 import { events, mapping } from './examples';
 
 describe('Destination Google GA4', () => {

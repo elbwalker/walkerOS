@@ -1,4 +1,4 @@
-import type { Mapping as WalkerOSMapping } from '@walkerOS/types';
+import type { Mapping as WalkerOSMapping } from '@walkerOS/core';
 import type { DestinationWeb } from '@walkerOS/web-collector';
 
 declare global {

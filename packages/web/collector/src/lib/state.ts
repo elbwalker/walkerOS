@@ -1,4 +1,4 @@
-import { Const, assign } from '@walkerOS/utils';
+import { Const, assign } from '@walkerOS/core';
 import type { WebCollector } from '../types';
 
 export function getState(

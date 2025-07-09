@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@walkerOS/web-collector": "0.0.1",
-    "@walkerOS/utils": "0.0.1"
+    "@walkerOS/core": "0.0.1"
   },
   "devDependencies": {
     "@walkerOS/tsup": "0.0.1"

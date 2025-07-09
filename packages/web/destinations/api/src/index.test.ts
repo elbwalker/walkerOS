@@ -1,8 +1,8 @@
-import type { WalkerOS } from '@walkerOS/types';
+import type { WalkerOS } from '@walkerOS/core';
 import type { Elb } from '@walkerOS/web-collector';
 import type { DestinationAPI } from '.';
 import { createWebCollector } from '@walkerOS/web-collector';
-import { createEvent } from '@walkerOS/utils';
+import { createEvent } from '@walkerOS/core';
 import { events, mapping } from './examples';
 
 describe('Destination API', () => {

@@ -1,5 +1,5 @@
 import type { Config, Settings, PartialConfig } from './types';
-import { onLog } from '@walkerOS/utils';
+import { onLog } from '@walkerOS/core';
 import { getConfigFirehose } from './lib/firehose';
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {

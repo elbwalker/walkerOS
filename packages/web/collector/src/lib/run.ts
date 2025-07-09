@@ -1,5 +1,5 @@
 import type { WebCollector } from '../types';
-import { assign, getId, onApply, tryCatch } from '@walkerOS/utils';
+import { assign, getId, onApply, tryCatch } from '@walkerOS/core';
 import { getGlobals } from './walker';
 import { pushPredefined } from './push';
 import { load } from './trigger';

@@ -1,5 +1,5 @@
 import type { DestinationServer } from '@walkerOS/server-collector';
-import type { Handler, Mapping as WalkerOSMapping } from '@walkerOS/types';
+import type { Handler, Mapping as WalkerOSMapping } from '@walkerOS/core';
 
 export interface Destination
   extends DestinationServer.Destination<Settings, Mapping> {}

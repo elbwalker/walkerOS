@@ -1,5 +1,5 @@
 import type { ServerCollector, Elb } from '../types';
-import { createPush } from '@walkerOS/utils';
+import { createPush } from '@walkerOS/core';
 import { handleCommand } from './handle';
 
 export function getPush(collector: ServerCollector.Collector): Elb.Fn {

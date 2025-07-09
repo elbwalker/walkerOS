@@ -1,7 +1,7 @@
-import type { WalkerOS } from '@walkerOS/types';
+import type { WalkerOS } from '@walkerOS/core';
 import type { WebCollector } from '../types';
 import type { SessionCallback } from '../utils';
-import { assign, isSameType, onApply, useHooks } from '@walkerOS/utils';
+import { assign, isSameType, onApply, useHooks } from '@walkerOS/core';
 import { sessionStart as sessionStartOrg } from '../utils';
 
 export function createSessionStart(collector: WebCollector.Collector) {

@@ -1,7 +1,7 @@
 import type { DestinationWeb, Elb } from '@walkerOS/web-collector';
 import type { DestinationMetaPixel } from '.';
 import { createWebCollector } from '@walkerOS/web-collector';
-import { getEvent } from '@walkerOS/utils';
+import { getEvent } from '@walkerOS/core';
 import { destinationMetaPixelExamples } from './examples';
 
 const { events, mapping } = destinationMetaPixelExamples;

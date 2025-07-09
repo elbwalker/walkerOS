@@ -1,5 +1,5 @@
-import type { Mapping as WalkerOSMapping } from '@walkerOS/types';
-import type { SendDataValue, SendHeaders } from '@walkerOS/utils';
+import type { Mapping as WalkerOSMapping } from '@walkerOS/core';
+import type { SendDataValue, SendHeaders } from '@walkerOS/core';
 import type { DestinationWeb } from '@walkerOS/web-collector';
 import type { SendWebTransport } from '@walkerOS/web-collector';
 
@@ -20,7 +20,6 @@ export interface Mapping {}
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;
-
 
 export type Transform = (
   data?: unknown,

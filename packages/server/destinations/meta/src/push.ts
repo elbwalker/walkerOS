@@ -1,11 +1,11 @@
-import type { WalkerOS } from '@walkerOS/types';
+import type { WalkerOS } from '@walkerOS/core';
 import type {
   BodyParameters,
   CustomerInformationParameters,
   PushFn,
   ServerEventParameters,
 } from './types';
-import { getMappingValue, isObject } from '@walkerOS/utils';
+import { getMappingValue, isObject } from '@walkerOS/core';
 import { sendServer } from '@walkerOS/server-collector';
 import { hashEvent } from './hash';
 

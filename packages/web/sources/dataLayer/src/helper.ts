@@ -1,5 +1,5 @@
 import type { DataLayer } from './types';
-import { isArray } from '@walkerOS/utils';
+import { isArray } from '@walkerOS/core';
 
 export function convertConsentStates(
   obj: Record<string, unknown>,

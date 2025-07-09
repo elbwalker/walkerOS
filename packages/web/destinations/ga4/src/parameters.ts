@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/types';
+import type { WalkerOS } from '@walkerOS/core';
 import type { Include, Parameters } from './types';
 
 export function getParamsInclude(

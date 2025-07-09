@@ -1,5 +1,5 @@
 import type { Destination } from './types';
-import { isObject } from '@walkerOS/utils';
+import { isObject } from '@walkerOS/core';
 
 // Types
 export * as DestinationAds from './types';

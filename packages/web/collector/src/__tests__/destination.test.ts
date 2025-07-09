@@ -1,6 +1,6 @@
 import type { WebCollector, DestinationWeb } from '../';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
-import { getEvent } from '@walkerOS/utils';
+import { getEvent } from '@walkerOS/core';
 import { createWebCollector, elb as elbOrg } from '../';
 
 describe('Destination', () => {

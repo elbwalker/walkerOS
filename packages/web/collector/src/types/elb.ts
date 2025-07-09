@@ -1,4 +1,4 @@
-import type { Elb, On, WalkerOS } from '@walkerOS/types';
+import type { Elb, On, WalkerOS } from '@walkerOS/core';
 import type { Destination, Init, Config } from './destination';
 import type { State } from './collector';
 import type { Trigger } from './walker';

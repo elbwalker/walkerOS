@@ -1,5 +1,5 @@
-import type { SendDataValue, SendHeaders, SendResponse } from '@walkerOS/utils';
-import { getHeaders, transformData, tryCatch } from '@walkerOS/utils';
+import type { SendDataValue, SendHeaders, SendResponse } from '@walkerOS/core';
+import { getHeaders, transformData, tryCatch } from '@walkerOS/core';
 import * as http from 'http';
 import * as https from 'https';
 

@@ -1,5 +1,5 @@
 import type { Config, Destination, Settings } from '../types';
-import { createEvent } from '@walkerOS/utils';
+import { createEvent } from '@walkerOS/core';
 
 describe('Server Destination BigQuery', () => {
   // Mock the bigquery package with __mocks__ implementation

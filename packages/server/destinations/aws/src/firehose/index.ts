@@ -1,5 +1,5 @@
 import type { Settings, Destination } from './types';
-import { isSameType, throwError, tryCatchAsync } from '@walkerOS/utils';
+import { isSameType, throwError, tryCatchAsync } from '@walkerOS/core';
 import { getConfig } from './config';
 import { push } from './push';
 

@@ -1,4 +1,4 @@
-import { commonHandleCommand, Const, createPushResult } from '@walkerOS/utils';
+import { commonHandleCommand, Const, createPushResult } from '@walkerOS/core';
 import type { Elb, ServerCollector } from '../types';
 import { getState } from './state';
 import { run } from './run';

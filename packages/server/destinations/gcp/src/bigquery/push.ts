@@ -1,6 +1,6 @@
-import type { WalkerOS } from '@walkerOS/types';
+import type { WalkerOS } from '@walkerOS/core';
 import type { PushFn } from './types';
-import { isObject, isArray } from '@walkerOS/utils';
+import { isObject, isArray } from '@walkerOS/core';
 
 export const push: PushFn = async function (event, config, _mapping, options) {
   const { client, datasetId, tableId } = config.settings!;

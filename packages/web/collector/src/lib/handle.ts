@@ -1,4 +1,4 @@
-import type { Hooks, On } from '@walkerOS/types';
+import type { Hooks, On } from '@walkerOS/core';
 import type { WebCollector, Elb } from '../types';
 import { initScopeTrigger, ready } from './trigger';
 import { getState } from './state';
@@ -10,7 +10,7 @@ import {
   createPushResult,
   isObject,
   on,
-} from '@walkerOS/utils';
+} from '@walkerOS/core';
 
 export async function handleCommand(
   collector: WebCollector.Collector,

@@ -1,4 +1,4 @@
-import type { On, WalkerOS } from '@walkerOS/types';
+import type { On, WalkerOS } from '@walkerOS/core';
 import { elb, sessionStart, sessionStorage, sessionWindow } from '..';
 
 let consent: On.ConsentConfig;

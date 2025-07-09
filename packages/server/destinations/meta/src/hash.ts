@@ -1,5 +1,5 @@
-import { WalkerOS } from '@walkerOS/types';
-import { isArray, isObject, isString } from '@walkerOS/utils';
+import { WalkerOS } from '@walkerOS/core';
+import { isArray, isObject, isString } from '@walkerOS/core';
 import { getHashServer } from '@walkerOS/server-collector';
 
 const keysToHash = [

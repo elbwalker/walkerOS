@@ -1,4 +1,4 @@
-import { getEvent } from '@walkerOS/utils';
+import { getEvent } from '@walkerOS/core';
 
 export function entity_action() {
   const event = getEvent('entity action');

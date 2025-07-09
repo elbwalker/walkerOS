@@ -1,5 +1,5 @@
 import type { Elb, WebCollector } from './types';
-import { addDestination, onApply } from '@walkerOS/utils';
+import { addDestination, onApply } from '@walkerOS/core';
 import { sessionStart } from './utils/';
 import { getPush, elbLayerInit } from './lib/push';
 import { run } from './lib/run';

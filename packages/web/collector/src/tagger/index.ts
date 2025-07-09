@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/types';
+import type { WalkerOS } from '@walkerOS/core';
 import type { ITagger } from './types';
 
 function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Instance {

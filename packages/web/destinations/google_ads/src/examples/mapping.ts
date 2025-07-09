@@ -1,4 +1,4 @@
-import type { Mapping } from '@walkerOS/types';
+import type { Mapping } from '@walkerOS/core';
 import type { DestinationAds } from '..';
 
 export const conversion: DestinationAds.Rule = {

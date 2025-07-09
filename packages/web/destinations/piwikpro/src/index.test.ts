@@ -1,7 +1,7 @@
 import type { Elb } from '@walkerOS/web-collector';
 import type { DestinationPiwikPro } from '.';
 import { createWebCollector } from '@walkerOS/web-collector';
-import { getEvent } from '@walkerOS/utils';
+import { getEvent } from '@walkerOS/core';
 import { destinationPiwikProExamples } from './examples';
 
 const { events, mapping } = destinationPiwikProExamples;

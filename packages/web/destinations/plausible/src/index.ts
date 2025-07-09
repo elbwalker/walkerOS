@@ -1,5 +1,5 @@
 import type { Config, Destination } from './types';
-import { isObject } from '@walkerOS/utils';
+import { isObject } from '@walkerOS/core';
 
 // Types
 export * as DestinationPlausible from './types';

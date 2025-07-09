@@ -1,6 +1,6 @@
-import type { Mapping } from '@walkerOS/types';
+import type { Mapping } from '@walkerOS/core';
 import type { DestinationGTM } from '..';
-import { isObject } from '@walkerOS/utils';
+import { isObject } from '@walkerOS/core';
 
 export const entity_action: DestinationGTM.Rule = {
   name: 'entity_action',

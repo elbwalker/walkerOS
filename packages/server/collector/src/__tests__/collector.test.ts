@@ -1,6 +1,6 @@
 import type { ServerCollector, DestinationServer, Elb } from '../types';
-import type { WalkerOS } from '@walkerOS/types';
-import { createEvent } from '@walkerOS/utils';
+import type { WalkerOS } from '@walkerOS/core';
+import { createEvent } from '@walkerOS/core';
 import { createServerCollector } from '../';
 
 describe('Server Collector', () => {

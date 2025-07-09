@@ -1,4 +1,4 @@
-import type { Hooks } from '@walkerOS/types';
+import type { Hooks } from '@walkerOS/core';
 import type { WebCollector } from '../types';
 
 export function addHook<Hook extends keyof Hooks.Functions>(

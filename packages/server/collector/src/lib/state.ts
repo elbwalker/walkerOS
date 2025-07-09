@@ -1,5 +1,5 @@
 import type { ServerCollector } from '../types';
-import { assign, onLog } from '@walkerOS/utils';
+import { assign, onLog } from '@walkerOS/core';
 
 export function getState(
   initConfig: ServerCollector.InitConfig,

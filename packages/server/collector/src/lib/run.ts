@@ -1,5 +1,5 @@
 import type { ServerCollector } from '../types';
-import { assign, getId } from '@walkerOS/utils';
+import { assign, getId } from '@walkerOS/core';
 
 export function run(
   collector: ServerCollector.Collector,

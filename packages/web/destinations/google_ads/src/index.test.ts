@@ -1,7 +1,7 @@
 import type { Elb } from '@walkerOS/web-collector';
 import type { DestinationAds } from '.';
 import { createWebCollector } from '@walkerOS/web-collector';
-import { getEvent } from '@walkerOS/utils';
+import { getEvent } from '@walkerOS/core';
 import { destinationAdsExamples } from './examples';
 
 const { events, mapping } = destinationAdsExamples;

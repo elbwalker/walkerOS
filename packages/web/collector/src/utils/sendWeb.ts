@@ -1,10 +1,10 @@
-import type { SendDataValue, SendHeaders, SendResponse } from '@walkerOS/utils';
+import type { SendDataValue, SendHeaders, SendResponse } from '@walkerOS/core';
 import {
   getHeaders,
   transformData,
   tryCatch,
   tryCatchAsync,
-} from '@walkerOS/utils';
+} from '@walkerOS/core';
 
 export type SendWebTransport = 'fetch' | 'beacon' | 'xhr';
 

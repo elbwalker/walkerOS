@@ -1,6 +1,6 @@
 import type { Settings, Destination } from './types';
 import { addScript, setup } from './setup';
-import { isObject } from '@walkerOS/utils';
+import { isObject } from '@walkerOS/core';
 
 // Types
 export * as DestinationMetaPixel from './types';

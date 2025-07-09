@@ -4,13 +4,12 @@
   "workspaces": [
     "packages/*",
     "packages/config/*",
+    "packages/core/*",
     "packages/server/*",
     "packages/server/destinations/*",
     "packages/web/*",
     "packages/web/destinations/*",
-    "packages/web/sources/*",
-    "packages/utils/*",
-    "packages/types/*"
+    "packages/web/sources/*"
   ],
   "scripts": {
     "build": "turbo run build --output-logs=errors-only",

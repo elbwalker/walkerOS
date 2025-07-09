@@ -1,4 +1,4 @@
-import type { Mapping as WalkerOSMapping } from '@walkerOS/types';
+import type { Mapping as WalkerOSMapping } from '@walkerOS/core';
 import type { DestinationWeb } from '@walkerOS/web-collector';
 
 declare global {
@@ -22,4 +22,3 @@ export interface Mapping {}
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;
-

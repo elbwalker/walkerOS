@@ -1,5 +1,5 @@
 import type { Settings, Destination } from './types';
-import { isDefined } from '@walkerOS/utils';
+import { isDefined } from '@walkerOS/core';
 import { sendWeb } from '@walkerOS/web-collector';
 
 // Types

@@ -1,4 +1,4 @@
-import { Walker } from '@walkerOS/types';
+import { Walker } from '@walkerOS/core';
 
 export namespace ITagger {
   interface Config {

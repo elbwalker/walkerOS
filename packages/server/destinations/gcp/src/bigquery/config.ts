@@ -1,6 +1,6 @@
 import type { Config, PartialConfig, Settings } from './types';
 import type { BigQueryOptions } from '@google-cloud/bigquery';
-import { onLog, throwError } from '@walkerOS/utils';
+import { onLog, throwError } from '@walkerOS/core';
 import { BigQuery } from '@google-cloud/bigquery';
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {

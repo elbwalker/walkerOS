@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/types';
+import type { WalkerOS } from '@walkerOS/core';
 import type { Config, Rule, MappedEvent, Mapping } from './types';
 import {
   getId,
@@ -6,7 +6,7 @@ import {
   isDefined,
   isObject,
   isString,
-} from '@walkerOS/utils';
+} from '@walkerOS/core';
 import { convertConsentStates } from './helper';
 
 const defaultMapping: Mapping = {

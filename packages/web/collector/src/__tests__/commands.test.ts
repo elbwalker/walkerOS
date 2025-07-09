@@ -1,5 +1,5 @@
 import type { WebCollector } from '../';
-import type { Elb, WalkerOS } from '@walkerOS/types';
+import type { Elb, WalkerOS } from '@walkerOS/core';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { createWebCollector } from '../';
 
