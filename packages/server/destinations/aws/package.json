@@ -34,9 +34,7 @@
     "@walkerOS/server-collector": "0.0.1",
     "@walkerOS/core": "0.0.1"
   },
-  "devDependencies": {
-    "@walkerOS/types": "0.0.1"
-  },
+  "devDependencies": {},
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/server/destinations/aws"
@@ -47,13 +45,11 @@
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "keywords": [
-    "elb",
-    "elbwalker",
     "walker",
-    "walkerOS destination",
-    "analytics",
-    "tracking",
-    "AWS",
+    "walkerOS",
+    "destination",
+    "server",
+    "aws",
     "firehose"
   ],
   "funding": [

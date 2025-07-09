@@ -32,9 +32,7 @@
   "dependencies": {
     "@walkerOS/core": "0.0.1"
   },
-  "devDependencies": {
-    "@walkerOS/tsup": "0.0.1"
-  },
+  "devDependencies": {},
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/web/collector"

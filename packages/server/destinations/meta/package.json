@@ -31,8 +31,7 @@
   },
   "dependencies": {
     "@walkerOS/server-collector": "0.0.1",
-    "@walkerOS/core": "0.0.1",
-    "@walkerOS/types": "0.0.1"
+    "@walkerOS/core": "0.0.1"
   },
   "devDependencies": {},
   "repository": {
@@ -45,13 +44,12 @@
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "keywords": [
-    "elb",
-    "elbwalker",
     "walker",
-    "walkerOS destination",
-    "analytics",
-    "tracking",
-    "meta capi"
+    "walkerOS",
+    "destination",
+    "server",
+    "meta",
+    "capi"
   ],
   "funding": [
     {

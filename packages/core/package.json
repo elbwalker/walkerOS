@@ -18,9 +18,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {},
-  "devDependencies": {
-    "@walkerOS/tsup": "0.0.1"
-  },
+  "devDependencies": {},
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/core"
@@ -43,7 +41,7 @@
     "product analytics",
     "core",
     "types",
-    "utilities"
+    "utils"
   ],
   "funding": [
     {

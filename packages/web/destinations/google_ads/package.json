@@ -34,8 +34,6 @@
     "@walkerOS/core": "0.0.1"
   },
   "devDependencies": {
-    "@walkerOS/tsup": "0.0.1",
-    "@walkerOS/types": "0.0.1",
     "@types/gtag.js": "^0.0.20"
   },
   "repository": {
@@ -48,13 +46,10 @@
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "keywords": [
-    "elb",
-    "elbwalker",
     "walker",
     "walkerOS",
-    "walker destination",
-    "analytics",
-    "tracking",
+    "destination",
+    "web",
     "google ads"
   ],
   "funding": [

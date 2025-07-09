@@ -33,10 +33,7 @@
     "@walkerOS/web-collector": "0.0.1",
     "@walkerOS/core": "0.0.1"
   },
-  "devDependencies": {
-    "@walkerOS/tsup": "0.0.1",
-    "@walkerOS/types": "0.0.1"
-  },
+  "devDependencies": {},
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/web/sources/dataLayer"
@@ -47,15 +44,11 @@
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "keywords": [
-    "elb",
-    "elbwalker",
     "walker",
     "walkerOS",
-    "walker source",
-    "analytics",
-    "tracking",
-    "datalayer",
-    "data layer"
+    "source",
+    "web",
+    "dataLayer"
   ],
   "funding": [
     {
