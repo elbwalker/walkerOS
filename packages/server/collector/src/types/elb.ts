@@ -1,6 +1,6 @@
 import type { Elb } from '@walkerOS/types';
 import type { Destination, Init, Config } from './destination';
-import type { State } from './source';
+import type { State } from './collector';
 
 export interface Fn<R = Return, D = PushData, O = PushOptions>
   extends Elb.Fn<R, D, O>,

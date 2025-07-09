@@ -1,6 +1,6 @@
 import type { Elb, On, WalkerOS } from '@walkerOS/types';
 import type { Destination, Init, Config } from './destination';
-import type { State } from './source';
+import type { State } from './collector';
 import type { Trigger } from './walker';
 
 export interface Fn<R = Return, D = PushData, O = PushOptions, C = PushContext>
