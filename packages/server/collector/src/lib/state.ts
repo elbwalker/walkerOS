@@ -1,5 +1,5 @@
 import type { ServerCollector } from '../types';
-import { assign, onLog } from '@walkerOS/core';
+import { assign, onLog, initDestinations } from '@walkerOS/core';
 
 export function getState(
   initConfig: ServerCollector.InitConfig,
@@ -50,7 +50,7 @@ export function getState(
     consent,
     count: 0, // Event counter for each run
     custom,
-    destinations,
+    destinations: initDestinations(destinations),
     globals,
     group: '', // Random id to group events of a run
     hooks,

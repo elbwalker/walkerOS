@@ -1,4 +1,8 @@
-import type { Hooks, WalkerOS } from '@walkerOS/core';
+import type {
+  Hooks,
+  WalkerOS,
+  Destination as WalkerOSDestination,
+} from '@walkerOS/core';
 import type { SessionConfig } from '../utils';
 import type { Destination, Config as DestConfig } from './destination';
 import type { Fn, Layer } from './elb';
@@ -44,7 +48,7 @@ export interface Config extends WalkerOS.Config {
 export interface InitConfig extends Partial<Config> {
   consent?: WalkerOS.Consent;
   custom?: WalkerOS.Properties;
-  destinations?: Destinations;
+  destinations?: WalkerOSDestination.InitDestinations;
   hooks?: Hooks.Functions;
   on?: WalkerOS.OnConfig;
   tagging?: number;

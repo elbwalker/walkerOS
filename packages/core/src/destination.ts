@@ -352,3 +352,18 @@ export function createPushResult(
     partialResult,
   );
 }
+
+export function initDestinations(
+  destinations: WalkerOSDestination.InitDestinations,
+): WalkerOSDestination.Destinations {
+  return Object.entries(destinations).reduce<WalkerOSDestination.Destinations>(
+    (acc, [name, destination]) => {
+      acc[name] = {
+        ...destination,
+        config: isObject(destination.config) ? destination.config : {},
+      };
+      return acc;
+    },
+    {},
+  );
+}

@@ -1,4 +1,9 @@
-import type { Hooks, Schema, WalkerOS } from '@walkerOS/core';
+import type {
+  Hooks,
+  Schema,
+  WalkerOS,
+  Destination as WalkerOSDestination,
+} from '@walkerOS/core';
 import type { Fn } from './elb';
 import type { Destination } from './destination';
 
@@ -21,7 +26,7 @@ export type PartialConfig = Partial<Config>;
 export interface InitConfig extends Partial<Config> {
   consent?: WalkerOS.Consent;
   custom?: WalkerOS.Properties;
-  destinations?: Destinations;
+  destinations?: WalkerOSDestination.InitDestinations;
   hooks?: Hooks.Functions;
   on?: WalkerOS.OnConfig;
   tagging?: number;

@@ -1,4 +1,4 @@
-import { Const, assign } from '@walkerOS/core';
+import { Const, assign, initDestinations } from '@walkerOS/core';
 import type { WebCollector } from '../types';
 
 export function getState(
@@ -61,7 +61,7 @@ export function getState(
     consent,
     count: 0, // Event counter for each run
     custom,
-    destinations,
+    destinations: initDestinations(destinations),
     globals,
     group: '', // Random id to group events of a run
     hooks,

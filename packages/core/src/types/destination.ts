@@ -39,6 +39,21 @@ export interface Policy {
 export type Init = Partial<Omit<Destination, 'push'>> &
   Pick<Destination, 'push'>;
 
+export type InitDestination<Settings = unknown, Mapping = unknown> = Omit<
+  Destination<Settings, Mapping>,
+  'config'
+> & {
+  config?: Config<Settings, Mapping>;
+};
+
+export interface InitDestinations {
+  [key: string]: InitDestination;
+}
+
+export interface Destinations {
+  [key: string]: Destination;
+}
+
 export type InitFn<Settings, Mapping> = (
   config?: PartialConfig<Settings, Mapping>,
   collector?: WalkerOS.Collector,
