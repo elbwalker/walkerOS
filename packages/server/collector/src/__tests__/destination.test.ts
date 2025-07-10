@@ -16,6 +16,8 @@ describe('Destination', () => {
     config: {},
     init: mockInit,
     push: mockPush,
+    queue: [],
+    dlq: [],
   };
   let result: Elb.PushResult;
 
@@ -138,7 +140,10 @@ describe('Destination', () => {
         ...changes,
         event: 'NewEventName',
       }),
-      mockDestination.config,
+      expect.objectContaining({
+        ...mockDestination.config,
+        init: true,
+      }),
       eventMapping,
       { collector },
     );
@@ -304,6 +309,8 @@ describe('Destination', () => {
       push: jest.fn().mockImplementation(() => {
         throw new Error('init kaputt');
       }),
+      queue: [],
+      dlq: [],
     };
 
     const pushFail: DestinationServer.Destination = {
@@ -311,6 +318,8 @@ describe('Destination', () => {
       push: jest.fn().mockImplementation(() => {
         throw new Error('push kaputt');
       }),
+      queue: [],
+      dlq: [],
     };
 
     const { elb, collector } = getCollector({
@@ -325,7 +334,13 @@ describe('Destination', () => {
       successful: [
         {
           id: 'mockDestination',
-          destination: mockDestination,
+          destination: expect.objectContaining({
+            ...mockDestination,
+            config: expect.objectContaining({
+              ...mockDestination.config,
+              init: true,
+            }),
+          }),
         },
       ],
       queued: [],

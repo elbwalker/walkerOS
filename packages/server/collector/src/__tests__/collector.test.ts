@@ -8,6 +8,8 @@ describe('Server Collector', () => {
   const mockDestination: DestinationServer.Destination = {
     config: {},
     push: mockDestinationPush,
+    queue: [],
+    dlq: [],
   };
   let mockEvent: WalkerOS.Event;
   let result: Elb.PushResult;
@@ -49,6 +51,7 @@ describe('Server Collector', () => {
       mock: {
         config: { id: 'mock' },
         queue: [],
+        dlq: [],
         push: mockDestinationPush,
       },
     });
