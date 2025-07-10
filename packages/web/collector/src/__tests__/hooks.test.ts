@@ -86,9 +86,10 @@ describe('Hooks', () => {
         result: undefined,
       },
       expect.objectContaining({ event: 'e a' }), // event
-      { init: true, mapping: { bundle: { me: { batch: 100 } } } }, // destination config
-      undefined, // custom event mapping
-      { collector }, // options
+      expect.objectContaining({
+        config: { init: true, mapping: { bundle: { me: { batch: 100 } } } }, // destination config
+        collector, // collector
+      }),
     );
 
     elb('bundle me', { on: 'ce' });

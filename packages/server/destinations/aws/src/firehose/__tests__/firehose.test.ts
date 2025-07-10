@@ -1,4 +1,5 @@
 import type { Config, Settings, Destination } from '../types';
+import type { WalkerOS } from '@walkerOS/core';
 import { createEvent } from '@walkerOS/core';
 import {
   FirehoseClient,
@@ -14,7 +15,11 @@ describe('Firehose', () => {
   const streamName = 'demo';
 
   async function getConfig(settings: Settings = {}) {
-    return (await destination.init({ settings })) as Config;
+    const mockCollector = {} as WalkerOS.Collector;
+    return (await destination.init({
+      config: { settings },
+      collector: mockCollector,
+    })) as Config;
   }
 
   beforeEach(() => {
@@ -45,8 +50,9 @@ describe('Firehose', () => {
   test('push', async () => {
     const spy = (FirehoseClient.prototype.send = jest.fn());
     const config = await getConfig(settingsConfig);
+    const mockCollector = {} as WalkerOS.Collector;
 
-    await destination.push(event, config);
+    await destination.push(event, { config, collector: mockCollector });
     expect(spy).toHaveBeenCalledWith(expect.any(PutRecordBatchCommand));
   });
 });

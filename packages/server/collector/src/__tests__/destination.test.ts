@@ -141,11 +141,8 @@ describe('Destination', () => {
         event: 'NewEventName',
       }),
       expect.objectContaining({
-        ...mockDestination.config,
-        init: true,
+        mapping: eventMapping,
       }),
-      eventMapping,
-      { collector },
     );
   });
 
@@ -162,9 +159,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'custom',
       }),
-      expect.any(Object),
-      eventMapping,
-      { collector },
+      expect.objectContaining({
+        mapping: eventMapping,
+      }),
     );
   });
 
@@ -181,9 +178,10 @@ describe('Destination', () => {
     result = await elb(mockEvent);
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'entity action' }),
-      expect.anything(),
-      eventMapping,
-      { data: 'bar', collector: expect.anything() },
+      expect.objectContaining({
+        mapping: eventMapping,
+        data: 'bar',
+      }),
     );
   });
 
@@ -203,15 +201,13 @@ describe('Destination', () => {
     result = await elb(mockEvent);
     expect(mockPush).toHaveBeenCalledWith(
       expect.any(Object),
-      expect.any(Object),
-      eventMapping,
-      {
+      expect.objectContaining({
+        mapping: eventMapping,
         data: {
           foo: 'bar',
           bar: 'baz',
         },
-        collector: expect.anything(),
-      },
+      }),
     );
   });
 

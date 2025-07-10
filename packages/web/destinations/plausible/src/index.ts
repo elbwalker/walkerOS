@@ -12,7 +12,7 @@ export const destinationPlausible: Destination = {
 
   config: {},
 
-  init(config = {}) {
+  init({ config }) {
     const w = window;
     const settings = config.settings || {};
 
@@ -25,9 +25,9 @@ export const destinationPlausible: Destination = {
       };
   },
 
-  push(event, config, mapping, options = {}) {
+  push(event, { config, data }) {
     const { fn } = config;
-    const params = isObject(options.data) ? options.data : {};
+    const params = isObject(data) ? data : {};
 
     const func = fn || window.plausible!;
     func(`${event.event}`, params);

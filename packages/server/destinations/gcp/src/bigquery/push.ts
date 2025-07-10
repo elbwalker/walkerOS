@@ -2,13 +2,16 @@ import type { WalkerOS } from '@walkerOS/core';
 import type { PushFn } from './types';
 import { isObject, isArray } from '@walkerOS/core';
 
-export const push: PushFn = async function (event, config, _mapping, options) {
+export const push: PushFn = async function (
+  event,
+  { config, mapping: _mapping, data, collector },
+) {
   const { client, datasetId, tableId } = config.settings!;
 
   let row: WalkerOS.AnyObject | undefined;
 
-  if (isObject(options?.data)) {
-    row = options.data;
+  if (isObject(data)) {
+    row = data;
   } else {
     const now = new Date();
     row = {

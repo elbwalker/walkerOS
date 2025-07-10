@@ -6,14 +6,14 @@ export function dataLayerDestination(): DestinationWeb.Init {
     (window.dataLayer as unknown[]).push(event);
   };
   const destination: DestinationWeb.Init = {
-    push: (event, config, mapping, options = {}) => {
+    push: (event, { data }) => {
       // Do not process events from dataLayer source
       if (event.source?.type === 'dataLayer') return;
 
-      const data = options.data || event;
-      dataLayerPush(data);
+      const eventData = data || event;
+      dataLayerPush(eventData);
     },
-    pushBatch: (batch) => {
+    pushBatch: (batch, {}) => {
       dataLayerPush({
         event: 'batch',
         batched_event: batch.key,

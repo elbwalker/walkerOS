@@ -12,16 +12,16 @@ export const destinationAPI: Destination = {
 
   config: {},
 
-  push(event, config, mapping, options = {}) {
+  push(event, { config, mapping, data }) {
     const { settings = {} as Settings, fn } = config;
     const { url, headers, method, transform, transport = 'fetch' } = settings;
 
     if (!url) return;
 
-    const data = isDefined(options.data) ? options.data : event;
+    const eventData = isDefined(data) ? data : event;
     const body = transform
-      ? transform(data, config, mapping) // Transform event data
-      : JSON.stringify(data);
+      ? transform(eventData, config, mapping) // Transform event data
+      : JSON.stringify(eventData);
 
     const func = fn || sendWeb;
     func(url, body, { headers, method, transport });

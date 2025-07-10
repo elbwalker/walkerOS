@@ -393,7 +393,69 @@ Major export renames across destinations:
 - **Sources:** `source-*` → `web-collector`/`server-collector`
 - **Core packages:** `@walkerOS/types` + `@walkerOS/utils` → `@walkerOS/core`
 
-### 5. Mapping Terminology & Structure Updates
+### 5. Destination API Context Changes
+
+Destination function signatures have been simplified by consolidating parameters into context objects. This change makes the API cleaner and more extensible.
+
+**Key Changes:**
+
+1. **Function Signature Simplification:**
+   - `InitFn`: Parameters consolidated into a single `context` object
+   - `PushFn`: Event parameter remains explicit, other parameters in `context`
+   - `PushBatchFn`: Batch parameter remains explicit, other parameters in `context`
+
+   **Before:**
+   ```typescript
+   type InitFn<Settings, Mapping> = (
+     config?: PartialConfig<Settings, Mapping>,
+     collector?: WalkerOS.Collector,
+   ) => WalkerOS.PromiseOrValue<void | false | Config<Settings, Mapping>>;
+
+   type PushFn<Settings, Mapping> = (
+     event: WalkerOS.Event,
+     config: Config<Settings, Mapping>,
+     mapping?: WalkerOSMapping.Rule<Mapping>,
+     options?: Options,
+   ) => WalkerOS.PromiseOrValue<void>;
+   ```
+
+   **After:**
+   ```typescript
+   type InitFn<Settings, Mapping> = (
+     context: InitContext<Settings, Mapping>
+   ) => WalkerOS.PromiseOrValue<void | false | Config<Settings, Mapping>>;
+
+   type PushFn<Settings, Mapping> = (
+     event: WalkerOS.Event,
+     context: PushContext<Settings, Mapping>
+   ) => WalkerOS.PromiseOrValue<void>;
+   ```
+
+2. **Context Interfaces:**
+   - `InitContext`: Contains `collector` and `config`
+   - `PushContext`: Contains `collector`, `config`, `mapping`, and `data`
+   - `PushBatchContext`: Contains `collector`, `config`, `mapping`, and `data`
+
+3. **Options Interface Removed:**
+   - The `Options` interface has been removed in favor of the context-based approach
+
+**Migration Impact:**
+
+```typescript
+// Before
+push(event, config, mapping, options) {
+  const { collector, data } = options;
+  // ...
+}
+
+// After
+push(event, { collector, config, mapping, data }) {
+  // Direct destructuring in parameter - no need for const assignment
+  // ...
+}
+```
+
+### 6. Mapping Terminology & Structure Updates
 
 The event mapping system has undergone significant refactoring to improve clarity, consistency, and alignment with the overall `walkerOS` naming conventions.
 

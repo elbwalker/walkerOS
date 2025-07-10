@@ -12,7 +12,7 @@ export const destinationPiwikPro: Destination = {
 
   config: {},
 
-  init(config = {}) {
+  init({ config }) {
     const w = window;
     const { settings = {} as Partial<Settings>, fn, loadScript } = config;
     const { appId, url } = settings;
@@ -39,9 +39,8 @@ export const destinationPiwikPro: Destination = {
     if (settings.linkTracking !== false) func(['enableLinkTracking']);
   },
 
-  async push(event, config, mapping = {}, options = {}) {
+  async push(event, { config, mapping = {}, data }) {
     const { fn } = config;
-    const { data } = options;
     const func = fn || window._paq!.push;
 
     // Send pageviews if not disabled

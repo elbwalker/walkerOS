@@ -14,7 +14,7 @@ export const destinationGA4: Destination = {
 
   config: { settings: { measurementId: '' } },
 
-  init(config = {}) {
+  init({ config }) {
     const w = window;
     const { settings = {} as Partial<Settings>, fn, loadScript } = config;
     const { measurementId, transport_url, server_container_url, pageview } =
@@ -53,14 +53,14 @@ export const destinationGA4: Destination = {
     func('config', measurementId, gtagSettings);
   },
 
-  push(event, config, mapping = {}, options = {}) {
+  push(event, { config, mapping = {}, data }) {
     const { settings, fn } = config;
     const eventMapping = mapping.settings || {};
     if (!settings) return;
 
     if (!settings.measurementId) return;
 
-    const data = isObject(options.data) ? options.data : {};
+    const eventData = isObject(data) ? data : {};
 
     const paramsInclude = getParamsInclude(
       event,
@@ -70,7 +70,7 @@ export const destinationGA4: Destination = {
 
     const eventParams: Parameters = {
       ...paramsInclude,
-      ...data,
+      ...eventData,
     };
 
     // Event name (snake_case default)

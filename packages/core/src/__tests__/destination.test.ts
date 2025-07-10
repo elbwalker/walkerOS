@@ -80,9 +80,9 @@ describe('Destination', () => {
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith(
       clonedEvent,
-      { init: true },
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: { init: true },
+      }),
     );
   });
 

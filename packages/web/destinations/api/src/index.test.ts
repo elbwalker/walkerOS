@@ -53,7 +53,7 @@ describe('Destination API', () => {
 
   test('fn', () => {
     const fn = jest.fn();
-    destination.push(event, { settings: { url }, fn });
+    destination.push(event, { config: { settings: { url }, fn } });
     expect(fn).toHaveBeenCalledTimes(1);
   });
 

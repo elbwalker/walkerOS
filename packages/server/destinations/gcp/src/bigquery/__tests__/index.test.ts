@@ -22,7 +22,7 @@ describe('Server Destination BigQuery', () => {
   }
 
   async function getConfig(settings: Partial<Settings>) {
-    return (await destination.init({ settings })) as Config;
+    return (await destination.init({ config: { settings } })) as Config;
   }
 
   beforeEach(() => {
@@ -38,7 +38,7 @@ describe('Server Destination BigQuery', () => {
     if (!destination.init) return;
 
     await expect(
-      destination.init({ settings: { datasetId, tableId } }),
+      destination.init({ config: { settings: { datasetId, tableId } } }),
     ).rejects.toThrow('Config settings projectId missing');
 
     const config = await getConfig({ projectId });
@@ -58,7 +58,12 @@ describe('Server Destination BigQuery', () => {
     const config = await getConfig({ projectId, bigquery: { credentials } });
     const mockFn = getMockFn(config);
 
-    await destination.push(event, config);
+    await destination.push(event, {
+      config,
+      mapping: undefined,
+      data: undefined,
+      collector: undefined,
+    });
     expect(mockFn).toHaveBeenCalledWith('insert', [
       {
         timestamp: expect.any(Date),
@@ -91,7 +96,12 @@ describe('Server Destination BigQuery', () => {
     const data = { foo: 'bar' };
     const mockFn = getMockFn(config);
 
-    await destination.push(event, config, {}, { data });
+    await destination.push(event, {
+      config,
+      mapping: {},
+      data,
+      collector: undefined,
+    });
     expect(mockFn).toHaveBeenCalledWith('insert', [{ foo: 'bar' }]);
   });
 });

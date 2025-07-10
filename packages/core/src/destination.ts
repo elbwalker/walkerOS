@@ -247,11 +247,16 @@ export async function destinationInit<
 >(collector: WalkerOS.Collector, destination: Destination): Promise<boolean> {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
+    const context: WalkerOSDestination.InitContext = {
+      collector,
+      config: destination.config,
+    };
+
     const configResult = await useHooks(
       destination.init,
       'DestinationInit',
       collector.hooks,
-    )(destination.config, collector);
+    )(context);
 
     // Actively check for errors (when false)
     if (configResult === false) return configResult; // don't push if init is false
@@ -301,7 +306,12 @@ export async function destinationPush<
     }
   }
 
-  const options = { data, collector };
+  const context: WalkerOSDestination.PushContext = {
+    collector,
+    config,
+    data,
+    mapping: eventMapping,
+  };
 
   if (eventMapping?.batch && destination.pushBatch) {
     const batched = eventMapping.batched || {
@@ -315,11 +325,18 @@ export async function destinationPush<
     eventMapping.batchFn =
       eventMapping.batchFn ||
       debounce((destination, collector) => {
+        const batchContext: WalkerOSDestination.PushBatchContext = {
+          collector,
+          config,
+          data,
+          mapping: eventMapping,
+        };
+
         useHooks(
           destination.pushBatch!,
           'DestinationPushBatch',
           collector.hooks,
-        )(batched, config, options);
+        )(batched, batchContext);
 
         // Reset the batched queues
         batched.events = [];
@@ -330,12 +347,11 @@ export async function destinationPush<
     eventMapping.batchFn(destination, collector);
   } else {
     // It's time to go to the destination's side now
-    await useHooks(destination.push, 'DestinationPush', collector.hooks)(
-      event,
-      config,
-      eventMapping,
-      options,
-    );
+    await useHooks(
+      destination.push,
+      'DestinationPush',
+      collector.hooks,
+    )(event, context);
   }
 
   return true;

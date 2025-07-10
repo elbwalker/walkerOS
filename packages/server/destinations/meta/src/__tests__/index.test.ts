@@ -35,15 +35,23 @@ describe('Server Destination Meta', () => {
   afterEach(() => {});
 
   async function getConfig(settings = {}) {
-    return (await destination.init({ settings })) as Config;
+    const mockCollector = {} as WalkerOS.Collector;
+    return (await destination.init({
+      config: { settings },
+      collector: mockCollector,
+    })) as Config;
   }
 
   test('init', async () => {
-    await expect(destination.init({})).rejects.toThrow(
-      'Error: Config settings accessToken missing',
-    );
+    const mockCollector = {} as WalkerOS.Collector;
     await expect(
-      destination.init({ settings: { accessToken } }),
+      destination.init({ config: {}, collector: mockCollector }),
+    ).rejects.toThrow('Error: Config settings accessToken missing');
+    await expect(
+      destination.init({
+        config: { settings: { accessToken } },
+        collector: mockCollector,
+      }),
     ).rejects.toThrow('Error: Config settings pixelId missing');
 
     const config = await getConfig({ accessToken, pixelId });

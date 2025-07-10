@@ -63,9 +63,9 @@ describe('Server Collector', () => {
     expect(mockDestinationPush).toHaveBeenCalledTimes(1);
     expect(mockDestinationPush).toHaveBeenCalledWith(
       mockEvent,
-      mockDestination.config,
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: mockDestination.config,
+      }),
     );
     expect(result).toEqual({
       ok: true,
@@ -116,9 +116,9 @@ describe('Server Collector', () => {
     expect(mockDestinationPush).toHaveBeenCalledTimes(1);
     expect(mockDestinationPush).toHaveBeenCalledWith(
       event,
-      mockDestination.config,
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: mockDestination.config,
+      }),
     );
   });
 

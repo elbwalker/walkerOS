@@ -54,22 +54,39 @@ export interface Destinations {
   [key: string]: Destination;
 }
 
+// Context interfaces for destination functions
+export interface Context<Settings = unknown, Mapping = unknown> {
+  collector: WalkerOS.Collector;
+  config: Config<Settings, Mapping>;
+  data?: Data;
+}
+
+export interface InitContext<Settings = unknown, Mapping = unknown>
+  extends Context<Settings, Mapping> {}
+
+export interface PushContext<Settings = unknown, Mapping = unknown>
+  extends Context<Settings, Mapping> {
+  mapping?: WalkerOSMapping.Rule<Mapping>;
+}
+
+export interface PushBatchContext<Settings = unknown, Mapping = unknown>
+  extends Context<Settings, Mapping> {
+  mapping?: WalkerOSMapping.Rule<Mapping>;
+}
+
+// Updated function signatures with context-based parameters
 export type InitFn<Settings, Mapping> = (
-  config?: PartialConfig<Settings, Mapping>,
-  collector?: WalkerOS.Collector,
+  context: InitContext<Settings, Mapping>,
 ) => WalkerOS.PromiseOrValue<void | false | Config<Settings, Mapping>>;
 
 export type PushFn<Settings, Mapping> = (
   event: WalkerOS.Event,
-  config: Config<Settings, Mapping>,
-  mapping?: WalkerOSMapping.Rule<Mapping>,
-  options?: Options,
+  context: PushContext<Settings, Mapping>,
 ) => WalkerOS.PromiseOrValue<void>;
 
 export type PushBatchFn<Settings, Mapping> = (
   batch: Batch<Mapping>,
-  config: Config<Settings, Mapping>,
-  options?: Options,
+  context: PushBatchContext<Settings, Mapping>,
 ) => void;
 
 export type PushEvent<Mapping = unknown> = {
@@ -83,11 +100,6 @@ export interface Batch<Mapping> {
   events: WalkerOS.Events;
   data: Array<Data>;
   mapping?: WalkerOSMapping.Rule<Mapping>;
-}
-
-export interface Options {
-  collector?: WalkerOS.Collector;
-  data?: Data;
 }
 
 export type Data =

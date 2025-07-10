@@ -12,7 +12,7 @@ export const destinationGTM: Destination = {
 
   config: {},
 
-  init(config = {}) {
+  init({ config }) {
     const w = window as unknown as Record<string, unknown[]>;
     const { settings = {} as Partial<Settings>, fn, loadScript } = config;
     const { containerId, dataLayer, domain } = settings;
@@ -31,9 +31,8 @@ export const destinationGTM: Destination = {
       addScript(containerId, domain || defaultDomain, dataLayerName);
   },
 
-  push(event, config, mapping, options = {}) {
+  push(event, { config, data }) {
     const func = config.fn || (window.dataLayer as unknown[]).push;
-    const { data } = options;
     const obj = { event: event.event }; // Use the name mapping by default
 
     func({

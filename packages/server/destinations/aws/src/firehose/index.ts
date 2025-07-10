@@ -15,9 +15,9 @@ export const destinationFirehose: Destination = {
 
   config: {},
 
-  async init(partialConfig = {}) {
+  async init({ config: partialConfig }) {
     const config = await tryCatchAsync(getConfig, (error) => {
-      config.onLog('Init error', partialConfig.verbose);
+      config.onLog('Init error', partialConfig?.verbose);
 
       throwError(error);
     })(partialConfig);
@@ -27,12 +27,12 @@ export const destinationFirehose: Destination = {
     return config;
   },
 
-  async push(event, config) {
+  async push(event, { config, collector }) {
     return await tryCatchAsync(push, (error) => {
       if (config.onLog) config.onLog('Push error');
 
       throwError(error);
-    })(event, config);
+    })(event, { config, collector });
   },
 };
 

@@ -13,7 +13,7 @@ export const destinationMeta: Destination = {
 
   config: {},
 
-  init(config = {}) {
+  init({ config }) {
     const { settings = {} as Partial<Settings>, fn, loadScript } = config;
     const { pixelId } = settings;
 
@@ -30,10 +30,9 @@ export const destinationMeta: Destination = {
     func('init', pixelId);
   },
 
-  push(event, config, mapping = {}, options = {}) {
+  push(event, { config, mapping = {}, data }) {
     const { fn } = config;
     const { track, trackCustom } = mapping.settings || {};
-    const { data } = options;
     const func = fn || window.fbq;
 
     // page view

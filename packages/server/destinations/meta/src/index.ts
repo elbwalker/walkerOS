@@ -14,9 +14,9 @@ export const destinationMeta: Destination = {
 
   config: {},
 
-  async init(partialConfig = {}) {
+  async init({ config: partialConfig }) {
     const config = await tryCatchAsync(getConfig, (error) => {
-      log('Init error', partialConfig.verbose);
+      log('Init error', partialConfig?.verbose);
 
       throwError(error);
     })(partialConfig);
@@ -24,11 +24,11 @@ export const destinationMeta: Destination = {
     return config;
   },
 
-  async push(event, config, mapping, options) {
+  async push(event, { config, mapping, data, collector }) {
     return await tryCatchAsync(push, (error) => {
       if (config.onError) config.onError(error);
       throwError(error);
-    })(event, config, mapping, options);
+    })(event, { config, mapping, data, collector });
   },
 };
 

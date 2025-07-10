@@ -66,9 +66,9 @@ describe('elbLayer', () => {
         event: 'e 1',
         count: 1,
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
 
     expect(mockDestinationPush).toHaveBeenCalledWith(
@@ -76,9 +76,9 @@ describe('elbLayer', () => {
         event: 'e 2',
         count: 2,
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
 
     expect(mockDestinationPush).toHaveBeenCalledWith(
@@ -86,9 +86,9 @@ describe('elbLayer', () => {
         event: 'page view',
         count: 3,
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
 
     expect(mockDestinationPush).toHaveBeenCalledWith(
@@ -96,9 +96,9 @@ describe('elbLayer', () => {
         event: 'e 4',
         count: 4,
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
   });
 
@@ -149,9 +149,9 @@ describe('elbLayer', () => {
         event: 'event postponed',
         user: { id: 'userId' },
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
     expect(mockDestinationPush).toHaveBeenNthCalledWith(
       2,
@@ -159,9 +159,9 @@ describe('elbLayer', () => {
         event: 'page view',
         user: { id: 'userId' },
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
     expect(mockDestinationPush).toHaveBeenNthCalledWith(
       3,
@@ -169,9 +169,9 @@ describe('elbLayer', () => {
         event: 'event later',
         user: { id: 'userId' },
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
   });
 
@@ -278,9 +278,9 @@ describe('elbLayer', () => {
     // Regular session start calls to both
     expect(mockDest1).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'session start' }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
     expect(mockDest2).toHaveBeenCalledTimes(1);
     jest.clearAllMocks();
@@ -329,17 +329,17 @@ describe('elbLayer', () => {
       expect.objectContaining({
         event: 'e load',
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
     expect(mockDest2).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e load',
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
   });
 
@@ -359,9 +359,9 @@ describe('elbLayer', () => {
       expect.objectContaining({
         event: 'e a',
       }),
-      { init: true, settings: { a: 1 } },
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: { init: true, settings: { a: 1 } },
+      }),
     );
   });
 

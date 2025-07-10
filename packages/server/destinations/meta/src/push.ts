@@ -9,7 +9,10 @@ import { getMappingValue, isObject } from '@walkerOS/core';
 import { sendServer } from '@walkerOS/server-collector';
 import { hashEvent } from './hash';
 
-export const push: PushFn = async function (event, config, mapping, options) {
+export const push: PushFn = async function (
+  event,
+  { config, mapping, data, collector },
+) {
   const {
     accessToken,
     pixelId,
@@ -20,7 +23,7 @@ export const push: PushFn = async function (event, config, mapping, options) {
     user_data,
   } = config.settings!;
 
-  const data = isObject(options?.data) ? options?.data : {};
+  const eventData = isObject(data) ? data : {};
   const configData = config.data
     ? await getMappingValue(event, config.data)
     : {};
@@ -36,13 +39,13 @@ export const push: PushFn = async function (event, config, mapping, options) {
     // Custom user_data
     ...(isObject(userDataCustom) ? userDataCustom : {}),
     // Event mapping
-    ...(isObject(data.user_data) ? data.user_data : {}),
+    ...(isObject(eventData.user_data) ? eventData.user_data : {}),
   };
 
   if (userData.fbclid) {
     userData.fbc = formatClickId(
       userData.fbclid,
-      options?.collector?.session?.start || event.timestamp,
+      collector?.session?.start || event.timestamp,
     );
     delete userData.fbclid;
   }
@@ -51,7 +54,7 @@ export const push: PushFn = async function (event, config, mapping, options) {
     event_id: event.id,
     event_time: Math.round((event.timestamp || Date.now()) / 1000),
     action_source,
-    ...data,
+    ...eventData,
     user_data: userData,
   };
 

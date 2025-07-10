@@ -43,9 +43,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: event.event,
       }),
-      { init: true },
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: { init: true },
+      }),
     );
   });
 
@@ -106,9 +106,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'run one',
       }),
-      expect.anything(),
-      undefined,
-      { collector },
+      expect.objectContaining({
+        collector,
+      }),
     );
 
     elb('walker run');
@@ -118,9 +118,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'run two',
       }),
-      expect.anything(),
-      undefined,
-      { collector },
+      expect.objectContaining({
+        collector,
+      }),
     );
   });
 
@@ -142,9 +142,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: event.event,
       }),
-      { init: true },
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: { init: true },
+      }),
     );
   });
 
@@ -210,25 +210,25 @@ describe('Destination', () => {
       expect.objectContaining({
         event: event.event,
       }),
-      expect.anything(),
-      {},
-      expect.anything(),
+      expect.objectContaining({
+        mapping: {},
+      }),
     );
     expect(mockPushB).toHaveBeenCalledWith(
       expect.objectContaining({
         event: event.event,
       }),
-      expect.anything(),
-      {},
-      expect.anything(),
+      expect.objectContaining({
+        mapping: {},
+      }),
     );
     expect(mockPushC).toHaveBeenCalledWith(
       expect.objectContaining({
         event: event.event,
       }),
-      expect.anything(),
-      {},
-      expect.anything(),
+      expect.objectContaining({
+        mapping: {},
+      }),
     );
 
     jest.clearAllMocks();
@@ -240,9 +240,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'foo bar',
       }),
-      expect.anything(),
-      { name: 'foo bar' },
-      expect.anything(),
+      expect.objectContaining({
+        mapping: { name: 'foo bar' },
+      }),
     );
 
     jest.clearAllMocks();
@@ -254,9 +254,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'random action',
       }),
-      expect.anything(),
-      {},
-      expect.anything(),
+      expect.objectContaining({
+        mapping: {},
+      }),
     );
 
     jest.clearAllMocks();
@@ -268,9 +268,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'entity random',
       }),
-      expect.anything(),
-      {},
-      expect.anything(),
+      expect.objectContaining({
+        mapping: {},
+      }),
     );
 
     jest.clearAllMocks();
@@ -300,9 +300,10 @@ describe('Destination', () => {
     // Event data
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'foo bar' }),
-      expect.anything(),
-      eventMapping,
-      { data: 'bar', collector: expect.anything() },
+      expect.objectContaining({
+        mapping: eventMapping,
+        data: 'bar',
+      }),
     );
 
     // Destination data
@@ -310,9 +311,9 @@ describe('Destination', () => {
     await elb(event);
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({ event: event.event }),
-      expect.anything(),
-      undefined,
-      { data: 'foo', collector: expect.anything() },
+      expect.objectContaining({
+        data: 'foo',
+      }),
     );
   });
 
@@ -333,15 +334,13 @@ describe('Destination', () => {
     await jest.runAllTimersAsync();
     expect(mockPush).toHaveBeenCalledWith(
       expect.any(Object),
-      expect.any(Object),
-      eventMapping,
-      {
+      expect.objectContaining({
+        mapping: eventMapping,
         data: {
           foo: 'bar',
           bar: 'baz',
         },
-        collector: expect.anything(),
-      },
+      }),
     );
   });
 
@@ -470,9 +469,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'p v',
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
 
     expect(mockPushC).toHaveBeenNthCalledWith(
@@ -480,9 +479,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'e a',
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
 
     await elb('f b');
@@ -491,9 +490,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'f b',
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
 
     // Revoked consent
@@ -560,9 +559,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'page_view',
       }),
-      config,
-      { name: 'page_view' },
-      expect.anything(),
+      expect.objectContaining({
+        mapping: { name: 'page_view' },
+      }),
     );
   });
 
@@ -601,16 +600,16 @@ describe('Destination', () => {
     expect(mockInitA).not.toHaveBeenCalled();
     expect(mockPushA).toHaveBeenCalledWith(
       expect.objectContaining({ event: name }),
-      expect.anything(),
-      { name },
-      expect.anything(),
+      expect.objectContaining({
+        mapping: { name },
+      }),
     );
     expect(mockInitB).toHaveBeenCalled();
     expect(mockPushB).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'different' }),
-      expect.anything(),
-      { name: 'different' },
-      expect.anything(),
+      expect.objectContaining({
+        mapping: { name: 'different' },
+      }),
     );
 
     // Save config automatically
@@ -638,9 +637,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'p v',
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
 
     jest.clearAllMocks();
@@ -656,9 +655,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'p v',
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
 
     // Expect to only process current events
@@ -670,9 +669,9 @@ describe('Destination', () => {
       expect.objectContaining({
         event: 'p v2',
       }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+      }),
     );
     const mockPushLater = jest.fn();
     const destinationLater: DestinationWeb.Destination = {
@@ -778,8 +777,10 @@ describe('Destination', () => {
         events: expect.any(Array),
         data: [],
       },
-      expect.anything(),
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+        collector: expect.any(Object),
+      }),
     );
 
     // promotion visible
@@ -790,8 +791,10 @@ describe('Destination', () => {
         events: expect.any(Array),
         data: [],
       },
-      expect.anything(),
-      expect.anything(),
+      expect.objectContaining({
+        config: expect.any(Object),
+        collector: expect.any(Object),
+      }),
     );
   });
 

@@ -9,7 +9,7 @@ export const destinationAds: Destination = {
 
   config: {},
 
-  init(config = {}) {
+  init({ config }) {
     const { settings = {}, fn, loadScript } = config;
     const w = window;
 
@@ -38,17 +38,17 @@ export const destinationAds: Destination = {
     return config;
   },
 
-  push(event, config, mapping = {}, options = {}): void {
+  push(event, { config, mapping = {}, data }): void {
     const { settings = {}, fn } = config;
     const { name } = mapping;
-    const data = isObject(options.data) ? options.data : {};
+    const eventData = isObject(data) ? data : {};
 
     if (!name) return;
 
     const params: Gtag.CustomParams = {
       send_to: `${settings.conversionId}/${name}`,
       currency: settings.currency,
-      ...data,
+      ...eventData,
     };
 
     const func = fn || window.gtag;
