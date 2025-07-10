@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
-import { elb } from '@elbwalker/walker.js';
+import { elb } from '@walkerOS/web-collector';
 import { setupAnalytics } from './data';
 import Footer from './components/organisms/footer';
 import Navigation from './components/organisms/navigation';

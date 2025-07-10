@@ -11,9 +11,11 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@elbwalker/destination-web-google-gtm": "^2.1.3",
-    "@elbwalker/utils": "*",
-    "@elbwalker/walker.js": "^2.1.3",
+    "@walkerOS/core": "*",
+    "@walkerOS/web-collector": "*",
+    "@walkerOS/web-destination-gtm": "*",
+    "@walkerOS/web-destination-ga4": "*",
+    "@walkerOS/web-destination-meta": "*",
     "@heroicons/react": "^2.1.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

@@ -9,7 +9,8 @@
     "packages/server/destinations/*",
     "packages/web/*",
     "packages/web/destinations/*",
-    "packages/web/sources/*"
+    "packages/web/sources/*",
+    "apps/demos/react"
   ],
   "scripts": {
     "build": "turbo run build --output-logs=errors-only",
