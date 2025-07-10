@@ -1,4 +1,4 @@
-import type { Elb } from '@walkerOS/core';
+import type { ElbCore } from '@walkerOS/core';
 import type { Config } from './types';
 import {
   clone,
@@ -53,7 +53,7 @@ export async function push(config: Config, live: boolean, ...args: unknown[]) {
         const { command, event } = mappedObj;
 
         if (command && command.name) {
-          await config.elb(command.name, command.data as Elb.PushData);
+          await config.elb(command.name, command.data as ElbCore.PushData);
         } else if (event && event.event) {
           await config.elb(event);
         }

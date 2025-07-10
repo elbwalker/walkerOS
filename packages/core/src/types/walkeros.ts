@@ -1,11 +1,11 @@
-import type { Destination, Elb, Handler, Hooks } from '.';
+import type { Destination, ElbCore, Handler, Hooks } from '.';
 
 export type AnyObject<T = unknown> = Record<string, T>;
 export type AnyFunction = (...args: unknown[]) => unknown;
 export type SingleOrArray<T> = T | Array<T>;
 
 export interface Collector extends State {
-  push: Elb.Fn;
+  push: ElbCore.Fn;
 }
 
 export interface State {

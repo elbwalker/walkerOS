@@ -19,8 +19,7 @@
   },
   "dependencies": {
     "@google-cloud/bigquery": "^7.8.0",
-    "@walkerOS/server-collector": "0.0.1",
-    "@walkerOS/core": "0.0.1"
+    "@walkerOS/server-collector": "0.0.1"
   },
   "devDependencies": {},
   "repository": {

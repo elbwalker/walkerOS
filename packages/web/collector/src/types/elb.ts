@@ -1,17 +1,17 @@
-import type { Elb, On, WalkerOS } from '@walkerOS/core';
+import type { ElbCore, On, WalkerOS } from '@walkerOS/core';
 import type { Destination, Init, Config } from './destination';
 import type { State } from './collector';
 import type { Trigger } from './walker';
 
 export interface Fn<R = Return, D = PushData, O = PushOptions, C = PushContext>
-  extends Elb.Fn<R, D, O, C>,
+  extends ElbCore.Fn<R, D, O, C>,
     Arguments<R>,
     CommandInit<R>,
     CommandDestination<R>,
     CommandOn<R>,
     CommandRun<R> {}
 
-export type Arguments<R = void> = Elb.Arguments<
+export type Arguments<R = void> = ElbCore.Arguments<
   R,
   PushData,
   PushOptions,
@@ -41,26 +41,26 @@ export type CommandOn<R = void> = (
 ) => R;
 
 export type PushData =
-  | Elb.PushData
+  | ElbCore.PushData
   | Destination
   | Init
   | Partial<State>
   | ScopeType;
 
 export type PushOptions =
-  | Elb.PushOptions
+  | ElbCore.PushOptions
   | Trigger
   | WalkerOS.SingleOrArray<On.Options>
   | Config;
 
-export type PushContext = Elb.PushContext | Element;
+export type PushContext = ElbCore.PushContext | Element;
 
 export type Scope = Element | Document;
 
 export type ScopeType = Scope | Scope[];
 
-export type PushResult = Elb.PushResult;
+export type PushResult = ElbCore.PushResult;
 
 export type Return<R = Promise<PushResult>> = R;
 
-export type Layer = Elb.Layer;
+export type Layer = ElbCore.Layer;

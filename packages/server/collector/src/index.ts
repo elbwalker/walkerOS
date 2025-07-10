@@ -3,6 +3,9 @@ import { run } from './lib/run';
 import { getState } from './lib/state';
 import { getPush } from './lib/push';
 
+// Re-export all core utilities
+export * from '@walkerOS/core';
+
 // Types
 export * from './types';
 

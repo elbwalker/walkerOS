@@ -1,6 +1,6 @@
 import type { Settings, Destination } from './types';
 import { addScript, setup } from './setup';
-import { isObject } from '@walkerOS/core';
+import { isObject } from '@walkerOS/web-collector';
 
 // Types
 export * as DestinationMeta from './types';

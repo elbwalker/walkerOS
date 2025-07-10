@@ -1,6 +1,6 @@
 import type { WalkerOS } from './types';
 import type { Destination } from './types';
-import type { Elb } from './types';
+import type { ElbCore } from './types';
 import { Commands, Const } from './constants';
 import { addDestination } from './destination';
 import { assign } from './assign';
@@ -12,8 +12,8 @@ export async function commonHandleCommand(
   action: string,
   data?: unknown,
   options?: unknown,
-): Promise<Elb.PushResult | undefined> {
-  let result: Elb.PushResult | undefined;
+): Promise<ElbCore.PushResult | undefined> {
+  let result: ElbCore.PushResult | undefined;
 
   switch (action) {
     case Const.Commands.Consent:

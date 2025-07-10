@@ -1,10 +1,10 @@
 import type { WebCollector } from '../';
-import type { Elb, WalkerOS } from '@walkerOS/core';
+import type { ElbCore, WalkerOS } from '@walkerOS/core';
 import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { createWebCollector } from '../';
 
 describe('Commands', () => {
-  let elb: Elb.Fn;
+  let elb: ElbCore.Fn;
   let walkerjs: WebCollector.Collector;
 
   beforeEach(() => {

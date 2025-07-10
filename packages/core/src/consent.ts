@@ -1,4 +1,4 @@
-import type { WalkerOS, Elb } from './types';
+import type { WalkerOS, ElbCore } from './types';
 import { assign } from './assign';
 import { pushToDestinations, createPushResult } from './destination';
 import { onApply } from './on';
@@ -30,7 +30,7 @@ export function getGrantedConsent(
 export async function setConsent(
   collector: WalkerOS.Collector,
   data: WalkerOS.Consent,
-): Promise<Elb.PushResult> {
+): Promise<ElbCore.PushResult> {
   const { consent } = collector;
 
   let runQueue = false;

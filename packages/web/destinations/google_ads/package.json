@@ -30,8 +30,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkerOS/web-collector": "0.0.1",
-    "@walkerOS/core": "0.0.1"
+    "@walkerOS/web-collector": "0.0.1"
   },
   "devDependencies": {
     "@types/gtag.js": "^0.0.20"

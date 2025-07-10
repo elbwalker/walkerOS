@@ -1,7 +1,7 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkerOS/web-collector';
 import type { Settings, Destination, Parameters } from './types';
 import { getParamsInclude } from './parameters';
-import { isObject } from '@walkerOS/core';
+import { isObject } from '@walkerOS/web-collector';
 
 // Types
 export * as DestinationGA4 from './types';

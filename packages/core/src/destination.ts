@@ -2,7 +2,7 @@ import type {
   Destination as WalkerOSDestination,
   Mapping,
   WalkerOS,
-  Elb,
+  ElbCore,
 } from './types';
 import { getId } from './getId';
 import { setByPath } from './byPath';
@@ -19,19 +19,21 @@ import { createEventOrCommand } from './handle';
 export type HandleCommandFn<T extends WalkerOS.Collector> = (
   collector: T,
   action: string,
-  data?: Elb.PushData,
-  options?: Elb.PushOptions,
-) => Promise<Elb.PushResult>;
+  data?: ElbCore.PushData,
+  options?: ElbCore.PushOptions,
+) => Promise<ElbCore.PushResult>;
 
-export function createPush<T extends WalkerOS.Collector, F extends Elb.Fn>(
+export function createPush<T extends WalkerOS.Collector, F extends ElbCore.Fn>(
   collector: T,
   handleCommand: HandleCommandFn<T>,
-  prepareEvent: Elb.Fn<WalkerOS.PartialEvent>,
+  prepareEvent: ElbCore.Fn<WalkerOS.PartialEvent>,
 ): F {
   return useHooks(
     async (...args) => {
       return await tryCatchAsync(
-        async (...args: Parameters<Elb.Arguments>): Promise<Elb.PushResult> => {
+        async (
+          ...args: Parameters<ElbCore.Arguments>
+        ): Promise<ElbCore.PushResult> => {
           const [nameOrEvent, pushData, options] = args;
           const partialEvent = prepareEvent(...args);
 
@@ -96,7 +98,7 @@ export async function pushToDestinations(
   collector: WalkerOS.Collector,
   event?: WalkerOS.Event,
   destinations?: WalkerOS.Destinations,
-): Promise<Elb.PushResult> {
+): Promise<ElbCore.PushResult> {
   const { allowed, consent, globals, user } = collector;
 
   // Check if collector is allowed to push
@@ -340,8 +342,8 @@ export async function destinationPush<
 }
 
 export function createPushResult(
-  partialResult?: Partial<Elb.PushResult>,
-): Elb.PushResult {
+  partialResult?: Partial<ElbCore.PushResult>,
+): ElbCore.PushResult {
   return assign(
     {
       ok: !partialResult?.failed?.length,

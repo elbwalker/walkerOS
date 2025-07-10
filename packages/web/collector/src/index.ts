@@ -9,14 +9,17 @@ import { createElb, initGlobalTrigger, ready } from './lib/trigger';
 import { getAllEvents, getEvents, getGlobals } from './lib/walker';
 import { dataLayerDestination } from './lib/destination';
 
+// Re-export all core utilities
+export * from '@walkerOS/core';
+
 // Export types and elb
 export * from './types';
 
-// Walker utilities
-export * from './lib/walker';
-
 // Web utilities
 export * from './utils';
+
+// Walker utilities
+export * from './lib/walker';
 
 export const elb: Elb.Fn = createElb();
 

@@ -1,6 +1,6 @@
 export * as Data from './data';
 export * as Destination from './destination';
-export * as Elb from './elb';
+export * as ElbCore from './elb';
 export * as Handler from './handler';
 export * as Hooks from './hooks';
 export * as Mapping from './mapping';

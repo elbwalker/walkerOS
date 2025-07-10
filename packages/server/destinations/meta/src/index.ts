@@ -1,5 +1,5 @@
 import type { Destination } from './types';
-import { throwError, tryCatchAsync } from '@walkerOS/core';
+import { throwError, tryCatchAsync } from '@walkerOS/server-collector';
 import { getConfig, log } from './config';
 import { push } from './push';
 
