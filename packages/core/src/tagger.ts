@@ -1,8 +1,61 @@
-import type { WalkerOS } from '@walkerOS/core';
-import type { ITagger } from './types';
+import type { WalkerOS } from './types';
 
-function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Instance {
-  const instance: ITagger.Instance = {
+export namespace Tagger {
+  export interface Config {
+    prefix: string;
+  }
+
+  export interface Instance {
+    config: Config;
+    entity: (name: string) => WalkerOS.Properties;
+    action: ActionMethod;
+    property: PropertyMethod;
+    context: ContextMethod;
+    globals: GlobalsMethod;
+  }
+
+  type ActionMethod = {
+    (trigger: Trigger, action?: string): WalkerOS.Properties;
+    (triggerActions: KevVal): WalkerOS.Properties;
+  };
+
+  type ContextMethod = {
+    (context: string, value?: WalkerOS.Property): WalkerOS.Properties;
+    (context: KevVal): WalkerOS.Properties;
+  };
+
+  type GlobalsMethod = {
+    (global: string, value?: WalkerOS.Property): WalkerOS.Properties;
+    (global: KevVal): WalkerOS.Properties;
+  };
+
+  type PropertyMethod = {
+    (
+      entity: string,
+      prop: string,
+      value?: WalkerOS.Property,
+    ): WalkerOS.Properties;
+    (entity: string, properties: KevVal): WalkerOS.Properties;
+  };
+
+  export interface KevVal {
+    [key: string | Trigger]: WalkerOS.Property;
+  }
+
+  export type Trigger =
+    | 'click'
+    | 'custom'
+    | 'hover'
+    | 'load'
+    | 'pulse'
+    | 'submit'
+    | 'visible'
+    | 'wait'
+    | string;
+}
+
+export function tagger(config: Partial<Tagger.Config> = {}): Tagger.Instance {
+  const instance: Tagger.Instance = {
     config: {
       prefix: config.prefix || 'data-elb',
     },
@@ -20,7 +73,7 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Instance {
 
   // data-elbaction="trigger:action"
   function actionMethod(
-    triggerActions: ITagger.Trigger | ITagger.KevVal,
+    triggerActions: Tagger.Trigger | Tagger.KevVal,
     action?: string,
   ): WalkerOS.Properties {
     if (typeof triggerActions === 'string')
@@ -34,7 +87,7 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Instance {
   // data-elb-entity="key:val"
   function propertyMethod(
     entity: string,
-    properties: string | ITagger.KevVal,
+    properties: string | Tagger.KevVal,
     value?: WalkerOS.Property,
   ): WalkerOS.Properties {
     if (typeof properties === 'string')
@@ -45,7 +98,7 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Instance {
 
   // data-elbcontext="key:val"
   function contextMethod(
-    context: string | ITagger.KevVal,
+    context: string | Tagger.KevVal,
     value?: WalkerOS.Property,
   ): WalkerOS.Properties {
     if (typeof context === 'string') context = { [context]: value || '' };
@@ -55,7 +108,7 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Instance {
 
   // data-elbglobals="key:val"
   function globalsMethod(
-    globals: string | ITagger.KevVal,
+    globals: string | Tagger.KevVal,
     value?: WalkerOS.Property,
   ): WalkerOS.Properties {
     if (typeof globals === 'string') globals = { [globals]: value || '' };
@@ -70,7 +123,7 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Instance {
     return instance.config.prefix + name;
   }
 
-  function getStr(obj: ITagger.KevVal): string {
+  function getStr(obj: Tagger.KevVal): string {
     let str = '';
     let separator = '';
 
@@ -84,5 +137,3 @@ function Tagger(config: Partial<ITagger.Config> = {}): ITagger.Instance {
 
   return instance;
 }
-
-export default Tagger;

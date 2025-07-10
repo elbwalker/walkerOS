@@ -1,7 +1,5 @@
-// Type exports (namespaced)
 export * from './types';
 
-// Utility exports (direct)
 export * from './anonymizeIP';
 export * from './assign';
 export * from './byPath';
@@ -26,5 +24,6 @@ export * from './throwError';
 export * from './trim';
 export * from './tryCatch';
 export * from './useHooks';
+export * from './tagger';
 export * from './userAgent';
 export * from './validate';

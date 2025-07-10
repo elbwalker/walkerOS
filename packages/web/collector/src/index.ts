@@ -12,10 +12,6 @@ import { dataLayerDestination } from './lib/destination';
 // Export types and elb
 export * from './types';
 
-// Tagger utility
-export { default as tagger } from './tagger';
-export * from './tagger/types/index.d';
-
 // Walker utilities
 export * from './lib/walker';
 

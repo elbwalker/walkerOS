@@ -1,42 +1,41 @@
-import Tagger from '..';
-import type { ITagger } from '../types';
+import { tagger, Tagger } from '../tagger';
 
 describe('Tagger', () => {
-  let tagger: ITagger.Instance;
+  let instance: Tagger.Instance;
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
 
-    tagger = Tagger();
+    instance = tagger();
   });
 
   afterEach(() => {});
 
   test('Init', () => {
-    expect(tagger.config).toMatchObject({
+    expect(instance.config).toMatchObject({
       prefix: 'data-elb',
     });
 
-    tagger = Tagger({ prefix: 'elb' });
-    expect(tagger.config).toMatchObject({
+    instance = tagger({ prefix: 'elb' });
+    expect(instance.config).toMatchObject({
       prefix: 'elb',
     });
   });
 
   test('Entity', () => {
-    expect(tagger.entity('promotion')).toMatchObject({
+    expect(instance.entity('promotion')).toMatchObject({
       'data-elb': 'promotion',
     });
   });
 
   test('Action', () => {
-    expect(tagger.action('visible', 'view')).toMatchObject({
+    expect(instance.action('visible', 'view')).toMatchObject({
       'data-elbaction': 'visible:view',
     });
 
     expect(
-      tagger.action({
+      instance.action({
         visible: 'impression',
         load: 'view',
         'load(entity)': 'filter',
@@ -47,14 +46,14 @@ describe('Tagger', () => {
   });
 
   test('Property', () => {
-    expect(tagger.property('promotion', 'category', 'analytics')).toMatchObject(
-      {
-        'data-elb-promotion': 'category:analytics',
-      },
-    );
+    expect(
+      instance.property('promotion', 'category', 'analytics'),
+    ).toMatchObject({
+      'data-elb-promotion': 'category:analytics',
+    });
 
     expect(
-      tagger.property('product', {
+      instance.property('product', {
         id: 'abc',
         price: 42,
       }),
@@ -64,12 +63,12 @@ describe('Tagger', () => {
   });
 
   test('Context', () => {
-    expect(tagger.context('test', 'engagement')).toMatchObject({
+    expect(instance.context('test', 'engagement')).toMatchObject({
       'data-elbcontext': 'test:engagement',
     });
 
     expect(
-      tagger.context({
+      instance.context({
         test: 'a',
         shopping: 'discovery',
       }),
@@ -79,12 +78,12 @@ describe('Tagger', () => {
   });
 
   test('Globals', () => {
-    expect(tagger.globals('language', 'en')).toMatchObject({
+    expect(instance.globals('language', 'en')).toMatchObject({
       'data-elbglobals': 'language:en',
     });
 
     expect(
-      tagger.globals({
+      instance.globals({
         language: 'de',
         pagegroup: 'shop',
       }),
