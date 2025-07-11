@@ -14,9 +14,9 @@ export const destinationGA4: Destination = {
 
   config: { settings: { measurementId: '' } },
 
-  init({ config }) {
+  init({ config, wrap }) {
     const w = window;
-    const { settings = {} as Partial<Settings>, fn, loadScript } = config;
+    const { settings = {} as Partial<Settings>, loadScript } = config;
     const { measurementId, transport_url, server_container_url, pageview } =
       settings;
 
@@ -40,21 +40,21 @@ export const destinationGA4: Destination = {
     // setup required methods
     w.dataLayer = w.dataLayer || [];
 
-    let func = fn || w.gtag;
     if (!w.gtag) {
       w.gtag = function () {
         (w.dataLayer as unknown[]).push(arguments);
       };
-      func = func || w.gtag;
-      func('js', new Date());
     }
 
+    const gtag = wrap('gtag', w.gtag);
+    gtag('js', new Date());
+
     // gtag init call
-    func('config', measurementId, gtagSettings);
+    gtag('config', measurementId, gtagSettings);
   },
 
-  push(event, { config, mapping = {}, data }) {
-    const { settings, fn } = config;
+  push(event, { config, mapping = {}, data, wrap }) {
+    const { settings } = config;
     const eventMapping = mapping.settings || {};
     if (!settings) return;
 
@@ -85,8 +85,8 @@ export const destinationGA4: Destination = {
     // Debug mode
     if (settings.debug) eventParams.debug_mode = true;
 
-    const func = fn || window.gtag;
-    func('event', eventName, eventParams);
+    const gtag = wrap('gtag', window.gtag);
+    gtag('event', eventName, eventParams);
   },
 };
 

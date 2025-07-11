@@ -39,12 +39,17 @@ describe('destination google-tag-manager', () => {
     expect(w.dataLayer).toBeDefined();
   });
 
-  test('fn', async () => {
+  test('wrapper', async () => {
     w.dataLayer = undefined as unknown;
-    const fn = jest.fn();
-    elb('walker destination', destination, { fn });
+    const onCall = jest.fn();
+    elb('walker destination', destination, { wrapper: { onCall } });
     await elb(event);
-    expect(fn).toHaveBeenCalledTimes(2);
+    // Verify wrapper was called (at least once for push, and potentially for init)
+    expect(onCall).toHaveBeenCalledWith(
+      { name: 'dataLayer.push', id: expect.any(String), type: 'google-gtm' },
+      [expect.any(Object)],
+    );
+    expect(onCall).toHaveBeenCalled();
   });
 
   test('init with load script', async () => {

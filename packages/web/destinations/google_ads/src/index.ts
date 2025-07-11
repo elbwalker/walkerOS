@@ -9,8 +9,8 @@ export const destinationAds: Destination = {
 
   config: {},
 
-  init({ config }) {
-    const { settings = {}, fn, loadScript } = config;
+  init({ config, wrap }) {
+    const { settings = {}, loadScript } = config;
     const w = window;
 
     // required measurement id
@@ -23,23 +23,23 @@ export const destinationAds: Destination = {
 
     w.dataLayer = w.dataLayer || [];
 
-    let func = fn || w.gtag;
     if (!w.gtag) {
       w.gtag = function gtag() {
         (w.dataLayer as unknown[]).push(arguments);
       };
-      func = func || w.gtag;
-      func('js', new Date());
     }
 
+    const gtag = wrap('gtag', w.gtag);
+    gtag('js', new Date());
+
     // gtag init call
-    func('config', settings.conversionId);
+    gtag('config', settings.conversionId);
 
     return config;
   },
 
-  push(event, { config, mapping = {}, data }): void {
-    const { settings = {}, fn } = config;
+  push(event, { config, mapping = {}, data, wrap }): void {
+    const { settings = {} } = config;
     const { name } = mapping;
     const eventData = isObject(data) ? data : {};
 
@@ -51,8 +51,8 @@ export const destinationAds: Destination = {
       ...eventData,
     };
 
-    const func = fn || window.gtag;
-    func('event', 'conversion', params);
+    const gtag = wrap('gtag', window.gtag);
+    gtag('event', 'conversion', params);
   },
 };
 

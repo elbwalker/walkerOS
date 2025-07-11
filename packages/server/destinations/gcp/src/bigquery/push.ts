@@ -4,7 +4,7 @@ import { isObject, isArray } from '@walkerOS/core';
 
 export const push: PushFn = async function (
   event,
-  { config, mapping: _mapping, data, collector },
+  { config, mapping: _mapping, data, collector, wrap },
 ) {
   const { client, datasetId, tableId } = config.settings!;
 

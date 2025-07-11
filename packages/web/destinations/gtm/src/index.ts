@@ -12,16 +12,16 @@ export const destinationGTM: Destination = {
 
   config: {},
 
-  init({ config }) {
+  init({ config, wrap }) {
     const w = window as unknown as Record<string, unknown[]>;
-    const { settings = {} as Partial<Settings>, fn, loadScript } = config;
+    const { settings = {} as Partial<Settings>, loadScript } = config;
     const { containerId, dataLayer, domain } = settings;
     const dataLayerName = dataLayer || defaultDataLayer;
 
     w[dataLayerName] = w[dataLayerName] || [];
 
-    const func = fn || w[dataLayerName].push;
-    func({
+    const push = wrap('dataLayer.push', w[dataLayerName].push);
+    push({
       'gtm.start': new Date().getTime(),
       event: 'gtm.js',
     });
@@ -31,11 +31,11 @@ export const destinationGTM: Destination = {
       addScript(containerId, domain || defaultDomain, dataLayerName);
   },
 
-  push(event, { config, data }) {
-    const func = config.fn || (window.dataLayer as unknown[]).push;
+  push(event, { config, data, wrap }) {
+    const push = wrap('dataLayer.push', (window.dataLayer as unknown[]).push);
     const obj = { event: event.event }; // Use the name mapping by default
 
-    func({
+    push({
       ...obj,
       ...(isObject(data) ? data : event),
     });

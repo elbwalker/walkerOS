@@ -8,3 +8,4 @@ export * as On from './on';
 export * as Request from './request';
 export * as Schema from './schema';
 export * as WalkerOS from './walkeros';
+export * as Wrapper from './wrapper';

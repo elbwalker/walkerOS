@@ -46,13 +46,17 @@ describe('Destination Meta Pixel', () => {
     expect(w.fbq).toBeDefined();
   });
 
-  test('fn', async () => {
+  test('wrapper', async () => {
     (w.fbq as unknown) = undefined;
-    const fn = jest.fn();
-    destination.config.fn = fn;
+    const onCall = jest.fn();
+    destination.config.wrapper = { onCall };
     elb('walker destination', destination);
     await elb(event);
-    expect(fn).toHaveBeenCalledTimes(2);
+    expect(onCall).toHaveBeenCalledTimes(2);
+    expect(onCall).toHaveBeenCalledWith(
+      { name: 'fbq', id: expect.any(String), type: 'meta-pixel' },
+      expect.any(Array),
+    );
   });
 
   test('Init calls', async () => {

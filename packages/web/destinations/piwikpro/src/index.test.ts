@@ -42,13 +42,17 @@ describe('Destination PiwikPro', () => {
     expect(true).toBeTruthy(); // @TODO: Add tests
   });
 
-  test('fn', async () => {
+  test('wrapper', async () => {
     (w._paq as unknown) = undefined;
-    const fn = jest.fn();
-    destination.config.fn = fn;
+    const onCall = jest.fn();
+    destination.config.wrapper = { onCall };
     elb('walker destination', destination);
     await elb(event);
-    expect(fn).toHaveBeenCalledTimes(2);
+    expect(onCall).toHaveBeenCalled();
+    expect(onCall).toHaveBeenCalledWith(
+      { name: '_paq.push', id: expect.any(String), type: 'piwikpro' },
+      expect.any(Array),
+    );
   });
 
   test('pageview', async () => {

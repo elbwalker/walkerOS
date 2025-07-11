@@ -12,7 +12,7 @@ export const destinationPlausible: Destination = {
 
   config: {},
 
-  init({ config }) {
+  init({ config, wrap }) {
     const w = window;
     const settings = config.settings || {};
 
@@ -25,12 +25,11 @@ export const destinationPlausible: Destination = {
       };
   },
 
-  push(event, { config, data }) {
-    const { fn } = config;
+  push(event, { config, data, wrap }) {
     const params = isObject(data) ? data : {};
 
-    const func = fn || window.plausible!;
-    func(`${event.event}`, params);
+    const plausible = wrap('plausible', window.plausible!);
+    plausible(`${event.event}`, params);
   },
 };
 

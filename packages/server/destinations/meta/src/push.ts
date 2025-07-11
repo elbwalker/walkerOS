@@ -11,7 +11,7 @@ import { hashEvent } from './hash';
 
 export const push: PushFn = async function (
   event,
-  { config, mapping, data, collector },
+  { config, mapping, data, collector, wrap },
 ) {
   const {
     accessToken,
@@ -68,8 +68,8 @@ export const push: PushFn = async function (
   // Test event code
   if (test_event_code) body.test_event_code = test_event_code;
 
-  const func = config.fn || sendServer;
-  const result = await func(
+  const sendRequest = wrap('sendServer', sendServer);
+  const result = await sendRequest(
     `${url}${pixelId}/events?access_token=${accessToken}`,
     JSON.stringify(body),
   );

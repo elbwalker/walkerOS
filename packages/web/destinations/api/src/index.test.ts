@@ -51,10 +51,32 @@ describe('Destination API', () => {
     );
   });
 
-  test('fn', () => {
-    const fn = jest.fn();
-    destination.push(event, { config: { settings: { url }, fn } });
-    expect(fn).toHaveBeenCalledTimes(1);
+  test('wrapper', () => {
+    const onCall = jest.fn();
+    const wrap = jest.fn((name, fn) => {
+      return (...args: unknown[]) => {
+        onCall({ name, id: 'test-id', type: 'api' }, args);
+        return fn(...args);
+      };
+    });
+
+    destination.push(event, {
+      config: {
+        settings: { url },
+      },
+      wrap,
+    });
+
+    expect(wrap).toHaveBeenCalledWith('sendWeb', expect.any(Function));
+    expect(onCall).toHaveBeenCalledTimes(1);
+    expect(onCall).toHaveBeenCalledWith(
+      { name: 'sendWeb', id: 'test-id', type: 'api' },
+      [
+        url,
+        JSON.stringify(event),
+        expect.objectContaining({ transport: 'fetch' }),
+      ],
+    );
   });
 
   test('transform', async () => {

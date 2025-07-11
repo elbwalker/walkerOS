@@ -1,4 +1,10 @@
-import type { Handler, Mapping as WalkerOSMapping, On, WalkerOS } from '.';
+import type {
+  Handler,
+  Mapping as WalkerOSMapping,
+  On,
+  WalkerOS,
+  Wrapper,
+} from '.';
 
 export interface Destination<Settings = unknown, Mapping = unknown> {
   config: Config<Settings, Mapping>; // Configuration settings for the destination
@@ -22,7 +28,7 @@ export interface Config<Settings = unknown, Mapping = unknown> {
   policy?: Policy; // Rules for processing events
   queue?: boolean; // Disable processing of previously pushed events
   verbose?: boolean; // Enable verbose logging
-  fn?: (...args: unknown[]) => unknown; // Custom function to be called
+  wrapper?: Wrapper.Config; // Wrapper configuration for function interception
   onError?: Handler.Error; // Custom error handler
   onLog?: Handler.Log; // Custom log handler
 }
@@ -62,16 +68,20 @@ export interface Context<Settings = unknown, Mapping = unknown> {
 }
 
 export interface InitContext<Settings = unknown, Mapping = unknown>
-  extends Context<Settings, Mapping> {}
+  extends Context<Settings, Mapping> {
+  wrap: Wrapper.Wrap;
+}
 
 export interface PushContext<Settings = unknown, Mapping = unknown>
   extends Context<Settings, Mapping> {
   mapping?: WalkerOSMapping.Rule<Mapping>;
+  wrap: Wrapper.Wrap;
 }
 
 export interface PushBatchContext<Settings = unknown, Mapping = unknown>
   extends Context<Settings, Mapping> {
   mapping?: WalkerOSMapping.Rule<Mapping>;
+  wrap: Wrapper.Wrap;
 }
 
 // Updated function signatures with context-based parameters

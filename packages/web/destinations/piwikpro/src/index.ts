@@ -12,9 +12,9 @@ export const destinationPiwikPro: Destination = {
 
   config: {},
 
-  init({ config }) {
+  init({ config, wrap }) {
     const w = window;
-    const { settings = {} as Partial<Settings>, fn, loadScript } = config;
+    const { settings = {} as Partial<Settings>, loadScript } = config;
     const { appId, url } = settings;
 
     // Required parameters
@@ -23,29 +23,28 @@ export const destinationPiwikPro: Destination = {
     // Set up the Piwik Pro interface _paq
     w._paq = w._paq || [];
 
-    const func = fn || w._paq.push;
+    const paq = wrap('_paq.push', w._paq.push);
     if (loadScript) {
       // Load the JavaScript Tracking Client
       addScript(url);
 
       // Register the tracker url only with script loading
-      func(['setTrackerUrl', url + 'ppms.php']);
+      paq(['setTrackerUrl', url + 'ppms.php']);
 
       // Register app id
-      func(['setSiteId', appId]);
+      paq(['setSiteId', appId]);
     }
 
     // Enable download and outlink tracking if not disabled
-    if (settings.linkTracking !== false) func(['enableLinkTracking']);
+    if (settings.linkTracking !== false) paq(['enableLinkTracking']);
   },
 
-  async push(event, { config, mapping = {}, data }) {
-    const { fn } = config;
-    const func = fn || window._paq!.push;
+  async push(event, { config, mapping = {}, data, wrap }) {
+    const paq = wrap('_paq.push', window._paq!.push);
 
     // Send pageviews if not disabled
     if (event.event === 'page view' && !mapping.settings) {
-      func(['trackPageView', await getMappingValue(event, 'data.title')]);
+      paq(['trackPageView', await getMappingValue(event, 'data.title')]);
       return;
     }
 
@@ -53,14 +52,14 @@ export const destinationPiwikPro: Destination = {
 
     const parameters = isArray(data) ? data : [data];
 
-    func([event.event, ...parameters]);
+    paq([event.event, ...parameters]);
 
     if (eventMapping.goalId) {
       const goalValue = eventMapping.goalValue
         ? getMappingValue(event, eventMapping.goalValue)
         : undefined;
 
-      func([
+      paq([
         'trackGoal',
         eventMapping.goalId,
         goalValue,

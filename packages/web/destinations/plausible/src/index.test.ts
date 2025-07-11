@@ -40,12 +40,16 @@ describe('destination plausible', () => {
     expect(w.plausible).toBeDefined();
   });
 
-  test('fn', async () => {
-    const fn = jest.fn();
-    destination.config.fn = fn;
+  test('wrapper', async () => {
+    const onCall = jest.fn();
+    destination.config.wrapper = { onCall };
     elb('walker destination', destination);
     await elb(event);
-    expect(fn).toHaveBeenCalledTimes(1);
+    expect(onCall).toHaveBeenCalled();
+    expect(onCall).toHaveBeenCalledWith(
+      { name: 'plausible', id: expect.any(String), type: 'plausible' },
+      expect.any(Array),
+    );
   });
 
   test('init with script load', async () => {

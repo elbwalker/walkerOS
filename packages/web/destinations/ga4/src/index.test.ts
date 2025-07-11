@@ -69,17 +69,21 @@ describe('Destination Google GA4', () => {
 
     await elb(event);
 
-    expect(mockFn).toHaveBeenCalledTimes(2);
-    expect(mockFn).toHaveBeenNthCalledWith(1, 'config', measurementId, {});
+    expect(mockFn).toHaveBeenCalledTimes(3);
+    expect(mockFn).toHaveBeenNthCalledWith(2, 'config', measurementId, {});
   });
 
-  test('fn', async () => {
+  test('wrapper', async () => {
     (w.gtag as unknown) = undefined;
-    const fn = jest.fn();
-    destination.config.fn = fn;
+    const onCall = jest.fn();
+    destination.config.wrapper = { onCall };
     elb('walker destination', destination);
     await elb(event);
-    expect(fn).toHaveBeenCalledTimes(3);
+    expect(onCall).toHaveBeenCalledTimes(3);
+    expect(onCall).toHaveBeenCalledWith(
+      { name: 'gtag', id: expect.any(String), type: 'google-ga4' },
+      expect.any(Array),
+    );
   });
 
   test('init with load script', async () => {

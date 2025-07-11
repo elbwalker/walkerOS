@@ -13,8 +13,8 @@ export const destinationMeta: Destination = {
 
   config: {},
 
-  init({ config }) {
-    const { settings = {} as Partial<Settings>, fn, loadScript } = config;
+  init({ config, wrap }) {
+    const { settings = {} as Partial<Settings>, loadScript } = config;
     const { pixelId } = settings;
 
     // Load Meta Pixel script if required (fbevents.js)
@@ -26,14 +26,13 @@ export const destinationMeta: Destination = {
     // fbq function setup
     setup();
 
-    const func = fn || window.fbq;
-    func('init', pixelId);
+    const fbq = wrap('fbq', window.fbq);
+    fbq('init', pixelId);
   },
 
-  push(event, { config, mapping = {}, data }) {
-    const { fn } = config;
+  push(event, { config, mapping = {}, data, wrap }) {
     const { track, trackCustom } = mapping.settings || {};
-    const func = fn || window.fbq;
+    const fbq = wrap('fbq', window.fbq);
 
     // page view
     if (event.event === 'page view' && !mapping.settings) {
@@ -43,7 +42,7 @@ export const destinationMeta: Destination = {
 
     const eventName = track || trackCustom || event.event;
 
-    func(
+    fbq(
       trackCustom ? 'trackCustom' : 'track',
       String(eventName),
       isObject(data) ? data : {},

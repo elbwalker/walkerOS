@@ -24,11 +24,11 @@ export const destinationMeta: Destination = {
     return config;
   },
 
-  async push(event, { config, mapping, data, collector }) {
+  async push(event, { config, mapping, data, collector, wrap }) {
     return await tryCatchAsync(push, (error) => {
       if (config.onError) config.onError(error);
       throwError(error);
-    })(event, { config, mapping, data, collector });
+    })(event, { config, mapping, data, collector, wrap });
   },
 };
 

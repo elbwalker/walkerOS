@@ -52,17 +52,21 @@ describe('destination Google Ads', () => {
     expect(w.gtag).toBeDefined();
   });
 
-  test('fn', async () => {
+  test('wrapper', async () => {
     (w.gtag as unknown) = undefined;
-    const fn = jest.fn();
+    const onCall = jest.fn();
     elb('walker destination', destination, {
       ...config,
       mapping: { order: { complete: { name: 'label' } } },
-      fn,
+      wrapper: { onCall },
     });
 
     await elb(event);
-    expect(fn).toHaveBeenCalledTimes(3);
+    expect(onCall).toHaveBeenCalledTimes(3);
+    expect(onCall).toHaveBeenCalledWith(
+      { name: 'gtag', id: expect.any(String), type: 'google-ads' },
+      expect.any(Array),
+    );
   });
 
   test('Init calls', async () => {
@@ -70,7 +74,7 @@ describe('destination Google Ads', () => {
 
     await elb(event);
 
-    expect(mockFn).toHaveBeenNthCalledWith(1, 'config', conversionId);
+    expect(mockFn).toHaveBeenNthCalledWith(2, 'config', conversionId);
   });
 
   test('init with load script', async () => {

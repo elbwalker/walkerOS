@@ -4,6 +4,7 @@ import type {
   WalkerOS,
   ElbCore,
 } from './types';
+import { createWrapper } from './wrapper';
 import { getId } from './getId';
 import { setByPath } from './byPath';
 import { getMappingEvent, getMappingValue } from './mapping';
@@ -247,9 +248,17 @@ export async function destinationInit<
 >(collector: WalkerOS.Collector, destination: Destination): Promise<boolean> {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
+    // Always create wrapper (passthrough if no config)
+    const wrap = createWrapper(
+      destination.config.id || 'unknown',
+      destination.type || 'unknown',
+      destination.config.wrapper || {},
+    );
+
     const context: WalkerOSDestination.InitContext = {
       collector,
       config: destination.config,
+      wrap,
     };
 
     const configResult = await useHooks(
@@ -306,11 +315,19 @@ export async function destinationPush<
     }
   }
 
+  // Always create wrapper (passthrough if no config)
+  const wrap = createWrapper(
+    destination.config.id || 'unknown',
+    destination.type || 'unknown',
+    destination.config.wrapper || {},
+  );
+
   const context: WalkerOSDestination.PushContext = {
     collector,
     config,
     data,
     mapping: eventMapping,
+    wrap,
   };
 
   if (eventMapping?.batch && destination.pushBatch) {
@@ -330,6 +347,7 @@ export async function destinationPush<
           config,
           data,
           mapping: eventMapping,
+          wrap,
         };
 
         useHooks(

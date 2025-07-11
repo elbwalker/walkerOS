@@ -12,8 +12,8 @@ export const destinationAPI: Destination = {
 
   config: {},
 
-  push(event, { config, mapping, data }) {
-    const { settings = {} as Settings, fn } = config;
+  push(event, { config, mapping, data, wrap }) {
+    const { settings = {} as Settings } = config;
     const { url, headers, method, transform, transport = 'fetch' } = settings;
 
     if (!url) return;
@@ -23,8 +23,8 @@ export const destinationAPI: Destination = {
       ? transform(eventData, config, mapping) // Transform event data
       : JSON.stringify(eventData);
 
-    const func = fn || sendWeb;
-    func(url, body, { headers, method, transport });
+    const send = wrap('sendWeb', sendWeb) as typeof sendWeb;
+    send(url, body, { headers, method, transport });
   },
 };
 
