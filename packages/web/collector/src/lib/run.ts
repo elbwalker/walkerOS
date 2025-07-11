@@ -3,6 +3,7 @@ import { assign, getId, onApply, tryCatch } from '@walkerOS/core';
 import { getGlobals } from './walker';
 import { pushPredefined } from './push';
 import { load } from './trigger';
+import { destroyVisibilityTracking } from './triggerVisible';
 import { sessionStart } from './session';
 
 export function run(
@@ -38,6 +39,9 @@ export function run(
   Object.values(destinations).forEach((destination) => {
     destination.queue = [];
   });
+
+  // Clean up visibility tracking for fresh state on each run (especially important for SPAs)
+  destroyVisibilityTracking(collector);
 
   // Increase round counter
   if (++collector.round == 1) {

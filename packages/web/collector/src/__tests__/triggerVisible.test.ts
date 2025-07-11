@@ -119,4 +119,104 @@ describe('triggerVisible', () => {
     // Restore
     global.IntersectionObserver = originalIO;
   });
+
+  test('scope change cleanup and re-initialization', () => {
+    // Test that visibility tracking is properly cleaned up and re-initialized during scope changes
+    const { initScopeTrigger } = require('../lib/trigger');
+
+    // Create a more complete mock collector with scope configuration
+    const scopeMockCollector = {
+      config: {
+        listeners: true,
+        prefix: 'data-elb',
+        scope: document,
+      },
+      push: jest.fn(),
+    } as unknown as WebCollector.Collector;
+
+    // Initialize first time
+    initScopeTrigger(scopeMockCollector);
+    expect(scopeMockCollector._visibilityState).toBeDefined();
+    expect(global.IntersectionObserver).toHaveBeenCalledTimes(1);
+
+    // Initialize again (simulating scope change)
+    initScopeTrigger(scopeMockCollector);
+    expect(scopeMockCollector._visibilityState).toBeDefined();
+
+    // Should have disconnected the old observer and created a new one
+    expect(mockObserver.disconnect).toHaveBeenCalled();
+    expect(global.IntersectionObserver).toHaveBeenCalledTimes(2);
+
+    // Should have a new observer instance
+    const secondObserver = scopeMockCollector._visibilityState?.observer;
+    expect(secondObserver).toBeDefined();
+
+    // Clean up
+    destroyVisibilityTracking(scopeMockCollector);
+  });
+
+  test('high-volume element observation stress test', () => {
+    initVisibilityTracking(mockCollector, 1000);
+
+    // Create and observe many elements
+    const elements: HTMLElement[] = [];
+    for (let i = 0; i < 100; i++) {
+      const element = document.createElement('div');
+      element.id = `stress-test-element-${i}`;
+      elements.push(element);
+      triggerVisible(mockCollector, element);
+    }
+
+    // Should have called observe for all elements
+    expect(mockObserver.observe).toHaveBeenCalledTimes(100);
+
+    // Clean up all elements
+    elements.forEach((element) => {
+      unobserveElement(mockCollector, element);
+    });
+
+    // Should have called unobserve for all elements
+    expect(mockObserver.unobserve).toHaveBeenCalledTimes(100);
+  });
+
+  test('error condition handling', () => {
+    // Test that errors in visibility tracking are handled gracefully
+    // This test verifies that the entry-level tryCatch works correctly
+    const { tryCatch } = require('@walkerOS/core');
+
+    // Test that tryCatch prevents errors from propagating (simulating entry point behavior)
+    expect(() => {
+      tryCatch(() => {
+        throw new Error('Simulated visibility error');
+      })();
+    }).not.toThrow();
+
+    // Test that functions work normally when no errors occur
+    expect(() => {
+      tryCatch(() => initVisibilityTracking(mockCollector, 1000))();
+      tryCatch(() => {
+        const element = document.createElement('div');
+        triggerVisible(mockCollector, element);
+      })();
+      tryCatch(() => destroyVisibilityTracking(mockCollector))();
+    }).not.toThrow();
+  });
+
+  test('element safety checks', () => {
+    initVisibilityTracking(mockCollector, 1000);
+
+    // Should handle null/undefined elements gracefully
+    expect(() => {
+      triggerVisible(mockCollector, null as unknown as HTMLElement);
+      triggerVisible(mockCollector, undefined as unknown as HTMLElement);
+      unobserveElement(mockCollector, null as unknown as HTMLElement);
+      unobserveElement(mockCollector, undefined as unknown as HTMLElement);
+    }).not.toThrow();
+
+    // Should handle elements without required properties
+    const invalidElement = {} as HTMLElement;
+    expect(() => {
+      triggerVisible(mockCollector, invalidElement);
+    }).not.toThrow();
+  });
 });

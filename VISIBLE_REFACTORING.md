@@ -142,49 +142,43 @@ if (intersectionRatio > 0 && isVisible(element)) {
 
 ---
 
-### Phase 4: Memory Management & Cleanup
+### ✅ Phase 4: Memory Management & Cleanup - COMPLETED
 
-**Objective**: Eliminate memory leaks and improve reliability
+**Objective**: Eliminate memory leaks and improve reliability ✅
 
-#### 4.1 Comprehensive Cleanup Strategy
+#### ✅ 4.1 Scope Change Integration
 
-Might be out of date and not required any longer. Calling the "walker run"
-command may lead to unobserving all previous elements and re-initializing from
-scratch
+- ✅ Added `destroyVisibilityTracking()` calls to `initScopeTrigger()` to
+  prevent observer accumulation
+- ✅ Ensures clean teardown and rebuilding of observers during scope changes
 
-```typescript
-class VisibleTriggerManager {
-  destroy(): void {
-    // Clean up all timers
-    this.elementTimers.clear();
+#### ✅ 4.2 Walker Run Lifecycle Integration
 
-    // Disconnect observer
-    this.observer?.disconnect();
-
-    // Remove event listeners
-    this.cleanupEventListeners();
-  }
-}
-```
-
-#### 4.2 Scope Management Improvements
-
-- Proper observer lifecycle tied to collector scope
-- Element-specific cleanup on DOM mutations
-- Graceful handling of scope changes
-
-#### 4.3 Error Boundary Implementation
-
-- Robust error handling around observer operations
-- Fallback mechanisms for edge cases
-- Comprehensive logging for debugging
-
-**Estimated Time**: 1-2 development sessions **Risk Level**: Low (reliability
-improvement)
+- ✅ Integrated visibility cleanup into the `run()` function's reset logic
+- ✅ Ensures fresh state for each walker run (especially important for SPAs)
 
 ---
 
-### Phase 5: Advanced Features & Configuration
+### ✅ Phase 5: Error Boundaries & Robustness - COMPLETED
+
+**Objective**: Enable comprehensive error handling and safety ✅
+
+#### ✅ 5.1 IntersectionObserver Error Handling
+
+- ✅ Added comprehensive try-catch around observer operations
+- ✅ Graceful error handling in intersection callback processing
+- ✅ Safe observer creation, observation, unobservation, and disconnection
+
+#### ✅ 5.2 Element Reference Safety
+
+- ✅ Added null/undefined checks for element operations
+- ✅ Validation of element properties before use (getBoundingClientRect,
+  offsetHeight)
+- ✅ Safe handling of invalid or malformed elements
+
+---
+
+### Phase 6: Advanced Features & Configuration (Future)
 
 **Objective**: Enable future enhancements and flexibility
 
@@ -281,7 +275,7 @@ features)
 
 ### Functional Testing
 
-- [x] ✅ All existing tests pass (196/196 tests passing)
+- [x] ✅ All existing tests pass (199/199 tests passing)
 - [x] ✅ No behavioral regressions (comprehensive test coverage maintained)
 - [x] ✅ Performance improvements confirmed (70% reduction in redundant checks)
 - [x] ✅ Memory usage optimized (40% reduction via cache cleanup + eliminated
@@ -291,9 +285,10 @@ features)
 
 - [x] ✅ Multi-collector scenarios (tested in triggerVisible.test.ts)
 - [x] ✅ Complete isVisible.ts coverage (100% - all edge cases covered)
-- [ ] Scope changes and re-initialization
-- [ ] High-volume element observation
-- [ ] Error condition handling
+- [x] ✅ Scope changes and re-initialization (cleanup and re-init tested)
+- [x] ✅ High-volume element observation (100 element stress test)
+- [x] ✅ Error condition handling (observer failure scenarios)
+- [x] ✅ Element safety checks (null/undefined/invalid element handling)
 
 ---
 

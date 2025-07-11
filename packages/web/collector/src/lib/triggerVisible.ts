@@ -94,6 +94,7 @@ function handleIntersection(
 ): void {
   const target = entry.target as HTMLElement;
   const state = collector._visibilityState;
+
   if (!state) return;
 
   const existingTimer = state.timers.get(target);
@@ -183,11 +184,9 @@ export function destroyVisibilityTracking(
   const state = collector._visibilityState;
   if (!state) return;
 
-  // Disconnect observer
   if (state.observer) {
     state.observer.disconnect();
   }
 
-  // Clear state
   delete collector._visibilityState;
 }

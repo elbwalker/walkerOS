@@ -7,7 +7,11 @@ import {
   getPageViewData,
   getTriggerActions,
 } from './walker';
-import { initVisibilityTracking, triggerVisible } from './triggerVisible';
+import {
+  initVisibilityTracking,
+  triggerVisible,
+  destroyVisibilityTracking,
+} from './triggerVisible';
 
 let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
@@ -97,6 +101,9 @@ export function initScopeTrigger(
 
   // Reset all scroll events @TODO check if it's right here
   scrollElements = [];
+
+  // Clean up any existing visibility tracking to prevent observer accumulation
+  destroyVisibilityTracking(collector);
 
   // Initialize visibility tracking for this collector
   initVisibilityTracking(collector, 1000);
