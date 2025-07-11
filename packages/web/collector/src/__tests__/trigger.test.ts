@@ -535,7 +535,7 @@ describe('Trigger', () => {
       });
       jest.clearAllMocks();
 
-      // Large element with any intersection + isVisible true
+      // Large element with intersection + isVisible true
       observerCallback(
         [createMockEntry(target, 0.3)],
         {} as IntersectionObserver,

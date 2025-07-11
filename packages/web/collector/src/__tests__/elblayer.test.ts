@@ -391,7 +391,7 @@ describe('elbLayer', () => {
       '', // trigger
       {}, // context
       [], // nested
-      { any: 'thing' }, // custom
+      { some: 'thing' }, // custom
     );
 
     const { elb } = createWebCollector({ default: true, pageview: false });
@@ -400,7 +400,7 @@ describe('elbLayer', () => {
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e 1',
-        custom: { any: 'thing' },
+        custom: { some: 'thing' },
       }),
     );
 
@@ -410,12 +410,12 @@ describe('elbLayer', () => {
       '', // trigger
       {}, // context
       [], // nested
-      { any: 'thing' }, // custom
+      { some: 'thing' }, // custom
     );
     expect(mockDataLayer).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'e 2',
-        custom: { any: 'thing' },
+        custom: { some: 'thing' },
       }),
     );
   });

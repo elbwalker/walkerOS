@@ -31,13 +31,15 @@ describe('triggerVisible', () => {
       disconnect: jest.fn(),
     };
 
-    global.IntersectionObserver = jest.fn(() => mockObserver) as any;
+    global.IntersectionObserver = jest.fn(
+      () => mockObserver,
+    ) as unknown as typeof IntersectionObserver;
 
     // Create mock collector
     mockCollector = {
       config: { listeners: true },
       push: jest.fn(),
-    } as any;
+    } as unknown as WebCollector.Collector;
   });
 
   afterEach(() => {
@@ -83,7 +85,10 @@ describe('triggerVisible', () => {
   });
 
   test('handles multiple collectors independently', () => {
-    const collector2 = { config: { listeners: true }, push: jest.fn() } as any;
+    const collector2 = {
+      config: { listeners: true },
+      push: jest.fn(),
+    } as unknown as WebCollector.Collector;
 
     initVisibilityTracking(mockCollector, 1000);
     initVisibilityTracking(collector2, 2000);
@@ -103,7 +108,8 @@ describe('triggerVisible', () => {
   test('handles no IntersectionObserver support gracefully', () => {
     // Remove IntersectionObserver
     const originalIO = global.IntersectionObserver;
-    delete (global as any).IntersectionObserver;
+    delete (global as unknown as { IntersectionObserver?: unknown })
+      .IntersectionObserver;
 
     expect(() => initVisibilityTracking(mockCollector, 1000)).not.toThrow();
 

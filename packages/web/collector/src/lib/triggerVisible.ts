@@ -138,7 +138,7 @@ function handleIntersection(
     }
   }
 
-  // Element isn't sufficiently in viewport - clear any existing timer
+  // Element isn't sufficiently in viewport - clear existing timer
   if (existingTimer) {
     clearTimeout(existingTimer);
     state.timers.delete(target);
