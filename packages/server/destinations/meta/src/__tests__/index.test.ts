@@ -105,7 +105,6 @@ describe('Server Destination Meta', () => {
   });
 
   test('error', async () => {
-    const onError = jest.fn();
     mockSendServer.mockResolvedValue({
       ok: false,
       data: {
@@ -123,7 +122,6 @@ describe('Server Destination Meta', () => {
     const config: DestinationServer.Config = {
       settings: { accessToken, pixelId, test_event_code: 'TEST' },
       mapping: mapping.config,
-      onError,
     };
 
     elb('walker destination', destination, config);

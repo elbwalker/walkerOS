@@ -28,6 +28,7 @@ export interface State {
 }
 
 export interface Config {
+  dryRun: boolean;
   tagging: number;
   session: false | unknown;
   default: boolean;

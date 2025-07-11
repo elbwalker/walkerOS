@@ -20,6 +20,7 @@ export interface Config<Settings = unknown, Mapping = unknown> {
   consent?: WalkerOS.Consent; // Required consent states to init and push events
   settings?: Settings; // Destination-specific configuration settings
   data?: WalkerOSMapping.Value | WalkerOSMapping.Values; // Mapping of event data
+  dryRun?: boolean; // Enable dry run mode for this destination
   id?: string; // A unique key for the destination
   init?: boolean; // If the destination has been initialized by calling the init method
   loadScript?: boolean; // If an additional script to work should be loaded

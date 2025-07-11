@@ -27,3 +27,4 @@ export * from './useHooks';
 export * from './tagger';
 export * from './userAgent';
 export * from './validate';
+export * from './wrapper';

@@ -1,6 +1,5 @@
 import type {
   Destination as WalkerOSDestination,
-  Mapping,
   WalkerOS,
   ElbCore,
 } from './types';
@@ -24,6 +23,15 @@ export type HandleCommandFn<T extends WalkerOS.Collector> = (
   options?: ElbCore.PushOptions,
 ) => Promise<ElbCore.PushResult>;
 
+/**
+ * Creates the main push function for the collector.
+ *
+ * @template T, F
+ * @param collector - The walkerOS collector instance.
+ * @param handleCommand - TBD.
+ * @param prepareEvent - TBD.
+ * @returns The push function.
+ */
 export function createPush<T extends WalkerOS.Collector, F extends ElbCore.Fn>(
   collector: T,
   handleCommand: HandleCommandFn<T>,
@@ -51,10 +59,6 @@ export function createPush<T extends WalkerOS.Collector, F extends ElbCore.Fn>(
           return result;
         },
         (error) => {
-          // Call custom error handling
-          if (collector.config.onError)
-            collector.config.onError(error, collector);
-
           return createPushResult({ ok: false });
         },
       )(...args);
@@ -64,6 +68,14 @@ export function createPush<T extends WalkerOS.Collector, F extends ElbCore.Fn>(
   ) as unknown as F;
 }
 
+/**
+ * Adds a new destination to the collector.
+ *
+ * @param collector - The walkerOS collector instance.
+ * @param data - The destination's init data.
+ * @param options - The destination's config.
+ * @returns The result of the push operation.
+ */
 export async function addDestination(
   collector: WalkerOS.Collector,
   data: WalkerOSDestination.Init,
@@ -95,6 +107,14 @@ export async function addDestination(
   return pushToDestinations(collector, undefined, { [id]: destination });
 }
 
+/**
+ * Pushes an event to all or a subset of destinations.
+ *
+ * @param collector - The walkerOS collector instance.
+ * @param event - The event to push.
+ * @param destinations - The destinations to push to.
+ * @returns The result of the push operation.
+ */
 export async function pushToDestinations(
   collector: WalkerOS.Collector,
   event?: WalkerOS.Event,
@@ -243,6 +263,14 @@ export async function pushToDestinations(
   });
 }
 
+/**
+ * Initializes a destination.
+ *
+ * @template Destination
+ * @param collector - The walkerOS collector instance.
+ * @param destination - The destination to initialize.
+ * @returns Whether the destination was initialized successfully.
+ */
 export async function destinationInit<
   Destination extends WalkerOSDestination.Destination,
 >(collector: WalkerOS.Collector, destination: Destination): Promise<boolean> {
@@ -251,7 +279,7 @@ export async function destinationInit<
     const context: WalkerOSDestination.Context = {
       collector,
       config: destination.config,
-      wrap: getWrapper(destination),
+      wrap: getWrapper(destination, collector),
     };
 
     const configResult = await useHooks(
@@ -273,6 +301,16 @@ export async function destinationInit<
   return true; // Destination is ready to push
 }
 
+/**
+ * Pushes an event to a single destination.
+ * Handles mapping, batching, and consent checks.
+ *
+ * @template Destination
+ * @param collector - The walkerOS collector instance.
+ * @param destination - The destination to push to.
+ * @param event - The event to push.
+ * @returns Whether the event was pushed successfully.
+ */
 export async function destinationPush<
   Destination extends WalkerOSDestination.Destination,
 >(
@@ -313,7 +351,7 @@ export async function destinationPush<
     config,
     data,
     mapping: eventMapping,
-    wrap: getWrapper(destination),
+    wrap: getWrapper(destination, collector),
   };
 
   if (eventMapping?.batch && destination.pushBatch) {
@@ -333,7 +371,7 @@ export async function destinationPush<
           config,
           data,
           mapping: eventMapping,
-          wrap: getWrapper(destination),
+          wrap: getWrapper(destination, collector),
         };
 
         useHooks(
@@ -361,6 +399,12 @@ export async function destinationPush<
   return true;
 }
 
+/**
+ * Creates a standardized result object for push operations.
+ *
+ * @param partialResult - A partial result to merge with the default result.
+ * @returns The push result.
+ */
 export function createPushResult(
   partialResult?: Partial<ElbCore.PushResult>,
 ): ElbCore.PushResult {
@@ -375,6 +419,12 @@ export function createPushResult(
   );
 }
 
+/**
+ * Initializes a map of destinations.
+ *
+ * @param destinations - The destinations to initialize.
+ * @returns The initialized destinations.
+ */
 export function initDestinations(
   destinations: WalkerOSDestination.InitDestinations,
 ): WalkerOSDestination.Destinations {
@@ -390,9 +440,15 @@ export function initDestinations(
   );
 }
 
-function getWrapper(destination: WalkerOSDestination.Destination) {
-  return createWrapper(
-    destination.type || 'unknown',
-    destination.config.wrapper,
-  );
+function getWrapper(
+  destination: WalkerOSDestination.Destination,
+  collector?: WalkerOS.Collector,
+) {
+  const wrapperConfig = destination.config.wrapper || {};
+  const dryRun = destination.config.dryRun ?? collector?.config.dryRun;
+
+  return createWrapper(destination.type || 'unknown', {
+    ...wrapperConfig,
+    ...(isDefined(dryRun) && { dryRun }),
+  });
 }
