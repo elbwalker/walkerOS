@@ -9,6 +9,7 @@ export function getState(
     default: false, // Run in default mode
     dataLayer: false, // Do not use dataLayer by default
     dataLayerConfig: {}, // Configuration for dataLayer
+    dryRun: false, // Active by default
     elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
     globalsStatic: {}, // Static global properties
     pageview: true, // Trigger a page view event by default

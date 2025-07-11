@@ -1038,8 +1038,8 @@ describe('Destination', () => {
           mockPushWithDryRun({ result, called: testFn.mock.calls.length });
         },
         config: {
+          dryRun: true,
           wrapper: {
-            dryRun: true,
             mockReturn: 'dry-run-result',
             onCall,
           },

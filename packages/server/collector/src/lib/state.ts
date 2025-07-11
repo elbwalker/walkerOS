@@ -7,6 +7,7 @@ export function getState(
 ): ServerCollector.State {
   const defaultConfig: ServerCollector.Config = {
     default: false, // Run in default mode
+    dryRun: false, // Active by default
     session: false, // Do not use session by default
     contracts: undefined, // Contract schemas
     globalsStatic: {}, // Static global properties
