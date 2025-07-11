@@ -1,5 +1,14 @@
 import type { Hooks } from './types';
 
+/**
+ * A utility function that wraps a function with hooks.
+ *
+ * @template P, R
+ * @param fn The function to wrap.
+ * @param name The name of the function.
+ * @param hooks The hooks to use.
+ * @returns The wrapped function.
+ */
 export function useHooks<P extends unknown[], R>(
   fn: (...args: P) => R,
   name: string,

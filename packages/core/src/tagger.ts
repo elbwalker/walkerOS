@@ -20,6 +20,12 @@ export interface TaggerInstance {
   get: () => Record<string, string>;
 }
 
+/**
+ * Creates a new tagger instance.
+ *
+ * @param config The configuration for the tagger.
+ * @returns A new tagger instance.
+ */
 export function createTagger(
   config: TaggerConfig = {},
 ): (entity?: string) => TaggerInstance {

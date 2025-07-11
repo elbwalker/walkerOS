@@ -7,6 +7,15 @@ import { assign } from './assign';
 import { isObject, isSameType } from './is';
 import { setConsent } from './consent';
 
+/**
+ * Handles common commands.
+ *
+ * @param collector The walkerOS collector instance.
+ * @param action The action to handle.
+ * @param data The data to handle.
+ * @param options The options to handle.
+ * @returns A promise that resolves with the push result or undefined.
+ */
 export async function commonHandleCommand(
   collector: WalkerOS.Collector,
   action: string,
@@ -60,6 +69,14 @@ export async function commonHandleCommand(
   return result;
 }
 
+/**
+ * Creates an event or a command from a partial event.
+ *
+ * @param collector The walkerOS collector instance.
+ * @param nameOrEvent The name of the event or a partial event.
+ * @param defaults The default values for the event.
+ * @returns An object with the event or the command.
+ */
 export function createEventOrCommand(
   collector: WalkerOS.Collector,
   nameOrEvent: unknown,

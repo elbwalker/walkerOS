@@ -1,3 +1,13 @@
+/**
+ * Creates a deep clone of a value.
+ * Supports primitive values, objects, arrays, dates, and regular expressions.
+ * Handles circular references.
+ *
+ * @template T
+ * @param org - The value to clone.
+ * @param visited - A map of visited objects to handle circular references.
+ * @returns The cloned value.
+ */
 export function clone<T>(
   org: T,
   visited: WeakMap<object, unknown> = new WeakMap(),

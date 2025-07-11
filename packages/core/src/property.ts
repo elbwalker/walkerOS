@@ -9,6 +9,12 @@ import {
   isString,
 } from './is';
 
+/**
+ * Checks if a value is a valid property type.
+ *
+ * @param value The value to check.
+ * @returns True if the value is a valid property type, false otherwise.
+ */
 export function isPropertyType(value: unknown): value is WalkerOS.PropertyType {
   return (
     isBoolean(value) ||
@@ -20,6 +26,12 @@ export function isPropertyType(value: unknown): value is WalkerOS.PropertyType {
   );
 }
 
+/**
+ * Filters a value to only include valid property types.
+ *
+ * @param value The value to filter.
+ * @returns The filtered value or undefined.
+ */
 export function filterValues(value: unknown): WalkerOS.Property | undefined {
   if (isBoolean(value) || isString(value) || isNumber(value)) return value;
 
@@ -45,6 +57,12 @@ export function filterValues(value: unknown): WalkerOS.Property | undefined {
   return;
 }
 
+/**
+ * Casts a value to a valid property type.
+ *
+ * @param value The value to cast.
+ * @returns The casted value or undefined.
+ */
 export function castToProperty(value: unknown): WalkerOS.Property | undefined {
   return isPropertyType(value) ? value : undefined;
 }

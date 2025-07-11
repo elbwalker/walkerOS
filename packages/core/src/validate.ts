@@ -3,6 +3,13 @@ import { isSameType } from './is';
 import { throwError } from './throwError';
 import { tryCatch } from './tryCatch';
 
+/**
+ * Validates an event against a set of contracts.
+ *
+ * @param obj The event to validate.
+ * @param customContracts The custom contracts to use.
+ * @returns The validated event.
+ */
 export function validateEvent(
   obj: unknown,
   customContracts: Schema.Contracts = [],
@@ -110,6 +117,15 @@ export function validateEvent(
   return result;
 }
 
+/**
+ * Validates a property against a schema.
+ *
+ * @param obj The object to validate.
+ * @param key The key of the property to validate.
+ * @param value The value of the property to validate.
+ * @param schema The schema to validate against.
+ * @returns The validated property.
+ */
 export function validateProperty(
   obj: WalkerOS.AnyObject,
   key: string,

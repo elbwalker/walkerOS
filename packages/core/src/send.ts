@@ -11,12 +11,24 @@ export interface SendResponse {
   error?: string;
 }
 
+/**
+ * Transforms data to a string.
+ *
+ * @param data The data to transform.
+ * @returns The transformed data.
+ */
 export function transformData(data?: SendDataValue): string | undefined {
   if (data === undefined) return data;
 
   return isSameType(data, '' as string) ? data : JSON.stringify(data);
 }
 
+/**
+ * Gets the headers for a request.
+ *
+ * @param headers The headers to merge with the default headers.
+ * @returns The merged headers.
+ */
 export function getHeaders(headers: SendHeaders = {}): SendHeaders {
   return assign(
     {

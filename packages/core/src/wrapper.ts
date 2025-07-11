@@ -1,5 +1,12 @@
 import type { Wrapper } from './types';
 
+/**
+ * Creates a wrapper function that can be used to wrap other functions.
+ *
+ * @param type The type of the wrapper.
+ * @param config The configuration for the wrapper.
+ * @returns A wrapper function.
+ */
 export function createWrapper(
   type: string = 'unknown',
   { dryRun = false, mockReturn, onCall }: Wrapper.Config = {},

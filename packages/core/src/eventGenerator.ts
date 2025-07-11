@@ -1,6 +1,13 @@
 import type { WalkerOS } from './types';
 import { assign } from './assign';
 
+/**
+ * Creates a complete event with default values.
+ * Used for testing and debugging.
+ *
+ * @param props - Properties to override the default values.
+ * @returns A complete event.
+ */
 export function createEvent(
   props: WalkerOS.DeepPartialEvent = {},
 ): WalkerOS.Event {
@@ -70,6 +77,14 @@ export function createEvent(
   return event;
 }
 
+/**
+ * Creates a complete event with default values based on the event name.
+ * Used for testing and debugging.
+ *
+ * @param name - The name of the event to create.
+ * @param props - Properties to override the default values.
+ * @returns A complete event.
+ */
 export function getEvent(
   name: string = 'entity action',
   props: WalkerOS.DeepPartialEvent = {},

@@ -1,3 +1,12 @@
+/**
+ * A utility function that wraps a function in a try-catch block.
+ *
+ * @template P, R, S
+ * @param fn The function to wrap.
+ * @param onError A function to call when an error is caught.
+ * @param onFinally A function to call in the finally block.
+ * @returns The wrapped function.
+ */
 // Use function overload to support different return type depending on onError
 // Types
 export function tryCatch<P extends unknown[], R, S>(
@@ -28,6 +37,15 @@ export function tryCatch<P extends unknown[], R, S>(
   };
 }
 
+/**
+ * A utility function that wraps an async function in a try-catch block.
+ *
+ * @template P, R, S
+ * @param fn The async function to wrap.
+ * @param onError A function to call when an error is caught.
+ * @param onFinally A function to call in the finally block.
+ * @returns The wrapped async function.
+ */
 // Use function overload to support different return type depending on onError
 // Types
 export function tryCatchAsync<P extends unknown[], R, S>(

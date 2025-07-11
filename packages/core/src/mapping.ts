@@ -5,6 +5,13 @@ import { isArray, isDefined, isString, isObject } from './is';
 import { castToProperty } from './property';
 import { tryCatchAsync } from './tryCatch';
 
+/**
+ * Gets the mapping for an event.
+ *
+ * @param event The event to get the mapping for.
+ * @param mapping The mapping rules.
+ * @returns The mapping result.
+ */
 export async function getMappingEvent(
   event: WalkerOS.PartialEvent,
   mapping?: Mapping.Rules,
@@ -49,6 +56,14 @@ export async function getMappingEvent(
   return { eventMapping, mappingKey };
 }
 
+/**
+ * Gets a value from a mapping.
+ *
+ * @param value The value to get the mapping from.
+ * @param data The mapping data.
+ * @param options The mapping options.
+ * @returns The mapped value.
+ */
 export async function getMappingValue(
   value: WalkerOS.DeepPartialEvent | unknown | undefined,
   data: Mapping.Data = {},
@@ -122,13 +137,13 @@ async function processMappingValue(
 
       let mappingValue: unknown = isDefined(staticValue) ? staticValue : value;
 
+      // Use a custom function to get the value
       if (fn) {
-        // Use a custom function to get the value
         mappingValue = await tryCatchAsync(fn)(value, mappingItem, options);
       }
 
+      // Get dynamic value from the event
       if (key) {
-        // Get dynamic value from the event
         mappingValue = getByPath(value, key, staticValue);
       }
 

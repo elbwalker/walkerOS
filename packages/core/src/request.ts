@@ -3,6 +3,12 @@ import { tryCatch } from './tryCatch';
 import { castValue } from './castValue';
 import { isArray, isObject } from './is';
 
+/**
+ * Converts a request string to a data object.
+ *
+ * @param parameter The request string to convert.
+ * @returns The data object or undefined.
+ */
 export function requestToData(
   parameter: unknown,
 ): WalkerOS.AnyObject | undefined {
@@ -47,6 +53,12 @@ export function requestToData(
   })();
 }
 
+/**
+ * Converts a data object to a request string.
+ *
+ * @param data The data object to convert.
+ * @returns The request string.
+ */
 export function requestToParameter(
   data: WalkerOS.AnyObject | WalkerOS.PropertyType,
 ): string {

@@ -5,6 +5,13 @@ export interface MarketingParameters {
   [key: string]: string;
 }
 
+/**
+ * Extracts marketing parameters from a URL.
+ *
+ * @param url - The URL to extract the parameters from.
+ * @param custom - Custom marketing parameters to extract.
+ * @returns The extracted marketing parameters.
+ */
 export function getMarketingParameters(
   url: URL,
   custom: MarketingParameters = {},

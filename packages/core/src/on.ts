@@ -3,6 +3,13 @@ import { isArray } from './is';
 import { Const } from './constants';
 import { tryCatch } from './tryCatch';
 
+/**
+ * Registers a callback for a specific event type.
+ *
+ * @param collector The walkerOS collector instance.
+ * @param type The type of the event to listen for.
+ * @param option The callback function or an array of callback functions.
+ */
 export function on(
   collector: WalkerOS.Collector,
   type: On.Types,
@@ -23,6 +30,14 @@ export function on(
   onApply(collector, type, options);
 }
 
+/**
+ * Applies all registered callbacks for a specific event type.
+ *
+ * @param collector The walkerOS collector instance.
+ * @param type The type of the event to apply the callbacks for.
+ * @param options The options for the callbacks.
+ * @param config The consent configuration.
+ */
 export function onApply(
   collector: WalkerOS.Collector,
   type: On.Types,

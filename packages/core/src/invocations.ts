@@ -1,3 +1,15 @@
+/**
+ * Creates a debounced function that delays invoking `fn` until after `wait`
+ * milliseconds have elapsed since the last time the debounced function was
+ * invoked. The debounced function comes with a `cancel` method to cancel
+ * delayed `fn` invocations and a `flush` method to immediately invoke them.
+ *
+ * @template P, R
+ * @param fn The function to debounce.
+ * @param wait The number of milliseconds to delay.
+ * @param immediate Trigger the function on the leading edge, instead of the trailing.
+ * @returns The new debounced function.
+ */
 export function debounce<P extends unknown[], R>(
   fn: (...args: P) => R,
   wait = 1000,
@@ -31,6 +43,18 @@ export function debounce<P extends unknown[], R>(
     });
   };
 }
+
+/**
+ * Creates a throttled function that only invokes `fn` at most once per
+ * every `delay` milliseconds. The throttled function comes with a `cancel`
+ * method to cancel delayed `fn` invocations and a `flush` method to
+ * immediately invoke them.
+ *
+ * @template P, R
+ * @param fn The function to throttle.
+ * @param delay The number of milliseconds to throttle invocations to.
+ * @returns The new throttled function.
+ */
 
 type Timeout = ReturnType<typeof setTimeout>;
 export function throttle<P extends unknown[], R>(

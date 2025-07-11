@@ -3,6 +3,14 @@ import { assign } from './assign';
 import { pushToDestinations, createPushResult } from './destination';
 import { onApply } from './on';
 
+/**
+ * Checks if the required consent is granted.
+ *
+ * @param required - The required consent states.
+ * @param state - The current consent states.
+ * @param individual - Individual consent states to prioritize.
+ * @returns The granted consent states or false if not granted.
+ */
 export function getGrantedConsent(
   required: WalkerOS.Consent | undefined,
   state: WalkerOS.Consent = {},
@@ -27,6 +35,13 @@ export function getGrantedConsent(
   return hasRequiredConsent ? grantedStates : false;
 }
 
+/**
+ * Sets the consent state and processes the queue.
+ *
+ * @param collector - The walkerOS collector instance.
+ * @param data - The consent data to set.
+ * @returns The result of the push operation.
+ */
 export async function setConsent(
   collector: WalkerOS.Collector,
   data: WalkerOS.Consent,

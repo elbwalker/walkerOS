@@ -1,13 +1,23 @@
 import type { WalkerOS } from './types';
 import { isArray, isDefined } from './is';
 
+/**
+ * Gets a value from an object by a dot-notation string.
+ * Supports wildcards for arrays.
+ *
+ * @example
+ * getByPath({ data: { id: 1 } }, "data.id") // Returns 1
+ *
+ * @param event - The object to get the value from.
+ * @param key - The dot-notation string.
+ * @param defaultValue - The default value to return if the key is not found.
+ * @returns The value from the object or the default value.
+ */
 export function getByPath(
   event: unknown,
   key: string = '',
   defaultValue?: unknown,
-  i: unknown = 0,
 ): unknown {
-  // String dot notation for object ("data.id" -> { data: { id: 1 } })
   const keys = key.split('.');
   let values: unknown = event;
 
@@ -19,7 +29,7 @@ export function getByPath(
       const result: unknown[] = [];
 
       for (const item of values) {
-        const value = getByPath(item, remainingKeys, defaultValue, i);
+        const value = getByPath(item, remainingKeys, defaultValue);
         result.push(value);
       }
 
@@ -35,6 +45,14 @@ export function getByPath(
   return isDefined(values) ? values : defaultValue;
 }
 
+/**
+ * Sets a value in an object by a dot-notation string.
+ *
+ * @param event - The object to set the value in.
+ * @param key - The dot-notation string.
+ * @param value - The value to set.
+ * @returns The modified object.
+ */
 export function setByPath(
   event: WalkerOS.Event,
   key: string,

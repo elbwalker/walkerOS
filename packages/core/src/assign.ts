@@ -1,7 +1,14 @@
+/**
+ * @interface Assign
+ * @description Options for the assign function.
+ * @property merge - Merge array properties instead of overriding them.
+ * @property shallow - Create a shallow copy instead of updating the target object.
+ * @property extend - Extend the target with new properties instead of only updating existing ones.
+ */
 interface Assign {
-  merge?: boolean; // Merge array properties (default) instead of overriding them
-  shallow?: boolean; // Create a shallow copy (default) instead of updating the target object
-  extend?: boolean; // Extend the target with new properties (default) instead of only updating existing ones
+  merge?: boolean;
+  shallow?: boolean;
+  extend?: boolean;
 }
 
 const defaultOptions: Assign = {
@@ -10,6 +17,15 @@ const defaultOptions: Assign = {
   extend: true,
 };
 
+/**
+ * Merges objects with advanced options.
+ *
+ * @template T, U
+ * @param target - The target object to merge into.
+ * @param obj - The source object to merge from.
+ * @param options - Options for merging.
+ * @returns The merged object.
+ */
 export function assign<T extends object, U extends object>(
   target: T,
   obj: U = {} as U,
