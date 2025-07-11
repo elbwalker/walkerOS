@@ -11,7 +11,7 @@ import { push } from './push';
 export * as DestinationFirehose from './types';
 
 export const destinationFirehose: Destination = {
-  type: 'aws',
+  type: 'aws-firehose',
 
   config: {},
 

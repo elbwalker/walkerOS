@@ -68,9 +68,6 @@ export interface Context<Settings = unknown, Mapping = unknown> {
   wrap: Wrapper.Wrap;
 }
 
-export interface InitContext<Settings = unknown, Mapping = unknown>
-  extends Context<Settings, Mapping> {}
-
 export interface PushContext<Settings = unknown, Mapping = unknown>
   extends Context<Settings, Mapping> {
   mapping?: WalkerOSMapping.Rule<Mapping>;
@@ -83,7 +80,7 @@ export interface PushBatchContext<Settings = unknown, Mapping = unknown>
 
 // Updated function signatures with context-based parameters
 export type InitFn<Settings, Mapping> = (
-  context: InitContext<Settings, Mapping>,
+  context: Context<Settings, Mapping>,
 ) => WalkerOS.PromiseOrValue<void | false | Config<Settings, Mapping>>;
 
 export type PushFn<Settings, Mapping> = (

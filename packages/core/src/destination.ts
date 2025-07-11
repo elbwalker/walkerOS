@@ -248,7 +248,7 @@ export async function destinationInit<
 >(collector: WalkerOS.Collector, destination: Destination): Promise<boolean> {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
-    const context: WalkerOSDestination.InitContext = {
+    const context: WalkerOSDestination.Context = {
       collector,
       config: destination.config,
       wrap: getWrapper(destination),
