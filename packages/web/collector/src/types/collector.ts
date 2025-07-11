@@ -37,6 +37,7 @@ export interface Config extends WalkerOS.Config {
   dataLayer: boolean;
   dataLayerConfig: DestConfig;
   elbLayer: Layer;
+  listeners: boolean;
   pageview: boolean;
   prefix: string;
   run: boolean;

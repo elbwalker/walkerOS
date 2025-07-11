@@ -47,6 +47,8 @@ export async function ready<T extends (...args: never[]) => R, R>(
     return result;
   };
 
+  if (!collector.config.listeners) return fn(...args);
+
   if (document.readyState !== 'loading') {
     return readyFn();
   } else {
@@ -56,6 +58,8 @@ export async function ready<T extends (...args: never[]) => R, R>(
 
 // Called for each new run to setup triggers
 export function load(collector: WebCollector.Collector) {
+  if (!collector.config.listeners) return;
+
   const { pageview, prefix } = collector.config;
   // Trigger static page view if enabled
   if (pageview) {
@@ -67,6 +71,8 @@ export function load(collector: WebCollector.Collector) {
 }
 
 export function initGlobalTrigger(collector: WebCollector.Collector): void {
+  if (!collector.config.listeners) return;
+
   document.addEventListener(
     'click',
     tryCatch(function (this: Document, ev: MouseEvent) {
@@ -85,6 +91,8 @@ export function initScopeTrigger(
   collector: WebCollector.Collector,
   scope: Elb.Scope = document,
 ) {
+  if (!collector.config.listeners) return;
+
   // Reset all scroll events @TODO check if it's right here
   scrollElements = [];
 

@@ -12,6 +12,7 @@ export function getState(
     dryRun: false, // Active by default
     elbLayer: window.elbLayer || (window.elbLayer = []), // Async access api in window as array
     globalsStatic: {}, // Static global properties
+    listeners: true, // Register event listeners and observers by default
     pageview: true, // Trigger a page view event by default
     prefix: Const.Commands.Prefix, // HTML prefix attribute
     run: false, // Run the walker by default

@@ -191,6 +191,7 @@ describe('elbLayer', () => {
       dryRun: false,
       elbLayer: expect.any(Array),
       globalsStatic: {},
+      listeners: true,
       pageview: true,
       prefix: 'data-elb',
       run: false,

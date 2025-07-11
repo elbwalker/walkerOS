@@ -291,6 +291,58 @@ describe('webCollector', () => {
     );
   });
 
+  test('listeners disabled', () => {
+    // Mock addEventListener to track calls
+    const originalAddEventListener = document.addEventListener;
+    const addEventListenerSpy = jest.fn();
+    document.addEventListener = addEventListenerSpy;
+
+    // Mock IntersectionObserver
+    const mockObserver = {
+      observe: jest.fn(),
+      disconnect: jest.fn(),
+      unobserve: jest.fn(),
+    };
+    const IntersectionObserverSpy = jest.fn(() => mockObserver);
+    (window as any).IntersectionObserver = IntersectionObserverSpy;
+
+    // Mock setInterval and setTimeout
+    const setIntervalSpy = jest.spyOn(global, 'setInterval');
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+
+    try {
+      // Create collector with listeners disabled
+      const collector = webCollector({
+        listeners: false,
+        run: true,
+        pageview: true,
+      });
+
+      // Run the collector to trigger potential listener registration
+      collector.push('walker run');
+
+      // Verify no event listeners were registered
+      expect(addEventListenerSpy).not.toHaveBeenCalled();
+
+      // Verify no IntersectionObserver was created
+      expect(IntersectionObserverSpy).not.toHaveBeenCalled();
+
+      // Verify no timers were set (excluding Jest's own timers)
+      expect(setIntervalSpy).not.toHaveBeenCalled();
+      expect(setTimeoutSpy).not.toHaveBeenCalled();
+
+      // Verify collector still works programmatically
+      expect(collector.push).toBeDefined();
+      expect(typeof collector.push).toBe('function');
+      expect(collector.config.listeners).toBe(false);
+    } finally {
+      // Restore original functions
+      document.addEventListener = originalAddEventListener;
+      setIntervalSpy.mockRestore();
+      setTimeoutSpy.mockRestore();
+    }
+  });
+
   // @TODO move to somewhere else
   test('Contract', () => {
     const contract: Data.Contract = {

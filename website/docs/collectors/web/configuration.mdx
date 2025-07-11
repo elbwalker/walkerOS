@@ -42,6 +42,7 @@ const walkerjs = Walkerjs({
       return params.fn(event);
     },
   },
+  listeners: false,
   on: {
     run: [(instance) => console.log('run', instance.round)],
   },
@@ -79,6 +80,7 @@ const walkerjs = Walkerjs({
 | elbLayer        | object                      | Public elbwalker API for async communication            |
 | globalsStatic   | object                      | Static default attributes added to each event           |
 | hooks           | object                      | Functions to customize default behavior                 |
+| listeners       | boolean                     | Enable/disable automatic event listener registration    |
 | on              | object                      | Event listeners for specific walkerOS events            |
 | onError         | function                    | Custom error handler                                    |
 | onLog           | function                    | Custom logging for the verbose mode                     |
