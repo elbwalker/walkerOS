@@ -55,6 +55,7 @@ const walkerjs = Walkerjs({
   pageview: true,
   prefix: 'data-elb',
   run: true,
+  scope: document.getElementById('playground'),
   session: {
     storage: true,
     consent: ['analytics', 'marketing'],
@@ -87,6 +88,7 @@ const walkerjs = Walkerjs({
 | pageview        | boolean                     | Trigger a page view event by default                    |
 | prefix          | string                      | Attributes prefix used by walker                        |
 | run             | boolean                     | Automatically start running                             |
+| scope           | Document \| Element         | DOM scope to constrain all tracking operations          |
 | session         | false or<br />SessionConfig | Configuration for session detection                     |
 | sessionStatic   | object                      | Static default session data                             |
 | tagging         | number                      | Current version of the tagging                          |

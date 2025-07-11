@@ -10,6 +10,7 @@ export function run(
   state: Partial<WebCollector.State> = {},
 ) {
   const { config, destinations } = collector;
+  const { globalsStatic, prefix, scope, session, sessionStatic } = config;
 
   const newState = assign(
     {
@@ -26,8 +27,8 @@ export function run(
     // Load globals properties
     // Use the static globals and search for tagged ones
     // Due to site performance only once every run
-    assign(config.globalsStatic, state.globals),
-    getGlobals(config.prefix),
+    assign(globalsStatic, state.globals),
+    getGlobals(prefix, scope),
   );
 
   // Update the collector reference with the updated state
@@ -48,7 +49,7 @@ export function run(
   }
 
   // Session handling
-  const sessionConfig = config.session;
+  const sessionConfig = session;
   if (sessionConfig) {
     // Disable session start for window after first round (for SPAs)
     if (!sessionConfig.storage && collector.round > 1)
@@ -56,7 +57,7 @@ export function run(
 
     sessionStart(collector, {
       ...sessionConfig, // Session detection configuration
-      data: config.sessionStatic, // Static default session data
+      data: sessionStatic, // Static default session data
     });
   }
 

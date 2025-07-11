@@ -60,10 +60,10 @@ export async function ready<T extends (...args: never[]) => R, R>(
 export function load(collector: WebCollector.Collector) {
   if (!collector.config.listeners) return;
 
-  const { pageview, prefix } = collector.config;
+  const { pageview, prefix, scope } = collector.config;
   // Trigger static page view if enabled
   if (pageview) {
-    const [data, context] = getPageViewData(prefix);
+    const [data, context] = getPageViewData(prefix, scope);
     collector.push('page view', data, Trigger.Load, context);
   }
 
@@ -73,15 +73,17 @@ export function load(collector: WebCollector.Collector) {
 export function initGlobalTrigger(collector: WebCollector.Collector): void {
   if (!collector.config.listeners) return;
 
-  document.addEventListener(
+  const scope = collector.config.scope;
+
+  scope.addEventListener(
     'click',
-    tryCatch(function (this: Document, ev: MouseEvent) {
-      triggerClick.call(this, collector, ev);
+    tryCatch(function (this: WebCollector.Scope, ev: Event) {
+      triggerClick.call(this, collector, ev as MouseEvent);
     }),
   );
-  document.addEventListener(
+  scope.addEventListener(
     'submit',
-    tryCatch(function (this: Document, ev: SubmitEvent) {
+    tryCatch(function (this: WebCollector.Scope, ev: Event) {
       triggerSubmit.call(this, collector, ev);
     }),
   );
@@ -89,7 +91,7 @@ export function initGlobalTrigger(collector: WebCollector.Collector): void {
 
 export function initScopeTrigger(
   collector: WebCollector.Collector,
-  scope: Elb.Scope = document,
+  elem?: WebCollector.Scope,
 ) {
   if (!collector.config.listeners) return;
 
@@ -110,8 +112,9 @@ export function initScopeTrigger(
     false,
   );
 
+  const scope = elem || collector.config.scope;
   if (scope === document) {
-    // Disconnect previous on full loads
+    // Disconnect previous on full loads when using document scope @TODO check if it's right here
     visibleObserver && visibleObserver.disconnect();
   } else {
     // Handle the elements action(s), too
@@ -286,10 +289,14 @@ function scroll(collector: WebCollector.Collector) {
   // Don't add unnecessary scroll listeners
   if (!scrollListener) {
     scrollListener = throttle(function () {
-      scrollElements = scrolling.call(document, scrollElements, collector);
+      scrollElements = scrolling.call(
+        collector.config.scope,
+        scrollElements,
+        collector,
+      );
     });
 
-    document.addEventListener('scroll', scrollListener);
+    collector.config.scope.addEventListener('scroll', scrollListener);
   }
 }
 

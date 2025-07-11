@@ -1,4 +1,4 @@
-import type { Walker } from '../types';
+import type { Walker, WebCollector } from '../types';
 import type { WalkerOS } from '@walkerOS/core';
 import { Const, assign, castValue, isArray, trim } from '@walkerOS/core';
 import { getAttribute } from '../utils';
@@ -69,7 +69,7 @@ export function getElbValues(
 }
 
 export function getAllEvents(
-  scope: Element = document.body,
+  scope: WebCollector.Scope = document.body,
   prefix: string = Const.Commands.Prefix,
 ): Walker.Events {
   let events: Walker.Events = [];
@@ -151,6 +151,7 @@ export function getEvents(
 
 export function getGlobals(
   prefix: string = Const.Commands.Prefix,
+  scope: WebCollector.Scope = document,
 ): WalkerOS.Properties {
   const globalsName = getElbAttributeName(
     prefix,
@@ -160,7 +161,7 @@ export function getGlobals(
   const globalSelector = `[${globalsName}]`;
   let values = {};
 
-  queryAll(document, globalSelector, (element) => {
+  queryAll(scope, globalSelector, (element) => {
     values = assign(
       values,
       getElbValues(prefix, element, Const.Commands.Globals, false),
@@ -172,12 +173,14 @@ export function getGlobals(
 
 export function getPageViewData(
   prefix: string,
+  scope: WebCollector.Scope,
 ): [WalkerOS.Properties, WalkerOS.OrderedProperties] {
   // static page view
   const loc = window.location;
   const page = 'page';
+  const scopeElement = scope === document ? document.body : (scope as Element);
   const [data, context] = getThisAndParentProperties(
-    document.body,
+    scopeElement,
     `[${getElbAttributeName(prefix, page)}]`,
     prefix,
     page,
@@ -270,6 +273,8 @@ function getEntity(
     const [linkId, linkState] = splitKeyVal(getAttribute(link, linkName));
 
     // Get all linked child elements if link is a parent
+    // Note: This searches the entire document - for scoped operation, we would need
+    // to pass scope context down to this function or redesign the linking mechanism
     if (linkState === 'parent')
       queryAll(document.body, `[${linkName}="${linkId}:child"]`, (wormhole) => {
         scopeElems.push(wormhole);
@@ -323,6 +328,8 @@ function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
     const [linkId, linkState] = splitKeyVal(getAttribute(elem, linkName));
     if (linkState === 'child') {
       // If current element is a child-link jump to the parent
+      // Note: This searches the entire document - for scoped operation, we would need
+      // to pass scope context down to this function or redesign the linking mechanism
       return document.querySelector(`[${linkName}="${linkId}:parent"]`);
     }
   }

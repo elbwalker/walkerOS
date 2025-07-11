@@ -195,6 +195,7 @@ describe('elbLayer', () => {
       pageview: true,
       prefix: 'data-elb',
       run: false,
+      scope: document,
       session: { storage: false },
       sessionStatic: {},
       tagging: expect.any(Number),

@@ -1,6 +1,6 @@
 import type { ElbCore, On, WalkerOS } from '@walkerOS/core';
 import type { Destination, Init, Config } from './destination';
-import type { State } from './collector';
+import type { Scope, State } from './collector';
 import type { Trigger } from './walker';
 
 export interface Fn<R = Return, D = PushData, O = PushOptions, C = PushContext>
@@ -45,7 +45,8 @@ export type PushData =
   | Destination
   | Init
   | Partial<State>
-  | ScopeType;
+  | Scope
+  | Array<Scope>;
 
 export type PushOptions =
   | ElbCore.PushOptions
@@ -54,10 +55,6 @@ export type PushOptions =
   | Config;
 
 export type PushContext = ElbCore.PushContext | Element;
-
-export type Scope = Element | Document;
-
-export type ScopeType = Scope | Scope[];
 
 export type PushResult = ElbCore.PushResult;
 

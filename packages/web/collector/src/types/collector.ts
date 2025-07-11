@@ -41,6 +41,7 @@ export interface Config extends WalkerOS.Config {
   pageview: boolean;
   prefix: string;
   run: boolean;
+  scope: Scope;
   session: false | SessionConfig;
   elb?: string;
   name?: string;
@@ -64,3 +65,5 @@ export interface SessionStartOptions {
 export interface Destinations {
   [name: string]: Destination;
 }
+
+export type Scope = Element | Document;

@@ -303,8 +303,10 @@ describe('webCollector', () => {
       disconnect: jest.fn(),
       unobserve: jest.fn(),
     };
-    const IntersectionObserverSpy = jest.fn(() => mockObserver);
-    (window as any).IntersectionObserver = IntersectionObserverSpy;
+    const IntersectionObserverSpy = jest.fn(
+      () => mockObserver,
+    ) as unknown as typeof IntersectionObserver;
+    window.IntersectionObserver = IntersectionObserverSpy;
 
     // Mock setInterval and setTimeout
     const setIntervalSpy = jest.spyOn(global, 'setInterval');
@@ -340,6 +342,57 @@ describe('webCollector', () => {
       document.addEventListener = originalAddEventListener;
       setIntervalSpy.mockRestore();
       setTimeoutSpy.mockRestore();
+    }
+  });
+
+  test('scope', () => {
+    document.body.innerHTML = `
+      <div data-elb="ignore" data-elbaction="load:me">
+        <div data-elbglobals="ignore:me"></div>
+        out-of-scope
+      </div>
+      <div id="scoped" >
+        <div data-elb="scoped" data-elbaction="load"></div>
+      </div>
+    `;
+
+    const scopeContainer = document.getElementById('scoped') as HTMLElement;
+    const originalAddEventListener = scopeContainer.addEventListener;
+    const addEventListenerSpy = jest.fn();
+    scopeContainer.addEventListener = addEventListenerSpy;
+
+    try {
+      // Create collector with scoped configuration
+      const collector = webCollector({
+        scope: scopeContainer,
+        run: true,
+        pageview: false,
+        listeners: true,
+      });
+
+      expect(collector.globals).toStrictEqual({});
+
+      // Verify event listeners were attached to the scope element, not document
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'click',
+        expect.any(Function),
+      );
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'submit',
+        expect.any(Function),
+      );
+
+      // Verify collector respects the scope
+      expect(collector.config.scope).toBe(scopeContainer);
+
+      // Test that getAllEvents respects scope
+      const events = collector.getAllEvents(scopeContainer, 'data-elb');
+      expect(events).toHaveLength(1);
+      expect(events[0].entity).toBe('scoped');
+    } finally {
+      // Restore original function and cleanup
+      scopeContainer.addEventListener = originalAddEventListener;
+      document.body.removeChild(scopeContainer);
     }
   });
 

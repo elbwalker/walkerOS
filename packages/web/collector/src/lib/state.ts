@@ -16,6 +16,7 @@ export function getState(
     pageview: true, // Trigger a page view event by default
     prefix: Const.Commands.Prefix, // HTML prefix attribute
     run: false, // Run the walker by default
+    scope: document, // Default scope is the entire document
     session: {
       // Configuration for session handling
       storage: false, // Do not use storage by default
