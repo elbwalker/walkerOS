@@ -349,11 +349,8 @@ describe('webCollector', () => {
     document.body.innerHTML = `
       <div data-elb="ignore" data-elbaction="load:me">
         <div data-elbglobals="ignore:me"></div>
-        out-of-scope
       </div>
-      <div id="scoped" >
-        <div data-elb="scoped" data-elbaction="load"></div>
-      </div>
+      <div id="scoped" data-elb="scoped" data-elbaction="load"></div>
     `;
 
     const scopeContainer = document.getElementById('scoped') as HTMLElement;

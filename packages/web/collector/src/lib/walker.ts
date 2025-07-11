@@ -74,14 +74,22 @@ export function getAllEvents(
 ): Walker.Events {
   let events: Walker.Events = [];
   const action = Const.Commands.Action;
+  const actionSelector = `[${getElbAttributeName(prefix, action, false)}]`;
 
-  queryAll(scope, `[${getElbAttributeName(prefix, action, false)}]`, (elem) => {
+  const processElementEvents = (elem: Element) => {
     Object.keys(getElbValues(prefix, elem, action, false)).forEach(
       (trigger) => {
         events = events.concat(getEvents(elem, trigger, prefix));
       },
     );
-  });
+  };
+
+  // Check if the scope element itself has action attributes
+  if (scope !== document && (scope as Element).matches(actionSelector)) {
+    processElementEvents(scope as Element);
+  }
+
+  queryAll(scope, actionSelector, processElementEvents);
 
   return events;
 }
