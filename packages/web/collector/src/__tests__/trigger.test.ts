@@ -2,6 +2,13 @@ import { mockDataLayer } from '@walkerOS/jest/web.setup';
 import { Trigger } from '../lib/trigger';
 import { createWebCollector } from '../';
 
+// Mock isVisible at module level
+const mockIsVisible = jest.fn();
+jest.mock('../utils', () => ({
+  ...jest.requireActual('../utils'),
+  isVisible: (element: HTMLElement) => mockIsVisible(element),
+}));
+
 describe('Trigger', () => {
   const w = window;
   const mockAddEventListener = jest.fn(); //.mockImplementation(console.log);
@@ -421,84 +428,250 @@ describe('Trigger', () => {
     window.innerHeight = innerHeight;
   });
 
-  test('visible', async () => {
-    // mock isVisible to return true
-    jest.mock('../utils', () => ({
-      ...jest.requireActual('../utils'),
-      isVisible: () => true,
-    }));
+  describe('visible trigger', () => {
+    let mockObserve: jest.Mock;
+    let mockUnobserve: jest.Mock;
+    let mockDisconnect: jest.Mock;
+    let observerCallback: (
+      entries: IntersectionObserverEntry[],
+      observer: IntersectionObserver,
+    ) => void;
 
-    jest.spyOn(global, 'setTimeout');
-    jest.spyOn(global, 'clearTimeout');
+    const createMockEntry = (
+      target: HTMLElement,
+      intersectionRatio: number,
+    ): IntersectionObserverEntry => ({
+      target,
+      intersectionRatio,
+      isIntersecting: intersectionRatio > 0,
+      boundingClientRect: {} as DOMRectReadOnly,
+      intersectionRect: {} as DOMRectReadOnly,
+      rootBounds: {} as DOMRectReadOnly,
+      time: Date.now(),
+    });
 
-    // Mock Intersection Observer
-    const mockObserve = jest.fn();
-    const mockUnobserve = jest.fn();
-    const mockDisconnect = jest.fn();
-    w.IntersectionObserver = jest.fn(
-      () =>
-        ({
+    beforeEach(() => {
+      // Reset isVisible mock
+      mockIsVisible.mockReturnValue(true);
+
+      // Mock Intersection Observer
+      mockObserve = jest.fn();
+      mockUnobserve = jest.fn();
+      mockDisconnect = jest.fn();
+      w.IntersectionObserver = jest.fn((callback) => {
+        observerCallback = callback;
+        return {
           observe: mockObserve,
           unobserve: mockUnobserve,
           disconnect: mockDisconnect,
-        } as unknown as IntersectionObserver),
-    );
+        } as unknown as IntersectionObserver;
+      });
 
-    // Reimport with the mocked isVisible
-    document.body.innerHTML = `<div id="visible" data-elb="visible" data-elbaction="visible:impression"></div>`;
-    const { createWebCollector } = jest.requireActual('../');
-    createWebCollector({ default: true, session: false, pageview: false });
+      jest.spyOn(global, 'setTimeout');
+      jest.spyOn(global, 'clearTimeout');
+    });
 
-    const target = document.getElementById('visible');
-    const [observer] = (window.IntersectionObserver as jest.Mock).mock.calls[0];
+    test('50% threshold - should trigger at 50% intersection', async () => {
+      document.body.innerHTML = `<div id="visible" data-elb="visible" data-elbaction="visible:impression"></div>`;
+      const { createWebCollector } = jest.requireActual('../');
+      createWebCollector({ default: true, session: false, pageview: false });
 
-    // Check for disconnection to prevent double listens
-    expect(mockDisconnect).toHaveBeenCalledWith();
+      const target = document.getElementById('visible') as HTMLElement;
+      jest.clearAllMocks();
 
-    jest.clearAllMocks();
-    expect(setTimeout).toHaveBeenCalledTimes(0);
+      // Test 50% intersection - should trigger
+      observerCallback(
+        [createMockEntry(target, 0.5)],
+        {} as IntersectionObserver,
+      );
 
-    // Simulate scroll event
-    observer([
-      {
-        target,
-        isIntersecting: false,
-        intersectionRatio: 1,
-      },
-      {
-        target,
-        isIntersecting: false,
-        intersectionRatio: 0.2,
-      },
-    ]);
+      expect(setTimeout).toHaveBeenCalledTimes(1);
+      expect(mockIsVisible).not.toHaveBeenCalled(); // isVisible called only in timer callback
 
-    // Called for getting into viewport
-    expect(setTimeout).toHaveBeenCalledTimes(1);
-    // Called for getting out of viewport
-    expect(clearTimeout).toHaveBeenCalledTimes(1);
+      await jest.runOnlyPendingTimersAsync();
 
-    // Completely in viewport
-    observer([
-      {
-        target,
-        isIntersecting: false,
-        intersectionRatio: 1,
-      },
-    ]);
+      expect(mockIsVisible).toHaveBeenCalledWith(target); // Now isVisible should be called
+      expect(mockDataLayer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'visible impression',
+          trigger: Trigger.Visible,
+        }),
+      );
+      expect(mockUnobserve).toHaveBeenCalledWith(target);
+    });
 
-    expect(mockDataLayer).toHaveBeenCalledTimes(0);
+    test('49% threshold - should NOT trigger below 50% intersection', async () => {
+      document.body.innerHTML = `<div id="visible" data-elb="visible" data-elbaction="visible:impression"></div>`;
+      const { createWebCollector } = jest.requireActual('../');
+      createWebCollector({ default: true, session: false, pageview: false });
 
-    await jest.runOnlyPendingTimersAsync();
+      const target = document.getElementById('visible') as HTMLElement;
+      jest.clearAllMocks();
 
-    expect(mockDataLayer).toHaveBeenCalledTimes(1);
-    expect(mockDataLayer).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: 'visible impression',
-        trigger: Trigger.Visible,
-      }),
-    );
+      // Test 49% intersection - should NOT trigger
+      observerCallback(
+        [createMockEntry(target, 0.49)],
+        {} as IntersectionObserver,
+      );
 
-    // Stop watching
-    expect(mockUnobserve).toHaveBeenCalled();
+      expect(setTimeout).not.toHaveBeenCalled();
+      expect(mockIsVisible).not.toHaveBeenCalled();
+
+      await jest.runOnlyPendingTimersAsync();
+
+      expect(mockDataLayer).not.toHaveBeenCalled();
+      expect(mockUnobserve).not.toHaveBeenCalled();
+    });
+
+    test('large element behavior - should trigger when height > viewport and isVisible true', async () => {
+      document.body.innerHTML = `<div id="large" data-elb="large" data-elbaction="visible:impression"></div>`;
+      const { createWebCollector } = jest.requireActual('../');
+      createWebCollector({ default: true, session: false, pageview: false });
+
+      const target = document.getElementById('large') as HTMLElement;
+      // Mock large element
+      Object.defineProperty(target, 'offsetHeight', {
+        value: window.innerHeight + 100,
+      });
+      jest.clearAllMocks();
+
+      // Large element with any intersection + isVisible true
+      observerCallback(
+        [createMockEntry(target, 0.3)],
+        {} as IntersectionObserver,
+      ); // Below 50% but should trigger for large elements
+
+      expect(setTimeout).toHaveBeenCalledTimes(1);
+      expect(mockIsVisible).toHaveBeenCalledWith(target);
+
+      await jest.runOnlyPendingTimersAsync();
+
+      expect(mockDataLayer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'large impression',
+          trigger: Trigger.Visible,
+        }),
+      );
+    });
+
+    test('isVisible integration - should NOT trigger when isVisible returns false', async () => {
+      document.body.innerHTML = `<div id="hidden" data-elb="hidden" data-elbaction="visible:impression"></div>`;
+      const { createWebCollector } = jest.requireActual('../');
+      createWebCollector({ default: true, session: false, pageview: false });
+
+      const target = document.getElementById('hidden') as HTMLElement;
+      mockIsVisible.mockReturnValue(false); // Element is hidden by overlay
+      jest.clearAllMocks();
+
+      // 100% intersection but isVisible false
+      observerCallback(
+        [createMockEntry(target, 1.0)],
+        {} as IntersectionObserver,
+      );
+
+      expect(setTimeout).toHaveBeenCalledTimes(1);
+
+      await jest.runOnlyPendingTimersAsync();
+
+      expect(mockIsVisible).toHaveBeenCalledWith(target);
+      expect(mockDataLayer).not.toHaveBeenCalled();
+      expect(mockUnobserve).not.toHaveBeenCalled();
+    });
+
+    test('timing behavior - element hidden before duration should cancel trigger', async () => {
+      document.body.innerHTML = `<div id="timing" data-elb="timing" data-elbaction="visible:impression"></div>`;
+      const { createWebCollector } = jest.requireActual('../');
+      createWebCollector({ default: true, session: false, pageview: false });
+
+      const target = document.getElementById('timing') as HTMLElement;
+      jest.clearAllMocks();
+
+      // Element becomes visible
+      observerCallback(
+        [createMockEntry(target, 0.8)],
+        {} as IntersectionObserver,
+      );
+
+      expect(setTimeout).toHaveBeenCalledTimes(1);
+
+      // Element becomes hidden before timer completes
+      observerCallback(
+        [createMockEntry(target, 0.2)],
+        {} as IntersectionObserver,
+      );
+
+      expect(clearTimeout).toHaveBeenCalledTimes(1);
+
+      await jest.runOnlyPendingTimersAsync();
+
+      expect(mockDataLayer).not.toHaveBeenCalled();
+    });
+
+    test('multiple elements - should handle multiple observations simultaneously', async () => {
+      document.body.innerHTML = `
+        <div id="elem1" data-elb="elem1" data-elbaction="visible:impression"></div>
+        <div id="elem2" data-elb="elem2" data-elbaction="visible:view"></div>
+      `;
+      const { createWebCollector } = jest.requireActual('../');
+      createWebCollector({ default: true, session: false, pageview: false });
+
+      const elem1 = document.getElementById('elem1') as HTMLElement;
+      const elem2 = document.getElementById('elem2') as HTMLElement;
+      jest.clearAllMocks();
+
+      // Both elements become visible simultaneously
+      observerCallback(
+        [createMockEntry(elem1, 0.6), createMockEntry(elem2, 0.7)],
+        {} as IntersectionObserver,
+      );
+
+      expect(setTimeout).toHaveBeenCalledTimes(2);
+
+      await jest.runOnlyPendingTimersAsync();
+
+      expect(mockDataLayer).toHaveBeenCalledTimes(2);
+      expect(mockDataLayer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'elem1 impression',
+        }),
+      );
+      expect(mockDataLayer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'elem2 view',
+        }),
+      );
+    });
+
+    test('observer lifecycle - should disconnect on document scope', async () => {
+      document.body.innerHTML = `<div id="lifecycle" data-elb="lifecycle" data-elbaction="visible:impression"></div>`;
+      const { createWebCollector } = jest.requireActual('../');
+      createWebCollector({ default: true, session: false, pageview: false });
+
+      // Should disconnect on document scope initialization
+      expect(mockDisconnect).toHaveBeenCalled();
+    });
+
+    test('one-time trigger - should unobserve after successful trigger', async () => {
+      document.body.innerHTML = `<div id="onetime" data-elb="onetime" data-elbaction="visible:impression"></div>`;
+      const { createWebCollector } = jest.requireActual('../');
+      createWebCollector({ default: true, session: false, pageview: false });
+
+      const target = document.getElementById('onetime') as HTMLElement;
+      jest.clearAllMocks();
+
+      // Trigger visibility
+      observerCallback(
+        [createMockEntry(target, 0.8)],
+        {} as IntersectionObserver,
+      );
+
+      await jest.runOnlyPendingTimersAsync();
+
+      expect(mockDataLayer).toHaveBeenCalledTimes(1);
+      expect(mockUnobserve).toHaveBeenCalledWith(target);
+
+      // Verify that the timer dataset was cleaned up
+      expect(target.dataset['elbTimerId']).toBeUndefined();
+    });
   });
 });
