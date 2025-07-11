@@ -3,7 +3,9 @@ import type { Handler, Mapping as WalkerOSMapping } from '@walkerOS/core';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Destination
-  extends DestinationServer.Destination<Settings, Mapping> {}
+  extends DestinationServer.Destination<Settings, Mapping> {
+  init: DestinationServer.InitFn<Settings, Mapping>;
+}
 
 export type Config = {
   settings: Settings;

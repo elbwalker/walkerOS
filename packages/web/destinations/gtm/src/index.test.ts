@@ -46,7 +46,7 @@ describe('destination google-tag-manager', () => {
     await elb(event);
     // Verify wrapper was called (at least once for push, and potentially for init)
     expect(onCall).toHaveBeenCalledWith(
-      { name: 'dataLayer.push', id: expect.any(String), type: 'google-gtm' },
+      { name: 'dataLayer.push', type: 'google-gtm' },
       [expect.any(Object)],
     );
     expect(onCall).toHaveBeenCalled();

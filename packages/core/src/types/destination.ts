@@ -65,23 +65,20 @@ export interface Context<Settings = unknown, Mapping = unknown> {
   collector: WalkerOS.Collector;
   config: Config<Settings, Mapping>;
   data?: Data;
+  wrap: Wrapper.Wrap;
 }
 
 export interface InitContext<Settings = unknown, Mapping = unknown>
-  extends Context<Settings, Mapping> {
-  wrap: Wrapper.Wrap;
-}
+  extends Context<Settings, Mapping> {}
 
 export interface PushContext<Settings = unknown, Mapping = unknown>
   extends Context<Settings, Mapping> {
   mapping?: WalkerOSMapping.Rule<Mapping>;
-  wrap: Wrapper.Wrap;
 }
 
 export interface PushBatchContext<Settings = unknown, Mapping = unknown>
   extends Context<Settings, Mapping> {
   mapping?: WalkerOSMapping.Rule<Mapping>;
-  wrap: Wrapper.Wrap;
 }
 
 // Updated function signatures with context-based parameters

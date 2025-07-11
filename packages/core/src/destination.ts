@@ -248,17 +248,10 @@ export async function destinationInit<
 >(collector: WalkerOS.Collector, destination: Destination): Promise<boolean> {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
-    // Always create wrapper (passthrough if no config)
-    const wrap = createWrapper(
-      destination.config.id || 'unknown',
-      destination.type || 'unknown',
-      destination.config.wrapper || {},
-    );
-
     const context: WalkerOSDestination.InitContext = {
       collector,
       config: destination.config,
-      wrap,
+      wrap: getWrapper(destination),
     };
 
     const configResult = await useHooks(
@@ -315,19 +308,12 @@ export async function destinationPush<
     }
   }
 
-  // Always create wrapper (passthrough if no config)
-  const wrap = createWrapper(
-    destination.config.id || 'unknown',
-    destination.type || 'unknown',
-    destination.config.wrapper || {},
-  );
-
   const context: WalkerOSDestination.PushContext = {
     collector,
     config,
     data,
     mapping: eventMapping,
-    wrap,
+    wrap: getWrapper(destination),
   };
 
   if (eventMapping?.batch && destination.pushBatch) {
@@ -347,7 +333,7 @@ export async function destinationPush<
           config,
           data,
           mapping: eventMapping,
-          wrap,
+          wrap: getWrapper(destination),
         };
 
         useHooks(
@@ -401,5 +387,12 @@ export function initDestinations(
       return acc;
     },
     {},
+  );
+}
+
+function getWrapper(destination: WalkerOSDestination.Destination) {
+  return createWrapper(
+    destination.type || 'unknown',
+    destination.config.wrapper,
   );
 }

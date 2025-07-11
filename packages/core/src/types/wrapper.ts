@@ -1,7 +1,6 @@
 export interface Fn {
   name: string; // original function name
-  id: string; // destination id
-  type: string; // destination type
+  type?: string; // destination type
 }
 
 export type OnCall = (context: Fn, args: unknown[]) => void;

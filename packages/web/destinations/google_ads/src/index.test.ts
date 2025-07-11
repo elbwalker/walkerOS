@@ -64,7 +64,7 @@ describe('destination Google Ads', () => {
     await elb(event);
     expect(onCall).toHaveBeenCalledTimes(3);
     expect(onCall).toHaveBeenCalledWith(
-      { name: 'gtag', id: expect.any(String), type: 'google-ads' },
+      { name: 'gtag', type: 'google-ads' },
       expect.any(Array),
     );
   });

@@ -54,7 +54,7 @@ describe('Destination Meta Pixel', () => {
     await elb(event);
     expect(onCall).toHaveBeenCalledTimes(2);
     expect(onCall).toHaveBeenCalledWith(
-      { name: 'fbq', id: expect.any(String), type: 'meta-pixel' },
+      { name: 'fbq', type: 'meta-pixel' },
       expect.any(Array),
     );
   });

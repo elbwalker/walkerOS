@@ -1,3 +1,4 @@
+import type { WalkerOS } from '@walkerOS/core';
 import type { Config, Destination, Settings } from '../types';
 import { createEvent } from '@walkerOS/core';
 
@@ -7,22 +8,27 @@ describe('Server Destination BigQuery', () => {
 
   const event = createEvent();
 
+  let destination: Destination;
   const projectId = 'pr0j3ct1d';
   // const location = 'EU';
   const datasetId = 'd4t4s3t1d';
   const tableId = 't4bl31d';
-
-  let destination: Destination;
-
   const credentials = { type: 'service_account', private_key: 'secret' };
+
+  const mockCollector = {} as WalkerOS.Collector;
+  const mockWrap = jest.fn((_name, fn) => fn);
 
   function getMockFn(config: Partial<Config>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (config.settings?.client || ({} as any)).mockFn;
   }
 
-  async function getConfig(settings: Partial<Settings>) {
-    return (await destination.init({ config: { settings } })) as Config;
+  async function getConfig(settings: Partial<Settings> = {}) {
+    return (await destination.init({
+      config: { settings: settings as Settings },
+      collector: mockCollector,
+      wrap: mockWrap,
+    })) as Config;
   }
 
   beforeEach(() => {
@@ -38,7 +44,11 @@ describe('Server Destination BigQuery', () => {
     if (!destination.init) return;
 
     await expect(
-      destination.init({ config: { settings: { datasetId, tableId } } }),
+      destination.init({
+        config: { settings: { datasetId, tableId } as Settings },
+        collector: mockCollector,
+        wrap: mockWrap,
+      }),
     ).rejects.toThrow('Config settings projectId missing');
 
     const config = await getConfig({ projectId });
@@ -62,7 +72,8 @@ describe('Server Destination BigQuery', () => {
       config,
       mapping: undefined,
       data: undefined,
-      collector: undefined,
+      collector: mockCollector,
+      wrap: mockWrap,
     });
     expect(mockFn).toHaveBeenCalledWith('insert', [
       {
@@ -100,7 +111,8 @@ describe('Server Destination BigQuery', () => {
       config,
       mapping: {},
       data,
-      collector: undefined,
+      collector: mockCollector,
+      wrap: mockWrap,
     });
     expect(mockFn).toHaveBeenCalledWith('insert', [{ foo: 'bar' }]);
   });

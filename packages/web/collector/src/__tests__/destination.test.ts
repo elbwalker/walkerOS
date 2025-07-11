@@ -936,4 +936,204 @@ describe('Destination', () => {
       // timing: 0, // @TODO should be set to default type
     });
   });
+
+  describe('wrapper integration', () => {
+    test('should pass wrapper to destination push functions', async () => {
+      const mockPushWithWrapper = jest.fn();
+      const onCall = jest.fn();
+
+      const destination: DestinationWeb.Destination = {
+        push: mockPushWithWrapper,
+        config: { wrapper: { onCall } },
+      };
+
+      const { elb } = createWebCollector({
+        run: true,
+        pageview: false,
+        session: false,
+        destinations: { destination },
+      });
+
+      await elb(event);
+
+      expect(mockPushWithWrapper).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: event.event,
+        }),
+        expect.objectContaining({
+          wrap: expect.any(Function),
+        }),
+      );
+    });
+
+    test('should pass wrapper to destination init functions', async () => {
+      const mockInitWithWrapper = jest.fn();
+      const onCall = jest.fn();
+
+      const destination: DestinationWeb.Destination = {
+        init: mockInitWithWrapper,
+        push: mockPush,
+        config: { wrapper: { onCall } },
+      };
+
+      const { elb } = createWebCollector({
+        run: true,
+        pageview: false,
+        session: false,
+        destinations: { destination },
+      });
+
+      await elb(event);
+
+      expect(mockInitWithWrapper).toHaveBeenCalledWith(
+        expect.objectContaining({
+          wrap: expect.any(Function),
+        }),
+      );
+    });
+
+    test('should create wrapper with destination id and type', async () => {
+      const mockPushWithWrapper = jest.fn();
+      const onCall = jest.fn();
+
+      const destination: DestinationWeb.Destination = {
+        push: (event, { wrap }) => {
+          const testFn = jest.fn((arg: string) => 'test-result');
+          const wrappedFn = wrap('testFunction', testFn);
+          wrappedFn('test-arg');
+          mockPushWithWrapper(event);
+        },
+        config: {
+          id: 'test-destination',
+          wrapper: { onCall },
+        },
+        type: 'test-type',
+      };
+
+      const { elb } = createWebCollector({
+        run: true,
+        pageview: false,
+        session: false,
+        destinations: { destination },
+      });
+
+      await elb(event);
+
+      expect(onCall).toHaveBeenCalledWith(
+        { name: 'testFunction', type: 'test-type' },
+        ['test-arg'],
+      );
+      expect(mockPushWithWrapper).toHaveBeenCalledTimes(1);
+    });
+
+    test('should support dry run mode', async () => {
+      const mockPushWithDryRun = jest.fn();
+      const onCall = jest.fn();
+
+      const destination: DestinationWeb.Destination = {
+        push: (_, { wrap }) => {
+          const testFn = jest.fn((arg: string) => 'original-result');
+          const wrappedFn = wrap('testFunction', testFn);
+          const result = wrappedFn('test-arg');
+          mockPushWithDryRun({ result, called: testFn.mock.calls.length });
+        },
+        config: {
+          wrapper: {
+            dryRun: true,
+            mockReturn: 'dry-run-result',
+            onCall,
+          },
+        },
+      };
+
+      const { elb } = createWebCollector({
+        run: true,
+        pageview: false,
+        session: false,
+        destinations: { destination },
+      });
+
+      await elb(event);
+
+      expect(onCall).toHaveBeenCalledWith(
+        {
+          name: 'testFunction',
+          type: 'unknown',
+        },
+        ['test-arg'],
+      );
+      expect(mockPushWithDryRun).toHaveBeenCalledWith({
+        result: 'dry-run-result',
+        called: 0, // Original function should not be called in dry run
+      });
+    });
+
+    test('should work without wrapper config (passthrough)', async () => {
+      const mockPushWithoutWrapper = jest.fn();
+
+      const destination: DestinationWeb.Destination = {
+        push: (_, { wrap }) => {
+          const testFn = jest.fn(() => 'result');
+          const wrappedFn = wrap('testFunction', testFn);
+          const result = wrappedFn();
+          mockPushWithoutWrapper({ result, called: testFn.mock.calls.length });
+        },
+        config: {}, // No wrapper config
+      };
+
+      const { elb } = createWebCollector({
+        run: true,
+        pageview: false,
+        session: false,
+        destinations: { destination },
+      });
+
+      await elb(event);
+
+      expect(mockPushWithoutWrapper).toHaveBeenCalledWith({
+        result: 'result',
+        called: 1, // Should execute normally
+      });
+    });
+
+    test('should handle batch push functions with wrapper', async () => {
+      const mockBatchWithWrapper = jest.fn();
+      const onCall = jest.fn();
+
+      const destination: DestinationWeb.Destination = {
+        push: mockPush,
+        pushBatch: (batch, { wrap }) => {
+          const testFn = jest.fn((arg: string) => 'batch-result');
+          const wrappedFn = wrap('batchFunction', testFn);
+          wrappedFn('batch-arg');
+          mockBatchWithWrapper(batch);
+        },
+        config: {
+          wrapper: { onCall },
+          mapping: {
+            product: { click: { batch: 50 } },
+          },
+        },
+      };
+
+      const { elb } = createWebCollector({
+        run: true,
+        pageview: false,
+        session: false,
+        destinations: { destination },
+      });
+
+      await elb('product click', { id: 1 });
+      jest.advanceTimersByTime(50);
+
+      expect(onCall).toHaveBeenCalledWith(
+        {
+          name: 'batchFunction',
+          type: 'unknown',
+        },
+        ['batch-arg'],
+      );
+      expect(mockBatchWithWrapper).toHaveBeenCalledTimes(1);
+    });
+  });
 });

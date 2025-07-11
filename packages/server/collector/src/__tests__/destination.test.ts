@@ -452,4 +452,54 @@ describe('Destination', () => {
       // timing: 0, // @TODO should be set to default type
     });
   });
+
+  describe('wrapper integration', () => {
+    test('should pass wrapper to destination push functions', async () => {
+      const mockPushWithWrapper = jest.fn();
+      const onCall = jest.fn();
+
+      const destination: DestinationServer.Destination = {
+        config: { wrapper: { onCall } },
+        push: mockPushWithWrapper,
+      };
+
+      const { elb } = getCollector({
+        destinations: { destination },
+      });
+
+      await elb(mockEvent);
+
+      expect(mockPushWithWrapper).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: mockEvent.event,
+        }),
+        expect.objectContaining({
+          wrap: expect.any(Function),
+        }),
+      );
+    });
+
+    test('should pass wrapper to destination init functions', async () => {
+      const mockInitWithWrapper = jest.fn();
+      const onCall = jest.fn();
+
+      const destination: DestinationServer.Destination = {
+        config: { wrapper: { onCall } },
+        init: mockInitWithWrapper,
+        push: mockPush,
+      };
+
+      const { elb } = getCollector({
+        destinations: { destination },
+      });
+
+      await elb(mockEvent);
+
+      expect(mockInitWithWrapper).toHaveBeenCalledWith(
+        expect.objectContaining({
+          wrap: expect.any(Function),
+        }),
+      );
+    });
+  });
 });

@@ -47,7 +47,7 @@ describe('destination plausible', () => {
     await elb(event);
     expect(onCall).toHaveBeenCalled();
     expect(onCall).toHaveBeenCalledWith(
-      { name: 'plausible', id: expect.any(String), type: 'plausible' },
+      { name: 'plausible', type: 'plausible' },
       expect.any(Array),
     );
   });

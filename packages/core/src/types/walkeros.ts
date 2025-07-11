@@ -39,7 +39,7 @@ export interface Config {
 }
 
 export interface Destinations {
-  [name: string]: Destination.Destination;
+  [id: string]: Destination.Destination;
 }
 
 export type Events = Array<Event>;

@@ -50,7 +50,7 @@ describe('Destination PiwikPro', () => {
     await elb(event);
     expect(onCall).toHaveBeenCalled();
     expect(onCall).toHaveBeenCalledWith(
-      { name: '_paq.push', id: expect.any(String), type: 'piwikpro' },
+      { name: '_paq.push', type: 'piwikpro' },
       expect.any(Array),
     );
   });

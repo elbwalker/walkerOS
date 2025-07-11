@@ -6,7 +6,9 @@ import type {
 } from '@aws-sdk/client-firehose';
 
 export interface Destination
-  extends DestinationServer.Destination<Settings, Mapping> {}
+  extends DestinationServer.Destination<Settings, Mapping> {
+  init: DestinationServer.InitFn<Settings, Mapping>;
+}
 
 export type Config = {
   settings: Settings;

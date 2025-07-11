@@ -81,7 +81,7 @@ describe('Destination Google GA4', () => {
     await elb(event);
     expect(onCall).toHaveBeenCalledTimes(3);
     expect(onCall).toHaveBeenCalledWith(
-      { name: 'gtag', id: expect.any(String), type: 'google-ga4' },
+      { name: 'gtag', type: 'google-ga4' },
       expect.any(Array),
     );
   });

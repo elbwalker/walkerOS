@@ -7,18 +7,22 @@ import {
 } from '@aws-sdk/client-firehose';
 
 describe('Firehose', () => {
+  const event = createEvent();
+
   let destination: Destination;
   let settingsConfig: Settings;
 
-  const event = createEvent();
-
   const streamName = 'demo';
+
+  const mockCollector = {} as WalkerOS.Collector;
+  const mockWrap = jest.fn((_name, fn) => fn);
 
   async function getConfig(settings: Settings = {}) {
     const mockCollector = {} as WalkerOS.Collector;
     return (await destination.init({
       config: { settings },
       collector: mockCollector,
+      wrap: mockWrap,
     })) as Config;
   }
 
@@ -52,7 +56,11 @@ describe('Firehose', () => {
     const config = await getConfig(settingsConfig);
     const mockCollector = {} as WalkerOS.Collector;
 
-    await destination.push(event, { config, collector: mockCollector });
+    await destination.push(event, {
+      config,
+      collector: mockCollector,
+      wrap: mockWrap,
+    });
     expect(spy).toHaveBeenCalledWith(expect.any(PutRecordBatchCommand));
   });
 });

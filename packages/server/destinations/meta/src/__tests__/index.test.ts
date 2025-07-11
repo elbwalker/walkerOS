@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@walkerOS/core';
 import type { DestinationServer } from '@walkerOS/server-collector';
-import type { Config, Destination } from '../types';
+import type { Config, Destination, Settings } from '../types';
 import { getEvent } from '@walkerOS/core';
 import { createServerCollector } from '@walkerOS/server-collector';
 import { destinationMetaExamples } from '../examples';
@@ -24,6 +24,9 @@ describe('Server Destination Meta', () => {
   const accessToken = 's3cr3t';
   const pixelId = 'p1x3l1d';
 
+  const mockCollector = {} as WalkerOS.Collector;
+  const mockWrap = jest.fn((_name, fn) => fn);
+
   beforeEach(async () => {
     jest.clearAllMocks();
     jest.resetModules();
@@ -34,23 +37,27 @@ describe('Server Destination Meta', () => {
 
   afterEach(() => {});
 
-  async function getConfig(settings = {}) {
-    const mockCollector = {} as WalkerOS.Collector;
+  async function getConfig(settings: Partial<Settings> = {}) {
     return (await destination.init({
-      config: { settings },
+      config: { settings: settings as Settings },
       collector: mockCollector,
+      wrap: mockWrap,
     })) as Config;
   }
 
   test('init', async () => {
-    const mockCollector = {} as WalkerOS.Collector;
     await expect(
-      destination.init({ config: {}, collector: mockCollector }),
+      destination.init({
+        config: {},
+        collector: mockCollector,
+        wrap: mockWrap,
+      }),
     ).rejects.toThrow('Error: Config settings accessToken missing');
     await expect(
       destination.init({
-        config: { settings: { accessToken } },
+        config: { settings: { accessToken, pixelId: '' } },
         collector: mockCollector,
+        wrap: mockWrap,
       }),
     ).rejects.toThrow('Error: Config settings pixelId missing');
 
@@ -76,18 +83,18 @@ describe('Server Destination Meta', () => {
     expect(requestBody.test_event_code).toEqual('TEST');
   });
 
-  test('fn', async () => {
-    const mockFn = jest.fn();
+  test('wrapper', async () => {
+    const mockOnCall = jest.fn();
     const { elb } = createServerCollector({});
     const event = getEvent();
     const config: DestinationServer.Config = {
-      fn: mockFn,
+      wrapper: { onCall: mockOnCall },
       settings: { accessToken, pixelId },
     };
 
     elb('walker destination', destination, config);
     await elb(event);
-    expect(mockFn).toHaveBeenCalled();
+    expect(mockOnCall).toHaveBeenCalled();
   });
 
   test('error', async () => {
