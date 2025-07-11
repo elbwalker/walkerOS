@@ -642,13 +642,13 @@ describe('Trigger', () => {
       );
     });
 
-    test('observer lifecycle - should disconnect on document scope', async () => {
+    test('observer lifecycle - should create observer for each collector', async () => {
       document.body.innerHTML = `<div id="lifecycle" data-elb="lifecycle" data-elbaction="visible:impression"></div>`;
       const { createWebCollector } = jest.requireActual('../');
       createWebCollector({ default: true, session: false, pageview: false });
 
-      // Should disconnect on document scope initialization
-      expect(mockDisconnect).toHaveBeenCalled();
+      // Should create IntersectionObserver for new collector
+      expect(w.IntersectionObserver).toHaveBeenCalled();
     });
 
     test('one-time trigger - should unobserve after successful trigger', async () => {

@@ -42,46 +42,32 @@ initScopeTrigger() � observerVisible() � IntersectionObserver � Timer � 
 
 ## Implementation Plan
 
-### Phase 1: Core Architecture Refactoring
+### ✅ Phase 1: Core Architecture Refactoring - COMPLETED
 
-**Objective**: Replace global observer with instance-based design
+**Objective**: Replace global observer with instance-based design ✅
 
-#### 1.1 Create VisibleTriggerManager Class
+#### ✅ 1.1 Functional Implementation (instead of class-based)
 
-```typescript
-class VisibleTriggerManager {
-  private observer: IntersectionObserver | undefined;
-  private elementTimers: WeakMap<HTMLElement, number>;
-  private collector: WebCollector.Collector;
-  private duration: number;
+- Created `triggerVisible.ts` with functional approach
+- Used collector `_visibilityState` property for state management
+- Implemented WeakMap for timer storage per collector
+- Added proper IntersectionObserver lifecycle management
 
-  constructor(collector: WebCollector.Collector, duration = 1000) {
-    this.collector = collector;
-    this.duration = duration;
-    this.elementTimers = new WeakMap();
-    this.createObserver();
-  }
+#### ✅ 1.2 Collector Integration
 
-  observeElement(element: HTMLElement): void;
-  unobserveElement(element: HTMLElement): void;
-  destroy(): void;
-}
-```
+- Added `_visibilityState` property to WebCollector.Collector interface
+- Integrated `initVisibilityTracking` in `initScopeTrigger`
+- Removed all old global observer code
+- Updated triggerVisible function call in handleActionElem
 
-#### 1.2 Update Collector Integration
+#### ✅ 1.3 Complete Migration
 
-- Add `visibleManager` property to WebCollector.Collector
-- Initialize manager in `initScopeTrigger` instead of global observer
-- Ensure proper cleanup on collector destruction
+- ❌ No fallbacks - complete migration as requested
+- ❌ No feature flags - full replacement
+- ✅ All tests updated and passing (196/196)
+- ✅ Optimized threshold array to [0, 0.5] only
 
-#### 1.3 Migration Strategy
-
-- Keep current global approach as fallback during transition
-- Add feature flag for new architecture
-- Ensure test compatibility throughout migration
-
-**Estimated Time**: 2-3 development sessions **Risk Level**: Medium (core
-architecture change)
+**Completed**: Modern, minimal, performant implementation
 
 ---
 

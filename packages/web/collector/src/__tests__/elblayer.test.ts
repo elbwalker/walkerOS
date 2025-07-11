@@ -227,6 +227,7 @@ describe('elbLayer', () => {
       getEvents: expect.any(Function),
       getGlobals: expect.any(Function),
       sessionStart: expect.any(Function),
+      _visibilityState: expect.any(Object),
       ...defaultState,
     };
 

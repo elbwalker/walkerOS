@@ -1,14 +1,14 @@
 import type { Walker, WebCollector, Elb } from '../types';
 import { Const, onApply, throttle, tryCatch } from '@walkerOS/core';
-import { elb as elbOrg, getAttribute, isVisible } from '../utils';
+import { elb as elbOrg, getAttribute } from '../utils';
 import {
   getElbAttributeName,
   getEvents,
   getPageViewData,
   getTriggerActions,
 } from './walker';
+import { initVisibilityTracking, triggerVisible } from './triggerVisible';
 
-let visibleObserver: IntersectionObserver | undefined;
 let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
 
@@ -98,12 +98,8 @@ export function initScopeTrigger(
   // Reset all scroll events @TODO check if it's right here
   scrollElements = [];
 
-  // Load the visible observer
-  visibleObserver =
-    visibleObserver ||
-    tryCatch(observerVisible, () => {
-      return undefined;
-    })(collector, 1000);
+  // Initialize visibility tracking for this collector
+  initVisibilityTracking(collector, 1000);
 
   // default data-elbaction
   const selectorAction = getElbAttributeName(
@@ -113,10 +109,7 @@ export function initScopeTrigger(
   );
 
   const scope = elem || collector.config.scope;
-  if (scope === document) {
-    // Disconnect previous on full loads when using document scope @TODO check if it's right here
-    visibleObserver && visibleObserver.disconnect();
-  } else {
+  if (scope !== document) {
     // Handle the elements action(s), too
     handleActionElem(collector, scope as HTMLElement, selectorAction);
   }
@@ -129,12 +122,12 @@ export function initScopeTrigger(
   if (scrollElements.length) scroll(collector);
 }
 
-async function handleTrigger(
+export async function handleTrigger(
   collector: WebCollector.Collector,
   element: Element,
   trigger: Walker.Trigger,
   // @TODO add triggerParams to filter for specific trigger
-) {
+): Promise<unknown[]> {
   const events = getEvents(element, trigger, collector.config.prefix);
   return Promise.all(
     events.map((event: Walker.Event) =>
@@ -175,7 +168,7 @@ function handleActionElem(
           triggerScroll(elem, triggerAction.triggerParams);
           break;
         case Trigger.Visible:
-          triggerVisible(elem, visibleObserver);
+          triggerVisible(collector, elem);
           break;
         case Trigger.Wait:
           triggerWait(collector, elem, triggerAction.triggerParams);
@@ -229,13 +222,6 @@ function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
 
 function triggerSubmit(collector: WebCollector.Collector, ev: Event) {
   handleTrigger(collector, ev.target as Element, Trigger.Submit);
-}
-
-function triggerVisible(
-  elem: HTMLElement,
-  visibleObserver?: IntersectionObserver,
-) {
-  if (visibleObserver) visibleObserver!.observe(elem);
 }
 
 function triggerWait(
@@ -298,66 +284,4 @@ function scroll(collector: WebCollector.Collector) {
 
     collector.config.scope.addEventListener('scroll', scrollListener);
   }
-}
-
-function observerVisible(
-  collector: WebCollector.Collector,
-  duration = 1000,
-): IntersectionObserver | undefined {
-  if (!window.IntersectionObserver) return;
-
-  return new window.IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        const target = entry.target as HTMLElement;
-        const timerId = 'elbTimerId';
-
-        // Check for an existing timer
-        let timer = Number(target.dataset[timerId]);
-
-        if (entry.intersectionRatio > 0) {
-          // Check if a large target element is in viewport
-          const largeElemInViewport =
-            target.offsetHeight > window.innerHeight && isVisible(target);
-
-          // Element is more than 50% in viewport
-          if (largeElemInViewport || entry.intersectionRatio >= 0.5) {
-            // Take existing scheduled function or create a new one
-            timer =
-              timer ||
-              window.setTimeout(async function () {
-                if (isVisible(target)) {
-                  await handleTrigger(
-                    collector,
-                    target as Element,
-                    Trigger.Visible,
-                  );
-
-                  // Just count once
-                  delete target.dataset[timerId];
-                  if (visibleObserver) visibleObserver.unobserve(target);
-                }
-              }, duration);
-
-            // Remember the timer, temporarily
-            target.dataset[timerId] = String(timer);
-
-            // We're done here
-            return;
-          }
-        }
-
-        // Element isn't in viewport
-        // Clearing a timer is more easy than computing isVisible
-        if (timer) {
-          clearTimeout(timer);
-          delete target.dataset[timerId];
-        }
-      });
-    },
-    {
-      rootMargin: '0px',
-      threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5], // Trigger for the first 50%
-    },
-  );
 }

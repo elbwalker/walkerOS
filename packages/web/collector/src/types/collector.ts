@@ -26,6 +26,11 @@ export interface Collector extends WalkerOS.Collector {
   getEvents: (target: Element, trigger: Trigger, prefix: string) => Events;
   getGlobals: () => WalkerOS.Properties;
   sessionStart: (options?: SessionStartOptions) => void | WalkerOS.SessionData;
+  _visibilityState?: {
+    observer: IntersectionObserver | undefined;
+    timers: WeakMap<HTMLElement, number>;
+    duration: number;
+  };
 }
 
 export interface State extends WalkerOS.State {
