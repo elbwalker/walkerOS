@@ -3,6 +3,63 @@ import { tryCatch } from '@walkerOS/core';
 import { isVisible } from '../utils';
 import { handleTrigger, Trigger } from './trigger';
 
+// Cache for element size calculations to reduce DOM queries
+const elementSizeCache = new WeakMap<
+  HTMLElement,
+  { isLarge: boolean; lastChecked: number }
+>();
+
+// Cache for basic visibility checks to reduce expensive isVisible() calls
+const visibilityCache = new WeakMap<
+  HTMLElement,
+  { isVisible: boolean; lastChecked: number }
+>();
+
+/**
+ * Cached visibility check to reduce expensive isVisible() calls
+ */
+function isElementVisible(element: HTMLElement): boolean {
+  const now = Date.now();
+  let cached = visibilityCache.get(element);
+
+  // Cache visibility result for 500ms to balance accuracy with performance
+  if (!cached || now - cached.lastChecked > 500) {
+    cached = {
+      isVisible: isVisible(element),
+      lastChecked: now,
+    };
+    visibilityCache.set(element, cached);
+  }
+
+  return cached.isVisible;
+}
+
+/**
+ * Element cleanup (unobserve + timer + cache cleanup)
+ */
+export function unobserveElement(
+  collector: WebCollector.Collector,
+  element: HTMLElement,
+): void {
+  const state = collector._visibilityState;
+  if (!state) return;
+
+  if (state.observer) {
+    state.observer.unobserve(element);
+  }
+
+  // Clear timer
+  const timer = state.timers.get(element);
+  if (timer) {
+    clearTimeout(timer);
+    state.timers.delete(element);
+  }
+
+  // Clean up caches to prevent memory leaks
+  elementSizeCache.delete(element);
+  visibilityCache.delete(element);
+}
+
 /**
  * Creates an IntersectionObserver for the given collector
  */
@@ -42,18 +99,34 @@ function handleIntersection(
   const existingTimer = state.timers.get(target);
 
   if (entry.intersectionRatio > 0) {
-    // Check if a large target element is in viewport
-    const largeElemInViewport =
-      target.offsetHeight > window.innerHeight && isVisible(target);
+    // Optimize: Cache element size calculations to avoid repeated DOM queries
+    const now = Date.now();
+    let cached = elementSizeCache.get(target);
 
-    // Element is more than 50% in viewport
-    if (largeElemInViewport || entry.intersectionRatio >= 0.5) {
+    // Cache element size for 1 second to reduce DOM queries
+    if (!cached || now - cached.lastChecked > 1000) {
+      cached = {
+        isLarge: target.offsetHeight > window.innerHeight,
+        lastChecked: now,
+      };
+      elementSizeCache.set(target, cached);
+    }
+
+    const meetsThreshold = entry.intersectionRatio >= 0.5;
+
+    // Optimized visibility strategy:
+    // - Standard elements: intersection ratio ≥ 0.5 is sufficient (fast)
+    // - Large elements: need additional overlay/occlusion check (slower but necessary)
+    const shouldTrigger =
+      meetsThreshold || (cached.isLarge && isElementVisible(target));
+
+    if (shouldTrigger) {
       // Only create timer if none exists
       if (!existingTimer) {
         const timer = window.setTimeout(async () => {
-          if (isVisible(target)) {
+          // Final visibility check before triggering (cached for performance)
+          if (isElementVisible(target)) {
             await handleTrigger(collector, target as Element, Trigger.Visible);
-
             // Clean up and unobserve
             unobserveElement(collector, target);
           }
@@ -89,7 +162,7 @@ export function initVisibilityTracking(
 }
 
 /**
- * Adds an element to be observed for visibility changes
+ * Main trigger function for visible elements
  */
 export function triggerVisible(
   collector: WebCollector.Collector,
@@ -98,28 +171,6 @@ export function triggerVisible(
   const state = collector._visibilityState;
   if (state?.observer) {
     state.observer.observe(element);
-  }
-}
-
-/**
- * Removes an element from observation and cleans up any associated timers
- */
-export function unobserveElement(
-  collector: WebCollector.Collector,
-  element: HTMLElement,
-): void {
-  const state = collector._visibilityState;
-  if (!state) return;
-
-  if (state.observer) {
-    state.observer.unobserve(element);
-  }
-
-  // Clean up any pending timer
-  const timer = state.timers.get(element);
-  if (timer) {
-    clearTimeout(timer);
-    state.timers.delete(element);
   }
 }
 

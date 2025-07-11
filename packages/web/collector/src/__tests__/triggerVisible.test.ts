@@ -1,9 +1,8 @@
 import {
   initVisibilityTracking,
-  observeElement,
-  unobserveElement,
-  destroyVisibilityTracking,
   triggerVisible,
+  destroyVisibilityTracking,
+  unobserveElement,
 } from '../lib/triggerVisible';
 import type { WebCollector } from '../types';
 
@@ -54,7 +53,7 @@ describe('triggerVisible', () => {
     initVisibilityTracking(mockCollector, 1000);
     const element = document.createElement('div');
 
-    observeElement(mockCollector, element);
+    triggerVisible(mockCollector, element);
     expect(mockObserver.observe).toHaveBeenCalledWith(element);
   });
 
@@ -62,7 +61,7 @@ describe('triggerVisible', () => {
     initVisibilityTracking(mockCollector, 1000);
     const element = document.createElement('div');
 
-    observeElement(mockCollector, element);
+    triggerVisible(mockCollector, element);
     unobserveElement(mockCollector, element);
 
     expect(mockObserver.unobserve).toHaveBeenCalledWith(element);
@@ -92,8 +91,8 @@ describe('triggerVisible', () => {
     const element1 = document.createElement('div');
     const element2 = document.createElement('div');
 
-    observeElement(mockCollector, element1);
-    observeElement(collector2, element2);
+    triggerVisible(mockCollector, element1);
+    triggerVisible(collector2, element2);
 
     expect(mockObserver.observe).toHaveBeenCalledWith(element1);
     expect(mockObserver.observe).toHaveBeenCalledWith(element2);
@@ -109,7 +108,7 @@ describe('triggerVisible', () => {
     expect(() => initVisibilityTracking(mockCollector, 1000)).not.toThrow();
 
     const element = document.createElement('div');
-    expect(() => observeElement(mockCollector, element)).not.toThrow();
+    expect(() => triggerVisible(mockCollector, element)).not.toThrow();
 
     // Restore
     global.IntersectionObserver = originalIO;
