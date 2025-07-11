@@ -60,7 +60,6 @@ describe('Server Destination BigQuery', () => {
         datasetId: 'walkeros',
         tableId: 'events',
       },
-      onLog: expect.any(Function),
     });
   });
 

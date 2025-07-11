@@ -1,5 +1,5 @@
 import type { DestinationServer } from '@walkerOS/server-collector';
-import type { Handler, Mapping as WalkerOSMapping } from '@walkerOS/core';
+import type { Mapping as WalkerOSMapping } from '@walkerOS/core';
 
 export interface Destination
   extends DestinationServer.Destination<Settings, Mapping> {
@@ -8,7 +8,6 @@ export interface Destination
 
 export type Config = {
   settings: Settings;
-  onLog: Handler.Log;
 } & DestinationServer.Config<Settings, Mapping>;
 
 export type InitFn = DestinationServer.InitFn<Settings, Mapping>;

@@ -1,9 +1,5 @@
 import type { Settings, Destination } from './types';
-import {
-  isSameType,
-  throwError,
-  tryCatchAsync,
-} from '@walkerOS/server-collector';
+import { isSameType } from '@walkerOS/server-collector';
 import { getConfig } from './config';
 import { push } from './push';
 
@@ -16,11 +12,7 @@ export const destinationFirehose: Destination = {
   config: {},
 
   async init({ config: partialConfig }) {
-    const config = await tryCatchAsync(getConfig, (error) => {
-      config.onLog('Init error', partialConfig?.verbose);
-
-      throwError(error);
-    })(partialConfig);
+    const config = getConfig(partialConfig);
 
     if (!isSameType(config.settings, {} as Settings)) return false;
 
@@ -28,11 +20,7 @@ export const destinationFirehose: Destination = {
   },
 
   async push(event, { config, collector, wrap }) {
-    return await tryCatchAsync(push, (error) => {
-      if (config.onLog) config.onLog('Push error');
-
-      throwError(error);
-    })(event, { config, collector, wrap });
+    return await push(event, { config, collector, wrap });
   },
 };
 

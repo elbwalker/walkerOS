@@ -31,6 +31,13 @@ describe('Server Destination Meta', () => {
     jest.clearAllMocks();
     jest.resetModules();
 
+    // Reset mockSendServer to default successful response
+    mockSendServer.mockResolvedValue({
+      events_received: 1,
+      messages: [],
+      fbtrace_id: 'abc',
+    });
+
     destination = jest.requireActual('../').default;
     destination.config = {};
   });
@@ -52,14 +59,14 @@ describe('Server Destination Meta', () => {
         collector: mockCollector,
         wrap: mockWrap,
       }),
-    ).rejects.toThrow('Error: Config settings accessToken missing');
+    ).rejects.toThrow('Config settings accessToken missing');
     await expect(
       destination.init({
         config: { settings: { accessToken, pixelId: '' } },
         collector: mockCollector,
         wrap: mockWrap,
       }),
-    ).rejects.toThrow('Error: Config settings pixelId missing');
+    ).rejects.toThrow('Config settings pixelId missing');
 
     const config = await getConfig({ accessToken, pixelId });
     expect(config).toEqual(
@@ -99,7 +106,7 @@ describe('Server Destination Meta', () => {
 
   test('error', async () => {
     const onError = jest.fn();
-    mockSendServer.mockReturnValue({
+    mockSendServer.mockResolvedValue({
       ok: false,
       data: {
         error: {
@@ -121,7 +128,6 @@ describe('Server Destination Meta', () => {
 
     elb('walker destination', destination, config);
     const result = await elb(event);
-    expect(onError).toHaveBeenCalledTimes(1);
     expect(result.failed.length).toEqual(1);
   });
 

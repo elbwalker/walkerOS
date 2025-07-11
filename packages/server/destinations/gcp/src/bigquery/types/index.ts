@@ -1,5 +1,5 @@
 import type { DestinationServer } from '@walkerOS/server-collector';
-import type { Handler, Mapping as WalkerOSMapping } from '@walkerOS/core';
+import type { Mapping as WalkerOSMapping } from '@walkerOS/core';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
 export interface Destination
@@ -9,7 +9,6 @@ export interface Destination
 
 export type Config = {
   settings: Settings;
-  onLog: Handler.Log;
 } & DestinationServer.Config<Settings, Mapping>;
 
 export interface Settings {

@@ -47,7 +47,6 @@ describe('Firehose', () => {
           streamName,
         },
       },
-      onLog: expect.any(Function),
     });
   });
 

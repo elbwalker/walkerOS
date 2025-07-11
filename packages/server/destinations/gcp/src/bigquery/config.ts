@@ -1,6 +1,6 @@
 import type { Config, PartialConfig, Settings } from './types';
 import type { BigQueryOptions } from '@google-cloud/bigquery';
-import { onLog, throwError } from '@walkerOS/core';
+import { throwError } from '@walkerOS/core';
 import { BigQuery } from '@google-cloud/bigquery';
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {
@@ -28,12 +28,5 @@ export function getConfig(partialConfig: PartialConfig = {}): Config {
     tableId,
   };
 
-  // Log Handler
-  const onLog = (message: string) => log(message, partialConfig.verbose);
-
-  return { ...partialConfig, settings: settingsConfig, onLog };
-}
-
-export function log(message: string, verbose?: boolean) {
-  onLog(`Destination BigQuery: ${message}`, verbose);
+  return { ...partialConfig, settings: settingsConfig };
 }

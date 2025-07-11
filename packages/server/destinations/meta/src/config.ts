@@ -1,5 +1,5 @@
 import type { Config, Settings, PartialConfig } from './types';
-import { onLog, throwError } from '@walkerOS/core';
+import { throwError } from '@walkerOS/core';
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {
   const settings = (partialConfig.settings || {}) as Partial<Settings>;
@@ -14,12 +14,5 @@ export function getConfig(partialConfig: PartialConfig = {}): Config {
     pixelId,
   };
 
-  // Log Handler
-  const onLog = (message: string) => log(message, partialConfig.verbose);
-
-  return { ...partialConfig, settings: settingsConfig, onLog };
-}
-
-export function log(message: string, verbose?: boolean) {
-  onLog(`Destination Meta: ${message}`, verbose);
+  return { ...partialConfig, settings: settingsConfig };
 }
