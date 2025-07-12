@@ -24,6 +24,7 @@ export type Trigger =
   | 'scroll'
   | 'submit'
   | 'visible'
+  | 'visibles'
   | 'wait'
   | string;
 

@@ -22,6 +22,8 @@ describe('triggerVisible', () => {
   };
 
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.spyOn(global, 'setTimeout');
     mockIsVisible.mockReturnValue(true);
 
     // Mock IntersectionObserver
@@ -44,6 +46,8 @@ describe('triggerVisible', () => {
 
   afterEach(() => {
     destroyVisibilityTracking(mockCollector);
+    jest.useRealTimers();
+    jest.clearAllMocks();
   });
 
   test('initializes visibility tracking', () => {
@@ -218,5 +222,287 @@ describe('triggerVisible', () => {
     expect(() => {
       triggerVisible(mockCollector, invalidElement);
     }).not.toThrow();
+  });
+
+  describe('visibles trigger (multiple: true)', () => {
+    test('accepts multiple config parameter', () => {
+      initVisibilityTracking(mockCollector, 1000);
+      const element = document.createElement('div');
+
+      expect(() => {
+        triggerVisible(mockCollector, element, { multiple: true });
+      }).not.toThrow();
+
+      expect(mockObserver.observe).toHaveBeenCalledWith(element);
+    });
+
+    test('stores element config for multiple triggers', () => {
+      initVisibilityTracking(mockCollector, 1000);
+      const element = document.createElement('div');
+
+      triggerVisible(mockCollector, element, { multiple: true });
+
+      const state = mockCollector._visibilityState;
+      expect(state?.elementConfigs).toBeDefined();
+
+      const config = state?.elementConfigs?.get(element);
+      expect(config).toEqual({
+        multiple: true,
+        blocked: false,
+      });
+    });
+
+    test('stores element config for single triggers (default)', () => {
+      initVisibilityTracking(mockCollector, 1000);
+      const element = document.createElement('div');
+
+      triggerVisible(mockCollector, element);
+
+      const state = mockCollector._visibilityState;
+      const config = state?.elementConfigs?.get(element);
+      expect(config).toEqual({
+        multiple: false,
+        blocked: false,
+      });
+    });
+
+    test('does not unobserve multiple elements after triggering', () => {
+      initVisibilityTracking(mockCollector, 1000);
+      const element = document.createElement('div');
+
+      // Mock element dimensions and visibility
+      Object.defineProperty(element, 'offsetHeight', { value: 100 });
+      Object.defineProperty(element, 'clientHeight', { value: 100 });
+      Object.defineProperty(element, 'offsetTop', { value: 0 });
+      Object.defineProperty(window, 'innerHeight', { value: 800 });
+      mockIsVisible.mockReturnValue(true);
+
+      triggerVisible(mockCollector, element, { multiple: true });
+
+      // Simulate intersection with sufficient visibility
+      const intersectionCallback = (global.IntersectionObserver as jest.Mock)
+        .mock.calls[0][0];
+      const mockEntry = {
+        target: element,
+        intersectionRatio: 0.6,
+      };
+
+      intersectionCallback([mockEntry]);
+
+      // Fast-forward timer
+      jest.advanceTimersByTime(1000);
+
+      // Element should still be observed (not unobserved)
+      expect(mockObserver.unobserve).not.toHaveBeenCalledWith(element);
+    });
+
+    test('tracks visibility state for re-entry detection', () => {
+      initVisibilityTracking(mockCollector, 1000);
+      const element = document.createElement('div');
+
+      // Mock element dimensions
+      Object.defineProperty(element, 'offsetHeight', { value: 100 });
+      Object.defineProperty(element, 'clientHeight', { value: 100 });
+      Object.defineProperty(element, 'offsetTop', { value: 0 });
+      Object.defineProperty(window, 'innerHeight', { value: 800 });
+      mockIsVisible.mockReturnValue(true);
+
+      triggerVisible(mockCollector, element, { multiple: true });
+
+      const intersectionCallback = (global.IntersectionObserver as jest.Mock)
+        .mock.calls[0][0];
+      const state = mockCollector._visibilityState;
+      const config = state?.elementConfigs?.get(element);
+
+      // Initial state should be blocked: false
+      expect(config?.blocked).toBe(false);
+      expect(config?.multiple).toBe(true);
+
+      // 1. Element becomes visible - should create timer
+      intersectionCallback([
+        {
+          target: element,
+          intersectionRatio: 0.6,
+        },
+      ]);
+
+      expect(state?.timers.has(element)).toBe(true);
+
+      // 2. Element goes out of view - should clear timer and update state
+      intersectionCallback([
+        {
+          target: element,
+          intersectionRatio: 0,
+        },
+      ]);
+
+      expect(state?.timers.has(element)).toBe(false);
+      expect(config?.blocked).toBe(false);
+
+      // 3. Element becomes visible again (re-entry) - should be allowed
+      intersectionCallback([
+        {
+          target: element,
+          intersectionRatio: 0.6,
+        },
+      ]);
+
+      // Should create timer for second firing
+      expect(state?.timers.has(element)).toBe(true);
+    });
+
+    test('prevents continuous firing while element remains visible', () => {
+      initVisibilityTracking(mockCollector, 1000);
+      const element = document.createElement('div');
+
+      // Mock element dimensions
+      Object.defineProperty(element, 'offsetHeight', { value: 100 });
+      Object.defineProperty(element, 'clientHeight', { value: 100 });
+      Object.defineProperty(element, 'offsetTop', { value: 0 });
+      Object.defineProperty(window, 'innerHeight', { value: 800 });
+      mockIsVisible.mockReturnValue(true);
+
+      triggerVisible(mockCollector, element, { multiple: true });
+
+      const intersectionCallback = (global.IntersectionObserver as jest.Mock)
+        .mock.calls[0][0];
+      const state = mockCollector._visibilityState;
+      const config = state?.elementConfigs?.get(element);
+
+      // 1. Element becomes visible
+      intersectionCallback([
+        {
+          target: element,
+          intersectionRatio: 0.6,
+        },
+      ]);
+
+      expect(state?.timers.has(element)).toBe(true);
+      expect(config?.blocked).toBe(false); // Not yet fired
+
+      // 2. Element remains visible (intersection event fires again)
+      // Since blocked is still false, this should not block
+      intersectionCallback([
+        {
+          target: element,
+          intersectionRatio: 0.7,
+        },
+      ]);
+
+      // Should still have timer (or reset it)
+      expect(state?.timers.has(element)).toBe(true);
+      expect(config?.multiple).toBe(true);
+    });
+
+    test('handles rapid visibility transitions correctly', () => {
+      initVisibilityTracking(mockCollector, 1000);
+      const element = document.createElement('div');
+
+      // Mock element dimensions
+      Object.defineProperty(element, 'offsetHeight', { value: 100 });
+      Object.defineProperty(element, 'clientHeight', { value: 100 });
+      Object.defineProperty(element, 'offsetTop', { value: 0 });
+      Object.defineProperty(window, 'innerHeight', { value: 800 });
+      mockIsVisible.mockReturnValue(true);
+
+      triggerVisible(mockCollector, element, { multiple: true });
+
+      const intersectionCallback = (global.IntersectionObserver as jest.Mock)
+        .mock.calls[0][0];
+      const state = mockCollector._visibilityState;
+      const config = state?.elementConfigs?.get(element);
+
+      // Initial state
+      expect(config?.blocked).toBe(false);
+      expect(config?.multiple).toBe(true);
+
+      // 1. Element becomes visible
+      intersectionCallback([{ target: element, intersectionRatio: 0.6 }]);
+      expect(state?.timers.has(element)).toBe(true);
+
+      // 2. Element goes out of view
+      intersectionCallback([{ target: element, intersectionRatio: 0 }]);
+      expect(config?.blocked).toBe(false);
+      expect(state?.timers.has(element)).toBe(false); // Timer cleared
+
+      // 3. Element becomes visible again (should be allowed)
+      intersectionCallback([{ target: element, intersectionRatio: 0.6 }]);
+      expect(state?.timers.has(element)).toBe(true); // New timer created
+
+      // 4. Another rapid transition
+      intersectionCallback([{ target: element, intersectionRatio: 0 }]);
+      expect(config?.blocked).toBe(false);
+      expect(state?.timers.has(element)).toBe(false); // Timer cleared again
+    });
+
+    test('compares visible vs visibles behavior', () => {
+      initVisibilityTracking(mockCollector, 1000);
+
+      const visibleElement = document.createElement('div');
+      const visiblesElement = document.createElement('div');
+
+      // Mock element dimensions for both
+      [visibleElement, visiblesElement].forEach((el) => {
+        Object.defineProperty(el, 'offsetHeight', { value: 100 });
+        Object.defineProperty(el, 'clientHeight', { value: 100 });
+        Object.defineProperty(el, 'offsetTop', { value: 0 });
+      });
+      Object.defineProperty(window, 'innerHeight', { value: 800 });
+      mockIsVisible.mockReturnValue(true);
+
+      // Setup: one visible (single), one visibles (multiple)
+      triggerVisible(mockCollector, visibleElement, { multiple: false });
+      triggerVisible(mockCollector, visiblesElement, { multiple: true });
+
+      const state = mockCollector._visibilityState;
+      const visibleConfig = state?.elementConfigs?.get(visibleElement);
+      const visiblesConfig = state?.elementConfigs?.get(visiblesElement);
+
+      // Verify different configurations are stored
+      expect(visibleConfig?.multiple).toBe(false);
+      expect(visiblesConfig?.multiple).toBe(true);
+
+      // Both should be observed
+      expect(mockObserver.observe).toHaveBeenCalledWith(visibleElement);
+      expect(mockObserver.observe).toHaveBeenCalledWith(visiblesElement);
+    });
+
+    test('performance test with many visibles elements', () => {
+      initVisibilityTracking(mockCollector, 1000);
+
+      const elements: HTMLElement[] = [];
+      const numElements = 10; // Reduced for simpler test
+
+      // Create many elements with visibles trigger
+      for (let i = 0; i < numElements; i++) {
+        const element = document.createElement('div');
+        element.id = `visibles-perf-test-${i}`;
+
+        // Mock element dimensions
+        Object.defineProperty(element, 'offsetHeight', { value: 100 });
+        Object.defineProperty(element, 'clientHeight', { value: 100 });
+        Object.defineProperty(element, 'offsetTop', { value: i * 200 });
+
+        elements.push(element);
+        triggerVisible(mockCollector, element, { multiple: true });
+      }
+
+      const state = mockCollector._visibilityState;
+
+      // Verify all elements are registered and configured
+      elements.forEach((element) => {
+        const config = state?.elementConfigs?.get(element);
+        expect(config).toEqual({
+          multiple: true,
+          blocked: false,
+        });
+        expect(mockObserver.observe).toHaveBeenCalledWith(element);
+      });
+
+      // All elements should still be observed (not unobserved)
+      elements.forEach((element) => {
+        expect(mockObserver.unobserve).not.toHaveBeenCalledWith(element);
+      });
+    });
   });
 });

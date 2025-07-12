@@ -122,14 +122,29 @@ function handleIntersection(
       meetsThreshold || (cached.isLarge && isElementVisible(target));
 
     if (shouldTrigger) {
+      // Get element configuration
+      const elementConfig = state.elementConfigs?.get(target);
+
+      // For multiple triggers, only proceed if this is a re-entry (was not visible, now visible)
+      if (elementConfig?.multiple && elementConfig.blocked) return; // Don't trigger again
+
       // Only create timer if none exists
       if (!existingTimer) {
         const timer = window.setTimeout(async () => {
           // Final visibility check before triggering (cached for performance)
           if (isElementVisible(target)) {
             await handleTrigger(collector, target as Element, Trigger.Visible);
-            // Clean up and unobserve
-            unobserveElement(collector, target);
+
+            // Get fresh element config reference for state update
+            const currentConfig = state.elementConfigs?.get(target);
+
+            // For multiple triggers, mark as visible after firing
+            if (currentConfig?.multiple) {
+              currentConfig.blocked = true;
+            } else {
+              // Clean up and unobserve only if not a multiple trigger
+              unobserveElement(collector, target);
+            }
           }
         }, state.duration);
 
@@ -143,6 +158,12 @@ function handleIntersection(
   if (existingTimer) {
     clearTimeout(existingTimer);
     state.timers.delete(target);
+  }
+
+  // For multiple triggers, mark as not visible for re-entry detection
+  const elementConfig = state.elementConfigs?.get(target);
+  if (elementConfig?.multiple) {
+    elementConfig.blocked = false;
   }
 }
 
@@ -168,9 +189,18 @@ export function initVisibilityTracking(
 export function triggerVisible(
   collector: WebCollector.Collector,
   element: HTMLElement,
+  config: { multiple?: boolean } = { multiple: false },
 ): void {
   const state = collector._visibilityState;
-  if (state?.observer) {
+  if (state?.observer && element) {
+    // Store element config for later use in intersection handling
+    if (!state.elementConfigs) {
+      state.elementConfigs = new WeakMap();
+    }
+    state.elementConfigs.set(element, {
+      multiple: config.multiple ?? false,
+      blocked: false,
+    });
     state.observer.observe(element);
   }
 }

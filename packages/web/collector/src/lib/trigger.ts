@@ -37,6 +37,7 @@ export const Trigger: { [key: string]: Walker.Trigger } = {
   Scroll: 'scroll',
   Submit: 'submit',
   Visible: 'visible',
+  Visibles: 'visibles',
   Wait: 'wait',
 } as const;
 
@@ -176,6 +177,9 @@ function handleActionElem(
           break;
         case Trigger.Visible:
           triggerVisible(collector, elem);
+          break;
+        case Trigger.Visibles:
+          triggerVisible(collector, elem, { multiple: true });
           break;
         case Trigger.Wait:
           triggerWait(collector, elem, triggerAction.triggerParams);

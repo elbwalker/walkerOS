@@ -30,6 +30,10 @@ export interface Collector extends WalkerOS.Collector {
     observer: IntersectionObserver | undefined;
     timers: WeakMap<HTMLElement, number>;
     duration: number;
+    elementConfigs?: WeakMap<
+      HTMLElement,
+      { multiple: boolean; blocked: boolean }
+    >;
   };
 }
 
