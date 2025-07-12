@@ -1,10 +1,14 @@
 {
-  "name": "@elbwalker/tsup",
+  "name": "@walkerOS/tsup",
   "version": "0.0.1",
   "main": "index.mjs",
   "types": "index.d.ts",
   "private": true,
   "license": "MIT",
+  "files": [
+    "*.mjs",
+    "*.d.ts"
+  ],
   "devDependencies": {
     "@swc/core": "^1.11.13",
     "tsup": "^8.4.0",

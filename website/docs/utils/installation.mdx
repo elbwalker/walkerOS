@@ -8,10 +8,22 @@ import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
+Utils are included in the collectors. For most use cases, install the collector
+instead:
+
+- **<Link to="/docs/collectors/web/installation/">Web Collector</Link>** -
+  includes web and core utils
+- **<Link to="/docs/collectors/server/installation/">Server Collector</Link>** -
+  includes server and core utils
+
+## Standalone Installation
+
+For advanced use cases requiring only specific utils:
+
 ### NPM
 
 ```bash
-$ npm install @elbwalker/utils
+$ npm install @walkerOS/core
 ```
 
 ### CDN
@@ -23,7 +35,7 @@ can be used in older browsers as well as with Google Tag Manager.
 <Tabs>
   <TabItem value="script" label="Scripts" default>
     ```html
-    <script src="https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/web.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walkerOS/core@latest/dist/web.js"></script>
     ```
   </TabItem>
   <TabItem value="module" label="Module">
@@ -31,7 +43,7 @@ can be used in older browsers as well as with Google Tag Manager.
     ```html
     <script type="module">
       const Utils = ( await import(
-      'https://cdn.jsdelivr.net/npm/@elbwalker/utils@latest/dist/web.mjs' ) );
+      'https://cdn.jsdelivr.net/npm/@walkerOS/core@latest/dist/web.mjs' ) );
       console.log('id', Utils.getId())
     </script>
     ```
@@ -41,12 +53,5 @@ can be used in older browsers as well as with Google Tag Manager.
 :::warning
 
 Be aware of the `latest` version in the URL, better use a specific version.
-
-:::
-
-:::info
-
-If you need professional support with your walkerOS implementation, check out
-our&nbsp;<Link to="/services">services</Link>.
 
 :::

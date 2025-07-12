@@ -1,0 +1,72 @@
+import type { WalkerOS, ElbCore } from './types';
+import { assign } from './assign';
+import { pushToDestinations, createPushResult } from './destination';
+import { onApply } from './on';
+
+/**
+ * Checks if the required consent is granted.
+ *
+ * @param required - The required consent states.
+ * @param state - The current consent states.
+ * @param individual - Individual consent states to prioritize.
+ * @returns The granted consent states or false if not granted.
+ */
+export function getGrantedConsent(
+  required: WalkerOS.Consent | undefined,
+  state: WalkerOS.Consent = {},
+  individual: WalkerOS.Consent = {},
+): false | WalkerOS.Consent {
+  // Merge state and individual, prioritizing individual states
+  const states: WalkerOS.Consent = { ...state, ...individual };
+
+  const grantedStates: WalkerOS.Consent = {};
+  let hasRequiredConsent = required === undefined;
+
+  Object.keys(states).forEach((name) => {
+    if (states[name]) {
+      // consent granted
+      grantedStates[name] = true;
+
+      // Check if it's required and granted consent
+      if (required && required[name]) hasRequiredConsent = true;
+    }
+  });
+
+  return hasRequiredConsent ? grantedStates : false;
+}
+
+/**
+ * Sets the consent state and processes the queue.
+ *
+ * @param collector - The walkerOS collector instance.
+ * @param data - The consent data to set.
+ * @returns The result of the push operation.
+ */
+export async function setConsent(
+  collector: WalkerOS.Collector,
+  data: WalkerOS.Consent,
+): Promise<ElbCore.PushResult> {
+  const { consent } = collector;
+
+  let runQueue = false;
+  const update: WalkerOS.Consent = {};
+  Object.entries(data).forEach(([name, granted]) => {
+    const state = !!granted;
+
+    update[name] = state;
+
+    // Only run queue if state was set to true
+    runQueue = runQueue || state;
+  });
+
+  // Update consent state
+  collector.consent = assign(consent, update);
+
+  // Run on consent events
+  onApply(collector, 'consent', undefined, update);
+
+  // Process previous events if not disabled
+  return runQueue
+    ? pushToDestinations(collector)
+    : createPushResult({ ok: true });
+}

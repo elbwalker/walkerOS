@@ -13,10 +13,8 @@ how to collect and process event data.
 :::note
 
 There are multiple ways to get started. The implementation depends on
-which&nbsp;<Link to="/docs/sources/overview/">source</Link> you want to send
-data from and
-which&nbsp;<Link to="/docs/destinations/overview/">destination</Link> you want
-to send it.
+which&nbsp;<Link to="/docs/sources">source</Link> you want to send data from and
+which&nbsp;<Link to="/docs/destinations">destination</Link> you want to send it.
 
 :::
 
@@ -24,28 +22,28 @@ to send it.
 
 Before you start, read about
 the&nbsp;<Link to="/docs/getting_started/event-model">event model</Link>
-and&nbsp;<Link to="/docs/user_stitching">user stichting</Link>, especially if
+and&nbsp;<Link to="/docs/user_stitching">user stitching</Link>, especially if
 you want to work with walkerOS raw data.
 
 :::
 
-## Step 1: Choose a source
+## Step 1: Choose a collector
 
-- <Link to="/docs/sources/walkerjs/installation">walker.js</Link>
-- <Link to="/docs/sources/node/installation">node</Link>
+- <Link to="/docs/collectors/web/installation"> Web (Client-side)</Link>
+- <Link to="/docs/collectors/server/installation">Server-side</Link>
 
 ## Step 2: Add a destination
 
-- <Link to="/docs/destinations/api">API</Link>
-- <Link to="/docs/destinations/google-ads">Google Ads</Link>
-- <Link to="/docs/destinations/google-ga4">Google Analytics 4</Link>
-- <Link to="/docs/destinations/google-gtm">Google Tag Manager</Link>
-- <Link to="/docs/destinations/meta-pixel">Meta Pixel</Link>
-- <Link to="/docs/destinations/piwikpro">Piwik PRO</Link>
-- <Link to="/docs/destinations/plausible">Plausible Analytics</Link>
-- <Link to="/docs/destinations/aws">AWS</Link>
-- <Link to="/docs/destinations/bigquery">BigQuery</Link>
-- <Link to="/docs/destinations/meta">Meta Conversion API</Link>
+- <Link to="/docs/destinations/web/api">API</Link>
+- <Link to="/docs/destinations/web/google_ads">Google Ads</Link>
+- <Link to="/docs/destinations/web/ga4">Google Analytics 4</Link>
+- <Link to="/docs/destinations/web/gtm">Google Tag Manager</Link>
+- <Link to="/docs/destinations/web/meta">Meta Pixel</Link>
+- <Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>
+- <Link to="/docs/destinations/web/plausible">Plausible Analytics</Link>
+- <Link to="/docs/destinations/server/aws">AWS</Link>
+- <Link to="/docs/destinations/server/gcp">BigQuery</Link>
+- <Link to="/docs/destinations/server/meta">Meta Conversion API</Link>
 
 Congratulations! ✅ You have created your first event pipeline with walkerOS.
 
@@ -54,18 +52,7 @@ Congratulations! ✅ You have created your first event pipeline with walkerOS.
 Depending on your use-case next steps are different but here is a list with the
 most common next steps after the intial setup:
 
-- Start&nbsp;<Link to="/docs/sources/walkerjs/tagging">tagging</Link>
-- Add more&nbsp;<Link to="/docs/destinations/overview/">destinations</Link>
-- Define the&nbsp;<Link to="/docs/destinations/event_mapping">event
-  mapping</Link> for your destinations
+- Start&nbsp;<Link to="/docs/sources/html-tagging">tagging</Link>
+- Add more&nbsp;<Link to="/docs/destinations">destinations</Link>
 - Implement&nbsp;<Link to="/docs/consent_management/overview/">consent
   mangement</Link>
-- Enhance your data collection and use your
-  first&nbsp;<Link to="/docs/utils/">util</Link>
-
-:::info
-
-If you need professional support with your walkerOS implementation, check out
-our&nbsp;<Link to="/services">services</Link>.
-
-:::

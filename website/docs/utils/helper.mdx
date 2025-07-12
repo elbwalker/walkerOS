@@ -14,10 +14,18 @@ in any environment, the web-helpers are are made for the browser.
 
 ## Core
 
-Import the core utils from the `@elbwalker/utils` package.
+Import the core utils either directly from the `@walkerOS/core` package or from
+the collectors:
 
 ```ts
-import { assign, anonymizeIP } from '@elbwalker/utils';
+// Directly from the core package
+import { assign, anonymizeIP } from '@walkerOS/core';
+
+// Web environments
+import { assign, anonymizeIP } from '@walkerOS/web-collector';
+
+// Server environments
+import { assign, anonymizeIP } from '@walkerOS/server-collector';
 ```
 
 ### anonymizeIP
@@ -282,23 +290,43 @@ integrity by verifying that operations are performed on matching data types.
 
 ### onLog
 
-`onLog(message: string, level: string)` is a function designed for consistent
-and customizable logging across your application. It allows you to log messages
-with with a verbose option, aiding in better monitoring and debugging of your
-code.
+`onLog(message: unknown, verbose?: boolean)` is a function designed for
+consistent and customizable logging across your application. It allows you to
+log messages with a verbose option, aiding in better monitoring and debugging of
+your code.
 
 ```js
 onLog('Silent'); // Won't log anything
 onLog('Curious', true); // Logs a message
 ```
 
-This function is for maintaining a standardized logging format is crucial. I
+This function is for maintaining a standardized logging format is crucial.
 
 ### Request
 
-#### requestToURL
+#### requestToData
 
-### requestToData
+`requestToData(parameter: unknown): WalkerOS.AnyObject | undefined` converts a
+query string or URL-encoded string into a JavaScript object. It handles nested
+objects and arrays, and attempts to cast values to their appropriate types
+(numbers, booleans).
+
+```js
+requestToData('a=1&b=true&c=foo%20bar&d%5B0%5D=x&d%5B1%5D=y&e%5Bkey%5D=value');
+// Returns { a: 1, b: true, c: 'foo bar', d: ['x', 'y'], e: { key: 'value' } }
+```
+
+#### requestToParameter
+
+`requestToParameter(data: WalkerOS.AnyObject | WalkerOS.PropertyType): string`
+converts a JavaScript object or a primitive value into a URL-encoded query
+string. It handles nested objects and arrays, encoding all values appropriately
+for use in URLs.
+
+```js
+requestToParameter({ a: 1, b: true, c: 'foo bar' });
+// Returns 'a=1&b=true&c=foo%20bar'
+```
 
 ### sessionStart
 
@@ -382,34 +410,34 @@ handle errors gracefully without disrupting the application flow.
 As this is a more complex util learn more about it on
 the&nbsp;<Link to="/docs/utils/hooks">Hooks</Link> page.
 
-## Node
+## Server
 
-Import the core utils from the `@elbwalker/utils/node` package.
+Import the server utils from the server collector:
 
 ```ts
-import { getHashNode, sendNode } from '@elbwalker/utils/node';
+import { getHashServer, sendServer } from '@walkerOS/server-collector';
 ```
 
-### getHashNode
+### getHashServer
 
-`async getHashNode(str: string, length?: number): Promise<string>` generates a
+`async getHashServer(str: string, length?: number): Promise<string>` generates a
 hash value from a string, usually used to anonymize or fingerprinting. To create
 a string concatenate all values. Use `length` to limit the output.
 
 ```js
-await getHashNode('' + userAgent + language + domain + dayOfMonth, 16);
+await getHashServer('' + userAgent + language + domain + dayOfMonth, 16);
 // Return a 16 character hash, like 47e0bdd10f04ef13
 ```
 
-### sendNode
+### sendServer
 
-`async sendNode(url: string, data?: SendDataValue, options: SendNodeOptions = {}): Promise<SendResponse>`
+`async sendServer(url: string, data?: SendDataValue, options: SendServerOptions = {}): Promise<SendResponse>`
 sends data to a specified `url` using the official Node.js HTTP/HTTPS modules.
 This function is useful for scenarios where you need to send data to a server or
-API endpoint from a Node.js environment.
+API endpoint from a server environment.
 
 ```ts
-interface SendNodeOptions {
+interface SendServerOptions {
   headers?: SendHeaders; // Custom headers to be sent with the request
   method?: string; // HTTP method to be used for the request (default: POST)
   timeout?: number; // Request timeout in milliseconds (default: 5000)
@@ -424,10 +452,10 @@ interface SendResponse {
 
 ## Web
 
-Import the web utils from the `@elbwalker/utils/web` package.
+Import the web utils from the web collector:
 
 ```ts
-import { getHashWeb, sendWeb } from '@elbwalker/utils/web';
+import { getHashWeb, sendWeb } from '@walkerOS/web-collector';
 ```
 
 ### Browser
@@ -544,10 +572,3 @@ interface SendWebOptionsFetch extends SendWebOptions {
 sends data to a specified `url` using the browser's older XMLHttpRequest API.
 It's implemented to make **synchronous requests only**. It's a reliable method
 for sending and receiving data from a server.
-
-:::info
-
-If you need professional support with your walkerOS implementation, check out
-our&nbsp;<Link to="/services">services</Link>.
-
-:::

@@ -9,7 +9,7 @@ import {
   debounce,
   isString,
   tryCatchAsync,
-} from '@elbwalker/utils';
+} from '@walkerOS/core';
 import { taggingRegistry } from './tagging';
 
 export interface EventFlowProps {
