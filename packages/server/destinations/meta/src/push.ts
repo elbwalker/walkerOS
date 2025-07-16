@@ -6,7 +6,7 @@ import type {
   ServerEventParameters,
 } from './types';
 import { getMappingValue, isObject } from '@walkerOS/core';
-import { sendServer } from '@walkerOS/server-collector';
+import { sendServer } from '@walkerOS/server-core';
 import { hashEvent } from './hash';
 
 export const push: PushFn = async function (

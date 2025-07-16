@@ -1,4 +1,4 @@
-import type { Mapping, WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkerOS/core';
 import type { DestinationMeta } from '..';
 import { isObject } from '@walkerOS/core';
 

@@ -1,7 +1,12 @@
-import type { Mapping as WalkerOSMapping } from '@walkerOS/core';
-import type { DestinationWeb } from '@walkerOS/web-collector';
+import type { Mapping as WalkerOSMapping, Elb } from '@walkerOS/core';
+import type { DestinationWeb } from '@walkerOS/web-core';
 
 declare global {
+  // Augment the global WalkerOS namespace with destination-specific types
+  namespace WalkerOS {
+    interface Elb extends Elb.RegisterDestination<Destination, Config> {}
+  }
+
   interface Window {
     dataLayer: Array<unknown> | unknown;
     gtag?: Gtag.Gtag;

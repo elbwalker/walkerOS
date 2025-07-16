@@ -1,5 +1,4 @@
 import type { WalkerOS } from './types';
-import { Const } from './constants';
 
 /**
  * Checks if a value is an arguments object.
@@ -38,7 +37,7 @@ export function isBoolean(value: unknown): value is boolean {
  * @returns True if the entity is a walker command, false otherwise.
  */
 export function isCommand(entity: string) {
-  return entity === Const.Commands.Walker;
+  return entity === 'walker';
 }
 
 /**
@@ -59,6 +58,16 @@ export function isDefined<T>(val: T | undefined): val is T {
  */
 export function isElementOrDocument(elem: unknown): elem is Element {
   return elem === document || elem instanceof Element;
+}
+
+/**
+ * Checks if a value is a function.
+ *
+ * @param value The value to check.
+ * @returns True if the value is a function, false otherwise.
+ */
+export function isFunction(value: unknown): value is Function {
+  return typeof value === 'function';
 }
 
 /**

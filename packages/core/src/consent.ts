@@ -1,7 +1,4 @@
-import type { WalkerOS, ElbCore } from './types';
-import { assign } from './assign';
-import { pushToDestinations, createPushResult } from './destination';
-import { onApply } from './on';
+import type { WalkerOS } from './types';
 
 /**
  * Checks if the required consent is granted.
@@ -33,40 +30,4 @@ export function getGrantedConsent(
   });
 
   return hasRequiredConsent ? grantedStates : false;
-}
-
-/**
- * Sets the consent state and processes the queue.
- *
- * @param collector - The walkerOS collector instance.
- * @param data - The consent data to set.
- * @returns The result of the push operation.
- */
-export async function setConsent(
-  collector: WalkerOS.Collector,
-  data: WalkerOS.Consent,
-): Promise<ElbCore.PushResult> {
-  const { consent } = collector;
-
-  let runQueue = false;
-  const update: WalkerOS.Consent = {};
-  Object.entries(data).forEach(([name, granted]) => {
-    const state = !!granted;
-
-    update[name] = state;
-
-    // Only run queue if state was set to true
-    runQueue = runQueue || state;
-  });
-
-  // Update consent state
-  collector.consent = assign(consent, update);
-
-  // Run on consent events
-  onApply(collector, 'consent', undefined, update);
-
-  // Process previous events if not disabled
-  return runQueue
-    ? pushToDestinations(collector)
-    : createPushResult({ ok: true });
 }

@@ -1,13 +1,13 @@
-import type { Elb } from '@walkerOS/web-collector';
+import type { WalkerOS } from '@walkerOS/core';
 import type { DestinationPlausible } from '.';
-import { createWebCollector } from '@walkerOS/web-collector';
+import { createCollector } from '@walkerOS/collector';
 import { getEvent } from '@walkerOS/core';
 import { destinationPlausibleExamples } from './examples';
 
 const { events, mapping } = destinationPlausibleExamples;
 
 describe('destination plausible', () => {
-  let elb: Elb.Fn;
+  let elb: WalkerOS.Elb;
   const w = window;
   let destination: DestinationPlausible.Destination;
 
@@ -16,15 +16,14 @@ describe('destination plausible', () => {
   const event = getEvent();
   const script = 'https://plausible.io/js/script.manual.js';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     destination = jest.requireActual('.').default;
 
     w.plausible = mockFn;
 
-    ({ elb } = createWebCollector({
-      pageview: false,
-      run: true,
+    ({ elb } = await createCollector({
       session: false,
+      tagging: 2,
     }));
   });
 

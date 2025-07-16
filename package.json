@@ -2,12 +2,12 @@
   "name": "@walkerOS/monorepo",
   "private": true,
   "workspaces": [
-    "packages/*",
     "packages/config/*",
-    "packages/core/*",
-    "packages/server/*",
+    "packages/core",
+    "packages/collector",
+    "packages/server/core",
     "packages/server/destinations/*",
-    "packages/web/*",
+    "packages/web/core",
     "packages/web/destinations/*",
     "packages/web/sources/*",
     "apps/demos/react"

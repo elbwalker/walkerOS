@@ -1,31 +1,23 @@
 import type { WalkerOS } from '@walkerOS/core';
-import type { DestinationServer } from '@walkerOS/server-collector';
 import type { Config, Destination, Settings } from '../types';
 import { getEvent } from '@walkerOS/core';
-import { createServerCollector } from '@walkerOS/server-collector';
+import { createCollector } from '@walkerOS/collector';
 import { destinationMetaExamples } from '../examples';
 import { hashEvent } from '../hash';
 
 const { events, mapping } = destinationMetaExamples;
 
-const mockSendServer = jest.fn().mockResolvedValue({
-  events_received: 1,
-  messages: [],
-  fbtrace_id: 'abc',
-});
-
 describe('Server Destination Meta', () => {
-  jest.mock('@walkerOS/server-collector', () => ({
-    ...jest.requireActual('@walkerOS/server-collector'),
-    sendServer: mockSendServer,
-  }));
-
   let destination: Destination;
+  let elb: WalkerOS.Elb;
   const accessToken = 's3cr3t';
   const pixelId = 'p1x3l1d';
+  const mockSendServer = jest.fn();
 
-  const mockCollector = {} as WalkerOS.Collector;
-  const mockWrap = jest.fn((_name, fn) => fn);
+  jest.mock('@walkerOS/server-core', () => ({
+    ...jest.requireActual('@walkerOS/server-core'),
+    sendServer: mockSendServer,
+  }));
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -33,9 +25,12 @@ describe('Server Destination Meta', () => {
 
     // Reset mockSendServer to default successful response
     mockSendServer.mockResolvedValue({
-      events_received: 1,
-      messages: [],
-      fbtrace_id: 'abc',
+      ok: true,
+      data: {
+        events_received: 1,
+        messages: [],
+        fbtrace_id: 'abc',
+      },
     });
 
     destination = jest.requireActual('../').default;
@@ -45,6 +40,8 @@ describe('Server Destination Meta', () => {
   afterEach(() => {});
 
   async function getConfig(settings: Partial<Settings> = {}) {
+    const mockCollector = {} as WalkerOS.Collector;
+    const mockWrap = jest.fn((_name, fn) => fn);
     return (await destination.init({
       config: { settings: settings as Settings },
       collector: mockCollector,
@@ -53,6 +50,8 @@ describe('Server Destination Meta', () => {
   }
 
   test('init', async () => {
+    const mockCollector = {} as WalkerOS.Collector;
+    const mockWrap = jest.fn((_name, fn) => fn);
     await expect(
       destination.init({
         config: {},
@@ -77,30 +76,39 @@ describe('Server Destination Meta', () => {
   });
 
   test('testCode', async () => {
-    const { elb } = createServerCollector({});
+    const mockCollector = {} as WalkerOS.Collector;
+    const mockWrap = jest.fn((_name, fn) => fn);
     const event = getEvent();
-    const config: DestinationServer.Config = {
+    const config: Config = {
       settings: { accessToken, pixelId, test_event_code: 'TEST' },
       mapping: mapping.config,
     };
 
-    elb('walker destination', destination, config);
-    await elb(event);
+    await destination.push(event, {
+      config,
+      collector: mockCollector,
+      wrap: mockWrap,
+    });
+
+    expect(mockSendServer).toHaveBeenCalled();
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
     expect(requestBody.test_event_code).toEqual('TEST');
   });
 
   test('wrapper', async () => {
     const mockOnCall = jest.fn();
-    const { elb } = createServerCollector({});
-    const event = getEvent();
-    const config: DestinationServer.Config = {
+    const config: Config = {
       wrapper: { onCall: mockOnCall },
       settings: { accessToken, pixelId },
     };
 
-    elb('walker destination', destination, config);
-    await elb(event);
+    const { elb } = await createCollector();
+
+    await elb('walker destination', destination, config);
+
+    const event = getEvent();
+    const result = await elb(event);
+
     expect(mockOnCall).toHaveBeenCalled();
   });
 
@@ -117,22 +125,28 @@ describe('Server Destination Meta', () => {
       },
       error: '400 Bad Request',
     });
-    const { elb } = createServerCollector({});
+    const mockCollector = {} as WalkerOS.Collector;
+    const mockWrap = jest.fn((_name, fn) => fn);
     const event = getEvent();
-    const config: DestinationServer.Config = {
+    const config: Config = {
       settings: { accessToken, pixelId, test_event_code: 'TEST' },
       mapping: mapping.config,
     };
 
-    elb('walker destination', destination, config);
-    const result = await elb(event);
-    expect(result.failed.length).toEqual(1);
+    await expect(
+      destination.push(event, {
+        config,
+        collector: mockCollector,
+        wrap: mockWrap,
+      }),
+    ).rejects.toThrow();
   });
 
   test('fbclid', async () => {
-    const { elb } = createServerCollector({});
+    const mockCollector = {} as WalkerOS.Collector;
+    const mockWrap = jest.fn((_name, fn) => fn);
     const event = getEvent();
-    const config: DestinationServer.Config = {
+    const config: Config = {
       settings: {
         accessToken,
         pixelId,
@@ -141,16 +155,18 @@ describe('Server Destination Meta', () => {
       mapping: mapping.config,
     };
 
-    elb('walker destination', destination, config);
-    await elb(event);
+    await destination.push(event, {
+      config,
+      collector: mockCollector,
+      wrap: mockWrap,
+    });
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
     expect(requestBody.data[0].user_data.fbc).toContain('.abc');
   });
 
   test('userData', async () => {
-    const { elb } = createServerCollector({});
     const event = getEvent();
-    const config: DestinationServer.Config = {
+    const config: Config = {
       settings: mapping.InitUserData,
       data: {
         map: {
@@ -178,8 +194,11 @@ describe('Server Destination Meta', () => {
       },
     };
 
-    elb('walker destination', destination, config);
-    await elb(event);
+    const { elb, collector } = await createCollector();
+
+    await elb('walker destination', destination, config);
+    const result = await elb(event);
+
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
     expect(requestBody.data[0].user_data).toEqual({
       fn: expect.any(String), // from destination config data
@@ -212,17 +231,18 @@ describe('Server Destination Meta', () => {
   });
 
   test('event Purchase', async () => {
-    const { elb } = createServerCollector({});
     const event = getEvent('order complete');
 
-    const config: DestinationServer.Config = {
+    const config: Config = {
       settings: mapping.InitUserData,
       mapping: mapping.config,
     };
 
-    elb('walker destination', destination, config);
+    const { elb } = await createCollector();
+    await elb('walker destination', destination, config);
+    const result = await elb(event);
 
-    await elb(event);
+    expect(result.successful).toHaveLength(1);
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
     expect(requestBody).toEqual(events.Purchase());
   });

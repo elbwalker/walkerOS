@@ -1,16 +1,15 @@
 import type { WalkerOS } from '@walkerOS/core';
-import type { Elb } from '@walkerOS/web-collector';
 import type { DestinationAPI } from '.';
-import { createWebCollector } from '@walkerOS/web-collector';
+import { createCollector } from '@walkerOS/collector';
 import { createEvent } from '@walkerOS/core';
 import { events, mapping } from './examples';
 
 describe('Destination API', () => {
-  let elb: Elb.Fn;
+  let elb: WalkerOS.Elb;
   const mockSendWeb = jest.fn(); //.mockImplementation(console.log);
 
-  jest.mock('@walkerOS/web-collector', () => ({
-    ...jest.requireActual('@walkerOS/web-collector'),
+  jest.mock('@walkerOS/web-core', () => ({
+    ...jest.requireActual('@walkerOS/web-core'),
     sendWeb: mockSendWeb,
   }));
 
@@ -18,15 +17,14 @@ describe('Destination API', () => {
   let event: WalkerOS.Event;
   const url = 'https://api.example.com/';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
 
     destination = jest.requireActual('.').default;
     event = createEvent();
-    ({ elb } = createWebCollector({
+    ({ elb } = await createCollector({
       session: false,
-      pageview: false,
-      run: true,
+      tagging: 2,
     }));
   });
 
@@ -53,21 +51,24 @@ describe('Destination API', () => {
 
   test('wrapper', () => {
     const onCall = jest.fn();
-    const wrap = jest.fn((name, fn) => {
-      return (...args: unknown[]) => {
-        onCall({ name, id: 'test-id', type: 'api' }, args);
-        return fn(...args);
-      };
-    });
+    const wrap = jest.fn(
+      <T extends (...args: unknown[]) => unknown>(name: string, fn: T): T => {
+        return ((...args: unknown[]) => {
+          onCall({ name, id: 'test-id', type: 'api' }, args);
+          return fn(...args);
+        }) as T;
+      },
+    );
 
     destination.push(event, {
+      collector: {} as WalkerOS.Collector,
       config: {
         settings: { url },
       },
       wrap,
     });
 
-    expect(wrap).toHaveBeenCalledWith('sendWeb', expect.any(Function));
+    expect(wrap).toHaveBeenCalledWith('sendWeb', mockSendWeb);
     expect(onCall).toHaveBeenCalledTimes(1);
     expect(onCall).toHaveBeenCalledWith(
       { name: 'sendWeb', id: 'test-id', type: 'api' },

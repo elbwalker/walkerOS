@@ -30,7 +30,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkerOS/web-collector": "0.0.1"
+    "@walkerOS/web-core": "0.0.1"
   },
   "devDependencies": {},
   "repository": {

@@ -1,6 +1,13 @@
-import type { DestinationServer } from '@walkerOS/server-collector';
-import type { Mapping as WalkerOSMapping } from '@walkerOS/core';
+import type { DestinationServer } from '@walkerOS/server-core';
+import type { Mapping as WalkerOSMapping, Elb } from '@walkerOS/core';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
+
+declare global {
+  // Augment the global WalkerOS namespace with destination-specific types
+  namespace WalkerOS {
+    interface Elb extends Elb.RegisterDestination<Destination, Config> {}
+  }
+}
 
 export interface Destination
   extends DestinationServer.Destination<Settings, Mapping> {

@@ -1,13 +1,13 @@
-import type { Elb } from '@walkerOS/web-collector';
+import type { WalkerOS } from '@walkerOS/core';
 import type { DestinationPiwikPro } from '.';
-import { createWebCollector } from '@walkerOS/web-collector';
+import { createCollector } from '@walkerOS/collector';
 import { getEvent } from '@walkerOS/core';
 import { destinationPiwikProExamples } from './examples';
 
 const { events, mapping } = destinationPiwikProExamples;
 
 describe('Destination PiwikPro', () => {
-  let elb: Elb.Fn;
+  let elb: WalkerOS.Elb;
   const w = window;
   let destination: DestinationPiwikPro.Destination,
     settings: DestinationPiwikPro.Settings;
@@ -18,7 +18,7 @@ describe('Destination PiwikPro', () => {
   const appId = 'XXX-XXX-XXX-XXX-XXX';
   const url = 'https://your_account_name.piwik.pro/';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     settings = { appId, url };
 
     destination = jest.requireActual('.').default;
@@ -27,10 +27,9 @@ describe('Destination PiwikPro', () => {
     w._paq = [];
     w._paq.push = mockFn;
 
-    ({ elb } = createWebCollector({
-      pageview: false,
-      run: true,
+    ({ elb } = await createCollector({
       session: false,
+      tagging: 2,
     }));
   });
 

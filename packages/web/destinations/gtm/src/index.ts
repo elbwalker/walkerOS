@@ -1,5 +1,5 @@
 import type { Settings, Destination } from './types';
-import { isObject } from '@walkerOS/web-collector';
+import { isObject } from '@walkerOS/core';
 
 const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';

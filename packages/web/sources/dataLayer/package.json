@@ -33,7 +33,9 @@
     "@walkerOS/web-collector": "0.0.1",
     "@walkerOS/core": "0.0.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/gtag.js": "^0.0.20"
+  },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/web/sources/dataLayer"

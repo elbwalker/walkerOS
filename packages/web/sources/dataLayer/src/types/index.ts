@@ -1,38 +1,46 @@
-import type {
-  ElbCore,
-  Mapping as WalkerOSMapping,
-  WalkerOS,
-} from '@walkerOS/core';
+import type { Mapping as WalkerOSMapping, WalkerOS } from '@walkerOS/core';
 
 declare global {
   interface Window {
+    dataLayer?: DataLayer;
     [key: string]: DataLayer | unknown;
   }
 }
 
 export type DataLayer = Array<unknown>;
-export interface Config {
-  elb: ElbCore.Fn | WalkerOS.AnyFunction;
+
+// Unified collector source interface
+export interface Source extends WalkerOS.CollectorSource {
+  type: 'dataLayer';
+  init?: (
+    collector: WalkerOS.Collector,
+    config: WalkerOS.CollectorSourceConfig,
+  ) => void | Promise<void>;
+  settings?: Settings;
+  mapping?: WalkerOSMapping.Rules;
+}
+
+export interface Settings extends Record<string, unknown> {
+  name?: string; // dataLayer variable name (default: 'dataLayer')
+  prefix?: string; // Event prefix (default: 'gtag')
   filter?: (event: unknown) => WalkerOS.PromiseOrValue<boolean>;
-  mapping?: Mapping;
+}
+
+// Legacy config interface (for backward compatibility during migration)
+export interface LegacyConfig {
+  elb: WalkerOS.Collector['push'];
+  filter?: (event: unknown) => WalkerOS.PromiseOrValue<boolean>;
+  mapping?: WalkerOSMapping.Rules;
   name?: string;
   prefix: string;
   processing?: boolean;
   skipped: unknown[];
 }
 
-export interface Mapping {
-  [event: string]: Rule | undefined;
-}
-
-export type Rule<T = CustomEvent> = Omit<
-  WalkerOSMapping.Rule<T>,
-  'batch' | 'batchFn' | 'batched' | 'consent'
->;
-
-export interface CustomEvent {
-  command: WalkerOSMapping.Data;
-}
+export type DataLayerEvent = {
+  event: string;
+  [key: string]: unknown;
+};
 
 export type MappedEvent = {
   event?: WalkerOS.DeepPartialEvent & { id: string };

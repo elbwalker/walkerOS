@@ -105,7 +105,7 @@ describe('getMappingEvent', () => {
     expect(
       await getMappingEvent({ event: 'order complete' }, mapping),
     ).toStrictEqual({
-      eventMapping: mapping.order!.complete[1],
+      eventMapping: (mapping.order!.complete as Array<Mapping.Rule>)[1],
       mappingKey: 'order complete',
     });
 
@@ -115,7 +115,7 @@ describe('getMappingEvent', () => {
         mapping,
       ),
     ).toStrictEqual({
-      eventMapping: mapping.order!.complete[0],
+      eventMapping: (mapping.order!.complete as Array<Mapping.Rule>)[0],
       mappingKey: 'order complete',
     });
   });
@@ -447,7 +447,10 @@ describe('getMappingValue', () => {
     const mockFn = jest.fn();
 
     const mappings = [
-      { condition: (event) => event.event === 'no pe' },
+      {
+        condition: (event: unknown) =>
+          isObject(event) && 'event' in event && event.event === 'no pe',
+      },
       'non.existing.key',
       { key: 'data.string' },
       { fn: mockFn },

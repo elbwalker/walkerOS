@@ -1,8 +1,9 @@
-import { elb, webCollector } from '@walkerOS/web-collector';
+import type { Destination } from '@walkerOS/core';
+import { createCollector } from '@walkerOS/collector';
+import { sourceBrowser } from '@walkerOS/web-source-browser';
 import { destinationGTM } from '@walkerOS/web-destination-gtm';
 import { destinationGA4 } from '@walkerOS/web-destination-ga4';
 import { destinationMeta } from '@walkerOS/web-destination-meta';
-import { Destination } from '@walkerOS/core';
 
 declare global {
   interface Window {
@@ -10,15 +11,32 @@ declare global {
   }
 }
 
-export function setupAnalytics() {
+// Export the elb function once collector is initialized
+import type { BrowserPush } from '@walkerOS/web-source-browser';
+
+export let elb: BrowserPush;
+
+export async function setupAnalytics() {
   // Dummy destination to log events to the console
   const destinationLog: Destination.InitDestination = {
     type: 'log',
     push: console.log,
   };
 
-  // Initialize a walkerOS web collector instance
-  webCollector({
+  // Initialize a walkerOS unified collector with browser source
+  const walker = await createCollector({
+    tagging: 2,
+    session: false,
+    run: true,
+    sources: [
+      sourceBrowser({
+        prefix: 'data-elb',
+        scope: document,
+        pageview: true,
+        session: true,
+        listeners: true,
+      }),
+    ],
     destinations: {
       log: destinationLog,
       elbEvents: {
@@ -30,13 +48,14 @@ export function setupAnalytics() {
         },
       },
     },
-    run: true,
-    elb: 'elb',
-    name: 'walkerjs',
+    consent: { functional: true },
   });
 
+  // Export the push function as elb for use in components, cast to browser interface
+  elb = walker.elb as unknown as BrowserPush;
+
   // Google Tag Manager Destination
-  elb('walker destination', destinationGTM, {
+  await elb('walker destination', destinationGTM, {
     consent: { functional: true },
     mapping: { '*': { '*': {} } },
     settings: {
@@ -46,7 +65,7 @@ export function setupAnalytics() {
   });
 
   // Google Analytics 4 Destination
-  elb('walker destination', destinationGA4, {
+  await elb('walker destination', destinationGA4, {
     consent: { functional: true },
     mapping: { '*': { '*': {} } },
     settings: {
@@ -56,7 +75,7 @@ export function setupAnalytics() {
   });
 
   // Meta Pixel Destination
-  elb('walker destination', destinationMeta, {
+  await elb('walker destination', destinationMeta, {
     consent: { functional: true },
     mapping: { '*': { '*': {} } },
     settings: {
@@ -65,5 +84,5 @@ export function setupAnalytics() {
   });
 
   // Enable destinations by setting functional consent
-  elb('walker consent', { functional: true });
+  await elb('walker consent', { functional: true });
 }

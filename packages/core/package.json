@@ -1,6 +1,6 @@
 {
   "name": "@walkerOS/core",
-  "description": "Core types and utilities for walkerOS",
+  "description": "Core types and platform-agnostic utilities for walkerOS",
   "version": "0.0.1",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

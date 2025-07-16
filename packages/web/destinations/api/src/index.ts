@@ -1,5 +1,6 @@
 import type { Settings, Destination } from './types';
-import { isDefined, sendWeb } from '@walkerOS/web-collector';
+import { isDefined } from '@walkerOS/core';
+import { sendWeb } from '@walkerOS/web-core';
 
 // Types
 export * as DestinationAPI from './types';

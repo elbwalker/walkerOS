@@ -1,11 +1,11 @@
-import type { Elb } from '@walkerOS/web-collector';
+import type { WalkerOS } from '@walkerOS/core';
 import type { DestinationGA4 } from '.';
-import { createWebCollector } from '@walkerOS/web-collector';
+import { createCollector } from '@walkerOS/collector';
 import { getEvent } from '@walkerOS/core';
 import { events, mapping } from './examples';
 
 describe('Destination Google GA4', () => {
-  let elb: Elb.Fn;
+  let elb: WalkerOS.Elb;
   const w = window;
   let destination: DestinationGA4.Destination, config: DestinationGA4.Config;
   const mockFn = jest.fn(); //.mockImplementation(console.log);
@@ -23,11 +23,8 @@ describe('Destination Google GA4', () => {
     destination = jest.requireActual('.').default;
     destination.config = config;
 
-    ({ elb } = createWebCollector({
-      pageview: false,
-      session: false,
+    ({ elb } = await createCollector({
       tagging: 2,
-      run: true,
     }));
     w.gtag = mockFn;
   });
@@ -54,12 +51,17 @@ describe('Destination Google GA4', () => {
   test('init calls', async () => {
     destination.config = config;
 
-    // Bad configs
-    elb('walker destination', destination, {});
-    elb('walker destination', destination, { settings: {} });
-    elb('walker destination', destination, { settings: {} });
-    elb('walker destination', destination, { init: true });
-    elb('walker destination', destination, {
+    // Cast elb to bypass type checking for testing error handling
+    const badElb = elb as (
+      event: string,
+      destination: unknown,
+      config?: unknown,
+    ) => Promise<unknown>;
+    badElb('walker destination', destination, {});
+    badElb('walker destination', destination, { settings: {} });
+    badElb('walker destination', destination, { settings: {} });
+    badElb('walker destination', destination, { init: true });
+    badElb('walker destination', destination, {
       settings: {},
       init: true,
     });
@@ -232,7 +234,10 @@ describe('Destination Google GA4', () => {
     };
     elb('walker destination', destination, config);
 
-    await elb('entity action', { foo: 'bar', override: 'foo' });
+    await elb({
+      event: 'entity action',
+      data: { foo: 'bar', override: 'foo' },
+    });
 
     expect(mockFn).toHaveBeenCalledWith(
       'event',

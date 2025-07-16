@@ -1,13 +1,13 @@
-import type { DestinationWeb, Elb } from '@walkerOS/web-collector';
+import type { WalkerOS } from '@walkerOS/core';
 import type { DestinationMeta } from '.';
-import { createWebCollector } from '@walkerOS/web-collector';
+import { createCollector } from '@walkerOS/collector';
 import { getEvent } from '@walkerOS/core';
 import { destinationMetaExamples } from './examples';
 
 const { events, mapping } = destinationMetaExamples;
 
 describe('Destination Meta Pixel', () => {
-  let elb: Elb.Fn;
+  let elb: WalkerOS.Elb;
   const w = window;
   let destination: DestinationMeta.Destination, config: DestinationMeta.Config;
 
@@ -16,7 +16,7 @@ describe('Destination Meta Pixel', () => {
   const event = getEvent();
   const pixelId = '1234567890';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     config = {
       settings: { pixelId },
     };
@@ -26,10 +26,9 @@ describe('Destination Meta Pixel', () => {
 
     w.fbq = mockFn;
 
-    ({ elb } = createWebCollector({
-      pageview: false,
-      run: true,
+    ({ elb } = await createCollector({
       session: false,
+      tagging: 2,
     }));
   });
 
@@ -125,7 +124,7 @@ describe('Destination Meta Pixel', () => {
   test('event Purchase', async () => {
     const event = getEvent('order complete');
 
-    const config: DestinationWeb.Config = {
+    const config: DestinationMeta.Config = {
       settings: { pixelId },
       mapping: mapping.config,
     };

@@ -19,8 +19,8 @@ function getModuleMapper() {
 
   return {
     '^@walkerOS/core$': getDirectory('core/src/'),
-    '^@walkerOS/server-collector$': getDirectory('server/collector/src/'),
-    '^@walkerOS/web-collector$': getDirectory('web/collector/src/'),
+    '^@walkerOS/collector$': getDirectory('collector/src/'),
+    '^@walkerOS/web-core$': getDirectory('web/core/src/'),
     '^@walkerOS/web-destination-ga4$': getDirectory(
       'web/destinations/ga4/src/',
     ),
@@ -45,6 +45,7 @@ function getModuleMapper() {
     '^@walkerOS/web-source-dataLayer$': getDirectory(
       'web/sources/dataLayer/src/',
     ),
+    '^@walkerOS/server-core$': getDirectory('server/core/src/'),
     '^@walkerOS/server-destination-aws$': getDirectory(
       'server/destinations/aws/src/',
     ),

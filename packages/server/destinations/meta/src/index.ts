@@ -15,7 +15,6 @@ export const destinationMeta: Destination = {
 
   async init({ config: partialConfig }) {
     const config = getConfig(partialConfig);
-
     return config;
   },
 

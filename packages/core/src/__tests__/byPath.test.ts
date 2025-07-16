@@ -14,7 +14,7 @@ describe('byPath', () => {
     expect(getByPath(obj, 'a.b')).toBe('c');
     expect(getByPath(obj, 'a.isFalse')).toBe(false);
     expect(getByPath(obj, 'i.2.id')).toBe('dynamic');
-    expect(getByPath(obj, 'i.*.id', 'unknown', 2)).toStrictEqual([
+    expect(getByPath(obj, 'i.*.id', 'unknown')).toStrictEqual([
       'unknown',
       'unknown',
       'dynamic',

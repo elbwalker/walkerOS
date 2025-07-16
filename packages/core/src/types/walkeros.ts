@@ -1,11 +1,21 @@
-import type { Destination, ElbCore, Handler, Hooks } from '.';
+import type { Destination, Elb as ElbTypes, Handler, Hooks } from '.';
 
 export type AnyObject<T = unknown> = Record<string, T>;
+export type Elb = globalThis.WalkerOS.Elb;
 export type AnyFunction = (...args: unknown[]) => unknown;
 export type SingleOrArray<T> = T | Array<T>;
 
+// Global namespace for type augmentation by destinations
+declare global {
+  namespace WalkerOS {
+    interface Elb extends ElbTypes.Fn {}
+  }
+}
+
 export interface Collector extends State {
-  push: ElbCore.Fn;
+  push: ElbTypes.Fn;
+  sources?: Record<string, CollectorSource>;
+  addSource(source: CollectorSource): Promise<void>;
 }
 
 export interface State {
@@ -25,6 +35,7 @@ export interface State {
   timing: number;
   user: User;
   version: string;
+  sources?: Record<string, CollectorSource>;
 }
 
 export interface Config {
@@ -37,6 +48,7 @@ export interface Config {
   sessionStatic: Partial<SessionData>;
   onError?: Handler.Error;
   onLog?: Handler.Log;
+  run?: boolean;
 }
 
 export interface Destinations {
@@ -140,6 +152,22 @@ export interface Source extends Properties {
 }
 
 export type SourceType = 'web' | 'server' | 'app' | 'other' | string;
+
+// Collector Source interface for the unified collector
+export interface CollectorSource {
+  type: string;
+  init?(
+    collector: Collector,
+    config: CollectorSourceConfig,
+  ): void | Promise<void>;
+  mapping?: unknown; // Will be properly typed with Mapping.Config from collector package
+  settings?: Record<string, unknown>;
+}
+
+export interface CollectorSourceConfig {
+  mapping?: unknown; // Will be properly typed with Mapping.Config from collector package
+  settings: Record<string, unknown>;
+}
 
 export type PropertyType =
   | boolean

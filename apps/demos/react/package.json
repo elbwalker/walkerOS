@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@walkerOS/core": "*",
-    "@walkerOS/web-collector": "*",
+    "@walkerOS/collector": "*",
+    "@walkerOS/web-source-browser": "*",
     "@walkerOS/web-destination-gtm": "*",
     "@walkerOS/web-destination-ga4": "*",
     "@walkerOS/web-destination-meta": "*",

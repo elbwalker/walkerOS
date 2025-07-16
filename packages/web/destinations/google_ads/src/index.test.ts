@@ -1,13 +1,13 @@
-import type { Elb } from '@walkerOS/web-collector';
+import type { WalkerOS } from '@walkerOS/core';
 import type { DestinationAds } from '.';
-import { createWebCollector } from '@walkerOS/web-collector';
+import { createCollector } from '@walkerOS/collector';
 import { getEvent } from '@walkerOS/core';
 import { destinationAdsExamples } from './examples';
 
 const { events, mapping } = destinationAdsExamples;
 
 describe('destination Google Ads', () => {
-  let elb: Elb.Fn;
+  let elb: WalkerOS.Elb;
   const w = window;
   let destination: DestinationAds.Destination, config: DestinationAds.Config;
 
@@ -16,7 +16,7 @@ describe('destination Google Ads', () => {
   const event = getEvent('order complete');
   const conversionId = 'AW-123456789';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     config = {
       settings: { conversionId },
     };
@@ -26,10 +26,9 @@ describe('destination Google Ads', () => {
 
     w.gtag = mockFn;
 
-    ({ elb } = createWebCollector({
+    ({ elb } = await createCollector({
       session: false,
-      pageview: false,
-      run: true,
+      tagging: 2,
     }));
   });
 

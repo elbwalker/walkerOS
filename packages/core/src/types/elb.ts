@@ -1,67 +1,74 @@
-import type { Destination, Hooks, WalkerOS } from '.';
+import type { Destination, Hooks, On, WalkerOS } from '.';
 
-export interface Fn<R = void, D = PushData, O = PushOptions, C = PushContext>
-  extends Event<R>,
-    Arguments<R, D, O, C>,
-    CommandConfig<R>,
-    CommandConsent<R>,
-    CommandHook<R>,
-    CommandUser<R> {}
+// Event signatures only
+export interface EventFn<R = Promise<PushResult>> {
+  (partialEvent: WalkerOS.DeepPartialEvent): R;
+  (event: string): R;
+  (event: string, data: WalkerOS.Properties): R;
+}
 
-export type Arguments<
-  R = void,
-  D = PushData,
-  O = PushOptions,
-  C = PushContext,
-> = (
-  event?: unknown,
-  data?: D,
-  options?: O,
-  context?: C,
-  nested?: WalkerOS.Entities,
-  custom?: WalkerOS.Properties,
+// Complete function interface - can be extended by other interfaces
+export interface Fn<R = Promise<PushResult>>
+  extends EventFn<R>,
+    WalkerCommands<R> {
+  // Interface intentionally empty - combines EventFn and WalkerCommands
+}
+
+// Walker commands (clear, predefined list)
+export interface WalkerCommands<R = Promise<PushResult>> {
+  (event: 'walker config', config: Partial<WalkerOS.Config>): R;
+  (event: 'walker consent', consent: WalkerOS.Consent): R;
+  (
+    event: 'walker destination',
+    destination: Destination.Init | Destination.Destination,
+    config?: Destination.Config,
+  ): R;
+  <K extends keyof Hooks.Functions>(
+    event: 'walker hook',
+    name: K,
+    hookFn: Hooks.Functions[K],
+  ): R;
+  (
+    event: 'walker on',
+    type: On.Types,
+    rules: WalkerOS.SingleOrArray<On.Options>,
+  ): R;
+  (event: 'walker user', user: WalkerOS.User): R;
+  (
+    event: 'walker run',
+    runState: {
+      consent?: WalkerOS.Consent;
+      user?: WalkerOS.User;
+      globals?: WalkerOS.Properties;
+      custom?: WalkerOS.Properties;
+    },
+  ): R;
+}
+
+export type Event<R = Promise<PushResult>> = (
+  partialEvent: WalkerOS.DeepPartialEvent,
 ) => R;
 
-export type CommandConfig<R = void> = (
-  event: 'walker config',
-  config: Partial<WalkerOS.Config>,
-) => R;
-
-export type CommandConsent<R = void> = (
-  event: 'walker consent',
-  consent: WalkerOS.Consent,
-) => R;
-
-export type CommandHook<R = void> = <K extends keyof Hooks.Functions>(
-  event: 'walker hook',
-  name: K,
-  hookFn: Hooks.Functions[K],
-) => R;
-
-export type CommandUser<R = void> = (
-  event: 'walker user',
-  user: WalkerOS.User,
-) => R;
-
-export type Event<R = void> = (partialEvent: WalkerOS.DeepPartialEvent) => R;
-
+// Simplified push data types for core collector
 export type PushData =
-  | string
-  | object
   | WalkerOS.DeepPartial<WalkerOS.Config>
   | WalkerOS.Consent
   | WalkerOS.User
   | WalkerOS.Properties;
-
-export type PushOptions = Hooks.AnyFunction | object | string;
-
-export type PushContext = WalkerOS.OrderedProperties;
 
 export interface PushResult extends Destination.Result {
   event?: WalkerOS.Event;
   ok: boolean;
 }
 
-export type Layer = Array<
-  IArguments | WalkerOS.DeepPartialEvent | Parameters<Arguments>[number]
->;
+// Simplified Layer type for core collector
+export type Layer = Array<IArguments | WalkerOS.DeepPartialEvent | unknown[]>;
+
+// Helper type for destinations to register themselves
+export interface RegisterDestination<Destination, Config> {
+  (
+    event: 'walker destination',
+    destination: Destination,
+    config?: Config,
+  ): Promise<PushResult>;
+}

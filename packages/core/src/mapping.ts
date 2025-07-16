@@ -1,9 +1,9 @@
 import type { Mapping, WalkerOS } from './types';
-import { getGrantedConsent } from './consent';
 import { getByPath } from './byPath';
 import { isArray, isDefined, isString, isObject } from './is';
 import { castToProperty } from './property';
 import { tryCatchAsync } from './tryCatch';
+import { getGrantedConsent } from './consent';
 
 /**
  * Gets the mapping for an event.

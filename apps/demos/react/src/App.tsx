@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
-import { elb } from '@walkerOS/web-collector';
-import { setupAnalytics } from './data';
+import { elb, setupAnalytics } from './data';
 import Footer from './components/organisms/footer';
 import Navigation from './components/organisms/navigation';
 import Home from './components/pages/home';
@@ -9,14 +8,23 @@ import LogIn from './components/pages/login';
 import Pricing from './components/pages/pricing';
 import './App.css';
 
-setupAnalytics();
-
 function App() {
-  // https://v5.reactrouter.com/web/api/Hooks/uselocation
+  const [analyticsReady, setAnalyticsReady] = useState(false);
   const location = useLocation();
+
   useEffect(() => {
-    elb('walker run');
-  }, [location]);
+    // Initialize analytics on app start
+    setupAnalytics().then(() => {
+      setAnalyticsReady(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    // Run walker tracking on location change (only after analytics is ready)
+    if (analyticsReady && elb) {
+      elb('walker run');
+    }
+  }, [location, analyticsReady]);
 
   return (
     <>
