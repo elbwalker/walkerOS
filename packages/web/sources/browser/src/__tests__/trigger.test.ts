@@ -40,7 +40,7 @@ describe('Trigger System', () => {
 
     // Mock collector
     mockCollector = {
-      config: { session: true },
+      config: {},
       push: jest.fn(),
       consent: { functional: true },
       session: {},
@@ -97,19 +97,26 @@ describe('Trigger System', () => {
     expect(mockAddEventListener).toHaveBeenCalledTimes(2);
   });
 
-  test('initGlobalTrigger respects session config', () => {
-    mockCollector.config.session = false;
-
+  test('initGlobalTrigger always adds event listeners', () => {
     initGlobalTrigger(mockCollector, document);
 
-    expect(mockAddEventListener).toHaveBeenCalledTimes(0);
+    // Should always add both click and submit listeners
+    expect(mockAddEventListener).toHaveBeenCalledTimes(2);
   });
 
   test('load triggers page view when enabled', () => {
     document.body.innerHTML =
       '<div data-elb="page" data-elb-page="title:Home"></div>';
 
-    load(mockCollector, 'data-elb', document);
+    load(mockCollector, {
+      prefix: 'data-elb',
+      scope: document,
+      pageview: true,
+      session: true,
+      elb: 'elb',
+      name: 'walkerjs',
+      elbLayer: 'elbLayer',
+    });
 
     // Should have triggered page view
     expect(mockCollector.push).toHaveBeenCalledWith(
@@ -134,12 +141,11 @@ describe('Trigger System', () => {
   });
 
   test('ready function executes immediately when document is ready', async () => {
-    const mockFn = jest.fn().mockReturnValue('result');
+    const mockFn = jest.fn();
 
-    const result = await ready(mockCollector, mockFn, 'arg1', 'arg2');
+    await ready(mockFn, mockCollector, { test: 'settings' });
 
-    expect(mockFn).toHaveBeenCalledWith('arg1', 'arg2');
-    expect(result).toBe('result');
+    expect(mockFn).toHaveBeenCalledWith(mockCollector, { test: 'settings' });
   });
 
   test('ready function waits for DOMContentLoaded when document is loading', () => {
@@ -159,7 +165,7 @@ describe('Trigger System', () => {
         }
       });
 
-    ready(mockCollector, mockFn, 'arg1');
+    ready(mockFn, mockCollector, { test: 'settings' });
 
     // Should add event listener for DOMContentLoaded
     expect(document.addEventListener).toHaveBeenCalledWith(
@@ -168,14 +174,12 @@ describe('Trigger System', () => {
     );
   });
 
-  test('ready function returns undefined when session is disabled', async () => {
-    mockCollector.config.session = false;
-    const mockFn = jest.fn().mockReturnValue('result');
+  test('ready function calls function with collector and settings', async () => {
+    const mockFn = jest.fn();
 
-    const result = await ready(mockCollector, mockFn, 'arg1');
+    await ready(mockFn, mockCollector, { test: 'settings' });
 
-    expect(mockFn).toHaveBeenCalledWith('arg1');
-    expect(result).toBe('result');
+    expect(mockFn).toHaveBeenCalledWith(mockCollector, { test: 'settings' });
   });
 
   test('handleTrigger processes events correctly', async () => {

@@ -1,17 +1,13 @@
-import type { Mapping as WalkerOSMapping, WalkerOS } from '@walkerOS/core';
+import type { Mapping as WalkerOSMapping, Source } from '@walkerOS/core';
 import type { Walker, Elb } from '@walkerOS/web-core';
 
 // Export browser-specific elb types
 export * from './elb';
 
-export interface Source extends WalkerOS.CollectorSource {
+// Browser source configuration extending core source config
+export interface BrowserSourceConfig extends Source.Config {
   type: 'browser';
-  init?: (
-    collector: WalkerOS.Collector,
-    config: WalkerOS.CollectorSourceConfig,
-  ) => void | Promise<void>;
-  settings?: Settings;
-  mapping?: Mapping;
+  settings: Settings;
 }
 
 export interface Config {
@@ -22,14 +18,10 @@ export interface Config {
 export interface Settings extends Record<string, unknown> {
   prefix?: string;
   scope?: Element | Document;
-  listeners?: boolean;
   pageview?: boolean;
   session?: boolean;
   elb?: string;
   name?: string;
-  dataLayer?: boolean;
-  dataLayerConfig?: unknown;
-  run?: boolean;
   elbLayer?: boolean | string | Elb.Layer;
 }
 

@@ -52,7 +52,7 @@ describe('triggerVisible', () => {
 
     // Create mock collector
     mockCollector = {
-      config: { session: true },
+      config: {},
       push: jest.fn(),
       consent: { functional: true },
       session: {},

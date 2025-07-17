@@ -3,7 +3,6 @@ export * from './consent';
 export * from './destination';
 export * from './handle';
 export * from './on';
-export * from './source';
 
 // Export collector-specific constants
 export * from './constants';
@@ -15,19 +14,13 @@ export * from './types';
 import type { WalkerOS, Elb } from '@walkerOS/core';
 import { assign, onLog } from '@walkerOS/core';
 import { commonHandleCommand } from './handle';
-import { init as initSources, addSource } from './source';
 import { initDestinations, createPush } from './destination';
-import type { InitConfig, Source, CreateCollector } from './types';
+import type { InitConfig, CreateCollector } from './types';
 
 export async function createCollector(
   initConfig: InitConfig = {},
 ): Promise<CreateCollector> {
   const instance = collector(initConfig);
-
-  // Initialize sources if provided
-  if (initConfig.sources?.length) {
-    await initSources(instance, initConfig.sources);
-  }
 
   // Auto-run if configured
   if (instance.config.run) {
@@ -68,7 +61,6 @@ export async function createCollector(
 function collector(initConfig: InitConfig): WalkerOS.Collector {
   const version = '0.0.1';
 
-  // Create default config similar to legacy implementations
   const defaultConfig: WalkerOS.Config = {
     default: false,
     dryRun: false,
@@ -83,7 +75,6 @@ function collector(initConfig: InitConfig): WalkerOS.Collector {
 
   // Extract config-specific properties and non-config properties separately
   const {
-    sources,
     destinations = {},
     consent = {},
     user = {},
@@ -125,7 +116,6 @@ function collector(initConfig: InitConfig): WalkerOS.Collector {
     version,
     sources: {},
     push: undefined as unknown as Elb.Fn, // Placeholder, will be set below
-    addSource: async (source: Source) => addSource(collector, source),
   };
 
   // Set the push function with the collector reference

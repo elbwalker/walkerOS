@@ -15,7 +15,6 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
 
     ({ collector } = await createCollector({
       tagging: 2,
-      sources: [],
     }));
 
     collector.push = mockPush;

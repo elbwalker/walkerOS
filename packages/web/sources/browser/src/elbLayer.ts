@@ -1,18 +1,18 @@
 import type { WalkerOS } from '@walkerOS/core';
 import type { ELBLayer, ELBLayerConfig } from './types';
+import type {
+  BrowserPushData,
+  BrowserPushOptions,
+  BrowserPushContext,
+} from './types/elb';
 import { tryCatch } from '@walkerOS/core';
 import { translateToCoreCollector } from './translation';
-
-/**
- * ELB Layer system for async command handling
- * Provides backward compatibility with legacy async initialization patterns
- */
 
 /**
  * Initialize ELB Layer for async command handling
  * This creates window.elbLayer array and processes any existing commands
  */
-export function initELBLayer(
+export function initElbLayer(
   collector: WalkerOS.Collector,
   config: ELBLayerConfig = {},
 ): void {
@@ -95,9 +95,9 @@ function processCommand(collector: WalkerOS.Collector, command: unknown): void {
             translateToCoreCollector(
               collector,
               action,
-              data as any,
-              options as any,
-              context as any,
+              data as BrowserPushData,
+              options as BrowserPushOptions,
+              context as BrowserPushContext,
             );
           }
         }
@@ -135,6 +135,6 @@ function isArrayLike(value: unknown): boolean {
     value != null &&
     typeof value === 'object' &&
     'length' in value &&
-    typeof (value as any).length === 'number'
+    typeof (value as unknown[]).length === 'number'
   );
 }

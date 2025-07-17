@@ -14,8 +14,6 @@ declare global {
 
 export interface Collector extends State {
   push: ElbTypes.Fn;
-  sources?: Record<string, CollectorSource>;
-  addSource(source: CollectorSource): Promise<void>;
 }
 
 export interface State {
@@ -24,6 +22,7 @@ export interface State {
   consent: Consent;
   count: number;
   custom: Properties;
+  sources: Sources;
   destinations: Destinations;
   globals: Properties;
   group: string;
@@ -35,7 +34,6 @@ export interface State {
   timing: number;
   user: User;
   version: string;
-  sources?: Record<string, CollectorSource>;
 }
 
 export interface Config {
@@ -49,6 +47,10 @@ export interface Config {
   onError?: Handler.Error;
   onLog?: Handler.Log;
   run?: boolean;
+}
+
+export interface Sources {
+  [id: string]: CollectorSource;
 }
 
 export interface Destinations {
@@ -156,10 +158,6 @@ export type SourceType = 'web' | 'server' | 'app' | 'other' | string;
 // Collector Source interface for the unified collector
 export interface CollectorSource {
   type: string;
-  init?(
-    collector: Collector,
-    config: CollectorSourceConfig,
-  ): void | Promise<void>;
   mapping?: unknown; // Will be properly typed with Mapping.Config from collector package
   settings?: Record<string, unknown>;
 }

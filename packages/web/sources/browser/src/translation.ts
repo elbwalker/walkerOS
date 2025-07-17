@@ -1,4 +1,5 @@
 import type { WalkerOS, Elb } from '@walkerOS/core';
+import { isString, isObject, isDefined } from '@walkerOS/core';
 import type {
   BrowserPushData,
   BrowserPushOptions,
@@ -19,10 +20,7 @@ export function translateToCoreCollector(
   custom?: WalkerOS.Properties,
 ): Promise<Elb.PushResult> {
   // Handle walker commands - pass command and data only
-  if (
-    typeof eventOrCommand === 'string' &&
-    eventOrCommand.startsWith('walker ')
-  ) {
+  if (isString(eventOrCommand) && eventOrCommand.startsWith('walker ')) {
     if (eventOrCommand === 'walker config') {
       return (
         collector.push as (
@@ -58,12 +56,12 @@ export function translateToCoreCollector(
   }
 
   // Handle event objects
-  if (typeof eventOrCommand === 'object' && eventOrCommand !== null) {
+  if (isObject(eventOrCommand)) {
     return collector.push(eventOrCommand as WalkerOS.DeepPartialEvent);
   }
 
   // Handle string events with additional parameters
-  if (typeof eventOrCommand === 'string' && eventOrCommand.length > 0) {
+  if (isString(eventOrCommand) && eventOrCommand.length > 0) {
     const event: WalkerOS.DeepPartialEvent = {
       event: eventOrCommand,
       data: normalizeData(data || {}),
@@ -73,19 +71,16 @@ export function translateToCoreCollector(
     };
 
     // Add trigger if options is a string (likely a trigger)
-    if (typeof options === 'string') {
-      (event as any).trigger = options;
+    if (isString(options)) {
+      (event as WalkerOS.DeepPartialEvent & { trigger?: string }).trigger =
+        options;
     }
 
     return collector.push(event);
   }
 
   // For malformed commands, return a resolved promise without calling push
-  if (
-    eventOrCommand === null ||
-    eventOrCommand === undefined ||
-    eventOrCommand === ''
-  ) {
+  if (!isDefined(eventOrCommand)) {
     return Promise.resolve({
       ok: true,
       successful: [],
@@ -104,8 +99,9 @@ export function translateToCoreCollector(
   };
 
   // Add trigger if options is a string (likely a trigger)
-  if (typeof options === 'string') {
-    (event as any).trigger = options;
+  if (isString(options)) {
+    (event as WalkerOS.DeepPartialEvent & { trigger?: string }).trigger =
+      options;
   }
 
   return collector.push(event);
@@ -114,6 +110,7 @@ export function translateToCoreCollector(
 /**
  * Normalize data to WalkerOS.Properties format
  */
+// @TODO There is a util for this
 function normalizeData(data: BrowserPushData | undefined): WalkerOS.Properties {
   if (!data) return {};
 
@@ -129,6 +126,7 @@ function normalizeData(data: BrowserPushData | undefined): WalkerOS.Properties {
 /**
  * Normalize context to WalkerOS.OrderedProperties format
  */
+// @TODO This is not correct
 function normalizeContext(
   context: BrowserPushContext | undefined,
 ): WalkerOS.OrderedProperties {

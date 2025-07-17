@@ -1,7 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
 import { createCollector } from '@walkerOS/collector';
 import { sourceDataLayer } from '../index';
 import type { WalkerOS } from '@walkerOS/core';
@@ -20,7 +16,6 @@ describe('DataLayer Source - Filtering', () => {
 
     ({ collector } = await createCollector({
       tagging: 2,
-      sources: [],
     }));
 
     collector.push = mockPush;

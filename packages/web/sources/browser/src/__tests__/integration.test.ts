@@ -1,9 +1,5 @@
-/**
- * @jest-environment jsdom
- */
-
 import { createCollector } from '@walkerOS/collector';
-import { sourceBrowser } from '../index';
+import { createBrowserSource } from './test-utils';
 import type { WalkerOS } from '@walkerOS/core';
 
 describe('Browser Source Integration Tests', () => {
@@ -32,8 +28,6 @@ describe('Browser Source Integration Tests', () => {
     // Initialize collector without any sources to avoid initial triggers
     ({ collector } = await createCollector({
       tagging: 2,
-      session: true, // Enable session globally for the collector
-      sources: [],
     }));
 
     // Override push with mock
@@ -55,10 +49,7 @@ describe('Browser Source Integration Tests', () => {
       `;
 
       // Initialize source - should trigger load events
-      const source = sourceBrowser({ pageview: false });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { pageview: false });
 
       // Should have processed the load trigger
       expect(mockPush).toHaveBeenCalledTimes(1); // Only product view (pageview disabled in setup)
@@ -86,10 +77,7 @@ describe('Browser Source Integration Tests', () => {
       `;
 
       // Initialize source
-      const source = sourceBrowser({ pageview: false });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { pageview: false });
 
       // Simulate click event
       const button = document.querySelector('button')!;
@@ -119,10 +107,7 @@ describe('Browser Source Integration Tests', () => {
       ];
 
       // Initialize source - should process existing commands
-      const source = sourceBrowser({ pageview: false });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { pageview: false });
 
       // Should process all commands in order
       expect(mockPush).toHaveBeenCalledTimes(3);
@@ -165,10 +150,7 @@ describe('Browser Source Integration Tests', () => {
       window.elbLayer = [['user', { id: 'user123' }, 'system']];
 
       // Initialize source
-      const source = sourceBrowser({ pageview: false });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { pageview: false });
 
       // Should process both ELB Layer and DOM events
       expect(mockPush).toHaveBeenCalledWith(
@@ -202,10 +184,7 @@ describe('Browser Source Integration Tests', () => {
       `;
 
       // Initialize source
-      const source = sourceBrowser({ pageview: false });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { pageview: false });
 
       // Should process load trigger immediately
       expect(mockPush).toHaveBeenCalledWith(
@@ -264,12 +243,9 @@ describe('Browser Source Integration Tests', () => {
       ];
 
       // Should not throw
-      expect(async () => {
-        const source = sourceBrowser({ pageview: false });
-        if (source.init) {
-          await source.init(collector, { settings: source.settings || {} });
-        }
-      }).not.toThrow();
+      await expect(
+        createBrowserSource(collector, { pageview: false }),
+      ).resolves.not.toThrow();
 
       // Should still process second event
       expect(mockPush).toHaveBeenCalledTimes(2);
@@ -285,10 +261,7 @@ describe('Browser Source Integration Tests', () => {
         </div>
       `;
 
-      const source = sourceBrowser({ pageview: false });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { pageview: false });
 
       // Should still process at least the valid element
       expect(mockPush).toHaveBeenCalled();
@@ -306,10 +279,7 @@ describe('Browser Source Integration Tests', () => {
 
       const startTime = performance.now();
 
-      const source = sourceBrowser({ pageview: false });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { pageview: false });
 
       const endTime = performance.now();
 
@@ -329,10 +299,10 @@ describe('Browser Source Integration Tests', () => {
         </div>
       `;
 
-      const source = sourceBrowser({ prefix: 'data-custom', pageview: false });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, {
+        prefix: 'data-custom',
+        pageview: false,
+      });
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -362,10 +332,10 @@ describe('Browser Source Integration Tests', () => {
         </div>
       `;
 
-      const source = sourceBrowser({ scope: container, pageview: false });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, {
+        scope: container,
+        pageview: false,
+      });
 
       // Should only process element inside scope
       expect(mockPush).toHaveBeenCalledTimes(1);

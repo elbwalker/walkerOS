@@ -1,9 +1,5 @@
-/**
- * @jest-environment jsdom
- */
-
 import { createCollector } from '@walkerOS/collector';
-import { sourceBrowser } from '../index';
+import { createBrowserSource } from './test-utils';
 import type { WalkerOS } from '@walkerOS/core';
 
 describe('Browser Source Edge Cases', () => {
@@ -25,8 +21,6 @@ describe('Browser Source Edge Cases', () => {
 
     ({ collector } = await createCollector({
       tagging: 2,
-      session: true, // Enable session globally for the collector
-      sources: [sourceBrowser()],
     }));
 
     collector.push = mockPush;
@@ -45,10 +39,7 @@ describe('Browser Source Edge Cases', () => {
         </div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       // Should handle gracefully (may or may not push depending on implementation)
       expect(() => {}).not.toThrow();
@@ -61,10 +52,7 @@ describe('Browser Source Edge Cases', () => {
         </div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });
@@ -76,10 +64,7 @@ describe('Browser Source Edge Cases', () => {
         </div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });
@@ -94,10 +79,7 @@ describe('Browser Source Edge Cases', () => {
         </div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       // Should not throw and should still process valid elements
       expect(() => {}).not.toThrow();
@@ -111,10 +93,7 @@ describe('Browser Source Edge Cases', () => {
         </div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });
@@ -127,10 +106,7 @@ describe('Browser Source Edge Cases', () => {
         </div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });
@@ -142,10 +118,7 @@ describe('Browser Source Edge Cases', () => {
         </div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });
@@ -165,10 +138,7 @@ describe('Browser Source Edge Cases', () => {
         [] as unknown[],
       ];
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       // Should process valid commands and ignore invalid ones
       expect(mockPush).toHaveBeenCalledWith(
@@ -199,10 +169,7 @@ describe('Browser Source Edge Cases', () => {
         ['normal_event', { data: 'normal' }],
       ];
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
       expect(window.elbLayer).toHaveLength(0);
@@ -215,10 +182,7 @@ describe('Browser Source Edge Cases', () => {
       }
       window.elbLayer = commands;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(mockPush).toHaveBeenCalledTimes(10001); // +1 for session initialization
       expect(window.elbLayer).toHaveLength(0);
@@ -234,10 +198,7 @@ describe('Browser Source Edge Cases', () => {
         </div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       // Should only process element with attributes + session initialization
       expect(mockPush).toHaveBeenCalledTimes(2);
@@ -255,10 +216,7 @@ describe('Browser Source Edge Cases', () => {
 
       document.body.innerHTML = html;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(mockPush).toHaveBeenCalledTimes(16); // All nested elements + session initialization
     });
@@ -273,10 +231,7 @@ describe('Browser Source Edge Cases', () => {
         </div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });
@@ -296,10 +251,7 @@ describe('Browser Source Edge Cases', () => {
         }
       }, 10);
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });
@@ -315,10 +267,7 @@ describe('Browser Source Edge Cases', () => {
       `;
       document.body.appendChild(container);
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });
@@ -332,10 +281,7 @@ describe('Browser Source Edge Cases', () => {
         <div data-elb="test" data-elb-test="id:789" data-elbaction="scroll(200):action">Scroll</div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });
@@ -346,10 +292,7 @@ describe('Browser Source Edge Cases', () => {
         <div data-elb="test" data-elb-test="id:456" data-elbaction="wait1000):action">Malformed</div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });
@@ -360,10 +303,7 @@ describe('Browser Source Edge Cases', () => {
         <div data-elb="test" data-elb-test="id:456" data-elbaction="custom_trigger:action">Custom trigger</div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });
@@ -375,10 +315,7 @@ describe('Browser Source Edge Cases', () => {
         </div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });
@@ -390,10 +327,7 @@ describe('Browser Source Edge Cases', () => {
         <div data-elb="test" data-elb-test="id:123" data-elbaction="load:view">Test</div>
       `;
 
-      const source = sourceBrowser({ prefix: '' });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { prefix: '' });
 
       expect(() => {}).not.toThrow();
     });
@@ -403,19 +337,13 @@ describe('Browser Source Edge Cases', () => {
         <div data-elb="test" data-elb-test="id:123" data-elbaction="load:view">Test</div>
       `;
 
-      const source = sourceBrowser({ scope: null as any });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { scope: null as any });
 
       expect(() => {}).not.toThrow();
     });
 
     test('handles invalid elbLayer configuration', async () => {
-      const source = sourceBrowser({ elbLayer: 123 as any });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { elbLayer: 123 as any });
 
       expect(() => {}).not.toThrow();
     });
@@ -423,23 +351,16 @@ describe('Browser Source Edge Cases', () => {
 
   describe('Memory and Performance Edge Cases', () => {
     test('handles repeated initialization', async () => {
-      const source = sourceBrowser();
-
       // Initialize multiple times
       for (let i = 0; i < 10; i++) {
-        if (source.init) {
-          await source.init(collector, { settings: source.settings || {} });
-        }
+        await createBrowserSource(collector);
       }
 
       expect(() => {}).not.toThrow();
     });
 
     test('handles rapid DOM changes', async () => {
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       // Rapidly add and remove elements
       for (let i = 0; i < 100; i++) {
@@ -464,10 +385,7 @@ describe('Browser Source Edge Cases', () => {
         </div>
       `;
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
     });

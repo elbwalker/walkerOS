@@ -1,7 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
 import { createCollector } from '@walkerOS/collector';
 import { sourceDataLayer } from '../index';
 import type { WalkerOS } from '@walkerOS/core';
@@ -22,7 +18,6 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     // Initialize collector
     ({ collector } = await createCollector({
       tagging: 2,
-      sources: [],
     }));
 
     // Override push with synchronous mock

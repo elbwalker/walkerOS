@@ -1,8 +1,6 @@
 import type { WalkerOS, Destination, Elb } from '@walkerOS/core';
-import type { Source } from './source';
 
 export interface InitConfig extends Partial<WalkerOS.Config> {
-  sources?: Source[];
   destinations?: Destination.InitDestinations;
   consent?: WalkerOS.Consent;
   user?: WalkerOS.User;

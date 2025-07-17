@@ -6,6 +6,7 @@ import type {
   Events,
   ScrollElements,
   TriggerAction,
+  Settings,
 } from './types';
 import { throttle, tryCatch } from '@walkerOS/core';
 import { Const, onApply } from '@walkerOS/collector';
@@ -55,21 +56,18 @@ export const Triggers: { [key: string]: Trigger } = {
   Wait: 'wait',
 } as const;
 
-export async function ready<T extends (...args: never[]) => R, R>(
+export async function ready(
+  fn: (collector: WalkerOS.Collector, settings: any) => void,
   collector: WalkerOS.Collector,
-  fn: T,
-  ...args: Parameters<T>
-): Promise<R | undefined> {
+  settings: any,
+): Promise<void> {
   const readyFn = () => {
-    const result = fn(...args);
+    fn(collector, settings);
     onApply(collector, 'ready');
-    return result;
   };
 
-  if (!collector.config.session) return fn(...args);
-
   if (document.readyState !== 'loading') {
-    return readyFn();
+    readyFn();
   } else {
     document.addEventListener('DOMContentLoaded', readyFn);
   }
@@ -78,15 +76,13 @@ export async function ready<T extends (...args: never[]) => R, R>(
 // Called for each new run to setup triggers
 export function load(
   collector: WalkerOS.Collector,
-  prefix: string,
-  scope: Scope,
-  pageview: boolean = true,
+  settings: Required<Settings>,
 ) {
-  if (!collector.config.session) return;
+  const { prefix, scope, pageview } = settings;
 
   // Trigger static page view if enabled
   if (pageview) {
-    const [data, context] = getPageViewData(prefix, scope);
+    const [data, context] = getPageViewData(prefix, scope as Scope);
     translateToCoreCollector(
       collector,
       'page view',
@@ -96,15 +92,13 @@ export function load(
     );
   }
 
-  initScopeTrigger(collector, prefix, scope);
+  initScopeTrigger(collector, prefix, scope as Scope);
 }
 
 export function initGlobalTrigger(
   collector: WalkerOS.Collector,
   scope: Scope,
 ): void {
-  if (!collector.config.session) return;
-
   scope.addEventListener(
     'click',
     tryCatch(function (this: Scope, ev: unknown) {
@@ -124,8 +118,6 @@ export function initScopeTrigger(
   prefix: string,
   elem?: Scope,
 ) {
-  if (!collector.config.session) return;
-
   // Reset all scroll events @TODO check if it's right here
   scrollElements = [];
 

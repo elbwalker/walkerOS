@@ -1,10 +1,6 @@
-/**
- * @jest-environment jsdom
- */
-
 import { createCollector } from '@walkerOS/collector';
-import { sourceBrowser } from '../index';
-import { initELBLayer } from '../elbLayer';
+import { createBrowserSource } from './test-utils';
+import { initElbLayer } from '../elbLayer';
 import type { WalkerOS } from '@walkerOS/core';
 
 describe('ELB Layer', () => {
@@ -31,7 +27,6 @@ describe('ELB Layer', () => {
     // Initialize collector
     ({ collector } = await createCollector({
       tagging: 2,
-      sources: [],
     }));
 
     // Override push with mock
@@ -48,7 +43,7 @@ describe('ELB Layer', () => {
     test('creates elbLayer array on window', () => {
       expect(window.elbLayer).toBeUndefined();
 
-      initELBLayer(collector);
+      initElbLayer(collector);
 
       expect(window.elbLayer).toBeDefined();
       expect(Array.isArray(window.elbLayer)).toBe(true);
@@ -58,7 +53,7 @@ describe('ELB Layer', () => {
     test('uses custom layer name', () => {
       expect((window as any).customLayer).toBeUndefined();
 
-      initELBLayer(collector, { name: 'customLayer' });
+      initElbLayer(collector, { name: 'customLayer' });
 
       expect((window as any).customLayer).toBeDefined();
       expect(Array.isArray((window as any).customLayer)).toBe(true);
@@ -68,7 +63,7 @@ describe('ELB Layer', () => {
     test('preserves existing elbLayer if present', () => {
       window.elbLayer = [['existing', 'commands'] as unknown[]];
 
-      initELBLayer(collector);
+      initElbLayer(collector);
 
       expect(window.elbLayer).toBeDefined();
       expect(Array.isArray(window.elbLayer)).toBe(true);
@@ -85,7 +80,7 @@ describe('ELB Layer', () => {
         ['product', 'click', 'click', { id: 'test' }],
       ];
 
-      initELBLayer(collector);
+      initElbLayer(collector);
 
       expect(mockPush).toHaveBeenCalledTimes(2);
       expect(window.elbLayer).toHaveLength(0); // Commands cleared after processing
@@ -99,7 +94,7 @@ describe('ELB Layer', () => {
         ['walker user', { id: 'user123' }], // Walker command
       ];
 
-      initELBLayer(collector);
+      initElbLayer(collector);
 
       expect(mockPush).toHaveBeenCalledTimes(4);
 
@@ -127,7 +122,7 @@ describe('ELB Layer', () => {
         ['test_event', { key: 'value' }, 'load', { context: 'test' }],
       ];
 
-      initELBLayer(collector);
+      initElbLayer(collector);
 
       expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith(
@@ -149,7 +144,7 @@ describe('ELB Layer', () => {
 
       window.elbLayer = [eventObject];
 
-      initELBLayer(collector);
+      initElbLayer(collector);
 
       expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith(eventObject);
@@ -162,7 +157,7 @@ describe('ELB Layer', () => {
         {} as WalkerOS.DeepPartialEvent, // Empty object
       ];
 
-      initELBLayer(collector);
+      initElbLayer(collector);
 
       // Should not throw and should not call push for invalid commands
       expect(mockPush).not.toHaveBeenCalled();
@@ -174,20 +169,14 @@ describe('ELB Layer', () => {
     test('initializes elbLayer by default', async () => {
       expect(window.elbLayer).toBeUndefined();
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector);
 
       expect(window.elbLayer).toBeDefined();
       expect(Array.isArray(window.elbLayer)).toBe(true);
     });
 
     test('uses custom elbLayer name from settings', async () => {
-      const source = sourceBrowser({ elbLayer: 'myCustomLayer' });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { elbLayer: 'myCustomLayer' });
 
       expect((window as any).myCustomLayer).toBeDefined();
       expect(Array.isArray((window as any).myCustomLayer)).toBe(true);
@@ -195,10 +184,7 @@ describe('ELB Layer', () => {
     });
 
     test('can disable elbLayer initialization', async () => {
-      const source = sourceBrowser({ elbLayer: false });
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { elbLayer: false });
 
       expect(window.elbLayer).toBeUndefined();
     });
@@ -210,10 +196,7 @@ describe('ELB Layer', () => {
         ['page', 'view', 'load'],
       ];
 
-      const source = sourceBrowser();
-      if (source.init) {
-        await source.init(collector, { settings: source.settings || {} });
-      }
+      await createBrowserSource(collector, { pageview: false });
 
       expect(mockPush).toHaveBeenCalledTimes(2);
       expect(window.elbLayer).toHaveLength(0);
@@ -226,7 +209,7 @@ describe('ELB Layer', () => {
         ['entity_name', { prop: 'value' }, 'trigger_type', { ctx: 'context' }],
       ];
 
-      initELBLayer(collector);
+      initElbLayer(collector);
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -245,7 +228,7 @@ describe('ELB Layer', () => {
         ['walker user', { id: 'user123' }, 'options', { context: 'test' }],
       ];
 
-      initELBLayer(collector);
+      initElbLayer(collector);
 
       expect(mockPush).toHaveBeenCalledWith('walker user', { id: 'user123' });
     });
@@ -265,7 +248,7 @@ describe('ELB Layer', () => {
 
       // Should not throw
       expect(() => {
-        initELBLayer(collector);
+        initElbLayer(collector);
       }).not.toThrow();
 
       // Commands should still be cleared
@@ -279,7 +262,7 @@ describe('ELB Layer', () => {
       window.elbLayer = [['test', circular]];
 
       expect(() => {
-        initELBLayer(collector);
+        initElbLayer(collector);
       }).not.toThrow();
     });
   });
@@ -294,7 +277,7 @@ describe('ELB Layer', () => {
       window.elbLayer = commands;
 
       const startTime = performance.now();
-      initELBLayer(collector);
+      initElbLayer(collector);
       const endTime = performance.now();
 
       expect(endTime - startTime).toBeLessThan(100); // Should process in under 100ms

@@ -1,11 +1,18 @@
 import type { WalkerOS } from '@walkerOS/core';
-import { assign, isSameType, useHooks } from '@walkerOS/core';
+import type { SessionCallback } from '@walkerOS/web-core';
+import { assign, useHooks } from '@walkerOS/core';
 import { onApply } from '@walkerOS/collector';
 import { sessionStart as sessionStartOrg } from '@walkerOS/web-core';
 
 export interface SessionStartOptions {
   config?: unknown;
   data?: WalkerOS.SessionData;
+}
+
+// Enhanced session configuration interface
+interface SessionConfigWithCallback {
+  cb?: false | SessionCallback;
+  [key: string]: unknown;
 }
 
 export function createSessionStart(collector: WalkerOS.Collector) {
@@ -37,25 +44,35 @@ export function sessionStart(
   );
 
   // A wrapper for the callback
-  const cb = (
+  const cb: SessionCallback = (
     session: WalkerOS.SessionData,
-    collector: WalkerOS.Collector,
-    defaultCb: unknown,
+    collector: WalkerOS.Collector | undefined,
+    defaultCb: SessionCallback,
   ) => {
     let result: void | undefined | WalkerOS.SessionData;
-    if ((sessionConfig as any).cb !== false)
+    const configWithCb = sessionConfig as SessionConfigWithCallback;
+    if (configWithCb.cb !== false && configWithCb.cb)
       // Run either the default callback or the provided one
-      result = ((sessionConfig as any).cb || defaultCb)(
+      result = configWithCb.cb(
         session,
         collector,
-        defaultCb,
+        defaultCb as SessionCallback,
+      );
+    else if (configWithCb.cb !== false)
+      // Run default callback
+      result = (defaultCb as SessionCallback)(
+        session,
+        collector,
+        defaultCb as SessionCallback,
       );
 
-    // Assign the session
-    collector.session = session;
+    // Assign the session (only if collector is available)
+    if (collector) {
+      collector.session = session;
 
-    // Run on session events
-    onApply(collector, 'session');
+      // Run on session events
+      onApply(collector, 'session');
+    }
 
     return result;
   };
@@ -66,7 +83,7 @@ export function sessionStart(
     collector.hooks,
   )({
     ...sessionConfig, // Session detection configuration
-    cb: cb as any, // Custom wrapper callback
+    cb: cb, // Custom wrapper callback
     data: sessionData, // Static default session data
     collector,
   });

@@ -26,6 +26,11 @@ interface VisibilityState {
   >;
 }
 
+// Extended collector interface with visibility state
+interface CollectorWithVisibility extends WalkerOS.Collector {
+  _visibilityState?: VisibilityState;
+}
+
 /**
  * Cached visibility check to reduce expensive isVisible() calls
  */
@@ -52,7 +57,7 @@ export function unobserveElement(
   collector: WalkerOS.Collector,
   element: HTMLElement,
 ): void {
-  const state = (collector as any)._visibilityState as VisibilityState;
+  const state = (collector as CollectorWithVisibility)._visibilityState;
   if (!state) return;
 
   if (state.observer) {
@@ -104,7 +109,7 @@ function handleIntersection(
   entry: IntersectionObserverEntry,
 ): void {
   const target = entry.target as HTMLElement;
-  const state = (collector as any)._visibilityState as VisibilityState;
+  const state = (collector as CollectorWithVisibility)._visibilityState;
 
   if (!state) return;
 
@@ -190,9 +195,9 @@ export function initVisibilityTracking(
   collector: WalkerOS.Collector,
   duration = 1000,
 ): void {
-  if ((collector as any)._visibilityState) return; // Already initialized
+  if ((collector as CollectorWithVisibility)._visibilityState) return; // Already initialized
 
-  (collector as any)._visibilityState = {
+  (collector as CollectorWithVisibility)._visibilityState = {
     observer: createObserver(collector),
     timers: new WeakMap(),
     duration,
@@ -207,7 +212,7 @@ export function triggerVisible(
   element: HTMLElement,
   config: { multiple?: boolean } = { multiple: false },
 ): void {
-  const state = (collector as any)._visibilityState as VisibilityState;
+  const state = (collector as CollectorWithVisibility)._visibilityState;
   if (state?.observer && element) {
     // Store element config for later use in intersection handling
     if (!state.elementConfigs) {
@@ -225,12 +230,12 @@ export function triggerVisible(
  * Destroys visibility tracking for a collector, cleaning up all resources
  */
 export function destroyVisibilityTracking(collector: WalkerOS.Collector): void {
-  const state = (collector as any)._visibilityState as VisibilityState;
+  const state = (collector as CollectorWithVisibility)._visibilityState;
   if (!state) return;
 
   if (state.observer) {
     state.observer.disconnect();
   }
 
-  delete (collector as any)._visibilityState;
+  delete (collector as CollectorWithVisibility)._visibilityState;
 }
