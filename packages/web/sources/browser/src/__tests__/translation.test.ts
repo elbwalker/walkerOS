@@ -253,6 +253,82 @@ describe('Translation Layer', () => {
     });
   });
 
+  describe('Context Normalization', () => {
+    test('handles undefined context', async () => {
+      await translateToCoreCollector(
+        collector,
+        'test event',
+        { id: 123 },
+        undefined,
+        undefined, // undefined context
+      );
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: {},
+        }),
+      );
+    });
+
+    test('handles element context', async () => {
+      // Create a test element
+      const element = document.createElement('div');
+      element.id = 'test-element';
+      element.className = 'test-class';
+
+      await translateToCoreCollector(
+        collector,
+        'test event',
+        { id: 123 },
+        undefined,
+        element, // element context
+      );
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: {}, // Elements return empty object
+        }),
+      );
+    });
+
+    test('handles empty object context', async () => {
+      await translateToCoreCollector(
+        collector,
+        'test event',
+        { id: 123 },
+        undefined,
+        {}, // empty object context
+      );
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: {}, // Empty objects return empty object
+        }),
+      );
+    });
+
+    test('handles valid ordered properties context', async () => {
+      const validContext: WalkerOS.OrderedProperties = {
+        page: ['home', 0],
+        section: ['hero', 1],
+      };
+
+      await translateToCoreCollector(
+        collector,
+        'test event',
+        { id: 123 },
+        undefined,
+        validContext,
+      );
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: validContext, // Valid objects pass through
+        }),
+      );
+    });
+  });
+
   describe('Edge Cases', () => {
     test('handles null/undefined referrer gracefully', async () => {
       // Mock null referrer

@@ -1,5 +1,11 @@
 import type { WalkerOS, Elb } from '@walkerOS/core';
-import { isString, isObject, isDefined, isSameType } from '@walkerOS/core';
+import {
+  isString,
+  isObject,
+  isDefined,
+  isSameType,
+  isElementOrDocument,
+} from '@walkerOS/core';
 import type {
   BrowserPushData,
   BrowserPushOptions,
@@ -128,25 +134,19 @@ function normalizeData(data: BrowserPushData | undefined): WalkerOS.Properties {
 /**
  * Normalize context to WalkerOS.OrderedProperties format
  */
-// @TODO This is not correct
 function normalizeContext(
   context: BrowserPushContext | undefined,
 ): WalkerOS.OrderedProperties {
   if (!context) return {};
 
-  // If it's already ordered properties, return as-is
-  if (typeof context === 'object' && !('nodeType' in context)) {
-    return context as WalkerOS.OrderedProperties;
+  // Handle elements separately - they don't become context directly
+  if (isElementOrDocument(context)) {
+    return {};
   }
 
-  // Convert Element to ordered properties
-  if (context && 'nodeType' in context) {
-    const element = context as Element;
-    return {
-      tagName: [element.tagName.toLowerCase(), 0],
-      id: element.id ? [element.id, 1] : undefined,
-      className: element.className ? [element.className, 2] : undefined,
-    };
+  // Only use objects with content as context
+  if (isObject(context) && Object.keys(context).length) {
+    return context as WalkerOS.OrderedProperties;
   }
 
   return {};
