@@ -25,9 +25,7 @@ describe('ELB Layer', () => {
     }) as unknown as jest.MockedFunction<WalkerOS.Collector['push']>;
 
     // Initialize collector
-    ({ collector } = await createCollector({
-      tagging: 2,
-    }));
+    ({ collector } = await createCollector());
 
     // Override push with mock
     collector.push = mockPush;
@@ -217,8 +215,6 @@ describe('ELB Layer', () => {
           data: { prop: 'value' },
           context: { ctx: 'context' },
           trigger: 'trigger_type',
-          custom: {},
-          nested: [],
         }),
       );
     });

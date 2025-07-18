@@ -19,9 +19,7 @@ describe('Browser Source Edge Cases', () => {
       });
     }) as unknown as jest.MockedFunction<WalkerOS.Collector['push']>;
 
-    ({ collector } = await createCollector({
-      tagging: 2,
-    }));
+    ({ collector } = await createCollector());
 
     collector.push = mockPush;
   });
@@ -145,6 +143,11 @@ describe('Browser Source Edge Cases', () => {
         expect.objectContaining({
           event: 'valid_event',
           data: { data: 'test' },
+          source: expect.objectContaining({
+            type: 'web',
+            id: expect.any(String),
+            previous_id: expect.any(String),
+          }),
         }),
       );
 
@@ -152,10 +155,17 @@ describe('Browser Source Edge Cases', () => {
         consent: { marketing: true },
       });
 
-      expect(mockPush).toHaveBeenCalledWith({
-        event: 'object_event',
-        data: { key: 'value' },
-      });
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'object_event',
+          data: { key: 'value' },
+          source: expect.objectContaining({
+            type: 'web',
+            id: expect.any(String),
+            previous_id: expect.any(String),
+          }),
+        }),
+      );
 
       expect(window.elbLayer).toHaveLength(0);
     });

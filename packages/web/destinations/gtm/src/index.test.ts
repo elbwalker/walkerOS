@@ -11,7 +11,6 @@ describe('destination google-tag-manager', () => {
   let elb: WalkerOS.Elb;
   const w = window;
   let destination: DestinationGTM.Destination, config: DestinationGTM.Config;
-  let collectorInstance: WalkerOS.Collector;
 
   const containerId = 'GTM-XXXXXXX';
   let event: WalkerOS.Event;

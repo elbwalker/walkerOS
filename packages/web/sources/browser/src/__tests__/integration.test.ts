@@ -26,9 +26,7 @@ describe('Browser Source Integration Tests', () => {
     }) as unknown as jest.MockedFunction<WalkerOS.Collector['push']>;
 
     // Initialize collector without any sources to avoid initial triggers
-    ({ collector } = await createCollector({
-      tagging: 2,
-    }));
+    ({ collector } = await createCollector());
 
     // Override push with mock
     collector.push = mockPush;

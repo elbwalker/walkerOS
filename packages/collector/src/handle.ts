@@ -3,7 +3,7 @@ import type { Destination } from '@walkerOS/core';
 import type { Elb, On } from '@walkerOS/core';
 import { Commands, Const } from './constants';
 import { addDestination, pushToDestinations } from './destination';
-import { assign, getId, isFunction } from '@walkerOS/core';
+import { assign, getId, isFunction, isString } from '@walkerOS/core';
 import { isObject, isSameType } from '@walkerOS/core';
 import { setConsent } from './consent';
 import { on, onApply } from './on';
@@ -69,7 +69,7 @@ export async function commonHandleCommand(
       break;
 
     case Const.Commands.On:
-      if (typeof data === 'string') {
+      if (isString(data)) {
         on(
           collector,
           data as On.Types,

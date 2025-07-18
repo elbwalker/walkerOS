@@ -1,5 +1,5 @@
 import type { WalkerOS, Elb } from '@walkerOS/core';
-import { isString, isObject, isDefined } from '@walkerOS/core';
+import { isString, isObject, isDefined, isSameType } from '@walkerOS/core';
 import type {
   BrowserPushData,
   BrowserPushOptions,
@@ -57,7 +57,12 @@ export function translateToCoreCollector(
 
   // Handle event objects
   if (isObject(eventOrCommand)) {
-    return collector.push(eventOrCommand as WalkerOS.DeepPartialEvent);
+    const event = eventOrCommand as WalkerOS.DeepPartialEvent;
+
+    // If event doesn't have source info, add it
+    if (!event.source) event.source = getBrowserSource();
+
+    return collector.push(event);
   }
 
   // Handle string events with additional parameters
@@ -66,8 +71,9 @@ export function translateToCoreCollector(
       event: eventOrCommand,
       data: normalizeData(data || {}),
       context: normalizeContext(context || {}),
-      custom: custom || {},
-      nested: nested || [],
+      custom,
+      nested,
+      source: getBrowserSource(),
     };
 
     // Add trigger if options is a string (likely a trigger)
@@ -94,8 +100,9 @@ export function translateToCoreCollector(
     event: String(eventOrCommand || ''),
     data: normalizeData(data || {}),
     context: normalizeContext(context || {}),
-    custom: custom || {},
-    nested: nested || [],
+    custom,
+    nested,
+    source: getBrowserSource(),
   };
 
   // Add trigger if options is a string (likely a trigger)
@@ -109,18 +116,13 @@ export function translateToCoreCollector(
 
 /**
  * Normalize data to WalkerOS.Properties format
+ * Uses the same logic as legacy web collector
  */
-// @TODO There is a util for this
 function normalizeData(data: BrowserPushData | undefined): WalkerOS.Properties {
   if (!data) return {};
 
-  // If it's already properties, return as-is
-  if (typeof data === 'object' && !Array.isArray(data)) {
-    return data as WalkerOS.Properties;
-  }
-
-  // Convert other types to properties
-  return { value: data };
+  // Use the same logic as legacy: if it's Properties, use it; otherwise empty object
+  return isSameType(data, {} as WalkerOS.Properties) ? data : {};
 }
 
 /**
@@ -148,4 +150,15 @@ function normalizeContext(
   }
 
   return {};
+}
+
+/**
+ * Create source information for browser events
+ */
+function getBrowserSource(): WalkerOS.Source {
+  return {
+    type: 'web',
+    id: window.location.href,
+    previous_id: document.referrer,
+  };
 }
