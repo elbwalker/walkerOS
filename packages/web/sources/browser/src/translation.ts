@@ -157,7 +157,7 @@ function normalizeContext(
  */
 function getBrowserSource(): WalkerOS.Source {
   return {
-    type: 'web',
+    type: 'browser',
     id: window.location.href,
     previous_id: document.referrer,
   };

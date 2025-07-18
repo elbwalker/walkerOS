@@ -59,7 +59,7 @@ describe('Translation Layer', () => {
           data: { id: 123 },
           context: { page: ['test', 0] },
           source: {
-            type: 'web',
+            type: 'browser',
             id: 'https://example.com/test-page',
             previous_id: 'https://previous.com/page',
           },
@@ -83,7 +83,7 @@ describe('Translation Layer', () => {
           data: { value: 'test' },
           context: { context: ['info', 0] },
           source: {
-            type: 'web',
+            type: 'browser',
             id: 'https://example.com/test-page',
             previous_id: 'https://previous.com/page',
           },
@@ -107,7 +107,7 @@ describe('Translation Layer', () => {
           data: {}, // Should be empty object, not { value: 'primitive string data' }
           context: { page: ['test', 0] },
           source: {
-            type: 'web',
+            type: 'browser',
             id: 'https://example.com/test-page',
             previous_id: 'https://previous.com/page',
           },
@@ -151,7 +151,7 @@ describe('Translation Layer', () => {
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
           source: {
-            type: 'web',
+            type: 'browser',
             id: 'https://example.com/test-page',
             previous_id: '',
           },
@@ -175,7 +175,7 @@ describe('Translation Layer', () => {
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
           source: {
-            type: 'web',
+            type: 'browser',
             id: 'https://test.com/path?query=value#section',
             previous_id: 'https://previous.com/page',
           },
@@ -203,7 +203,7 @@ describe('Translation Layer', () => {
           context: { position: 1 },
           trigger: 'click',
           source: {
-            type: 'web',
+            type: 'browser',
             id: 'https://example.com/test-page',
             previous_id: 'https://previous.com/page',
           },
@@ -216,7 +216,7 @@ describe('Translation Layer', () => {
           data: { title: 'Test' },
           trigger: 'load',
           source: {
-            type: 'web',
+            type: 'browser',
             id: 'https://example.com/test-page',
             previous_id: 'https://previous.com/page',
           },
@@ -244,7 +244,7 @@ describe('Translation Layer', () => {
           trigger: 'load',
           data: { id: 123 },
           source: {
-            type: 'web',
+            type: 'browser',
             id: 'https://example.com/test-page',
             previous_id: 'https://previous.com/page',
           },
@@ -342,7 +342,7 @@ describe('Translation Layer', () => {
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
           source: {
-            type: 'web',
+            type: 'browser',
             id: 'https://example.com/test-page',
             previous_id: null,
           },
@@ -359,7 +359,7 @@ describe('Translation Layer', () => {
           event: '',
           data: { test: true },
           source: {
-            type: 'web',
+            type: 'browser',
             id: 'https://example.com/test-page',
             previous_id: 'https://previous.com/page',
           },

@@ -144,7 +144,7 @@ describe('Browser Source Edge Cases', () => {
           event: 'valid_event',
           data: { data: 'test' },
           source: expect.objectContaining({
-            type: 'web',
+            type: 'browser',
             id: expect.any(String),
             previous_id: expect.any(String),
           }),
@@ -160,7 +160,7 @@ describe('Browser Source Edge Cases', () => {
           event: 'object_event',
           data: { key: 'value' },
           source: expect.objectContaining({
-            type: 'web',
+            type: 'browser',
             id: expect.any(String),
             previous_id: expect.any(String),
           }),
