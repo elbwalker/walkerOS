@@ -20,8 +20,7 @@ export type CommandTypes =
   | 'User'
   | 'Walker';
 
-// Define Commands with keys as CommandTypes
-export const Commands: Record<CommandTypes, WalkerOS.Commands> = {
+export const Commands: Record<CommandTypes, WalkerOS.CommandType> = {
   Action: 'action',
   Config: 'config',
   Consent: 'consent',

@@ -1,13 +1,14 @@
 import type {
+  Elb,
   Hooks,
   WalkerOS,
   Destination as WalkerOSDestination,
 } from '@walkerOS/core';
 import type { SessionConfig } from '../session';
 import type { Destination, Config as DestConfig } from './destination';
-import type { Elb } from '@walkerOS/core';
 import type { Layer } from './elb';
 import type { Events, Trigger } from './walker';
+import type { On } from '@walkerOS/core';
 
 declare global {
   interface Window {
@@ -19,8 +20,8 @@ declare global {
   }
 }
 
-export interface Collector extends WalkerOS.Collector {
-  config: Config;
+export interface Collector extends Omit<WalkerOS.Collector, 'config'> {
+  config: Config & WalkerOS.Config;
   destinations: Destinations;
   push: Elb.Fn<Promise<Elb.PushResult>>;
   getAllEvents: (scope: Element, prefix: string) => Events;
@@ -38,12 +39,12 @@ export interface Collector extends WalkerOS.Collector {
   };
 }
 
-export interface State extends WalkerOS.State {
+export interface State {
   config: Config;
   destinations: Destinations;
 }
 
-export interface Config extends WalkerOS.Config {
+export interface Config {
   dataLayer: boolean;
   dataLayerConfig: DestConfig;
   elbLayer: Layer;
@@ -62,7 +63,7 @@ export interface InitConfig extends Partial<Config> {
   custom?: WalkerOS.Properties;
   destinations?: WalkerOSDestination.InitDestinations;
   hooks?: Hooks.Functions;
-  on?: WalkerOS.OnConfig;
+  on?: On.OnConfig;
   tagging?: number;
   user?: WalkerOS.User;
 }

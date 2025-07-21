@@ -6,12 +6,12 @@ import type {
   BrowserPushContext,
   BrowserPush,
 } from './types/elb';
+import { isString } from '@walkerOS/core';
 import { load, ready, initGlobalTrigger } from './trigger';
 import { destroyVisibilityTracking } from './triggerVisible';
 import { initElbLayer } from './elbLayer';
 import { translateToCoreCollector } from './translation';
 import { sessionStart } from './session';
-import { isString } from '@walkerOS/core';
 import { getConfig } from './config';
 
 export * from './types';

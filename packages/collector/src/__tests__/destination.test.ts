@@ -27,7 +27,6 @@ describe('Destination', () => {
       dryRun: false,
       tagging: 1,
       session: false,
-      default: false,
       verbose: false,
       globalsStatic: {},
       sessionStatic: {},

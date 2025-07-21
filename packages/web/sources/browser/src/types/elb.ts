@@ -1,4 +1,4 @@
-import type { Elb, On, WalkerOS } from '@walkerOS/core';
+import type { Elb, WalkerOS } from '@walkerOS/core';
 import type { DestinationWeb } from '@walkerOS/web-core';
 
 // Forward declare types to avoid circular imports
@@ -27,7 +27,7 @@ export interface BrowserPush<R = Promise<Elb.PushResult>> {
     destination: DestinationWeb.Destination | DestinationWeb.Init,
     config?: DestinationWeb.Config,
   ): R;
-  (event: 'walker run', state?: Partial<WalkerOS.State>): R;
+  (event: 'walker run', state?: Partial<WalkerOS.Collector>): R;
 
   // Flexible arguments
   (
@@ -90,7 +90,7 @@ export type CommandDestination<R = Promise<Elb.PushResult>> = (
 
 export type CommandRun<R = Promise<Elb.PushResult>> = (
   event: 'walker run',
-  state?: Partial<WalkerOS.State>,
+  state?: Partial<WalkerOS.Collector>,
 ) => R;
 
 // Re-export core types

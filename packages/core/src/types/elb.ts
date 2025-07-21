@@ -8,15 +8,15 @@ export interface EventFn<R = Promise<PushResult>> {
 }
 
 // Complete function interface - can be extended by other interfaces
-export interface Fn<R = Promise<PushResult>>
+export interface Fn<R = Promise<PushResult>, Config = unknown>
   extends EventFn<R>,
-    WalkerCommands<R> {
+    WalkerCommands<R, Config> {
   // Interface intentionally empty - combines EventFn and WalkerCommands
 }
 
 // Walker commands (clear, predefined list)
-export interface WalkerCommands<R = Promise<PushResult>> {
-  (event: 'walker config', config: Partial<WalkerOS.Config>): R;
+export interface WalkerCommands<R = Promise<PushResult>, Config = unknown> {
+  (event: 'walker config', config: Partial<Config>): R;
   (event: 'walker consent', consent: WalkerOS.Consent): R;
   (
     event: 'walker destination',
@@ -50,8 +50,8 @@ export type Event<R = Promise<PushResult>> = (
 ) => R;
 
 // Simplified push data types for core collector
-export type PushData =
-  | WalkerOS.DeepPartial<WalkerOS.Config>
+export type PushData<Config = unknown> =
+  | WalkerOS.DeepPartial<Config>
   | WalkerOS.Consent
   | WalkerOS.User
   | WalkerOS.Properties;

@@ -1,8 +1,4 @@
-import type {
-  Destination as WalkerOSDestination,
-  WalkerOS,
-  Elb,
-} from '@walkerOS/core';
+import type { WalkerOS, Elb, Destination } from '@walkerOS/core';
 import {
   assign,
   clone,
@@ -99,14 +95,14 @@ export function createPush<T extends WalkerOS.Collector>(
  */
 export async function addDestination(
   collector: WalkerOS.Collector,
-  data: WalkerOSDestination.Init,
-  options?: WalkerOSDestination.Config,
+  data: Destination.Init,
+  options?: Destination.Config,
 ): Promise<Elb.PushResult> {
   // Prefer explicit given config over default config
   const config = options || data.config || { init: false };
   // @TODO might not be the best solution to use options || data.config
 
-  const destination: WalkerOSDestination.Destination = {
+  const destination: Destination.Destination = {
     ...data,
     config,
   };
@@ -154,7 +150,7 @@ export async function pushToDestinations(
 
   const results = await Promise.all(
     // Process all destinations in parallel
-    Object.entries(destinations).map(async ([id, destination]) => {
+    Object.entries(destinations || {}).map(async ([id, destination]) => {
       // Create a queue of events to be processed
       let currentQueue = (destination.queue || []).map((event) => ({
         ...event,
@@ -293,11 +289,11 @@ export async function pushToDestinations(
  * @returns Whether the destination was initialized successfully.
  */
 export async function destinationInit<
-  Destination extends WalkerOSDestination.Destination,
+  Destination extends Destination.Destination,
 >(collector: WalkerOS.Collector, destination: Destination): Promise<boolean> {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
-    const context: WalkerOSDestination.Context = {
+    const context: Destination.Context = {
       collector,
       config: destination.config,
       wrap: getWrapper(destination, collector),
@@ -333,7 +329,7 @@ export async function destinationInit<
  * @returns Whether the event was pushed successfully.
  */
 export async function destinationPush<
-  Destination extends WalkerOSDestination.Destination,
+  Destination extends Destination.Destination,
 >(
   collector: WalkerOS.Collector,
   destination: Destination,
@@ -367,7 +363,7 @@ export async function destinationPush<
     }
   }
 
-  const context: WalkerOSDestination.PushContext = {
+  const context: Destination.PushContext = {
     collector,
     config,
     data,
@@ -387,18 +383,18 @@ export async function destinationPush<
     eventMapping.batchFn =
       eventMapping.batchFn ||
       debounce((destination, collector) => {
-        const batchContext: WalkerOSDestination.PushBatchContext = {
+        const batchContext: Destination.PushBatchContext = {
           collector,
           config,
           data,
           mapping: eventMapping,
-          wrap: getWrapper(destination, collector),
+          wrap: getWrapper(destination, collector as WalkerOS.Collector),
         };
 
         useHooks(
           destination.pushBatch!,
           'DestinationPushBatch',
-          collector.hooks,
+          (collector as WalkerOS.Collector).hooks,
         )(batched, batchContext);
 
         // Reset the batched queues
@@ -407,7 +403,7 @@ export async function destinationPush<
       }, eventMapping.batch);
 
     eventMapping.batched = batched;
-    eventMapping.batchFn(destination, collector);
+    eventMapping.batchFn?.(destination, collector);
   } else {
     // It's time to go to the destination's side now
     await useHooks(
@@ -447,9 +443,9 @@ export function createPushResult(
  * @returns The initialized destinations.
  */
 export function initDestinations(
-  destinations: WalkerOSDestination.InitDestinations,
-): WalkerOSDestination.Destinations {
-  return Object.entries(destinations).reduce<WalkerOSDestination.Destinations>(
+  destinations: Destination.InitDestinations,
+): WalkerOS.Destinations {
+  return Object.entries(destinations).reduce<WalkerOS.Destinations>(
     (acc, [name, destination]) => {
       acc[name] = {
         ...destination,
@@ -462,7 +458,7 @@ export function initDestinations(
 }
 
 function getWrapper(
-  destination: WalkerOSDestination.Destination,
+  destination: Destination.Destination,
   collector?: WalkerOS.Collector,
 ) {
   const wrapperConfig = destination.config.wrapper || {};

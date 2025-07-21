@@ -37,16 +37,10 @@ const initDataLayerSource: Source.Init<DataLayerSourceConfig> = (
   };
 
   // Process existing events in dataLayer
-  processExistingEvents(collector, {
-    settings,
-    mapping: undefined,
-  });
+  processExistingEvents(collector, config);
 
   // Set up interception for new events
-  interceptDataLayer(collector, {
-    settings,
-    mapping: undefined,
-  });
+  interceptDataLayer(collector, config);
 
   // Create dataLayer-specific elb function
   const elb: WalkerOS.AnyFunction = (...args: unknown[]) => {

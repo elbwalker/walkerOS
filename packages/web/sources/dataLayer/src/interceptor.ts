@@ -1,4 +1,5 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { InitSource } from '@walkerOS/collector';
+import type { WalkerOS, Source } from '@walkerOS/core';
 import { isArray, isObject, isString, tryCatch } from '@walkerOS/core';
 
 // Global flag to prevent infinite loops
@@ -9,7 +10,7 @@ let isProcessing = false;
  */
 export function interceptDataLayer(
   collector: WalkerOS.Collector,
-  config: WalkerOS.CollectorSourceConfig,
+  config: InitSource,
 ): void {
   const settings = config.settings as {
     name?: string;
@@ -56,7 +57,7 @@ export function interceptDataLayer(
  */
 export function processExistingEvents(
   collector: WalkerOS.Collector,
-  config: WalkerOS.CollectorSourceConfig,
+  config: Source.Config,
 ): void {
   const settings = config.settings as {
     name?: string;

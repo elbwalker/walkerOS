@@ -121,7 +121,7 @@ function onSession(
   collector: WalkerOS.Collector,
   onConfig: Array<On.SessionConfig>,
 ): void {
-  if (!collector.config.session) return; // Session handling is disabled
+  if (!collector.config.session) return;
 
   onConfig.forEach((func) => {
     tryCatch(func)(collector, collector.session);

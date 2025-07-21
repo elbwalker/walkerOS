@@ -15,10 +15,10 @@ import type { WalkerOS, Elb } from '@walkerOS/core';
 import { assign, onLog } from '@walkerOS/core';
 import { commonHandleCommand } from './handle';
 import { initDestinations, createPush } from './destination';
-import type { InitConfig, CreateCollector } from './types';
+import type { CreateCollector } from './types';
 
 export async function createCollector(
-  initConfig: InitConfig = {},
+  initConfig: WalkerOS.InitConfig = {},
 ): Promise<CreateCollector> {
   const instance = collector(initConfig);
 
@@ -58,11 +58,10 @@ export async function createCollector(
   };
 }
 
-function collector(initConfig: InitConfig): WalkerOS.Collector {
+function collector(initConfig: WalkerOS.InitConfig): WalkerOS.Collector {
   const version = '0.0.1';
 
   const defaultConfig: WalkerOS.Config = {
-    default: false,
     dryRun: false,
     session: false,
     globalsStatic: {},
@@ -96,7 +95,6 @@ function collector(initConfig: InitConfig): WalkerOS.Collector {
   // Enhanced globals with static globals from init
   const finalGlobals = { ...config.globalsStatic, ...globals };
 
-  // Create the collector instance
   const collector: WalkerOS.Collector = {
     allowed: false,
     config,

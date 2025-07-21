@@ -1,6 +1,4 @@
-import type { WalkerOS } from '@walkerOS/core';
-import type { Destination } from '@walkerOS/core';
-import type { Elb, On } from '@walkerOS/core';
+import type { WalkerOS, Destination, Elb, On } from '@walkerOS/core';
 import { Commands, Const } from './constants';
 import { addDestination, pushToDestinations } from './destination';
 import { assign, getId, isFunction, isString } from '@walkerOS/core';

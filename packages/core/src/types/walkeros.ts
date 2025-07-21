@@ -1,4 +1,4 @@
-import type { Destination, Elb as ElbTypes, Handler, Hooks } from '.';
+import type { Elb as ElbTypes, Handler, Hooks, Destination, On } from '.';
 
 export type AnyObject<T = unknown> = Record<string, T>;
 export type Elb = globalThis.WalkerOS.Elb;
@@ -10,51 +10,6 @@ declare global {
   namespace WalkerOS {
     interface Elb extends ElbTypes.Fn {}
   }
-}
-
-export interface Collector extends State {
-  push: ElbTypes.Fn;
-}
-
-export interface State {
-  allowed: boolean;
-  config: Config;
-  consent: Consent;
-  count: number;
-  custom: Properties;
-  sources: Sources;
-  destinations: Destinations;
-  globals: Properties;
-  group: string;
-  hooks: Hooks.Functions;
-  on: OnConfig;
-  queue: Events;
-  round: number;
-  session: undefined | SessionData;
-  timing: number;
-  user: User;
-  version: string;
-}
-
-export interface Config {
-  dryRun: boolean;
-  tagging: number;
-  session: false | unknown;
-  default: boolean;
-  verbose: boolean;
-  globalsStatic: Properties;
-  sessionStatic: Partial<SessionData>;
-  onError?: Handler.Error;
-  onLog?: Handler.Log;
-  run?: boolean;
-}
-
-export interface Sources {
-  [id: string]: CollectorSource;
-}
-
-export interface Destinations {
-  [id: string]: Destination.Destination;
 }
 
 export type Events = Array<Event>;
@@ -83,36 +38,6 @@ export interface Event {
 
 export interface Consent {
   [name: string]: boolean; // name of consent group or tool
-}
-
-export type Commands =
-  | 'action'
-  | 'config'
-  | 'consent'
-  | 'context'
-  | 'destination'
-  | 'elb'
-  | 'globals'
-  | 'hook'
-  | 'init'
-  | 'link'
-  | 'run'
-  | 'user'
-  | 'walker'
-  | string;
-
-export interface SessionData extends Properties {
-  isStart: boolean; // If this is a new session or a known one
-  storage: boolean; // If the storage was used to determine the session
-  id?: string; // Session ID
-  start?: number; // Timestamp of session start
-  marketing?: true; // If the session was started by a marketing parameters
-  // Storage data
-  updated?: number; // Timestamp of last update
-  isNew?: boolean; // If this is the first visit on a device
-  device?: string; // Device ID
-  count?: number; // Total number of sessions
-  runs?: number; // Total number of runs (like page views)
 }
 
 export interface User extends Properties {
@@ -155,18 +80,6 @@ export interface Source extends Properties {
 
 export type SourceType = 'web' | 'server' | 'app' | 'other' | string;
 
-// Collector Source interface for the unified collector
-export interface CollectorSource {
-  type: string;
-  mapping?: unknown; // Will be properly typed with Mapping.Config from collector package
-  settings?: Record<string, unknown>;
-}
-
-export interface CollectorSourceConfig {
-  mapping?: unknown; // Will be properly typed with Mapping.Config from collector package
-  settings: Record<string, unknown>;
-}
-
 export type PropertyType =
   | boolean
   | string
@@ -193,17 +106,96 @@ export interface Entity {
 export type ConsentHandler = Record<string, AnyFunction>;
 export type ActionHandler = AnyFunction;
 
-// @TODO standardize on config in server and web collectors
-export interface OnConfig {
-  consent?: ConsentHandler[];
-  ready?: ActionHandler[];
-  run?: ActionHandler[];
-  session?: ActionHandler[];
-  [key: string]: ConsentHandler[] | ActionHandler[] | undefined;
-}
+// OnConfig interface moved to on.ts
 
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
 export type PromiseOrValue<T> = T | Promise<T>;
+
+// Collector configuration interfaces
+export interface Config {
+  dryRun: boolean;
+  tagging: number;
+  session: false | unknown;
+  verbose: boolean;
+  globalsStatic: Properties;
+  sessionStatic: Partial<SessionData>;
+  onError?: Handler.Error;
+  onLog?: Handler.Log;
+  run?: boolean;
+}
+
+export interface InitConfig extends Partial<Config> {
+  destinations?: Destination.InitDestinations;
+  consent?: Consent;
+  user?: User;
+  globals?: Properties;
+  custom?: Properties;
+}
+
+export interface SessionData extends Properties {
+  isStart: boolean;
+  storage: boolean;
+  id?: string;
+  start?: number;
+  marketing?: true;
+  updated?: number;
+  isNew?: boolean;
+  device?: string;
+  count?: number;
+  runs?: number;
+}
+
+export interface Sources {
+  [id: string]: CollectorSource;
+}
+
+export interface Destinations {
+  [id: string]: Destination.Destination;
+}
+
+export interface CollectorSource {
+  type: string;
+  mapping?: unknown;
+  settings?: Record<string, unknown>;
+}
+
+export type CommandType =
+  | 'action'
+  | 'config'
+  | 'consent'
+  | 'context'
+  | 'destination'
+  | 'elb'
+  | 'globals'
+  | 'hook'
+  | 'init'
+  | 'link'
+  | 'run'
+  | 'user'
+  | 'walker'
+  | string;
+
+// Main Collector interface
+export interface Collector {
+  push: ElbTypes.Fn;
+  allowed: boolean;
+  config: Config;
+  consent: Consent;
+  count: number;
+  custom: Properties;
+  sources: Sources;
+  destinations: Destinations;
+  globals: Properties;
+  group: string;
+  hooks: Hooks.Functions;
+  on: On.OnConfig;
+  queue: Events;
+  round: number;
+  session: undefined | SessionData;
+  timing: number;
+  user: User;
+  version: string;
+}

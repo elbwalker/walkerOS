@@ -1,9 +1,9 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS, Source as CoreSource } from '@walkerOS/core';
 
 export interface Source<
   Settings extends Record<string, unknown> = Record<string, unknown>,
   Mapping = unknown,
-> extends WalkerOS.CollectorSource {
+> extends CoreSource.Instance {
   settings?: Settings;
   mapping?: Mapping;
 }
@@ -13,7 +13,7 @@ export type Init = Partial<Omit<Source, 'init'>> & Pick<Source, 'type'>;
 export type Config<
   Settings extends Record<string, unknown> = Record<string, unknown>,
   Mapping = unknown,
-> = WalkerOS.CollectorSourceConfig & {
+> = CoreSource.Instance & {
   settings: Settings;
   mapping?: Mapping;
 };

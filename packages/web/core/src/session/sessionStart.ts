@@ -1,4 +1,4 @@
-import type { WalkerOS, Elb, On } from '@walkerOS/core';
+import type { WalkerOS, On } from '@walkerOS/core';
 import type { SessionStorageConfig } from './';
 import { sessionStorage, sessionWindow } from './';
 import { elb as elbOrg } from '../elb';
