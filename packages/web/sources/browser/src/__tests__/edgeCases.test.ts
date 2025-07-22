@@ -1,6 +1,6 @@
+import type { WalkerOS } from '@walkerOS/core';
 import { createCollector } from '@walkerOS/collector';
 import { createBrowserSource } from './test-utils';
-import type { WalkerOS } from '@walkerOS/core';
 
 describe('Browser Source Edge Cases', () => {
   let collector: WalkerOS.Collector;
@@ -115,17 +115,22 @@ describe('Browser Source Edge Cases', () => {
           Unicode content
         </div>
       `;
-
       await createBrowserSource(collector);
 
       expect(() => {}).not.toThrow();
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'product view',
+          data: { title: '测试产品', emoji: '🚀🎉' },
+        }),
+      );
     });
   });
 
   describe('Malformed ELB Layer Commands', () => {
     test('handles mixed valid and invalid commands', async () => {
       window.elbLayer = [
-        ['valid_event', { data: 'test' }] as unknown[],
+        ['valid event', { data: 'test' }] as unknown[],
         [] as unknown[], // Empty array instead of null
         [''] as unknown[], // Empty action array instead of undefined
         ['walker run', { consent: { marketing: true } }] as unknown[],
@@ -141,7 +146,7 @@ describe('Browser Source Edge Cases', () => {
       // Should process valid commands and ignore invalid ones
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'valid_event',
+          event: 'valid event',
           data: { data: 'test' },
           source: expect.objectContaining({
             type: 'browser',
