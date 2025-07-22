@@ -11,6 +11,21 @@ allows you to send events to Google BigQuery.
 
 [View documentation](https://www.elbwalker.com/docs/destinations/server/gcp/)
 
+## Role in walkerOS Ecosystem
+
+walkerOS follows a **source → collector → destination** architecture:
+
+- **Sources**: Capture events from various environments (browser DOM, dataLayer,
+  server requests)
+- **Collector**: Processes, validates, and routes events with consent awareness
+- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
+  custom APIs)
+
+This GCP destination receives processed events from the walkerOS collector and
+streams them to Google BigQuery, enabling real-time data warehousing and
+analytics with Google Cloud's powerful data processing and machine learning
+capabilities.
+
 ## Installation
 
 ```sh
@@ -22,7 +37,7 @@ npm install @walkerOS/server-destination-gcp
 Here's a basic example of how to use the GCP destination:
 
 ```typescript
-import { elb } from '@walkerOS/server-collector';
+import { elb } from '@walkerOS/collector';
 import { destinationBigQuery } from '@walkerOS/server-destination-gcp';
 
 elb('walker destination', destinationBigQuery, {

@@ -17,6 +17,9 @@ import { getConfig } from './config';
 export * from './types';
 export type { BrowserPush } from './types/elb';
 
+// Export walker utility functions
+export { getAllEvents, getEvents, getGlobals } from './walker';
+
 // Browser source init function for createSource
 export const sourceBrowser: Source.Init<
   BrowserSourceConfig,

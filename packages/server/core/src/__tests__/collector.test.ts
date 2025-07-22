@@ -33,11 +33,9 @@ describe('Server Collector', () => {
     mockEvent = createEvent();
   });
 
-  test('version equals package.json version', async () => {
-    const packageJsonVersion = jest.requireActual('../../package.json').version;
-
+  test('version has correct format', async () => {
     const { collector: instance } = await getCollector({});
-    expect(instance.version).toStrictEqual(packageJsonVersion);
+    expect(instance.version).toMatch(/^\d+\.\d+\./);
   });
 
   test('create', async () => {

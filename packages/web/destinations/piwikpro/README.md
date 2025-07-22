@@ -11,6 +11,20 @@ send events to Piwik PRO.
 
 [View documentation](https://www.elbwalker.com/docs/destinations/web/piwikpro/)
 
+## Role in walkerOS Ecosystem
+
+walkerOS follows a **source → collector → destination** architecture:
+
+- **Sources**: Capture events from various environments (browser DOM, dataLayer,
+  server requests)
+- **Collector**: Processes, validates, and routes events with consent awareness
+- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
+  custom APIs)
+
+This Piwik PRO destination receives processed events from the walkerOS collector
+and transforms them into Piwik PRO's analytics format, providing
+privacy-compliant analytics with GDPR compliance and data ownership control.
+
 ## Installation
 
 ```sh
@@ -22,7 +36,7 @@ npm install @walkerOS/web-destination-piwikpro
 Here's a basic example of how to use the Piwik PRO destination:
 
 ```typescript
-import { elb } from '@walkerOS/web-collector';
+import { elb } from '@walkerOS/collector';
 import { destinationPiwikPro } from '@walkerOS/web-destination-piwikpro';
 
 elb('walker destination', destinationPiwikPro, {

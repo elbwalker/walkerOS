@@ -1,6 +1,8 @@
 import type { WalkerOS } from './types';
 import { assign } from './assign';
 
+const { version } = require('../package.json');
+
 /**
  * Creates a complete event with default values.
  * Used for testing and debugging.
@@ -47,7 +49,7 @@ export function createEvent(
     group,
     count,
     version: {
-      source: '0.0.7',
+      source: version,
       tagging: 1,
     },
     source: {

@@ -11,6 +11,21 @@ events from a dataLayer and send them to the walkerOS collector.
 
 [View documentation](https://www.elbwalker.com/docs/sources/datalayer/)
 
+## Role in walkerOS Ecosystem
+
+walkerOS follows a **source → collector → destination** architecture:
+
+- **Sources**: Capture events from various environments (browser DOM, dataLayer,
+  server requests)
+- **Collector**: Processes, validates, and routes events with consent awareness
+- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
+  custom APIs)
+
+This dataLayer source monitors the browser's dataLayer (commonly used with
+Google Tag Manager) and transforms existing gtag() calls and dataLayer.push()
+events into standardized walkerOS events, enabling seamless migration from
+traditional dataLayer implementations.
+
 ## Installation
 
 ```sh
@@ -22,7 +37,7 @@ npm install @walkerOS/web-source-dataLayer
 Here's a basic example of how to use the dataLayer source:
 
 ```typescript
-import { elb } from '@walkerOS/web-collector';
+import { elb } from '@walkerOS/collector';
 import { sourceDataLayer } from '@walkerOS/web-source-dataLayer';
 
 sourceDataLayer({ elb });

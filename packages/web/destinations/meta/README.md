@@ -11,6 +11,21 @@ walkerOS. It allows you to send events to Meta Pixel.
 
 [View documentation](https://www.elbwalker.com/docs/destinations/web/meta/)
 
+## Role in walkerOS Ecosystem
+
+walkerOS follows a **source → collector → destination** architecture:
+
+- **Sources**: Capture events from various environments (browser DOM, dataLayer,
+  server requests)
+- **Collector**: Processes, validates, and routes events with consent awareness
+- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
+  custom APIs)
+
+This Meta Pixel destination receives processed events from the walkerOS
+collector and transforms them into Meta's Pixel API format, handling conversion
+events, custom events, and audience building data to optimize your Meta
+advertising campaigns.
+
 ## Installation
 
 ```sh
@@ -22,7 +37,7 @@ npm install @walkerOS/web-destination-meta
 Here's a basic example of how to use the Meta Pixel destination:
 
 ```typescript
-import { elb } from '@walkerOS/web-collector';
+import { elb } from '@walkerOS/collector';
 import { destinationMeta } from '@walkerOS/web-destination-meta';
 
 elb('walker destination', destinationMeta, {

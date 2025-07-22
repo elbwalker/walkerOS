@@ -11,6 +11,21 @@ events to a custom API endpoint.
 
 [View documentation](https://www.elbwalker.com/docs/destinations/web/api/)
 
+## Role in walkerOS Ecosystem
+
+walkerOS follows a **source → collector → destination** architecture:
+
+- **Sources**: Capture events from various environments (browser DOM, dataLayer,
+  server requests)
+- **Collector**: Processes, validates, and routes events with consent awareness
+- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
+  custom APIs)
+
+This API destination receives processed events from the walkerOS collector and
+sends them to your custom API endpoint, enabling integration with internal
+analytics systems, data warehouses, or custom business logic that requires
+real-time event data.
+
 ## Installation
 
 ```sh
@@ -22,7 +37,7 @@ npm install @walkerOS/web-destination-api
 Here's a basic example of how to use the web API destination:
 
 ```typescript
-import { elb } from '@walkerOS/web-collector';
+import { elb } from '@walkerOS/collector';
 import { destinationAPI } from '@walkerOS/web-destination-api';
 
 elb('walker destination', destinationAPI, {

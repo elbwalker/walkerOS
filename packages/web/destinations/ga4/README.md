@@ -11,6 +11,21 @@ allows you to send events to GA4.
 
 [View documentation](https://www.elbwalker.com/docs/destinations/web/ga4/)
 
+## Role in walkerOS Ecosystem
+
+walkerOS follows a **source → collector → destination** architecture:
+
+- **Sources**: Capture events from various environments (browser DOM, dataLayer,
+  server requests)
+- **Collector**: Processes, validates, and routes events with consent awareness
+- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
+  custom APIs)
+
+This GA4 destination receives processed events from the walkerOS collector and
+automatically transforms them into Google Analytics 4 format, handling the
+measurement protocol, event structure, and data mapping to ensure your walkerOS
+events appear correctly in your GA4 reports.
+
 ## Installation
 
 ```sh
@@ -22,7 +37,7 @@ npm install @walkerOS/web-destination-ga4
 Here's a basic example of how to use the GA4 destination:
 
 ```typescript
-import { elb } from '@walkerOS/web-collector';
+import { elb } from '@walkerOS/collector';
 import { destinationGA4 } from '@walkerOS/web-destination-ga4';
 
 elb('walker destination', destinationGA4, {

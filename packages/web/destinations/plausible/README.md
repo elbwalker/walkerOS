@@ -11,6 +11,20 @@ send events to Plausible Analytics.
 
 [View documentation](https://www.elbwalker.com/docs/destinations/web/plausible/)
 
+## Role in walkerOS Ecosystem
+
+walkerOS follows a **source → collector → destination** architecture:
+
+- **Sources**: Capture events from various environments (browser DOM, dataLayer,
+  server requests)
+- **Collector**: Processes, validates, and routes events with consent awareness
+- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
+  custom APIs)
+
+This Plausible destination receives processed events from the walkerOS collector
+and transforms them into Plausible Analytics format, providing lightweight,
+privacy-focused web analytics without cookies or personal data collection.
+
 ## Installation
 
 ```sh
@@ -22,7 +36,7 @@ npm install @walkerOS/web-destination-plausible
 Here's a basic example of how to use the Plausible destination:
 
 ```typescript
-import { elb } from '@walkerOS/web-collector';
+import { elb } from '@walkerOS/collector';
 import { destinationPlausible } from '@walkerOS/web-destination-plausible';
 
 elb('walker destination', destinationPlausible, {

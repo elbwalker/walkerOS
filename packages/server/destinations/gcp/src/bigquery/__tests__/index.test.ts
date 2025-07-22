@@ -93,7 +93,7 @@ describe('Server Destination BigQuery', () => {
         timing: 3.14,
         group: 'gr0up',
         count: 1,
-        version: '{"source":"0.0.7","tagging":1}',
+        version: expect.any(String),
         source:
           '{"type":"web","id":"https://localhost:80","previous_id":"http://remotehost:9001"}',
         createdAt: expect.any(Date),

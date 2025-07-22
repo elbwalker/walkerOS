@@ -11,6 +11,21 @@ events to various AWS services. Currently, it supports AWS Firehose.
 
 [View documentation](https://www.elbwalker.com/docs/destinations/server/aws/)
 
+## Role in walkerOS Ecosystem
+
+walkerOS follows a **source → collector → destination** architecture:
+
+- **Sources**: Capture events from various environments (browser DOM, dataLayer,
+  server requests)
+- **Collector**: Processes, validates, and routes events with consent awareness
+- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
+  custom APIs)
+
+This AWS destination receives processed events from the walkerOS collector and
+streams them to AWS services like Firehose, enabling real-time data ingestion
+into AWS data lakes, warehouses, and analytics services for large-scale event
+processing and analysis.
+
 ## Installation
 
 ```sh
@@ -22,7 +37,7 @@ npm install @walkerOS/server-destination-aws
 Here's a basic example of how to use the AWS destination:
 
 ```typescript
-import { elb } from '@walkerOS/server-collector';
+import { elb } from '@walkerOS/collector';
 import { destinationFirehose } from '@walkerOS/server-destination-aws';
 
 elb('walker destination', destinationFirehose, {

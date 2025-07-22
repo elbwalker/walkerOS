@@ -59,7 +59,7 @@ export async function createCollector(
 }
 
 function collector(initConfig: WalkerOS.InitConfig): WalkerOS.Collector {
-  const version = '0.0.1';
+  const { version } = require('../package.json');
 
   const defaultConfig: WalkerOS.Config = {
     dryRun: false,

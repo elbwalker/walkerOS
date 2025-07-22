@@ -11,6 +11,21 @@ allows you to send events to the Meta Conversions API.
 
 [View documentation](https://www.elbwalker.com/docs/destinations/server/meta/)
 
+## Role in walkerOS Ecosystem
+
+walkerOS follows a **source → collector → destination** architecture:
+
+- **Sources**: Capture events from various environments (browser DOM, dataLayer,
+  server requests)
+- **Collector**: Processes, validates, and routes events with consent awareness
+- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
+  custom APIs)
+
+This Meta CAPI destination receives processed events from the walkerOS collector
+and sends them server-to-server to Meta's Conversions API, providing enhanced
+data accuracy and attribution for Meta advertising campaigns while bypassing
+browser limitations.
+
 ## Installation
 
 ```sh
@@ -22,7 +37,7 @@ npm install @walkerOS/server-destination-meta
 Here's a basic example of how to use the Meta CAPI destination:
 
 ```typescript
-import { elb } from '@walkerOS/server-collector';
+import { elb } from '@walkerOS/collector';
 import { destinationMeta } from '@walkerOS/server-destination-meta';
 
 elb('walker destination', destinationMeta, {

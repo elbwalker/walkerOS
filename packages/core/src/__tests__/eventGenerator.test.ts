@@ -37,7 +37,7 @@ describe('createEvent', () => {
     group,
     count,
     version: {
-      source: '0.0.7',
+      source: expect.stringMatching(/^\d+\.\d+\./),
       tagging: 1,
     },
     source: {

@@ -10,7 +10,8 @@
     "packages/web/core",
     "packages/web/destinations/*",
     "packages/web/sources/*",
-    "apps/demos/react"
+    "apps/demos/react",
+    "apps/walkerjs"
   ],
   "scripts": {
     "build": "turbo run build --output-logs=errors-only",
