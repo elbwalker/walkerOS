@@ -1,8 +1,4 @@
-import type {
-  Mapping as WalkerOSMapping,
-  WalkerOS,
-  Source,
-} from '@walkerOS/core';
+import type { WalkerOS, Source } from '@walkerOS/core';
 
 declare global {
   interface Window {

@@ -21,14 +21,8 @@ function getModuleMapper() {
     '^@walkerOS/core$': getDirectory('core/src/'),
     '^@walkerOS/collector$': getDirectory('collector/src/'),
     '^@walkerOS/web-core$': getDirectory('web/core/src/'),
-    '^@walkerOS/web-destination-ga4$': getDirectory(
-      'web/destinations/ga4/src/',
-    ),
-    '^@walkerOS/web-destination-gtm$': getDirectory(
-      'web/destinations/gtm/src/',
-    ),
-    '^@walkerOS/web-destination-google_ads$': getDirectory(
-      'web/destinations/google_ads/src/',
+    '^@walkerOS/web-destination-gtag$': getDirectory(
+      'web/destinations/gtag/src/',
     ),
     '^@walkerOS/web-destination-api$': getDirectory(
       'web/destinations/api/src/',
@@ -42,6 +36,7 @@ function getModuleMapper() {
     '^@walkerOS/web-destination-plausible$': getDirectory(
       'web/destinations/plausible/src/',
     ),
+    '^@walkerOS/web-source-browser$': getDirectory('web/sources/browser/src/'),
     '^@walkerOS/web-source-dataLayer$': getDirectory(
       'web/sources/dataLayer/src/',
     ),
@@ -78,7 +73,7 @@ const config = {
   },
   transformIgnorePatterns: ['/node_modules/(?!(@walkerOS)/)'],
   testMatch: ['<rootDir>/**/*.test.(ts|tsx|js|jsx)'],
-  moduleFileExtensions: ['js', 'ts', 'mjs'],
+  moduleFileExtensions: ['js', 'ts', 'tsx', 'mjs'],
   rootDir: '.',
   moduleDirectories: ['node_modules', 'src'],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],

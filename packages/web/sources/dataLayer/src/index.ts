@@ -17,12 +17,10 @@ const initDataLayerSource: Source.Init<DataLayerSourceConfig> = (
   collector: WalkerOS.Collector,
   config: DataLayerSourceConfig,
 ) => {
-  const sourceId = `dataLayer_${getId(8)}`;
   const { settings } = config;
 
   // Create the source instance
   const source: Source.Instance<DataLayerSourceConfig> = {
-    id: sourceId,
     type: 'dataLayer',
     config,
     collector,

@@ -5,16 +5,10 @@ export interface Config {
   id?: string;
   disabled?: boolean;
   settings: WalkerOS.AnyObject;
-  onError?: Handler.Error;
+  onError?: WalkerOS.AnyFunction;
 }
 
-export interface InitConfig {
-  type: string;
-  id?: string;
-  disabled?: boolean;
-  settings: WalkerOS.AnyObject;
-  onError?: Handler.Error;
-}
+export type InitConfig = Partial<Config>;
 
 export interface Init<T extends Config = Config, E = WalkerOS.AnyFunction> {
   (
@@ -27,12 +21,12 @@ export interface CreateSource<
   T extends Config = Config,
   E = WalkerOS.AnyFunction,
 > {
-  source: Instance<T>;
-  elb: E; // Source-specific elb function with proper type
+  source?: Instance<T>;
+  elb?: E; // Source-specific elb function with proper type
 }
 
 export interface Instance<T extends Config = Config> {
-  id: string;
+  // id: string;
   type: string;
   config: T;
   collector: WalkerOS.Collector;

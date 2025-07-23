@@ -1,3 +1,5 @@
+import '@testing-library/jest-dom';
+
 const mockDataLayer = jest.fn(); //.mockImplementation(console.log);
 
 global.beforeEach(() => {
