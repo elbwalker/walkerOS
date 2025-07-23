@@ -1,0 +1,502 @@
+---
+title: Google Ads
+description: Google Ads conversion tracking within the unified gtag destination
+sidebar_position: 3
+---
+
+# Google Ads
+
+Configure Google Ads conversion tracking within the unified gtag destination for
+measuring campaign performance, conversion attribution, and ROI optimization.
+
+## Configuration
+
+### Basic Setup
+
+```typescript
+import { destinationGtag } from '@walkerOS/web-destination-gtag';
+
+const destination = destinationGtag({
+  settings: {
+    ads: {
+      conversionId: 'AW-XXXXXXXXX', // Required
+      currency: 'USD',
+    },
+  },
+});
+```
+
+### Advanced Configuration
+
+```typescript
+const destination = destinationGtag({
+  settings: {
+    ads: {
+      conversionId: 'AW-XXXXXXXXX',
+      currency: 'EUR', // Default currency for all conversions
+    },
+  },
+  mapping: {
+    // Conversion tracking mappings
+    order: {
+      complete: {
+        name: 'PURCHASE_CONVERSION_LABEL', // Conversion label from Google Ads
+        settings: {
+          ads: {}, // Google Ads specific settings
+        },
+        data: {
+          map: {
+            value: 'data.total',
+            currency: { key: 'data.currency', value: 'EUR' },
+            transaction_id: 'data.id',
+          },
+        },
+      },
+    },
+  },
+});
+```
+
+## Google Ads Settings Reference
+
+| Setting        | Type     | Default      | Description                             |
+| -------------- | -------- | ------------ | --------------------------------------- |
+| `conversionId` | `string` | **Required** | Google Ads Conversion ID (AW-XXXXXXXXX) |
+| `currency`     | `string` | `'EUR'`      | Default currency code for conversions   |
+
+## Conversion Tracking
+
+### How Conversion Labels Work
+
+In Google Ads, conversions are tracked using:
+
+- **Conversion ID**: Your Google Ads account identifier (AW-XXXXXXXXX)
+- **Conversion Label**: Specific action identifier from your conversion setup
+
+The conversion label is specified in the `settings.ads.label` field:
+
+```typescript
+const mapping = {
+  order: {
+    complete: {
+      name: 'purchase', // GA4/GTM event name
+      settings: {
+        ads: {
+          label: 'PURCHASE_CONVERSION_LABEL', // Google Ads conversion label
+        },
+      },
+      // ... mapping configuration
+    },
+  },
+};
+```
+
+This sends a conversion to: `AW-XXXXXXXXX/PURCHASE_CONVERSION_LABEL`
+
+### Purchase Conversion
+
+```typescript
+const purchaseConversion = {
+  name: 'purchase', // GA4/GTM event name
+  settings: {
+    ads: {
+      label: 'AbCdEf1234567890', // Conversion label from Google Ads
+    },
+  },
+  data: {
+    map: {
+      value: 'data.total', // Conversion value
+      currency: { key: 'data.currency', value: 'USD' },
+      transaction_id: 'data.id', // For deduplication
+      // Enhanced conversion data
+      email: 'user.email',
+      phone_number: 'user.phone',
+      first_name: 'user.firstName',
+      last_name: 'user.lastName',
+      street: 'user.address.street',
+      city: 'user.address.city',
+      region: 'user.address.state',
+      postal_code: 'user.address.zip',
+      country: 'user.address.country',
+    },
+  },
+};
+```
+
+### Lead Generation Conversion
+
+```typescript
+const leadConversion = {
+  name: 'generate_lead', // GA4/GTM event name
+  settings: {
+    ads: {
+      label: 'XyZ9876543210', // Lead conversion label
+    },
+  },
+  data: {
+    map: {
+      value: { value: 25.0 }, // Fixed lead value
+      currency: 'USD',
+      // Enhanced conversion data for better attribution
+      email: 'data.email',
+      phone_number: 'data.phone',
+      first_name: 'data.firstName',
+      last_name: 'data.lastName',
+    },
+  },
+};
+```
+
+### Sign-up Conversion
+
+```typescript
+const signupConversion = {
+  name: 'sign_up', // GA4/GTM event name
+  settings: {
+    ads: {
+      label: 'Abc123XyZ456', // Sign-up conversion label
+    },
+  },
+  data: {
+    map: {
+      // No value for sign-up events (unless assigning a value)
+      email: 'user.email',
+      phone_number: 'user.phone',
+    },
+  },
+};
+```
+
+## Enhanced Conversions
+
+Enhanced conversions improve attribution by sending hashed first-party data:
+
+### Customer Data for Enhanced Conversions
+
+```typescript
+const enhancedConversionMapping = {
+  name: 'purchase', // GA4/GTM event name
+  settings: {
+    ads: {
+      label: 'CONVERSION_LABEL', // Google Ads conversion label
+    },
+  },
+  data: {
+    map: {
+      // Conversion value and currency
+      value: 'data.total',
+      currency: 'data.currency',
+      transaction_id: 'data.id',
+
+      // Enhanced conversion data (automatically hashed by gtag)
+      email: 'user.email', // Customer email
+      phone_number: 'user.phone', // Phone in E.164 format
+      first_name: 'user.firstName',
+      last_name: 'user.lastName',
+
+      // Address information
+      home_address: {
+        street: 'user.address.street',
+        city: 'user.address.city',
+        region: 'user.address.state', // State/province
+        postal_code: 'user.address.zip',
+        country: 'user.address.country', // ISO country code
+      },
+    },
+  },
+};
+```
+
+### Data Requirements
+
+For enhanced conversions, ensure data quality:
+
+- **Email**: Valid email addresses
+- **Phone**: E.164 format (+1234567890)
+- **Names**: First and last names without titles
+- **Address**: Complete address information
+- **Country**: ISO 3166-1 alpha-2 country codes (US, DE, etc.)
+
+## Multiple Conversion Actions
+
+### Different Events, Different Labels
+
+```typescript
+const multipleConversions = {
+  // Purchase conversion
+  order: {
+    complete: {
+      name: 'purchase',
+      settings: { 
+        ads: {
+          label: 'PURCHASE_LABEL_123',
+        },
+      },
+      data: {
+        map: {
+          value: 'data.total',
+          currency: 'data.currency',
+          transaction_id: 'data.id',
+        },
+      },
+    },
+  },
+
+  // Newsletter signup
+  newsletter: {
+    subscribe: {
+      name: 'subscribe',
+      settings: { 
+        ads: {
+          label: 'NEWSLETTER_LABEL_456',
+        },
+      },
+      data: {
+        map: {
+          value: { value: 5.0 }, // Assign value to newsletter signup
+          currency: 'USD',
+          email: 'data.email',
+        },
+      },
+    },
+  },
+
+  // Contact form submission
+  contact: {
+    submit: {
+      name: 'contact',
+      settings: { 
+        ads: {
+          label: 'CONTACT_LABEL_789',
+        },
+      },
+      data: {
+        map: {
+          email: 'data.email',
+          phone_number: 'data.phone',
+        },
+      },
+    },
+  },
+};
+```
+
+### Dynamic Conversion Values
+
+```typescript
+const dynamicValueMapping = {
+  name: 'subscription',
+  settings: {
+    ads: {
+      label: 'DYNAMIC_VALUE_LABEL',
+    },
+  },
+  data: {
+    map: {
+      // Dynamic value based on subscription type
+      value: {
+        condition: (event) => {
+          const plan = event.data.plan;
+          switch (plan) {
+            case 'premium':
+              return 99.99;
+            case 'standard':
+              return 49.99;
+            case 'basic':
+              return 19.99;
+            default:
+              return 0;
+          }
+        },
+      },
+      currency: 'USD',
+      custom_parameters: {
+        plan_type: 'data.plan',
+        subscription_length: 'data.months',
+      },
+    },
+  },
+};
+```
+
+## Conversion Deduplication
+
+### Using Transaction IDs
+
+Prevent duplicate conversions with transaction IDs:
+
+```typescript
+const deduplicatedConversion = {
+  name: 'purchase',
+  settings: {
+    ads: {
+      label: 'PURCHASE_LABEL',
+    },
+  },
+  data: {
+    map: {
+      value: 'data.total',
+      currency: 'data.currency',
+      transaction_id: 'data.orderId', // Unique identifier
+
+      // Additional deduplication data
+      order_timestamp: 'data.timestamp',
+      customer_id: 'user.id',
+    },
+  },
+};
+```
+
+### Best Practices for Deduplication
+
+1. **Use Unique Transaction IDs**: Ensure IDs are unique across all orders
+2. **Include Timestamps**: Add order timestamps for additional verification
+3. **Customer Identification**: Include customer IDs when available
+4. **Consistent Format**: Use the same ID format across all systems
+
+## Currency Handling
+
+### Default Currency
+
+Set a default currency in the ads configuration:
+
+```typescript
+const destination = destinationGtag({
+  settings: {
+    ads: {
+      conversionId: 'AW-XXXXXXXXX',
+      currency: 'EUR', // Default for all conversions
+    },
+  },
+});
+```
+
+### Dynamic Currency
+
+Override default currency per event:
+
+```typescript
+const currencyMapping = {
+  data: {
+    map: {
+      value: 'data.total',
+      currency: 'data.userCurrency', // Dynamic currency from event data
+      transaction_id: 'data.id',
+    },
+  },
+};
+```
+
+### Supported Currencies
+
+Google Ads supports ISO 4217 currency codes:
+
+- `USD` - US Dollar
+- `EUR` - Euro
+- `GBP` - British Pound
+- `JPY` - Japanese Yen
+- `CAD` - Canadian Dollar
+- And many more...
+
+## Combined with Other Tools
+
+### GA4 + Google Ads
+
+Track the same events in both GA4 and Google Ads:
+
+```typescript
+const unifiedTracking = {
+  order: {
+    complete: {
+      name: 'purchase', // GA4 event name
+      settings: {
+        ga4: {
+          include: ['data', 'context'],
+        },
+        ads: {
+          label: 'PURCHASE_LABEL', // Specify conversion label explicitly
+        },
+      },
+      data: {
+        map: {
+          // Shared mapping for both tools
+          transaction_id: 'data.id',
+          value: 'data.total',
+          currency: 'data.currency',
+
+          // GA4-specific enhanced ecommerce
+          items: {
+            loop: [
+              'nested',
+              {
+                condition: (entity) => entity.type === 'product',
+                map: {
+                  item_id: 'data.id',
+                  item_name: 'data.name',
+                  quantity: 'data.quantity',
+                },
+              },
+            ],
+          },
+
+          // Google Ads enhanced conversion data
+          email: 'user.email',
+          phone_number: 'user.phone',
+        },
+      },
+    },
+  },
+};
+```
+
+## Troubleshooting
+
+### Conversions Not Appearing
+
+1. **Check Conversion ID**: Verify the conversion ID is correct (AW-XXXXXXXXX)
+2. **Verify Conversion Label**: Ensure the `settings.ads.label` matches the Google Ads
+   conversion label
+3. **Check Conversion Action**: Verify the conversion action is set up in Google
+   Ads
+4. **Review Attribution Window**: Conversions may appear within the attribution
+   window
+
+### Enhanced Conversions Not Working
+
+1. **Data Quality**: Ensure email addresses and phone numbers are valid
+2. **Hashing**: Data is automatically hashed by gtag, don't pre-hash
+3. **Privacy Compliance**: Ensure proper consent for enhanced conversions
+4. **Setup in Google Ads**: Verify enhanced conversions are enabled in your
+   account
+
+### Duplicate Conversions
+
+1. **Transaction IDs**: Use unique transaction IDs for deduplication
+2. **Event Frequency**: Ensure events aren't fired multiple times
+3. **Cross-Domain Tracking**: Configure proper cross-domain tracking if needed
+
+## Testing
+
+### Google Ads Conversion Testing
+
+1. **Use Google Ads Preview**: Test conversions in Google Ads preview mode
+2. **Check Browser Developer Tools**: Verify gtag calls in network tab
+3. **Google Tag Assistant**: Use Google Tag Assistant browser extension
+4. **Wait for Processing**: Conversions may take time to appear in reporting
+
+## TypeScript Support
+
+```typescript
+import type { DestinationGtag } from '@walkerOS/web-destination-gtag';
+
+// Type-safe Google Ads configuration
+const adsConfig: DestinationGtag.AdsSettings = {
+  conversionId: 'AW-XXXXXXXXX',
+  currency: 'USD',
+};
+
+// Type-safe mapping
+const adsMapping: DestinationGtag.AdsMapping = {
+  label: 'CONVERSION_LABEL', // Google Ads conversion label
+};
+```
