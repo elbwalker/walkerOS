@@ -1,0 +1,327 @@
+---
+title: API Destination
+description: Send events to any custom API endpoint
+sidebar_position: 1
+tags: [web, destination, api]
+package: '@walkerOS/web-destination-api'
+---
+
+import PackageLink from '@site/src/components/docs/package-link';
+import { EnvironmentBadges } from '@site/src/components/docs/environment-badges';
+
+# API Destination
+
+<EnvironmentBadges web={true} server={false} />
+
+<PackageLink
+  browser="@walkerOS/web-destination-api"
+  es5="@walkerOS/web-destination-api"
+  github="packages/web/destinations/api"
+  npm="@walkerOS/web-destination-api"
+/>
+
+The API destination allows you to send events to any custom API endpoint. This is useful for sending data to your own backend systems, third-party services, or any HTTP endpoint that can receive JSON data.
+
+## Installation
+
+```bash
+npm install @walkerOS/web-destination-api
+```
+
+## Quick Start
+
+<EXPLORER config="collector, web-destination-api">
+```typescript
+import { Collector } from '@walkerOS/collector';
+import { destinationAPI } from '@walkerOS/web-destination-api';
+
+const collector = Collector.create();
+
+// Add the API destination
+collector.destination('myAPI', destinationAPI, {
+  settings: {
+    url: 'https://api.example.com/events',
+  },
+});
+
+// Send events to your API
+collector.push('user login', { id: 'user123' });
+```
+</EXPLORER>
+
+## Configuration
+
+```typescript
+interface Settings {
+  url: string;                              // Required: The API endpoint URL
+  headers?: Record<string, string>;         // Optional: HTTP headers
+  method?: string;                          // Optional: HTTP method (default: 'POST')
+  transform?: Transform;                    // Optional: Transform function for the event data
+  transport?: 'fetch' | 'xhr' | 'beacon';   // Optional: Transport method (default: 'fetch')
+}
+
+type Transform = (
+  data?: unknown,
+  config?: Config,
+  mapping?: Rule,
+) => string | FormData | URLSearchParams | ReadableStream | Blob | ArrayBuffer | DataView;
+```
+
+### Configuration Options
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `url` | `string` | ✓ | The URL to send events to |
+| `headers` | `object` | | HTTP headers to include with the request |
+| `method` | `string` | | HTTP method (default: `'POST'`) |
+| `transform` | `function` | | Custom transformation function for event data |
+| `transport` | `string` | | Transport method: `'fetch'` (default), `'xhr'`, or `'beacon'` |
+
+## Usage
+
+### Basic Usage
+
+<EXPLORER config="collector, web-destination-api">
+```typescript
+import { Collector } from '@walkerOS/collector';
+import { destinationAPI } from '@walkerOS/web-destination-api';
+
+const collector = Collector.create();
+
+// Configure the destination
+collector.destination('myAPI', destinationAPI, {
+  settings: {
+    url: 'https://api.example.com/events',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': 'your-api-key',
+    },
+  },
+});
+```
+</EXPLORER>
+
+### Custom Transform Function
+
+You can provide a custom transform function to modify the event data before sending:
+
+<EXPLORER config="collector, web-destination-api">
+```typescript
+collector.destination('myAPI', destinationAPI, {
+  settings: {
+    url: 'https://api.example.com/events',
+    transform: (event, config, mapping) => {
+      // Custom transformation logic
+      return JSON.stringify({
+        timestamp: Date.now(),
+        event: event,
+        metadata: {
+          source: 'walkerOS',
+        },
+      });
+    },
+  },
+});
+```
+</EXPLORER>
+
+### Transport Methods
+
+Choose the appropriate transport method based on your requirements:
+
+<EXPLORER config="collector, web-destination-api">
+```typescript
+// Using Beacon API for reliability when page unloads
+collector.destination('analytics', destinationAPI, {
+  settings: {
+    url: 'https://analytics.example.com/events',
+    transport: 'beacon', // Survives page unloads
+  },
+});
+
+// Using XHR for compatibility
+collector.destination('legacy', destinationAPI, {
+  settings: {
+    url: 'https://legacy.example.com/events',
+    transport: 'xhr', // Better browser compatibility
+  },
+});
+```
+</EXPLORER>
+
+## Event Mapping
+
+The API destination supports event mapping to transform events before sending:
+
+<EXPLORER config="collector, web-destination-api">
+```typescript
+import type { DestinationAPI } from '@walkerOS/web-destination-api';
+
+// Define mapping rules
+const mapping: DestinationAPI.Rules = {
+  // Map specific entity/action combinations
+  user: {
+    login: {
+      data: 'data', // Pass through the data as-is
+    },
+  },
+  // Map all page views
+  page: {
+    view: {
+      custom: {
+        url: 'context.location.href',
+        title: 'data.title',
+      },
+    },
+  },
+};
+
+// Apply mapping to the destination
+collector.destination('myAPI', destinationAPI, {
+  settings: {
+    url: 'https://api.example.com/events',
+  },
+  mapping,
+});
+```
+</EXPLORER>
+
+## Examples
+
+### Sending to Multiple Endpoints
+
+<EXPLORER config="collector, web-destination-api">
+```typescript
+// Analytics endpoint
+collector.destination('analytics', destinationAPI, {
+  settings: {
+    url: 'https://analytics.example.com/events',
+    headers: {
+      'X-Analytics-Key': 'analytics-key',
+    },
+  },
+});
+
+// Error tracking endpoint
+collector.destination('errors', destinationAPI, {
+  settings: {
+    url: 'https://errors.example.com/track',
+    transform: (event) => {
+      if (event.entity === 'error') {
+        return JSON.stringify({
+          error: event.data,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+        });
+      }
+      return null; // Skip non-error events
+    },
+  },
+});
+```
+</EXPLORER>
+
+### Batching Events
+
+While the API destination sends events individually, you can implement batching with a custom transform:
+
+<EXPLORER config="collector, web-destination-api">
+```typescript
+const eventBatch: any[] = [];
+let batchTimer: NodeJS.Timeout;
+
+collector.destination('batchAPI', destinationAPI, {
+  settings: {
+    url: 'https://api.example.com/batch',
+    transform: (event) => {
+      eventBatch.push(event);
+      
+      // Clear existing timer
+      clearTimeout(batchTimer);
+      
+      // Set new timer to send batch after 1 second
+      batchTimer = setTimeout(() => {
+        const batch = [...eventBatch];
+        eventBatch.length = 0;
+        
+        // Send the batch
+        return JSON.stringify({ events: batch });
+      }, 1000);
+      
+      // Return null to skip immediate send
+      return null;
+    },
+  },
+});
+```
+</EXPLORER>
+
+## Troubleshooting
+
+### Events Not Being Sent
+
+1. **Check the URL**: Ensure the `url` in settings is valid and accessible
+2. **CORS Issues**: Verify your API endpoint allows requests from your domain
+3. **Transform Function**: If using a custom transform, ensure it returns a valid value
+
+### Network Errors
+
+```typescript
+// Add error handling
+collector.on('error', (error) => {
+  if (error.source === 'destination' && error.destination === 'myAPI') {
+    console.error('API destination error:', error);
+  }
+});
+```
+
+### Debugging
+
+Enable verbose logging to troubleshoot issues:
+
+```typescript
+collector.destination('myAPI', destinationAPI, {
+  settings: {
+    url: 'https://api.example.com/events',
+  },
+  verbose: true, // Enable detailed logging
+});
+```
+
+## Migration Guide
+
+If migrating from `@elbwalker/destination-web-api`:
+
+1. Update the import:
+   ```typescript
+   // Old
+   import destination from '@elbwalker/destination-web-api';
+   
+   // New
+   import { destinationAPI } from '@walkerOS/web-destination-api';
+   ```
+
+2. Update configuration (structure remains the same):
+   ```typescript
+   // The configuration structure is unchanged
+   const config = {
+     settings: {
+       url: 'https://api.example.com/events',
+     },
+   };
+   ```
+
+3. Update collector usage:
+   ```typescript
+   // Old
+   elb('walker destination', destination, config);
+   
+   // New
+   collector.destination('myAPI', destinationAPI, config);
+   ```
+
+## See Also
+
+- [Collector Documentation](/docs/collector)
+- [Event Mapping](/docs/guides/event-mapping)
+- [Web Destinations Overview](/docs/destinations/web)

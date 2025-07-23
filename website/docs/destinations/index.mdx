@@ -1,98 +1,142 @@
 ---
 title: Destinations
-description: Initialize and send events to any tool or service with walkerOS
-sidebar_position: 5
+description: Send events to analytics tools, marketing platforms, and custom endpoints
+sidebar_position: 4
 ---
 
-import Link from '@docusaurus/Link';
+# Destinations
 
-WalkerOS is built **vendor-agnostically**.
-While&nbsp;<Link to="/docs/sources">sources</Link> create events, destinations
-are built to manage how events are processed and sent to various **analytics**,
-**marketing** or data **storage** tools.
+Destinations are the endpoints where your collected events are sent. WalkerOS supports a wide variety of destinations for both web (browser) and server environments.
 
-Destinations ensure that data captured from your website or application is
-best-organized to easily get integrated with different tools if proper consent
-was granted. This helps maintaining data quality and simplifying the setup of
-new tools.
+## Destination Types
 
-## How it works
+### [Web Destinations](./web)
 
-Destinations are added to a source
-(see&nbsp;<Link to="/docs/collectors/web/commands#destination">walker.js</Link>
-or&nbsp;<Link to="/docs/collectors/server/commands#destination">server</Link>).
-Before receiving events from the source, the proper consent states are checked
-each time automatically. Destinations receive events through the `push`
-interface. Each destination can have its own configuration, which is set up in
-the [`config`](/docs/destinations/event_mapping#example) object. This
-configuration includes general settings for the destination and individual event
-settings. The optional `init` function in a destination gets called before
-actually pushing events. This function must return `true` upon successful
-initialization for the events to be processed.
+Web destinations run in the browser and send events directly from the user's device:
 
-```mermaid
----
-title: Eventflow
----
-flowchart LR
-  subgraph frontend["Frontend <small>(client-side)</small>"]
-    webC["walker.js<br>web source"]
-    webD["<b>Web<br>Destinations</b>"]
-    webC -- consent<br>check --> webD
-  end
-  subgraph backend["Backend <small>(server-side)</small>"]
-    serverC["Server<br>source"]
-    serverD["<b>Server<br>Destinations</b>"]
-    serverC -- consent<br>check --> serverD
-  end
-  subgraph tools["Tools"]
-    direction LR
-    storage["Storage"]
-    marketing["Marketing"]
-    analytics["Analytics"]
-  end
+- **API** - Send to any custom HTTP endpoint
+- **Google (Gtag)** - Google Analytics 4, Google Ads, GTM
+- **Meta Pixel** - Facebook/Meta conversion tracking
+- **Piwik PRO** - Privacy-focused analytics
+- **Plausible** - Simple, privacy-friendly analytics
 
-  webD & serverD --> tools
-  click webC "/docs/collectors/web/"
-  click serverC "/docs/collectors/server/"
-  click webD "/docs/destinations/web/api/"
-  click serverD "/docs/destinations/server/gcp/"
+### [Server Destinations](./server)
+
+Server destinations run in Node.js environments and are ideal for:
+
+- Server-side tracking
+- Sensitive data handling
+- Batch processing
+- Backend integrations
+
+Available server destinations:
+- **AWS** - Amazon Kinesis Firehose
+- **GCP** - Google BigQuery
+- **Meta Conversions API** - Server-side Facebook/Meta tracking
+
+## Choosing Between Web and Server
+
+### Use Web Destinations When:
+- You need real-time user interaction tracking
+- Client-side context is important (viewport, mouse position, etc.)
+- You want simple implementation without server infrastructure
+- The destination service provides a JavaScript SDK
+
+### Use Server Destinations When:
+- Handling sensitive data (PII, payment info)
+- You need guaranteed delivery
+- Batch processing is required
+- You want to enrich data with server-side information
+- Compliance requires server-side processing
+
+## Common Concepts
+
+### Event Mapping
+
+All destinations support mapping to transform walkerOS events into the destination's expected format:
+
+```typescript
+const mapping = {
+  page: {
+    view: {
+      // Map walkerOS event to destination format
+      event_name: 'page_view',
+      page_location: 'context.location.href',
+      page_title: 'data.title',
+    },
+  },
+};
 ```
 
-## Categories
+### Configuration
 
-There are two types of destinations within walkerOS that destinations are
-categorized in: **web** and **server**.
+Every destination requires configuration:
 
-### Web
+```typescript
+const config = {
+  settings: {
+    // Destination-specific settings
+  },
+  mapping: {
+    // Event transformation rules
+  },
+};
+```
 
-Like&nbsp;<Link to="/docs/collectors/web">walker.js</Link>, web destinations run
-in the **browser** directly. Their purpose is to initialize, map event data to
-the vendors' requirements, and send them.
+### Error Handling
 
-- <Link to="/docs/destinations/web/api">API</Link>
-- <Link to="/docs/destinations/web/google_ads">Google Ads</Link>
-- <Link to="/docs/destinations/web/ga4">Google Analytics 4</Link>
-- <Link to="/docs/destinations/web/gtm">Google Tag Manager</Link>
-- <Link to="/docs/destinations/web/meta">Meta Pixel</Link>
-- <Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>
-- <Link to="/docs/destinations/web/plausible">Plausible Analytics</Link>
+Both web and server destinations provide error handling:
 
-### Server
+```typescript
+collector.on('error', (error) => {
+  if (error.source === 'destination') {
+    console.error(`Destination error:`, error);
+  }
+});
+```
 
-Server destinations offer a flexible and efficient way to handle your
-**server-side** event data. Whether you're sending data to a cloud-based data
-warehouse or to a custom API, they make it easy to configure, initialize, and
-push your events securely.
+## Getting Started
 
-- <Link to="/docs/destinations/server/aws">AWS</Link>
-- <Link to="/docs/destinations/server/gcp">BigQuery</Link>
-- <Link to="/docs/destinations/server/meta">Meta Conversion API</Link>
+1. Choose your destination type (web or server)
+2. Install the destination package
+3. Configure the destination with your credentials
+4. Set up event mapping rules
+5. Test the integration
 
-:::info
+## Best Practices
 
-If you can't find a destination, you
-can&nbsp;<Link to="https://github.com/elbwalker/walkerOS/issues/new?assignees=&labels=&template=feature_request.md&title=">request
-it</Link>.
+### Security
+- Never expose sensitive credentials in web destinations
+- Use environment variables for server destination credentials
+- Implement proper authentication for custom API destinations
 
-:::
+### Performance
+- Load web destinations asynchronously when possible
+- Batch events in server destinations
+- Use appropriate transport methods (beacon for critical web events)
+
+### Privacy
+- Always respect user consent
+- Implement destination removal when consent is revoked
+- Document what data each destination receives
+
+## Creating Custom Destinations
+
+You can create custom destinations by implementing the destination interface:
+
+```typescript
+const customDestination = {
+  type: 'custom',
+  config: {},
+  push(event, context) {
+    // Your custom logic here
+  },
+};
+```
+
+## See Also
+
+- [Collector Documentation](/docs/collector)
+- [Event Model](/docs/getting-started/event-model)
+- [Event Mapping Guide](/docs/guides/event-mapping)
+- [Privacy & Consent](/docs/guides/consent)
