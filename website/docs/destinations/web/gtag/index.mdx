@@ -6,4 +6,64 @@ description:
 sidebar_position: 1
 ---
 
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
 # Google Gtag
+
+## Configuration
+
+<SettingsTable
+  properties={[
+    {
+      name: 'ga4',
+      type: 'GA4Settings',
+      description: 'GA4-specific configuration settings',
+      required: false,
+      example: "{ measurementId: 'G-XXXXXXXXXX' }",
+    },
+    {
+      name: 'ads',
+      type: 'AdsSettings',
+      description: 'Google Ads specific configuration settings',
+      required: false,
+      example: "{ conversionId: 'AW-XXXXXXXXX' }",
+    },
+    {
+      name: 'gtm',
+      type: 'GTMSettings',
+      description: 'Google Tag Manager specific configuration settings',
+      required: false,
+      example: "{ containerId: 'GTM-XXXXXXX' }",
+    },
+  ]}
+/>
+
+### Event Mapping
+
+For custom event mapping (`mapping.entity.action.settings`):
+
+<SettingsTable
+  properties={[
+    {
+      name: 'ga4',
+      type: 'GA4Mapping',
+      description: 'GA4-specific event mapping configuration',
+      required: false,
+      example: "{ include: ['data', 'context'] }",
+    },
+    {
+      name: 'ads',
+      type: 'AdsMapping',
+      description: 'Google Ads specific event mapping configuration',
+      required: false,
+      example: "{ label: 'conversion_label' }",
+    },
+    {
+      name: 'gtm',
+      type: 'GTMMapping',
+      description: 'GTM specific event mapping configuration',
+      required: false,
+      example: "{}",
+    },
+  ]}
+/>

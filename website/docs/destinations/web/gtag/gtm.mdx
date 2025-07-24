@@ -5,4 +5,38 @@ description:
 sidebar_position: 4
 ---
 
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
 # Google Tag Manager (GTM)
+
+## Configuration
+
+<SettingsTable
+  properties={[
+    {
+      name: 'containerId',
+      type: 'string',
+      description: 'GTM Container ID from Google Tag Manager',
+      required: true,
+      example: "'GTM-XXXXXXX'",
+    },
+    {
+      name: 'dataLayer',
+      type: 'string',
+      description: 'Custom dataLayer variable name',
+      required: false,
+      example: "'customDataLayer'",
+    },
+    {
+      name: 'domain',
+      type: 'string',
+      description: 'Domain for GTM script loading',
+      required: false,
+      example: "'googletagmanager.com'",
+    },
+  ]}
+/>
+
+### Event Mapping
+
+GTM specific event mapping (`mapping.entity.action.settings.gtm`) currently has no configurable properties. The GTMMapping interface is empty, so events are passed through to GTM without additional transformation options.

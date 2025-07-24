@@ -7,4 +7,111 @@ tags: [collector, configuration, setup]
 package: '@walkerOS/collector'
 ---
 
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
 # Collector Configuration
+
+## Configuration
+
+<SettingsTable
+  properties={[
+    {
+      name: 'dryRun',
+      type: 'boolean',
+      description: 'Run in dry mode without executing events',
+      required: true,
+      example: 'false',
+    },
+    {
+      name: 'run',
+      type: 'boolean',
+      description: 'Whether to run collector automatically',
+      required: false,
+      example: 'true',
+    },
+    {
+      name: 'consent',
+      type: 'Consent',
+      description: 'Initial consent state',
+      required: false,
+      example: "{ analytics: true, marketing: false }",
+    },
+    {
+      name: 'user',
+      type: 'User',
+      description: 'Initial user data',
+      required: false,
+      example: "{ id: 'user123', email: 'user@example.com' }",
+    },
+    {
+      name: 'tagging',
+      type: 'number',
+      description: 'Version for event tagging',
+      required: true,
+      example: '2',
+    },
+    {
+      name: 'session',
+      type: 'false | unknown',
+      description: 'Session configuration',
+      required: true,
+      example: 'false',
+    },
+    {
+      name: 'globals',
+      type: 'Properties',
+      description: 'Initial global properties',
+      required: false,
+      example: "{ version: '1.2.3' }",
+    },
+    {
+      name: 'globalsStatic',
+      type: 'Properties',
+      description: 'Static global properties even on a new run',
+      required: true,
+      example: "{ environment: 'production' }",
+    },
+    {
+      name: 'sessionStatic',
+      type: 'Partial<SessionData>',
+      description: 'Static session data even on a new run',
+      required: true,
+      example: '{ storage: true }',
+    },
+    {
+      name: 'destinations',
+      type: 'Destination.InitDestinations',
+      description: 'Destination configurations',
+      required: false,
+      example: '[{ destination, config }]',
+    },
+    {
+      name: 'custom',
+      type: 'Properties',
+      description: 'Initial custom properties',
+      required: false,
+      example: "{ experiment: 'variant-a' }",
+    },
+    {
+      name: 'verbose',
+      type: 'boolean',
+      description: 'Enable verbose logging',
+      required: true,
+      example: 'false',
+    },
+    {
+      name: 'onError',
+      type: 'Handler.Error',
+      description: 'Error handler',
+      required: false,
+      example: '(error) => console.error(error)',
+    },
+    {
+      name: 'onLog',
+      type: 'Handler.Log',
+      description: 'Log handler',
+      required: false,
+      example: '(message, level) => console.log(message)',
+    },
+  ]}
+/>

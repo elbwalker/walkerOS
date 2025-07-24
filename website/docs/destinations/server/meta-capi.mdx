@@ -8,4 +8,62 @@ tags: [server, meta, facebook, capi, conversions-api, advertising, privacy]
 package: '@walkerOS/server-destination-meta'
 ---
 
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
 # Meta Conversions API
+
+## Configuration
+
+<SettingsTable
+  properties={[
+    {
+      name: 'accessToken',
+      type: 'string',
+      description: 'Meta access token for Conversions API authentication',
+      required: true,
+      example: "'your_access_token'",
+    },
+    {
+      name: 'pixelId',
+      type: 'string',
+      description: 'Meta Pixel ID from your Facebook Business account',
+      required: true,
+      example: "'1234567890'",
+    },
+    {
+      name: 'action_source',
+      type: 'ActionSource',
+      description: 'Source of the event (website, app, phone_call, etc.)',
+      required: false,
+      example: "'website'",
+    },
+    {
+      name: 'doNotHash',
+      type: 'string[]',
+      description: 'Array of user_data fields that should not be hashed',
+      required: false,
+      example: "['client_ip_address', 'client_user_agent']",
+    },
+    {
+      name: 'test_event_code',
+      type: 'string',
+      description: 'Test event code for debugging Meta Conversions API events',
+      required: false,
+      example: "'TEST12345'",
+    },
+    {
+      name: 'url',
+      type: 'string',
+      description: 'Custom URL for Meta Conversions API endpoint',
+      required: false,
+      example: "'https://graph.facebook.com/v17.0'",
+    },
+    {
+      name: 'user_data',
+      type: 'WalkerOSMapping.Map',
+      description: 'Mapping configuration for user data fields',
+      required: false,
+      example: "{ email: 'user.email', phone: 'user.phone' }",
+    },
+  ]}
+/>

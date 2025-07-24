@@ -4,4 +4,43 @@ description: Google Ads conversion tracking within the unified gtag destination
 sidebar_position: 3
 ---
 
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
 # Google Ads
+
+## Configuration
+
+<SettingsTable
+  properties={[
+    {
+      name: 'conversionId',
+      type: 'string',
+      description: 'Google Ads conversion ID from your Google Ads account',
+      required: true,
+      example: "'AW-XXXXXXXXX'",
+    },
+    {
+      name: 'currency',
+      type: 'string',
+      description: 'Default currency code for conversion values',
+      required: false,
+      example: "'EUR'",
+    },
+  ]}
+/>
+
+### Event Mapping
+
+For custom event mapping (`mapping.entity.action.settings.ads`):
+
+<SettingsTable
+  properties={[
+    {
+      name: 'label',
+      type: 'string',
+      description: 'Conversion label for this specific event',
+      required: false,
+      example: "'conversion_label'",
+    },
+  ]}
+/>

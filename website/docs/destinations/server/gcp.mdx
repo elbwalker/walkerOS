@@ -8,4 +8,55 @@ tags: [server, gcp, bigquery, analytics, data-warehouse, streaming]
 package: '@walkerOS/server-destination-gcp'
 ---
 
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
 # GCP BigQuery
+
+## Configuration
+
+<SettingsTable
+  properties={[
+    {
+      name: 'client',
+      type: 'BigQuery',
+      description: 'Google Cloud BigQuery client instance',
+      required: true,
+      example: 'new BigQuery({ projectId, keyFilename })',
+    },
+    {
+      name: 'projectId',
+      type: 'string',
+      description: 'Google Cloud Project ID',
+      required: true,
+      example: "'my-gcp-project'",
+    },
+    {
+      name: 'datasetId',
+      type: 'string',
+      description: 'BigQuery dataset ID where events will be stored',
+      required: true,
+      example: "'walker_events'",
+    },
+    {
+      name: 'tableId',
+      type: 'string',
+      description: 'BigQuery table ID for event storage',
+      required: true,
+      example: "'events'",
+    },
+    {
+      name: 'location',
+      type: 'string',
+      description: 'Geographic location for the BigQuery dataset',
+      required: false,
+      example: "'US'",
+    },
+    {
+      name: 'bigquery',
+      type: 'BigQueryOptions',
+      description: 'Additional BigQuery client configuration options',
+      required: false,
+      example: '{ keyFilename: "path/to/key.json" }',
+    },
+  ]}
+/>

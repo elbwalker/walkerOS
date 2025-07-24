@@ -522,7 +522,6 @@ into context objects. This change makes the API cleaner and more extensible.
 **Key Changes:**
 
 1. **Function Signature Simplification:**
-
    - `InitFn`: Parameters consolidated into a single `context` object
    - `PushFn`: Event parameter remains explicit, other parameters in `context`
    - `PushBatchFn`: Batch parameter remains explicit, other parameters in
@@ -558,7 +557,6 @@ into context objects. This change makes the API cleaner and more extensible.
    ```
 
 2. **Context Interfaces:**
-
    - `InitContext`: Contains `collector` and `config`
    - `PushContext`: Contains `collector`, `config`, `mapping`, and `data`
    - `PushBatchContext`: Contains `collector`, `config`, `mapping`, and `data`
@@ -592,7 +590,6 @@ conventions.
 **Key Changes:**
 
 1.  **Renamed Core Mapping Types:**
-
     - `Mapping.Config` (the overall mapping rulebook) has been renamed to
       `Mapping.Rules`.
     - `Mapping.EventConfig` (a single event mapping rule) has been renamed to
@@ -623,7 +620,6 @@ conventions.
     ```
 
 2.  **Generic Parameter Renamed (`CustomEvent` to `Settings`):**
-
     - The generic type parameter used within `Mapping.Rules` and `Mapping.Rule`
       (previously `CustomEvent`) has been renamed to `Settings`.
     - **Impact:** This aligns with the `Destination<Settings, Mapping>` generic,
@@ -647,7 +643,6 @@ conventions.
     ```
 
 3.  **`custom` Property Renamed to `settings` within `Mapping.Rule`:**
-
     - The `custom` property within a `Mapping.Rule` (which holds
       destination-specific configurations) has been renamed to `settings`.
     - **Impact:** This provides a more descriptive name for arbitrary
@@ -773,7 +768,7 @@ import { destinationAds } from '@walkerOS/web-destination-google_ads';
 const destination = destinationAds({
   settings: {
     conversionId: 'AW-XXXXXXXXX',
-    currency: 'USD',
+    currency: 'EUR',
   },
 });
 ```
@@ -787,7 +782,7 @@ const destination = destinationGtag({
   settings: {
     ads: {
       conversionId: 'AW-XXXXXXXXX',
-      currency: 'USD',
+      currency: 'EUR',
     },
   },
 });

@@ -7,4 +7,90 @@ tags: [web, analytics, piwik, privacy, gdpr]
 package: '@walkerOS/web-destination-piwikpro'
 ---
 
+import PackageLink from '@site/src/components/docs/package-link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
 # Piwik PRO
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/piwikpro"
+  npm="@walkerOS/web-destination-piwikpro"
+/>
+
+[Piwik PRO](https://piwik.pro/) is a European, privacy-focused web analytics and
+marketing platform that helps businesses track website traffic and user
+behavior.
+
+## Installation
+
+```bash
+npm install @walkerOS/web-destination-piwikpro
+```
+
+## Quick Start
+
+```typescript
+import { createCollector } from '@walkerOS/collector';
+import { destinationPiwikPro } from '@walkerOS/web-destination-piwikpro';
+
+const { elb } = await createCollector();
+
+elb('walker destination', destinationPiwikPro, {
+  settings: {
+    appId: 'XXX-XXX-XXX-XXX-XXX', // Required
+    url: 'https://your_account_name.piwik.pro/', // Required
+  },
+});
+```
+
+## Configuration
+
+<SettingsTable
+  properties={[
+    {
+      name: 'appId',
+      type: 'string',
+      description: 'ID of the Piwik PRO site',
+      required: true,
+      example: "'XXX-XXX-XXX-XXX-XXX'",
+    },
+    {
+      name: 'url',
+      type: 'string',
+      description: 'URL of your Piwik PRO account',
+      required: true,
+      example: "'https://your_account_name.piwik.pro/'",
+    },
+    {
+      name: 'linkTracking',
+      type: 'boolean',
+      description: 'Enables/Disables download and outlink tracking',
+      required: false,
+      example: 'false',
+    },
+  ]}
+/>
+
+### Event Mapping
+
+For custom event mapping (`mapping.entity.action.settings`):
+
+<SettingsTable
+  properties={[
+    {
+      name: 'goalId',
+      type: 'string',
+      description: 'ID to count the event as a goal',
+      required: false,
+      example: "'1'",
+    },
+    {
+      name: 'goalValue',
+      type: 'string',
+      description: 'Property to be used as the goal value',
+      required: false,
+      example: "'data.value'",
+    },
+  ]}
+/>

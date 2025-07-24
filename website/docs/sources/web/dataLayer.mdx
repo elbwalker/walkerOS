@@ -7,4 +7,34 @@ tags: [web, dataLayer, GTM, migration]
 package: '@walkerOS/web-source-dataLayer'
 ---
 
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
 # DataLayer Source
+
+## Configuration
+
+<SettingsTable
+  properties={[
+    {
+      name: 'name',
+      type: 'string',
+      description: 'DataLayer variable name (default: "dataLayer")',
+      required: false,
+      example: "'dataLayer'",
+    },
+    {
+      name: 'prefix',
+      type: 'string',
+      description: 'Event prefix for filtering dataLayer events (default: "gtag")',
+      required: false,
+      example: "'gtag'",
+    },
+    {
+      name: 'filter',
+      type: '(event: unknown) => WalkerOS.PromiseOrValue<boolean>',
+      description: 'Function to filter which dataLayer events to process',
+      required: false,
+      example: '(event) => event && typeof event === "object"',
+    },
+  ]}
+/>

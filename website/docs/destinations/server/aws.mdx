@@ -8,4 +8,55 @@ tags: [server, aws, firehose, kinesis, streaming, analytics]
 package: '@walkerOS/server-destination-aws'
 ---
 
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
 # AWS Firehose
+
+## Configuration
+
+<SettingsTable
+  properties={[
+    {
+      name: 'firehose',
+      type: 'FirehoseConfig',
+      description: 'AWS Firehose configuration settings',
+      required: false,
+      example: "{ streamName: 'walker-events', region: 'us-east-1' }",
+    },
+  ]}
+/>
+
+### Firehose Configuration
+
+<SettingsTable
+  properties={[
+    {
+      name: 'streamName',
+      type: 'string',
+      description: 'Name of the Kinesis Data Firehose delivery stream',
+      required: true,
+      example: "'walker-events'",
+    },
+    {
+      name: 'client',
+      type: 'FirehoseClient',
+      description: 'Pre-configured AWS Firehose client instance',
+      required: false,
+      example: 'new FirehoseClient(config)',
+    },
+    {
+      name: 'region',
+      type: 'string',
+      description: 'AWS region for the Firehose service',
+      required: false,
+      example: "'us-east-1'",
+    },
+    {
+      name: 'config',
+      type: 'FirehoseClientConfig',
+      description: 'AWS SDK client configuration options',
+      required: false,
+      example: '{ credentials: awsCredentials }',
+    },
+  ]}
+/>
