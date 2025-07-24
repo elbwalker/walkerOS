@@ -1,0 +1,151 @@
+.tableContainer {
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.settingsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  background: var(--ifm-background-color);
+}
+
+.settingsTable thead {
+  background: var(--ifm-color-emphasis-100);
+}
+
+.settingsTable th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-800);
+  border-bottom: 2px solid var(--ifm-color-emphasis-300);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.settingsTable td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  vertical-align: top;
+}
+
+.settingsTable tbody tr:hover {
+  background: var(--ifm-color-emphasis-50);
+}
+
+.settingsTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.propertyName {
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  background: var(--ifm-color-primary-lightest);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.propertyType {
+  color: var(--ifm-color-secondary-dark);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  background: var(--ifm-color-secondary-lightest);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.requiredCell {
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.required {
+  color: var(--ifm-color-success);
+  font-weight: bold;
+}
+
+.optional {
+  color: var(--ifm-color-emphasis-500);
+}
+
+.defaultValue {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  color: var(--ifm-color-info-dark);
+  background: var(--ifm-color-info-lightest);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.noDefault {
+  color: var(--ifm-color-emphasis-500);
+  font-style: italic;
+}
+
+.description {
+  line-height: 1.4;
+  max-width: 300px;
+}
+
+.example {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  color: var(--ifm-color-warning-dark);
+  background: var(--ifm-color-warning-lightest);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.noExample {
+  color: var(--ifm-color-emphasis-500);
+  font-style: italic;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .settingsTable {
+    font-size: 0.8rem;
+  }
+
+  .settingsTable th,
+  .settingsTable td {
+    padding: 8px 12px;
+  }
+
+  .propertyName,
+  .propertyType,
+  .defaultValue,
+  .example {
+    font-size: 0.75rem;
+  }
+
+  .description {
+    max-width: 200px;
+  }
+}
+
+/* Dark mode adjustments */
+[data-theme='dark'] .settingsTable {
+  border-color: var(--ifm-color-emphasis-300);
+}
+
+[data-theme='dark'] .settingsTable thead {
+  background: var(--ifm-color-emphasis-200);
+}
+
+[data-theme='dark'] .settingsTable th {
+  color: var(--ifm-color-emphasis-900);
+  border-bottom-color: var(--ifm-color-emphasis-400);
+}
+
+[data-theme='dark'] .settingsTable tbody tr:hover {
+  background: var(--ifm-color-emphasis-100);
+}

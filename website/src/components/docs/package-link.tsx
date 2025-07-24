@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { Icon } from '@iconify/react';
 
 type PackageLinkProps = {
+  env?: 'web' | 'server' | 'both';
   browser?: string;
   es5?: string;
   github?: string;
@@ -32,13 +33,23 @@ export function PackageButton({
 }
 
 export default function PackageLink({
+  env,
   browser,
   es5,
   github,
   npm,
 }: PackageLinkProps): React.JSX.Element {
+  const envText = {
+    web: 'Web',
+    server: 'Server',
+    both: 'Web & Server',
+  };
+
   return (
     <>
+      {env && (
+        <PackageButton icon="mdi:package-variant" to="#" text={envText[env]} />
+      )}
       {github && (
         <PackageButton
           icon="mdi:github"
