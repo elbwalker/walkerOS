@@ -1,0 +1,53 @@
+{
+  "name": "@walkerOS/explorer",
+  "version": "0.0.7",
+  "description": "Vanilla JS interactive HTML element explorer and live code editor for walkerOS",
+  "keywords": [
+    "walkerOS",
+    "explorer",
+    "code-editor",
+    "html",
+    "elb-tagging",
+    "developer-tools"
+  ],
+  "homepage": "https://www.walkerOS.com",
+  "bugs": "https://github.com/elbwalker/walkerOS/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elbwalker/walkerOS.git",
+    "directory": "apps/explorer"
+  },
+  "license": "MIT",
+  "author": "elbwalker",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "lint": "tsc && eslint \"**/*.ts*\"",
+    "test": "jest",
+    "update": "npx npm-check-updates -u && npm update"
+  },
+  "dependencies": {
+    "@walkerOS/core": "*",
+    "@walkerOS/web-core": "*",
+    "@walkerOS/collector": "*"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@walkerOS/eslint": "*",
+    "@walkerOS/jest": "*",
+    "@walkerOS/tsconfig": "*",
+    "@walkerOS/tsup": "*",
+    "typescript": "^5.5.2"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/elbwalker"
+  }
+}
