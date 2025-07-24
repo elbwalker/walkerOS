@@ -1,8 +1,12 @@
 .tableContainer {
-  margin: 1.5rem 0;
+  margin: 1.5rem 0 0;
   overflow-x: auto;
   border-radius: 8px;
   border: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.tableContainer table {
+  margin-bottom: 0;
 }
 
 .settingsTable {
@@ -33,12 +37,9 @@
   vertical-align: top;
 }
 
-.settingsTable tbody tr:hover {
-  background: var(--ifm-color-emphasis-50);
-}
-
 .settingsTable tbody tr:last-child td {
   border-bottom: none;
+  padding-bottom: 12px;
 }
 
 .propertyName {
@@ -46,67 +47,181 @@
   color: var(--ifm-color-primary);
   font-family: var(--ifm-font-family-monospace);
   font-size: 0.85rem;
-  background: var(--ifm-color-primary-lightest);
-  padding: 2px 6px;
-  border-radius: 4px;
 }
 
 .propertyType {
-  color: var(--ifm-color-secondary-dark);
+  color: var(--ifm-color-emphasis-800);
   font-family: var(--ifm-font-family-monospace);
   font-size: 0.8rem;
-  background: var(--ifm-color-secondary-lightest);
-  padding: 2px 6px;
-  border-radius: 4px;
   white-space: nowrap;
 }
 
-.requiredCell {
-  text-align: center;
-  font-size: 1.1rem;
-}
-
-.required {
-  color: var(--ifm-color-success);
+.requiredIcon {
+  color: var(--ifm-color-danger);
   font-weight: bold;
+  margin-left: 4px;
+  font-size: 1.1em;
 }
 
-.optional {
-  color: var(--ifm-color-emphasis-500);
+.actionCell {
+  text-align: center;
+  width: 60px;
 }
 
-.defaultValue {
-  font-family: var(--ifm-font-family-monospace);
-  font-size: 0.8rem;
-  color: var(--ifm-color-info-dark);
-  background: var(--ifm-color-info-lightest);
-  padding: 2px 6px;
+.propertyCell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.typeCell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.moreInfoButton {
+  background: none;
+  border: none;
+  padding: 6px;
   border-radius: 4px;
+  cursor: pointer;
+  color: var(--ifm-color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: background-color 0.2s ease;
 }
 
-.noDefault {
-  color: var(--ifm-color-emphasis-500);
+.moreInfoButton:hover {
+  background: var(--ifm-color-emphasis-100);
+  color: var(--ifm-color-primary-dark);
+}
+
+.requiredNotice {
+  margin-top: 0;
+  font-size: 0.85rem;
+  color: var(--ifm-color-emphasis-600);
   font-style: italic;
+}
+
+/* Modal styles */
+.modalBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modalContent {
+  background: var(--ifm-background-color);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  border: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.modalPropertyName {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--ifm-color-primary);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--ifm-color-emphasis-600);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.closeButton:hover {
+  background: var(--ifm-color-emphasis-100);
+  color: var(--ifm-color-emphasis-800);
+}
+
+.modalBody {
+  padding: 20px 24px 24px;
+}
+
+.modalRow {
+  margin-bottom: 16px;
+}
+
+.modalRow:last-child {
+  margin-bottom: 0;
+}
+
+.modalLabel {
+  display: block;
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-800);
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.modalType {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--ifm-color-emphasis-800);
+  font-size: 0.9rem;
+}
+
+.modalDescription {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.modalDefault {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--ifm-color-emphasis-800);
+  font-size: 0.9rem;
+}
+
+.modalExample {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--ifm-color-emphasis-800);
+  font-size: 0.9rem;
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .description {
   line-height: 1.4;
-  max-width: 300px;
-}
-
-.example {
-  font-family: var(--ifm-font-family-monospace);
-  font-size: 0.8rem;
-  color: var(--ifm-color-warning-dark);
-  background: var(--ifm-color-warning-lightest);
-  padding: 2px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
-}
-
-.noExample {
-  color: var(--ifm-color-emphasis-500);
-  font-style: italic;
+  width: auto;
 }
 
 /* Responsive design */
@@ -121,14 +236,34 @@
   }
 
   .propertyName,
-  .propertyType,
-  .defaultValue,
-  .example {
+  .propertyType {
     font-size: 0.75rem;
   }
 
   .description {
     max-width: 200px;
+  }
+
+  .modalContent {
+    margin: 10px;
+    max-height: 90vh;
+  }
+
+  .modalHeader {
+    padding: 16px 20px 12px;
+  }
+
+  .modalBody {
+    padding: 16px 20px 20px;
+  }
+
+  .actionCell {
+    width: 50px;
+  }
+
+  .moreInfoButton {
+    padding: 4px;
+    font-size: 1.1rem;
   }
 }
 
@@ -146,6 +281,19 @@
   border-bottom-color: var(--ifm-color-emphasis-400);
 }
 
-[data-theme='dark'] .settingsTable tbody tr:hover {
-  background: var(--ifm-color-emphasis-100);
+[data-theme='dark'] .modalContent {
+  border-color: var(--ifm-color-emphasis-400);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .modalHeader {
+  border-bottom-color: var(--ifm-color-emphasis-300);
+}
+
+[data-theme='dark'] .moreInfoButton:hover {
+  background: var(--ifm-color-emphasis-200);
+}
+
+[data-theme='dark'] .closeButton:hover {
+  background: var(--ifm-color-emphasis-200);
 }
