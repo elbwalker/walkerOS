@@ -7,6 +7,9 @@ export { highlightSyntax, DEFAULT_SYNTAX_CSS } from './core/syntax-highlighter';
 
 // Components
 export { CodeEditor } from './components/code-editor';
+export { HtmlPreview } from './components/html-preview';
+export { ResultDisplay } from './components/result-display';
+export { CodeBox } from './components/code-box';
 export { DestinationInit } from './components/destination-init';
 export { DestinationPush } from './components/destination-push';
 
@@ -35,6 +38,9 @@ export type {
   DestinationContextOptions,
 } from './core/destination-factory';
 export type { CodeEditorOptions } from './components/code-editor';
+export type { HtmlPreviewOptions } from './components/html-preview';
+export type { ResultDisplayOptions } from './components/result-display';
+export type { CodeBoxOptions } from './components/code-box';
 export type { DestinationInitOptions } from './components/destination-init';
 export type { DestinationPushOptions } from './components/destination-push';
 export type {

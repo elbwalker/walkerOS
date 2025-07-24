@@ -4,6 +4,21 @@
 import type { ExplorerConfig } from './types';
 import { highlightHTML } from './utils/highlighter';
 
+// Import components for both export and global exposure
+import { CodeEditor } from './components/code-editor';
+import { HtmlPreview } from './components/html-preview';
+import { ResultDisplay } from './components/result-display';
+import { CodeBox } from './components/code-box';
+
+// Export all Phase 1 components for browser usage
+export { CodeEditor, HtmlPreview, ResultDisplay, CodeBox };
+
+// Export types
+export type { CodeEditorOptions } from './components/code-editor';
+export type { HtmlPreviewOptions } from './components/html-preview';
+export type { ResultDisplayOptions } from './components/result-display';
+export type { CodeBoxOptions } from './components/code-box';
+
 /**
  * Explorer instance interface
  */
@@ -400,16 +415,32 @@ export async function createExplorer(
   };
 }
 
+// Components are already imported above
+
 // Global API for browser usage following walkerOS patterns
 declare global {
   interface Window {
     createExplorer: typeof createExplorer;
+    WalkerOSExplorer: {
+      createExplorer: typeof createExplorer;
+      CodeEditor: typeof CodeEditor;
+      HtmlPreview: typeof HtmlPreview;
+      ResultDisplay: typeof ResultDisplay;
+      CodeBox: typeof CodeBox;
+    };
   }
 }
 
 // Export for IIFE build
 if (typeof window !== 'undefined') {
   window.createExplorer = createExplorer;
+  window.WalkerOSExplorer = {
+    createExplorer,
+    CodeEditor,
+    HtmlPreview,
+    ResultDisplay,
+    CodeBox,
+  };
 }
 
 export default createExplorer;

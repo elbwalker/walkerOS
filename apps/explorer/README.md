@@ -129,6 +129,9 @@ interface ExplorerOptions {
 # The package is already integrated in the monorepo
 npm install
 npm run build
+
+# Run interactive demo server (available at http://localhost:3001)
+npm run demo
 ```
 
 ### As External Dependency (Future)

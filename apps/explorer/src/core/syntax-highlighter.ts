@@ -1,5 +1,5 @@
 /**
- * Vanilla JS syntax highlighter for JavaScript, JSON, HTML, and other languages
+ * Simple, robust syntax highlighter without overlapping issues
  */
 
 export type SupportedLanguage =
@@ -48,191 +48,18 @@ export const DEFAULT_SYNTAX_CSS = `
   .${SYNTAX_CLASSES.operator} { color: #9a6e3a; }
   .${SYNTAX_CLASSES.punctuation} { color: #999999; }
   .${SYNTAX_CLASSES.property} { color: #0077aa; }
-  .${SYNTAX_CLASSES.tag} { color: #117744; font-weight: bold; }
-  .${SYNTAX_CLASSES.attr} { color: #0077aa; }
-  .${SYNTAX_CLASSES.value} { color: #669900; }
+  .${SYNTAX_CLASSES.tag} { color: #22863a; font-weight: bold; }
+  .${SYNTAX_CLASSES.attr} { color: #6f42c1; }
+  .${SYNTAX_CLASSES.value} { color: #032f62; }
   .${SYNTAX_CLASSES.lineNumber} { 
     color: #999999; 
-    user-select: none; 
-    margin-right: 10px; 
-    min-width: 20px; 
-    display: inline-block; 
-    text-align: right; 
+    margin-right: 12px; 
+    user-select: none;
+    display: inline-block;
+    width: 40px;
+    text-align: right;
   }
 `;
-
-/**
- * JavaScript/TypeScript keywords
- */
-const JS_KEYWORDS = [
-  'abstract',
-  'as',
-  'async',
-  'await',
-  'break',
-  'case',
-  'catch',
-  'class',
-  'const',
-  'continue',
-  'default',
-  'delete',
-  'do',
-  'else',
-  'enum',
-  'export',
-  'extends',
-  'false',
-  'finally',
-  'for',
-  'from',
-  'function',
-  'if',
-  'implements',
-  'import',
-  'in',
-  'instanceof',
-  'interface',
-  'let',
-  'new',
-  'null',
-  'of',
-  'private',
-  'protected',
-  'public',
-  'return',
-  'static',
-  'super',
-  'switch',
-  'this',
-  'throw',
-  'true',
-  'try',
-  'type',
-  'typeof',
-  'undefined',
-  'var',
-  'void',
-  'while',
-  'with',
-  'yield',
-];
-
-/**
- * HTML tag names (common ones)
- */
-const HTML_TAGS = [
-  'a',
-  'abbr',
-  'address',
-  'area',
-  'article',
-  'aside',
-  'audio',
-  'b',
-  'base',
-  'bdi',
-  'bdo',
-  'blockquote',
-  'body',
-  'br',
-  'button',
-  'canvas',
-  'caption',
-  'cite',
-  'code',
-  'col',
-  'colgroup',
-  'data',
-  'datalist',
-  'dd',
-  'del',
-  'details',
-  'dfn',
-  'dialog',
-  'div',
-  'dl',
-  'dt',
-  'em',
-  'embed',
-  'fieldset',
-  'figcaption',
-  'figure',
-  'footer',
-  'form',
-  'h1',
-  'h2',
-  'h3',
-  'h4',
-  'h5',
-  'h6',
-  'head',
-  'header',
-  'hr',
-  'html',
-  'i',
-  'iframe',
-  'img',
-  'input',
-  'ins',
-  'kbd',
-  'label',
-  'legend',
-  'li',
-  'link',
-  'main',
-  'map',
-  'mark',
-  'meta',
-  'meter',
-  'nav',
-  'noscript',
-  'object',
-  'ol',
-  'optgroup',
-  'option',
-  'output',
-  'p',
-  'param',
-  'picture',
-  'pre',
-  'progress',
-  'q',
-  'rp',
-  'rt',
-  'ruby',
-  's',
-  'samp',
-  'script',
-  'section',
-  'select',
-  'small',
-  'source',
-  'span',
-  'strong',
-  'style',
-  'sub',
-  'summary',
-  'sup',
-  'svg',
-  'table',
-  'tbody',
-  'td',
-  'template',
-  'textarea',
-  'tfoot',
-  'th',
-  'thead',
-  'time',
-  'title',
-  'tr',
-  'track',
-  'u',
-  'ul',
-  'var',
-  'video',
-  'wbr',
-];
 
 /**
  * Escape HTML entities
@@ -247,168 +74,252 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Wrap text in a span with a CSS class
+ * Tokenize and highlight code to avoid overlapping
  */
-function wrapInClass(text: string, className: string): string {
-  return `<span class="${className}">${escapeHtml(text)}</span>`;
+interface Token {
+  type: 'keyword' | 'string' | 'number' | 'comment' | 'text';
+  value: string;
+  start: number;
+  end: number;
+}
+
+function tokenizeJavaScript(code: string): Token[] {
+  const tokens: Token[] = [];
+  let i = 0;
+
+  const keywords = [
+    'abstract',
+    'any',
+    'as',
+    'async',
+    'await',
+    'boolean',
+    'break',
+    'case',
+    'catch',
+    'class',
+    'const',
+    'constructor',
+    'continue',
+    'debugger',
+    'declare',
+    'default',
+    'delete',
+    'do',
+    'else',
+    'enum',
+    'export',
+    'extends',
+    'false',
+    'finally',
+    'for',
+    'from',
+    'function',
+    'if',
+    'implements',
+    'import',
+    'in',
+    'instanceof',
+    'interface',
+    'let',
+    'new',
+    'null',
+    'number',
+    'of',
+    'private',
+    'protected',
+    'public',
+    'readonly',
+    'return',
+    'static',
+    'string',
+    'super',
+    'switch',
+    'this',
+    'throw',
+    'true',
+    'try',
+    'type',
+    'typeof',
+    'undefined',
+    'var',
+    'void',
+    'while',
+    'with',
+    'yield',
+  ];
+
+  while (i < code.length) {
+    const start = i;
+
+    // Skip whitespace
+    if (/\s/.test(code[i])) {
+      while (i < code.length && /\s/.test(code[i])) i++;
+      tokens.push({ type: 'text', value: code.slice(start, i), start, end: i });
+      continue;
+    }
+
+    // Comments
+    if (code.slice(i, i + 2) === '//') {
+      while (i < code.length && code[i] !== '\n') i++;
+      tokens.push({
+        type: 'comment',
+        value: code.slice(start, i),
+        start,
+        end: i,
+      });
+      continue;
+    }
+
+    if (code.slice(i, i + 2) === '/*') {
+      i += 2;
+      while (i < code.length - 1 && code.slice(i, i + 2) !== '*/') i++;
+      if (i < code.length - 1) i += 2;
+      tokens.push({
+        type: 'comment',
+        value: code.slice(start, i),
+        start,
+        end: i,
+      });
+      continue;
+    }
+
+    // Strings
+    if (code[i] === '"' || code[i] === "'" || code[i] === '`') {
+      const quote = code[i];
+      i++;
+      while (i < code.length && code[i] !== quote) {
+        if (code[i] === '\\') i++; // Skip escaped characters
+        i++;
+      }
+      i++; // Include closing quote
+      tokens.push({
+        type: 'string',
+        value: code.slice(start, i),
+        start,
+        end: i,
+      });
+      continue;
+    }
+
+    // Numbers
+    if (/\d/.test(code[i])) {
+      while (i < code.length && /[\d.]/.test(code[i])) i++;
+      tokens.push({
+        type: 'number',
+        value: code.slice(start, i),
+        start,
+        end: i,
+      });
+      continue;
+    }
+
+    // Keywords and identifiers
+    if (/[a-zA-Z_$]/.test(code[i])) {
+      while (i < code.length && /[a-zA-Z0-9_$]/.test(code[i])) i++;
+      const value = code.slice(start, i);
+      const type = keywords.includes(value) ? 'keyword' : 'text';
+      tokens.push({ type, value, start, end: i });
+      continue;
+    }
+
+    // Everything else
+    i++;
+    tokens.push({ type: 'text', value: code.slice(start, i), start, end: i });
+  }
+
+  return tokens;
+}
+
+function highlightTokens(tokens: Token[]): string {
+  return tokens
+    .map((token) => {
+      const escaped = escapeHtml(token.value);
+      switch (token.type) {
+        case 'keyword':
+          return `<span class="${SYNTAX_CLASSES.keyword}">${escaped}</span>`;
+        case 'string':
+          return `<span class="${SYNTAX_CLASSES.string}">${escaped}</span>`;
+        case 'number':
+          return `<span class="${SYNTAX_CLASSES.number}">${escaped}</span>`;
+        case 'comment':
+          return `<span class="${SYNTAX_CLASSES.comment}">${escaped}</span>`;
+        default:
+          return escaped;
+      }
+    })
+    .join('');
 }
 
 /**
- * Highlight JavaScript/TypeScript code
- */
-function highlightJavaScript(code: string): string {
-  let result = code;
-
-  // Escape HTML first
-  result = escapeHtml(result);
-
-  // Comments (single line)
-  result = result.replace(/\/\/.*$/gm, (match) =>
-    wrapInClass(
-      match
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&amp;/g, '&'),
-      SYNTAX_CLASSES.comment,
-    ),
-  );
-
-  // Comments (multi line)
-  result = result.replace(/\/\*[\s\S]*?\*\//g, (match) =>
-    wrapInClass(
-      match
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&amp;/g, '&'),
-      SYNTAX_CLASSES.comment,
-    ),
-  );
-
-  // String literals (double quotes)
-  result = result.replace(/&quot;(?:[^&\\]|\\.|&[^;]+;)*&quot;/g, (match) =>
-    wrapInClass(match.replace(/&quot;/g, '"'), SYNTAX_CLASSES.string),
-  );
-
-  // String literals (single quotes)
-  result = result.replace(/&#39;(?:[^&\\]|\\.|&[^;]+;)*&#39;/g, (match) =>
-    wrapInClass(match.replace(/&#39;/g, "'"), SYNTAX_CLASSES.string),
-  );
-
-  // Template literals
-  result = result.replace(/`(?:[^`\\]|\\.)*`/g, (match) =>
-    wrapInClass(match, SYNTAX_CLASSES.string),
-  );
-
-  // Numbers
-  result = result.replace(/\b\d+\.?\d*\b/g, (match) =>
-    wrapInClass(match, SYNTAX_CLASSES.number),
-  );
-
-  // Keywords
-  const keywordPattern = new RegExp(`\\b(${JS_KEYWORDS.join('|')})\\b`, 'g');
-  result = result.replace(keywordPattern, (match) =>
-    wrapInClass(match, SYNTAX_CLASSES.keyword),
-  );
-
-  // Operators
-  result = result.replace(/[+\-*/%=<>!&|^~?:]/g, (match) =>
-    wrapInClass(match, SYNTAX_CLASSES.operator),
-  );
-
-  // Punctuation
-  result = result.replace(/[{}[\]();,\.]/g, (match) =>
-    wrapInClass(match, SYNTAX_CLASSES.punctuation),
-  );
-
-  return result;
-}
-
-/**
- * Highlight JSON code
+ * Simple JSON highlighting
  */
 function highlightJSON(code: string): string {
   let result = escapeHtml(code);
 
-  // String values (including property names)
-  result = result.replace(/&quot;(?:[^&\\]|\\.|&[^;]+;)*&quot;/g, (match) => {
-    const unescaped = match.replace(/&quot;/g, '"');
-    return wrapInClass(unescaped, SYNTAX_CLASSES.string);
+  // Highlight strings (keys and values)
+  result = result.replace(/"[^"]*"/g, (match) => {
+    return `<span class="${SYNTAX_CLASSES.string}">${match}</span>`;
   });
 
-  // Numbers
-  result = result.replace(/:\s*(-?\d+\.?\d*)/g, (match, number) =>
-    match.replace(number, wrapInClass(number, SYNTAX_CLASSES.number)),
-  );
+  // Highlight numbers
+  result = result.replace(/\b-?\d+\.?\d*([eE][+-]?\d+)?\b/g, (match) => {
+    return `<span class="${SYNTAX_CLASSES.number}">${match}</span>`;
+  });
 
-  // Boolean and null values
-  result = result.replace(/:\s*(true|false|null)/g, (match, value) =>
-    match.replace(value, wrapInClass(value, SYNTAX_CLASSES.keyword)),
-  );
-
-  // Punctuation
-  result = result.replace(/[{}[\],:]/g, (match) =>
-    wrapInClass(match, SYNTAX_CLASSES.punctuation),
-  );
+  // Highlight keywords
+  result = result.replace(/\b(true|false|null)\b/g, (match) => {
+    return `<span class="${SYNTAX_CLASSES.keyword}">${match}</span>`;
+  });
 
   return result;
 }
 
 /**
- * Highlight HTML code
+ * Simple HTML highlighting
  */
 function highlightHTML(code: string): string {
   let result = escapeHtml(code);
 
-  // HTML tags
-  result = result.replace(
-    /(&lt;\/?)([a-zA-Z][a-zA-Z0-9]*)/g,
-    (match, bracket, tagName) => {
-      if (HTML_TAGS.includes(tagName.toLowerCase())) {
-        return bracket + wrapInClass(tagName, SYNTAX_CLASSES.tag);
-      }
-      return match;
-    },
-  );
-
-  // Attributes
-  result = result.replace(
-    /(\s)([a-zA-Z-]+)(=)/g,
-    (match, space, attrName, equals) => {
-      return space + wrapInClass(attrName, SYNTAX_CLASSES.attr) + equals;
-    },
-  );
-
-  // Attribute values
-  result = result.replace(
-    /=(&quot;[^&]*?&quot;|&#39;[^&]*?&#39;)/g,
-    (match, value) => {
-      const unescaped = value.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-      return '=' + wrapInClass(unescaped, SYNTAX_CLASSES.value);
-    },
-  );
-
-  // Comments
+  // Highlight comments
   result = result.replace(/&lt;!--[\s\S]*?--&gt;/g, (match) => {
-    const unescaped = match.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-    return wrapInClass(unescaped, SYNTAX_CLASSES.comment);
+    return `<span class="${SYNTAX_CLASSES.comment}">${match}</span>`;
   });
+
+  // Highlight tags
+  result = result.replace(
+    /&lt;(\/?[\w-]+)([^&gt;]*?)&gt;/g,
+    (match, tagName, attributes) => {
+      let highlighted =
+        '&lt;' + `<span class="${SYNTAX_CLASSES.tag}">${tagName}</span>`;
+
+      if (attributes) {
+        // Simple attribute highlighting
+        highlighted += attributes.replace(
+          /([\w-]+)=(&quot;[^&]*?&quot;|&#39;[^&]*?&#39;)/g,
+          (attrMatch: string, attrName: string, attrValue: string) => {
+            return `<span class="${SYNTAX_CLASSES.attr}">${attrName}</span>=<span class="${SYNTAX_CLASSES.value}">${attrValue}</span>`;
+          },
+        );
+      }
+
+      highlighted += '&gt;';
+      return highlighted;
+    },
+  );
 
   return result;
 }
 
 /**
- * Add line numbers to highlighted code
+ * Add line numbers to code
  */
 function addLineNumbers(code: string): string {
   const lines = code.split('\n');
   return lines
     .map((line, index) => {
-      const lineNumber = (index + 1).toString().padStart(2, ' ');
-      return `<span class="${SYNTAX_CLASSES.lineNumber}">${lineNumber}</span>${line}`;
+      const lineNumber = `<span class="${SYNTAX_CLASSES.lineNumber}">${(index + 1).toString().padStart(2, ' ')}</span>`;
+      return lineNumber + line;
     })
     .join('\n');
 }
@@ -420,12 +331,17 @@ export function highlightSyntax(
   code: string,
   options: HighlightOptions,
 ): HighlightResult {
+  if (!code || code.trim() === '') {
+    return { highlighted: '', lineCount: 0 };
+  }
+
   let highlighted: string;
 
   switch (options.language) {
     case 'javascript':
     case 'typescript':
-      highlighted = highlightJavaScript(code);
+      const tokens = tokenizeJavaScript(code);
+      highlighted = highlightTokens(tokens);
       break;
     case 'json':
       highlighted = highlightJSON(code);
@@ -434,11 +350,9 @@ export function highlightSyntax(
       highlighted = highlightHTML(code);
       break;
     case 'css':
-      // Simple CSS highlighting - can be expanded later
-      highlighted = escapeHtml(code);
-      break;
     default:
       highlighted = escapeHtml(code);
+      break;
   }
 
   if (options.showLineNumbers) {
