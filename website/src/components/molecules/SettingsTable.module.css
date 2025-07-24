@@ -89,12 +89,6 @@
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-  transition: background-color 0.2s ease;
-}
-
-.moreInfoButton:hover {
-  background: var(--ifm-color-emphasis-100);
-  color: var(--ifm-color-primary-dark);
 }
 
 .requiredNotice {
@@ -168,7 +162,6 @@
 }
 
 .closeButton:hover {
-  background: var(--ifm-color-emphasis-100);
   color: var(--ifm-color-emphasis-800);
 }
 
@@ -288,12 +281,4 @@
 
 [data-theme='dark'] .modalHeader {
   border-bottom-color: var(--ifm-color-emphasis-300);
-}
-
-[data-theme='dark'] .moreInfoButton:hover {
-  background: var(--ifm-color-emphasis-200);
-}
-
-[data-theme='dark'] .closeButton:hover {
-  background: var(--ifm-color-emphasis-200);
 }
