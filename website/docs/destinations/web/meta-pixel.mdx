@@ -7,4 +7,253 @@ tags: [web, facebook, instagram, meta, advertising]
 package: '@walkerOS/web-destination-meta'
 ---
 
+import PackageLink from '@site/src/components/docs/package-link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
 # Meta Pixel
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/meta"
+  npm="@walkerOS/web-destination-meta"
+/>
+
+Send events to Meta Pixel (formerly Facebook Pixel) to track visitor activity and conversions for Facebook and Instagram advertising campaigns.
+
+## Installation
+
+```bash
+npm install @walkerOS/web-destination-meta
+```
+
+## Quick Start
+
+```typescript
+import { createCollector } from '@walkerOS/collector';
+import { destinationMeta } from '@walkerOS/web-destination-meta';
+
+const { elb } = await createCollector();
+
+elb('walker destination', destinationMeta, {
+  settings: {
+    pixelId: '1234567890', // Your Meta Pixel ID
+  },
+  loadScript: true, // Load Meta Pixel script automatically
+});
+```
+
+## Configuration
+
+<SettingsTable
+  properties={[
+    {
+      name: 'pixelId',
+      type: 'string',
+      description: 'Your Meta Pixel ID from Facebook Business Manager',
+      required: true,
+      example: "'1234567890'",
+    },
+    {
+      name: 'loadScript',
+      type: 'boolean',
+      description: 'Whether to automatically load the Meta Pixel script (fbevents.js)',
+      required: false,
+      example: 'true',
+    },
+  ]}
+/>
+
+## Usage
+
+### Basic Event Tracking
+
+```typescript
+// Track a standard PageView event
+elb('entity action', {
+  event: 'page view',
+  data: {
+    title: 'Homepage',
+    url: 'https://example.com'
+  }
+});
+
+// Track a Purchase event
+elb('entity action', {
+  event: 'order complete',
+  data: {
+    total: 99.99,
+    currency: 'EUR'
+  },
+  nested: [
+    {
+      type: 'product',
+      data: {
+        id: 'prod-123',
+        quantity: 1
+      }
+    }
+  ]
+});
+```
+
+### Event Mapping
+
+Use mapping rules to customize how events are sent to Meta Pixel:
+
+```typescript
+elb('walker destination', destinationMeta, {
+  settings: {
+    pixelId: '1234567890',
+  },
+  mapping: {
+    'product view': {
+      settings: {
+        track: 'ViewContent'
+      }
+    },
+    'product add': {
+      settings: {
+        track: 'AddToCart'
+      }
+    },
+    'custom event': {
+      settings: {
+        trackCustom: 'MyCustomEvent'
+      }
+    }
+  }
+});
+```
+
+## Examples
+
+### E-commerce Events
+
+```typescript
+// Purchase Event
+elb('entity action', {
+  event: 'order complete',
+  data: {
+    total: 149.98,
+    currency: 'EUR'
+  },
+  nested: [
+    {
+      type: 'product',
+      data: {
+        id: 'shoe-123',
+        quantity: 1,
+        price: 79.99
+      }
+    },
+    {
+      type: 'product', 
+      data: {
+        id: 'sock-456',
+        quantity: 2,
+        price: 34.99
+      }
+    }
+  ]
+});
+
+// Add to Cart Event
+elb('entity action', {
+  event: 'product add',
+  data: {
+    id: 'shoe-123',
+    price: 79.99,
+    quantity: 1
+  }
+});
+
+// View Content Event
+elb('entity action', {
+  event: 'product view',
+  data: {
+    id: 'shoe-123',
+    price: 79.99,
+    name: 'Running Shoes'
+  }
+});
+
+// Initiate Checkout Event
+elb('entity action', {
+  event: 'cart view',
+  data: {
+    value: 149.98
+  },
+  nested: [
+    {
+      type: 'product',
+      data: {
+        id: 'shoe-123',
+        quantity: 1
+      }
+    }
+  ]
+});
+```
+
+### Standard Events
+
+Meta Pixel supports these standard events:
+
+- `PageView` - Automatically tracked for page view events
+- `Purchase` - Order completion events
+- `AddToCart` - Product added to cart
+- `AddToWishlist` - Product added to wishlist
+- `InitiateCheckout` - Checkout process started
+- `ViewContent` - Product or content viewed
+- `Search` - Search performed
+- `Lead` - Lead form submitted
+- `CompleteRegistration` - User registration completed
+- `Contact` - Contact form submitted
+- `AddPaymentInfo` - Payment information added
+- `FindLocation` - Store locator used
+- `Schedule` - Appointment scheduled
+- `StartTrial` - Trial started
+- `SubmitApplication` - Application submitted
+- `Subscribe` - Newsletter subscription
+
+### Custom Events
+
+For custom events not in the standard list, use `trackCustom`:
+
+```typescript
+elb('walker destination', destinationMeta, {
+  settings: {
+    pixelId: '1234567890',
+  },
+  mapping: {
+    'newsletter signup': {
+      settings: {
+        trackCustom: 'NewsletterSignup'
+      }
+    }
+  }
+});
+```
+
+## Advanced Configuration
+
+### Data Mapping
+
+```typescript
+import { destinationMetaExamples } from '@walkerOS/web-destination-meta/examples';
+
+// Use pre-built mapping configurations
+elb('walker destination', destinationMeta, {
+  settings: {
+    pixelId: '1234567890',
+  },
+  mapping: destinationMetaExamples.mapping.config
+});
+```
+
+The destination automatically handles:
+- Event ID generation for deduplication
+- Standard event parameter mapping
+- Currency and value formatting
+- Product content arrays
+- Custom event parameters
