@@ -114,26 +114,41 @@ export type DeepPartial<T> = {
 
 export type PromiseOrValue<T> = T | Promise<T>;
 
-// Collector configuration interfaces
+/**
+ * Core collector configuration interface
+ */
 export interface Config {
+  /** Run in dry mode without executing events */
   dryRun: boolean;
-  tagging: number;
-  session: false | unknown;
-  verbose: boolean;
-  globalsStatic: Properties;
-  sessionStatic: Partial<SessionData>;
-  onError?: Handler.Error;
-  onLog?: Handler.Log;
+  /** Whether to run collector automatically */
   run?: boolean;
+  /** Initial consent state */
+  consent?: Consent;
+  /** Initial user data */
+  user?: User;
+  /** Version for event tagging */
+  tagging: number;
+  /** Session configuration */
+  session: false | unknown;
+  /** Initial global properties */
+  globals?: Properties;
+  /** Static global properties even on a new run */
+  globalsStatic: Properties;
+  /** Static session data even on a new run */
+  sessionStatic: Partial<SessionData>;
+  /** Destination configurations */
+  destinations?: Destination.InitDestinations;
+  /** Initial custom properties */
+  custom?: Properties;
+  /** Enable verbose logging */
+  verbose: boolean;
+  /** Error handler */
+  onError?: Handler.Error;
+  /** Log handler */
+  onLog?: Handler.Log;
 }
 
-export interface InitConfig extends Partial<Config> {
-  destinations?: Destination.InitDestinations;
-  consent?: Consent;
-  user?: User;
-  globals?: Properties;
-  custom?: Properties;
-}
+export type InitConfig = Partial<Config>;
 
 export interface SessionData extends Properties {
   isStart: boolean;
@@ -179,6 +194,8 @@ export type CommandType =
   | string;
 
 // Main Collector interface
+// Note: This type is duplicated in @walkerOS/collector for better organization
+// TODO: Eventually deprecate this in favor of the collector package version
 export interface Collector {
   push: ElbTypes.Fn;
   allowed: boolean;

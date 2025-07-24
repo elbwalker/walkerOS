@@ -35,19 +35,14 @@ function collector(initConfig: WalkerOS.InitConfig): WalkerOS.Collector {
     verbose: false,
     onLog: log,
     run: true,
+    destinations: {},
+    consent: {},
+    user: {},
+    globals: {},
+    custom: {},
   };
 
-  // Extract config-specific properties and non-config properties separately
-  const {
-    destinations = {},
-    consent = {},
-    user = {},
-    globals = {},
-    custom = {},
-    ...configProps
-  } = initConfig;
-
-  const config: WalkerOS.Config = assign(defaultConfig, configProps, {
+  const config: WalkerOS.Config = assign(defaultConfig, initConfig, {
     merge: false,
     extend: false,
   });
@@ -57,16 +52,16 @@ function collector(initConfig: WalkerOS.InitConfig): WalkerOS.Collector {
   }
   config.onLog = log;
 
-  // Enhanced globals with static globals from init
-  const finalGlobals = { ...config.globalsStatic, ...globals };
+  // Enhanced globals with static globals from config
+  const finalGlobals = { ...config.globalsStatic, ...config.globals };
 
   const collector: WalkerOS.Collector = {
     allowed: false,
     config,
-    consent,
+    consent: config.consent || {},
     count: 0,
-    custom,
-    destinations: initDestinations(destinations),
+    custom: config.custom || {},
+    destinations: initDestinations(config.destinations || {}),
     globals: finalGlobals,
     group: '',
     hooks: {},
@@ -75,7 +70,7 @@ function collector(initConfig: WalkerOS.InitConfig): WalkerOS.Collector {
     round: 0,
     session: undefined,
     timing: Date.now(),
-    user,
+    user: config.user || {},
     version,
     sources: {},
     push: undefined as unknown as Elb.Fn, // Placeholder, will be set below
