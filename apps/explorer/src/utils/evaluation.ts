@@ -16,12 +16,17 @@ export interface EvaluationResult {
   executionTime?: number;
 }
 
+export interface EvaluationOptions {
+  autoReturn?: boolean;
+}
+
 /**
  * Safely evaluate JavaScript code with injected context
  */
 export async function evaluateJavaScript(
   code: string,
   context: EvaluationContext = {},
+  options: EvaluationOptions = {},
 ): Promise<EvaluationResult> {
   const startTime = performance.now();
 
@@ -30,11 +35,14 @@ export async function evaluateJavaScript(
     const contextKeys = Object.keys(context);
     const contextValues = Object.values(context);
 
+    // Auto-add return if option is enabled
+    const processedCode = options.autoReturn ? `return ${code}` : code;
+
     // Wrap code in async function to support await
     const wrappedCode = `
       "use strict";
       return (async () => {
-        ${code}
+        ${processedCode}
       })();
     `;
 

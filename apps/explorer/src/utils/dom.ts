@@ -125,12 +125,26 @@ export function delegate<K extends keyof HTMLElementEventMap>(
 }
 
 /**
- * Inject CSS into document head
+ * Inject CSS into document head or shadow root
  */
-export function injectCSS(css: string, id?: string): HTMLStyleElement {
+export function injectCSS(
+  css: string,
+  id?: string,
+  target?: HTMLElement | ShadowRoot | Document,
+): HTMLStyleElement {
+  const targetDocument = target || document;
+  const targetHead =
+    target instanceof ShadowRoot
+      ? target
+      : target instanceof HTMLElement
+        ? target
+        : document.head;
+
   // Remove existing style with same ID
   if (id) {
-    const existing = document.getElementById(id);
+    const existing = targetDocument.querySelector
+      ? targetDocument.querySelector(`#${id}`)
+      : document.getElementById(id);
     if (existing) {
       existing.remove();
     }
@@ -142,9 +156,30 @@ export function injectCSS(css: string, id?: string): HTMLStyleElement {
   });
 
   style.textContent = css;
-  document.head.appendChild(style);
+  targetHead.appendChild(style);
 
   return style;
+}
+
+/**
+ * Enhanced CSS injection for shadow DOM components
+ */
+export function injectComponentCSS(
+  css: string,
+  id: string,
+  shadowRoot?: ShadowRoot | null,
+  scopePrefix?: string,
+): HTMLStyleElement {
+  // Add scoping if no shadow DOM
+  let scopedCSS = css;
+  if (!shadowRoot && scopePrefix) {
+    // Add CSS scoping for light DOM usage
+    scopedCSS = css.replace(/(\.explorer-[\w-]+)/g, `${scopePrefix} $1`);
+  }
+
+  // Inject into shadow root or document
+  const target = shadowRoot || document;
+  return injectCSS(scopedCSS, id, target);
 }
 
 /**

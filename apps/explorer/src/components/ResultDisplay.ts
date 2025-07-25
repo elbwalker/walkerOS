@@ -17,6 +17,7 @@ import {
   addEventListener,
   copyToClipboard,
   injectCSS,
+  injectComponentCSS,
 } from '../utils/dom';
 
 export type ResultType = 'value' | 'error' | 'log' | 'warning' | 'info';
@@ -61,10 +62,16 @@ export function createResultDisplay(
 ): ResultDisplayAPI {
   const baseComponent = createComponent(elementOrSelector, {
     autoMount: false,
+    useShadowDOM: true, // Enable shadow DOM for CSS isolation
   });
 
   const element = baseComponent.getElement()!;
+  const shadowRoot = baseComponent.getShadowRoot();
+  const contentRoot = baseComponent.getContentRoot() as HTMLElement;
+
+  // Add class to both host and content root for backward compatibility
   element.classList.add('explorer-result-display');
+  contentRoot.classList.add('explorer-result-display');
 
   // Component state
   let results: ResultItem[] = [];
@@ -77,59 +84,53 @@ export function createResultDisplay(
    * Inject ResultDisplay CSS styles
    */
   function injectStyles(): void {
+    // Detect theme from host document
+    const isDark =
+      document.documentElement.getAttribute('data-theme') === 'dark' ||
+      document.documentElement.classList.contains('dark') ||
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    // Define theme-aware colors
+    const colors = {
+      bgPrimary: isDark ? '#1e1e1e' : '#ffffff',
+      bgSecondary: isDark ? '#2d2d2d' : '#f8f9fa',
+      bgTertiary: isDark ? '#404040' : '#f1f3f4',
+      borderPrimary: isDark ? '#404040' : '#e1e5e9',
+      textPrimary: isDark ? '#e1e4e8' : '#24292e',
+      textSecondary: isDark ? '#c9d1d9' : '#586069',
+      textMuted: isDark ? '#8b949e' : '#6a737d',
+      textInverse: '#ffffff',
+      interactivePrimary: '#2563eb',
+      interactiveHover: isDark ? '#30363d' : '#f3f4f6',
+      interactiveError: '#ef4444',
+      interactiveWarning: '#f59e0b',
+    };
+
     const css = `
+/* CSS Reset and theme setup for shadow DOM */
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 /* ResultDisplay Component Styles */
 .explorer-result-display {
-  /* Removed border and border-radius - now handled by UnifiedContainer */
-  background: var(--explorer-bg-primary);
+  background: ${colors.bgPrimary};
   overflow: hidden;
   display: flex;
   flex-direction: column;
   height: 100%;
+  box-sizing: border-box;
 }
 
-.explorer-result-display__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: var(--explorer-bg-secondary);
-  border-bottom: 1px solid var(--explorer-border-primary);
-  font-size: 12px;
-  color: var(--explorer-text-secondary);
-}
-
-.explorer-result-display__title {
-  font-weight: 600;
-  color: var(--explorer-text-primary);
-}
-
-.explorer-result-display__actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.explorer-result-display__clear-btn {
-  background: none;
-  border: none;
-  color: var(--explorer-text-secondary);
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  transition: all 0.2s ease;
-}
-
-.explorer-result-display__clear-btn:hover {
-  background: var(--explorer-interactive-hover);
-  color: var(--explorer-text-primary);
+.explorer-result-display * {
+  box-sizing: border-box;
 }
 
 .explorer-result-display__content {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 16px;
   font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.4;
@@ -140,124 +141,16 @@ export function createResultDisplay(
   align-items: center;
   justify-content: center;
   height: 100px;
-  color: var(--explorer-text-muted);
+  color: ${colors.textMuted};
   font-style: italic;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.explorer-result-item {
-  margin-bottom: 12px;
-  padding: 8px;
-  border-radius: 4px;
-  background: var(--explorer-bg-secondary);
-  border-left: 3px solid var(--explorer-border-primary);
-  position: relative;
-}
-
-.explorer-result-item--value {
-  border-left-color: var(--explorer-interactive-primary);
-}
-
-.explorer-result-item--error {
-  border-left-color: var(--explorer-interactive-error);
-  background: rgba(239, 68, 68, 0.05);
-}
-
-.explorer-result-item--log {
-  border-left-color: var(--explorer-text-muted);
-}
-
-.explorer-result-item--warning {
-  border-left-color: var(--explorer-interactive-warning);
-  background: rgba(245, 158, 11, 0.05);
-}
-
-.explorer-result-item--info {
-  border-left-color: var(--explorer-interactive-primary);
-  background: rgba(59, 130, 246, 0.05);
-}
-
-.explorer-result-item__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-  font-size: 11px;
-  color: var(--explorer-text-muted);
-}
-
-.explorer-result-item__label {
-  font-weight: 600;
-  color: var(--explorer-text-secondary);
-}
-
-.explorer-result-item__timestamp {
-  font-family: monospace;
-}
-
-.explorer-result-item__type {
-  text-transform: uppercase;
-  font-weight: 600;
-  padding: 1px 4px;
-  border-radius: 2px;
-  font-size: 10px;
-}
-
-.explorer-result-item__type--value {
-  background: var(--explorer-interactive-primary);
-  color: var(--explorer-text-inverse);
-}
-
-.explorer-result-item__type--error {
-  background: var(--explorer-interactive-error);
-  color: var(--explorer-text-inverse);
-}
-
-.explorer-result-item__type--log {
-  background: var(--explorer-text-muted);
-  color: var(--explorer-text-inverse);
-}
-
-.explorer-result-item__type--warning {
-  background: var(--explorer-interactive-warning);
-  color: var(--explorer-text-inverse);
-}
-
-.explorer-result-item__type--info {
-  background: var(--explorer-interactive-primary);
-  color: var(--explorer-text-inverse);
-}
-
-.explorer-result-item__actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.explorer-result-item__copy-btn {
-  background: none;
-  border: none;
-  color: var(--explorer-text-muted);
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 2px;
-  font-size: 10px;
-  opacity: 0;
-  transition: all 0.2s ease;
-}
-
-.explorer-result-item:hover .explorer-result-item__copy-btn {
-  opacity: 1;
-}
-
-.explorer-result-item__copy-btn:hover {
-  background: var(--explorer-interactive-hover);
-  color: var(--explorer-text-primary);
-}
-
 .explorer-result-item__content {
-  color: var(--explorer-text-primary);
+  color: ${colors.textPrimary};
   word-break: break-word;
+  padding: 0;
+  margin: 0;
 }
 
 .explorer-result-item__content pre {
@@ -271,14 +164,14 @@ export function createResultDisplay(
 }
 
 .explorer-result-item__content--json {
-  background: var(--explorer-bg-tertiary);
+  background: ${colors.bgTertiary};
   padding: 8px;
   border-radius: 4px;
   margin-top: 4px;
 }
 
 .explorer-result-item__content--error {
-  color: var(--explorer-interactive-error);
+  color: ${colors.interactiveError};
 }
 
 .explorer-result-item__content--collapsed {
@@ -294,26 +187,26 @@ export function createResultDisplay(
   left: 0;
   right: 0;
   height: 20px;
-  background: linear-gradient(transparent, var(--explorer-bg-secondary));
+  background: linear-gradient(transparent, ${colors.bgSecondary});
 }
 
 .explorer-result-item__expand-btn {
   background: none;
   border: none;
-  color: var(--explorer-interactive-primary);
+  color: ${colors.interactivePrimary};
   cursor: pointer;
   font-size: 11px;
   margin-top: 4px;
   text-decoration: underline;
 }
 
-/* Syntax highlighting integration */
-.explorer-result-display .syntax-keyword { color: var(--explorer-syntax-keyword); font-weight: 600; }
-.explorer-result-display .syntax-string { color: var(--explorer-syntax-string); }
-.explorer-result-display .syntax-number { color: var(--explorer-syntax-number); }
-.explorer-result-display .syntax-boolean { color: var(--explorer-syntax-keyword); }
-.explorer-result-display .syntax-null { color: var(--explorer-syntax-keyword); }
-.explorer-result-display .syntax-key { color: var(--explorer-syntax-attribute); }
+/* Syntax highlighting integration - theme aware */
+.explorer-result-display .syntax-keyword { color: ${isDark ? '#ff6b6b' : '#d73a49'}; font-weight: 600; }
+.explorer-result-display .syntax-string { color: ${isDark ? '#4ecdc4' : '#032f62'}; }
+.explorer-result-display .syntax-number { color: ${isDark ? '#45b7d1' : '#005cc5'}; }
+.explorer-result-display .syntax-boolean { color: ${isDark ? '#ff6b6b' : '#d73a49'}; }
+.explorer-result-display .syntax-null { color: ${isDark ? '#ff6b6b' : '#d73a49'}; }
+.explorer-result-display .syntax-key { color: ${isDark ? '#9b59b6' : '#6f42c1'}; }
 
 /* Responsive design */
 @media (max-width: 768px) {
@@ -329,14 +222,14 @@ export function createResultDisplay(
 }
 `;
 
-    injectCSS(css, 'explorer-result-display-styles');
+    injectComponentCSS(css, 'explorer-result-display-styles', shadowRoot);
   }
 
   /**
    * Create the DOM structure
    */
   function createDOM(): void {
-    element.innerHTML = '';
+    contentRoot.innerHTML = '';
 
     // Create content container
     contentContainer = createElement('div', {
@@ -351,7 +244,7 @@ export function createResultDisplay(
       contentContainer.style.maxHeight = '400px';
     }
 
-    element.appendChild(contentContainer);
+    contentRoot.appendChild(contentContainer);
 
     // Show empty state
     updateDisplay();
@@ -373,16 +266,25 @@ export function createResultDisplay(
     }
 
     if (typeof content === 'string') {
-      return { html: content, isJSON: false };
+      return { html: `"${content}"`, isJSON: false };
     }
 
-    if (typeof content === 'number' || typeof content === 'boolean') {
-      const className =
-        typeof content === 'number' ? 'syntax-number' : 'syntax-boolean';
+    if (typeof content === 'number') {
       return {
-        html: `<span class="${className}">${content}</span>`,
+        html: `<span class="syntax-number">${content}</span>`,
         isJSON: false,
       };
+    }
+
+    if (typeof content === 'boolean') {
+      return {
+        html: `<span class="syntax-boolean">${content}</span>`,
+        isJSON: false,
+      };
+    }
+
+    if (typeof content === 'function') {
+      return { html: '[Function]', isJSON: false };
     }
 
     if (content instanceof Error) {
@@ -411,74 +313,6 @@ export function createResultDisplay(
    * Create result item element
    */
   function createResultItem(result: ResultItem, index: number): HTMLElement {
-    const item = createElement('div', {
-      className: `explorer-result-item explorer-result-item--${result.type}`,
-    });
-
-    // Header
-    const header = createElement('div', {
-      className: 'explorer-result-item__header',
-    });
-
-    const leftSection = createElement('div');
-
-    if (result.label) {
-      const label = createElement('span', {
-        className: 'explorer-result-item__label',
-        textContent: result.label,
-      });
-      leftSection.appendChild(label);
-      leftSection.appendChild(document.createTextNode(' '));
-    }
-
-    const typeSpan = createElement('span', {
-      className: `explorer-result-item__type explorer-result-item__type--${result.type}`,
-      textContent: result.type,
-    });
-    leftSection.appendChild(typeSpan);
-
-    const rightSection = createElement('div', {
-      className: 'explorer-result-item__actions',
-    });
-
-    if (options.showTimestamps && result.timestamp) {
-      const timestamp = createElement('span', {
-        className: 'explorer-result-item__timestamp',
-        textContent: formatTimestamp(result.timestamp),
-      });
-      rightSection.appendChild(timestamp);
-    }
-
-    if (options.showCopyButton) {
-      const copyBtn = createElement('button', {
-        className: 'explorer-result-item__copy-btn',
-        textContent: '📋',
-      }) as HTMLButtonElement;
-
-      const onCopy = async () => {
-        const contentStr =
-          typeof result.content === 'string'
-            ? result.content
-            : JSON.stringify(result.content, null, 2);
-
-        const success = await copyToClipboard(contentStr);
-        if (success) {
-          copyBtn.textContent = '✓';
-          setTimeout(() => {
-            copyBtn.textContent = '📋';
-          }, 1000);
-          options.onCopy?.(contentStr);
-        }
-      };
-
-      cleanupFunctions.push(addEventListener(copyBtn, 'click', onCopy));
-      rightSection.appendChild(copyBtn);
-    }
-
-    header.appendChild(leftSection);
-    header.appendChild(rightSection);
-    item.appendChild(header);
-
     // Content
     const { html, isJSON } = formatContent(result.content);
     const content = createElement('div', {
@@ -506,12 +340,10 @@ export function createResultDisplay(
       };
 
       cleanupFunctions.push(addEventListener(expandBtn, 'click', onExpand));
-      item.appendChild(expandBtn);
+      content.appendChild(expandBtn);
     }
 
-    item.appendChild(content);
-
-    return item;
+    return content;
   }
 
   /**
@@ -532,6 +364,14 @@ export function createResultDisplay(
     results.forEach((result, index) => {
       const item = createResultItem(result, index);
       contentContainer.appendChild(item);
+
+      // Add spacing between items
+      if (index < results.length - 1) {
+        const spacer = createElement('div', {
+          style: 'margin-bottom: 12px;',
+        });
+        contentContainer.appendChild(spacer);
+      }
     });
 
     // Auto-scroll to bottom

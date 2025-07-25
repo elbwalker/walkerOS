@@ -16,7 +16,11 @@ import {
   type SupportedLanguage,
   getSyntaxHighlightCSS,
 } from '../utils/syntax';
-import { createElement, addEventListener, injectCSS } from '../utils/dom';
+import {
+  createElement,
+  addEventListener,
+  injectComponentCSS,
+} from '../utils/dom';
 import { debounce } from '../utils/debounce';
 
 export interface CodeEditorOptions {
@@ -53,10 +57,16 @@ export function createCodeEditor(
 ): CodeEditorAPI {
   const baseComponent = createComponent(elementOrSelector, {
     autoMount: false,
+    useShadowDOM: true, // Enable shadow DOM by default for CSS isolation
   });
 
   const element = baseComponent.getElement()!;
+  const shadowRoot = baseComponent.getShadowRoot();
+  const contentRoot = baseComponent.getContentRoot() as HTMLElement;
+
+  // Add class to both host element (for tests/API) and content root (for styling)
   element.classList.add('explorer-code-editor');
+  contentRoot.classList.add('explorer-code-editor');
 
   // Component state
   let currentValue = options.value || '';
@@ -79,29 +89,62 @@ export function createCodeEditor(
   }, 300);
 
   /**
-   * Inject CodeEditor CSS styles
+   * Inject CodeEditor CSS styles with proper shadow DOM support
    */
   function injectStyles(): void {
+    // Check if we're in a website context for theme detection
+    const htmlTheme = document.documentElement.getAttribute('data-theme');
+    const isDark = htmlTheme === 'dark';
+
+    // Define colors based on theme context
+    const colors = isDark
+      ? {
+          bgPrimary: 'transparent',
+          borderPrimary: '#374151',
+          bgTertiary: '#4b5563',
+          textPrimary: '#f3f4f6',
+          textMuted: '#9ca3af',
+          interactivePrimary: '#3b82f6',
+        }
+      : {
+          bgPrimary: 'transparent',
+          borderPrimary: '#e5e7eb',
+          bgTertiary: '#f9fafb',
+          textPrimary: '#111827',
+          textMuted: '#9ca3af',
+          interactivePrimary: '#2563eb',
+        };
+
     const css = `
-/* CodeEditor Component Styles */
+/* CSS Reset and theme setup for shadow DOM */
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .explorer-code-editor {
   position: relative;
-  /* Removed border, border-radius, and box-shadow - now handled by UnifiedContainer */
-  background: var(--explorer-bg-primary, #ffffff);
+  background: ${colors.bgPrimary};
   overflow: hidden;
   font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
   height: 100%;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+}
+
+.explorer-code-editor * {
+  box-sizing: border-box;
 }
 
 .explorer-code-editor:focus-within {
-  border-color: var(--explorer-interactive-primary, #2563eb);
+  border-color: ${colors.interactivePrimary};
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1), 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
 .explorer-code-editor--readonly {
-  background: var(--explorer-bg-secondary);
+  background: ${colors.bgTertiary};
 }
 
 .explorer-code-editor__content {
@@ -112,61 +155,62 @@ export function createCodeEditor(
 }
 
 .explorer-code-editor__textarea {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  padding: 12px 16px 40px 16px;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--explorer-text-primary, #111827);
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.6;
-  resize: none;
-  z-index: 2;
-  white-space: pre;
-  overflow-wrap: normal;
-  word-break: normal;
-  caret-color: var(--explorer-interactive-primary, #2563eb);
-  box-sizing: border-box;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 12px 16px 40px 16px !important;
+  margin: 0 !important;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  color: transparent !important;
+  font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  resize: none !important;
+  z-index: 2 !important;
+  white-space: pre !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  caret-color: ${colors.textPrimary} !important;
+  box-sizing: border-box !important;
 }
 
 .explorer-code-editor__textarea::placeholder {
-  color: var(--explorer-text-muted, #9ca3af);
+  color: ${colors.textMuted};
   font-style: italic;
 }
 
 .explorer-code-editor__highlight {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  padding: 12px 16px 40px 16px;
-  margin: 0;
-  border: none;
-  background: transparent;
-  color: transparent;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.6;
-  white-space: pre;
-  overflow-wrap: normal;
-  word-break: normal;
-  z-index: 1;
-  pointer-events: none;
-  overflow: auto;
-  box-sizing: border-box;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 12px 16px 40px 16px !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  color: ${colors.textPrimary} !important;
+  font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  white-space: pre !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+  overflow: auto !important;
+  box-sizing: border-box !important;
 }
 
 .explorer-code-editor__highlight pre {
   margin: 0;
   padding: 0;
   background: transparent;
-  color: var(--explorer-text-primary);
+  color: ${colors.textPrimary};
 }
 
 .explorer-code-editor--with-line-numbers .explorer-code-editor__textarea,
@@ -175,42 +219,43 @@ export function createCodeEditor(
 }
 
 .explorer-code-editor__line-numbers {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 54px;
-  padding: 12px 8px 40px 8px;
-  background: var(--explorer-bg-tertiary, #f9fafb);
-  border-right: 1px solid var(--explorer-border-primary, #e5e7eb);
-  color: var(--explorer-text-muted, #9ca3af);
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.6;
-  text-align: right;
-  user-select: none;
-  pointer-events: none;
-  white-space: pre;
-  z-index: 3;
-  overflow: hidden;
-  font-variant-numeric: tabular-nums;
-  height: 100%;
-  box-sizing: border-box;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 54px !important;
+  padding: 12px 8px 40px 8px !important;
+  margin: 0 !important;
+  background: ${colors.bgTertiary} !important;
+  border-right: 1px solid ${colors.borderPrimary} !important;
+  color: ${colors.textMuted} !important;
+  font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  text-align: right !important;
+  user-select: none !important;
+  pointer-events: none !important;
+  white-space: pre !important;
+  z-index: 3 !important;
+  overflow: hidden !important;
+  font-variant-numeric: tabular-nums !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
 }
 
-/* Syntax highlighting integration */
-.explorer-code-editor .syntax-keyword { color: #d73a49 !important; font-weight: 600; }
-.explorer-code-editor .syntax-string { color: #032f62 !important; }
-.explorer-code-editor .syntax-number { color: #005cc5 !important; }
-.explorer-code-editor .syntax-comment { color: #6a737d !important; font-style: italic; }
-.explorer-code-editor .syntax-function { color: #6f42c1 !important; font-weight: 500; }
-.explorer-code-editor .syntax-tag { color: #22863a !important; font-weight: 600; }
-.explorer-code-editor .syntax-attribute { color: #6f42c1 !important; }
-.explorer-code-editor .syntax-value { color: #032f62 !important; }
-.explorer-code-editor .syntax-operator { color: #d73a49 !important; }
-.explorer-code-editor .syntax-type { color: #005cc5 !important; font-weight: 500; }
-.explorer-code-editor .syntax-property { color: #6f42c1 !important; }
-.explorer-code-editor .syntax-elb-attribute { color: #28a745 !important; font-weight: 700; }
-.explorer-code-editor .syntax-elb-value { color: #28a745 !important; font-weight: 500; }
+/* Syntax highlighting integration - theme aware */
+.explorer-code-editor .syntax-keyword { color: ${isDark ? '#ff6b6b' : '#d73a49'} !important; font-weight: 600; }
+.explorer-code-editor .syntax-string { color: ${isDark ? '#4ecdc4' : '#032f62'} !important; }
+.explorer-code-editor .syntax-number { color: ${isDark ? '#45b7d1' : '#005cc5'} !important; }
+.explorer-code-editor .syntax-comment { color: ${isDark ? '#95a5a6' : '#6a737d'} !important; font-style: italic; }
+.explorer-code-editor .syntax-function { color: ${isDark ? '#9b59b6' : '#6f42c1'} !important; font-weight: 500; }
+.explorer-code-editor .syntax-tag { color: ${isDark ? '#2ecc71' : '#22863a'} !important; font-weight: 600; }
+.explorer-code-editor .syntax-attribute { color: ${isDark ? '#9b59b6' : '#6f42c1'} !important; }
+.explorer-code-editor .syntax-value { color: ${isDark ? '#4ecdc4' : '#032f62'} !important; }
+.explorer-code-editor .syntax-operator { color: ${isDark ? '#ff6b6b' : '#d73a49'} !important; }
+.explorer-code-editor .syntax-type { color: ${isDark ? '#45b7d1' : '#005cc5'} !important; font-weight: 500; }
+.explorer-code-editor .syntax-property { color: ${isDark ? '#9b59b6' : '#6f42c1'} !important; }
+.explorer-code-editor .syntax-elb-attribute { color: ${isDark ? '#2ecc71' : '#28a745'} !important; font-weight: 700; }
+.explorer-code-editor .syntax-elb-value { color: ${isDark ? '#2ecc71' : '#28a745'} !important; font-weight: 500; }
 
 /* Responsive design */
 @media (max-width: 768px) {
@@ -233,17 +278,35 @@ export function createCodeEditor(
 }
 `;
 
-    injectCSS(css, 'explorer-code-editor-styles');
-
-    // Also inject global syntax highlighting CSS
-    injectCSS(getSyntaxHighlightCSS(), 'syntax-highlighting-styles');
+    // Use shadow DOM-aware CSS injection
+    if (shadowRoot) {
+      injectComponentCSS(css, 'explorer-code-editor-styles', shadowRoot);
+      injectComponentCSS(
+        getSyntaxHighlightCSS(),
+        'syntax-highlighting-styles',
+        shadowRoot,
+      );
+    } else {
+      injectComponentCSS(
+        css,
+        'explorer-code-editor-styles',
+        null,
+        '.explorer-code-editor',
+      );
+      injectComponentCSS(
+        getSyntaxHighlightCSS(),
+        'syntax-highlighting-styles',
+        null,
+        '.explorer-code-editor',
+      );
+    }
   }
 
   /**
    * Create the DOM structure
    */
   function createDOM(): void {
-    element.innerHTML = '';
+    contentRoot.innerHTML = '';
 
     // Create content container
     const content = createElement('div', {
@@ -293,11 +356,11 @@ export function createCodeEditor(
     content.appendChild(highlightLayer);
     content.appendChild(textArea);
 
-    element.appendChild(content);
+    contentRoot.appendChild(content);
 
     // Add line numbers if requested - after content is in DOM
     if (options.showLineNumbers) {
-      element.classList.add('explorer-code-editor--with-line-numbers');
+      contentRoot.classList.add('explorer-code-editor--with-line-numbers');
       updateLineNumbers();
     }
   }
@@ -322,7 +385,7 @@ export function createCodeEditor(
   function updateLineNumbers(): void {
     if (!options.showLineNumbers) return;
 
-    let lineNumbersEl = element.querySelector(
+    let lineNumbersEl = contentRoot.querySelector(
       '.explorer-code-editor__line-numbers',
     ) as HTMLElement;
 
@@ -330,7 +393,9 @@ export function createCodeEditor(
       lineNumbersEl = createElement('div', {
         className: 'explorer-code-editor__line-numbers',
       });
-      const content = element.querySelector('.explorer-code-editor__content')!;
+      const content = contentRoot.querySelector(
+        '.explorer-code-editor__content',
+      )!;
       content.appendChild(lineNumbersEl);
     }
 
@@ -385,7 +450,7 @@ export function createCodeEditor(
 
       // Sync line numbers scrolling
       if (options.showLineNumbers) {
-        const lineNumbersEl = element.querySelector(
+        const lineNumbersEl = contentRoot.querySelector(
           '.explorer-code-editor__line-numbers',
         ) as HTMLElement;
         if (lineNumbersEl) {

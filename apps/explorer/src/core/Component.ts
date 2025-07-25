@@ -13,6 +13,7 @@ export interface ComponentOptions {
   theme?: 'light' | 'dark' | 'auto';
   className?: string;
   autoMount?: boolean;
+  useShadowDOM?: boolean;
   [key: string]: unknown;
 }
 
@@ -25,6 +26,8 @@ export interface ComponentAPI {
   emit(event: string, data?: unknown): void;
   setTheme(theme: 'light' | 'dark'): void;
   getElement(): HTMLElement | null;
+  getShadowRoot(): ShadowRoot | null;
+  getContentRoot(): HTMLElement | ShadowRoot;
 }
 
 // Global registry to track all component instances
@@ -61,14 +64,26 @@ export function createComponent(
   elementOrSelector: HTMLElement | string,
   options: ComponentOptions = {},
 ): ComponentAPI {
-  const id = generateUniqueId();
   const element = getElement(elementOrSelector);
+
+  // Check for existing component instance to prevent duplicates
+  const existingId = element.getAttribute('data-explorer-component');
+  if (existingId && componentRegistry.has(existingId)) {
+    console.warn(
+      `Component already exists on element, destroying existing instance: ${existingId}`,
+    );
+    const existingComponent = componentRegistry.get(existingId);
+    existingComponent?.destroy();
+  }
+
+  const id = generateUniqueId();
 
   // Component state (isolated per instance)
   let mounted = false;
   let destroyed = false;
   const eventListeners = new Map<string, Set<Function>>();
   const cleanupFunctions: Function[] = [];
+  let shadowRoot: ShadowRoot | null = null;
 
   // Set unique ID on element to prevent conflicts
   if (!element.id) {
@@ -78,15 +93,36 @@ export function createComponent(
   // Add component marker
   element.setAttribute('data-explorer-component', id);
 
+  // Create shadow DOM if requested and supported
+  if (options.useShadowDOM && element.attachShadow) {
+    try {
+      shadowRoot = element.attachShadow({ mode: 'open' });
+      // Add unique class to shadow root for styling
+      const shadowContainer = document.createElement('div');
+      shadowContainer.className = 'explorer-shadow-container';
+      shadowContainer.setAttribute('data-explorer-component', id);
+      shadowRoot.appendChild(shadowContainer);
+    } catch (error) {
+      console.warn(
+        'Failed to create shadow DOM, falling back to light DOM:',
+        error,
+      );
+      shadowRoot = null;
+    }
+  }
+
   // Theme management
   let currentTheme = options.theme || 'auto';
 
   const updateTheme = () => {
+    const targetElement =
+      (shadowRoot?.firstElementChild as HTMLElement) || element;
+
     // Check if we're in a website context (html has data-theme)
     const htmlTheme = document.documentElement.getAttribute('data-theme');
     if (htmlTheme && (htmlTheme === 'light' || htmlTheme === 'dark')) {
       // Website context - don't set data-theme, just add explorer class for CSS targeting
-      element.classList.add('explorer-component');
+      targetElement.classList.add('explorer-component');
       return;
     }
 
@@ -97,9 +133,9 @@ export function createComponent(
         document.documentElement.classList.contains('dark') ||
         window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-      element.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      targetElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
     } else {
-      element.setAttribute('data-theme', currentTheme);
+      targetElement.setAttribute('data-theme', currentTheme);
     }
   };
 
@@ -173,6 +209,12 @@ export function createComponent(
       element.removeAttribute('data-theme');
       element.classList.remove('explorer-component');
 
+      // Clean up shadow DOM
+      if (shadowRoot) {
+        shadowRoot.innerHTML = '';
+        shadowRoot = null;
+      }
+
       // Remove from registry
       componentRegistry.delete(id);
     },
@@ -215,6 +257,15 @@ export function createComponent(
 
     getElement() {
       return destroyed ? null : element;
+    },
+
+    getShadowRoot() {
+      return destroyed ? null : shadowRoot;
+    },
+
+    getContentRoot(): HTMLElement | ShadowRoot {
+      if (destroyed) return element;
+      return (shadowRoot?.firstElementChild as HTMLElement) || element;
     },
   };
 

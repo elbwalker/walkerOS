@@ -9,7 +9,11 @@
  * - Consistent spacing and layout
  */
 
-import { createElement, addEventListener, injectCSS } from '../utils/dom';
+import {
+  createElement,
+  addEventListener,
+  injectComponentCSS,
+} from '../utils/dom';
 
 export interface HeaderButton {
   text: string;
@@ -25,6 +29,7 @@ export interface UnifiedHeaderOptions {
   onRefresh?: () => void;
   customButtons?: HeaderButton[];
   className?: string;
+  shadowRoot?: ShadowRoot | null;
 }
 
 export interface UnifiedHeaderAPI {
@@ -45,6 +50,7 @@ export function createUnifiedHeader(
   let titleElement: HTMLElement;
   let actionsElement: HTMLElement;
   const cleanupFunctions: Array<() => void> = [];
+  const shadowRoot = options.shadowRoot || null;
 
   /**
    * Inject unified header CSS styles
@@ -137,7 +143,13 @@ export function createUnifiedHeader(
 }
 `;
 
-    injectCSS(css, 'explorer-unified-header-styles');
+    // Use shadow DOM-aware CSS injection
+    injectComponentCSS(
+      css,
+      'explorer-unified-header-styles',
+      shadowRoot,
+      '.explorer-unified-header',
+    );
   }
 
   /**

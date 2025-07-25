@@ -21,7 +21,6 @@ import {
 } from '../core/UnifiedContainer';
 import {
   evaluateJavaScript,
-  formatEvaluationResult,
   createSafeContext,
   type EvaluationContext,
 } from '../utils/evaluation';
@@ -36,6 +35,7 @@ export interface LiveCodeJSOptions {
   height?: string;
   showHeader?: boolean;
   title?: string;
+  autoReturn?: boolean;
 }
 
 export interface LiveCodeJSAPI extends ComponentAPI {
@@ -62,7 +62,7 @@ export function createLiveCodeJS(
   let codeEditor: CodeEditorAPI;
   let resultDisplay: ResultDisplayAPI;
 
-  // Create base component
+  // Create base component with shadow DOM enabled by default
   const {
     api: baseApi,
     contentElement,
@@ -72,6 +72,7 @@ export function createLiveCodeJS(
     height: options.height,
     showHeader: options.showHeader,
     title: options.title || 'JavaScript Evaluator',
+    useShadowDOM: true, // Enable shadow DOM by default for CSS isolation
   });
 
   // Debounced evaluation for performance
@@ -87,6 +88,9 @@ export function createLiveCodeJS(
   function createPanels(): void {
     contentElement.innerHTML = '';
 
+    // Get shadow root for CSS isolation
+    const shadowRoot = baseApi.getShadowRoot ? baseApi.getShadowRoot() : null;
+
     // Create editor container with unified styling
     const editorContainer = createUnifiedContainer({
       className:
@@ -95,21 +99,18 @@ export function createLiveCodeJS(
       headerOptions: {
         title: 'JavaScript Code',
       },
+      shadowRoot: shadowRoot,
     });
 
-    // Create result container with unified styling and clear button
+    // Create result container with unified styling
     const resultContainer = createUnifiedContainer({
       className:
         'explorer-livecode-base__panel explorer-unified-container--result-display',
       showHeader: true,
       headerOptions: {
         title: 'Results',
-        onClear: () => {
-          currentCode = '';
-          codeEditor.setValue('');
-          resultDisplay.clear();
-        },
       },
+      shadowRoot: shadowRoot,
     });
 
     // Assemble panels
@@ -152,29 +153,19 @@ export function createLiveCodeJS(
 
     try {
       resultDisplay.clear();
-      resultDisplay.addInfo('Evaluating...', 'Status');
 
-      const result = await evaluateJavaScript(currentCode, currentContext);
-
-      // Clear status
-      resultDisplay.clear();
+      const result = await evaluateJavaScript(currentCode, currentContext, {
+        autoReturn: options.autoReturn,
+      });
 
       if (result.success) {
-        const formattedResult = formatEvaluationResult(result.result);
-        resultDisplay.addValue(formattedResult, 'Result');
-
-        if (result.executionTime !== undefined) {
-          resultDisplay.addInfo(
-            `Execution time: ${result.executionTime.toFixed(2)}ms`,
-            'Performance',
-          );
-        }
+        resultDisplay.addValue(result.result);
       } else {
-        resultDisplay.addError(result.error || 'Unknown error', 'Error');
+        resultDisplay.addError(result.error || 'Unknown error');
       }
     } catch (error) {
       resultDisplay.clear();
-      resultDisplay.addError(String(error), 'Evaluation Error');
+      resultDisplay.addError(String(error));
     }
   }
 

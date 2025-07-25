@@ -1,5 +1,5 @@
 ---
-title: Overview
+title: Browser Source
 description: DOM-based event tracking for web applications
 sidebar_position: 1
 tags: [web, browser, DOM, tracking]
@@ -7,3 +7,50 @@ package: '@walkerOS/web-source-browser'
 ---
 
 # Browser Source
+
+The Browser Source is walkerOS's primary web tracking solution that
+automatically captures user interactions, page events, and custom data directly
+from the browsers DOM. It provides zero-configuration event tracking only based
+on HTML data attributes.
+
+## What It Does
+
+The Browser Source transforms your website into a comprehensive tracking
+environment by:
+
+- **Automatic Event Capture**: Detects clicks, form submissions, page views, and
+  element visibility without manual instrumentation
+- **Data Attribute Reading**: Extracts custom tracking data from HTML `data-elb`
+  attributes
+- **Session Management**: Detects and handles user sessions and cross-page
+  tracking automatically
+- **DOM Integration**: Works seamlessly with your existing HTML structure
+
+## Installation
+
+```bash
+npm install @walkerOS/web-source-browser
+```
+
+## Basic Setup
+
+```typescript
+import { createCollector } from '@walkerOS/collector';
+import { createSource, sourceBrowser } from '@walkerOS/core';
+
+// Create collector with your destinations
+const { collector } = await createCollector({
+  destinations: {
+    log: { push: console.log },
+  },
+});
+
+// Add browser source
+const { elb } = await createSource(collector, sourceBrowser, {
+  pageview: true,
+  session: true,
+});
+
+// The source is now active and tracking events automatically
+// Use elb() function for manual event triggering when needed
+```

@@ -9,7 +9,7 @@
  * - No borders on parent containers
  */
 
-import { createElement, injectCSS } from '../utils/dom';
+import { createElement, injectComponentCSS } from '../utils/dom';
 import {
   createUnifiedHeader,
   type UnifiedHeaderOptions,
@@ -22,6 +22,8 @@ export interface UnifiedContainerOptions {
   showHeader?: boolean;
   headerOptions?: UnifiedHeaderOptions;
   contentClassName?: string;
+  useShadowDOM?: boolean;
+  shadowRoot?: ShadowRoot | null;
 }
 
 export interface UnifiedContainerAPI {
@@ -41,6 +43,7 @@ export function createUnifiedContainer(
   let containerElement: HTMLElement;
   let contentElement: HTMLElement;
   let headerAPI: UnifiedHeaderAPI | null = null;
+  const shadowRoot = options.shadowRoot || null;
 
   /**
    * Inject unified container CSS styles
@@ -113,7 +116,13 @@ export function createUnifiedContainer(
 }
 `;
 
-    injectCSS(css, 'explorer-unified-container-styles');
+    // Use shadow DOM-aware CSS injection
+    injectComponentCSS(
+      css,
+      'explorer-unified-container-styles',
+      shadowRoot,
+      '.explorer-unified-container',
+    );
   }
 
   /**
@@ -136,7 +145,8 @@ export function createUnifiedContainer(
 
     // Create header if requested
     if (options.showHeader && options.headerOptions) {
-      headerAPI = createUnifiedHeader(options.headerOptions);
+      const headerOptions = { ...options.headerOptions, shadowRoot };
+      headerAPI = createUnifiedHeader(headerOptions);
       containerElement.appendChild(headerAPI.getElement());
     }
 

@@ -6,13 +6,18 @@
  */
 
 import { createComponent, type ComponentAPI } from './Component';
-import { createElement, addEventListener, injectCSS } from '../utils/dom';
+import {
+  createElement,
+  addEventListener,
+  injectComponentCSS,
+} from '../utils/dom';
 
 export interface LiveCodeBaseOptions {
   layout?: 'horizontal' | 'vertical';
   height?: string;
   showHeader?: boolean;
   title?: string;
+  useShadowDOM?: boolean;
 }
 
 export interface LiveCodeBaseAPI extends ComponentAPI {
@@ -33,10 +38,16 @@ export function createLiveCodeBase(
 } {
   const baseComponent = createComponent(elementOrSelector, {
     autoMount: false,
+    useShadowDOM: options.useShadowDOM || false,
   });
 
   const element = baseComponent.getElement()!;
+  const shadowRoot = baseComponent.getShadowRoot();
+  const contentRoot = baseComponent.getContentRoot() as HTMLElement;
+
+  // Add class to both host element (for tests/API) and content root (for styling)
   element.classList.add('explorer-livecode-base');
+  contentRoot.classList.add('explorer-livecode-base');
 
   // Component state
   let currentLayout = options.layout || 'horizontal';
@@ -176,19 +187,27 @@ export function createLiveCodeBase(
 }
 `;
 
-    injectCSS(css, 'explorer-livecode-base-styles');
+    // Use shadow DOM-aware CSS injection
+    injectComponentCSS(
+      css,
+      'explorer-livecode-base-styles',
+      shadowRoot,
+      '.explorer-livecode-base',
+    );
   }
 
   /**
    * Create the DOM structure
    */
   function createDOM(): HTMLElement {
-    element.innerHTML = '';
+    contentRoot.innerHTML = '';
+    // Add layout class to both host element (for tests/API) and content root (for styling)
     element.classList.add(`explorer-livecode-base--${currentLayout}`);
+    contentRoot.classList.add(`explorer-livecode-base--${currentLayout}`);
 
     // Set height if provided
     if (options.height) {
-      element.style.height = options.height;
+      contentRoot.style.height = options.height;
     }
 
     // Create header (optional)
@@ -226,7 +245,7 @@ export function createLiveCodeBase(
       actions.appendChild(layoutToggle);
       header.appendChild(title);
       header.appendChild(actions);
-      element.appendChild(header);
+      contentRoot.appendChild(header);
     }
 
     // Create content container
@@ -234,7 +253,7 @@ export function createLiveCodeBase(
       className: 'explorer-livecode-base__content',
     });
 
-    element.appendChild(content);
+    contentRoot.appendChild(content);
     return content;
   }
 
@@ -259,15 +278,21 @@ export function createLiveCodeBase(
     setLayout(layout: 'horizontal' | 'vertical'): void {
       currentLayout = layout;
 
-      // Update element classes
+      // Update classes on both host element and content root
       element.className = element.className.replace(
         /explorer-livecode-base--\w+/,
         '',
       );
       element.classList.add(`explorer-livecode-base--${layout}`);
 
+      contentRoot.className = contentRoot.className.replace(
+        /explorer-livecode-base--\w+/,
+        '',
+      );
+      contentRoot.classList.add(`explorer-livecode-base--${layout}`);
+
       // Update layout icon
-      const layoutToggle = element.querySelector(
+      const layoutToggle = contentRoot.querySelector(
         '.explorer-livecode-base__layout-toggle',
       );
       if (layoutToggle) {
