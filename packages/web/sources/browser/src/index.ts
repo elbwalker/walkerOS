@@ -21,6 +21,10 @@ export * as SourceBrowser from './types';
 // Export walker utility functions
 export { getAllEvents, getEvents, getGlobals } from './walker';
 
+// Export tagger functionality
+export { createTagger } from './tagger';
+export type { TaggerConfig, TaggerInstance } from './tagger';
+
 // Browser source init function for createSource
 export const sourceBrowser: Source.Init<
   BrowserSourceConfig,

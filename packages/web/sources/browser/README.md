@@ -7,9 +7,10 @@
 # Browser DOM Source for walkerOS
 
 The walkerOS Browser DOM Source provides automatic event collection from browser
-interactions and DOM elements. It serves as the primary source for capturing
-user behavior, page views, and element interactions directly from the DOM
-without requiring manual event instrumentation.
+interactions and DOM elements, plus a tagger utility for generating HTML data
+attributes. It serves as the primary source for capturing user behavior, page
+views, and element interactions directly from the DOM without requiring manual
+event instrumentation.
 
 ## Role in walkerOS Ecosystem
 
@@ -38,10 +39,15 @@ Here's a basic example of how to use the Browser DOM source:
 
 ```typescript
 import { elb } from '@walkerOS/collector';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
+import { sourceBrowser, createTagger } from '@walkerOS/web-source-browser';
 
 // Initialize the browser source
 sourceBrowser({ elb });
+
+// Use the tagger to generate HTML data attributes
+const tagger = createTagger();
+const attrs = tagger('product').data('id', '123').action('load', 'view').get();
+// Result: { 'data-elb': 'product', 'data-elb-product': 'id:123', 'data-elbaction': 'load:view' }
 
 // The source will now automatically capture:
 // - Page views

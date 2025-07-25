@@ -1,0 +1,243 @@
+---
+title: Tagger
+description: HTML data attribute generator for walkerOS event tracking
+tags: [web, browser, tagger, html, data-attributes, elb-tagging]
+package: '@walkerOS/web-source-browser'
+path: packages/web/sources/browser
+---
+
+import PackageLink from '@site/src/components/docs/package-link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
+# Tagger
+
+<PackageLink env="web" github="packages/web/sources/browser" npm="@walkerOS/web-source-browser" />
+
+The tagger is a utility for generating HTML data attributes that the walkerOS
+browser source uses for event tracking. It provides a fluent interface to create
+properly formatted and escaped data attributes for your HTML elements.
+
+## Why Use the Tagger?
+
+The tagger solves several challenges when working with walkerOS data attributes:
+
+- **Consistent formatting** - Ensures data attributes follow walkerOS
+  conventions
+- **Automatic escaping** - Handles special characters in values (semicolons,
+  colons, quotes, backslashes)
+- **Type safety** - Provides TypeScript support for better development
+  experience
+- **Fluent API** - Chainable methods for building complex attribute sets
+- **Maintainability** - Centralized logic for attribute generation
+
+## When to Use the Tagger
+
+Use the tagger when you need to:
+
+- Generate data attributes programmatically in JavaScript/TypeScript
+- Handle dynamic values that may contain special characters
+- Build complex attribute sets with multiple properties
+- Ensure consistent tagging across your application
+- Integrate walkerOS tracking into component-based frameworks (React, Vue, etc.)
+
+## Installation
+
+```bash
+npm install @walkerOS/web-source-browser
+```
+
+## Initialization
+
+The tagger is initialized using the `createTagger` factory function:
+
+```typescript
+import { createTagger } from '@walkerOS/web-source-browser';
+
+// Create with default configuration
+const tagger = createTagger();
+
+// Create with custom configuration
+const customTagger = createTagger({
+  prefix: 'data-custom',
+});
+```
+
+## Configuration
+
+<SettingsTable
+  properties={[
+    {
+      name: 'prefix',
+      type: 'string',
+      description: 'Custom prefix for generated data attributes',
+      default: "'data-elb'",
+    },
+  ]}
+/>
+
+## Usage Examples
+
+### Basic Entity Tagging
+
+```typescript
+const tagger = createTagger();
+
+const attributes = tagger('product')
+  .data('id', '123')
+  .data('name', 'Widget')
+  .get();
+
+// Result:
+// {
+//   'data-elb': 'product',
+//   'data-elb-product': 'id:123;name:Widget'
+// }
+```
+
+### Action Mapping
+
+```typescript
+const attributes = tagger()
+  .action('load', 'view')
+  .action('click', 'select')
+  .get();
+
+// Result:
+// {
+//   'data-elbaction': 'load:view;click:select'
+// }
+```
+
+### Context and Global Properties
+
+```typescript
+const attributes = tagger('product')
+  .data('id', 123)
+  .context('test', 'engagement')
+  .globals('lang', 'en')
+  .get();
+
+// Result:
+// {
+//   'data-elb': 'product',
+//   'data-elb-product': 'id:123',
+//   'data-elbcontext': 'test:engagement',
+//   'data-elbglobals': 'lang:en'
+// }
+```
+
+### Multiple Entity Scopes
+
+```typescript
+const attributes = tagger('product')
+  .data('id', 123)
+  .entity('user')
+  .data('name', 'John')
+  .get();
+
+// Result:
+// {
+//   'data-elb': 'user',
+//   'data-elb-product': 'id:123',
+//   'data-elb-user': 'name:John'
+// }
+```
+
+### Value Escaping
+
+```typescript
+const attributes = tagger()
+  .data('description', 'Product with: special; chars & "quotes"')
+  .get();
+
+// Result:
+// {
+//   'data-elb-': 'description:Product with\\: special\\; chars & \\"quotes\\"'
+// }
+```
+
+## Available Methods (API Reference)
+
+##### `entity(name: string)`
+
+Sets the current entity scope for subsequent data calls.
+
+```typescript
+tagger().entity('product').data('id', '123');
+// Creates: data-elb="product" data-elb-product="id:123"
+```
+
+##### `data(key: string, value: Property)` | `data(object: Properties)`
+
+Adds data properties to the current entity scope.
+
+```typescript
+// Single property
+tagger('product').data('id', 123);
+
+// Multiple properties
+tagger('product').data({ id: 123, name: 'Widget', price: 99.99 });
+```
+
+##### `action(trigger: string, action?: string)` | `action(object: Record<string, string>)`
+
+Adds action mappings for event triggers.
+
+```typescript
+// Single action
+tagger().action('load', 'view');
+
+// Combined trigger:action
+tagger().action('load:view');
+
+// Multiple actions
+tagger().action({ load: 'view', click: 'select', visible: 'impression' });
+```
+
+##### `context(key: string, value: Property)` | `context(object: Properties)`
+
+Adds context properties that apply to all events.
+
+```typescript
+// Single context
+tagger().context('test', 'engagement');
+
+// Multiple contexts
+tagger().context({ test: 'engagement', position: 'header', type: 'promo' });
+```
+
+##### `globals(key: string, value: Property)` | `globals(object: Properties)`
+
+Adds global properties that persist across page views.
+
+```typescript
+// Single global
+tagger().globals('lang', 'en');
+
+// Multiple globals
+tagger().globals({ lang: 'en', plan: 'paid', version: '1.0' });
+```
+
+##### `link(id: string, type: string)` | `link(object: Record<string, string>)`
+
+Adds link relationships between elements.
+
+```typescript
+// Single link
+tagger().link('details', 'parent');
+
+// Multiple links
+tagger().link({ details: 'parent', modal: 'child', sidebar: 'child' });
+```
+
+##### `get()`
+
+Generates the final HTML attributes object.
+
+```typescript
+const attributes = tagger('product').data('id', '123').get();
+// Returns: { 'data-elb': 'product', 'data-elb-product': 'id:123' }
+```
+
+All methods return the tagger instance for method chaining, except `get()` which
+returns the final attributes object.

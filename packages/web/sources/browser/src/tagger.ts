@@ -1,5 +1,5 @@
-import type { WalkerOS } from './types';
-import { isString, isDefined } from './is';
+import type { WalkerOS } from '@walkerOS/core';
+import { isString, isDefined } from '@walkerOS/core';
 
 export interface TaggerConfig {
   prefix?: string;
@@ -21,7 +21,7 @@ export interface TaggerInstance {
 }
 
 /**
- * Creates a new tagger instance.
+ * Creates a new tagger instance for generating walkerOS data attributes.
  *
  * @param config The configuration for the tagger.
  * @returns A new tagger instance.

@@ -20,7 +20,6 @@ export * from './throwError';
 export * from './trim';
 export * from './tryCatch';
 export * from './useHooks';
-export * from './tagger';
 export * from './userAgent';
 export * from './validate';
 export * from './wrapper';
