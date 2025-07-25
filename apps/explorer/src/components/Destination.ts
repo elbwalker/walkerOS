@@ -10,10 +10,13 @@
  */
 
 import { type ComponentAPI } from '../core/Component';
+import {
+  createMultiColumnLayout,
+  type MultiColumnLayoutAPI,
+} from '../core/MultiColumnLayout';
 import { createCodeEditor, type CodeEditorAPI } from './CodeEditor';
 import { createResultDisplay, type ResultDisplayAPI } from './ResultDisplay';
 import { debounce } from '../utils/debounce';
-import { createElement } from '../utils/dom';
 
 export interface DestinationOptions {
   height?: string;
@@ -24,7 +27,7 @@ export interface DestinationOptions {
   updateDelay?: number;
 }
 
-export interface DestinationAPI extends ComponentAPI {
+export interface DestinationAPI extends MultiColumnLayoutAPI {
   getEventData(): string;
   setEventData(data: string): void;
   getMappingData(): string;
@@ -33,54 +36,6 @@ export interface DestinationAPI extends ComponentAPI {
   refresh(): void;
   clear(): void;
 }
-
-const DESTINATION_CSS = `
-  .destination-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 16px;
-    height: 100%;
-    min-height: 400px;
-    width: 100%;
-  }
-  
-  .destination-column {
-    display: flex;
-    flex-direction: column;
-    min-height: 400px;
-    overflow: hidden;
-    background: white;
-    border: 1px solid #e1e5e9;
-    border-radius: 8px;
-  }
-  
-  .column-header {
-    padding: 12px 16px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e1e5e9;
-    font-weight: 600;
-    font-size: 14px;
-    color: #333;
-  }
-  
-  .column-content {
-    flex: 1;
-    min-height: 0;
-    height: 100%;
-    overflow: hidden;
-  }
-  
-  @media (max-width: 1024px) {
-    .destination-container {
-      grid-template-columns: 1fr;
-      gap: 12px;
-    }
-    
-    .destination-column {
-      min-height: 300px;
-    }
-  }
-`;
 
 /**
  * Create a Destination component
@@ -117,19 +72,30 @@ export function createDestination(
   let mappingEditor: CodeEditorAPI;
   let resultDisplay: ResultDisplayAPI;
 
-  // Get the target element
-  const element =
-    typeof elementOrSelector === 'string'
-      ? (document.querySelector(elementOrSelector) as HTMLElement)
-      : elementOrSelector;
-
-  if (!element) {
-    throw new Error('Target element not found');
-  }
-
-  // Set basic styles on the element
-  element.style.height = options.height || '100%';
-  element.style.width = '100%';
+  // Create multi-column layout with 3 columns
+  const {
+    api: baseApi,
+    contentElement,
+    columnContainers,
+    cleanup,
+  } = createMultiColumnLayout(elementOrSelector, {
+    columns: [
+      { title: 'Event', className: 'explorer-unified-container--code-editor' },
+      {
+        title: 'Mapping',
+        className: 'explorer-unified-container--code-editor',
+      },
+      {
+        title: 'Result',
+        className: 'explorer-unified-container--result-display',
+      },
+    ],
+    layout: 'horizontal',
+    height: options.height,
+    showHeader: options.showHeader,
+    title: options.title || 'Destination Mapping',
+    useShadowDOM: true, // Enable shadow DOM by default for CSS isolation
+  });
 
   // Debounced update for performance
   const debouncedUpdate = debounce(() => {
@@ -137,64 +103,26 @@ export function createDestination(
   }, options.updateDelay || 300);
 
   /**
-   * Create the three-column layout
+   * Create components using multi-column layout
    */
-  function createLayout(): void {
-    // Clear any existing content
-    element.innerHTML = '';
+  function createComponents(): void {
+    // Get column content elements from the multi-column layout
+    const eventContentElement = baseApi.getColumnContentElement(0); // First column for Event
+    const mappingContentElement = baseApi.getColumnContentElement(1); // Second column for Mapping
+    const resultContentElement = baseApi.getColumnContentElement(2); // Third column for Result
 
-    // Inject basic CSS
-    const style = createElement('style');
-    style.textContent = DESTINATION_CSS;
-    document.head.appendChild(style);
-
-    // Create the container
-    const container = createElement('div', {
-      className: 'destination-container',
-    });
-
-    // Create Event column
-    const eventColumn = createElement('div', {
-      className: 'destination-column',
-    });
-    const eventHeader = createElement('div', { className: 'column-header' });
-    eventHeader.textContent = 'Event';
-    const eventContent = createElement('div', { className: 'column-content' });
-    eventColumn.appendChild(eventHeader);
-    eventColumn.appendChild(eventContent);
-
-    // Create Mapping column
-    const mappingColumn = createElement('div', {
-      className: 'destination-column',
-    });
-    const mappingHeader = createElement('div', { className: 'column-header' });
-    mappingHeader.textContent = 'Mapping';
-    const mappingContent = createElement('div', {
-      className: 'column-content',
-    });
-    mappingColumn.appendChild(mappingHeader);
-    mappingColumn.appendChild(mappingContent);
-
-    // Create Result column
-    const resultColumn = createElement('div', {
-      className: 'destination-column',
-    });
-    const resultHeader = createElement('div', { className: 'column-header' });
-    resultHeader.textContent = 'Result';
-    const resultContent = createElement('div', { className: 'column-content' });
-    resultColumn.appendChild(resultHeader);
-    resultColumn.appendChild(resultContent);
-
-    // Assemble layout
-    container.appendChild(eventColumn);
-    container.appendChild(mappingColumn);
-    container.appendChild(resultColumn);
-
-    // Add to element
-    element.appendChild(container);
+    if (
+      !eventContentElement ||
+      !mappingContentElement ||
+      !resultContentElement
+    ) {
+      throw new Error(
+        'Failed to get column content elements from multi-column layout',
+      );
+    }
 
     // Create components
-    eventEditor = createCodeEditor(eventContent, {
+    eventEditor = createCodeEditor(eventContentElement, {
       language: 'json',
       value: eventData,
       height: '100%',
@@ -204,7 +132,7 @@ export function createDestination(
       },
     });
 
-    mappingEditor = createCodeEditor(mappingContent, {
+    mappingEditor = createCodeEditor(mappingContentElement, {
       language: 'json',
       value: mappingData,
       height: '100%',
@@ -214,7 +142,7 @@ export function createDestination(
       },
     });
 
-    resultDisplay = createResultDisplay(resultContent, {
+    resultDisplay = createResultDisplay(resultContentElement, {
       height: '100%',
       showCopyButton: true,
       showTimestamps: false,
@@ -265,35 +193,9 @@ export function createDestination(
     }
   }
 
-  // Simple API
+  // Enhanced API
   const api: DestinationAPI = {
-    id: 'dest-' + Date.now(),
-    mount() {},
-    unmount() {},
-    destroy() {
-      eventEditor?.destroy();
-      mappingEditor?.destroy();
-      resultDisplay?.destroy();
-      element.innerHTML = '';
-    },
-    on() {
-      return () => {};
-    },
-    emit() {},
-    setTheme() {},
-    getElement() {
-      return element;
-    },
-    getShadowRoot() {
-      return null;
-    },
-    getContentRoot() {
-      return element;
-    },
-    injectThemeCSS() {},
-    getCurrentTheme() {
-      return 'light' as const;
-    },
+    ...baseApi,
 
     getEventData(): string {
       return eventData;
@@ -330,10 +232,21 @@ export function createDestination(
       mappingEditor?.setValue('{}');
       resultDisplay?.clear();
     },
+
+    destroy(): void {
+      cleanup.forEach((fn) => fn());
+      eventEditor?.destroy();
+      mappingEditor?.destroy();
+      resultDisplay?.destroy();
+      baseApi.destroy();
+    },
   };
 
   // Initialize component
-  createLayout();
+  createComponents();
+
+  // Mount the base component
+  api.mount();
 
   return api;
 }

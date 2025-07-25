@@ -10,11 +10,13 @@
  */
 
 import { type ComponentAPI } from '../core/Component';
-import { createLiveCodeBase } from '../core/LiveCodeBase';
+import {
+  createMultiColumnLayout,
+  type MultiColumnLayoutAPI,
+} from '../core/MultiColumnLayout';
 import { createCodeEditor, type CodeEditorAPI } from './CodeEditor';
 import { createResultDisplay, type ResultDisplayAPI } from './ResultDisplay';
 import { debounce } from '../utils/debounce';
-import { createUnifiedContainer } from '../core/UnifiedContainer';
 import {
   evaluateJavaScript,
   createSafeContext,
@@ -59,12 +61,23 @@ export function createLiveCodeJS(
   let codeEditor: CodeEditorAPI;
   let resultDisplay: ResultDisplayAPI;
 
-  // Create base component with shadow DOM enabled by default
+  // Create multi-column layout with 2 columns
   const {
     api: baseApi,
     contentElement,
+    columnContainers,
     cleanup,
-  } = createLiveCodeBase(elementOrSelector, {
+  } = createMultiColumnLayout(elementOrSelector, {
+    columns: [
+      {
+        title: 'JavaScript Code',
+        className: 'explorer-unified-container--code-editor',
+      },
+      {
+        title: 'Results',
+        className: 'explorer-unified-container--result-display',
+      },
+    ],
     layout: options.layout || 'horizontal',
     height: options.height,
     showHeader: options.showHeader,
@@ -80,42 +93,21 @@ export function createLiveCodeJS(
   }, options.evaluationDelay || 500);
 
   /**
-   * Create the panel structure
+   * Create the panel structure using multi-column layout
    */
   function createPanels(): void {
-    contentElement.innerHTML = '';
+    // Get column content elements from the multi-column layout
+    const editorContentElement = baseApi.getColumnContentElement(0); // First column for JavaScript Code
+    const resultContentElement = baseApi.getColumnContentElement(1); // Second column for Results
 
-    // Get shadow root for CSS isolation
-    const shadowRoot = baseApi.getShadowRoot ? baseApi.getShadowRoot() : null;
-
-    // Create editor container with unified styling
-    const editorContainer = createUnifiedContainer({
-      className:
-        'explorer-livecode-base__panel explorer-unified-container--code-editor',
-      showHeader: true,
-      headerOptions: {
-        title: 'JavaScript Code',
-      },
-      shadowRoot: shadowRoot,
-    });
-
-    // Create result container with unified styling
-    const resultContainer = createUnifiedContainer({
-      className:
-        'explorer-livecode-base__panel explorer-unified-container--result-display',
-      showHeader: true,
-      headerOptions: {
-        title: 'Results',
-      },
-      shadowRoot: shadowRoot,
-    });
-
-    // Assemble panels
-    contentElement.appendChild(editorContainer.getElement());
-    contentElement.appendChild(resultContainer.getElement());
+    if (!editorContentElement || !resultContentElement) {
+      throw new Error(
+        'Failed to get column content elements from multi-column layout',
+      );
+    }
 
     // Create components
-    codeEditor = createCodeEditor(editorContainer.getContentElement(), {
+    codeEditor = createCodeEditor(editorContentElement, {
       language: 'javascript',
       value: currentCode,
       height: '100%',
@@ -125,7 +117,7 @@ export function createLiveCodeJS(
       },
     });
 
-    resultDisplay = createResultDisplay(resultContainer.getContentElement(), {
+    resultDisplay = createResultDisplay(resultContentElement, {
       height: '100%',
       showCopyButton: true,
       showTimestamps: false,

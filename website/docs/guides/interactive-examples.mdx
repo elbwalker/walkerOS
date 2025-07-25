@@ -1,0 +1,48 @@
+---
+title: Interactive Examples
+---
+
+import ExplorerDemo from '@site/src/components/organisms/explorerDemo';
+
+# Interactive Examples
+
+Experience walkerOS development tools directly in your browser with these interactive components.
+
+## LiveCodeJS Component
+
+The LiveCodeJS component provides a JavaScript evaluation environment with walkerOS context injection. Perfect for testing functions and data processing.
+
+<ExplorerDemo
+  type="livecode"
+  initCode={`await getMappingValue(
+    { a: 0, b: 1, c: 2 },
+    'b',
+  )`}
+  height="300px"
+/>
+
+## Destination Component
+
+The Destination component provides a three-column layout for visualizing event data transformation through mapping configurations.
+
+<ExplorerDemo
+  type="destination"
+  initialEvent={`{
+  "entity": "product",
+  "action": "view",
+  "data": {
+    "id": "prod-123",
+    "name": "Wireless Headphones",
+    "price": 99.99,
+    "category": "electronics"
+  }
+}`}
+  initialMapping={`{
+  "event_name": "product_view",
+  "product_id": "data.id",
+  "product_name": "data.name",
+  "product_price": "data.price",
+  "product_category": "data.category"
+}`}
+  height="450px"
+/>

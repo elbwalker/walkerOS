@@ -206,14 +206,11 @@ export function createCodeEditor(
     // Use enhanced shadow DOM-aware CSS injection
     if (shadowRoot) {
       // Inject foundation theme variables
-      baseComponent.injectThemeCSS(
-        CSS_THEME_VARIABLES,
-        'explorer-foundation-theme',
-      );
+      baseComponent.injectCSS(CSS_THEME_VARIABLES, 'explorer-foundation-theme');
       // Inject component-specific styles
-      baseComponent.injectThemeCSS(css, 'explorer-code-editor-styles');
+      baseComponent.injectCSS(css, 'explorer-code-editor-styles');
       // Inject enhanced syntax highlighting with high specificity
-      baseComponent.injectThemeCSS(
+      baseComponent.injectCSS(
         CSS_SYNTAX_HIGHLIGHTING,
         'syntax-highlighting-styles',
       );

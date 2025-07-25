@@ -11,7 +11,6 @@
  */
 
 export interface ComponentOptions {
-  theme?: 'light' | 'dark' | 'auto';
   className?: string;
   autoMount?: boolean;
   useShadowDOM?: boolean;
@@ -25,12 +24,10 @@ export interface ComponentAPI {
   destroy(): void;
   on(event: string, handler: Function): () => void;
   emit(event: string, data?: unknown): void;
-  setTheme(theme: 'light' | 'dark'): void;
   getElement(): HTMLElement | null;
   getShadowRoot(): ShadowRoot | null;
   getContentRoot(): HTMLElement | ShadowRoot;
-  injectThemeCSS(css: string, id?: string): void;
-  getCurrentTheme(): 'light' | 'dark';
+  injectCSS(css: string, id?: string): void;
 }
 
 // Global registry to track all component instances
@@ -57,94 +54,6 @@ function getElement(elementOrSelector: HTMLElement | string): HTMLElement {
     return element as HTMLElement;
   }
   return elementOrSelector;
-}
-
-/**
- * Inject CSS custom properties inheritance into shadow DOM
- * This ensures theme variables are available inside shadow boundaries
- */
-function injectShadowThemeInheritance(shadowRoot: ShadowRoot): void {
-  const style = document.createElement('style');
-  style.id = 'explorer-shadow-theme-inheritance';
-
-  // CSS to inherit theme variables from parent document
-  style.textContent = `
-    /* Inherit CSS custom properties from parent document across shadow boundary */
-    :host {
-      /* Core theme variables */
-      --explorer-bg-primary: var(--explorer-bg-primary, transparent);
-      --explorer-bg-primary-opaque: var(--explorer-bg-primary-opaque, #ffffff);
-      --explorer-bg-secondary: var(--explorer-bg-secondary, rgba(248, 250, 252, 0.8));
-      --explorer-bg-tertiary: var(--explorer-bg-tertiary, rgba(241, 245, 249, 0.9));
-      --explorer-bg-input: var(--explorer-bg-input, #fafafa);
-      
-      /* Text colors */
-      --explorer-text-primary: var(--explorer-text-primary, #1f2937);
-      --explorer-text-secondary: var(--explorer-text-secondary, #6b7280);
-      --explorer-text-muted: var(--explorer-text-muted, #9ca3af);
-      --explorer-text-inverse: var(--explorer-text-inverse, #ffffff);
-      
-      /* Border colors */
-      --explorer-border-primary: var(--explorer-border-primary, #d1d5db);
-      --explorer-border-secondary: var(--explorer-border-secondary, #e5e7eb);
-      --explorer-border-focus: var(--explorer-border-focus, #3b82f6);
-      
-      /* Interactive colors */
-      --explorer-interactive-primary: var(--explorer-interactive-primary, #2563eb);
-      
-      /* Detect theme context and set appropriate background */
-      background: var(--explorer-bg-primary);
-    }
-    
-    /* Theme detection - check if parent has data-theme */
-    :host([data-theme="dark"]) {
-      --explorer-bg-primary: var(--explorer-bg-primary, transparent);
-      --explorer-bg-primary-opaque: var(--explorer-bg-primary-opaque, #1f2937);
-      --explorer-bg-secondary: var(--explorer-bg-secondary, rgba(55, 65, 81, 0.8));
-      --explorer-bg-tertiary: var(--explorer-bg-tertiary, rgba(75, 85, 99, 0.9));
-      --explorer-bg-input: var(--explorer-bg-input, #111827);
-      
-      --explorer-text-primary: var(--explorer-text-primary, #f3f4f6);
-      --explorer-text-secondary: var(--explorer-text-secondary, #d1d5db);
-      --explorer-text-muted: var(--explorer-text-muted, #9ca3af);
-      --explorer-text-inverse: var(--explorer-text-inverse, #1f2937);
-      
-      --explorer-border-primary: var(--explorer-border-primary, #374151);
-      --explorer-border-secondary: var(--explorer-border-secondary, #4b5563);
-    }
-    
-    /* Shadow container inherits from host */
-    .explorer-shadow-container {
-      background: inherit;
-      color: var(--explorer-text-primary);
-      font-family: inherit;
-    }
-  `;
-
-  shadowRoot.insertBefore(style, shadowRoot.firstChild);
-}
-
-/**
- * Get current theme from document context
- */
-function getCurrentDocumentTheme(): 'light' | 'dark' {
-  // Check website context first
-  const htmlTheme = document.documentElement.getAttribute('data-theme');
-  if (htmlTheme === 'light' || htmlTheme === 'dark') {
-    return htmlTheme;
-  }
-
-  // Check for dark class (common pattern)
-  if (document.documentElement.classList.contains('dark')) {
-    return 'dark';
-  }
-
-  // Check system preference
-  if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    return 'dark';
-  }
-
-  return 'light';
 }
 
 /**
@@ -193,9 +102,6 @@ export function createComponent(
       shadowContainer.className = 'explorer-shadow-container';
       shadowContainer.setAttribute('data-explorer-component', id);
       shadowRoot.appendChild(shadowContainer);
-
-      // Inject CSS custom properties inheritance for shadow DOM
-      injectShadowThemeInheritance(shadowRoot);
     } catch (error) {
       console.warn(
         'Failed to create shadow DOM, falling back to light DOM:',
@@ -205,63 +111,14 @@ export function createComponent(
     }
   }
 
-  // Theme management
-  let currentTheme = options.theme || 'auto';
-
-  const updateTheme = () => {
+  // Basic component setup
+  const setupComponent = () => {
     const targetElement =
       (shadowRoot?.firstElementChild as HTMLElement) || element;
 
     // Always add explorer class for CSS targeting
     targetElement.classList.add('explorer-component');
-
-    // Get the resolved theme
-    let resolvedTheme: 'light' | 'dark';
-    if (currentTheme === 'auto') {
-      resolvedTheme = getCurrentDocumentTheme();
-    } else {
-      resolvedTheme = currentTheme;
-    }
-
-    // Check if we're in a website context (html has data-theme)
-    const htmlTheme = document.documentElement.getAttribute('data-theme');
-    if (htmlTheme && (htmlTheme === 'light' || htmlTheme === 'dark')) {
-      // Website context - mirror the parent theme for consistency
-      targetElement.setAttribute('data-theme', htmlTheme);
-      // Also set on host element for shadow DOM CSS selectors
-      if (shadowRoot) {
-        element.setAttribute('data-theme', htmlTheme);
-      }
-    } else {
-      // Standalone context - apply resolved theme
-      targetElement.setAttribute('data-theme', resolvedTheme);
-      // Also set on host element for shadow DOM CSS selectors
-      if (shadowRoot) {
-        element.setAttribute('data-theme', resolvedTheme);
-      }
-    }
   };
-
-  // Watch for theme changes on document
-  const themeObserver = new MutationObserver(() => {
-    // Re-evaluate theme when document changes
-    updateTheme();
-  });
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class', 'data-theme'],
-  });
-  cleanupFunctions.push(() => themeObserver.disconnect());
-
-  // Watch for system theme changes
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  const handleSystemThemeChange = () => {
-    if (currentTheme === 'auto') updateTheme();
-  };
-  mediaQuery.addEventListener('change', handleSystemThemeChange);
-  cleanupFunctions.push(() =>
-    mediaQuery.removeEventListener('change', handleSystemThemeChange),
-  );
 
   // Component API
   const api: ComponentAPI = {
@@ -271,7 +128,7 @@ export function createComponent(
       if (mounted || destroyed) return;
 
       mounted = true;
-      updateTheme();
+      setupComponent();
 
       // Add component class
       if (options.className) {
@@ -307,9 +164,8 @@ export function createComponent(
       cleanupFunctions.forEach((cleanup) => cleanup());
       cleanupFunctions.length = 0;
 
-      // Remove component marker and theme-related attributes/classes
+      // Remove component marker and classes
       element.removeAttribute('data-explorer-component');
-      element.removeAttribute('data-theme');
       element.classList.remove('explorer-component');
 
       // Clean up shadow DOM
@@ -352,12 +208,6 @@ export function createComponent(
       });
     },
 
-    setTheme(theme: 'light' | 'dark') {
-      currentTheme = theme;
-      updateTheme();
-      api.emit('theme-change', theme);
-    },
-
     getElement() {
       return destroyed ? null : element;
     },
@@ -371,11 +221,11 @@ export function createComponent(
       return (shadowRoot?.firstElementChild as HTMLElement) || element;
     },
 
-    injectThemeCSS(css: string, id?: string): void {
+    injectCSS(css: string, id?: string): void {
       if (destroyed) return;
 
       const targetRoot = shadowRoot || document.head;
-      const styleId = id || `explorer-theme-${api.id}`;
+      const styleId = id || `explorer-css-${api.id}`;
 
       // Remove existing style with same ID
       const existingStyle = targetRoot.querySelector(`#${styleId}`);
@@ -392,16 +242,6 @@ export function createComponent(
         shadowRoot.appendChild(style);
       } else {
         document.head.appendChild(style);
-      }
-    },
-
-    getCurrentTheme(): 'light' | 'dark' {
-      if (destroyed) return 'light';
-
-      if (currentTheme === 'auto') {
-        return getCurrentDocumentTheme();
-      } else {
-        return currentTheme;
       }
     },
   };

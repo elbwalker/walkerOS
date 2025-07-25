@@ -62,10 +62,6 @@ export function createUnifiedContainer(
   transition: all 0.2s ease;
 }
 
-/* Standalone context - opaque backgrounds */
-[data-theme] .explorer-unified-container {
-  background: var(--explorer-bg-primary-opaque, var(--explorer-bg-primary));
-}
 
 .explorer-unified-container:focus-within {
   border-color: var(--explorer-interactive-primary, #2563eb);
