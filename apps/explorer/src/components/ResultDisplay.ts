@@ -19,6 +19,104 @@ import {
   injectCSS,
 } from '../utils/dom';
 
+export const RESULT_DISPLAY_CSS = `
+/* ResultDisplay Component Styles */
+.explorer-result-display {
+  background: var(--explorer-bg-primary);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.explorer-result-display * {
+  box-sizing: border-box;
+}
+
+.explorer-result-display__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+  font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.explorer-result-display__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  color: var(--explorer-text-muted);
+  font-style: italic;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.explorer-result-item__content {
+  color: var(--explorer-text-primary);
+  word-break: break-word;
+  padding: 0;
+  margin: 0;
+}
+
+.explorer-result-item__content pre {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  white-space: pre-wrap;
+}
+
+.explorer-result-item__content--json {
+}
+
+.explorer-result-item__content--error {
+  color: var(--explorer-danger);
+}
+
+.explorer-result-item__content--collapsed {
+  max-height: 100px;
+  overflow: hidden;
+  position: relative;
+}
+
+.explorer-result-item__content--collapsed::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(transparent, var(--explorer-bg-secondary));
+}
+
+.explorer-result-item__expand-btn {
+  background: none;
+  border: none;
+  color: var(--explorer-primary);
+  cursor: pointer;
+  font-size: 11px;
+  margin-top: 4px;
+  text-decoration: underline;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .explorer-result-display__content {
+    font-size: 12px;
+    padding: 4px;
+  }
+  
+  .explorer-result-item {
+    padding: 4px;
+    margin-bottom: 8px;
+  }
+}
+`;
+
 export type ResultType = 'value' | 'error' | 'log' | 'warning' | 'info';
 
 export interface ResultItem {
@@ -61,13 +159,16 @@ export function createResultDisplay(
 ): ResultDisplayAPI {
   const baseComponent = createComponent(elementOrSelector, {
     autoMount: false,
-    useShadowDOM: false, // No shadow DOM needed - parent LiveCodeJS already provides isolation
+    useShadowDOM: false, // No shadow DOM - parent layout provides CSS isolation
   });
 
   const element = baseComponent.getElement()!;
-  const contentRoot = element; // No shadow DOM, so contentRoot is the element itself
+  const shadowRoot = baseComponent.getShadowRoot();
+  const contentRoot = baseComponent.getContentRoot() as HTMLElement;
 
+  // Add class to both host element (for tests/API) and content root (for styling)
   element.classList.add('explorer-result-display');
+  contentRoot.classList.add('explorer-result-display');
 
   // Component state
   let results: ResultItem[] = [];
@@ -77,114 +178,11 @@ export function createResultDisplay(
   const cleanupFunctions: Array<() => void> = [];
 
   /**
-   * Inject ResultDisplay CSS styles
+   * CSS injection handled by parent MultiColumnLayout
    */
   function injectStyles(): void {
-    const css = `
-/* ResultDisplay Component Styles */
-.explorer-result-display {
-  background: var(--explorer-bg-primary);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  box-sizing: border-box;
-}
-
-.explorer-result-display * {
-  box-sizing: border-box;
-}
-
-.explorer-result-display__content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.explorer-result-display__empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100px;
-  color: var(--explorer-text-muted);
-  font-style: italic;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-.explorer-result-item__content {
-  color: var(--explorer-text-primary);
-  word-break: break-word;
-  padding: 0;
-  margin: 0;
-}
-
-.explorer-result-item__content pre {
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  border: none;
-  font-family: inherit;
-  font-size: inherit;
-  white-space: pre-wrap;
-}
-
-.explorer-result-item__content--json {
-  background: var(--explorer-bg-tertiary);
-  padding: 8px;
-  border-radius: 4px;
-  margin-top: 4px;
-}
-
-.explorer-result-item__content--error {
-  color: var(--explorer-danger);
-}
-
-.explorer-result-item__content--collapsed {
-  max-height: 100px;
-  overflow: hidden;
-  position: relative;
-}
-
-.explorer-result-item__content--collapsed::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 20px;
-  background: linear-gradient(transparent, var(--explorer-bg-secondary));
-}
-
-.explorer-result-item__expand-btn {
-  background: none;
-  border: none;
-  color: var(--explorer-primary);
-  cursor: pointer;
-  font-size: 11px;
-  margin-top: 4px;
-  text-decoration: underline;
-}
-
-/* Syntax highlighting inherits from global theme-aware styles */
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .explorer-result-display__content {
-    font-size: 12px;
-    padding: 6px;
-  }
-  
-  .explorer-result-item {
-    padding: 6px;
-    margin-bottom: 8px;
-  }
-}
-`;
-
-    injectCSS(css, 'explorer-result-display-styles');
+    // CSS is injected by parent MultiColumnLayout - no individual injection needed
+    // This reduces CSS duplication and shadow DOM overhead
   }
 
   /**

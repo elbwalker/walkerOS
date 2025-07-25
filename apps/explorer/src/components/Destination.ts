@@ -94,7 +94,6 @@ export function createDestination(
     height: options.height,
     showHeader: options.showHeader,
     title: options.title || 'Destination Mapping',
-    useShadowDOM: true, // Enable shadow DOM by default for CSS isolation
   });
 
   // Debounced update for performance

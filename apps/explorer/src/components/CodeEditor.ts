@@ -17,89 +17,9 @@ import {
   injectComponentCSS,
 } from '../utils/dom';
 import { debounce } from '../utils/debounce';
-import {
-  CSS_THEME_VARIABLES,
-  CSS_SYNTAX_HIGHLIGHTING,
-  getCompleteShadowCSS,
-} from '../core/css-theme-system';
 
-export interface CodeEditorOptions {
-  language?: SupportedLanguage;
-  value?: string;
-  placeholder?: string;
-  readOnly?: boolean;
-  tabSize?: number;
-  fontSize?: string;
-  height?: string;
-  maxHeight?: string;
-  onChange?: (value: string, language: SupportedLanguage) => void;
-  onLanguageChange?: (language: SupportedLanguage) => void;
-}
-
-export interface CodeEditorAPI extends ComponentAPI {
-  getValue(): string;
-  setValue(value: string): void;
-  getLanguage(): SupportedLanguage;
-  setLanguage(language: SupportedLanguage): void;
-  focus(): void;
-  selectAll(): void;
-  insertText(text: string): void;
-  getSelection(): { start: number; end: number; text: string };
-}
-
-/**
- * Create a CodeEditor component
- */
-export function createCodeEditor(
-  elementOrSelector: HTMLElement | string,
-  options: CodeEditorOptions = {},
-): CodeEditorAPI {
-  const baseComponent = createComponent(elementOrSelector, {
-    autoMount: false,
-    useShadowDOM: true, // Enable shadow DOM by default for CSS isolation
-  });
-
-  const element = baseComponent.getElement()!;
-  const shadowRoot = baseComponent.getShadowRoot();
-  const contentRoot = baseComponent.getContentRoot() as HTMLElement;
-
-  // Add class to both host element (for tests/API) and content root (for styling)
-  element.classList.add('explorer-code-editor');
-  contentRoot.classList.add('explorer-code-editor');
-
-  // Component state
-  let currentValue = options.value || '';
-  let currentLanguage: SupportedLanguage = options.language || 'text';
-  let textArea: HTMLTextAreaElement;
-  let highlightLayer: HTMLElement;
-  let isHighlighting = false;
-  let lastHighlightedValue = ''; // Cache last highlighted value to avoid unnecessary work
-
-  // Cleanup functions
-  const cleanupFunctions: Array<() => void> = [];
-
-  // Debounced highlighting for performance
-  const debouncedHighlight = debounce(() => {
-    updateHighlighting();
-  }, 20);
-
-  // Debounced change notification
-  const debouncedChange = debounce((value: string) => {
-    options.onChange?.(value, currentLanguage);
-  }, 200);
-
-  /**
-   * Inject CodeEditor CSS styles with proper shadow DOM support
-   */
-  function injectStyles(): void {
-    const css = `
-/* CSS Reset for shadow DOM */
-:host {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
+export const CODE_EDITOR_CSS = `
+/* CodeEditor Component Styles */
 .explorer-code-editor {
   position: relative;
   background: var(--explorer-bg-primary);
@@ -137,7 +57,7 @@ export function createCodeEditor(
   left: 0 !important;
   width: 100% !important;
   height: 100% !important;
-  padding: 12px 16px 40px 16px !important;
+  padding: 4px !important;
   margin: 0 !important;
   border: none !important;
   outline: none !important;
@@ -166,7 +86,7 @@ export function createCodeEditor(
   left: 0 !important;
   width: 100% !important;
   height: 100% !important;
-  padding: 12px 16px 40px 16px !important;
+  padding: 4px !important;
   margin: 0 !important;
   border: none !important;
   background: transparent !important;
@@ -190,45 +110,87 @@ export function createCodeEditor(
   color: var(--explorer-text-primary);
 }
 
-
-/* Syntax highlighting inherits from global theme-aware styles */
-
 /* Responsive design */
 @media (max-width: 768px) {
   .explorer-code-editor__textarea,
   .explorer-code-editor__highlight {
     font-size: 13px;
-    padding: 10px 12px 32px 12px;
+    padding: 4px;
   }
 }
 `;
 
-    // Use enhanced shadow DOM-aware CSS injection
-    if (shadowRoot) {
-      // Inject foundation theme variables
-      baseComponent.injectCSS(CSS_THEME_VARIABLES, 'explorer-foundation-theme');
-      // Inject component-specific styles
-      baseComponent.injectCSS(css, 'explorer-code-editor-styles');
-      // Inject enhanced syntax highlighting with high specificity
-      baseComponent.injectCSS(
-        CSS_SYNTAX_HIGHLIGHTING,
-        'syntax-highlighting-styles',
-      );
-    } else {
-      // Light DOM fallback
-      injectComponentCSS(
-        css,
-        'explorer-code-editor-styles',
-        null,
-        '.explorer-code-editor',
-      );
-      injectComponentCSS(
-        CSS_SYNTAX_HIGHLIGHTING,
-        'syntax-highlighting-styles',
-        null,
-        '.explorer-code-editor',
-      );
-    }
+export interface CodeEditorOptions {
+  language?: SupportedLanguage;
+  value?: string;
+  placeholder?: string;
+  readOnly?: boolean;
+  tabSize?: number;
+  fontSize?: string;
+  height?: string;
+  maxHeight?: string;
+  onChange?: (value: string, language: SupportedLanguage) => void;
+  onLanguageChange?: (language: SupportedLanguage) => void;
+}
+
+export interface CodeEditorAPI extends ComponentAPI {
+  getValue(): string;
+  setValue(value: string): void;
+  getLanguage(): SupportedLanguage;
+  setLanguage(language: SupportedLanguage): void;
+  focus(): void;
+  selectAll(): void;
+  insertText(text: string): void;
+  getSelection(): { start: number; end: number; text: string };
+}
+
+/**
+ * Create a CodeEditor component
+ */
+export function createCodeEditor(
+  elementOrSelector: HTMLElement | string,
+  options: CodeEditorOptions = {},
+): CodeEditorAPI {
+  const baseComponent = createComponent(elementOrSelector, {
+    autoMount: false,
+    useShadowDOM: false, // No shadow DOM - parent layout provides CSS isolation
+  });
+
+  const element = baseComponent.getElement()!;
+  const shadowRoot = baseComponent.getShadowRoot();
+  const contentRoot = baseComponent.getContentRoot() as HTMLElement;
+
+  // Add class to both host element (for tests/API) and content root (for styling)
+  element.classList.add('explorer-code-editor');
+  contentRoot.classList.add('explorer-code-editor');
+
+  // Component state
+  let currentValue = options.value || '';
+  let currentLanguage: SupportedLanguage = options.language || 'text';
+  let textArea: HTMLTextAreaElement;
+  let highlightLayer: HTMLElement;
+  let isHighlighting = false;
+  let lastHighlightedValue = ''; // Cache last highlighted value to avoid unnecessary work
+
+  // Cleanup functions
+  const cleanupFunctions: Array<() => void> = [];
+
+  // Debounced highlighting for performance
+  const debouncedHighlight = debounce(() => {
+    updateHighlighting();
+  }, 20);
+
+  // Debounced change notification
+  const debouncedChange = debounce((value: string) => {
+    options.onChange?.(value, currentLanguage);
+  }, 200);
+
+  /**
+   * CSS injection handled by parent MultiColumnLayout
+   */
+  function injectStyles(): void {
+    // CSS is injected by parent MultiColumnLayout - no individual injection needed
+    // This reduces CSS duplication and shadow DOM overhead
   }
 
   /**

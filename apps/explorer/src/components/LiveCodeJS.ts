@@ -82,7 +82,6 @@ export function createLiveCodeJS(
     height: options.height,
     showHeader: options.showHeader,
     title: options.title || 'JavaScript Evaluator',
-    useShadowDOM: true, // Enable shadow DOM by default for CSS isolation
   });
 
   // Debounced evaluation for performance

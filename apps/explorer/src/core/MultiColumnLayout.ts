@@ -15,6 +15,12 @@ import {
   type UnifiedContainerAPI,
 } from './UnifiedContainer';
 import { createElement, injectComponentCSS } from '../utils/dom';
+import {
+  CSS_THEME_VARIABLES,
+  CSS_SYNTAX_HIGHLIGHTING,
+} from './css-theme-system';
+import { CODE_EDITOR_CSS } from '../components/CodeEditor';
+import { RESULT_DISPLAY_CSS } from '../components/ResultDisplay';
 
 export interface ColumnConfig {
   title: string;
@@ -103,10 +109,10 @@ export function createMultiColumnLayout(
     );
   }
 
-  // Create base component
+  // Create base component with shadow DOM for CSS isolation
   const baseComponent = createComponent(elementOrSelector, {
     autoMount: false,
-    useShadowDOM: options.useShadowDOM || false,
+    useShadowDOM: true, // Always use shadow DOM for optimal CSS isolation
   });
 
   const element = baseComponent.getElement()!;
@@ -123,20 +129,34 @@ export function createMultiColumnLayout(
   const cleanupFunctions: Array<() => void> = [];
 
   /**
-   * Inject layout CSS styles
+   * Inject all CSS styles (foundation, layout, and child component styles)
    */
   function injectStyles(): void {
-    const css = MULTI_COLUMN_CSS;
-
-    if (shadowRoot) {
-      injectComponentCSS(
-        css,
-        'explorer-multi-column-layout-styles',
-        shadowRoot,
+    if (!shadowRoot) {
+      throw new Error(
+        'MultiColumnLayout requires shadow DOM for CSS isolation',
       );
-    } else {
-      injectComponentCSS(css, 'explorer-multi-column-layout-styles');
     }
+
+    // Inject all required CSS into the single shadow DOM
+    // 1. Foundation theme variables (required by all components)
+    baseComponent.injectCSS(CSS_THEME_VARIABLES, 'explorer-foundation-theme');
+
+    // 2. Syntax highlighting (required by CodeEditor and ResultDisplay)
+    baseComponent.injectCSS(
+      CSS_SYNTAX_HIGHLIGHTING,
+      'syntax-highlighting-styles',
+    );
+
+    // 3. Component-specific styles
+    baseComponent.injectCSS(CODE_EDITOR_CSS, 'code-editor-styles');
+    baseComponent.injectCSS(RESULT_DISPLAY_CSS, 'result-display-styles');
+
+    // 4. Layout-specific styles
+    baseComponent.injectCSS(
+      MULTI_COLUMN_CSS,
+      'explorer-multi-column-layout-styles',
+    );
   }
 
   /**
