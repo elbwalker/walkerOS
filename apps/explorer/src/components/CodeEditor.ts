@@ -14,7 +14,7 @@ import { createComponent, type ComponentAPI } from '../core/Component';
 import {
   highlightSyntax,
   type SupportedLanguage,
-  detectLanguage,
+  getSyntaxHighlightCSS,
 } from '../utils/syntax';
 import {
   createElement,
@@ -93,11 +93,18 @@ export function createCodeEditor(
 /* CodeEditor Component Styles */
 .explorer-code-editor {
   position: relative;
-  border: 1px solid var(--explorer-border-primary);
-  border-radius: 8px;
-  background: var(--explorer-bg-primary);
+  border: 1px solid var(--explorer-border-primary, #e5e7eb);
+  border-radius: 12px;
+  background: var(--explorer-bg-primary, #ffffff);
   overflow: hidden;
   font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+}
+
+.explorer-code-editor:focus-within {
+  border-color: var(--explorer-interactive-primary, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1), 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
 .explorer-code-editor--readonly {
@@ -108,11 +115,12 @@ export function createCodeEditor(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: var(--explorer-bg-secondary);
-  border-bottom: 1px solid var(--explorer-border-primary);
+  padding: 12px 16px;
+  background: var(--explorer-bg-secondary, #f9fafb);
+  border-bottom: 1px solid var(--explorer-border-primary, #e5e7eb);
   font-size: 12px;
-  color: var(--explorer-text-secondary);
+  color: var(--explorer-text-secondary, #6b7280);
+  border-radius: 12px 12px 0 0;
 }
 
 .explorer-code-editor__language {
@@ -122,13 +130,14 @@ export function createCodeEditor(
 }
 
 .explorer-code-editor__language-badge {
-  background: var(--explorer-interactive-primary);
-  color: var(--explorer-text-inverse);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
+  background: var(--explorer-interactive-primary, #2563eb);
+  color: var(--explorer-text-inverse, #ffffff);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.025em;
 }
 
 .explorer-code-editor__actions {
@@ -139,25 +148,33 @@ export function createCodeEditor(
 
 .explorer-code-editor__copy-btn {
   background: none;
-  border: none;
-  color: var(--explorer-text-secondary);
+  border: 1px solid transparent;
+  color: var(--explorer-text-secondary, #6b7280);
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  font-size: 14px;
 }
 
 .explorer-code-editor__copy-btn:hover {
-  background: var(--explorer-interactive-hover);
-  color: var(--explorer-text-primary);
+  background: var(--explorer-interactive-hover, #f3f4f6);
+  color: var(--explorer-text-primary, #111827);
+  border-color: var(--explorer-border-primary, #e5e7eb);
+}
+
+.explorer-code-editor__copy-btn:active {
+  transform: scale(0.95);
 }
 
 .explorer-code-editor__content {
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .explorer-code-editor__textarea {
@@ -166,23 +183,26 @@ export function createCodeEditor(
   left: 0;
   width: 100%;
   height: 100%;
-  padding: 12px;
+  padding: 12px 16px 40px 16px;
   border: none;
   outline: none;
   background: transparent;
-  color: var(--explorer-text-primary);
+  color: var(--explorer-text-primary, #111827);
   font-family: inherit;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   resize: none;
   z-index: 2;
   white-space: pre;
   overflow-wrap: normal;
   word-break: normal;
+  caret-color: var(--explorer-interactive-primary, #2563eb);
+  box-sizing: border-box;
 }
 
 .explorer-code-editor__textarea::placeholder {
-  color: var(--explorer-text-muted);
+  color: var(--explorer-text-muted, #9ca3af);
+  font-style: italic;
 }
 
 .explorer-code-editor__highlight {
@@ -191,20 +211,21 @@ export function createCodeEditor(
   left: 0;
   width: 100%;
   height: 100%;
-  padding: 12px;
+  padding: 12px 16px 40px 16px;
   margin: 0;
   border: none;
   background: transparent;
   color: transparent;
   font-family: inherit;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   white-space: pre;
   overflow-wrap: normal;
   word-break: normal;
   z-index: 1;
   pointer-events: none;
   overflow: auto;
+  box-sizing: border-box;
 }
 
 .explorer-code-editor__highlight pre {
@@ -216,61 +237,76 @@ export function createCodeEditor(
 
 .explorer-code-editor--with-line-numbers .explorer-code-editor__textarea,
 .explorer-code-editor--with-line-numbers .explorer-code-editor__highlight {
-  padding-left: 50px;
+  padding-left: 70px;
 }
 
 .explorer-code-editor__line-numbers {
   position: absolute;
   top: 0;
   left: 0;
-  width: 42px;
-  padding: 12px 8px 12px 12px;
-  background: var(--explorer-bg-tertiary);
-  border-right: 1px solid var(--explorer-border-primary);
-  color: var(--explorer-text-muted);
+  width: 54px;
+  padding: 12px 8px 40px 8px;
+  background: var(--explorer-bg-tertiary, #f9fafb);
+  border-right: 1px solid var(--explorer-border-primary, #e5e7eb);
+  color: var(--explorer-text-muted, #9ca3af);
   font-family: inherit;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   text-align: right;
   user-select: none;
   pointer-events: none;
   white-space: pre;
-  z-index: 1;
+  z-index: 3;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 /* Syntax highlighting integration */
-.explorer-code-editor .syntax-keyword { color: var(--explorer-syntax-keyword); font-weight: 600; }
-.explorer-code-editor .syntax-string { color: var(--explorer-syntax-string); }
-.explorer-code-editor .syntax-number { color: var(--explorer-syntax-number); }
-.explorer-code-editor .syntax-comment { color: var(--explorer-syntax-comment); font-style: italic; }
-.explorer-code-editor .syntax-tag { color: var(--explorer-syntax-tag); font-weight: 600; }
-.explorer-code-editor .syntax-attribute { color: var(--explorer-syntax-attribute); }
-.explorer-code-editor .syntax-value { color: var(--explorer-syntax-value); }
-.explorer-code-editor .syntax-elb-attribute { color: var(--explorer-interactive-success); font-weight: 700; }
-.explorer-code-editor .syntax-elb-value { color: var(--explorer-interactive-success); font-weight: 500; }
+.explorer-code-editor .syntax-keyword { color: #d73a49 !important; font-weight: 600; }
+.explorer-code-editor .syntax-string { color: #032f62 !important; }
+.explorer-code-editor .syntax-number { color: #005cc5 !important; }
+.explorer-code-editor .syntax-comment { color: #6a737d !important; font-style: italic; }
+.explorer-code-editor .syntax-function { color: #6f42c1 !important; font-weight: 500; }
+.explorer-code-editor .syntax-tag { color: #22863a !important; font-weight: 600; }
+.explorer-code-editor .syntax-attribute { color: #6f42c1 !important; }
+.explorer-code-editor .syntax-value { color: #032f62 !important; }
+.explorer-code-editor .syntax-operator { color: #d73a49 !important; }
+.explorer-code-editor .syntax-type { color: #005cc5 !important; font-weight: 500; }
+.explorer-code-editor .syntax-property { color: #6f42c1 !important; }
+.explorer-code-editor .syntax-elb-attribute { color: #28a745 !important; font-weight: 700; }
+.explorer-code-editor .syntax-elb-value { color: #28a745 !important; font-weight: 500; }
 
 /* Responsive design */
 @media (max-width: 768px) {
   .explorer-code-editor__textarea,
   .explorer-code-editor__highlight {
     font-size: 13px;
-    padding: 8px;
+    padding: 10px 12px 32px 12px;
   }
   
   .explorer-code-editor--with-line-numbers .explorer-code-editor__textarea,
   .explorer-code-editor--with-line-numbers .explorer-code-editor__highlight {
-    padding-left: 40px;
+    padding-left: 55px;
   }
   
   .explorer-code-editor__line-numbers {
-    width: 32px;
-    padding: 8px 4px 8px 8px;
+    width: 43px;
+    padding: 10px 6px 32px 6px;
     font-size: 13px;
+  }
+  
+  .explorer-code-editor__header {
+    padding: 8px 12px;
   }
 }
 `;
 
     injectCSS(css, 'explorer-code-editor-styles');
+
+    // Also inject global syntax highlighting CSS
+    injectCSS(getSyntaxHighlightCSS(), 'syntax-highlighting-styles');
   }
 
   /**
@@ -454,6 +490,16 @@ export function createCodeEditor(
     const onScroll = () => {
       highlightLayer.scrollTop = textArea.scrollTop;
       highlightLayer.scrollLeft = textArea.scrollLeft;
+
+      // Sync line numbers scrolling
+      if (options.showLineNumbers) {
+        const lineNumbersEl = element.querySelector(
+          '.explorer-code-editor__line-numbers',
+        ) as HTMLElement;
+        if (lineNumbersEl) {
+          lineNumbersEl.scrollTop = textArea.scrollTop;
+        }
+      }
     };
 
     cleanupFunctions.push(addEventListener(textArea, 'input', onInput));

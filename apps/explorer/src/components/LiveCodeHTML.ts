@@ -1,5 +1,5 @@
 /**
- * LiveCode Component - Live HTML/CSS/JS editor with real-time preview
+ * LiveCodeHTML Component - Live HTML/CSS/JS editor with real-time preview
  *
  * Features:
  * - Combined code editor and preview
@@ -18,7 +18,7 @@ import { createElement, addEventListener, injectCSS } from '../utils/dom';
 import { debounce } from '../utils/debounce';
 import { eventBus } from '../core/EventBus';
 
-export interface LiveCodeOptions {
+export interface LiveCodeHTMLOptions {
   layout?: 'horizontal' | 'vertical' | 'tabs';
   showTabs?: boolean;
   showResults?: boolean;
@@ -34,7 +34,7 @@ export interface LiveCodeOptions {
   onError?: (error: string) => void;
 }
 
-export interface LiveCodeAPI extends ComponentAPI {
+export interface LiveCodeHTMLAPI extends ComponentAPI {
   getHTML(): string;
   getCSS(): string;
   getJS(): string;
@@ -52,12 +52,12 @@ export interface LiveCodeAPI extends ComponentAPI {
 type EditorTab = 'html' | 'css' | 'js';
 
 /**
- * Create a LiveCode component
+ * Create a LiveCodeHTML component
  */
-export function createLiveCode(
+export function createLiveCodeHTML(
   elementOrSelector: HTMLElement | string,
-  options: LiveCodeOptions = {},
-): LiveCodeAPI {
+  options: LiveCodeHTMLOptions = {},
+): LiveCodeHTMLAPI {
   const baseComponent = createComponent(elementOrSelector, {
     autoMount: false,
   });
@@ -489,7 +489,7 @@ export function createLiveCode(
     });
 
     cssEditor = createCodeEditor(cssEditorEl, {
-      language: 'css',
+      language: 'text', // CSS syntax highlighting removed from explorer
       value: cssContent,
       height: options.editorHeight || '100%',
       onChange: (value) => {
@@ -755,7 +755,7 @@ export function createLiveCode(
   }
 
   // Enhanced API
-  const api: LiveCodeAPI = {
+  const api: LiveCodeHTMLAPI = {
     ...baseComponent,
 
     getHTML(): string {

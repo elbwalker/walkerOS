@@ -85,7 +85,6 @@ export {
   measurePerformance,
 } from './utils/debounce';
 
-// Phase 2: Individual Components (functional factories)
 export {
   createCodeEditor,
   type CodeEditorAPI,
@@ -103,7 +102,16 @@ export {
   type ResultItem,
   type ResultType,
 } from './components/ResultDisplay';
-// export { createLiveCode } from './components/LiveCode';
+export {
+  createLiveCodeHTML,
+  type LiveCodeHTMLAPI,
+  type LiveCodeHTMLOptions,
+} from './components/LiveCodeHTML';
+export {
+  createLiveCodeJS,
+  type LiveCodeJSAPI,
+  type LiveCodeJSOptions,
+} from './components/LiveCodeJS';
 export {
   createEventFlow,
   type EventFlowAPI,

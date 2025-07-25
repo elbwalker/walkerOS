@@ -433,7 +433,7 @@ describe('Foundation - Utilities', () => {
       expect(css).toContain('.syntax-keyword');
       expect(css).toContain('.syntax-string');
       expect(css).toContain('.syntax-elb-attribute');
-      expect(css).toContain('var(--explorer-syntax-keyword');
+      expect(css).toContain('#d73a49');
     });
   });
 

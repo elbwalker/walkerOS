@@ -147,3 +147,8 @@ h6 {
     margin: 0.5em 0;
   }
 }
+
+/* Hide the web category from sidebar navigation */
+.hide-web-category {
+  display: none !important;
+}

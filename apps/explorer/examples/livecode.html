@@ -66,331 +66,500 @@
 </head>
 <body>
     <div class="container">
-        <h1>⚡ LiveCode Example</h1>
-        <p>Interactive code editor with live preview and result display - perfect for WalkerOS development.</p>
+        <h1>⚡ LiveCodeHTML Example</h1>
+        <p>Interactive HTML/CSS/JS editor with live preview - perfect for web development and prototyping.</p>
         
-        <div class="split-layout">
-            <div id="editor" class="panel"></div>
-            <div id="preview" class="panel"></div>
-        </div>
-        
-        <div id="result" style="height: 200px; border: 1px solid #ddd; border-radius: 4px; margin: 20px 0;"></div>
+        <div id="livecode-container" style="height: 600px; border: 1px solid #ddd; border-radius: 8px; margin: 20px 0;"></div>
         
         <div class="controls">
-            <button onclick="loadWalkerExample()">WalkerOS Example</button>
-            <button onclick="loadTrackingExample()">Tracking Example</button>
-            <button onclick="loadDestinationExample()">Destination Example</button>
-            <button class="btn-primary" onclick="executeCode()">Execute Code</button>
+            <button onclick="loadWebExample()">Web App Example</button>
+            <button onclick="loadWalkerExample()">WalkerOS Integration</button>
+            <button onclick="loadAnimationExample()">CSS Animation</button>
             <button onclick="clearAll()">Clear All</button>
         </div>
     </div>
 
     <script src="../explorer.js"></script>
     <script>
-        let editor = null;
-        let preview = null;
-        let result = null;
+        let liveCodeHTML = null;
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Initialize CodeEditor
-            editor = WalkerExplorer.createCodeEditor('#editor', {
-                language: 'javascript',
-                value: `// WalkerOS LiveCode Demo
-function trackEvent(event, data) {
-    console.log('Tracking event:', event);
-    console.log('Data:', data);
-    
-    // Simulate processing
-    const result = {
-        event,
-        data,
-        timestamp: new Date().toISOString(),
-        processed: true
-    };
-    
-    // Return for display
-    return result;
+            // Initialize LiveCodeHTML
+            liveCodeHTML = WalkerExplorer.createLiveCodeHTML('#livecode-container', {
+                layout: 'horizontal',
+                showResults: true,
+                autoRun: true,
+                runDelay: 800,
+                initialHTML: `<div class="demo">
+  <h1>Welcome to LiveCodeHTML!</h1>
+  <p>Edit the HTML, CSS, and JavaScript to see live updates.</p>
+  <button id="demo-btn">Click me!</button>
+  <div id="output"></div>
+</div>`,
+                initialCSS: `.demo {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  color: white;
+  border-radius: 8px;
 }
 
-// Example usage
-const eventData = {
-    product_id: 'demo-123',
-    product_name: 'Demo Product',
-    price: 99.99
-};
+.demo h1 {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+}
 
-trackEvent('product_view', eventData);`,
-                showLineNumbers: true,
-                onChange: (value) => {
-                    updatePreview(value);
-                }
-            });
+.demo p {
+  margin: 0 0 20px 0;
+  opacity: 0.9;
+}
 
-            // Initialize Preview
-            preview = WalkerExplorer.createPreview('#preview', {
-                html: generatePreviewHTML(editor.getValue()),
-                height: '330px'
-            });
+#demo-btn {
+  background: white;
+  color: #667eea;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
 
-            // Initialize ResultDisplay
-            result = WalkerExplorer.createResultDisplay('#result', {
-                height: '180px',
-                showTimestamps: true
+#demo-btn:hover {
+  background: #f0f0f0;
+}
+
+#output {
+  margin-top: 20px;
+  padding: 10px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 5px;
+}`,
+                initialJS: `// LiveCodeHTML JavaScript
+let clickCount = 0;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('demo-btn');
+  const output = document.getElementById('output');
+  
+  btn.addEventListener('click', () => {
+    clickCount++;
+    output.innerHTML = \`Button clicked \${clickCount} time\${clickCount === 1 ? '' : 's'}!\`;
+  });
+  
+  console.log('LiveCodeHTML demo initialized!');
+});`,
+                enableConsoleCapture: true
             });
             
-            // Add initial message
-            result.addResult({
-                type: 'log',
-                content: { message: 'LiveCode demo ready! Edit code to see live updates.' },
-                timestamp: Date.now()
-            });
-            
-            window.editor = editor;
-            window.preview = preview;
-            window.result = result;
+            window.liveCodeHTML = liveCodeHTML;
         });
 
-        function generatePreviewHTML(code) {
-            return '<!DOCTYPE html>' +
-'<html>' +
-'<head>' +
-    '<style>' +
-        'body { font-family: Arial, sans-serif; padding: 20px; background: #f8f9fa; }' +
-        '.output { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 10px 0; }' +
-        '.log { color: #28a745; }' +
-        '.error { color: #dc3545; }' +
-        'pre { margin: 0; white-space: pre-wrap; }' +
-    '</style>' +
-'</head>' +
-'<body>' +
-    '<h3>Live Code Output</h3>' +
-    '<div id="output"></div>' +
-    '<script>' +
-        '(function() {' +
-            'if (!window.originalConsole) {' +
-                'window.originalConsole = console.log;' +
-            '}' +
-            'const outputDiv = document.getElementById("output");' +
-            'if (outputDiv) outputDiv.innerHTML = "";' +
-            'console.log = function(...args) {' +
-                'const div = document.createElement("div");' +
-                'div.className = "output log";' +
-                'div.innerHTML = "<pre>" + args.map(arg => typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)).join(" ") + "</pre>";' +
-                'outputDiv.appendChild(div);' +
-                'window.originalConsole.apply(console, args);' +
-            '};' +
-            'try {' +
-                code +
-            '} catch (error) {' +
-                'const div = document.createElement("div");' +
-                'div.className = "output error";' +
-                'div.innerHTML = "<pre>Error: " + error.message + "</pre>";' +
-                'outputDiv.appendChild(div);' +
-            '}' +
-        '})();' +
-    '<\/script>' +
-'</body>' +
-'</html>';
-        }
+        window.loadWebExample = () => {
+            liveCodeHTML.setHTML(`<div class="app">
+  <header>
+    <h1>My Web App</h1>
+    <nav>
+      <button class="nav-btn active" data-page="home">Home</button>
+      <button class="nav-btn" data-page="about">About</button>
+      <button class="nav-btn" data-page="contact">Contact</button>
+    </nav>
+  </header>
+  
+  <main id="content">
+    <div class="page" id="home">
+      <h2>Welcome Home!</h2>
+      <p>This is a single-page app demo.</p>
+      <button id="counter-btn">Click count: 0</button>
+    </div>
+    
+    <div class="page" id="about" style="display: none;">
+      <h2>About Us</h2>
+      <p>This app demonstrates interactive web development.</p>
+    </div>
+    
+    <div class="page" id="contact" style="display: none;">
+      <h2>Contact</h2>
+      <form id="contact-form">
+        <input type="text" placeholder="Your name" required>
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  </main>
+</div>`);
+            
+            liveCodeHTML.setCSS(`* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-        function updatePreview(code) {
-            if (preview) {
-                preview.setHTML(generatePreviewHTML(code));
-            }
-        }
+.app {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+nav {
+  margin-top: 15px;
+}
+
+.nav-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  margin: 0 5px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.nav-btn:hover, .nav-btn.active {
+  background: white;
+  color: #667eea;
+}
+
+main {
+  padding: 30px;
+}
+
+.page h2 {
+  color: #333;
+  margin-bottom: 15px;
+}
+
+#counter-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+form input {
+  padding: 10px;
+  margin-right: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}`);
+            
+            liveCodeHTML.setJS(`let counter = 0;
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Navigation
+  const navBtns = document.querySelectorAll('.nav-btn');
+  const pages = document.querySelectorAll('.page');
+  
+  navBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetPage = btn.dataset.page;
+      
+      // Update nav buttons
+      navBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Show target page
+      pages.forEach(page => {
+        page.style.display = page.id === targetPage ? 'block' : 'none';
+      });
+    });
+  });
+  
+  // Counter button
+  const counterBtn = document.getElementById('counter-btn');
+  counterBtn.addEventListener('click', () => {
+    counter++;
+    counterBtn.textContent = \`Click count: \${counter}\`;
+  });
+  
+  // Contact form
+  const form = document.getElementById('contact-form');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = form.querySelector('input').value;
+    alert(\`Thanks for reaching out, \${name}!\`);
+    form.reset();
+  });
+  
+  console.log('Web app initialized!');
+});`);
+        };
 
         window.loadWalkerExample = () => {
-            const code = `// WalkerOS Entity Tracking Example
-function createEntity(type, id, data) {
-    const entity = {
-        type,
-        id,
-        data,
-        actions: {}
-    };
-    
-    // Add action tracking
-    entity.actions.track = function(action, additionalData = {}) {
-        const event = {
-            entity: type,
-            action,
-            data: { ...data, ...additionalData },
-            timestamp: Date.now()
-        };
-        
-        console.log('WalkerOS Event:', event);
-        return event;
-    };
-    
-    return entity;
+            liveCodeHTML.setHTML(`<div id="tracker-demo">
+  <h2>WalkerOS Tracking Demo</h2>
+  <div class="actions">
+    <button data-action="page_view">Track Page View</button>
+    <button data-action="product_view">Track Product View</button>
+    <button data-action="add_to_cart">Add to Cart</button>
+    <button data-action="purchase">Track Purchase</button>
+  </div>
+  <div id="event-log"></div>
+</div>`);
+            
+            liveCodeHTML.setCSS(`#tracker-demo {
+  font-family: Arial, sans-serif;
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
 }
 
-// Create a product entity
-const product = createEntity('product', 'demo-123', {
-    name: 'Demo Product',
-    price: 99.99,
-    category: 'electronics'
-});
+.actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 20px 0;
+}
 
-// Track different actions
-product.actions.track('view');
-product.actions.track('cart', { quantity: 2 });
-product.actions.track('purchase', { transaction_id: 'txn_456' });`;
+.actions button {
+  padding: 10px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.actions button:hover {
+  background: #0056b3;
+}
+
+#event-log {
+  margin-top: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.event-item {
+  background: white;
+  margin: 8px 0;
+  padding: 12px;
+  border-radius: 4px;
+  border-left: 4px solid #28a745;
+  font-family: monospace;
+  font-size: 12px;
+}`);
             
-            editor.setValue(code);
-            updatePreview(code);
-        };
-
-        window.loadTrackingExample = () => {
-            const code = `// Event Tracking with Context
-class EventTracker {
-    constructor(config) {
-        this.config = config;
-        this.context = {
-            page: window.location?.pathname || '/demo',
-            timestamp: Date.now()
-        };
-    }
+            liveCodeHTML.setJS(`// WalkerOS-style tracking implementation
+class SimpleTracker {
+  constructor() {
+    this.events = [];
+    this.destinations = ['Google Analytics', 'Meta Pixel'];
+  }
+  
+  track(action, data = {}) {
+    const event = {
+      action,
+      data,
+      timestamp: new Date().toISOString(),
+      id: Math.random().toString(36).substr(2, 9)
+    };
     
-    track(event, data = {}) {
-        const enrichedEvent = {
-            event,
-            data,
-            context: this.context,
-            config: this.config
-        };
-        
-        console.log('Tracked Event:', enrichedEvent);
-        
-        // Simulate sending to destinations
-        this.sendToDestinations(enrichedEvent);
-        
-        return enrichedEvent;
-    }
+    this.events.push(event);
+    this.logEvent(event);
+    this.sendToDestinations(event);
     
-    sendToDestinations(event) {
-        const destinations = ['Google Analytics', 'Meta Pixel'];
-        destinations.forEach(dest => {
-            console.log(\`Sent to \${dest}:\`, event.event);
-        });
-    }
+    return event;
+  }
+  
+  logEvent(event) {
+    const log = document.getElementById('event-log');
+    const item = document.createElement('div');
+    item.className = 'event-item';
+    item.innerHTML = \`
+      <strong>\${event.action}</strong> 
+      <small>(\${event.id})</small><br>
+      \${JSON.stringify(event.data, null, 2)}
+    \`;
+    log.appendChild(item);
+    log.scrollTop = log.scrollHeight;
+  }
+  
+  sendToDestinations(event) {
+    this.destinations.forEach(dest => {
+      console.log(\`Sent to \${dest}:\`, event);
+    });
+  }
 }
 
 // Initialize tracker
-const tracker = new EventTracker({
-    debug: true,
-    destinations: ['ga4', 'meta']
-});
+const tracker = new SimpleTracker();
 
-// Track events
-tracker.track('page_view', { title: 'Demo Page' });
-tracker.track('button_click', { button_id: 'cta-1' });`;
-            
-            editor.setValue(code);
-            updatePreview(code);
+document.addEventListener('DOMContentLoaded', () => {
+  const buttons = document.querySelectorAll('[data-action]');
+  
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      let data = {};
+      
+      // Add action-specific data
+      switch(action) {
+        case 'page_view':
+          data = { page: '/demo', title: 'WalkerOS Demo' };
+          break;
+        case 'product_view':
+          data = { product_id: 'demo-123', name: 'Demo Product' };
+          break;
+        case 'add_to_cart':
+          data = { product_id: 'demo-123', quantity: 1, price: 99.99 };
+          break;
+        case 'purchase':
+          data = { transaction_id: 'txn_' + Date.now(), value: 99.99 };
+          break;
+      }
+      
+      tracker.track(action, data);
+    });
+  });
+  
+  // Track initial page view
+  tracker.track('page_view', { page: '/demo', title: 'WalkerOS Demo' });
+});`);
         };
 
-        window.loadDestinationExample = () => {
-            const code = `// Destination Handler Example
-function createDestination(name, config) {
-    return {
-        name,
-        config,
-        
-        handleEvent(event, data) {
-            console.log(\`[\${name}] Processing event: \${event}\`);
+        window.loadAnimationExample = () => {
+            liveCodeHTML.setHTML(`<div class="animation-demo">
+  <h2>CSS Animation Demo</h2>
+  <div class="controls">
+    <button id="start-btn">Start Animation</button>
+    <button id="pause-btn">Pause</button>
+    <button id="reset-btn">Reset</button>
+  </div>
+  <div class="animation-container">
+    <div class="bouncing-ball"></div>
+    <div class="rotating-square"></div>
+    <div class="sliding-text">Hello World!</div>
+  </div>
+</div>`);
             
-            // Transform data for this destination
-            const transformed = this.transform(event, data);
-            
-            // Send to destination
-            this.send(transformed);
-            
-            return { success: true, destination: name };
-        },
-        
-        transform(event, data) {
-            // Example transformation for GA4
-            if (name === 'Google Analytics 4') {
-                return {
-                    event_name: event,
-                    event_parameters: data
-                };
-            }
-            
-            // Default transformation
-            return { event, data };
-        },
-        
-        send(data) {
-            console.log(\`[\${name}] Sending:\`, data);
-            // Simulate API call
-            setTimeout(() => {
-                console.log(\`[\${name}] ✅ Event sent successfully\`);
-            }, 100);
-        }
-    };
+            liveCodeHTML.setCSS(`@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-100px); }
 }
 
-// Create destinations
-const ga4 = createDestination('Google Analytics 4', { 
-    measurement_id: 'G-XXXXXXXXXX' 
-});
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
-const metaPixel = createDestination('Meta Pixel', { 
-    pixel_id: '123456789' 
-});
+@keyframes slide {
+  0% { transform: translateX(-100%); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
 
-// Process events
-ga4.handleEvent('purchase', { 
-    transaction_id: 'txn_123', 
-    value: 99.99 
-});
+.animation-demo {
+  text-align: center;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
 
-metaPixel.handleEvent('purchase', { 
-    content_ids: ['demo-123'], 
-    value: 99.99 
-});`;
+.controls {
+  margin: 20px 0;
+}
+
+.controls button {
+  margin: 0 5px;
+  padding: 8px 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.animation-container {
+  height: 200px;
+  position: relative;
+  background: linear-gradient(45deg, #f0f8ff, #e6f3ff);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 20px 0;
+}
+
+.bouncing-ball {
+  width: 40px;
+  height: 40px;
+  background: #ff6b6b;
+  border-radius: 50%;
+  position: absolute;
+  left: 50px;
+  bottom: 20px;
+  animation: bounce 2s infinite ease-in-out;
+}
+
+.rotating-square {
+  width: 50px;
+  height: 50px;
+  background: #4ecdc4;
+  position: absolute;
+  right: 50px;
+  top: 50%;
+  transform-origin: center;
+  animation: rotate 3s infinite linear;
+}
+
+.sliding-text {
+  position: absolute;
+  top: 50%;
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+  animation: slide 4s infinite ease-in-out;
+}`);
             
-            editor.setValue(code);
-            updatePreview(code);
-        };
-
-        window.executeCode = () => {
-            const code = editor.getValue();
-            
-            try {
-                // Execute code and capture result
-                const executeResult = new Function(code);
-                const output = executeResult();
-                
-                result.addResult({
-                    type: 'value',
-                    content: { 
-                        message: 'Code executed successfully',
-                        output: output || 'undefined',
-                        lines: code.split('\\n').length
-                    },
-                    timestamp: Date.now()
-                });
-                
-            } catch (error) {
-                result.addResult({
-                    type: 'error',
-                    content: {
-                        name: error.name,
-                        message: error.message,
-                        stack: error.stack
-                    },
-                    timestamp: Date.now()
-                });
-            }
+            liveCodeHTML.setJS(`document.addEventListener('DOMContentLoaded', () => {
+  const startBtn = document.getElementById('start-btn');
+  const pauseBtn = document.getElementById('pause-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const animatedElements = document.querySelectorAll('.bouncing-ball, .rotating-square, .sliding-text');
+  
+  startBtn.addEventListener('click', () => {
+    animatedElements.forEach(el => {
+      el.style.animationPlayState = 'running';
+    });
+    console.log('Animations started');
+  });
+  
+  pauseBtn.addEventListener('click', () => {
+    animatedElements.forEach(el => {
+      el.style.animationPlayState = 'paused';
+    });
+    console.log('Animations paused');
+  });
+  
+  resetBtn.addEventListener('click', () => {
+    animatedElements.forEach(el => {
+      el.style.animation = 'none';
+      setTimeout(() => {
+        el.style.animation = '';
+      }, 10);
+    });
+    console.log('Animations reset');
+  });
+  
+  console.log('Animation demo initialized!');
+});`);
         };
 
         window.clearAll = () => {
-            editor.setValue('// Start coding here...');
-            preview.setHTML('<div style="padding: 20px; text-align: center; color: #666;">Preview will appear here</div>');
-            result.clear();
+            liveCodeHTML.clear();
         };
     </script>
 </body>
