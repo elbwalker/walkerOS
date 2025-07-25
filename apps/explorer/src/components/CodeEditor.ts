@@ -100,31 +100,8 @@ export function createCodeEditor(
    * Inject CodeEditor CSS styles with proper shadow DOM support
    */
   function injectStyles(): void {
-    // Check if we're in a website context for theme detection
-    const htmlTheme = document.documentElement.getAttribute('data-theme');
-    const isDark = htmlTheme === 'dark';
-
-    // Define colors based on theme context
-    const colors = isDark
-      ? {
-          bgPrimary: 'transparent',
-          borderPrimary: '#374151',
-          bgTertiary: '#4b5563',
-          textPrimary: '#f3f4f6',
-          textMuted: '#9ca3af',
-          interactivePrimary: '#3b82f6',
-        }
-      : {
-          bgPrimary: 'transparent',
-          borderPrimary: '#e5e7eb',
-          bgTertiary: '#f9fafb',
-          textPrimary: '#111827',
-          textMuted: '#9ca3af',
-          interactivePrimary: '#2563eb',
-        };
-
     const css = `
-/* CSS Reset and theme setup for shadow DOM */
+/* CSS Reset for shadow DOM */
 :host {
   display: block;
   width: 100%;
@@ -133,7 +110,7 @@ export function createCodeEditor(
 
 .explorer-code-editor {
   position: relative;
-  background: ${colors.bgPrimary};
+  background: var(--explorer-bg-primary);
   overflow: hidden;
   font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
   height: 100%;
@@ -147,12 +124,12 @@ export function createCodeEditor(
 }
 
 .explorer-code-editor:focus-within {
-  border-color: ${colors.interactivePrimary};
+  border-color: var(--explorer-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1), 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
 .explorer-code-editor--readonly {
-  background: ${colors.bgTertiary};
+  background: var(--explorer-bg-tertiary);
 }
 
 .explorer-code-editor__content {
@@ -182,12 +159,12 @@ export function createCodeEditor(
   white-space: pre !important;
   overflow-wrap: normal !important;
   word-break: normal !important;
-  caret-color: ${colors.textPrimary} !important;
+  caret-color: var(--explorer-text-primary) !important;
   box-sizing: border-box !important;
 }
 
 .explorer-code-editor__textarea::placeholder {
-  color: ${colors.textMuted};
+  color: var(--explorer-text-muted);
   font-style: italic;
 }
 
@@ -201,7 +178,7 @@ export function createCodeEditor(
   margin: 0 !important;
   border: none !important;
   background: transparent !important;
-  color: ${colors.textPrimary} !important;
+  color: var(--explorer-text-primary) !important;
   font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace !important;
   font-size: 14px !important;
   line-height: 1.6 !important;
@@ -218,7 +195,7 @@ export function createCodeEditor(
   margin: 0;
   padding: 0;
   background: transparent;
-  color: ${colors.textPrimary};
+  color: var(--explorer-text-primary);
 }
 
 .explorer-code-editor--with-line-numbers .explorer-code-editor__textarea,
@@ -233,9 +210,9 @@ export function createCodeEditor(
   width: 54px !important;
   padding: 12px 8px 40px 8px !important;
   margin: 0 !important;
-  background: ${colors.bgTertiary} !important;
-  border-right: 1px solid ${colors.borderPrimary} !important;
-  color: ${colors.textMuted} !important;
+  background: var(--explorer-bg-tertiary) !important;
+  border-right: 1px solid var(--explorer-border-primary) !important;
+  color: var(--explorer-text-muted) !important;
   font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace !important;
   font-size: 14px !important;
   line-height: 1.6 !important;
@@ -250,20 +227,7 @@ export function createCodeEditor(
   box-sizing: border-box !important;
 }
 
-/* Syntax highlighting integration - theme aware */
-.explorer-code-editor .syntax-keyword { color: ${isDark ? '#ff6b6b' : '#d73a49'} !important; font-weight: 600; }
-.explorer-code-editor .syntax-string { color: ${isDark ? '#4ecdc4' : '#032f62'} !important; }
-.explorer-code-editor .syntax-number { color: ${isDark ? '#45b7d1' : '#005cc5'} !important; }
-.explorer-code-editor .syntax-comment { color: ${isDark ? '#95a5a6' : '#6a737d'} !important; font-style: italic; }
-.explorer-code-editor .syntax-function { color: ${isDark ? '#9b59b6' : '#6f42c1'} !important; font-weight: 500; }
-.explorer-code-editor .syntax-tag { color: ${isDark ? '#2ecc71' : '#22863a'} !important; font-weight: 600; }
-.explorer-code-editor .syntax-attribute { color: ${isDark ? '#9b59b6' : '#6f42c1'} !important; }
-.explorer-code-editor .syntax-value { color: ${isDark ? '#4ecdc4' : '#032f62'} !important; }
-.explorer-code-editor .syntax-operator { color: ${isDark ? '#ff6b6b' : '#d73a49'} !important; }
-.explorer-code-editor .syntax-type { color: ${isDark ? '#45b7d1' : '#005cc5'} !important; font-weight: 500; }
-.explorer-code-editor .syntax-property { color: ${isDark ? '#9b59b6' : '#6f42c1'} !important; }
-.explorer-code-editor .syntax-elb-attribute { color: ${isDark ? '#2ecc71' : '#28a745'} !important; font-weight: 700; }
-.explorer-code-editor .syntax-elb-value { color: ${isDark ? '#2ecc71' : '#28a745'} !important; font-weight: 500; }
+/* Syntax highlighting inherits from global theme-aware styles */
 
 /* Responsive design */
 @media (max-width: 768px) {

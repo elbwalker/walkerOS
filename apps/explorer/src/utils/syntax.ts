@@ -392,14 +392,14 @@ function escapeHtml(text: string): string {
  */
 export function getSyntaxHighlightCSS(): string {
   return `
-/* Syntax highlighting styles */
+/* Syntax highlighting styles - Light mode (GitHub-like) */
 .syntax-keyword { 
   color: #d73a49 !important; 
   font-weight: 600; 
 }
 
 .syntax-string { 
-  color: #032f62 !important; 
+  color: #22863a !important; 
 }
 
 .syntax-number { 
@@ -451,6 +451,59 @@ export function getSyntaxHighlightCSS(): string {
 .syntax-elb-value { 
   color: #28a745 !important; 
   font-weight: 500; 
+}
+
+/* Dark mode - Palenight theme */
+[data-theme='dark'] .syntax-keyword { 
+  color: #c792ea !important; 
+}
+
+[data-theme='dark'] .syntax-string { 
+  color: #c3e88d !important; 
+}
+
+[data-theme='dark'] .syntax-number { 
+  color: #f78c6c !important; 
+}
+
+[data-theme='dark'] .syntax-comment { 
+  color: #676e95 !important; 
+}
+
+[data-theme='dark'] .syntax-function {
+  color: #82aaff !important;
+}
+
+[data-theme='dark'] .syntax-tag { 
+  color: #f07178 !important; 
+}
+
+[data-theme='dark'] .syntax-attribute { 
+  color: #ffcb6b !important; 
+}
+
+[data-theme='dark'] .syntax-value { 
+  color: #c3e88d !important; 
+}
+
+[data-theme='dark'] .syntax-operator { 
+  color: #89ddff !important; 
+}
+
+[data-theme='dark'] .syntax-type { 
+  color: #ffcb6b !important; 
+}
+
+[data-theme='dark'] .syntax-property { 
+  color: #82aaff !important; 
+}
+
+[data-theme='dark'] .syntax-elb-attribute { 
+  color: #c3e88d !important; 
+}
+
+[data-theme='dark'] .syntax-elb-value { 
+  color: #c3e88d !important; 
 }
 `;
 }

@@ -51,12 +51,12 @@ describe('Google Ads Implementation', () => {
     it('should not override existing currency', () => {
       const settings: AdsSettings = {
         conversionId: 'AW-XXXXXXXXX',
-        currency: 'USD',
+        currency: 'EUR',
       };
 
       initAds(settings, mockWrap, true);
 
-      expect(settings.currency).toBe('USD');
+      expect(settings.currency).toBe('EUR');
     });
 
     it('should not load script if loadScript is false', () => {
@@ -79,7 +79,7 @@ describe('Google Ads Implementation', () => {
 
     const settings: AdsSettings = {
       conversionId: 'AW-XXXXXXXXX',
-      currency: 'USD',
+      currency: 'EUR',
     };
 
     it('should return early if no mapping name', () => {
@@ -95,7 +95,7 @@ describe('Google Ads Implementation', () => {
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
         send_to: 'AW-XXXXXXXXX/PURCHASE_CONVERSION',
-        currency: 'USD',
+        currency: 'EUR',
       });
     });
 
@@ -117,7 +117,7 @@ describe('Google Ads Implementation', () => {
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
         send_to: 'AW-XXXXXXXXX/PURCHASE_CONVERSION',
-        currency: 'USD',
+        currency: 'EUR',
         value: 99.99,
         transaction_id: 'order-123',
       });
@@ -158,7 +158,7 @@ describe('Google Ads Implementation', () => {
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
         send_to: 'AW-XXXXXXXXX/PURCHASE_CONVERSION',
-        currency: 'USD',
+        currency: 'EUR',
       });
     });
 
@@ -177,7 +177,7 @@ describe('Google Ads Implementation', () => {
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
         send_to: 'AW-XXXXXXXXX/MAPPED_LABEL',
-        currency: 'USD',
+        currency: 'EUR',
       });
     });
 
@@ -196,7 +196,7 @@ describe('Google Ads Implementation', () => {
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
         send_to: 'AW-XXXXXXXXX/FALLBACK_LABEL',
-        currency: 'USD',
+        currency: 'EUR',
       });
     });
 

@@ -17,7 +17,6 @@ import {
   addEventListener,
   copyToClipboard,
   injectCSS,
-  injectComponentCSS,
 } from '../utils/dom';
 
 export type ResultType = 'value' | 'error' | 'log' | 'warning' | 'info';
@@ -62,16 +61,13 @@ export function createResultDisplay(
 ): ResultDisplayAPI {
   const baseComponent = createComponent(elementOrSelector, {
     autoMount: false,
-    useShadowDOM: true, // Enable shadow DOM for CSS isolation
+    useShadowDOM: false, // No shadow DOM needed - parent LiveCodeJS already provides isolation
   });
 
   const element = baseComponent.getElement()!;
-  const shadowRoot = baseComponent.getShadowRoot();
-  const contentRoot = baseComponent.getContentRoot() as HTMLElement;
+  const contentRoot = element; // No shadow DOM, so contentRoot is the element itself
 
-  // Add class to both host and content root for backward compatibility
   element.classList.add('explorer-result-display');
-  contentRoot.classList.add('explorer-result-display');
 
   // Component state
   let results: ResultItem[] = [];
@@ -84,38 +80,10 @@ export function createResultDisplay(
    * Inject ResultDisplay CSS styles
    */
   function injectStyles(): void {
-    // Detect theme from host document
-    const isDark =
-      document.documentElement.getAttribute('data-theme') === 'dark' ||
-      document.documentElement.classList.contains('dark') ||
-      window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    // Define theme-aware colors
-    const colors = {
-      bgPrimary: isDark ? '#1e1e1e' : '#ffffff',
-      bgSecondary: isDark ? '#2d2d2d' : '#f8f9fa',
-      bgTertiary: isDark ? '#404040' : '#f1f3f4',
-      borderPrimary: isDark ? '#404040' : '#e1e5e9',
-      textPrimary: isDark ? '#e1e4e8' : '#24292e',
-      textSecondary: isDark ? '#c9d1d9' : '#586069',
-      textMuted: isDark ? '#8b949e' : '#6a737d',
-      textInverse: '#ffffff',
-      interactivePrimary: '#2563eb',
-      interactiveHover: isDark ? '#30363d' : '#f3f4f6',
-      interactiveError: '#ef4444',
-      interactiveWarning: '#f59e0b',
-    };
-
     const css = `
-/* CSS Reset and theme setup for shadow DOM */
-:host {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
 /* ResultDisplay Component Styles */
 .explorer-result-display {
-  background: ${colors.bgPrimary};
+  background: var(--explorer-bg-primary);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -141,13 +109,13 @@ export function createResultDisplay(
   align-items: center;
   justify-content: center;
   height: 100px;
-  color: ${colors.textMuted};
+  color: var(--explorer-text-muted);
   font-style: italic;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .explorer-result-item__content {
-  color: ${colors.textPrimary};
+  color: var(--explorer-text-primary);
   word-break: break-word;
   padding: 0;
   margin: 0;
@@ -164,14 +132,14 @@ export function createResultDisplay(
 }
 
 .explorer-result-item__content--json {
-  background: ${colors.bgTertiary};
+  background: var(--explorer-bg-tertiary);
   padding: 8px;
   border-radius: 4px;
   margin-top: 4px;
 }
 
 .explorer-result-item__content--error {
-  color: ${colors.interactiveError};
+  color: var(--explorer-danger);
 }
 
 .explorer-result-item__content--collapsed {
@@ -187,26 +155,20 @@ export function createResultDisplay(
   left: 0;
   right: 0;
   height: 20px;
-  background: linear-gradient(transparent, ${colors.bgSecondary});
+  background: linear-gradient(transparent, var(--explorer-bg-secondary));
 }
 
 .explorer-result-item__expand-btn {
   background: none;
   border: none;
-  color: ${colors.interactivePrimary};
+  color: var(--explorer-primary);
   cursor: pointer;
   font-size: 11px;
   margin-top: 4px;
   text-decoration: underline;
 }
 
-/* Syntax highlighting integration - theme aware */
-.explorer-result-display .syntax-keyword { color: ${isDark ? '#ff6b6b' : '#d73a49'}; font-weight: 600; }
-.explorer-result-display .syntax-string { color: ${isDark ? '#4ecdc4' : '#032f62'}; }
-.explorer-result-display .syntax-number { color: ${isDark ? '#45b7d1' : '#005cc5'}; }
-.explorer-result-display .syntax-boolean { color: ${isDark ? '#ff6b6b' : '#d73a49'}; }
-.explorer-result-display .syntax-null { color: ${isDark ? '#ff6b6b' : '#d73a49'}; }
-.explorer-result-display .syntax-key { color: ${isDark ? '#9b59b6' : '#6f42c1'}; }
+/* Syntax highlighting inherits from global theme-aware styles */
 
 /* Responsive design */
 @media (max-width: 768px) {
@@ -222,7 +184,7 @@ export function createResultDisplay(
 }
 `;
 
-    injectComponentCSS(css, 'explorer-result-display-styles', shadowRoot);
+    injectCSS(css, 'explorer-result-display-styles');
   }
 
   /**

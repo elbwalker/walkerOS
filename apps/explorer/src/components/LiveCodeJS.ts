@@ -13,7 +13,7 @@ import { type ComponentAPI } from '../core/Component';
 import { createLiveCodeBase, type LiveCodeBaseAPI } from '../core/LiveCodeBase';
 import { createCodeEditor, type CodeEditorAPI } from './CodeEditor';
 import { createResultDisplay, type ResultDisplayAPI } from './ResultDisplay';
-import { createElement, addEventListener } from '../utils/dom';
+import { createElement, addEventListener, injectCSS } from '../utils/dom';
 import { debounce } from '../utils/debounce';
 import {
   createUnifiedContainer,
@@ -24,6 +24,7 @@ import {
   createSafeContext,
   type EvaluationContext,
 } from '../utils/evaluation';
+import { CSS_THEME_VARIABLES } from '../core/css-theme-system';
 
 export interface LiveCodeJSOptions {
   initCode?: string;
@@ -56,6 +57,9 @@ export function createLiveCodeJS(
   elementOrSelector: HTMLElement | string,
   options: LiveCodeJSOptions = {},
 ): LiveCodeJSAPI {
+  // Inject foundation theme CSS system
+  injectCSS(CSS_THEME_VARIABLES, 'explorer-foundation-theme');
+
   // Component state
   let currentCode = options.initCode || '';
   let currentContext: EvaluationContext = createSafeContext(options.context);

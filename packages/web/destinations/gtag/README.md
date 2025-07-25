@@ -50,7 +50,7 @@ const destination = destinationGtag({
     },
     ads: {
       conversionId: 'AW-XXXXXXXXX',
-      currency: 'USD',
+      currency: 'EUR',
     },
     gtm: {
       containerId: 'GTM-XXXXXXX',
