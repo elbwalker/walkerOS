@@ -1,100 +1,24 @@
 /**
- * WalkerOS Explorer - Main entry point
+ * WalkerOS Explorer - LiveCodeJS Component
  *
- * Functional component library for walkerOS development tools
- * Zero dependencies, framework-agnostic, Tailwind-compatible
+ * JavaScript evaluation component with context injection
+ * Zero dependencies, framework-agnostic
  */
 
-// Core system
+// Main component
 export {
-  createComponent,
-  generateUniqueId,
-  getAllComponents,
-  getComponent,
-  destroyAllComponents,
-  findComponents,
-  type ComponentAPI,
-  type ComponentOptions,
-} from './core/Component';
+  createLiveCodeJS,
+  type LiveCodeJSAPI,
+  type LiveCodeJSOptions,
+} from './components/LiveCodeJS';
 
-export {
-  eventBus,
-  ComponentEvents,
-  createScopedEventBus,
-  EventDebug,
-  type EventHandler,
-  type EventMeta,
-  type EventSubscription,
-} from './core/EventBus';
-
-export {
-  defaultTheme,
-  getThemeCSS,
-  injectThemeCSS,
-  detectCurrentTheme,
-  watchThemeChanges,
-  getCurrentThemeColors,
-  type ThemeConfig,
-  type ThemeColors,
-} from './core/Theme';
-
-// Utilities
-export {
-  createElement,
-  getElement,
-  findElement,
-  getElements,
-  matches,
-  closest,
-  addEventListener,
-  delegate,
-  injectCSS,
-  getComputedStyleValue,
-  isVisible,
-  getDimensions,
-  scrollIntoView,
-  copyToClipboard,
-  createFragment,
-  setHTML,
-  escapeHTML,
-  observeResize,
-  observeMutations,
-  isInViewport,
-  getUniqueSelector,
-} from './utils/dom';
-
-export {
-  highlightSyntax,
-  detectLanguage,
-  formatCode,
-  getSyntaxHighlightCSS,
-  createCodeBlock,
-  tokenize,
-  type SyntaxToken,
-  type SupportedLanguage,
-} from './utils/syntax';
-
-export {
-  debounce,
-  throttle,
-  rafThrottle,
-  debounceAsync,
-  batch,
-  memoize,
-  scheduleIdleWork,
-  measurePerformance,
-} from './utils/debounce';
-
+// Supporting components (used by LiveCodeJS)
 export {
   createCodeEditor,
   type CodeEditorAPI,
   type CodeEditorOptions,
 } from './components/CodeEditor';
-export {
-  createPreview,
-  type PreviewAPI,
-  type PreviewOptions,
-} from './components/Preview';
+
 export {
   createResultDisplay,
   type ResultDisplayAPI,
@@ -102,28 +26,19 @@ export {
   type ResultItem,
   type ResultType,
 } from './components/ResultDisplay';
+
+// Core types that might be useful
+export { type ComponentAPI } from './core/Component';
+
+// Utilities that might be useful
 export {
-  createLiveCodeHTML,
-  type LiveCodeHTMLAPI,
-  type LiveCodeHTMLOptions,
-} from './components/LiveCodeHTML';
-export {
-  createLiveCodeJS,
-  type LiveCodeJSAPI,
-  type LiveCodeJSOptions,
-} from './components/LiveCodeJS';
-export {
-  createEventFlow,
-  type EventFlowAPI,
-  type EventFlowOptions,
-  type WalkerEvent,
-} from './components/EventFlow';
-export {
-  createDestination,
-  type DestinationAPI,
-  type DestinationOptions,
-  type DestinationConfig,
-} from './components/Destination';
+  evaluateJavaScript,
+  createSafeContext,
+  formatEvaluationResult,
+  type EvaluationContext,
+  type EvaluationResult,
+  type EvaluationOptions,
+} from './utils/evaluation';
 
 // Export version info
 export const version = '1.0.0';

@@ -8,10 +8,420 @@ package: '@walkerOS/collector'
 ---
 
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import Link from '@docusaurus/Link';
+import CollectorConfiguration from '@site/src/components/organisms/collectorConfiguration';
 
 # Collector Configuration
 
-## Configuration
+Configuration controls how the collector processes events and routes them to
+destinations. The collector uses sensible defaults, so you only need to specify
+settings that differ from the defaults.
+
+## Basic Setup
+
+<CollectorConfiguration
+  configuration={`{
+  run: true,
+  destinations: {
+    console: {
+      push: (event) => console.log('Event:', event)
+    }
+  }
+}`}
+  javascript={`import { createCollector } from '@walkerOS/collector';
+
+const { collector } = await createCollector(config);
+
+// Now you can use the collector
+await collector.push('page view', { 
+  path: '/home' 
+});`}
+  fn={async (config, log) => {
+    try {
+      const parsedConfig = eval(`(${config})`);
+      log('✅ Configuration is valid');
+      log('Collector created with config:', JSON.stringify(parsedConfig, null, 2));
+      return 'Collector initialized successfully';
+    } catch (error) {
+      return `Configuration error: ${error.message}`;
+    }
+  }}
+  labelResult="Console Output"
+/>
+
+## Essential Configuration Properties
+
+### Core Operation
+
+**`run: boolean`** - Controls whether the collector starts processing events
+immediately.
+
+- **Why use it:** Prevents premature event processing before your setup is
+  complete
+- **Default:** `true`
+- **Example:** Set to `false` for manual initialization in complex setups
+
+**`dryRun: boolean`** - Enables testing mode where events are processed but not
+sent to destinations.
+
+- **Why use it:** Safe testing in production environments without polluting
+  analytics data
+- **Default:** `false`
+- **Example:** Enable for QA testing or development debugging
+
+**`verbose: boolean`** - Enables detailed logging of collector operations.
+
+- **Why use it:** Essential for debugging event flow and diagnosing
+  configuration issues
+- **Default:** `false`
+- **Example:** Enable during development or when troubleshooting
+
+### Data Properties
+
+**`globals: Properties`** - Properties automatically added to every event.
+
+- **Why use it:** Ensures consistent context like site version, environment, or
+  user segment across all events
+- **Example:**
+  `{ environment: 'production', version: '2.1.0', platform: 'web' }`
+
+**`globalsStatic: Properties`** - Persistent globals that survive collector
+reinitialization.
+
+- **Why use it:** Configuration data that should never change, even if collector
+  restarts
+- **Example:** `{ site_name: 'ecommerce', build_id: 'abc123' }`
+
+**`custom: Properties`** - Custom metadata for event enrichment.
+
+- **Why use it:** Business-specific data that doesn't fit standard event
+  properties
+- **Example:**
+  `{ experiment_group: 'variant-a', feature_flags: ['new-checkout'] }`
+
+**`user: User`** - User identification and context information.
+
+- **Why use it:** Enables personalization and user journey tracking across
+  sessions
+- **Example:** `{ id: 'user123', segment: 'premium', device_type: 'mobile' }`
+
+### Privacy & Compliance
+
+**`consent: Consent`** - Initial consent state for privacy compliance.
+
+- **Why use it:** Ensures only compliant data collection based on user
+  permissions
+- **Brief:** Controls which destinations receive events based on consent
+  categories
+- **More info:** <Link to="/docs/guides/consent/">Detailed consent management
+  guide</Link>
+
+### Advanced Settings
+
+**`session: false | SessionConfig`** - Session tracking configuration.
+
+- **Why use it:** Tracks user behavior across page visits and interactions
+- **Brief:** Manages session lifecycle, persistence, and cross-page tracking
+- **More info:** Session configuration details in collector documentation
+
+**`onError: Handler.Error`** - Custom error handler for collector operations.
+
+- **Why use it:** Integration with existing monitoring systems and custom error
+  handling
+- **Example:** `(error) => { logger.error('Collector error:', error); }`
+
+**`onLog: Handler.Log`** - Custom log handler for collector messages.
+
+- **Why use it:** Route collector logs to your preferred logging system
+- **Example:** `(message, verbose) => { console.log(\`[Collector]
+  \${message}\`); }`
+
+## Destination Configuration
+
+Destinations define where your events are sent after processing:
+
+<CollectorConfiguration
+  configuration={`{
+  destinations: {
+    analytics: {
+      push: async (event) => {
+        await fetch('/api/analytics', {
+          method: 'POST',
+          body: JSON.stringify(event)
+        });
+      },
+      consent: { analytics: true }
+    },
+    console: {
+      push: (event) => console.log('Debug:', event)
+    }
+  }
+}`}
+  javascript={`import { createCollector } from '@walkerOS/collector';
+
+const { collector } = await createCollector(config);
+
+// Send an event - it will go to both destinations
+await collector.push('product view', {
+  id: 'abc123',
+  name: 'Blue T-Shirt',
+  price: 29.99
+});`}
+  fn={async (config, log) => {
+    try {
+      const parsedConfig = eval(`(${config})`);
+      const destinations = Object.keys(parsedConfig.destinations || {});
+      log(`✅ Found ${destinations.length} destinations: ${destinations.join(', ')}`);
+      
+      // Simulate event processing
+      destinations.forEach(dest => {
+        const destConfig = parsedConfig.destinations[dest];
+        if (destConfig.consent) {
+          log(`📋 ${dest}: requires consent for ${Object.keys(destConfig.consent).join(', ')}`);
+        } else {
+          log(`🔄 ${dest}: no consent requirements`);
+        }
+      });
+      
+      return 'Multiple destinations configured successfully';
+    } catch (error) {
+      return `Configuration error: ${error.message}`;
+    }
+  }}
+  labelResult="Destination Analysis"
+/>
+
+**Why multiple destinations:** Enables data redundancy, different analytics
+needs, and separation of concerns (analytics vs marketing vs debugging).
+
+For detailed destination configuration, see the
+<Link to="/docs/destinations/">Destinations documentation</Link>.
+
+## Practical Configuration Examples
+
+### Basic Analytics Setup
+
+Perfect for simple websites or getting started:
+
+<CollectorConfiguration
+  configuration={`{
+  run: true,
+  globals: {
+    environment: 'production',
+    version: '1.2.0',
+    site_section: 'main'
+  },
+  destinations: {
+    console: {
+      push: (event) => console.log('Event:', event)
+    }
+  }
+}`}
+  javascript={`import { createCollector } from '@walkerOS/collector';
+
+const { collector } = await createCollector(config);
+
+// Every event will include the global properties
+await collector.push('button click', {
+  button_text: 'Sign Up',
+  page: '/landing'
+});
+
+// Global properties are automatically added
+// Final event includes: environment, version, site_section`}
+  fn={async (config, log) => {
+    try {
+      const parsedConfig = eval(`(${config})`);
+      
+      // Simulate event with globals
+      const mockEvent = {
+        event: 'button click',
+        data: { button_text: 'Sign Up', page: '/landing' },
+        ...parsedConfig.globals // Globals are merged
+      };
+      
+      log('📊 Event with globals applied:');
+      log(JSON.stringify(mockEvent, null, 2));
+      
+      return 'Basic analytics setup ready';
+    } catch (error) {
+      return `Configuration error: ${error.message}`;
+    }
+  }}
+  labelResult="Event Preview"
+/>
+
+### Development Configuration
+
+Ideal for local development and testing:
+
+<CollectorConfiguration
+  configuration={`{
+  dryRun: true,
+  verbose: true,
+  globals: {
+    environment: 'development',
+    developer: 'john-doe'
+  },
+  destinations: {
+    console: {
+      push: (event) => console.log('Dev Event:', event)
+    }
+  }
+}`}
+  javascript={`import { createCollector } from '@walkerOS/collector';
+
+const { collector } = await createCollector(config);
+
+// Events are processed but not sent (dryRun: true)
+await collector.push('test event', {
+  test_data: 'validation'
+});
+
+// Verbose logging shows detailed processing info
+console.log('✅ Event processed in development mode');`}
+  fn={async (config, log) => {
+    try {
+      const parsedConfig = eval(`(${config})`);
+      
+      if (parsedConfig.dryRun) {
+        log('🧪 DRY RUN MODE: Events processed but not sent');
+      }
+      
+      if (parsedConfig.verbose) {
+        log('📝 VERBOSE MODE: Detailed logging enabled');
+      }
+      
+      log(`👤 Developer: ${parsedConfig.globals.developer}`);
+      log(`🌍 Environment: ${parsedConfig.globals.environment}`);
+      
+      return 'Development environment configured';
+    } catch (error) {
+      return `Configuration error: ${error.message}`;
+    }
+  }}
+  labelResult="Development Status"
+/>
+
+### Production with Multiple Destinations
+
+Comprehensive setup for production applications:
+
+```typescript
+const { collector } = await createCollector({
+  globals: {
+    site: 'ecommerce',
+    version: '2.1.0',
+    build_id: process.env.BUILD_ID,
+  },
+  globalsStatic: {
+    environment: 'production',
+    platform: 'web',
+  },
+  user: {
+    segment: 'premium',
+    subscription_tier: 'pro',
+  },
+  custom: {
+    experiment_variant: 'checkout-v2',
+    feature_flags: ['new-design', 'fast-checkout'],
+  },
+  destinations: {
+    analytics: {
+      push: async (event) => {
+        await fetch('/api/analytics', {
+          method: 'POST',
+          body: JSON.stringify(event),
+        });
+      },
+      consent: { analytics: true },
+    },
+    marketing: {
+      push: async (event) => {
+        // Send to marketing platform
+        await marketingAPI.track(event);
+      },
+      consent: { marketing: true },
+    },
+  },
+  onError: (error) => {
+    console.error('Collector error:', error);
+    // Send to error monitoring service
+    errorService.report(error);
+  },
+});
+```
+
+## Configuration Best Practices
+
+### Environment-Specific Configurations
+
+**Why:** Different environments have different debugging needs, destinations,
+and data requirements.
+
+```typescript
+// config/development.js
+export const devConfig = {
+  dryRun: true,
+  verbose: true,
+  globals: { environment: 'development' },
+};
+
+// config/production.js
+export const prodConfig = {
+  dryRun: false,
+  verbose: false,
+  globals: { environment: 'production' },
+};
+```
+
+### Use dryRun for Testing
+
+**Why:** Avoid polluting production analytics with test data while still
+validating event flow.
+
+```typescript
+const { collector } = await createCollector({
+  dryRun: process.env.NODE_ENV === 'test',
+  // ... other config
+});
+```
+
+### Set Appropriate Globals
+
+**Why:** Consistent event context across all destinations reduces data
+inconsistencies.
+
+```typescript
+const { collector } = await createCollector({
+  globals: {
+    app_version: process.env.APP_VERSION,
+    environment: process.env.NODE_ENV,
+    user_agent: navigator.userAgent,
+    timestamp: new Date().toISOString(),
+  },
+});
+```
+
+### Configure Error Handling
+
+**Why:** Maintain system stability and get visibility into collection issues.
+
+```typescript
+const { collector } = await createCollector({
+  onError: (error) => {
+    // Log to monitoring service
+    console.error('Collection error:', error);
+
+    // Don't let collection errors break the app
+    if (window.errorReporting) {
+      window.errorReporting.captureException(error);
+    }
+  },
+});
+```
+
+## Configuration Reference
 
 <SettingsTable
   properties={[
@@ -34,7 +444,7 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
       type: 'Consent',
       description: 'Initial consent state',
       required: false,
-      example: "{ analytics: true, marketing: false }",
+      example: '{ analytics: true, marketing: false }',
     },
     {
       name: 'user',

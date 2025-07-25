@@ -10,25 +10,16 @@
  */
 
 import { type ComponentAPI } from '../core/Component';
-import { createLiveCodeBase, type LiveCodeBaseAPI } from '../core/LiveCodeBase';
+import { createLiveCodeBase } from '../core/LiveCodeBase';
 import { createCodeEditor, type CodeEditorAPI } from './CodeEditor';
 import { createResultDisplay, type ResultDisplayAPI } from './ResultDisplay';
-import { createElement, addEventListener, injectCSS } from '../utils/dom';
 import { debounce } from '../utils/debounce';
-import {
-  createUnifiedContainer,
-  type UnifiedContainerAPI,
-} from '../core/UnifiedContainer';
+import { createUnifiedContainer } from '../core/UnifiedContainer';
 import {
   evaluateJavaScript,
   createSafeContext,
   type EvaluationContext,
 } from '../utils/evaluation';
-import {
-  CSS_THEME_VARIABLES,
-  CSS_SYNTAX_HIGHLIGHTING,
-  getCompleteShadowCSS,
-} from '../core/css-theme-system';
 
 export interface LiveCodeJSOptions {
   initCode?: string;
