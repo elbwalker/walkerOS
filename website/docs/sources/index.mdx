@@ -1,5 +1,141 @@
 ---
-title: Overview
+title: Sources
 description: Event data sources for walkerOS collector
 tags: [sources, data collection]
 ---
+
+# Sources
+
+Sources are the entry points for event data in walkerOS. They capture events
+from different environments and formats, then transform them into standardized
+events that the collector can process.
+
+## What are Sources?
+
+Sources act as adapters between your application's event-generating components
+and the walkerOS collector. Think of them as translators that understand
+different "languages" of events and convert them all into a common format that
+walkerOS can work with.
+
+## Why Sources Exist
+
+In a typical application, events can come from many different places:
+
+- DOM interactions in the browser (clicks, form submissions, page views)
+- DataLayer pushes from other tracking tools
+- Server-side events from APIs
+- Custom application events
+
+Each of these has its own format and structure. Sources provide a clean
+separation between:
+
+- **Event capture** - How events are detected and collected
+- **Event processing** - How events are enriched, filtered, and sent to
+  destinations
+
+This separation makes walkerOS flexible and maintainable, allowing you to add
+new event sources without changing your destination configurations.
+
+## How Sources Work
+
+### Basic Flow
+
+1. **Capture**: Sources listen for or capture events in their native format
+2. **Transform**: Convert the captured data into walkerOS event format
+3. **Send**: Push the standardized event to the collector for processing
+
+### Integration with walkerOS
+
+Sources integrate seamlessly with the walkerOS architecture:
+
+```typescript
+import { createCollector } from '@walkerOS/collector';
+import { createSource, sourceBrowser } from '@walkerOS/core';
+
+// Create a collector
+const { collector } = await createCollector({
+  destinations: {
+    /* your destinations */
+  },
+});
+
+// Add a browser source
+const { elb } = await createSource(collector, sourceBrowser, {
+  prefix: 'data-elb',
+  pageview: true,
+});
+
+// The source automatically captures browser events
+// and sends them to your collector
+```
+
+## Available Sources
+
+### Browser Source
+
+The browser source captures events from web pages:
+
+- **DOM interactions**: Clicks, form submissions, page views
+- **Automatic tracking**: Page views, session management
+- **Flexible configuration**: Customize what gets tracked and how
+
+### DataLayer Source
+
+The dataLayer source works with existing analytics implementations:
+
+- **Legacy integration**: Works with existing GA4 and dataLayer implementations
+- **Event mapping**: Transform dataLayer events to walkerOS format
+- **Migration friendly**: Gradual transition from existing setups
+
+## Using Sources
+
+### Basic Setup
+
+Every source follows the same pattern:
+
+1. **Create a collector** with your destination configuration
+2. **Add sources** using `createSource` with the source type and configuration
+3. **Use the returned `elb` function** to trigger events manually when needed
+
+### Configuration Options
+
+Sources are highly configurable to fit your needs:
+
+- **Enable/disable** sources based on conditions
+- **Custom error handling** for robust tracking
+- **Source-specific settings** for fine-tuned behavior
+
+### Clean Separation
+
+- Sources handle event capture
+- Collector handles event processing
+- Destinations handle event delivery
+
+### Flexibility
+
+- Add new sources without changing destinations
+- Mix and match different event sources
+- Gradual migration from existing tracking setups
+
+### Reliability
+
+- Sources operate independently
+- Built-in error handling prevents failures
+- Type-safe configuration reduces bugs
+
+### Performance
+
+- Asynchronous initialization
+- Efficient event processing
+- Proper resource cleanup
+
+## Next Steps
+
+Choose the source that matches your environment:
+
+- **[Browser Source](./web/browser/)** - For web applications and websites
+- **[DataLayer Source](./web/dataLayer/)** - For integration with existing
+  analytics
+
+Each source includes detailed setup instructions, configuration options, and
+usage examples to get you started quickly.

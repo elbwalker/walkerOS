@@ -7,4 +7,55 @@ tags: [collector, core, web, server]
 package: '@walkerOS/collector'
 ---
 
+import Link from '@docusaurus/Link';
+
 # Collector
+
+The Collector is the central processing engine of walkerOS that receives events
+from sources, enriches them with additional data, applies consent rules, and
+routes them to destinations. It acts as the intelligent middleware between event
+capture and event delivery.
+
+## What It Does
+
+The Collector transforms raw events into enriched, compliant data streams by:
+
+- **Event Processing** - Validates, normalizes, and enriches incoming events
+- **Consent Management** - Applies privacy rules and user consent preferences
+- **Data Enrichment** - Adds session data, user context, and custom properties
+- **Destination Routing** - Sends processed events to configured analytics
+  platforms
+
+## Key Features
+
+- **Universal Compatibility** - Works in both web browsers and server
+  environments
+- **Privacy-First** - Built-in consent management and data protection
+- **Event Validation** - Ensures data quality and consistency
+- **Flexible Routing** - Send events to multiple destinations simultaneously
+
+## Architecture Role
+
+In the walkerOS data flow, the Collector sits between sources and destinations:
+
+```
+Sources → Collector → Destinations
+```
+
+Sources capture events and send them to the Collector, which processes and
+routes them to your chosen destinations like Google Analytics, custom APIs, or
+data warehouses.
+
+## Getting Started
+
+Learn how to configure and use the Collector:
+
+- **<Link to="/docs/collector/configuration">Configuration</Link>** - Set up
+  collector settings, consent, and global properties
+- **<Link to="/docs/collector/commands">Commands</Link>** - Control collector
+  behavior with runtime commands
+- **<Link to="/docs/collector/testing">Testing</Link>** - Validate your
+  collector setup and event flow
+
+The Collector provides the reliability and control you need to ensure your
+analytics data is accurate, compliant, and delivered to the right destinations.

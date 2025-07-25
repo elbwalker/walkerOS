@@ -1,153 +1,68 @@
 ---
-title: Overview
-description:
-  Send events to analytics tools, marketing platforms, and custom endpoints
+title: Destinations
+description: Send events to analytics tools, marketing platforms, and custom endpoints
 sidebar_position: 4
+tags: [destinations, analytics, marketing, integrations]
 ---
+
+import Link from '@docusaurus/Link';
 
 # Destinations
 
-Destinations are the endpoints where your collected events are sent. WalkerOS
-supports a wide variety of destinations for both web (browser) and server
-environments.
+Destinations are the endpoints where walkerOS sends your processed events. They transform standardized walkerOS events into the specific formats required by analytics platforms, marketing tools, data warehouses, and custom APIs.
 
-## Destination Types
+## What They Do
 
-### [Web Destinations](./web)
+Destinations handle the final step in the data pipeline by:
 
-Web destinations run in the browser and send events directly from the user's
-device:
+- **Format Transformation** - Convert walkerOS events to platform-specific formats
+- **API Integration** - Handle authentication and delivery to external services
+- **Error Handling** - Manage failed requests and retry logic
+- **Data Validation** - Ensure events meet destination requirements
 
-- **API** - Send to any custom HTTP endpoint
-- **Google (Gtag)** - Google Analytics 4, Google Ads, GTM
-- **Meta Pixel** - Facebook/Meta conversion tracking
-- **Piwik PRO** - Privacy-focused analytics
-- **Plausible** - Simple, privacy-friendly analytics
+## Types of Destinations
 
-### [Server Destinations](./server)
+### Web Destinations
+Client-side integrations that send events directly from the browser:
 
-Server destinations run in Node.js environments and are ideal for:
+- **<Link to="/docs/destinations/web/gtag/">Google Analytics & Ads</Link>** - GA4, Google Ads, and GTM integration
+- **<Link to="/docs/destinations/web/meta-pixel">Meta Pixel</Link>** - Facebook and Instagram advertising
+- **<Link to="/docs/destinations/web/plausible">Plausible Analytics</Link>** - Privacy-focused web analytics
+- **<Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>** - Enterprise analytics platform
+- **<Link to="/docs/destinations/web/api">Custom API</Link>** - Send events to your own endpoints
 
-- Server-side tracking
-- Sensitive data handling
-- Batch processing
-- Backend integrations
+### Server Destinations
+Server-side integrations for enhanced privacy and data control:
 
-Available server destinations:
+- **<Link to="/docs/destinations/server/aws">AWS</Link>** - Amazon cloud services integration
+- **<Link to="/docs/destinations/server/gcp">Google Cloud Platform</Link>** - GCP services and BigQuery
+- **<Link to="/docs/destinations/server/meta-capi">Meta Conversions API</Link>** - Server-side Facebook/Instagram tracking
 
-- **AWS** - Amazon Kinesis Firehose
-- **GCP** - Google BigQuery
-- **Meta Conversions API** - Server-side Facebook/Meta tracking
+## Key Benefits
 
-## Choosing Between Web and Server
+- **Privacy Compliance** - Server-side destinations reduce client-side tracking
+- **Data Quality** - Consistent event formatting across all platforms
+- **Reliability** - Built-in error handling and retry mechanisms
+- **Flexibility** - Mix client-side and server-side destinations as needed
+- **Consent Awareness** - Automatic respect for user privacy preferences
 
-### Use Web Destinations When:
+## Architecture
 
-- You need real-time user interaction tracking
-- Client-side context is important (viewport, mouse position, etc.)
-- You want simple implementation without server infrastructure
-- The destination service provides a JavaScript SDK
+Destinations receive events from the collector after processing:
 
-### Use Server Destinations When:
-
-- Handling sensitive data (PII, payment info)
-- You need guaranteed delivery
-- Batch processing is required
-- You want to enrich data with server-side information
-- Compliance requires server-side processing
-
-## Common Concepts
-
-### Event Mapping
-
-All destinations support mapping to transform walkerOS events into the
-destination's expected format:
-
-```typescript
-const mapping = {
-  page: {
-    view: {
-      // Map walkerOS event to destination format
-      event_name: 'page_view',
-      page_location: 'context.location.href',
-      page_title: 'data.title',
-    },
-  },
-};
+```
+Sources → Collector → Destinations → External Platforms
 ```
 
-### Configuration
-
-Every destination requires configuration:
-
-```typescript
-const config = {
-  settings: {
-    // Destination-specific settings
-  },
-  mapping: {
-    // Event transformation rules
-  },
-};
-```
-
-### Error Handling
-
-Both web and server destinations provide error handling:
-
-```typescript
-collector.on('error', (error) => {
-  if (error.source === 'destination') {
-    console.error(`Destination error:`, error);
-  }
-});
-```
+Each destination operates independently, so one failed destination won't affect others. This ensures reliable data delivery even when individual services have issues.
 
 ## Getting Started
 
-1. Choose your destination type (web or server)
-2. Install the destination package
-3. Configure the destination with your credentials
-4. Set up event mapping rules
-5. Test the integration
+Choose destinations based on your tracking needs:
 
-## Best Practices
+1. **Web Analytics** - Start with <Link to="/docs/destinations/web/gtag/ga4">Google Analytics 4</Link> or <Link to="/docs/destinations/web/plausible">Plausible</Link>
+2. **Advertising** - Add <Link to="/docs/destinations/web/meta-pixel">Meta Pixel</Link> or <Link to="/docs/destinations/web/gtag/ads">Google Ads</Link>
+3. **Custom Data** - Use <Link to="/docs/destinations/web/api">API destinations</Link> for your own systems
+4. **Enhanced Privacy** - Implement server-side destinations for sensitive data
 
-### Security
-
-- Never expose sensitive credentials in web destinations
-- Use environment variables for server destination credentials
-- Implement proper authentication for custom API destinations
-
-### Performance
-
-- Load web destinations asynchronously when possible
-- Batch events in server destinations
-- Use appropriate transport methods (beacon for critical web events)
-
-### Privacy
-
-- Always respect user consent
-- Implement destination removal when consent is revoked
-- Document what data each destination receives
-
-## Creating Custom Destinations
-
-You can create custom destinations by implementing the destination interface:
-
-```typescript
-const customDestination = {
-  type: 'custom',
-  config: {},
-  push(event, context) {
-    // Your custom logic here
-  },
-};
-```
-
-## See Also
-
-- [Collector Documentation](/docs/collector)
-- [Event Model](/docs/getting-started/event-model)
-- [Event Mapping Guide](/docs/guides/event-mapping)
-- [Privacy & Consent](/docs/guides/consent)
+Each destination includes setup instructions, configuration options, and examples to help you get started quickly.

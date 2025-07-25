@@ -19,6 +19,8 @@
     "@docusaurus/preset-classic": "^3.7.0",
     "@docusaurus/theme-live-codeblock": "^3.7.0",
     "@docusaurus/theme-mermaid": "^3.7.0",
+    "@walkerOS/core": "*",
+    "@walkerOS/explorer": "*",
     "@elbwalker/destination-web-api": "^3.0.4",
     "@elbwalker/destination-web-google-ads": "^3.0.4",
     "@elbwalker/destination-web-google-ga4": "^3.1.6",
