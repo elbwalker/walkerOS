@@ -24,7 +24,11 @@ import {
   createSafeContext,
   type EvaluationContext,
 } from '../utils/evaluation';
-import { CSS_THEME_VARIABLES } from '../core/css-theme-system';
+import {
+  CSS_THEME_VARIABLES,
+  CSS_SYNTAX_HIGHLIGHTING,
+  getCompleteShadowCSS,
+} from '../core/css-theme-system';
 
 export interface LiveCodeJSOptions {
   initCode?: string;
@@ -57,8 +61,7 @@ export function createLiveCodeJS(
   elementOrSelector: HTMLElement | string,
   options: LiveCodeJSOptions = {},
 ): LiveCodeJSAPI {
-  // Inject foundation theme CSS system
-  injectCSS(CSS_THEME_VARIABLES, 'explorer-foundation-theme');
+  // Foundation CSS will be injected by individual components with shadow DOM
 
   // Component state
   let currentCode = options.initCode || '';

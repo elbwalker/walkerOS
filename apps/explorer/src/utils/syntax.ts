@@ -389,123 +389,13 @@ function escapeHtml(text: string): string {
 
 /**
  * Get CSS for syntax highlighting
+ * @deprecated Use CSS_SYNTAX_HIGHLIGHTING from css-theme-system.ts for enhanced shadow DOM support
  */
 export function getSyntaxHighlightCSS(): string {
-  return `
-/* Syntax highlighting styles - Light mode (GitHub-like) */
-.syntax-keyword { 
-  color: #d73a49 !important; 
-  font-weight: 600; 
-}
-
-.syntax-string { 
-  color: #22863a !important; 
-}
-
-.syntax-number { 
-  color: #005cc5 !important; 
-}
-
-.syntax-comment { 
-  color: #6a737d !important; 
-  font-style: italic; 
-}
-
-.syntax-function {
-  color: #6f42c1 !important;
-  font-weight: 500;
-}
-
-.syntax-tag { 
-  color: #22863a !important; 
-  font-weight: 600; 
-}
-
-.syntax-attribute { 
-  color: #6f42c1 !important; 
-}
-
-.syntax-value { 
-  color: #032f62 !important; 
-}
-
-.syntax-operator { 
-  color: #d73a49 !important; 
-}
-
-.syntax-type { 
-  color: #005cc5 !important; 
-  font-weight: 500; 
-}
-
-.syntax-property { 
-  color: #6f42c1 !important; 
-}
-
-/* Special highlighting for elb attributes */
-.syntax-elb-attribute { 
-  color: #28a745 !important; 
-  font-weight: 700; 
-}
-
-.syntax-elb-value { 
-  color: #28a745 !important; 
-  font-weight: 500; 
-}
-
-/* Dark mode - Palenight theme */
-[data-theme='dark'] .syntax-keyword { 
-  color: #c792ea !important; 
-}
-
-[data-theme='dark'] .syntax-string { 
-  color: #c3e88d !important; 
-}
-
-[data-theme='dark'] .syntax-number { 
-  color: #f78c6c !important; 
-}
-
-[data-theme='dark'] .syntax-comment { 
-  color: #676e95 !important; 
-}
-
-[data-theme='dark'] .syntax-function {
-  color: #82aaff !important;
-}
-
-[data-theme='dark'] .syntax-tag { 
-  color: #f07178 !important; 
-}
-
-[data-theme='dark'] .syntax-attribute { 
-  color: #ffcb6b !important; 
-}
-
-[data-theme='dark'] .syntax-value { 
-  color: #c3e88d !important; 
-}
-
-[data-theme='dark'] .syntax-operator { 
-  color: #89ddff !important; 
-}
-
-[data-theme='dark'] .syntax-type { 
-  color: #ffcb6b !important; 
-}
-
-[data-theme='dark'] .syntax-property { 
-  color: #82aaff !important; 
-}
-
-[data-theme='dark'] .syntax-elb-attribute { 
-  color: #c3e88d !important; 
-}
-
-[data-theme='dark'] .syntax-elb-value { 
-  color: #c3e88d !important; 
-}
-`;
+  // Import the enhanced CSS from the theme system for consistency
+  // This maintains backward compatibility while using the improved system
+  const { CSS_SYNTAX_HIGHLIGHTING } = require('../core/css-theme-system');
+  return CSS_SYNTAX_HIGHLIGHTING;
 }
 
 /**

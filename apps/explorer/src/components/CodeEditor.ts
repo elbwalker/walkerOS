@@ -11,17 +11,18 @@
  */
 
 import { createComponent, type ComponentAPI } from '../core/Component';
-import {
-  highlightSyntax,
-  type SupportedLanguage,
-  getSyntaxHighlightCSS,
-} from '../utils/syntax';
+import { highlightSyntax, type SupportedLanguage } from '../utils/syntax';
 import {
   createElement,
   addEventListener,
   injectComponentCSS,
 } from '../utils/dom';
 import { debounce } from '../utils/debounce';
+import {
+  CSS_THEME_VARIABLES,
+  CSS_SYNTAX_HIGHLIGHTING,
+  getCompleteShadowCSS,
+} from '../core/css-theme-system';
 
 export interface CodeEditorOptions {
   language?: SupportedLanguage;
@@ -250,15 +251,22 @@ export function createCodeEditor(
 }
 `;
 
-    // Use shadow DOM-aware CSS injection
+    // Use enhanced shadow DOM-aware CSS injection
     if (shadowRoot) {
-      injectComponentCSS(css, 'explorer-code-editor-styles', shadowRoot);
-      injectComponentCSS(
-        getSyntaxHighlightCSS(),
+      // Inject foundation theme variables
+      baseComponent.injectThemeCSS(
+        CSS_THEME_VARIABLES,
+        'explorer-foundation-theme',
+      );
+      // Inject component-specific styles
+      baseComponent.injectThemeCSS(css, 'explorer-code-editor-styles');
+      // Inject enhanced syntax highlighting with high specificity
+      baseComponent.injectThemeCSS(
+        CSS_SYNTAX_HIGHLIGHTING,
         'syntax-highlighting-styles',
-        shadowRoot,
       );
     } else {
+      // Light DOM fallback
       injectComponentCSS(
         css,
         'explorer-code-editor-styles',
@@ -266,7 +274,7 @@ export function createCodeEditor(
         '.explorer-code-editor',
       );
       injectComponentCSS(
-        getSyntaxHighlightCSS(),
+        CSS_SYNTAX_HIGHLIGHTING,
         'syntax-highlighting-styles',
         null,
         '.explorer-code-editor',

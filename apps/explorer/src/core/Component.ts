@@ -7,6 +7,7 @@
  * - Event system for component communication
  * - Lifecycle management
  * - DOM utilities
+ * - Enhanced shadow DOM theme inheritance
  */
 
 export interface ComponentOptions {
@@ -28,6 +29,8 @@ export interface ComponentAPI {
   getElement(): HTMLElement | null;
   getShadowRoot(): ShadowRoot | null;
   getContentRoot(): HTMLElement | ShadowRoot;
+  injectThemeCSS(css: string, id?: string): void;
+  getCurrentTheme(): 'light' | 'dark';
 }
 
 // Global registry to track all component instances
@@ -54,6 +57,94 @@ function getElement(elementOrSelector: HTMLElement | string): HTMLElement {
     return element as HTMLElement;
   }
   return elementOrSelector;
+}
+
+/**
+ * Inject CSS custom properties inheritance into shadow DOM
+ * This ensures theme variables are available inside shadow boundaries
+ */
+function injectShadowThemeInheritance(shadowRoot: ShadowRoot): void {
+  const style = document.createElement('style');
+  style.id = 'explorer-shadow-theme-inheritance';
+
+  // CSS to inherit theme variables from parent document
+  style.textContent = `
+    /* Inherit CSS custom properties from parent document across shadow boundary */
+    :host {
+      /* Core theme variables */
+      --explorer-bg-primary: var(--explorer-bg-primary, transparent);
+      --explorer-bg-primary-opaque: var(--explorer-bg-primary-opaque, #ffffff);
+      --explorer-bg-secondary: var(--explorer-bg-secondary, rgba(248, 250, 252, 0.8));
+      --explorer-bg-tertiary: var(--explorer-bg-tertiary, rgba(241, 245, 249, 0.9));
+      --explorer-bg-input: var(--explorer-bg-input, #fafafa);
+      
+      /* Text colors */
+      --explorer-text-primary: var(--explorer-text-primary, #1f2937);
+      --explorer-text-secondary: var(--explorer-text-secondary, #6b7280);
+      --explorer-text-muted: var(--explorer-text-muted, #9ca3af);
+      --explorer-text-inverse: var(--explorer-text-inverse, #ffffff);
+      
+      /* Border colors */
+      --explorer-border-primary: var(--explorer-border-primary, #d1d5db);
+      --explorer-border-secondary: var(--explorer-border-secondary, #e5e7eb);
+      --explorer-border-focus: var(--explorer-border-focus, #3b82f6);
+      
+      /* Interactive colors */
+      --explorer-interactive-primary: var(--explorer-interactive-primary, #2563eb);
+      
+      /* Detect theme context and set appropriate background */
+      background: var(--explorer-bg-primary);
+    }
+    
+    /* Theme detection - check if parent has data-theme */
+    :host([data-theme="dark"]) {
+      --explorer-bg-primary: var(--explorer-bg-primary, transparent);
+      --explorer-bg-primary-opaque: var(--explorer-bg-primary-opaque, #1f2937);
+      --explorer-bg-secondary: var(--explorer-bg-secondary, rgba(55, 65, 81, 0.8));
+      --explorer-bg-tertiary: var(--explorer-bg-tertiary, rgba(75, 85, 99, 0.9));
+      --explorer-bg-input: var(--explorer-bg-input, #111827);
+      
+      --explorer-text-primary: var(--explorer-text-primary, #f3f4f6);
+      --explorer-text-secondary: var(--explorer-text-secondary, #d1d5db);
+      --explorer-text-muted: var(--explorer-text-muted, #9ca3af);
+      --explorer-text-inverse: var(--explorer-text-inverse, #1f2937);
+      
+      --explorer-border-primary: var(--explorer-border-primary, #374151);
+      --explorer-border-secondary: var(--explorer-border-secondary, #4b5563);
+    }
+    
+    /* Shadow container inherits from host */
+    .explorer-shadow-container {
+      background: inherit;
+      color: var(--explorer-text-primary);
+      font-family: inherit;
+    }
+  `;
+
+  shadowRoot.insertBefore(style, shadowRoot.firstChild);
+}
+
+/**
+ * Get current theme from document context
+ */
+function getCurrentDocumentTheme(): 'light' | 'dark' {
+  // Check website context first
+  const htmlTheme = document.documentElement.getAttribute('data-theme');
+  if (htmlTheme === 'light' || htmlTheme === 'dark') {
+    return htmlTheme;
+  }
+
+  // Check for dark class (common pattern)
+  if (document.documentElement.classList.contains('dark')) {
+    return 'dark';
+  }
+
+  // Check system preference
+  if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark';
+  }
+
+  return 'light';
 }
 
 /**
@@ -102,6 +193,9 @@ export function createComponent(
       shadowContainer.className = 'explorer-shadow-container';
       shadowContainer.setAttribute('data-explorer-component', id);
       shadowRoot.appendChild(shadowContainer);
+
+      // Inject CSS custom properties inheritance for shadow DOM
+      injectShadowThemeInheritance(shadowRoot);
     } catch (error) {
       console.warn(
         'Failed to create shadow DOM, falling back to light DOM:',
@@ -118,24 +212,33 @@ export function createComponent(
     const targetElement =
       (shadowRoot?.firstElementChild as HTMLElement) || element;
 
+    // Always add explorer class for CSS targeting
+    targetElement.classList.add('explorer-component');
+
+    // Get the resolved theme
+    let resolvedTheme: 'light' | 'dark';
+    if (currentTheme === 'auto') {
+      resolvedTheme = getCurrentDocumentTheme();
+    } else {
+      resolvedTheme = currentTheme;
+    }
+
     // Check if we're in a website context (html has data-theme)
     const htmlTheme = document.documentElement.getAttribute('data-theme');
     if (htmlTheme && (htmlTheme === 'light' || htmlTheme === 'dark')) {
-      // Website context - don't set data-theme, just add explorer class for CSS targeting
-      targetElement.classList.add('explorer-component');
-      return;
-    }
-
-    // Standalone context - apply theme normally
-    if (currentTheme === 'auto') {
-      // Auto-detect theme from document or media queries
-      const isDark =
-        document.documentElement.classList.contains('dark') ||
-        window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-      targetElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      // Website context - mirror the parent theme for consistency
+      targetElement.setAttribute('data-theme', htmlTheme);
+      // Also set on host element for shadow DOM CSS selectors
+      if (shadowRoot) {
+        element.setAttribute('data-theme', htmlTheme);
+      }
     } else {
-      targetElement.setAttribute('data-theme', currentTheme);
+      // Standalone context - apply resolved theme
+      targetElement.setAttribute('data-theme', resolvedTheme);
+      // Also set on host element for shadow DOM CSS selectors
+      if (shadowRoot) {
+        element.setAttribute('data-theme', resolvedTheme);
+      }
     }
   };
 
@@ -266,6 +369,40 @@ export function createComponent(
     getContentRoot(): HTMLElement | ShadowRoot {
       if (destroyed) return element;
       return (shadowRoot?.firstElementChild as HTMLElement) || element;
+    },
+
+    injectThemeCSS(css: string, id?: string): void {
+      if (destroyed) return;
+
+      const targetRoot = shadowRoot || document.head;
+      const styleId = id || `explorer-theme-${api.id}`;
+
+      // Remove existing style with same ID
+      const existingStyle = targetRoot.querySelector(`#${styleId}`);
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+
+      // Create and inject new style
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = css;
+
+      if (shadowRoot) {
+        shadowRoot.appendChild(style);
+      } else {
+        document.head.appendChild(style);
+      }
+    },
+
+    getCurrentTheme(): 'light' | 'dark' {
+      if (destroyed) return 'light';
+
+      if (currentTheme === 'auto') {
+        return getCurrentDocumentTheme();
+      } else {
+        return currentTheme;
+      }
     },
   };
 

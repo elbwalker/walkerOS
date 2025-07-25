@@ -449,6 +449,211 @@ export function toggleElementTheme(element: HTMLElement): 'light' | 'dark' {
 }
 
 /**
+ * Enhanced syntax highlighting CSS with higher specificity for shadow DOM
+ */
+export const CSS_SYNTAX_HIGHLIGHTING = `
+/* High-specificity syntax highlighting - works in shadow DOM and light DOM */
+.explorer-component .syntax-keyword,
+.explorer-shadow-container .syntax-keyword,
+:host .syntax-keyword { 
+  color: #d73a49 !important; 
+  font-weight: 600 !important; 
+}
+
+.explorer-component .syntax-string,
+.explorer-shadow-container .syntax-string,
+:host .syntax-string { 
+  color: #22863a !important; 
+}
+
+.explorer-component .syntax-number,
+.explorer-shadow-container .syntax-number,
+:host .syntax-number { 
+  color: #005cc5 !important; 
+}
+
+.explorer-component .syntax-comment,
+.explorer-shadow-container .syntax-comment,
+:host .syntax-comment { 
+  color: #6a737d !important; 
+  font-style: italic !important; 
+}
+
+.explorer-component .syntax-function,
+.explorer-shadow-container .syntax-function,
+:host .syntax-function {
+  color: #6f42c1 !important;
+  font-weight: 500 !important;
+}
+
+.explorer-component .syntax-tag,
+.explorer-shadow-container .syntax-tag,
+:host .syntax-tag { 
+  color: #22863a !important; 
+  font-weight: 600 !important; 
+}
+
+.explorer-component .syntax-attribute,
+.explorer-shadow-container .syntax-attribute,
+:host .syntax-attribute { 
+  color: #6f42c1 !important; 
+}
+
+.explorer-component .syntax-value,
+.explorer-shadow-container .syntax-value,
+:host .syntax-value { 
+  color: #032f62 !important; 
+}
+
+.explorer-component .syntax-operator,
+.explorer-shadow-container .syntax-operator,
+:host .syntax-operator { 
+  color: #d73a49 !important; 
+}
+
+.explorer-component .syntax-type,
+.explorer-shadow-container .syntax-type,
+:host .syntax-type { 
+  color: #005cc5 !important; 
+  font-weight: 500 !important; 
+}
+
+.explorer-component .syntax-property,
+.explorer-shadow-container .syntax-property,
+:host .syntax-property { 
+  color: #6f42c1 !important; 
+}
+
+/* Special highlighting for elb attributes */
+.explorer-component .syntax-elb-attribute,
+.explorer-shadow-container .syntax-elb-attribute,
+:host .syntax-elb-attribute { 
+  color: #28a745 !important; 
+  font-weight: 700 !important; 
+}
+
+.explorer-component .syntax-elb-value,
+.explorer-shadow-container .syntax-elb-value,
+:host .syntax-elb-value { 
+  color: #28a745 !important; 
+  font-weight: 500 !important; 
+}
+
+/* Dark mode - Palenight theme with higher specificity */
+[data-theme='dark'] .explorer-component .syntax-keyword,
+[data-theme='dark'] .explorer-shadow-container .syntax-keyword,
+:host([data-theme='dark']) .syntax-keyword { 
+  color: #c792ea !important; 
+}
+
+[data-theme='dark'] .explorer-component .syntax-string,
+[data-theme='dark'] .explorer-shadow-container .syntax-string,
+:host([data-theme='dark']) .syntax-string { 
+  color: #c3e88d !important; 
+}
+
+[data-theme='dark'] .explorer-component .syntax-number,
+[data-theme='dark'] .explorer-shadow-container .syntax-number,
+:host([data-theme='dark']) .syntax-number { 
+  color: #f78c6c !important; 
+}
+
+[data-theme='dark'] .explorer-component .syntax-comment,
+[data-theme='dark'] .explorer-shadow-container .syntax-comment,
+:host([data-theme='dark']) .syntax-comment { 
+  color: #676e95 !important; 
+}
+
+[data-theme='dark'] .explorer-component .syntax-function,
+[data-theme='dark'] .explorer-shadow-container .syntax-function,
+:host([data-theme='dark']) .syntax-function {
+  color: #82aaff !important;
+}
+
+[data-theme='dark'] .explorer-component .syntax-tag,
+[data-theme='dark'] .explorer-shadow-container .syntax-tag,
+:host([data-theme='dark']) .syntax-tag { 
+  color: #f07178 !important; 
+}
+
+[data-theme='dark'] .explorer-component .syntax-attribute,
+[data-theme='dark'] .explorer-shadow-container .syntax-attribute,
+:host([data-theme='dark']) .syntax-attribute { 
+  color: #ffcb6b !important; 
+}
+
+[data-theme='dark'] .explorer-component .syntax-value,
+[data-theme='dark'] .explorer-shadow-container .syntax-value,
+:host([data-theme='dark']) .syntax-value { 
+  color: #c3e88d !important; 
+}
+
+[data-theme='dark'] .explorer-component .syntax-operator,
+[data-theme='dark'] .explorer-shadow-container .syntax-operator,
+:host([data-theme='dark']) .syntax-operator { 
+  color: #89ddff !important; 
+}
+
+[data-theme='dark'] .explorer-component .syntax-type,
+[data-theme='dark'] .explorer-shadow-container .syntax-type,
+:host([data-theme='dark']) .syntax-type { 
+  color: #ffcb6b !important; 
+}
+
+[data-theme='dark'] .explorer-component .syntax-property,
+[data-theme='dark'] .explorer-shadow-container .syntax-property,
+:host([data-theme='dark']) .syntax-property { 
+  color: #82aaff !important; 
+}
+
+[data-theme='dark'] .explorer-component .syntax-elb-attribute,
+[data-theme='dark'] .explorer-shadow-container .syntax-elb-attribute,
+:host([data-theme='dark']) .syntax-elb-attribute { 
+  color: #c3e88d !important; 
+}
+
+[data-theme='dark'] .explorer-component .syntax-elb-value,
+[data-theme='dark'] .explorer-shadow-container .syntax-elb-value,
+:host([data-theme='dark']) .syntax-elb-value { 
+  color: #c3e88d !important; 
+}
+`;
+
+/**
+ * Inject CSS directly into shadow root with theme context awareness
+ */
+export function injectShadowRootCSS(
+  shadowRoot: ShadowRoot,
+  css: string,
+  id: string,
+): void {
+  // Remove existing style with same ID
+  const existingStyle = shadowRoot.querySelector(`#${id}`);
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+
+  // Create and inject new style
+  const style = document.createElement('style');
+  style.id = id;
+  style.textContent = css;
+  shadowRoot.appendChild(style);
+}
+
+/**
+ * Get complete CSS including syntax highlighting for shadow DOM injection
+ */
+export function getCompleteShadowCSS(): string {
+  return (
+    CSS_THEME_VARIABLES +
+    '\n\n' +
+    CSS_COMPONENT_STYLES +
+    '\n\n' +
+    CSS_SYNTAX_HIGHLIGHTING
+  );
+}
+
+/**
  * Get the complete CSS for theming
  */
 export function getThemeCSS(): string {
