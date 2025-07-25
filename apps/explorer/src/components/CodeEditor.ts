@@ -74,6 +74,7 @@ export function createCodeEditor(
   let textArea: HTMLTextAreaElement;
   let highlightLayer: HTMLElement;
   let isHighlighting = false;
+  let lastHighlightedValue = ''; // Cache last highlighted value to avoid unnecessary work
 
   // Cleanup functions
   const cleanupFunctions: Array<() => void> = [];
@@ -81,12 +82,19 @@ export function createCodeEditor(
   // Debounced highlighting for performance
   const debouncedHighlight = debounce(() => {
     updateHighlighting();
-  }, 150);
+  }, 20);
+
+  // Debounced line numbers update for performance
+  const debouncedLineNumbers = debounce(() => {
+    if (options.showLineNumbers) {
+      updateLineNumbers();
+    }
+  }, 100);
 
   // Debounced change notification
   const debouncedChange = debounce((value: string) => {
     options.onChange?.(value, currentLanguage);
-  }, 300);
+  }, 200);
 
   /**
    * Inject CodeEditor CSS styles with proper shadow DOM support
@@ -369,12 +377,13 @@ export function createCodeEditor(
    * Update syntax highlighting
    */
   function updateHighlighting(): void {
-    if (isHighlighting) return;
+    if (isHighlighting || currentValue === lastHighlightedValue) return;
     isHighlighting = true;
 
     requestAnimationFrame(() => {
       const highlighted = highlightSyntax(currentValue, currentLanguage);
       highlightLayer.innerHTML = `<pre>${highlighted}</pre>`;
+      lastHighlightedValue = currentValue;
       isHighlighting = false;
     });
   }
@@ -419,9 +428,7 @@ export function createCodeEditor(
         debouncedHighlight();
         debouncedChange(newValue);
 
-        if (options.showLineNumbers) {
-          updateLineNumbers();
-        }
+        debouncedLineNumbers(); // Use debounced line numbers for better performance
       }
     };
 
