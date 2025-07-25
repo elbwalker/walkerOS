@@ -135,6 +135,64 @@
             border-top: 1px solid #e5e7eb;
             margin-top: 60px;
         }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+            color: #1f2937;
+        }
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.05);
+        }
+        
+        /* Dark theme styles */
+        html[data-theme='dark'] {
+            color-scheme: dark;
+        }
+        html[data-theme='dark'] body {
+            background: #0f172a;
+            color: #f1f5f9;
+        }
+        html[data-theme='dark'] .theme-toggle {
+            background: rgba(15, 23, 42, 0.9);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #f1f5f9;
+        }
+        html[data-theme='dark'] .theme-toggle:hover {
+            background: rgba(15, 23, 42, 1);
+        }
+        html[data-theme='dark'] .example-card {
+            background: #1e293b;
+            border-color: #334155;
+        }
+        html[data-theme='dark'] .example-card:hover {
+            background: #334155;
+            border-color: #475569;
+        }
+        html[data-theme='dark'] .example-title {
+            color: #f1f5f9;
+        }
+        html[data-theme='dark'] .example-description {
+            color: #cbd5e1;
+        }
+        html[data-theme='dark'] .footer {
+            color: #94a3b8;
+            border-color: #334155;
+        }
 
         @media (max-width: 768px) {
             .examples-grid {
@@ -152,6 +210,10 @@
     </style>
 </head>
 <body>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+        <span id="theme-icon">🌙</span>
+    </button>
+    
     <div class="container">
         <a href="../index.html" class="back-link">← Back to Main Demo</a>
         
@@ -251,5 +313,32 @@
             <p>Each example demonstrates a single component with focused functionality and interactive controls.</p>
         </footer>
     </div>
+    
+    <script>
+        // Theme toggle functionality
+        window.toggleTheme = () => {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            
+            // Update icon
+            const icon = document.getElementById('theme-icon');
+            icon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            
+            // Save preference
+            localStorage.setItem('theme', newTheme);
+        };
+
+        // Initialize theme from localStorage or default to light
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            const icon = document.getElementById('theme-icon');
+            icon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        });
+    </script>
 </body>
 </html>

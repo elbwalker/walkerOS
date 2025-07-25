@@ -69,7 +69,6 @@ export function createResultDisplay(
   // Component state
   let results: ResultItem[] = [];
   let contentContainer: HTMLElement;
-  let clearButton: HTMLButtonElement | null = null;
 
   // Cleanup functions
   const cleanupFunctions: Array<() => void> = [];
@@ -81,12 +80,12 @@ export function createResultDisplay(
     const css = `
 /* ResultDisplay Component Styles */
 .explorer-result-display {
-  border: 1px solid var(--explorer-border-primary);
-  border-radius: 8px;
+  /* Removed border and border-radius - now handled by UnifiedContainer */
   background: var(--explorer-bg-primary);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
 .explorer-result-display__header {
@@ -339,31 +338,6 @@ export function createResultDisplay(
   function createDOM(): void {
     element.innerHTML = '';
 
-    // Create header
-    const header = createElement('div', {
-      className: 'explorer-result-display__header',
-    });
-
-    const title = createElement('div', {
-      className: 'explorer-result-display__title',
-      textContent: 'Results',
-    });
-
-    const actions = createElement('div', {
-      className: 'explorer-result-display__actions',
-    });
-
-    clearButton = createElement('button', {
-      className: 'explorer-result-display__clear-btn',
-      textContent: 'Clear',
-    }) as HTMLButtonElement;
-
-    actions.appendChild(clearButton);
-
-    header.appendChild(title);
-    header.appendChild(actions);
-    element.appendChild(header);
-
     // Create content container
     contentContainer = createElement('div', {
       className: 'explorer-result-display__content',
@@ -570,15 +544,7 @@ export function createResultDisplay(
    * Setup event listeners
    */
   function setupEventListeners(): void {
-    if (clearButton) {
-      const onClear = () => {
-        results = [];
-        updateDisplay();
-        options.onClear?.();
-      };
-
-      cleanupFunctions.push(addEventListener(clearButton, 'click', onClear));
-    }
+    // No event listeners needed in this component
   }
 
   // Enhanced API

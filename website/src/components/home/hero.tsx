@@ -8,8 +8,8 @@ export default function HomeHero() {
       subtitle="Open-source event data collection"
       text="Collect event data for digital analytics in a unified and privacy-centric way."
       primaryButton={{
-        link: '/docs/getting_started/quick_start',
-        children: 'Quickstart',
+        link: '/docs/',
+        children: 'Getting started',
         elbAction: 'start',
       }}
       secondaryButton={{

@@ -86,13 +86,13 @@ export function createCodeEditor(
 /* CodeEditor Component Styles */
 .explorer-code-editor {
   position: relative;
-  border: 1px solid var(--explorer-border-primary, #e5e7eb);
-  border-radius: 12px;
+  /* Removed border, border-radius, and box-shadow - now handled by UnifiedContainer */
   background: var(--explorer-bg-primary, #ffffff);
   overflow: hidden;
   font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  transition: all 0.2s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .explorer-code-editor:focus-within {

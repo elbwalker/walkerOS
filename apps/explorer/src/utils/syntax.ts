@@ -44,18 +44,28 @@ const languageDefinitions: Record<
     {
       type: 'keyword',
       pattern:
-        /\b(async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|finally|for|function|if|import|in|instanceof|let|new|return|super|switch|this|throw|try|typeof|var|void|while|with|yield)\b/g,
+        /\b(?:async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|finally|for|function|if|import|in|instanceof|let|new|return|super|switch|this|throw|try|typeof|var|void|while|with|yield)\b/g,
       className: 'syntax-keyword',
     },
-    { type: 'number', pattern: /\b\d+(\.\d+)?\b/g, className: 'syntax-number' },
     {
       type: 'boolean',
-      pattern: /\b(true|false|null|undefined)\b/g,
+      pattern: /\b(?:true|false|null|undefined)\b/g,
       className: 'syntax-keyword',
+    },
+    {
+      type: 'number',
+      pattern: /\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/g,
+      className: 'syntax-number',
+    },
+    {
+      type: 'function',
+      pattern: /\b[a-zA-Z_$][a-zA-Z0-9_$]*(?=\s*\()/g,
+      className: 'syntax-function',
     },
     {
       type: 'operator',
-      pattern: /[+\-*/%=!<>?:&|^~]/g,
+      pattern:
+        /[+\-*/%=!<>?:&|^~]+|===|!==|==|!=|<=|>=|\|\||&&|\+\+|--|=>|\.\.\./g,
       className: 'syntax-operator',
     },
   ],
@@ -74,14 +84,34 @@ const languageDefinitions: Record<
     {
       type: 'keyword',
       pattern:
-        /\b(abstract|any|as|async|await|boolean|break|case|catch|class|const|constructor|continue|debugger|declare|default|delete|do|else|enum|export|extends|false|finally|for|from|function|get|if|implements|import|in|instanceof|interface|let|module|namespace|new|null|number|private|protected|public|readonly|return|set|static|string|super|switch|this|throw|true|try|type|typeof|undefined|var|void|while|with|yield)\b/g,
+        /\b(?:abstract|any|as|async|await|boolean|break|case|catch|class|const|constructor|continue|debugger|declare|default|delete|do|else|enum|export|extends|finally|for|from|function|get|if|implements|import|in|instanceof|interface|let|module|namespace|new|private|protected|public|readonly|return|set|static|string|super|switch|this|throw|try|type|typeof|var|void|while|with|yield)\b/g,
       className: 'syntax-keyword',
     },
-    { type: 'number', pattern: /\b\d+(\.\d+)?\b/g, className: 'syntax-number' },
+    {
+      type: 'boolean',
+      pattern: /\b(?:true|false|null|undefined)\b/g,
+      className: 'syntax-keyword',
+    },
+    {
+      type: 'number',
+      pattern: /\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/g,
+      className: 'syntax-number',
+    },
+    {
+      type: 'function',
+      pattern: /\b[a-zA-Z_$][a-zA-Z0-9_$]*(?=\s*\()/g,
+      className: 'syntax-function',
+    },
     {
       type: 'type',
       pattern: /\b[A-Z][a-zA-Z0-9]*\b/g,
       className: 'syntax-type',
+    },
+    {
+      type: 'operator',
+      pattern:
+        /[+\-*/%=!<>?:&|^~]+|===|!==|==|!=|<=|>=|\|\||&&|\+\+|--|=>|\.\.\./g,
+      className: 'syntax-operator',
     },
   ],
 
@@ -115,25 +145,6 @@ const languageDefinitions: Record<
     { type: 'value', pattern: /"[^"]*"|'[^']*'/g, className: 'syntax-value' },
   ],
 
-  css: [
-    {
-      type: 'comment',
-      pattern: /\/\*[\s\S]*?\*\//g,
-      className: 'syntax-comment',
-    },
-    {
-      type: 'selector',
-      pattern: /[^{}]+(?=\s*\{)/g,
-      className: 'syntax-selector',
-    },
-    {
-      type: 'property',
-      pattern: /[a-zA-Z-]+(?=\s*:)/g,
-      className: 'syntax-property',
-    },
-    { type: 'value', pattern: /(?<=:)[^;]+/g, className: 'syntax-value' },
-  ],
-
   json: [
     {
       type: 'key',
@@ -154,6 +165,40 @@ const languageDefinitions: Record<
       type: 'boolean',
       pattern: /\b(true|false|null)\b/g,
       className: 'syntax-keyword',
+    },
+  ],
+
+  css: [
+    {
+      type: 'comment',
+      pattern: /\/\*[\s\S]*?\*\//g,
+      className: 'syntax-comment',
+    },
+    {
+      type: 'selector',
+      pattern: /[.#]?[a-zA-Z][\w-]*(?=\s*\{)/g,
+      className: 'syntax-tag',
+    },
+    {
+      type: 'property',
+      pattern: /(?<=\{|\;)\s*[a-zA-Z-]+(?=\s*:)/g,
+      className: 'syntax-property',
+    },
+    {
+      type: 'value',
+      pattern: /(?<=:\s*)[^;}]+/g,
+      className: 'syntax-string',
+    },
+    {
+      type: 'unit',
+      pattern: /\b\d+(?:px|em|rem|%|vh|vw|pt|pc|in|cm|mm|ex|ch|fr)\b/g,
+      className: 'syntax-number',
+    },
+    {
+      type: 'color',
+      pattern:
+        /#[0-9a-fA-F]{3,6}\b|rgb\([^)]+\)|rgba\([^)]+\)|hsl\([^)]+\)|hsla\([^)]+\)/g,
+      className: 'syntax-number',
     },
   ],
 
@@ -252,8 +297,6 @@ export function detectLanguage(filename: string): SupportedLanguage {
     case 'htm':
       return 'html';
     case 'css':
-    case 'scss':
-    case 'sass':
       return 'css';
     case 'json':
       return 'json';
@@ -351,62 +394,62 @@ export function getSyntaxHighlightCSS(): string {
   return `
 /* Syntax highlighting styles */
 .syntax-keyword { 
-  color: var(--explorer-syntax-keyword, #9333ea); 
+  color: #d73a49 !important; 
   font-weight: 600; 
 }
 
 .syntax-string { 
-  color: var(--explorer-syntax-string, #059669); 
+  color: #032f62 !important; 
 }
 
 .syntax-number { 
-  color: var(--explorer-syntax-number, #2563eb); 
+  color: #005cc5 !important; 
 }
 
 .syntax-comment { 
-  color: var(--explorer-syntax-comment, #6b7280); 
+  color: #6a737d !important; 
   font-style: italic; 
 }
 
+.syntax-function {
+  color: #6f42c1 !important;
+  font-weight: 500;
+}
+
 .syntax-tag { 
-  color: var(--explorer-syntax-tag, #2563eb); 
+  color: #22863a !important; 
   font-weight: 600; 
 }
 
 .syntax-attribute { 
-  color: var(--explorer-syntax-attribute, #9333ea); 
+  color: #6f42c1 !important; 
 }
 
 .syntax-value { 
-  color: var(--explorer-syntax-value, #059669); 
+  color: #032f62 !important; 
 }
 
 .syntax-operator { 
-  color: var(--explorer-text-secondary, #374151); 
+  color: #d73a49 !important; 
 }
 
 .syntax-type { 
-  color: var(--explorer-syntax-keyword, #9333ea); 
+  color: #005cc5 !important; 
   font-weight: 500; 
 }
 
 .syntax-property { 
-  color: var(--explorer-syntax-attribute, #9333ea); 
-}
-
-.syntax-selector { 
-  color: var(--explorer-syntax-tag, #2563eb); 
-  font-weight: 600; 
+  color: #6f42c1 !important; 
 }
 
 /* Special highlighting for elb attributes */
 .syntax-elb-attribute { 
-  color: var(--explorer-interactive-success, #10b981); 
+  color: #28a745 !important; 
   font-weight: 700; 
 }
 
 .syntax-elb-value { 
-  color: var(--explorer-interactive-success, #10b981); 
+  color: #28a745 !important; 
   font-weight: 500; 
 }
 `;

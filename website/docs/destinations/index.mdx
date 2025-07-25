@@ -1,18 +1,22 @@
 ---
-title: Destinations
-description: Send events to analytics tools, marketing platforms, and custom endpoints
+title: Overview
+description:
+  Send events to analytics tools, marketing platforms, and custom endpoints
 sidebar_position: 4
 ---
 
 # Destinations
 
-Destinations are the endpoints where your collected events are sent. WalkerOS supports a wide variety of destinations for both web (browser) and server environments.
+Destinations are the endpoints where your collected events are sent. WalkerOS
+supports a wide variety of destinations for both web (browser) and server
+environments.
 
 ## Destination Types
 
 ### [Web Destinations](./web)
 
-Web destinations run in the browser and send events directly from the user's device:
+Web destinations run in the browser and send events directly from the user's
+device:
 
 - **API** - Send to any custom HTTP endpoint
 - **Google (Gtag)** - Google Analytics 4, Google Ads, GTM
@@ -30,6 +34,7 @@ Server destinations run in Node.js environments and are ideal for:
 - Backend integrations
 
 Available server destinations:
+
 - **AWS** - Amazon Kinesis Firehose
 - **GCP** - Google BigQuery
 - **Meta Conversions API** - Server-side Facebook/Meta tracking
@@ -37,12 +42,14 @@ Available server destinations:
 ## Choosing Between Web and Server
 
 ### Use Web Destinations When:
+
 - You need real-time user interaction tracking
 - Client-side context is important (viewport, mouse position, etc.)
 - You want simple implementation without server infrastructure
 - The destination service provides a JavaScript SDK
 
 ### Use Server Destinations When:
+
 - Handling sensitive data (PII, payment info)
 - You need guaranteed delivery
 - Batch processing is required
@@ -53,7 +60,8 @@ Available server destinations:
 
 ### Event Mapping
 
-All destinations support mapping to transform walkerOS events into the destination's expected format:
+All destinations support mapping to transform walkerOS events into the
+destination's expected format:
 
 ```typescript
 const mapping = {
@@ -106,16 +114,19 @@ collector.on('error', (error) => {
 ## Best Practices
 
 ### Security
+
 - Never expose sensitive credentials in web destinations
 - Use environment variables for server destination credentials
 - Implement proper authentication for custom API destinations
 
 ### Performance
+
 - Load web destinations asynchronously when possible
 - Batch events in server destinations
 - Use appropriate transport methods (beacon for critical web events)
 
 ### Privacy
+
 - Always respect user consent
 - Implement destination removal when consent is revoked
 - Document what data each destination receives

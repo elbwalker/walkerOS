@@ -16,6 +16,10 @@ import { createResultDisplay, type ResultDisplayAPI } from './ResultDisplay';
 import { createElement, addEventListener } from '../utils/dom';
 import { debounce } from '../utils/debounce';
 import {
+  createUnifiedContainer,
+  type UnifiedContainerAPI,
+} from '../core/UnifiedContainer';
+import {
   evaluateJavaScript,
   formatEvaluationResult,
   createSafeContext,
@@ -83,46 +87,37 @@ export function createLiveCodeJS(
   function createPanels(): void {
     contentElement.innerHTML = '';
 
-    // Create editor panel
-    const editorPanel = createElement('div', {
-      className: 'explorer-livecode-base__panel',
+    // Create editor container with unified styling
+    const editorContainer = createUnifiedContainer({
+      className:
+        'explorer-livecode-base__panel explorer-unified-container--code-editor',
+      showHeader: true,
+      headerOptions: {
+        title: 'JavaScript Code',
+      },
     });
 
-    const editorHeader = createElement('div', {
-      className: 'explorer-livecode-base__panel-header',
-      textContent: 'JavaScript Code',
+    // Create result container with unified styling and clear button
+    const resultContainer = createUnifiedContainer({
+      className:
+        'explorer-livecode-base__panel explorer-unified-container--result-display',
+      showHeader: true,
+      headerOptions: {
+        title: 'Results',
+        onClear: () => {
+          currentCode = '';
+          codeEditor.setValue('');
+          resultDisplay.clear();
+        },
+      },
     });
-
-    const editorContainer = createElement('div', {
-      className: 'explorer-livecode-base__panel-content',
-    });
-
-    editorPanel.appendChild(editorHeader);
-    editorPanel.appendChild(editorContainer);
-
-    // Create result panel
-    const resultPanel = createElement('div', {
-      className: 'explorer-livecode-base__panel',
-    });
-
-    const resultHeader = createElement('div', {
-      className: 'explorer-livecode-base__panel-header',
-      textContent: 'Results',
-    });
-
-    const resultContainer = createElement('div', {
-      className: 'explorer-livecode-base__panel-content',
-    });
-
-    resultPanel.appendChild(resultHeader);
-    resultPanel.appendChild(resultContainer);
 
     // Assemble panels
-    contentElement.appendChild(editorPanel);
-    contentElement.appendChild(resultPanel);
+    contentElement.appendChild(editorContainer.getElement());
+    contentElement.appendChild(resultContainer.getElement());
 
     // Create components
-    codeEditor = createCodeEditor(editorContainer, {
+    codeEditor = createCodeEditor(editorContainer.getContentElement(), {
       language: 'javascript',
       value: currentCode,
       showLineNumbers: options.showLineNumbers || false,
@@ -133,7 +128,7 @@ export function createLiveCodeJS(
       },
     });
 
-    resultDisplay = createResultDisplay(resultContainer, {
+    resultDisplay = createResultDisplay(resultContainer.getContentElement(), {
       height: '100%',
       showCopyButton: true,
       showTimestamps: false,

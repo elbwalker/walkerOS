@@ -82,11 +82,19 @@ export function createComponent(
   let currentTheme = options.theme || 'auto';
 
   const updateTheme = () => {
+    // Check if we're in a website context (html has data-theme)
+    const htmlTheme = document.documentElement.getAttribute('data-theme');
+    if (htmlTheme && (htmlTheme === 'light' || htmlTheme === 'dark')) {
+      // Website context - don't set data-theme, just add explorer class for CSS targeting
+      element.classList.add('explorer-component');
+      return;
+    }
+
+    // Standalone context - apply theme normally
     if (currentTheme === 'auto') {
-      // Auto-detect theme from document or Tailwind
+      // Auto-detect theme from document or media queries
       const isDark =
         document.documentElement.classList.contains('dark') ||
-        document.documentElement.getAttribute('data-theme') === 'dark' ||
         window.matchMedia('(prefers-color-scheme: dark)').matches;
 
       element.setAttribute('data-theme', isDark ? 'dark' : 'light');
@@ -95,8 +103,11 @@ export function createComponent(
     }
   };
 
-  // Watch for theme changes
-  const themeObserver = new MutationObserver(() => updateTheme());
+  // Watch for theme changes on document
+  const themeObserver = new MutationObserver(() => {
+    // Re-evaluate theme when document changes
+    updateTheme();
+  });
   themeObserver.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['class', 'data-theme'],
@@ -157,9 +168,10 @@ export function createComponent(
       cleanupFunctions.forEach((cleanup) => cleanup());
       cleanupFunctions.length = 0;
 
-      // Remove component marker
+      // Remove component marker and theme-related attributes/classes
       element.removeAttribute('data-explorer-component');
       element.removeAttribute('data-theme');
+      element.classList.remove('explorer-component');
 
       // Remove from registry
       componentRegistry.delete(id);

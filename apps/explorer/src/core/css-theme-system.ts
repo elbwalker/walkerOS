@@ -1,17 +1,21 @@
 /**
  * CSS-Based Theme System
  *
- * Uses CSS custom properties and data-theme attributes for theming.
- * No JavaScript required for theme switching - just change the data-theme attribute.
+ * Uses CSS custom properties with fallback chain for theming.
+ * Supports parent theme inheritance (e.g., from website html[data-theme]).
+ * Transparent backgrounds by default for embedded usage.
  */
 
 export const CSS_THEME_VARIABLES = `
   :root,
-  [data-theme="light"] {
-    /* Base colors */
-    --explorer-bg-primary: #ffffff;
-    --explorer-bg-secondary: #f8fafc;
-    --explorer-bg-tertiary: #f1f5f9;
+  [data-theme="light"],
+  html[data-theme="light"] .explorer-component,
+  html[data-theme="light"] [class*="explorer-"] {
+    /* Base colors - transparent by default for website integration */
+    --explorer-bg-primary: transparent;
+    --explorer-bg-primary-opaque: #ffffff;
+    --explorer-bg-secondary: rgba(248, 250, 252, 0.8);
+    --explorer-bg-tertiary: rgba(241, 245, 249, 0.9);
     --explorer-bg-input: #fafafa;
     
     /* Text colors */
@@ -58,11 +62,14 @@ export const CSS_THEME_VARIABLES = `
     --explorer-scrollbar-thumb-hover: #94a3b8;
   }
 
-  [data-theme="dark"] {
-    /* Base colors */
-    --explorer-bg-primary: #1f2937;
-    --explorer-bg-secondary: #374151;
-    --explorer-bg-tertiary: #4b5563;
+  [data-theme="dark"],
+  html[data-theme="dark"] .explorer-component,
+  html[data-theme="dark"] [class*="explorer-"] {
+    /* Base colors - transparent by default for website integration */
+    --explorer-bg-primary: transparent;
+    --explorer-bg-primary-opaque: #1f2937;
+    --explorer-bg-secondary: rgba(55, 65, 81, 0.8);
+    --explorer-bg-tertiary: rgba(75, 85, 99, 0.9);
     --explorer-bg-input: #111827;
     
     /* Text colors */
@@ -381,11 +388,23 @@ export const CSS_COMPONENT_STYLES = `
 
 /**
  * Utility function to set theme on an element
+ * Checks for website context to avoid conflicts
  */
 export function setElementTheme(
   element: HTMLElement | ShadowRoot | DocumentFragment,
   theme: 'light' | 'dark',
 ): void {
+  // Check if we're in a website context (html has data-theme)
+  const htmlTheme = document.documentElement.getAttribute('data-theme');
+  if (htmlTheme && (htmlTheme === 'light' || htmlTheme === 'dark')) {
+    // Website context - don't override, just add explorer class for targeting
+    if (element instanceof HTMLElement) {
+      element.classList.add('explorer-component');
+    }
+    return;
+  }
+
+  // Standalone context - apply theme normally
   if (element instanceof HTMLElement) {
     element.setAttribute('data-theme', theme);
   } else if (element instanceof ShadowRoot) {
@@ -400,10 +419,23 @@ export function setElementTheme(
 }
 
 /**
- * Utility function to get current theme from an element
+ * Utility function to get current theme from element or parent context
  */
 export function getElementTheme(element: HTMLElement): 'light' | 'dark' {
-  return (element.getAttribute('data-theme') as 'light' | 'dark') || 'light';
+  // Check website context first
+  const htmlTheme = document.documentElement.getAttribute('data-theme');
+  if (htmlTheme === 'light' || htmlTheme === 'dark') {
+    return htmlTheme;
+  }
+
+  // Check element's own theme
+  const elementTheme = element.getAttribute('data-theme') as 'light' | 'dark';
+  if (elementTheme) {
+    return elementTheme;
+  }
+
+  // Default fallback
+  return 'light';
 }
 
 /**

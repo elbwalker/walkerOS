@@ -54,11 +54,10 @@ export function createLiveCodeBase(
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--explorer-bg-primary, #ffffff);
-  border: 1px solid var(--explorer-border-primary, #e5e7eb);
-  border-radius: 12px;
+  background: transparent;
+  /* Removed border - individual boxes have their own borders */
   overflow: hidden;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  /* Removed border-radius and box-shadow - not needed on parent container */
 }
 
 .explorer-livecode-base__header {
@@ -103,6 +102,8 @@ export function createLiveCodeBase(
   flex: 1;
   display: flex;
   overflow: hidden;
+  gap: 8px;
+  padding: 8px;
 }
 
 /* Horizontal Layout */
@@ -122,22 +123,35 @@ export function createLiveCodeBase(
   overflow: hidden;
 }
 
-.explorer-livecode-base__panel + .explorer-livecode-base__panel {
-  border-left: 1px solid var(--explorer-border-primary, #e5e7eb);
-}
-
-.explorer-livecode-base--vertical .explorer-livecode-base__panel + .explorer-livecode-base__panel {
-  border-left: none;
-  border-top: 1px solid var(--explorer-border-primary, #e5e7eb);
-}
+/* Removed margin-left approach - now using flex gap */
+/* Individual panels get their own borders through unified container system */
 
 .explorer-livecode-base__panel-header {
+  display: flex;
+  align-items: center;
   padding: 8px 12px;
   background: var(--explorer-bg-tertiary, #f9fafb);
   border-bottom: 1px solid var(--explorer-border-primary, #e5e7eb);
   font-size: 12px;
   font-weight: 600;
   color: var(--explorer-text-secondary, #6b7280);
+}
+
+.explorer-livecode-base__clear-btn {
+  background: none;
+  border: 1px solid var(--explorer-border-primary, #e5e7eb);
+  color: var(--explorer-text-secondary, #6b7280);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  margin-left: auto;
+  transition: all 0.2s ease;
+}
+
+.explorer-livecode-base__clear-btn:hover {
+  background: var(--explorer-interactive-hover, #f3f4f6);
+  color: var(--explorer-text-primary, #111827);
 }
 
 .explorer-livecode-base__panel-content {
@@ -151,9 +165,9 @@ export function createLiveCodeBase(
     flex-direction: column;
   }
   
-  .explorer-livecode-base--horizontal .explorer-livecode-base__panel + .explorer-livecode-base__panel {
-    border-left: none;
-    border-top: 1px solid var(--explorer-border-primary, #e5e7eb);
+  .explorer-livecode-base__content {
+    padding: 6px;
+    gap: 6px;
   }
   
   .explorer-livecode-base__header {
