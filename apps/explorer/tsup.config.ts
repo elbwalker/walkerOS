@@ -60,6 +60,21 @@ const standaloneConfig: Options = {
         fs.unlinkSync(standaloneMapPath);
       }
     }
+
+    // Copy examples folder to dist
+    const examplesSourcePath = 'examples';
+    const examplesDestPath = path.join('dist', 'examples');
+
+    if (fs.existsSync(examplesSourcePath)) {
+      // Remove existing examples in dist if any
+      if (fs.existsSync(examplesDestPath)) {
+        fs.rmSync(examplesDestPath, { recursive: true, force: true });
+      }
+
+      // Copy examples folder recursively
+      fs.cpSync(examplesSourcePath, examplesDestPath, { recursive: true });
+      console.log('✅ Examples copied to dist/examples');
+    }
   },
 };
 

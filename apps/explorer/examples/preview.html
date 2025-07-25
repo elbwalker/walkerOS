@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #f0f0f0;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👀 Preview Example</h1>
+        <p>Demonstration of the Preview component with safe HTML rendering.</p>
+        
+        <div id="preview" style="height: 300px; border: 1px solid #ddd; border-radius: 4px;"></div>
+        
+        <div class="controls">
+            <button onclick="loadBasic()">Load Basic HTML</button>
+            <button onclick="loadInteractive()">Load Interactive</button>
+            <button onclick="loadWalkerOS()">Load WalkerOS Example</button>
+            <button class="btn-primary" onclick="refresh()">Refresh</button>
+        </div>
+    </div>
+
+    <script src="../explorer.js"></script>
+    <script>
+        let preview = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            preview = WalkerExplorer.createPreview('#preview', {
+                html: `<div style="padding: 20px; text-align: center; background: linear-gradient(45deg, #667eea, #764ba2); color: white; border-radius: 8px;">
+    <h2>🎉 Welcome to Preview!</h2>
+    <p>This HTML is safely rendered in an iframe.</p>
+    <button onclick="alert('Hello from preview!')">Click me!</button>
+</div>`,
+                height: '280px',
+                onLoad: () => {
+                    console.log('Preview loaded successfully');
+                },
+                onError: (error) => {
+                    console.error('Preview error:', error);
+                }
+            });
+            
+            window.preview = preview;
+        });
+
+        window.loadBasic = () => {
+            preview.setHTML(`<div style="padding: 30px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+    <h1 style="color: #343a40;">Basic HTML Example</h1>
+    <p style="font-size: 18px; color: #6c757d;">This is a simple HTML preview with styling.</p>
+    <ul style="list-style: none; padding: 0;">
+        <li style="padding: 5px;">✅ Safe rendering</li>
+        <li style="padding: 5px;">✅ CSS styling</li>
+        <li style="padding: 5px;">✅ Interactive elements</li>
+    </ul>
+</div>`);
+        };
+
+        window.loadInteractive = () => {
+            preview.setHTML('<div style="padding: 20px; background: #e3f2fd; border-radius: 8px;">' +
+    '<h2 style="color: #1976d2;">Interactive Elements</h2>' +
+    '<form onsubmit="handleSubmit(event)" style="margin: 20px 0;">' +
+        '<input type="text" placeholder="Enter your name" style="padding: 10px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px;">' +
+        '<button type="submit" style="padding: 10px 20px; background: #1976d2; color: white; border: none; border-radius: 4px;">Submit</button>' +
+    '</form>' +
+    '<div style="margin: 20px 0;">' +
+        '<button onclick="changeColor()" style="padding: 10px; margin: 5px; background: #4caf50; color: white; border: none; border-radius: 4px;">Change Color</button>' +
+        '<button onclick="showAlert()" style="padding: 10px; margin: 5px; background: #ff9800; color: white; border: none; border-radius: 4px;">Show Alert</button>' +
+    '</div>' +
+    '<div id="output" style="padding: 10px; background: white; border-radius: 4px; margin-top: 10px;">Output will appear here...</div>' +
+    '<script>' +
+        'function handleSubmit(e) {' +
+            'e.preventDefault();' +
+            'const name = e.target.querySelector("input").value;' +
+            'document.getElementById("output").innerHTML = "Hello, " + name + "! 👋";' +
+        '}' +
+        'function changeColor() {' +
+            'const colors = ["#ffebee", "#e8f5e8", "#fff3e0", "#f3e5f5"];' +
+            'const randomColor = colors[Math.floor(Math.random() * colors.length)];' +
+            'document.body.style.backgroundColor = randomColor;' +
+        '}' +
+        'function showAlert() {' +
+            'alert("This is an interactive preview! 🎉");' +
+        '}' +
+    '<\/script>' +
+'</div>');
+        };
+
+        window.loadWalkerOS = () => {
+            preview.setHTML('<div style="padding: 20px; background: #f5f5f5; border-radius: 8px;">' +
+    '<h2 style="color: #333;">WalkerOS Tracking Example</h2>' +
+    '<div data-elb="product" data-elb-id="demo-product" style="border: 2px dashed #007bff; padding: 15px; margin: 15px 0; border-radius: 8px; background: white;">' +
+        '<h3>Demo Product</h3>' +
+        '<p>Price: $99.99</p>' +
+        '<button data-elbaction="view" onclick="trackAction(\'view\')" style="padding: 8px 16px; margin: 5px; background: #28a745; color: white; border: none; border-radius: 4px;">View Product</button>' +
+        '<button data-elbaction="cart" onclick="trackAction(\'cart\')" style="padding: 8px 16px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px;">Add to Cart</button>' +
+    '</div>' +
+    '<div style="background: #343a40; color: white; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px;">' +
+        '<strong>Event Log:</strong>' +
+        '<div id="eventLog">Ready to track events...</div>' +
+    '</div>' +
+    '<script>' +
+        'function trackAction(action) {' +
+            'const event = {' +
+                'event: action,' +
+                'data: {' +
+                    'product_id: "demo-product",' +
+                    'product_name: "Demo Product",' +
+                    'price: 99.99,' +
+                    'timestamp: new Date().toISOString()' +
+                '}' +
+            '};' +
+            'const log = document.getElementById("eventLog");' +
+            'log.innerHTML += "<br/>📊 " + action + " → " + JSON.stringify(event.data, null, 2);' +
+            'console.log("WalkerOS Event:", event);' +
+        '}' +
+    '<\/script>' +
+'</div>');
+        };
+
+        window.refresh = () => {
+            preview.refresh();
+            console.log('Preview refreshed');
+        };
+    </script>
+</body>
+</html>

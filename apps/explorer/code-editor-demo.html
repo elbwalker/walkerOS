@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Code Editor Demo - WalkerOS Explorer</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f8fafc;
+        color: #1f2937;
+        line-height: 1.6;
+      }
+      
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+        padding: 40px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        color: white;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      }
+      
+      .header h1 {
+        margin: 0 0 16px 0;
+        font-size: 2.5rem;
+        font-weight: 700;
+      }
+      
+      .header p {
+        margin: 0;
+        font-size: 1.2rem;
+        opacity: 0.9;
+      }
+      
+      .demo-card {
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e5e7eb;
+        margin-bottom: 32px;
+      }
+      
+      .demo-card h2 {
+        margin: 0 0 16px 0;
+        color: #1f2937;
+        font-size: 1.5rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      
+      .demo-card p {
+        margin: 0 0 24px 0;
+        color: #6b7280;
+        font-size: 1rem;
+      }
+      
+      .component-container {
+        border: 2px solid #f3f4f6;
+        border-radius: 12px;
+        padding: 20px;
+        background: #fafafa;
+        margin-bottom: 24px;
+        min-height: 300px;
+      }
+      
+      .controls {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
+      }
+      
+      .btn {
+        padding: 10px 20px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        background: white;
+        color: #374151;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-block;
+      }
+      
+      .btn:hover {
+        border-color: #3b82f6;
+        color: #3b82f6;
+        transform: translateY(-1px);
+      }
+      
+      .btn-primary {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+      }
+      
+      .btn-primary:hover {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: white;
+      }
+      
+      .nav-link {
+        color: #3b82f6;
+        text-decoration: none;
+        font-weight: 500;
+      }
+      
+      .nav-link:hover {
+        text-decoration: underline;
+      }
+      
+      .icon {
+        font-size: 1.2em;
+      }
+
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 2rem;
+        }
+        
+        .demo-card {
+          padding: 24px;
+        }
+        
+        .controls {
+          justify-content: stretch;
+        }
+        
+        .btn {
+          flex: 1;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>📝 Code Editor Demo</h1>
+        <p>Interactive code editor with syntax highlighting for multiple languages</p>
+        <p><a href="index.html" class="nav-link">← Back to Main Demo</a></p>
+      </header>
+
+      <div class="demo-card">
+        <h2><span class="icon">📝</span> Code Editor</h2>
+        <p>Interactive code editor with syntax highlighting for JavaScript, TypeScript, JSON, HTML, CSS, and more.</p>
+        <div class="component-container">
+          <div id="code-editor" style="height: 350px;"></div>
+        </div>
+        <div class="controls">
+          <button class="btn" onclick="loadJSExample()">Load JS Example</button>
+          <button class="btn" onclick="loadJSONExample()">Load JSON Example</button>
+          <button class="btn" onclick="loadHTMLExample()">Load HTML Example</button>
+          <button class="btn" onclick="switchLanguage()">Switch Language</button>
+          <button class="btn btn-primary" onclick="getEditorValue()">Get Value</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load the WalkerOS Explorer library -->
+    <script type="module">
+      import { createCodeEditor } from './dist/index.mjs';
+
+      // Global component instance
+      window.codeEditor = null;
+
+      // Initialize component when DOM is ready
+      document.addEventListener('DOMContentLoaded', initializeComponent);
+
+      function initializeComponent() {
+        try {
+          // Initialize CodeEditor
+          window.codeEditor = createCodeEditor('#code-editor', {
+            language: 'javascript',
+            value: `// WalkerOS Event Handler Example
+function handleWalkerEvent(event, data, context) {
+  console.log('Event:', event);
+  console.log('Data:', data);
+  console.log('Context:', context);
+  
+  // Process the event
+  return {
+    event,
+    data,
+    context,
+    timestamp: Date.now(),
+    processed: true
+  };
+}
+
+// Example usage
+const result = handleWalkerEvent(
+  'product_view',
+  { id: '123', name: 'Demo Product', price: 99.99 },
+  { page: '/products', user: 'demo-user' }
+);
+
+console.log('Processed Event:', result);`,
+            height: '330px',
+            showLineNumbers: true,
+            onChange: (value) => {
+              console.log('Code changed:', value.length, 'characters');
+            }
+          });
+
+          console.log('✅ Code Editor component initialized successfully!');
+
+        } catch (error) {
+          console.error('❌ Error initializing component:', error);
+        }
+      }
+
+      // Demo functions
+      window.loadJSExample = () => {
+        window.codeEditor.setLanguage('javascript');
+        window.codeEditor.setValue(`// WalkerOS destination handler
+function createDestinationHandler(config) {
+  return {
+    name: config.name,
+    
+    handleEvent(event, data) {
+      console.log('Processing event:', event);
+      console.log('With data:', data);
+      
+      // Transform data for this destination
+      const transformed = {
+        ...data,
+        timestamp: Date.now(),
+        destination: config.name
+      };
+      
+      return transformed;
+    }
+  };
+}
+
+// Example usage
+const ga4Handler = createDestinationHandler({
+  name: 'Google Analytics 4'
+});
+
+const result = ga4Handler.handleEvent('purchase', {
+  transaction_id: 'txn_123',
+  value: 99.99,
+  currency: 'USD'
+});
+
+console.log('Result:', result);`);
+      };
+
+      window.loadJSONExample = () => {
+        window.codeEditor.setLanguage('json');
+        window.codeEditor.setValue(`{
+  "walkerOS": {
+    "version": "2.0.0",
+    "destinations": [
+      {
+        "name": "Google Analytics 4",
+        "type": "web",
+        "config": {
+          "measurementId": "G-XXXXXXXXXX"
+        }
+      }
+    ],
+    "mapping": {
+      "product": {
+        "view": {
+          "event": "view_item",
+          "data": {
+            "item_id": "id",
+            "item_name": "name",
+            "price": "price"
+          }
+        }
+      }
+    }
+  }
+}`);
+      };
+
+      window.loadHTMLExample = () => {
+        window.codeEditor.setLanguage('html');
+        window.codeEditor.setValue(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WalkerOS Example</title>
+</head>
+<body>
+  <div data-elb="product" data-elb-id="demo-123">
+    <h1>Product Demo</h1>
+    <p>Price: $99.99</p>
+    <button data-elbaction="view">View Product</button>
+    <button data-elbaction="cart">Add to Cart</button>
+  </div>
+</body>
+</html>`);
+      };
+
+      window.switchLanguage = () => {
+        const languages = ['javascript', 'json', 'html', 'css'];
+        const current = window.codeEditor.getLanguage();
+        const currentIndex = languages.indexOf(current);
+        const nextLanguage = languages[(currentIndex + 1) % languages.length];
+        
+        window.codeEditor.setLanguage(nextLanguage);
+        console.log('Switched to:', nextLanguage);
+      };
+
+      window.getEditorValue = () => {
+        const value = window.codeEditor.getValue();
+        const language = window.codeEditor.getLanguage();
+        alert(language.toUpperCase() + ' Code (' + value.length + ' characters):\\n\\n' + value.substring(0, 200) + (value.length > 200 ? '...' : ''));
+      };
+    </script>
+  </body>
+</html>

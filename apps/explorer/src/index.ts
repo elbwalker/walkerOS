@@ -85,13 +85,37 @@ export {
   measurePerformance,
 } from './utils/debounce';
 
-// Components will be added in Phase 2
-// export { createCodeEditor } from './components/CodeEditor';
-// export { createPreview } from './components/Preview';
-// export { createResultDisplay } from './components/ResultDisplay';
+// Phase 2: Individual Components (functional factories)
+export {
+  createCodeEditor,
+  type CodeEditorAPI,
+  type CodeEditorOptions,
+} from './components/CodeEditor';
+export {
+  createPreview,
+  type PreviewAPI,
+  type PreviewOptions,
+} from './components/Preview';
+export {
+  createResultDisplay,
+  type ResultDisplayAPI,
+  type ResultDisplayOptions,
+  type ResultItem,
+  type ResultType,
+} from './components/ResultDisplay';
 // export { createLiveCode } from './components/LiveCode';
-// export { createEventFlow } from './components/EventFlow';
-// export { createDestination } from './components/Destination';
+export {
+  createEventFlow,
+  type EventFlowAPI,
+  type EventFlowOptions,
+  type WalkerEvent,
+} from './components/EventFlow';
+export {
+  createDestination,
+  type DestinationAPI,
+  type DestinationOptions,
+  type DestinationConfig,
+} from './components/Destination';
 
 // Export version info
 export const version = '1.0.0';

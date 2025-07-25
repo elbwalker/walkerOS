@@ -9,13 +9,15 @@ const port = process.env.PORT || 3001;
 const mimeTypes = {
   '.html': 'text/html',
   '.js': 'application/javascript',
+  '.mjs': 'application/javascript',
+  '.cjs': 'application/javascript',
   '.css': 'text/css',
   '.json': 'application/json',
   '.map': 'application/json',
 };
 
 const server = http.createServer((req, res) => {
-  let filePath = req.url === '/' ? '/demo.html' : req.url;
+  let filePath = req.url === '/' ? '/index.html' : req.url;
   filePath = path.join(__dirname, filePath);
 
   const extname = path.extname(filePath);
@@ -41,7 +43,7 @@ server.listen(port, () => {
   console.log(`🚀 walkerOS Explorer Demo Server running at:`);
   console.log(`   http://localhost:${port}`);
   console.log(`\n📋 Available demos:`);
-  console.log(`   • Main Demo: http://localhost:${port}/demo.html`);
+  console.log(`   • Main Demo: http://localhost:${port}/index.html`);
   console.log(`   • Built files available at: http://localhost:${port}/dist/`);
   console.log(
     `\n🎯 Test all Phase 1 components interactively in your browser!`,

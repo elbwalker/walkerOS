@@ -19,7 +19,7 @@ export interface SharedHeaderOptions {
 }
 
 export class SharedHeader {
-  private container: HTMLDivElement;
+  private container!: HTMLDivElement;
   private options: Required<SharedHeaderOptions>;
   private actionButtons: Map<string, HTMLButtonElement> = new Map();
 

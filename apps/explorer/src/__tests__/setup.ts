@@ -20,7 +20,7 @@ if (!global.requestIdleCallback) {
           return Math.max(0, 50 - (Date.now() - start));
         },
       });
-    }, 1);
+    }, 1) as any;
   };
 
   global.cancelIdleCallback = (id: any) => clearTimeout(id);
