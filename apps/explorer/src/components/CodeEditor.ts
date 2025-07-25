@@ -5,7 +5,6 @@
  * - Syntax highlighting for multiple languages
  * - Live editing with change events
  * - Copy to clipboard functionality
- * - Line numbers (optional)
  * - Theme-aware styling
  * - Functional factory pattern
  */
@@ -29,7 +28,6 @@ export interface CodeEditorOptions {
   value?: string;
   placeholder?: string;
   readOnly?: boolean;
-  showLineNumbers?: boolean;
   tabSize?: number;
   fontSize?: string;
   height?: string;
@@ -84,13 +82,6 @@ export function createCodeEditor(
   const debouncedHighlight = debounce(() => {
     updateHighlighting();
   }, 20);
-
-  // Debounced line numbers update for performance
-  const debouncedLineNumbers = debounce(() => {
-    if (options.showLineNumbers) {
-      updateLineNumbers();
-    }
-  }, 100);
 
   // Debounced change notification
   const debouncedChange = debounce((value: string) => {
@@ -199,34 +190,6 @@ export function createCodeEditor(
   color: var(--explorer-text-primary);
 }
 
-.explorer-code-editor--with-line-numbers .explorer-code-editor__textarea,
-.explorer-code-editor--with-line-numbers .explorer-code-editor__highlight {
-  padding-left: 70px;
-}
-
-.explorer-code-editor__line-numbers {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 54px !important;
-  padding: 12px 8px 40px 8px !important;
-  margin: 0 !important;
-  background: var(--explorer-bg-tertiary) !important;
-  border-right: 1px solid var(--explorer-border-primary) !important;
-  color: var(--explorer-text-muted) !important;
-  font-family: 'Fira Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace !important;
-  font-size: 14px !important;
-  line-height: 1.6 !important;
-  text-align: right !important;
-  user-select: none !important;
-  pointer-events: none !important;
-  white-space: pre !important;
-  z-index: 3 !important;
-  overflow: hidden !important;
-  font-variant-numeric: tabular-nums !important;
-  height: 100% !important;
-  box-sizing: border-box !important;
-}
 
 /* Syntax highlighting inherits from global theme-aware styles */
 
@@ -236,17 +199,6 @@ export function createCodeEditor(
   .explorer-code-editor__highlight {
     font-size: 13px;
     padding: 10px 12px 32px 12px;
-  }
-  
-  .explorer-code-editor--with-line-numbers .explorer-code-editor__textarea,
-  .explorer-code-editor--with-line-numbers .explorer-code-editor__highlight {
-    padding-left: 55px;
-  }
-  
-  .explorer-code-editor__line-numbers {
-    width: 43px;
-    padding: 10px 6px 32px 6px;
-    font-size: 13px;
   }
 }
 `;
@@ -337,12 +289,6 @@ export function createCodeEditor(
     content.appendChild(textArea);
 
     contentRoot.appendChild(content);
-
-    // Add line numbers if requested - after content is in DOM
-    if (options.showLineNumbers) {
-      contentRoot.classList.add('explorer-code-editor--with-line-numbers');
-      updateLineNumbers();
-    }
   }
 
   /**
@@ -361,34 +307,6 @@ export function createCodeEditor(
   }
 
   /**
-   * Update line numbers
-   */
-  function updateLineNumbers(): void {
-    if (!options.showLineNumbers) return;
-
-    let lineNumbersEl = contentRoot.querySelector(
-      '.explorer-code-editor__line-numbers',
-    ) as HTMLElement;
-
-    if (!lineNumbersEl) {
-      lineNumbersEl = createElement('div', {
-        className: 'explorer-code-editor__line-numbers',
-      });
-      const content = contentRoot.querySelector(
-        '.explorer-code-editor__content',
-      )!;
-      content.appendChild(lineNumbersEl);
-    }
-
-    const lines = currentValue.split('\n');
-    const lineNumbers = Array.from(
-      { length: Math.max(lines.length, 1) },
-      (_, i) => i + 1,
-    );
-    lineNumbersEl.textContent = lineNumbers.join('\n');
-  }
-
-  /**
    * Setup event listeners
    */
   function setupEventListeners(): void {
@@ -399,8 +317,6 @@ export function createCodeEditor(
         currentValue = newValue;
         debouncedHighlight();
         debouncedChange(newValue);
-
-        debouncedLineNumbers(); // Use debounced line numbers for better performance
       }
     };
 
@@ -426,16 +342,6 @@ export function createCodeEditor(
     const onScroll = () => {
       highlightLayer.scrollTop = textArea.scrollTop;
       highlightLayer.scrollLeft = textArea.scrollLeft;
-
-      // Sync line numbers scrolling
-      if (options.showLineNumbers) {
-        const lineNumbersEl = contentRoot.querySelector(
-          '.explorer-code-editor__line-numbers',
-        ) as HTMLElement;
-        if (lineNumbersEl) {
-          lineNumbersEl.scrollTop = textArea.scrollTop;
-        }
-      }
     };
 
     cleanupFunctions.push(addEventListener(textArea, 'input', onInput));
@@ -455,9 +361,6 @@ export function createCodeEditor(
       currentValue = value;
       textArea.value = value;
       updateHighlighting();
-      if (options.showLineNumbers) {
-        updateLineNumbers();
-      }
     },
 
     getLanguage(): SupportedLanguage {

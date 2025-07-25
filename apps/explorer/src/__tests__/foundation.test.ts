@@ -403,7 +403,6 @@ describe('Foundation - Utilities', () => {
     test('creates code block element', () => {
       const code = 'console.log("test");';
       const codeBlock = createCodeBlock(code, 'javascript', {
-        showLineNumbers: true,
         className: 'custom-code',
         maxHeight: '200px',
       });
@@ -411,7 +410,6 @@ describe('Foundation - Utilities', () => {
       expect(codeBlock.tagName).toBe('PRE');
       expect(codeBlock.classList.contains('syntax-highlight')).toBe(true);
       expect(codeBlock.classList.contains('custom-code')).toBe(true);
-      expect(codeBlock.classList.contains('with-line-numbers')).toBe(true);
       expect(codeBlock.style.maxHeight).toBe('200px');
     });
 

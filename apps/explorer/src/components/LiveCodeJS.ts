@@ -27,7 +27,6 @@ export interface LiveCodeJSOptions {
   layout?: 'horizontal' | 'vertical';
   autoEvaluate?: boolean;
   evaluationDelay?: number;
-  showLineNumbers?: boolean;
   height?: string;
   showHeader?: boolean;
   title?: string;
@@ -119,7 +118,6 @@ export function createLiveCodeJS(
     codeEditor = createCodeEditor(editorContainer.getContentElement(), {
       language: 'javascript',
       value: currentCode,
-      showLineNumbers: options.showLineNumbers || false,
       height: '100%',
       onChange: (value) => {
         currentCode = value;

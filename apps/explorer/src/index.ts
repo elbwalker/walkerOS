@@ -27,6 +27,12 @@ export {
   type ResultType,
 } from './components/ResultDisplay';
 
+export {
+  createDestination,
+  type DestinationAPI,
+  type DestinationOptions,
+} from './components/Destination';
+
 // Core types that might be useful
 export { type ComponentAPI } from './core/Component';
 

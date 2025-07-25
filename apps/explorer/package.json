@@ -24,7 +24,6 @@
   "types": "dist/index.d.ts",
   "files": [
     "dist/**",
-    "test-demo.html",
     "serve.js"
   ],
   "scripts": {

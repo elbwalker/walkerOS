@@ -405,7 +405,6 @@ export function createCodeBlock(
   code: string,
   language: SupportedLanguage = 'text',
   options: {
-    showLineNumbers?: boolean;
     className?: string;
     maxHeight?: string;
   } = {},
@@ -416,19 +415,6 @@ export function createCodeBlock(
   // Set classes
   pre.className = `syntax-highlight ${options.className || ''}`;
   codeElement.className = `language-${language}`;
-
-  // Add line numbers if requested
-  if (options.showLineNumbers) {
-    const lines = code.split('\n');
-    const lineNumbers = lines.map((_, i) => i + 1).join('\n');
-
-    const lineNumbersEl = document.createElement('span');
-    lineNumbersEl.className = 'line-numbers';
-    lineNumbersEl.textContent = lineNumbers;
-
-    pre.appendChild(lineNumbersEl);
-    pre.classList.add('with-line-numbers');
-  }
 
   // Highlight and set content
   codeElement.innerHTML = highlightSyntax(code, language);

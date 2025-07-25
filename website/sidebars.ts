@@ -93,6 +93,7 @@ const sidebars: SidebarsConfig = {
         'destinations/server/aws',
         'destinations/server/gcp',
         'destinations/server/meta-capi',
+        'destinations/create-your-own',
       ],
     },
     {
