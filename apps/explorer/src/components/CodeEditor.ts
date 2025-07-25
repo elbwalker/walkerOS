@@ -16,12 +16,7 @@ import {
   type SupportedLanguage,
   getSyntaxHighlightCSS,
 } from '../utils/syntax';
-import {
-  createElement,
-  addEventListener,
-  copyToClipboard,
-  injectCSS,
-} from '../utils/dom';
+import { createElement, addEventListener, injectCSS } from '../utils/dom';
 import { debounce } from '../utils/debounce';
 
 export interface CodeEditorOptions {
@@ -34,7 +29,6 @@ export interface CodeEditorOptions {
   fontSize?: string;
   height?: string;
   maxHeight?: string;
-  showCopyButton?: boolean;
   onChange?: (value: string, language: SupportedLanguage) => void;
   onLanguageChange?: (language: SupportedLanguage) => void;
 }
@@ -69,7 +63,6 @@ export function createCodeEditor(
   let currentLanguage: SupportedLanguage = options.language || 'text';
   let textArea: HTMLTextAreaElement;
   let highlightLayer: HTMLElement;
-  let copyButton: HTMLButtonElement | null = null;
   let isHighlighting = false;
 
   // Cleanup functions
@@ -109,65 +102,6 @@ export function createCodeEditor(
 
 .explorer-code-editor--readonly {
   background: var(--explorer-bg-secondary);
-}
-
-.explorer-code-editor__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--explorer-bg-secondary, #f9fafb);
-  border-bottom: 1px solid var(--explorer-border-primary, #e5e7eb);
-  font-size: 12px;
-  color: var(--explorer-text-secondary, #6b7280);
-  border-radius: 12px 12px 0 0;
-}
-
-.explorer-code-editor__language {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.explorer-code-editor__language-badge {
-  background: var(--explorer-interactive-primary, #2563eb);
-  color: var(--explorer-text-inverse, #ffffff);
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.explorer-code-editor__actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.explorer-code-editor__copy-btn {
-  background: none;
-  border: 1px solid transparent;
-  color: var(--explorer-text-secondary, #6b7280);
-  cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  font-size: 14px;
-}
-
-.explorer-code-editor__copy-btn:hover {
-  background: var(--explorer-interactive-hover, #f3f4f6);
-  color: var(--explorer-text-primary, #111827);
-  border-color: var(--explorer-border-primary, #e5e7eb);
-}
-
-.explorer-code-editor__copy-btn:active {
-  transform: scale(0.95);
 }
 
 .explorer-code-editor__content {
@@ -296,10 +230,6 @@ export function createCodeEditor(
     padding: 10px 6px 32px 6px;
     font-size: 13px;
   }
-  
-  .explorer-code-editor__header {
-    padding: 8px 12px;
-  }
 }
 `;
 
@@ -315,44 +245,6 @@ export function createCodeEditor(
   function createDOM(): void {
     element.innerHTML = '';
 
-    // Create header (optional)
-    if (options.showCopyButton || currentLanguage !== 'text') {
-      const header = createElement('div', {
-        className: 'explorer-code-editor__header',
-      });
-
-      // Language indicator
-      if (currentLanguage !== 'text') {
-        const languageSection = createElement('div', {
-          className: 'explorer-code-editor__language',
-        });
-        const languageBadge = createElement('span', {
-          className: 'explorer-code-editor__language-badge',
-          textContent: currentLanguage,
-        });
-        languageSection.appendChild(languageBadge);
-        header.appendChild(languageSection);
-      }
-
-      // Actions
-      if (options.showCopyButton) {
-        const actions = createElement('div', {
-          className: 'explorer-code-editor__actions',
-        });
-
-        copyButton = createElement('button', {
-          className: 'explorer-code-editor__copy-btn',
-          innerHTML: '📋',
-          title: 'Copy code',
-        }) as HTMLButtonElement;
-
-        actions.appendChild(copyButton);
-        header.appendChild(actions);
-      }
-
-      element.appendChild(header);
-    }
-
     // Create content container
     const content = createElement('div', {
       className: 'explorer-code-editor__content',
@@ -365,7 +257,7 @@ export function createCodeEditor(
       content.style.maxHeight = options.maxHeight;
       content.style.overflow = 'auto';
     } else {
-      content.style.height = '200px';
+      content.style.height = '100%';
     }
 
     // Create textarea
@@ -505,21 +397,6 @@ export function createCodeEditor(
     cleanupFunctions.push(addEventListener(textArea, 'input', onInput));
     cleanupFunctions.push(addEventListener(textArea, 'keydown', onKeyDown));
     cleanupFunctions.push(addEventListener(textArea, 'scroll', onScroll));
-
-    // Copy button
-    if (copyButton) {
-      const onCopy = async () => {
-        const success = await copyToClipboard(currentValue);
-        if (success) {
-          copyButton!.innerHTML = '✓';
-          setTimeout(() => {
-            if (copyButton) copyButton.innerHTML = '📋';
-          }, 1000);
-        }
-      };
-
-      cleanupFunctions.push(addEventListener(copyButton, 'click', onCopy));
-    }
   }
 
   // Enhanced API
@@ -546,14 +423,6 @@ export function createCodeEditor(
     setLanguage(language: SupportedLanguage): void {
       currentLanguage = language;
       textArea.placeholder = options.placeholder || `Enter ${language} code...`;
-
-      // Update language badge if it exists
-      const badge = element.querySelector(
-        '.explorer-code-editor__language-badge',
-      );
-      if (badge) {
-        badge.textContent = language;
-      }
 
       updateHighlighting();
       options.onLanguageChange?.(language);
