@@ -4,20 +4,31 @@
 import type { ExplorerConfig } from './types';
 import { highlightHTML } from './utils/highlighter';
 
-// Import components for both export and global exposure
-import { CodeEditor } from './components/code-editor';
+// Import CSS-based components (no toolbar/format functionality)
+import { CodeEditorCSS } from './components/code-editor-css';
+import { CodeBoxCSS } from './components/code-box-css';
+import { ResultDisplayCSS } from './components/result-display-css';
+import { LiveCodeCSS } from './components/live-code-css';
 import { HtmlPreview } from './components/html-preview';
-import { ResultDisplay } from './components/result-display';
-import { CodeBox } from './components/code-box';
+import { EventFlow } from './components/event-flow';
 
-// Export all Phase 1 components for browser usage
-export { CodeEditor, HtmlPreview, ResultDisplay, CodeBox };
+// Export all components for browser usage
+export {
+  CodeEditorCSS,
+  CodeBoxCSS,
+  ResultDisplayCSS,
+  LiveCodeCSS,
+  HtmlPreview,
+  EventFlow,
+};
 
 // Export types
-export type { CodeEditorOptions } from './components/code-editor';
+export type { CodeEditorOptions as CodeEditorCSSOptions } from './components/code-editor-css';
 export type { HtmlPreviewOptions } from './components/html-preview';
-export type { ResultDisplayOptions } from './components/result-display';
-export type { CodeBoxOptions } from './components/code-box';
+export type { ResultDisplayOptions as ResultDisplayCSSOptions } from './components/result-display-css';
+export type { CodeBoxOptions as CodeBoxCSSOptions } from './components/code-box-css';
+export type { LiveCodeCSSOptions } from './components/live-code-css';
+export type { EventFlowOptions } from './components/event-flow';
 
 /**
  * Explorer instance interface
@@ -423,10 +434,12 @@ declare global {
     createExplorer: typeof createExplorer;
     WalkerOSExplorer: {
       createExplorer: typeof createExplorer;
-      CodeEditor: typeof CodeEditor;
+      CodeEditorCSS: typeof CodeEditorCSS;
       HtmlPreview: typeof HtmlPreview;
-      ResultDisplay: typeof ResultDisplay;
-      CodeBox: typeof CodeBox;
+      ResultDisplayCSS: typeof ResultDisplayCSS;
+      CodeBoxCSS: typeof CodeBoxCSS;
+      LiveCodeCSS: typeof LiveCodeCSS;
+      EventFlow: typeof EventFlow;
     };
   }
 }
@@ -436,10 +449,12 @@ if (typeof window !== 'undefined') {
   window.createExplorer = createExplorer;
   window.WalkerOSExplorer = {
     createExplorer,
-    CodeEditor,
+    CodeEditorCSS,
     HtmlPreview,
-    ResultDisplay,
-    CodeBox,
+    ResultDisplayCSS,
+    CodeBoxCSS,
+    LiveCodeCSS,
+    EventFlow,
   };
 }
 

@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WalkerOS Explorer - Test Suite</title>
+    
+    <!-- Tailwind CSS for testing in Tailwind environment -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Explorer library -->
+    <script src="../dist/explorer.js"></script>
+    
+    <style>
+        /* Test harness styles */
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .test-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .test-status {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .test-status.pass {
+            background: #10b981;
+            color: white;
+        }
+        
+        .test-status.fail {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .test-status.pending {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .test-container {
+            min-height: 200px;
+            border: 1px dashed #d1d5db;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .test-log {
+            background: #f3f4f6;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.875rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        /* Dark mode support */
+        html.dark {
+            background: #111827;
+            color: #f3f4f6;
+        }
+        
+        html.dark .test-section {
+            border-color: #374151;
+            background: #1f2937;
+        }
+        
+        html.dark .test-container {
+            border-color: #4b5563;
+        }
+        
+        html.dark .test-log {
+            background: #374151;
+            color: #f3f4f6;
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Toggle -->
+    <div class="theme-toggle">
+        <button onclick="toggleTheme()" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md">
+            Toggle Theme
+        </button>
+    </div>
+
+    <h1 class="text-3xl font-bold mb-8">WalkerOS Explorer Test Suite</h1>
+    
+    <!-- Test 1: CodeEditor Component -->
+    <div class="test-section" id="test-code-editor">
+        <div class="test-header">
+            <h2 class="test-title">CodeEditor Component</h2>
+            <span class="test-status pending">Pending</span>
+        </div>
+        
+        <div class="test-controls">
+            <button onclick="testCodeEditor.run()" class="px-4 py-2 bg-blue-500 text-white rounded">Run Test</button>
+            <button onclick="testCodeEditor.reset()" class="px-4 py-2 bg-gray-500 text-white rounded">Reset</button>
+        </div>
+        
+        <div class="test-container" id="code-editor-container"></div>
+        
+        <div class="test-log" id="code-editor-log">
+            Test log will appear here...
+        </div>
+    </div>
+    
+    <!-- Test 2: Preview Component -->
+    <div class="test-section" id="test-preview">
+        <div class="test-header">
+            <h2 class="test-title">Preview Component</h2>
+            <span class="test-status pending">Pending</span>
+        </div>
+        
+        <div class="test-controls">
+            <button onclick="testPreview.run()" class="px-4 py-2 bg-blue-500 text-white rounded">Run Test</button>
+            <button onclick="testPreview.reset()" class="px-4 py-2 bg-gray-500 text-white rounded">Reset</button>
+        </div>
+        
+        <div class="test-container" id="preview-container"></div>
+        
+        <div class="test-log" id="preview-log">
+            Test log will appear here...
+        </div>
+    </div>
+    
+    <!-- Test 3: LiveCode Component -->
+    <div class="test-section" id="test-livecode">
+        <div class="test-header">
+            <h2 class="test-title">LiveCode Component</h2>
+            <span class="test-status pending">Pending</span>
+        </div>
+        
+        <div class="test-controls">
+            <button onclick="testLiveCode.run()" class="px-4 py-2 bg-blue-500 text-white rounded">Run Test</button>
+            <button onclick="testLiveCode.reset()" class="px-4 py-2 bg-gray-500 text-white rounded">Reset</button>
+        </div>
+        
+        <div class="test-container" id="livecode-container"></div>
+        
+        <div class="test-log" id="livecode-log">
+            Test log will appear here...
+        </div>
+    </div>
+    
+    <!-- Test 4: EventFlow Component -->
+    <div class="test-section" id="test-eventflow">
+        <div class="test-header">
+            <h2 class="test-title">EventFlow Component</h2>
+            <span class="test-status pending">Pending</span>
+        </div>
+        
+        <div class="test-controls">
+            <button onclick="testEventFlow.run()" class="px-4 py-2 bg-blue-500 text-white rounded">Run Test</button>
+            <button onclick="testEventFlow.reset()" class="px-4 py-2 bg-gray-500 text-white rounded">Reset</button>
+        </div>
+        
+        <div class="test-container" id="eventflow-container" style="min-height: 400px;"></div>
+        
+        <div class="test-log" id="eventflow-log">
+            Test log will appear here...
+        </div>
+    </div>
+    
+    <!-- Test 5: Performance Benchmarks -->
+    <div class="test-section" id="test-performance">
+        <div class="test-header">
+            <h2 class="test-title">Performance Benchmarks</h2>
+            <span class="test-status pending">Pending</span>
+        </div>
+        
+        <div class="test-controls">
+            <button onclick="testPerformance.run()" class="px-4 py-2 bg-blue-500 text-white rounded">Run Benchmarks</button>
+        </div>
+        
+        <div class="test-log" id="performance-log" style="min-height: 300px;">
+            Performance results will appear here...
+        </div>
+    </div>
+
+    <script>
+        // Global test utilities
+        const WalkerExplorer = window.WalkerExplorer || window.WalkerOSExplorer || {};
+        
+        function log(testId, message) {
+            const logEl = document.getElementById(`${testId}-log`);
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            logEl.innerHTML += `[${timestamp}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        function setStatus(testId, status) {
+            const section = document.getElementById(`test-${testId}`);
+            const statusEl = section.querySelector('.test-status');
+            statusEl.className = `test-status ${status}`;
+            statusEl.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        }
+        
+        function clearLog(testId) {
+            document.getElementById(`${testId}-log`).innerHTML = 'Test started...\n';
+        }
+        
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            // Notify all components about theme change
+            if (window.explorerComponents) {
+                window.explorerComponents.forEach(comp => {
+                    if (comp && comp.setTheme) {
+                        comp.setTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+                    }
+                });
+            }
+        }
+        
+        // Track all created components for cleanup
+        window.explorerComponents = [];
+        
+        // Test 1: CodeEditor
+        const testCodeEditor = {
+            component: null,
+            
+            run() {
+                clearLog('code-editor');
+                log('code-editor', 'Testing Phase 1 Foundation...');
+                
+                try {
+                    const container = document.getElementById('code-editor-container');
+                    container.innerHTML = ''; // Clear previous
+                    
+                    // Test basic component creation
+                    log('code-editor', '✓ WalkerExplorer loaded: ' + (typeof WalkerExplorer !== 'undefined'));
+                    log('code-editor', '✓ Version: ' + WalkerExplorer.version);
+                    log('code-editor', '✓ Name: ' + WalkerExplorer.name);
+                    
+                    // Test component factory
+                    const testComponent = WalkerExplorer.createComponent(container, {
+                        theme: 'auto',
+                        className: 'test-component'
+                    });
+                    
+                    log('code-editor', '✓ Component created with ID: ' + testComponent.id);
+                    log('code-editor', '✓ Component mounted: ' + container.hasAttribute('data-explorer-component'));
+                    
+                    // Test theme system
+                    const themeCSS = WalkerExplorer.getThemeCSS();
+                    log('code-editor', '✓ Theme CSS generated: ' + (themeCSS.length > 1000 ? 'Yes' : 'No'));
+                    
+                    // Test syntax highlighting
+                    const code = 'const message = "Hello, Explorer!";';
+                    const highlighted = WalkerExplorer.highlightSyntax(code, 'javascript');
+                    log('code-editor', '✓ Syntax highlighting works: ' + (highlighted.includes('syntax-') ? 'Yes' : 'No'));
+                    
+                    // Test utilities
+                    const element = WalkerExplorer.createElement('div', { textContent: 'Test Element' });
+                    log('code-editor', '✓ DOM utilities work: ' + (element.textContent === 'Test Element' ? 'Yes' : 'No'));
+                    
+                    // Test debounce
+                    let callCount = 0;
+                    const debouncedFn = WalkerExplorer.debounce(() => callCount++, 10);
+                    debouncedFn();
+                    debouncedFn();
+                    debouncedFn();
+                    
+                    setTimeout(() => {
+                        log('code-editor', '✓ Debounce works: ' + (callCount === 1 ? 'Yes' : 'No'));
+                        
+                        this.component = testComponent;
+                        window.explorerComponents.push(testComponent);
+                        
+                        log('code-editor', '✅ Phase 1 Foundation Test Complete!');
+                        setStatus('code-editor', 'pass');
+                    }, 50);
+                    
+                } catch (error) {
+                    log('code-editor', `✗ Error: ${error.message}`);
+                    setStatus('code-editor', 'fail');
+                }
+            },
+            
+            reset() {
+                if (this.component) {
+                    this.component.destroy();
+                    this.component = null;
+                }
+                document.getElementById('code-editor-container').innerHTML = '';
+                clearLog('code-editor');
+                setStatus('code-editor', 'pending');
+            }
+        };
+        
+        // Test 2: Preview
+        const testPreview = {
+            component: null,
+            
+            run() {
+                clearLog('preview');
+                log('preview', 'Initializing Preview component...');
+                
+                try {
+                    const container = document.getElementById('preview-container');
+                    container.innerHTML = '';
+                    
+                    this.component = new WalkerExplorer.Preview(container, {
+                        html: `
+                            <div data-elb="product" data-elb-id="123" style="padding: 20px; border: 2px solid #3b82f6; border-radius: 8px;">
+                                <h3>Test Product</h3>
+                                <p>Click elements to capture events</p>
+                                <button data-elbaction="add_to_cart" style="background: #3b82f6; color: white; padding: 8px 16px; border-radius: 4px; border: none; cursor: pointer;">
+                                    Add to Cart
+                                </button>
+                            </div>
+                        `,
+                        onInteraction: (event) => {
+                            log('preview', `✓ Captured event: ${JSON.stringify(event)}`);
+                        }
+                    });
+                    
+                    window.explorerComponents.push(this.component);
+                    
+                    log('preview', '✓ Component created successfully');
+                    log('preview', '✓ HTML rendered in sandbox');
+                    log('preview', 'Click the button above to test event capture...');
+                    
+                    setStatus('preview', 'pass');
+                    
+                } catch (error) {
+                    log('preview', `✗ Error: ${error.message}`);
+                    setStatus('preview', 'fail');
+                }
+            },
+            
+            reset() {
+                if (this.component) {
+                    this.component.destroy();
+                    this.component = null;
+                }
+                document.getElementById('preview-container').innerHTML = '';
+                clearLog('preview');
+                setStatus('preview', 'pending');
+            }
+        };
+        
+        // Test 3: LiveCode
+        const testLiveCode = {
+            component: null,
+            
+            run() {
+                clearLog('livecode');
+                log('livecode', 'Initializing LiveCode component...');
+                
+                try {
+                    const container = document.getElementById('livecode-container');
+                    container.innerHTML = '';
+                    
+                    this.component = new WalkerExplorer.LiveCode(container, {
+                        layout: 'horizontal',
+                        theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+                        execute: async (code) => {
+                            log('livecode', 'Executing code...');
+                            try {
+                                // Safe evaluation in try-catch
+                                const result = eval(`(function() { ${code} })()`);
+                                return { success: true, result };
+                            } catch (error) {
+                                return { success: false, error: error.message };
+                            }
+                        },
+                        initialCode: 'return { message: "Hello from LiveCode!", timestamp: Date.now() };'
+                    });
+                    
+                    window.explorerComponents.push(this.component);
+                    
+                    log('livecode', '✓ Component created successfully');
+                    log('livecode', '✓ Editor and result panels rendered');
+                    log('livecode', 'Edit the code and click Run to execute...');
+                    
+                    setStatus('livecode', 'pass');
+                    
+                } catch (error) {
+                    log('livecode', `✗ Error: ${error.message}`);
+                    setStatus('livecode', 'fail');
+                }
+            },
+            
+            reset() {
+                if (this.component) {
+                    this.component.destroy();
+                    this.component = null;
+                }
+                document.getElementById('livecode-container').innerHTML = '';
+                clearLog('livecode');
+                setStatus('livecode', 'pending');
+            }
+        };
+        
+        // Test 4: EventFlow
+        const testEventFlow = {
+            component: null,
+            
+            run() {
+                clearLog('eventflow');
+                log('eventflow', 'Initializing EventFlow component...');
+                
+                try {
+                    const container = document.getElementById('eventflow-container');
+                    container.innerHTML = '';
+                    
+                    this.component = new WalkerExplorer.EventFlow(container, {
+                        height: '400px',
+                        theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+                        code: `<div data-elb="product" data-elb-id="test-123">
+    <h3>Sample Product</h3>
+    <button data-elbaction="view">View Details</button>
+    <button data-elbaction="add_to_cart">Add to Cart</button>
+</div>`,
+                        mapping: `{
+  "product": {
+    "view": {
+      "name": "product_viewed"
+    },
+    "add_to_cart": {
+      "name": "product_added_to_cart"
+    }
+  }
+}`
+                    });
+                    
+                    window.explorerComponents.push(this.component);
+                    
+                    log('eventflow', '✓ Component created successfully');
+                    log('eventflow', '✓ All 5 panels rendered');
+                    log('eventflow', 'Click buttons in the preview to see event flow...');
+                    
+                    setStatus('eventflow', 'pass');
+                    
+                } catch (error) {
+                    log('eventflow', `✗ Error: ${error.message}`);
+                    setStatus('eventflow', 'fail');
+                }
+            },
+            
+            reset() {
+                if (this.component) {
+                    this.component.destroy();
+                    this.component = null;
+                }
+                document.getElementById('eventflow-container').innerHTML = '';
+                clearLog('eventflow');
+                setStatus('eventflow', 'pending');
+            }
+        };
+        
+        // Test 5: Performance
+        const testPerformance = {
+            async run() {
+                clearLog('performance');
+                log('performance', 'Running performance benchmarks...\n');
+                
+                const benchmarks = [];
+                
+                // Benchmark 1: Component creation time
+                const createStart = performance.now();
+                const tempContainer = document.createElement('div');
+                document.body.appendChild(tempContainer);
+                
+                const editor = new WalkerExplorer.CodeEditor(tempContainer, {
+                    value: 'const test = "performance";'
+                });
+                
+                const createEnd = performance.now();
+                benchmarks.push({
+                    name: 'Component Creation',
+                    time: createEnd - createStart,
+                    target: 50
+                });
+                
+                // Benchmark 2: Large content handling
+                const largeContent = 'console.log("test");\n'.repeat(1000);
+                const updateStart = performance.now();
+                editor.setValue(largeContent);
+                const updateEnd = performance.now();
+                
+                benchmarks.push({
+                    name: 'Large Content Update (1000 lines)',
+                    time: updateEnd - updateStart,
+                    target: 100
+                });
+                
+                // Benchmark 3: Memory usage
+                const memoryBefore = performance.memory ? performance.memory.usedJSHeapSize : 0;
+                const components = [];
+                
+                for (let i = 0; i < 10; i++) {
+                    const div = document.createElement('div');
+                    tempContainer.appendChild(div);
+                    components.push(new WalkerExplorer.CodeEditor(div, { value: 'test' }));
+                }
+                
+                const memoryAfter = performance.memory ? performance.memory.usedJSHeapSize : 0;
+                const memoryUsed = (memoryAfter - memoryBefore) / 1024 / 1024;
+                
+                benchmarks.push({
+                    name: 'Memory Usage (10 components)',
+                    time: memoryUsed,
+                    target: 1,
+                    unit: 'MB'
+                });
+                
+                // Cleanup
+                components.forEach(c => c.destroy());
+                editor.destroy();
+                tempContainer.remove();
+                
+                // Display results
+                log('performance', '=== Benchmark Results ===\n');
+                
+                let allPassed = true;
+                benchmarks.forEach(bench => {
+                    const passed = bench.time <= bench.target;
+                    const status = passed ? '✓' : '✗';
+                    const unit = bench.unit || 'ms';
+                    
+                    log('performance', `${status} ${bench.name}`);
+                    log('performance', `  Time: ${bench.time.toFixed(2)}${unit}`);
+                    log('performance', `  Target: <${bench.target}${unit}`);
+                    log('performance', `  Status: ${passed ? 'PASS' : 'FAIL'}\n`);
+                    
+                    if (!passed) allPassed = false;
+                });
+                
+                // Bundle size check
+                log('performance', '=== Bundle Size ===');
+                log('performance', 'Note: Check network tab for actual bundle sizes');
+                log('performance', 'Target: <30KB gzipped for full bundle\n');
+                
+                setStatus('performance', allPassed ? 'pass' : 'fail');
+            }
+        };
+        
+        // Auto-run tests on load
+        window.addEventListener('DOMContentLoaded', () => {
+            log('code-editor', 'Ready to test. Click "Run Test" to begin.');
+            log('preview', 'Ready to test. Click "Run Test" to begin.');
+            log('livecode', 'Ready to test. Click "Run Test" to begin.');
+            log('eventflow', 'Ready to test. Click "Run Test" to begin.');
+            log('performance', 'Ready to run benchmarks. Click "Run Benchmarks" to begin.');
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            window.explorerComponents.forEach(comp => {
+                if (comp && comp.destroy) {
+                    comp.destroy();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

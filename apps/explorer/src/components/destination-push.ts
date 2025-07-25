@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@walkerOS/core';
 import { BaseComponent } from '../core/base-component';
-import { CodeEditor } from './code-editor';
+import { CodeEditorCSS } from './code-editor-css';
 import type {
   ExplorerStateManager,
   DestinationState,
@@ -25,8 +25,8 @@ export class DestinationPush extends BaseComponent {
   private options: Required<DestinationPushOptions>;
   private stateManager: ExplorerStateManager;
   private destinationId: string;
-  private eventEditor!: CodeEditor;
-  private mappingEditor?: CodeEditor;
+  private eventEditor!: CodeEditorCSS;
+  private mappingEditor?: CodeEditorCSS;
   private outputContainer?: HTMLDivElement;
   private outputContent?: HTMLPreElement;
   private executeButton!: HTMLButtonElement;
@@ -150,12 +150,11 @@ export class DestinationPush extends BaseComponent {
     eventLabel.textContent = 'Event Data';
 
     const eventEditorElement = this.createElement('div');
-    this.eventEditor = new CodeEditor(eventEditorElement, {
+    this.eventEditor = new CodeEditorCSS(eventEditorElement, {
       language: 'json',
       height: this.options.height,
       value: this.getInitialEventValue(),
       showCopyButton: true,
-      showFormatButton: true,
       theme: this.options.theme,
       fontSize: this.options.smallText ? '12px' : '14px',
     });
@@ -184,12 +183,11 @@ export class DestinationPush extends BaseComponent {
       mappingLabel.textContent = 'Mapping Configuration';
 
       const mappingEditorElement = this.createElement('div');
-      this.mappingEditor = new CodeEditor(mappingEditorElement, {
+      this.mappingEditor = new CodeEditorCSS(mappingEditorElement, {
         language: 'json',
         height: this.options.height,
         value: this.getInitialMappingValue(),
         showCopyButton: true,
-        showFormatButton: true,
         theme: this.options.theme,
         fontSize: this.options.smallText ? '12px' : '14px',
       });

@@ -30,9 +30,9 @@ const standaloneConfig: Options = {
   splitting: false,
   sourcemap: true,
   minify: false,
-  entry: ['src/standalone.ts'],
+  entry: ['src/index.ts'],
   format: ['iife'],
-  globalName: 'WalkerOSExplorer',
+  globalName: 'WalkerExplorer',
   platform: 'browser',
   outExtension: () => ({ js: '.js' }),
   outDir: 'dist',
@@ -45,7 +45,7 @@ const standaloneConfig: Options = {
     const path = await import('path');
 
     // Rename standalone build to explorer.js
-    const standalonePath = path.join('dist', 'standalone.js');
+    const standalonePath = path.join('dist', 'index.js');
     const explorerPath = path.join('dist', 'explorer.js');
 
     if (fs.existsSync(standalonePath)) {
@@ -53,7 +53,7 @@ const standaloneConfig: Options = {
       fs.unlinkSync(standalonePath);
 
       // Also handle sourcemap
-      const standaloneMapPath = path.join('dist', 'standalone.js.map');
+      const standaloneMapPath = path.join('dist', 'index.js.map');
       const explorerMapPath = path.join('dist', 'explorer.js.map');
       if (fs.existsSync(standaloneMapPath)) {
         fs.copyFileSync(standaloneMapPath, explorerMapPath);

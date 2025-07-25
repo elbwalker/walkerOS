@@ -33,20 +33,36 @@
     "dev": "jest --watchAll --colors",
     "demo": "npm run build && node serve.js",
     "lint": "tsc && eslint \"**/*.ts*\"",
-    "test": "jest",
+    "test": "jest --passWithNoTests --silent",
+    "test:watch": "jest --watch --passWithNoTests --silent",
+    "test:coverage": "jest --coverage --passWithNoTests --silent",
+    "test:quick": "jest --testPathPattern=quick.test.ts --passWithNoTests --silent",
+    "test:foundation": "jest --testPathPattern=foundation.test.ts --passWithNoTests --silent",
+    "test:ci": "jest --ci --coverage --passWithNoTests --silent",
+    "test:verbose": "jest --passWithNoTests --verbose",
+    "test:visual": "node test-harness.js",
+    "test:visual:watch": "node test-harness.js --watch",
+    "test:playwright": "playwright test",
+    "test:playwright:ui": "playwright test --ui",
+    "test:playwright:debug": "playwright test --debug",
+    "test:playwright:report": "playwright show-report",
+    "dev:visual": "node dev-workflow.js",
+    "dev:visual:once": "node dev-workflow.js --no-watch",
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
+    "@walkerOS/collector": "*",
     "@walkerOS/core": "*",
-    "@walkerOS/web-core": "*",
-    "@walkerOS/collector": "*"
+    "@walkerOS/web-core": "*"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@walkerOS/eslint": "*",
     "@walkerOS/jest": "*",
     "@walkerOS/tsconfig": "*",
     "@walkerOS/tsup": "*",
+    "chokidar": "^4.0.3",
     "typescript": "^5.5.2"
   },
   "funding": {

@@ -1,49 +1,98 @@
-// Main entry point for the @walkerOS/explorer package
+/**
+ * WalkerOS Explorer - Main entry point
+ *
+ * Functional component library for walkerOS development tools
+ * Zero dependencies, framework-agnostic, Tailwind-compatible
+ */
 
-// Core functionality
-export { ExplorerStateManager, generateId } from './core/state-manager';
-export { BaseComponent } from './core/base-component';
-export { highlightSyntax, DEFAULT_SYNTAX_CSS } from './core/syntax-highlighter';
-
-// Components
-export { CodeEditor } from './components/code-editor';
-export { HtmlPreview } from './components/html-preview';
-export { ResultDisplay } from './components/result-display';
-export { CodeBox } from './components/code-box';
-export { DestinationInit } from './components/destination-init';
-export { DestinationPush } from './components/destination-push';
-
-// Factory functions
+// Core system
 export {
-  createDestination,
-  createDestinationGroup,
-  createMockDestination,
-} from './core/destination-factory';
+  createComponent,
+  generateUniqueId,
+  getAllComponents,
+  getComponent,
+  destroyAllComponents,
+  findComponents,
+  type ComponentAPI,
+  type ComponentOptions,
+} from './core/Component';
 
-// Legacy utilities (maintaining backward compatibility)
-export { highlightHTML } from './utils/highlighter';
+export {
+  eventBus,
+  ComponentEvents,
+  createScopedEventBus,
+  EventDebug,
+  type EventHandler,
+  type EventMeta,
+  type EventSubscription,
+} from './core/EventBus';
 
-// Standalone factory function (following walkerOS patterns)
-export { default as createExplorer } from './standalone';
+export {
+  defaultTheme,
+  getThemeCSS,
+  injectThemeCSS,
+  detectCurrentTheme,
+  watchThemeChanges,
+  getCurrentThemeColors,
+  type ThemeConfig,
+  type ThemeColors,
+} from './core/Theme';
 
-// Export types
-export type { ExplorerConfig } from './types';
+// Utilities
+export {
+  createElement,
+  getElement,
+  findElement,
+  getElements,
+  matches,
+  closest,
+  addEventListener,
+  delegate,
+  injectCSS,
+  getComputedStyleValue,
+  isVisible,
+  getDimensions,
+  scrollIntoView,
+  copyToClipboard,
+  createFragment,
+  setHTML,
+  escapeHTML,
+  observeResize,
+  observeMutations,
+  isInViewport,
+  getUniqueSelector,
+} from './utils/dom';
 
-export type {
-  DestinationFunction,
-  DestinationState,
-} from './core/state-manager';
-export type {
-  DestinationInstance,
-  DestinationContextOptions,
-} from './core/destination-factory';
-export type { CodeEditorOptions } from './components/code-editor';
-export type { HtmlPreviewOptions } from './components/html-preview';
-export type { ResultDisplayOptions } from './components/result-display';
-export type { CodeBoxOptions } from './components/code-box';
-export type { DestinationInitOptions } from './components/destination-init';
-export type { DestinationPushOptions } from './components/destination-push';
-export type {
-  SupportedLanguage,
-  HighlightOptions,
-} from './core/syntax-highlighter';
+export {
+  highlightSyntax,
+  detectLanguage,
+  formatCode,
+  getSyntaxHighlightCSS,
+  createCodeBlock,
+  tokenize,
+  type SyntaxToken,
+  type SupportedLanguage,
+} from './utils/syntax';
+
+export {
+  debounce,
+  throttle,
+  rafThrottle,
+  debounceAsync,
+  batch,
+  memoize,
+  scheduleIdleWork,
+  measurePerformance,
+} from './utils/debounce';
+
+// Components will be added in Phase 2
+// export { createCodeEditor } from './components/CodeEditor';
+// export { createPreview } from './components/Preview';
+// export { createResultDisplay } from './components/ResultDisplay';
+// export { createLiveCode } from './components/LiveCode';
+// export { createEventFlow } from './components/EventFlow';
+// export { createDestination } from './components/Destination';
+
+// Export version info
+export const version = '1.0.0';
+export const name = '@walkeros/explorer';

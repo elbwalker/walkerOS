@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@walkerOS/core';
 import { BaseComponent } from '../core/base-component';
-import { CodeEditor } from './code-editor';
+import { CodeEditorCSS } from './code-editor-css';
 import type {
   ExplorerStateManager,
   DestinationState,
@@ -21,7 +21,7 @@ export class DestinationInit extends BaseComponent {
   private options: Required<DestinationInitOptions>;
   private stateManager: ExplorerStateManager;
   private destinationId: string;
-  private configEditor!: CodeEditor;
+  private configEditor!: CodeEditorCSS;
   private outputContainer?: HTMLDivElement;
   private outputContent?: HTMLPreElement;
   private unsubscribe?: () => void;
@@ -99,12 +99,11 @@ export class DestinationInit extends BaseComponent {
 
     // Create config editor
     const configEditorContainer = this.createElement('div');
-    this.configEditor = new CodeEditor(configEditorContainer, {
+    this.configEditor = new CodeEditorCSS(configEditorContainer, {
       language: 'json',
       height: this.options.height,
       value: this.getInitialConfigValue(),
       showCopyButton: true,
-      showFormatButton: true,
       theme: this.options.theme,
       onChange: (value) => this.handleConfigChange(value),
     });

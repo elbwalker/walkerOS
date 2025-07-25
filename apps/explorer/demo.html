@@ -104,15 +104,21 @@
   </head>
   <body>
     <div class="demo-container">
-      <h1>🚀 walkerOS Explorer - Phase 1 Components</h1>
-      <div id="status">✅ All components loaded successfully!</div>
+      <h1>🚀 walkerOS Explorer - CSS-Based Components (No Toolbar/Format)</h1>
+      <div id="status">✅ All CSS-based components loaded successfully!</div>
+      
+      <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 6px; padding: 12px; margin-bottom: 20px;">
+        <strong>🎨 CSS Theming Demo:</strong> 
+        <button id="themeToggle" class="btn btn-primary" style="margin-left: 10px;">Switch to Dark Theme</button>
+        <p style="margin: 8px 0 0 0; font-size: 14px; color: #0369a1;">Components now use data-theme attributes instead of JavaScript theming!</p>
+      </div>
 
       <!-- CodeEditor Demo -->
       <div class="demo-section">
-        <h2>1. CodeEditor Component</h2>
+        <h2>1. CodeEditorCSS Component</h2>
         <p>
-          Advanced code editor with syntax highlighting, copy/format
-          functionality, and Shadow DOM isolation.
+          Clean code editor with syntax highlighting and CSS-based theming. 
+          <strong>No toolbar or format functionality</strong> - simplified design.
         </p>
         <div class="demo-grid">
           <div class="component-demo">
@@ -130,7 +136,7 @@
               <button class="btn" onclick="setJSONCode()">
                 Set Sample JSON
               </button>
-              <button class="btn" onclick="formatJSON()">Format JSON</button>
+              <button class="btn" onclick="validateJSON()">Validate JSON</button>
             </div>
           </div>
         </div>
@@ -174,10 +180,10 @@
 
       <!-- ResultDisplay Demo -->
       <div class="demo-section">
-        <h2>3. ResultDisplay Component</h2>
+        <h2>3. ResultDisplayCSS Component</h2>
         <p>
-          Smart JSON/object visualization with syntax highlighting, expandable
-          view, and copy functionality.
+          Clean JSON/object visualization with syntax highlighting. 
+          <strong>No copy button</strong> - simplified display component.
         </p>
         <div class="demo-grid">
           <div class="component-demo">
@@ -205,10 +211,10 @@
 
       <!-- CodeBox Demo -->
       <div class="demo-section">
-        <h2>4. CodeBox Component</h2>
+        <h2>4. CodeBoxCSS Component</h2>
         <p>
-          Smart wrapper combining CodeEditor with labels, actions, and
-          consistent styling.
+          Clean wrapper around CodeEditorCSS with labels and basic actions. 
+          <strong>No format functionality</strong> - only copy and reset actions.
         </p>
         <div class="demo-grid">
           <div class="component-demo">
@@ -232,9 +238,61 @@
         </div>
       </div>
 
+      <!-- EventFlow Demo -->
+      <div class="demo-section">
+        <h2>5. EventFlow Component</h2>
+        <p>
+          Complete 5-panel walkerOS event flow visualization - replaces React EventFlow with vanilla JS.
+        </p>
+        <div style="margin-bottom: 20px;">
+          <div id="eventflow-demo" style="height: 600px"></div>
+          <div class="controls">
+            <button class="btn" onclick="setEcommerceExample()">E-commerce Example</button>
+            <button class="btn" onclick="setFormExample()">Form Example</button>
+            <button class="btn" onclick="simulateClick()">Simulate Click</button>
+            <button class="btn" onclick="clearEventFlow()">Clear Events</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LiveCode Demo -->
+      <div class="demo-section">
+        <h2>6. LiveCodeCSS Component</h2>
+        <p>
+          Clean interactive code execution environment with CSS-based theming. 
+          <strong>No toolbar functionality</strong> - simplified live coding experience.
+        </p>
+        <div class="demo-grid">
+          <div class="component-demo">
+            <h3>JavaScript Function Demo</h3>
+            <div id="livecode-js" style="height: 350px"></div>
+            <div class="controls">
+              <button class="btn" onclick="setMathFunction()">
+                Set Math Function
+              </button>
+              <button class="btn" onclick="executeManual()">
+                Execute Manually
+              </button>
+            </div>
+          </div>
+          <div class="component-demo">
+            <h3>Data Processing Demo</h3>
+            <div id="livecode-data" style="height: 350px"></div>
+            <div class="controls">
+              <button class="btn" onclick="setDataFunction()">
+                Set Data Processing
+              </button>
+              <button class="btn" onclick="setComplexConfig()">
+                Complex Config
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Integration Demo -->
       <div class="demo-section">
-        <h2>5. Component Integration</h2>
+        <h2>7. Component Integration</h2>
         <p>
           Demonstration of components working together in a realistic scenario.
         </p>
@@ -277,27 +335,30 @@
 
       function initializeComponents() {
         try {
-          // CodeEditor demos
-          components.jsEditor = new WalkerOSExplorer.CodeBox(
+          // Theme toggle functionality
+          setupThemeToggle();
+          
+          // CodeEditor demos - using new CSS-based components
+          components.jsEditor = new WalkerOSExplorer.CodeBoxCSS(
             document.getElementById('js-editor'),
             {
               label: 'JavaScript',
               language: 'javascript',
               value: 'function hello(name) {\n  return `Hello, ${name}!`;\n}',
               showCopy: true,
-              showFormat: true,
+              showReset: false,
               theme: 'light',
             },
           );
 
-          components.jsonEditor = new WalkerOSExplorer.CodeBox(
+          components.jsonEditor = new WalkerOSExplorer.CodeBoxCSS(
             document.getElementById('json-editor'),
             {
               label: 'JSON',
               language: 'json',
               value: '{\n  "name": "walkerOS",\n  "version": "1.0.0"\n}',
               showCopy: true,
-              showFormat: true,
+              showReset: false,
             },
           );
 
@@ -331,7 +392,7 @@
             },
           );
 
-          components.htmlInput = new WalkerOSExplorer.CodeBox(
+          components.htmlInput = new WalkerOSExplorer.CodeBoxCSS(
             document.getElementById('html-input'),
             {
               label: 'HTML Input',
@@ -340,12 +401,12 @@
                 '<div style="padding: 20px;">\n  <h3>Sample HTML</h3>\n  <button>Click me!</button>\n</div>',
               height: '150px',
               showCopy: true,
-              showFormat: true,
+              showReset: false,
             },
           );
 
-          // ResultDisplay demos
-          components.simpleResult = new WalkerOSExplorer.ResultDisplay(
+          // ResultDisplay demos - using new CSS-based components
+          components.simpleResult = new WalkerOSExplorer.ResultDisplayCSS(
             document.getElementById('simple-result'),
             {
               value: 'Hello, walkerOS Explorer!',
@@ -353,7 +414,7 @@
             },
           );
 
-          components.complexResult = new WalkerOSExplorer.ResultDisplay(
+          components.complexResult = new WalkerOSExplorer.ResultDisplayCSS(
             document.getElementById('complex-result'),
             {
               value: {
@@ -365,8 +426,8 @@
             },
           );
 
-          // CodeBox demos
-          components.configCodeBox = new WalkerOSExplorer.CodeBox(
+          // CodeBox demos - using new CSS-based components
+          components.configCodeBox = new WalkerOSExplorer.CodeBoxCSS(
             document.getElementById('config-codebox'),
             {
               label: 'walkerOS Configuration',
@@ -374,14 +435,13 @@
                 '{\n  "tagging": 1,\n  "consent": {\n    "functional": true\n  }\n}',
               language: 'json',
               showCopy: true,
-              showFormat: true,
               showReset: true,
               resetValue:
                 '{\n  "tagging": 1,\n  "consent": {\n    "functional": true\n  }\n}',
             },
           );
 
-          components.eventCodeBox = new WalkerOSExplorer.CodeBox(
+          components.eventCodeBox = new WalkerOSExplorer.CodeBoxCSS(
             document.getElementById('event-codebox'),
             {
               label: 'Event Data',
@@ -389,9 +449,114 @@
                 '{\n  "event": "page view",\n  "data": {\n    "title": "Home Page"\n  }\n}',
               language: 'json',
               showCopy: true,
-              showFormat: true,
+              showReset: false,
             },
           );
+
+          // LiveCode demos - using new CSS-based components
+          components.liveCodeJS = new WalkerOSExplorer.LiveCodeCSS(
+            document.getElementById('livecode-js'),
+            {
+              initialCode:
+                'function calculate(x, y) {\n  return x * y + Math.random();\n}\n\nreturn calculate(5, 3)',
+              language: 'javascript',
+              title: 'JavaScript Executor',
+              showTitle: true,
+              showRunButton: true,
+              showResetButton: true,
+              layout: 'vertical',
+              onRun: async (code) => {
+                try {
+                  // Simple eval for demo purposes
+                  const func = new Function(code);
+                  const result = func();
+                  return {
+                    result,
+                    timestamp: new Date().toISOString(),
+                  };
+                } catch (error) {
+                  return error;
+                }
+              },
+            },
+          );
+
+          components.liveCodeData = new WalkerOSExplorer.LiveCodeCSS(
+            document.getElementById('livecode-data'),
+            {
+              initialCode:
+                'const data = [1, 2, 3, 4, 5];\nconst multiplier = 2;\nconst threshold = 5;\n\nconst result = data.map(x => x * multiplier).filter(x => x > threshold);\n\nreturn {\n  processedData: result,\n  summary: {\n    resultCount: result.length,\n    processingTime: Date.now()\n  }\n}',
+              language: 'javascript',
+              title: 'Data Processor',
+              showTitle: true,
+              showRunButton: true,
+              showResetButton: true,
+              layout: 'vertical',
+              onRun: async (code) => {
+                try {
+                  const func = new Function(code);
+                  return func();
+                } catch (error) {
+                  return error;
+                }
+              },
+            },
+          );
+
+          // EventFlow demo
+          try {
+            components.eventFlow = new WalkerOSExplorer.EventFlow(document.getElementById('eventflow-demo'), {
+            code: `<div data-elb="product" data-elb-id="demo-123" style="padding: 20px; border: 2px solid #3b82f6; border-radius: 8px; text-align: center; background: #f0f9ff;">
+  <h3 style="color: #1d4ed8; margin: 0 0 10px 0;">Demo Product</h3>
+  <p style="margin: 10px 0; color: #374151;">Interactive walkerOS demonstration</p>
+  <div style="margin: 15px 0;">
+    <button data-elbaction="view_details" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">View Details</button>
+    <button data-elbaction="add_to_cart" style="padding: 10px 20px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer;">Add to Cart</button>
+  </div>
+  <div data-elb="review" data-elb-id="review-456" style="margin-top: 15px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; background: white;">
+    <p style="margin: 5px 0; font-size: 14px;">⭐⭐⭐⭐⭐ "Great product!"</p>
+    <button data-elbaction="helpful" style="padding: 5px 10px; background: #6b7280; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Helpful</button>
+  </div>
+</div>`,
+            mapping: `{
+  "product": {
+    "view_details": {
+      "name": "product_details_viewed",
+      "data": {
+        "category": "demo",
+        "value": 99.99
+      }
+    },
+    "add_to_cart": {
+      "name": "product_added_to_cart", 
+      "data": {
+        "currency": "USD",
+        "value": 99.99
+      }
+    }
+  },
+  "review": {
+    "helpful": {
+      "name": "review_marked_helpful",
+      "data": {
+        "review_rating": 5
+      }
+    }
+  }
+}`,
+            height: '600px',
+            previewId: 'eventflow-demo-preview',
+            onEvent: (event) => {
+              console.log('EventFlow captured event:', event);
+            },
+            onResult: (result) => {
+              console.log('EventFlow processed result:', result);
+            }
+          });
+          } catch (error) {
+            console.error('Failed to create EventFlow:', error);
+            document.getElementById('eventflow-demo').innerHTML = '<div style="padding: 20px; background: #fef2f2; color: #dc2626; border-radius: 8px;">EventFlow initialization failed: ' + error.message + '</div>';
+          }
 
           // Integration demo
           const integrationHtmlValue = `<div data-elb="product" data-elb-id="123" style="padding: 20px; border: 1px solid #ccc; border-radius: 8px; margin: 10px; text-align: center;">
@@ -401,14 +566,13 @@
   <button data-elbaction="view_details" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">View Details</button>
 </div>`;
 
-          components.integrationHtml = new WalkerOSExplorer.CodeBox(
+          components.integrationHtml = new WalkerOSExplorer.CodeBoxCSS(
             document.getElementById('integration-html'),
             {
               label: 'HTML Source',
               value: integrationHtmlValue,
               height: '120px',
               showCopy: true,
-              showFormat: true,
               showReset: true,
             },
           );
@@ -440,7 +604,7 @@
             },
           );
 
-          components.integrationResult = new WalkerOSExplorer.ResultDisplay(
+          components.integrationResult = new WalkerOSExplorer.ResultDisplayCSS(
             document.getElementById('integration-result'),
             {
               value: {
@@ -451,13 +615,30 @@
             },
           );
 
-          console.log('✅ All components initialized successfully!');
+          console.log('✅ All CSS-based components initialized successfully!');
         } catch (error) {
           console.error('❌ Error initializing components:', error);
           document.getElementById('status').innerHTML =
             '❌ Error loading components: ' + error.message;
           document.getElementById('status').style.background = '#ef4444';
         }
+      }
+
+      // Theme toggle functionality
+      function setupThemeToggle() {
+        let currentTheme = 'light';
+        const themeToggle = document.getElementById('themeToggle');
+        
+        themeToggle.addEventListener('click', () => {
+          currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+          themeToggle.textContent = `Switch to ${currentTheme === 'light' ? 'Dark' : 'Light'} Theme`;
+          
+          // Update document theme using data-theme attribute
+          document.documentElement.setAttribute('data-theme', currentTheme);
+          
+          console.log(`🎨 Switched to ${currentTheme} theme using CSS data-theme attribute`);
+          console.log('✨ All components automatically update via CSS custom properties!');
+        });
       }
 
       // Demo functions
@@ -473,18 +654,17 @@
 
       function setJSONCode() {
         components.jsonEditor.setValue(
-          '{\n  "event": "product view",\n  "data": {\n    "id": "12345",\n    "name": "Demo Product",\n    "category": "Electronics",\n    "price": 99.99,\n    "currency": "USD"\n  },\n  "context": {\n    "page": "/products/demo",\n    "user": {\n      "id": "user-123",\n      "segment": "premium"\n    }\n  }\n}',
+          '{\n  "event": "product view",\n  "data": {\n    "id": "12345",\n    "name": "Demo Product",\n    "category": "Electronics",\n    "price": 99.99,\n    "currency": "EUR"\n  },\n  "context": {\n    "page": "/products/demo",\n    "user": {\n      "id": "user-123",\n      "segment": "premium"\n    }\n  }\n}',
         );
       }
 
-      function formatJSON() {
+      function validateJSON() {
         try {
           const value = components.jsonEditor.getValue();
           const parsed = JSON.parse(value);
-          const formatted = JSON.stringify(parsed, null, 2);
-          components.jsonEditor.setValue(formatted);
+          alert('✅ Valid JSON with ' + Object.keys(parsed).length + ' top-level keys');
         } catch (e) {
-          alert('Invalid JSON: ' + e.message);
+          alert('❌ Invalid JSON: ' + e.message);
         }
       }
 
@@ -628,7 +808,7 @@
 
       function setEventData() {
         components.eventCodeBox.setValue(
-          '{\n  "event": "purchase complete",\n  "data": {\n    "order_id": "order-123",\n    "total": 299.99,\n    "currency": "USD",\n    "items": [\n      {\n        "id": "item-1",\n        "name": "Premium Widget",\n        "category": "Electronics",\n        "quantity": 2,\n        "price": 149.99\n      }\n    ]\n  },\n  "context": {\n    "page": "/checkout/success",\n    "user": {\n      "id": "user-456",\n      "email": "customer@example.com"\n    }\n  }\n}',
+          '{\n  "event": "purchase complete",\n  "data": {\n    "order_id": "order-123",\n    "total": 299.99,\n    "currency": "EUR",\n    "items": [\n      {\n        "id": "item-1",\n        "name": "Premium Widget",\n        "category": "Electronics",\n        "quantity": 2,\n        "price": 149.99\n      }\n    ]\n  },\n  "context": {\n    "page": "/checkout/success",\n    "user": {\n      "id": "user-456",\n      "email": "customer@example.com"\n    }\n  }\n}',
         );
       }
 
@@ -657,6 +837,179 @@
 
       function clearResults() {
         components.integrationResult.clear();
+      }
+
+      // LiveCode demo functions (updated for CSS-based components)
+      function setMathFunction() {
+        components.liveCodeJS.setCode(
+          'function fibonacci(n) {\n  if (n <= 1) return n;\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}\n\nconst n = 8;\nconst result = fibonacci(n);\n\nreturn {\n  number: n,\n  fibonacci: result,\n  calculated: new Date().toISOString()\n}',
+        );
+      }
+
+      function executeManual() {
+        components.liveCodeJS.run();
+      }
+
+      function setDataFunction() {
+        components.liveCodeData.setCode(
+          'const users = [\n  { name: "Alice", age: 25, active: true },\n  { name: "Bob", age: 30, active: false },\n  { name: "Carol", age: 35, active: true }\n];\n\nconst onlyActive = true;\nconst minAge = 25;\n\nconst filtered = users\n  .filter(user => onlyActive ? user.active : true)\n  .filter(user => user.age >= minAge)\n  .map(user => ({\n    ...user,\n    category: user.age < 30 ? "young" : "mature"\n  }));\n\nreturn {\n  totalUsers: users.length,\n  filteredUsers: filtered,\n  averageAge: filtered.reduce((sum, u) => sum + u.age, 0) / filtered.length\n}',
+        );
+      }
+
+      function setComplexConfig() {
+        // Note: CSS-based LiveCode doesn't have separate config - 
+        // all configuration is now handled within the code itself
+        alert('💡 CSS-based LiveCode uses simplified configuration within the code itself!');
+      }
+
+      // EventFlow demo functions
+      function setEcommerceExample() {
+        if (!components.eventFlow) {
+          alert('EventFlow component not available');
+          return;
+        }
+        components.eventFlow.setHtml(`<div data-elb="shop" data-elb-page="category" style="padding: 20px; background: #f9fafb; border-radius: 8px;">
+  <h2 style="color: #111827; margin-bottom: 20px;">Shop Electronics</h2>
+  
+  <div data-elb="product" data-elb-id="laptop-123" style="padding: 15px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 15px; background: white;">
+    <h3 style="margin: 0 0 10px 0;">Premium Laptop</h3>
+    <p style="margin: 5px 0; color: #6b7280;">$1,299.99</p>
+    <div style="margin-top: 10px;">
+      <button data-elbaction="view_details" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 8px;">View Details</button>
+      <button data-elbaction="add_to_cart" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">Add to Cart</button>
+    </div>
+  </div>
+  
+  <div data-elb="product" data-elb-id="phone-456" style="padding: 15px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 15px; background: white;">
+    <h3 style="margin: 0 0 10px 0;">Smartphone Pro</h3>
+    <p style="margin: 5px 0; color: #6b7280;">$899.99</p>
+    <div style="margin-top: 10px;">
+      <button data-elbaction="view_details" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 8px;">View Details</button>
+      <button data-elbaction="add_to_cart" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">Add to Cart</button>
+    </div>
+  </div>
+  
+  <div data-elb="cart" style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 6px;">
+    <button data-elbaction="view_cart" style="padding: 10px 20px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer;">View Cart (2 items)</button>
+  </div>
+</div>`);
+
+        components.eventFlow.setMapping({
+          "product": {
+            "view_details": {
+              "name": "product_viewed",
+              "data": {
+                "currency": "USD",
+                "category": "electronics"
+              }
+            },
+            "add_to_cart": {
+              "name": "add_to_cart",
+              "data": {
+                "currency": "USD",
+                "category": "electronics"
+              }
+            }
+          },
+          "cart": {
+            "view_cart": {
+              "name": "cart_viewed",
+              "data": {
+                "cart_size": 2
+              }
+            }
+          }
+        });
+      }
+
+      function setFormExample() {
+        if (!components.eventFlow) {
+          alert('EventFlow component not available');
+          return;
+        }
+        components.eventFlow.setHtml(`<div data-elb="form" data-elb-id="contact-form" style="padding: 20px; background: #f0fdf4; border-radius: 8px; max-width: 500px;">
+  <h2 style="color: #166534; margin-bottom: 20px;">Contact Us</h2>
+  
+  <form style="display: flex; flex-direction: column; gap: 15px;">
+    <div>
+      <label style="display: block; margin-bottom: 5px; font-weight: 500;">Name:</label>
+      <input data-elbaction="focus" type="text" placeholder="Your name" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;">
+    </div>
+    
+    <div>
+      <label style="display: block; margin-bottom: 5px; font-weight: 500;">Email:</label>
+      <input data-elbaction="focus" type="email" placeholder="your@email.com" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px;">
+    </div>
+    
+    <div>
+      <label style="display: block; margin-bottom: 5px; font-weight: 500;">Message:</label>
+      <textarea data-elbaction="focus" placeholder="Your message..." style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; height: 100px; resize: vertical;"></textarea>
+    </div>
+    
+    <div style="display: flex; gap: 10px; margin-top: 10px;">
+      <button data-elbaction="submit" type="button" style="flex: 1; padding: 12px; background: #16a34a; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Submit</button>
+      <button data-elbaction="reset" type="button" style="padding: 12px 20px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">Reset</button>
+    </div>
+  </form>
+</div>`);
+
+        components.eventFlow.setMapping({
+          "form": {
+            "focus": {
+              "name": "form_field_focused",
+              "data": {
+                "form_type": "contact"
+              }
+            },
+            "submit": {
+              "name": "form_submitted",
+              "data": {
+                "form_type": "contact",
+                "form_id": "contact-form"
+              }
+            },
+            "reset": {
+              "name": "form_reset",
+              "data": {
+                "form_type": "contact"
+              }
+            }
+          }
+        });
+      }
+
+      function simulateClick() {
+        if (!components.eventFlow) {
+          alert('EventFlow component not available');
+          return;
+        }
+        // Simulate a click event on the first button in the EventFlow preview
+        const event = {
+          event: "add_to_cart",
+          data: {
+            product: {
+              id: "demo-123"
+            }
+          },
+          context: {
+            product: [{
+              id: "demo-123"
+            }]
+          },
+          entity: "product",
+          timestamp: Date.now(),
+          id: Date.now() + "-simulated"
+        };
+        
+        components.eventFlow.simulateEvent(event);
+      }
+
+      function clearEventFlow() {
+        if (!components.eventFlow) {
+          alert('EventFlow component not available');
+          return;
+        }
+        components.eventFlow.clearEvents();
       }
     </script>
   </body>
