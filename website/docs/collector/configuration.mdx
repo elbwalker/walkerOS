@@ -9,7 +9,6 @@ package: '@walkeros/collector'
 
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
 import Link from '@docusaurus/Link';
-import CollectorConfiguration from '@site/src/components/organisms/collectorConfiguration';
 
 # Collector Configuration
 
@@ -28,9 +27,9 @@ const config = {
   run: true,
   sources: {
     browser: createSource(sourceBrowser, {
-      settings: { scope: document.body }
-    })
-  }
+      settings: { scope: document.body },
+    }),
+  },
 };
 
 const { collector, elb } = await createCollector(config);
@@ -124,9 +123,13 @@ reinitialization.
 
 ## Destination Configuration
 
-Destinations define where your events are sent after processing. You can configure destinations using either the traditional `createCollector` destinations config or the more flexible `elb('walker destination', ...)` approach:
+Destinations define where your events are sent after processing. You can
+configure destinations using either the traditional `createCollector`
+destinations config or the more flexible `elb('walker destination', ...)`
+approach:
 
 ### Traditional Configuration
+
 ```typescript
 import { createCollector } from '@walkeros/collector';
 import { createSource } from '@walkeros/core';
@@ -135,9 +138,9 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 const config = {
   sources: {
     browser: createSource(sourceBrowser, {
-      settings: { scope: document.body }
-    })
-  }
+      settings: { scope: document.body },
+    }),
+  },
 };
 
 const { elb } = await createCollector(config);
@@ -153,7 +156,7 @@ elb('walker destination', {
   },
   config: {
     consent: { analytics: true },
-  }
+  },
 });
 
 // Add debug destination
@@ -175,7 +178,8 @@ needs, and separation of concerns (analytics vs marketing vs debugging).
 
 ### Using createSource and createDestination Utilities
 
-For elegant configuration and to avoid config side-effects in tests, use the `createSource` and `createDestination` utilities:
+For elegant configuration and to avoid config side-effects in tests, use the
+`createSource` and `createDestination` utilities:
 
 ```typescript
 import { createDestination, createSource } from '@walkeros/core';
@@ -185,23 +189,27 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 const { elb } = await createCollector({
   sources: {
     browser: createSource(sourceBrowser, {
-      settings: { scope: document.body }
-    })
-  }
+      settings: { scope: document.body },
+    }),
+  },
 });
 
 // Create configured destination instance
-elb('walker destination', createDestination(destinationGtag, {
-  settings: {
-    ga4: { measurementId: 'G-XXXXXXXXXX' },
-    ads: { conversionId: 'AW-YYYYYY' }
-  }
-}));
+elb(
+  'walker destination',
+  createDestination(destinationGtag, {
+    settings: {
+      ga4: { measurementId: 'G-XXXXXXXXXX' },
+      ads: { conversionId: 'AW-YYYYYY' },
+    },
+  }),
+);
 ```
 
 **Benefits of createSource and createDestination:**
+
 - **Fresh instances:** No config side-effects between collector instances
-- **Type safety:** Full TypeScript support with proper generics  
+- **Type safety:** Full TypeScript support with proper generics
 - **Clean API:** Consistent pattern for sources and destinations
 - **Single config:** Enables describing entire tracking setup in one place
 - **Elegant configuration:** No more `{ code, config }` complexity
@@ -230,9 +238,9 @@ const config = {
   },
   sources: {
     browser: createSource(sourceBrowser, {
-      settings: { scope: document.body }
-    })
-  }
+      settings: { scope: document.body },
+    }),
+  },
 };
 
 const { collector, elb } = await createCollector(config);
@@ -271,9 +279,9 @@ const config = {
   },
   sources: {
     browser: createSource(sourceBrowser, {
-      settings: { scope: document.body }
-    })
-  }
+      settings: { scope: document.body },
+    }),
+  },
 };
 
 const { collector, elb } = await createCollector(config);
