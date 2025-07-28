@@ -15,7 +15,7 @@ export function dataLayerDestination(): Destination.InitDestination {
 
     (window.dataLayer as DataLayer)!.push(event);
   };
-  const destination: Destination.Destination = {
+  const destination: Destination.Instance = {
     type: 'dataLayer',
     config: {},
     push: (event, context) => {

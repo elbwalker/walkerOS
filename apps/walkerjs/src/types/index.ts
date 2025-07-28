@@ -1,4 +1,4 @@
-import type { Source, WalkerOS } from '@walkerOS/core';
+import type { Collector, Source, WalkerOS } from '@walkerOS/core';
 import type { SourceBrowser } from '@walkerOS/web-source-browser';
 import type { SourceDataLayer } from '@walkerOS/web-source-dataLayer';
 
@@ -10,14 +10,14 @@ declare global {
 
 // Instance interface
 export interface Instance {
-  collector: WalkerOS.Collector;
+  collector: Collector.Instance;
   elb: SourceBrowser.BrowserPush;
 }
 
 // Configuration interface
 export interface Config {
   // Collector configuration
-  collector?: WalkerOS.InitConfig;
+  collector?: Collector.InitConfig;
 
   // Browser source configuration
   browser?: Partial<SourceBrowser.Settings>;

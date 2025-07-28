@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vanilla JS Shadow DOM Explorer Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        /* Conflicting styles to test isolation */
+        color: red !important;
+        background: yellow;
+      }
+      .test-element {
+        border: 2px solid #007bff;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        position: relative;
+        /* More conflicting styles */
+        background: purple !important;
+        color: white !important;
+      }
+      /* Try to interfere with modal */
+      .modal-backdrop {
+        background: green !important;
+      }
+      .inspector-tag {
+        color: orange !important;
+      }
+      .feature-showcase {
+        background: #e9f5ff;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+        margin: 20px 0;
+      }
+      .feature-showcase h3 {
+        margin-top: 0;
+        color: #0056b3;
+      }
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin: 15px 0;
+      }
+      .feature-item {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        border-radius: 4px;
+        font-size: 14px;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🚀 Vanilla JS Shadow DOM Explorer Test</h1>
+    <p>
+      This tests the new vanilla JS standalone explorer with Shadow DOM
+      isolation and aggressive CSS conflicts.
+    </p>
+
+    <div class="feature-showcase">
+      <h3>Vanilla JS Features Available in Standalone Mode:</h3>
+      <div class="feature-grid">
+        <div class="feature-item">✅ <strong>Live Code Editor</strong></div>
+        <div class="feature-item">✅ <strong>Syntax Highlighting</strong></div>
+        <div class="feature-item">✅ <strong>Copy & Format</strong></div>
+        <div class="feature-item">✅ <strong>Full Screen Mode</strong></div>
+        <div class="feature-item">✅ <strong>Shadow DOM</strong></div>
+        <div class="feature-item">✅ <strong>State Management</strong></div>
+        <div class="feature-item">✅ <strong>Auto-detection</strong></div>
+        <div class="feature-item">✅ <strong>Escape Key</strong></div>
+      </div>
+    </div>
+
+    <div
+      class="test-element"
+      data-elb="test"
+      data-elb-test="id:123;name:Test Product;category:demo"
+    >
+      <h2>Test Element 1</h2>
+      <p>
+        Hover to see explorer icon, click to open the full vanilla JS modal with
+        live editor!
+      </p>
+      <button
+        data-elbaction="click:test"
+        data-elb-product="color:red;size:L;price:29.99"
+      >
+        Test Button with Complex Attributes
+      </button>
+    </div>
+
+    <div
+      class="test-element"
+      data-elb="product"
+      data-elb-product="id:456;name:Sample Product;price:49.99;currency:EUR"
+    >
+      <h2>Test Element 2</h2>
+      <p>
+        Another inspectable element with multiple ELB attributes to test syntax
+        highlighting.
+      </p>
+      <div data-elbcontext="section:demo;page:test" data-elbinspector>
+        <span data-elbaction="hover(1000):interested;click:select">
+          Nested Multi-Action Element
+        </span>
+      </div>
+    </div>
+
+    <div style="background: #f0f0f0; padding: 15px; margin: 20px 0">
+      <h3>Expected Vanilla JS Explorer Results:</h3>
+      <ul>
+        <li>
+          ✅ <strong>Vanilla JS Modal</strong> - Pure JavaScript component with
+          Shadow DOM isolation
+        </li>
+        <li>
+          ✅ <strong>Live Editor</strong> - Edit HTML code with real-time syntax
+          highlighting
+        </li>
+        <li>
+          ✅ <strong>Copy Button</strong> - One-click code copying to clipboard
+        </li>
+        <li>
+          ✅ <strong>Format Button</strong> - Auto-format HTML with proper
+          indentation
+        </li>
+        <li>
+          ✅ <strong>Full Screen</strong> - Expand modal to full screen for
+          better editing
+        </li>
+        <li>
+          ✅ <strong>CSS Isolation</strong> - Modal unaffected by page's
+          yellow/purple/orange styles
+        </li>
+        <li>
+          ✅ <strong>Clean HTML</strong> - No inspector icons in displayed code
+        </li>
+        <li>
+          ✅ <strong>ELB Highlighting</strong> - data-elb* attributes in green,
+          values in blue
+        </li>
+        <li>✅ <strong>Escape Key</strong> - Close modal with keyboard</li>
+        <li>
+          ✅ <strong>Click Outside</strong> - Close modal by clicking backdrop
+        </li>
+      </ul>
+    </div>
+
+    <div
+      id="console-output"
+      style="
+        background: #f8f9fa;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 4px;
+      "
+    >
+      <strong>Console Output:</strong><br />
+      <span id="log">Vanilla JS Explorer will initialize here...</span>
+    </div>
+
+    <!-- Include vanilla JS standalone explorer -->
+    <script src="../../explorer/dist/explorer.js"></script>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        const log = document.getElementById('log');
+
+        function updateLog(message) {
+          log.innerHTML += '<br>' + message;
+          console.log(message);
+        }
+      });
+    </script>
+  </body>
+</html>

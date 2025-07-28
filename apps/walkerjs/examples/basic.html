@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Walker.js - Basic Example</title>
+
+    <!-- Include walker.js with async loading and config reference -->
+    <script async data-elbconfig="elbConfig" src="../dist/walker.js"></script>
+
+    <script>
+      function elb() {
+        (window.elbLayer = window.elbLayer || []).push(arguments);
+      }
+
+      window.elbConfig = {
+        elb: 'elb',
+        name: 'walkerjs',
+        collector: {
+          destinations: {
+            console: {
+              type: 'console',
+              push: (event) => console.log('walkerjs: ', event),
+            },
+            container: {
+              type: 'container',
+              init: () => {
+                const container = document.getElementById('console-output');
+                if (!container) return;
+
+                return { container };
+              },
+              push: (event, context) => {
+                const { container } = context.config;
+                const output = {
+                  event: event.event,
+                  data: event.data,
+                  context: event.context,
+                  timing: event.timing,
+                };
+
+                const entry = document.createElement('div');
+                entry.className = 'console-entry';
+                entry.innerHTML = `<pre>${JSON.stringify(output, null, 2)}</pre>`;
+
+                container.insertBefore(entry, container.firstChild);
+              },
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="content">
+        <h1>Walker.js - Basic Example</h1>
+        <p>
+          This example demonstrates basic walker.js tracking with automatic DOM
+          attribute detection.
+        </p>
+
+        <div
+          style="
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+          "
+        >
+          <h3 style="margin-top: 0; color: #1565c0">🔍 Explorer Mode</h3>
+          <p style="margin-bottom: 0; color: #0d47a1">
+            <strong>Hover over elements with blue tags</strong> to see
+            exploration icons. Click the icons to view the element's HTML code
+            with elb tagging.
+          </p>
+        </div>
+
+        <div data-elbglobals="site:walker.js demo" data-elbinspector>
+          <div data-elbcontext="section:products" data-elbinspector>
+            <div class="products-grid">
+              <div
+                class="product"
+                data-elb="product"
+                data-elb-product="id:123;name:Blue T-Shirt;price:29.99"
+                             >
+                <h3>Blue T-Shirt</h3>
+                <p>A comfortable blue t-shirt made from 100% cotton.</p>
+                <p>Price: $29.99</p>
+                <button data-elbaction="click:add" data-elbinspector>
+                  Add to Cart
+                </button>
+                <button
+                  data-elbaction="click:view_details"
+                  data-elb-product="color:blue;size:M"
+                                 >
+                  View Details
+                </button>
+              </div>
+
+              <div
+                class="product"
+                data-elb="product"
+                data-elb-product="id:456;name:Red Hoodie;price:49.99"
+                             >
+                <h3>Red Hoodie</h3>
+                <p>A warm red hoodie perfect for cold weather.</p>
+                <p>Price: $49.99</p>
+                <button data-elbaction="click:add" data-elbinspector>
+                  Add to Cart
+                </button>
+                <button
+                  data-elbaction="click:view_details"
+                  data-elb-product="color:red;size:L"
+                                 >
+                  View Details
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hover-tracking" data-elbinspector>
+          <h2>Hover Tracking Demonstration</h2>
+          <p>
+            These elements demonstrate advanced hover tracking with different
+            configurations. Hover over the cards to see tracking events.
+          </p>
+
+          <div class="hover-grid">
+            <div
+              class="hover-card"
+              data-elb="feature"
+              data-elb-feature="id:hover_basic;name:Basic Hover"
+              data-elbaction="hover:preview"
+                         >
+              <h4>Basic Hover Tracking</h4>
+              <p>Triggers immediately on hover</p>
+              <span class="trigger-indicator"
+                >data-elbaction="hover:preview"</span
+              >
+            </div>
+
+            <div
+              class="hover-card"
+              data-elb="feature"
+              data-elb-feature="id:hover_duration;name:Duration Hover"
+              data-elbaction="hover(1000):interested"
+                         >
+              <h4>Duration Hover (1s)</h4>
+              <p>Triggers after hovering for 1 second</p>
+              <span class="trigger-indicator"
+                >data-elbaction="hover(1000):interested"</span
+              >
+            </div>
+
+            <div
+              class="hover-card"
+              data-elb="feature"
+              data-elb-feature="id:hover_multi;name:Multi Trigger"
+              data-elbaction="hover:quick_look;hover(2000):deep_interest;click:select"
+                         >
+              <h4>Multi-Trigger Element</h4>
+              <p>Immediate hover + 2s hover + click tracking</p>
+              <span class="trigger-indicator">hover + hover(2000) + click</span>
+            </div>
+
+            <div
+              class="hover-card navigation-item"
+              data-elb="navigation"
+              data-elb-navigation="section:demo;item:hover_nav"
+              data-elbaction="hover(500):navigation_preview"
+                         >
+              <h4>Navigation Hover (500ms)</h4>
+              <p>Simulates menu hover with 500ms delay</p>
+              <span class="trigger-indicator"
+                >data-elbaction="hover(500):navigation_preview"</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="scroll-tracking" data-elbinspector>
+          <h2>Scroll Depth Tracking</h2>
+          <p>
+            This long article demonstrates scroll depth tracking with different
+            percentage thresholds. Scroll down to trigger events at 25%, 50%,
+            75%, and 100%.
+          </p>
+
+          <div
+            class="article-content"
+            data-elb="article"
+            data-elb-article="id:scroll_demo;title:Advanced Walker.js Features"
+            data-elbaction="scroll(25):quarter_read;scroll(50):half_read;scroll(75):mostly_read;scroll(100):fully_read"
+                     >
+            <h3>Understanding Walker.js Advanced Features</h3>
+
+            <div class="scroll-marker" data-marker="start">
+              📍 Start of Article
+            </div>
+
+            <p>
+              Walker.js provides comprehensive event tracking capabilities that
+              go far beyond simple click tracking. The browser source
+              implementation includes sophisticated trigger systems that can
+              capture user interactions in real-time.
+            </p>
+
+            <p>
+              One of the most powerful features is scroll depth tracking, which
+              allows you to understand how users engage with your content. By
+              tracking scroll percentages, you can identify where users drop off
+              and which content sections are most engaging.
+            </p>
+
+            <div class="scroll-marker" data-marker="25">
+              📍 25% Scroll Point
+            </div>
+
+            <p>
+              The hover tracking system demonstrates another advanced
+              capability. Unlike basic mouseover events, walker.js can track
+              hover duration, allowing you to differentiate between accidental
+              mouse passes and intentional content exploration.
+            </p>
+
+            <p>
+              Multi-trigger elements showcase the flexibility of the system. A
+              single element can respond to multiple interaction types with
+              different timing parameters, providing rich behavioral insights.
+            </p>
+
+            <div class="scroll-marker" data-marker="50">
+              📍 50% Scroll Point (Half Read)
+            </div>
+
+            <p>
+              Visibility tracking using IntersectionObserver APIs enables
+              automatic detection of when content enters the viewport. This is
+              particularly valuable for tracking ad impressions, content
+              engagement, and user attention patterns.
+            </p>
+
+            <p>
+              The pulse tracking feature provides heartbeat-style tracking for
+              engagement measurement. This helps identify active users and can
+              trigger retention campaigns or personalization logic.
+            </p>
+
+            <div class="scroll-marker" data-marker="75">
+              📍 75% Scroll Point (Mostly Read)
+            </div>
+
+            <p>
+              Wait tracking demonstrates time-based triggers that activate after
+              specific delays. This is useful for measuring page dwell time and
+              identifying committed users versus quick bounces.
+            </p>
+
+            <p>
+              Element linking through data-elblink allows complex relationships
+              between different page sections, enabling cross-functional
+              analytics and user journey mapping across disparate interface
+              elements.
+            </p>
+
+            <p>
+              The combination of all these features creates a comprehensive
+              tracking solution that provides deep insights into user behavior
+              while maintaining clean, declarative HTML markup.
+            </p>
+
+            <div class="scroll-marker" data-marker="100">
+              📍 100% Scroll Point (Fully Read) 🎉
+            </div>
+          </div>
+
+          <div class="scroll-progress-indicator">
+            <div class="progress-bar">
+              <div class="progress-fill" id="scroll-progress"></div>
+            </div>
+            <span class="progress-text">Scroll to see progress tracking</span>
+          </div>
+        </div>
+
+        <div class="visibility-tracking" data-elbinspector>
+          <h2>Visibility Tracking (IntersectionObserver)</h2>
+          <p>
+            These elements demonstrate automatic visibility tracking using
+            IntersectionObserver. Elements track when they become visible in the
+            viewport with different timing configurations.
+          </p>
+
+          <div class="visibility-grid">
+            <div
+              class="visibility-card ad-impression"
+              data-elb="advertisement"
+              data-elb-advertisement="id:banner_1;type:display;placement:demo"
+              data-elbaction="visible:impression"
+                         >
+              <h4>🎯 Ad Banner</h4>
+              <p>Tracks impression immediately when visible</p>
+              <span class="trigger-indicator"
+                >data-elbaction="visible:impression"</span
+              >
+              <div class="visibility-status">Not visible yet</div>
+            </div>
+
+            <div
+              class="visibility-card engagement-card"
+              data-elb="content"
+              data-elb-content="id:feature_highlight;section:demo"
+              data-elbaction="visible(1000):engaged_view"
+                         >
+              <h4>📖 Content Engagement</h4>
+              <p>Tracks engagement after 1 second of visibility</p>
+              <span class="trigger-indicator"
+                >data-elbaction="visible(1000):engaged_view"</span
+              >
+              <div class="visibility-status">Not visible yet</div>
+            </div>
+
+            <div
+              class="visibility-card video-placeholder"
+              data-elb="media"
+              data-elb-media="id:demo_video;type:promotional"
+              data-elbaction="visible:video_impression;visible(2000):video_engagement"
+                         >
+              <h4>🎥 Video Content</h4>
+              <p>Immediate impression + 2s engagement tracking</p>
+              <span class="trigger-indicator">visible + visible(2000)</span>
+              <div class="visibility-status">Not visible yet</div>
+            </div>
+
+            <div
+              class="visibility-card social-proof"
+              data-elb="testimonial"
+              data-elb-testimonial="id:customer_review;rating:5"
+              data-elbaction="visible(500):testimonial_viewed"
+                         >
+              <h4>⭐ Customer Testimonial</h4>
+              <p>Tracks testimonial views after 500ms</p>
+              <span class="trigger-indicator"
+                >data-elbaction="visible(500):testimonial_viewed"</span
+              >
+              <div class="visibility-status">Not visible yet</div>
+            </div>
+
+            <div
+              class="visibility-card call-to-action"
+              data-elb="cta"
+              data-elb-cta="id:signup_prompt;priority:high"
+              data-elbaction="visible:cta_impression;visible(3000):cta_consideration;click:cta_click"
+                         >
+              <h4>🚀 Call to Action</h4>
+              <p>Multi-stage tracking: impression → consideration → click</p>
+              <span class="trigger-indicator"
+                >visible + visible(3000) + click</span
+              >
+              <div class="visibility-status">Not visible yet</div>
+              <button class="cta-button">Sign Up Now</button>
+            </div>
+
+            <div
+              class="visibility-card newsletter-signup"
+              data-elb="form"
+              data-elb-form="id:newsletter;type:email_capture"
+              data-elbaction="visible(750):form_viewed"
+                         >
+              <h4>📧 Newsletter Signup</h4>
+              <p>Form impression tracking with 750ms delay</p>
+              <span class="trigger-indicator"
+                >data-elbaction="visible(750):form_viewed"</span
+              >
+              <div class="visibility-status">Not visible yet</div>
+              <div class="mock-form">
+                <input
+                  type="email"
+                  placeholder="Enter your email..."
+                  disabled
+                />
+                <button disabled>Subscribe</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="visibility-instructions">
+            <p>
+              <strong>💡 Instructions:</strong> Scroll down slowly to see
+              visibility tracking in action. Watch the console output and status
+              indicators as elements become visible.
+            </p>
+          </div>
+        </div>
+
+        <div class="manual-tracking" data-elbinspector>
+          <h2>Manual Event Tracking</h2>
+          <p>You can also track events manually using the elb function:</p>
+          <button onclick="trackCustomEvent(event)" data-elbinspector>
+            Track Custom Event
+          </button>
+        </div>
+      </div>
+
+      <div class="console">
+        <h3>Event Console</h3>
+        <div id="console-output"></div>
+      </div>
+    </div>
+
+    <!-- Include explorer for element exploration -->
+    <script src="../../explorer/dist/explorer.js"></script>
+
+    <script>
+      // Initialize explorer when DOM is ready
+      document.addEventListener('DOMContentLoaded', () => {
+        if (
+          typeof WalkerOSExplorer !== 'undefined' &&
+          WalkerOSExplorer.elbExplorer
+        ) {
+          // Initialize explorer with default selector [data-elb]
+          const explorer = WalkerOSExplorer.elbExplorer();
+          console.log('🔍 Explorer initialized');
+        }
+      });
+
+      // Manual event tracking function
+      function trackCustomEvent(event) {
+        elb('button click', {
+          mouseX: event.clientX,
+          mouseY: event.clientY,
+        });
+      }
+
+      // Scroll progress indicator
+      function updateScrollProgress() {
+        const articleContent = document.querySelector('.article-content');
+        const progressFill = document.getElementById('scroll-progress');
+
+        if (articleContent && progressFill) {
+          const rect = articleContent.getBoundingClientRect();
+          const windowHeight = window.innerHeight;
+          const documentHeight = rect.height;
+
+          // Calculate how much of the article is visible
+          const scrollTop = Math.max(0, -rect.top);
+          const visibleHeight =
+            Math.min(windowHeight, rect.bottom) - Math.max(0, rect.top);
+
+          // Calculate scroll percentage within the article
+          let scrollPercent = 0;
+          if (rect.top < windowHeight && rect.bottom > 0) {
+            scrollPercent = Math.min(
+              100,
+              Math.max(0, (scrollTop / (documentHeight - windowHeight)) * 100),
+            );
+          }
+
+          progressFill.style.width = scrollPercent + '%';
+        }
+      }
+
+      // Add scroll listener for progress indicator
+      window.addEventListener('scroll', updateScrollProgress);
+      window.addEventListener('resize', updateScrollProgress);
+
+      // Initialize progress on load
+      document.addEventListener('DOMContentLoaded', updateScrollProgress);
+    </script>
+
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        padding: 20px;
+        line-height: 1.6;
+        background: #fafafa;
+      }
+
+      .container {
+        display: flex;
+        gap: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .content {
+        flex: 2;
+        min-width: 0; /* Allow flex item to shrink */
+      }
+
+      .products-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin: 30px 0;
+      }
+
+      .product {
+        border: 1px solid #ddd;
+        padding: 20px;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .product h3 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 8px;
+        margin-bottom: 8px;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+
+      .hover-tracking {
+        margin-top: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .hover-tracking h2 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .hover-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+      }
+
+      .hover-card {
+        border: 2px solid #e9ecef;
+        padding: 20px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+      }
+
+      .hover-card:hover {
+        border-color: #28a745;
+        background: #f0fff4;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
+      }
+
+      .hover-card h4 {
+        margin: 0 0 10px 0;
+        color: #333;
+        font-size: 16px;
+      }
+
+      .hover-card p {
+        margin: 0 0 15px 0;
+        color: #666;
+        font-size: 14px;
+      }
+
+      .trigger-indicator {
+        display: block;
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-size: 12px;
+        background: #e9ecef;
+        padding: 8px;
+        border-radius: 4px;
+        color: #495057;
+        border-left: 3px solid #28a745;
+      }
+
+      .navigation-item {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .navigation-item h4,
+      .navigation-item p {
+        color: white;
+      }
+
+      .navigation-item .trigger-indicator {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        border-left-color: white;
+      }
+
+      .scroll-tracking {
+        margin-top: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .scroll-tracking h2 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .article-content {
+        background: #f8f9fa;
+        padding: 30px;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        margin: 20px 0;
+        line-height: 1.8;
+        position: relative;
+      }
+
+      .article-content h3 {
+        color: #495057;
+        margin-top: 0;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+      }
+
+      .article-content p {
+        margin-bottom: 20px;
+        color: #495057;
+      }
+
+      .scroll-marker {
+        background: linear-gradient(90deg, #007bff, #6610f2);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+        margin: 30px 0;
+        text-align: center;
+        font-size: 14px;
+        border: 2px solid white;
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+      }
+
+      .scroll-marker[data-marker='25'] {
+        background: linear-gradient(90deg, #28a745, #20c997);
+      }
+
+      .scroll-marker[data-marker='50'] {
+        background: linear-gradient(90deg, #ffc107, #fd7e14);
+      }
+
+      .scroll-marker[data-marker='75'] {
+        background: linear-gradient(90deg, #dc3545, #e83e8c);
+      }
+
+      .scroll-marker[data-marker='100'] {
+        background: linear-gradient(90deg, #6f42c1, #e83e8c);
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .scroll-progress-indicator {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #007bff, #28a745);
+        width: 0%;
+        transition: width 0.3s ease;
+      }
+
+      .progress-text {
+        font-size: 14px;
+        color: #6c757d;
+        font-style: italic;
+      }
+
+      .visibility-tracking {
+        margin-top: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .visibility-tracking h2 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .visibility-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+      }
+
+      .visibility-card {
+        border: 2px solid #e9ecef;
+        padding: 20px;
+        border-radius: 8px;
+        background: white;
+        transition: all 0.5s ease;
+        position: relative;
+        min-height: 180px;
+      }
+
+      .visibility-card h4 {
+        margin: 0 0 10px 0;
+        color: #333;
+        font-size: 16px;
+      }
+
+      .visibility-card p {
+        margin: 0 0 15px 0;
+        color: #666;
+        font-size: 14px;
+      }
+
+      .visibility-status {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #6c757d;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+      }
+
+      .visibility-status.visible {
+        background: #28a745;
+      }
+
+      .ad-impression {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        color: white;
+      }
+
+      .ad-impression h4,
+      .ad-impression p {
+        color: white;
+      }
+
+      .ad-impression .trigger-indicator {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        border-left-color: white;
+      }
+
+      .engagement-card {
+        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+        color: white;
+      }
+
+      .engagement-card h4,
+      .engagement-card p {
+        color: white;
+      }
+
+      .engagement-card .trigger-indicator {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        border-left-color: white;
+      }
+
+      .video-placeholder {
+        background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+        color: white;
+      }
+
+      .video-placeholder h4,
+      .video-placeholder p {
+        color: white;
+      }
+
+      .video-placeholder .trigger-indicator {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        border-left-color: white;
+      }
+
+      .social-proof {
+        background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+        color: white;
+      }
+
+      .social-proof h4,
+      .social-proof p {
+        color: white;
+      }
+
+      .social-proof .trigger-indicator {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        border-left-color: white;
+      }
+
+      .call-to-action {
+        background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+        color: white;
+      }
+
+      .call-to-action h4,
+      .call-to-action p {
+        color: white;
+      }
+
+      .call-to-action .trigger-indicator {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        border-left-color: white;
+      }
+
+      .cta-button {
+        background: white;
+        color: #00b894;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: bold;
+        margin-top: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .cta-button:hover {
+        background: #f8f9fa;
+        transform: translateY(-1px);
+      }
+
+      .newsletter-signup {
+        background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+        color: white;
+      }
+
+      .newsletter-signup h4,
+      .newsletter-signup p {
+        color: white;
+      }
+
+      .newsletter-signup .trigger-indicator {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        border-left-color: white;
+      }
+
+      .mock-form {
+        margin-top: 15px;
+      }
+
+      .mock-form input {
+        width: 100%;
+        padding: 8px;
+        border: none;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        box-sizing: border-box;
+      }
+
+      .mock-form button {
+        background: white;
+        color: #e84393;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: bold;
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+
+      .visibility-instructions {
+        background: #e9ecef;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 20px;
+        border-left: 4px solid #007bff;
+      }
+
+      .visibility-instructions p {
+        margin: 0;
+        color: #495057;
+      }
+
+      .manual-tracking {
+        margin-top: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .manual-tracking h2 {
+        margin-top: 0;
+      }
+
+      .console {
+        flex: 1;
+        min-width: 320px;
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        max-height: calc(100vh - 40px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        position: sticky;
+        top: 20px;
+      }
+
+      .console h3 {
+        margin: 0 0 15px 0;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+        color: #333;
+        font-size: 16px;
+      }
+
+      #console-output {
+        flex: 1;
+        overflow-y: auto;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 12px;
+      }
+
+      .console-entry {
+        margin: 0 0 15px 0;
+        padding: 0;
+        background: white;
+        border-radius: 4px;
+        border: 1px solid #e9ecef;
+        overflow: hidden;
+      }
+
+      .console-entry pre {
+        margin: 0;
+        padding: 12px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: white;
+        color: #2d3748;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+
+      /* Mobile responsiveness */
+      @media (max-width: 768px) {
+        body {
+          padding: 10px;
+        }
+
+        .container {
+          flex-direction: column;
+        }
+
+        .products-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .console {
+          position: static;
+          max-height: 400px;
+          min-width: unset;
+          margin-top: 20px;
+        }
+
+        .product {
+          padding: 15px;
+        }
+
+        button {
+          width: 100%;
+          margin-bottom: 8px;
+          margin-right: 0;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .console-entry pre {
+          font-size: 10px;
+        }
+      }
+    </style>
+  </body>
+</html>

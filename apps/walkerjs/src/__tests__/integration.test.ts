@@ -3,7 +3,7 @@ import { createWalkerjs, getAllEvents, getEvents, getGlobals } from '../index';
 
 describe('Walker.js Integration Tests', () => {
   let collectedEvents: WalkerOS.Event[];
-  let mockPush: jest.MockedFunction<WalkerOS.Collector['push']>;
+  let mockPush: jest.MockedFunction<Collector.Instance['push']>;
 
   beforeEach(() => {
     collectedEvents = [];
@@ -23,7 +23,7 @@ describe('Walker.js Integration Tests', () => {
         queued: [],
         failed: [],
       });
-    }) as unknown as jest.MockedFunction<WalkerOS.Collector['push']>;
+    }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
   });
 
   describe('Initialization', () => {

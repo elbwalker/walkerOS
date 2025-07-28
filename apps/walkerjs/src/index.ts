@@ -1,12 +1,12 @@
-import type { WalkerOS } from '@walkerOS/core';
 import type { Config, Instance } from './types';
-import { createCollector } from '@walkerOS/collector';
-import { assign, createSource, isObject } from '@walkerOS/core';
+import { createCollector, type CollectorConfig } from '@walkerOS/collector';
+import { assign, isObject } from '@walkerOS/core';
 import {
   sourceBrowser,
   getAllEvents,
   getEvents,
   getGlobals,
+  type SourceBrowser,
 } from '@walkerOS/web-source-browser';
 import { sourceDataLayer } from '@walkerOS/web-source-dataLayer';
 import { dataLayerDestination } from './destination';
@@ -35,34 +35,50 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
 
   const fullConfig = assign(defaultConfig, config);
 
-  const { collector } = await createCollector(fullConfig.collector);
+  // Build collector config with sources
+  const collectorConfig: Partial<CollectorConfig> = {
+    ...fullConfig.collector,
+    sources: {
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: fullConfig.browser,
+        },
+      },
+    },
+  };
 
-  const { elb } = await createSource(collector, sourceBrowser, {
-    type: 'browser',
-    id: 'browser',
-    settings: fullConfig.browser,
-  });
-
-  if (!elb) throw new Error('Failed to initialize browser source');
-
+  // Add dataLayer source if configured
   if (fullConfig.dataLayer) {
     const dataLayerSettings = isObject(fullConfig.dataLayer)
       ? fullConfig.dataLayer
       : {};
 
-    await createSource(collector, sourceDataLayer(dataLayerSettings), {
-      id: 'dataLayer',
-      settings: dataLayerSettings,
-    });
+    if (collectorConfig.sources) {
+      collectorConfig.sources.dataLayer = {
+        code: sourceDataLayer(dataLayerSettings),
+        config: {
+          settings: dataLayerSettings,
+        },
+      };
+    }
+  }
+
+  const { collector } = await createCollector(collectorConfig);
+
+  // Get browser elb function
+  const browserSource = collector.sources.browser;
+  if (!browserSource?.elb) {
+    throw new Error('Failed to initialize browser source');
   }
 
   const instance: Instance = {
     collector,
-    elb,
+    elb: browserSource.elb as SourceBrowser.BrowserPush,
   };
 
   // Set up global variables if configured
-  if (fullConfig.elb) window[fullConfig.elb] = elb;
+  if (fullConfig.elb) window[fullConfig.elb] = browserSource.elb;
   if (fullConfig.name) window[fullConfig.name] = collector;
 
   return instance;
