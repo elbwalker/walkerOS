@@ -1,0 +1,170 @@
+---
+title: Walker.js with Sources
+description: CDN setup with automatic DOM tracking for non-npm users
+sidebar_position: 20
+---
+
+# Walker.js with Sources
+
+This example demonstrates how to use Walker.js via CDN with automatic DOM
+tracking. Perfect for users who can't use npm packages or want a simple
+script-based setup.
+
+## What You'll Learn
+
+- Loading Walker.js from CDN
+- Configuring automatic DOM tracking
+- Setting up browser sources without build tools
+- Tracking events from HTML attributes
+
+## Installation
+
+No npm installation required! Just add the CDN script:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@latest/dist/index.browser.js"></script>
+```
+
+## Complete Example
+
+```typescript
+// Walker.js bundle includes browser source by default
+export async function setupWalkerWithSources(): Promise<unknown> {
+  // Load walker.js bundle from CDN
+  await new Promise<void>((resolve) => {
+    const script = document.createElement('script');
+    script.src =
+      'https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@latest/dist/index.browser.js';
+    script.async = true;
+    script.onload = () => resolve();
+    document.head.appendChild(script);
+  });
+
+  // Walker.js automatically initializes with browser source
+  // which tracks DOM elements with data-elb attributes
+  return (window as Record<string, unknown>).elb;
+}
+
+export async function trackWithWalkerSources(elb: unknown): Promise<void> {
+  // Type the elb function safely
+  const elbFn = elb as (
+    command: string,
+    config: Record<string, unknown>,
+  ) => Promise<void>;
+
+  // Configure browser source to track specific attributes
+  await elbFn('walker config', {
+    source: {
+      browser: {
+        // Track elements with data-track attributes
+        dataLayer: true,
+        // Enable click tracking
+        click: true,
+        // Enable view tracking (intersection observer)
+        view: true,
+      },
+    },
+  });
+
+  // Add a destination to see the events
+  await elbFn('walker destination', {
+    push: (event: Record<string, unknown>) => {
+      console.log('Walker.js Event:', {
+        event: event.event,
+        data: event.data,
+        trigger: event.trigger,
+      });
+    },
+  });
+
+  // Trigger a custom event
+  await elbFn('button click', {
+    label: 'Sign Up',
+    position: 'header',
+  });
+}
+```
+
+## HTML Setup
+
+Add tracking attributes to your HTML elements:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@latest/dist/index.browser.js"></script>
+  </head>
+  <body>
+    <!-- Automatically tracked button -->
+    <button
+      data-elb="button"
+      data-elbaction="click"
+      data-elb-button="label:Sign Up"
+    >
+      Sign Up Now
+    </button>
+
+    <!-- Automatically tracked product view -->
+    <div
+      data-elb="product"
+      data-elbaction="view"
+      data-elb-product="id:prod-123"
+    >
+      Product Details
+    </div>
+
+    <!-- Automatically tracked form -->
+    <form
+      data-elb="form"
+      data-elbaction="submit"
+      data-elb-form="type:newsletter"
+    >
+      <input type="email" placeholder="Email" />
+      <button type="submit">Subscribe</button>
+    </form>
+  </body>
+</html>
+```
+
+## Key Features
+
+### Automatic Event Collection
+
+- **Click Tracking**: Automatically tracks clicks on elements with `data-elb`
+  attributes
+- **View Tracking**: Uses Intersection Observer to track when elements come into
+  view
+- **Form Tracking**: Captures form submissions and field interactions
+
+### No Build Required
+
+- **CDN Delivery**: Load directly from CDN without bundling
+- **Instant Setup**: Works immediately in any HTML page
+- **Zero Dependencies**: Self-contained script with all features
+
+### Browser Source Integration
+
+- **DOM Attributes**: Uses `data-elb*` attributes for configuration
+- **Event Mapping**: Automatically maps DOM events to walkerOS format
+- **Performance Optimized**: Efficient event listening and batching
+
+## Use Cases
+
+Perfect for:
+
+- **Static Websites**: Sites without complex build processes
+- **Legacy Applications**: Adding tracking to existing systems
+- **Quick Prototypes**: Fast implementation for testing
+- **Third-party Integrations**: When you can only add script tags
+
+## Try It Yourself
+
+1. Copy the HTML example above
+2. Save as an HTML file and open in browser
+3. Open browser console to see tracked events
+4. Click buttons and interact with elements
+5. Observe automatic event collection
+
+The Walker.js bundle provides the same powerful tracking capabilities as the npm
+packages, but with the simplicity of a script tag.

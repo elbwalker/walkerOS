@@ -1,0 +1,157 @@
+---
+title: Migrations
+description: How to migrate to the latest walkerOS packages
+position: 1
+---
+
+# Migration Guide: From @elbwalker to @walkerOS
+
+This guide helps you migrate from the old elbwalker packages to the new walkerOS packages.
+
+## Quick Reference
+
+### Core Package Changes
+- `@elbwalker/walker.js` → `@walkerOS/collector` + `@walkerOS/web-source-browser`
+- `@elbwalker/types` + `@elbwalker/utils` → `@walkerOS/core`
+- `@elbwalker/destination-web-*` → `@walkerOS/web-destination-*`
+- `@elbwalker/destination-node-*` → `@walkerOS/server-destination-*`
+
+## Step-by-Step Migration
+
+### 1. Update Dependencies
+
+**Before:**
+```json
+{
+  "dependencies": {
+    "@elbwalker/walker.js": "^2.0.0",
+    "@elbwalker/destination-web-google-ga4": "^2.0.0"
+  }
+}
+```
+
+**After:**
+```json
+{
+  "dependencies": {
+    "@walkerOS/collector": "^0.0.7",
+    "@walkerOS/web-source-browser": "^0.0.7",
+    "@walkerOS/web-destination-gtag": "^0.0.7"
+  }
+}
+```
+
+### 2. Update Imports
+
+**Before:**
+```typescript
+import { Walkerjs } from '@elbwalker/walker.js';
+import { destinationGoogleGA4 } from '@elbwalker/destination-web-google-ga4';
+import type { WalkerOS } from '@elbwalker/types';
+```
+
+**After:**
+```typescript
+import { createCollector } from '@walkerOS/collector';
+import { sourceBrowser } from '@walkerOS/web-source-browser';
+import { destinationGtag } from '@walkerOS/web-destination-gtag';
+import type { WalkerOS } from '@walkerOS/core';
+```
+
+### 3. Update Function Calls
+
+**Before:**
+```typescript
+const walker = Walkerjs({
+  destinations: [destinationGoogleGA4],
+});
+```
+
+**After:**
+```typescript
+const { elb } = await createCollector({
+  destinations: {
+    gtag: destinationGtag
+  }
+});
+
+// Add destination with configuration
+elb('walker destination', destinationGtag, {
+  settings: {
+    ga4: { measurementId: 'G-XXXXXXXXXX' }
+  }
+});
+```
+
+## Breaking Changes
+
+### 1. Unified Collector
+- Single `@walkerOS/collector` package works across all platforms
+- Use `createCollector()` instead of `Walkerjs()` or `createSourceNode()`
+
+### 2. Modular Sources  
+- DOM tracking is now `@walkerOS/web-source-browser`
+- Import and initialize sources separately
+
+### 3. Core Package Merger
+- All types and utilities now come from `@walkerOS/core`
+- Update all import statements accordingly
+
+### 4. Google Destinations Unified
+- GA4, Google Ads, and GTM are now unified in `@walkerOS/web-destination-gtag`
+- Configure all Google services through a single destination
+
+## Destination Configuration Patterns
+
+### Option 1: Traditional Configuration (Current)
+```typescript
+elb('walker destination', destinationGtag, {
+  settings: {
+    ga4: { measurementId: 'G-XXXXXXXXXX' }
+  }
+});
+```
+
+### Option 2: Using createDestination (New)
+For a more elegant API and to avoid config side-effects in tests:
+
+```typescript
+import { createDestination } from '@walkerOS/core';
+
+elb('walker destination', createDestination(destinationGtag, {
+  settings: {
+    ga4: { measurementId: 'G-XXXXXXXXXX' }
+  }
+}));
+```
+
+**Benefits of createDestination:**
+- Creates fresh destination instances (no config side-effects)
+- Enables cleaner single-config-file setups
+- Maintains full type safety
+- Backward compatible with existing code
+
+## Migration Checklist
+
+### Package Dependencies
+- [ ] Remove old `@elbwalker/*` packages
+- [ ] Add `@walkerOS/collector` 
+- [ ] Add required sources and destinations
+- [ ] Add `@walkerOS/core` for custom implementations
+
+### Code Updates  
+- [ ] Update all imports to new packages
+- [ ] Replace collector initialization with `createCollector()`
+- [ ] Update type imports to use `@walkerOS/core`
+- [ ] Test functionality after migration
+
+## Common Issues
+
+**"Cannot find module @walkerOS/web-collector"**  
+Solution: Use `@walkerOS/collector` + `@walkerOS/web-source-browser`
+
+**"elb is not defined"**  
+Solution: `elb` is returned by `createCollector()` function
+
+**TypeScript cannot find types**  
+Solution: Import types from `@walkerOS/core`

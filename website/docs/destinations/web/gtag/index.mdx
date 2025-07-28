@@ -4,11 +4,50 @@ description:
   Unified Google destination supporting GA4, Google Ads, and GTM through a
   single gtag implementation
 sidebar_position: 1
+package: '@walkerOS/web-destination-gtag'
 ---
 
+import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
 
 # Google Gtag
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/gtag"
+  npm="@walkerOS/web-destination-gtag"
+/>
+
+The Google Gtag destination provides a unified interface for sending events to Google Analytics 4 (GA4), Google Ads, and Google Tag Manager (GTM) through a single destination configuration.
+
+## Installation
+
+```bash
+npm install @walkerOS/web-destination-gtag
+```
+
+## Quick Start
+
+```typescript
+import { createCollector } from '@walkerOS/collector';
+import { destinationGtag } from '@walkerOS/web-destination-gtag';
+
+const { elb } = await createCollector();
+
+elb('walker destination', destinationGtag, {
+  settings: {
+    ga4: {
+      measurementId: 'G-XXXXXXXXXX', // Required for GA4
+    },
+    ads: {
+      conversionId: 'AW-XXXXXXXXX', // Required for Google Ads
+    },
+    gtm: {
+      containerId: 'GTM-XXXXXXX', // Required for GTM
+    },
+  },
+});
+```
 
 ## Configuration
 

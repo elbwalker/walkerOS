@@ -1,0 +1,630 @@
+---
+title: Quickstart Examples
+description: Ready-to-use code examples for walkerOS packages
+sidebar_position: 1
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Quickstart Examples
+
+Get started with walkerOS in minutes. These examples provide working code that
+you can copy, paste, and run immediately.
+
+## What You'll Find
+
+Each quickstart example is:
+
+- **Tested** - All code is verified to work
+- **Minimal** - Only essential configuration included
+- **Self-contained** - No additional setup required
+- **Type-safe** - Full TypeScript support
+
+## Available Examples
+
+### Core Setup
+
+- [Basic Collector](/docs/collector) - Event collection fundamentals
+- [Walker.js Bundle](/docs/apps/walkerjs) - Complete browser tracking
+
+### Web Sources
+
+- [Browser Tracking](/docs/sources/web/browser) - DOM event tracking
+- [DataLayer Integration](/docs/sources/web/dataLayer) - Google Tag Manager
+  compatibility
+
+### Web Destinations
+
+- [Google Analytics 4](/docs/destinations/web/gtag/ga4) - GA4 event tracking
+- [Google Ads](/docs/destinations/web/gtag/ads) - Conversion tracking
+- [Meta Pixel](/docs/destinations/web/meta-pixel) - Facebook/Instagram tracking
+- [PiwikPro Analytics](/docs/destinations/web/piwikpro) - Privacy-focused
+  analytics
+- [Plausible Analytics](/docs/destinations/web/plausible) - Simple web analytics
+- [API Endpoint](/docs/destinations/web/api) - Custom server integration
+
+### Server Destinations
+
+- [AWS Firehose](/docs/destinations/server/aws) - Stream to AWS
+- [Google Cloud Pub/Sub](/docs/destinations/server/gcp) - GCP integration
+- [Meta Conversions API](/docs/destinations/server/meta-capi) - Server-side
+  conversions
+
+### Advanced Examples
+
+- **Walker.js with Sources** - CDN setup with automatic DOM tracking
+- **Custom Destination** - Build your own destination with webhooks
+- **Consent Management** - GDPR/CCPA compliant tracking setup
+- **Custom Mapping Functions** - Advanced event transformation
+- **Batch Processing** - High-performance event batching
+
+## Detailed Examples
+
+### Core Setup
+
+#### Basic Collector
+
+**What it demonstrates:** Fundamental event collection using the walkerOS
+collector without any sources or destinations.
+
+**Try it yourself:**
+
+<Tabs>
+  <TabItem value="npm" label="NPM" default>
+
+```bash
+npm install @walkerOS/collector
+```
+
+Copy the code from
+[collector/basic.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/collector/basic.ts),
+run it, and see events logged to console.
+
+  </TabItem>
+  <TabItem value="browser" label="Browser/CDN">
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector@latest/dist/index.browser.js"></script>
+<script>
+  const { createCollector } = walkerOSCollector;
+
+  async function setup() {
+    const { collector, elb } = await createCollector({
+      destinations: {
+        console: { push: (event) => console.log('Event:', event) },
+      },
+    });
+
+    await elb('page view', { title: document.title });
+  }
+
+  setup();
+</script>
+```
+
+  </TabItem>
+</Tabs>
+
+#### Walker.js Bundle
+
+**What it demonstrates:** Complete browser tracking using the pre-built
+Walker.js bundle for non-npm users.
+
+**Try it yourself:**
+
+<Tabs>
+  <TabItem value="npm" label="NPM" default>
+
+```bash
+npm install @walkerOS/walker.js
+```
+
+Copy the setup from
+[walkerjs/basic.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/walkerjs/basic.ts)
+and start tracking events immediately.
+
+  </TabItem>
+  <TabItem value="browser" label="Browser/CDN">
+
+```html
+<script
+  async
+  src="https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@latest/dist/walker.js"
+></script>
+<script>
+  window.elbConfig = {
+    collector: {
+      destinations: {
+        console: { push: (event) => console.log('Walker.js Event:', event) },
+      },
+    },
+  };
+</script>
+
+<!-- Add tracking attributes to HTML elements -->
+<button
+  data-elb="button"
+  data-elbaction="click"
+  data-elb-button="label:Get Started"
+>
+  Get Started
+</button>
+```
+
+  </TabItem>
+</Tabs>
+
+### Web Sources
+
+#### Browser Tracking
+
+**What it demonstrates:** Automatic DOM event tracking for clicks, views, and
+form submissions using the browser source.
+
+**Try it yourself:**
+
+<Tabs>
+  <TabItem value="npm" label="NPM" default>
+
+```bash
+npm install @walkerOS/collector @walkerOS/web-source-browser
+```
+
+Copy
+[web-browser/basic.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/web-browser/basic.ts),
+add `data-elb` attributes to your HTML elements, and see automatic tracking.
+
+  </TabItem>
+  <TabItem value="browser" label="Browser/CDN">
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector@latest/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkerOS/web-source-browser@latest/dist/index.browser.js"></script>
+<script>
+  async function setup() {
+    const { createCollector } = walkerOSCollector;
+    const { sourceBrowser } = walkerOSWebSourceBrowser;
+
+    const { collector, elb } = await createCollector({
+      sources: {
+        browser: {
+          code: sourceBrowser,
+          config: {
+            settings: {}
+          }
+        }
+      },
+      destinations: {
+        console: { push: (event) => console.log('Browser Event:', event) },
+      },
+    });
+  }
+
+  setup();
+</script>
+
+<!-- Add tracking attributes -->
+<div data-elb="product" data-elbaction="view" data-elbid="prod-123">
+  Product Details
+</div>
+```
+
+  </TabItem>
+</Tabs>
+
+#### DataLayer Integration
+
+**What it demonstrates:** Google Tag Manager compatibility using the dataLayer
+source for seamless migration.
+
+**Try it yourself:**
+
+<Tabs>
+  <TabItem value="npm" label="NPM" default>
+
+```bash
+npm install @walkerOS/collector @walkerOS/web-source-datalayer
+```
+
+Copy
+[web-dataLayer/basic.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/web-dataLayer/basic.ts)
+and push events to `window.dataLayer` to see them processed.
+
+  </TabItem>
+  <TabItem value="browser" label="Browser/CDN">
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector@latest/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkerOS/web-source-datalayer@latest/dist/index.browser.js"></script>
+<script>
+  async function setup() {
+    const { createCollector } = walkerOSCollector;
+    const { sourceDataLayer } = walkerOSWebSourceDataLayer;
+
+    const { collector, elb } = await createCollector({
+      sources: {
+        dataLayer: {
+          code: sourceDataLayer,
+          config: {
+            settings: {}
+          }
+        }
+      },
+      destinations: {
+        console: { push: (event) => console.log('DataLayer Event:', event) },
+      },
+    });
+  }
+
+  setup();
+
+  // Test dataLayer integration
+  window.dataLayer = window.dataLayer || [];
+  dataLayer.push({
+    event: 'page_view',
+    page_title: 'Demo Page',
+  });
+</script>
+```
+
+  </TabItem>
+</Tabs>
+
+### Web Destinations
+
+#### Google Analytics 4
+
+**What it demonstrates:** Complete GA4 integration with page views, e-commerce
+events, and custom parameters.
+
+**Try it yourself:**
+
+<Tabs>
+  <TabItem value="npm" label="NPM" default>
+
+```bash
+npm install @walkerOS/collector @walkerOS/web-destination-gtag
+```
+
+Copy
+[web-destinations/ga4-complete.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/web-destinations/ga4-complete.ts),
+add your GA4 measurement ID, and see events in GA4 real-time reports.
+
+  </TabItem>
+  <TabItem value="browser" label="Browser/CDN">
+
+```html
+<script
+  async
+  src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
+></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector@latest/dist/index.browser.js"></script>
+<script>
+  // Initialize GA4
+  window.dataLayer = window.dataLayer || [];
+  function gtag() {
+    dataLayer.push(arguments);
+  }
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+
+  // Setup walkerOS with GA4 destination
+  async function setup() {
+    const { createCollector } = walkerOSCollector;
+
+    const { collector, elb } = await createCollector({
+      destinations: {
+        ga4: {
+          push: (event) => {
+            gtag('event', event.event.replace(' ', '_'), {
+              event_category: event.entity,
+              event_label: event.action,
+              value: event.data.value,
+              custom_parameters: event.data,
+            });
+          },
+        },
+      },
+    });
+
+    // Track page view
+    await elb('page view', { title: document.title });
+  }
+
+  setup();
+</script>
+```
+
+  </TabItem>
+</Tabs>
+
+#### Google Ads
+
+**What it demonstrates:** Conversion tracking for Google Ads campaigns with
+enhanced conversions.
+
+**Try it yourself:**
+
+```bash
+npm install @walkerOS/collector @walkerOS/destination-web-gtag
+```
+
+Copy
+[web-destinations/gtag-ads.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/web-destinations/gtag-ads.ts),
+configure your conversion IDs, and track ad performance.
+
+#### Meta Pixel
+
+**What it demonstrates:** Facebook/Instagram pixel integration with standard
+events and custom conversions.
+
+**Try it yourself:**
+
+```bash
+npm install @walkerOS/collector @walkerOS/destination-web-meta
+```
+
+Copy
+[web-destinations/meta-pixel.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/web-destinations/meta-pixel.ts),
+add your pixel ID, and see events in Meta Events Manager.
+
+#### PiwikPro Analytics
+
+**What it demonstrates:** Privacy-focused analytics with GDPR compliance and
+e-commerce tracking.
+
+**Try it yourself:**
+
+```bash
+npm install @walkerOS/collector @walkerOS/destination-web-piwikpro
+```
+
+Copy
+[web-destinations/piwikpro.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/web-destinations/piwikpro.ts),
+configure your instance URL, and track privacy-compliant analytics.
+
+#### Plausible Analytics
+
+**What it demonstrates:** Simple, lightweight web analytics with custom goals
+and properties.
+
+**Try it yourself:**
+
+```bash
+npm install @walkerOS/collector @walkerOS/destination-web-plausible
+```
+
+Copy
+[web-destinations/plausible.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/web-destinations/plausible.ts),
+set your domain, and see simple analytics data.
+
+#### API Endpoint
+
+**What it demonstrates:** Custom server integration by sending events to any
+HTTP endpoint.
+
+**Try it yourself:**
+
+```bash
+npm install @walkerOS/collector @walkerOS/destination-web-api
+```
+
+Copy
+[web-destinations/api.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/web-destinations/api.ts),
+configure your endpoint, and receive events via HTTP POST.
+
+### Server Destinations
+
+#### AWS Firehose
+
+**What it demonstrates:** Stream events to AWS for data warehousing and
+analytics using Kinesis Data Firehose.
+
+**Try it yourself:**
+
+```bash
+npm install @walkerOS/collector @walkerOS/destination-server-aws
+```
+
+Copy
+[server-destinations/aws.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/server-destinations/aws.ts),
+configure AWS credentials, and stream to your data lake.
+
+#### Google Cloud Pub/Sub
+
+**What it demonstrates:** Real-time event streaming to Google Cloud for
+processing and analytics.
+
+**Try it yourself:**
+
+```bash
+npm install @walkerOS/collector @walkerOS/destination-server-gcp
+```
+
+Copy
+[server-destinations/gcp.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/server-destinations/gcp.ts),
+set up GCP authentication, and publish to Pub/Sub.
+
+#### Meta Conversions API
+
+**What it demonstrates:** Server-side conversion tracking for improved
+attribution and iOS 14+ compatibility.
+
+**Try it yourself:**
+
+```bash
+npm install @walkerOS/collector @walkerOS/destination-server-meta
+```
+
+Copy
+[server-destinations/meta-capi.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/server-destinations/meta-capi.ts),
+configure your access token, and send server-side conversions.
+
+### Advanced Examples
+
+#### Walker.js with Sources
+
+**What it demonstrates:** CDN-based setup with automatic DOM tracking for users
+who can't use npm packages.
+
+**Try it yourself:** Add the Walker.js script to your HTML and copy
+[walkerjs/with-sources.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/walkerjs/with-sources.ts)
+patterns for automatic event collection.
+
+#### Custom Destination
+
+**What it demonstrates:** Building your own destination to send events to any
+service via webhooks or APIs.
+
+**Try it yourself:**
+
+<Tabs>
+  <TabItem value="npm" label="NPM" default>
+
+```bash
+npm install @walkerOS/collector
+```
+
+Copy
+[web-destinations/custom-destination.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/web-destinations/custom-destination.ts),
+modify the webhook URL, and create your own integration.
+
+  </TabItem>
+  <TabItem value="browser" label="Browser/CDN">
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector@latest/dist/index.browser.js"></script>
+<script>
+  async function setup() {
+    const { createCollector } = walkerOSCollector;
+
+    const { collector, elb } = await createCollector({
+      destinations: {
+        webhook: {
+          push: async (event) => {
+            await fetch('https://webhook.site/your-unique-id', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                event: event.event,
+                data: event.data,
+                timestamp: new Date().toISOString(),
+              }),
+            });
+          },
+        },
+      },
+    });
+
+    await elb('custom event', { message: 'Hello from browser!' });
+  }
+
+  setup();
+</script>
+```
+
+  </TabItem>
+</Tabs>
+
+#### Consent Management
+
+**What it demonstrates:** GDPR/CCPA compliant tracking with consent state
+management and conditional event sending.
+
+**Try it yourself:**
+
+<Tabs>
+  <TabItem value="npm" label="NPM" default>
+
+```bash
+npm install @walkerOS/collector @walkerOS/web-destination-gtag
+```
+
+Copy
+[consent/management.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/consent/management.ts)
+and implement compliant user tracking with consent controls.
+
+  </TabItem>
+  <TabItem value="browser" label="Browser/CDN">
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector@latest/dist/index.browser.js"></script>
+<script>
+  async function setup() {
+    const { createCollector } = walkerOSCollector;
+
+    const { collector, elb } = await createCollector({
+      destinations: {
+        console: { push: (event) => console.log('Consent Event:', event) },
+      },
+    });
+
+    // Initially disable tracking
+    collector.allowed = false;
+
+    // Simulate consent acceptance
+    setTimeout(async () => {
+      await elb('walker consent', {
+        functional: true,
+        analytics: true,
+        marketing: false,
+      });
+      collector.allowed = true;
+
+      // Now events will be sent
+      await elb('page view', { title: 'Consented Page' });
+    }, 2000);
+  }
+
+  setup();
+</script>
+```
+
+  </TabItem>
+</Tabs>
+
+#### Custom Mapping Functions
+
+**What it demonstrates:** Advanced event transformation with custom mapping
+functions for data enrichment.
+
+**Try it yourself:**
+
+```bash
+npm install @walkerOS/collector @walkerOS/destination-web-gtag
+```
+
+Copy
+[mappings/custom-functions.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/mappings/custom-functions.ts)
+and see how to transform events before sending to destinations.
+
+#### Batch Processing
+
+**What it demonstrates:** High-performance event batching for high-volume
+applications with optimized API calls.
+
+**Try it yourself:**
+
+```bash
+npm install @walkerOS/collector @walkerOS/destination-web-api
+```
+
+Copy
+[performance/batch-processing.ts](https://github.com/elbwalker/walkerOS/blob/main/apps/quickstart/src/performance/batch-processing.ts)
+and implement efficient batch processing for scale.
+
+## Quick Start
+
+```bash
+# Install walkerOS
+npm install @walkerOS/collector
+
+# Copy any example from the links above
+# Modify configuration (IDs, endpoints, etc.)
+# Start tracking events!
+```
+
+All examples are maintained in our
+[quickstart app](https://github.com/elbwalker/walkerOS/tree/main/apps/quickstart)
+and tested with every release.

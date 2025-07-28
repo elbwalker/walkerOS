@@ -1,0 +1,436 @@
+---
+title: Consent Management
+description: GDPR/CCPA compliant tracking with consent state management
+sidebar_position: 22
+---
+
+# Consent Management
+
+This example demonstrates how to implement GDPR/CCPA compliant tracking with
+proper consent state management. Essential for any website that needs to respect
+user privacy preferences.
+
+## What You'll Learn
+
+- Setting up consent-aware tracking
+- Managing consent states (accept/reject/customize)
+- Conditional event sending based on consent
+- GDPR and CCPA compliance patterns
+- Consent banner integration
+
+## Installation
+
+```bash
+npm install @walkerOS/collector @walkerOS/destination-web-gtag @walkerOS/destination-web-meta
+```
+
+## Complete Example
+
+```typescript
+import { createCollector } from '@walkerOS/collector';
+import { destinationGtag } from '@walkerOS/web-destination-gtag';
+import { destinationMeta } from '@walkerOS/web-destination-meta';
+import type { WalkerOS } from '@walkerOS/core';
+
+export async function setupConsentManagement(): Promise<{
+  collector: Collector.Instance;
+  elb: WalkerOS.ElbFn;
+}> {
+  const { collector, elb } = await createCollector({
+    destinations: {
+      gtag: {
+        ...destinationGtag,
+        config: {
+          settings: {
+            ga4: { measurementId: 'G-XXXXXXXXXX' },
+          },
+          mapping: {
+            // Map consent events
+            walker: {
+              consent: {
+                name: 'consent_update',
+                data: {
+                  map: {
+                    analytics_storage: 'analytics_storage',
+                    ad_storage: 'ad_storage',
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      meta: {
+        ...destinationMeta,
+        config: {
+          settings: {
+            pixelId: 'YOUR_PIXEL_ID',
+          },
+          mapping: {
+            // Map consent events for Meta
+            walker: {
+              consent: {
+                name: 'consent_granted',
+                data: {
+                  map: {
+                    consent_type: 'ad_storage',
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Initially disable all tracking until consent is given
+  collector.allowed = false;
+
+  return { collector, elb };
+}
+
+export async function handleConsentChoice(
+  collector: Collector.Instance,
+  consentType: 'accept' | 'reject' | 'customize',
+  customConsent?: {
+    analytics: boolean;
+    advertising: boolean;
+    functional: boolean;
+  },
+): Promise<void> {
+  let consentState: WalkerOS.Consent = {};
+
+  switch (consentType) {
+    case 'accept':
+      // User accepts all tracking
+      consentState = {
+        functional: true,
+        analytics: true,
+        marketing: true,
+        ad_storage: true,
+        analytics_storage: true,
+        ad_user_data: true,
+        ad_personalization: true,
+      };
+      collector.allowed = true;
+      break;
+
+    case 'reject':
+      // User rejects all non-essential tracking
+      consentState = {
+        functional: true, // Essential cookies only
+        analytics: false,
+        marketing: false,
+        ad_storage: false,
+        analytics_storage: false,
+        ad_user_data: false,
+        ad_personalization: false,
+      };
+      collector.allowed = false;
+      break;
+
+    case 'customize':
+      // User customizes consent preferences
+      if (customConsent) {
+        consentState = {
+          functional: true, // Always required
+          analytics: customConsent.analytics,
+          marketing: customConsent.advertising,
+          ad_storage: customConsent.advertising,
+          analytics_storage: customConsent.analytics,
+          ad_user_data: customConsent.advertising,
+          ad_personalization: customConsent.advertising,
+        };
+        collector.allowed =
+          customConsent.analytics || customConsent.advertising;
+      }
+      break;
+  }
+
+  // Update consent state
+  await elb('walker consent', consentState);
+
+  console.log(`Consent updated: ${consentType}`, consentState);
+}
+
+export async function trackConsentedEvents(elb: WalkerOS.ElbFn): Promise<void> {
+  // This event will only be sent if consent allows it
+  await elb('page view', {
+    title: 'Consent Demo Page',
+    category: 'demo',
+  });
+
+  // Marketing events require marketing consent
+  await elb('product view', {
+    id: 'demo-product',
+    name: 'Consent Example Product',
+    price: 29.99,
+  });
+
+  // Functional events (like error tracking) might always be allowed
+  await elb('error occurred', {
+    type: 'javascript',
+    message: 'Demo error for testing',
+    severity: 'low',
+  });
+}
+
+// Simulate consent banner interaction
+export async function simulateConsentBanner(
+  collector: Collector.Instance,
+): Promise<void> {
+  console.log('🍪 Consent banner shown');
+
+  // Simulate user clicking "Accept All"
+  setTimeout(async () => {
+    console.log('✅ User accepted all cookies');
+    await handleConsentChoice(collector, 'accept');
+
+    // Now tracking events will be sent
+    await trackConsentedEvents(collector);
+  }, 1000);
+}
+```
+
+## Consent States
+
+### Required Consent Types
+
+#### Functional Consent
+
+Always required for basic website functionality:
+
+```typescript
+{
+  functional: true; // Always true - essential cookies
+}
+```
+
+#### Analytics Consent
+
+For tracking user behavior and website performance:
+
+```typescript
+{
+  analytics: true,
+  analytics_storage: true
+}
+```
+
+#### Marketing Consent
+
+For advertising and personalization:
+
+```typescript
+{
+  marketing: true,
+  ad_storage: true,
+  ad_user_data: true,
+  ad_personalization: true
+}
+```
+
+### GDPR Compliance
+
+The consent system follows GDPR requirements:
+
+- **Freely Given**: Users can accept or reject
+- **Specific**: Separate controls for different purposes
+- **Informed**: Clear descriptions of what each consent enables
+- **Unambiguous**: Explicit opt-in required
+- **Withdrawable**: Users can change consent later
+
+## Implementation Patterns
+
+### Consent Banner Integration
+
+```typescript
+// Example consent banner implementation
+function showConsentBanner() {
+  const banner = document.createElement('div');
+  banner.innerHTML = `
+    <div class="consent-banner">
+      <p>We use cookies to improve your experience.</p>
+      <button onclick="acceptAll()">Accept All</button>
+      <button onclick="rejectAll()">Reject</button>
+      <button onclick="customize()">Customize</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+}
+
+async function acceptAll() {
+  await handleConsentChoice(collector, 'accept');
+  hideConsentBanner();
+}
+
+async function rejectAll() {
+  await handleConsentChoice(collector, 'reject');
+  hideConsentBanner();
+}
+
+async function customize() {
+  // Show detailed consent options
+  const preferences = showConsentPreferences();
+  await handleConsentChoice(collector, 'customize', preferences);
+  hideConsentBanner();
+}
+```
+
+### Persistent Consent Storage
+
+```typescript
+// Save consent to localStorage
+function saveConsent(consentState: WalkerOS.Consent) {
+  localStorage.setItem(
+    'walkerOS_consent',
+    JSON.stringify({
+      state: consentState,
+      timestamp: Date.now(),
+      version: '1.0',
+    }),
+  );
+}
+
+// Load consent on page load
+function loadConsent(): WalkerOS.Consent | null {
+  const stored = localStorage.getItem('walkerOS_consent');
+  if (stored) {
+    const { state, timestamp } = JSON.parse(stored);
+
+    // Check if consent is still valid (e.g., within 1 year)
+    const oneYear = 365 * 24 * 60 * 60 * 1000;
+    if (Date.now() - timestamp < oneYear) {
+      return state;
+    }
+  }
+  return null;
+}
+
+// Initialize with stored consent
+async function initializeWithConsent(collector: Collector.Instance) {
+  const savedConsent = loadConsent();
+  if (savedConsent) {
+    await elb('walker consent', savedConsent);
+    collector.allowed = savedConsent.analytics || savedConsent.marketing;
+  } else {
+    showConsentBanner();
+  }
+}
+```
+
+### Conditional Event Tracking
+
+```typescript
+// Helper function to check if tracking is allowed
+function canTrack(eventType: string, consent: WalkerOS.Consent): boolean {
+  switch (eventType) {
+    case 'error':
+    case 'performance':
+      return consent.functional; // Always allowed for functional events
+
+    case 'page view':
+    case 'scroll':
+      return consent.analytics;
+
+    case 'product view':
+    case 'purchase':
+      return consent.marketing;
+
+    default:
+      return consent.analytics;
+  }
+}
+
+// Enhanced tracking function with consent checks
+async function trackWithConsent(
+  elb: WalkerOS.ElbFn,
+  eventName: string,
+  eventData: Record<string, unknown>,
+  consent: WalkerOS.Consent,
+) {
+  if (canTrack(eventName, consent)) {
+    await elb(eventName, eventData);
+  } else {
+    console.log(`Event "${eventName}" blocked by consent settings`);
+  }
+}
+```
+
+## Destination-Specific Consent
+
+### Google Analytics 4
+
+```typescript
+// GA4 consent mapping
+{
+  analytics_storage: consentState.analytics,
+  ad_storage: consentState.marketing,
+  ad_user_data: consentState.marketing,
+  ad_personalization: consentState.marketing
+}
+```
+
+### Meta Pixel
+
+```typescript
+// Meta Pixel consent handling
+if (consentState.marketing) {
+  // Enable Meta Pixel tracking
+  fbq('consent', 'grant');
+} else {
+  // Disable Meta Pixel tracking
+  fbq('consent', 'revoke');
+}
+```
+
+### Custom Destinations
+
+```typescript
+// Pass consent to custom destinations
+const customDestination = {
+  async push(event, { config, consent }) {
+    if (consent.marketing) {
+      // Send to marketing platforms
+      await sendToMarketingAPI(event);
+    }
+
+    if (consent.analytics) {
+      // Send to analytics platforms
+      await sendToAnalyticsAPI(event);
+    }
+  },
+};
+```
+
+## Legal Compliance
+
+### GDPR Requirements
+
+- ✅ Lawful basis for processing
+- ✅ Explicit consent for marketing
+- ✅ Right to withdraw consent
+- ✅ Data minimization
+- ✅ Consent records
+
+### CCPA Requirements
+
+- ✅ Right to opt-out of sale
+- ✅ Clear privacy notice
+- ✅ Non-discrimination
+- ✅ Verifiable consumer requests
+
+## Try It Yourself
+
+1. Copy the consent management code
+2. Integrate with your consent banner solution
+3. Test different consent scenarios:
+   - Accept all cookies
+   - Reject all cookies
+   - Customize preferences
+4. Verify events are only sent when consent allows
+5. Check that consent state persists across page loads
+
+This implementation ensures your walkerOS tracking respects user privacy choices
+and complies with international privacy regulations.

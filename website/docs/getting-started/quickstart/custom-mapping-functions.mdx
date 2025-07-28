@@ -1,0 +1,802 @@
+---
+title: Custom Mapping Functions
+description: Learn walkerOS mapping with practical examples using built-in functions
+sidebar_position: 23
+---
+
+import Link from '@docusaurus/Link';
+import { LiveCode } from '@site/src/components/organisms/liveCode';
+import { getMappingEvent, getMappingValue } from '@walkerOS/core';
+import { parseInput } from '@site/src/components/molecules/codeBox';
+
+export const logEvent = async (input, config, log) => {
+  log(await parseInput(input, { getMappingEvent }));
+};
+export const logValue = async (input, config, log) => {
+  log(await parseInput(input, { getMappingValue }));
+};
+
+# Custom Mapping Functions
+
+This guide demonstrates how to use walkerOS's built-in mapping functions to transform events for different destinations. Learn to create flexible, powerful mappings using only the existing mapping functionality.
+
+## What You'll Learn
+
+- Using getMappingEvent for event transformation
+- Creating dynamic data mappings with getMappingValue
+- Building destination-specific configurations
+- Real-world mapping patterns
+- Testing your mapping configurations
+
+## Basic Mapping Setup
+
+Start with a simple destination configuration that uses walkerOS mapping functions:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Destination Configuration"
+  input={`// Example destination configuration
+const destinationConfig = {
+  mapping: {
+    product: {
+      view: {
+        name: 'view_item',
+        data: {
+          map: {
+            item_id: 'data.id',
+            item_name: 'data.name',
+            value: 'data.price',
+            currency: { value: 'USD' }
+          }
+        }
+      }
+    }
+  }
+};
+
+// Test the mapping
+await getMappingEvent(
+  { event: 'product view' },
+  destinationConfig.mapping
+);`}
+  output={`{
+    eventMapping: {
+      name: "view_item",
+      data: {
+        map: {
+          item_id: "data.id",
+          item_name: "data.name", 
+          value: "data.price",
+          currency: { value: "USD" }
+        }
+      }
+    },
+    mappingKey: "product view"
+  }`}
+  fn={logEvent}
+/>
+
+## Function-Based Transformations
+
+Use the `fn` property to create custom transformation logic:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Function Mapping"
+  input={`await getMappingValue(
+    {
+      product: { 
+        price: 29.99,
+        currency: 'USD'
+      },
+      user: { locale: 'en-US' }
+    },
+    {
+      fn: (event) => {
+        const price = event.product.price;
+        const currency = event.product.currency;
+        const locale = event.user.locale;
+        
+        return new Intl.NumberFormat(locale, {
+          style: 'currency',
+          currency: currency
+        }).format(price);
+      }
+    }
+  );`}
+  output={`"$29.99"`}
+  fn={logValue}
+/>
+
+## Conditional Mappings
+
+Apply different mappings based on event conditions:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Conditional Mapping"
+  input={`await getMappingValue(
+    {
+      order: { total: 150, items: 3 },
+      user: { tier: 'premium' }
+    },
+    [
+      {
+        condition: (event) => event.user.tier === 'premium',
+        fn: (event) => ({
+          order_value: event.order.total,
+          tier_bonus: event.order.total * 0.1,
+          priority: 'high'
+        })
+      },
+      {
+        condition: (event) => event.order.total > 100,
+        fn: (event) => ({
+          order_value: event.order.total,
+          priority: 'medium'
+        })
+      },
+      {
+        fn: (event) => ({
+          order_value: event.order.total,
+          priority: 'low'
+        })
+      }
+    ]
+  );`}
+  output={`{
+    order_value: 150,
+    tier_bonus: 15,
+    priority: "high"
+  }`}
+  fn={logValue}
+/>
+
+## Array Processing with Loop
+
+Transform arrays of data using the loop functionality:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Array Processing"
+  input={`await getMappingValue(
+    {
+      cart: {
+        items: [
+          { id: 'p1', name: 'Laptop', price: 999, qty: 1 },
+          { id: 'p2', name: 'Mouse', price: 29, qty: 2 }
+        ]
+      }
+    },
+    {
+      loop: [
+        'cart.items',
+        {
+          fn: (item) => ({
+            item_id: item.id,
+            item_name: item.name,
+            quantity: item.qty,
+            item_total: item.price * item.qty
+          })
+        }
+      ]
+    }
+  );`}
+  output={`[
+    {
+      item_id: "p1",
+      item_name: "Laptop", 
+      quantity: 1,
+      item_total: 999
+    },
+    {
+      item_id: "p2",
+      item_name: "Mouse",
+      quantity: 2, 
+      item_total: 58
+    }
+  ]`}
+  fn={logValue}
+/>
+
+## Dynamic Value Generation
+
+Create values based on current context and event data:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Dynamic Values"
+  input={`await getMappingValue(
+    {
+      event: 'page view',
+      context: { url: 'https://example.com/products/123' },
+      user: { id: 'user456' }
+    },
+    {
+      map: {
+        page_type: {
+          fn: (event) => {
+            const url = event.context.url;
+            if (url.includes('/products/')) return 'product';
+            if (url.includes('/checkout')) return 'checkout';
+            if (url.includes('/cart')) return 'cart';
+            return 'other';
+          }
+        },
+        session_id: {
+          fn: () => 'sess_' + Date.now().toString(36)
+        },
+        timestamp_iso: {
+          fn: () => new Date().toISOString()
+        },
+        user_hash: {
+          fn: (event) => btoa(event.user.id).slice(0, 8)
+        }
+      }
+    }
+  );`}
+  output={`{
+    page_type: "product",
+    session_id: "sess_l2x3b8k9",
+    timestamp_iso: "2024-01-15T10:30:45.123Z",
+    user_hash: "dXNlcjQ1"
+  }`}
+  fn={logValue}
+/>
+
+## E-commerce Mapping Pattern
+
+Create a comprehensive e-commerce mapping configuration:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="E-commerce Mapping"
+  input={`const ecommerceMapping = {
+  product: {
+    view: {
+      name: 'view_item',
+      data: {
+        map: {
+          currency: { value: 'USD' },
+          value: 'data.price',
+          items: {
+            fn: (event) => [{
+              item_id: event.data.id,
+              item_name: event.data.name,
+              item_category: event.data.category,
+              price: event.data.price,
+              quantity: 1
+            }]
+          }
+        }
+      }
+    },
+    purchase: {
+      name: 'add_to_cart', 
+      data: {
+        map: {
+          currency: { value: 'USD' },
+          value: 'data.price',
+          items: {
+            fn: (event) => [{
+              item_id: event.data.id,
+              item_name: event.data.name,
+              quantity: event.data.quantity || 1,
+              price: event.data.price
+            }]
+          }
+        }
+      }
+    }
+  }
+};
+
+// Test product view mapping
+await getMappingEvent(
+  { event: 'product view' },
+  ecommerceMapping
+);`}
+  output={`{
+    eventMapping: {
+      name: "view_item",
+      data: {
+        map: {
+          currency: { value: "USD" },
+          value: "data.price",
+          items: {
+            fn: "[function]"
+          }
+        }
+      }
+    },
+    mappingKey: "product view"
+  }`}
+  fn={logEvent}
+/>
+
+## Validation and Fallbacks
+
+Ensure data quality with validation and fallback values:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Validation Mapping"
+  input={`await getMappingValue(
+    {
+      user: { email: 'john@example.com', age: 25 },
+      product: { price: null }
+    },
+    {
+      map: {
+        user_email: {
+          key: 'user.email',
+          validate: (value) => typeof value === 'string' && value.includes('@'),
+          value: 'anonymous@example.com' // fallback
+        },
+        user_age_group: {
+          fn: (event) => {
+            const age = event.user.age;
+            if (age < 25) return '18-24';
+            if (age < 35) return '25-34';
+            if (age < 45) return '35-44';
+            return '45+';
+          }
+        },
+        product_price: {
+          key: 'product.price',
+          validate: (value) => typeof value === 'number' && value > 0,
+          value: 0 // fallback for invalid prices
+        }
+      }
+    }
+  );`}
+  output={`{
+    user_email: "john@example.com",
+    user_age_group: "25-34",
+    product_price: 0
+  }`}
+  fn={logValue}
+/>
+
+## Complete Destination Example
+
+Here's how these mappings work in a real destination configuration:
+
+```typescript
+import { createCollector } from '@walkerOS/collector';
+import type { Destination } from '@walkerOS/core';
+
+// Console logger destination with custom mapping
+const consoleDestination: Destination.Instance = {
+  type: 'console-logger',
+  
+  init() {
+    console.log('Console destination initialized');
+    return {};
+  },
+
+  async push(event, { data }) {
+    console.log('Mapped Event:', {
+      event: event.event,
+      mapped_data: data
+    });
+  },
+
+  config: {
+    mapping: {
+      product: {
+        view: {
+          name: 'view_item',
+          data: {
+            fn: (event) => ({
+              item_id: event.data.id,
+              item_name: event.data.name,
+              formatted_price: new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+              }).format(event.data.price),
+              timestamp: new Date().toISOString()
+            })
+          }
+        }
+      }
+    }
+  }
+};
+
+// Create collector with our destination
+export async function setupMappingExample() {
+  const { collector, elb } = await createCollector({
+    destinations: {
+      console: consoleDestination
+    }
+  });
+
+  // Test the mapping
+  await elb('product view', {
+    id: 'prod-123',
+    name: 'Wireless Headphones',
+    price: 129.99,
+    category: 'Electronics'
+  });
+
+  return { collector, elb };
+}
+```
+
+## Testing Your Mappings
+
+Test your mapping configurations to ensure they work correctly:
+
+```typescript
+import { getMappingEvent, getMappingValue } from '@walkerOS/core';
+
+describe('Custom Mappings', () => {
+  test('product view mapping', async () => {
+    const result = await getMappingEvent(
+      { event: 'product view' },
+      ecommerceMapping
+    );
+    
+    expect(result.eventMapping?.name).toBe('view_item');
+    expect(result.mappingKey).toBe('product view');
+  });
+
+  test('price formatting', async () => {
+    const result = await getMappingValue(
+      { product: { price: 99.99 } },
+      {
+        fn: (event) => new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD'
+        }).format(event.product.price)
+      }
+    );
+    
+    expect(result).toBe('$99.99');
+  });
+});
+```
+
+## Best Practices
+
+1. **Keep functions simple** - Complex logic can impact performance
+2. **Use validation** - Always validate data before transformation
+3. **Provide fallbacks** - Use default values for missing data
+4. **Test thoroughly** - Verify mappings with different event scenarios
+5. **Document mappings** - Comment complex transformation logic
+
+## Next Steps
+
+- Explore <Link to="/docs/guides/event-mapping">Event Mapping</Link> for more mapping patterns
+- Learn about <Link to="/docs/destinations">Destinations</Link> to integrate with your analytics tools
+- Check out <Link to="/docs/getting-started/quickstart/consent-management">Consent Management</Link> for privacy-compliant mappings
+
+Use walkerOS's built-in mapping functions to create powerful, flexible event transformations without writing custom code.
+```
+
+## Mapping Function Types
+
+### Data Transformation
+Transform raw event data into destination-specific formats:
+
+```typescript
+// Price formatting for different regions
+function formatPrice(value: number, region: string) {
+  const formatters = {
+    'US': new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }),
+    'EU': new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }),
+    'JP': new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' })
+  };
+  
+  return formatters[region]?.format(value) || value.toString();
+}
+
+// Category normalization
+function normalizeCategory(category: string): string {
+  const categoryMap = {
+    'electronics': 'Electronics',
+    'clothing': 'Apparel',
+    'books': 'Media',
+    'home': 'Home & Garden'
+  };
+  
+  return categoryMap[category.toLowerCase()] || category;
+}
+```
+
+### Data Enrichment
+Add computed fields and contextual information:
+
+```typescript
+function enrichUserData(event: WalkerOS.Event) {
+  const enriched = { ...event.data };
+  
+  // Add device information
+  enriched.device_info = {
+    is_mobile: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent),
+    screen_size: `${screen.width}x${screen.height}`,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  };
+  
+  // Add session context
+  enriched.session_context = {
+    page_count: sessionStorage.getItem('page_count') || '1',
+    referrer_domain: document.referrer ? new URL(document.referrer).hostname : 'direct',
+    visit_duration: Date.now() - parseInt(sessionStorage.getItem('session_start') || '0')
+  };
+  
+  // Add performance metrics
+  if ('performance' in window) {
+    enriched.performance = {
+      page_load_time: performance.timing.loadEventEnd - performance.timing.navigationStart,
+      dns_time: performance.timing.domainLookupEnd - performance.timing.domainLookupStart
+    };
+  }
+  
+  return enriched;
+}
+```
+
+### Conditional Logic
+Apply different transformations based on conditions:
+
+```typescript
+function applyConditionalMapping(event: WalkerOS.Event) {
+  const mapped = { ...event };
+  
+  // Different mapping for different user types
+  if (event.user?.type === 'premium') {
+    mapped.data.user_segment = 'premium';
+    mapped.data.priority = 'high';
+  } else if (event.user?.type === 'trial') {
+    mapped.data.user_segment = 'trial';
+    mapped.data.priority = 'medium';
+  } else {
+    mapped.data.user_segment = 'free';
+    mapped.data.priority = 'low';
+  }
+  
+  // Add revenue tier for e-commerce events
+  if (event.entity === 'order' && typeof event.data.total === 'number') {
+    if (event.data.total > 500) {
+      mapped.data.revenue_tier = 'high';
+    } else if (event.data.total > 100) {
+      mapped.data.revenue_tier = 'medium';
+    } else {
+      mapped.data.revenue_tier = 'low';
+    }
+  }
+  
+  return mapped;
+}
+```
+
+## Advanced Mapping Patterns
+
+### Function-Based Mapping
+Use functions for dynamic mapping:
+
+```typescript
+const dynamicMapping = {
+  product: {
+    view: {
+      name: 'view_item',
+      data: {
+        // Function that transforms the event
+        fn: (event: WalkerOS.Event) => ({
+          item_id: event.data.id,
+          item_name: event.data.name,
+          item_category: normalizeCategory(event.data.category as string),
+          value: event.data.price,
+          currency: detectCurrency(event.data.price as number),
+          custom_parameters: {
+            stock_level: categorizeStock(event.data.stock as number),
+            price_tier: categorizePriceLevel(event.data.price as number),
+            brand_tier: getBrandTier(event.data.brand as string)
+          }
+        })
+      }
+    }
+  }
+};
+```
+
+### Contextual Mapping
+Map based on page context or user state:
+
+```typescript
+function getContextualMapping(event: WalkerOS.Event) {
+  const context = {
+    page_type: detectPageType(window.location.pathname),
+    user_journey_stage: getUserJourneyStage(event.user),
+    ab_test_variant: getABTestVariant(),
+    content_group: getContentGroup(document.title)
+  };
+  
+  // Adjust mapping based on context
+  if (context.page_type === 'checkout') {
+    return getCheckoutMapping(event);
+  } else if (context.page_type === 'product') {
+    return getProductPageMapping(event);
+  } else {
+    return getDefaultMapping(event);
+  }
+}
+```
+
+### Performance Optimization
+Optimize mappings for performance:
+
+```typescript
+// Memoize expensive calculations
+const memoizedFormatters = new Map();
+
+function getMemoizedFormatter(currency: string) {
+  if (!memoizedFormatters.has(currency)) {
+    memoizedFormatters.set(currency, new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency
+    }));
+  }
+  return memoizedFormatters.get(currency);
+}
+
+// Batch processing for multiple events
+function batchTransformEvents(events: WalkerOS.Event[]) {
+  // Pre-calculate common values
+  const timestamp = new Date().toISOString();
+  const sessionId = generateSessionId();
+  
+  return events.map(event => ({
+    ...event,
+    data: {
+      ...event.data,
+      processed_at: timestamp,
+      session_id: sessionId,
+      batch_size: events.length
+    }
+  }));
+}
+```
+
+## Real-World Examples
+
+### E-commerce Enhancement
+```typescript
+function enhanceEcommerceEvent(event: WalkerOS.Event) {
+  if (event.entity === 'product') {
+    return {
+      ...event.data,
+      // Add computed fields
+      price_per_unit: calculatePricePerUnit(event.data),
+      discount_percentage: calculateDiscount(event.data),
+      stock_status: getStockStatus(event.data.stock as number),
+      
+      // Add recommendations
+      recommended_products: getRecommendations(event.data.id as string),
+      
+      // Add attribution
+      traffic_source: getTrafficSource(),
+      campaign_info: getCampaignInfo()
+    };
+  }
+  return event.data;
+}
+```
+
+### User Behavior Analysis
+```typescript
+function enhanceUserBehavior(event: WalkerOS.Event) {
+  return {
+    ...event.data,
+    
+    // Behavioral scoring
+    engagement_score: calculateEngagementScore(event),
+    purchase_intent: predictPurchaseIntent(event),
+    churn_risk: assessChurnRisk(event),
+    
+    // Segmentation
+    user_persona: identifyPersona(event.user),
+    lifecycle_stage: getLifecycleStage(event.user),
+    value_segment: getValueSegment(event.user),
+    
+    // Timing analysis
+    time_since_last_visit: getTimeSinceLastVisit(),
+    session_depth: getSessionDepth(),
+    time_on_page: getTimeOnPage()
+  };
+}
+```
+
+### Marketing Attribution
+```typescript
+function addMarketingAttribution(event: WalkerOS.Event) {
+  const attribution = {
+    // First-touch attribution
+    first_touch: {
+      source: getFirstTouchSource(),
+      medium: getFirstTouchMedium(),
+      campaign: getFirstTouchCampaign(),
+      timestamp: getFirstTouchTimestamp()
+    },
+    
+    // Last-touch attribution
+    last_touch: {
+      source: getLastTouchSource(),
+      medium: getLastTouchMedium(),
+      campaign: getLastTouchCampaign(),
+      timestamp: getLastTouchTimestamp()
+    },
+    
+    // Multi-touch attribution
+    touchpoints: getTouchpointHistory(),
+    attribution_model: 'time_decay'
+  };
+  
+  return {
+    ...event.data,
+    attribution
+  };
+}
+```
+
+## Testing Mapping Functions
+
+### Unit Testing
+```typescript
+describe('Custom Mapping Functions', () => {
+  test('formats currency correctly', () => {
+    const result = formatCurrency(123.45, 'USD');
+    expect(result).toBe('$123.45');
+  });
+  
+  test('categorizes time segments', () => {
+    // Mock Date to specific time
+    jest.spyOn(Date.prototype, 'getHours').mockReturnValue(14);
+    expect(getTimeSegment()).toBe('afternoon');
+  });
+  
+  test('enriches product data', () => {
+    const event = {
+      entity: 'product',
+      data: { id: '123', price: 99.99, stock: 5 }
+    };
+    
+    const result = applyCustomMappings(event);
+    expect(result.item.in_stock).toBe(true);
+    expect(result.item.price_formatted).toBe('$99.99');
+  });
+});
+```
+
+### Integration Testing
+```typescript
+test('end-to-end mapping pipeline', async () => {
+  const collector = await setupCustomMappingFunctions();
+  const consoleSpy = jest.spyOn(console, 'log');
+  
+  await trackCustomMappedEvents(collector);
+  
+  expect(consoleSpy).toHaveBeenCalledWith(
+    'Advanced Mapping Result:',
+    expect.objectContaining({
+      mapped: expect.objectContaining({
+        item: expect.objectContaining({
+          price_formatted: expect.stringMatching(/\$\d+\.\d{2}/)
+        })
+      })
+    })
+  );
+});
+```
+
+## Try It Yourself
+
+1. Copy the custom mapping example
+2. Add your own transformation functions
+3. Test with different event types and data
+4. Observe how events are enriched and formatted
+5. Integrate with your preferred destinations
+
+Custom mapping functions give you complete control over how events are transformed, enabling sophisticated data enrichment and destination-specific formatting.

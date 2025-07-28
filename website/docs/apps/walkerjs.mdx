@@ -7,6 +7,7 @@ package: '@walkerOS/walker.js'
 ---
 
 import Link from '@docusaurus/Link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
 
 # Walker.js
 
@@ -101,6 +102,148 @@ Walker.js supports multiple configuration approaches with different priorities:
 1. **Script tag `data-elbconfig`** (highest priority)
 2. **`window.elbConfig`** (default fallback)
 3. **Manual initialization** (when `run: false`)
+
+### Settings
+
+<SettingsTable
+  properties={[
+    {
+      name: 'elb',
+      type: 'string',
+      default: '"elb"',
+      description: 'Global function name for event tracking',
+    },
+    {
+      name: 'name',
+      type: 'string',
+      default: '"walkerjs"',
+      description: 'Global instance name',
+    },
+    {
+      name: 'run',
+      type: 'boolean',
+      default: 'true',
+      description: 'Auto-initialize walker.js on load',
+    },
+    {
+      name: 'browser',
+      type: 'object | boolean',
+      default:
+        '{ run: true, session: true, scope: document.body, pageview: true }',
+      description: (
+        <>
+          <Link to="/docs/sources/web/browser/configuration">
+            Browser source configuration
+          </Link>
+        </>
+      ),
+    },
+    {
+      name: 'dataLayer',
+      type: 'object | boolean',
+      default: 'false',
+      description: (
+        <>
+          <Link to="/docs/sources/web/dataLayer">
+            DataLayer source configuration
+          </Link>
+        </>
+      ),
+    },
+    {
+      name: 'collector',
+      type: 'object',
+      default: '{}',
+      description: (
+        <>
+          <Link to="/docs/collector/configuration">
+            Collector configuration
+          </Link>{' '}
+          including destinations and consent settings
+        </>
+      ),
+    },
+  ]}
+/>
+
+#### Browser Source Settings
+
+<SettingsTable
+  properties={[
+    {
+      name: 'browser.run',
+      type: 'boolean',
+      default: 'true',
+      description: 'Auto-start DOM tracking',
+    },
+    {
+      name: 'browser.session',
+      type: 'boolean',
+      default: 'true',
+      description: 'Enable session tracking',
+    },
+    {
+      name: 'browser.scope',
+      type: 'Element',
+      default: 'document.body',
+      description: 'DOM element scope for tracking',
+    },
+    {
+      name: 'browser.pageview',
+      type: 'boolean',
+      default: 'true',
+      description: 'Enable automatic page view events',
+    },
+  ]}
+/>
+
+#### DataLayer Settings
+
+<SettingsTable
+  properties={[
+    {
+      name: 'dataLayer',
+      type: 'boolean',
+      default: 'false',
+      description: 'Enable dataLayer integration with defaults',
+    },
+    {
+      name: 'dataLayer.name',
+      type: 'string',
+      default: '"dataLayer"',
+      description: 'DataLayer variable name',
+    },
+    {
+      name: 'dataLayer.prefix',
+      type: 'string',
+      default: '"dataLayer"',
+      description: 'Event prefix for dataLayer events',
+    },
+  ]}
+/>
+
+#### Collector Settings
+
+<SettingsTable
+  properties={[
+    {
+      name: 'collector.consent',
+      type: 'object',
+      default: '{ functional: true }',
+      description: 'Default consent state',
+    },
+    {
+      name: 'collector.destinations',
+      type: 'object',
+      default: '{}',
+      description: (
+        <>
+          <Link to="/docs/destinations">Destination configurations</Link>
+        </>
+      ),
+    },
+  ]}
+/>
 
 ### Full Configuration Object
 

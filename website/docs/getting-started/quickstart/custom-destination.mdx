@@ -1,0 +1,365 @@
+---
+title: Custom Destination
+description: Build your own destination to send events to any service
+sidebar_position: 21
+---
+
+# Custom Destination
+
+This example shows how to create a custom destination to send events to any
+service via webhooks or APIs. Perfect for integrating with internal systems or
+services not directly supported by walkerOS.
+
+## What You'll Learn
+
+- Creating a custom destination from scratch
+- Implementing proper error handling
+- Configuring webhook endpoints
+- Event mapping and transformation
+- Testing custom integrations
+
+## Installation
+
+```bash
+npm install @walkerOS/collector
+```
+
+## Complete Example
+
+```typescript
+import { createCollector } from '@walkerOS/collector';
+import type { WalkerOS, Destination } from '@walkerOS/core';
+
+// Custom destination that sends events to a webhook
+const customWebhookDestination: Destination.Instance = {
+  type: 'webhook',
+
+  config: {},
+
+  init({ config }) {
+    const { settings } = config;
+    const settingsObj =
+      settings && typeof settings === 'object'
+        ? (settings as Record<string, unknown>)
+        : {};
+    if (!settingsObj.url || typeof settingsObj.url !== 'string') {
+      console.warn('Custom webhook destination: URL not configured');
+      return false;
+    }
+    console.log('Custom webhook destination initialized');
+  },
+
+  async push(event, { config }) {
+    const { settings } = config;
+    const settingsObj =
+      settings && typeof settings === 'object'
+        ? (settings as Record<string, unknown>)
+        : {};
+
+    if (!settingsObj.url || typeof settingsObj.url !== 'string') {
+      console.warn(
+        'Custom webhook destination: No URL configured, skipping event',
+      );
+      return;
+    }
+
+    // Send to webhook
+    try {
+      const headers =
+        settingsObj.headers && typeof settingsObj.headers === 'object'
+          ? (settingsObj.headers as Record<string, string>)
+          : {};
+
+      const response = await fetch(settingsObj.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: JSON.stringify({
+          timestamp: new Date().toISOString(),
+          event: event.event,
+          data: event.data,
+          user: event.user,
+          session: event.context?.session,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      console.log('Event sent to webhook:', event.event);
+    } catch (error) {
+      console.error('Failed to send event to webhook:', error);
+      throw error;
+    }
+  },
+};
+
+export async function setupCustomDestination(): Promise<{
+  collector: Collector.Instance;
+  elb: WalkerOS.ElbFn;
+}> {
+  const { collector, elb } = await createCollector({
+    destinations: {
+      webhook: {
+        ...customWebhookDestination,
+        config: {
+          settings: {
+            url: 'https://webhook.site/unique-id',
+            headers: {
+              Authorization: 'Bearer your-api-token',
+              'X-Source': 'walkerOS-quickstart',
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return { collector, elb };
+}
+
+export async function trackCustomDestinationEvents(
+  elb: WalkerOS.ElbFn,
+): Promise<void> {
+  // Track page view
+  await elb('page view', {
+    title: 'Custom Destination Demo',
+    url: '/demo',
+  });
+
+  // Track purchase
+  await elb('order complete', {
+    id: 'order-12345',
+    total: 99.99,
+    items: 2,
+  });
+
+  // Track custom event
+  await elb('feature used', {
+    feature: 'custom-destination',
+    success: true,
+  });
+}
+```
+
+## Key Components
+
+### Destination Interface
+
+Every custom destination must implement:
+
+- **type**: Unique identifier for your destination
+- **init()**: Initialize the destination with configuration
+- **push()**: Handle individual events
+- **pushBatch()** (optional): Handle batched events for performance
+
+### Configuration Structure
+
+```typescript
+{
+  settings: {
+    url: 'https://your-webhook-endpoint.com/events',
+    headers: {
+      'Authorization': 'Bearer your-token',
+      'X-Custom-Header': 'value'
+    },
+    timeout: 5000,
+    retries: 3
+  },
+  mapping: {
+    // Optional event mapping configuration
+  }
+}
+```
+
+### Error Handling
+
+Proper error handling ensures:
+
+- Failed events can be retried
+- Network issues don't crash your app
+- Debugging information is available
+- Graceful degradation when services are down
+
+## Advanced Features
+
+### Event Transformation
+
+Transform events before sending:
+
+```typescript
+async push(event, { config }) {
+  const transformedEvent = {
+    event_name: event.event.replace(' ', '_').toUpperCase(),
+    properties: {
+      ...event.data,
+      timestamp: new Date().toISOString(),
+      source: 'walkerOS'
+    },
+    user_id: event.user?.id,
+    session_id: event.context?.session?.id
+  };
+
+  // Send transformed event...
+}
+```
+
+### Batch Processing
+
+For high-volume applications:
+
+```typescript
+async pushBatch(events, { config }) {
+  const batchPayload = {
+    events: events.map(event => ({
+      name: event.event,
+      data: event.data,
+      timestamp: event.timestamp
+    })),
+    batch_id: Date.now(),
+    count: events.length
+  };
+
+  // Send batch...
+}
+```
+
+### Authentication
+
+Support different auth methods:
+
+```typescript
+init({ config }) {
+  const { settings } = config;
+
+  // API Key authentication
+  if (settings.apiKey) {
+    this.headers = { 'X-API-Key': settings.apiKey };
+  }
+
+  // OAuth Bearer token
+  if (settings.bearerToken) {
+    this.headers = { 'Authorization': `Bearer ${settings.bearerToken}` };
+  }
+
+  // Custom authentication
+  if (settings.customAuth) {
+    this.headers = settings.customAuth;
+  }
+}
+```
+
+## Integration Examples
+
+### Slack Notifications
+
+Send important events to Slack:
+
+```typescript
+const slackDestination = {
+  type: 'slack',
+  async push(event, { config }) {
+    if (event.event === 'order complete') {
+      await fetch(config.settings.webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: `New order: $${event.data.total} from ${event.user?.email}`,
+        }),
+      });
+    }
+  },
+};
+```
+
+### Database Storage
+
+Store events in your database:
+
+```typescript
+const databaseDestination = {
+  type: 'database',
+  async push(event, { config }) {
+    await fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_name: event.event,
+        event_data: event.data,
+        user_id: event.user?.id,
+        timestamp: new Date(event.timestamp),
+      }),
+    });
+  },
+};
+```
+
+### Email Triggers
+
+Trigger emails based on events:
+
+```typescript
+const emailDestination = {
+  type: 'email',
+  async push(event, { config }) {
+    if (event.event === 'user signup') {
+      await fetch('/api/send-welcome-email', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: event.user?.email,
+          name: event.data.name,
+        }),
+      });
+    }
+  },
+};
+```
+
+## Testing Your Destination
+
+### Local Testing
+
+Use webhook.site for quick testing:
+
+1. Go to [webhook.site](https://webhook.site)
+2. Copy your unique URL
+3. Use it as your webhook URL
+4. Send test events and see them appear
+
+### Unit Testing
+
+```typescript
+describe('Custom Destination', () => {
+  it('sends events to webhook', async () => {
+    const mockFetch = jest.fn().mockResolvedValue({ ok: true });
+    global.fetch = mockFetch;
+
+    const { collector, elb } = await setupCustomDestination();
+    await elb('test event', { value: 123 });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('webhook.site'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+        }),
+      }),
+    );
+  });
+});
+```
+
+## Try It Yourself
+
+1. Copy the example code above
+2. Replace the webhook URL with your own endpoint
+3. Configure any required headers or authentication
+4. Run the tracking functions
+5. Verify events are received at your endpoint
+
+Custom destinations give you complete control over where and how your events are
+sent, making walkerOS adaptable to any infrastructure or service.

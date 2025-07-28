@@ -19,35 +19,25 @@ settings that differ from the defaults.
 
 ## Basic Setup
 
-<CollectorConfiguration
-  configuration={`{
+```typescript
+import { createCollector } from '@walkerOS/collector';
+
+const config = {
   run: true,
   destinations: {
     console: {
-      push: (event) => console.log('Event:', event)
-    }
-  }
-}`}
-  javascript={`import { createCollector } from '@walkerOS/collector';
+      push: (event) => console.log('Event:', event),
+    },
+  },
+};
 
-const { collector } = await createCollector(config);
+const { collector, elb } = await createCollector(config);
 
-// Now you can use the collector
-await collector.push('page view', { 
-  path: '/home' 
-});`}
-  fn={async (config, log) => {
-    try {
-      const parsedConfig = eval(`(${config})`);
-      log('✅ Configuration is valid');
-      log('Collector created with config:', JSON.stringify(parsedConfig, null, 2));
-      return 'Collector initialized successfully';
-    } catch (error) {
-      return `Configuration error: ${error.message}`;
-    }
-  }}
-  labelResult="Console Output"
-/>
+// Now you can use the elb function
+await elb('page view', {
+  path: '/home',
+});
+```
 
 ## Essential Configuration Properties
 
@@ -124,77 +114,45 @@ reinitialization.
 - **Brief:** Manages session lifecycle, persistence, and cross-page tracking
 - **More info:** Session configuration details in collector documentation
 
-**`onError: Handler.Error`** - Custom error handler for collector operations.
-
-- **Why use it:** Integration with existing monitoring systems and custom error
-  handling
-- **Example:** `(error) => { logger.error('Collector error:', error); }`
-
-**`onLog: Handler.Log`** - Custom log handler for collector messages.
-
-- **Why use it:** Route collector logs to your preferred logging system
-- **Example:** `(message, verbose) => { console.log(\`[Collector]
-  \${message}\`); }`
-
 ## Destination Configuration
 
 Destinations define where your events are sent after processing:
 
-<CollectorConfiguration
-  configuration={`{
+```typescript
+import { createCollector } from '@walkerOS/collector';
+
+const config = {
   destinations: {
     analytics: {
       push: async (event) => {
         await fetch('/api/analytics', {
           method: 'POST',
-          body: JSON.stringify(event)
+          body: JSON.stringify(event),
         });
       },
-      consent: { analytics: true }
+      consent: { analytics: true },
     },
     console: {
-      push: (event) => console.log('Debug:', event)
-    }
-  }
-}`}
-  javascript={`import { createCollector } from '@walkerOS/collector';
+      push: (event) => console.log('Debug:', event),
+    },
+  },
+};
 
-const { collector } = await createCollector(config);
+const { collector, elb } = await createCollector(config);
 
 // Send an event - it will go to both destinations
-await collector.push('product view', {
+await elb('product view', {
   id: 'abc123',
   name: 'Blue T-Shirt',
-  price: 29.99
-});`}
-  fn={async (config, log) => {
-    try {
-      const parsedConfig = eval(`(${config})`);
-      const destinations = Object.keys(parsedConfig.destinations || {});
-      log(`✅ Found ${destinations.length} destinations: ${destinations.join(', ')}`);
-      
-      // Simulate event processing
-      destinations.forEach(dest => {
-        const destConfig = parsedConfig.destinations[dest];
-        if (destConfig.consent) {
-          log(`📋 ${dest}: requires consent for ${Object.keys(destConfig.consent).join(', ')}`);
-        } else {
-          log(`🔄 ${dest}: no consent requirements`);
-        }
-      });
-      
-      return 'Multiple destinations configured successfully';
-    } catch (error) {
-      return `Configuration error: ${error.message}`;
-    }
-  }}
-  labelResult="Destination Analysis"
-/>
+  price: 29.99,
+});
+```
 
 **Why multiple destinations:** Enables data redundancy, different analytics
 needs, and separation of concerns (analytics vs marketing vs debugging).
 
 For detailed destination configuration, see the
+
 <Link to="/docs/destinations/">Destinations documentation</Link>.
 
 ## Practical Configuration Examples
@@ -203,105 +161,66 @@ For detailed destination configuration, see the
 
 Perfect for simple websites or getting started:
 
-<CollectorConfiguration
-  configuration={`{
+```typescript
+import { createCollector } from '@walkerOS/collector';
+
+const config = {
   run: true,
   globals: {
     environment: 'production',
     version: '1.2.0',
-    site_section: 'main'
+    site_section: 'main',
   },
   destinations: {
     console: {
-      push: (event) => console.log('Event:', event)
-    }
-  }
-}`}
-  javascript={`import { createCollector } from '@walkerOS/collector';
+      push: (event) => console.log('Event:', event),
+    },
+  },
+};
 
-const { collector } = await createCollector(config);
+const { collector, elb } = await createCollector(config);
 
 // Every event will include the global properties
-await collector.push('button click', {
+await elb('button click', {
   button_text: 'Sign Up',
-  page: '/landing'
+  page: '/landing',
 });
 
 // Global properties are automatically added
-// Final event includes: environment, version, site_section`}
-  fn={async (config, log) => {
-    try {
-      const parsedConfig = eval(`(${config})`);
-      
-      // Simulate event with globals
-      const mockEvent = {
-        event: 'button click',
-        data: { button_text: 'Sign Up', page: '/landing' },
-        ...parsedConfig.globals // Globals are merged
-      };
-      
-      log('📊 Event with globals applied:');
-      log(JSON.stringify(mockEvent, null, 2));
-      
-      return 'Basic analytics setup ready';
-    } catch (error) {
-      return `Configuration error: ${error.message}`;
-    }
-  }}
-  labelResult="Event Preview"
-/>
+// Final event includes: environment, version, site_section
+```
 
 ### Development Configuration
 
 Ideal for local development and testing:
 
-<CollectorConfiguration
-  configuration={`{
+```typescript
+import { createCollector } from '@walkerOS/collector';
+
+const config = {
   dryRun: true,
   verbose: true,
   globals: {
     environment: 'development',
-    developer: 'john-doe'
+    developer: 'john-doe',
   },
   destinations: {
     console: {
-      push: (event) => console.log('Dev Event:', event)
-    }
-  }
-}`}
-  javascript={`import { createCollector } from '@walkerOS/collector';
+      push: (event) => console.log('Dev Event:', event),
+    },
+  },
+};
 
-const { collector } = await createCollector(config);
+const { collector, elb } = await createCollector(config);
 
 // Events are processed but not sent (dryRun: true)
-await collector.push('test event', {
-  test_data: 'validation'
+await elb('test event', {
+  test_data: 'validation',
 });
 
 // Verbose logging shows detailed processing info
-console.log('✅ Event processed in development mode');`}
-  fn={async (config, log) => {
-    try {
-      const parsedConfig = eval(`(${config})`);
-      
-      if (parsedConfig.dryRun) {
-        log('🧪 DRY RUN MODE: Events processed but not sent');
-      }
-      
-      if (parsedConfig.verbose) {
-        log('📝 VERBOSE MODE: Detailed logging enabled');
-      }
-      
-      log(`👤 Developer: ${parsedConfig.globals.developer}`);
-      log(`🌍 Environment: ${parsedConfig.globals.environment}`);
-      
-      return 'Development environment configured';
-    } catch (error) {
-      return `Configuration error: ${error.message}`;
-    }
-  }}
-  labelResult="Development Status"
-/>
+console.log('✅ Event processed in development mode');
+```
 
 ### Production with Multiple Destinations
 

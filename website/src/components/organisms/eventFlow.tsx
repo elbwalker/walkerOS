@@ -5,12 +5,8 @@ import Preview from '@site/src/components/molecules/preview';
 import FullScreenMode from '@site/src/components/organisms/fullScreenMode';
 import { parseInput } from '@site/src/components/molecules/codeBox';
 import '@site/src/css/highlighting.scss';
-import {
-  destinationPush,
-  debounce,
-  isString,
-  tryCatchAsync,
-} from '@walkerOS/core';
+import { debounce, isString, tryCatchAsync } from '@walkerOS/core';
+import { destinationPush } from '@walkerOS/collector';
 import { taggingRegistry } from './tagging';
 
 export interface EventFlowProps {

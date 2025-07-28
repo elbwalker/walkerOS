@@ -265,7 +265,7 @@ const batchDestination: Destination<BatchSettings> = {
 ```typescript
 type InitFn<Settings, Mapping> = (
   context: {
-    collector: WalkerOS.Collector;
+    collector: Collector.Instance;
     config: Config<Settings, Mapping>;
     wrap: Wrapper.Wrap;
   }
@@ -282,7 +282,7 @@ type InitFn<Settings, Mapping> = (
 type PushFn<Settings, Mapping> = (
   event: WalkerOS.Event,
   context: {
-    collector: WalkerOS.Collector;
+    collector: Collector.Instance;
     config: Config<Settings, Mapping>;
     mapping?: WalkerOSMapping.Rule<Mapping>;
     data?: any;
@@ -297,7 +297,7 @@ type PushFn<Settings, Mapping> = (
 type PushBatchFn<Settings, Mapping> = (
   batch: Array<{ event: WalkerOS.Event; mapping?: WalkerOSMapping.Rule<Mapping> }>,
   context: {
-    collector: WalkerOS.Collector;
+    collector: Collector.Instance;
     config: Config<Settings, Mapping>;
     wrap: Wrapper.Wrap;
   }
@@ -442,7 +442,7 @@ describe('Custom Analytics Destination', () => {
     const mockFetch = jest.fn().mockResolvedValue({ ok: true });
     global.fetch = mockFetch;
     
-    const { collector } = await createCollector({
+    const { collector, elb } = await createCollector({
       destinations: {
         analytics: {
           destination: analyticsDestination,
@@ -456,7 +456,7 @@ describe('Custom Analytics Destination', () => {
       }
     });
     
-    await collector.push('product view', { id: '123' });
+    await elb('product view', { id: '123' });
     
     expect(mockFetch).toHaveBeenCalledWith(
       'https://api.example.com/events',
@@ -507,7 +507,7 @@ const { collector } = await createCollector({
 });
 
 // Events will now be sent to both destinations
-await collector.push('product view', { id: '123', name: 'T-Shirt' });
+await elb('product view', { id: '123', name: 'T-Shirt' });
 ```
 
 ## Advanced Features
