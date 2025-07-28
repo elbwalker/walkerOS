@@ -28,7 +28,7 @@ web-specific event processing capabilities.
 ## Installation
 
 ```sh
-npm install @walkerOS/web-core
+npm install @walkeros/web-core
 ```
 
 ## Usage
@@ -51,7 +51,7 @@ import {
 
   // Storage utilities
   storage,
-} from '@walkerOS/web-core';
+} from '@walkeros/web-core';
 
 // Example: Check if element is visible
 const element = document.getElementById('my-element');

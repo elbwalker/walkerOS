@@ -1,4 +1,4 @@
-import { isVisible } from '@walkerOS/web-core';
+import { isVisible } from '@walkeros/web-core';
 
 describe('isVisible', () => {
   const w = window;

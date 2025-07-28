@@ -21,17 +21,17 @@ user privacy preferences.
 ## Installation
 
 ```bash
-npm install @walkerOS/collector @walkerOS/destination-web-gtag @walkerOS/destination-web-meta
+npm install @walkeros/collector @walkeros/destination-web-gtag @walkeros/destination-web-meta
 ```
 
 ## Complete Example
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { destinationGtag } from '@walkerOS/web-destination-gtag';
-import { destinationMeta } from '@walkerOS/web-destination-meta';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+import { destinationMeta } from '@walkeros/web-destination-meta';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import type { WalkerOS, Collector } from '@walkeros/core';
 
 export async function setupConsentManagement(): Promise<{
   collector: Collector.Instance;

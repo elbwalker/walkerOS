@@ -1,5 +1,5 @@
 {
-  "name": "@walkerOS/web-destination-meta",
+  "name": "@walkeros/web-destination-meta",
   "description": "Meta pixel web destination for walkerOS",
   "version": "0.0.7",
   "license": "MIT",
@@ -30,7 +30,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkerOS/web-core": "0.0.7"
+    "@walkeros/web-core": "0.0.7"
   },
   "devDependencies": {
     "@types/facebook-pixel": "^0.0.31"

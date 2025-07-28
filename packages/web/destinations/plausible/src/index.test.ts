@@ -1,7 +1,7 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
 import type { DestinationPlausible } from '.';
-import { createCollector } from '@walkerOS/collector';
-import { getEvent } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { getEvent } from '@walkeros/core';
 import { destinationPlausibleExamples } from './examples';
 
 const { events, mapping } = destinationPlausibleExamples;

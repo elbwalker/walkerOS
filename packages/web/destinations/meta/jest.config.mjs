@@ -1,4 +1,4 @@
-import baseConfig from '@walkerOS/jest/web.config.mjs';
+import baseConfig from '@walkeros/jest/web.config.mjs';
 
 const config = {};
 

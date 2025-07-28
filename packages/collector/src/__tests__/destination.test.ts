@@ -1,6 +1,6 @@
-import type { Collector } from '@walkerOS/core';
-import type { Destination, WalkerOS } from '@walkerOS/core';
-import { clone, createEvent } from '@walkerOS/core';
+import type { Collector } from '@walkeros/core';
+import type { Destination, WalkerOS } from '@walkeros/core';
+import { clone, createEvent } from '@walkeros/core';
 import { pushToDestinations } from '..';
 
 describe('Destination', () => {

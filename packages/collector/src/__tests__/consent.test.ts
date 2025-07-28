@@ -1,4 +1,4 @@
-import { getGrantedConsent } from '@walkerOS/core';
+import { getGrantedConsent } from '@walkeros/core';
 
 describe('consent', () => {
   test('nothing required', () => {

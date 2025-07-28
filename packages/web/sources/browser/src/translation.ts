@@ -1,11 +1,11 @@
-import type { WalkerOS, Elb, Collector } from '@walkerOS/core';
+import type { WalkerOS, Elb, Collector } from '@walkeros/core';
 import {
   isString,
   isObject,
   isDefined,
   isSameType,
   isElementOrDocument,
-} from '@walkerOS/core';
+} from '@walkeros/core';
 import type {
   BrowserPushData,
   BrowserPushOptions,

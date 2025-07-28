@@ -1,7 +1,7 @@
-import type { Collector, WalkerOS } from '@walkerOS/core';
+import type { Collector, WalkerOS } from '@walkeros/core';
 import type { SessionWindowConfig } from '.';
-import type { StorageType } from '@walkerOS/core';
-import { getId, tryCatch } from '@walkerOS/core';
+import type { StorageType } from '@walkeros/core';
+import { getId, tryCatch } from '@walkeros/core';
 import { storageRead, storageWrite } from '../storage';
 import { sessionWindow } from '.';
 

@@ -8,7 +8,7 @@ projects.
 
 ```javascript
 // eslint.config.mjs
-import { base, web, node } from '@walkerOS/eslint';
+import { base, web, node } from '@walkeros/eslint';
 
 export default [
   ...base, // Base TypeScript rules

@@ -1,5 +1,5 @@
-import type { Mapping } from '@walkerOS/core';
-import { isObject } from '@walkerOS/core';
+import type { Mapping } from '@walkeros/core';
+import { isObject } from '@walkeros/core';
 
 /**
  * Consent Mode Mapping - Primary use case

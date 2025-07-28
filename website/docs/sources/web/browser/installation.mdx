@@ -16,12 +16,12 @@ import TabItem from '@theme/TabItem';
 Install the source via npm
 
 ```bash
-npm install @walkerOS/web-source-browser
+npm install @walkeros/web-source-browser
 ```
 
 ```js
-import { createCollector } from '@walkerOS/collector';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
+import { createCollector } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector, elb } = await createCollector({
   sources: {
@@ -41,10 +41,10 @@ Load the destination via dynamic import
 <script>
   // Load the collector and source
   const { createCollector } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkerOS/collector/dist/index.mjs'
+    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
   );
   const { sourceBrowser } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkerOS/web-source-browser/dist/index.mjs'
+    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
   );
 
   const { collector, elb } = await createCollector({

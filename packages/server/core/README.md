@@ -28,7 +28,7 @@ server-specific event processing capabilities.
 ## Installation
 
 ```sh
-npm install @walkerOS/server-core
+npm install @walkeros/server-core
 ```
 
 ## Usage
@@ -43,7 +43,7 @@ import {
 
   // Type definitions
   ServerDestination,
-} from '@walkerOS/server-core';
+} from '@walkeros/server-core';
 
 // Example: Generate server-side hash
 const hash = await getHashServer('user-id', 'additional-data');

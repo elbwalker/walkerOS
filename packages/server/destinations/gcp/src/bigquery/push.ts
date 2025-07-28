@@ -1,6 +1,6 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
 import type { PushFn } from './types';
-import { isObject, isArray } from '@walkerOS/core';
+import { isObject, isArray } from '@walkeros/core';
 
 export const push: PushFn = async function (
   event,

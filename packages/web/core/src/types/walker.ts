@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
 
 export type Events = Event[];
 

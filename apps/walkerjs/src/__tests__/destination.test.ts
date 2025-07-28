@@ -1,4 +1,4 @@
-import type { WalkerOS, Destination } from '@walkerOS/core';
+import type { WalkerOS, Destination } from '@walkeros/core';
 import { dataLayerDestination } from '../destination';
 import { mockDataLayer } from './setup';
 

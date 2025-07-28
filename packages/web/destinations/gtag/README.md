@@ -1,4 +1,4 @@
-# @walkerOS/web-destination-gtag
+# @walkeros/web-destination-gtag
 
 Unified Google destination for walkerOS supporting Google Analytics 4 (GA4),
 Google Ads, and Google Tag Manager (GTM) through a single gtag implementation.
@@ -17,7 +17,7 @@ Google Ads, and Google Tag Manager (GTM) through a single gtag implementation.
 ## Installation
 
 ```bash
-npm install @walkerOS/web-destination-gtag
+npm install @walkeros/web-destination-gtag
 ```
 
 ## Basic Usage
@@ -25,7 +25,7 @@ npm install @walkerOS/web-destination-gtag
 ### Single Tool (GA4 Only)
 
 ```typescript
-import { destinationGtag } from '@walkerOS/web-destination-gtag';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const destination = destinationGtag({
   settings: {
@@ -39,7 +39,7 @@ const destination = destinationGtag({
 ### Multiple Tools
 
 ```typescript
-import { destinationGtag } from '@walkerOS/web-destination-gtag';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const destination = destinationGtag({
   settings: {
@@ -62,8 +62,8 @@ const destination = destinationGtag({
 ### With Collector
 
 ```typescript
-import { collector } from '@walkerOS/collector';
-import { destinationGtag } from '@walkerOS/web-destination-gtag';
+import { collector } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const instance = collector({
   destinations: [
@@ -183,7 +183,7 @@ settings: {
 ### E-commerce Purchase
 
 ```typescript
-import { destinationGtag } from '@walkerOS/web-destination-gtag';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const destination = destinationGtag({
   settings: {
@@ -257,7 +257,7 @@ const customEventMapping = {
 Full TypeScript support with strict typing:
 
 ```typescript
-import type { DestinationGtag } from '@walkerOS/web-destination-gtag';
+import type { DestinationGtag } from '@walkeros/web-destination-gtag';
 
 // Type-safe configuration
 const config: DestinationGtag.Config = {

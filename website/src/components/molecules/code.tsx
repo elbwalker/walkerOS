@@ -1,4 +1,4 @@
-import { assign } from '@walkerOS/core';
+import { assign } from '@walkeros/core';
 import { ComponentProps } from 'react';
 import CodeBox from './codeBox';
 

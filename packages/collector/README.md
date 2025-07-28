@@ -28,7 +28,7 @@ on, ensuring consistent event handling regardless of the environment.
 ## Installation
 
 ```sh
-npm install @walkerOS/collector
+npm install @walkeros/collector
 ```
 
 ## Usage
@@ -36,7 +36,7 @@ npm install @walkerOS/collector
 The collector provides a factory function for creating collector instances:
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
+import { createCollector } from '@walkeros/collector';
 
 // Basic setup
 const { collector, elb } = await createCollector({

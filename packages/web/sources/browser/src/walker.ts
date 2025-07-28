@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
 import type {
   Scope,
   WalkerEvent,
@@ -10,9 +10,9 @@ import type {
   Attributes,
   KeyVal,
 } from './types';
-import { assign, castValue, isArray, trim } from '@walkerOS/core';
-import { Const } from '@walkerOS/collector';
-import { getAttribute } from '@walkerOS/web-core';
+import { assign, castValue, isArray, trim } from '@walkeros/core';
+import { Const } from '@walkeros/collector';
+import { getAttribute } from '@walkeros/web-core';
 
 export function getElbAttributeName(
   prefix: string,

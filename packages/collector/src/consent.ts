@@ -1,5 +1,5 @@
-import type { Collector, WalkerOS, Elb } from '@walkerOS/core';
-import { assign } from '@walkerOS/core';
+import type { Collector, WalkerOS, Elb } from '@walkeros/core';
+import { assign } from '@walkeros/core';
 import { pushToDestinations, createPushResult } from './destination';
 import { onApply } from './on';
 

@@ -1,5 +1,5 @@
 {
-  "name": "@walkerOS/web-source-dataLayer",
+  "name": "@walkeros/web-source-dataLayer",
   "description": "DataLayer source for walkerOS",
   "version": "0.0.7",
   "license": "MIT",
@@ -30,8 +30,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkerOS/core": "0.0.7",
-    "@walkerOS/collector": "0.0.7"
+    "@walkeros/core": "0.0.7",
+    "@walkeros/collector": "0.0.7"
   },
   "devDependencies": {
     "@types/gtag.js": "^0.0.20"

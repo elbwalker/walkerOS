@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
 import type { Settings, Destination } from './types';
 import { initGA4, pushGA4Event } from './ga4';
 import { initAds, pushAdsEvent } from './ads';

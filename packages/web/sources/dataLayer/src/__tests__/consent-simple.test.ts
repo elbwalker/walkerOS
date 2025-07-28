@@ -1,6 +1,6 @@
-import { createCollector } from '@walkerOS/collector';
+import { createCollector } from '@walkeros/collector';
 import { sourceDataLayer } from '../index';
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 import { createMockPush, getDataLayer } from './test-utils';
 
 describe('DataLayer Source - Consent Mode (Simple)', () => {

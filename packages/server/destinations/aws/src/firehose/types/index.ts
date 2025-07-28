@@ -1,5 +1,5 @@
-import type { DestinationServer } from '@walkerOS/server-core';
-import type { Mapping as WalkerOSMapping, Elb } from '@walkerOS/core';
+import type { DestinationServer } from '@walkeros/server-core';
+import type { Mapping as WalkerOSMapping, Elb } from '@walkeros/core';
 import type {
   FirehoseClient,
   FirehoseClientConfig,

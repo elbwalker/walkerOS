@@ -1,7 +1,7 @@
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
-import { getEvent } from '@walkerOS/core';
-import { createCollector } from '@walkerOS/collector';
+import { getEvent } from '@walkeros/core';
+import { createCollector } from '@walkeros/collector';
 import { destinationMetaExamples } from '../examples';
 import { hashEvent } from '../hash';
 
@@ -14,8 +14,8 @@ describe('Server Destination Meta', () => {
   const pixelId = 'p1x3l1d';
   const mockSendServer = jest.fn();
 
-  jest.mock('@walkerOS/server-core', () => ({
-    ...jest.requireActual('@walkerOS/server-core'),
+  jest.mock('@walkeros/server-core', () => ({
+    ...jest.requireActual('@walkeros/server-core'),
     sendServer: mockSendServer,
   }));
 

@@ -3,9 +3,9 @@ import type {
   SendDataValue,
   SendHeaders,
   Elb,
-} from '@walkerOS/core';
-import type { DestinationWeb } from '@walkerOS/web-core';
-import type { SendWebTransport } from '@walkerOS/web-core';
+} from '@walkeros/core';
+import type { DestinationWeb } from '@walkeros/web-core';
+import type { SendWebTransport } from '@walkeros/web-core';
 
 declare global {
   // Augment the global WalkerOS namespace with destination-specific types

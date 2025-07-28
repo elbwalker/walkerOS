@@ -1,7 +1,7 @@
-import type { Collector, On, WalkerOS } from '@walkerOS/core';
-import { isArray } from '@walkerOS/core';
+import type { Collector, On, WalkerOS } from '@walkeros/core';
+import { isArray } from '@walkeros/core';
 import { Const } from './constants';
-import { tryCatch } from '@walkerOS/core';
+import { tryCatch } from '@walkeros/core';
 
 /**
  * Registers a callback for a specific event type.

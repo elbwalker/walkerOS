@@ -15,8 +15,8 @@ import { assign } from './assign';
  *
  * @example
  * ```typescript
- * import { createSource } from '@walkerOS/core';
- * import { sourceBrowser } from '@walkerOS/web-source-browser';
+ * import { createSource } from '@walkeros/core';
+ * import { sourceBrowser } from '@walkeros/web-source-browser';
  *
  * const configuredSource = createSource(sourceBrowser, {
  *   settings: {

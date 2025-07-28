@@ -1,12 +1,12 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
 import type {
   BodyParameters,
   CustomerInformationParameters,
   PushFn,
   ServerEventParameters,
 } from './types';
-import { getMappingValue, isObject } from '@walkerOS/core';
-import { sendServer } from '@walkerOS/server-core';
+import { getMappingValue, isObject } from '@walkeros/core';
+import { sendServer } from '@walkeros/server-core';
 import { hashEvent } from './hash';
 
 export const push: PushFn = async function (

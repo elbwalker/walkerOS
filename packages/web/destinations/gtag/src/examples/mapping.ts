@@ -1,6 +1,6 @@
-import type { Mapping } from '@walkerOS/core';
+import type { Mapping } from '@walkeros/core';
 import type { DestinationGtag } from '..';
-import { isObject } from '@walkerOS/core';
+import { isObject } from '@walkeros/core';
 
 // GA4 Purchase Mapping
 export const ga4Purchase: DestinationGtag.Rule = {

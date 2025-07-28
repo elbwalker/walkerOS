@@ -29,7 +29,7 @@ capabilities.
 ## Installation
 
 ```sh
-npm install @walkerOS/server-destination-gcp
+npm install @walkeros/server-destination-gcp
 ```
 
 ## Usage
@@ -37,8 +37,8 @@ npm install @walkerOS/server-destination-gcp
 Here's a basic example of how to use the GCP destination:
 
 ```typescript
-import { elb } from '@walkerOS/collector';
-import { destinationBigQuery } from '@walkerOS/server-destination-gcp';
+import { elb } from '@walkeros/collector';
+import { destinationBigQuery } from '@walkeros/server-destination-gcp';
 
 elb('walker destination', destinationBigQuery, {
   custom: {

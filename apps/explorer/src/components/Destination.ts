@@ -17,8 +17,8 @@ import {
 import { createCodeEditor, type CodeEditorAPI } from './CodeEditor';
 import { createResultDisplay, type ResultDisplayAPI } from './ResultDisplay';
 import { debounce } from '../utils/debounce';
-import { createCollector } from '@walkerOS/collector';
-import type { Collector, WalkerOS, Destination, Elb } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import type { Collector, WalkerOS, Destination, Elb } from '@walkeros/core';
 import { toggleElementTheme, getElementTheme } from '../core/css-theme-system';
 
 export interface DestinationOptions {

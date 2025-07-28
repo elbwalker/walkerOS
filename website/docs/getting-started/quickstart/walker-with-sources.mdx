@@ -22,7 +22,7 @@ script-based setup.
 No npm installation required! Just add the CDN script:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@latest/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/index.browser.js"></script>
 ```
 
 ## Complete Example
@@ -34,7 +34,7 @@ export async function setupWalkerWithSources(): Promise<unknown> {
   await new Promise<void>((resolve) => {
     const script = document.createElement('script');
     script.src =
-      'https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@latest/dist/index.browser.js';
+      'https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/index.browser.js';
     script.async = true;
     script.onload = () => resolve();
     document.head.appendChild(script);
@@ -93,7 +93,7 @@ Add tracking attributes to your HTML elements:
 <!DOCTYPE html>
 <html>
   <head>
-    <script src="https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@latest/dist/index.browser.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/index.browser.js"></script>
   </head>
   <body>
     <!-- Automatically tracked button -->

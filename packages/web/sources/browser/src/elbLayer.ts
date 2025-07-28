@@ -1,11 +1,11 @@
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 import type { ELBLayer, ELBLayerConfig } from './types';
 import type {
   BrowserPushData,
   BrowserPushOptions,
   BrowserPushContext,
 } from './types/elb';
-import { tryCatch } from '@walkerOS/core';
+import { tryCatch } from '@walkeros/core';
 import { translateToCoreCollector } from './translation';
 
 /**

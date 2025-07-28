@@ -1,5 +1,5 @@
 {
-  "name": "@walkerOS/server-destination-meta",
+  "name": "@walkeros/server-destination-meta",
   "description": "Meta server destination for walkerOS",
   "version": "0.0.7",
   "license": "MIT",
@@ -30,7 +30,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkerOS/server-core": "0.0.7"
+    "@walkeros/server-core": "0.0.7"
   },
   "devDependencies": {},
   "repository": {

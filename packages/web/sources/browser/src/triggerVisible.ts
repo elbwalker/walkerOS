@@ -1,6 +1,6 @@
-import type { WalkerOS, Collector } from '@walkerOS/core';
-import { tryCatch } from '@walkerOS/core';
-import { isVisible } from '@walkerOS/web-core';
+import type { WalkerOS, Collector } from '@walkeros/core';
+import { tryCatch } from '@walkeros/core';
+import { isVisible } from '@walkeros/web-core';
 import { handleTrigger, Triggers } from './trigger';
 
 // Cache for element size calculations to reduce DOM queries

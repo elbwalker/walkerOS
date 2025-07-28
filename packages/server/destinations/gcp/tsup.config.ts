@@ -1,4 +1,4 @@
-import { defineConfig, buildModules, buildExamples } from '@walkerOS/tsup';
+import { defineConfig, buildModules, buildExamples } from '@walkeros/tsup';
 
 export default defineConfig([
   buildModules({

@@ -1,4 +1,4 @@
-import { getEvent } from '@walkerOS/core';
+import { getEvent } from '@walkeros/core';
 
 // GA4 Purchase Event Example
 export function ga4Purchase(): unknown[] {

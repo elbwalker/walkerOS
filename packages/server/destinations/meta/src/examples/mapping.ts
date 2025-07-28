@@ -1,6 +1,6 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
 import type { DestinationMeta } from '..';
-import { isObject } from '@walkerOS/core';
+import { isObject } from '@walkeros/core';
 
 export const InitUserData: DestinationMeta.Settings = {
   pixelId: 'p1x3l1d',

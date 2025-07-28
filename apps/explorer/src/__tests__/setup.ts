@@ -1,4 +1,4 @@
-// Test setup file for @walkerOS/explorer
+// Test setup file for @walkeros/explorer
 import '@testing-library/jest-dom';
 
 // Polyfills for JSDOM environment

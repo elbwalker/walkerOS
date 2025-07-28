@@ -1,8 +1,8 @@
-import type { WalkerOS, Collector } from '@walkerOS/core';
-import type { SessionCallback } from '@walkerOS/web-core';
-import { assign, useHooks } from '@walkerOS/core';
-import { onApply } from '@walkerOS/collector';
-import { sessionStart as sessionStartOrg } from '@walkerOS/web-core';
+import type { WalkerOS, Collector } from '@walkeros/core';
+import type { SessionCallback } from '@walkeros/web-core';
+import { assign, useHooks } from '@walkeros/core';
+import { onApply } from '@walkeros/collector';
+import { sessionStart as sessionStartOrg } from '@walkeros/web-core';
 
 export interface SessionStartOptions {
   config?: unknown;

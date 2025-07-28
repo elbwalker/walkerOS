@@ -1,5 +1,5 @@
 import type { Config, Settings, PartialConfig } from './types';
-import { throwError } from '@walkerOS/core';
+import { throwError } from '@walkeros/core';
 
 export function getConfig(partialConfig: PartialConfig = {}): Config {
   const settings = (partialConfig.settings || {}) as Partial<Settings>;

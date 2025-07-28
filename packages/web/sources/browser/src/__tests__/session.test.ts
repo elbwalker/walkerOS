@@ -1,4 +1,4 @@
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 import {
   createSessionStart,
   sessionStart,
@@ -6,25 +6,25 @@ import {
 } from '../session';
 
 // Mock dependencies - declare before use in jest.mock
-jest.mock('@walkerOS/core', () => ({
-  ...jest.requireActual('@walkerOS/core'),
+jest.mock('@walkeros/core', () => ({
+  ...jest.requireActual('@walkeros/core'),
   assign: jest.fn((target, source) => Object.assign({}, target, source)),
   isSameType: jest.fn(() => true),
   useHooks: jest.fn(),
 }));
 
-jest.mock('@walkerOS/collector', () => ({
+jest.mock('@walkeros/collector', () => ({
   onApply: jest.fn(),
 }));
 
-jest.mock('@walkerOS/web-core', () => ({
+jest.mock('@walkeros/web-core', () => ({
   sessionStart: jest.fn(),
 }));
 
 // Get references to the mocked functions
-const { useHooks } = require('@walkerOS/core');
-const { onApply } = require('@walkerOS/collector');
-const { sessionStart: sessionStartOrg } = require('@walkerOS/web-core');
+const { useHooks } = require('@walkeros/core');
+const { onApply } = require('@walkeros/collector');
+const { sessionStart: sessionStartOrg } = require('@walkeros/web-core');
 
 describe('Session', () => {
   let mockCollector: Collector.Instance;

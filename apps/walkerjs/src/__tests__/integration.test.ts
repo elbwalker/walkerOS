@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
 import { createWalkerjs, getAllEvents, getEvents, getGlobals } from '../index';
 
 describe('Walker.js Integration Tests', () => {

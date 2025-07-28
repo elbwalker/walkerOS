@@ -1,5 +1,5 @@
-import type { WalkerOS } from '@walkerOS/core';
-import { isString, isDefined } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
+import { isString, isDefined } from '@walkeros/core';
 
 export interface TaggerConfig {
   prefix?: string;

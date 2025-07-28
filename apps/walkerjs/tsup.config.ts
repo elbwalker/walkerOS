@@ -3,7 +3,7 @@ import {
   buildModules,
   buildBrowser,
   buildES5,
-} from '@walkerOS/tsup';
+} from '@walkeros/tsup';
 
 const globalName = 'Walkerjs';
 

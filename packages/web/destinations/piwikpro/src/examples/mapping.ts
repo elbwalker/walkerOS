@@ -1,6 +1,6 @@
-import type { Mapping } from '@walkerOS/core';
+import type { Mapping } from '@walkeros/core';
 import type { DestinationPiwikPro } from '..';
-import { isObject } from '@walkerOS/core';
+import { isObject } from '@walkeros/core';
 
 const productMap = {
   sku: 'data.id',

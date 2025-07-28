@@ -1,4 +1,4 @@
-import { parseInlineConfig } from '@walkerOS/web-core';
+import { parseInlineConfig } from '@walkeros/web-core';
 import { createWalkerjs } from './index';
 import type { Config } from './types';
 

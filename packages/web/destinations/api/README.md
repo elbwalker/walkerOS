@@ -29,7 +29,7 @@ real-time event data.
 ## Installation
 
 ```sh
-npm install @walkerOS/web-destination-api
+npm install @walkeros/web-destination-api
 ```
 
 ## Usage
@@ -37,8 +37,8 @@ npm install @walkerOS/web-destination-api
 Here's a basic example of how to use the web API destination:
 
 ```typescript
-import { elb } from '@walkerOS/collector';
-import { destinationAPI } from '@walkerOS/web-destination-api';
+import { elb } from '@walkeros/collector';
+import { destinationAPI } from '@walkeros/web-destination-api';
 
 elb('walker destination', destinationAPI, {
   custom: {

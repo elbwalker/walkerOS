@@ -1,4 +1,4 @@
-import { getLanguage, getTimezone, getScreenSize } from '@walkerOS/web-core';
+import { getLanguage, getTimezone, getScreenSize } from '@walkeros/web-core';
 
 describe('Browser Utilities', () => {
   const mockWindow = {

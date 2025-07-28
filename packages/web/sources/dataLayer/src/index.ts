@@ -1,7 +1,7 @@
-import type { Collector, WalkerOS, Source } from '@walkerOS/core';
+import type { Collector, WalkerOS, Source } from '@walkeros/core';
 import type { Settings, DataLayerSourceConfig } from './types';
 import { interceptDataLayer, processExistingEvents } from './interceptor';
-import { getId } from '@walkerOS/core';
+import { getId } from '@walkeros/core';
 
 // Export types for external usage
 export * as SourceDataLayer from './types';

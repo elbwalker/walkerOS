@@ -1,5 +1,5 @@
 import type { BodyParameters } from '../types';
-import { getEvent } from '@walkerOS/core';
+import { getEvent } from '@walkeros/core';
 
 export function Purchase(): BodyParameters {
   const event = getEvent('order complete');

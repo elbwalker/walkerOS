@@ -29,7 +29,7 @@ experiences.
 npm install
 
 # As external dependency (future)
-npm install @walkerOS/explorer
+npm install @walkeros/explorer
 ```
 
 ## 🏗️ Architecture
@@ -65,7 +65,7 @@ import {
   createCodeEditor,
   createPreview,
   createResultDisplay,
-} from '@walkerOS/explorer';
+} from '@walkeros/explorer';
 
 // Create a code editor
 const editor = createCodeEditor('#editor', {
@@ -94,7 +94,7 @@ import {
   createLiveCode,
   createEventFlow,
   createDestination,
-} from '@walkerOS/explorer';
+} from '@walkeros/explorer';
 
 // Live code editor with preview
 const liveCode = createLiveCode('#livecode', {

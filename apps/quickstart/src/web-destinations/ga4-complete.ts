@@ -1,6 +1,6 @@
-import { createCollector } from '@walkerOS/collector';
-import { destinationGtag } from '@walkerOS/web-destination-gtag';
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+import type { WalkerOS, Collector } from '@walkeros/core';
 
 export async function setupGA4Complete(): Promise<{
   collector: Collector.Instance;

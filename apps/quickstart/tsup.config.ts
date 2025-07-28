@@ -1,4 +1,4 @@
-import { defineConfig } from '@walkerOS/tsup';
+import { defineConfig } from '@walkeros/tsup';
 
 export default defineConfig({
   entry: ['src/**/*.ts', '!src/**/*.test.ts', '!src/__tests__/**'],

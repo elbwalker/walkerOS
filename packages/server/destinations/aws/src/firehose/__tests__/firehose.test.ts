@@ -1,6 +1,6 @@
 import type { Config, Settings, Destination } from '../types';
-import type { WalkerOS, Collector } from '@walkerOS/core';
-import { createEvent } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
+import { createEvent } from '@walkeros/core';
 import {
   FirehoseClient,
   PutRecordBatchCommand,

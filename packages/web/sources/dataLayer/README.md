@@ -29,7 +29,7 @@ traditional dataLayer implementations.
 ## Installation
 
 ```sh
-npm install @walkerOS/web-source-dataLayer
+npm install @walkeros/web-source-dataLayer
 ```
 
 ## Usage
@@ -37,8 +37,8 @@ npm install @walkerOS/web-source-dataLayer
 Here's a basic example of how to use the dataLayer source:
 
 ```typescript
-import { elb } from '@walkerOS/collector';
-import { sourceDataLayer } from '@walkerOS/web-source-dataLayer';
+import { elb } from '@walkeros/collector';
+import { sourceDataLayer } from '@walkeros/web-source-dataLayer';
 
 sourceDataLayer({ elb });
 ```

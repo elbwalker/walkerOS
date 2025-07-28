@@ -22,11 +22,11 @@ requirements.
 For projects using npm and build tools:
 
 ```bash
-npm install @walkerOS/collector
+npm install @walkeros/collector
 ```
 
 ```javascript
-import { createCollector } from '@walkerOS/collector';
+import { createCollector } from '@walkeros/collector';
 
 const { collector, elb } = await createCollector({
   destinations: {
@@ -44,7 +44,7 @@ For websites without build tools:
 
 ```html
 <!-- Add to your HTML head -->
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@latest/dist/walker.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/walker.js"></script>
 
 <script>
   // Configure tracking
@@ -131,7 +131,7 @@ For websites without build tools:
 For event collection and processing:
 
 ```bash
-npm install @walkerOS/collector
+npm install @walkeros/collector
 ```
 
 #### Web Development
@@ -140,13 +140,13 @@ For browser-based applications:
 
 ```bash
 # Basic web tracking
-npm install @walkerOS/collector @walkerOS/web-source-browser
+npm install @walkeros/collector @walkeros/web-source-browser
 
 # With Google Analytics
-npm install @walkerOS/collector @walkerOS/web-destination-gtag
+npm install @walkeros/collector @walkeros/web-destination-gtag
 
 # Complete web setup
-npm install @walkerOS/collector @walkerOS/web-source-browser @walkerOS/web-destination-gtag @walkerOS/web-destination-meta
+npm install @walkeros/collector @walkeros/web-source-browser @walkeros/web-destination-gtag @walkeros/web-destination-meta
 ```
 
 #### Server Development
@@ -155,10 +155,10 @@ For Node.js and server environments:
 
 ```bash
 # Basic server tracking
-npm install @walkerOS/collector @walkerOS/server-destination-aws
+npm install @walkeros/collector @walkeros/server-destination-aws
 
 # Complete server setup
-npm install @walkerOS/collector @walkerOS/server-destination-aws @walkerOS/server-destination-gcp
+npm install @walkeros/collector @walkeros/server-destination-aws @walkeros/server-destination-gcp
 ```
 
 ### Package Categories
@@ -167,42 +167,42 @@ npm install @walkerOS/collector @walkerOS/server-destination-aws @walkerOS/serve
 
 ```bash
 # Browser DOM tracking
-npm install @walkerOS/web-source-browser
+npm install @walkeros/web-source-browser
 
 # DataLayer integration
-npm install @walkerOS/web-source-datalayer
+npm install @walkeros/web-source-datalayer
 ```
 
 #### Web Destinations (Analytics Platforms)
 
 ```bash
 # Google Analytics 4 & Ads
-npm install @walkerOS/web-destination-gtag
+npm install @walkeros/web-destination-gtag
 
 # Meta Pixel (Facebook/Instagram)
-npm install @walkerOS/web-destination-meta
+npm install @walkeros/web-destination-meta
 
 # PiwikPro Analytics
-npm install @walkerOS/web-destination-piwikpro
+npm install @walkeros/web-destination-piwikpro
 
 # Plausible Analytics
-npm install @walkerOS/web-destination-plausible
+npm install @walkeros/web-destination-plausible
 
 # Custom API endpoints
-npm install @walkerOS/web-destination-api
+npm install @walkeros/web-destination-api
 ```
 
 #### Server Destinations (Data Streaming)
 
 ```bash
 # AWS Kinesis Data Firehose
-npm install @walkerOS/server-destination-aws
+npm install @walkeros/server-destination-aws
 
 # Google Cloud Pub/Sub
-npm install @walkerOS/server-destination-gcp
+npm install @walkeros/server-destination-gcp
 
 # Meta Conversions API
-npm install @walkerOS/server-destination-meta
+npm install @walkeros/server-destination-meta
 ```
 
 ### TypeScript Support
@@ -210,10 +210,10 @@ npm install @walkerOS/server-destination-meta
 All packages include TypeScript definitions:
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { destinationGtag } from '@walkerOS/web-destination-gtag';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import type { WalkerOS, Collector } from '@walkeros/core';
 
 const { elb }: { elb: WalkerOS.Elb } = await createCollector({
   sources: {
@@ -237,13 +237,13 @@ Load packages directly from CDN:
 
 ```html
 <!-- Core collector -->
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.browser.js"></script>
 
 <!-- Browser source -->
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/web-source-browser/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.browser.js"></script>
 
 <!-- Google Analytics destination -->
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/web-destination-gtag/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.browser.js"></script>
 
 <script>
   // Use the loaded packages
@@ -261,13 +261,13 @@ Use modern ES6 modules:
 <script type="module">
   // Dynamic imports
   const { createCollector } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkerOS/collector/dist/index.mjs'
+    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
   );
   const { destinationGtag } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkerOS/web-destination-gtag/dist/index.mjs'
+    'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.mjs'
   );
   const { sourceBrowser } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkerOS/web-source-browser/dist/index.mjs'
+    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
   );
 
   // Setup tracking
@@ -295,8 +295,8 @@ For older browsers, use ES5 builds:
 
 ```html
 <!-- ES5 compatible builds -->
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector/dist/index.es5.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/web-destination-gtag/dist/index.es5.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.es5.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.es5.js"></script>
 ```
 
 ## Advanced Options
@@ -307,12 +307,12 @@ Pin to specific versions for production:
 
 ```html
 <!-- Pin to specific version -->
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@0.0.7/dist/walker.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@0.0.7/dist/walker.js"></script>
 ```
 
 ```bash
 # NPM version pinning
-npm install @walkerOS/collector@0.0.7
+npm install @walkeros/collector@0.0.7
 ```
 
 ### Self-Hosting
@@ -321,7 +321,7 @@ Download and host files yourself:
 
 ```bash
 # Download specific package
-npm pack @walkerOS/walker.js
+npm pack @walkeros/walker.js
 tar -xzf walkerOS-walker.js-*.tgz
 cp package/dist/* ./public/js/
 ```

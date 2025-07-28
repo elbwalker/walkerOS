@@ -28,7 +28,7 @@ privacy-focused web analytics without cookies or personal data collection.
 ## Installation
 
 ```sh
-npm install @walkerOS/web-destination-plausible
+npm install @walkeros/web-destination-plausible
 ```
 
 ## Usage
@@ -36,8 +36,8 @@ npm install @walkerOS/web-destination-plausible
 Here's a basic example of how to use the Plausible destination:
 
 ```typescript
-import { elb } from '@walkerOS/collector';
-import { destinationPlausible } from '@walkerOS/web-destination-plausible';
+import { elb } from '@walkeros/collector';
+import { destinationPlausible } from '@walkeros/web-destination-plausible';
 
 elb('walker destination', destinationPlausible, {
   custom: {

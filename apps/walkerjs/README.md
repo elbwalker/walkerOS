@@ -40,7 +40,7 @@ Add this before walker.js loads to queue events:
 <script
   async
   data-elbconfig="elbConfig"
-  src="https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@latest/dist/walker.js"
+  src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/walker.js"
 ></script>
 ```
 
@@ -253,7 +253,7 @@ Creates a new walker.js instance with the provided configuration.
 You can also import and use the utility functions directly:
 
 ```javascript
-import { getAllEvents, getEvents, getGlobals } from '@walkerOS/walker.js';
+import { getAllEvents, getEvents, getGlobals } from '@walkeros/walker.js';
 
 // Get all events on the page
 const events = getAllEvents();
@@ -298,8 +298,8 @@ for contribution guidelines.
 
 ## Related Packages
 
-- [@walkerOS/collector](../../../packages/collector) - Core collector
-- [@walkerOS/web-source-browser](../../../packages/web/sources/browser) -
+- [@walkeros/collector](../../../packages/collector) - Core collector
+- [@walkeros/web-source-browser](../../../packages/web/sources/browser) -
   Browser source
-- [@walkerOS/web-source-dataLayer](../../../packages/web/sources/dataLayer) -
+- [@walkeros/web-source-dataLayer](../../../packages/web/sources/dataLayer) -
   DataLayer source

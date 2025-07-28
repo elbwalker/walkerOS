@@ -1,5 +1,5 @@
-import { createCollector } from '@walkerOS/collector';
-import type { WalkerOS, Destination, Collector } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import type { WalkerOS, Destination, Collector } from '@walkeros/core';
 
 // Custom destination that sends events to a webhook
 const customWebhookDestination: Destination.Instance = {

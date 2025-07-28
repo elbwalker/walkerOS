@@ -1,9 +1,9 @@
-import { createCollector } from '@walkerOS/collector';
-import { createSource, createDestination } from '@walkerOS/core';
-import { destinationAPI } from '@walkerOS/web-destination-api';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
-import type { WalkerOS, Collector, Source } from '@walkerOS/core';
-import type { SourceInit } from '@walkerOS/collector';
+import { createCollector } from '@walkeros/collector';
+import { createSource, createDestination } from '@walkeros/core';
+import { destinationAPI } from '@walkeros/web-destination-api';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import type { WalkerOS, Collector, Source } from '@walkeros/core';
+import type { SourceInit } from '@walkeros/collector';
 
 // Helper function to wrap createSource result for collector compatibility
 function wrapSource<T extends Source.Config, E>(

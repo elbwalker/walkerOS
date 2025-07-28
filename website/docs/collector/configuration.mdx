@@ -4,7 +4,7 @@ description: Complete collector configuration guide
 path: /docs/collector/configuration
 sidebar_position: 2
 tags: [collector, configuration, setup]
-package: '@walkerOS/collector'
+package: '@walkeros/collector'
 ---
 
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
@@ -20,9 +20,9 @@ settings that differ from the defaults.
 ## Basic Setup
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { createSource } from '@walkerOS/core';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
+import { createCollector } from '@walkeros/collector';
+import { createSource } from '@walkeros/core';
+import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const config = {
   run: true,
@@ -128,9 +128,9 @@ Destinations define where your events are sent after processing. You can configu
 
 ### Traditional Configuration
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { createSource } from '@walkerOS/core';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
+import { createCollector } from '@walkeros/collector';
+import { createSource } from '@walkeros/core';
+import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const config = {
   sources: {
@@ -178,9 +178,9 @@ needs, and separation of concerns (analytics vs marketing vs debugging).
 For elegant configuration and to avoid config side-effects in tests, use the `createSource` and `createDestination` utilities:
 
 ```typescript
-import { createDestination, createSource } from '@walkerOS/core';
-import { destinationGtag } from '@walkerOS/web-destination-gtag';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
+import { createDestination, createSource } from '@walkeros/core';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { elb } = await createCollector({
   sources: {
@@ -217,9 +217,9 @@ For detailed destination configuration, see the
 Perfect for simple websites or getting started:
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { createSource } from '@walkerOS/core';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
+import { createCollector } from '@walkeros/collector';
+import { createSource } from '@walkeros/core';
+import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const config = {
   run: true,
@@ -258,9 +258,9 @@ await elb('button click', {
 Ideal for local development and testing:
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { createSource } from '@walkerOS/core';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
+import { createCollector } from '@walkeros/collector';
+import { createSource } from '@walkeros/core';
+import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const config = {
   dryRun: true,

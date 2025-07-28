@@ -11,10 +11,10 @@ This guide helps you migrate from the old elbwalker packages to the new walkerOS
 ## Quick Reference
 
 ### Core Package Changes
-- `@elbwalker/walker.js` → `@walkerOS/collector` + `@walkerOS/web-source-browser`
-- `@elbwalker/types` + `@elbwalker/utils` → `@walkerOS/core`
-- `@elbwalker/destination-web-*` → `@walkerOS/web-destination-*`
-- `@elbwalker/destination-node-*` → `@walkerOS/server-destination-*`
+- `@elbwalker/walker.js` → `@walkeros/collector` + `@walkeros/web-source-browser`
+- `@elbwalker/types` + `@elbwalker/utils` → `@walkeros/core`
+- `@elbwalker/destination-web-*` → `@walkeros/web-destination-*`
+- `@elbwalker/destination-node-*` → `@walkeros/server-destination-*`
 
 ## Step-by-Step Migration
 
@@ -34,9 +34,9 @@ This guide helps you migrate from the old elbwalker packages to the new walkerOS
 ```json
 {
   "dependencies": {
-    "@walkerOS/collector": "^0.0.7",
-    "@walkerOS/web-source-browser": "^0.0.7",
-    "@walkerOS/web-destination-gtag": "^0.0.7"
+    "@walkeros/collector": "^0.0.7",
+    "@walkeros/web-source-browser": "^0.0.7",
+    "@walkeros/web-destination-gtag": "^0.0.7"
   }
 }
 ```
@@ -52,10 +52,10 @@ import type { WalkerOS } from '@elbwalker/types';
 
 **After:**
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
-import { destinationGtag } from '@walkerOS/web-destination-gtag';
-import type { WalkerOS } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+import type { WalkerOS } from '@walkeros/core';
 ```
 
 ### 3. Update Function Calls
@@ -69,7 +69,7 @@ const walker = Walkerjs({
 
 **After:**
 ```typescript
-import { createSource, createDestination } from '@walkerOS/core';
+import { createSource, createDestination } from '@walkeros/core';
 
 // Single big config file approach
 const { elb } = await createCollector({
@@ -91,19 +91,19 @@ elb('walker destination', createDestination(destinationGtag, {
 ## Breaking Changes
 
 ### 1. Unified Collector
-- Single `@walkerOS/collector` package works across all platforms
+- Single `@walkeros/collector` package works across all platforms
 - Use `createCollector()` instead of `Walkerjs()` or `createSourceNode()`
 
 ### 2. Modular Sources  
-- DOM tracking is now `@walkerOS/web-source-browser`
+- DOM tracking is now `@walkeros/web-source-browser`
 - Import and initialize sources separately
 
 ### 3. Core Package Merger
-- All types and utilities now come from `@walkerOS/core`
+- All types and utilities now come from `@walkeros/core`
 - Update all import statements accordingly
 
 ### 4. Google Destinations Unified
-- GA4, Google Ads, and GTM are now unified in `@walkerOS/web-destination-gtag`
+- GA4, Google Ads, and GTM are now unified in `@walkeros/web-destination-gtag`
 - Configure all Google services through a single destination
 
 ## Destination Configuration Patterns
@@ -121,7 +121,7 @@ elb('walker destination', destinationGtag, {
 For a more elegant API and to avoid config side-effects in tests:
 
 ```typescript
-import { createSource, createDestination } from '@walkerOS/core';
+import { createSource, createDestination } from '@walkeros/core';
 
 // Complete tracking setup in one config
 const trackingConfig = {
@@ -152,23 +152,23 @@ elb('walker destination', createDestination(destinationGtag, {
 
 ### Package Dependencies
 - [ ] Remove old `@elbwalker/*` packages
-- [ ] Add `@walkerOS/collector` 
+- [ ] Add `@walkeros/collector` 
 - [ ] Add required sources and destinations
-- [ ] Add `@walkerOS/core` for custom implementations
+- [ ] Add `@walkeros/core` for custom implementations
 
 ### Code Updates  
 - [ ] Update all imports to new packages
 - [ ] Replace collector initialization with `createCollector()`
-- [ ] Update type imports to use `@walkerOS/core`
+- [ ] Update type imports to use `@walkeros/core`
 - [ ] Test functionality after migration
 
 ## Common Issues
 
-**"Cannot find module @walkerOS/web-collector"**  
-Solution: Use `@walkerOS/collector` + `@walkerOS/web-source-browser`
+**"Cannot find module @walkeros/web-collector"**  
+Solution: Use `@walkeros/collector` + `@walkeros/web-source-browser`
 
 **"elb is not defined"**  
 Solution: `elb` is returned by `createCollector()` function
 
 **TypeScript cannot find types**  
-Solution: Import types from `@walkerOS/core`
+Solution: Import types from `@walkeros/core`

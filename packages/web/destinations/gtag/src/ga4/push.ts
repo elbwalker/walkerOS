@@ -1,6 +1,6 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
 import type { GA4Settings, GA4Mapping, Parameters } from '../types';
-import { isObject } from '@walkerOS/core';
+import { isObject } from '@walkeros/core';
 import { getParamsInclude } from '../shared/parameters';
 import { normalizeEventName } from '../shared/mapping';
 import { getGtag } from '../shared/gtag';

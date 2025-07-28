@@ -1,7 +1,7 @@
-import { createCollector } from '@walkerOS/collector';
-import { createDestination } from '@walkerOS/core';
-import { destinationFirehose } from '@walkerOS/server-destination-aws';
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { createDestination } from '@walkeros/core';
+import { destinationFirehose } from '@walkeros/server-destination-aws';
+import type { WalkerOS, Collector } from '@walkeros/core';
 
 export async function setupAWSFirehose(): Promise<{
   collector: Collector.Instance;

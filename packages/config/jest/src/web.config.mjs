@@ -1,7 +1,7 @@
-import baseConfig from '@walkerOS/jest/index.mjs';
+import baseConfig from '@walkeros/jest/index.mjs';
 
 const config = {
-  setupFilesAfterEnv: ['@walkerOS/jest/web.setup'],
+  setupFilesAfterEnv: ['@walkeros/jest/web.setup'],
   testEnvironment: 'jsdom',
 };
 

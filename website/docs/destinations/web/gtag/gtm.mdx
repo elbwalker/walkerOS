@@ -3,7 +3,7 @@ title: Google Tag Manager (GTM)
 description:
   Google Tag Manager configuration within the unified gtag destination
 sidebar_position: 4
-package: '@walkerOS/web-destination-gtag'
+package: '@walkeros/web-destination-gtag'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
@@ -14,7 +14,7 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
 <PackageLink
   env="web"
   github="packages/web/destinations/gtag"
-  npm="@walkerOS/web-destination-gtag"
+  npm="@walkeros/web-destination-gtag"
 />
 
 Google Tag Manager (GTM) configuration within the unified gtag destination. This allows you to send events to your GTM container for advanced tag management and third-party integrations.
@@ -22,14 +22,14 @@ Google Tag Manager (GTM) configuration within the unified gtag destination. This
 ## Installation
 
 ```bash
-npm install @walkerOS/web-destination-gtag
+npm install @walkeros/web-destination-gtag
 ```
 
 ## Quick Start
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { destinationGtag } from '@walkerOS/web-destination-gtag';
+import { createCollector } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const { elb } = await createCollector();
 

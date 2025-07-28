@@ -1,4 +1,4 @@
-import type { Elb } from '@walkerOS/core';
+import type { Elb } from '@walkeros/core';
 import type { Destination, Init, Config } from './destination';
 
 export type Fn<R = Return> = Elb.Fn<R> & CommandDestination<R> & CommandRun<R>;

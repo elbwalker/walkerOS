@@ -1,4 +1,4 @@
-import type { Collector, WalkerOS, Source as CoreSource } from '@walkerOS/core';
+import type { Collector, WalkerOS, Source as CoreSource } from '@walkeros/core';
 
 export interface Source<
   Settings extends Record<string, unknown> = Record<string, unknown>,

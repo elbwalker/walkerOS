@@ -1,8 +1,8 @@
 import type { DestinationServer, Elb } from '../types';
-import type { WalkerOS } from '@walkerOS/core';
-import { createEvent } from '@walkerOS/core';
-import { createCollector } from '@walkerOS/collector';
-import type { CollectorConfig } from '@walkerOS/collector';
+import type { WalkerOS } from '@walkeros/core';
+import { createEvent } from '@walkeros/core';
+import { createCollector } from '@walkeros/collector';
+import type { CollectorConfig } from '@walkeros/collector';
 
 describe('Server Collector', () => {
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);

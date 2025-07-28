@@ -29,7 +29,7 @@ browser limitations.
 ## Installation
 
 ```sh
-npm install @walkerOS/server-destination-meta
+npm install @walkeros/server-destination-meta
 ```
 
 ## Usage
@@ -37,8 +37,8 @@ npm install @walkerOS/server-destination-meta
 Here's a basic example of how to use the Meta CAPI destination:
 
 ```typescript
-import { elb } from '@walkerOS/collector';
-import { destinationMeta } from '@walkerOS/server-destination-meta';
+import { elb } from '@walkeros/collector';
+import { destinationMeta } from '@walkeros/server-destination-meta';
 
 elb('walker destination', destinationMeta, {
   custom: {

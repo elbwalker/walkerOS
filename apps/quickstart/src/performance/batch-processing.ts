@@ -1,6 +1,6 @@
-import { createCollector } from '@walkerOS/collector';
-import { destinationAPI } from '@walkerOS/web-destination-api';
-import type { WalkerOS, Destination, Collector } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { destinationAPI } from '@walkeros/web-destination-api';
+import type { WalkerOS, Destination, Collector } from '@walkeros/core';
 
 // Custom batching destination for high-performance event processing
 const batchingDestination: Destination.Instance = {

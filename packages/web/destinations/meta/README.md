@@ -29,7 +29,7 @@ advertising campaigns.
 ## Installation
 
 ```sh
-npm install @walkerOS/web-destination-meta
+npm install @walkeros/web-destination-meta
 ```
 
 ## Usage
@@ -37,8 +37,8 @@ npm install @walkerOS/web-destination-meta
 Here's a basic example of how to use the Meta Pixel destination:
 
 ```typescript
-import { elb } from '@walkerOS/collector';
-import { destinationMeta } from '@walkerOS/web-destination-meta';
+import { elb } from '@walkeros/collector';
+import { destinationMeta } from '@walkeros/web-destination-meta';
 
 elb('walker destination', destinationMeta, {
   custom: {

@@ -1,5 +1,5 @@
-import { createCollector } from '@walkerOS/collector';
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import type { WalkerOS, Collector } from '@walkeros/core';
 
 export async function setupDataLayer(): Promise<{
   collector: Collector.Instance;

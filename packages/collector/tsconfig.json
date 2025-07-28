@@ -1,5 +1,5 @@
 {
-  "extends": "@walkerOS/tsconfig/base.json",
+  "extends": "@walkeros/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src"

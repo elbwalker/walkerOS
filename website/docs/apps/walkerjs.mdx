@@ -3,7 +3,7 @@ title: Walker.js
 description: Ready-to-use walkerOS bundle for instant web tracking
 sidebar_position: 1
 tags: [app, bundle, web, tracking, ready-to-use]
-package: '@walkerOS/walker.js'
+package: '@walkeros/walker.js'
 ---
 
 import Link from '@docusaurus/Link';
@@ -38,7 +38,7 @@ and destinations, walker.js bundles everything together with sensible defaults.
 ### Option 1: NPM Package
 
 ```bash
-npm install @walkerOS/walker.js
+npm install @walkeros/walker.js
 ```
 
 ### Option 2: CDN
@@ -47,7 +47,7 @@ npm install @walkerOS/walker.js
 <script
   async
   data-elbconfig="elbConfig"
-  src="https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@latest/dist/walker.js"
+  src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/walker.js"
 ></script>
 ```
 
@@ -401,7 +401,7 @@ Walker.js provides multiple build formats for different environments:
 Use walker.js programmatically in applications:
 
 ```javascript
-import { createWalkerjs } from '@walkerOS/walker.js';
+import { createWalkerjs } from '@walkeros/walker.js';
 
 const { collector, elb } = await createWalkerjs({
   collector: {
@@ -476,7 +476,7 @@ Creates a new walker.js instance with the provided configuration.
 ### Utility Functions
 
 ```javascript
-import { getAllEvents, getEvents, getGlobals } from '@walkerOS/walker.js';
+import { getAllEvents, getEvents, getGlobals } from '@walkeros/walker.js';
 
 // Get all trackable events on the page
 const events = getAllEvents();

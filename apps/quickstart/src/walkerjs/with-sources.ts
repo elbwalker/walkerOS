@@ -4,7 +4,7 @@ export async function setupWalkerWithSources(): Promise<unknown> {
   await new Promise<void>((resolve) => {
     const script = document.createElement('script');
     script.src =
-      'https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@latest/dist/index.browser.js';
+      'https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/index.browser.js';
     script.async = true;
     script.onload = () => resolve();
     document.head.appendChild(script);

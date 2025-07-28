@@ -30,7 +30,7 @@ destinations.
 ## Installation
 
 ```sh
-npm install @walkerOS/web-source-browser
+npm install @walkeros/web-source-browser
 ```
 
 ## Usage
@@ -38,8 +38,8 @@ npm install @walkerOS/web-source-browser
 Here's a basic example of how to use the Browser DOM source:
 
 ```typescript
-import { elb } from '@walkerOS/collector';
-import { sourceBrowser, createTagger } from '@walkerOS/web-source-browser';
+import { elb } from '@walkeros/collector';
+import { sourceBrowser, createTagger } from '@walkeros/web-source-browser';
 
 // Initialize the browser source
 sourceBrowser({ elb });

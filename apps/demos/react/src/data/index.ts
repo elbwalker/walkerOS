@@ -1,10 +1,10 @@
-import type { Destination } from '@walkerOS/core';
-import { createCollector } from '@walkerOS/collector';
-import { createSource } from '@walkerOS/core';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
-// import { destinationGTM } from '@walkerOS/web-destination-gtm';
-// import { destinationGA4 } from '@walkerOS/web-destination-ga4';
-// import { destinationMeta } from '@walkerOS/web-destination-meta';
+import type { Destination } from '@walkeros/core';
+import { createCollector } from '@walkeros/collector';
+import { createSource } from '@walkeros/core';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+// import { destinationGTM } from '@walkeros/web-destination-gtm';
+// import { destinationGA4 } from '@walkeros/web-destination-ga4';
+// import { destinationMeta } from '@walkeros/web-destination-meta';
 
 declare global {
   interface Window {
@@ -13,7 +13,7 @@ declare global {
 }
 
 // Import the BrowserPush type for proper type inference
-import type { BrowserPush } from '@walkerOS/web-source-browser';
+import type { BrowserPush } from '@walkeros/web-source-browser';
 
 // Export the elb function once collector is initialized
 export let elb: BrowserPush;

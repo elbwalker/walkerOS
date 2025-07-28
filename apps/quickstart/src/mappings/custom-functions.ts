@@ -1,6 +1,6 @@
-import { createCollector } from '@walkerOS/collector';
-import { destinationGtag } from '@walkerOS/web-destination-gtag';
-import type { WalkerOS, Destination, Collector } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+import type { WalkerOS, Destination, Collector } from '@walkeros/core';
 
 // Custom destination with advanced mapping functions
 const advancedMappingDestination: Destination.Instance = {

@@ -59,7 +59,7 @@ npm run lint
 
 ```typescript
 // Minimal configuration only
-import { createCollector } from '@walkerOS/collector';
+import { createCollector } from '@walkeros/collector';
 
 const collector = createCollector({
   // Only required parameters

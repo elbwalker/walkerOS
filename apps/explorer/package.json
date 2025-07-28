@@ -1,5 +1,5 @@
 {
-  "name": "@walkerOS/explorer",
+  "name": "@walkeros/explorer",
   "version": "0.0.7",
   "description": "Vanilla JS interactive HTML element explorer and live code editor for walkerOS",
   "keywords": [
@@ -50,17 +50,17 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkerOS/collector": "*",
-    "@walkerOS/core": "*",
-    "@walkerOS/web-core": "*"
+    "@walkeros/collector": "*",
+    "@walkeros/core": "*",
+    "@walkeros/web-core": "*"
   },
   "devDependencies": {
     "@playwright/test": "^1.54.1",
     "@testing-library/jest-dom": "^6.6.3",
-    "@walkerOS/eslint": "*",
-    "@walkerOS/jest": "*",
-    "@walkerOS/tsconfig": "*",
-    "@walkerOS/tsup": "*",
+    "@walkeros/eslint": "*",
+    "@walkeros/jest": "*",
+    "@walkeros/tsconfig": "*",
+    "@walkeros/tsup": "*",
     "chokidar": "^4.0.3",
     "typescript": "^5.5.2"
   },

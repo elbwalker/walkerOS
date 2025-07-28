@@ -1,7 +1,7 @@
-import { createCollector } from '@walkerOS/collector';
-import { destinationGtag } from '@walkerOS/web-destination-gtag';
-import { destinationMeta } from '@walkerOS/web-destination-meta';
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+import { destinationMeta } from '@walkeros/web-destination-meta';
+import type { WalkerOS, Collector } from '@walkeros/core';
 
 export async function setupConsentManagement(): Promise<{
   collector: Collector.Instance;

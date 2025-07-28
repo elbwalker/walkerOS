@@ -1,5 +1,5 @@
-import type { Collector } from '@walkerOS/core';
-import type { Destination, WalkerOS } from '@walkerOS/core';
+import type { Collector } from '@walkeros/core';
+import type { Destination, WalkerOS } from '@walkeros/core';
 import { createCollector } from '..';
 import { commonHandleCommand } from '../handle';
 

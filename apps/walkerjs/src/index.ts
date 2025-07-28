@@ -1,14 +1,14 @@
 import type { Config, Instance } from './types';
-import { createCollector, type CollectorConfig } from '@walkerOS/collector';
-import { assign, isObject } from '@walkerOS/core';
+import { createCollector, type CollectorConfig } from '@walkeros/collector';
+import { assign, isObject } from '@walkeros/core';
 import {
   sourceBrowser,
   getAllEvents,
   getEvents,
   getGlobals,
   type SourceBrowser,
-} from '@walkerOS/web-source-browser';
-import { sourceDataLayer } from '@walkerOS/web-source-dataLayer';
+} from '@walkeros/web-source-browser';
+import { sourceDataLayer } from '@walkeros/web-source-dataLayer';
 import { dataLayerDestination } from './destination';
 
 // Re-export types

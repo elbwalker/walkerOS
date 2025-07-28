@@ -1,7 +1,7 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
 import type { DestinationMeta } from '.';
-import { createCollector } from '@walkerOS/collector';
-import { getEvent } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { getEvent } from '@walkeros/core';
 import { destinationMetaExamples } from './examples';
 
 const { events, mapping } = destinationMetaExamples;

@@ -8,7 +8,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { createEvent, destinationPush, tryCatchAsync } from '@walkerOS/core';
+import { createEvent, destinationPush, tryCatchAsync } from '@walkeros/core';
 import { LiveCode } from './liveCode';
 import { formatValue, parseInput } from '../molecules/codeBox';
 

@@ -1,8 +1,8 @@
 import type { DestinationServer, Elb } from '../types';
-import type { WalkerOS } from '@walkerOS/core';
-import { createCollector } from '@walkerOS/collector';
-import type { CollectorConfig } from '@walkerOS/collector';
-import { createEvent } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
+import { createCollector } from '@walkeros/collector';
+import type { CollectorConfig } from '@walkeros/collector';
+import { createEvent } from '@walkeros/core';
 
 describe('Destination', () => {
   const eventCall = jest.fn();

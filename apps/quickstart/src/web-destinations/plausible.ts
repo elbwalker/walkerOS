@@ -1,6 +1,6 @@
-import { createCollector } from '@walkerOS/collector';
-import { destinationPlausible } from '@walkerOS/web-destination-plausible';
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { destinationPlausible } from '@walkeros/web-destination-plausible';
+import type { WalkerOS, Collector } from '@walkeros/core';
 
 export async function setupPlausible(): Promise<{
   collector: Collector.Instance;

@@ -1,6 +1,6 @@
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
-import { createEvent } from '@walkerOS/core';
+import { createEvent } from '@walkeros/core';
 
 describe('Server Destination BigQuery', () => {
   // Mock the bigquery package with __mocks__ implementation

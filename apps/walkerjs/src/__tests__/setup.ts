@@ -1,5 +1,5 @@
 // Browser environment setup for walker.js tests
-// Based on @walkerOS/jest/web.setup.ts
+// Based on @walkeros/jest/web.setup.ts
 
 const mockDataLayer = jest.fn();
 

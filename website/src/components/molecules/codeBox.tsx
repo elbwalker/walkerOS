@@ -1,5 +1,5 @@
-import type { WalkerOS } from '@walkerOS/core';
-import { isString, isDefined, tryCatch, tryCatchAsync } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
+import { isString, isDefined, tryCatch, tryCatchAsync } from '@walkeros/core';
 import Editor from 'react-simple-code-editor';
 import { useState, useEffect, useRef } from 'react';
 import * as prettier from 'prettier/standalone';

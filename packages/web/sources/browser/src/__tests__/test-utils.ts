@@ -1,5 +1,5 @@
-import type { WalkerOS, Source, Collector } from '@walkerOS/core';
-import { createSource } from '@walkerOS/collector';
+import type { WalkerOS, Source, Collector } from '@walkeros/core';
+import { createSource } from '@walkeros/collector';
 import { sourceBrowser } from '../index';
 import type { Settings, BrowserSourceConfig } from '../types';
 import type { BrowserPush } from '../types/elb';

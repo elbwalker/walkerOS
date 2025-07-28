@@ -1,3 +1,3 @@
-import config from '@walkerOS/jest/index.mjs';
+import config from '@walkeros/jest/index.mjs';
 
 export default config;

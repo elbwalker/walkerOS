@@ -2,7 +2,7 @@
 title: API
 description: Generic HTTP API destination for sending events to custom endpoints
 tags: [web, destination, api, http]
-package: '@walkerOS/web-destination-api'
+package: '@walkeros/web-destination-api'
 path: packages/web/destinations/api
 ---
 
@@ -14,7 +14,7 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
 <PackageLink
   env="web"
   github="packages/web/destinations/api"
-  npm="@walkerOS/web-destination-api"
+  npm="@walkeros/web-destination-api"
 />
 
 The API destination allows you to send events to any HTTP endpoint with
@@ -23,14 +23,14 @@ customizable data transformation and transport methods.
 ## Installation
 
 ```bash
-npm install @walkerOS/web-destination-api
+npm install @walkeros/web-destination-api
 ```
 
 ## Quick Start
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { destinationAPI } from '@walkerOS/web-destination-api';
+import { createCollector } from '@walkeros/collector';
+import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { elb } = await createCollector();
 
@@ -89,8 +89,8 @@ elb('walker destination', destinationAPI, {
 ### Basic Usage
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { destinationAPI } from '@walkerOS/web-destination-api';
+import { createCollector } from '@walkeros/collector';
+import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { elb } = await createCollector();
 
@@ -109,8 +109,8 @@ elb('walker destination', destinationAPI, {
 ### Advanced Usage with Transform
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { destinationAPI } from '@walkerOS/web-destination-api';
+import { createCollector } from '@walkeros/collector';
+import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { elb } = await createCollector();
 
@@ -136,8 +136,8 @@ elb('walker destination', destinationAPI, {
 ### Sending to Analytics API
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { destinationAPI } from '@walkerOS/web-destination-api';
+import { createCollector } from '@walkeros/collector';
+import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { elb } = await createCollector();
 

@@ -1,6 +1,6 @@
-import type { Collector, Source, WalkerOS } from '@walkerOS/core';
-import type { SourceBrowser } from '@walkerOS/web-source-browser';
-import type { SourceDataLayer } from '@walkerOS/web-source-dataLayer';
+import type { Collector, Source, WalkerOS } from '@walkeros/core';
+import type { SourceBrowser } from '@walkeros/web-source-browser';
+import type { SourceDataLayer } from '@walkeros/web-source-dataLayer';
 
 declare global {
   interface Window {

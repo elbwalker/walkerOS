@@ -1,4 +1,4 @@
-import type { Collector, WalkerOS } from '@walkerOS/core';
+import type { Collector, WalkerOS } from '@walkeros/core';
 import type { InitSources } from '../source';
 
 // Collector-specific types that don't belong in core

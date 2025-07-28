@@ -1,4 +1,4 @@
-import { getEvent } from '@walkerOS/core';
+import { getEvent } from '@walkeros/core';
 
 export function Purchase(): unknown[] {
   const event = getEvent('order complete');

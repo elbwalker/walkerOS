@@ -29,7 +29,7 @@ processing and analysis.
 ## Installation
 
 ```sh
-npm install @walkerOS/server-destination-aws
+npm install @walkeros/server-destination-aws
 ```
 
 ## Usage
@@ -37,8 +37,8 @@ npm install @walkerOS/server-destination-aws
 Here's a basic example of how to use the AWS destination:
 
 ```typescript
-import { elb } from '@walkerOS/collector';
-import { destinationFirehose } from '@walkerOS/server-destination-aws';
+import { elb } from '@walkeros/collector';
+import { destinationFirehose } from '@walkeros/server-destination-aws';
 
 elb('walker destination', destinationFirehose, {
   custom: {

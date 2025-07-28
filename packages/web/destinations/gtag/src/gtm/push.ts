@@ -1,6 +1,6 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
 import type { GTMSettings, GTMMapping, WindowData } from '../types';
-import { isObject } from '@walkerOS/core';
+import { isObject } from '@walkeros/core';
 
 export function pushGTMEvent(
   event: WalkerOS.Event,

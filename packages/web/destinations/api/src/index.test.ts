@@ -1,15 +1,15 @@
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 import type { DestinationAPI } from '.';
-import { createCollector } from '@walkerOS/collector';
-import { createEvent } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { createEvent } from '@walkeros/core';
 import { events, mapping } from './examples';
 
 describe('Destination API', () => {
   let elb: WalkerOS.Elb;
   const mockSendWeb = jest.fn(); //.mockImplementation(console.log);
 
-  jest.mock('@walkerOS/web-core', () => ({
-    ...jest.requireActual('@walkerOS/web-core'),
+  jest.mock('@walkeros/web-core', () => ({
+    ...jest.requireActual('@walkeros/web-core'),
     sendWeb: mockSendWeb,
   }));
 

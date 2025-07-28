@@ -1,4 +1,4 @@
-import type { Collector, WalkerOS, Source } from '@walkerOS/core';
+import type { Collector, WalkerOS, Source } from '@walkeros/core';
 import type { BrowserSourceConfig, Scope } from './types';
 import type {
   BrowserPushData,
@@ -6,7 +6,7 @@ import type {
   BrowserPushContext,
   BrowserPush,
 } from './types/elb';
-import { isString } from '@walkerOS/core';
+import { isString } from '@walkeros/core';
 import { load, ready, initGlobalTrigger } from './trigger';
 import { destroyVisibilityTracking } from './triggerVisible';
 import { initElbLayer } from './elbLayer';

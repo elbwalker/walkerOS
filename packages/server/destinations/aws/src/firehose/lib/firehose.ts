@@ -1,6 +1,6 @@
-import type { Destination } from '@walkerOS/core';
+import type { Destination } from '@walkeros/core';
 import type { FirehoseConfig } from '../types';
-import { throwError } from '@walkerOS/core';
+import { throwError } from '@walkeros/core';
 import {
   FirehoseClient,
   PutRecordBatchCommand,

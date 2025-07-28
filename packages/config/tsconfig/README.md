@@ -9,7 +9,7 @@ configurations.
 ```json
 // tsconfig.json
 {
-  "extends": "@walkerOS/tsconfig/base.json",
+  "extends": "@walkeros/tsconfig/base.json",
   "compilerOptions": {
     // Additional project-specific options
   }

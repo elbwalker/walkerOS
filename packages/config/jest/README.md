@@ -7,7 +7,7 @@ testing configurations for web and Node.js environments.
 
 ```javascript
 // jest.config.mjs
-import { webConfig, nodeConfig } from '@walkerOS/jest';
+import { webConfig, nodeConfig } from '@walkeros/jest';
 
 export default webConfig; // or nodeConfig for server packages
 ```

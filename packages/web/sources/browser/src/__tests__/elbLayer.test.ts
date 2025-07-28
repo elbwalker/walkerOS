@@ -1,7 +1,7 @@
-import { createCollector } from '@walkerOS/collector';
+import { createCollector } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
 import { initElbLayer } from '../elbLayer';
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 
 describe('ELB Layer', () => {
   let collectedEvents: WalkerOS.Event[];

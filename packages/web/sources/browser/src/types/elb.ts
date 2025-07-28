@@ -1,5 +1,5 @@
-import type { Collector, Elb, WalkerOS } from '@walkerOS/core';
-import type { DestinationWeb } from '@walkerOS/web-core';
+import type { Collector, Elb, WalkerOS } from '@walkeros/core';
+import type { DestinationWeb } from '@walkeros/web-core';
 
 // Forward declare types to avoid circular imports
 export type Scope = Element | Document;
@@ -13,10 +13,10 @@ export interface BrowserPush<R = Promise<Elb.PushResult>> {
   // Walker commands
   (event: 'walker config', config: Partial<Collector.Config>): R;
   (event: 'walker consent', consent: WalkerOS.Consent): R;
-  <K extends keyof import('@walkerOS/core').Hooks.Functions>(
+  <K extends keyof import('@walkeros/core').Hooks.Functions>(
     event: 'walker hook',
     name: K,
-    hookFn: import('@walkerOS/core').Hooks.Functions[K],
+    hookFn: import('@walkeros/core').Hooks.Functions[K],
   ): R;
   (event: 'walker user', user: WalkerOS.User): R;
 

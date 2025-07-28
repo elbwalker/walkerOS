@@ -1,5 +1,5 @@
 {
-  "name": "@walkerOS/tsup",
+  "name": "@walkeros/tsup",
   "version": "0.0.7",
   "main": "index.mjs",
   "types": "index.d.ts",

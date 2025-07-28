@@ -28,7 +28,7 @@ privacy-compliant analytics with GDPR compliance and data ownership control.
 ## Installation
 
 ```sh
-npm install @walkerOS/web-destination-piwikpro
+npm install @walkeros/web-destination-piwikpro
 ```
 
 ## Usage
@@ -36,8 +36,8 @@ npm install @walkerOS/web-destination-piwikpro
 Here's a basic example of how to use the Piwik PRO destination:
 
 ```typescript
-import { elb } from '@walkerOS/collector';
-import { destinationPiwikPro } from '@walkerOS/web-destination-piwikpro';
+import { elb } from '@walkeros/collector';
+import { destinationPiwikPro } from '@walkeros/web-destination-piwikpro';
 
 elb('walker destination', destinationPiwikPro, {
   custom: {

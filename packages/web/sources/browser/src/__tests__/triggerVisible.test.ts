@@ -1,4 +1,4 @@
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 import {
   initVisibilityTracking,
   triggerVisible,
@@ -7,8 +7,8 @@ import {
 } from '../triggerVisible';
 
 // Mock isVisible
-jest.mock('@walkerOS/web-core', () => ({
-  ...jest.requireActual('@walkerOS/web-core'),
+jest.mock('@walkeros/web-core', () => ({
+  ...jest.requireActual('@walkeros/web-core'),
   isVisible: jest.fn(),
 }));
 
@@ -20,7 +20,7 @@ jest.mock('../trigger', () => ({
 }));
 
 // Get references to mocked functions
-const { isVisible } = require('@walkerOS/web-core');
+const { isVisible } = require('@walkeros/web-core');
 const { handleTrigger } = require('../trigger');
 
 describe('triggerVisible', () => {

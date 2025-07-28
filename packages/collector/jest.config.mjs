@@ -1,7 +1,7 @@
-import baseConfig from '@walkerOS/jest/web.config.mjs';
+import baseConfig from '@walkeros/jest/web.config.mjs';
 
 export default {
   ...baseConfig,
-  displayName: '@walkerOS/collector',
+  displayName: '@walkeros/collector',
   testEnvironment: 'jsdom',
 };

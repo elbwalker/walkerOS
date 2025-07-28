@@ -27,7 +27,7 @@ collector without any sources or destinations.
   <TabItem value="npm" label="NPM" default>
 
 ```bash
-npm install @walkerOS/collector
+npm install @walkeros/collector
 ```
 
 Copy the code from
@@ -38,7 +38,7 @@ run it, and see events logged to console.
   <TabItem value="browser" label="Browser/CDN">
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector@latest/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector@latest/dist/index.browser.js"></script>
 <script>
   const { createCollector } = walkerOSCollector;
 
@@ -70,7 +70,7 @@ Walker.js bundle for non-npm users.
   <TabItem value="npm" label="NPM" default>
 
 ```bash
-npm install @walkerOS/walker.js
+npm install @walkeros/walker.js
 ```
 
 Copy the setup from
@@ -83,7 +83,7 @@ and start tracking events immediately.
 ```html
 <script
   async
-  src="https://cdn.jsdelivr.net/npm/@walkerOS/walker.js@latest/dist/walker.js"
+  src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/walker.js"
 ></script>
 <script>
   window.elbConfig = {
@@ -121,7 +121,7 @@ form submissions using the browser source.
   <TabItem value="npm" label="NPM" default>
 
 ```bash
-npm install @walkerOS/collector @walkerOS/web-source-browser
+npm install @walkeros/collector @walkeros/web-source-browser
 ```
 
 Copy
@@ -132,8 +132,8 @@ add `data-elb` attributes to your HTML elements, and see automatic tracking.
   <TabItem value="browser" label="Browser/CDN">
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector@latest/dist/index.browser.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/web-source-browser@latest/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector@latest/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser@latest/dist/index.browser.js"></script>
 <script>
   async function setup() {
     const { createCollector } = walkerOSCollector;
@@ -177,7 +177,7 @@ source for seamless migration.
   <TabItem value="npm" label="NPM" default>
 
 ```bash
-npm install @walkerOS/collector @walkerOS/web-source-datalayer
+npm install @walkeros/collector @walkeros/web-source-datalayer
 ```
 
 Copy
@@ -188,8 +188,8 @@ and push events to `window.dataLayer` to see them processed.
   <TabItem value="browser" label="Browser/CDN">
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector@latest/dist/index.browser.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/web-source-datalayer@latest/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector@latest/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-source-datalayer@latest/dist/index.browser.js"></script>
 <script>
   async function setup() {
     const { createCollector } = walkerOSCollector;
@@ -237,7 +237,7 @@ events, and custom parameters.
   <TabItem value="npm" label="NPM" default>
 
 ```bash
-npm install @walkerOS/collector @walkerOS/web-destination-gtag
+npm install @walkeros/collector @walkeros/web-destination-gtag
 ```
 
 Copy
@@ -252,7 +252,7 @@ add your GA4 measurement ID, and see events in GA4 real-time reports.
   async
   src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
 ></script>
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector@latest/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector@latest/dist/index.browser.js"></script>
 <script>
   // Initialize GA4
   window.dataLayer = window.dataLayer || [];
@@ -300,7 +300,7 @@ enhanced conversions.
 **Try it yourself:**
 
 ```bash
-npm install @walkerOS/collector @walkerOS/destination-web-gtag
+npm install @walkeros/collector @walkeros/destination-web-gtag
 ```
 
 Copy
@@ -315,7 +315,7 @@ events and custom conversions.
 **Try it yourself:**
 
 ```bash
-npm install @walkerOS/collector @walkerOS/destination-web-meta
+npm install @walkeros/collector @walkeros/destination-web-meta
 ```
 
 Copy
@@ -330,7 +330,7 @@ e-commerce tracking.
 **Try it yourself:**
 
 ```bash
-npm install @walkerOS/collector @walkerOS/destination-web-piwikpro
+npm install @walkeros/collector @walkeros/destination-web-piwikpro
 ```
 
 Copy
@@ -345,7 +345,7 @@ and properties.
 **Try it yourself:**
 
 ```bash
-npm install @walkerOS/collector @walkerOS/destination-web-plausible
+npm install @walkeros/collector @walkeros/destination-web-plausible
 ```
 
 Copy
@@ -360,7 +360,7 @@ HTTP endpoint.
 **Try it yourself:**
 
 ```bash
-npm install @walkerOS/collector @walkerOS/destination-web-api
+npm install @walkeros/collector @walkeros/destination-web-api
 ```
 
 Copy
@@ -377,7 +377,7 @@ analytics using Kinesis Data Firehose.
 **Try it yourself:**
 
 ```bash
-npm install @walkerOS/collector @walkerOS/destination-server-aws
+npm install @walkeros/collector @walkeros/destination-server-aws
 ```
 
 Copy
@@ -392,7 +392,7 @@ processing and analytics.
 **Try it yourself:**
 
 ```bash
-npm install @walkerOS/collector @walkerOS/destination-server-gcp
+npm install @walkeros/collector @walkeros/destination-server-gcp
 ```
 
 Copy
@@ -407,7 +407,7 @@ attribution and iOS 14+ compatibility.
 **Try it yourself:**
 
 ```bash
-npm install @walkerOS/collector @walkerOS/destination-server-meta
+npm install @walkeros/collector @walkeros/destination-server-meta
 ```
 
 Copy
@@ -436,7 +436,7 @@ service via webhooks or APIs.
   <TabItem value="npm" label="NPM" default>
 
 ```bash
-npm install @walkerOS/collector
+npm install @walkeros/collector
 ```
 
 Copy
@@ -447,7 +447,7 @@ modify the webhook URL, and create your own integration.
   <TabItem value="browser" label="Browser/CDN">
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector@latest/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector@latest/dist/index.browser.js"></script>
 <script>
   async function setup() {
     const { createCollector } = walkerOSCollector;
@@ -491,7 +491,7 @@ management and conditional event sending.
   <TabItem value="npm" label="NPM" default>
 
 ```bash
-npm install @walkerOS/collector @walkerOS/web-destination-gtag
+npm install @walkeros/collector @walkeros/web-destination-gtag
 ```
 
 Copy
@@ -502,7 +502,7 @@ and implement compliant user tracking with consent controls.
   <TabItem value="browser" label="Browser/CDN">
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@walkerOS/collector@latest/dist/index.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector@latest/dist/index.browser.js"></script>
 <script>
   async function setup() {
     const { createCollector } = walkerOSCollector;
@@ -545,7 +545,7 @@ functions for data enrichment.
 **Try it yourself:**
 
 ```bash
-npm install @walkerOS/collector @walkerOS/destination-web-gtag
+npm install @walkeros/collector @walkeros/destination-web-gtag
 ```
 
 Copy
@@ -560,7 +560,7 @@ applications with optimized API calls.
 **Try it yourself:**
 
 ```bash
-npm install @walkerOS/collector @walkerOS/destination-web-api
+npm install @walkeros/collector @walkeros/destination-web-api
 ```
 
 Copy
@@ -571,7 +571,7 @@ and implement efficient batch processing for scale.
 
 ```bash
 # Install walkerOS
-npm install @walkerOS/collector
+npm install @walkeros/collector
 
 # Copy any example from the links above
 # Modify configuration (IDs, endpoints, etc.)

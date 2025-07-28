@@ -1,5 +1,5 @@
-import type { WalkerOS, Collector } from '@walkerOS/core';
-import { createCollector } from '@walkerOS/collector';
+import type { WalkerOS, Collector } from '@walkeros/core';
+import { createCollector } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
 
 describe('Browser Source Edge Cases', () => {

@@ -18,36 +18,36 @@ function getModuleMapper() {
   if (!isWatchMode) return {};
 
   return {
-    '^@walkerOS/core$': getDirectory('core/src/'),
-    '^@walkerOS/collector$': getDirectory('collector/src/'),
-    '^@walkerOS/web-core$': getDirectory('web/core/src/'),
-    '^@walkerOS/web-destination-gtag$': getDirectory(
+    '^@walkeros/core$': getDirectory('core/src/'),
+    '^@walkeros/collector$': getDirectory('collector/src/'),
+    '^@walkeros/web-core$': getDirectory('web/core/src/'),
+    '^@walkeros/web-destination-gtag$': getDirectory(
       'web/destinations/gtag/src/',
     ),
-    '^@walkerOS/web-destination-api$': getDirectory(
+    '^@walkeros/web-destination-api$': getDirectory(
       'web/destinations/api/src/',
     ),
-    '^@walkerOS/web-destination-meta$': getDirectory(
+    '^@walkeros/web-destination-meta$': getDirectory(
       'web/destinations/meta/src/',
     ),
-    '^@walkerOS/web-destination-piwikpro$': getDirectory(
+    '^@walkeros/web-destination-piwikpro$': getDirectory(
       'web/destinations/piwikpro/src/',
     ),
-    '^@walkerOS/web-destination-plausible$': getDirectory(
+    '^@walkeros/web-destination-plausible$': getDirectory(
       'web/destinations/plausible/src/',
     ),
-    '^@walkerOS/web-source-browser$': getDirectory('web/sources/browser/src/'),
-    '^@walkerOS/web-source-dataLayer$': getDirectory(
+    '^@walkeros/web-source-browser$': getDirectory('web/sources/browser/src/'),
+    '^@walkeros/web-source-dataLayer$': getDirectory(
       'web/sources/dataLayer/src/',
     ),
-    '^@walkerOS/server-core$': getDirectory('server/core/src/'),
-    '^@walkerOS/server-destination-aws$': getDirectory(
+    '^@walkeros/server-core$': getDirectory('server/core/src/'),
+    '^@walkeros/server-destination-aws$': getDirectory(
       'server/destinations/aws/src/',
     ),
-    '^@walkerOS/server-destination-gcp$': getDirectory(
+    '^@walkeros/server-destination-gcp$': getDirectory(
       'server/destinations/gcp/src/',
     ),
-    '^@walkerOS/server-destination-meta$': getDirectory(
+    '^@walkeros/server-destination-meta$': getDirectory(
       'server/destinations/meta/src/',
     ),
   };

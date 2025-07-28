@@ -1,6 +1,6 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
 import type { AdsSettings, AdsMapping } from '../types';
-import { isObject } from '@walkerOS/core';
+import { isObject } from '@walkeros/core';
 import { getGtag } from '../shared/gtag';
 
 export function pushAdsEvent(

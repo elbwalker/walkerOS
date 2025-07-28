@@ -1,4 +1,4 @@
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 import {
   initGlobalTrigger,
   initScopeTrigger,
@@ -10,12 +10,12 @@ import {
 } from '../trigger';
 
 // Mock the dependencies
-jest.mock('@walkerOS/core', () => ({
-  ...jest.requireActual('@walkerOS/core'),
+jest.mock('@walkeros/core', () => ({
+  ...jest.requireActual('@walkeros/core'),
   tryCatch: (fn: () => void) => fn, // Simplified mock
 }));
 
-jest.mock('@walkerOS/collector', () => ({
+jest.mock('@walkeros/collector', () => ({
   Const: {
     Commands: {
       Action: 'action',

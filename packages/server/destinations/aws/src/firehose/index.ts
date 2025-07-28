@@ -1,5 +1,5 @@
 import type { Settings, Destination } from './types';
-import { isSameType } from '@walkerOS/core';
+import { isSameType } from '@walkeros/core';
 import { getConfig } from './config';
 import { push } from './push';
 

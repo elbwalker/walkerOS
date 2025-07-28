@@ -21,15 +21,15 @@ services not directly supported by walkerOS.
 ## Installation
 
 ```bash
-npm install @walkerOS/collector @walkerOS/web-source-browser
+npm install @walkeros/collector @walkeros/web-source-browser
 ```
 
 ## Complete Example
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { sourceBrowser } from '@walkerOS/web-source-browser';
-import type { WalkerOS, Destination, Collector } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import type { WalkerOS, Destination, Collector } from '@walkeros/core';
 
 // Custom destination that sends events to a webhook
 const customWebhookDestination: Destination.Instance = {

@@ -4,7 +4,7 @@ description: Facebook and Instagram advertising pixel integration
 path: /docs/destinations/web/meta-pixel
 sidebar_position: 2
 tags: [web, facebook, instagram, meta, advertising]
-package: '@walkerOS/web-destination-meta'
+package: '@walkeros/web-destination-meta'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
@@ -15,7 +15,7 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
 <PackageLink
   env="web"
   github="packages/web/destinations/meta"
-  npm="@walkerOS/web-destination-meta"
+  npm="@walkeros/web-destination-meta"
 />
 
 Send events to Meta Pixel (formerly Facebook Pixel) to track visitor activity
@@ -24,14 +24,14 @@ and conversions for Facebook and Instagram advertising campaigns.
 ## Installation
 
 ```bash
-npm install @walkerOS/web-destination-meta
+npm install @walkeros/web-destination-meta
 ```
 
 ## Quick Start
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import { destinationMeta } from '@walkerOS/web-destination-meta';
+import { createCollector } from '@walkeros/collector';
+import { destinationMeta } from '@walkeros/web-destination-meta';
 
 const { elb } = await createCollector();
 

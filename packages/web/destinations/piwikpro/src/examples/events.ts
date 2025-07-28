@@ -1,5 +1,5 @@
-import type { WalkerOS } from '@walkerOS/core';
-import { getEvent } from '@walkerOS/core';
+import type { WalkerOS } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
 
 function getProduct(entity: WalkerOS.Entity | WalkerOS.Event) {
   return {

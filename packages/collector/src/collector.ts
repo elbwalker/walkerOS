@@ -1,6 +1,6 @@
-import type { Collector, WalkerOS, Elb } from '@walkerOS/core';
+import type { Collector, WalkerOS, Elb } from '@walkeros/core';
 import type { CreateCollector, CollectorConfig } from './types';
-import { assign, onLog } from '@walkerOS/core';
+import { assign, onLog } from '@walkeros/core';
 import { commonHandleCommand } from './handle';
 import { initDestinations, createPush } from './destination';
 import { initSources } from './source';

@@ -1,5 +1,5 @@
 {
-  "name": "@walkerOS/core",
+  "name": "@walkeros/core",
   "description": "Core types and platform-agnostic utilities for walkerOS",
   "version": "0.0.7",
   "main": "./dist/index.js",

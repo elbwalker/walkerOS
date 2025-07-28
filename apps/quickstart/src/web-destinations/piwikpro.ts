@@ -1,6 +1,6 @@
-import { createCollector } from '@walkerOS/collector';
-import { destinationPiwikPro } from '@walkerOS/web-destination-piwikpro';
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import { destinationPiwikPro } from '@walkeros/web-destination-piwikpro';
+import type { WalkerOS, Collector } from '@walkeros/core';
 
 export async function setupPiwikPro(): Promise<{
   collector: Collector.Instance;

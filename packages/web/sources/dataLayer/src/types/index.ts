@@ -1,4 +1,4 @@
-import type { WalkerOS, Source } from '@walkerOS/core';
+import type { WalkerOS, Source } from '@walkeros/core';
 
 declare global {
   interface Window {

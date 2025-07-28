@@ -1,5 +1,5 @@
-import type { Mapping as WalkerOSMapping, Source } from '@walkerOS/core';
-import type { Walker, Elb } from '@walkerOS/web-core';
+import type { Mapping as WalkerOSMapping, Source } from '@walkeros/core';
+import type { Walker, Elb } from '@walkeros/web-core';
 
 // Export browser-specific elb types
 export * from './elb';

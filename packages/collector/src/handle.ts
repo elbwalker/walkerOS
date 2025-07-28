@@ -1,8 +1,8 @@
-import type { Collector, WalkerOS, Destination, Elb, On } from '@walkerOS/core';
+import type { Collector, WalkerOS, Destination, Elb, On } from '@walkeros/core';
 import { Commands, Const } from './constants';
 import { addDestination, pushToDestinations } from './destination';
-import { assign, getId, isFunction, isString } from '@walkerOS/core';
-import { isObject, isSameType } from '@walkerOS/core';
+import { assign, getId, isFunction, isString } from '@walkeros/core';
+import { isObject, isSameType } from '@walkeros/core';
 import { setConsent } from './consent';
 import { on, onApply } from './on';
 import type { RunState } from './types/collector';

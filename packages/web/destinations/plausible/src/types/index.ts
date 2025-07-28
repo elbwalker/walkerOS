@@ -1,5 +1,5 @@
-import type { Mapping as WalkerOSMapping, WalkerOS, Elb } from '@walkerOS/core';
-import type { DestinationWeb } from '@walkerOS/web-core';
+import type { Mapping as WalkerOSMapping, WalkerOS, Elb } from '@walkeros/core';
+import type { DestinationWeb } from '@walkeros/web-core';
 
 declare global {
   // Augment the global WalkerOS namespace with destination-specific types

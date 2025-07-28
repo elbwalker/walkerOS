@@ -1,6 +1,6 @@
 # Explorer Package Tests
 
-This directory contains integration tests for the @walkerOS/explorer package.
+This directory contains integration tests for the @walkeros/explorer package.
 
 ## Test Structure
 
@@ -43,4 +43,4 @@ These are integration tests that verify:
 
 - `@testing-library/react` - Component testing utilities
 - `@testing-library/jest-dom` - DOM testing matchers
-- `@walkerOS/jest` - Shared Jest configuration
+- `@walkeros/jest` - Shared Jest configuration

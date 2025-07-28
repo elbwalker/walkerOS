@@ -1,4 +1,4 @@
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 import type {
   Trigger,
   Scope,
@@ -8,9 +8,9 @@ import type {
   TriggerAction,
   Settings,
 } from './types';
-import { throttle, tryCatch } from '@walkerOS/core';
-import { Const, onApply } from '@walkerOS/collector';
-import { elb as elbOrg, getAttribute } from '@walkerOS/web-core';
+import { throttle, tryCatch } from '@walkeros/core';
+import { Const, onApply } from '@walkeros/collector';
+import { elb as elbOrg, getAttribute } from '@walkeros/web-core';
 import {
   getElbAttributeName,
   getEvents,

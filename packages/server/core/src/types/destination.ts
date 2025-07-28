@@ -1,4 +1,4 @@
-import type { Destination as WalkerOSDestination } from '@walkerOS/core';
+import type { Destination as WalkerOSDestination } from '@walkeros/core';
 
 export interface Destination<Settings = unknown, Mapping = unknown>
   extends WalkerOSDestination.Instance<Settings, Mapping> {}

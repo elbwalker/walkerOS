@@ -1,5 +1,5 @@
-import type { Collector } from '@walkerOS/core';
-import type { WalkerOS } from '@walkerOS/core';
+import type { Collector } from '@walkeros/core';
+import type { WalkerOS } from '@walkeros/core';
 
 export type CommandTypes =
   | 'Action'

@@ -1,5 +1,5 @@
 import { createTagger } from '../tagger';
-import type { WalkerOS, Collector } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 
 describe('Tagger', () => {
   describe('Factory Function', () => {

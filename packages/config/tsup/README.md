@@ -7,7 +7,7 @@ standardized build settings for generating CommonJS, ESM, and type definitions.
 
 ```javascript
 // tsup.config.ts
-import { defineConfig } from '@walkerOS/tsup';
+import { defineConfig } from '@walkeros/tsup';
 
 export default defineConfig({
   // Additional project-specific options

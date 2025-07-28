@@ -1,5 +1,5 @@
-import type { Collector, WalkerOS, Source } from '@walkerOS/core';
-import { tryCatchAsync, getId } from '@walkerOS/core';
+import type { Collector, WalkerOS, Source } from '@walkeros/core';
+import { tryCatchAsync, getId } from '@walkeros/core';
 
 /**
  * Core source factory function that creates sources with consistent error handling and lifecycle management.

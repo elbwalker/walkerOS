@@ -1,6 +1,6 @@
-import type { Destination } from '@walkerOS/core';
+import type { Destination } from '@walkeros/core';
 import type { DataLayer } from './types';
-import { isObject } from '@walkerOS/core';
+import { isObject } from '@walkeros/core';
 
 export function dataLayerDestination(): Destination.InitDestination {
   window.dataLayer = window.dataLayer || [];

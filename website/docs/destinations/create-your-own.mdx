@@ -81,7 +81,7 @@ interface Config<Settings, Mapping> {
 Perfect for HTTP APIs and simple integrations:
 
 ```typescript
-import type { WalkerOS, Destination } from '@walkerOS/core';
+import type { WalkerOS, Destination } from '@walkeros/core';
 
 // Define your settings interface
 interface WebhookSettings {
@@ -435,7 +435,7 @@ export interface AnalyticsMapping {
 ### Unit Testing Pattern
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
+import { createCollector } from '@walkeros/collector';
 
 describe('Custom Analytics Destination', () => {
   test('processes events correctly', async () => {
@@ -477,7 +477,7 @@ describe('Custom Analytics Destination', () => {
 Using your custom destination in a collector:
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
+import { createCollector } from '@walkeros/collector';
 import { analyticsDestination } from './destinations/analytics';
 
 const { collector } = await createCollector({

@@ -1,6 +1,6 @@
-import type { Mapping, WalkerOS } from '@walkerOS/core';
+import type { Mapping, WalkerOS } from '@walkeros/core';
 import type { DestinationMeta } from '..';
-import { isObject } from '@walkerOS/core';
+import { isObject } from '@walkeros/core';
 
 export const Purchase: DestinationMeta.Rule = {
   name: 'Purchase',

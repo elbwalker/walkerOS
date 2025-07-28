@@ -1,5 +1,5 @@
 import type { Settings, Mapping, Destination } from './types';
-import { getMappingValue, isArray } from '@walkerOS/core';
+import { getMappingValue, isArray } from '@walkeros/core';
 
 // Types
 export * as DestinationPiwikPro from './types';

@@ -1,4 +1,4 @@
-import type { Mapping } from '@walkerOS/core';
+import type { Mapping } from '@walkeros/core';
 import type { DestinationPlausible } from '..';
 
 export const customEvent: DestinationPlausible.Rule = {

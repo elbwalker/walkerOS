@@ -28,7 +28,7 @@ functions across the entire platform.
 ## Installation
 
 ```sh
-npm install @walkerOS/core
+npm install @walkeros/core
 ```
 
 ## Usage
@@ -51,7 +51,7 @@ import {
   // Mapping utilities
   byPath,
   mapping,
-} from '@walkerOS/core';
+} from '@walkeros/core';
 
 // Example: Validate an event
 const event: WalkerOS.Event = {

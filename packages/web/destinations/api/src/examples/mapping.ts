@@ -1,4 +1,4 @@
-import type { Mapping } from '@walkerOS/core';
+import type { Mapping } from '@walkeros/core';
 import type { DestinationAPI } from '..';
 
 export const entity_action: DestinationAPI.Rule = {

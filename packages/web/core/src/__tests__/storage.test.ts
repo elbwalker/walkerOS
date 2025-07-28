@@ -1,4 +1,4 @@
-import { Const } from '@walkerOS/core';
+import { Const } from '@walkeros/core';
 import { storageDelete, storageRead, storageWrite } from '..';
 
 describe('Storage', () => {

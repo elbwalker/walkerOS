@@ -1,6 +1,6 @@
-import type { InitSource } from '@walkerOS/collector';
-import type { WalkerOS, Source, Collector } from '@walkerOS/core';
-import { isArray, isObject, isString, tryCatch } from '@walkerOS/core';
+import type { InitSource } from '@walkeros/collector';
+import type { WalkerOS, Source, Collector } from '@walkeros/core';
+import { isArray, isObject, isString, tryCatch } from '@walkeros/core';
 
 // Global flag to prevent infinite loops
 let isProcessing = false;

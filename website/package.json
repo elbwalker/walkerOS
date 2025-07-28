@@ -1,5 +1,5 @@
 {
-  "name": "@walkerOS/website",
+  "name": "@walkeros/website",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -19,8 +19,8 @@
     "@docusaurus/preset-classic": "^3.7.0",
     "@docusaurus/theme-live-codeblock": "^3.7.0",
     "@docusaurus/theme-mermaid": "^3.7.0",
-    "@walkerOS/core": "*",
-    "@walkerOS/explorer": "*",
+    "@walkeros/core": "*",
+    "@walkeros/explorer": "*",
     "@elbwalker/destination-web-api": "^3.0.4",
     "@elbwalker/destination-web-google-ads": "^3.0.4",
     "@elbwalker/destination-web-google-ga4": "^3.1.6",

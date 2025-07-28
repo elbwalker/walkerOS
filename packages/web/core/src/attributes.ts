@@ -1,4 +1,4 @@
-import { trim } from '@walkerOS/core';
+import { trim } from '@walkeros/core';
 
 /**
  * Get attribute value from element

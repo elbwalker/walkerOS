@@ -1,4 +1,4 @@
-import type { Collector, WalkerOS, Elb, Destination } from '@walkerOS/core';
+import type { Collector, WalkerOS, Elb, Destination } from '@walkeros/core';
 import {
   assign,
   clone,
@@ -13,7 +13,7 @@ import {
   setByPath,
   tryCatchAsync,
   useHooks,
-} from '@walkerOS/core';
+} from '@walkeros/core';
 import { createEventOrCommand } from './handle';
 
 export type HandleCommandFn<T extends Collector.Instance> = (

@@ -1,5 +1,5 @@
-import type { Collector } from '@walkerOS/core';
-import type { WalkerOS, Source } from '@walkerOS/core';
+import type { Collector } from '@walkeros/core';
+import type { WalkerOS, Source } from '@walkeros/core';
 import { createCollector } from '../collector';
 import { createSource, initSources } from '../source';
 

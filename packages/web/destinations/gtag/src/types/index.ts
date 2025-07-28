@@ -1,5 +1,5 @@
-import type { Mapping as WalkerOSMapping } from '@walkerOS/core';
-import type { DestinationWeb } from '@walkerOS/web-core';
+import type { Mapping as WalkerOSMapping } from '@walkeros/core';
+import type { DestinationWeb } from '@walkeros/web-core';
 
 // Extend Window interface with specific dataLayer typing
 interface WindowWithDataLayer extends Window {

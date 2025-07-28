@@ -6,7 +6,7 @@ sidebar_position: 23
 
 import Link from '@docusaurus/Link';
 import { LiveCode } from '@site/src/components/organisms/liveCode';
-import { getMappingEvent, getMappingValue } from '@walkerOS/core';
+import { getMappingEvent, getMappingValue } from '@walkeros/core';
 import { parseInput } from '@site/src/components/molecules/codeBox';
 
 export const logEvent = async (input, config, log) => {
@@ -363,8 +363,8 @@ Ensure data quality with validation and fallback values:
 Here's how these mappings work in a real destination configuration:
 
 ```typescript
-import { createCollector } from '@walkerOS/collector';
-import type { Destination } from '@walkerOS/core';
+import { createCollector } from '@walkeros/collector';
+import type { Destination } from '@walkeros/core';
 
 // Console logger destination with custom mapping
 const consoleDestination: Destination.Instance = {
@@ -429,7 +429,7 @@ export async function setupMappingExample() {
 Test your mapping configurations to ensure they work correctly:
 
 ```typescript
-import { getMappingEvent, getMappingValue } from '@walkerOS/core';
+import { getMappingEvent, getMappingValue } from '@walkeros/core';
 
 describe('Custom Mappings', () => {
   test('product view mapping', async () => {
