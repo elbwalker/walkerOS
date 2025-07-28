@@ -9,14 +9,15 @@ import TabItem from '@theme/TabItem';
 
 # Installation
 
-Choose the installation method that best fits your project and technical requirements.
+Choose the installation method that best fits your project and technical
+requirements.
 
 ## Quick Start
 
 ### 30-Second Setup
 
 <Tabs>
-  <TabItem value="npm" label="NPM (Developers)" default>
+  <TabItem value="npm" label="NPM" default>
 
 For projects using npm and build tools:
 
@@ -29,15 +30,15 @@ import { createCollector } from '@walkerOS/collector';
 
 const { collector, elb } = await createCollector({
   destinations: {
-    console: { push: console.log }
-  }
+    console: { push: console.log },
+  },
 });
 
 await elb('page view', { title: 'Homepage' });
 ```
 
   </TabItem>
-  <TabItem value="browser" label="Browser/CDN (Marketing)">
+  <TabItem value="browser" label="Browser/CDN">
 
 For websites without build tools:
 
@@ -50,9 +51,9 @@ For websites without build tools:
   window.elbConfig = {
     collector: {
       destinations: {
-        console: { push: (event) => console.log('Event:', event) }
-      }
-    }
+        console: { push: (event) => console.log('Event:', event) },
+      },
+    },
   };
 </script>
 ```
@@ -63,15 +64,18 @@ For websites without build tools:
 ## Choose Your Method
 
 ### 🔧 NPM Installation
+
 **Best for**: Developers using modern build tools (Webpack, Vite, etc.)
 
 **Advantages**:
+
 - Type safety with TypeScript
 - Tree shaking and optimization
 - Version control and dependency management
 - Hot module replacement during development
 
 **Use when**:
+
 - Building React, Vue, or Angular applications
 - Using bundlers like Webpack, Vite, or Rollup
 - Working in a team development environment
@@ -79,15 +83,18 @@ For websites without build tools:
 [→ See NPM Installation Guide](#npm-installation)
 
 ### 🌐 Browser/CDN Installation
+
 **Best for**: Marketing teams, agencies, legacy websites
 
 **Advantages**:
+
 - No build tools required
 - Copy-paste implementation
 - Works with any HTML page
 - Instant setup and testing
 
 **Use when**:
+
 - Adding tracking to existing websites
 - Working with content management systems
 - Quick prototyping or testing
@@ -96,15 +103,18 @@ For websites without build tools:
 [→ See Browser Installation Guide](/docs/sources/web/browser/)
 
 ### 📦 Walker.js Bundle
+
 **Best for**: Complete solution without configuration
 
 **Advantages**:
+
 - Everything included in one file
 - Automatic DOM tracking
 - DataLayer compatibility
 - No package management needed
 
 **Use when**:
+
 - Migrating from Google Tag Manager
 - Need comprehensive tracking quickly
 - Working with multiple websites
@@ -117,6 +127,7 @@ For websites without build tools:
 ### Core Packages
 
 #### Basic Setup
+
 For event collection and processing:
 
 ```bash
@@ -124,6 +135,7 @@ npm install @walkerOS/collector
 ```
 
 #### Web Development
+
 For browser-based applications:
 
 ```bash
@@ -138,6 +150,7 @@ npm install @walkerOS/collector @walkerOS/web-source-browser @walkerOS/web-desti
 ```
 
 #### Server Development
+
 For Node.js and server environments:
 
 ```bash
@@ -151,6 +164,7 @@ npm install @walkerOS/collector @walkerOS/server-destination-aws @walkerOS/serve
 ### Package Categories
 
 #### Sources (Data Collection)
+
 ```bash
 # Browser DOM tracking
 npm install @walkerOS/web-source-browser
@@ -160,6 +174,7 @@ npm install @walkerOS/web-source-datalayer
 ```
 
 #### Web Destinations (Analytics Platforms)
+
 ```bash
 # Google Analytics 4 & Ads
 npm install @walkerOS/web-destination-gtag
@@ -178,6 +193,7 @@ npm install @walkerOS/web-destination-api
 ```
 
 #### Server Destinations (Data Streaming)
+
 ```bash
 # AWS Kinesis Data Firehose
 npm install @walkerOS/server-destination-aws
@@ -196,19 +212,20 @@ All packages include TypeScript definitions:
 ```typescript
 import { createCollector } from '@walkerOS/collector';
 import { destinationGtag } from '@walkerOS/web-destination-gtag';
-import type { WalkerOS } from '@walkerOS/core';
+import { sourceBrowser } from '@walkerOS/web-source-browser';
+import type { WalkerOS, Collector } from '@walkerOS/core';
 
-const { collector }: { collector: Collector.Instance } = await createCollector({
-  destinations: {
-    gtag: {
-      ...destinationGtag,
-      config: {
-        settings: {
-          ga4: { measurementId: 'G-XXXXXXXXXX' }
-        }
-      }
-    }
-  }
+const { elb }: { elb: WalkerOS.Elb } = await createCollector({
+  sources: {
+    browser: { code: sourceBrowser },
+  },
+});
+
+// Add destination with configuration
+elb('walker destination', destinationGtag, {
+  settings: {
+    ga4: { measurementId: 'G-XXXXXXXXXX' },
+  },
 });
 ```
 
@@ -243,19 +260,28 @@ Use modern ES6 modules:
 ```html
 <script type="module">
   // Dynamic imports
-  const { createCollector } = await import('https://cdn.jsdelivr.net/npm/@walkerOS/collector/dist/index.mjs');
-  const { destinationGtag } = await import('https://cdn.jsdelivr.net/npm/@walkerOS/web-destination-gtag/dist/index.mjs');
+  const { createCollector } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkerOS/collector/dist/index.mjs'
+  );
+  const { destinationGtag } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkerOS/web-destination-gtag/dist/index.mjs'
+  );
+  const { sourceBrowser } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkerOS/web-source-browser/dist/index.mjs'
+  );
 
   // Setup tracking
-  const { collector } = await createCollector({
-    destinations: {
-      gtag: {
-        ...destinationGtag,
-        config: {
-          settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } }
-        }
-      }
-    }
+  const { elb } = await createCollector({
+    sources: {
+      browser: { code: sourceBrowser },
+    },
+  });
+
+  // Add destination with configuration
+  elb('walker destination', destinationGtag, {
+    settings: {
+      ga4: { measurementId: 'G-XXXXXXXXXX' },
+    },
   });
 
   // Track events
@@ -309,12 +335,12 @@ cp package/dist/* ./public/js/
 
 Different builds for different needs:
 
-| Build Type | Use Case | Example |
-|------------|----------|---------|
+| Build Type    | Use Case               | Example            |
+| ------------- | ---------------------- | ------------------ |
 | `.browser.js` | Modern browsers (IIFE) | `index.browser.js` |
-| `.es5.js` | Legacy browsers (ES5) | `index.es5.js` |
-| `.mjs` | ES6 modules | `index.mjs` |
-| `.js` | CommonJS/Node.js | `index.js` |
+| `.es5.js`     | Legacy browsers (ES5)  | `index.es5.js`     |
+| `.mjs`        | ES6 modules            | `index.mjs`        |
+| `.js`         | CommonJS/Node.js       | `index.js`         |
 
 ## Getting Started
 
@@ -324,7 +350,6 @@ Different builds for different needs:
 2. **Follow a quickstart guide**:
    - [Basic Collector](/docs/getting-started/quickstart/#basic-collector)
    - [Google Analytics Setup](/docs/getting-started/quickstart/#google-analytics-4)
-   - [Complete Web Tracking](/docs/getting-started/quickstart/#walker-js-bundle)
 3. **Configure your destinations**:
    - [Web Destinations](/docs/destinations/)
    - [Server Destinations](/docs/destinations/)
@@ -334,8 +359,12 @@ Different builds for different needs:
 
 ### Need Help?
 
-- **Developers**: Start with [NPM installation](#npm-installation) and [quickstart examples](/docs/getting-started/quickstart)
-- **Marketing Teams**: Use [Browser installation](/docs/sources/web/browser/) and [Walker.js](/docs/apps/walkerjs)
-- **Migration**: See [migration guides](/docs/guides/migrations) for existing setups
+- **Developers**: Start with [NPM installation](#npm-installation) and
+  [quickstart examples](/docs/getting-started/quickstart)
+- **Marketing Teams**: Use [Browser installation](/docs/sources/web/browser/)
+  and [Walker.js](/docs/apps/walkerjs)
+- **Migration**: See [migration guides](/docs/guides/migrations) for existing
+  setups
 
-All installation methods provide the same powerful tracking capabilities - choose what works best for your workflow.
+All installation methods provide the same powerful tracking capabilities -
+choose what works best for your workflow.

@@ -1,6 +1,6 @@
 import { createCollector } from '@walkerOS/collector';
 import { createBrowserSource } from './test-utils';
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkerOS/core';
 
 describe('Browser Source Integration Tests', () => {
   let collector: Collector.Instance;

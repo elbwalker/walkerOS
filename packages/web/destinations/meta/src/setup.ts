@@ -7,17 +7,30 @@ export function addScript(
   document.head.appendChild(script);
 }
 
+interface FBQFunction {
+  (...args: unknown[]): void;
+  callMethod?: (this: FBQFunction, ...args: unknown[]) => void;
+  queue: unknown[];
+  push: FBQFunction;
+  loaded: boolean;
+  version: string;
+}
+
 export function setup() {
-  const w = window;
+  const w = window as unknown as {
+    fbq?: FBQFunction;
+    _fbq?: FBQFunction;
+  };
   if (w.fbq as unknown) return;
 
-  const n = (w.fbq = function (): void {
-    n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }) as any;
+  const n = function (...args: unknown[]): void {
+    n.callMethod ? n.callMethod.apply(n, args) : n.queue.push(args);
+  } as FBQFunction;
+
+  w.fbq = n;
   if (!w._fbq) w._fbq = n;
   n.push = n;
-  n.loaded = !0;
+  n.loaded = true;
   n.version = '2.0';
   n.queue = [];
 }

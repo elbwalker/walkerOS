@@ -1,6 +1,6 @@
 import { createCollector } from '@walkerOS/collector';
 import { sourceDataLayer } from '../index';
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkerOS/core';
 import { createMockPush, getDataLayer } from './test-utils';
 
 describe('DataLayer Source - Minimal', () => {

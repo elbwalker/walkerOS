@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkerOS/core';
 import { tryCatch } from '@walkerOS/core';
 import { isVisible } from '@walkerOS/web-core';
 import { handleTrigger, Triggers } from './trigger';

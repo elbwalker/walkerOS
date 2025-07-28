@@ -21,14 +21,15 @@ services not directly supported by walkerOS.
 ## Installation
 
 ```bash
-npm install @walkerOS/collector
+npm install @walkerOS/collector @walkerOS/web-source-browser
 ```
 
 ## Complete Example
 
 ```typescript
 import { createCollector } from '@walkerOS/collector';
-import type { WalkerOS, Destination } from '@walkerOS/core';
+import { sourceBrowser } from '@walkerOS/web-source-browser';
+import type { WalkerOS, Destination, Collector } from '@walkerOS/core';
 
 // Custom destination that sends events to a webhook
 const customWebhookDestination: Destination.Instance = {
@@ -102,18 +103,18 @@ export async function setupCustomDestination(): Promise<{
   elb: WalkerOS.ElbFn;
 }> {
   const { collector, elb } = await createCollector({
-    destinations: {
-      webhook: {
-        ...customWebhookDestination,
-        config: {
-          settings: {
-            url: 'https://webhook.site/unique-id',
-            headers: {
-              Authorization: 'Bearer your-api-token',
-              'X-Source': 'walkerOS-quickstart',
-            },
-          },
-        },
+    sources: {
+      browser: { code: sourceBrowser }
+    }
+  });
+
+  // Add custom webhook destination
+  elb('walker destination', customWebhookDestination, {
+    settings: {
+      url: 'https://webhook.site/unique-id',
+      headers: {
+        Authorization: 'Bearer your-api-token',
+        'X-Source': 'walkerOS-quickstart',
       },
     },
   });

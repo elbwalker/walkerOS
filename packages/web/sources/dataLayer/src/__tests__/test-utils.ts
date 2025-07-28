@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkerOS/core';
 
 // Test utility for creating properly typed mock push function
 export function createMockPush(

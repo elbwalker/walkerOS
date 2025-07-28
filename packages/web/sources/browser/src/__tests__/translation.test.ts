@@ -1,7 +1,7 @@
 import { createCollector } from '@walkerOS/collector';
 import { createBrowserSource } from './test-utils';
 import { translateToCoreCollector } from '../translation';
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkerOS/core';
 
 describe('Translation Layer', () => {
   let collector: Collector.Instance;

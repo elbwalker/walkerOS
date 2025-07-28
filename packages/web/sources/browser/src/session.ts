@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkerOS/core';
 import type { SessionCallback } from '@walkerOS/web-core';
 import { assign, useHooks } from '@walkerOS/core';
 import { onApply } from '@walkerOS/collector';
@@ -6,7 +6,7 @@ import { sessionStart as sessionStartOrg } from '@walkerOS/web-core';
 
 export interface SessionStartOptions {
   config?: unknown;
-  data?: WalkerOS.SessionData;
+  data?: Collector.SessionData;
 }
 
 // Enhanced session configuration interface
@@ -18,13 +18,13 @@ interface SessionConfigWithCallback {
 export function createSessionStart(collector: Collector.Instance) {
   return function (
     options: SessionStartOptions = {},
-  ): void | WalkerOS.SessionData {
+  ): void | Collector.SessionData {
     const { config = {}, data, ...otherOptions } = options;
     return sessionStart(collector, {
       config: Object.assign({ pulse: true }, config),
       data: Object.assign({}, collector.session, {
         updated: Date.now(),
-      }) as WalkerOS.SessionData,
+      }) as Collector.SessionData,
       ...otherOptions,
     });
   };
@@ -33,7 +33,7 @@ export function createSessionStart(collector: Collector.Instance) {
 export function sessionStart(
   collector: Collector.Instance,
   options: SessionStartOptions = {},
-): void | WalkerOS.SessionData {
+): void | Collector.SessionData {
   const sessionConfig = assign(
     collector.config.session || {},
     options.config || {},
@@ -45,11 +45,11 @@ export function sessionStart(
 
   // A wrapper for the callback
   const cb: SessionCallback = (
-    session: WalkerOS.SessionData,
+    session: Collector.SessionData,
     collector: Collector.Instance | undefined,
     defaultCb: SessionCallback,
   ) => {
-    let result: void | undefined | WalkerOS.SessionData;
+    let result: void | undefined | Collector.SessionData;
     const configWithCb = sessionConfig as SessionConfigWithCallback;
     if (configWithCb.cb !== false && configWithCb.cb)
       // Run either the default callback or the provided one

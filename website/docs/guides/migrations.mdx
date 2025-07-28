@@ -69,18 +69,23 @@ const walker = Walkerjs({
 
 **After:**
 ```typescript
+import { createSource, createDestination } from '@walkerOS/core';
+
+// Single big config file approach
 const { elb } = await createCollector({
-  destinations: {
-    gtag: destinationGtag
+  sources: {
+    browser: createSource(sourceBrowser, {
+      settings: { scope: document.body }
+    })
   }
 });
 
 // Add destination with configuration
-elb('walker destination', destinationGtag, {
+elb('walker destination', createDestination(destinationGtag, {
   settings: {
     ga4: { measurementId: 'G-XXXXXXXXXX' }
   }
-});
+}));
 ```
 
 ## Breaking Changes
@@ -112,11 +117,22 @@ elb('walker destination', destinationGtag, {
 });
 ```
 
-### Option 2: Using createDestination (New)
+### Option 2: Using createSource and createDestination (New)
 For a more elegant API and to avoid config side-effects in tests:
 
 ```typescript
-import { createDestination } from '@walkerOS/core';
+import { createSource, createDestination } from '@walkerOS/core';
+
+// Complete tracking setup in one config
+const trackingConfig = {
+  sources: {
+    browser: createSource(sourceBrowser, {
+      settings: { scope: document.body, session: true }
+    })
+  }
+};
+
+const { elb } = await createCollector(trackingConfig);
 
 elb('walker destination', createDestination(destinationGtag, {
   settings: {
@@ -125,11 +141,12 @@ elb('walker destination', createDestination(destinationGtag, {
 }));
 ```
 
-**Benefits of createDestination:**
-- Creates fresh destination instances (no config side-effects)
-- Enables cleaner single-config-file setups
-- Maintains full type safety
-- Backward compatible with existing code
+**Benefits of createSource and createDestination:**
+- Creates fresh instances (no config side-effects)
+- Enables single-config-file setups describing entire tracking
+- Maintains full type safety with proper config linking
+- Consistent API pattern for sources and destinations
+- No more `{ code, config }` complexity
 
 ## Migration Checklist
 

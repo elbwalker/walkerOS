@@ -1,5 +1,5 @@
 import type { InitSource } from '@walkerOS/collector';
-import type { WalkerOS, Source } from '@walkerOS/core';
+import type { WalkerOS, Source, Collector } from '@walkerOS/core';
 import { isArray, isObject, isString, tryCatch } from '@walkerOS/core';
 
 // Global flag to prevent infinite loops

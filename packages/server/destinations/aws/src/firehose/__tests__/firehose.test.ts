@@ -1,5 +1,5 @@
 import type { Config, Settings, Destination } from '../types';
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkerOS/core';
 import { createEvent } from '@walkerOS/core';
 import {
   FirehoseClient,

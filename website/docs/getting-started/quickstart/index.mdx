@@ -12,53 +12,6 @@ import TabItem from '@theme/TabItem';
 Get started with walkerOS in minutes. These examples provide working code that
 you can copy, paste, and run immediately.
 
-## What You'll Find
-
-Each quickstart example is:
-
-- **Tested** - All code is verified to work
-- **Minimal** - Only essential configuration included
-- **Self-contained** - No additional setup required
-- **Type-safe** - Full TypeScript support
-
-## Available Examples
-
-### Core Setup
-
-- [Basic Collector](/docs/collector) - Event collection fundamentals
-- [Walker.js Bundle](/docs/apps/walkerjs) - Complete browser tracking
-
-### Web Sources
-
-- [Browser Tracking](/docs/sources/web/browser) - DOM event tracking
-- [DataLayer Integration](/docs/sources/web/dataLayer) - Google Tag Manager
-  compatibility
-
-### Web Destinations
-
-- [Google Analytics 4](/docs/destinations/web/gtag/ga4) - GA4 event tracking
-- [Google Ads](/docs/destinations/web/gtag/ads) - Conversion tracking
-- [Meta Pixel](/docs/destinations/web/meta-pixel) - Facebook/Instagram tracking
-- [PiwikPro Analytics](/docs/destinations/web/piwikpro) - Privacy-focused
-  analytics
-- [Plausible Analytics](/docs/destinations/web/plausible) - Simple web analytics
-- [API Endpoint](/docs/destinations/web/api) - Custom server integration
-
-### Server Destinations
-
-- [AWS Firehose](/docs/destinations/server/aws) - Stream to AWS
-- [Google Cloud Pub/Sub](/docs/destinations/server/gcp) - GCP integration
-- [Meta Conversions API](/docs/destinations/server/meta-capi) - Server-side
-  conversions
-
-### Advanced Examples
-
-- **Walker.js with Sources** - CDN setup with automatic DOM tracking
-- **Custom Destination** - Build your own destination with webhooks
-- **Consent Management** - GDPR/CCPA compliant tracking setup
-- **Custom Mapping Functions** - Advanced event transformation
-- **Batch Processing** - High-performance event batching
-
 ## Detailed Examples
 
 ### Core Setup
@@ -191,9 +144,9 @@ add `data-elb` attributes to your HTML elements, and see automatic tracking.
         browser: {
           code: sourceBrowser,
           config: {
-            settings: {}
-          }
-        }
+            settings: {},
+          },
+        },
       },
       destinations: {
         console: { push: (event) => console.log('Browser Event:', event) },
@@ -247,9 +200,9 @@ and push events to `window.dataLayer` to see them processed.
         dataLayer: {
           code: sourceDataLayer,
           config: {
-            settings: {}
-          }
-        }
+            settings: {},
+          },
+        },
       },
       destinations: {
         console: { push: (event) => console.log('DataLayer Event:', event) },

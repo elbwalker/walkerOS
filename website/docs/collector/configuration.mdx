@@ -21,19 +21,27 @@ settings that differ from the defaults.
 
 ```typescript
 import { createCollector } from '@walkerOS/collector';
+import { createSource } from '@walkerOS/core';
+import { sourceBrowser } from '@walkerOS/web-source-browser';
 
 const config = {
   run: true,
-  destinations: {
-    console: {
-      push: (event) => console.log('Event:', event),
-    },
-  },
+  sources: {
+    browser: createSource(sourceBrowser, {
+      settings: { scope: document.body }
+    })
+  }
 };
 
 const { collector, elb } = await createCollector(config);
 
-// Now you can use the elb function
+// Add destination configuration
+elb('walker destination', {
+  type: 'console',
+  push: (event) => console.log('Event:', event),
+});
+
+// Now you can track events
 await elb('page view', {
   path: '/home',
 });
@@ -116,29 +124,43 @@ reinitialization.
 
 ## Destination Configuration
 
-Destinations define where your events are sent after processing:
+Destinations define where your events are sent after processing. You can configure destinations using either the traditional `createCollector` destinations config or the more flexible `elb('walker destination', ...)` approach:
 
+### Traditional Configuration
 ```typescript
 import { createCollector } from '@walkerOS/collector';
+import { createSource } from '@walkerOS/core';
+import { sourceBrowser } from '@walkerOS/web-source-browser';
 
 const config = {
-  destinations: {
-    analytics: {
-      push: async (event) => {
-        await fetch('/api/analytics', {
-          method: 'POST',
-          body: JSON.stringify(event),
-        });
-      },
-      consent: { analytics: true },
-    },
-    console: {
-      push: (event) => console.log('Debug:', event),
-    },
-  },
+  sources: {
+    browser: createSource(sourceBrowser, {
+      settings: { scope: document.body }
+    })
+  }
 };
 
-const { collector, elb } = await createCollector(config);
+const { elb } = await createCollector(config);
+
+// Add destinations using elb function
+elb('walker destination', {
+  type: 'analytics',
+  push: async (event) => {
+    await fetch('/api/analytics', {
+      method: 'POST',
+      body: JSON.stringify(event),
+    });
+  },
+  config: {
+    consent: { analytics: true },
+  }
+});
+
+// Add debug destination
+elb('walker destination', {
+  type: 'console',
+  push: (event) => console.log('Debug:', event),
+});
 
 // Send an event - it will go to both destinations
 await elb('product view', {
@@ -150,6 +172,39 @@ await elb('product view', {
 
 **Why multiple destinations:** Enables data redundancy, different analytics
 needs, and separation of concerns (analytics vs marketing vs debugging).
+
+### Using createSource and createDestination Utilities
+
+For elegant configuration and to avoid config side-effects in tests, use the `createSource` and `createDestination` utilities:
+
+```typescript
+import { createDestination, createSource } from '@walkerOS/core';
+import { destinationGtag } from '@walkerOS/web-destination-gtag';
+import { sourceBrowser } from '@walkerOS/web-source-browser';
+
+const { elb } = await createCollector({
+  sources: {
+    browser: createSource(sourceBrowser, {
+      settings: { scope: document.body }
+    })
+  }
+});
+
+// Create configured destination instance
+elb('walker destination', createDestination(destinationGtag, {
+  settings: {
+    ga4: { measurementId: 'G-XXXXXXXXXX' },
+    ads: { conversionId: 'AW-YYYYYY' }
+  }
+}));
+```
+
+**Benefits of createSource and createDestination:**
+- **Fresh instances:** No config side-effects between collector instances
+- **Type safety:** Full TypeScript support with proper generics  
+- **Clean API:** Consistent pattern for sources and destinations
+- **Single config:** Enables describing entire tracking setup in one place
+- **Elegant configuration:** No more `{ code, config }` complexity
 
 For detailed destination configuration, see the
 
@@ -163,6 +218,8 @@ Perfect for simple websites or getting started:
 
 ```typescript
 import { createCollector } from '@walkerOS/collector';
+import { createSource } from '@walkerOS/core';
+import { sourceBrowser } from '@walkerOS/web-source-browser';
 
 const config = {
   run: true,
@@ -171,14 +228,20 @@ const config = {
     version: '1.2.0',
     site_section: 'main',
   },
-  destinations: {
-    console: {
-      push: (event) => console.log('Event:', event),
-    },
-  },
+  sources: {
+    browser: createSource(sourceBrowser, {
+      settings: { scope: document.body }
+    })
+  }
 };
 
 const { collector, elb } = await createCollector(config);
+
+// Add console destination for debugging
+elb('walker destination', {
+  type: 'console',
+  push: (event) => console.log('Event:', event),
+});
 
 // Every event will include the global properties
 await elb('button click', {
@@ -196,6 +259,8 @@ Ideal for local development and testing:
 
 ```typescript
 import { createCollector } from '@walkerOS/collector';
+import { createSource } from '@walkerOS/core';
+import { sourceBrowser } from '@walkerOS/web-source-browser';
 
 const config = {
   dryRun: true,
@@ -204,14 +269,20 @@ const config = {
     environment: 'development',
     developer: 'john-doe',
   },
-  destinations: {
-    console: {
-      push: (event) => console.log('Dev Event:', event),
-    },
-  },
+  sources: {
+    browser: createSource(sourceBrowser, {
+      settings: { scope: document.body }
+    })
+  }
 };
 
 const { collector, elb } = await createCollector(config);
+
+// Add console destination for development debugging
+elb('walker destination', {
+  type: 'console',
+  push: (event) => console.log('Dev Event:', event),
+});
 
 // Events are processed but not sent (dryRun: true)
 await elb('test event', {

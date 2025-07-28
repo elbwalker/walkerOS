@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { WalkerOS, Collector } from '@walkerOS/core';
 import type {
   Trigger,
   Scope,

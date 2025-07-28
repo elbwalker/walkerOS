@@ -30,53 +30,53 @@ npm install @walkerOS/collector @walkerOS/destination-web-gtag @walkerOS/destina
 import { createCollector } from '@walkerOS/collector';
 import { destinationGtag } from '@walkerOS/web-destination-gtag';
 import { destinationMeta } from '@walkerOS/web-destination-meta';
-import type { WalkerOS } from '@walkerOS/core';
+import { sourceBrowser } from '@walkerOS/web-source-browser';
+import type { WalkerOS, Collector } from '@walkerOS/core';
 
 export async function setupConsentManagement(): Promise<{
   collector: Collector.Instance;
   elb: WalkerOS.ElbFn;
 }> {
   const { collector, elb } = await createCollector({
-    destinations: {
-      gtag: {
-        ...destinationGtag,
-        config: {
-          settings: {
-            ga4: { measurementId: 'G-XXXXXXXXXX' },
-          },
-          mapping: {
-            // Map consent events
-            walker: {
-              consent: {
-                name: 'consent_update',
-                data: {
-                  map: {
-                    analytics_storage: 'analytics_storage',
-                    ad_storage: 'ad_storage',
-                  },
-                },
-              },
+    sources: {
+      browser: { code: sourceBrowser }
+    }
+  });
+
+  // Add destination with consent mapping
+  elb('walker destination', destinationGtag, {
+    settings: {
+      ga4: { measurementId: 'G-XXXXXXXXXX' },
+    },
+    mapping: {
+      // Map consent events
+      walker: {
+        consent: {
+          name: 'consent_update',
+          data: {
+            map: {
+              analytics_storage: 'analytics_storage',
+              ad_storage: 'ad_storage',
             },
           },
         },
       },
-      meta: {
-        ...destinationMeta,
-        config: {
-          settings: {
-            pixelId: 'YOUR_PIXEL_ID',
-          },
-          mapping: {
-            // Map consent events for Meta
-            walker: {
-              consent: {
-                name: 'consent_granted',
-                data: {
-                  map: {
-                    consent_type: 'ad_storage',
-                  },
-                },
-              },
+    },
+  });
+
+  // Add Meta destination with consent mapping
+  elb('walker destination', destinationMeta, {
+    settings: {
+      pixelId: 'YOUR_PIXEL_ID',
+    },
+    mapping: {
+      // Map consent events for Meta
+      walker: {
+        consent: {
+          name: 'consent_granted',
+          data: {
+            map: {
+              consent_type: 'ad_storage',
             },
           },
         },

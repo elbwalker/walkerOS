@@ -1,4 +1,4 @@
-import type { Mapping, WalkerOS } from '../types';
+import type { Mapping, WalkerOS, Collector } from '../types';
 import {
   createEvent,
   getEvent,

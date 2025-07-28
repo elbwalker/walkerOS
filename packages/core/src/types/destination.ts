@@ -54,6 +54,7 @@ export type InitDestination<Settings = unknown, Mapping = unknown> = Omit<
 };
 
 export interface InitDestinations {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: InitDestination<any, any>;
 }
 

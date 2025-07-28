@@ -1,4 +1,4 @@
-import type { WalkerOS, Source } from '@walkerOS/core';
+import type { WalkerOS, Source, Collector } from '@walkerOS/core';
 import { createSource } from '@walkerOS/collector';
 import { sourceBrowser } from '../index';
 import type { Settings, BrowserSourceConfig } from '../types';

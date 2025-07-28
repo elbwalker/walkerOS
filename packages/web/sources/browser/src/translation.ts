@@ -1,4 +1,4 @@
-import type { WalkerOS, Elb } from '@walkerOS/core';
+import type { WalkerOS, Elb, Collector } from '@walkerOS/core';
 import {
   isString,
   isObject,

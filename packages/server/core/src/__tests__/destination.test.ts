@@ -1,6 +1,7 @@
 import type { DestinationServer, Elb } from '../types';
 import type { WalkerOS } from '@walkerOS/core';
 import { createCollector } from '@walkerOS/collector';
+import type { CollectorConfig } from '@walkerOS/collector';
 import { createEvent } from '@walkerOS/core';
 
 describe('Destination', () => {
@@ -21,7 +22,7 @@ describe('Destination', () => {
   };
   let result: Elb.PushResult;
 
-  async function getCollector(custom?: Partial<WalkerOS.InitConfig>) {
+  async function getCollector(custom?: Partial<CollectorConfig>) {
     const config = custom || {
       destinations: { mock: mockDestination },
     };

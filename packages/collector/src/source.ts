@@ -61,6 +61,7 @@ export interface SourceInit<
 }
 
 export interface InitSources {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [sourceId: string]: SourceInit<any, any>;
 }
 
