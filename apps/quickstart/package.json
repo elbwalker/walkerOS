@@ -1,0 +1,43 @@
+{
+  "name": "@walkerOS/quickstart",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Verified code examples for walkerOS documentation",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsup",
+    "test": "jest --colors",
+    "dev": "jest --watchAll --colors",
+    "lint": "tsc && eslint \"**/*.ts*\" --rule '@typescript-eslint/no-explicit-any: off'",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage"
+  },
+  "dependencies": {
+    "@walkerOS/core": "0.0.7",
+    "@walkerOS/collector": "0.0.7",
+    "@walkerOS/web-core": "0.0.7",
+    "@walkerOS/web-source-browser": "0.0.7",
+    "@walkerOS/web-source-dataLayer": "0.0.7",
+    "@walkerOS/web-destination-gtag": "0.0.7",
+    "@walkerOS/web-destination-meta": "0.0.7",
+    "@walkerOS/web-destination-api": "0.0.7",
+    "@walkerOS/web-destination-piwikpro": "0.0.7",
+    "@walkerOS/web-destination-plausible": "0.0.7",
+    "@walkerOS/server-core": "0.0.7",
+    "@walkerOS/server-destination-aws": "0.0.7",
+    "@walkerOS/server-destination-gcp": "0.0.7",
+    "@walkerOS/server-destination-meta": "0.0.7",
+    "@walkerOS/walker.js": "0.0.7"
+  },
+  "devDependencies": {
+    "@swc/jest": "^0.2.36",
+    "@types/jest": "^29.5.12",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "apps/quickstart"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme"
+}
