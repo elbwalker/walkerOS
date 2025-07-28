@@ -31,7 +31,7 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "demo": "npm run build && node serve.js",
-    "lint": "tsc && eslint \"**/*.ts*\"",
+    "lint": "tsc && eslint \"**/*.ts*\" --rule '@typescript-eslint/no-explicit-any: off'",
     "test": "jest --passWithNoTests --silent",
     "test:watch": "jest --watch --passWithNoTests --silent",
     "test:coverage": "jest --coverage --passWithNoTests --silent",

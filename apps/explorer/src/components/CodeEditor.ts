@@ -73,11 +73,38 @@ export const CODE_EDITOR_CSS = `
   word-break: normal !important;
   caret-color: var(--explorer-text-primary) !important;
   box-sizing: border-box !important;
+  /* Force cursor visibility and animation */
+  cursor: text !important;
 }
 
 .explorer-code-editor__textarea::placeholder {
   color: var(--explorer-text-muted);
   font-style: italic;
+}
+
+/* Ensure cursor animation is enabled */
+.explorer-code-editor__textarea:focus {
+  caret-color: var(--explorer-text-primary) !important;
+  animation: none !important; /* Remove any conflicting animations */
+}
+
+/* Force caret visibility across browsers */
+@supports (caret-color: var(--explorer-text-primary)) {
+  .explorer-code-editor__textarea {
+    caret-color: var(--explorer-text-primary) !important;
+  }
+}
+
+/* Fallback for browsers that don't support caret-color */
+@supports not (caret-color: var(--explorer-text-primary)) {
+  .explorer-code-editor__textarea {
+    color: var(--explorer-text-primary) !important;
+    text-shadow: none !important;
+    background: transparent !important;
+  }
+  .explorer-code-editor__highlight {
+    display: none !important;
+  }
 }
 
 .explorer-code-editor__highlight {
@@ -303,9 +330,16 @@ export function createCodeEditor(
       highlightLayer.scrollLeft = textArea.scrollLeft;
     };
 
+    // Add click event to ensure focus
+    const onClick = () => {
+      textArea.focus();
+    };
+
     cleanupFunctions.push(addEventListener(textArea, 'input', onInput));
     cleanupFunctions.push(addEventListener(textArea, 'keydown', onKeyDown));
     cleanupFunctions.push(addEventListener(textArea, 'scroll', onScroll));
+    cleanupFunctions.push(addEventListener(contentRoot, 'click', onClick));
+    cleanupFunctions.push(addEventListener(highlightLayer, 'click', onClick));
   }
 
   // Enhanced API
@@ -382,6 +416,13 @@ export function createCodeEditor(
 
   // Mount the base component
   api.mount();
+
+  // Auto-focus the textarea after a brief delay to ensure cursor is visible
+  setTimeout(() => {
+    if (!options.readOnly) {
+      textArea.focus();
+    }
+  }, 100);
 
   return api;
 }

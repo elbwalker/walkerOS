@@ -439,6 +439,35 @@ export function getElementTheme(element: HTMLElement): 'light' | 'dark' {
 }
 
 /**
+ * Detect the current theme based on the environment
+ */
+export function detectTheme(): 'light' | 'dark' {
+  // Check if document has a theme set
+  const htmlTheme = document.documentElement.getAttribute('data-theme');
+  if (htmlTheme === 'light' || htmlTheme === 'dark') {
+    return htmlTheme;
+  }
+
+  // Check for dark mode classes on html element (common pattern)
+  if (document.documentElement.classList.contains('dark')) {
+    return 'dark';
+  }
+
+  // Check system preference if available
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    const prefersDark = window.matchMedia(
+      '(prefers-color-scheme: dark)',
+    ).matches;
+    if (prefersDark) {
+      return 'dark';
+    }
+  }
+
+  // Default to light
+  return 'light';
+}
+
+/**
  * Utility function to toggle theme on an element
  */
 export function toggleElementTheme(element: HTMLElement): 'light' | 'dark' {
@@ -449,47 +478,47 @@ export function toggleElementTheme(element: HTMLElement): 'light' | 'dark' {
 }
 
 /**
- * Enhanced syntax highlighting CSS with higher specificity for shadow DOM
+ * Enhanced syntax highlighting CSS with Palenight theme for both light and dark modes
  */
 export const CSS_SYNTAX_HIGHLIGHTING = `
-/* High-specificity syntax highlighting - works in shadow DOM and light DOM */
+/* Light mode - Palenight-inspired colors adapted for light backgrounds */
 .explorer-component .syntax-keyword,
 .explorer-shadow-container .syntax-keyword,
 :host .syntax-keyword { 
-  color: #d73a49 !important; 
+  color: #ab47bc !important; 
   font-weight: 600 !important; 
 }
 
 .explorer-component .syntax-string,
 .explorer-shadow-container .syntax-string,
 :host .syntax-string { 
-  color: #22863a !important; 
+  color: #689f38 !important; 
 }
 
 .explorer-component .syntax-number,
 .explorer-shadow-container .syntax-number,
 :host .syntax-number { 
-  color: #005cc5 !important; 
+  color: #f57c00 !important; 
 }
 
 .explorer-component .syntax-comment,
 .explorer-shadow-container .syntax-comment,
 :host .syntax-comment { 
-  color: #6a737d !important; 
+  color: #757575 !important; 
   font-style: italic !important; 
 }
 
 .explorer-component .syntax-function,
 .explorer-shadow-container .syntax-function,
 :host .syntax-function {
-  color: #6f42c1 !important;
+  color: #3f51b5 !important;
   font-weight: 500 !important;
 }
 
 .explorer-component .syntax-tag,
 .explorer-shadow-container .syntax-tag,
 :host .syntax-tag { 
-  color: #22863a !important; 
+  color: #e91e63 !important; 
   font-weight: 600 !important; 
 }
 
@@ -522,6 +551,60 @@ export const CSS_SYNTAX_HIGHLIGHTING = `
 .explorer-shadow-container .syntax-property,
 :host .syntax-property { 
   color: #6f42c1 !important; 
+}
+
+/* JSON-specific styling for better readability */
+.explorer-component[data-language="json"] .syntax-string,
+.explorer-shadow-container[data-language="json"] .syntax-string,
+:host([data-language="json"]) .syntax-string { 
+  color: #22863a !important; /* GitHub green for JSON strings */
+}
+
+.explorer-component[data-language="json"] .syntax-number,
+.explorer-shadow-container[data-language="json"] .syntax-number,
+:host([data-language="json"]) .syntax-number { 
+  color: #005cc5 !important; /* GitHub blue for JSON numbers */
+}
+
+.explorer-component[data-language="json"] .syntax-property,
+.explorer-shadow-container[data-language="json"] .syntax-property,
+:host([data-language="json"]) .syntax-property { 
+  color: #032f62 !important; /* GitHub dark blue for JSON keys */
+  font-weight: 500 !important;
+}
+
+.explorer-component[data-language="json"] .syntax-keyword,
+.explorer-shadow-container[data-language="json"] .syntax-keyword,
+:host([data-language="json"]) .syntax-keyword { 
+  color: #d73a49 !important; /* GitHub red for true/false/null */
+  font-weight: 600 !important;
+}
+
+/* JSON-specific dark mode styling */
+[data-theme='dark'] .explorer-component[data-language="json"] .syntax-string,
+[data-theme='dark'] .explorer-shadow-container[data-language="json"] .syntax-string,
+:host([data-theme='dark'][data-language="json"]) .syntax-string { 
+  color: #98d982 !important; /* Softer green for dark mode JSON strings */
+}
+
+[data-theme='dark'] .explorer-component[data-language="json"] .syntax-number,
+[data-theme='dark'] .explorer-shadow-container[data-language="json"] .syntax-number,
+:host([data-theme='dark'][data-language="json"]) .syntax-number { 
+  color: #79b8ff !important; /* Softer blue for dark mode JSON numbers */
+}
+
+[data-theme='dark'] .explorer-component[data-language="json"] .syntax-property,
+[data-theme='dark'] .explorer-shadow-container[data-language="json"] .syntax-property,
+:host([data-theme='dark'][data-language="json"]) .syntax-property { 
+  color: #b392f0 !important; /* Light purple for dark mode JSON keys */
+  font-weight: 500 !important;
+}
+
+[data-theme='dark'] .explorer-component[data-language="json"] .syntax-keyword,
+[data-theme='dark'] .explorer-shadow-container[data-language="json"] .syntax-keyword,
+:host([data-theme='dark'][data-language="json"]) .syntax-keyword { 
+  color: #f97583 !important; /* Soft red for dark mode true/false/null */
+  font-weight: 600 !important;
 }
 
 /* Special highlighting for elb attributes */

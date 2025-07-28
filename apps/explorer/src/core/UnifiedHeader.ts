@@ -14,6 +14,7 @@ import {
   addEventListener,
   injectComponentCSS,
 } from '../utils/dom';
+import { toggleElementTheme } from './css-theme-system';
 
 export interface HeaderButton {
   text: string;
@@ -27,6 +28,7 @@ export interface UnifiedHeaderOptions {
   onClear?: () => void;
   onCopy?: () => void;
   onRefresh?: () => void;
+  onThemeToggle?: () => void;
   customButtons?: HeaderButton[];
   className?: string;
   shadowRoot?: ShadowRoot | null;
@@ -128,6 +130,11 @@ export function createUnifiedHeader(
   /* Specific styling for refresh button if needed */
 }
 
+.explorer-unified-header__btn--theme {
+  /* Specific styling for theme toggle button */
+  font-size: 12px;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .explorer-unified-header {
@@ -197,6 +204,21 @@ export function createUnifiedHeader(
         addEventListener(refreshBtn, 'click', opts.onRefresh),
       );
       buttons.push(refreshBtn);
+    }
+
+    // Theme toggle button (show if onThemeToggle callback exists)
+    if (opts.onThemeToggle) {
+      const themeBtn = createElement('button', {
+        className:
+          'explorer-unified-header__btn explorer-unified-header__btn--theme',
+        textContent: '🌙',
+        title: 'Toggle theme',
+      }) as HTMLButtonElement;
+
+      cleanupFunctions.push(
+        addEventListener(themeBtn, 'click', opts.onThemeToggle),
+      );
+      buttons.push(themeBtn);
     }
 
     // Custom buttons

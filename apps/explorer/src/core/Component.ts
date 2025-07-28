@@ -10,10 +10,13 @@
  * - Enhanced shadow DOM theme inheritance
  */
 
+import { setElementTheme, detectTheme } from './css-theme-system';
+
 export interface ComponentOptions {
   className?: string;
   autoMount?: boolean;
   useShadowDOM?: boolean;
+  theme?: 'light' | 'dark' | 'auto';
   [key: string]: unknown;
 }
 
@@ -133,6 +136,16 @@ export function createComponent(
       // Add component class
       if (options.className) {
         element.classList.add(options.className);
+      }
+
+      // Handle theme setting
+      if (options.theme) {
+        if (options.theme === 'auto') {
+          const detectedTheme = detectTheme();
+          setElementTheme(element, detectedTheme);
+        } else {
+          setElementTheme(element, options.theme);
+        }
       }
 
       api.emit('mount');

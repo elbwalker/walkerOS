@@ -129,8 +129,6 @@ export interface ResultItem {
 
 export interface ResultDisplayOptions {
   maxResults?: number;
-  showTimestamps?: boolean;
-  showCopyButton?: boolean;
   collapsible?: boolean;
   autoScroll?: boolean;
   height?: string;

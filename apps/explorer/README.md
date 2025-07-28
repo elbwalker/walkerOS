@@ -83,7 +83,6 @@ const preview = createPreview('#preview', {
 
 // Create a results display
 const results = createResultDisplay('#results', {
-  showTimestamps: true,
   maxResults: 100,
 });
 ```
@@ -131,8 +130,6 @@ const editor = createCodeEditor(elementOrSelector, {
   language: 'javascript' | 'typescript' | 'html' | 'css' | 'json' | 'markdown',
   value: string,
   height: string,
-  showLineNumbers: boolean,
-  showCopyButton: boolean,
   readOnly: boolean,
   onChange: (value: string, language: string) => void
 });
@@ -175,8 +172,6 @@ Display execution results with multiple result types and formatting.
 
 ```typescript
 const results = createResultDisplay(elementOrSelector, {
-  showCopyButton: boolean,
-  showTimestamps: boolean,
   maxResults: number,
   height: string,
   autoScroll: boolean
@@ -479,7 +474,3 @@ Part of the walkerOS project. See the main repository for license information.
 - **walkerOS Documentation**: https://docs.walkerOS.com
 - **GitHub Repository**: https://github.com/elbwalker/walkerOS
 - **Issues**: https://github.com/elbwalker/walkerOS/issues
-
----
-
-**Built with ❤️ for the walkerOS community**

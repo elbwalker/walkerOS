@@ -22,6 +22,7 @@ import {
   createSafeContext,
   type EvaluationContext,
 } from '../utils/evaluation';
+import { toggleElementTheme, getElementTheme } from '../core/css-theme-system';
 
 export interface LiveCodeJSOptions {
   initCode?: string;
@@ -84,6 +85,53 @@ export function createLiveCodeJS(
     title: options.title || 'JavaScript Evaluator',
   });
 
+  // Add theme toggle functionality to the first column header
+  const handleThemeToggle = () => {
+    const element = baseApi.getElement();
+    if (element) {
+      const newTheme = toggleElementTheme(element);
+      // Update theme icon in any theme buttons found
+      const themeButtons = element.querySelectorAll(
+        '.explorer-unified-header__btn--theme',
+      );
+      themeButtons.forEach((btn) => {
+        btn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+      });
+    }
+  };
+
+  // Get the first column container and add theme toggle to its header
+  setTimeout(() => {
+    const firstColumn = baseApi.getColumnElement(0);
+    if (firstColumn) {
+      const container = firstColumn.querySelector(
+        '.explorer-unified-container',
+      ) as HTMLElement;
+      if (container) {
+        // Access the container's header API to add theme toggle
+        const headerElement = container.querySelector(
+          '.explorer-unified-header',
+        );
+        if (headerElement) {
+          const actionsElement = headerElement.querySelector(
+            '.explorer-unified-header__actions',
+          );
+          if (actionsElement) {
+            // Create theme toggle button
+            const themeBtn = document.createElement('button');
+            themeBtn.className =
+              'explorer-unified-header__btn explorer-unified-header__btn--theme';
+            themeBtn.textContent =
+              getElementTheme(baseApi.getElement()!) === 'dark' ? '☀️' : '🌙';
+            themeBtn.title = 'Toggle theme';
+            themeBtn.addEventListener('click', handleThemeToggle);
+            actionsElement.appendChild(themeBtn);
+          }
+        }
+      }
+    }
+  }, 10);
+
   // Debounced evaluation for performance
   const debouncedEvaluate = debounce(() => {
     if (options.autoEvaluate !== false) {
@@ -118,8 +166,6 @@ export function createLiveCodeJS(
 
     resultDisplay = createResultDisplay(resultContentElement, {
       height: '100%',
-      showCopyButton: true,
-      showTimestamps: false,
       maxResults: 10,
     });
 
