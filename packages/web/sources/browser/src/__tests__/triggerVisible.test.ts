@@ -24,7 +24,7 @@ const { isVisible } = require('@walkerOS/web-core');
 const { handleTrigger } = require('../trigger');
 
 describe('triggerVisible', () => {
-  let mockCollector: WalkerOS.Collector;
+  let mockCollector: Collector.Instance;
   let mockObserver: {
     observe: jest.Mock;
     unobserve: jest.Mock;
@@ -62,7 +62,7 @@ describe('triggerVisible', () => {
       on: {},
       user: {},
       allowed: true,
-    } as unknown as WalkerOS.Collector;
+    } as unknown as Collector.Instance;
   });
 
   afterEach(() => {

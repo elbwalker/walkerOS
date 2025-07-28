@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { Collector, WalkerOS } from '@walkerOS/core';
 import {
   getId,
   getMarketingParameters,
@@ -16,7 +16,7 @@ export interface SessionWindowConfig {
 
 export function sessionWindow(
   config: SessionWindowConfig = {},
-): WalkerOS.SessionData {
+): Collector.SessionData {
   let isStart = config.isStart || false;
   const known = { isStart, storage: false };
 

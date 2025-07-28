@@ -13,7 +13,7 @@ import { translateToCoreCollector } from './translation';
  * This creates window.elbLayer array and processes any existing commands
  */
 export function initElbLayer(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   config: ELBLayerConfig = {},
 ): void {
   const layerName = config.name || 'elbLayer';
@@ -36,7 +36,7 @@ export function initElbLayer(
  * Commands are processed in order with walker commands getting priority
  */
 function processELBLayerCommands(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   elbLayer: ELBLayer,
 ): void {
   // Separate walker commands from regular events for priority processing
@@ -69,7 +69,7 @@ function processELBLayerCommands(
 /**
  * Process a single command from ELB Layer
  */
-function processCommand(collector: WalkerOS.Collector, command: unknown): void {
+function processCommand(collector: Collector.Instance, command: unknown): void {
   // Skip malformed commands entirely
   if (
     command === null ||

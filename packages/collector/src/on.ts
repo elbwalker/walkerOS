@@ -1,4 +1,4 @@
-import type { On, WalkerOS } from '@walkerOS/core';
+import type { Collector, On, WalkerOS } from '@walkerOS/core';
 import { isArray } from '@walkerOS/core';
 import { Const } from './constants';
 import { tryCatch } from '@walkerOS/core';
@@ -11,7 +11,7 @@ import { tryCatch } from '@walkerOS/core';
  * @param option The callback function or an array of callback functions.
  */
 export function on(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   type: On.Types,
   option: WalkerOS.SingleOrArray<On.Options>,
 ) {
@@ -39,7 +39,7 @@ export function on(
  * @param config The consent configuration.
  */
 export function onApply(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   type: On.Types,
   options?: Array<On.Options>,
   config?: WalkerOS.Consent,
@@ -79,7 +79,7 @@ export function onApply(
 }
 
 function onConsent(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   onConfig: Array<On.ConsentConfig>,
   currentConsent?: WalkerOS.Consent,
 ): void {
@@ -98,7 +98,7 @@ function onConsent(
 }
 
 function onReady(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   onConfig: Array<On.ReadyConfig>,
 ): void {
   if (collector.allowed)
@@ -108,7 +108,7 @@ function onReady(
 }
 
 function onRun(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   onConfig: Array<On.RunConfig>,
 ): void {
   if (collector.allowed)
@@ -118,7 +118,7 @@ function onRun(
 }
 
 function onSession(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   onConfig: Array<On.SessionConfig>,
 ): void {
   if (!collector.config.session) return;

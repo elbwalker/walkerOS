@@ -15,7 +15,7 @@ interface SessionConfigWithCallback {
   [key: string]: unknown;
 }
 
-export function createSessionStart(collector: WalkerOS.Collector) {
+export function createSessionStart(collector: Collector.Instance) {
   return function (
     options: SessionStartOptions = {},
   ): void | WalkerOS.SessionData {
@@ -31,7 +31,7 @@ export function createSessionStart(collector: WalkerOS.Collector) {
 }
 
 export function sessionStart(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   options: SessionStartOptions = {},
 ): void | WalkerOS.SessionData {
   const sessionConfig = assign(
@@ -46,7 +46,7 @@ export function sessionStart(
   // A wrapper for the callback
   const cb: SessionCallback = (
     session: WalkerOS.SessionData,
-    collector: WalkerOS.Collector | undefined,
+    collector: Collector.Instance | undefined,
     defaultCb: SessionCallback,
   ) => {
     let result: void | undefined | WalkerOS.SessionData;

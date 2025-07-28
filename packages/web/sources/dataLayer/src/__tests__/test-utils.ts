@@ -3,7 +3,7 @@ import type { WalkerOS } from '@walkerOS/core';
 // Test utility for creating properly typed mock push function
 export function createMockPush(
   collectedEvents: WalkerOS.Event[],
-): WalkerOS.Collector['push'] {
+): Collector.Instance['push'] {
   return jest.fn((event: unknown) => {
     collectedEvents.push(event as WalkerOS.Event);
     return Promise.resolve({
@@ -12,7 +12,7 @@ export function createMockPush(
       queued: [],
       failed: [],
     });
-  }) as WalkerOS.Collector['push'];
+  }) as Collector.Instance['push'];
 }
 
 // Type assertion for dataLayer

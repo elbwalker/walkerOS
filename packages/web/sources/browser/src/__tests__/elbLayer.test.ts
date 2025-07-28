@@ -5,8 +5,8 @@ import type { WalkerOS } from '@walkerOS/core';
 
 describe('ELB Layer', () => {
   let collectedEvents: WalkerOS.Event[];
-  let collector: WalkerOS.Collector;
-  let mockPush: jest.MockedFunction<WalkerOS.Collector['push']>;
+  let collector: Collector.Instance;
+  let mockPush: jest.MockedFunction<Collector.Instance['push']>;
 
   beforeEach(async () => {
     // Clear any existing elbLayer
@@ -22,7 +22,7 @@ describe('ELB Layer', () => {
         queued: [],
         failed: [],
       });
-    }) as unknown as jest.MockedFunction<WalkerOS.Collector['push']>;
+    }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
 
     // Initialize collector
     ({ collector } = await createCollector());

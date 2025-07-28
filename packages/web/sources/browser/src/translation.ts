@@ -17,7 +17,7 @@ import type {
  * to the strict core collector format
  */
 export function translateToCoreCollector(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   eventOrCommand: unknown,
   data?: BrowserPushData,
   options?: BrowserPushOptions,
@@ -31,11 +31,11 @@ export function translateToCoreCollector(
       return (
         collector.push as (
           event: 'walker config',
-          config: WalkerOS.DeepPartial<WalkerOS.Collector['config']>,
+          config: WalkerOS.DeepPartial<Collector.Instance['config']>,
         ) => Promise<Elb.PushResult>
       )(
         'walker config',
-        data as WalkerOS.DeepPartial<WalkerOS.Collector['config']>,
+        data as WalkerOS.DeepPartial<Collector.Instance['config']>,
       );
     } else if (eventOrCommand === 'walker consent') {
       return (
@@ -55,11 +55,11 @@ export function translateToCoreCollector(
       return (
         collector.push as (
           event: 'walker run',
-          options: WalkerOS.DeepPartial<WalkerOS.Collector['config']>,
+          options: WalkerOS.DeepPartial<Collector.Instance['config']>,
         ) => Promise<Elb.PushResult>
       )(
         'walker run',
-        data as WalkerOS.DeepPartial<WalkerOS.Collector['config']>,
+        data as WalkerOS.DeepPartial<Collector.Instance['config']>,
       );
     } else if (eventOrCommand === 'walker hook') {
       // This is more complex due to the generic nature, but we can't handle it properly here

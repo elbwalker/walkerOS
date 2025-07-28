@@ -57,8 +57,8 @@ export const Triggers: { [key: string]: Trigger } = {
 } as const;
 
 export async function ready(
-  fn: (collector: WalkerOS.Collector, settings: any) => void,
-  collector: WalkerOS.Collector,
+  fn: (collector: Collector.Instance, settings: any) => void,
+  collector: Collector.Instance,
   settings: any,
 ): Promise<void> {
   const readyFn = () => {
@@ -75,7 +75,7 @@ export async function ready(
 
 // Called for each new run to setup triggers
 export function load(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   settings: Required<Settings>,
 ) {
   const { prefix, scope, pageview } = settings;
@@ -96,7 +96,7 @@ export function load(
 }
 
 export function initGlobalTrigger(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   scope: Scope,
 ): void {
   scope.addEventListener(
@@ -114,7 +114,7 @@ export function initGlobalTrigger(
 }
 
 export function initScopeTrigger(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   prefix: string,
   elem?: Scope,
 ) {
@@ -151,7 +151,7 @@ export function initScopeTrigger(
 }
 
 export async function handleTrigger(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   element: Element,
   trigger: string,
   prefix: string,
@@ -170,7 +170,7 @@ export async function handleTrigger(
 }
 
 function handleActionElem(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   elem: HTMLElement,
   selectorAction: string,
   prefix: string,
@@ -211,13 +211,13 @@ function handleActionElem(
   );
 }
 
-function triggerClick(collector: WalkerOS.Collector, ev: MouseEvent) {
+function triggerClick(collector: Collector.Instance, ev: MouseEvent) {
   // Use default prefix - will be parameterized when integrating with source config
   handleTrigger(collector, ev.target as Element, Triggers.Click, 'data-elb');
 }
 
 function triggerHover(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   elem: HTMLElement,
   prefix: string,
 ) {
@@ -231,7 +231,7 @@ function triggerHover(
 }
 
 function triggerLoad(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   elem: HTMLElement,
   prefix: string,
 ) {
@@ -239,7 +239,7 @@ function triggerLoad(
 }
 
 function triggerPulse(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   elem: HTMLElement,
   triggerParams: string = '',
   prefix: string,
@@ -264,7 +264,7 @@ function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
   scrollElements.push([elem, depth]);
 }
 
-function triggerSubmit(collector: WalkerOS.Collector, ev: SubmitEvent) {
+function triggerSubmit(collector: Collector.Instance, ev: SubmitEvent) {
   // Use default prefix - will be parameterized when integrating with source config
   if (ev.target) {
     handleTrigger(collector, ev.target as Element, Triggers.Submit, 'data-elb');
@@ -272,7 +272,7 @@ function triggerSubmit(collector: WalkerOS.Collector, ev: SubmitEvent) {
 }
 
 function triggerWait(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   elem: HTMLElement,
   triggerParams: string = '',
   prefix: string,
@@ -283,10 +283,10 @@ function triggerWait(
   );
 }
 
-function scroll(collector: WalkerOS.Collector, scope: Scope) {
+function scroll(collector: Collector.Instance, scope: Scope) {
   const scrolling = (
     scrollElements: ScrollElements,
-    collector: WalkerOS.Collector,
+    collector: Collector.Instance,
   ) => {
     return scrollElements.filter(([element, depth]) => {
       // Distance from top to the bottom of the visible screen

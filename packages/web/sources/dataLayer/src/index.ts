@@ -1,4 +1,4 @@
-import type { WalkerOS, Source } from '@walkerOS/core';
+import type { Collector, WalkerOS, Source } from '@walkerOS/core';
 import type { Settings, DataLayerSourceConfig } from './types';
 import { interceptDataLayer, processExistingEvents } from './interceptor';
 import { getId } from '@walkerOS/core';
@@ -14,7 +14,7 @@ export * from './examples';
  * Sets up dataLayer interception and processes existing events
  */
 const initDataLayerSource: Source.Init<DataLayerSourceConfig> = (
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   config: DataLayerSourceConfig,
 ) => {
   const { settings } = config;
@@ -66,14 +66,14 @@ export function sourceDataLayer(
   init: Partial<Settings> = {},
 ): Source.Init<DataLayerSourceConfig> & {
   init?: (
-    collector: WalkerOS.Collector,
+    collector: Collector.Instance,
     config: { settings: Settings },
   ) => void;
   settings?: Settings;
   type?: string;
 } {
   const sourceInit = (
-    collector: WalkerOS.Collector,
+    collector: Collector.Instance,
     config: DataLayerSourceConfig,
   ) => {
     // Merge provided settings with defaults
@@ -92,7 +92,7 @@ export function sourceDataLayer(
 
   // Add backward compatibility properties for tests
   sourceInit.init = (
-    collector: WalkerOS.Collector,
+    collector: Collector.Instance,
     config: { settings: Settings },
   ) => {
     return initDataLayerSource(collector, {

@@ -1,4 +1,4 @@
-import type { WalkerOS, Elb } from '@walkerOS/core';
+import type { Collector, WalkerOS, Elb } from '@walkerOS/core';
 import { assign } from '@walkerOS/core';
 import { pushToDestinations, createPushResult } from './destination';
 import { onApply } from './on';
@@ -11,7 +11,7 @@ import { onApply } from './on';
  * @returns The result of the push operation.
  */
 export async function setConsent(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   data: WalkerOS.Consent,
 ): Promise<Elb.PushResult> {
   const { consent } = collector;

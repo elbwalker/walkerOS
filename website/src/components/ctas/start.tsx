@@ -11,7 +11,7 @@ export default function CTAStart() {
         </>
       }
       primaryButton={{
-        link: '/docs/getting_started/quick_start',
+        link: '/docs/getting-started/quickstart/',
         children: 'Quickstart',
       }}
       secondaryButton={{

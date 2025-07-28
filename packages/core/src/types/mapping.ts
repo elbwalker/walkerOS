@@ -1,4 +1,4 @@
-import type { Destination, WalkerOS } from '.';
+import type { Collector, Destination, WalkerOS } from '.';
 
 export interface Rules<T = Rule> {
   [entity: string]: Record<string, T | Array<T>> | undefined;
@@ -7,8 +7,8 @@ export interface Rules<T = Rule> {
 export interface Rule<Settings = unknown> {
   batch?: number; // Bundle events for batch processing
   batchFn?: (
-    destination: Destination.Destination,
-    collector: WalkerOS.Collector,
+    destination: Destination.Instance,
+    collector: Collector.Instance,
   ) => void;
   batched?: Destination.Batch<Settings>; // Batch of events to be processed
   condition?: Condition; // Added condition
@@ -44,7 +44,7 @@ export interface ValueConfig {
 export type Condition = (
   value: WalkerOS.DeepPartialEvent | unknown,
   mapping?: Value,
-  collector?: WalkerOS.Collector,
+  collector?: Collector.Instance,
 ) => WalkerOS.PromiseOrValue<boolean>;
 
 export type Fn = (
@@ -59,7 +59,7 @@ export type Map = { [key: string]: Value };
 
 export interface Options {
   consent?: WalkerOS.Consent;
-  collector?: WalkerOS.Collector;
+  collector?: Collector.Instance;
   props?: unknown;
 }
 

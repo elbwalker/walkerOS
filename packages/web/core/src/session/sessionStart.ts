@@ -1,4 +1,4 @@
-import type { WalkerOS, On } from '@walkerOS/core';
+import type { Collector, WalkerOS, On } from '@walkerOS/core';
 import type { SessionStorageConfig } from './';
 import { sessionStorage, sessionWindow } from './';
 import { elb as elbOrg } from '../elb';
@@ -8,19 +8,19 @@ export interface SessionConfig extends SessionStorageConfig {
   consent?: string | string[];
   storage?: boolean;
   cb?: SessionCallback | false;
-  collector?: WalkerOS.Collector;
+  collector?: Collector.Instance;
 }
 
 export type SessionFunction = typeof sessionStorage | typeof sessionWindow;
 export type SessionCallback = (
-  session: WalkerOS.SessionData,
-  collector: WalkerOS.Collector | undefined,
+  session: Collector.SessionData,
+  collector: Collector.Instance | undefined,
   defaultCb: SessionCallback,
 ) => void;
 
 export function sessionStart(
   config: SessionConfig = {},
-): WalkerOS.SessionData | void {
+): Collector.SessionData | void {
   const { cb, consent, collector, storage } = config;
   const elb = collector?.push || elbOrg;
   const sessionFn: SessionFunction = storage ? sessionStorage : sessionWindow;
@@ -44,8 +44,8 @@ export function sessionStart(
 }
 
 function callFuncAndCb(
-  session: WalkerOS.SessionData,
-  collector?: WalkerOS.Collector,
+  session: Collector.SessionData,
+  collector?: Collector.Instance,
   cb?: SessionCallback | false,
 ) {
   if (cb === false) return session; // Callback is disabled
@@ -57,7 +57,7 @@ function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
   // Track the last processed group to prevent duplicate processing
   let lastProcessedGroup: string | undefined;
 
-  const func = (collector: WalkerOS.Collector, consent: WalkerOS.Consent) => {
+  const func = (collector: Collector.Instance, consent: WalkerOS.Consent) => {
     // Skip if we've already processed this group
     if (
       isDefined(lastProcessedGroup) &&
@@ -89,7 +89,7 @@ function onConsentFn(config: SessionConfig, cb?: SessionCallback | false) {
 const defaultCb: SessionCallback = (
   session,
   collector,
-): WalkerOS.SessionData => {
+): Collector.SessionData => {
   const elb = collector?.push || elbOrg;
   const user: WalkerOS.User = {};
 

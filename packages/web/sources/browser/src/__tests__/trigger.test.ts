@@ -28,7 +28,7 @@ jest.mock('@walkerOS/collector', () => ({
 }));
 
 describe('Trigger System', () => {
-  let mockCollector: WalkerOS.Collector;
+  let mockCollector: Collector.Instance;
   let mockAddEventListener: jest.Mock;
   let events: Record<string, EventListenerOrEventListenerObject> = {};
 
@@ -50,7 +50,7 @@ describe('Trigger System', () => {
       on: {},
       user: {},
       allowed: true,
-    } as unknown as WalkerOS.Collector;
+    } as unknown as Collector.Instance;
 
     // Mock event listeners
     events = {};

@@ -1,3 +1,4 @@
+export * as Collector from './collector';
 export * as Data from './data';
 export * as Destination from './destination';
 export * as Elb from './elb';

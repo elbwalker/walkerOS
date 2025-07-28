@@ -61,7 +61,7 @@ describe('Destination API', () => {
     );
 
     destination.push(event, {
-      collector: {} as WalkerOS.Collector,
+      collector: {} as Collector.Instance,
       config: {
         settings: { url },
       },

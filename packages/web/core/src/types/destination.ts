@@ -1,7 +1,7 @@
 import type { Destination as WalkerOSDestination } from '@walkerOS/core';
 
 export interface Destination<Settings = unknown, Mapping = unknown>
-  extends WalkerOSDestination.Destination<Settings, Mapping> {}
+  extends WalkerOSDestination.Instance<Settings, Mapping> {}
 
 export type Init = WalkerOSDestination.Init;
 

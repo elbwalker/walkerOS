@@ -1,4 +1,5 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { Collector, WalkerOS } from '@walkerOS/core';
+import type { InitSources } from '../source';
 
 // Collector-specific types that don't belong in core
 export interface RunState {
@@ -9,8 +10,13 @@ export interface RunState {
 }
 
 export interface CreateCollector {
-  collector: WalkerOS.Collector;
+  collector: Collector.Instance;
   elb: WalkerOS.Elb;
 }
 
-export type InitSource = Partial<WalkerOS.CollectorSource>;
+export type InitSource = Partial<Collector.CollectorSource>;
+
+// Extended config interface that includes sources
+export interface CollectorConfig extends Collector.Config {
+  sources?: InitSources;
+}

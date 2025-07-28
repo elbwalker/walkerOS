@@ -27,7 +27,7 @@ interface VisibilityState {
 }
 
 // Extended collector interface with visibility state
-interface CollectorWithVisibility extends WalkerOS.Collector {
+interface CollectorWithVisibility extends Collector.Instance {
   _visibilityState?: VisibilityState;
 }
 
@@ -54,7 +54,7 @@ function isElementVisible(element: HTMLElement): boolean {
  * Element cleanup (unobserve + timer + cache cleanup)
  */
 export function unobserveElement(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   element: HTMLElement,
 ): void {
   const state = (collector as CollectorWithVisibility)._visibilityState;
@@ -80,7 +80,7 @@ export function unobserveElement(
  * Creates an IntersectionObserver for the given collector
  */
 function createObserver(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
 ): IntersectionObserver | undefined {
   if (!window.IntersectionObserver) return undefined;
 
@@ -105,7 +105,7 @@ function createObserver(
  * Handles intersection changes for observed elements
  */
 function handleIntersection(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   entry: IntersectionObserverEntry,
 ): void {
   const target = entry.target as HTMLElement;
@@ -192,7 +192,7 @@ function handleIntersection(
  * Initializes visibility tracking for a collector
  */
 export function initVisibilityTracking(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   duration = 1000,
 ): void {
   if ((collector as CollectorWithVisibility)._visibilityState) return; // Already initialized
@@ -208,7 +208,7 @@ export function initVisibilityTracking(
  * Main trigger function for visible elements
  */
 export function triggerVisible(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   element: HTMLElement,
   config: { multiple?: boolean } = { multiple: false },
 ): void {
@@ -229,7 +229,7 @@ export function triggerVisible(
 /**
  * Destroys visibility tracking for a collector, cleaning up all resources
  */
-export function destroyVisibilityTracking(collector: WalkerOS.Collector): void {
+export function destroyVisibilityTracking(collector: Collector.Instance): void {
   const state = (collector as CollectorWithVisibility)._visibilityState;
   if (!state) return;
 

@@ -5,7 +5,7 @@ import { createMockPush, getDataLayer } from './test-utils';
 
 describe('DataLayer Source - Integration', () => {
   let collectedEvents: WalkerOS.Event[];
-  let collector: WalkerOS.Collector;
+  let collector: Collector.Instance;
 
   beforeEach(async () => {
     window.dataLayer = [];

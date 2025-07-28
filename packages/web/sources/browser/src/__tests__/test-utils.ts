@@ -1,5 +1,5 @@
 import type { WalkerOS, Source } from '@walkerOS/core';
-import { createSource } from '@walkerOS/core';
+import { createSource } from '@walkerOS/collector';
 import { sourceBrowser } from '../index';
 import type { Settings, BrowserSourceConfig } from '../types';
 import type { BrowserPush } from '../types/elb';
@@ -9,7 +9,7 @@ import type { BrowserPush } from '../types/elb';
  * Returns a promise that resolves to the source creation result
  */
 export async function createBrowserSource(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   settings: Partial<Settings> = {},
 ): Promise<Source.CreateSource<BrowserSourceConfig, BrowserPush>> {
   const fullConfig: BrowserSourceConfig = {

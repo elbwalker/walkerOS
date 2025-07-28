@@ -1,4 +1,5 @@
 import type {
+  Collector as CoreCollector,
   Elb,
   Hooks,
   WalkerOS,
@@ -20,14 +21,16 @@ declare global {
   }
 }
 
-export interface Collector extends Omit<WalkerOS.Collector, 'config'> {
-  config: Config & WalkerOS.Config;
+export interface Collector extends Omit<CoreCollector.Instance, 'config'> {
+  config: Config & CoreCollector.Config;
   destinations: Destinations;
   push: Elb.Fn<Promise<Elb.PushResult>>;
   getAllEvents: (scope: Element, prefix: string) => Events;
   getEvents: (target: Element, trigger: Trigger, prefix: string) => Events;
   getGlobals: () => WalkerOS.Properties;
-  sessionStart: (options?: SessionStartOptions) => void | WalkerOS.SessionData;
+  sessionStart: (
+    options?: SessionStartOptions,
+  ) => void | CoreCollector.SessionData;
   _visibilityState?: {
     observer: IntersectionObserver | undefined;
     timers: WeakMap<HTMLElement, number>;
@@ -70,7 +73,7 @@ export interface InitConfig extends Partial<Config> {
 
 export interface SessionStartOptions {
   config?: SessionConfig;
-  data?: Partial<WalkerOS.SessionData>;
+  data?: Partial<CoreCollector.SessionData>;
 }
 
 export interface Destinations {

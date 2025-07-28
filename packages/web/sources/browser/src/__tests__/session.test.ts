@@ -27,7 +27,7 @@ const { onApply } = require('@walkerOS/collector');
 const { sessionStart: sessionStartOrg } = require('@walkerOS/web-core');
 
 describe('Session', () => {
-  let mockCollector: WalkerOS.Collector;
+  let mockCollector: Collector.Instance;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -51,7 +51,7 @@ describe('Session', () => {
       on: {},
       user: {},
       allowed: true,
-    } as unknown as WalkerOS.Collector;
+    } as unknown as Collector.Instance;
 
     // Mock the useHooks to return a function that calls the original
     (useHooks as jest.Mock).mockImplementation(() => {

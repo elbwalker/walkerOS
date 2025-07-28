@@ -14,11 +14,11 @@ describe('Firehose', () => {
 
   const streamName = 'demo';
 
-  const mockCollector = {} as WalkerOS.Collector;
+  const mockCollector = {} as Collector.Instance;
   const mockWrap = jest.fn((_name, fn) => fn);
 
   async function getConfig(settings: Settings = {}) {
-    const mockCollector = {} as WalkerOS.Collector;
+    const mockCollector = {} as Collector.Instance;
     return (await destination.init({
       config: { settings },
       collector: mockCollector,
@@ -53,7 +53,7 @@ describe('Firehose', () => {
   test('push', async () => {
     const spy = (FirehoseClient.prototype.send = jest.fn());
     const config = await getConfig(settingsConfig);
-    const mockCollector = {} as WalkerOS.Collector;
+    const mockCollector = {} as Collector.Instance;
 
     await destination.push(event, {
       config,

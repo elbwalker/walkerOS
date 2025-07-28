@@ -3,9 +3,9 @@ import { createBrowserSource } from './test-utils';
 import type { WalkerOS } from '@walkerOS/core';
 
 describe('Browser Source Integration Tests', () => {
-  let collector: WalkerOS.Collector;
+  let collector: Collector.Instance;
   let collectedEvents: WalkerOS.Event[];
-  let mockPush: jest.MockedFunction<WalkerOS.Collector['push']>;
+  let mockPush: jest.MockedFunction<Collector.Instance['push']>;
 
   beforeEach(async () => {
     collectedEvents = [];
@@ -23,7 +23,7 @@ describe('Browser Source Integration Tests', () => {
         queued: [],
         failed: [],
       });
-    }) as unknown as jest.MockedFunction<WalkerOS.Collector['push']>;
+    }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
 
     // Initialize collector without any sources to avoid initial triggers
     ({ collector } = await createCollector());
@@ -220,7 +220,7 @@ describe('Browser Source Integration Tests', () => {
       // Mock push to fail on first call
       let callCount = 0;
       mockPush.mockImplementation(
-        (...args: Parameters<WalkerOS.Collector['push']>) => {
+        (...args: Parameters<Collector.Instance['push']>) => {
           callCount++;
           if (callCount === 1) {
             throw new Error('First event failed');

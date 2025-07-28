@@ -3,8 +3,8 @@ import { createCollector } from '@walkerOS/collector';
 import { createBrowserSource } from './test-utils';
 
 describe('Browser Source Edge Cases', () => {
-  let collector: WalkerOS.Collector;
-  let mockPush: jest.MockedFunction<WalkerOS.Collector['push']>;
+  let collector: Collector.Instance;
+  let mockPush: jest.MockedFunction<Collector.Instance['push']>;
 
   beforeEach(async () => {
     document.body.innerHTML = '';
@@ -17,7 +17,7 @@ describe('Browser Source Edge Cases', () => {
         queued: [],
         failed: [],
       });
-    }) as unknown as jest.MockedFunction<WalkerOS.Collector['push']>;
+    }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
 
     ({ collector } = await createCollector());
 

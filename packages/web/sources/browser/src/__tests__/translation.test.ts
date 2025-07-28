@@ -4,9 +4,9 @@ import { translateToCoreCollector } from '../translation';
 import type { WalkerOS } from '@walkerOS/core';
 
 describe('Translation Layer', () => {
-  let collector: WalkerOS.Collector;
+  let collector: Collector.Instance;
   let collectedEvents: WalkerOS.Event[];
-  let mockPush: jest.MockedFunction<WalkerOS.Collector['push']>;
+  let mockPush: jest.MockedFunction<Collector.Instance['push']>;
 
   beforeEach(async () => {
     collectedEvents = [];
@@ -33,7 +33,7 @@ describe('Translation Layer', () => {
         queued: [],
         failed: [],
       });
-    }) as unknown as jest.MockedFunction<WalkerOS.Collector['push']>;
+    }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
 
     // Initialize collector
     ({ collector } = await createCollector());

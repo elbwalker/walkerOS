@@ -1,4 +1,4 @@
-import type { WalkerOS, Handler } from './index';
+import type { Collector, WalkerOS, Handler } from './index';
 
 export interface Config {
   type: string;
@@ -12,7 +12,7 @@ export type InitConfig = Partial<Config>;
 
 export interface Init<T extends Config = Config, E = WalkerOS.AnyFunction> {
   (
-    collector: WalkerOS.Collector,
+    collector: Collector.Instance,
     config: T,
   ): CreateSource<T, E> | Promise<CreateSource<T, E>>;
 }
@@ -29,6 +29,6 @@ export interface Instance<T extends Config = Config> {
   // id: string;
   type: string;
   config: T;
-  collector: WalkerOS.Collector;
+  collector: Collector.Instance;
   destroy?(): void | Promise<void>;
 }

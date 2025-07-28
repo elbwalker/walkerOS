@@ -15,7 +15,7 @@ describe('Server Destination BigQuery', () => {
   const tableId = 't4bl31d';
   const credentials = { type: 'service_account', private_key: 'secret' };
 
-  const mockCollector = {} as WalkerOS.Collector;
+  const mockCollector = {} as Collector.Instance;
   const mockWrap = jest.fn((_name, fn) => fn);
 
   function getMockFn(config: Partial<Config>) {

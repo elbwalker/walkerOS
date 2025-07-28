@@ -20,7 +20,7 @@ export interface WalkerCommands<R = Promise<PushResult>, Config = unknown> {
   (event: 'walker consent', consent: WalkerOS.Consent): R;
   (
     event: 'walker destination',
-    destination: Destination.Init | Destination.Destination,
+    destination: Destination.Init | Destination.Instance,
     config?: Destination.Config,
   ): R;
   <K extends keyof Hooks.Functions>(

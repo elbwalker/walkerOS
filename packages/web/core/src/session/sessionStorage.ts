@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkerOS/core';
+import type { Collector, WalkerOS } from '@walkerOS/core';
 import type { SessionWindowConfig } from '.';
 import type { StorageType } from '@walkerOS/core';
 import { getId, tryCatch } from '@walkerOS/core';
@@ -17,7 +17,7 @@ export interface SessionStorageConfig extends SessionWindowConfig {
 
 export function sessionStorage(
   config: SessionStorageConfig = {},
-): WalkerOS.SessionData {
+): Collector.SessionData {
   const now = Date.now();
   const {
     length = 30, // Session length in minutes
@@ -42,7 +42,7 @@ export function sessionStorage(
   })(deviceKey, deviceAge, deviceStorage);
 
   // Retrieve or initialize session data
-  const existingSession: WalkerOS.SessionData =
+  const existingSession: Collector.SessionData =
     tryCatch(
       (key: string, storage?: StorageType) => {
         const session = JSON.parse(String(storageRead(key, storage)));
@@ -82,7 +82,7 @@ export function sessionStorage(
     )(sessionKey, sessionStorage) || {};
 
   // Default session data
-  const defaultSession: Partial<WalkerOS.SessionData> = {
+  const defaultSession: Partial<Collector.SessionData> = {
     id: getId(12),
     start: now,
     isNew: true,

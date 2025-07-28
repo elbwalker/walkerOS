@@ -1,4 +1,4 @@
-import type { Collector, Consent } from './walkeros';
+import type { Collector, WalkerOS } from './';
 
 // collector state for the on actions
 export type Config = {
@@ -18,19 +18,25 @@ export type Options = ConsentConfig | ReadyConfig | RunConfig | SessionConfig;
 export interface ConsentConfig {
   [key: string]: ConsentFn;
 }
-export type ConsentFn = (collector: Collector, consent: Consent) => void;
+export type ConsentFn = (
+  collector: Collector.Instance,
+  consent: WalkerOS.Consent,
+) => void;
 
 // Ready
 export type ReadyConfig = ReadyFn;
-export type ReadyFn = (collector: Collector) => void;
+export type ReadyFn = (collector: Collector.Instance) => void;
 
 // Run
 export type RunConfig = RunFn;
-export type RunFn = (collector: Collector) => void;
+export type RunFn = (collector: Collector.Instance) => void;
 
 // Session
 export type SessionConfig = SessionFn;
-export type SessionFn = (collector: Collector, session?: unknown) => void;
+export type SessionFn = (
+  collector: Collector.Instance,
+  session?: unknown,
+) => void;
 
 export interface OnConfig {
   consent?: ConsentConfig[];

@@ -1,3 +1,4 @@
+import type { Collector } from '@walkerOS/core';
 import type { Destination, WalkerOS } from '@walkerOS/core';
 import { createCollector } from '..';
 import { commonHandleCommand } from '../handle';
@@ -5,7 +6,7 @@ import { commonHandleCommand } from '../handle';
 describe('Handle Commands', () => {
   let mockDestinationPush: jest.Mock;
   let mockDestinationInit: jest.Mock;
-  let mockDestination: Destination.Destination;
+  let mockDestination: Destination.Instance;
 
   beforeEach(() => {
     jest.clearAllMocks();

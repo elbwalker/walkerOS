@@ -1,4 +1,4 @@
-import type { WalkerOS, Source } from '@walkerOS/core';
+import type { Collector, WalkerOS, Source } from '@walkerOS/core';
 import type { BrowserSourceConfig, Scope } from './types';
 import type {
   BrowserPushData,
@@ -29,7 +29,7 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
 export const sourceBrowser: Source.Init<
   BrowserSourceConfig,
   BrowserPush
-> = async (collector: WalkerOS.Collector, config: BrowserSourceConfig) => {
+> = async (collector: Collector.Instance, config: BrowserSourceConfig) => {
   // Get full configuration with defaults
   const settings = getConfig(config.settings);
   const fullConfig: BrowserSourceConfig = {
@@ -71,9 +71,9 @@ export const sourceBrowser: Source.Init<
 
   // Setup cleanup for visibility tracking on collector destroy
   const originalDestroy = (
-    collector as WalkerOS.Collector & { _destroy?: () => void }
+    collector as Collector.Instance & { _destroy?: () => void }
   )._destroy;
-  (collector as WalkerOS.Collector & { _destroy?: () => void })._destroy =
+  (collector as Collector.Instance & { _destroy?: () => void })._destroy =
     () => {
       source.destroy?.();
       if (originalDestroy) originalDestroy();

@@ -340,7 +340,7 @@ describe('getMappingValue', () => {
   test('consent', async () => {
     const collector = {
       consent: { collectorLevel: true },
-    } as unknown as WalkerOS.Collector;
+    } as unknown as Collector.Instance;
 
     expect(collector.consent.collectorLevel).toBeTruthy();
 

@@ -75,9 +75,9 @@ creates a **current snapshot** of the site and state, and builds events on the
 fly. A component only has to be tagged once and can be tracked multiple times,
 in various settings, on multiple pages.
 
-E.g. you can add a [global attribute](/docs/sources/html-tagging#globals) once
+E.g. you can add a [global attribute](/docs/sources/web/browser/tagging#globals) once
 and automatically have it available in every event. walker.js also captures
-[additional fields](/docs/collectors/web/) like event timings, consent-state,
+[additional fields](/docs/sources/web/browser/) like event timings, consent-state,
 event count or the tagging version automatically. The states of the events are
 always up-to-date as a user interacts with certain components on the screen.
 Using the dataLayer you'll have to update every single event on its own.
@@ -153,10 +153,10 @@ We offer serveral ways to integrate with GTM and/or keep using the `dataLayer`:
 
 - **Install walker.js with the tag template:** If you'd like to install
   walker.js using GTM you can use the
-  [Google Tag Manager tag template](/docs/collectors/web/installation/gtm/)
+  [Google Tag Manager tag template](/docs/sources/web/browser/installation)
 
 - **Use GTM destination:** If you'd like to use
-  [walker.js](/docs/collectors/web/) as an event source while keeping GTM for
+  [walker.js](/docs/sources/web/browser/) as an event source while keeping GTM for
   other tasks, you can use the
-  [Google Tag Manager destination](https://www.elbwalker.com/docs/destinations/google-gtm)
+  [Google Tag Manager destination](/docs/destinations/web/gtag/gtm)
   that automatically pushes walker events into the `dataLayer`

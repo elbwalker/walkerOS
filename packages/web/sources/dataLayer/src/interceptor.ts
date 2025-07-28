@@ -9,7 +9,7 @@ let isProcessing = false;
  * DataLayer interceptor - handles dataLayer.push interception and event transformation
  */
 export function interceptDataLayer(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   config: InitSource,
 ): void {
   const settings = config.settings as {
@@ -56,7 +56,7 @@ export function interceptDataLayer(
  * Process existing events on initialization
  */
 export function processExistingEvents(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   config: Source.Config,
 ): void {
   const settings = config.settings as {
@@ -87,7 +87,7 @@ export function processExistingEvents(
  * Process a single event - handles filtering, transformation, and WalkerOS event creation
  */
 function processEvent(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   settings: { prefix?: string; filter?: (event: unknown) => boolean } = {},
   rawEvent: unknown,
 ): void {

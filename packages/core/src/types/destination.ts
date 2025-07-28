@@ -1,4 +1,5 @@
 import type {
+  Collector,
   Handler,
   Mapping as WalkerOSMapping,
   On,
@@ -6,7 +7,7 @@ import type {
   Wrapper,
 } from '.';
 
-export interface Destination<Settings = unknown, Mapping = unknown> {
+export interface Instance<Settings = unknown, Mapping = unknown> {
   config: Config<Settings, Mapping>; // Configuration settings for the destination
   queue?: WalkerOS.Events; // Non processed events yet and reset with each new run
   dlq?: DLQ; // Failed events
@@ -43,27 +44,26 @@ export interface Policy {
   [key: string]: WalkerOSMapping.Value;
 }
 
-export type Init = Partial<Omit<Destination, 'push'>> &
-  Pick<Destination, 'push'>;
+export type Init = Partial<Omit<Instance, 'push'>> & Pick<Instance, 'push'>;
 
 export type InitDestination<Settings = unknown, Mapping = unknown> = Omit<
-  Destination<Settings, Mapping>,
+  Instance<Settings, Mapping>,
   'config'
 > & {
   config?: Config<Settings, Mapping>;
 };
 
 export interface InitDestinations {
-  [key: string]: InitDestination;
+  [key: string]: InitDestination<any, any>;
 }
 
 export interface Destinations {
-  [key: string]: Destination;
+  [key: string]: Instance;
 }
 
 // Context interfaces for destination functions
 export interface Context<Settings = unknown, Mapping = unknown> {
-  collector: WalkerOS.Collector;
+  collector: Collector.Instance;
   config: Config<Settings, Mapping>;
   data?: Data;
   wrap: Wrapper.Wrap;
@@ -114,7 +114,7 @@ export type Data =
 
 export type Ref = {
   id: string;
-  destination: Destination;
+  destination: Instance;
 };
 
 export type Push = {

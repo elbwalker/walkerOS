@@ -40,7 +40,7 @@ describe('Server Destination Meta', () => {
   afterEach(() => {});
 
   async function getConfig(settings: Partial<Settings> = {}) {
-    const mockCollector = {} as WalkerOS.Collector;
+    const mockCollector = {} as Collector.Instance;
     const mockWrap = jest.fn((_name, fn) => fn);
     return (await destination.init({
       config: { settings: settings as Settings },
@@ -50,7 +50,7 @@ describe('Server Destination Meta', () => {
   }
 
   test('init', async () => {
-    const mockCollector = {} as WalkerOS.Collector;
+    const mockCollector = {} as Collector.Instance;
     const mockWrap = jest.fn((_name, fn) => fn);
     await expect(
       destination.init({
@@ -76,7 +76,7 @@ describe('Server Destination Meta', () => {
   });
 
   test('testCode', async () => {
-    const mockCollector = {} as WalkerOS.Collector;
+    const mockCollector = {} as Collector.Instance;
     const mockWrap = jest.fn((_name, fn) => fn);
     const event = getEvent();
     const config: Config = {
@@ -125,7 +125,7 @@ describe('Server Destination Meta', () => {
       },
       error: '400 Bad Request',
     });
-    const mockCollector = {} as WalkerOS.Collector;
+    const mockCollector = {} as Collector.Instance;
     const mockWrap = jest.fn((_name, fn) => fn);
     const event = getEvent();
     const config: Config = {
@@ -143,7 +143,7 @@ describe('Server Destination Meta', () => {
   });
 
   test('fbclid', async () => {
-    const mockCollector = {} as WalkerOS.Collector;
+    const mockCollector = {} as Collector.Instance;
     const mockWrap = jest.fn((_name, fn) => fn);
     const event = getEvent();
     const config: Config = {

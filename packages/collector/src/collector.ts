@@ -1,19 +1,25 @@
-import type { WalkerOS, Elb } from '@walkerOS/core';
-import type { CreateCollector } from './types';
+import type { Collector, WalkerOS, Elb } from '@walkerOS/core';
+import type { CreateCollector, CollectorConfig } from './types';
 import { assign, onLog } from '@walkerOS/core';
 import { commonHandleCommand } from './handle';
 import { initDestinations, createPush } from './destination';
+import { initSources } from './source';
 
-export async function createCollector(
-  initConfig: WalkerOS.InitConfig = {},
-): Promise<CreateCollector> {
+export async function createCollector<
+  TConfig extends Partial<CollectorConfig> = Partial<CollectorConfig>,
+>(initConfig: TConfig = {} as TConfig): Promise<CreateCollector> {
   const instance = collector(initConfig);
-  const { consent, user, globals, custom } = initConfig;
+  const { consent, user, globals, custom, sources } = initConfig;
 
   if (consent) await instance.push('walker consent', consent);
   if (user) await instance.push('walker user', user);
   if (globals) Object.assign(instance.globals, globals);
   if (custom) Object.assign(instance.custom, custom);
+
+  // Initialize sources if provided
+  if (sources) {
+    await initSources(instance, sources);
+  }
 
   if (instance.config.run) await instance.push('walker run');
 
@@ -23,10 +29,10 @@ export async function createCollector(
   };
 }
 
-function collector(initConfig: WalkerOS.InitConfig): WalkerOS.Collector {
+function collector(initConfig: Partial<CollectorConfig>): Collector.Instance {
   const { version } = require('../package.json');
 
-  const defaultConfig: WalkerOS.Config = {
+  const defaultConfig: Collector.Config = {
     dryRun: false,
     session: false,
     globalsStatic: {},
@@ -42,7 +48,7 @@ function collector(initConfig: WalkerOS.InitConfig): WalkerOS.Collector {
     custom: {},
   };
 
-  const config: WalkerOS.Config = assign(defaultConfig, initConfig, {
+  const config: Collector.Config = assign(defaultConfig, initConfig, {
     merge: false,
     extend: false,
   });
@@ -55,7 +61,7 @@ function collector(initConfig: WalkerOS.InitConfig): WalkerOS.Collector {
   // Enhanced globals with static globals from config
   const finalGlobals = { ...config.globalsStatic, ...config.globals };
 
-  const collector: WalkerOS.Collector = {
+  const collector: Collector.Instance = {
     allowed: false,
     config,
     consent: config.consent || {},

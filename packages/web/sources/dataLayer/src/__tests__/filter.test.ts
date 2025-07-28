@@ -6,7 +6,7 @@ import { createMockPush, getDataLayer } from './test-utils';
 
 describe('DataLayer Source - Filtering', () => {
   let collectedEvents: WalkerOS.Event[];
-  let collector: WalkerOS.Collector;
+  let collector: Collector.Instance;
 
   beforeEach(async () => {
     window.dataLayer = [];

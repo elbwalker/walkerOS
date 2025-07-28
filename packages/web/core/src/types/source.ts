@@ -1,4 +1,4 @@
-import type { WalkerOS, Source as CoreSource } from '@walkerOS/core';
+import type { Collector, WalkerOS, Source as CoreSource } from '@walkerOS/core';
 
 export interface Source<
   Settings extends Record<string, unknown> = Record<string, unknown>,
@@ -27,6 +27,6 @@ export type InitFn<
   Settings extends Record<string, unknown> = Record<string, unknown>,
   Mapping = unknown,
 > = (
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   config: Config<Settings, Mapping>,
 ) => void | Promise<void>;

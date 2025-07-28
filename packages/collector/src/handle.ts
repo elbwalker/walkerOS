@@ -1,4 +1,4 @@
-import type { WalkerOS, Destination, Elb, On } from '@walkerOS/core';
+import type { Collector, WalkerOS, Destination, Elb, On } from '@walkerOS/core';
 import { Commands, Const } from './constants';
 import { addDestination, pushToDestinations } from './destination';
 import { assign, getId, isFunction, isString } from '@walkerOS/core';
@@ -17,7 +17,7 @@ import type { RunState } from './types/collector';
  * @returns A promise that resolves with the push result or undefined.
  */
 export async function commonHandleCommand(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   action: string,
   data?: unknown,
   options?: unknown,
@@ -26,7 +26,7 @@ export async function commonHandleCommand(
   switch (action) {
     case Const.Commands.Config:
       if (isObject(data)) {
-        assign(collector.config, data as Partial<WalkerOS.Config>, {
+        assign(collector.config, data as Partial<Collector.Config>, {
           shallow: false,
         });
       }
@@ -106,7 +106,7 @@ export async function commonHandleCommand(
  * @returns An object with the event or the command.
  */
 export function createEventOrCommand(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   nameOrEvent: unknown,
   defaults: WalkerOS.PartialEvent = {},
 ): { event?: WalkerOS.Event; command?: string } {
@@ -193,7 +193,7 @@ export function createEventOrCommand(
  * @returns A promise that resolves with the push result.
  */
 export async function runCollector(
-  collector: WalkerOS.Collector,
+  collector: Collector.Instance,
   state?: RunState,
 ): Promise<Elb.PushResult> {
   // Set the collector to allowed state

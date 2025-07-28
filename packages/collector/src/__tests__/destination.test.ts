@@ -1,28 +1,29 @@
+import type { Collector } from '@walkerOS/core';
 import type { Destination, WalkerOS } from '@walkerOS/core';
 import { clone, createEvent } from '@walkerOS/core';
 import { pushToDestinations } from '..';
 
 describe('Destination', () => {
   let event: WalkerOS.Event;
-  let destination: Destination.Destination;
+  let destination: Destination.Instance;
   let config: Destination.Config;
   let mockInit: jest.Mock;
   let mockPush: jest.Mock;
 
   function createDestination(
-    args?: Partial<Destination.Destination>,
-  ): Destination.Destination {
+    args?: Partial<Destination.Instance>,
+  ): Destination.Instance {
     return {
       init: mockInit,
       push: mockPush,
       config: {},
       ...args,
-    } as Destination.Destination;
+    } as Destination.Instance;
   }
 
   function createTestConfig(
-    overrides: Partial<WalkerOS.Config> = {},
-  ): WalkerOS.Config {
+    overrides: Partial<Collector.Config> = {},
+  ): Collector.Config {
     return {
       dryRun: false,
       tagging: 1,
@@ -36,9 +37,11 @@ describe('Destination', () => {
 
   function createWalkerjs(
     args?: Partial<
-      Omit<WalkerOS.Collector, 'config'> & { config?: Partial<WalkerOS.Config> }
+      Omit<Collector.Instance, 'config'> & {
+        config?: Partial<Collector.Config>;
+      }
     >,
-  ): WalkerOS.Collector {
+  ): Collector.Instance {
     const defaultConfig = createTestConfig();
 
     return {
@@ -51,7 +54,7 @@ describe('Destination', () => {
       queue: [],
       ...args,
       config: args?.config ? createTestConfig(args.config) : defaultConfig,
-    } as unknown as WalkerOS.Collector;
+    } as unknown as Collector.Instance;
   }
 
   beforeEach(() => {

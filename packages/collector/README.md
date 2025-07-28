@@ -39,17 +39,16 @@ The collector provides a factory function for creating collector instances:
 import { createCollector } from '@walkerOS/collector';
 
 // Basic setup
-const collector = createCollector({
+const { collector, elb } = await createCollector({
   consent: { functional: true },
   destinations: [
     // Add your destinations here
   ],
 });
 
-// Process events
-collector.push({
-  event: 'page view',
-  data: { page: '/home' },
+// Process events - use elb as the standard API
+await elb('page view', {
+  page: '/home',
 });
 ```
 
@@ -62,17 +61,17 @@ separation. The mapping translates walkerOS events into platform-specific ones.
 ✅ **Correct**: Use spaces to separate entity and action
 
 ```typescript
-collector.push({ event: 'order complete', data: { value: 99.99 } });
-collector.push({ event: 'product add', data: { id: 'abc123' } });
-collector.push({ event: 'page view', data: { path: '/home' } });
+await elb('order complete', { value: 99.99 });
+await elb('product add', { id: 'abc123' });
+await elb('page view', { path: '/home' });
 ```
 
 ❌ **Incorrect**: Do not use platform-specific formats
 
 ```typescript
 // Don't use these in walkerOS
-collector.push({ event: 'purchase' }); // GA4 format - wrong here
-collector.push({ event: 'order_complete', data }); // Wrong: underscores
+await elb('purchase'); // GA4 format - wrong here
+await elb('order_complete', data); // Wrong: underscores
 ```
 
 The collector will validate event names and destinations handle
