@@ -23,7 +23,7 @@
     "lint": "turbo run lint --output-logs=errors-only",
     "publish-packages": "npm run build lint test && changeset version && changeset publish",
     "test": "turbo run test --output-logs=errors-only",
-    "prepare": "husky"
+    "prepare": "is-ci || husky"
   },
   "devDependencies": {
     "@changesets/cli": "^2.28.1",
@@ -32,6 +32,7 @@
     "@walkerOS/tsconfig": "*",
     "@walkerOS/tsup": "*",
     "husky": "^9.1.7",
+    "is-ci": "^3.0.1",
     "lint-staged": "^16.1.2",
     "prettier": "^3.6.2",
     "turbo": "^2.5.4",
@@ -43,6 +44,9 @@
     ]
   },
   "packageManager": "npm@11.2.0",
+  "engines": {
+    "node": ">=20.0"
+  },
   "browserslist": [
     "> 0.2%",
     "not dead",
