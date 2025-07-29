@@ -27,7 +27,6 @@ describe('Destination Meta Pixel', () => {
     w.fbq = mockFn;
 
     ({ elb } = await createCollector({
-      session: false,
       tagging: 2,
     }));
   });

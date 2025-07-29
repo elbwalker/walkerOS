@@ -22,7 +22,6 @@ describe('destination plausible', () => {
     w.plausible = mockFn;
 
     ({ elb } = await createCollector({
-      session: false,
       tagging: 2,
     }));
   });

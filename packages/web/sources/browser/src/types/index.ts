@@ -1,5 +1,10 @@
 import type { Mapping as WalkerOSMapping, Source } from '@walkeros/core';
-import type { Walker, Elb } from '@walkeros/web-core';
+import type {
+  Walker,
+  Elb,
+  SessionConfig,
+  SessionCallback,
+} from '@walkeros/web-core';
 
 // Export browser-specific elb types
 export * from './elb';
@@ -19,11 +24,14 @@ export interface Settings extends Record<string, unknown> {
   prefix?: string;
   scope?: Element | Document;
   pageview?: boolean;
-  session?: boolean;
+  session?: boolean | SessionConfig;
   elb?: string;
   name?: string;
   elbLayer?: boolean | string | Elb.Layer;
 }
+
+// Re-export session types from web-core to avoid duplication
+export type { SessionConfig, SessionCallback };
 
 // ELB Layer types for async command handling
 export type ELBLayer = Elb.Layer;

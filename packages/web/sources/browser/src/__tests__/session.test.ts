@@ -146,7 +146,6 @@ describe('Session', () => {
   });
 
   test('sessionStart merges session config correctly', () => {
-    mockCollector.config.session = { storage: true, duration: 30 };
     const options: SessionStartOptions = {
       config: { storage: false, newField: 'value' },
     };
@@ -158,8 +157,6 @@ describe('Session', () => {
   });
 
   test('sessionStart handles missing session config', () => {
-    mockCollector.config.session = undefined;
-
     const result = sessionStart(mockCollector, {});
 
     expect(useHooks).toHaveBeenCalled();

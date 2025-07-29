@@ -28,7 +28,6 @@ describe('Destination PiwikPro', () => {
     w._paq.push = mockFn;
 
     ({ elb } = await createCollector({
-      session: false,
       tagging: 2,
     }));
   });

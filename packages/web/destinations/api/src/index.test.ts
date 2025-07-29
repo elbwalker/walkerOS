@@ -23,7 +23,6 @@ describe('Destination API', () => {
     destination = jest.requireActual('.').default;
     event = createEvent();
     ({ elb } = await createCollector({
-      session: false,
       tagging: 2,
     }));
   });

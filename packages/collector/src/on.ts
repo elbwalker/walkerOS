@@ -121,7 +121,7 @@ function onSession(
   collector: Collector.Instance,
   onConfig: Array<On.SessionConfig>,
 ): void {
-  if (!collector.config.session) return;
+  if (!collector.session) return;
 
   onConfig.forEach((func) => {
     tryCatch(func)(collector, collector.session);

@@ -106,8 +106,6 @@ export interface Entity {
 export type ConsentHandler = Record<string, AnyFunction>;
 export type ActionHandler = AnyFunction;
 
-// OnConfig interface moved to on.ts
-
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };

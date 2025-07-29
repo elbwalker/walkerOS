@@ -63,7 +63,9 @@ export const sourceBrowser: Source.Init<
 
   // Initialize session if enabled
   if (settings.session) {
-    sessionStart(collector, {}); // @TODO pass session config and add to source settings
+    const sessionConfig =
+      typeof settings.session === 'boolean' ? {} : settings.session;
+    sessionStart(collector, { config: sessionConfig });
   }
 
   // Setup auto-initialization via ready state

@@ -21,8 +21,6 @@ export interface Config {
   user?: WalkerOS.User;
   /** Version for event tagging */
   tagging: number;
-  /** Session configuration */
-  session: false | unknown;
   /** Initial global properties */
   globals?: WalkerOS.Properties;
   /** Static global properties even on a new run */

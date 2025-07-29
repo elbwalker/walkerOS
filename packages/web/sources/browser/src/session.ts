@@ -34,10 +34,7 @@ export function sessionStart(
   collector: Collector.Instance,
   options: SessionStartOptions = {},
 ): void | Collector.SessionData {
-  const sessionConfig = assign(
-    collector.config.session || {},
-    options.config || {},
-  );
+  const sessionConfig = options.config || {};
   const sessionData = assign(
     collector.config.sessionStatic || {},
     options.data || {},
@@ -83,7 +80,7 @@ export function sessionStart(
     collector.hooks,
   )({
     ...sessionConfig, // Session detection configuration
-    cb: cb, // Custom wrapper callback
+    cb, // Custom wrapper callback
     data: sessionData, // Static default session data
     collector,
   });

@@ -34,7 +34,6 @@ function collector(initConfig: Partial<CollectorConfig>): Collector.Instance {
 
   const defaultConfig: Collector.Config = {
     dryRun: false,
-    session: false,
     globalsStatic: {},
     sessionStatic: {},
     tagging: 0,
