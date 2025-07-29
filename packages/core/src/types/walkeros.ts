@@ -1,4 +1,4 @@
-import type { Elb as ElbTypes, Handler, Hooks, Destination, On } from '.';
+import type { Elb as ElbTypes } from '.';
 
 export type AnyObject<T = unknown> = Record<string, T>;
 export type Elb = globalThis.WalkerOS.Elb;

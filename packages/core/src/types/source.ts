@@ -1,4 +1,4 @@
-import type { Collector, WalkerOS, Handler } from './index';
+import type { Collector, WalkerOS } from './index';
 
 export interface Config {
   type: string;
