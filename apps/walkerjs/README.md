@@ -301,5 +301,5 @@ for contribution guidelines.
 - [@walkeros/collector](../../../packages/collector) - Core collector
 - [@walkeros/web-source-browser](../../../packages/web/sources/browser) -
   Browser source
-- [@walkeros/web-source-dataLayer](../../../packages/web/sources/dataLayer) -
+- [@walkeros/web-source-datalayer](../../../packages/web/sources/dataLayer) -
   DataLayer source

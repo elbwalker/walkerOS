@@ -8,7 +8,7 @@ import {
   getGlobals,
   type SourceBrowser,
 } from '@walkeros/web-source-browser';
-import { sourceDataLayer } from '@walkeros/web-source-dataLayer';
+import { sourceDataLayer } from '@walkeros/web-source-datalayer';
 import { dataLayerDestination } from './destination';
 
 // Re-export types

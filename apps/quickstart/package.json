@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/quickstart",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Verified code examples for walkerOS documentation",
   "license": "MIT",
@@ -16,7 +16,7 @@
     "@walkeros/collector": "0.0.7",
     "@walkeros/web-core": "0.0.7",
     "@walkeros/web-source-browser": "0.0.7",
-    "@walkeros/web-source-dataLayer": "0.0.7",
+    "@walkeros/web-source-datalayer": "0.0.7",
     "@walkeros/web-destination-gtag": "0.0.7",
     "@walkeros/web-destination-meta": "0.0.7",
     "@walkeros/web-destination-api": "0.0.7",
@@ -26,7 +26,7 @@
     "@walkeros/server-destination-aws": "0.0.7",
     "@walkeros/server-destination-gcp": "0.0.7",
     "@walkeros/server-destination-meta": "0.0.7",
-    "@walkeros/walker.js": "0.0.7"
+    "@walkeros/walker.js": "0.0.8"
   },
   "devDependencies": {
     "@swc/jest": "^0.2.36",

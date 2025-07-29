@@ -37,7 +37,7 @@ function getModuleMapper() {
       'web/destinations/plausible/src/',
     ),
     '^@walkeros/web-source-browser$': getDirectory('web/sources/browser/src/'),
-    '^@walkeros/web-source-dataLayer$': getDirectory(
+    '^@walkeros/web-source-datalayer$': getDirectory(
       'web/sources/dataLayer/src/',
     ),
     '^@walkeros/server-core$': getDirectory('server/core/src/'),
