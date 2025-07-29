@@ -25,7 +25,6 @@ describe('byPath', () => {
   test('setByPath', () => {
     const event = createEvent();
 
-    // expect(setByPath(event, 'foo', 'bar')).not.toHaveProperty('foo'); // @TODO
     expect(setByPath(event, 'timing', 2)).toHaveProperty('timing', 2);
     expect(setByPath(event, 'data.string', 'updated')).toHaveProperty(
       'data.string',
@@ -39,5 +38,20 @@ describe('byPath', () => {
     expect(setByPath(event, 'data', { a: 1 })).toStrictEqual(
       expect.objectContaining({ data: { a: 1 } }),
     );
+  });
+
+  test('setByPath immutability', () => {
+    const originalEvent = createEvent();
+    const originalData = originalEvent.data;
+
+    const modifiedEvent = setByPath(originalEvent, 'data.newField', 'newValue');
+
+    // Original event should not be modified
+    expect(originalEvent.data).toBe(originalData);
+    expect(originalEvent.data).not.toHaveProperty('newField');
+
+    // Modified event should have the new field
+    expect(modifiedEvent.data).toHaveProperty('newField', 'newValue');
+    expect(modifiedEvent).not.toBe(originalEvent);
   });
 });

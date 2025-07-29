@@ -62,11 +62,11 @@ getByPath({ arr: ['foo', 'bar'] }, 'arr.1'); // Returns "bar"
 #### setByPath
 
 `setByPath(object: WalkerOS.Event, path: string, value: unknown): WalkerOS.Event`
-sets nested values using dot notation, mutating the original object.
+sets nested values using dot notation, returning a new object with the updated value.
 
 ```js
-setByPath(event, 'data.id', 'new-value');
-// Updates event.data.id to 'new-value'
+const updatedEvent = setByPath(event, 'data.id', 'new-value');
+// Returns a new event with data.id set to 'new-value'
 ```
 
 ### clone
