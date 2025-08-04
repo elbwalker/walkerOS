@@ -1,83 +1,48 @@
-import { useEffect, useState } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
-import { elb, setupAnalytics } from './data';
-import Footer from './components/organisms/footer';
-import Navigation from './components/organisms/navigation';
-import Home from './components/pages/home';
-import LogIn from './components/pages/login';
-import Pricing from './components/pages/pricing';
-import './App.css';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import Navigation from './components/Navigation';
+import ConsentBar from './components/ConsentBar';
+import PageA from './pages/PageA';
+import PageB from './pages/PageB';
+import { initializeWalker } from './walker';
 
 function App() {
-  const [analyticsReady, setAnalyticsReady] = useState(false);
   const location = useLocation();
+  const isFirstRender = useRef(true);
 
+  // Initialize walker on app mount
   useEffect(() => {
-    // Initialize analytics on app start
-    setupAnalytics().then(() => {
-      setAnalyticsReady(true);
-    });
+    // eslint-disable-next-line no-console
+    initializeWalker().catch(console.error);
   }, []);
 
   useEffect(() => {
-    // Run walker tracking on location change (only after analytics is ready)
-    if (analyticsReady && elb) {
-      elb('walker run');
+    // For SPAs, manually trigger page view on route change
+    // Skip first render as browser source handles initial pageview when pageview: true
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
     }
-  }, [location, analyticsReady]);
+
+    if (typeof window.elb === 'function') {
+      // Trigger page view event for route changes
+      window.elb('page view', {}, 'load');
+    }
+  }, [location]);
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50">
       <Navigation />
 
-      {/* Debug Section */}
-      {analyticsReady && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 10,
-            right: 10,
-            background: '#f0f0f0',
-            padding: '10px',
-            border: '1px solid #ccc',
-            borderRadius: '5px',
-            fontSize: '12px',
-            zIndex: 1000,
-          }}
-        >
-          <h4>🔍 Browser Source Debug</h4>
-          <button
-            onClick={() =>
-              elb('debug button click', {
-                source: 'manual',
-                timestamp: Date.now(),
-              })
-            }
-            style={{ marginRight: '5px', fontSize: '10px' }}
-          >
-            Test Manual Event
-          </button>
-          <button
-            onClick={() =>
-              console.log('Window elbEvents:', (window as any).elbEvents)
-            }
-            style={{ fontSize: '10px' }}
-          >
-            Show Events
-          </button>
-          <div style={{ marginTop: '5px', fontSize: '10px' }}>
-            Status: {analyticsReady ? '✅ Ready' : '⏳ Loading'}
-          </div>
-        </div>
-      )}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+        <Routes>
+          <Route path="/" element={<PageA />} />
+          <Route path="/page-b" element={<PageB />} />
+        </Routes>
+      </main>
 
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/login" element={<LogIn />} />
-      </Routes>
-      <Footer />
-    </>
+      <ConsentBar />
+    </div>
   );
 }
 

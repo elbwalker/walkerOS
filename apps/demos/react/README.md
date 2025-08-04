@@ -1,123 +1,114 @@
 # walkerOS React Demo
 
-A demo application showing how to use the new walkerOS packages with React.
-
-## Overview
-
-This demo has been updated to use the new walkerOS package structure:
-
-- `@walkerOS/core` - Core types and utilities
-- `@walkerOS/web-collector` - Browser-based event collection
-- `@walkerOS/web-destination-gtm` - Google Tag Manager destination
-- `@walkerOS/web-destination-ga4` - Google Analytics 4 destination
-- `@walkerOS/web-destination-meta` - Meta Pixel destination
-- `@walkerOS/web-source-dataLayer` - DataLayer source integration
+This demo showcases how to integrate walkerOS into a React application using
+TypeScript and Vite.
 
 ## Features
 
-- **Local Package Integration**: Uses local walkerOS packages from the monorepo
-- **Multiple Destinations**: Demonstrates GTM, GA4, and Meta Pixel integrations
-- **DataLayer Source**: Shows how to capture events from window.dataLayer
-- **Console Logging**: All events are logged to the console for debugging
-- **React Integration**: Page view tracking on route changes
+- **Page Navigation Tracking**: Automatic page view tracking with React Router
+- **Global Context**: Different page contexts (page:A, page:B) for segmentation
+- **Consent Management**: Interactive consent bar with localStorage persistence
+- **Multiple Destinations**: Console logging, batch events, API, GA4, and
+  dataLayer
+- **Event Mapping**: Demonstrates how to transform events for different
+  destinations
+- **Data Attributes**: Declarative tracking using data-elb attributes
+- **Programmatic Tracking**: Manual event triggering from React components
 
-## Installation
+## Setup
+
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-## Development
+2. Start the development server:
 
 ```bash
 npm run dev
 ```
 
-The app will start at http://127.0.0.1:8002 and you can see events being logged
-to the console.
+The app will be available at http://localhost:3001
 
-## Setup and Configuration
+## Configuration
 
-The new setup uses the `@walkerOS/web-collector` instead of the legacy
-`@elbwalker/walker.js`:
+The walkerOS configuration is located in `src/walker/config.json`. It includes:
 
-```ts
-import { elb, webCollector } from '@walkerOS/web-collector';
-import { destinationGTM } from '@walkerOS/web-destination-gtm';
-import { destinationGA4 } from '@walkerOS/web-destination-ga4';
-import { destinationMeta } from '@walkerOS/web-destination-meta';
+- **Collector settings**: Consent defaults, session configuration
+- **Browser source**: Data attribute prefix, page view tracking, visible
+  tracking
+- **Destinations**:
+  - Console: Logs all events with timestamps
+  - Console Batch: Bundles visible events for batch processing
+  - API: Sends events to configured endpoint (default: httpbin.org)
+  - GA4: Google Analytics 4 with event mapping
+  - dataLayer: Pushes events to window.dataLayer
+
+## Usage
+
+### Consent Management
+
+The consent bar at the bottom allows users to:
+
+- **Accept**: Enables all tracking (functional, analytics, marketing)
+- **Deny**: Disables analytics and marketing, keeps functional
+- **Reset**: Clears consent choice
+
+### Data Attribute Tracking
+
+Add tracking to any element using data attributes:
+
+```html
+<!-- Track entity with action -->
+<div data-elb="product" data-elbaction="click">
+  <h3 data-elb-product="name:#innerText">Product Name</h3>
+  <p data-elb-product="price:#innerText">$99.99</p>
+</div>
+
+<!-- Set global properties -->
+<a data-elbglobals="page:A" href="/page-a">Page A</a>
 ```
 
-### Destination init
+### Programmatic Tracking
 
-The new system supports user-friendly lean destinations that don't require the
-`config` property:
+Track events manually from React components:
 
-```ts
-webCollector({
-  destinations: {
-    log: {
-      push: console.log,
-    },
-    elbEvents: {
-      init: () => {
-        window.elbEvents = [];
-      },
-      push: (event: unknown) => {
-        window.elbEvents.push(event);
-      },
-    },
-  },
+```typescript
+// Track custom event
+window.elb('custom event', {
+  category: 'interaction',
+  action: 'button_click',
+  label: 'cta',
+});
+
+// Update consent
+window.elb('walker consent', {
+  functional: true,
+  analytics: true,
+  marketing: false,
 });
 ```
 
-The collector automatically adds `config: {}` to any destination that doesn't
-have one.
+## Development
 
-Update the settings in `src/data/index.ts` to configure your tracking IDs:
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run ESLint
+- `npm run typecheck` - Check TypeScript types
 
-```typescript
-// Google Tag Manager
-containerId: 'GTM-XXXXXXX', // Replace with your GTM container ID
+## Architecture
 
-// Google Analytics 4
-measurementId: 'G-XXXXXXXXXX', // Replace with your GA4 measurement ID
-
-// Meta Pixel
-pixelId: '1234567890', // Replace with your Meta Pixel ID
 ```
-
-Set `loadScript: true` to automatically load the respective tracking scripts.
-
-## Trigger page views
-
-Page views are triggered automatically on route changes using `useLocation` from
-react-router-dom:
-
-```ts
-import { useEffect } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
-import { elb } from '@walkerOS/web-collector';
-
-const location = useLocation();
-useEffect(() => {
-  elb('walker run');
-}, [location]);
+src/
+├── walker/              # walkerOS configuration and initialization
+│   ├── config.json     # Main configuration file
+│   └── index.ts        # Initialization logic
+├── components/         # React components
+│   ├── Navigation.tsx  # Top navigation with page globals
+│   └── ConsentBar.tsx  # Consent management UI
+├── pages/              # Page components
+│   ├── PageA.tsx       # Demo page A
+│   └── PageB.tsx       # Demo page B
+└── App.tsx            # Main app component with routing
 ```
-
-## Events
-
-Here we have the entities `page`, `account`, `pricing` & `promotion`. While a
-page can be _viewed_ and _read_ the app events are considered as core events on
-this page and appear on multiple sites like the promotion that serves as a
-fictional cta banner to encourage a new signup. The pricing actions are great
-for targeted remarketing since a freelancer requires another messaging than an
-enterprise visitor. The detailed requests are also a great source for product or
-sales teams.
-
-We use a light
-[atomic design](https://bradfrost.com/blog/post/atomic-web-design/) approach to
-demonstrate how to set up actions automatically using granular components.
-
-The layout is based on components made by
-[Tailwind UI](https://tailwindui.com/).
