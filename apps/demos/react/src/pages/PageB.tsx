@@ -1,3 +1,6 @@
+import Hero from '../components/Hero';
+import Product from '../components/Product';
+
 function PageB() {
   return (
     <div className="py-8">
@@ -6,29 +9,8 @@ function PageB() {
       </h1>
 
       <div className="space-y-12">
-        {/* Hero Section Placeholder */}
-        <section className="bg-white rounded-lg shadow p-8">
-          <h2 className="text-2xl font-semibold mb-4">Hero Section</h2>
-          <p className="text-gray-600">
-            Same components as Page A but with different page global context.
-          </p>
-        </section>
-
-        {/* Forms Section Placeholder */}
-        <section className="bg-white rounded-lg shadow p-8">
-          <h2 className="text-2xl font-semibold mb-4">Form Tracking</h2>
-          <p className="text-gray-600">
-            Form with input tracking will be demonstrated here.
-          </p>
-        </section>
-
-        {/* Recommendations Section Placeholder */}
-        <section className="bg-white rounded-lg shadow p-8">
-          <h2 className="text-2xl font-semibold mb-4">Recommendations</h2>
-          <p className="text-gray-600">
-            Recommendation tracking examples will be shown here.
-          </p>
-        </section>
+        <Hero />
+        <Product />
       </div>
     </div>
   );

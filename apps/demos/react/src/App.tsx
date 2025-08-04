@@ -24,10 +24,7 @@ function App() {
       return;
     }
 
-    if (typeof window.elb === 'function') {
-      // Trigger page view event for route changes
-      window.elb('page view', {}, 'load');
-    }
+    if (window.elb) window.elb('walker run');
   }, [location]);
 
   return (
