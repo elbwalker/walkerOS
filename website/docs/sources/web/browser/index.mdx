@@ -34,23 +34,84 @@ npm install @walkeros/web-source-browser
 
 ## Basic Setup
 
+There are two ways to set up the browser source:
+
+### Unified API (Recommended)
+
 ```typescript
 import { createCollector } from '@walkeros/collector';
-import { createSource, sourceBrowser } from '@walkeros/core';
+import { createSource } from '@walkeros/core';
+import { sourceBrowser } from '@walkeros/web-source-browser';
 
-// Create collector with your destinations
+// Create collector with browser source and destinations
+const { collector, elb } = await createCollector({
+  sources: {
+    browser: createSource(sourceBrowser, {
+      type: 'browser',
+      settings: {
+        pageview: true,
+        session: true,
+      },
+    }),
+  },
+  destinations: {
+    log: { push: console.log },
+  },
+});
+
+// The collector's elb function handles basic events
+// For browser-specific commands, access the enhanced elb function:
+const browserElb = collector.sources.browser.elb;
+
+// Examples:
+elb('page view', { title: 'Home' }); // Basic collector elb
+browserElb('walker init', element); // Enhanced browser elb
+```
+
+### Separate Source Creation (Direct elb Access)
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+import { createSource } from '@walkeros/core';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+// Create collector with destinations
 const { collector } = await createCollector({
   destinations: {
     log: { push: console.log },
   },
 });
 
-// Add browser source
+// Add browser source separately to get direct access to enhanced elb function
 const { elb } = await createSource(collector, sourceBrowser, {
   pageview: true,
   session: true,
 });
 
-// The source is now active and tracking events automatically
-// Use elb() function for manual event triggering when needed
+// The enhanced elb function supports both basic events and browser-specific commands
+elb('page view', { title: 'Home' }); // Basic event
+elb('walker init', element); // Browser-specific command
 ```
+
+:::tip Two Different elb Functions
+
+The collector provides **two different elb functions**:
+
+1. **Collector elb** (`elb` from `createCollector`): Basic event tracking that
+   works with all sources and destinations
+2. **Browser Source elb** (`collector.sources.browser.elb` or direct from
+   `createSource`): Enhanced function with browser-specific features
+
+**Browser Source elb adds:**
+
+- **DOM Commands**: `walker run`, `walker init` for DOM interaction
+- **Flexible Arguments**: Support for multiple argument patterns
+- **elbLayer Integration**: Automatic processing of queued commands
+
+Use **separate source creation** for direct access to the enhanced elb function,
+or access it via `collector.sources.browser.elb` in the unified API.
+
+See [Commands](/docs/sources/web/browser/commands) for full browser source API
+documentation.
+
+:::
