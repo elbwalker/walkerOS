@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { SearchBox } from './SearchBox';
 
 const meta: Meta<typeof SearchBox> = {
