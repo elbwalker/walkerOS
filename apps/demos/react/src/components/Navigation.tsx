@@ -11,28 +11,61 @@ function Navigation() {
             <h1 className="text-xl font-semibold">walkerOS React Demo</h1>
           </div>
 
-          <div className="flex space-x-8 items-center">
+          <div className="flex space-x-6 items-center">
             <Link
               to="/"
-              data-elbglobals="page:A"
+              data-elbglobals="page:home"
               className={`inline-flex items-center px-1 pt-1 text-sm font-medium ${
                 location.pathname === '/'
                   ? 'text-blue-600 border-b-2 border-blue-500'
                   : 'text-gray-900 hover:text-gray-700'
               }`}
             >
-              Page A
+              Home
             </Link>
             <Link
-              to="/page-b"
-              data-elbglobals="page:B"
+              to="/category"
+              data-elbglobals="page:category"
               className={`inline-flex items-center px-1 pt-1 text-sm font-medium ${
-                location.pathname === '/page-b'
+                location.pathname === '/category'
                   ? 'text-blue-600 border-b-2 border-blue-500'
                   : 'text-gray-900 hover:text-gray-700'
               }`}
             >
-              Page B
+              Products
+            </Link>
+            <Link
+              to="/product/1"
+              data-elbglobals="page:product"
+              className={`inline-flex items-center px-1 pt-1 text-sm font-medium ${
+                location.pathname.startsWith('/product')
+                  ? 'text-blue-600 border-b-2 border-blue-500'
+                  : 'text-gray-900 hover:text-gray-700'
+              }`}
+            >
+              Product
+            </Link>
+            <Link
+              to="/checkout"
+              data-elbglobals="page:checkout"
+              className={`inline-flex items-center px-1 pt-1 text-sm font-medium ${
+                location.pathname === '/checkout'
+                  ? 'text-blue-600 border-b-2 border-blue-500'
+                  : 'text-gray-900 hover:text-gray-700'
+              }`}
+            >
+              Checkout
+            </Link>
+            <Link
+              to="/order/123"
+              data-elbglobals="page:order"
+              className={`inline-flex items-center px-1 pt-1 text-sm font-medium ${
+                location.pathname.startsWith('/order')
+                  ? 'text-blue-600 border-b-2 border-blue-500'
+                  : 'text-gray-900 hover:text-gray-700'
+              }`}
+            >
+              Order
             </Link>
           </div>
         </div>

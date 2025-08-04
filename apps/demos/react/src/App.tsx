@@ -2,8 +2,11 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import Navigation from './components/Navigation';
 import ConsentBar from './components/ConsentBar';
-import PageA from './pages/PageA';
-import PageB from './pages/PageB';
+import Home from './pages/Home';
+import Category from './pages/Category';
+import Detail from './pages/Detail';
+import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
 import { initializeWalker } from './walker';
 
 function App() {
@@ -33,8 +36,11 @@ function App() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
         <Routes>
-          <Route path="/" element={<PageA />} />
-          <Route path="/page-b" element={<PageB />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/category" element={<Category />} />
+          <Route path="/product/:id" element={<Detail />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/order/:id" element={<OrderConfirmation />} />
         </Routes>
       </main>
 

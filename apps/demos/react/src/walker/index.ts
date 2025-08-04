@@ -1,10 +1,13 @@
 import type { WalkerOS } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
-import { sourceBrowser } from '@walkeros/web-source-browser';
+import { createSource } from '@walkeros/core';
+import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 import { destinationAPI } from '@walkeros/web-destination-api';
-import { destinationConsole } from './destinations/console';
-import { destinationConsoleBatch } from './destinations/console-batch';
+import {
+  destinationConsole,
+  destinationConsoleBatch,
+} from './destinations/console';
 import { destinationDataLayer } from './destinations/data-layer';
 
 // Initialize walker
@@ -15,20 +18,16 @@ export async function initializeWalker(): Promise<{
   // Create collector with destinations and source
   const { collector, elb } = await createCollector({
     consent: { functional: true },
-    allowed: true,
     sources: {
-      browser: {
-        code: sourceBrowser,
-        config: {
-          type: 'browser',
-          settings: {
-            prefix: 'data-elb',
-            pageview: true,
-            session: true,
-            elb: 'elb',
-          },
+      browser: createSource(sourceBrowser, {
+        type: 'browser',
+        settings: {
+          prefix: 'data-elb',
+          pageview: true,
+          session: true,
+          elb: 'elb',
         },
-      },
+      }),
     },
     destinations: {
       console: destinationConsole,
@@ -39,7 +38,7 @@ export async function initializeWalker(): Promise<{
           mapping: {
             '*': {
               visible: {
-                batch: 5, // Batch visible events in groups of 5
+                batch: 500, // Batch visible events in groups of 500
               },
             },
           },
@@ -110,4 +109,14 @@ export function updateDestinationSettings(
       console.log(`✅ Updated ${destinationId} settings:`, settings);
     }
   }
+}
+
+// Centralized tagger configuration
+const taggerInstance = createTagger({
+  prefix: 'data-elb', // Match the browser source prefix
+});
+
+// Simple tagger export for use in components
+export function tagger(entity?: string) {
+  return taggerInstance(entity);
 }
