@@ -52,17 +52,9 @@ export async function createSource<
 }
 
 // Types for source initialization
-export interface SourceInit<
-  T extends Source.Config = Source.Config,
-  E = WalkerOS.AnyFunction,
-> {
-  code: Source.Init<T, E>;
-  config?: Partial<T>;
-}
-
 export interface InitSources {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [sourceId: string]: SourceInit<any, any>;
+  [sourceId: string]: Source.Init<any, any>;
 }
 
 /**
@@ -75,15 +67,12 @@ export async function initSources(
   collector: Collector.Instance,
   sources: InitSources = {},
 ): Promise<void> {
-  for (const [sourceId, initSource] of Object.entries(sources)) {
-    const { code, config = {} } = initSource;
-
+  for (const [sourceId, sourceInit] of Object.entries(sources)) {
     const fullConfig: Source.InitConfig = {
       id: sourceId,
-      ...config,
     };
 
-    const result = await createSource(collector, code, fullConfig);
+    const result = await createSource(collector, sourceInit, fullConfig);
 
     if (result.source) {
       // Store source with elb attached

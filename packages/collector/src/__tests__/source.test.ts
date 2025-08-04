@@ -1,7 +1,11 @@
 import type { Collector } from '@walkeros/core';
-import type { WalkerOS, Source } from '@walkeros/core';
+import type { Source } from '@walkeros/core';
+import { createSource } from '@walkeros/core';
 import { createCollector } from '../collector';
-import { createSource, initSources } from '../source';
+import {
+  createSource as createSourceFromCollector,
+  initSources,
+} from '../source';
 
 // Mock source implementation
 const mockSource: Source.Init<Source.Config, () => void> = async (
@@ -37,7 +41,11 @@ describe('Source', () => {
         settings: { test: true },
       };
 
-      const result = await createSource(collector, mockSource, config);
+      const result = await createSourceFromCollector(
+        collector,
+        mockSource,
+        config,
+      );
 
       expect(result.source).toBeDefined();
       expect(result.elb).toBeDefined();
@@ -52,7 +60,11 @@ describe('Source', () => {
         settings: {},
       };
 
-      const result = await createSource(collector, mockSource, config);
+      const result = await createSourceFromCollector(
+        collector,
+        mockSource,
+        config,
+      );
 
       expect(result.source).toBeDefined();
       const sourceWithElb = result.source as Source.Instance & {
@@ -68,7 +80,11 @@ describe('Source', () => {
         settings: {},
       };
 
-      const result = await createSource(collector, mockSource, config);
+      const result = await createSourceFromCollector(
+        collector,
+        mockSource,
+        config,
+      );
 
       expect(result).toEqual({});
       expect(collector.sources['test-source']).toBeUndefined();
@@ -79,7 +95,11 @@ describe('Source', () => {
         settings: {},
       };
 
-      const result = await createSource(collector, mockSource, config);
+      const result = await createSourceFromCollector(
+        collector,
+        mockSource,
+        config,
+      );
 
       expect(result.source).toBeDefined();
       // Should have generated an ID starting with mock_
@@ -97,7 +117,11 @@ describe('Source', () => {
         settings: {},
       };
 
-      const result = await createSource(collector, errorSource, config);
+      const result = await createSourceFromCollector(
+        collector,
+        errorSource,
+        config,
+      );
 
       expect(result).toEqual({});
       expect(collector.sources['error-source']).toBeUndefined();
@@ -106,19 +130,16 @@ describe('Source', () => {
 
   describe('initSources', () => {
     it('should initialize multiple sources', async () => {
+      const source1 = createSource(mockSource, {
+        settings: { name: 'source1' },
+      });
+      const source2 = createSource(mockSource, {
+        settings: { name: 'source2' },
+      });
+
       const sources = {
-        source1: {
-          code: mockSource,
-          config: {
-            settings: { name: 'source1' },
-          },
-        },
-        source2: {
-          code: mockSource,
-          config: {
-            settings: { name: 'source2' },
-          },
-        },
+        source1,
+        source2,
       };
 
       await initSources(collector, sources);
@@ -143,19 +164,16 @@ describe('Source', () => {
         throw new Error('Source init failed');
       };
 
+      const goodSource = createSource(mockSource, {
+        settings: { name: 'good' },
+      });
+      const badSource = createSource(errorSource, {
+        settings: { name: 'bad' },
+      });
+
       const sources = {
-        goodSource: {
-          code: mockSource,
-          config: {
-            settings: { name: 'good' },
-          },
-        },
-        badSource: {
-          code: errorSource,
-          config: {
-            settings: { name: 'bad' },
-          },
-        },
+        goodSource,
+        badSource,
       };
 
       await initSources(collector, sources);
@@ -167,14 +185,13 @@ describe('Source', () => {
 
   describe('createCollector with sources', () => {
     it('should initialize sources during collector creation', async () => {
+      const testSource = createSource(mockSource, {
+        settings: { test: true },
+      });
+
       const config = {
         sources: {
-          test: {
-            code: mockSource,
-            config: {
-              settings: { test: true },
-            },
-          },
+          test: testSource,
         },
       };
 

@@ -1,6 +1,6 @@
 import type { Config, Instance } from './types';
 import { createCollector, type CollectorConfig } from '@walkeros/collector';
-import { assign, isObject } from '@walkeros/core';
+import { assign, isObject, createSource } from '@walkeros/core';
 import {
   sourceBrowser,
   getAllEvents,
@@ -39,12 +39,9 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
   const collectorConfig: Partial<CollectorConfig> = {
     ...fullConfig.collector,
     sources: {
-      browser: {
-        code: sourceBrowser,
-        config: {
-          settings: fullConfig.browser,
-        },
-      },
+      browser: createSource(sourceBrowser, {
+        settings: fullConfig.browser,
+      }),
     },
   };
 
@@ -55,12 +52,12 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
       : {};
 
     if (collectorConfig.sources) {
-      collectorConfig.sources.dataLayer = {
-        code: sourceDataLayer(dataLayerSettings),
-        config: {
+      collectorConfig.sources.dataLayer = createSource(
+        sourceDataLayer(dataLayerSettings),
+        {
           settings: dataLayerSettings,
         },
-      };
+      );
     }
   }
 
