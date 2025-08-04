@@ -2,10 +2,13 @@ import { HeaderBar } from '../../organisms/HeaderBar';
 import { HeroBanner } from '../../organisms/HeroBanner';
 import { CarouselSection } from '../../organisms/CarouselSection';
 import { PromotionBanner } from '../../organisms/PromotionBanner';
+import { createTrackingProps, type DataElb } from '../../../../utils/tagger';
+import { assign } from '@walkeros/core';
 
 export interface MediathekTemplateProps {
   activeMenuItem?: string;
   onMenuItemClick?: (item: string) => void;
+  dataElb?: DataElb;
 }
 
 const topSeriesItems = [
@@ -47,9 +50,19 @@ const filmRecommendations = [
 export const MediathekTemplate = ({
   activeMenuItem,
   onMenuItemClick,
+  dataElb,
 }: MediathekTemplateProps) => {
+  const trackingProps = createTrackingProps(
+    assign(
+      {
+        context: { stage: 'inspo' },
+      },
+      dataElb,
+    ),
+  );
+
   return (
-    <div data-elbcontext="stage:inspo" className="min-h-screen bg-background">
+    <div {...trackingProps} className="min-h-screen bg-background">
       <HeaderBar
         activeMenuItem={activeMenuItem}
         onMenuItemClick={onMenuItemClick}

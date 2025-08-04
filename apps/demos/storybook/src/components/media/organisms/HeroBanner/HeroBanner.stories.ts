@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { HeroBanner } from './HeroBanner';
-import { walkerOSArgTypes } from '@walkeros/storybook-addon';
 
 const meta: Meta<typeof HeroBanner> = {
   title: 'Media/Organisms/HeroBanner',
@@ -10,7 +9,11 @@ const meta: Meta<typeof HeroBanner> = {
   },
   tags: ['autodocs'],
   argTypes: {
-    ...walkerOSArgTypes,
+    dataElb: {
+      name: 'walkerOS Data',
+      description: 'walkerOS tracking configuration',
+      control: { type: 'object' },
+    },
   },
 };
 

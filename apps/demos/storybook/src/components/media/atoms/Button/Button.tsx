@@ -1,4 +1,5 @@
 import './Button.css';
+import { createTrackingProps, type DataElb } from '../../../../utils/tagger';
 
 export interface ButtonProps {
   primary?: boolean;
@@ -7,6 +8,7 @@ export interface ButtonProps {
   label: string;
   disabled?: boolean;
   onClick?: () => void;
+  dataElb?: DataElb;
 }
 
 export const Button = ({
@@ -15,10 +17,13 @@ export const Button = ({
   disabled = false,
   label,
   onClick,
+  dataElb,
 }: ButtonProps) => {
   const mode = primary
     ? 'storybook-button--primary'
     : 'storybook-button--secondary';
+
+  const trackingProps = createTrackingProps(dataElb);
 
   return (
     <button
@@ -26,6 +31,7 @@ export const Button = ({
       className={['storybook-button', `storybook-button--${size}`, mode].join(
         ' ',
       )}
+      {...trackingProps}
       disabled={disabled}
       onClick={onClick}
     >

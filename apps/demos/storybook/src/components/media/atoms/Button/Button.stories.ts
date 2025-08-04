@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Button } from './Button';
-import { walkerOSArgTypes } from '@walkeros/storybook-addon';
 
 const meta: Meta<typeof Button> = {
   title: 'Media/Atoms/Button',
@@ -11,7 +10,10 @@ const meta: Meta<typeof Button> = {
   tags: ['media'],
   argTypes: {
     backgroundColor: { control: 'color' },
-    ...walkerOSArgTypes,
+    dataElb: {
+      control: { type: 'object' },
+      description: 'walkerOS tracking configuration',
+    },
   },
 };
 
@@ -22,11 +24,21 @@ export const Primary: Story = {
   args: {
     primary: true,
     label: 'Button',
+    dataElb: {
+      entity: 'button',
+      action: 'click',
+      data: { variant: 'primary' },
+    },
   },
 };
 
 export const Secondary: Story = {
   args: {
     label: 'Button',
+    dataElb: {
+      entity: 'button',
+      action: 'click',
+      data: { variant: 'secondary' },
+    },
   },
 };

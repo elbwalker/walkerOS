@@ -1,18 +1,14 @@
 import './Button.css';
+import { createTrackingProps, type DataElb } from '../../../../utils/tagger';
 
-export interface Tracking {
-  elbContext?: string;
-  elbAction?: string;
-  elbValue?: string;
-}
-
-export interface ButtonProps extends Tracking {
+export interface ButtonProps {
   primary?: boolean;
   backgroundColor?: string;
   size?: 'small' | 'medium' | 'large';
   label: string;
   disabled?: boolean;
   onClick?: () => void;
+  dataElb?: DataElb;
 }
 
 export const Button = ({
@@ -21,19 +17,23 @@ export const Button = ({
   backgroundColor,
   disabled = false,
   label,
-  elbAction,
   onClick,
+  dataElb,
 }: ButtonProps) => {
   const mode = primary
     ? 'storybook-button--primary'
     : 'storybook-button--secondary';
+
+  // Generate walkerOS tracking properties from dataElb configuration
+  const trackingProps = createTrackingProps(dataElb);
+
   return (
     <button
       type="button"
       className={['storybook-button', `storybook-button--${size}`, mode].join(
         ' ',
       )}
-      {...(elbAction ? { 'data-elbaction': 'click:' + elbAction } : {})}
+      {...trackingProps}
       style={{ backgroundColor }}
       disabled={disabled}
       onClick={onClick}

@@ -1,6 +1,8 @@
 import type { ImageProps } from '../../atoms/Image';
 import { Typography } from '../../atoms/Typography';
 import { CarouselItem } from '../../molecules/CarouselItem';
+import { createTrackingProps, type DataElb } from '../../../../utils/tagger';
+import { assign } from '@walkeros/core';
 
 export interface CarouselSectionProps {
   title: string;
@@ -10,6 +12,7 @@ export interface CarouselSectionProps {
   }>;
   onItemClick?: (id: unknown) => void;
   type?: ImageProps['type'];
+  dataElb?: DataElb;
 }
 
 export const CarouselSection = ({
@@ -17,12 +20,19 @@ export const CarouselSection = ({
   items,
   onItemClick,
   type = 'thumbnail',
+  dataElb,
 }: CarouselSectionProps) => {
+  const trackingProps = createTrackingProps(
+    assign(
+      {
+        context: { list: title },
+      },
+      dataElb,
+    ),
+  );
+
   return (
-    <section
-      data-elbcontext={`list:${title}`}
-      className="py-6 overflow-visible"
-    >
+    <section {...trackingProps} className="py-6 overflow-visible">
       <div className="max-w-7xl mx-auto px-6 overflow-visible">
         <Typography variant="h3" className="mb-8 text-foreground">
           {title}

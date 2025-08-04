@@ -1,25 +1,30 @@
 import { type ButtonProps, Button } from '../../atoms/Button';
-import type { WalkerOSTagging } from '@walkeros/storybook-addon';
+import { createTrackingProps, type DataElb } from '../../../../utils/tagger';
+import { assign } from '@walkeros/core';
 
-export interface TaggedButtonProps extends ButtonProps, WalkerOSTagging {}
+export interface TaggedButtonProps extends ButtonProps {
+  dataElb?: DataElb;
+}
 
 export const TaggedButton = ({
-  elbEntity = '',
-  elbAction,
-  elbData,
-  ...props
+  dataElb,
+  ...buttonProps
 }: TaggedButtonProps) => {
-  elbData =
-    elbData || '' + ';' + (props.primary ? 'type:primary' : 'type:secondary');
+  const trackingProps = createTrackingProps(
+    assign(
+      {
+        data: {
+          cta: buttonProps.label,
+          type: buttonProps.primary ? 'primary' : 'secondary',
+        },
+      },
+      dataElb,
+    ),
+  );
 
   return (
-    <span
-      {...{ 'data-elbaction': 'click' + (elbAction ? `:${elbAction}` : '') }}
-      {...{
-        [`data-elb-${elbEntity}`]: `cta:${props.label};${elbData}`,
-      }}
-    >
-      <Button {...props} />
+    <span {...trackingProps}>
+      <Button {...buttonProps} />
     </span>
   );
 };

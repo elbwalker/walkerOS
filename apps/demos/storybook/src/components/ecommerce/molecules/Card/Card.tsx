@@ -45,7 +45,9 @@ export const Card = ({
               label={actionLabel}
               onClick={onAction}
               size="small"
-              elbAction="add"
+              dataElb={{
+                action: 'add',
+              }}
             />
           </div>
         )}

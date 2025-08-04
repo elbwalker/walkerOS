@@ -1,9 +1,13 @@
+import { createTrackingProps, type DataElb } from '../../../../utils/tagger';
+import { assign } from '@walkeros/core';
+
 export interface ImageProps {
   type: 'thumbnail' | 'banner' | 'postcard';
   style?: number;
   alt?: string;
   title?: string;
   className?: string;
+  dataElb?: DataElb;
 }
 
 export const Image = ({
@@ -12,6 +16,7 @@ export const Image = ({
   alt,
   title,
   className = '',
+  dataElb,
 }: ImageProps) => {
   const getPlaceholderColor = (
     styleNum: number,
@@ -82,14 +87,26 @@ export const Image = ({
     postcard: 'aspect-[16/20] rounded-xl',
   };
 
+  const trackingProps = createTrackingProps(
+    assign(
+      {
+        data: {
+          img: `id-${titleStyle.length}`,
+          type: type,
+          ...(title && { title }),
+          ...(alt && { alt }),
+        },
+      },
+      dataElb,
+    ),
+  );
+
   return (
     <div
+      {...trackingProps}
       className={`${typeClasses[type]} bg-gradient-to-br ${placeholderColor} flex items-center justify-center ${className}`}
     >
-      <div
-        className="text-center text-white dark:text-white"
-        data-elb-={'img:id-' + titleStyle.length}
-      >
+      <div className="text-center text-white dark:text-white">
         {title && <div className={`${titleStyle} mb-1`}>{title}</div>}
         <div className={`opacity-75`}>{alt}</div>
       </div>

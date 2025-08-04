@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { TaggedButton } from './TaggedButton';
-import { walkerOSArgTypes } from '@walkeros/storybook-addon';
 
 const meta: Meta<typeof TaggedButton> = {
   title: 'Media/Molecules/TaggedButton',
@@ -10,7 +9,11 @@ const meta: Meta<typeof TaggedButton> = {
   },
   tags: ['autodocs'],
   argTypes: {
-    ...walkerOSArgTypes,
+    dataElb: {
+      name: 'walkerOS Data',
+      description: 'walkerOS tracking configuration',
+      control: { type: 'object' },
+    },
   },
 };
 
@@ -20,7 +23,10 @@ type Story = StoryObj<typeof meta>;
 export const WatchNow: Story = {
   args: {
     label: 'Watch Now',
-    elbEntity: 'page',
+    dataElb: {
+      entity: 'page',
+      action: 'watch',
+    },
     primary: true,
   },
 };
@@ -28,6 +34,9 @@ export const WatchNow: Story = {
 export const LearnMore: Story = {
   args: {
     label: 'Learn More',
-    elbEntity: 'page',
+    dataElb: {
+      entity: 'page',
+      action: 'learn',
+    },
   },
 };

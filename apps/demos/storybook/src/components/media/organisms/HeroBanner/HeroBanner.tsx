@@ -1,14 +1,16 @@
 import { Image } from '../../atoms/Image';
 import { BannerText } from '../../molecules/BannerText';
 import { TaggedButton } from '../../molecules/TaggedButton';
-import type { WalkerOSTagging } from '@walkeros/storybook-addon';
+import { createTrackingProps, type DataElb } from '../../../../utils/tagger';
+import { assign } from '@walkeros/core';
 
-export interface HeroBannerProps extends WalkerOSTagging {
+export interface HeroBannerProps {
   title: string;
   subtitle: string;
   buttonText: string;
   style?: number;
   onButtonClick?: () => void;
+  dataElb?: DataElb;
 }
 
 export const HeroBanner = ({
@@ -17,20 +19,23 @@ export const HeroBanner = ({
   buttonText,
   style = 1,
   onButtonClick,
-  elbEntity = 'teaser',
-  elbTrigger = 'visible',
-  elbAction,
-  elbData = 'type:hero',
-  elbContext,
+  dataElb,
 }: HeroBannerProps) => {
+  const trackingProps = createTrackingProps(
+    assign(
+      {
+        entity: 'teaser',
+        trigger: 'visible',
+        action: 'visible',
+        data: { type: 'hero' },
+      },
+      dataElb,
+    ),
+  );
+
   return (
     <div
-      {...(elbEntity && { 'data-elb': elbEntity })}
-      {...(elbTrigger && {
-        'data-elbaction': elbTrigger + (elbAction ? ':' + elbAction : ''),
-      })}
-      {...(elbData && { [`data-elb-${elbEntity}`]: elbData })}
-      {...(elbContext && { 'data-elbcontext': elbContext })}
+      {...trackingProps}
       className="relative h-96 md:h-[500px] overflow-hidden"
     >
       {/* Background Image */}
@@ -49,8 +54,10 @@ export const HeroBanner = ({
             label={buttonText}
             primary={true}
             onClick={onButtonClick}
-            elbEntity="teaser"
-            elbData="type:primary"
+            dataElb={{
+              action: 'engage',
+              data: { type: 'primary' },
+            }}
           />
         </div>
       </div>

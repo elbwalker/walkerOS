@@ -52,20 +52,21 @@ export default config;
 
 1. **Install and register** the addon (see Installation above)
 
-2. **Add walkerOS data attributes** to your components:
+2. **Add walkerOS tracking** to your components using the `dataElb` prop
+   pattern:
 
    ```tsx
-   // React component example
-   export const Button = ({ label, ...props }) => (
-     <button
-       data-elb="button"
-       data-elbaction="click"
-       data-elbdata="category:primary"
-       {...props}
-     >
-       {label}
-     </button>
-   );
+   import { createTrackingProps, type DataElb } from '../utils/tagger';
+
+   interface ButtonProps {
+     label: string;
+     dataElb?: DataElb;
+   }
+
+   export const Button = ({ label, dataElb }: ButtonProps) => {
+     const trackingProps = createTrackingProps(dataElb);
+     return <button {...trackingProps}>{label}</button>;
+   };
    ```
 
 3. **View your story** - the walkerOS addon panel will automatically appear and
@@ -73,22 +74,23 @@ export default config;
 
 4. **Configure as needed** using the addon's Config tab or story parameters
 
-### Using walkerOS Arg Types
+### Configure Storybook Controls
 
-The addon provides pre-built arg types for easy walkerOS tagging in your
-stories:
+Add `dataElb` controls to your stories for easy tracking configuration:
 
 ```ts
 // Button.stories.ts
 import type { Meta, StoryObj } from '@storybook/react';
-import { walkerOSArgTypes } from '@walkeros/storybook-addon';
 import { Button } from './Button';
 
 const meta: Meta<typeof Button> = {
   title: 'Example/Button',
   component: Button,
   argTypes: {
-    ...walkerOSArgTypes, // 👈 Add walkerOS controls
+    dataElb: {
+      control: { type: 'object' },
+      description: 'walkerOS tracking configuration',
+    },
     // ... your other arg types
   },
 };
@@ -99,9 +101,11 @@ type Story = StoryObj<typeof meta>;
 export const Primary: Story = {
   args: {
     label: 'Button',
-    elbEntity: 'button',
-    elbAction: 'click',
-    elbData: 'category:primary',
+    dataElb: {
+      entity: 'button',
+      action: 'click',
+      data: { category: 'primary' },
+    },
   },
 };
 ```
@@ -140,19 +144,30 @@ These settings are saved and will persist across browser sessions.
 
 ## API Reference
 
-### `walkerOSArgTypes`
+### Exports
 
-Pre-built Storybook arg types for walkerOS tagging attributes:
+The addon exports the following types:
 
 ```ts
-import { walkerOSArgTypes } from '@walkeros/storybook-addon';
+import {
+  DataElb, // TypeScript interface for dataElb prop
+} from '@walkeros/storybook-addon';
+```
 
-// Available arg types:
-// - elbEntity: Main entity being tracked
-// - elbTrigger: Event trigger type
-// - elbAction: Action being performed
-// - elbData: Additional data properties
-// - elbContext: Contextual information
+### `DataElb` Interface
+
+TypeScript interface for the tracking prop pattern:
+
+```ts
+interface DataElb {
+  entity?: string;
+  trigger?: string;
+  action?: string;
+  data?: WalkerOS.Properties; // Rich data objects
+  context?: WalkerOS.Properties; // Context information
+  globals?: WalkerOS.Properties; // Global properties
+  link?: Record<string, string>; // Link relationships
+}
 ```
 
 ### Addon Configuration
@@ -185,8 +200,8 @@ The addon works by:
    JSON syntax highlighting
 4. **Interactive UI**: Provides an expandable list interface for easy event
    inspection
-5. **Zero Configuration**: Works without initializing walkerOS - just add data
-   attributes to your components
+5. **Zero Configuration**: Works without initializing walkerOS - just add the
+   `dataElb` prop to your components
 
 ## Supported Frameworks
 
@@ -205,11 +220,11 @@ This addon works with any Storybook framework:
 
 If events are not appearing in the addon panel:
 
-1. **Check data attributes**: Ensure your components have walkerOS data
-   attributes:
+1. **Check tracking implementation**: Ensure your components use the `dataElb`
+   prop:
 
-   ```html
-   <button data-elb="button" data-elbaction="click">Click me</button>
+   ```tsx
+   <Button label="Click me" dataElb={{ entity: 'button', action: 'click' }} />
    ```
 
 2. **Verify prefix**: Check that the prefix in the Config tab matches your

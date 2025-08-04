@@ -1,5 +1,7 @@
 import { Image, type ImageProps } from '../../atoms/Image';
 import { Typography } from '../../atoms/Typography';
+import { createTrackingProps, type DataElb } from '../../../../utils/tagger';
+import { assign } from '@walkeros/core';
 
 export interface CarouselItemProps {
   title: string;
@@ -8,6 +10,7 @@ export interface CarouselItemProps {
   alt?: string;
   onClick?: () => void;
   position?: number;
+  dataElb?: DataElb;
 }
 
 export const CarouselItem = ({
@@ -17,12 +20,25 @@ export const CarouselItem = ({
   onClick,
   type = 'thumbnail',
   position,
+  dataElb,
 }: CarouselItemProps) => {
+  const trackingProps = createTrackingProps(
+    assign(
+      {
+        entity: 'content',
+        action: 'visible',
+        data: {
+          title: title,
+          ...(position && { position: position }),
+        },
+      },
+      dataElb,
+    ),
+  );
+
   return (
     <div
-      data-elb="content"
-      data-elbaction="visible;click"
-      {...(position && { 'data-elb-content': `position:${position}` })}
+      {...trackingProps}
       className="flex-shrink-0 w-64 cursor-pointer group px-2 py-2"
       onClick={onClick}
     >
@@ -35,7 +51,6 @@ export const CarouselItem = ({
           className="mb-3"
         />
         <Typography
-          data-elb-content={`title:${title}`}
           variant="body2"
           className="text-foreground group-hover:text-primary-600 transition-colors duration-200"
         >

@@ -1,29 +1,23 @@
 import React from 'react';
+import { createTrackingProps, type DataElb } from '../utils/tagger';
 
 interface SimpleButtonProps {
   label: string;
-  elbEntity?: string;
-  elbAction?: string;
-  elbData?: string;
   onClick?: () => void;
+  dataElb?: DataElb;
 }
 
 export const SimpleButton: React.FC<SimpleButtonProps> = ({
   label,
-  elbEntity,
-  elbAction,
-  elbData,
   onClick,
+  dataElb,
 }) => {
-  const dataAttributes: Record<string, string> = {};
-
-  if (elbEntity) dataAttributes['data-elb'] = elbEntity;
-  if (elbAction) dataAttributes['data-elbaction'] = elbAction;
-  if (elbData) dataAttributes['data-elbdata'] = elbData;
+  // Generate walkerOS tracking properties from dataElb configuration
+  const trackingProps = createTrackingProps(dataElb);
 
   return (
     <button
-      {...dataAttributes}
+      {...trackingProps}
       onClick={onClick}
       style={{
         backgroundColor: '#0066cc',

@@ -1,5 +1,7 @@
 import { BannerText } from '../../molecules/BannerText';
 import { TaggedButton } from '../../molecules/TaggedButton';
+import { createTrackingProps, type DataElb } from '../../../../utils/tagger';
+import { assign } from '@walkeros/core';
 
 export interface PromotionBannerProps {
   headline: string;
@@ -7,6 +9,7 @@ export interface PromotionBannerProps {
   buttonText: string;
   backgroundGradient?: string;
   onButtonClick?: () => void;
+  dataElb?: DataElb;
 }
 
 export const PromotionBanner = ({
@@ -15,19 +18,25 @@ export const PromotionBanner = ({
   buttonText,
   backgroundGradient = 'from-primary-700 to-primary-900',
   onButtonClick,
+  dataElb,
 }: PromotionBannerProps) => {
+  const trackingProps = createTrackingProps(
+    assign(
+      {
+        trigger: 'visible',
+        data: { type: 'promo' },
+      },
+      dataElb,
+    ),
+  );
+
   return (
     <div
-      data-elb="teaser"
-      data-elbaction="visible"
-      data-elb-teaser="type:promo"
+      {...trackingProps}
       className={`bg-gradient-to-r ${backgroundGradient} rounded-xl p-8 md:p-12 mx-6 my-8`}
     >
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0">
-        <div
-          data-elb-teaser={`title:${headline}`}
-          className="text-center md:text-left"
-        >
+        <div className="text-center md:text-left">
           <BannerText headline={headline} subtitle={subtitle} />
         </div>
 
@@ -36,6 +45,10 @@ export const PromotionBanner = ({
             label={buttonText}
             primary={true}
             onClick={onButtonClick}
+            dataElb={{
+              action: 'engage',
+              data: { type: 'button' },
+            }}
           />
         </div>
       </div>

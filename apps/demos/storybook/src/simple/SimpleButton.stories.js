@@ -1,11 +1,11 @@
 import { SimpleButton } from './SimpleButton';
-import { walkerOSArgTypes } from '@walkeros/storybook-addon';
+import { dataElbArgTypes } from '@walkeros/storybook-addon';
 
 export default {
   title: 'Demo/SimpleButton',
   component: SimpleButton,
   argTypes: {
-    ...walkerOSArgTypes,
+    ...dataElbArgTypes,
     label: {
       control: 'text',
       description: 'Button label text',
@@ -16,9 +16,11 @@ export default {
 export const Default = {
   args: {
     label: 'Click me',
-    elbEntity: 'button',
-    elbAction: 'click',
-    elbData: 'category:demo',
+    dataElb: {
+      entity: 'button',
+      action: 'demo',
+      data: { category: 'demo' },
+    },
   },
 };
 
@@ -31,9 +33,18 @@ export const WithoutTracking = {
 export const ComplexData = {
   args: {
     label: 'Complex tracking',
-    elbEntity: 'promotional_button',
-    elbAction: 'click',
-    elbData: 'type:cta;campaign:hero;variant:primary',
-    elbContext: 'page:demo;section:examples',
+    dataElb: {
+      entity: 'promotional_button',
+      action: 'engage',
+      data: {
+        type: 'cta',
+        campaign: 'hero',
+        variant: 'primary',
+      },
+      context: {
+        page: 'demo',
+        section: 'examples',
+      },
+    },
   },
 };

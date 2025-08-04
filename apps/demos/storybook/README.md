@@ -1,256 +1,132 @@
 # walkerOS Storybook Demo
 
-A comprehensive Storybook demo showcasing **walkerOS event tracking
-integration** with React components. This demo demonstrates how to use the
-`@walkeros/storybook-addon` to visualize and debug data collection events in
-your component library.
+A lean demonstration of the **walkerOS Storybook addon** that helps developers
+visualize and debug event tracking in React components.
 
-## 🚀 Features
+## Why Use the walkerOS Storybook Addon?
 
-- **walkerOS Integration**: Complete integration with
-  `@walkeros/storybook-addon` for event tracking visualization
-- **Atomic Design Structure**: Components organized as Atoms → Molecules →
-  Organisms → Templates
-- **Event Visualization**: Real-time walkerOS event detection and display
-- **TypeScript Support**: Full type safety across all components
-- **Responsive Design**: Mobile-first approach with responsive layouts
-- **Domain Filtering**: Toggle between e-commerce and media component domains
+- **Validate Implementation**: Ensure tracking works correctly before deployment
+- **Component Development**: Build tracking directly into your component library
+- **Team Collaboration**: Share tracking specifications with stakeholders using
+  Storybook
+- **Debug Tracking**: See walkerOS events in real-time as you interact with
+  components
 
-## 📁 Project Structure
-
-```
-src/components/
-├── ecommerce/       # E-commerce domain components
-│   ├── atoms/       # Basic building blocks
-│   │   ├── Button/
-│   │   ├── Input/
-│   │   └── Typography/
-│   ├── molecules/   # Simple groups of UI elements
-│   │   ├── Card/
-│   │   └── SearchBox/
-│   ├── organisms/   # Complex UI components
-│   │   ├── Header/
-│   │   └── ProductGrid/
-│   └── templates/   # Page-level layouts
-│       └── ShopTemplate/
-└── media/           # Media domain components
-    ├── atoms/       # Basic media elements
-    │   ├── Button/
-    │   ├── Icon/
-    │   └── Typography/
-    ├── molecules/   # Media UI groups
-    │   ├── BannerText/
-    │   └── TaggedButton/
-    ├── organisms/   # Complex media components
-    │   ├── HeroBanner/
-    │   └── PromotionBanner/
-    └── templates/   # Media page layouts
-        └── MediathekTemplate/
-```
-
-## 🛠️ Getting Started
-
-### Prerequisites
-
-- Node.js (v20 or higher)
-- npm
-
-### Quick Start - Standalone Demo ⚡
-
-**The easiest way to see the walkerOS addon in action:**
-
-1. **Clone the walkerOS repository**:
+## Quick Start
 
 ```bash
+# Clone and navigate to the demo
 git clone https://github.com/elbwalker/walkerOS.git
 cd walkerOS/apps/demos/storybook
-```
 
-2. **Open the standalone demo**:
-
-```bash
-# Simply open the HTML file in your browser
-open storybook-standalone.html
-# or serve it locally
-python -m http.server 8000  # then visit http://localhost:8000/storybook-standalone.html
-```
-
-This standalone demo simulates the exact functionality of the
-`@walkeros/storybook-addon` and shows:
-
-- Real-time walkerOS event detection
-- Interactive event inspection
-- Configurable prefix settings
-- Multiple tracking examples
-
-### Full Storybook Setup
-
-**To run the complete Storybook with the walkerOS addon:**
-
-1. **Clone and setup** (from the walkerOS root):
-
-```bash
-git clone https://github.com/elbwalker/walkerOS.git
-cd walkerOS
+# Install dependencies and start
 npm install
-```
-
-2. **Build the storybook addon**:
-
-```bash
-cd apps/storybook-addon
-npm run build
-```
-
-3. **Launch Storybook**:
-
-```bash
-cd ../demos/storybook
 npm run storybook
 ```
 
-> **Note**: Due to monorepo module resolution complexities, if you encounter
-> issues, use the standalone demo above which provides the same functionality.
+Visit `http://localhost:6006` and check the **walkerOS** addon panel to see live
+tracking events.
 
-## 🏷️ walkerOS Integration
+## How It Works
 
-### Event Tracking Demo
+### 1. Add the Addon to Your Storybook
 
-This demo showcases how walkerOS data attributes work with the Storybook addon:
+```bash
+npm install @walkeros/storybook-addon
+```
 
-#### Tagged Components
+Add to your `.storybook/main.ts`:
 
-Several components include walkerOS tagging examples:
+```typescript
+export default {
+  addons: ['@walkeros/storybook-addon'],
+};
+```
 
-- **Tagged Button** (media domain): Demonstrates `data-elb` attributes
-- **Hero Banner** (media domain): Shows entity and action tracking
-- **Other components**: Various examples of walkerOS integration
+### 2. Create Components with walkerOS Tracking (optional)
 
-#### Using the walkerOS Addon
-
-1. **View Events**: Navigate to any story and open the "walkerOS" tab in the
-   addon panel
-2. **Inspect Data**: Click on detected events to see their complete data
-   structure
-3. **Configure**: Use the Config tab to adjust auto-refresh and prefix settings
-4. **Domain Filter**: Use the toolbar to filter components by domain
-   (e-commerce/media/all)
-
-#### Example Tagging
+Add tracking to your components using the `dataElb` prop pattern:
 
 ```tsx
-// Example from TaggedButton component
-<button
-  data-elb="promotional_button"
-  data-elbaction="click"
-  data-elbdata="type:cta;campaign:hero"
->
-  Click me
-</button>
-```
+import { createTrackingProps, type DataElb } from '../utils/tagger';
 
-## 📚 Component Structure
-
-The demo is organized into two domains to show different use cases:
-
-### E-commerce Domain
-
-- **Atoms**: Button, Input, Typography
-- **Molecules**: Card, SearchBox
-- **Organisms**: Header, ProductGrid
-- **Templates**: ShopTemplate
-
-### Media Domain
-
-- **Atoms**: Button, Icon, Image, Typography
-- **Molecules**: BannerText, CarouselItem, TaggedButton
-- **Organisms**: HeroBanner, PromotionBanner, CarouselSection
-- **Templates**: MediathekTemplate
-
-## 📖 Storybook Features
-
-Access the demo at: `http://localhost:6006`
-
-### Key Features:
-
-- **walkerOS Addon Panel**: Real-time event detection and visualization
-- **Domain Filtering**: Toggle between e-commerce, media, or all components
-- **Interactive Controls**: Modify component props and see walkerOS events
-  update
-- **Event Inspector**: Detailed JSON view of detected walkerOS events
-- **Auto-refresh**: Events update automatically when navigating or changing
-  controls
-
-### Navigation Tips:
-
-1. Use the **Domain** dropdown in the toolbar to filter components
-2. Check the **walkerOS** addon panel for event information
-3. Try the **Config** tab to adjust addon settings
-4. Look for components with "Tagged" in the name for walkerOS examples
-
-## 🔧 Available Scripts
-
-- `npm run storybook` - Start Storybook development server
-- `npm run build-storybook` - Build static Storybook for deployment
-- `npm run lint` - Run ESLint on source files
-
-## 🎯 Learning Objectives
-
-This demo illustrates:
-
-1. **walkerOS Integration**: How to implement event tracking in React components
-2. **Storybook Addon Usage**: Visualizing and debugging tracking events
-3. **Component Tagging**: Best practices for adding walkerOS data attributes
-4. **Event Validation**: Using Storybook to verify tracking implementation
-5. **Domain Organization**: Structuring components by business domain
-
-## 🔍 Exploring walkerOS Events
-
-### What to Look For:
-
-- **Tagged Button**: Simple button with walkerOS attributes
-- **Hero Banner**: Complex component with nested event data
-- **Navigation Elements**: Examples of contextual tracking
-- **Interactive Components**: Events that trigger on user actions
-
-### Event Structure:
-
-All walkerOS events follow a consistent structure:
-
-```json
-{
-  "entity": "promotional_button",
-  "action": "click",
-  "data": {
-    "type": "cta",
-    "campaign": "hero"
-  },
-  "context": {},
-  "user": {},
-  "nested": []
+interface ButtonProps {
+  label: string;
+  dataElb?: DataElb; // Add walkerOS tracking prop
 }
+
+export const Button = ({ label, dataElb }: ButtonProps) => {
+  // The tagger converts walkerOS config to HTML data attributes
+  const trackingProps = createTrackingProps(dataElb);
+
+  return <button {...trackingProps}>{label}</button>;
+};
 ```
 
-## 🚀 Using This Demo
+The **tagger utility** automatically converts your tracking configuration into
+the proper `data-elb*` attributes that walkerOS needs, while keeping your
+component code clean.
 
-### For Developers:
+### 3. Configure Storybook Controls
 
-1. **Learn walkerOS**: See practical examples of event tracking implementation
-2. **Test Components**: Use Storybook to validate tracking before deployment
-3. **Debug Events**: Use the addon to troubleshoot tracking issues
+Add `dataElb` controls to your stories:
 
-### For Product Teams:
+```typescript
+export default {
+  component: Button,
+  argTypes: {
+    dataElb: {
+      control: { type: 'object' },
+      description: 'walkerOS tracking configuration',
+    },
+  },
+};
 
-1. **Review Tracking**: Verify that events match analytics requirements
-2. **Plan Events**: Use the demo to design tracking for new features
-3. **Document Events**: Share Storybook links to communicate event structures
+export const Primary = {
+  args: {
+    label: 'Click me',
+    dataElb: {
+      entity: 'cta_button',
+      action: 'engage',
+      data: { campaign: 'hero' },
+    },
+  },
+};
+```
 
-## 📚 Related Documentation
+### 4. Debug in Storybook
 
-- [walkerOS Documentation](https://docs.walkeros.com)
-- [@walkeros/storybook-addon](../../../storybook-addon/README.md)
+1. Open any story with walkerOS tracking
+2. Navigate to the **walkerOS** addon panel
+3. Interact with components to see live events
+4. Inspect event data structure and validate tracking
+
+## Demo Components
+
+This demo includes examples of:
+
+- **Simple Components**: Basic buttons with tracking
+- **Complex Components**: Hero banners with nested data
+- **Template Components**: Full page layouts with contextual tracking
+- **Different Patterns**: Various approaches to component tracking
+
+## Key Features
+
+- **Real-time Events**: See tracking fire as you interact with components
+- **Event Inspector**: Detailed JSON view of all event properties
+- **Auto-refresh**: Events update automatically when you change component props
+- **Clean Integration**: Use modern React patterns with the `dataElb` prop
+
+## Useful Commands
+
+```bash
+npm run storybook        # Start development server
+npm run build-storybook  # Build static version
+npm run build           # Build demo components
+```
+
+## Learn More
+
+- [walkerOS Documentation](https://docs.elbwalker.com)
+- [Storybook Addon Source](../../../storybook-addon/)
 - [walkerOS GitHub](https://github.com/elbwalker/walkerOS)
-
----
-
-**Built with ❤️ to demonstrate walkerOS integration with Storybook.**
