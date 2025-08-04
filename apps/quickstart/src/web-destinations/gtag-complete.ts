@@ -3,16 +3,6 @@ import { createSource, createDestination } from '@walkeros/core';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import type { WalkerOS, Collector, Source } from '@walkeros/core';
-import type { SourceInit } from '@walkeros/collector';
-
-// Helper function to wrap createSource result for collector compatibility
-function wrapSource<T extends Source.Config, E>(
-  sourceInit: Source.Init<T, E>,
-): SourceInit<T, E> {
-  return {
-    code: sourceInit,
-  };
-}
 
 export async function setupGtagComplete(): Promise<{
   collector: Collector.Instance;
@@ -26,14 +16,12 @@ export async function setupGtagComplete(): Promise<{
       version: '1.0.0',
     },
     sources: {
-      browser: wrapSource(
-        createSource(sourceBrowser, {
-          settings: {
-            scope: document.body,
-            session: true,
-          },
-        }),
-      ),
+      browser: createSource(sourceBrowser, {
+        settings: {
+          scope: document.body,
+          session: true,
+        },
+      }),
     },
     destinations: {
       gtag: createDestination(destinationGtag, {

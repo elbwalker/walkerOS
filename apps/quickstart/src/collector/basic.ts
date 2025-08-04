@@ -1,17 +1,7 @@
 import { createCollector } from '@walkeros/collector';
 import { createSource } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
-import type { Collector, WalkerOS, Source } from '@walkeros/core';
-import type { SourceInit } from '@walkeros/collector';
-
-// Helper function to wrap createSource result for collector compatibility
-function wrapSource<T extends Source.Config, E>(
-  sourceInit: Source.Init<T, E>,
-): SourceInit<T, E> {
-  return {
-    code: sourceInit,
-  };
-}
+import type { Collector, WalkerOS } from '@walkeros/core';
 
 export async function setupCollector(): Promise<{
   collector: Collector.Instance;
@@ -21,13 +11,11 @@ export async function setupCollector(): Promise<{
   const trackingConfig = {
     run: true,
     sources: {
-      browser: wrapSource(
-        createSource(sourceBrowser, {
-          settings: {
-            scope: document.body,
-          },
-        }),
-      ),
+      browser: createSource(sourceBrowser, {
+        settings: {
+          scope: document.body,
+        },
+      }),
     },
   };
 
@@ -43,13 +31,11 @@ export async function setupCollectorWithConfig(): Promise<{
   const trackingConfig = {
     run: true,
     sources: {
-      browser: wrapSource(
-        createSource(sourceBrowser, {
-          settings: {
-            scope: document.body,
-          },
-        }),
-      ),
+      browser: createSource(sourceBrowser, {
+        settings: {
+          scope: document.body,
+        },
+      }),
     },
     destinations: {
       console: {

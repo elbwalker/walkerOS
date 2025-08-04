@@ -3,16 +3,6 @@ import { createSource, createDestination } from '@walkeros/core';
 import { destinationMeta } from '@walkeros/web-destination-meta';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import type { WalkerOS, Collector, Source } from '@walkeros/core';
-import type { SourceInit } from '@walkeros/collector';
-
-// Helper function to wrap createSource result for collector compatibility
-function wrapSource<T extends Source.Config, E>(
-  sourceInit: Source.Init<T, E>,
-): SourceInit<T, E> {
-  return {
-    code: sourceInit,
-  };
-}
 
 export async function setupMetaPixel(): Promise<{
   collector: Collector.Instance;
@@ -26,14 +16,12 @@ export async function setupMetaPixel(): Promise<{
       currency: 'USD',
     },
     sources: {
-      browser: wrapSource(
-        createSource(sourceBrowser, {
-          settings: {
-            scope: document.body,
-            session: true,
-          },
-        }),
-      ),
+      browser: createSource(sourceBrowser, {
+        settings: {
+          scope: document.body,
+          session: true,
+        },
+      }),
     },
     destinations: {
       meta: createDestination(destinationMeta, {

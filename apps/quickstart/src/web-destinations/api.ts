@@ -3,16 +3,6 @@ import { createSource, createDestination } from '@walkeros/core';
 import { destinationAPI } from '@walkeros/web-destination-api';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import type { WalkerOS, Collector, Source } from '@walkeros/core';
-import type { SourceInit } from '@walkeros/collector';
-
-// Helper function to wrap createSource result for collector compatibility
-function wrapSource<T extends Source.Config, E>(
-  sourceInit: Source.Init<T, E>,
-): SourceInit<T, E> {
-  return {
-    code: sourceInit,
-  };
-}
 
 export async function setupAPIDestination(): Promise<{
   collector: Collector.Instance;
@@ -26,14 +16,12 @@ export async function setupAPIDestination(): Promise<{
       api_version: 'v1',
     },
     sources: {
-      browser: wrapSource(
-        createSource(sourceBrowser, {
-          settings: {
-            scope: document.body,
-            session: true,
-          },
-        }),
-      ),
+      browser: createSource(sourceBrowser, {
+        settings: {
+          scope: document.body,
+          session: true,
+        },
+      }),
     },
     destinations: {
       api: createDestination(destinationAPI, {
