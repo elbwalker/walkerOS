@@ -1,7 +1,7 @@
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import Navigation from './components/Navigation';
-import ConsentBar from './components/ConsentBar';
+import ControlBar from './components/ControlBar';
 import Home from './pages/Home';
 import Category from './pages/Category';
 import Detail from './pages/Detail';
@@ -44,7 +44,7 @@ function App() {
         </Routes>
       </main>
 
-      <ConsentBar />
+      <ControlBar />
     </div>
   );
 }

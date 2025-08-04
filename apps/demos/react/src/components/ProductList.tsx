@@ -62,16 +62,6 @@ function ProductList({
   const handleLoadMore = async () => {
     if (loading) return;
 
-    // Track load more click
-    if (window.elb) {
-      window.elb('load more click', {
-        list_name: title,
-        current_product_count: products.length,
-        current_product_id: currentProductId,
-        offset: offset,
-      });
-    }
-
     setLoading(true);
     setError(null);
 
@@ -85,64 +75,21 @@ function ProductList({
 
       if (newProducts.length === 0) {
         setHasMore(false);
-        // Track no more products event
-        if (window.elb) {
-          window.elb('products list exhausted', {
-            list_name: title,
-            total_products_shown: products.length,
-          });
-        }
       } else {
         setProducts((prev) => [...prev, ...newProducts]);
         setOffset((prev) => prev + newProducts.length);
         setHasMore(newProducts.length === 4);
-
-        // Track successful load more
-        if (window.elb) {
-          window.elb('products loaded', {
-            list_name: title,
-            products_loaded: newProducts.length,
-            total_products: products.length + newProducts.length,
-            new_products: newProducts.map((p) => ({
-              id: p.id,
-              name: p.name,
-              category: p.category,
-              price: p.price,
-            })),
-          });
-        }
       }
     } catch (err) {
       setError('Failed to load more products. Please try again.');
+      // eslint-disable-next-line no-console
       console.error('Error loading products:', err);
-
-      // Track error event
-      if (window.elb) {
-        window.elb('load more error', {
-          list_name: title,
-          error_message: 'Failed to load more products',
-          current_product_count: products.length,
-        });
-      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleProductClick = (product: Product) => {
-    // Track product click event
-    if (window.elb) {
-      window.elb('product click', {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        category: product.category,
-        rating: product.rating,
-        position: products.findIndex((p) => p.id === product.id) + 1,
-        list_name: title,
-      });
-    }
-  };
+  const handleProductClick = (product: Product) => {};
 
   return (
     <section

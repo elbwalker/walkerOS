@@ -2,9 +2,9 @@
 
 declare global {
   interface Window {
-    elb?: (event: string, data?: any, options?: any) => void;
+    elb?: (event: string, data?: unknown, options?: unknown) => void;
     walkerjs?: {
-      destinations?: Record<string, any>;
+      destinations?: Record<string, unknown>;
     };
   }
 }

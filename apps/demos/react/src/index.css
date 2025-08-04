@@ -1,3 +1,40 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* walkerOS Element Highlighting Styles */
+.elb-globals [data-elbglobals] {
+  outline: none;
+  border-color: #4fc3f7 !important;
+  box-shadow: 0 0 60px #4fc3f7 !important;
+}
+
+.elb-context [data-elbcontext] {
+  outline: none;
+  border-color: #ffbd44 !important;
+  box-shadow: 0 0 50px #ffbd44 !important;
+}
+
+.elb-entity [data-elb] {
+  outline: none;
+  border-color: #00ca4e !important;
+  box-shadow: 0 0 40px #00ca4e !important;
+}
+
+.data-elbproperty {
+  outline: none;
+  border-color: #ff605c !important;
+  box-shadow: 0 0 10px #ff605c !important;
+}
+
+.elb-action [data-elbaction] {
+  outline: none;
+  border-color: #9900ff !important;
+  box-shadow: 0 0 10px #9900ff !important;
+}
+
+/* Test mode styling */
+[data-elbcontext='font:beautiful'] {
+  font-family: 'Comic Sans MS', cursive !important;
+  font-style: italic !important;
+}
