@@ -23,7 +23,7 @@ export interface Settings extends Record<string, unknown> {
 export type { SessionConfig, SessionCallback };
 
 // ELB Layer types for async command handling
-export type ELBLayer = Elb.Layer;
+export type ELBLayer = Array<Elb.Layer | IArguments>;
 export interface ELBLayerConfig {
   name?: string; // Property name for window.elbLayer (default: 'elbLayer')
 }

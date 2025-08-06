@@ -107,27 +107,22 @@ describe('Browser Source Integration Tests', () => {
       // Initialize source - should process existing commands
       await createBrowserSource(collector, { pageview: false });
 
-      // Should process all commands in order
-      expect(mockPush).toHaveBeenCalledTimes(3);
+      // Should process commands in order (first walker run is skipped)
+      expect(mockPush).toHaveBeenCalledTimes(2);
 
-      // Walker command should be first
-      expect(mockPush).toHaveBeenNthCalledWith(1, 'walker run', {
-        consent: { marketing: true },
-      });
-
-      // Then regular events
+      // Regular events are processed (walker run is skipped on initialization)
       expect(mockPush).toHaveBeenNthCalledWith(
-        2,
+        1,
         expect.objectContaining({
           event: 'page',
-          data: { title: 'Home' },
+          data: { id: '/', title: 'Home' },
           context: { url: '/' },
           trigger: 'load',
         }),
       );
 
       expect(mockPush).toHaveBeenNthCalledWith(
-        3,
+        2,
         expect.objectContaining({
           event: 'product',
           data: { id: '123' },

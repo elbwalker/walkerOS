@@ -59,7 +59,8 @@ export type BrowserPushData =
   | Array<Scope> // Web-specific
   | Trigger // Web-specific
   | string
-  | object; // Flexible for browser source
+  | object // Flexible for browser source
+  | IArguments; // Support for arguments object
 
 // Browser-specific options
 export type BrowserPushOptions =
@@ -95,4 +96,4 @@ export type CommandRun<R = Promise<Elb.PushResult>> = (
 
 // Re-export core types
 export type PushResult = Elb.PushResult;
-export type Layer = Elb.Layer;
+export type Layer = Elb.Layer | IArguments;

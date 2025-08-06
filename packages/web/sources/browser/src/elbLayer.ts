@@ -1,15 +1,10 @@
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { WalkerOS, Collector, Elb } from '@walkeros/core';
 import type { ELBLayer, ELBLayerConfig } from './types';
-import type {
-  BrowserPushData,
-  BrowserPushOptions,
-  BrowserPushContext,
-} from './types/elb';
-import { tryCatch } from '@walkeros/core';
+import { tryCatch, isString, isObject } from '@walkeros/core';
 import { translateToCoreCollector } from './translation';
 
 /**
- * Initialize ELB Layer for async command handling
+ * Initialize elbLayer for async command handling
  * This creates window.elbLayer array and processes any existing commands
  */
 export function initElbLayer(
@@ -25,9 +20,30 @@ export function initElbLayer(
 
   const elbLayer = window[layerName] as ELBLayer;
 
+  // Override the push method to process items immediately
+  elbLayer.push = function (...args: Array<Elb.Layer | IArguments>) {
+    // Handle arguments object
+    if (isArguments(args[0])) {
+      const argsArray = [...Array.from(args[0])];
+      const i = Array.prototype.push.apply(this, [argsArray]);
+      // Process the arguments as a single command
+      pushCommand(collector, argsArray);
+      return i;
+    }
+
+    const i = Array.prototype.push.apply(this, args);
+
+    // Process each pushed item immediately
+    args.forEach((item) => {
+      pushCommand(collector, item);
+    });
+
+    return i;
+  };
+
   // Process any existing commands that were pushed before initialization
   if (Array.isArray(elbLayer) && elbLayer.length > 0) {
-    processELBLayerCommands(collector, elbLayer);
+    processElbLayer(collector, elbLayer);
   }
 }
 
@@ -35,79 +51,117 @@ export function initElbLayer(
  * Process commands from ELB Layer array
  * Commands are processed in order with walker commands getting priority
  */
-function processELBLayerCommands(
+function processElbLayer(
   collector: Collector.Instance,
   elbLayer: ELBLayer,
 ): void {
-  // Separate walker commands from regular events for priority processing
-  const walkerCommands: unknown[] = [];
-  const regularEvents: unknown[] = [];
-
-  // Sort commands by priority (walker commands first)
-  elbLayer.forEach((command) => {
-    if (isWalkerCommand(command)) {
-      walkerCommands.push(command);
-    } else {
-      regularEvents.push(command);
-    }
-  });
-
-  // Process walker commands first
-  walkerCommands.forEach((command) => {
-    processCommand(collector, command);
-  });
-
-  // Then process regular events
-  regularEvents.forEach((command) => {
-    processCommand(collector, command);
-  });
+  // Process in two phases: walker commands first, then events
+  processPredefined(collector, elbLayer, true); // Commands only
+  processPredefined(collector, elbLayer, false); // Events only
 
   // Clear the array after processing
   elbLayer.length = 0;
 }
 
 /**
- * Process a single command from ELB Layer
+ * Process predefined commands with execution order handling
  */
-function processCommand(collector: Collector.Instance, command: unknown): void {
-  // Skip malformed commands entirely
-  if (
-    command === null ||
-    command === undefined ||
-    command === '' ||
-    typeof command === 'number' ||
-    typeof command === 'string'
-  ) {
-    return;
-  }
+function processPredefined(
+  collector: Collector.Instance,
+  elbLayer: ELBLayer,
+  commandsOnly: boolean,
+): void {
+  const walkerCommand = 'walker '; // Space on purpose
+  const events: unknown[] = [];
+  let isFirstRunEvent = true;
 
+  elbLayer.forEach((pushedItem) => {
+    // Handle arguments object or arrays
+    const item = isArguments(pushedItem)
+      ? [...Array.from(pushedItem)]
+      : isArrayLike(pushedItem)
+        ? Array.from(pushedItem as ArrayLike<unknown>)
+        : [pushedItem];
+
+    // Skip malformed commands
+    if (Array.isArray(item) && item.length === 0) {
+      return; // Empty array
+    }
+
+    if (Array.isArray(item) && item.length === 1 && !item[0]) {
+      return; // Array with falsy first element
+    }
+
+    const firstParam = item[0];
+    const isCommand =
+      !isObject(firstParam) &&
+      isString(firstParam) &&
+      firstParam.startsWith(walkerCommand);
+
+    if (!isObject(firstParam)) {
+      const args = Array.from(item);
+      if (!isString(args[0]) || args[0].trim() === '') return; // Invalid or empty string
+
+      // Skip the first stacked run event since it's the reason we're here
+      // and to prevent duplicate execution which we don't want
+      const runCommand = 'walker run';
+      if (isFirstRunEvent && args[0] === runCommand) {
+        isFirstRunEvent = false; // Next time it's on
+        return;
+      }
+    } else {
+      // For objects, skip if empty
+      if (
+        typeof firstParam === 'object' &&
+        Object.keys(firstParam).length === 0
+      ) {
+        return;
+      }
+    }
+
+    // Handle commands and events separately
+    if (
+      (commandsOnly && isCommand) || // Only commands
+      (!commandsOnly && !isCommand) // Only events
+    )
+      events.push(item);
+  });
+
+  events.forEach((item) => {
+    // Use the elb push function directly to match legacy behavior
+    pushCommand(collector, item);
+  });
+}
+
+/**
+ * Push command directly using collector or translation based on type
+ */
+function pushCommand(collector: Collector.Instance, item: unknown): void {
   tryCatch(
     () => {
-      if (isArrayLike(command)) {
-        // Handle array-like commands: [action, data, options, context]
-        const args = Array.from(command as ArrayLike<unknown>);
+      if (Array.isArray(item)) {
+        const [action, ...rest] = item;
 
-        if (args.length >= 1) {
-          const [action, data, options, context] = args;
-
-          if (typeof action === 'string' && action.length > 0) {
-            // Use translation layer to convert to core collector format
-            translateToCoreCollector(
-              collector,
-              action,
-              data as BrowserPushData,
-              options as BrowserPushOptions,
-              context as BrowserPushContext,
-            );
-          }
-        }
-      } else if (typeof command === 'object' && command !== null) {
-        // Skip empty objects unless they have properties
-        if (Object.keys(command).length === 0) {
+        // Skip empty or invalid actions
+        if (!action || (isString(action) && action.trim() === '')) {
           return;
         }
-        // Handle object commands directly through translation
-        translateToCoreCollector(collector, command);
+
+        // Walker commands go directly to collector
+        if (isString(action) && action.startsWith('walker ')) {
+          collector.push(action, rest[0]);
+          return;
+        }
+
+        // Regular events go through translation
+        translateToCoreCollector(collector, action, ...rest);
+      } else if (item && typeof item === 'object') {
+        // Skip empty objects
+        if (Object.keys(item).length === 0) {
+          return;
+        }
+        // Object events go directly to collector
+        collector.push(item as WalkerOS.DeepPartialEvent);
       }
     },
     () => {
@@ -117,14 +171,14 @@ function processCommand(collector: Collector.Instance, command: unknown): void {
 }
 
 /**
- * Check if a command is a walker command (starts with 'walker ')
+ * Check if value is arguments object
  */
-function isWalkerCommand(command: unknown): boolean {
-  if (isArrayLike(command)) {
-    const args = Array.from(command as ArrayLike<unknown>);
-    return typeof args[0] === 'string' && args[0].startsWith('walker ');
-  }
-  return false;
+function isArguments(value: unknown): value is IArguments {
+  return (
+    value != null &&
+    typeof value === 'object' &&
+    Object.prototype.toString.call(value) === '[object Arguments]'
+  );
 }
 
 /**

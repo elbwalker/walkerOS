@@ -94,23 +94,20 @@ describe('ELB Layer', () => {
 
       initElbLayer(collector);
 
-      expect(mockPush).toHaveBeenCalledTimes(4);
+      expect(mockPush).toHaveBeenCalledTimes(3);
 
-      // Walker commands should be processed first
-      expect(mockPush).toHaveBeenNthCalledWith(1, 'walker run', {
-        consent: { marketing: true },
-      });
-      expect(mockPush).toHaveBeenNthCalledWith(2, 'walker user', {
+      // Walker commands should be processed first (first walker run is skipped)
+      expect(mockPush).toHaveBeenNthCalledWith(1, 'walker user', {
         id: 'user123',
       });
 
       // Then regular events
       expect(mockPush).toHaveBeenNthCalledWith(
-        3,
+        2,
         expect.objectContaining({ event: 'product' }),
       );
       expect(mockPush).toHaveBeenNthCalledWith(
-        4,
+        3,
         expect.objectContaining({ event: 'page' }),
       );
     });
@@ -196,7 +193,7 @@ describe('ELB Layer', () => {
 
       await createBrowserSource(collector, { pageview: false });
 
-      expect(mockPush).toHaveBeenCalledTimes(2);
+      expect(mockPush).toHaveBeenCalledTimes(1); // walker run is skipped on first initialization
       expect(window.elbLayer).toHaveLength(0);
     });
   });
@@ -260,6 +257,91 @@ describe('ELB Layer', () => {
       expect(() => {
         initElbLayer(collector);
       }).not.toThrow();
+    });
+  });
+
+  describe('Arguments Object Support', () => {
+    test('processes IArguments objects correctly', () => {
+      function testElb(...args: unknown[]) {
+        (window.elbLayer = window.elbLayer || []).push(arguments);
+      }
+
+      testElb('test_event', { key: 'value' }, 'load');
+
+      initElbLayer(collector);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'test_event',
+          data: { key: 'value' },
+          trigger: 'load',
+        }),
+      );
+    });
+
+    test('enhanced elbLayer.push processes arguments immediately', () => {
+      initElbLayer(collector);
+
+      function testElb(...args: unknown[]) {
+        window.elbLayer.push(arguments);
+      }
+
+      testElb('immediate_event', { test: true });
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'immediate_event',
+          data: { test: true },
+        }),
+      );
+    });
+  });
+
+  describe('Element Data Resolution', () => {
+    test('extracts data from elements', () => {
+      document.body.innerHTML = `
+        <div data-elb="product" data-elb-product="id:123;name:Test Product">
+          <button>Buy Now</button>
+        </div>
+      `;
+
+      const element = document.querySelector(
+        'div[data-elb="product"]',
+      ) as Element;
+
+      window.elbLayer = [['product', element]];
+
+      initElbLayer(collector);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'product',
+          data: expect.objectContaining({
+            id: 123, // Values are cast by castValue utility
+            name: 'Test Product',
+          }),
+        }),
+      );
+    });
+
+    test('page events get pathname id', () => {
+      Object.defineProperty(window, 'location', {
+        value: { pathname: '/test-page' },
+        writable: true,
+      });
+
+      window.elbLayer = [['page', 'view']];
+
+      initElbLayer(collector);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'page',
+          data: expect.objectContaining({
+            id: '/test-page',
+          }),
+        }),
+      );
     });
   });
 

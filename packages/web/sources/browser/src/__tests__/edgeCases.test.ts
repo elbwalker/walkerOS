@@ -156,7 +156,8 @@ describe('Browser Source Edge Cases', () => {
         }),
       );
 
-      expect(mockPush).toHaveBeenCalledWith('walker run', {
+      // walker run is skipped on first initialization
+      expect(mockPush).not.toHaveBeenCalledWith('walker run', {
         consent: { marketing: true },
       });
 
