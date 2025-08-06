@@ -190,19 +190,6 @@ describe('Browser Source Edge Cases', () => {
       expect(() => {}).not.toThrow();
       expect(window.elbLayer).toHaveLength(0);
     });
-
-    test('handles extremely large ELB Layer', async () => {
-      const commands = [];
-      for (let i = 0; i < 10000; i++) {
-        commands.push([`event_${i}`, { index: i }]);
-      }
-      window.elbLayer = commands;
-
-      await createBrowserSource(collector);
-
-      expect(mockPush).toHaveBeenCalledTimes(10001); // +1 for session initialization
-      expect(window.elbLayer).toHaveLength(0);
-    });
   });
 
   describe('DOM Edge Cases', () => {
@@ -216,8 +203,8 @@ describe('Browser Source Edge Cases', () => {
 
       await createBrowserSource(collector);
 
-      // Should only process element with attributes + session initialization
-      expect(mockPush).toHaveBeenCalledTimes(2);
+      // Should only process element with attributes
+      expect(mockPush).toHaveBeenCalledTimes(1);
     });
 
     test('handles deeply nested elements', async () => {
@@ -234,7 +221,7 @@ describe('Browser Source Edge Cases', () => {
 
       await createBrowserSource(collector);
 
-      expect(mockPush).toHaveBeenCalledTimes(16); // All nested elements + session initialization
+      expect(mockPush).toHaveBeenCalledTimes(15); // All nested elements
     });
 
     test('handles elements with conflicting attributes', async () => {

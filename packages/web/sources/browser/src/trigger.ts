@@ -71,21 +71,11 @@ export function load(
   collector: Collector.Instance,
   settings: Required<Settings>,
 ) {
-  const { prefix, scope, pageview } = settings;
+  const { prefix, scope } = settings;
 
-  // Trigger static page view if enabled
-  if (pageview) {
-    const [data, context] = getPageViewData(prefix, scope as Scope);
-    translateToCoreCollector(
-      collector,
-      'page view',
-      data,
-      Triggers.Load,
-      context,
-    );
-  }
-
+  // Initialize DOM triggers and scope-based event handling
   initScopeTrigger(collector, prefix, scope as Scope);
+  initGlobalTrigger(collector, scope as Scope);
 }
 
 export function initGlobalTrigger(

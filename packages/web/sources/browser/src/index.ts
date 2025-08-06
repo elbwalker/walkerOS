@@ -1,5 +1,5 @@
-import type { Collector, WalkerOS, Source } from '@walkeros/core';
-import type { BrowserSourceConfig, Scope } from './types';
+import type { Collector, WalkerOS, Source, On } from '@walkeros/core';
+import type { BrowserSourceConfig, Scope, Settings } from './types';
 import type {
   BrowserPushData,
   BrowserPushOptions,
@@ -7,11 +7,12 @@ import type {
   BrowserPush,
 } from './types/elb';
 import { isString } from '@walkeros/core';
-import { load, ready, initGlobalTrigger } from './trigger';
+import { load, ready, Triggers } from './trigger';
 import { destroyVisibilityTracking } from './triggerVisible';
 import { initElbLayer } from './elbLayer';
 import { translateToCoreCollector } from './translation';
 import { sessionStart } from './session';
+import { getPageViewData } from './walker';
 import { getConfig } from './config';
 
 export * as SourceBrowser from './types';
@@ -58,9 +59,6 @@ export const sourceBrowser: Source.Init<
     });
   }
 
-  // Initialize global event listeners (click, submit)
-  initGlobalTrigger(collector, scope);
-
   // Initialize session if enabled
   if (fullConfig.settings.session) {
     const sessionConfig =
@@ -72,6 +70,24 @@ export const sourceBrowser: Source.Init<
 
   // Setup auto-initialization via ready state
   await ready(load, collector, fullConfig.settings);
+
+  // Register on.run callback to trigger pageview on walker run command
+  if (fullConfig.settings.pageview) {
+    const runCallback: On.RunFn = (collectorInstance) => {
+      const [data, context] = getPageViewData(
+        fullConfig.settings.prefix || 'data-elb',
+        fullConfig.settings.scope as Scope,
+      );
+      translateToCoreCollector(
+        collectorInstance,
+        'page view',
+        data,
+        Triggers.Load,
+        context,
+      );
+    };
+    await collector.push('walker on', 'run', runCallback);
+  }
 
   // Setup cleanup for visibility tracking on collector destroy
   const originalDestroy = (

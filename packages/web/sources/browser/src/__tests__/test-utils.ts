@@ -17,7 +17,7 @@ export async function createBrowserSource(
     settings: {
       prefix: 'data-elb',
       scope: document,
-      pageview: true,
+      pageview: false, // Disabled by default in tests to avoid extra walker on calls
       session: false, // Disabled by default in tests to avoid extra events
       elb: 'elb',
       elbLayer: 'elbLayer',

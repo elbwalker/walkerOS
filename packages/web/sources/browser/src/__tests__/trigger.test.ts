@@ -104,7 +104,7 @@ describe('Trigger System', () => {
     expect(mockAddEventListener).toHaveBeenCalledTimes(2);
   });
 
-  test('load triggers page view when enabled', () => {
+  test('load initializes DOM triggers without pageview', () => {
     document.body.innerHTML =
       '<div data-elb="page" data-elb-page="title:Home"></div>';
 
@@ -117,14 +117,16 @@ describe('Trigger System', () => {
       elbLayer: 'elbLayer',
     });
 
-    // Should have triggered page view
-    expect(mockCollector.push).toHaveBeenCalledWith(
+    // Should NOT trigger page view (pageview now only fires on walker run)
+    expect(mockCollector.push).not.toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'page view',
-        data: expect.any(Object),
-        context: expect.any(Object),
       }),
     );
+
+    // Should initialize DOM triggers (we can verify by checking event listeners were added)
+    // The actual DOM trigger testing is done in other tests
+    expect(mockCollector.push).not.toHaveBeenCalled(); // No immediate events
   });
 
   test('initScopeTrigger processes action elements', () => {

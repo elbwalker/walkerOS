@@ -1,7 +1,7 @@
 import { createCollector } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
 import { initElbLayer } from '../elbLayer';
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { WalkerOS, Collector, On } from '@walkeros/core';
 
 describe('ELB Layer', () => {
   let collectedEvents: WalkerOS.Event[];
@@ -340,6 +340,50 @@ describe('ELB Layer', () => {
           data: expect.objectContaining({
             id: '/test-page',
           }),
+        }),
+      );
+    });
+
+    test('walker on command registers pageview callback when pageview enabled', async () => {
+      // Set up location mock
+      Object.defineProperty(window, 'location', {
+        value: { pathname: '/walker-run-test' },
+        writable: true,
+      });
+
+      // Initialize source with pageview enabled
+      await createBrowserSource(collector, { pageview: true });
+
+      // Check that walker on command was called to register the callback
+      expect(mockPush).toHaveBeenCalledWith(
+        'walker on',
+        'run',
+        expect.any(Function),
+      );
+
+      // Get the registered callback from the mock call
+      const walkerOnCall: any[] | undefined = mockPush.mock.calls.find(
+        (call: any) => call[0] === 'walker on' && call[1] === 'run',
+      );
+      expect(walkerOnCall).toBeDefined();
+
+      const runCallback = walkerOnCall![2] as On.RunFn;
+
+      // Clear mock to test callback behavior
+      mockPush.mockClear();
+
+      // Test the callback directly
+      runCallback(collector);
+
+      // Should have triggered a pageview
+      expect(mockPush).toHaveBeenCalledTimes(1);
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'page view',
+          data: expect.objectContaining({
+            id: '/walker-run-test',
+          }),
+          trigger: 'load',
         }),
       );
     });
