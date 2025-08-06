@@ -1,4 +1,5 @@
 import { getProductById } from '../data/products';
+import { tagger } from '../walker';
 
 function CheckoutCart() {
   const cartItems = [
@@ -12,7 +13,7 @@ function CheckoutCart() {
       const product = getProductById(item.productId);
       return product ? { ...product, quantity: item.quantity } : null;
     })
-    .filter(Boolean);
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   const subtotal = cartItemsWithDetails.reduce(
     (sum, item) => sum + (item?.price || 0) * (item?.quantity || 0),
@@ -20,13 +21,26 @@ function CheckoutCart() {
   );
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div
+      {...tagger().entity('cart').action('load', 'view').get()}
+      className="bg-white rounded-lg shadow p-6"
+    >
       <h2 className="text-xl font-semibold mb-4">Shopping Cart</h2>
 
       <div className="space-y-4">
         {cartItemsWithDetails.map((item) => (
           <div
             key={item.id}
+            {...tagger()
+              .entity('product')
+              .data({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                category: item.category,
+              })
+              .get()}
             className="flex justify-between items-center pb-4 border-b"
           >
             <div>

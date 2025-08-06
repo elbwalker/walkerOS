@@ -1,4 +1,5 @@
 import { getProductById } from '../data/products';
+import { tagger } from '../walker';
 
 interface ProductDetailProps {
   productId: string;
@@ -18,7 +19,14 @@ function ProductDetail({ productId }: ProductDetailProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-8">
+    <div
+      {...tagger()
+        .entity('product')
+        .action('load', 'view')
+        .data('productId', productId)
+        .get()}
+      className="bg-white rounded-lg shadow p-8"
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <div className="bg-gray-200 h-96 rounded-lg flex items-center justify-center">
@@ -27,22 +35,41 @@ function ProductDetail({ productId }: ProductDetailProps) {
         </div>
 
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1
+            {...tagger('product').data('name', product.name).get()}
+            className="text-3xl font-bold text-gray-900 mb-2"
+          >
             {product.name}
           </h1>
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-yellow-500">
+            <span
+              {...tagger('product').data('rating', product.rating).get()}
+              className="text-yellow-500"
+            >
               {'★'.repeat(Math.floor(product.rating))}
             </span>
             <span className="text-sm text-gray-500">
               ({product.rating} stars)
             </span>
-            <span className="text-sm text-gray-400">| {product.category}</span>
+            <span
+              {...tagger('product').data('category', product.category).get()}
+              className="text-sm text-gray-400"
+            >
+              | {product.category}
+            </span>
           </div>
           <div className="flex items-center gap-3 mb-6">
-            <p className="text-3xl font-bold text-blue-600">€{product.price}</p>
+            <p
+              {...tagger('product').data('price', product.price).get()}
+              className="text-3xl font-bold text-blue-600"
+            >
+              €{product.price}
+            </p>
             {product.priceOld && (
-              <p className="text-xl text-gray-400 line-through">
+              <p
+                {...tagger('product').data('priceOld', product.priceOld).get()}
+                className="text-xl text-gray-400 line-through"
+              >
                 €{product.priceOld}
               </p>
             )}
@@ -62,10 +89,16 @@ function ProductDetail({ productId }: ProductDetailProps) {
           </div>
 
           <div className="space-y-4">
-            <button className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              {...tagger().action('click', 'add').get()}
+              className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Add to Cart
             </button>
-            <button className="w-full bg-gray-200 text-gray-800 py-3 px-6 rounded-lg hover:bg-gray-300 transition-colors">
+            <button
+              {...tagger().action('click', 'save').get()}
+              className="w-full bg-gray-200 text-gray-800 py-3 px-6 rounded-lg hover:bg-gray-300 transition-colors"
+            >
               Add to Wishlist
             </button>
           </div>

@@ -89,16 +89,14 @@ function ProductList({
     }
   };
 
-  const handleProductClick = (product: Product) => {};
-
   return (
-    <section
-      className="bg-white rounded-lg shadow p-8"
-      {...tagger('product_list')}
-      data-elb-product-list-name={title}
-      data-elb-current-product-id={currentProductId}
-    >
-      <h2 className="text-2xl font-semibold mb-6">{title}</h2>
+    <section className="bg-white rounded-lg shadow p-8">
+      <h2
+        {...tagger().context('list', title).get()}
+        className="text-2xl font-semibold mb-6"
+      >
+        {title}
+      </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {products.map((product, index) => (
@@ -106,13 +104,20 @@ function ProductList({
             key={product.id}
             to={`/product/${product.id}`}
             className="block border rounded-lg p-4 hover:shadow-md transition-shadow"
-            onClick={() => handleProductClick(product)}
-            {...tagger('product')}
-            data-elb-product-id={product.id}
-            data-elb-product-name={product.name}
-            data-elb-product-price={product.price}
-            data-elb-product-category={product.category}
-            data-elb-product-position={index + 1}
+            {...tagger()
+              .entity('product')
+              .action('click')
+              .action('visible')
+              .data({
+                id: product.id,
+                name: product.name,
+                rating: product.rating,
+                price: product.price,
+                priceOld: product.priceOld,
+                category: product.category,
+              })
+              .context('position', index + 1)
+              .get()}
           >
             <div className="bg-gray-100 h-32 rounded mb-3 flex items-center justify-center">
               <span className="text-gray-400 text-sm">Product Image</span>
@@ -152,9 +157,6 @@ function ProductList({
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
-              {...tagger('load_more_button')}
-              data-elb-products-loaded={products.length}
-              data-elb-list-name={title}
             >
               {loading ? (
                 <span className="flex items-center gap-2">

@@ -1,4 +1,5 @@
 import { getProductById } from '../data/products';
+import { tagger } from '../walker';
 
 interface OrderProps {
   orderId: string;
@@ -16,7 +17,7 @@ function Order({ orderId }: OrderProps) {
       const product = getProductById(item.productId);
       return product ? { ...product, quantity: item.quantity } : null;
     })
-    .filter(Boolean);
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   const orderDetails = {
     id: orderId,
@@ -25,16 +26,21 @@ function Order({ orderId }: OrderProps) {
     status: 'Confirmed',
     items: orderItems,
     shipping: {
-      name: 'John Smith',
-      address: '123 Main Street',
-      city: 'Amsterdam',
-      state: 'North Holland',
-      zip: '1012 AB',
+      name: 'Olli Walker',
+      address: 'Gerhofstraße 1-3',
+      city: 'Hamburg',
+      zip: '20354',
     },
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-8">
+    <div
+      {...tagger('order')
+        .action('load', 'complete')
+        .data('orderId', orderId)
+        .get()}
+      className="bg-white rounded-lg shadow p-8"
+    >
       <div className="text-center mb-8">
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg
@@ -77,7 +83,12 @@ function Order({ orderId }: OrderProps) {
           </div>
           <div>
             <p className="text-gray-600">Total</p>
-            <p className="font-semibold">€{orderDetails.total.toFixed(2)}</p>
+            <p
+              {...tagger('order').data('total', orderDetails.total).get()}
+              className="font-semibold"
+            >
+              €{orderDetails.total.toFixed(2)}
+            </p>
           </div>
         </div>
       </div>
@@ -86,7 +97,15 @@ function Order({ orderId }: OrderProps) {
         <h3 className="font-semibold mb-3">Order Items</h3>
         <div className="space-y-3">
           {orderDetails.items.map((item) => (
-            <div key={item.id} className="flex justify-between text-sm">
+            <div
+              {...tagger('product')
+                .data('name', item.name)
+                .data('price', item.price)
+                .data('quantity', item.quantity)
+                .get()}
+              key={item.id}
+              className="flex justify-between text-sm"
+            >
               <span>
                 {item.name} x {item.quantity}
               </span>
@@ -104,8 +123,7 @@ function Order({ orderId }: OrderProps) {
           <p>{orderDetails.shipping.name}</p>
           <p>{orderDetails.shipping.address}</p>
           <p>
-            {orderDetails.shipping.city}, {orderDetails.shipping.state}{' '}
-            {orderDetails.shipping.zip}
+            {orderDetails.shipping.zip} {orderDetails.shipping.city}
           </p>
         </div>
       </div>

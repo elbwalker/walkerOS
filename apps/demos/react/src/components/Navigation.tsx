@@ -36,7 +36,6 @@ function Navigation() {
             </Link>
             <Link
               to="/product/1"
-              data-elbglobals="page:product"
               className={`inline-flex items-center px-1 pt-1 text-sm font-medium ${
                 location.pathname.startsWith('/product')
                   ? 'text-blue-600 border-b-2 border-blue-500'

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { tagger } from '../walker';
 
 function CheckoutSummary() {
   const orderSummary = {
