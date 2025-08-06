@@ -1,15 +1,6 @@
 import type { WalkerOS } from '@walkeros/core';
-import type {
-  Scope,
-  WalkerEvent,
-  Events,
-  Filter,
-  TriggerAction,
-  TriggerActions,
-  TriggersActionGroups,
-  Attributes,
-  KeyVal,
-} from './types';
+import type { Walker } from '@walkeros/web-core';
+import type { Scope } from './types';
 import { assign, castValue, isArray, trim } from '@walkeros/core';
 import { Const } from '@walkeros/collector';
 import { getAttribute } from '@walkeros/web-core';
@@ -35,7 +26,7 @@ export function getElbValues(
     getAttribute(element, getElbAttributeName(prefix, name, isProperty)) || '';
 
   const elbValues = splitAttribute(attributeValue).reduce((values, str) => {
-    let [key, val] = splitKeyVal(str);
+    let [key, val]: Walker.KeyVal = splitKeyVal(str);
 
     if (!key) return values;
 
@@ -82,8 +73,8 @@ export function getElbValues(
 export function getAllEvents(
   scope: Scope = document.body,
   prefix: string = Const.Commands.Prefix,
-): Events {
-  let events: Events = [];
+): Walker.Events {
+  let events: Walker.Events = [];
   const action = Const.Commands.Action;
   const actionSelector = `[${getElbAttributeName(prefix, action, false)}]`;
 
@@ -109,8 +100,8 @@ export function getEvents(
   target: Element,
   trigger: string,
   prefix: string = Const.Commands.Prefix,
-): Events {
-  const events: Events = [];
+): Walker.Events {
+  const events: Walker.Events = [];
 
   // Check for an action (data-elbaction) attribute and resolve it
   const actions = resolveAttributes(prefix, target, trigger);
@@ -124,7 +115,7 @@ export function getEvents(
         filter[trim(param)] = true;
         return filter;
       },
-      {} as Filter,
+      {} as Walker.Filter,
     );
 
     // Get the entities with their properties
@@ -215,8 +206,8 @@ export function getPageViewData(
   return [data, context];
 }
 
-export function getTriggerActions(str: string): TriggersActionGroups {
-  const values: TriggersActionGroups = {};
+export function getTriggerActions(str: string): Walker.TriggersActionGroups {
+  const values: Walker.TriggersActionGroups = {};
 
   const attributes = splitAttribute(str);
 
@@ -242,7 +233,7 @@ export function getTriggerActions(str: string): TriggersActionGroups {
 export function getEntities(
   prefix: string,
   target: Element,
-  filter?: Filter,
+  filter?: Walker.Filter,
 ): WalkerOS.Entities {
   const entities: WalkerOS.Entities = [];
   let element = target as Node['parentElement'];
@@ -264,7 +255,7 @@ function getEntity(
   prefix: string,
   element: Element,
   origin?: Element,
-  filter?: Filter,
+  filter?: Walker.Filter,
 ): WalkerOS.Entity | null {
   const type = getAttribute(element, getElbAttributeName(prefix));
 
@@ -289,7 +280,9 @@ function getEntity(
 
   // Add linked elements (data-elblink)
   queryAll(element, `[${linkName}]`, (link) => {
-    const [linkId, linkState] = splitKeyVal(getAttribute(link, linkName));
+    const [linkId, linkState]: Walker.KeyVal = splitKeyVal(
+      getAttribute(link, linkName),
+    );
 
     // Get all linked child elements if link is a parent
     // Note: This searches the entire document - for scoped operation, we would need
@@ -344,7 +337,9 @@ function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
 
   // Link
   if (elem.matches(`[${linkName}]`)) {
-    const [linkId, linkState] = splitKeyVal(getAttribute(elem, linkName));
+    const [linkId, linkState]: Walker.KeyVal = splitKeyVal(
+      getAttribute(elem, linkName),
+    );
     if (linkState === 'child') {
       // If current element is a child-link jump to the parent
       // Note: This searches the entire document - for scoped operation, we would need
@@ -422,7 +417,7 @@ function resolveAttributes(
   prefix: string,
   target: Element,
   trigger: string,
-): TriggerActions {
+): Walker.TriggerActions {
   let element = target as Node['parentElement'];
 
   while (element) {
@@ -445,8 +440,8 @@ function resolveAttributes(
   return [];
 }
 
-function splitAttribute(str: string, separator = ';'): Attributes {
-  const values: Attributes = [];
+function splitAttribute(str: string, separator = ';'): Walker.Attributes {
+  const values: Walker.Attributes = [];
 
   if (!str) return values;
 
@@ -454,12 +449,12 @@ function splitAttribute(str: string, separator = ';'): Attributes {
   return str.match(reg) || [];
 }
 
-function splitKeyVal(str: string): KeyVal {
+function splitKeyVal(str: string): Walker.KeyVal {
   const [key, value] = str.split(/:(.+)/, 2);
   return [trim(key), trim(value)];
 }
 
-function parseAttribute(str: string): KeyVal {
+function parseAttribute(str: string): Walker.KeyVal {
   // action(a, b, c)
   const [key, value] = str.split('(', 2);
   const param = value ? value.slice(0, -1) : ''; // Remove the )

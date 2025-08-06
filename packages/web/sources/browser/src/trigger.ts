@@ -1,13 +1,6 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
-import type {
-  Trigger,
-  Scope,
-  WalkerEvent,
-  Events,
-  ScrollElements,
-  TriggerAction,
-  Settings,
-} from './types';
+import type { Walker } from '@walkeros/web-core';
+import type { Scope, Settings } from './types';
 import { throttle, tryCatch } from '@walkeros/core';
 import { Const, onApply } from '@walkeros/collector';
 import { elb as elbOrg, getAttribute } from '@walkeros/web-core';
@@ -24,7 +17,7 @@ import {
 } from './triggerVisible';
 import { translateToCoreCollector } from './translation';
 
-let scrollElements: ScrollElements = [];
+let scrollElements: Walker.ScrollElements = [];
 let scrollListener: EventListenerOrEventListenerObject | undefined;
 
 // Reset function for testing
@@ -43,7 +36,7 @@ export const createElb: (customLayer?: unknown) => unknown = (customLayer?) => {
   ) as unknown;
 };
 
-export const Triggers: { [key: string]: Trigger } = {
+export const Triggers: { [key: string]: Walker.Trigger } = {
   Click: 'click',
   Custom: 'custom',
   Hover: 'hover',
@@ -159,7 +152,7 @@ export async function handleTrigger(
 ): Promise<unknown[]> {
   const events = getEvents(element, trigger, prefix);
   return Promise.all(
-    events.map((event: WalkerEvent) =>
+    events.map((event: Walker.Event) =>
       translateToCoreCollector(collector, {
         event: `${event.entity} ${event.action}`,
         ...event,
@@ -182,7 +175,7 @@ function handleActionElem(
   // TriggersActionGroups ([trigger: string]: TriggerActions)
   Object.values(getTriggerActions(actionAttr)).forEach((triggerActions) =>
     // TriggerActions (Array<TriggerAction>)
-    triggerActions.forEach((triggerAction) => {
+    triggerActions.forEach((triggerAction: Walker.TriggerActions[0]) => {
       // TriggerAction ({ trigger, triggerParams, action, actionParams })
       switch (triggerAction.trigger) {
         case Triggers.Hover:
@@ -285,14 +278,14 @@ function triggerWait(
 
 function scroll(collector: Collector.Instance, scope: Scope) {
   const scrolling = (
-    scrollElements: ScrollElements,
+    scrollElements: Walker.ScrollElements,
     collector: Collector.Instance,
   ) => {
-    return scrollElements.filter(([element, depth]) => {
+    return scrollElements.filter(([element, depth]: [Element, number]) => {
       // Distance from top to the bottom of the visible screen
       const windowBottom = window.scrollY + window.innerHeight;
       // Distance from top to the elements relevant content
-      const elemTop = element.offsetTop;
+      const elemTop = (element as HTMLElement).offsetTop;
 
       // Skip calculations if not in viewport yet
       if (windowBottom < elemTop) return true;

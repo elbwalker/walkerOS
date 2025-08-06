@@ -114,7 +114,6 @@ describe('Trigger System', () => {
       pageview: true,
       session: true,
       elb: 'elb',
-      name: 'walkerjs',
       elbLayer: 'elbLayer',
     });
 

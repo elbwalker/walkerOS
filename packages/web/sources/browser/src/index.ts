@@ -31,13 +31,12 @@ export const sourceBrowser: Source.Init<
   BrowserPush
 > = async (collector: Collector.Instance, config: BrowserSourceConfig) => {
   // Get full configuration with defaults
-  const settings = getConfig(config.settings);
   const fullConfig: BrowserSourceConfig = {
     ...config,
-    settings,
+    settings: getConfig(config.settings),
   };
 
-  const scope = settings.scope as Scope;
+  const scope = fullConfig.settings.scope as Scope;
 
   // Create the source instance
   const source: Source.Instance<BrowserSourceConfig> = {
@@ -52,9 +51,11 @@ export const sourceBrowser: Source.Init<
   };
 
   // Initialize ELB Layer for async command handling
-  if (settings.elbLayer !== false) {
+  if (fullConfig.settings.elbLayer !== false) {
     initElbLayer(collector, {
-      name: isString(settings.elbLayer) ? settings.elbLayer : 'elbLayer',
+      name: isString(fullConfig.settings.elbLayer)
+        ? fullConfig.settings.elbLayer
+        : 'elbLayer',
     });
   }
 
@@ -62,14 +63,16 @@ export const sourceBrowser: Source.Init<
   initGlobalTrigger(collector, scope);
 
   // Initialize session if enabled
-  if (settings.session) {
+  if (fullConfig.settings.session) {
     const sessionConfig =
-      typeof settings.session === 'boolean' ? {} : settings.session;
+      typeof fullConfig.settings.session === 'boolean'
+        ? {}
+        : fullConfig.settings.session;
     sessionStart(collector, { config: sessionConfig });
   }
 
   // Setup auto-initialization via ready state
-  await ready(load, collector, settings);
+  await ready(load, collector, fullConfig.settings);
 
   // Setup cleanup for visibility tracking on collector destroy
   const originalDestroy = (
@@ -95,6 +98,9 @@ export const sourceBrowser: Source.Init<
       custom as WalkerOS.Properties,
     );
   }) as BrowserPush;
+
+  // Automatically assign elb function to window using settings.elb property
+  if (isString(fullConfig.settings.elb)) window[fullConfig.settings.elb] = elb;
 
   return { source, elb };
 };

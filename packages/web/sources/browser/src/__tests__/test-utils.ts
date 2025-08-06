@@ -20,7 +20,6 @@ export async function createBrowserSource(
       pageview: true,
       session: false, // Disabled by default in tests to avoid extra events
       elb: 'elb',
-      name: 'walkerjs',
       elbLayer: 'elbLayer',
       ...settings,
     },

@@ -8,17 +8,13 @@ import type { Settings } from './types';
 export function getConfig(
   settings: Partial<Settings> = {},
 ): Required<Settings> {
-  // Ensure scope is valid, default to document if null/undefined
-  const validScope = settings.scope || document;
-
   return {
     prefix: 'data-elb',
     pageview: true,
     session: true,
     elb: 'elb',
-    name: 'walkerjs',
     elbLayer: 'elbLayer',
+    scope: document,
     ...settings,
-    scope: validScope, // Override to ensure valid scope
   };
 }

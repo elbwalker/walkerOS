@@ -1,10 +1,5 @@
-import type { Mapping as WalkerOSMapping, Source } from '@walkeros/core';
-import type {
-  Walker,
-  Elb,
-  SessionConfig,
-  SessionCallback,
-} from '@walkeros/web-core';
+import type { Source } from '@walkeros/core';
+import type { Elb, SessionConfig, SessionCallback } from '@walkeros/web-core';
 
 // Export browser-specific elb types
 export * from './elb';
@@ -15,18 +10,12 @@ export interface BrowserSourceConfig extends Source.Config {
   settings: Settings;
 }
 
-export interface Config {
-  settings: Settings;
-  mapping?: Mapping;
-}
-
 export interface Settings extends Record<string, unknown> {
   prefix?: string;
   scope?: Element | Document;
   pageview?: boolean;
   session?: boolean | SessionConfig;
   elb?: string;
-  name?: string;
   elbLayer?: boolean | string | Elb.Layer;
 }
 
@@ -44,31 +33,6 @@ declare global {
     [key: string]: Elb.Layer | unknown;
   }
 }
-
-// Source-to-collector mapping rules
-export interface Mapping {
-  // Transform source events to collector format
-}
-
-export type Rule = WalkerOSMapping.Rule<Mapping>;
-export type Rules = WalkerOSMapping.Rules<Rule>;
-
-// Re-export Walker types for backward compatibility
-export type Trigger = Walker.Trigger;
-export type WalkerEvent = Walker.Event;
-export type Events = Walker.Events;
-export type Filter = Walker.Filter;
-export interface TriggerAction {
-  trigger: string;
-  triggerParams?: string;
-  action: string;
-  actionParams?: string;
-}
-export type TriggerActions = Walker.TriggerActions;
-export type TriggersActionGroups = Walker.TriggersActionGroups;
-export type ScrollElements = Walker.ScrollElements;
-export type Attributes = Walker.Attributes;
-export type KeyVal = Walker.KeyVal;
 
 // Scope type for DOM operations
 export type Scope = Document | Element;
