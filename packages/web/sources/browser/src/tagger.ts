@@ -33,7 +33,8 @@ export function createTagger(
 
   return function (entity?: string): TaggerInstance {
     // Internal state
-    let currentEntity: string | undefined = entity;
+    let currentEntity: string | undefined = undefined; // Only set via .entity() method
+    let namingEntity: string | undefined = entity; // Used for data attribute naming
     const dataProperties: Record<string, WalkerOS.Properties> = {};
     const actionProperties: Record<string, string> = {};
     const contextProperties: WalkerOS.Properties = {};
@@ -65,6 +66,7 @@ export function createTagger(
     const instance: TaggerInstance = {
       entity(name: string): TaggerInstance {
         currentEntity = name;
+        namingEntity = name; // Always update naming scope when entity is set
         return instance;
       },
 
@@ -72,7 +74,7 @@ export function createTagger(
         keyOrData: string | WalkerOS.Properties,
         value?: WalkerOS.Property,
       ): TaggerInstance {
-        const entityKey = currentEntity ?? '';
+        const entityKey = namingEntity ?? '';
 
         if (!dataProperties[entityKey]) {
           dataProperties[entityKey] = {};

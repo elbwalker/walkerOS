@@ -77,12 +77,30 @@ const customTagger = createTagger({
 
 ## Usage Examples
 
-### Basic Entity Tagging
+### Basic Data Tagging (Without Entity)
 
 ```typescript
 const tagger = createTagger();
 
+// Using tagger with a scope parameter sets naming for data attributes only
 const attributes = tagger('product')
+  .data('id', '123')
+  .data('name', 'Widget')
+  .get();
+
+// Result:
+// {
+//   'data-elb-product': 'id:123;name:Widget'
+// }
+// Note: No 'data-elb' entity attribute is created
+```
+
+### Entity Tagging
+
+```typescript
+// To create an entity attribute, use the .entity() method
+const attributes = tagger()
+  .entity('product')
   .data('id', '123')
   .data('name', 'Widget')
   .get();
@@ -129,9 +147,10 @@ const attributes = tagger('product')
 ### Multiple Entity Scopes
 
 ```typescript
+// Starting with a naming scope
 const attributes = tagger('product')
   .data('id', 123)
-  .entity('user')
+  .entity('user')  // Changes both entity attribute and naming scope
   .data('name', 'John')
   .get();
 
@@ -140,6 +159,25 @@ const attributes = tagger('product')
 //   'data-elb': 'user',
 //   'data-elb-product': 'id:123',
 //   'data-elb-user': 'name:John'
+// }
+```
+
+### Order Matters
+
+```typescript
+// Data before entity uses original scope
+const attributes = tagger('product')
+  .data('id', 123)
+  .data('price', 99.99)
+  .entity('cart')  // Changes scope for future data calls
+  .data('quantity', 2)
+  .get();
+
+// Result:
+// {
+//   'data-elb': 'cart',
+//   'data-elb-product': 'id:123;price:99.99',
+//   'data-elb-cart': 'quantity:2'
 // }
 ```
 
@@ -158,25 +196,45 @@ const attributes = tagger()
 
 ## Available Methods (API Reference)
 
+##### `tagger(scope?: string)`
+
+Creates a new tagger instance. The optional scope parameter sets the naming scope for data attributes without creating an entity attribute.
+
+```typescript
+// Without scope - generic data attributes
+tagger().data('key', 'value');
+// Creates: data-elb-="key:value"
+
+// With scope - scoped data attributes (no entity attribute)
+tagger('product').data('id', '123');
+// Creates: data-elb-product="id:123"
+```
+
 ##### `entity(name: string)`
 
-Sets the current entity scope for subsequent data calls.
+Sets the entity attribute and updates the naming scope for subsequent data calls.
 
 ```typescript
 tagger().entity('product').data('id', '123');
 // Creates: data-elb="product" data-elb-product="id:123"
+
+// Entity changes the naming scope
+tagger('foo').entity('bar').data('a', 1);
+// Creates: data-elb="bar" data-elb-bar="a:1"
 ```
 
 ##### `data(key: string, value: Property)` | `data(object: Properties)`
 
-Adds data properties to the current entity scope.
+Adds data properties using the current naming scope.
 
 ```typescript
 // Single property
 tagger('product').data('id', 123);
+// Creates: data-elb-product="id:123"
 
 // Multiple properties
 tagger('product').data({ id: 123, name: 'Widget', price: 99.99 });
+// Creates: data-elb-product="id:123;name:Widget;price:99.99"
 ```
 
 ##### `action(trigger: string, action?: string)` | `action(object: Record<string, string>)`
@@ -235,9 +293,79 @@ tagger().link({ details: 'parent', modal: 'child', sidebar: 'child' });
 Generates the final HTML attributes object.
 
 ```typescript
+// With naming scope only
 const attributes = tagger('product').data('id', '123').get();
+// Returns: { 'data-elb-product': 'id:123' }
+
+// With entity attribute
+const attributes = tagger().entity('product').data('id', '123').get();
 // Returns: { 'data-elb': 'product', 'data-elb-product': 'id:123' }
 ```
 
 All methods return the tagger instance for method chaining, except `get()` which
 returns the final attributes object.
+
+## Common Use Cases
+
+### Product Listing Page
+
+```typescript
+// For product cards that don't need entity tracking
+function ProductCard({ product }) {
+  return (
+    <div 
+      {...tagger('product')
+        .data({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          category: product.category
+        })
+        .action('click', 'select')
+        .get()}
+    >
+      {product.name}
+    </div>
+  );
+}
+```
+
+### Shopping Cart
+
+```typescript
+// For cart items that need both entity and data attributes
+function CartItem({ item }) {
+  return (
+    <div 
+      {...tagger()
+        .entity('cart')
+        .data({
+          productId: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })
+        .action('click', 'remove')
+        .get()}
+    >
+      {item.name}
+    </div>
+  );
+}
+```
+
+### Dynamic Component Tracking
+
+```typescript
+// Reusable tracking function
+function trackComponent(type, data, actions = {}) {
+  return tagger(type)
+    .data(data)
+    .action(actions)
+    .get();
+}
+
+// Usage
+<button {...trackComponent('cta', { label: 'Sign Up', position: 'header' }, { click: 'signup' })}>
+  Sign Up
+</button>
+```

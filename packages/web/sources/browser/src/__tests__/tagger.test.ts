@@ -11,7 +11,8 @@ describe('Tagger', () => {
     });
 
     test('creates tagger with custom prefix', () => {
-      const result = createTagger({ prefix: 'custom-prefix' })('product')
+      const result = createTagger({ prefix: 'custom-prefix' })()
+        .entity('product')
         .data('id', '123')
         .get();
       expect(result).toMatchObject({
@@ -23,7 +24,7 @@ describe('Tagger', () => {
 
   describe('Tagger Function', () => {
     test('sets entity when provided', () => {
-      const result = createTagger()('product').get();
+      const result = createTagger()().entity('product').get();
       expect(result).toMatchObject({
         'data-elb': 'product',
       });
@@ -54,8 +55,15 @@ describe('Tagger', () => {
   });
 
   describe('Data Method', () => {
-    test('single key-value with entity', () => {
+    test('single key-value with entity naming only', () => {
       const result = createTagger()('product').data('id', 123).get();
+      expect(result).toMatchObject({
+        'data-elb-product': 'id:123',
+      });
+    });
+
+    test('single key-value with entity and entity attribute', () => {
+      const result = createTagger()().entity('product').data('id', 123).get();
       expect(result).toMatchObject({
         'data-elb': 'product',
         'data-elb-product': 'id:123',
@@ -70,7 +78,8 @@ describe('Tagger', () => {
     });
 
     test('object with multiple properties', () => {
-      const result = createTagger()('product')
+      const result = createTagger()()
+        .entity('product')
         .data({ id: 123, name: 'Widget', price: 99.99 })
         .get();
       expect(result).toMatchObject({
@@ -80,7 +89,8 @@ describe('Tagger', () => {
     });
 
     test('accumulates multiple data calls', () => {
-      const result = createTagger()('product')
+      const result = createTagger()()
+        .entity('product')
         .data('id', 123)
         .data('name', 'Widget')
         .data({ price: 99.99, category: 'electronics' })
@@ -102,6 +112,22 @@ describe('Tagger', () => {
         'data-elb': 'user',
         'data-elb-product': 'id:123',
         'data-elb-user': 'name:John',
+      });
+    });
+
+    test('entity updates naming scope', () => {
+      const result = createTagger()('foo').entity('bar').data('a', 1).get();
+      expect(result).toMatchObject({
+        'data-elb': 'bar',
+        'data-elb-bar': 'a:1', // entity() updates the naming scope
+      });
+    });
+
+    test('data before entity uses original scope', () => {
+      const result = createTagger()('foo').data('a', 1).entity('bar').get();
+      expect(result).toMatchObject({
+        'data-elb': 'bar',
+        'data-elb-foo': 'a:1', // data was called before entity, so uses 'foo' scope
       });
     });
   });
@@ -142,7 +168,8 @@ describe('Tagger', () => {
     });
 
     test('works with entity', () => {
-      const result = createTagger()('product')
+      const result = createTagger()()
+        .entity('product')
         .action('load', 'view')
         .data('id', 123)
         .get();
@@ -284,7 +311,8 @@ describe('Tagger', () => {
 
   describe('Complex Chaining', () => {
     test('full chain with entity', () => {
-      const result = createTagger()('product')
+      const result = createTagger()()
+        .entity('product')
         .data('id', 123)
         .data({ name: 'Widget', price: 99.99 })
         .action('load', 'view')
@@ -339,7 +367,8 @@ describe('Tagger', () => {
 
   describe('Type Handling', () => {
     test('handles different value types', () => {
-      const result = createTagger()('test')
+      const result = createTagger()()
+        .entity('test')
         .data({
           string: 'text',
           number: 42,
