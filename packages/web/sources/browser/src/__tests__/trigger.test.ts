@@ -2,7 +2,7 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import {
   initGlobalTrigger,
   initScopeTrigger,
-  load,
+  initTriggers,
   ready,
   Triggers,
   handleTrigger,
@@ -104,11 +104,11 @@ describe('Trigger System', () => {
     expect(mockAddEventListener).toHaveBeenCalledTimes(2);
   });
 
-  test('load initializes DOM triggers without pageview', () => {
+  test('initTriggers initializes DOM triggers without pageview', () => {
     document.body.innerHTML =
       '<div data-elb="page" data-elb-page="title:Home"></div>';
 
-    load(mockCollector, {
+    initTriggers(mockCollector, {
       prefix: 'data-elb',
       scope: document,
       pageview: true,

@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/storybook-addon",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Integrate walkerOS tagging support for data collection",
   "keywords": [
     "tracking",

@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 const Introduction = ({
   updateGlobals,
 }: {
-  updateGlobals?: (newGlobals: any) => void;
+  updateGlobals?: (newGlobals: unknown) => void;
 }) => (
   <div
     style={{

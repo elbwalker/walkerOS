@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-api",
   "description": "Web API destination for walkerOS",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -30,7 +30,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/web-core": "0.0.7"
+    "@walkeros/web-core": "0.0.8"
   },
   "devDependencies": {},
   "repository": {

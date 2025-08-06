@@ -5,7 +5,8 @@ description: Get started with walkerOS in React and Next.js applications
 
 # React & Next.js Quickstart
 
-This guide shows you how to integrate walkerOS into your React application with automatic pageview tracking and component-level event tracking.
+This guide shows you how to integrate walkerOS into your React application with
+automatic pageview tracking and component-level event tracking.
 
 ## Key Concepts
 
@@ -157,7 +158,7 @@ function ProductDetail({ productId }: { productId: string }) {
       >
         {product.name}
       </h1>
-      
+
       <p
         {...tagger('product').data('price', product.price).get()}
         className="text-3xl font-bold text-blue-600"
@@ -191,11 +192,7 @@ function CheckoutForm() {
     });
   };
 
-  return (
-    <form onSubmit={handleSubmit}>
-      {/* Form fields */}
-    </form>
-  );
+  return <form onSubmit={handleSubmit}>{/* Form fields */}</form>;
 }
 ```
 
@@ -233,7 +230,7 @@ export default function App({ Component, pageProps }) {
 
     // Next.js route events
     router.events.on('routeChangeComplete', handleRouteChange);
-    
+
     // Call on initial load
     handleRouteChange();
 
@@ -274,7 +271,7 @@ export default function RootLayout({ children }) {
       firstRun.current = false;
       return;
     }
-    
+
     elb('walker run');
   }, [pathname]);
 
@@ -288,7 +285,8 @@ export default function RootLayout({ children }) {
 
 ## Testing Your Implementation
 
-walkerOS includes a console destination by default. Open your browser's developer console to see tracked events:
+walkerOS includes a console destination by default. Open your browser's
+developer console to see tracked events:
 
 ```
 🎯 Event: product view
@@ -303,7 +301,8 @@ walkerOS includes a console destination by default. Open your browser's develope
 1. **Ultra-Simple**: Minimal React code, maximum walkerOS power
 2. **Singleton Safety**: Only initialize once, no memory leaks
 3. **Global Access**: Use `elb` function anywhere with TypeScript support
-4. **Automatic Tracking**: Browser source handles clicks, visibility, forms automatically
+4. **Automatic Tracking**: Browser source handles clicks, visibility, forms
+   automatically
 5. **StrictMode Compatible**: Handles React's double execution correctly
 
 ## Best Practices
@@ -311,7 +310,8 @@ walkerOS includes a console destination by default. Open your browser's develope
 1. **Use Tagger**: Clean component tagging with the tagger helper
 2. **Minimal React Code**: Keep React integration as simple as possible
 3. **Trust walkerOS**: No need for custom error handling or state management
-4. **Direct Integration**: No providers needed, integrate directly in App component
+4. **Direct Integration**: No providers needed, integrate directly in App
+   component
 5. **Test with Console**: Use console destination during development
 
 ## Troubleshooting
@@ -331,7 +331,8 @@ walkerOS includes a console destination by default. Open your browser's develope
 
 ### TypeScript Errors
 
-Make sure you've added the global type declarations in your walker initialization file.
+Make sure you've added the global type declarations in your walker
+initialization file.
 
 ## Next Steps
 
