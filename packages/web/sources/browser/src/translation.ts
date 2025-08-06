@@ -25,7 +25,8 @@ export function translateToCoreCollector(
 ): Promise<Elb.PushResult> {
   // Handle walker commands - pass through directly to collector
   if (isString(eventOrCommand) && eventOrCommand.startsWith('walker ')) {
-    return collector.push(eventOrCommand, data as WalkerOS.Properties);
+    const result = collector.push(eventOrCommand, data as WalkerOS.Properties);
+    return result;
   }
 
   // Handle event objects - add source if missing

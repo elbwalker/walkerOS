@@ -24,12 +24,16 @@ export async function createSource<
     onError: config.onError, // TODO: add default onError
   } as T;
 
-  if (fullConfig.disabled) return {};
+  if (fullConfig.disabled) {
+    return {};
+  }
 
   // Initialize the source
   const result = await tryCatchAsync(source)(collector, fullConfig);
 
-  if (!result || !result.source) return {};
+  if (!result || !result.source) {
+    return {};
+  }
 
   const type = fullConfig.type || result.source.type || '';
   const id = config.id || `${type}_${getId(5)}`;
@@ -40,7 +44,10 @@ export async function createSource<
     sourceWithElb.elb = result.elb;
   }
 
-  // Register the source in the collector
+  // Register the source in the collector (ensure sources object exists)
+  if (!collector.sources) {
+    collector.sources = {};
+  }
   collector.sources[id] = {
     type,
     settings: fullConfig.settings,

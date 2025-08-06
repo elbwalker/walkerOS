@@ -102,12 +102,12 @@ function processPredefined(
       const args = Array.from(item);
       if (!isString(args[0]) || args[0].trim() === '') return; // Invalid or empty string
 
-      // Skip the first stacked run event since it's the reason we're here
-      // and to prevent duplicate execution which we don't want
+      // FIXED: Don't skip the first walker run - this was causing no events on first load
+      // The original logic was meant to prevent duplicate execution but was too aggressive
       const runCommand = 'walker run';
       if (isFirstRunEvent && args[0] === runCommand) {
-        isFirstRunEvent = false; // Next time it's on
-        return;
+        isFirstRunEvent = false; // Mark that we've seen the first run
+        // Continue processing instead of returning
       }
     } else {
       // For objects, skip if empty

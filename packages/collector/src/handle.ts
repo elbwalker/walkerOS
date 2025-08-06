@@ -237,14 +237,17 @@ export async function runCollector(
     destination.queue = [];
   });
 
+  // Reset collector queue for this run
+  collector.queue = [];
+
   // Increase round counter
   collector.round++;
 
-  // Call the predefined run events
-  onApply(collector, 'run');
-
   // Process any queued events now that the collector is allowed
   const result = await pushToDestinations(collector);
+
+  // Call the predefined run events
+  onApply(collector, 'run');
 
   return result;
 }

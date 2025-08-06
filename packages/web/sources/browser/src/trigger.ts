@@ -56,7 +56,14 @@ export async function ready(
 ): Promise<void> {
   const readyFn = () => {
     fn(collector, settings);
-    onApply(collector, 'ready');
+    // Only call onApply if collector has the on property
+    if (collector?.on) {
+      try {
+        onApply(collector, 'ready');
+      } catch (error) {
+        // Don't throw - this is not critical for functionality
+      }
+    }
   };
 
   if (document.readyState !== 'loading') {
@@ -66,16 +73,22 @@ export async function ready(
   }
 }
 
-// Called for each new run to setup triggers
-export function load(
+// Called once during source initialization to setup global listeners
+export function initTriggers(
+  collector: Collector.Instance,
+  settings: Required<Settings>,
+) {
+  const { scope } = settings;
+  initGlobalTrigger(collector, scope as Scope);
+}
+
+// Called on each walker run to process load triggers
+export function processLoadTriggers(
   collector: Collector.Instance,
   settings: Required<Settings>,
 ) {
   const { prefix, scope } = settings;
-
-  // Initialize DOM triggers and scope-based event handling
   initScopeTrigger(collector, prefix, scope as Scope);
-  initGlobalTrigger(collector, scope as Scope);
 }
 
 export function initGlobalTrigger(
@@ -124,11 +137,11 @@ export function initScopeTrigger(
   }
 
   // Handle all children action(s)
-  scope
-    .querySelectorAll<HTMLElement>(`[${selectorAction}]`)
-    .forEach((elem) =>
-      handleActionElem(collector, elem, selectorAction, prefix),
-    );
+  const elements = scope.querySelectorAll<HTMLElement>(`[${selectorAction}]`);
+
+  elements.forEach((elem) => {
+    handleActionElem(collector, elem, selectorAction, prefix);
+  });
 
   if (scrollElements.length) scroll(collector, scope);
 }

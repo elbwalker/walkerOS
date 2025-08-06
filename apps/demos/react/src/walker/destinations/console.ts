@@ -4,29 +4,16 @@ export const destinationConsole: Destination.InitDestination = {
   type: 'console',
   push: async (event) => {
     // eslint-disable-next-line no-console
-    console.log('[Walker Event]:', event);
+    console.log('[Event]:', event);
   },
 };
 
 export const destinationConsoleBatch: Destination.InitDestination = {
   type: 'console-batch',
-  init: async () => {
-    // eslint-disable-next-line no-console
-    console.log('[Console Batch] Initialized');
-  },
-  push: async () => {
-    // Individual events are collected by the collector when batch is configured
-    // They will be sent to pushBatch when the batch size is reached
-  },
+  init: async () => {},
+  push: async () => {},
   pushBatch: async (batch) => {
-    // Handle the batch of events
-    const events = batch.events || [];
     // eslint-disable-next-line no-console
-    console.log(`[Batch] ${events.length} events:`, events);
-    // eslint-disable-next-line no-console
-    console.log('[Batch] Context:', {
-      key: batch.key,
-      data: batch.data,
-    });
+    console.log('[Batch]:', batch);
   },
 };

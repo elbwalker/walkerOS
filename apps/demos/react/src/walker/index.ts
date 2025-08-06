@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { Collector, WalkerOS } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
 import { createSource } from '@walkeros/core';
 import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
@@ -10,17 +10,24 @@ import {
 } from './destinations/console';
 import { destinationDataLayer } from './destinations/data-layer';
 
+declare global {
+  interface Window {
+    elb: WalkerOS.Elb;
+    walker: Collector.Instance;
+  }
+}
+
 // Initialize walker
-export async function initializeWalker(): Promise<{
-  collector: unknown;
-  elb: unknown;
-}> {
-  // Create collector with destinations and source
-  const { collector, elb } = await createCollector({
+export async function initializeWalker(): Promise<void> {
+  // Skip initialization if already done
+  if (window.walker) return;
+
+  // Create collector with destinations and source (run: false for manual pageview control)
+  const { collector } = await createCollector({
+    run: false,
     consent: { functional: true },
     sources: {
       browser: createSource(sourceBrowser, {
-        type: 'browser',
         settings: {
           prefix: 'data-elb',
           pageview: true,
@@ -38,7 +45,7 @@ export async function initializeWalker(): Promise<{
           mapping: {
             '*': {
               visible: {
-                batch: 500, // Batch visible events in groups of 500
+                batch: 1000,
               },
             },
           },
@@ -71,29 +78,26 @@ export async function initializeWalker(): Promise<{
     },
   });
 
+  // Set global window objects
+  window.walker = collector;
+
   // Check consent state from localStorage
   const consentKey = 'walker_consent';
   const storedConsent = localStorage.getItem(consentKey);
 
   if (storedConsent === 'accepted') {
-    await elb('walker consent', {
+    await collector.push('walker consent', {
       functional: true,
       analytics: true,
       marketing: true,
     });
   } else if (storedConsent === 'denied') {
-    await elb('walker consent', {
+    await collector.push('walker consent', {
       functional: true,
       analytics: false,
       marketing: false,
     });
   }
-
-  // Set window.elb to the browser source's elb function
-  // It can handle more browser specific commands than the original collector's elb
-  // window.elb = collector.sources.browser.elb as WalkerOS.Elb;
-
-  return { collector, elb };
 }
 
 // Helper function to update destination settings dynamically

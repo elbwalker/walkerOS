@@ -7,27 +7,29 @@ import Category from './pages/Category';
 import Detail from './pages/Detail';
 import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
-import { initializeWalker } from './walker';
+import { initializeWalker } from './walker/index';
+import { elb } from '@walkeros/web-core';
 
 function App() {
   const location = useLocation();
-  const isFirstRender = useRef(true);
+  const hasInitialized = useRef(false);
+  const firstRun = useRef(true);
 
-  // Initialize walker on app mount
   useEffect(() => {
-    // eslint-disable-next-line no-console
-    initializeWalker().catch(console.error);
+    // Prevent React StrictMode double execution
+    if (!hasInitialized.current) {
+      initializeWalker();
+      hasInitialized.current = true;
+    }
   }, []);
 
   useEffect(() => {
-    // For SPAs, manually trigger page view on route change
-    // Skip first render as browser source handles initial pageview when pageview: true
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
+    if (firstRun.current) {
+      firstRun.current = false;
       return;
     }
 
-    if (window.elb) window.elb('walker run');
+    elb('walker run');
   }, [location]);
 
   return (
