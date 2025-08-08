@@ -110,6 +110,7 @@ describe('triggerVisible', () => {
     expect(elementConfig).toEqual({
       multiple: true,
       blocked: false,
+      prefix: 'data-elb',
     });
   });
 
@@ -151,9 +152,9 @@ describe('triggerVisible', () => {
     await Promise.resolve(); // Wait for async
     expect(handleTrigger).toHaveBeenCalledWith(
       mockCollector,
+      'data-elb',
       element,
       'visible',
-      'data-elb',
     );
   });
 
@@ -181,9 +182,9 @@ describe('triggerVisible', () => {
 
     expect(handleTrigger).toHaveBeenCalledWith(
       mockCollector,
+      'data-elb',
       element,
       'visible',
-      'data-elb',
     );
   });
 

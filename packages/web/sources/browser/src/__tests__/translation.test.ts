@@ -72,6 +72,7 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
       // Test with number as event (falls through to flexible format)
       await translateToCoreCollector(
         collector,
+        'data-elb',
         123,
         { value: 'test' },
         undefined,
@@ -134,7 +135,7 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
         source: { type: 'custom', id: 'custom-id', previous_id: '' },
       };
 
-      await translateToCoreCollector(collector, eventObject);
+      await translateToCoreCollector(collector, 'data-elb', eventObject);
 
       // Object events should pass through unchanged
       expect(mockPush).toHaveBeenCalledWith(eventObject);

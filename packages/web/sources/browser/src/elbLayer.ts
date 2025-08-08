@@ -9,7 +9,7 @@ import { translateToCoreCollector } from './translation';
  */
 export function initElbLayer(
   collector: Collector.Instance,
-  config: ELBLayerConfig = {},
+  config: ELBLayerConfig & { prefix?: string } = {},
 ): void {
   const layerName = config.name || 'elbLayer';
 
@@ -27,7 +27,7 @@ export function initElbLayer(
       const argsArray = [...Array.from(args[0])];
       const i = Array.prototype.push.apply(this, [argsArray]);
       // Process the arguments as a single command
-      pushCommand(collector, argsArray);
+      pushCommand(collector, config.prefix, argsArray);
       return i;
     }
 
@@ -35,7 +35,7 @@ export function initElbLayer(
 
     // Process each pushed item immediately
     args.forEach((item) => {
-      pushCommand(collector, item);
+      pushCommand(collector, config.prefix, item);
     });
 
     return i;
@@ -43,7 +43,7 @@ export function initElbLayer(
 
   // Process any existing commands that were pushed before initialization
   if (Array.isArray(elbLayer) && elbLayer.length > 0) {
-    processElbLayer(collector, elbLayer);
+    processElbLayer(collector, config.prefix, elbLayer);
   }
 }
 
@@ -53,11 +53,12 @@ export function initElbLayer(
  */
 function processElbLayer(
   collector: Collector.Instance,
+  prefix: string = 'data-elb',
   elbLayer: ELBLayer,
 ): void {
   // Process in two phases: walker commands first, then events
-  processPredefined(collector, elbLayer, true); // Commands only
-  processPredefined(collector, elbLayer, false); // Events only
+  processPredefined(collector, prefix, elbLayer, true); // Commands only
+  processPredefined(collector, prefix, elbLayer, false); // Events only
 
   // Clear the array after processing
   elbLayer.length = 0;
@@ -68,6 +69,7 @@ function processElbLayer(
  */
 function processPredefined(
   collector: Collector.Instance,
+  prefix: string,
   elbLayer: ELBLayer,
   commandsOnly: boolean,
 ): void {
@@ -129,14 +131,18 @@ function processPredefined(
 
   events.forEach((item) => {
     // Use the elb push function directly to match legacy behavior
-    pushCommand(collector, item);
+    pushCommand(collector, prefix, item);
   });
 }
 
 /**
  * Push command directly using collector or translation based on type
  */
-function pushCommand(collector: Collector.Instance, item: unknown): void {
+function pushCommand(
+  collector: Collector.Instance,
+  prefix: string = 'data-elb',
+  item: unknown,
+): void {
   tryCatch(
     () => {
       if (Array.isArray(item)) {
@@ -154,7 +160,7 @@ function pushCommand(collector: Collector.Instance, item: unknown): void {
         }
 
         // Regular events go through translation
-        translateToCoreCollector(collector, action, ...rest);
+        translateToCoreCollector(collector, prefix, action, ...rest);
       } else if (item && typeof item === 'object') {
         // Skip empty objects
         if (Object.keys(item).length === 0) {

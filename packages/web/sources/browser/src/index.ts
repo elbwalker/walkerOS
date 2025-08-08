@@ -55,6 +55,7 @@ export const sourceBrowser: Source.Init<
         name: isString(fullConfig.settings.elbLayer)
           ? fullConfig.settings.elbLayer
           : 'elbLayer',
+        prefix: fullConfig.settings.prefix,
       });
     }
 
@@ -109,6 +110,7 @@ export const sourceBrowser: Source.Init<
       const [event, data, options, context, nested, custom] = args;
       return translateToCoreCollector(
         collector,
+        fullConfig.settings.prefix,
         event,
         data as BrowserPushData,
         options as BrowserPushOptions,

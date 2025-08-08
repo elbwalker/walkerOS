@@ -78,8 +78,8 @@ export function initTriggers(
   collector: Collector.Instance,
   settings: Required<Settings>,
 ) {
-  const { scope } = settings;
-  initGlobalTrigger(collector, scope as Scope);
+  const { scope, prefix } = settings;
+  initGlobalTrigger(collector, scope as Scope, prefix);
 }
 
 // Called on each walker run to process load triggers
@@ -94,17 +94,18 @@ export function processLoadTriggers(
 export function initGlobalTrigger(
   collector: Collector.Instance,
   scope: Scope,
+  prefix: string,
 ): void {
   scope.addEventListener(
     'click',
     tryCatch(function (this: Scope, ev: unknown) {
-      triggerClick.call(this, collector, ev as MouseEvent);
+      triggerClick.call(this, collector, ev as MouseEvent, prefix);
     }) as EventListener,
   );
   scope.addEventListener(
     'submit',
     tryCatch(function (this: Scope, ev: unknown) {
-      triggerSubmit.call(this, collector, ev as SubmitEvent);
+      triggerSubmit.call(this, collector, ev as SubmitEvent, prefix);
     }) as EventListener,
   );
 }
@@ -143,20 +144,20 @@ export function initScopeTrigger(
     handleActionElem(collector, elem, selectorAction, prefix);
   });
 
-  if (scrollElements.length) scroll(collector, scope);
+  if (scrollElements.length) scroll(collector, scope, prefix);
 }
 
 export async function handleTrigger(
   collector: Collector.Instance,
+  prefix: string,
   element: Element,
   trigger: string,
-  prefix: string,
   // @TODO add triggerParams to filter for specific trigger
 ): Promise<unknown[]> {
   const events = getEvents(element, trigger, prefix);
   return Promise.all(
     events.map((event: Walker.Event) =>
-      translateToCoreCollector(collector, {
+      translateToCoreCollector(collector, prefix, {
         event: `${event.entity} ${event.action}`,
         ...event,
         trigger,
@@ -194,10 +195,10 @@ function handleActionElem(
           triggerScroll(elem, triggerAction.triggerParams);
           break;
         case Triggers.Visible:
-          triggerVisible(collector, elem);
+          triggerVisible(collector, elem, { prefix });
           break;
         case Triggers.Visibles:
-          triggerVisible(collector, elem, { multiple: true });
+          triggerVisible(collector, elem, { multiple: true, prefix });
           break;
         case Triggers.Wait:
           triggerWait(collector, elem, triggerAction.triggerParams, prefix);
@@ -207,9 +208,12 @@ function handleActionElem(
   );
 }
 
-function triggerClick(collector: Collector.Instance, ev: MouseEvent) {
-  // Use default prefix - will be parameterized when integrating with source config
-  handleTrigger(collector, ev.target as Element, Triggers.Click, 'data-elb');
+function triggerClick(
+  collector: Collector.Instance,
+  ev: MouseEvent,
+  prefix: string,
+) {
+  handleTrigger(collector, prefix, ev.target as Element, Triggers.Click);
 }
 
 function triggerHover(
@@ -221,7 +225,7 @@ function triggerHover(
     'mouseenter',
     tryCatch(function (this: Document, ev: MouseEvent) {
       if (ev.target instanceof Element)
-        handleTrigger(collector, ev.target, Triggers.Hover, prefix);
+        handleTrigger(collector, prefix, ev.target, Triggers.Hover);
     }),
   );
 }
@@ -231,7 +235,7 @@ function triggerLoad(
   elem: HTMLElement,
   prefix: string,
 ) {
-  handleTrigger(collector, elem, Triggers.Load, prefix);
+  handleTrigger(collector, prefix, elem, Triggers.Load);
 }
 
 function triggerPulse(
@@ -244,7 +248,7 @@ function triggerPulse(
     () => {
       // Only trigger when tab is active
       if (!document.hidden)
-        handleTrigger(collector, elem, Triggers.Pulse, prefix);
+        handleTrigger(collector, prefix, elem, Triggers.Pulse);
     },
     parseInt(triggerParams || '') || 15000,
   );
@@ -260,10 +264,13 @@ function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
   scrollElements.push([elem, depth]);
 }
 
-function triggerSubmit(collector: Collector.Instance, ev: SubmitEvent) {
-  // Use default prefix - will be parameterized when integrating with source config
+function triggerSubmit(
+  collector: Collector.Instance,
+  ev: SubmitEvent,
+  prefix: string,
+) {
   if (ev.target) {
-    handleTrigger(collector, ev.target as Element, Triggers.Submit, 'data-elb');
+    handleTrigger(collector, prefix, ev.target as Element, Triggers.Submit);
   }
 }
 
@@ -274,15 +281,16 @@ function triggerWait(
   prefix: string,
 ) {
   setTimeout(
-    () => handleTrigger(collector, elem, Triggers.Wait, prefix),
+    () => handleTrigger(collector, prefix, elem, Triggers.Wait),
     parseInt(triggerParams || '') || 15000,
   );
 }
 
-function scroll(collector: Collector.Instance, scope: Scope) {
+function scroll(collector: Collector.Instance, scope: Scope, prefix: string) {
   const scrolling = (
     scrollElements: Walker.ScrollElements,
     collector: Collector.Instance,
+    prefix: string,
   ) => {
     return scrollElements.filter(([element, depth]: [Element, number]) => {
       // Distance from top to the bottom of the visible screen
@@ -305,7 +313,7 @@ function scroll(collector: Collector.Instance, scope: Scope) {
       // Check if the elements visibility skipped the required border
       if (scrollDepth >= depth) {
         // Enough scrolling, it's time
-        handleTrigger(collector, element, Triggers.Scroll, 'data-elb');
+        handleTrigger(collector, prefix, element, Triggers.Scroll);
 
         // Remove the element from scrollEvents
         return false;
@@ -319,7 +327,7 @@ function scroll(collector: Collector.Instance, scope: Scope) {
   // Don't add unnecessary scroll listeners
   if (!scrollListener) {
     scrollListener = throttle(function () {
-      scrollElements = scrolling.call(scope, scrollElements, collector);
+      scrollElements = scrolling.call(scope, scrollElements, collector, prefix);
     });
 
     scope.addEventListener('scroll', scrollListener);

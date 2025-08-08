@@ -1,4 +1,4 @@
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { Collector } from '@walkeros/core';
 import {
   initGlobalTrigger,
   initScopeTrigger,
@@ -84,7 +84,7 @@ describe('Trigger System', () => {
   test('initGlobalTrigger sets up click and submit listeners', () => {
     expect(mockAddEventListener).toHaveBeenCalledTimes(0);
 
-    initGlobalTrigger(mockCollector, document);
+    initGlobalTrigger(mockCollector, document, 'data-elb');
 
     expect(mockAddEventListener).toHaveBeenCalledWith(
       'click',
@@ -98,7 +98,7 @@ describe('Trigger System', () => {
   });
 
   test('initGlobalTrigger always adds event listeners', () => {
-    initGlobalTrigger(mockCollector, document);
+    initGlobalTrigger(mockCollector, document, 'data-elb');
 
     // Should always add both click and submit listeners
     expect(mockAddEventListener).toHaveBeenCalledTimes(2);
@@ -156,15 +156,10 @@ describe('Trigger System', () => {
     });
 
     const mockFn = jest.fn().mockReturnValue('result');
-    let addEventListenerCallback: (() => void) | undefined;
 
-    document.addEventListener = jest
-      .fn()
-      .mockImplementation((event, callback) => {
-        if (event === 'DOMContentLoaded') {
-          addEventListenerCallback = callback as () => void;
-        }
-      });
+    document.addEventListener = jest.fn().mockImplementation(() => {
+      // Mock implementation for DOMContentLoaded listener
+    });
 
     ready(mockFn, mockCollector, { test: 'settings' });
 
@@ -189,7 +184,7 @@ describe('Trigger System', () => {
 
     const element = document.getElementById('test')!;
 
-    await handleTrigger(mockCollector, element, Triggers.Click, 'data-elb');
+    await handleTrigger(mockCollector, 'data-elb', element, Triggers.Click);
 
     expect(mockCollector.push).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -410,6 +405,26 @@ describe('Trigger System', () => {
 
       // Load trigger should execute immediately
       expect(mockCollector.push).toHaveBeenCalled();
+    });
+  });
+
+  describe('Custom Prefix Support', () => {
+    test('load trigger works with custom prefix', () => {
+      // Set up DOM with custom prefix
+      document.body.innerHTML = `
+        <div data-custom="entity" data-customaction="load">Test Content</div>
+      `;
+
+      // Initialize scope triggers with custom prefix
+      initScopeTrigger(mockCollector, 'data-custom');
+
+      // Should have called push with entity load event
+      expect(mockCollector.push).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'entity load',
+          trigger: 'load',
+        }),
+      );
     });
   });
 });

@@ -22,7 +22,7 @@ interface VisibilityState {
   duration: number;
   elementConfigs?: WeakMap<
     HTMLElement,
-    { multiple: boolean; blocked: boolean }
+    { multiple: boolean; blocked: boolean; prefix: string }
   >;
 }
 
@@ -149,11 +149,15 @@ function handleIntersection(
         const timer = window.setTimeout(async () => {
           // Final visibility check before triggering (cached for performance)
           if (isElementVisible(target)) {
+            // Get element configuration to access prefix
+            const elementConfig = state.elementConfigs?.get(target);
+            const prefix = elementConfig?.prefix || 'data-elb';
+
             await handleTrigger(
               collector,
+              prefix,
               target as Element,
               Triggers.Visible,
-              'data-elb',
             );
 
             // Get fresh element config reference for state update
@@ -210,7 +214,7 @@ export function initVisibilityTracking(
 export function triggerVisible(
   collector: Collector.Instance,
   element: HTMLElement,
-  config: { multiple?: boolean } = { multiple: false },
+  config: { multiple?: boolean; prefix?: string } = { multiple: false },
 ): void {
   const state = (collector as CollectorWithVisibility)._visibilityState;
   if (state?.observer && element) {
@@ -221,6 +225,7 @@ export function triggerVisible(
     state.elementConfigs.set(element, {
       multiple: config.multiple ?? false,
       blocked: false,
+      prefix: config.prefix || 'data-elb',
     });
     state.observer.observe(element);
   }

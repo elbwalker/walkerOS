@@ -16,6 +16,7 @@ const startTime = performance.now();
  */
 export function translateToCoreCollector(
   collector: Collector.Instance,
+  prefix: string = 'data-elb',
   eventOrCommand: unknown,
   data?: BrowserPushData,
   options?: BrowserPushOptions,
@@ -63,7 +64,7 @@ export function translateToCoreCollector(
 
   // Extract data from element if provided
   if (elemParameter) {
-    const entityObj = getEntities('data-elb', elemParameter).find(
+    const entityObj = getEntities(prefix, elemParameter).find(
       (obj) => obj.type === entity,
     );
     if (entityObj) {
