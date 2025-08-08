@@ -1,5 +1,12 @@
 # @walkeros/walker.js
 
+## 0.0.10
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/web-source-browser@0.0.9
+
 ## 0.0.9
 
 ### Patch Changes

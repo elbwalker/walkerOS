@@ -1,5 +1,11 @@
 # @walkeros/web-source-browser
 
+## 0.0.9
+
+### Patch Changes
+
+- custom prefix
+
 ## 0.0.8
 
 ### Patch Changes
