@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveCode Example - WalkerOS Explorer</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f9fafb;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #1f2937;
+      margin-bottom: 10px;
+    }
+    
+    .description {
+      color: #6b7280;
+      margin-bottom: 30px;
+    }
+    
+    .example {
+      margin-bottom: 40px;
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .example h2 {
+      margin-top: 0;
+      color: #374151;
+      font-size: 1.25rem;
+    }
+    
+    .livecode-container {
+      height: 400px;
+      margin-top: 20px;
+    }
+  </style>
+  <script src="../dist/explorer.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>WalkerOS Explorer - LiveCode Examples</h1>
+    <p class="description">
+      Interactive code execution examples demonstrating the LiveCode component.
+    </p>
+    
+    <!-- Example 1: Basic JavaScript -->
+    <div class="example">
+      <h2>Example 1: Basic JavaScript Execution</h2>
+      <div id="example1" class="livecode-container"></div>
+    </div>
+    
+    <!-- Example 2: With Context -->
+    <div class="example">
+      <h2>Example 2: Execution with Context</h2>
+      <div id="example2" class="livecode-container"></div>
+    </div>
+    
+    <!-- Example 3: Async Code -->
+    <div class="example">
+      <h2>Example 3: Async/Await Support</h2>
+      <div id="example3" class="livecode-container"></div>
+    </div>
+    
+    <!-- Example 4: Error Handling -->
+    <div class="example">
+      <h2>Example 4: Error Handling</h2>
+      <div id="example4" class="livecode-container"></div>
+    </div>
+    
+    <!-- Example 5: Vertical Layout -->
+    <div class="example">
+      <h2>Example 5: Vertical Layout</h2>
+      <div id="example5" class="livecode-container" style="height: 600px;"></div>
+    </div>
+  </div>
+  
+  <script>
+    // Wait for the explorer bundle to load
+    document.addEventListener('DOMContentLoaded', () => {
+      const { createLiveCode } = WalkerExplorer;
+    
+    // Example 1: Basic JavaScript
+    const example1 = createLiveCode(document.getElementById('example1'), {
+      input: `// Basic JavaScript execution
+const numbers = [1, 2, 3, 4, 5];
+const doubled = numbers.map(n => n * 2);
+
+console.log('Original:', numbers);
+console.log('Doubled:', doubled);
+
+return {
+  sum: doubled.reduce((a, b) => a + b, 0),
+  average: doubled.reduce((a, b) => a + b, 0) / doubled.length
+};`,
+      labelInput: 'JavaScript Code',
+      labelOutput: 'Result'
+    });
+    
+    // Example 2: With Context
+    const example2 = createLiveCode(document.getElementById('example2'), {
+      input: `// Using provided context functions
+const event = {
+  event: 'product view',
+  data: {
+    id: 'P123',
+    name: 'Laptop',
+    price: 999
+  }
+};
+
+// Format the event
+const formatted = formatEvent(event);
+
+console.log('Original event:', event);
+console.log('Formatted:', formatted);
+
+return formatted;`,
+      context: {
+        formatEvent: (event) => ({
+          ...event,
+          timestamp: Date.now(),
+          entity: event.event.split(' ')[0],
+          action: event.event.split(' ')[1]
+        })
+      },
+      labelInput: 'Code with Context',
+      labelOutput: 'Processed Result'
+    });
+    
+    // Example 3: Async Code
+    const example3 = createLiveCode(document.getElementById('example3'), {
+      input: `// Async/await example
+async function fetchData() {
+  console.log('Starting fetch...');
+  
+  // Simulate API call
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  const data = {
+    users: ['Alice', 'Bob', 'Charlie'],
+    timestamp: new Date().toISOString()
+  };
+  
+  console.log('Data fetched!');
+  return data;
+}
+
+const result = await fetchData();
+return result;`,
+      labelInput: 'Async Code',
+      labelOutput: 'Async Result'
+    });
+    
+    // Example 4: Error Handling
+    const example4 = createLiveCode(document.getElementById('example4'), {
+      input: `// This will cause an error
+const data = {
+  name: 'Test'
+};
+
+// Try to access undefined property
+console.log('Accessing data.name:', data.name);
+console.log('Accessing nested property...');
+
+// This will throw an error
+return data.nested.property.value;`,
+      labelInput: 'Code with Error',
+      labelOutput: 'Error Display'
+    });
+    
+    // Example 5: Vertical Layout
+    const example5 = createLiveCode(document.getElementById('example5'), {
+      input: `// Vertical layout example
+const fibonacci = (n) => {
+  if (n <= 1) return n;
+  
+  const sequence = [0, 1];
+  for (let i = 2; i <= n; i++) {
+    sequence[i] = sequence[i-1] + sequence[i-2];
+  }
+  
+  return sequence;
+};
+
+const n = 10;
+const result = fibonacci(n);
+
+console.log(\`First \${n} Fibonacci numbers:\`);
+result.forEach((num, i) => {
+  console.log(\`F(\${i}) = \${num}\`);
+});
+
+return {
+  sequence: result,
+  sum: result.reduce((a, b) => a + b, 0)
+};`,
+      layout: 'vertical',
+      labelInput: 'Fibonacci Generator',
+      labelOutput: 'Sequence Result'
+    });
+    
+      // Log to console for debugging
+      console.log('LiveCode examples loaded:', {
+        example1,
+        example2,
+        example3,
+        example4,
+        example5
+      });
+    });
+  </script>
+</body>
+</html>

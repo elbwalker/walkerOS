@@ -17,7 +17,22 @@ const mimeTypes = {
 };
 
 const server = http.createServer((req, res) => {
-  let filePath = req.url === '/' ? '/index.html' : req.url;
+  let filePath = req.url === '/' ? '/examples/index.html' : req.url;
+
+  // Special handling for explorer.js - redirect to dist/explorer.js
+  if (filePath === '/explorer.js' || filePath === '/explorer.js.map') {
+    filePath = '/dist' + filePath;
+  }
+
+  // Check if file exists in examples directory first
+  if (!filePath.startsWith('/dist/') && !filePath.startsWith('/examples/')) {
+    // Try to find file in examples directory
+    const examplesPath = path.join(__dirname, 'examples', filePath);
+    if (fs.existsSync(examplesPath)) {
+      filePath = '/examples' + filePath;
+    }
+  }
+
   filePath = path.join(__dirname, filePath);
 
   const extname = path.extname(filePath);
@@ -27,7 +42,7 @@ const server = http.createServer((req, res) => {
     if (err) {
       if (err.code === 'ENOENT') {
         res.writeHead(404);
-        res.end('File not found');
+        res.end('File not found: ' + req.url);
       } else {
         res.writeHead(500);
         res.end('Server error: ' + err.code);
@@ -43,10 +58,11 @@ server.listen(port, () => {
   console.log(`🚀 walkerOS Explorer Demo Server running at:`);
   console.log(`   http://localhost:${port}`);
   console.log(`\n📋 Available demos:`);
-  console.log(`   • Main Demo: http://localhost:${port}/index.html`);
-  console.log(`   • Built files available at: http://localhost:${port}/dist/`);
+  console.log(`   • Main Page: http://localhost:${port}/`);
+  console.log(`   • LiveCode Examples: http://localhost:${port}/livecode.html`);
+  console.log(`   • Built files: http://localhost:${port}/dist/`);
   console.log(
-    `\n🎯 Test all Phase 1 components interactively in your browser!`,
+    `\n🎯 Test the new clean architecture components in your browser!`,
   );
   console.log(`\n⚡ Press Ctrl+C to stop the server`);
 });

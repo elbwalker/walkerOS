@@ -1,51 +1,57 @@
 /**
- * WalkerOS Explorer - LiveCodeJS Component
- *
- * JavaScript evaluation component with context injection
- * Zero dependencies, framework-agnostic
+ * WalkerOS Explorer
+ * Pure vanilla JavaScript component library for interactive code examples
  */
 
-// Main component
-export {
-  createLiveCodeJS,
-  type LiveCodeJSAPI,
-  type LiveCodeJSOptions,
-} from './components/LiveCodeJS';
+// Main organism components (what users typically use)
+export { createLiveCode } from './organisms/liveCode';
 
-// Supporting components (used by LiveCodeJS)
-export {
-  createCodeEditor,
-  type CodeEditorAPI,
-  type CodeEditorOptions,
-} from './components/CodeEditor';
+// Molecule components (for advanced users)
+export { createCodeBox } from './molecules/codeBox';
+export { createResultBox } from './molecules/resultBox';
 
-export {
-  createResultDisplay,
-  type ResultDisplayAPI,
-  type ResultDisplayOptions,
-  type ResultItem,
-  type ResultType,
-} from './components/ResultDisplay';
+// Layout components
+export { createColumns } from './layouts/columns';
 
-export {
-  createDestination,
-  type DestinationAPI,
-  type DestinationOptions,
-} from './components/Destination';
+// Atom components (for building custom components)
+export { createBox } from './atoms/box';
+export { createEditor } from './atoms/editor';
+export { createButton } from './atoms/button';
+export { createLabel } from './atoms/label';
 
-// Core types that might be useful
-export { type ComponentAPI } from './core/Component';
+// Utilities (for advanced usage)
+export { evaluate, formatValue, formatError } from './lib/evaluate';
+export { highlight, escapeHTML } from './lib/syntax';
+export { debounce, throttle } from './lib/debounce';
+export { createShadow, createElement } from './lib/dom';
+export { getBaseStyles, applyTheme } from './styles/theme';
 
-// Utilities that might be useful
-export {
-  evaluateJavaScript,
-  createSafeContext,
-  formatEvaluationResult,
-  type EvaluationContext,
-  type EvaluationResult,
-  type EvaluationOptions,
-} from './utils/evaluation';
+// Types
+export type {
+  // Component APIs
+  ComponentAPI,
+  LiveCodeAPI,
+  LiveCodeOptions,
+  CodeBoxAPI,
+  CodeBoxOptions,
+  ResultBoxAPI,
+  ResultBoxOptions,
+  BoxAPI,
+  BoxOptions,
+  EditorAPI,
+  EditorOptions,
+  ButtonAPI,
+  ButtonOptions,
+  LabelAPI,
+  LabelOptions,
+  LayoutAPI,
+  LayoutOptions,
+  // Utility types
+  ShadowContext,
+  EvaluationResult,
+  SyntaxToken,
+  ThemeOptions,
+} from './types';
 
-// Export version info
-export const version = '1.0.0';
-export const name = '@walkeros/explorer';
+// Version
+export const version = '2.0.0';
