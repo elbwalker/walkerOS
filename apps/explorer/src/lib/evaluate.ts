@@ -52,10 +52,12 @@ export async function evaluate(
     const contextKeys = Object.keys(fullContext);
     const contextValues = Object.values(fullContext);
 
-    // Wrap code to handle both expressions and statements
+    // Always wrap in async context - handles both sync and async code
     const wrappedCode = `
       'use strict';
-      ${code.includes('return') ? code : `return (async () => { ${code} })()`}
+      return (async () => {
+        ${code}
+      })()
     `;
 
     // Create and execute function
