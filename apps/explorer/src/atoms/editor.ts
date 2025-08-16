@@ -145,13 +145,13 @@ function injectEditorStyles(container: HTMLElement): void {
       font-family: var(--elb-font-mono);
       font-size: var(--elb-font-size-sm);
       line-height: 1.6;
-      background: var(--elb-bg);
+      background: transparent;
     }
     
     .elb-editor-lines {
       flex-shrink: 0;
-      padding: var(--elb-spacing-sm) 0;
-      background: var(--elb-bg);
+      padding: 0;
+      background: transparent;
       border-right: 1px solid var(--elb-border);
       overflow-y: hidden;
     }
@@ -178,7 +178,7 @@ function injectEditorStyles(container: HTMLElement): void {
       width: 100%;
       height: 100%;
       margin: 0;
-      padding: var(--elb-spacing-sm);
+      padding: 0;
       font: inherit;
       line-height: inherit;
       white-space: pre;
@@ -187,22 +187,36 @@ function injectEditorStyles(container: HTMLElement): void {
     
     .elb-editor-highlight {
       pointer-events: none;
-      color: transparent;
       background: transparent;
     }
     
     .elb-editor-highlight code {
       font: inherit;
+      color: var(--elb-fg);
     }
+    
+    /* Syntax highlighting tokens */
+    .elb-editor-highlight .elb-syntax-keyword { color: var(--elb-syntax-keyword) !important; }
+    .elb-editor-highlight .elb-syntax-string { color: var(--elb-syntax-string) !important; }
+    .elb-editor-highlight .elb-syntax-number { color: var(--elb-syntax-number) !important; }
+    .elb-editor-highlight .elb-syntax-comment { color: var(--elb-syntax-comment) !important; }
+    .elb-editor-highlight .elb-syntax-function { color: var(--elb-syntax-function) !important; }
+    .elb-editor-highlight .elb-syntax-operator { color: var(--elb-syntax-operator) !important; }
+    .elb-editor-highlight .elb-syntax-punctuation { color: var(--elb-syntax-punctuation) !important; }
     
     .elb-editor-textarea {
       resize: none;
       border: none;
       outline: none;
       background: transparent;
-      color: var(--elb-fg);
+      color: transparent;  /* Make text transparent so syntax highlighting shows through */
       caret-color: var(--elb-accent);
       z-index: 1;
+    }
+    
+    /* Make placeholder visible */
+    .elb-editor-textarea::placeholder {
+      color: var(--elb-muted);
     }
     
     .elb-editor-textarea::selection {

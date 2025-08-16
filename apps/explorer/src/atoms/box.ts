@@ -93,38 +93,63 @@ function getBoxStyles(): string {
       height: 100%;
       border: 1px solid var(--elb-border);
       border-radius: var(--elb-radius-md);
-      background: var(--elb-bg);
+      background: transparent;
       overflow: hidden;
+      box-shadow: var(--elb-shadow-sm);
     }
     
     .elb-box-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: var(--elb-spacing-sm) var(--elb-spacing-md);
+      min-height: 40px;
+      padding: 0 var(--elb-spacing-md);
       border-bottom: 1px solid var(--elb-border);
-      background: var(--elb-bg);
+      background: transparent;
+      gap: var(--elb-spacing-sm);
     }
     
     .elb-box-label {
       font-size: var(--elb-font-size-sm);
-      font-weight: 600;
+      font-weight: 500;
       color: var(--elb-fg);
+      letter-spacing: -0.01em;
     }
     
     .elb-box-content {
       flex: 1;
       overflow: auto;
       padding: var(--elb-spacing-md);
+      background: transparent;
     }
     
     .elb-box-footer {
       display: flex;
       align-items: center;
       gap: var(--elb-spacing-sm);
-      padding: var(--elb-spacing-sm) var(--elb-spacing-md);
+      min-height: 40px;
+      padding: 0 var(--elb-spacing-md);
       border-top: 1px solid var(--elb-border);
-      background: var(--elb-bg);
+      background: transparent;
+    }
+    
+    /* Scrollbar styling */
+    .elb-box-content::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    .elb-box-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .elb-box-content::-webkit-scrollbar-thumb {
+      background: var(--elb-border);
+      border-radius: var(--elb-radius-sm);
+    }
+    
+    .elb-box-content::-webkit-scrollbar-thumb:hover {
+      background: var(--elb-muted);
     }
   `;
 }

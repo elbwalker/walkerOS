@@ -156,6 +156,7 @@ function injectLayoutStyles(container: HTMLElement): void {
       width: 100%;
       height: 100%;
       gap: var(--elb-spacing-md);
+      background: transparent;
     }
     
     .elb-layout--horizontal {

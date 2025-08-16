@@ -9,6 +9,7 @@ export { createLiveCode } from './organisms/liveCode';
 // Molecule components (for advanced users)
 export { createCodeBox } from './molecules/codeBox';
 export { createResultBox } from './molecules/resultBox';
+export { createControlPanel } from './molecules/controlPanel';
 
 // Layout components
 export { createColumns } from './layouts/columns';
@@ -17,7 +18,9 @@ export { createColumns } from './layouts/columns';
 export { createBox } from './atoms/box';
 export { createEditor } from './atoms/editor';
 export { createButton } from './atoms/button';
+export { createIconButton } from './atoms/iconButton';
 export { createLabel } from './atoms/label';
+export { createOverlay } from './atoms/overlay';
 
 // Utilities (for advanced usage)
 export { evaluate, formatValue, formatError } from './lib/evaluate';
@@ -36,16 +39,22 @@ export type {
   CodeBoxOptions,
   ResultBoxAPI,
   ResultBoxOptions,
+  ControlPanelAPI,
+  ControlPanelOptions,
   BoxAPI,
   BoxOptions,
   EditorAPI,
   EditorOptions,
   ButtonAPI,
   ButtonOptions,
+  IconButtonAPI,
+  IconButtonOptions,
   LabelAPI,
   LabelOptions,
   LayoutAPI,
   LayoutOptions,
+  OverlayAPI,
+  OverlayOptions,
   // Utility types
   ShadowContext,
   EvaluationResult,

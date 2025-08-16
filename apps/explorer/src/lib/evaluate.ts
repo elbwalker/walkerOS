@@ -4,7 +4,7 @@
  */
 
 import type { EvaluationResult } from '../types';
-import { tryCatch, tryCatchAsync } from '@walkeros/core';
+import { tryCatch } from '@walkeros/core';
 
 /**
  * Create a safe execution context

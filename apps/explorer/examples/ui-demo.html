@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI Modernization Demo - WalkerOS Explorer</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #fafafa;
+      transition: background 200ms ease;
+    }
+    
+    [data-theme="dark"] body {
+      background: #0a0a0a;
+      color: #fafafa;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #e4e4e7;
+    }
+    
+    [data-theme="dark"] .header {
+      border-color: #27272a;
+    }
+    
+    h1 {
+      color: #0a0a0a;
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 600;
+    }
+    
+    [data-theme="dark"] h1 {
+      color: #fafafa;
+    }
+    
+    .description {
+      color: #71717a;
+      margin: 10px 0;
+      font-size: 1.1rem;
+    }
+    
+    [data-theme="dark"] .description {
+      color: #a1a1aa;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: white;
+      border: 1px solid #e4e4e7;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 200ms ease;
+    }
+    
+    [data-theme="dark"] .theme-toggle {
+      background: #18181b;
+      border-color: #27272a;
+      color: #fafafa;
+    }
+    
+    .theme-toggle:hover {
+      background: #f4f4f5;
+    }
+    
+    [data-theme="dark"] .theme-toggle:hover {
+      background: #27272a;
+    }
+    
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+    
+    .demo-section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    [data-theme="dark"] .demo-section {
+      background: #18181b;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    
+    .demo-section h2 {
+      margin-top: 0;
+      color: #0a0a0a;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    
+    [data-theme="dark"] .demo-section h2 {
+      color: #fafafa;
+    }
+    
+    .livecode-container {
+      height: 400px;
+      margin-top: 20px;
+    }
+    
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 20px 0;
+    }
+    
+    .feature-list li {
+      padding: 8px 0;
+      color: #71717a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    [data-theme="dark"] .feature-list li {
+      color: #a1a1aa;
+    }
+    
+    .feature-list li:before {
+      content: "✓";
+      color: #16a34a;
+      font-weight: bold;
+    }
+    
+    .height-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .height-btn {
+      padding: 6px 12px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 150ms ease;
+    }
+    
+    .height-btn:hover {
+      background: #1d4ed8;
+    }
+    
+    .height-btn:active {
+      transform: scale(0.95);
+    }
+  </style>
+  <script src="../dist/explorer.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>WalkerOS Explorer - Modern UI Demo</h1>
+        <p class="description">
+          Showcasing the modernized, clean interface with icon buttons, refined styling, and dark mode support
+        </p>
+      </div>
+      <div class="controls">
+        <button class="theme-toggle" onclick="toggleTheme()">
+          <span id="theme-icon">🌞</span>
+          <span id="theme-text">Light Mode</span>
+        </button>
+      </div>
+    </div>
+    
+    <div class="demo-grid">
+      <!-- Example 1: Modern Interface -->
+      <div class="demo-section">
+        <h2>1. Clean, Modern Interface</h2>
+        <ul class="feature-list">
+          <li>Icon buttons with tooltips (hover over Copy/Clear icons)</li>
+          <li>Refined color palette and spacing</li>
+          <li>Smooth transitions and hover states</li>
+          <li>Professional typography</li>
+        </ul>
+        <div id="example1" class="livecode-container"></div>
+      </div>
+      
+      <!-- Example 2: Responsive Height -->
+      <div class="demo-section">
+        <h2>2. Flexible Height Control</h2>
+        <p style="color: #71717a; margin: 10px 0;">
+          Components can have custom heights for different use cases
+        </p>
+        <div class="height-controls">
+          <button class="height-btn" onclick="setHeight('example2-container', '300px')">Small (300px)</button>
+          <button class="height-btn" onclick="setHeight('example2-container', '500px')">Medium (500px)</button>
+          <button class="height-btn" onclick="setHeight('example2-container', '700px')">Large (700px)</button>
+        </div>
+        <div id="example2-container" style="height: 500px; transition: height 300ms ease;">
+          <div id="example2" style="height: 100%;"></div>
+        </div>
+      </div>
+      
+      <!-- Example 3: Theme-Aware Components -->
+      <div class="demo-section">
+        <h2>3. Automatic Dark Mode Support</h2>
+        <p style="color: #71717a; margin: 10px 0;">
+          Components automatically adapt to the parent document's theme (toggle theme above)
+        </p>
+        <div id="example3" class="livecode-container"></div>
+      </div>
+      
+      <!-- Example 4: Interactive Features -->
+      <div class="demo-section">
+        <h2>4. Enhanced Interactivity</h2>
+        <ul class="feature-list">
+          <li>Live code execution with debouncing</li>
+          <li>Visual feedback on actions (try copying code)</li>
+          <li>Clean error display</li>
+          <li>Formatted output with syntax highlighting</li>
+        </ul>
+        <div id="example4" class="livecode-container"></div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Theme toggle function
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      
+      // Update button text
+      const icon = document.getElementById('theme-icon');
+      const text = document.getElementById('theme-text');
+      icon.textContent = newTheme === 'dark' ? '🌙' : '🌞';
+      text.textContent = newTheme === 'dark' ? 'Dark Mode' : 'Light Mode';
+    }
+    
+    // Height control function
+    function setHeight(containerId, height) {
+      const container = document.getElementById(containerId);
+      if (container) {
+        container.style.height = height;
+      }
+    }
+    
+    // Initialize components
+    document.addEventListener('DOMContentLoaded', () => {
+      const { createLiveCode } = WalkerExplorer;
+      
+      // Example 1: Clean Interface Demo with Control Panel
+      const example1 = createLiveCode(document.getElementById('example1'), {
+        input: `// Modern UI with icon buttons and tooltips
+const features = {
+  design: 'Clean and minimal',
+  buttons: 'Icon-based with tooltips',
+  theme: 'Automatic dark mode support',
+  styling: 'Modern color palette'
+};
+
+// Try hovering over the Copy and Clear icons above!
+console.log('Features:', features);
+
+return {
+  status: 'Modern UI Active',
+  features
+};`,
+        labelInput: 'Modern Code Editor',
+        labelOutput: 'Clean Output Display',
+        lineNumbers: true,  // Show line numbers in this example
+        textSize: 'regular',
+        showControls: true  // Show the control panel
+      });
+      
+      // Example 2: Height Control Demo
+      const example2 = createLiveCode(document.getElementById('example2'), {
+        input: `// This component has adjustable height
+// Click the buttons above to resize
+
+const getDimensions = () => {
+  const element = document.getElementById('example2-container');
+  return {
+    height: element?.offsetHeight || 0,
+    width: element?.offsetWidth || 0
+  };
+};
+
+const dimensions = getDimensions();
+console.log('Container dimensions:', dimensions);
+
+return {
+  message: 'Try resizing with buttons above!',
+  currentHeight: dimensions.height + 'px'
+};`,
+        labelInput: 'Resizable Editor',
+        labelOutput: 'Dynamic Output',
+        lineNumbers: false,  // No line numbers (default)
+        textSize: 'small'  // Smaller text size
+      });
+      
+      // Example 3: Theme-Aware Demo  
+      const example3 = createLiveCode(document.getElementById('example3'), {
+        input: `// Components adapt to parent theme automatically
+const getTheme = () => {
+  const html = document.documentElement;
+  return html.getAttribute('data-theme') || 'light';
+};
+
+const theme = getTheme();
+const colors = {
+  light: {
+    bg: '#fafafa',
+    fg: '#0a0a0a',
+    accent: '#2563eb'
+  },
+  dark: {
+    bg: '#0a0a0a',
+    fg: '#fafafa',
+    accent: '#3b82f6'
+  }
+};
+
+console.log('Current theme:', theme);
+console.log('Active colors:', colors[theme] || colors.light);
+
+return {
+  activeTheme: theme,
+  tip: 'Toggle theme with button above!'
+};`,
+        labelInput: 'Theme Detection',
+        labelOutput: 'Adaptive Display',
+        fullscreen: true  // Fullscreen enabled (default)
+      });
+      
+      // Example 4: Interactive Features
+      const example4 = createLiveCode(document.getElementById('example4'), {
+        input: `// Enhanced interactivity demo
+async function demonstrateFeatures() {
+  const features = [];
+  
+  // Feature 1: Async support
+  console.log('Testing async operations...');
+  await new Promise(r => setTimeout(r, 100));
+  features.push('✓ Async/await support');
+  
+  // Feature 2: Error handling
+  try {
+    // This would throw an error
+    // throw new Error('Test error');
+    features.push('✓ Clean error display');
+  } catch (e) {
+    console.error('Error caught:', e.message);
+  }
+  
+  // Feature 3: Rich output
+  features.push('✓ Formatted JSON output');
+  features.push('✓ Console log capture');
+  features.push('✓ Visual feedback on actions');
+  features.push('✓ Fullscreen mode (click expand icon)');
+  
+  return {
+    timestamp: new Date().toISOString(),
+    features,
+    tip: 'Try the fullscreen button!'
+  };
+}
+
+return await demonstrateFeatures();`,
+        labelInput: 'Interactive Features',
+        labelOutput: 'Rich Output Display',
+        lineNumbers: false,
+        fullscreen: false  // Disabled for this example to show option
+      });
+      
+      // Set initial theme icon
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme') || 'light';
+      const icon = document.getElementById('theme-icon');
+      const text = document.getElementById('theme-text');
+      icon.textContent = currentTheme === 'dark' ? '🌙' : '🌞';
+      text.textContent = currentTheme === 'dark' ? 'Dark Mode' : 'Light Mode';
+    });
+  </script>
+</body>
+</html>

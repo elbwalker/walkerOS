@@ -11,20 +11,25 @@ import type { ThemeOptions } from '../types';
 export const defaultTheme = {
   // Colors - Light Theme
   colors: {
-    bg: '#ffffff',
-    fg: '#1f2937',
-    border: '#e5e7eb',
-    accent: '#3b82f6',
-    error: '#ef4444',
-    success: '#10b981',
-    warning: '#f59e0b',
-    muted: '#6b7280',
+    bg: '#fafafa',
+    fg: '#0a0a0a',
+    border: '#e4e4e7',
+    accent: '#2563eb',
+    error: '#dc2626',
+    success: '#16a34a',
+    warning: '#d97706',
+    muted: '#71717a',
+    surface: '#ffffff',
+    hover: '#f4f4f5',
 
     // Dark theme variants
-    darkBg: '#1f2937',
-    darkFg: '#f9fafb',
-    darkBorder: '#374151',
-    darkAccent: '#60a5fa',
+    darkBg: '#0a0a0a',
+    darkFg: '#fafafa',
+    darkBorder: '#27272a',
+    darkAccent: '#3b82f6',
+    darkSurface: '#18181b',
+    darkHover: '#27272a',
+    darkMuted: '#a1a1aa',
   },
 
   // Syntax highlighting colors
@@ -47,13 +52,13 @@ export const defaultTheme = {
     darkPunctuation: '#f1f8ff',
   },
 
-  // Spacing
+  // Spacing - Much smaller values
   spacing: {
-    xs: '0.25rem',
-    sm: '0.5rem',
-    md: '1rem',
-    lg: '1.5rem',
-    xl: '2rem',
+    xs: '0.125rem', // 2px
+    sm: '0.25rem', // 4px
+    md: '0.5rem', // 8px
+    lg: '0.75rem', // 12px
+    xl: '1rem', // 16px
   },
 
   // Typography
@@ -63,23 +68,23 @@ export const defaultTheme = {
   },
 
   fontSize: {
-    xs: '0.75rem',
-    sm: '0.875rem',
-    base: '1rem',
-    lg: '1.125rem',
+    xs: '0.6875rem', // 11px
+    sm: '0.75rem', // 12px
+    base: '0.8125rem', // 13px
+    lg: '0.875rem', // 14px
   },
 
   // Layout
   radius: {
-    sm: '0.25rem',
-    md: '0.5rem',
-    lg: '0.75rem',
+    sm: '0.375rem', // 6px
+    md: '0.5rem', // 8px
+    lg: '0.75rem', // 12px
   },
 
   shadow: {
-    sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
-    md: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-    lg: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+    sm: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+    md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+    lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
   },
 
   // Transitions
@@ -142,53 +147,42 @@ export function generateCSSVariables(theme = defaultTheme): string {
 /**
  * Get base styles for components
  */
-export function getBaseStyles(): string {
+export function getBaseStyles(textSize?: 'small' | 'regular'): string {
+  const fontSize =
+    textSize === 'small'
+      ? 'var(--elb-font-size-sm)'
+      : 'var(--elb-font-size-base)';
+
   return `
     :host {
       ${generateCSSVariables()}
       
+      /* Override with global theme variables that inherit from parent document */
+      --elb-bg: var(--walker-bg, #fafafa);
+      --elb-fg: var(--walker-fg, #0a0a0a);
+      --elb-border: var(--walker-border, #e4e4e7);
+      --elb-accent: var(--walker-accent, #2563eb);
+      --elb-error: var(--walker-error, #dc2626);
+      --elb-success: var(--walker-success, #16a34a);
+      --elb-warning: var(--walker-warning, #d97706);
+      --elb-muted: var(--walker-muted, #71717a);
+      --elb-surface: var(--walker-surface, #ffffff);
+      --elb-hover: var(--walker-hover, #f4f4f5);
+      
+      /* Syntax colors from global theme with proper fallbacks */
+      --elb-syntax-keyword: var(--walker-syntax-keyword, #d73a49);
+      --elb-syntax-string: var(--walker-syntax-string, #032f62);
+      --elb-syntax-number: var(--walker-syntax-number, #005cc5);
+      --elb-syntax-comment: var(--walker-syntax-comment, #6a737d);
+      --elb-syntax-function: var(--walker-syntax-function, #6f42c1);
+      --elb-syntax-operator: var(--walker-syntax-operator, #d73a49);
+      --elb-syntax-punctuation: var(--walker-syntax-punctuation, #24292e);
+      
       /* Default styles */
       font-family: var(--elb-font-sans);
-      font-size: var(--elb-font-size-base);
+      font-size: ${fontSize};
       line-height: 1.5;
       color: var(--elb-fg);
-      background-color: var(--elb-bg);
-    }
-    
-    /* Dark mode auto-detection */
-    @media (prefers-color-scheme: dark) {
-      :host(:not([data-theme="light"])) {
-        --elb-bg: var(--elb-dark-bg);
-        --elb-fg: var(--elb-dark-fg);
-        --elb-border: var(--elb-dark-border);
-        --elb-accent: var(--elb-dark-accent);
-        
-        /* Dark syntax colors */
-        --elb-syntax-keyword: var(--elb-syntax-dark-keyword);
-        --elb-syntax-string: var(--elb-syntax-dark-string);
-        --elb-syntax-number: var(--elb-syntax-dark-number);
-        --elb-syntax-comment: var(--elb-syntax-dark-comment);
-        --elb-syntax-function: var(--elb-syntax-dark-function);
-        --elb-syntax-operator: var(--elb-syntax-dark-operator);
-        --elb-syntax-punctuation: var(--elb-syntax-dark-punctuation);
-      }
-    }
-    
-    /* Explicit dark theme */
-    :host([data-theme="dark"]) {
-      --elb-bg: var(--elb-dark-bg);
-      --elb-fg: var(--elb-dark-fg);
-      --elb-border: var(--elb-dark-border);
-      --elb-accent: var(--elb-dark-accent);
-      
-      /* Dark syntax colors */
-      --elb-syntax-keyword: var(--elb-syntax-dark-keyword);
-      --elb-syntax-string: var(--elb-syntax-dark-string);
-      --elb-syntax-number: var(--elb-syntax-dark-number);
-      --elb-syntax-comment: var(--elb-syntax-dark-comment);
-      --elb-syntax-function: var(--elb-syntax-dark-function);
-      --elb-syntax-operator: var(--elb-syntax-dark-operator);
-      --elb-syntax-punctuation: var(--elb-syntax-dark-punctuation);
     }
     
     /* Reset styles */

@@ -60,6 +60,30 @@ export interface ButtonAPI extends ComponentAPI {
   click: () => void;
 }
 
+export interface IconButtonOptions {
+  icon?:
+    | 'copy'
+    | 'format'
+    | 'expand'
+    | 'collapse'
+    | 'grid'
+    | 'columns'
+    | 'rows'
+    | 'check';
+  customIcon?: string;
+  tooltip?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
+}
+
+export interface IconButtonAPI extends ComponentAPI {
+  setIcon: (icon: string) => void;
+  setTooltip: (tooltip: string) => void;
+  setDisabled: (disabled: boolean) => void;
+  click: () => void;
+}
+
 export interface LabelOptions {
   text: string;
   className?: string;
@@ -145,6 +169,37 @@ export interface LayoutAPI extends ComponentAPI {
   removeColumn: (index: number) => void;
 }
 
+// Control Panel Component
+export interface ControlPanelOptions {
+  visible?: boolean;
+  defaultLayout?: 'columns' | 'rows' | 'grid';
+  showLayoutButtons?: boolean;
+  showFullscreen?: boolean;
+  showGrid?: boolean;
+  onLayoutChange?: (layout: 'columns' | 'rows' | 'grid') => void;
+  onFullscreen?: () => void;
+}
+
+export interface ControlPanelAPI extends ComponentAPI {
+  show: () => void;
+  hide: () => void;
+  setLayout: (layout: 'columns' | 'rows' | 'grid') => void;
+}
+
+// Overlay Component
+export interface OverlayOptions {
+  preventClose?: boolean;
+  onOpen?: () => void;
+  onClose?: () => void;
+}
+
+export interface OverlayAPI extends ComponentAPI {
+  open: (element?: HTMLElement) => void;
+  close: () => void;
+  isOpen: () => boolean;
+  setContent: (element: HTMLElement) => void;
+}
+
 // Organism Components
 export interface LiveCodeOptions {
   input?: string;
@@ -155,6 +210,10 @@ export interface LiveCodeOptions {
   layout?: 'horizontal' | 'vertical' | 'auto';
   height?: string;
   debounceDelay?: number;
+  lineNumbers?: boolean; // Default: false
+  fullscreen?: boolean; // Default: true
+  textSize?: 'small' | 'regular'; // Default: 'regular'
+  showControls?: boolean; // Default: false - shows control panel
 }
 
 export interface LiveCodeAPI extends ComponentAPI {

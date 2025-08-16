@@ -3,12 +3,21 @@
  * Interactive code execution with live results
  */
 
-import type { LiveCodeOptions, LiveCodeAPI } from '../types';
+import type {
+  LiveCodeOptions,
+  LiveCodeAPI,
+  ControlPanelAPI,
+  OverlayAPI,
+} from '../types';
 import { createColumns } from '../layouts/columns';
 import { createCodeBox } from '../molecules/codeBox';
 import { createResultBox } from '../molecules/resultBox';
-import { createShadow } from '../lib/dom';
+import { createControlPanel } from '../molecules/controlPanel';
+import { createIconButton } from '../atoms/iconButton';
+import { createOverlay } from '../atoms/overlay';
+import { createShadow, createElement } from '../lib/dom';
 import { getBaseStyles } from '../styles/theme';
+import { injectGlobalThemeStyles } from '../styles/globalTheme';
 import { evaluate } from '../lib/evaluate';
 import { debounce } from '../lib/debounce';
 
@@ -19,11 +28,14 @@ export function createLiveCode(
   element: HTMLElement,
   options: LiveCodeOptions = {},
 ): LiveCodeAPI {
+  // Inject global theme styles once (into document head)
+  injectGlobalThemeStyles();
+
   const { shadow, container } = createShadow(element);
 
-  // Inject base styles
+  // Inject base styles with text size option
   const styles = document.createElement('style');
-  styles.textContent = getBaseStyles() + getLiveCodeStyles();
+  styles.textContent = getBaseStyles(options.textSize) + getLiveCodeStyles();
   shadow.appendChild(styles);
 
   // Create layout
@@ -34,12 +46,53 @@ export function createLiveCode(
     gap: 'var(--elb-spacing-md)',
   });
 
+  // Create control panel if requested
+  let controlPanel: ControlPanelAPI | undefined;
+  let overlay: OverlayAPI | undefined;
+
+  if (options.showControls) {
+    // Create overlay for fullscreen if enabled
+    if (options.fullscreen !== false) {
+      overlay = createOverlay({
+        onClose: () => {
+          // Re-append container to original element
+          shadow.appendChild(container);
+        },
+      });
+    }
+
+    // Create wrapper div for control panel that goes above the layout
+    const controlWrapper = createElement('div', {
+      class: 'elb-control-wrapper',
+    });
+    container.insertBefore(controlWrapper, container.firstChild);
+
+    controlPanel = createControlPanel(controlWrapper, {
+      visible: true,
+      defaultLayout: options.layout === 'vertical' ? 'rows' : 'columns',
+      showLayoutButtons: true,
+      showFullscreen: options.fullscreen !== false,
+      showGrid: false,
+      onLayoutChange: (newLayout) => {
+        if (newLayout === 'columns' || newLayout === 'rows') {
+          layout.setDirection(newLayout === 'rows' ? 'vertical' : 'horizontal');
+        }
+      },
+      onFullscreen: () => {
+        if (overlay) {
+          overlay.open(container);
+        }
+      },
+    });
+  }
+
   // Create input code box
   const inputBox = createCodeBox(layout.getColumn(0), {
     label: options.labelInput || 'Input',
     value: options.input || '',
     language: 'javascript',
-    lineNumbers: true,
+    lineNumbers:
+      options.lineNumbers !== undefined ? options.lineNumbers : false, // Default false
     showControls: true,
     onChange: debounce(() => executeCode(), options.debounceDelay || 300),
   });
@@ -121,6 +174,8 @@ export function createLiveCode(
       inputBox.destroy();
       outputBox.destroy();
       layout.destroy();
+      if (controlPanel) controlPanel.destroy();
+      if (overlay) overlay.destroy();
       shadow.innerHTML = '';
       element.remove();
     },
@@ -137,6 +192,7 @@ function getLiveCodeStyles(): string {
       flex-direction: column;
       height: 100%;
       min-height: 200px;
+      background: transparent;
     }
     
     /* Ensure boxes fill their columns */

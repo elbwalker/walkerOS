@@ -5,7 +5,7 @@
 
 import type { ResultBoxOptions, ResultBoxAPI } from '../types';
 import { createBox } from '../atoms/box';
-import { createButton } from '../atoms/button';
+import { createIconButton } from '../atoms/iconButton';
 import { createElement, clearChildren } from '../lib/dom';
 import { formatValue, formatError } from '../lib/evaluate';
 import { highlight } from '../lib/syntax';
@@ -24,7 +24,7 @@ export function createResultBox(
   const box = createBox(element, {
     label: options.label || 'Result',
     showHeader: true,
-    showFooter: options.showActions,
+    showFooter: false,
     className: 'elb-result-box',
   });
 
@@ -32,28 +32,35 @@ export function createResultBox(
   const display = createElement('div', { class: 'elb-result-display' });
   box.getContent().appendChild(display);
 
-  // Add actions to footer if requested
-  if (options.showActions && box.getFooter()) {
-    // Clear button
-    const clearBtn = createButton(box.getFooter()!, {
-      text: 'Clear',
-      variant: 'ghost',
-      onClick: () => {
-        clearDisplay();
-        options.onClear?.();
+  // Add actions to header if requested
+  if (options.showActions && box.getHeader()) {
+    const controls = createElement('div', { class: 'elb-result-box-controls' });
+
+    // Copy button only
+    const copyBtn = createIconButton(controls, {
+      icon: 'copy',
+      tooltip: 'Copy output',
+      onClick: async () => {
+        const content = display.textContent || '';
+        try {
+          await navigator.clipboard.writeText(content);
+
+          // Visual feedback
+          copyBtn.setIcon('check');
+          copyBtn.setTooltip('Copied!');
+          setTimeout(() => {
+            copyBtn.setIcon('copy');
+            copyBtn.setTooltip('Copy output');
+          }, 2000);
+
+          options.onCopy?.();
+        } catch (e) {
+          console.error('Failed to copy:', e);
+        }
       },
     });
 
-    // Copy button
-    const copyBtn = createButton(box.getFooter()!, {
-      text: 'Copy',
-      variant: 'ghost',
-      onClick: async () => {
-        const content = display.textContent || '';
-        await navigator.clipboard.writeText(content);
-        options.onCopy?.();
-      },
-    });
+    box.getHeader()!.appendChild(controls);
   }
 
   // Helper functions
@@ -219,6 +226,16 @@ function injectResultBoxStyles(element: HTMLElement): void {
     .elb-result-box .elb-box-content {
       font-family: var(--elb-font-mono);
       font-size: var(--elb-font-size-sm);
+    }
+    
+    .elb-result-box-controls {
+      display: flex;
+      gap: var(--elb-spacing-xs);
+      margin-left: auto;
+    }
+    
+    .elb-result-box .elb-box-header {
+      padding-right: var(--elb-spacing-xs);
     }
     
     .elb-result-display {

@@ -6,7 +6,7 @@
 import type { CodeBoxOptions, CodeBoxAPI } from '../types';
 import { createBox } from '../atoms/box';
 import { createEditor } from '../atoms/editor';
-import { createButton } from '../atoms/button';
+import { createIconButton } from '../atoms/iconButton';
 import { createElement } from '../lib/dom';
 import { formatValue } from '../lib/evaluate';
 
@@ -27,7 +27,7 @@ export function createCodeBox(
   // Create editor in content area
   const editor = createEditor(box.getContent(), {
     value: options.value,
-    language: options.language,
+    language: options.language || 'javascript', // Default to javascript for syntax highlighting
     readOnly: options.readOnly,
     lineNumbers: options.lineNumbers,
     onChange: options.onChange,
@@ -37,11 +37,35 @@ export function createCodeBox(
   if (options.showControls && box.getHeader()) {
     const controls = createElement('div', { class: 'elb-code-box-controls' });
 
-    // Format button
+    // Default controls: Copy is always shown
+    const copyBtn = createIconButton(controls, {
+      icon: 'copy',
+      tooltip: 'Copy code',
+      onClick: async () => {
+        const value = editor.getValue();
+        try {
+          await navigator.clipboard.writeText(value);
+
+          // Visual feedback
+          copyBtn.setIcon('check');
+          copyBtn.setTooltip('Copied!');
+          setTimeout(() => {
+            copyBtn.setIcon('copy');
+            copyBtn.setTooltip('Copy code');
+          }, 2000);
+
+          options.onCopy?.();
+        } catch (e) {
+          console.error('Failed to copy:', e);
+        }
+      },
+    });
+
+    // Format button (optional)
     if (options.onFormat) {
-      const formatBtn = createButton(controls, {
-        text: 'Format',
-        variant: 'ghost',
+      const formatBtn = createIconButton(controls, {
+        icon: 'format',
+        tooltip: 'Format code',
         onClick: () => {
           const value = editor.getValue();
           try {
@@ -54,19 +78,6 @@ export function createCodeBox(
           } catch (e) {
             // Silent fail on format error
           }
-        },
-      });
-    }
-
-    // Copy button
-    if (options.onCopy) {
-      const copyBtn = createButton(controls, {
-        text: 'Copy',
-        variant: 'ghost',
-        onClick: async () => {
-          const value = editor.getValue();
-          await navigator.clipboard.writeText(value);
-          options.onCopy?.();
         },
       });
     }
@@ -138,11 +149,49 @@ function injectCodeBoxStyles(element: HTMLElement): void {
   const styles = `
     .elb-code-box .elb-box-content {
       padding: 0;
+      background: transparent;
     }
     
     .elb-code-box-controls {
       display: flex;
       gap: var(--elb-spacing-xs);
+      margin-left: auto;
+    }
+    
+    .elb-code-box .elb-box-header {
+      padding-right: var(--elb-spacing-xs);
+    }
+    
+    /* Consistent borderless icon buttons */
+    .elb-code-box-controls .elb-icon-button {
+      background: transparent !important;
+      border: none !important;
+      color: var(--elb-muted);
+      box-shadow: none !important;
+    }
+    
+    .elb-code-box-controls .elb-icon-button:hover:not(:disabled) {
+      background: transparent !important;
+      color: var(--elb-fg);
+      transform: none !important;
+      box-shadow: none !important;
+    }
+    
+    .elb-code-box-controls .elb-icon-button:focus {
+      outline: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+    
+    .elb-code-box-controls .elb-icon-button:focus-visible {
+      outline: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+    
+    .elb-code-box-controls .elb-icon-button:active {
+      background: transparent !important;
+      box-shadow: none !important;
     }
   `;
 
