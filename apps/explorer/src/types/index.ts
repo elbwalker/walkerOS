@@ -94,6 +94,13 @@ export interface LabelAPI extends ComponentAPI {
 }
 
 // Molecule Components
+export interface CodeBoxTabsConfig {
+  enabled: boolean;
+  items: ('html' | 'css' | 'js')[];
+  active: 'html' | 'css' | 'js';
+  disabled?: ('html' | 'css' | 'js')[];
+}
+
 export interface CodeBoxOptions {
   label?: string;
   value?: string;
@@ -101,7 +108,12 @@ export interface CodeBoxOptions {
   readOnly?: boolean;
   lineNumbers?: boolean;
   showControls?: boolean;
+  tabs?: CodeBoxTabsConfig;
   onChange?: (value: string) => void;
+  onTabChange?: (
+    tab: 'html' | 'css' | 'js',
+    content: { html: string; css: string; js: string },
+  ) => void;
   onFormat?: () => void;
   onCopy?: () => void;
 }
@@ -109,6 +121,10 @@ export interface CodeBoxOptions {
 export interface CodeBoxAPI extends ComponentAPI {
   getValue: () => string;
   setValue: (value: string) => void;
+  getAllValues: () => { html: string; css: string; js: string };
+  setAllValues: (values: { html: string; css: string; js: string }) => void;
+  getActiveTab: () => 'html' | 'css' | 'js';
+  setActiveTab: (tab: 'html' | 'css' | 'js') => void;
   setLabel: (label: string) => void;
   setLanguage: (language: string) => void;
   format: () => void;

@@ -5,6 +5,21 @@
 
 // Main organism components (what users typically use)
 export { createLiveCode } from './organisms/liveCode';
+export { createPlayground } from './organisms/playground';
+
+// Graph system
+export { createGraph, Graph } from './graph/api';
+export { GraphEngine } from './graph/engine';
+
+// Node components
+export { BaseNode } from './nodes/base';
+export { CodeNode } from './nodes/code';
+export { HTMLNode } from './nodes/html';
+export { PreviewNode } from './nodes/preview';
+export { CollectorNode } from './nodes/collector';
+export { MappingNode } from './nodes/mapping';
+export { DestinationNode } from './nodes/destination';
+export { ConsoleNode } from './nodes/console';
 
 // Molecule components (for advanced users)
 export { createCodeBox } from './molecules/codeBox';
@@ -61,6 +76,27 @@ export type {
   SyntaxToken,
   ThemeOptions,
 } from './types';
+
+// Graph types
+export type { GraphAPI } from './graph/api';
+
+export type {
+  GraphNode,
+  GraphState,
+  Edge,
+  NodeType,
+  NodeValue,
+  NodeConfig,
+  NodeContext,
+  Port,
+  PortRef,
+  ExecutionResult,
+  ValidationResult,
+  GraphConfig,
+  GraphEvent,
+  EventHandler,
+  DestinationOutput,
+} from './graph/types';
 
 // Version
 export const version = '2.0.0';

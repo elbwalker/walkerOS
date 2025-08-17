@@ -128,10 +128,31 @@
       <h2>Examples</h2>
       
       <div class="example-card">
-        <h3>LiveCode Component <span class="badge badge-new">NEW</span></h3>
+        <h3>Event Flow Playground <span class="badge badge-new">NEW</span></h3>
+        <p>Complete graph-based pipeline demonstrating walkerOS event flow from source to destination.</p>
+        <p><strong>Features:</strong> Visual pipeline, real-time event capture, mapping transformations, shadow DOM isolation</p>
+        <a href="playground.html">Open Example →</a>
+      </div>
+      
+      <div class="example-card">
+        <h3>PreviewNode Test <span class="badge badge-new">NEW</span></h3>
+        <p>Tests the PreviewNode with real walkerOS browser source integration and shadow DOM rendering.</p>
+        <p><strong>Features:</strong> Event capture, live HTML preview, walkerOS attribute testing</p>
+        <a href="preview-test.html">Open Example →</a>
+      </div>
+      
+      <div class="example-card">
+        <h3>LiveCode Component</h3>
         <p>Interactive code execution with live results. Pure vanilla JavaScript implementation with Shadow DOM isolation.</p>
         <p><strong>Features:</strong> Syntax highlighting, async support, context injection, multiple layouts</p>
         <a href="livecode.html">Open Example →</a>
+      </div>
+      
+      <div class="example-card">
+        <h3>UI Components Demo</h3>
+        <p>Atomic design components library showcasing all Explorer UI elements.</p>
+        <p><strong>Features:</strong> Atoms, molecules, organisms, responsive layouts</p>
+        <a href="ui-demo.html">Open Example →</a>
       </div>
     </div>
     
@@ -142,30 +163,57 @@
       <p>To use the new Explorer components in your project:</p>
       
       <h4>ES Modules (Recommended)</h4>
-      <pre><code>import { createLiveCode } from '@walkeros/explorer';
+      <pre><code>// LiveCode component
+import { createLiveCode } from '@walkeros/explorer';
 
 const liveCode = createLiveCode(element, {
   input: 'return 1 + 1;',
   context: { /* your functions */ }
+});
+
+// Playground component
+import { createPlayground } from '@walkeros/explorer';
+
+const playground = createPlayground(element, {
+  initialHTML: '&lt;div data-elb="product"&gt;...&lt;/div&gt;',
+  initialMapping: { /* mapping rules */ }
 });</code></pre>
       
       <h4>Browser Global</h4>
       <pre><code>&lt;script src="/dist/explorer.js"&gt;&lt;/script&gt;
 &lt;script&gt;
+  // LiveCode component
   const liveCode = WalkerExplorer.createLiveCode(element, options);
+  
+  // Playground component  
+  const playground = WalkerExplorer.createPlayground(element, {
+    initialHTML: '&lt;button data-elb="product"&gt;Buy&lt;/button&gt;'
+  });
+  
+  // Execute the pipeline
+  await playground.execute();
 &lt;/script&gt;</code></pre>
     </div>
     
     <div class="section">
       <h2>Architecture Overview</h2>
       
-      <p>The new Explorer follows atomic design principles:</p>
+      <p>The new Explorer follows atomic design principles and includes a graph-based event flow system:</p>
       
+      <h3>Component Hierarchy</h3>
       <ul>
         <li><strong>Atoms:</strong> Basic building blocks (box, editor, button, label)</li>
         <li><strong>Molecules:</strong> Composed components (codeBox, resultBox)</li>
-        <li><strong>Organisms:</strong> Complete features (liveCode, mapping, eventFlow)</li>
+        <li><strong>Organisms:</strong> Complete features (liveCode, mapping, playground)</li>
         <li><strong>Layouts:</strong> Responsive layout systems</li>
+      </ul>
+      
+      <h3>Graph System</h3>
+      <ul>
+        <li><strong>Nodes:</strong> HTMLNode, PreviewNode, CollectorNode, MappingNode, DestinationNode, ConsoleNode</li>
+        <li><strong>Edges:</strong> Define data flow between nodes</li>
+        <li><strong>Engine:</strong> DAG validation and topological execution</li>
+        <li><strong>Pipeline:</strong> Source → Collector → Mapping → Destination</li>
       </ul>
       
       <p>All components are:</p>
@@ -173,6 +221,7 @@ const liveCode = createLiveCode(element, {
         <li>✅ Pure vanilla JavaScript (no React)</li>
         <li>✅ Shadow DOM isolated</li>
         <li>✅ Fully typed with TypeScript</li>
+        <li>✅ Real walkerOS integration</li>
         <li>✅ < 30KB gzipped</li>
       </ul>
     </div>

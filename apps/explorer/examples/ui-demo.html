@@ -242,6 +242,18 @@
         </ul>
         <div id="example4" class="livecode-container"></div>
       </div>
+      
+      <!-- Example 5: Button Group Component -->
+      <div class="demo-section">
+        <h2>5. Button Group UI Component</h2>
+        <ul class="feature-list">
+          <li>Segmented control patterns (toggle groups)</li>
+          <li>Filter button groups with selection states</li>
+          <li>Action button groups with visual feedback</li>
+          <li>Responsive design with mobile support</li>
+        </ul>
+        <div id="example5" class="livecode-container"></div>
+      </div>
     </div>
   </div>
   
@@ -394,6 +406,213 @@ return await demonstrateFeatures();`,
         labelOutput: 'Rich Output Display',
         lineNumbers: false,
         fullscreen: false  // Disabled for this example to show option
+      });
+      
+      // Example 5: Button Group Component Demo
+      const example5 = createLiveCode(document.getElementById('example5'), {
+        input: `// Button Group UI Component Demo
+// Create DOM elements for different button group patterns
+
+// State management
+let viewMode = 'grid';
+let selectedSize = 'medium';
+let selectedFilters = new Set(['active']);
+
+// Create toggle button group (segmented control)
+function createToggleGroup() {
+  const container = document.createElement('div');
+  container.className = 'button-group toggle-group';
+  container.innerHTML = \`
+    <button class="btn-group \${viewMode === 'grid' ? 'active' : ''}" data-value="grid">Grid</button>
+    <button class="btn-group \${viewMode === 'list' ? 'active' : ''}" data-value="list">List</button>
+    <button class="btn-group \${viewMode === 'card' ? 'active' : ''}" data-value="card">Cards</button>
+  \`;
+  
+  container.addEventListener('click', (e) => {
+    if (e.target.classList.contains('btn-group')) {
+      // Remove active from all buttons
+      container.querySelectorAll('.btn-group').forEach(btn => 
+        btn.classList.remove('active'));
+      // Add active to clicked button
+      e.target.classList.add('active');
+      viewMode = e.target.dataset.value;
+      updateOutput();
+    }
+  });
+  
+  return container;
+}
+
+// Create filter button group (multi-select)
+function createFilterGroup() {
+  const container = document.createElement('div');
+  container.className = 'button-group filter-group';
+  container.innerHTML = \`
+    <button class="btn-group \${selectedFilters.has('active') ? 'selected' : ''}" data-value="active">Active</button>
+    <button class="btn-group \${selectedFilters.has('pending') ? 'selected' : ''}" data-value="pending">Pending</button>
+    <button class="btn-group \${selectedFilters.has('archived') ? 'selected' : ''}" data-value="archived">Archived</button>
+  \`;
+  
+  container.addEventListener('click', (e) => {
+    if (e.target.classList.contains('btn-group')) {
+      const value = e.target.dataset.value;
+      if (selectedFilters.has(value)) {
+        selectedFilters.delete(value);
+        e.target.classList.remove('selected');
+      } else {
+        selectedFilters.add(value);
+        e.target.classList.add('selected');
+      }
+      updateOutput();
+    }
+  });
+  
+  return container;
+}
+
+// Create size selection group (single select)
+function createSizeGroup() {
+  const container = document.createElement('div');
+  container.className = 'button-group size-group';
+  container.innerHTML = \`
+    <button class="btn-group \${selectedSize === 'small' ? 'selected' : ''}" data-value="small">S</button>
+    <button class="btn-group \${selectedSize === 'medium' ? 'selected' : ''}" data-value="medium">M</button>
+    <button class="btn-group \${selectedSize === 'large' ? 'selected' : ''}" data-value="large">L</button>
+    <button class="btn-group \${selectedSize === 'xlarge' ? 'selected' : ''}" data-value="xlarge">XL</button>
+  \`;
+  
+  container.addEventListener('click', (e) => {
+    if (e.target.classList.contains('btn-group')) {
+      // Remove selected from all
+      container.querySelectorAll('.btn-group').forEach(btn => 
+        btn.classList.remove('selected'));
+      // Add selected to clicked
+      e.target.classList.add('selected');
+      selectedSize = e.target.dataset.value;
+      updateOutput();
+    }
+  });
+  
+  return container;
+}
+
+// Add CSS styles
+const styles = \`
+<style>
+.button-group {
+  display: inline-flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #d1d5db;
+  margin: 8px;
+  background: white;
+}
+
+.btn-group {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-right: 1px solid #d1d5db;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.btn-group:last-child {
+  border-right: none;
+}
+
+.btn-group:hover {
+  background: #f3f4f6;
+}
+
+.toggle-group .btn-group.active {
+  background: #3b82f6;
+  color: white;
+}
+
+.filter-group .btn-group.selected {
+  background: #10b981;
+  color: white;
+}
+
+.size-group .btn-group.selected {
+  background: #f59e0b;
+  color: white;
+}
+
+.size-group .btn-group {
+  min-width: 40px;
+  padding: 8px 12px;
+}
+
+.demo-container {
+  font-family: system-ui, sans-serif;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.group-label {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #374151;
+}
+</style>
+\`;
+
+// Create the demo container
+const container = document.createElement('div');
+container.innerHTML = styles;
+
+const demoDiv = document.createElement('div');
+demoDiv.className = 'demo-container';
+
+// Add toggle group
+const toggleLabel = document.createElement('div');
+toggleLabel.className = 'group-label';
+toggleLabel.textContent = 'View Mode (Toggle):';
+demoDiv.appendChild(toggleLabel);
+demoDiv.appendChild(createToggleGroup());
+
+// Add filter group
+const filterLabel = document.createElement('div');
+filterLabel.className = 'group-label';
+filterLabel.textContent = 'Status Filters (Multi-select):';
+demoDiv.appendChild(filterLabel);
+demoDiv.appendChild(createFilterGroup());
+
+// Add size group
+const sizeLabel = document.createElement('div');
+sizeLabel.className = 'group-label';
+sizeLabel.textContent = 'Size Selection (Single-select):';
+demoDiv.appendChild(sizeLabel);
+demoDiv.appendChild(createSizeGroup());
+
+container.appendChild(demoDiv);
+
+// Add to document and update output
+document.body.appendChild(container);
+
+function updateOutput() {
+  return {
+    viewMode,
+    selectedSize,
+    selectedFilters: Array.from(selectedFilters),
+    timestamp: new Date().toLocaleTimeString(),
+    tip: 'Click buttons above to see state changes!'
+  };
+}
+
+return updateOutput();`,
+        labelInput: 'Button Group Implementation',
+        labelOutput: 'Component State',
+        lineNumbers: true,
+        textSize: 'small',
+        showControls: true
       });
       
       // Set initial theme icon

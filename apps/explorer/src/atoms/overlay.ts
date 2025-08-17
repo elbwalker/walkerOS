@@ -195,9 +195,8 @@ function injectOverlayStyles(): void {
     
     .elb-overlay-container {
       position: relative;
-      width: 90vw;
+      width: min(95vw, 1800px);
       height: 90vh;
-      max-width: 1400px;
       background: var(--elb-bg, #ffffff);
       border-radius: 12px;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -244,6 +243,30 @@ function injectOverlayStyles(): void {
       height: 100%;
       border-radius: 12px;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Preserve layout styles in fullscreen */
+    .elb-overlay-content .elb-layout {
+      display: flex !important;
+      width: 100% !important;
+      height: 100% !important;
+      gap: var(--elb-spacing-md) !important;
+    }
+    
+    .elb-overlay-content .elb-layout--horizontal {
+      flex-direction: row !important;
+    }
+    
+    .elb-overlay-content .elb-layout--vertical {
+      flex-direction: column !important;
+    }
+    
+    .elb-overlay-content .elb-layout-column {
+      flex: 1 !important;
+      min-width: 0 !important;
+      overflow: hidden !important;
     }
     
     /* Dark mode support */

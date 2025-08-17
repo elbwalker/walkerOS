@@ -76,13 +76,8 @@ export function createColumns(
   }
 
   function applyLayoutStyles(layout: HTMLElement, dir: string, gap?: string) {
-    setStyles(layout, {
-      display: 'flex',
-      flexDirection: dir === 'vertical' ? 'column' : 'row',
-      gap: gap || 'var(--elb-spacing-md)',
-      width: '100%',
-      height: '100%',
-    });
+    layout.style.flexDirection = dir === 'vertical' ? 'column' : 'row';
+    layout.style.gap = gap || 'var(--elb-spacing-md)';
   }
 
   function setupResponsive(layout: HTMLElement) {

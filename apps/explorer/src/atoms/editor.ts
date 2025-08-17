@@ -84,10 +84,15 @@ export function createEditor(
     }
   };
 
-  // Handle input changes
-  const handleInput = debounce(() => {
+  // Handle input changes - immediate highlighting, debounced callback
+  const handleInput = () => {
     value = textarea.value;
-    updateHighlight();
+    updateHighlight(); // Immediate syntax highlighting
+    debouncedOnChange(); // Debounced onChange callback
+  };
+
+  // Debounced onChange callback
+  const debouncedOnChange = debounce(() => {
     if (options.onChange) {
       options.onChange(value);
     }

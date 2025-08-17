@@ -1,12 +1,13 @@
 /**
  * CodeBox Molecule Component
- * Code editor with label and controls
+ * Code editor with label, controls, and multi-tab support
  */
 
 import type { CodeBoxOptions, CodeBoxAPI } from '../types';
 import { createBox } from '../atoms/box';
 import { createEditor } from '../atoms/editor';
 import { createIconButton } from '../atoms/iconButton';
+import { createButton } from '../atoms/button';
 import { createElement } from '../lib/dom';
 import { formatValue } from '../lib/evaluate';
 
@@ -17,6 +18,25 @@ export function createCodeBox(
   element: HTMLElement,
   options: CodeBoxOptions = {},
 ): CodeBoxAPI {
+  // Multi-tab state
+  const tabsEnabled = options.tabs?.enabled || false;
+  const tabItems = options.tabs?.items || ['html', 'css', 'js'];
+  let activeTab: 'html' | 'css' | 'js' = options.tabs?.active || 'html';
+  const contents = {
+    html: '',
+    css: '',
+    js: '',
+  };
+
+  // Initialize content based on tabs or single value
+  if (tabsEnabled) {
+    // Set initial content for active tab
+    contents[activeTab] = options.value || '';
+  } else {
+    // Single editor mode
+    contents.html = options.value || '';
+  }
+
   // Create base box
   const box = createBox(element, {
     label: options.label,
@@ -26,12 +46,102 @@ export function createCodeBox(
 
   // Create editor in content area
   const editor = createEditor(box.getContent(), {
-    value: options.value,
-    language: options.language || 'javascript', // Default to javascript for syntax highlighting
+    value: tabsEnabled ? contents[activeTab] : contents.html,
+    language: getLanguageForTab(activeTab),
     readOnly: options.readOnly,
     lineNumbers: options.lineNumbers,
-    onChange: options.onChange,
+    onChange: (value: string) => {
+      // Update content for active tab
+      if (tabsEnabled) {
+        contents[activeTab] = value;
+        // Call onTabChange with all contents
+        if (options.onTabChange) {
+          options.onTabChange(activeTab, contents);
+        }
+      } else {
+        contents.html = value;
+        if (options.onChange) {
+          options.onChange(value);
+        }
+      }
+    },
   });
+
+  // Helper function to get language for tab
+  function getLanguageForTab(
+    tab: 'html' | 'css' | 'js',
+  ): 'javascript' | 'json' | 'html' | 'css' {
+    switch (tab) {
+      case 'html':
+        return 'html';
+      case 'css':
+        return 'css';
+      case 'js':
+        return 'javascript';
+      default:
+        return options.language || 'javascript';
+    }
+  }
+
+  // Switch to a different tab
+  function switchTab(newTab: 'html' | 'css' | 'js') {
+    if (!tabItems.includes(newTab) || activeTab === newTab) return;
+
+    // Save current content
+    contents[activeTab] = editor.getValue();
+
+    // Switch to new tab
+    activeTab = newTab;
+    editor.setValue(contents[activeTab]);
+    editor.setLanguage(getLanguageForTab(activeTab));
+
+    // Update tab buttons
+    updateTabButtons();
+
+    // Call callback
+    if (options.onTabChange) {
+      options.onTabChange(activeTab, contents);
+    }
+  }
+
+  // Update tab button states
+  function updateTabButtons() {
+    const tabButtons = box.getHeader()?.querySelectorAll('.elb-tab-btn');
+    tabButtons?.forEach((btn) => {
+      const tab = btn.getAttribute('data-tab');
+      if (tab === activeTab) {
+        btn.classList.add('elb-tab-btn--active');
+      } else {
+        btn.classList.remove('elb-tab-btn--active');
+      }
+    });
+  }
+
+  // Add tabs to header if enabled
+  if (tabsEnabled && box.getHeader()) {
+    const tabsContainer = createElement('div', { class: 'elb-code-tabs' });
+
+    tabItems.forEach((tab) => {
+      const isDisabled = options.tabs?.disabled?.includes(tab) || false;
+      const isActive = tab === activeTab;
+
+      // Create button element directly since ButtonAPI doesn't have getElement
+      const button = createElement(
+        'button',
+        {
+          class: `elb-tab-btn ${isActive ? 'elb-tab-btn--active' : ''}`,
+          'data-tab': tab,
+          disabled: isDisabled,
+        },
+        tab.toUpperCase(),
+      );
+
+      button.addEventListener('click', () => switchTab(tab));
+      tabsContainer.appendChild(button);
+    });
+
+    box.getHeader()?.appendChild(tabsContainer);
+  }
 
   // Add controls to header if requested
   if (options.showControls && box.getHeader()) {
@@ -90,10 +200,49 @@ export function createCodeBox(
 
   // API
   return {
-    getValue: () => editor.getValue(),
+    getValue: () => {
+      // Update current tab content before returning
+      if (tabsEnabled) {
+        contents[activeTab] = editor.getValue();
+        return contents[activeTab];
+      }
+      return editor.getValue();
+    },
 
     setValue: (value: string) => {
+      if (tabsEnabled) {
+        contents[activeTab] = value;
+      } else {
+        contents.html = value;
+      }
       editor.setValue(value);
+    },
+
+    getAllValues: () => {
+      // Update current tab before returning all values
+      if (tabsEnabled) {
+        contents[activeTab] = editor.getValue();
+      } else {
+        contents.html = editor.getValue();
+      }
+      return { ...contents };
+    },
+
+    setAllValues: (values: { html: string; css: string; js: string }) => {
+      Object.assign(contents, values);
+      if (tabsEnabled) {
+        editor.setValue(contents[activeTab]);
+      } else {
+        editor.setValue(contents.html);
+      }
+    },
+
+    getActiveTab: () => activeTab,
+
+    setActiveTab: (tab: 'html' | 'css' | 'js') => {
+      if (tabsEnabled) {
+        switchTab(tab);
+      }
     },
 
     setLabel: (label: string) => {
@@ -106,7 +255,7 @@ export function createCodeBox(
 
     format: () => {
       const value = editor.getValue();
-      const formatted = formatCode(value, options.language || 'javascript');
+      const formatted = formatCode(value, getLanguageForTab(activeTab));
       editor.setValue(formatted);
     },
 
@@ -160,6 +309,58 @@ function injectCodeBoxStyles(element: HTMLElement): void {
     
     .elb-code-box .elb-box-header {
       padding-right: var(--elb-spacing-xs);
+    }
+    
+    /* Tab styles */
+    .elb-code-tabs {
+      display: inline-flex;
+      gap: 2px;
+      background: var(--elb-bg-secondary, #f3f4f6);
+      padding: 2px;
+      border-radius: 6px;
+      margin-left: auto;
+      margin-right: var(--elb-spacing-sm);
+    }
+    
+    .elb-tab-btn {
+      padding: 4px 12px !important;
+      background: transparent !important;
+      border: none !important;
+      color: var(--elb-fg-muted, #6b7280) !important;
+      font-size: 12px !important;
+      font-weight: 500 !important;
+      cursor: pointer !important;
+      border-radius: 4px !important;
+      transition: all 150ms ease !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.025em !important;
+      min-width: auto !important;
+      height: auto !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+    
+    .elb-tab-btn:hover:not(:disabled) {
+      background: var(--elb-bg-hover, #e5e7eb) !important;
+      color: var(--elb-fg, #111827) !important;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+    
+    .elb-tab-btn--active {
+      background: var(--elb-bg-primary, #ffffff) !important;
+      color: var(--elb-accent, #3b82f6) !important;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+    }
+    
+    .elb-tab-btn:disabled {
+      opacity: 0.5 !important;
+      cursor: not-allowed !important;
+    }
+    
+    .elb-tab-btn:focus {
+      outline: none !important;
+      box-shadow: 0 0 0 2px var(--elb-accent, #3b82f6) !important;
     }
     
     /* Consistent borderless icon buttons */

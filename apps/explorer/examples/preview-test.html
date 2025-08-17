@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PreviewNode Test - Real walkerOS Integration</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #fafafa;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #1f2937;
+      margin-bottom: 10px;
+    }
+    
+    .test-area {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    
+    .panel {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .panel h2 {
+      margin-top: 0;
+      color: #374151;
+      font-size: 1.25rem;
+    }
+    
+    #preview-container {
+      min-height: 200px;
+      border: 2px dashed #e5e7eb;
+      border-radius: 4px;
+      padding: 10px;
+    }
+    
+    #events-output {
+      font-family: monospace;
+      font-size: 12px;
+      background: #f3f4f6;
+      padding: 10px;
+      border-radius: 4px;
+      min-height: 200px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    
+    button {
+      padding: 8px 16px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    
+    button:hover {
+      background: #2563eb;
+    }
+    
+    .status {
+      padding: 4px 8px;
+      background: #10b981;
+      color: white;
+      border-radius: 4px;
+      font-size: 12px;
+      display: inline-block;
+      margin-left: 10px;
+    }
+  </style>
+  <script src="../dist/explorer.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>PreviewNode Test <span class="status">Real walkerOS Integration</span></h1>
+    <p>This tests the PreviewNode with real walkerOS browser source and shadow DOM.</p>
+    
+    <div class="controls">
+      <button id="loadHtmlBtn">Load Test HTML</button>
+      <button id="clearEventsBtn">Clear Events</button>
+      <button id="testClickBtn">Test Click Event</button>
+    </div>
+    
+    <div class="test-area">
+      <div class="panel">
+        <h2>HTML Input</h2>
+        <div id="html-editor" style="height: 300px;"></div>
+      </div>
+      
+      <div class="panel">
+        <h2>Preview (Shadow DOM)</h2>
+        <div id="preview-container"></div>
+      </div>
+    </div>
+    
+    <div class="panel" style="margin-top: 20px;">
+      <h2>Captured Events</h2>
+      <div id="events-output" style="height: 200px;"></div>
+    </div>
+  </div>
+  
+  <script>
+    // Test HTML with walkerOS attributes
+    const testHTML = `<div data-elb="product" data-elbcontext="stage:testing">
+  <h3 data-elb-product="name:#innerText">Test Product</h3>
+  <p data-elb-product="price:49.99">$49.99</p>
+  <button 
+    data-elbaction="click:view"
+    data-elb-product="id:TEST-123"
+    style="margin-right: 8px"
+  >
+    View Details
+  </button>
+  <button 
+    data-elbaction="click:add"
+    data-elb-product="quantity:1"
+    style="background: #10b981"
+  >
+    Add to Cart
+  </button>
+  <div 
+    data-elbaction="load:impression"
+    data-elb-product="position:hero"
+  >
+    This should trigger a load event
+  </div>
+</div>`;
+    
+    let previewNode;
+    let htmlEditor;
+    let resultBox;
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { PreviewNode, createLiveCode, createCodeBox, createResultBox } = WalkerExplorer;
+      
+      // Create HTML editor using CodeBox component
+      htmlEditor = createCodeBox(document.getElementById('html-editor'), {
+        value: testHTML,
+        language: 'html',
+        lineNumbers: true,
+        onChange: async (value) => {
+          // Update preview when HTML changes
+          if (previewNode) {
+            await updatePreview(value);
+          }
+        }
+      });
+      
+      // Create result box for events display
+      resultBox = createResultBox(document.getElementById('events-output'), {
+        value: 'No events captured yet...',
+        label: 'Captured Events'
+      });
+      
+      // Create PreviewNode instance
+      previewNode = new PreviewNode({
+        id: 'test-preview',
+        position: { x: 0, y: 0 }
+      });
+      
+      // Function to update preview
+      async function updatePreview(html) {
+        console.log('Updating preview...');
+        
+        // Process the HTML through PreviewNode
+        await previewNode.process(html);
+        
+        // Get the container and append to our preview area
+        const container = previewNode.getContainer();
+        const previewContainer = document.getElementById('preview-container');
+        if (container && previewContainer) {
+          previewContainer.innerHTML = '';
+          previewContainer.appendChild(container);
+        }
+      }
+      
+      // Set up event capture handler
+      previewNode.onEventCaptured = (event) => {
+        console.log('Event captured:', event);
+        
+        // Get existing events from result box
+        const currentValue = resultBox.getValue();
+        let events = [];
+        
+        if (Array.isArray(currentValue)) {
+          events = currentValue;
+        } else if (currentValue?.events) {
+          events = currentValue.events;
+        } else if (currentValue?.message === 'No events captured yet...' || currentValue?.message === 'Events cleared') {
+          events = [];
+        }
+        
+        // Add new event
+        events.push(event);
+        
+        // Update result box with formatted event data
+        resultBox.setValue(events.length === 1 ? event : events);
+      };
+      
+      // Load test HTML button
+      document.getElementById('loadHtmlBtn').addEventListener('click', async () => {
+        const html = htmlEditor.getValue();
+        await updatePreview(html);
+        console.log('HTML loaded and walkerOS initialized');
+      });
+      
+      // Clear events button
+      document.getElementById('clearEventsBtn').addEventListener('click', () => {
+        previewNode.clearEvents();
+        resultBox.setValue('Events cleared');
+        console.log('Events cleared');
+      });
+      
+      // Test click event button
+      document.getElementById('testClickBtn').addEventListener('click', () => {
+        // Simulate a click on the first button in the preview
+        const previewContainer = document.getElementById('preview-container');
+        const shadowRoot = previewContainer?.querySelector('div')?.shadowRoot;
+        if (shadowRoot) {
+          const button = shadowRoot.querySelector('button');
+          if (button) {
+            button.click();
+            console.log('Simulated click on preview button');
+          } else {
+            console.log('No button found in preview');
+          }
+        } else {
+          console.log('No shadow root found - load HTML first');
+        }
+      });
+      
+      // Auto-load HTML on start
+      document.getElementById('loadHtmlBtn').click();
+    });
+  </script>
+</body>
+</html>
