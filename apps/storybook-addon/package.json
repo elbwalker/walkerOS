@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/storybook-addon",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Integrate walkerOS tagging support for data collection",
   "keywords": [
     "tracking",
@@ -60,8 +60,8 @@
     "@walkeros/jest": "*",
     "@walkeros/tsconfig": "*",
     "@walkeros/tsup": "*",
-    "@storybook/addon-docs": "^9.0.15",
-    "@storybook/react-vite": "^9.0.15",
+    "@storybook/addon-docs": "^9.1.2",
+    "@storybook/react-vite": "^9.1.2",
     "@types/node": "^22",
     "@types/react": "^18.2.65",
     "@types/react-dom": "^18.2.21",
@@ -73,7 +73,7 @@
     "prompts": "^2.4.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "storybook": "^9.0.15",
+    "storybook": "^9.1.2",
     "ts-dedent": "^2.2.0",
     "tsup": "^8.2.4",
     "typescript": "^5.8.2",
@@ -81,7 +81,10 @@
     "zx": "^8.4.1"
   },
   "peerDependencies": {
-    "storybook": "^9.0.15"
+    "storybook": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "publishConfig": {
     "access": "public"

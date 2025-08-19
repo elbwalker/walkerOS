@@ -77,7 +77,7 @@ export default defineConfig(async (options) => {
       entry: managerEntries,
       format: ['esm'],
       platform: 'browser',
-      external: globalManagerPackages,
+      external: [...globalManagerPackages, 'react', 'react/jsx-runtime'],
     });
   }
 
