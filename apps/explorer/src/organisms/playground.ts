@@ -3,7 +3,7 @@
  * Clean demonstration of browser source event capture
  */
 
-import { createColumns } from '../layouts/columns';
+// Removed createColumns import - using CSS Grid instead
 import { createCodeBox } from '../molecules/codeBox';
 import { createBox } from '../atoms/box';
 import { createElement, createShadow } from '../lib/dom';
@@ -41,17 +41,11 @@ export function createPlayground(
   const styles = createElement('style', {}, getPlaygroundStyles());
   shadow.appendChild(styles);
 
-  // Create layout with three columns: HTML Editor, Preview, Captured Events
-  const layout = createColumns(container, {
-    columns: [
-      { width: '33%', minWidth: '300px' }, // HTML Editor
-      { width: '33%', minWidth: '300px' }, // Preview
-      { width: '34%', minWidth: '300px' }, // Captured Events
-    ],
-    direction: 'horizontal',
-    responsive: true,
-    gap: 'var(--elb-spacing-md, 16px)',
+  // Create simple responsive grid layout
+  const layout = createElement('div', {
+    class: 'elb-responsive-grid elb-playground-grid',
   });
+  container.appendChild(layout);
 
   // UI components
   let htmlEditor: any;
@@ -64,14 +58,11 @@ export function createPlayground(
   // Initialize components
   function initialize() {
     // HTML/CSS/JS Editor
-    const codeBox = createBox(layout.getColumn(0), {
-      label: 'Code Editor',
-      showHeader: true,
-    });
-    codeBox.getContainer().setAttribute('data-testid', 'code-editor');
+    const codeColumn = createElement('div', { class: 'elb-playground-column' });
+    layout.appendChild(codeColumn);
 
-    htmlEditor = createCodeBox(codeBox.getContent(), {
-      label: ' ', // Single space - creates header for tabs without visible duplicate text
+    htmlEditor = createCodeBox(codeColumn, {
+      label: 'Code Editor',
       tabs: {
         enabled: true,
         items: ['html', 'css', 'js'],
@@ -81,6 +72,7 @@ export function createPlayground(
       showControls: true,
       onTabChange: debounce((_tab, content) => handleCodeChange(content), 300),
     });
+    htmlEditor.getContainer().setAttribute('data-testid', 'code-editor');
 
     // Initialize with example content
     const initialContent = {
@@ -91,9 +83,15 @@ export function createPlayground(
     htmlEditor.setAllValues(initialContent);
 
     // Preview
-    const previewBox = createBox(layout.getColumn(1), {
+    const previewColumn = createElement('div', {
+      class: 'elb-playground-column',
+    });
+    layout.appendChild(previewColumn);
+
+    const previewBox = createBox(previewColumn, {
       label: 'Live Preview',
       showHeader: true,
+      noPadding: true,
     });
     previewBox.getContainer().setAttribute('data-testid', 'preview-panel');
 
@@ -104,20 +102,19 @@ export function createPlayground(
     previewBox.getContent().appendChild(previewContainer);
 
     // Captured Events Display
-    const eventsBox = createBox(layout.getColumn(2), {
-      label: 'Captured Events',
-      showHeader: true,
+    const eventsColumn = createElement('div', {
+      class: 'elb-playground-column',
     });
-    eventsBox.getContainer().setAttribute('data-testid', 'events-panel');
+    layout.appendChild(eventsColumn);
 
-    eventsDisplay = createCodeBox(eventsBox.getContent(), {
-      label: '',
+    eventsDisplay = createCodeBox(eventsColumn, {
+      label: 'Captured Events',
       value: '// No events captured yet',
       language: 'json',
       readOnly: true,
       lineNumbers: false,
     });
-    eventsDisplay.getContainer().setAttribute('data-testid', 'events-display');
+    eventsDisplay.getContainer().setAttribute('data-testid', 'events-panel');
 
     // Initial render
     renderPreview(initialContent);
@@ -334,7 +331,6 @@ export function createPlayground(
         currentBrowserSource.destroy();
       }
 
-      layout.destroy();
       shadow.innerHTML = '';
     },
   };
@@ -355,50 +351,53 @@ function getPlaygroundStyles(): string {
       display: flex;
       flex-direction: column;
       height: 100%;
-      background: var(--elb-bg-primary, #ffffff);
-      font-family: var(--elb-font-family, system-ui, -apple-system, sans-serif);
+      background: var(--elb-bg);
+      font-family: var(--elb-font-sans);
+    }
+    
+    .elb-playground-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      flex: 1;
+      padding: 1rem;
+      min-height: 0;
+    }
+    
+    .elb-playground-column {
+      display: flex;
+      flex-direction: column;
+      min-height: 400px;
     }
     
     .preview-container {
       width: 100%;
       height: 100%;
       overflow: auto;
-      background: var(--elb-bg-secondary, #f9fafb);
-      border: 1px solid var(--elb-border-color, #e5e7eb);
-      border-radius: var(--elb-border-radius, 4px);
-    }
-    
-    .elb-layout {
-      flex: 1;
-      min-height: 0;
-    }
-    
-    .elb-layout-column {
-      display: flex;
-      flex-direction: column;
-      min-height: 400px;
-    }
-    
-    .elb-box {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
+      background: var(--elb-surface);
+      border-radius: var(--elb-radius-sm);
     }
     
     .elb-code-box {
       flex: 1;
+      height: 100%;
     }
     
-    /* Responsive */
+    .elb-box {
+      flex: 1;
+      height: 100%;
+    }
+    
+    /* Responsive breakpoints */
     @media (max-width: 1024px) {
-      .elb-layout--horizontal {
-        flex-direction: column !important;
+      .elb-playground-grid {
+        grid-template-columns: repeat(2, 1fr);
       }
-      
-      .elb-layout-column {
-        width: 100% !important;
-        min-width: 0 !important;
-        margin-bottom: var(--elb-spacing-md, 16px);
+    }
+    
+    @media (max-width: 768px) {
+      .elb-playground-grid {
+        grid-template-columns: 1fr;
       }
     }
   `;

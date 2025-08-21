@@ -37,14 +37,31 @@ export function createCodeBox(
     contents.html = options.value || '';
   }
 
-  // Create base box
+  // Create tabs container for header center
+  let tabsContainer: HTMLElement | undefined;
+  if (tabsEnabled) {
+    tabsContainer = createElement('div', { class: 'elb-tab-group' });
+  }
+
+  // Create controls container for header right
+  let controlsContainer: HTMLElement | undefined;
+  if (options.showControls) {
+    controlsContainer = createElement('div', {
+      class: 'elb-code-box-controls',
+    });
+  }
+
+  // Create simplified box with header zones - no nested structure
   const box = createBox(element, {
     label: options.label,
     showHeader: true,
+    noPadding: true, // No padding for code editor
     className: 'elb-code-box',
+    headerCenter: tabsContainer,
+    headerRight: controlsContainer,
   });
 
-  // Create editor in content area
+  // Create editor directly in content area with no wrapper
   const editor = createEditor(box.getContent(), {
     value: tabsEnabled ? contents[activeTab] : contents.html,
     language: getLanguageForTab(activeTab),
@@ -117,11 +134,8 @@ export function createCodeBox(
     }
   }
 
-  // Add tabs to header if enabled
-  if (tabsEnabled && box.getHeader()) {
-    const header = box.getHeader()!;
-    const tabsContainer = createElement('div', { class: 'elb-tab-group' });
-
+  // Add tabs to tabs container if enabled
+  if (tabsEnabled && tabsContainer) {
     tabItems.forEach((tab) => {
       const isDisabled = options.tabs?.disabled?.includes(tab) || false;
       const isActive = tab === activeTab;
@@ -139,17 +153,12 @@ export function createCodeBox(
       // Store reference for managing active states
       tabButtons[tab] = tabButton;
     });
-
-    // Append tabs container to header
-    header.appendChild(tabsContainer);
   }
 
-  // Add controls to header if requested
-  if (options.showControls && box.getHeader()) {
-    const controls = createElement('div', { class: 'elb-code-box-controls' });
-
+  // Add controls to controls container if requested
+  if (options.showControls && controlsContainer) {
     // Default controls: Copy is always shown
-    const copyBtn = createIconButton(controls, {
+    const copyBtn = createIconButton(controlsContainer, {
       icon: 'copy',
       tooltip: 'Copy code',
       onClick: async () => {
@@ -174,7 +183,7 @@ export function createCodeBox(
 
     // Format button (optional)
     if (options.onFormat) {
-      const formatBtn = createIconButton(controls, {
+      const formatBtn = createIconButton(controlsContainer, {
         icon: 'format',
         tooltip: 'Format code',
         onClick: () => {
@@ -192,8 +201,6 @@ export function createCodeBox(
         },
       });
     }
-
-    box.getHeader()!.appendChild(controls);
   }
 
   // Note: Styles are now centralized in theme.ts

@@ -26,27 +26,62 @@ export function createBox(
 
   // Create structure
   const box = createElement('div', {
-    class: `elb-box ${options.className || ''}`,
+    class: `elb-box ${options.className || ''} ${options.noPadding ? 'elb-box--no-padding' : ''}`,
   });
 
   let header: HTMLElement | null = null;
+  let headerLeft: HTMLElement | null = null;
+  let headerCenter: HTMLElement | null = null;
+  let headerRight: HTMLElement | null = null;
   let content: HTMLElement;
   let footer: HTMLElement | null = null;
 
-  // Header
-  if (options.showHeader !== false && options.label) {
+  // Header with zones
+  if (
+    options.showHeader !== false &&
+    (options.label ||
+      options.headerLeft ||
+      options.headerCenter ||
+      options.headerRight)
+  ) {
     header = createElement('div', { class: 'elb-box-header' });
-    const label = createElement(
-      'span',
-      { class: 'elb-box-label' },
-      options.label,
-    );
-    header.appendChild(label);
+
+    // Left zone (label by default)
+    headerLeft = createElement('div', { class: 'elb-box-header-left' });
+    if (options.label) {
+      const label = createElement(
+        'span',
+        { class: 'elb-box-label' },
+        options.label,
+      );
+      headerLeft.appendChild(label);
+    }
+    if (options.headerLeft) {
+      headerLeft.appendChild(options.headerLeft);
+    }
+    header.appendChild(headerLeft);
+
+    // Center zone
+    headerCenter = createElement('div', { class: 'elb-box-header-center' });
+    if (options.headerCenter) {
+      headerCenter.appendChild(options.headerCenter);
+    }
+    header.appendChild(headerCenter);
+
+    // Right zone
+    headerRight = createElement('div', { class: 'elb-box-header-right' });
+    if (options.headerRight) {
+      headerRight.appendChild(options.headerRight);
+    }
+    header.appendChild(headerRight);
+
     box.appendChild(header);
   }
 
   // Content
-  content = createElement('div', { class: 'elb-box-content' });
+  content = createElement('div', {
+    class: `elb-box-content ${options.noPadding ? 'elb-box-content--no-padding' : ''}`,
+  });
   box.appendChild(content);
 
   // Footer
@@ -60,23 +95,38 @@ export function createBox(
   // API
   return {
     setLabel: (label: string) => {
-      if (!header) {
-        header = createElement('div', { class: 'elb-box-header' });
-        const labelElement = createElement(
-          'span',
-          { class: 'elb-box-label' },
-          label,
-        );
-        header.appendChild(labelElement);
-        box.insertBefore(header, content);
-      } else {
-        const labelElement = header.querySelector('.elb-box-label');
-        if (labelElement) labelElement.textContent = label;
+      if (!header || !headerLeft) {
+        // Create header if it doesn't exist
+        if (!header) {
+          header = createElement('div', { class: 'elb-box-header' });
+          headerLeft = createElement('div', { class: 'elb-box-header-left' });
+          headerCenter = createElement('div', {
+            class: 'elb-box-header-center',
+          });
+          headerRight = createElement('div', { class: 'elb-box-header-right' });
+          header.appendChild(headerLeft);
+          header.appendChild(headerCenter);
+          header.appendChild(headerRight);
+          box.insertBefore(header, content);
+        }
       }
+
+      // Update or create label
+      let labelElement = headerLeft!.querySelector(
+        '.elb-box-label',
+      ) as HTMLElement;
+      if (!labelElement) {
+        labelElement = createElement('span', { class: 'elb-box-label' });
+        headerLeft!.appendChild(labelElement);
+      }
+      labelElement.textContent = label;
     },
 
     getContent: () => content,
     getHeader: () => header,
+    getHeaderLeft: () => headerLeft,
+    getHeaderCenter: () => headerCenter,
+    getHeaderRight: () => headerRight,
     getFooter: () => footer,
     getContainer: () => box,
 
@@ -98,7 +148,7 @@ function getBoxStyles(): string {
       height: 100%;
       border: 1px solid var(--elb-border);
       border-radius: var(--elb-radius-md);
-      background: transparent;
+      background: var(--elb-surface);
       overflow: hidden;
       box-shadow: var(--elb-shadow-sm);
     }
@@ -106,12 +156,30 @@ function getBoxStyles(): string {
     .elb-box-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
       min-height: 40px;
-      padding: 0 var(--elb-spacing-md);
+      padding: 0 var(--elb-spacing-sm);
       border-bottom: 1px solid var(--elb-border);
       background: transparent;
       gap: var(--elb-spacing-sm);
+    }
+    
+    .elb-box-header-left {
+      display: flex;
+      align-items: center;
+      gap: var(--elb-spacing-sm);
+    }
+    
+    .elb-box-header-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+    }
+    
+    .elb-box-header-right {
+      display: flex;
+      align-items: center;
+      gap: var(--elb-spacing-xs);
     }
     
     .elb-box-label {
@@ -119,6 +187,7 @@ function getBoxStyles(): string {
       font-weight: 500;
       color: var(--elb-fg);
       letter-spacing: -0.01em;
+      white-space: nowrap;
     }
     
     .elb-box-content {
@@ -126,6 +195,14 @@ function getBoxStyles(): string {
       overflow: auto;
       padding: var(--elb-spacing-md);
       background: transparent;
+    }
+    
+    .elb-box-content--no-padding {
+      padding: 0;
+    }
+    
+    .elb-box--no-padding .elb-box-content {
+      padding: 0;
     }
     
     .elb-box-footer {

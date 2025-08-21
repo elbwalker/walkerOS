@@ -20,12 +20,19 @@ export interface BoxOptions {
   className?: string;
   showHeader?: boolean;
   showFooter?: boolean;
+  noPadding?: boolean;
+  headerLeft?: HTMLElement;
+  headerCenter?: HTMLElement;
+  headerRight?: HTMLElement;
 }
 
 export interface BoxAPI extends ComponentAPI {
   setLabel: (label: string) => void;
   getContent: () => HTMLElement;
   getHeader: () => HTMLElement | null;
+  getHeaderLeft: () => HTMLElement | null;
+  getHeaderCenter: () => HTMLElement | null;
+  getHeaderRight: () => HTMLElement | null;
   getFooter: () => HTMLElement | null;
   getContainer: () => HTMLElement;
 }

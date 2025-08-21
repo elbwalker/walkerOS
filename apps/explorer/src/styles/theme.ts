@@ -6,10 +6,10 @@
 import type { ThemeOptions } from '../types';
 
 /**
- * Default theme variables
+ * Default theme variables (light mode)
  */
 export const defaultTheme = {
-  // Colors - Light Theme
+  // Light theme colors
   colors: {
     bg: '#fafafa',
     fg: '#0a0a0a',
@@ -21,18 +21,23 @@ export const defaultTheme = {
     muted: '#71717a',
     surface: '#ffffff',
     hover: '#f4f4f5',
-
-    // Dark theme variants
-    darkBg: '#0a0a0a',
-    darkFg: '#fafafa',
-    darkBorder: '#27272a',
-    darkAccent: '#3b82f6',
-    darkSurface: '#18181b',
-    darkHover: '#27272a',
-    darkMuted: '#a1a1aa',
   },
 
-  // Syntax highlighting colors
+  // Dark theme colors
+  darkColors: {
+    bg: '#0a0a0a',
+    fg: '#fafafa',
+    border: '#27272a',
+    accent: '#3b82f6',
+    error: '#ef4444',
+    success: '#22c55e',
+    warning: '#f59e0b',
+    muted: '#a1a1aa',
+    surface: '#18181b',
+    hover: '#27272a',
+  },
+
+  // Light mode syntax highlighting
   syntax: {
     keyword: '#d73a49',
     string: '#032f62',
@@ -41,15 +46,17 @@ export const defaultTheme = {
     function: '#6f42c1',
     operator: '#d73a49',
     punctuation: '#24292e',
+  },
 
-    // Dark mode syntax
-    darkKeyword: '#f97583',
-    darkString: '#9ecbff',
-    darkNumber: '#79b8ff',
-    darkComment: '#959da5',
-    darkFunction: '#b392f0',
-    darkOperator: '#f97583',
-    darkPunctuation: '#f1f8ff',
+  // Dark mode syntax highlighting
+  darkSyntax: {
+    keyword: '#f97583',
+    string: '#9ecbff',
+    number: '#79b8ff',
+    comment: '#959da5',
+    function: '#b392f0',
+    operator: '#f97583',
+    punctuation: '#f1f8ff',
   },
 
   // Spacing - Much smaller values
@@ -96,58 +103,72 @@ export const defaultTheme = {
 };
 
 /**
- * Generate CSS variables from theme
+ * Generate CSS variables for light mode (default)
  */
-export function generateCSSVariables(theme = defaultTheme): string {
+export function generateLightModeCSS(theme = defaultTheme): string {
   const vars: string[] = [];
 
-  // Colors
+  // Light mode colors
   Object.entries(theme.colors).forEach(([key, value]) => {
     vars.push(`--elb-${camelToKebab(key)}: ${value};`);
   });
 
-  // Syntax colors
+  // Light mode syntax colors
   Object.entries(theme.syntax).forEach(([key, value]) => {
     vars.push(`--elb-syntax-${camelToKebab(key)}: ${value};`);
   });
 
-  // Spacing
+  // Spacing, fonts, etc. (theme-agnostic)
   Object.entries(theme.spacing).forEach(([key, value]) => {
     vars.push(`--elb-spacing-${key}: ${value};`);
   });
 
-  // Fonts
   Object.entries(theme.fonts).forEach(([key, value]) => {
     vars.push(`--elb-font-${key}: ${value};`);
   });
 
-  // Font sizes
   Object.entries(theme.fontSize).forEach(([key, value]) => {
     vars.push(`--elb-font-size-${key}: ${value};`);
   });
 
-  // Border radius
   Object.entries(theme.radius).forEach(([key, value]) => {
     vars.push(`--elb-radius-${key}: ${value};`);
   });
 
-  // Shadows
   Object.entries(theme.shadow).forEach(([key, value]) => {
     vars.push(`--elb-shadow-${key}: ${value};`);
   });
 
-  // Transitions
   Object.entries(theme.transition).forEach(([key, value]) => {
     vars.push(`--elb-transition-${key}: ${value};`);
   });
 
-  return vars.join('\n  ');
+  return vars.join('\n    ');
+}
+
+/**
+ * Generate CSS variables for dark mode
+ */
+export function generateDarkModeCSS(theme = defaultTheme): string {
+  const vars: string[] = [];
+
+  // Dark mode colors
+  Object.entries(theme.darkColors).forEach(([key, value]) => {
+    vars.push(`--elb-${camelToKebab(key)}: ${value};`);
+  });
+
+  // Dark mode syntax colors
+  Object.entries(theme.darkSyntax).forEach(([key, value]) => {
+    vars.push(`--elb-syntax-${camelToKebab(key)}: ${value};`);
+  });
+
+  return vars.join('\n    ');
 }
 
 // Component styles are embedded directly in getCompleteStyles function
 
 /**
- * Get base styles for components with centralized component CSS
+ * Get base styles with pure CSS light/dark mode support
  */
 export function getBaseStyles(textSize?: 'small' | 'regular'): string {
   const fontSize =
@@ -156,35 +177,22 @@ export function getBaseStyles(textSize?: 'small' | 'regular'): string {
       : 'var(--elb-font-size-base)';
 
   return `
+    /* Light mode (default) */
     :host {
-      ${generateCSSVariables()}
-      
-      /* Override with global theme variables that inherit from parent document */
-      --elb-bg: var(--walker-bg, #fafafa);
-      --elb-fg: var(--walker-fg, #0a0a0a);
-      --elb-border: var(--walker-border, #e4e4e7);
-      --elb-accent: var(--walker-accent, #2563eb);
-      --elb-error: var(--walker-error, #dc2626);
-      --elb-success: var(--walker-success, #16a34a);
-      --elb-warning: var(--walker-warning, #d97706);
-      --elb-muted: var(--walker-muted, #71717a);
-      --elb-surface: var(--walker-surface, #ffffff);
-      --elb-hover: var(--walker-hover, #f4f4f5);
-      
-      /* Syntax colors from global theme with proper fallbacks */
-      --elb-syntax-keyword: var(--walker-syntax-keyword, #d73a49);
-      --elb-syntax-string: var(--walker-syntax-string, #032f62);
-      --elb-syntax-number: var(--walker-syntax-number, #005cc5);
-      --elb-syntax-comment: var(--walker-syntax-comment, #6a737d);
-      --elb-syntax-function: var(--walker-syntax-function, #6f42c1);
-      --elb-syntax-operator: var(--walker-syntax-operator, #d73a49);
-      --elb-syntax-punctuation: var(--walker-syntax-punctuation, #24292e);
+      ${generateLightModeCSS()}
       
       /* Default styles */
       font-family: var(--elb-font-sans);
       font-size: ${fontSize};
       line-height: 1.5;
       color: var(--elb-fg);
+      background: var(--elb-bg);
+    }
+    
+    /* Dark mode - triggered by data-theme="dark" on any parent */
+    :host([data-theme="dark"]),
+    [data-theme="dark"] :host {
+      ${generateDarkModeCSS()}
     }
     
     /* Reset styles */
@@ -219,6 +227,25 @@ export function getBaseStyles(textSize?: 'small' | 'regular'): string {
       text-align: right;
       border-right: 1px solid var(--elb-border);
       user-select: none;
+    }
+    
+    /* Responsive breakpoints */
+    .elb-responsive-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+    
+    @media (max-width: 1024px) {
+      .elb-responsive-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .elb-responsive-grid {
+        grid-template-columns: 1fr;
+      }
     }
   `;
 }
