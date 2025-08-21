@@ -303,6 +303,7 @@ export function createPlayground(
       },
       lineNumbers: true,
       showControls: true,
+      showReset: true,
       onTabChange: debounce((_tab, content) => handleCodeChange(content), 300),
     });
     htmlEditor.getContainer().setAttribute('data-testid', 'code-editor');
@@ -394,7 +395,16 @@ export function createPlayground(
       language: 'json',
       readOnly: true,
       lineNumbers: false,
+      showControls: true,
+      showReset: true,
       footerContent: eventsListContainer,
+      onReset: () => {
+        // Clear captured events history
+        capturedEvents = [];
+        selectedEventIndex = -1;
+        updateEventsList();
+        updateEventsDisplay();
+      },
     });
     eventsDisplay.getContainer().setAttribute('data-testid', 'events-panel');
 

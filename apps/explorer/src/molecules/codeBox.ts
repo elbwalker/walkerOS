@@ -28,13 +28,22 @@ export function createCodeBox(
     js: '',
   };
 
+  // Store initial values for reset functionality
+  const initialContents = {
+    html: '',
+    css: '',
+    js: '',
+  };
+
   // Initialize content based on tabs or single value
   if (tabsEnabled) {
     // Set initial content for active tab
     contents[activeTab] = options.value || '';
+    initialContents[activeTab] = options.value || '';
   } else {
     // Single editor mode
     contents.html = options.value || '';
+    initialContents.html = options.value || '';
   }
 
   // Create tabs container for header center
@@ -202,6 +211,32 @@ export function createCodeBox(
         },
       });
     }
+
+    // Reset button (optional)
+    if (options.showReset) {
+      const resetBtn = createIconButton(controlsContainer, {
+        customIcon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+          <path d="M3 3v5h5"></path>
+        </svg>`,
+        tooltip: 'Reset to initial values',
+        onClick: () => {
+          // Reset to initial values
+          if (tabsEnabled) {
+            // Multi-tab mode: reset all tabs
+            Object.assign(contents, { ...initialContents });
+            editor.setValue(contents[activeTab]);
+          } else {
+            // Single editor mode: reset to initial value
+            contents.html = initialContents.html;
+            editor.setValue(initialContents.html);
+          }
+
+          // Call onReset callback if provided
+          options.onReset?.();
+        },
+      });
+    }
   }
 
   // Note: Styles are now centralized in theme.ts
@@ -238,6 +273,8 @@ export function createCodeBox(
 
     setAllValues: (values: { html: string; css: string; js: string }) => {
       Object.assign(contents, values);
+      // Also update initial contents for reset functionality
+      Object.assign(initialContents, values);
       if (tabsEnabled) {
         editor.setValue(contents[activeTab]);
       } else {

@@ -120,6 +120,7 @@ export interface CodeBoxOptions {
   readOnly?: boolean;
   lineNumbers?: boolean;
   showControls?: boolean;
+  showReset?: boolean;
   tabs?: CodeBoxTabsConfig;
   footerContent?: HTMLElement;
   onChange?: (value: string) => void;
@@ -129,6 +130,7 @@ export interface CodeBoxOptions {
   ) => void;
   onFormat?: () => void;
   onCopy?: () => void;
+  onReset?: () => void;
 }
 
 export interface CodeBoxAPI extends ComponentAPI {
