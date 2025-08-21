@@ -422,12 +422,6 @@ export function createPlayground(
       currentBrowserSource = null;
     }
 
-    // Clear events history
-    capturedEvents = [];
-    selectedEventIndex = -1;
-    updateEventsList();
-    updateEventsDisplay();
-
     // Create preview shadow DOM
     previewContainer.innerHTML = '';
     const previewElement = createElement('div', {
