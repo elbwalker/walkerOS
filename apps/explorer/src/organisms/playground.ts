@@ -60,6 +60,11 @@ export function createPlayground(
   // Track last rendered content to avoid unnecessary re-renders
   let lastRenderedContent: CodeContent | null = null;
 
+  // Events history management
+  let capturedEvents: any[] = [];
+  let selectedEventIndex: number = -1;
+  let eventsListContainer: HTMLElement;
+
   // Highlight state for preview
   const highlights = {
     context: false,
@@ -100,6 +105,82 @@ export function createPlayground(
         previewContentElement.classList.add(`highlight-${key}`);
       }
     });
+  }
+
+  // Add event to the history
+  function addCapturedEvent(eventData: any) {
+    capturedEvents.push(eventData);
+    selectedEventIndex = capturedEvents.length - 1; // Auto-select newest event
+    updateEventsList();
+    updateEventsDisplay();
+  }
+
+  // Update the events list in the footer
+  function updateEventsList() {
+    if (!eventsListContainer) return;
+
+    // Clear existing buttons
+    eventsListContainer.innerHTML = '';
+
+    // Display events in reverse order (newest first)
+    capturedEvents
+      .slice()
+      .reverse()
+      .forEach((event, reversedIndex) => {
+        const actualIndex = capturedEvents.length - 1 - reversedIndex;
+        const button = createElement('button', {
+          class: `elb-event-btn ${actualIndex === selectedEventIndex ? 'active' : ''}`,
+          'data-event-index': actualIndex.toString(),
+        });
+
+        // Create event label
+        const eventName = event.event || 'unknown';
+        const eventLabel = createElement(
+          'span',
+          {
+            class: 'elb-event-label',
+          },
+          eventName,
+        );
+
+        const eventIndex = createElement(
+          'span',
+          {
+            class: 'elb-event-index',
+          },
+          (actualIndex + 1).toString(),
+        );
+
+        button.appendChild(eventLabel);
+        button.appendChild(eventIndex);
+
+        button.addEventListener('click', () => selectEvent(actualIndex));
+        eventsListContainer.appendChild(button);
+      });
+  }
+
+  // Select and display a specific event
+  function selectEvent(index: number) {
+    if (index < 0 || index >= capturedEvents.length) return;
+
+    selectedEventIndex = index;
+    updateEventsList(); // Update active states
+    updateEventsDisplay();
+  }
+
+  // Update the main events display content
+  function updateEventsDisplay() {
+    if (!eventsDisplay) return;
+
+    if (capturedEvents.length === 0) {
+      eventsDisplay.setValue('// No events captured yet');
+      return;
+    }
+
+    if (selectedEventIndex >= 0 && selectedEventIndex < capturedEvents.length) {
+      const selectedEvent = capturedEvents[selectedEventIndex];
+      eventsDisplay.setValue(JSON.stringify(selectedEvent, null, 2));
+    }
   }
 
   // Get highlight styles as string for injection into shadow DOM
@@ -302,12 +383,18 @@ export function createPlayground(
     });
     layout.appendChild(eventsColumn);
 
+    // Create events list container for footer
+    eventsListContainer = createElement('div', {
+      class: 'elb-events-list',
+    });
+
     eventsDisplay = createCodeBox(eventsColumn, {
       label: 'Captured Events',
       value: '// No events captured yet',
       language: 'json',
       readOnly: true,
       lineNumbers: false,
+      footerContent: eventsListContainer,
     });
     eventsDisplay.getContainer().setAttribute('data-testid', 'events-panel');
 
@@ -325,8 +412,11 @@ export function createPlayground(
       currentBrowserSource = null;
     }
 
-    // Clear events display
-    eventsDisplay.setValue('// No events captured yet');
+    // Clear events history
+    capturedEvents = [];
+    selectedEventIndex = -1;
+    updateEventsList();
+    updateEventsDisplay();
 
     // Create preview shadow DOM
     previewContainer.innerHTML = '';
@@ -435,8 +525,8 @@ export function createPlayground(
 
           console.debug('Browser source output:', capturedOutput);
 
-          // Override events display (don't accumulate)
-          eventsDisplay.setValue(JSON.stringify([capturedOutput], null, 2));
+          // Add to events history instead of overriding
+          addCapturedEvent(capturedOutput);
 
           // Return success result matching PushResult interface
           return {

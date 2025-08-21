@@ -592,6 +592,79 @@ function getComponentStyles(): string {
     .elb-highlight-btn.elb-highlight-btn--action.active:hover {
       color: var(--highlight-action);
     }
+
+    /* Events List Styles */
+    .elb-events-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--elb-spacing-xs);
+      overflow-y: auto;
+      padding: var(--elb-spacing-xs);
+      max-height: 120px;
+      min-height: 40px;
+    }
+
+    .elb-events-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .elb-events-list::-webkit-scrollbar-track {
+      background: var(--elb-hover);
+    }
+
+    .elb-events-list::-webkit-scrollbar-thumb {
+      background: var(--elb-border);
+      border-radius: 2px;
+    }
+
+    .elb-event-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--elb-spacing-xs);
+      padding: var(--elb-spacing-xs) var(--elb-spacing-sm);
+      font-size: var(--elb-font-size-xs);
+      font-weight: 500;
+      border: 1px solid var(--elb-border);
+      border-radius: var(--elb-radius-sm);
+      background: var(--elb-surface);
+      color: var(--elb-fg);
+      cursor: pointer;
+      transition: all var(--elb-transition-fast);
+      white-space: nowrap;
+      height: 24px;
+      flex: none;
+    }
+
+    .elb-event-btn:hover {
+      background: var(--elb-hover);
+      border-color: var(--elb-accent);
+    }
+
+    .elb-event-btn.active {
+      background: var(--elb-accent);
+      color: white;
+      border-color: var(--elb-accent);
+    }
+
+    .elb-event-label {
+      font-weight: 500;
+    }
+
+    .elb-event-index {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 2px 6px;
+      border-radius: var(--elb-radius-sm);
+      font-size: var(--elb-font-size-xs);
+      font-weight: 600;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    .elb-event-btn:not(.active) .elb-event-index {
+      background: var(--elb-muted);
+      color: var(--elb-surface);
+    }
   `;
 }
 

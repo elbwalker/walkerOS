@@ -51,7 +51,7 @@ export function createCodeBox(
     });
   }
 
-  // Create simplified box with header zones - no nested structure
+  // Create simplified box with header zones and footer - no nested structure
   const box = createBox(element, {
     label: options.label,
     showHeader: true,
@@ -59,6 +59,7 @@ export function createCodeBox(
     className: 'elb-code-box',
     headerCenter: tabsContainer,
     headerRight: controlsContainer,
+    footerContent: options.footerContent,
   });
 
   // Create editor directly in content area with no wrapper

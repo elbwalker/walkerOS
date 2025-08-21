@@ -121,6 +121,7 @@ export interface CodeBoxOptions {
   lineNumbers?: boolean;
   showControls?: boolean;
   tabs?: CodeBoxTabsConfig;
+  footerContent?: HTMLElement;
   onChange?: (value: string) => void;
   onTabChange?: (
     tab: 'html' | 'css' | 'js',
