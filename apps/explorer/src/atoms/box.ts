@@ -85,8 +85,14 @@ export function createBox(
   box.appendChild(content);
 
   // Footer
-  if (options.showFooter) {
+  if (options.showFooter || options.footerContent) {
     footer = createElement('div', { class: 'elb-box-footer' });
+
+    // Add custom footer content if provided
+    if (options.footerContent) {
+      footer.appendChild(options.footerContent);
+    }
+
     box.appendChild(footer);
   }
 

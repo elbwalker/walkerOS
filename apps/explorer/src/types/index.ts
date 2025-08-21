@@ -24,6 +24,7 @@ export interface BoxOptions {
   headerLeft?: HTMLElement;
   headerCenter?: HTMLElement;
   headerRight?: HTMLElement;
+  footerContent?: HTMLElement;
 }
 
 export interface BoxAPI extends ComponentAPI {

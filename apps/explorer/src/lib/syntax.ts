@@ -210,11 +210,347 @@ export function tokenizeJSON(code: string): SyntaxToken[] {
 }
 
 /**
- * Tokenize HTML
+ * Tokenize HTML with proper attribute parsing
  */
 export function tokenizeHTML(code: string): SyntaxToken[] {
   const tokens: SyntaxToken[] = [];
-  const regex = /<\/?(\w+)([^>]*)>|<!--[\s\S]*?-->|data-elb[^=]*="[^"]*"/g;
+  let position = 0;
+
+  while (position < code.length) {
+    // Find next tag or comment
+    const nextTag = code.indexOf('<', position);
+
+    if (nextTag === -1) {
+      // No more tags, add remaining text
+      if (position < code.length) {
+        tokens.push({
+          type: 'default',
+          value: code.substring(position),
+          start: position,
+          end: code.length,
+        });
+      }
+      break;
+    }
+
+    // Add text before tag
+    if (nextTag > position) {
+      tokens.push({
+        type: 'default',
+        value: code.substring(position, nextTag),
+        start: position,
+        end: nextTag,
+      });
+    }
+
+    // Parse the tag
+    const tagEnd = code.indexOf('>', nextTag);
+    if (tagEnd === -1) {
+      // Malformed tag, treat as text
+      tokens.push({
+        type: 'default',
+        value: code.substring(nextTag),
+        start: nextTag,
+        end: code.length,
+      });
+      break;
+    }
+
+    const tagContent = code.substring(nextTag, tagEnd + 1);
+
+    // Handle comments
+    if (tagContent.startsWith('<!--')) {
+      tokens.push({
+        type: 'comment',
+        value: tagContent,
+        start: nextTag,
+        end: tagEnd + 1,
+      });
+      position = tagEnd + 1;
+      continue;
+    }
+
+    // Parse regular tag
+    parseHTMLTag(tagContent, nextTag, tokens);
+    position = tagEnd + 1;
+  }
+
+  return tokens;
+}
+
+/**
+ * Parse individual HTML tag into tokens
+ */
+function parseHTMLTag(
+  tagContent: string,
+  startPos: number,
+  tokens: SyntaxToken[],
+): void {
+  let position = 0;
+  const tagLength = tagContent.length;
+
+  // Opening bracket
+  tokens.push({
+    type: 'punctuation',
+    value: '<',
+    start: startPos,
+    end: startPos + 1,
+  });
+  position = 1;
+
+  // Check for closing tag
+  let isClosingTag = false;
+  if (tagContent[1] === '/') {
+    tokens.push({
+      type: 'punctuation',
+      value: '/',
+      start: startPos + 1,
+      end: startPos + 2,
+    });
+    position = 2;
+    isClosingTag = true;
+  }
+
+  // Tag name
+  const tagNameMatch = tagContent.substring(position).match(/^(\w+)/);
+  if (tagNameMatch) {
+    const tagName = tagNameMatch[1];
+    tokens.push({
+      type: 'keyword',
+      value: tagName,
+      start: startPos + position,
+      end: startPos + position + tagName.length,
+    });
+    position += tagName.length;
+  }
+
+  // Don't parse attributes for closing tags
+  if (isClosingTag) {
+    // Skip to closing bracket
+    while (position < tagLength - 1) {
+      if (
+        tagContent[position] !== ' ' &&
+        tagContent[position] !== '\t' &&
+        tagContent[position] !== '\n'
+      ) {
+        tokens.push({
+          type: 'default',
+          value: tagContent[position],
+          start: startPos + position,
+          end: startPos + position + 1,
+        });
+      }
+      position++;
+    }
+  } else {
+    // Parse attributes
+    position = parseHTMLAttributes(tagContent, position, startPos, tokens);
+  }
+
+  // Self-closing tag slash
+  if (position < tagLength - 1 && tagContent[tagLength - 2] === '/') {
+    // Add any whitespace before slash
+    if (position < tagLength - 2) {
+      const whitespace = tagContent.substring(position, tagLength - 2);
+      if (whitespace.trim() === '') {
+        position = tagLength - 2;
+      }
+    }
+
+    tokens.push({
+      type: 'punctuation',
+      value: '/',
+      start: startPos + tagLength - 2,
+      end: startPos + tagLength - 1,
+    });
+  }
+
+  // Closing bracket
+  tokens.push({
+    type: 'punctuation',
+    value: '>',
+    start: startPos + tagLength - 1,
+    end: startPos + tagLength,
+  });
+}
+
+/**
+ * Parse HTML attributes within a tag
+ */
+function parseHTMLAttributes(
+  tagContent: string,
+  startPos: number,
+  tagStartPos: number,
+  tokens: SyntaxToken[],
+): number {
+  let position = startPos;
+  const tagLength = tagContent.length;
+
+  while (position < tagLength - 1) {
+    const char = tagContent[position];
+
+    // Capture and preserve whitespace
+    if (char === ' ' || char === '\t' || char === '\n') {
+      const whitespaceStart = position;
+      while (position < tagLength && /\s/.test(tagContent[position])) {
+        position++;
+      }
+      // Add whitespace as default token to preserve it
+      if (position > whitespaceStart) {
+        tokens.push({
+          type: 'default',
+          value: tagContent.substring(whitespaceStart, position),
+          start: tagStartPos + whitespaceStart,
+          end: tagStartPos + position,
+        });
+      }
+      continue;
+    }
+
+    // Stop at closing bracket or self-closing slash
+    if (char === '>' || char === '/') {
+      break;
+    }
+
+    // Parse attribute name
+    const attrMatch = tagContent.substring(position).match(/^([a-zA-Z-]+)/);
+    if (attrMatch) {
+      const attrName = attrMatch[1];
+      const isDataElb = attrName.startsWith('data-elb');
+
+      tokens.push({
+        type: isDataElb ? 'function' : 'number', // data-elb = purple, regular attrs = blue
+        value: attrName,
+        start: tagStartPos + position,
+        end: tagStartPos + position + attrName.length,
+      });
+      position += attrName.length;
+
+      // Handle whitespace around equals sign
+      const whitespaceBeforeEquals = position;
+      while (position < tagLength && /\s/.test(tagContent[position])) {
+        position++;
+      }
+      if (position > whitespaceBeforeEquals) {
+        tokens.push({
+          type: 'default',
+          value: tagContent.substring(whitespaceBeforeEquals, position),
+          start: tagStartPos + whitespaceBeforeEquals,
+          end: tagStartPos + position,
+        });
+      }
+
+      // Check for equals sign
+      if (position < tagLength && tagContent[position] === '=') {
+        tokens.push({
+          type: 'operator',
+          value: '=',
+          start: tagStartPos + position,
+          end: tagStartPos + position + 1,
+        });
+        position++;
+
+        // Handle whitespace after equals sign
+        const whitespaceAfterEquals = position;
+        while (position < tagLength && /\s/.test(tagContent[position])) {
+          position++;
+        }
+        if (position > whitespaceAfterEquals) {
+          tokens.push({
+            type: 'default',
+            value: tagContent.substring(whitespaceAfterEquals, position),
+            start: tagStartPos + whitespaceAfterEquals,
+            end: tagStartPos + position,
+          });
+        }
+
+        // Parse attribute value
+        if (position < tagLength) {
+          const quote = tagContent[position];
+          if (quote === '"' || quote === "'") {
+            // Quoted value
+            const valueEnd = tagContent.indexOf(quote, position + 1);
+            if (valueEnd !== -1) {
+              const fullValue = tagContent.substring(position, valueEnd + 1);
+              tokens.push({
+                type: 'string',
+                value: fullValue,
+                start: tagStartPos + position,
+                end: tagStartPos + valueEnd + 1,
+              });
+              position = valueEnd + 1;
+            } else {
+              // Unclosed quote, treat as string to end
+              tokens.push({
+                type: 'string',
+                value: tagContent.substring(position),
+                start: tagStartPos + position,
+                end: tagStartPos + tagLength,
+              });
+              break;
+            }
+          } else {
+            // Unquoted value
+            const valueMatch = tagContent
+              .substring(position)
+              .match(/^([^\s>]+)/);
+            if (valueMatch) {
+              const value = valueMatch[1];
+              tokens.push({
+                type: 'string',
+                value: value,
+                start: tagStartPos + position,
+                end: tagStartPos + position + value.length,
+              });
+              position += value.length;
+            }
+          }
+        }
+      }
+    } else {
+      // Unknown character, add as default to preserve it
+      tokens.push({
+        type: 'default',
+        value: char,
+        start: tagStartPos + position,
+        end: tagStartPos + position + 1,
+      });
+      position++;
+    }
+  }
+
+  return position;
+}
+
+/**
+ * Convert tokens to HTML with syntax highlighting
+ */
+export function tokensToHTML(tokens: SyntaxToken[]): string {
+  return tokens
+    .map((token) => {
+      const escaped = escapeHTML(token.value);
+      if (token.type === 'default') return escaped;
+      return `<span class="elb-syntax-${token.type}">${escaped}</span>`;
+    })
+    .join('');
+}
+
+/**
+ * Escape HTML special characters
+ */
+export function escapeHTML(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * Tokenize CSS
+ */
+export function tokenizeCSS(code: string): SyntaxToken[] {
+  const tokens: SyntaxToken[] = [];
+  const regex =
+    /(\/\*[\s\S]*?\*\/|"[^"]*"|'[^']*'|[{}:;]|#[\w-]+|\.[a-zA-Z][\w-]*|[a-zA-Z-]+:|@[a-zA-Z-]+|\d+(\.\d+)?(px|em|rem|%|vh|vw)?)/g;
 
   let match;
   let lastIndex = 0;
@@ -235,12 +571,27 @@ export function tokenizeHTML(code: string): SyntaxToken[] {
 
     let type: SyntaxToken['type'] = 'default';
 
-    if (fullMatch.startsWith('<!--')) {
+    if (fullMatch.startsWith('/*')) {
       type = 'comment';
-    } else if (fullMatch.startsWith('data-elb')) {
-      type = 'function'; // Highlight data-elb attributes specially
-    } else if (fullMatch.startsWith('<')) {
-      type = 'keyword';
+    } else if (fullMatch.startsWith('"') || fullMatch.startsWith("'")) {
+      type = 'string';
+    } else if (fullMatch.startsWith('#')) {
+      type = 'string'; // Color values
+    } else if (fullMatch.startsWith('.')) {
+      type = 'function'; // Class selectors
+    } else if (fullMatch.includes(':')) {
+      type = 'keyword'; // Property names
+    } else if (fullMatch.startsWith('@')) {
+      type = 'keyword'; // At-rules
+    } else if (/^\d/.test(fullMatch)) {
+      type = 'number'; // Values with units
+    } else if (
+      fullMatch === '{' ||
+      fullMatch === '}' ||
+      fullMatch === ':' ||
+      fullMatch === ';'
+    ) {
+      type = 'punctuation';
     }
 
     tokens.push({
@@ -267,28 +618,6 @@ export function tokenizeHTML(code: string): SyntaxToken[] {
 }
 
 /**
- * Convert tokens to HTML with syntax highlighting
- */
-export function tokensToHTML(tokens: SyntaxToken[]): string {
-  return tokens
-    .map((token) => {
-      const escaped = escapeHTML(token.value);
-      if (token.type === 'default') return escaped;
-      return `<span class="elb-syntax-${token.type}">${escaped}</span>`;
-    })
-    .join('');
-}
-
-/**
- * Escape HTML special characters
- */
-export function escapeHTML(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-/**
  * Main highlighting function
  */
 export function highlight(
@@ -303,6 +632,9 @@ export function highlight(
       break;
     case 'html':
       tokens = tokenizeHTML(code);
+      break;
+    case 'css':
+      tokens = tokenizeCSS(code);
       break;
     case 'javascript':
     default:

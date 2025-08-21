@@ -51,9 +51,161 @@ export function createPlayground(
   let htmlEditor: any;
   let previewContainer: HTMLElement;
   let eventsDisplay: any;
+  let highlightContainerElement: HTMLElement;
+  let previewContentElement: HTMLElement;
 
   // Browser source management
   let currentBrowserSource: any = null;
+
+  // Track last rendered content to avoid unnecessary re-renders
+  let lastRenderedContent: CodeContent | null = null;
+
+  // Highlight state for preview
+  const highlights = {
+    context: false,
+    entity: false,
+    property: false,
+    action: false,
+  };
+
+  // Toggle highlight function
+  function toggleHighlight(type: keyof typeof highlights) {
+    highlights[type] = !highlights[type];
+    updateHighlightClasses();
+
+    // Update button states
+    const button = document.querySelector(
+      `[data-highlight="${type}"]`,
+    ) as HTMLElement;
+    if (button) {
+      button.classList.toggle('active', highlights[type]);
+    }
+  }
+
+  // Update highlight classes on preview content
+  function updateHighlightClasses() {
+    if (!previewContentElement) return;
+
+    // Remove all highlight classes
+    previewContentElement.classList.remove(
+      'highlight-context',
+      'highlight-entity',
+      'highlight-property',
+      'highlight-action',
+    );
+
+    // Add active highlight classes
+    Object.entries(highlights).forEach(([key, active]) => {
+      if (active) {
+        previewContentElement.classList.add(`highlight-${key}`);
+      }
+    });
+  }
+
+  // Get highlight styles as string for injection into shadow DOM
+  function getHighlightStyles(): string {
+    return `
+      /* Highlight Colors */
+      :host {
+        --highlight-context: #ffbd44cc;
+        --highlight-entity: #00ca4ecc;
+        --highlight-property: #ff605ccc;
+        --highlight-action: #9900ffcc;
+      }
+
+      /* Single highlight styles using box-shadow */
+      .highlight-context [data-elbcontext] {
+        box-shadow: 0 0 0 2px var(--highlight-context);
+      }
+
+      .highlight-entity [data-elb] {
+        box-shadow: 0 0 0 2px var(--highlight-entity);
+      }
+
+      .highlight-property [data-elbproperty] {
+        box-shadow: 0 0 0 2px var(--highlight-property);
+      }
+
+      .highlight-action [data-elbaction] {
+        box-shadow: 0 0 0 2px var(--highlight-action);
+      }
+
+      /* Double combinations with layered box-shadows */
+      .highlight-entity.highlight-action [data-elb][data-elbaction] {
+        box-shadow:
+          0 0 0 2px var(--highlight-action),
+          0 0 0 4px var(--highlight-entity);
+      }
+
+      .highlight-entity.highlight-context [data-elb][data-elbcontext] {
+        box-shadow:
+          0 0 0 2px var(--highlight-entity),
+          0 0 0 4px var(--highlight-context);
+      }
+
+      .highlight-entity.highlight-property [data-elb][data-elbproperty] {
+        box-shadow:
+          0 0 0 2px var(--highlight-entity),
+          0 0 0 4px var(--highlight-property);
+      }
+
+      .highlight-action.highlight-context [data-elbaction][data-elbcontext] {
+        box-shadow:
+          0 0 0 2px var(--highlight-action),
+          0 0 0 4px var(--highlight-context);
+      }
+
+      .highlight-context.highlight-property [data-elbcontext][data-elbproperty] {
+        box-shadow:
+          0 0 0 2px var(--highlight-context),
+          0 0 0 4px var(--highlight-property);
+      }
+
+      .highlight-action.highlight-property [data-elbaction][data-elbproperty] {
+        box-shadow:
+          0 0 0 2px var(--highlight-action),
+          0 0 0 4px var(--highlight-property);
+      }
+
+      /* Triple combinations with distinct layers */
+      .highlight-entity.highlight-action.highlight-context [data-elb][data-elbaction][data-elbcontext] {
+        box-shadow:
+          0 0 0 2px var(--highlight-action),
+          0 0 0 4px var(--highlight-entity),
+          0 0 0 6px var(--highlight-context);
+      }
+
+      .highlight-entity.highlight-action.highlight-property [data-elb][data-elbaction][data-elbproperty] {
+        box-shadow:
+          0 0 0 2px var(--highlight-action),
+          0 0 0 4px var(--highlight-entity),
+          0 0 0 6px var(--highlight-property);
+      }
+
+      .highlight-entity.highlight-context.highlight-property [data-elb][data-elbcontext][data-elbproperty] {
+        box-shadow:
+          0 0 0 2px var(--highlight-context),
+          0 0 0 4px var(--highlight-entity),
+          0 0 0 6px var(--highlight-property);
+      }
+
+      .highlight-action.highlight-context.highlight-property [data-elbaction][data-elbcontext][data-elbproperty] {
+        box-shadow:
+          0 0 0 2px var(--highlight-action),
+          0 0 0 4px var(--highlight-context),
+          0 0 0 6px var(--highlight-property);
+      }
+
+      /* Quadruple combination */
+      .highlight-entity.highlight-action.highlight-context.highlight-property [data-elb][data-elbaction][data-elbcontext][data-elbproperty] {
+        box-shadow:
+          0 0 0 2px var(--highlight-action),
+          0 0 0 4px var(--highlight-entity),
+          0 0 0 6px var(--highlight-context),
+          0 0 0 8px var(--highlight-property);
+      }
+    `;
+  }
 
   // Initialize components
   function initialize() {
@@ -88,18 +240,61 @@ export function createPlayground(
     });
     layout.appendChild(previewColumn);
 
+    // Create highlight toggle buttons
+    const highlightButtonsContainer = createElement('div', {
+      class: 'elb-highlight-buttons',
+    });
+
+    const highlightTypes = [
+      { key: 'context', label: 'Context' },
+      { key: 'entity', label: 'Entity' },
+      { key: 'property', label: 'Property' },
+      { key: 'action', label: 'Action' },
+    ] as const;
+
+    highlightTypes.forEach(({ key, label }) => {
+      const button = createElement(
+        'button',
+        {
+          class: `elb-highlight-btn elb-highlight-btn--${key}`,
+          'data-highlight': key,
+        },
+        label,
+      );
+
+      button.addEventListener('click', () => toggleHighlight(key));
+      highlightButtonsContainer.appendChild(button);
+    });
+
     const previewBox = createBox(previewColumn, {
       label: 'Live Preview',
       showHeader: true,
       noPadding: true,
+      footerContent: highlightButtonsContainer,
     });
     previewBox.getContainer().setAttribute('data-testid', 'preview-panel');
+
+    // Create highlight wrapper structure (similar to website)
+    const highlightWrapper = createElement('div', {
+      class: 'elb-highlight',
+    });
+
+    const highlightContainer = createElement('div', {
+      class: 'highlight-container',
+    });
 
     previewContainer = createElement('div', {
       class: 'preview-container',
     });
     previewContainer.setAttribute('data-testid', 'preview-container');
-    previewBox.getContent().appendChild(previewContainer);
+
+    // Build the hierarchy: content > highlightWrapper > highlightContainer > previewContainer
+    highlightContainer.appendChild(previewContainer);
+    highlightWrapper.appendChild(highlightContainer);
+    previewBox.getContent().appendChild(highlightWrapper);
+
+    // Store reference to highlight container for class updates
+    highlightContainerElement = highlightContainer;
 
     // Captured Events Display
     const eventsColumn = createElement('div', {
@@ -148,8 +343,31 @@ export function createPlayground(
       previewShadow.appendChild(styleElement);
     }
 
-    // Set HTML content
-    previewContent.innerHTML = content.html;
+    // Inject highlight styles into shadow DOM
+    const highlightStyles = createElement('style', {}, getHighlightStyles());
+    previewShadow.appendChild(highlightStyles);
+
+    // Set HTML content in a temporary container first to process it
+    const tempContainer = createElement('div');
+    tempContainer.innerHTML = content.html;
+
+    // Mark property attributes for highlighting (similar to website preview)
+    const entities = Array.from(tempContainer.querySelectorAll('[data-elb]'))
+      .map((el) => el.getAttribute('data-elb'))
+      .filter((entity): entity is string => !!entity);
+
+    entities.forEach((entity) => {
+      tempContainer.querySelectorAll(`[data-elb-${entity}]`).forEach((el) => {
+        el.setAttribute('data-elbproperty', '');
+      });
+    });
+
+    // Now set the processed HTML to the actual preview content
+    previewContent.innerHTML = tempContainer.innerHTML;
+
+    // Store reference to preview content and apply current highlight classes
+    previewContentElement = previewContent;
+    updateHighlightClasses();
 
     // Execute JavaScript if provided
     if (content.js.trim()) {
@@ -283,10 +501,29 @@ export function createPlayground(
   }
 
   /**
-   * Handle code changes
+   * Compare two code content objects for changes
+   */
+  function hasContentChanged(
+    newContent: CodeContent,
+    oldContent: CodeContent | null,
+  ): boolean {
+    if (!oldContent) return true;
+
+    return (
+      newContent.html !== oldContent.html ||
+      newContent.css !== oldContent.css ||
+      newContent.js !== oldContent.js
+    );
+  }
+
+  /**
+   * Handle code changes - only re-render if content actually changed
    */
   async function handleCodeChange(content: CodeContent): Promise<void> {
-    await renderPreview(content);
+    if (hasContentChanged(content, lastRenderedContent)) {
+      lastRenderedContent = { ...content };
+      await renderPreview(content);
+    }
   }
 
   // Initialize

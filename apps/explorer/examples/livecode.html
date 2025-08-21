@@ -84,10 +84,73 @@
         color: #6b7280;
         font-size: 14px;
       }
+
+      /* Theme Toggle Button */
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 44px;
+        height: 44px;
+        border: none;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        transition: all 200ms ease;
+        z-index: 1000;
+      }
+
+      .theme-toggle:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      /* Dark mode styles */
+      [data-theme="dark"] {
+        color-scheme: dark;
+      }
+
+      [data-theme="dark"] body {
+        background: #0a0a0a;
+        color: #fafafa;
+      }
+
+      [data-theme="dark"] h1 {
+        color: #f9fafb;
+      }
+
+      [data-theme="dark"] .description {
+        color: #9ca3af;
+      }
+
+      [data-theme="dark"] .playground-container {
+        background: #18181b;
+        border-color: #27272a;
+      }
+
+      [data-theme="dark"] .theme-toggle {
+        background: #27272a;
+        color: #fafafa;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      [data-theme="dark"] .theme-toggle:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      }
     </style>
     <script src="../dist/explorer.js"></script>
   </head>
   <body>
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+      <span id="theme-icon">☀️</span>
+    </button>
+
     <div class="container">
       <h1>🚀 WalkerOS Explorer - Real Integration Demo</h1>
 
@@ -99,6 +162,45 @@
     </div>
 
     <script>
+      // Theme Toggle Functionality
+      function initThemeToggle() {
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const html = document.documentElement;
+
+        // Get saved theme or default to light
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        
+        // Apply saved theme
+        if (savedTheme === 'dark') {
+          html.setAttribute('data-theme', 'dark');
+          themeIcon.textContent = '🌙';
+        } else {
+          html.removeAttribute('data-theme');
+          themeIcon.textContent = '☀️';
+        }
+
+        // Toggle theme on button click
+        themeToggle.addEventListener('click', () => {
+          const currentTheme = html.getAttribute('data-theme');
+          
+          if (currentTheme === 'dark') {
+            // Switch to light mode
+            html.removeAttribute('data-theme');
+            themeIcon.textContent = '☀️';
+            localStorage.setItem('theme', 'light');
+          } else {
+            // Switch to dark mode
+            html.setAttribute('data-theme', 'dark');
+            themeIcon.textContent = '🌙';
+            localStorage.setItem('theme', 'dark');
+          }
+        });
+      }
+
+      // Initialize theme toggle immediately
+      initThemeToggle();
+
       // Wait for the explorer bundle to load
       document.addEventListener('DOMContentLoaded', () => {
         try {
