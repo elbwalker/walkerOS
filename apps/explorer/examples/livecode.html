@@ -1,220 +1,335 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LiveCode Example - WalkerOS Explorer</title>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: #fafafa;
-    }
-    
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    
-    h1 {
-      color: #1f2937;
-      margin-bottom: 10px;
-    }
-    
-    .description {
-      color: #6b7280;
-      margin-bottom: 30px;
-    }
-    
-    .example {
-      margin-bottom: 40px;
-    }
-    
-    .example h2 {
-      margin-top: 0;
-      color: #374151;
-      font-size: 1.25rem;
-    }
-    
-    .livecode-container {
-      height: 400px;
-    }
-  </style>
-  <script src="../dist/explorer.js"></script>
-</head>
-<body>
-  <div class="container">
-    <h1>WalkerOS Explorer - LiveCode Examples</h1>
-    <p class="description">
-      Interactive code execution examples demonstrating the LiveCode component.
-    </p>
-    
-    <!-- Example 1: Basic JavaScript -->
-    <div class="example">
-      <h2>Example 1: Basic JavaScript Execution</h2>
-      <div id="example1" class="livecode-container"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WalkerOS Explorer - Real Integration Demo</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #fafafa;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        color: #1f2937;
+        margin-bottom: 10px;
+      }
+
+      .description {
+        color: #6b7280;
+        margin-bottom: 30px;
+        font-size: 16px;
+        line-height: 1.5;
+      }
+
+      .playground-container {
+        height: 80vh;
+        min-height: 600px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: white;
+        overflow: hidden;
+      }
+
+      .status {
+        background: #f3f4f6;
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        border-left: 4px solid #10b981;
+      }
+
+      .status-title {
+        font-weight: 600;
+        color: #059669;
+        margin-bottom: 4px;
+      }
+
+      .status-description {
+        color: #374151;
+        font-size: 14px;
+      }
+
+      .feature-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+        margin: 20px 0;
+      }
+
+      .feature {
+        background: white;
+        padding: 16px;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+      }
+
+      .feature-title {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 8px;
+      }
+
+      .feature-description {
+        color: #6b7280;
+        font-size: 14px;
+      }
+    </style>
+    <script src="../dist/explorer.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚀 WalkerOS Explorer - Real Integration Demo</h1>
+
+      <div
+        id="playground"
+        class="playground-container"
+        data-testid="livecode-explorer"
+      ></div>
     </div>
-    
-    <!-- Example 2: With Context -->
-    <div class="example">
-      <h2>Example 2: Execution with Context</h2>
-      <div id="example2" class="livecode-container"></div>
-    </div>
-    
-    <!-- Example 3: Async Code -->
-    <div class="example">
-      <h2>Example 3: Async/Await Support</h2>
-      <div id="example3" class="livecode-container"></div>
-    </div>
-    
-    <!-- Example 4: Error Handling -->
-    <div class="example">
-      <h2>Example 4: Error Handling</h2>
-      <div id="example4" class="livecode-container"></div>
-    </div>
-    
-    <!-- Example 5: Vertical Layout -->
-    <div class="example">
-      <h2>Example 5: Vertical Layout</h2>
-      <div id="example5" class="livecode-container" style="height: 600px;"></div>
-    </div>
+
+    <script>
+      // Wait for the explorer bundle to load
+      document.addEventListener('DOMContentLoaded', () => {
+        try {
+          const { createPlayground } = WalkerExplorer;
+
+          if (!createPlayground) {
+            throw new Error(
+              'createPlayground function not found in WalkerExplorer',
+            );
+          }
+
+          // Create playground with real walkerOS integration
+          const playground = createPlayground(
+            document.getElementById('playground'),
+            {
+              // Use example HTML that demonstrates various walkerOS features
+              initialHTML: `<div class="product" data-elb="product" data-elbcontext="stage:listing,test:variant-a">
+  <img src="https://via.placeholder.com/200x150/3b82f6/ffffff?text=Product" alt="Product Image" />
+  <h3 data-elb-product="name:#innerText">Premium Wireless Headphones</h3>
+  <p data-elb-product="price:149.99" class="price">$149.99</p>
+  <p data-elb-product="category:electronics" class="category">Audio Equipment</p>
+  
+  <div class="buttons">
+    <button 
+      data-elbaction="click:view"
+      data-elb-product="id:PROD-789"
+      class="btn btn-primary"
+    >
+      View Details
+    </button>
+    <button 
+      data-elbaction="click:add"
+      data-elb-product="quantity:1"
+      class="btn btn-success"
+    >
+      Add to Cart
+    </button>
+    <button 
+      data-elbaction="click:wishlist"
+      data-elb-product="list:favorites"
+      class="btn btn-secondary"
+    >
+      ♡ Wishlist
+    </button>
   </div>
   
-  <script>
-    // Wait for the explorer bundle to load
-    document.addEventListener('DOMContentLoaded', () => {
-      const { createLiveCode } = WalkerExplorer;
-    
-    // Example 1: Basic JavaScript
-    const example1 = createLiveCode(document.getElementById('example1'), {
-      input: `// Basic JavaScript execution
-const numbers = [1, 2, 3, 4, 5];
-const doubled = numbers.map(n => n * 2);
+  <div class="reviews" data-elb="review" data-elbcontext="section:social-proof">
+    <h4>Customer Reviews</h4>
+    <div 
+      data-elbaction="click:expand"
+      data-elb-review="rating:4.8,count:127"
+      class="review-summary"
+    >
+      ⭐ 4.8/5 (127 reviews) - Click to expand
+    </div>
+  </div>
+</div>`,
 
-console.log('Original:', numbers);
-console.log('Doubled:', doubled);
-
-return {
-  sum: doubled.reduce((a, b) => a + b, 0),
-  average: doubled.reduce((a, b) => a + b, 0) / doubled.length
-};`,
-      labelInput: 'JavaScript Code',
-      labelOutput: 'Result'
-    });
-    
-    // Example 2: With Context
-    const example2 = createLiveCode(document.getElementById('example2'), {
-      input: `// Using provided context functions
-const event = {
-  event: 'product view',
-  data: {
-    id: 'P123',
-    name: 'Laptop',
-    price: 999
-  }
-};
-
-// Format the event
-const formatted = formatEvent(event);
-
-console.log('Original event:', event);
-console.log('Formatted:', formatted);
-
-return formatted;`,
-      context: {
-        formatEvent: (event) => ({
-          ...event,
-          timestamp: Date.now(),
-          entity: event.event.split(' ')[0],
-          action: event.event.split(' ')[1]
-        })
-      },
-      labelInput: 'Code with Context',
-      labelOutput: 'Processed Result'
-    });
-    
-    // Example 3: Async Code
-    const example3 = createLiveCode(document.getElementById('example3'), {
-      input: `// Async/await example
-async function fetchData() {
-  console.log('Starting fetch...');
-  
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  const data = {
-    users: ['Alice', 'Bob', 'Charlie'],
-    timestamp: new Date().toISOString()
-  };
-  
-  console.log('Data fetched!');
-  return data;
+              // Enhanced CSS for better visual demo
+              initialCSS: `.product {
+  max-width: 400px;
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-family: system-ui, sans-serif;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
-const result = await fetchData();
-return result;`,
-      labelInput: 'Async Code',
-      labelOutput: 'Async Result'
-    });
-    
-    // Example 4: Error Handling
-    const example4 = createLiveCode(document.getElementById('example4'), {
-      input: `// This will cause an error
-const data = {
-  name: 'Test'
-};
+img {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
 
-// Try to access undefined property
-console.log('Accessing data.name:', data.name);
-console.log('Accessing nested property...');
+h3 {
+  color: #1f2937;
+  margin: 0 0 12px 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
 
-// This will throw an error
-return data.nested.property.value;`,
-      labelInput: 'Code with Error',
-      labelOutput: 'Error Display'
-    });
-    
-    // Example 5: Vertical Layout
-    const example5 = createLiveCode(document.getElementById('example5'), {
-      input: `// Vertical layout example
-const fibonacci = (n) => {
-  if (n <= 1) return n;
-  
-  const sequence = [0, 1];
-  for (let i = 2; i <= n; i++) {
-    sequence[i] = sequence[i-1] + sequence[i-2];
-  }
-  
-  return sequence;
-};
+.price {
+  font-size: 24px;
+  font-weight: bold;
+  color: #059669;
+  margin: 8px 0;
+}
 
-const n = 10;
-const result = fibonacci(n);
+.category {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 
-console.log(\`First \${n} Fibonacci numbers:\`);
-result.forEach((num, i) => {
-  console.log(\`F(\${i}) = \${num}\`);
-});
+.buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
 
-return {
-  sequence: result,
-  sum: result.reduce((a, b) => a + b, 0)
-};`,
-      layout: 'vertical',
-      labelInput: 'Fibonacci Generator',
-      labelOutput: 'Sequence Result'
-    });
-    
-      // Log to console for debugging
-      console.log('LiveCode examples loaded:', {
-        example1,
-        example2,
-        example3,
-        example4,
-        example5
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 200ms ease;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgb(59 130 246 / 0.3);
+}
+
+.btn-success {
+  background: #10b981;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgb(16 185 129 / 0.3);
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+.reviews {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 16px;
+}
+
+.reviews h4 {
+  color: #374151;
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+}
+
+.review-summary {
+  color: #6b7280;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: background-color 200ms ease;
+}
+
+.review-summary:hover {
+  background: #f9fafb;
+  color: #374151;
+}`,
+
+              // Interactive JavaScript for demonstration
+              initialJS: `// Enhanced walkerOS tracking demo
+console.log('🚀 Real walkerOS integration loaded!');
+`,
+
+              // Example mapping configuration for demonstration
+              initialMapping: {
+                product: {
+                  view: {
+                    name: 'view_item',
+                    data: {
+                      map: {
+                        item_id: 'data.id',
+                        item_name: 'data.name',
+                        item_category: 'data.category',
+                        currency: { value: 'USD' },
+                        value: 'data.price',
+                      },
+                    },
+                  },
+                  add: {
+                    name: 'add_to_cart',
+                    data: {
+                      map: {
+                        item_id: 'data.id',
+                        item_name: 'data.name',
+                        currency: { value: 'USD' },
+                        value: 'data.price',
+                        quantity: 'data.quantity',
+                      },
+                    },
+                  },
+                  wishlist: {
+                    name: 'add_to_wishlist',
+                    data: {
+                      map: {
+                        item_id: 'data.id',
+                        list_name: 'data.list',
+                      },
+                    },
+                  },
+                },
+                review: {
+                  expand: {
+                    name: 'view_reviews',
+                    data: {
+                      map: {
+                        rating: 'data.rating',
+                        review_count: 'data.count',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          );
+        } catch (error) {
+          console.error('❌ Failed to initialize WalkerOS Explorer:', error);
+        }
       });
-    });
-  </script>
-</body>
+    </script>
+  </body>
 </html>

@@ -27,6 +27,7 @@ export interface BoxAPI extends ComponentAPI {
   getContent: () => HTMLElement;
   getHeader: () => HTMLElement | null;
   getFooter: () => HTMLElement | null;
+  getContainer: () => HTMLElement;
 }
 
 export interface EditorOptions {
@@ -48,15 +49,18 @@ export interface EditorAPI extends ComponentAPI {
 
 export interface ButtonOptions {
   text?: string;
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'tab';
   icon?: string;
   onClick?: () => void;
   disabled?: boolean;
+  active?: boolean; // For tab buttons
+  testId?: string; // For Playwright testing
 }
 
 export interface ButtonAPI extends ComponentAPI {
   setText: (text: string) => void;
   setDisabled: (disabled: boolean) => void;
+  setActive: (active: boolean) => void; // For tab buttons
   click: () => void;
 }
 
@@ -128,6 +132,7 @@ export interface CodeBoxAPI extends ComponentAPI {
   setLabel: (label: string) => void;
   setLanguage: (language: string) => void;
   format: () => void;
+  getContainer: () => HTMLElement;
 }
 
 export interface ResultBoxOptions {

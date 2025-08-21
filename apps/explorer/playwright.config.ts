@@ -4,9 +4,9 @@ import { defineConfig, devices } from '@playwright/test';
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  testDir: './tests/visual',
+  testDir: './tests',
   // Output directory for test artifacts
-  outputDir: './test-results/visual',
+  outputDir: './test-results',
   // Global setup / teardown
   globalSetup: require.resolve('./tests/setup/global-setup.ts'),
   globalTeardown: require.resolve('./tests/setup/global-teardown.ts'),
@@ -40,42 +40,48 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
 
-  /* Configure projects for major browsers */
+  /* Configure projects for different test types */
   projects: [
+    // Functional tests - fast, no visual testing
     {
-      name: 'chromium',
+      name: 'functional',
+      testDir: './tests/functional',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Faster execution for functional tests
+        actionTimeout: 10000,
+        navigationTimeout: 30000,
+      },
+    },
+
+    // Visual tests - comprehensive browser coverage
+    {
+      name: 'visual-chromium',
+      testDir: './tests/visual',
       use: { ...devices['Desktop Chrome'] },
     },
-
     {
-      name: 'firefox',
+      name: 'visual-firefox',
+      testDir: './tests/visual',
       use: { ...devices['Desktop Firefox'] },
     },
-
     {
-      name: 'webkit',
+      name: 'visual-webkit',
+      testDir: './tests/visual',
       use: { ...devices['Desktop Safari'] },
     },
 
-    /* Test against mobile viewports. */
+    /* Mobile visual tests */
     {
-      name: 'Mobile Chrome',
+      name: 'visual-mobile-chrome',
+      testDir: './tests/visual',
       use: { ...devices['Pixel 5'] },
     },
     {
-      name: 'Mobile Safari',
+      name: 'visual-mobile-safari',
+      testDir: './tests/visual',
       use: { ...devices['iPhone 12'] },
     },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
   ],
 
   /* Run your local dev server before starting the tests */

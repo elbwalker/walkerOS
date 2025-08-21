@@ -13,11 +13,25 @@ export function createButton(
   container: HTMLElement,
   options: ButtonOptions = {},
 ): ButtonAPI {
-  const button = createElement('button', {
-    class: `elb-button elb-button--${options.variant || 'secondary'}`,
+  const classes = [
+    'elb-button',
+    `elb-button--${options.variant || 'secondary'}`,
+    options.active ? 'elb-button--active' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const attributes: Record<string, any> = {
+    class: classes,
     disabled: options.disabled,
     type: 'button',
-  }) as HTMLButtonElement;
+  };
+
+  if (options.testId) {
+    attributes['data-testid'] = options.testId;
+  }
+
+  const button = createElement('button', attributes) as HTMLButtonElement;
 
   // Add icon if provided
   if (options.icon) {
@@ -46,8 +60,7 @@ export function createButton(
     ? addListener(button, 'click', options.onClick)
     : null;
 
-  // Inject styles
-  injectButtonStyles(container);
+  // Note: Styles are now centralized and injected by box component
 
   // API
   return {
@@ -69,6 +82,14 @@ export function createButton(
       button.disabled = disabled;
     },
 
+    setActive: (active: boolean) => {
+      if (active) {
+        button.classList.add('elb-button--active');
+      } else {
+        button.classList.remove('elb-button--active');
+      }
+    },
+
     click: () => {
       button.click();
     },
@@ -80,89 +101,4 @@ export function createButton(
   };
 }
 
-/**
- * Inject button styles
- */
-function injectButtonStyles(container: HTMLElement): void {
-  const root = container.getRootNode();
-  const target = root instanceof ShadowRoot ? root : document.head;
-
-  if (target.querySelector('#elb-button-styles')) return;
-
-  const styles = `
-    .elb-button {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--elb-spacing-xs);
-      padding: var(--elb-spacing-xs) var(--elb-spacing-sm);
-      font-family: var(--elb-font-sans);
-      font-size: var(--elb-font-size-sm);
-      font-weight: 500;
-      border-radius: var(--elb-radius-sm);
-      border: 1px solid transparent;
-      cursor: pointer;
-      transition: all var(--elb-transition-fast);
-      outline: none;
-    }
-    
-    .elb-button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    
-    .elb-button:focus-visible {
-      outline: 2px solid var(--elb-accent);
-      outline-offset: 2px;
-    }
-    
-    /* Primary variant */
-    .elb-button--primary {
-      background: var(--elb-accent);
-      color: white;
-      border-color: var(--elb-accent);
-    }
-    
-    .elb-button--primary:hover:not(:disabled) {
-      background: var(--elb-accent);
-      filter: brightness(1.1);
-    }
-    
-    /* Secondary variant */
-    .elb-button--secondary {
-      background: var(--elb-bg);
-      color: var(--elb-fg);
-      border-color: var(--elb-border);
-    }
-    
-    .elb-button--secondary:hover:not(:disabled) {
-      background: var(--elb-border);
-    }
-    
-    /* Ghost variant */
-    .elb-button--ghost {
-      background: transparent;
-      color: var(--elb-fg);
-      border-color: transparent;
-    }
-    
-    .elb-button--ghost:hover:not(:disabled) {
-      background: var(--elb-border);
-    }
-    
-    .elb-button-icon {
-      display: flex;
-      align-items: center;
-    }
-    
-    .elb-button-text {
-      display: inline-block;
-    }
-  `;
-
-  const styleElement = createElement(
-    'style',
-    { id: 'elb-button-styles' },
-    styles,
-  );
-  target.appendChild(styleElement);
-}
+// Button styles are now centralized in styles/theme.ts

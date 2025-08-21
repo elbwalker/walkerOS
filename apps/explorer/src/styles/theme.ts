@@ -144,8 +144,10 @@ export function generateCSSVariables(theme = defaultTheme): string {
   return vars.join('\n  ');
 }
 
+// Component styles are embedded directly in getCompleteStyles function
+
 /**
- * Get base styles for components
+ * Get base styles for components with centralized component CSS
  */
 export function getBaseStyles(textSize?: 'small' | 'regular'): string {
   const fontSize =
@@ -217,6 +219,183 @@ export function getBaseStyles(textSize?: 'small' | 'regular'): string {
       text-align: right;
       border-right: 1px solid var(--elb-border);
       user-select: none;
+    }
+  `;
+}
+
+/**
+ * Get complete styles including centralized component styles
+ */
+export function getCompleteStyles(textSize?: 'small' | 'regular'): string {
+  const baseStyles = getBaseStyles(textSize);
+
+  // Include centralized component styles directly since bundler will handle CSS import
+  const componentStyles = getComponentStyles();
+
+  return baseStyles + '\n\n' + componentStyles;
+}
+
+/**
+ * Get component styles as a string (for bundler compatibility)
+ */
+function getComponentStyles(): string {
+  return `
+    /* Button Components */
+    .elb-button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--elb-spacing-xs);
+      padding: var(--elb-spacing-xs) var(--elb-spacing-sm);
+      font-family: var(--elb-font-sans);
+      font-size: var(--elb-font-size-sm);
+      font-weight: 500;
+      border-radius: var(--elb-radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all var(--elb-transition-fast);
+      outline: none;
+      background: none;
+      text-decoration: none;
+      box-sizing: border-box;
+    }
+
+    .elb-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .elb-button:focus-visible {
+      outline: 2px solid var(--elb-accent);
+      outline-offset: 2px;
+    }
+
+    /* Primary variant */
+    .elb-button--primary {
+      background: var(--elb-accent);
+      color: white;
+      border-color: var(--elb-accent);
+    }
+
+    .elb-button--primary:hover:not(:disabled) {
+      background: var(--elb-accent);
+      filter: brightness(1.1);
+    }
+
+    /* Secondary variant */
+    .elb-button--secondary {
+      background: var(--elb-surface);
+      color: var(--elb-fg);
+      border-color: var(--elb-border);
+    }
+
+    .elb-button--secondary:hover:not(:disabled) {
+      background: var(--elb-hover);
+    }
+
+    /* Ghost variant */
+    .elb-button--ghost {
+      background: transparent;
+      color: var(--elb-fg);
+      border-color: transparent;
+    }
+
+    .elb-button--ghost:hover:not(:disabled) {
+      background: var(--elb-hover);
+    }
+
+    /* Tab variant - for HTML/CSS/JS tabs */
+    .elb-button--tab {
+      padding: 4px 12px;
+      font-size: var(--elb-font-size-xs);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+      background: transparent;
+      color: var(--elb-muted);
+      border: none;
+      border-radius: 4px;
+      transition: all var(--elb-transition-fast);
+    }
+
+    .elb-button--tab:hover:not(:disabled) {
+      background: var(--elb-hover);
+      color: var(--elb-fg);
+    }
+
+    .elb-button--tab.elb-button--active {
+      background: var(--elb-surface);
+      color: var(--elb-accent);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    /* Button content */
+    .elb-button-icon {
+      display: flex;
+      align-items: center;
+    }
+
+    .elb-button-text {
+      display: inline-block;
+    }
+
+    /* Tab Group Container */
+    .elb-tab-group {
+      display: inline-flex;
+      gap: 2px;
+      background: var(--elb-hover);
+      padding: 2px;
+      border-radius: 6px;
+      margin-left: auto;
+      margin-right: var(--elb-spacing-sm);
+    }
+
+    /* Icon Button Specific Styles */
+    .elb-icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: var(--elb-spacing-xs);
+      font-size: var(--elb-font-size-sm);
+      border-radius: var(--elb-radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--elb-muted);
+      cursor: pointer;
+      transition: all var(--elb-transition-fast);
+      outline: none;
+    }
+
+    .elb-icon-button:hover:not(:disabled) {
+      background: var(--elb-hover);
+      color: var(--elb-fg);
+    }
+
+    .elb-icon-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .elb-icon-button:focus-visible {
+      outline: 2px solid var(--elb-accent);
+      outline-offset: 2px;
+    }
+
+    /* Code Box Specific Styles */
+    .elb-code-box .elb-box-content {
+      padding: 0;
+      background: transparent;
+    }
+
+    .elb-code-box-controls {
+      display: flex;
+      gap: var(--elb-spacing-xs);
+      margin-left: auto;
+    }
+
+    .elb-code-box .elb-box-header {
+      padding-right: var(--elb-spacing-xs);
     }
   `;
 }

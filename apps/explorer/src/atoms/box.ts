@@ -5,7 +5,7 @@
 
 import type { BoxOptions, BoxAPI } from '../types';
 import { createShadow, createElement, clearChildren } from '../lib/dom';
-import { getBaseStyles } from '../styles/theme';
+import { getCompleteStyles } from '../styles/theme';
 
 /**
  * Create a box component
@@ -16,8 +16,12 @@ export function createBox(
 ): BoxAPI {
   const { shadow, container } = createShadow(element);
 
-  // Inject styles
-  const styles = createElement('style', {}, getBaseStyles() + getBoxStyles());
+  // Inject styles - now includes all component styles
+  const styles = createElement(
+    'style',
+    {},
+    getCompleteStyles() + getBoxStyles(),
+  );
   shadow.appendChild(styles);
 
   // Create structure
@@ -74,6 +78,7 @@ export function createBox(
     getContent: () => content,
     getHeader: () => header,
     getFooter: () => footer,
+    getContainer: () => box,
 
     destroy: () => {
       clearChildren(container);

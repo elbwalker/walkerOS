@@ -118,8 +118,7 @@ export class Graph implements GraphAPI {
   }
 
   stop(): void {
-    // TODO: Implement execution cancellation
-    console.warn('Stop not yet implemented');
+    this.engine.stop();
   }
 
   // State management

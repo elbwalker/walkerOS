@@ -1,36 +1,29 @@
 /**
  * Playground Organism
- * Main component that demonstrates the complete walkerOS event flow
+ * Clean demonstration of browser source event capture
  */
 
-import { createGraph, type GraphAPI } from '../graph/api';
 import { createColumns } from '../layouts/columns';
 import { createCodeBox } from '../molecules/codeBox';
 import { createBox } from '../atoms/box';
 import { createElement, createShadow } from '../lib/dom';
 import { HTMLNode } from '../nodes/html';
-import { MappingNode } from '../nodes/mapping';
-import type { WalkerOS } from '@walkeros/core';
-import type { DOMEvent, CodeContent } from '../graph/types';
+import type { CodeContent } from '../graph/types';
 import { debounce } from '../lib/debounce';
+import { sourceBrowser } from '@walkeros/web-source-browser';
 
 export interface PlaygroundOptions {
   height?: string;
   initialHTML?: string;
   initialCSS?: string;
   initialJS?: string;
-  initialMapping?: any;
-  showConsole?: boolean;
 }
 
 export interface PlaygroundAPI {
-  execute: () => Promise<void>;
   setHTML: (html: string) => void;
   setCSS: (css: string) => void;
   setJS: (js: string) => void;
   setAllCode: (content: CodeContent) => void;
-  setMapping: (mapping: any) => void;
-  getGraph: () => GraphAPI;
   destroy: () => void;
 }
 
@@ -48,47 +41,37 @@ export function createPlayground(
   const styles = createElement('style', {}, getPlaygroundStyles());
   shadow.appendChild(styles);
 
-  // Create graph
-  const graph = createGraph();
-
-  // Create layout with columns
+  // Create layout with three columns: HTML Editor, Preview, Captured Events
   const layout = createColumns(container, {
     columns: [
-      { width: '20%', minWidth: '200px' }, // HTML
-      { width: '20%', minWidth: '200px' }, // Preview
-      { width: '20%', minWidth: '200px' }, // Events
-      { width: '20%', minWidth: '200px' }, // Mapping
-      { width: '20%', minWidth: '200px' }, // Destination
+      { width: '33%', minWidth: '300px' }, // HTML Editor
+      { width: '33%', minWidth: '300px' }, // Preview
+      { width: '34%', minWidth: '300px' }, // Captured Events
     ],
     direction: 'horizontal',
     responsive: true,
     gap: 'var(--elb-spacing-md, 16px)',
   });
 
-  // Create UI components
+  // UI components
   let htmlEditor: any;
   let previewContainer: HTMLElement;
   let eventsDisplay: any;
-  let mappingEditor: any;
-  let destinationDisplay: any;
 
-  // Node IDs
-  let htmlNodeId: string;
-  let previewNodeId: string;
-  let collectorNodeId: string;
-  let mappingNodeId: string;
-  let destinationNodeId: string;
+  // Browser source management
+  let currentBrowserSource: any = null;
 
   // Initialize components
   function initialize() {
-    // Code Editor with tabs
+    // HTML/CSS/JS Editor
     const codeBox = createBox(layout.getColumn(0), {
       label: 'Code Editor',
       showHeader: true,
     });
+    codeBox.getContainer().setAttribute('data-testid', 'code-editor');
 
     htmlEditor = createCodeBox(codeBox.getContent(), {
-      label: '',
+      label: ' ', // Single space - creates header for tabs without visible duplicate text
       tabs: {
         enabled: true,
         items: ['html', 'css', 'js'],
@@ -96,7 +79,7 @@ export function createPlayground(
       },
       lineNumbers: true,
       showControls: true,
-      onTabChange: debounce((tab, content) => handleCodeChange(content), 300),
+      onTabChange: debounce((_tab, content) => handleCodeChange(content), 300),
     });
 
     // Initialize with example content
@@ -112,17 +95,20 @@ export function createPlayground(
       label: 'Live Preview',
       showHeader: true,
     });
+    previewBox.getContainer().setAttribute('data-testid', 'preview-panel');
 
     previewContainer = createElement('div', {
       class: 'preview-container',
     });
+    previewContainer.setAttribute('data-testid', 'preview-container');
     previewBox.getContent().appendChild(previewContainer);
 
-    // Events Display
+    // Captured Events Display
     const eventsBox = createBox(layout.getColumn(2), {
       label: 'Captured Events',
       showHeader: true,
     });
+    eventsBox.getContainer().setAttribute('data-testid', 'events-panel');
 
     eventsDisplay = createCodeBox(eventsBox.getContent(), {
       label: '',
@@ -131,220 +117,183 @@ export function createPlayground(
       readOnly: true,
       lineNumbers: false,
     });
+    eventsDisplay.getContainer().setAttribute('data-testid', 'events-display');
 
-    // Mapping Editor
-    const mappingBox = createBox(layout.getColumn(3), {
-      label: 'Event Mapping',
-      showHeader: true,
-    });
-
-    mappingEditor = createCodeBox(mappingBox.getContent(), {
-      label: '',
-      value: JSON.stringify(
-        options.initialMapping || MappingNode.getExampleMapping(),
-        null,
-        2,
-      ),
-      language: 'json',
-      lineNumbers: true,
-      showControls: true,
-      onChange: debounce(() => handleMappingChange(), 300),
-    });
-
-    // Destination Display
-    const destinationBox = createBox(layout.getColumn(4), {
-      label: 'Destination Calls',
-      showHeader: true,
-    });
-
-    destinationDisplay = createCodeBox(destinationBox.getContent(), {
-      label: '',
-      value: '// No destination calls yet',
-      language: 'javascript',
-      readOnly: true,
-      lineNumbers: false,
-    });
-
-    // Create graph nodes
-    setupGraph();
-
-    // Initial execution
-    executeGraph();
+    // Initial render
+    renderPreview(initialContent);
   }
 
   /**
-   * Setup graph nodes and connections
+   * Render HTML/CSS/JS content in preview and initialize browser source
    */
-  function setupGraph() {
-    // Get initial content from editor
-    const initialContent = htmlEditor.getAllValues();
-
-    // Add nodes
-    htmlNodeId = graph.addNode('html', {
-      label: 'Code Editor',
-      initialValue: initialContent,
-    });
-
-    // Set the HTMLNode's value after creation
-    const htmlNode = graph.getNode(htmlNodeId) as any;
-    if (htmlNode) {
-      htmlNode.setAllCodes(initialContent);
-      htmlNode.setValue(initialContent);
+  async function renderPreview(content: CodeContent): Promise<void> {
+    // Clear previous content and browser source
+    if (currentBrowserSource?.destroy) {
+      currentBrowserSource.destroy();
+      currentBrowserSource = null;
     }
 
-    previewNodeId = graph.addNode('preview', {
-      label: 'Preview',
+    // Clear events display
+    eventsDisplay.setValue('// No events captured yet');
+
+    // Create preview shadow DOM
+    previewContainer.innerHTML = '';
+    const previewElement = createElement('div', {
+      style: 'width: 100%; height: 100%; position: relative;',
     });
+    const { shadow: previewShadow, container: previewContent } =
+      createShadow(previewElement);
+    previewContainer.appendChild(previewElement);
 
-    collectorNodeId = graph.addNode('collector', {
-      label: 'Event Collector',
-    });
-
-    mappingNodeId = graph.addNode('mapping', {
-      label: 'Mapping',
-      initialValue: JSON.parse(mappingEditor.getValue()),
-    });
-
-    destinationNodeId = graph.addNode('destination', {
-      label: 'GA4 Destination',
-      initialValue: { type: 'ga4', calls: [] },
-    });
-
-    // Connect nodes
-    graph.connect(
-      { nodeId: htmlNodeId, portId: 'code' },
-      { nodeId: previewNodeId, portId: 'code' },
-    );
-
-    graph.connect(
-      { nodeId: previewNodeId, portId: 'dom' },
-      { nodeId: collectorNodeId, portId: 'events' },
-    );
-
-    graph.connect(
-      { nodeId: collectorNodeId, portId: 'processed' },
-      { nodeId: mappingNodeId, portId: 'events' },
-    );
-
-    graph.connect(
-      { nodeId: mappingNodeId, portId: 'transformed' },
-      { nodeId: destinationNodeId, portId: 'events' },
-    );
-
-    // Setup preview node to render in our container
-    const previewNode = graph.getNode(previewNodeId) as any;
-    if (previewNode) {
-      // Listen for DOM events
-      previewNode.onDOMEvent = (event: DOMEvent) => {
-        // Update display when DOM events occur
-        updateEventsDisplay();
-        // Trigger graph execution to process the event
-        executeGraph();
-      };
+    // Apply CSS to preview shadow DOM
+    if (content.css.trim()) {
+      const styleElement = createElement('style', {}, content.css);
+      previewShadow.appendChild(styleElement);
     }
-  }
 
-  /**
-   * Handle code changes (HTML/CSS/JS)
-   */
-  async function handleCodeChange(content: CodeContent) {
-    const htmlNode = graph.getNode(htmlNodeId) as any;
-    if (htmlNode) {
-      htmlNode.setAllCodes(content);
-      htmlNode.setValue(content); // Also set as the node's value
-      await executeGraph();
+    // Set HTML content
+    previewContent.innerHTML = content.html;
 
-      // After execution, mount the preview container
-      const previewNode = graph.getNode(previewNodeId) as any;
-      if (previewNode) {
-        const nodeContainer = previewNode.getContainer();
-        if (nodeContainer && previewContainer) {
-          previewContainer.innerHTML = '';
-          previewContainer.appendChild(nodeContainer);
-        }
+    // Execute JavaScript if provided
+    if (content.js.trim()) {
+      try {
+        const script = createElement('script', {}, content.js);
+        previewShadow.appendChild(script);
+      } catch (error) {
+        console.error('Error executing JavaScript:', error);
       }
     }
+
+    // Initialize browser source with the preview content
+    await initializeBrowserSource(previewContent);
   }
 
   /**
-   * Handle mapping changes
+   * Initialize browser source with minimal collector for event capture
    */
-  async function handleMappingChange() {
+  async function initializeBrowserSource(
+    container: HTMLElement,
+  ): Promise<void> {
     try {
-      const mapping = JSON.parse(mappingEditor.getValue());
-      const mappingNode = graph.getNode(mappingNodeId) as any;
-      if (mappingNode) {
-        mappingNode.setMappingRules(mapping);
-        await executeGraph();
-      }
-    } catch (error) {
-      console.error('Invalid mapping JSON:', error);
-    }
-  }
+      console.debug('Initializing browser source with container:', container);
 
-  /**
-   * Execute the graph
-   */
-  async function executeGraph() {
-    try {
-      const result = await graph.execute();
+      // Create minimal collector instance that just captures events for display
+      const minimalCollector = {
+        push: async (...args: any[]) => {
+          // Handle different overloads of the push function
+          let event: string;
+          let data: any = {};
 
-      // Update displays
-      updateEventsDisplay();
-      updateDestinationDisplay();
-
-      console.log('Graph execution result:', result);
-    } catch (error) {
-      console.error('Graph execution error:', error);
-    }
-  }
-
-  /**
-   * Update events display
-   */
-  function updateEventsDisplay() {
-    const collectorNode = graph.getNode(collectorNodeId) as any;
-    if (collectorNode) {
-      const events = collectorNode.getProcessedEvents();
-      if (events && events.length > 0) {
-        eventsDisplay.setValue(JSON.stringify(events, null, 2));
-      } else {
-        // Show DOM events from preview if no processed events yet
-        const previewNode = graph.getNode(previewNodeId) as any;
-        if (previewNode) {
-          const domEvents = previewNode.getDOMEvents();
-          if (domEvents && domEvents.length > 0) {
-            eventsDisplay.setValue(
-              '// DOM Events (not yet processed):\n' +
-                JSON.stringify(domEvents, null, 2),
-            );
+          if (args.length === 1) {
+            // Single argument - could be string or partial event
+            if (typeof args[0] === 'string') {
+              event = args[0];
+            } else {
+              // Partial event object
+              event = args[0].event || 'unknown';
+              data = args[0].data || {};
+            }
+          } else if (args.length >= 2) {
+            // Multiple arguments
+            event = args[0] as string;
+            data = args[1] || {};
+          } else {
+            event = 'unknown';
           }
-        }
-      }
+
+          // Skip internal walker commands - don't display them
+          if (event.startsWith('walker ')) {
+            return {
+              ok: true,
+              successful: [],
+              queued: [],
+              failed: [],
+            };
+          }
+
+          // Capture exactly what browser source sends
+          const capturedOutput = {
+            event,
+            data,
+            timestamp: Date.now(),
+          };
+
+          console.debug('Browser source output:', capturedOutput);
+
+          // Override events display (don't accumulate)
+          eventsDisplay.setValue(JSON.stringify([capturedOutput], null, 2));
+
+          // Return success result matching PushResult interface
+          return {
+            ok: true,
+            successful: [],
+            queued: [],
+            failed: [],
+          };
+        },
+        // Required collector properties (minimal implementation)
+        allowed: true,
+        config: {
+          dryRun: false,
+          tagging: 1,
+          globalsStatic: false,
+          sessionStatic: false,
+          verbose: false,
+        },
+        consent: {},
+        count: 0,
+        custom: {},
+        sources: {},
+        destinations: {},
+        globals: {},
+        group: 'demo',
+        hooks: {},
+        on: {},
+        queue: [],
+        round: 0,
+        session: undefined,
+        timing: Date.now(),
+        user: {},
+        version: '2.0.0',
+      };
+
+      // Initialize browser source (cast to bypass strict typing for this minimal demo)
+      const result = await sourceBrowser(minimalCollector as any, {
+        type: 'browser',
+        settings: {
+          scope: container,
+          pageview: false, // Don't auto-send pageviews
+          session: false, // Don't track sessions
+          prefix: 'data-elb',
+          elb: '', // Don't create global elb function
+          elbLayer: false, // Don't use elbLayer
+        },
+      });
+
+      currentBrowserSource = result.source;
+      console.debug('Browser source initialized successfully');
+
+      // Trigger initial scan
+      await minimalCollector.push('walker run');
+    } catch (error) {
+      console.error('Failed to initialize browser source:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      eventsDisplay.setValue(
+        '// Error initializing browser source: ' + errorMessage,
+      );
     }
   }
 
   /**
-   * Update destination display
+   * Handle code changes
    */
-  function updateDestinationDisplay() {
-    const destNode = graph.getNode(destinationNodeId) as any;
-    if (destNode) {
-      const code = destNode.getCallsAsCode();
-      if (code) {
-        destinationDisplay.setValue(code);
-      }
-    }
+  async function handleCodeChange(content: CodeContent): Promise<void> {
+    await renderPreview(content);
   }
 
   // Initialize
   initialize();
-
-  // Execute initial graph to render preview
-  setTimeout(() => {
-    const initialContent = htmlEditor.getAllValues();
-    handleCodeChange(initialContent);
-  }, 100);
 
   // Set height if provided
   if (options.height) {
@@ -353,24 +302,25 @@ export function createPlayground(
 
   // API
   return {
-    execute: executeGraph,
-
     setHTML: (html: string) => {
       const currentValues = htmlEditor.getAllValues();
-      htmlEditor.setAllValues({ ...currentValues, html });
-      handleCodeChange({ ...currentValues, html });
+      const newContent = { ...currentValues, html };
+      htmlEditor.setAllValues(newContent);
+      handleCodeChange(newContent);
     },
 
     setCSS: (css: string) => {
       const currentValues = htmlEditor.getAllValues();
-      htmlEditor.setAllValues({ ...currentValues, css });
-      handleCodeChange({ ...currentValues, css });
+      const newContent = { ...currentValues, css };
+      htmlEditor.setAllValues(newContent);
+      handleCodeChange(newContent);
     },
 
     setJS: (js: string) => {
       const currentValues = htmlEditor.getAllValues();
-      htmlEditor.setAllValues({ ...currentValues, js });
-      handleCodeChange({ ...currentValues, js });
+      const newContent = { ...currentValues, js };
+      htmlEditor.setAllValues(newContent);
+      handleCodeChange(newContent);
     },
 
     setAllCode: (content: CodeContent) => {
@@ -378,15 +328,12 @@ export function createPlayground(
       handleCodeChange(content);
     },
 
-    setMapping: (mapping: any) => {
-      mappingEditor.setValue(JSON.stringify(mapping, null, 2));
-      handleMappingChange();
-    },
-
-    getGraph: () => graph,
-
     destroy: () => {
-      graph.clear();
+      // Cleanup browser source
+      if (currentBrowserSource?.destroy) {
+        currentBrowserSource.destroy();
+      }
+
       layout.destroy();
       shadow.innerHTML = '';
     },
@@ -429,7 +376,7 @@ function getPlaygroundStyles(): string {
     .elb-layout-column {
       display: flex;
       flex-direction: column;
-      min-height: 300px;
+      min-height: 400px;
     }
     
     .elb-box {

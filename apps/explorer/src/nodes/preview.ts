@@ -1,6 +1,6 @@
 /**
  * Preview Node
- * Renders HTML in shadow DOM and simulates DOM interactions
+ * Renders HTML in shadow DOM with real walkerOS browser source integration
  */
 
 import { BaseNode } from './base';
@@ -10,14 +10,17 @@ import type {
   DOMEvent,
   CodeContent,
 } from '../graph/types';
+import type { WalkerOS } from '@walkeros/core';
 import { createShadow } from '../lib/dom';
 
-export class PreviewNode extends BaseNode<string | CodeContent, DOMEvent[]> {
+export class PreviewNode extends BaseNode<
+  string | CodeContent,
+  WalkerOS.Event[]
+> {
   private container?: HTMLElement;
   private shadowRoot?: ShadowRoot;
   private previewContainer?: HTMLElement;
-  private domEvents: DOMEvent[] = [];
-  private eventListeners: Map<HTMLElement, EventListener> = new Map();
+  private walkerEvents: WalkerOS.Event[] = [];
 
   constructor(config: {
     id: string;
@@ -41,10 +44,10 @@ export class PreviewNode extends BaseNode<string | CodeContent, DOMEvent[]> {
       ],
       output: [
         {
-          id: 'dom',
+          id: 'events',
           type: 'output',
-          dataType: 'dom',
-          label: 'DOM Events',
+          dataType: 'events',
+          label: 'Walker Events',
         },
         {
           id: 'element',
@@ -60,10 +63,9 @@ export class PreviewNode extends BaseNode<string | CodeContent, DOMEvent[]> {
     return 'HTML Preview';
   }
 
-  async process(input: string | CodeContent): Promise<DOMEvent[]> {
-    // Clear previous events and listeners
-    this.clearEventListeners();
-    this.domEvents = [];
+  async process(input: string | CodeContent): Promise<WalkerOS.Event[]> {
+    // Clear previous events
+    this.walkerEvents = [];
 
     // Extract content from input
     const content = this.extractContent(input);
@@ -71,11 +73,8 @@ export class PreviewNode extends BaseNode<string | CodeContent, DOMEvent[]> {
     // Render HTML, CSS, and JS in shadow DOM
     await this.renderContent(content);
 
-    // Set up DOM event listeners
-    this.setupDOMListeners();
-
-    // Return DOM events (will be populated by event listeners)
-    return this.domEvents;
+    // Return walker events (will be populated externally)
+    return this.walkerEvents;
   }
 
   /**
@@ -88,6 +87,8 @@ export class PreviewNode extends BaseNode<string | CodeContent, DOMEvent[]> {
     }
     return input;
   }
+
+  // Simplified PreviewNode - browser source now handled by playground
 
   /**
    * Render content (HTML, CSS, JS) in shadow DOM
@@ -182,91 +183,10 @@ export class PreviewNode extends BaseNode<string | CodeContent, DOMEvent[]> {
   }
 
   /**
-   * Set up DOM event listeners
+   * Get the preview container for browser source integration
    */
-  private setupDOMListeners(): void {
-    if (!this.previewContainer) return;
-
-    // Clear existing listeners
-    this.clearEventListeners();
-
-    // Find all elements with data-elb attributes
-    const walkerElements = this.previewContainer.querySelectorAll(
-      '[data-elb], [data-elbaction]',
-    );
-
-    walkerElements.forEach((element) => {
-      // Listen for clicks on elements with data-elbaction
-      if (element.hasAttribute('data-elbaction')) {
-        const listener = (event: Event) => {
-          this.handleDOMEvent(event, element as HTMLElement);
-        };
-
-        // Parse action type from data-elbaction (e.g., "click:add" -> "click")
-        const actionAttr = element.getAttribute('data-elbaction') || '';
-        const [eventType] = actionAttr.split(':');
-
-        if (eventType) {
-          element.addEventListener(eventType, listener);
-          this.eventListeners.set(element as HTMLElement, listener);
-        }
-      }
-
-      // Also handle load events for elements with load actions
-      const actionAttr = element.getAttribute('data-elbaction') || '';
-      if (actionAttr.startsWith('load:')) {
-        // Simulate load event immediately
-        this.handleDOMEvent(new Event('load'), element as HTMLElement);
-      }
-    });
-  }
-
-  /**
-   * Handle DOM events
-   */
-  private handleDOMEvent(event: Event, element: HTMLElement): void {
-    // Extract walker attributes
-    const attributes: Record<string, any> = {};
-
-    // Get all data-elb* attributes
-    Array.from(element.attributes).forEach((attr) => {
-      if (attr.name.startsWith('data-elb')) {
-        const key = attr.name.replace('data-elb', '').replace(/^-/, '');
-        attributes[key] = attr.value;
-      }
-    });
-
-    // Create DOM event
-    const domEvent: DOMEvent = {
-      type: event.type,
-      target: element.tagName.toLowerCase(),
-      data: attributes,
-      timestamp: Date.now(),
-    };
-
-    // Add to events list
-    this.domEvents.push(domEvent);
-    this.setOutputValue(this.domEvents);
-
-    // Emit for real-time updates
-    if (this.onDOMEvent) {
-      this.onDOMEvent(domEvent);
-    }
-  }
-
-  /**
-   * Clear event listeners
-   */
-  private clearEventListeners(): void {
-    this.eventListeners.forEach((listener, element) => {
-      // Remove all possible event types
-      ['click', 'load', 'submit', 'change', 'focus', 'blur'].forEach(
-        (eventType) => {
-          element.removeEventListener(eventType, listener);
-        },
-      );
-    });
-    this.eventListeners.clear();
+  getPreviewContainer(): HTMLElement | undefined {
+    return this.previewContainer;
   }
 
   /**
@@ -277,24 +197,14 @@ export class PreviewNode extends BaseNode<string | CodeContent, DOMEvent[]> {
   }
 
   /**
-   * Get DOM events
-   */
-  getDOMEvents(): DOMEvent[] {
-    return [...this.domEvents];
-  }
-
-  /**
-   * Clear DOM events
-   */
-  clearEvents(): void {
-    this.domEvents = [];
-    this.setOutputValue([]);
-  }
-
-  /**
-   * Event handler for DOM events
+   * Event handler for DOM events (legacy)
    */
   onDOMEvent?(event: DOMEvent): void;
+
+  /**
+   * Event handler for Walker events (real integration)
+   */
+  onWalkerEvent?(event: WalkerOS.Event): void;
 
   /**
    * Inject CSS into shadow DOM
@@ -353,8 +263,15 @@ export class PreviewNode extends BaseNode<string | CodeContent, DOMEvent[]> {
       `;
 
       // Execute with context
-      const func = new Function('return ' + script.textContent)();
-      func.call(this.previewContainer, this.previewContainer, this.shadowRoot);
+      const scriptContent = script.textContent;
+      if (scriptContent) {
+        const func = new Function('container', 'shadowRoot', scriptContent);
+        func.call(
+          this.previewContainer,
+          this.previewContainer,
+          this.shadowRoot,
+        );
+      }
     } catch (error) {
       console.error('Error executing JavaScript in preview:', error);
     }
@@ -371,15 +288,26 @@ export class PreviewNode extends BaseNode<string | CodeContent, DOMEvent[]> {
    * Cleanup
    */
   onDestroy(): void {
-    // Clear event listeners
-    this.clearEventListeners();
+    try {
+      // Clear the shadow DOM content to release references
+      if (this.shadowRoot && this.previewContainer) {
+        this.previewContainer.innerHTML = '';
+      }
 
-    // Clean up DOM
-    if (this.container) {
-      this.container.remove();
+      // Remove container from DOM
+      if (this.container && this.container.parentNode) {
+        this.container.parentNode.removeChild(this.container);
+      }
+
+      // Clear all references
+      this.walkerEvents = [];
+      this.container = undefined;
+      this.shadowRoot = undefined;
+      this.previewContainer = undefined;
+      this.onDOMEvent = undefined;
+      this.onWalkerEvent = undefined;
+    } catch (error) {
+      console.warn(`Error during PreviewNode cleanup:`, error);
     }
-
-    // Clear events
-    this.domEvents = [];
   }
 }

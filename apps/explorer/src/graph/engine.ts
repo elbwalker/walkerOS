@@ -33,6 +33,7 @@ export class GraphEngine {
   private executionOrder: string[];
   private executionState: GraphState['execution']['state'];
   private eventHandlers: Map<GraphEvent, Set<EventHandler>>;
+  private abortController?: AbortController;
 
   constructor() {
     this.nodes = new Map();
@@ -221,12 +222,18 @@ export class GraphEngine {
   }
 
   /**
-   * Execute the graph
+   * Execute the graph with timeout and cancellation
    */
   async execute(): Promise<ExecutionResult> {
     const startTime = Date.now();
     const results = new Map<string, NodeValue>();
     const errors = new Map<string, any>();
+
+    // Create abort controller for cancellation
+    this.abortController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      this.abortController?.abort();
+    }, 5000); // 5 second timeout
 
     try {
       this.executionState = 'running';
@@ -234,6 +241,11 @@ export class GraphEngine {
 
       // Execute nodes in topological order
       for (const nodeId of this.executionOrder) {
+        // Check for cancellation
+        if (this.abortController.signal.aborted) {
+          throw new Error('Execution cancelled');
+        }
+
         const node = this.nodes.get(nodeId);
         if (!node) continue;
 
@@ -241,18 +253,60 @@ export class GraphEngine {
           // Get input from connected nodes
           const input = this.getNodeInput(nodeId);
 
-          // Execute node
-          const result = await node.execute(input as any);
-          results.set(nodeId, result);
+          // Execute node with timeout protection
+          const result = await Promise.race([
+            node.execute(input as any),
+            new Promise<NodeValue>((_, reject) => {
+              const id = setTimeout(
+                () => reject(new Error('Node execution timeout')),
+                2000,
+              );
+              this.abortController?.signal.addEventListener('abort', () => {
+                clearTimeout(id);
+                reject(new Error('Execution cancelled'));
+              });
+            }),
+          ]);
+
+          results.set(nodeId, result as NodeValue);
 
           // Propagate output to connected nodes
-          this.propagateOutput(nodeId, result);
+          this.propagateOutput(nodeId, result as NodeValue);
         } catch (error) {
-          errors.set(nodeId, {
+          const errorInfo = {
             message: error instanceof Error ? error.message : String(error),
             details: error,
-          });
+            nodeId,
+            timestamp: Date.now(),
+          };
+          errors.set(nodeId, errorInfo);
+
+          // Set node state to error
+          node.setState('error');
+          node.setError(errorInfo);
+
           console.error(`Error executing node ${nodeId}:`, error);
+
+          // Only stop execution on critical errors that could affect other nodes
+          const isCriticalError =
+            error instanceof Error &&
+            (error.message.includes('timeout') ||
+              error.message.includes('cancelled') ||
+              error.message.includes('Memory') ||
+              error.message.includes('RangeError'));
+
+          if (isCriticalError) {
+            console.warn(
+              `Critical error in node ${nodeId}, stopping execution:`,
+              error.message,
+            );
+            break;
+          }
+
+          // For non-critical errors, continue with execution but don't propagate output
+          console.debug(
+            `Non-critical error in node ${nodeId}, continuing execution`,
+          );
         }
       }
 
@@ -274,7 +328,33 @@ export class GraphEngine {
         },
       });
 
-      throw error;
+      return {
+        success: false,
+        nodes: results,
+        errors: new Map([
+          [
+            'execution',
+            {
+              message: error instanceof Error ? error.message : String(error),
+              details: error,
+            },
+          ],
+        ]),
+        duration: Date.now() - startTime,
+      };
+    } finally {
+      clearTimeout(timeoutId);
+      this.abortController = undefined;
+    }
+  }
+
+  /**
+   * Stop execution
+   */
+  stop(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.executionState = 'idle';
     }
   }
 
@@ -474,9 +554,44 @@ export class GraphEngine {
    * Check if graph is acyclic
    */
   isAcyclic(): boolean {
-    return !Array.from(this.nodes.keys()).some((nodeId) =>
-      this.wouldCreateCycle(nodeId, nodeId),
-    );
+    // Use topological sort to detect cycles
+    const visited = new Set<string>();
+    const visiting = new Set<string>();
+
+    const hasCycle = (nodeId: string): boolean => {
+      if (visiting.has(nodeId)) {
+        return true; // Back edge found, cycle detected
+      }
+      if (visited.has(nodeId)) {
+        return false; // Already processed
+      }
+
+      visiting.add(nodeId);
+
+      // Check all outgoing edges from this node
+      const outgoingEdges = Array.from(this.edges.values()).filter(
+        (edge) => edge.source.nodeId === nodeId,
+      );
+
+      for (const edge of outgoingEdges) {
+        if (hasCycle(edge.target.nodeId)) {
+          return true;
+        }
+      }
+
+      visiting.delete(nodeId);
+      visited.add(nodeId);
+      return false;
+    };
+
+    // Check all nodes for cycles
+    for (const nodeId of this.nodes.keys()) {
+      if (!visited.has(nodeId) && hasCycle(nodeId)) {
+        return false; // Cycle found
+      }
+    }
+
+    return true; // No cycles found
   }
 
   /**
@@ -547,13 +662,53 @@ export class GraphEngine {
    * Clear the graph
    */
   clear(): void {
-    this.nodes.forEach((node) => {
-      if (node.onDestroy) node.onDestroy();
+    // Stop any running execution
+    this.stop();
+
+    // Clear all event handlers first to prevent memory leaks
+    this.eventHandlers.forEach((handlers) => handlers.clear());
+    this.eventHandlers.clear();
+
+    // Destroy nodes with proper cleanup
+    this.nodes.forEach((node, nodeId) => {
+      try {
+        if (node.onDestroy) {
+          node.onDestroy();
+        }
+        // Clear all port values to break references
+        node.clearPorts();
+      } catch (error) {
+        console.warn(`Error cleaning up node ${nodeId}:`, error);
+      }
     });
 
     this.nodes.clear();
     this.edges.clear();
     this.executionOrder = [];
+    this.executionState = 'idle';
+
+    // Force garbage collection hint (if available)
+    if (typeof (globalThis as any).gc === 'function') {
+      (globalThis as any).gc();
+    }
+  }
+
+  /**
+   * Force cleanup of resources (emergency cleanup)
+   */
+  forceCleanup(): void {
+    console.warn('Force cleanup initiated - this may indicate a memory leak');
+
+    // Abort any running operations
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = undefined;
+    }
+
+    // Clear everything
+    this.clear();
+
+    // Reset state
     this.executionState = 'idle';
   }
 

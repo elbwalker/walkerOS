@@ -83,6 +83,19 @@ export function createCodeBox(
     }
   }
 
+  // Store tab button references for managing active states
+  const tabButtons: { [key: string]: any } = {};
+
+  // Update tab button states
+  function updateTabButtons() {
+    Object.keys(tabButtons).forEach((tab) => {
+      const button = tabButtons[tab];
+      if (button) {
+        button.setActive(tab === activeTab);
+      }
+    });
+  }
+
   // Switch to a different tab
   function switchTab(newTab: 'html' | 'css' | 'js') {
     if (!tabItems.includes(newTab) || activeTab === newTab) return;
@@ -104,43 +117,31 @@ export function createCodeBox(
     }
   }
 
-  // Update tab button states
-  function updateTabButtons() {
-    const tabButtons = box.getHeader()?.querySelectorAll('.elb-tab-btn');
-    tabButtons?.forEach((btn) => {
-      const tab = btn.getAttribute('data-tab');
-      if (tab === activeTab) {
-        btn.classList.add('elb-tab-btn--active');
-      } else {
-        btn.classList.remove('elb-tab-btn--active');
-      }
-    });
-  }
-
   // Add tabs to header if enabled
   if (tabsEnabled && box.getHeader()) {
-    const tabsContainer = createElement('div', { class: 'elb-code-tabs' });
+    const header = box.getHeader()!;
+    const tabsContainer = createElement('div', { class: 'elb-tab-group' });
 
     tabItems.forEach((tab) => {
       const isDisabled = options.tabs?.disabled?.includes(tab) || false;
       const isActive = tab === activeTab;
 
-      // Create button element directly since ButtonAPI doesn't have getElement
-      const button = createElement(
-        'button',
-        {
-          class: `elb-tab-btn ${isActive ? 'elb-tab-btn--active' : ''}`,
-          'data-tab': tab,
-          disabled: isDisabled,
-        },
-        tab.toUpperCase(),
-      );
+      // Create button - the createButton function automatically appends to the container
+      const tabButton = createButton(tabsContainer, {
+        text: tab.toUpperCase(),
+        variant: 'tab',
+        active: isActive,
+        disabled: isDisabled,
+        testId: `tab-${tab}`,
+        onClick: () => switchTab(tab),
+      });
 
-      button.addEventListener('click', () => switchTab(tab));
-      tabsContainer.appendChild(button);
+      // Store reference for managing active states
+      tabButtons[tab] = tabButton;
     });
 
-    box.getHeader()?.appendChild(tabsContainer);
+    // Append tabs container to header
+    header.appendChild(tabsContainer);
   }
 
   // Add controls to header if requested
@@ -195,8 +196,7 @@ export function createCodeBox(
     box.getHeader()!.appendChild(controls);
   }
 
-  // Inject additional styles
-  injectCodeBoxStyles(element);
+  // Note: Styles are now centralized in theme.ts
 
   // API
   return {
@@ -259,6 +259,10 @@ export function createCodeBox(
       editor.setValue(formatted);
     },
 
+    getContainer: () => {
+      return box.getContainer();
+    },
+
     destroy: () => {
       editor.destroy();
       box.destroy();
@@ -286,120 +290,4 @@ function formatCode(code: string, language: string): string {
     .replace(/}\s*/g, '\n}');
 }
 
-/**
- * Inject code box specific styles
- */
-function injectCodeBoxStyles(element: HTMLElement): void {
-  const root = element.getRootNode();
-  const target = root instanceof ShadowRoot ? root : document.head;
-
-  if (target.querySelector('#elb-code-box-styles')) return;
-
-  const styles = `
-    .elb-code-box .elb-box-content {
-      padding: 0;
-      background: transparent;
-    }
-    
-    .elb-code-box-controls {
-      display: flex;
-      gap: var(--elb-spacing-xs);
-      margin-left: auto;
-    }
-    
-    .elb-code-box .elb-box-header {
-      padding-right: var(--elb-spacing-xs);
-    }
-    
-    /* Tab styles */
-    .elb-code-tabs {
-      display: inline-flex;
-      gap: 2px;
-      background: var(--elb-bg-secondary, #f3f4f6);
-      padding: 2px;
-      border-radius: 6px;
-      margin-left: auto;
-      margin-right: var(--elb-spacing-sm);
-    }
-    
-    .elb-tab-btn {
-      padding: 4px 12px !important;
-      background: transparent !important;
-      border: none !important;
-      color: var(--elb-fg-muted, #6b7280) !important;
-      font-size: 12px !important;
-      font-weight: 500 !important;
-      cursor: pointer !important;
-      border-radius: 4px !important;
-      transition: all 150ms ease !important;
-      text-transform: uppercase !important;
-      letter-spacing: 0.025em !important;
-      min-width: auto !important;
-      height: auto !important;
-      box-shadow: none !important;
-      transform: none !important;
-    }
-    
-    .elb-tab-btn:hover:not(:disabled) {
-      background: var(--elb-bg-hover, #e5e7eb) !important;
-      color: var(--elb-fg, #111827) !important;
-      transform: none !important;
-      box-shadow: none !important;
-    }
-    
-    .elb-tab-btn--active {
-      background: var(--elb-bg-primary, #ffffff) !important;
-      color: var(--elb-accent, #3b82f6) !important;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
-    }
-    
-    .elb-tab-btn:disabled {
-      opacity: 0.5 !important;
-      cursor: not-allowed !important;
-    }
-    
-    .elb-tab-btn:focus {
-      outline: none !important;
-      box-shadow: 0 0 0 2px var(--elb-accent, #3b82f6) !important;
-    }
-    
-    /* Consistent borderless icon buttons */
-    .elb-code-box-controls .elb-icon-button {
-      background: transparent !important;
-      border: none !important;
-      color: var(--elb-muted);
-      box-shadow: none !important;
-    }
-    
-    .elb-code-box-controls .elb-icon-button:hover:not(:disabled) {
-      background: transparent !important;
-      color: var(--elb-fg);
-      transform: none !important;
-      box-shadow: none !important;
-    }
-    
-    .elb-code-box-controls .elb-icon-button:focus {
-      outline: none !important;
-      box-shadow: none !important;
-      background: transparent !important;
-    }
-    
-    .elb-code-box-controls .elb-icon-button:focus-visible {
-      outline: none !important;
-      box-shadow: none !important;
-      background: transparent !important;
-    }
-    
-    .elb-code-box-controls .elb-icon-button:active {
-      background: transparent !important;
-      box-shadow: none !important;
-    }
-  `;
-
-  const styleElement = createElement(
-    'style',
-    { id: 'elb-code-box-styles' },
-    styles,
-  );
-  target.appendChild(styleElement);
-}
+// CodeBox styles are now centralized in styles/theme.ts

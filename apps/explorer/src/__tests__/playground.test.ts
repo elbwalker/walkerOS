@@ -51,7 +51,7 @@ describe('Playground Component', () => {
     const graph = playground.getGraph();
     const htmlNode = graph.getNode('html-1') as any;
     expect(htmlNode).toBeDefined();
-    expect(htmlNode.getCode()).toBe(testHTML);
+    expect(htmlNode.getCode('html')).toBe(testHTML);
   });
 
   it('can set mapping configuration', () => {

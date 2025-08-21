@@ -33,6 +33,7 @@
     "demo": "npm run build && node serve.js",
     "lint": "tsc && eslint \"**/*.ts*\" --rule '@typescript-eslint/no-explicit-any: off'",
     "test": "jest --passWithNoTests --silent",
+    "verify": "npm run build && npm run lint && npm run test",
     "test:watch": "jest --watch --passWithNoTests --silent",
     "test:coverage": "jest --coverage --passWithNoTests --silent",
     "test:quick": "jest --testPathPattern=quick.test.ts --passWithNoTests --silent",
@@ -42,6 +43,8 @@
     "test:visual": "node test-harness.js",
     "test:visual:watch": "node test-harness.js --watch",
     "test:playwright": "playwright test",
+    "test:playwright:functional": "playwright test --project=functional",
+    "test:playwright:visual": "playwright test --project=visual-chromium",
     "test:playwright:ui": "playwright test --ui",
     "test:playwright:debug": "playwright test --debug",
     "test:playwright:report": "playwright show-report",
@@ -52,7 +55,8 @@
   "dependencies": {
     "@walkeros/collector": "*",
     "@walkeros/core": "*",
-    "@walkeros/web-core": "*"
+    "@walkeros/web-core": "*",
+    "@walkeros/web-source-browser": "*"
   },
   "devDependencies": {
     "@playwright/test": "^1.54.1",
