@@ -42,8 +42,11 @@ export function createEditor(
   highlightOverlay.appendChild(highlightCode);
 
   // Textarea for editing
+  const editorId = `elb-editor-${Math.random().toString(36).substr(2, 9)}`;
   const textarea = createElement('textarea', {
     class: 'elb-editor-textarea',
+    id: editorId,
+    name: editorId,
     placeholder: options.placeholder || '',
     readonly: options.readOnly,
     spellcheck: false,

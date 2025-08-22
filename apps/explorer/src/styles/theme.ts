@@ -263,6 +263,61 @@ export function getCompleteStyles(textSize?: 'small' | 'regular'): string {
 }
 
 /**
+ * Get styles optimized for standalone components (no :host selectors)
+ */
+export function getStandaloneStyles(textSize?: 'small' | 'regular'): string {
+  const fontSize =
+    textSize === 'small'
+      ? 'var(--elb-font-size-sm)'
+      : 'var(--elb-font-size-base)';
+
+  const standaloneBaseStyles = `
+    /* CSS Custom Properties for standalone components - defined on :host for inheritance */
+    :host {
+      ${generateLightModeCSS()}
+    }
+    
+    /* Dark mode - triggered by data-theme="dark" on any parent */
+    :host([data-theme="dark"]),
+    [data-theme="dark"] :host {
+      ${generateDarkModeCSS()}
+    }
+    
+    /* Base container with default styles */
+    .elb-explorer-root {
+      /* Default styles */
+      font-family: var(--elb-font-sans);
+      font-size: ${fontSize};
+      line-height: 1.5;
+      color: var(--elb-fg);
+      background: var(--elb-bg);
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Reset styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Syntax highlighting classes */
+    .elb-syntax-keyword { color: var(--elb-syntax-keyword); font-weight: 600; }
+    .elb-syntax-string { color: var(--elb-syntax-string); }
+    .elb-syntax-number { color: var(--elb-syntax-number); }
+    .elb-syntax-comment { color: var(--elb-syntax-comment); font-style: italic; }
+    .elb-syntax-function { color: var(--elb-syntax-function); }
+    .elb-syntax-operator { color: var(--elb-syntax-operator); }
+    .elb-syntax-punctuation { color: var(--elb-syntax-punctuation); }
+  `;
+
+  const componentStyles = getComponentStyles();
+
+  return standaloneBaseStyles + '\n\n' + componentStyles;
+}
+
+/**
  * Get component styles as a string (for bundler compatibility)
  */
 function getComponentStyles(): string {
@@ -409,6 +464,180 @@ function getComponentStyles(): string {
       outline-offset: 2px;
     }
 
+    /* Box Component Styles */
+    .elb-box {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      border: 1px solid var(--elb-border);
+      border-radius: var(--elb-radius-md);
+      background: var(--elb-surface);
+      overflow: hidden;
+      box-shadow: var(--elb-shadow-sm);
+    }
+    
+    .elb-box-header {
+      display: flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 0 var(--elb-spacing-sm);
+      border-bottom: 1px solid var(--elb-border);
+      background: transparent;
+      gap: var(--elb-spacing-sm);
+    }
+    
+    .elb-box-header-left {
+      display: flex;
+      align-items: center;
+      gap: var(--elb-spacing-sm);
+    }
+    
+    .elb-box-header-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+    }
+    
+    .elb-box-header-right {
+      display: flex;
+      align-items: center;
+      gap: var(--elb-spacing-xs);
+    }
+    
+    .elb-box-label {
+      font-size: var(--elb-font-size-sm);
+      font-weight: 500;
+      color: var(--elb-fg);
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+    
+    .elb-box-content {
+      flex: 1;
+      overflow: auto;
+      padding: var(--elb-spacing-md);
+      background: transparent;
+    }
+    
+    .elb-box-content--no-padding {
+      padding: 0;
+    }
+    
+    .elb-box--no-padding .elb-box-content {
+      padding: 0;
+    }
+    
+    /* Scrollbar styling */
+    .elb-box-content::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    .elb-box-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .elb-box-content::-webkit-scrollbar-thumb {
+      background: var(--elb-border);
+      border-radius: var(--elb-radius-sm);
+    }
+    
+    .elb-box-content::-webkit-scrollbar-thumb:hover {
+      background: var(--elb-muted);
+    }
+
+    /* Editor Component Styles */
+    .elb-editor {
+      display: flex;
+      height: 100%;
+      font-family: var(--elb-font-mono);
+      font-size: var(--elb-font-size-sm);
+      line-height: 1.6;
+      background: transparent;
+    }
+    
+    .elb-editor-lines {
+      flex-shrink: 0;
+      padding: 0;
+      background: transparent;
+      border-right: 1px solid var(--elb-border);
+      overflow-y: hidden;
+    }
+    
+    .elb-editor-line-number {
+      padding: 0 var(--elb-spacing-sm);
+      color: var(--elb-muted);
+      text-align: right;
+      user-select: none;
+      height: 1.6em;
+    }
+    
+    .elb-editor-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .elb-editor-highlight,
+    .elb-editor-textarea {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font: inherit;
+      line-height: inherit;
+      white-space: pre;
+      overflow: auto;
+    }
+    
+    .elb-editor-highlight {
+      pointer-events: none;
+      background: transparent;
+    }
+    
+    .elb-editor-highlight code {
+      font: inherit;
+      color: var(--elb-fg);
+    }
+    
+    /* Syntax highlighting tokens */
+    .elb-editor-highlight .elb-syntax-keyword { color: var(--elb-syntax-keyword) !important; }
+    .elb-editor-highlight .elb-syntax-string { color: var(--elb-syntax-string) !important; }
+    .elb-editor-highlight .elb-syntax-number { color: var(--elb-syntax-number) !important; }
+    .elb-editor-highlight .elb-syntax-comment { color: var(--elb-syntax-comment) !important; }
+    .elb-editor-highlight .elb-syntax-function { color: var(--elb-syntax-function) !important; }
+    .elb-editor-highlight .elb-syntax-operator { color: var(--elb-syntax-operator) !important; }
+    .elb-editor-highlight .elb-syntax-punctuation { color: var(--elb-syntax-punctuation) !important; }
+    
+    .elb-editor-textarea {
+      resize: none;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: transparent;  /* Make text transparent so syntax highlighting shows through */
+      caret-color: var(--elb-accent);
+      z-index: 1;
+    }
+    
+    /* Make placeholder visible */
+    .elb-editor-textarea::placeholder {
+      color: var(--elb-muted);
+    }
+    
+    .elb-editor-textarea::selection {
+      background: var(--elb-accent);
+      opacity: 0.3;
+    }
+    
+    .elb-editor-textarea:focus {
+      outline: 2px solid var(--elb-accent);
+      outline-offset: -2px;
+    }
+
     /* Code Box Specific Styles */
     .elb-code-box .elb-box-content {
       padding: 0;
@@ -424,12 +653,15 @@ function getComponentStyles(): string {
     .elb-code-box .elb-box-header {
       padding-right: var(--elb-spacing-xs);
     }
-
-    /* Box Footer Styles */
+    
     .elb-box-footer {
-      padding: var(--elb-spacing-xs);
-      background: var(--elb-surface);
+      display: flex;
+      align-items: center;
+      gap: var(--elb-spacing-sm);
+      min-height: 40px;
+      padding: 0 var(--elb-spacing-md);
       border-top: 1px solid var(--elb-border);
+      background: transparent;
     }
 
     /* Highlight Colors - matching website implementation */

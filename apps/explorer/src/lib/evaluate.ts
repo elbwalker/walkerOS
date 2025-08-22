@@ -27,7 +27,31 @@ export function createContext(
 }
 
 /**
- * Evaluate JavaScript code with injected context
+ * Simple input parsing with context injection
+ * Based on the website's parseInput function for unified approach
+ */
+export const parseInput = (
+  code: unknown,
+  context: Record<string, unknown> = {},
+  returnValue: boolean = true,
+  ...args: unknown[]
+): Promise<unknown> => {
+  const codeStr = String(code);
+
+  // Choose wrapper based on returnValue flag
+  const wrapper = returnValue
+    ? `"use strict"; return (async () => { return ${codeStr} })()` // Expression mode
+    : `"use strict"; return (async () => { ${codeStr} })()`; // Statement mode
+
+  return new Function(...Object.keys(context), wrapper)(
+    ...Object.values(context),
+    ...args,
+  );
+};
+
+/**
+ * Evaluate JavaScript code with injected context (deprecated - use parseInput)
+ * @deprecated Use parseInput for unified context injection
  */
 export async function evaluate(
   code: string,
@@ -48,22 +72,8 @@ export async function evaluate(
   };
 
   try {
-    // Create function with context parameters
-    const contextKeys = Object.keys(fullContext);
-    const contextValues = Object.values(fullContext);
-
-    // Always wrap in async context - handles both sync and async code
-    const wrappedCode = `
-      'use strict';
-      return (async () => {
-        ${code}
-      })()
-    `;
-
-    // Create and execute function
-    const fn = new Function(...contextKeys, wrappedCode);
-    const result = await fn(...contextValues);
-
+    // Use parseInput for execution
+    const result = await parseInput(code, fullContext);
     return { value: result, logs };
   } catch (error) {
     return {

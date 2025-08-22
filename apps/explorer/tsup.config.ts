@@ -40,6 +40,7 @@ const standaloneConfig: Options = {
     options.bundle = true;
   },
   external: [], // Bundle everything for standalone
+  noExternal: [/@walkeros/], // Make sure to bundle walkerOS packages
   onSuccess: async () => {
     const fs = await import('fs');
     const path = await import('path');

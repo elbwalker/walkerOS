@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Mapping System - WalkerOS Explorer</title>
+  <style>
+    /* CSS Variables for Modern Design - Global Scope */
+    :root {
+      /* Colors - Modern Palette */
+      --elb-bg: #fafbfc;
+      --elb-fg: #0f172a;
+      --elb-border: #e2e8f0;
+      --elb-accent: #3b82f6;
+      --elb-accent-hover: #2563eb;
+      --elb-error: #ef4444;
+      --elb-success: #10b981;
+      --elb-warning: #f59e0b;
+      --elb-muted: #64748b;
+      --elb-surface: #ffffff;
+      --elb-hover: #f1f5f9;
+      
+      /* Dark accent colors */
+      --elb-primary: #1e293b;
+      --elb-primary-hover: #334155;
+      
+      /* Fonts */
+      --elb-font-mono: 'SF Mono', 'Monaco', 'Cascadia Code', 'Source Code Pro', monospace;
+      --elb-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      
+      /* Sizes */
+      --elb-font-size-xs: 0.75rem;
+      --elb-font-size-sm: 0.875rem;
+      --elb-font-size-md: 1rem;
+      --elb-font-size-lg: 1.125rem;
+      --elb-font-size-xl: 1.25rem;
+      
+      /* Spacing */
+      --elb-spacing-xs: 0.25rem;
+      --elb-spacing-sm: 0.5rem;
+      --elb-spacing-md: 0.75rem;
+      --elb-spacing-lg: 1rem;
+      --elb-spacing-xl: 1.5rem;
+      --elb-spacing-2xl: 2rem;
+      
+      /* Radius */
+      --elb-radius-sm: 0.375rem;
+      --elb-radius-md: 0.5rem;
+      --elb-radius-lg: 0.75rem;
+      --elb-radius-xl: 1rem;
+      
+      /* Shadows - Modern elevations */
+      --elb-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --elb-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --elb-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      
+      /* Transitions */
+      --elb-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      --elb-transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      --elb-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Global Styles */
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: var(--elb-font-sans);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      margin: 0;
+      padding: var(--elb-spacing-xl);
+      min-height: 100vh;
+      color: var(--elb-fg);
+    }
+    
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    
+    .hero {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: var(--elb-radius-xl);
+      padding: var(--elb-spacing-2xl);
+      margin-bottom: var(--elb-spacing-2xl);
+      text-align: center;
+      box-shadow: var(--elb-shadow-lg);
+    }
+    
+    .hero h1 {
+      margin: 0 0 var(--elb-spacing-md) 0;
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .hero p {
+      margin: 0;
+      font-size: var(--elb-font-size-lg);
+      color: var(--elb-muted);
+    }
+    
+    .demo-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: var(--elb-spacing-xl);
+      margin-bottom: var(--elb-spacing-xl);
+    }
+    
+    .demo-card {
+      background: var(--elb-surface);
+      border-radius: var(--elb-radius-xl);
+      padding: var(--elb-spacing-xl);
+      box-shadow: var(--elb-shadow-lg);
+      border: 1px solid var(--elb-border);
+      transition: all var(--elb-transition-base);
+    }
+    
+    .demo-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    }
+    
+    .demo-card h3 {
+      margin: 0 0 var(--elb-spacing-lg) 0;
+      font-size: var(--elb-font-size-xl);
+      font-weight: 600;
+      color: var(--elb-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--elb-spacing-sm);
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--elb-spacing-md);
+      margin-bottom: var(--elb-spacing-lg);
+    }
+    
+    .stat-card {
+      background: linear-gradient(135deg, var(--elb-accent), var(--elb-accent-hover));
+      color: white;
+      padding: var(--elb-spacing-lg);
+      border-radius: var(--elb-radius-lg);
+      text-align: center;
+      box-shadow: var(--elb-shadow-md);
+      transition: all var(--elb-transition-base);
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--elb-shadow-lg);
+    }
+    
+    .stat-value {
+      font-size: 1.875rem;
+      font-weight: 700;
+      margin-bottom: var(--elb-spacing-xs);
+      display: block;
+    }
+    
+    .stat-label {
+      font-size: var(--elb-font-size-sm);
+      opacity: 0.9;
+      font-weight: 500;
+    }
+    
+    .output {
+      background: var(--elb-primary);
+      color: white;
+      border-radius: var(--elb-radius-lg);
+      padding: var(--elb-spacing-lg);
+      font-family: var(--elb-font-mono);
+      font-size: var(--elb-font-size-sm);
+      white-space: pre-wrap;
+      max-height: 500px;
+      overflow-y: auto;
+      line-height: 1.5;
+      box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.1);
+    }
+    
+    .output::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .output::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+    
+    .output::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+    }
+    
+    .output::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+    
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--elb-spacing-lg);
+      margin-bottom: var(--elb-spacing-xl);
+    }
+    
+    .feature-card {
+      background: var(--elb-surface);
+      border-radius: var(--elb-radius-lg);
+      padding: var(--elb-spacing-lg);
+      box-shadow: var(--elb-shadow-md);
+      border-left: 4px solid;
+      transition: all var(--elb-transition-base);
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--elb-shadow-lg);
+    }
+    
+    .feature-card.visual { border-left-color: var(--elb-accent); }
+    .feature-card.recursive { border-left-color: var(--elb-success); }
+    .feature-card.functions { border-left-color: var(--elb-warning); }
+    .feature-card.modern { border-left-color: var(--elb-error); }
+    
+    .feature-card h4 {
+      margin: 0 0 var(--elb-spacing-sm) 0;
+      color: var(--elb-primary);
+      font-weight: 600;
+    }
+    
+    .feature-card p {
+      margin: 0;
+      color: var(--elb-muted);
+      font-size: var(--elb-font-size-sm);
+      line-height: 1.6;
+    }
+
+    /* Mapping Box Container */
+    .mapping-container {
+      min-height: 600px;
+    }
+
+    /* Override and enhance component styles */
+    .elb-mapping-box,
+    .elb-mapping-visual-wrapper,
+    .elb-mapping-section,
+    .elb-mapping-tree,
+    .elb-value-mapper-wrapper {
+      font-family: var(--elb-font-sans) !important;
+    }
+
+    /* Modern button styling */
+    .elb-btn,
+    .elb-mapping-tree-add-child,
+    .elb-mapping-tree-remove,
+    .elb-value-mapper-add-btn {
+      background: var(--elb-accent) !important;
+      color: white !important;
+      border: none !important;
+      padding: var(--elb-spacing-xs) var(--elb-spacing-sm) !important;
+      border-radius: var(--elb-radius-sm) !important;
+      font-size: var(--elb-font-size-sm) !important;
+      font-weight: 500 !important;
+      cursor: pointer !important;
+      transition: all var(--elb-transition-fast) !important;
+      box-shadow: var(--elb-shadow-sm) !important;
+    }
+
+    .elb-btn:hover,
+    .elb-mapping-tree-add-child:hover,
+    .elb-value-mapper-add-btn:hover {
+      background: var(--elb-accent-hover) !important;
+      transform: translateY(-1px) !important;
+      box-shadow: var(--elb-shadow-md) !important;
+    }
+
+    .elb-mapping-tree-remove {
+      background: var(--elb-error) !important;
+    }
+
+    .elb-mapping-tree-remove:hover {
+      background: #dc2626 !important;
+    }
+
+    /* Modern input styling */
+    .elb-mapping-tree-key,
+    .elb-mapping-tree-function,
+    .elb-mapping-tree-condition,
+    .elb-event-pattern-entity,
+    .elb-event-pattern-action {
+      border: 2px solid var(--elb-border) !important;
+      border-radius: var(--elb-radius-sm) !important;
+      padding: var(--elb-spacing-sm) !important;
+      font-size: var(--elb-font-size-sm) !important;
+      transition: all var(--elb-transition-fast) !important;
+      background: var(--elb-surface) !important;
+      color: var(--elb-fg) !important;
+    }
+
+    .elb-mapping-tree-key:focus,
+    .elb-mapping-tree-function:focus,
+    .elb-mapping-tree-condition:focus,
+    .elb-event-pattern-entity:focus,
+    .elb-event-pattern-action:focus {
+      outline: none !important;
+      border-color: var(--elb-accent) !important;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    }
+
+    /* Modern section styling */
+    .elb-mapping-section,
+    .elb-mapping-event-pattern-section,
+    .elb-value-mapper-wrapper {
+      border: 1px solid var(--elb-border) !important;
+      border-radius: var(--elb-radius-lg) !important;
+      background: var(--elb-surface) !important;
+      box-shadow: var(--elb-shadow-sm) !important;
+      overflow: hidden !important;
+    }
+
+    /* Tree node styling */
+    .elb-mapping-tree-node {
+      border-bottom: 1px solid var(--elb-border) !important;
+      padding: var(--elb-spacing-sm) !important;
+      transition: all var(--elb-transition-fast) !important;
+    }
+
+    .elb-mapping-tree-node:hover {
+      background: var(--elb-hover) !important;
+    }
+
+    /* Property toggle styling */
+    .elb-mapping-tree-property {
+      margin-bottom: var(--elb-spacing-sm) !important;
+      border: 1px solid var(--elb-border) !important;
+      border-radius: var(--elb-radius-sm) !important;
+      overflow: hidden !important;
+    }
+
+    .elb-mapping-tree-property.active {
+      border-color: var(--elb-accent) !important;
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1) !important;
+    }
+
+    .elb-mapping-tree-property-header {
+      padding: var(--elb-spacing-sm) !important;
+      background: var(--elb-bg) !important;
+      cursor: pointer !important;
+      transition: all var(--elb-transition-fast) !important;
+    }
+
+    .elb-mapping-tree-property-header:hover {
+      background: var(--elb-hover) !important;
+    }
+
+    /* Header styling */
+    .elb-mapping-section-header,
+    .elb-value-mapper-header {
+      background: linear-gradient(135deg, var(--elb-bg), var(--elb-hover)) !important;
+      padding: var(--elb-spacing-md) !important;
+      font-weight: 600 !important;
+      color: var(--elb-primary) !important;
+      border-bottom: 1px solid var(--elb-border) !important;
+    }
+
+    /* Tab styling */
+    .elb-tab-group .elb-btn {
+      background: var(--elb-bg) !important;
+      color: var(--elb-muted) !important;
+      border-radius: var(--elb-radius-sm) var(--elb-radius-sm) 0 0 !important;
+      margin-right: 2px !important;
+    }
+
+    .elb-tab-group .elb-btn.active {
+      background: var(--elb-accent) !important;
+      color: white !important;
+    }
+
+    /* Empty state styling */
+    .elb-mapping-tree-empty {
+      text-align: center !important;
+      padding: var(--elb-spacing-2xl) !important;
+      color: var(--elb-muted) !important;
+    }
+
+    .elb-mapping-tree-empty-icon {
+      font-size: 3rem !important;
+      margin-bottom: var(--elb-spacing-lg) !important;
+      opacity: 0.5 !important;
+    }
+
+    @media (max-width: 1024px) {
+      .demo-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    
+    @media (max-width: 640px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .hero h1 {
+        font-size: 2rem;
+      }
+      
+      body {
+        padding: var(--elb-spacing-lg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1>🚀 Optimized Mapping System</h1>
+      <p>Smart entity-action dropdowns • Multi-configuration management • Clean architecture • Standalone ready</p>
+    </div>
+    
+    <div class="feature-grid">
+      <div class="feature-card visual">
+        <h4>🎯 Smart Dropdowns</h4>
+        <p>Entity and action selection with pre-populated walkerOS patterns, wildcard support, and custom input validation.</p>
+      </div>
+      
+      <div class="feature-card recursive">
+        <h4>🔄 Configuration Manager</h4>
+        <p>Switch between multiple mapping configurations seamlessly. Save, load, and manage complex mapping sets.</p>
+      </div>
+      
+      <div class="feature-card functions">
+        <h4>⚡ Clean Architecture</h4>
+        <p>Starts empty by default, proper ID generation with walkerOS core, and improved component integration.</p>
+      </div>
+      
+      <div class="feature-card modern">
+        <h4>✨ Standalone Ready</h4>
+        <p>Framework-agnostic component with consistent theming and complete API for external integration.</p>
+      </div>
+    </div>
+    
+    <div class="demo-grid">
+      <div class="demo-card">
+        <h3>🛠️ Interactive Mapping Builder</h3>
+        <div class="mapping-container" id="mapping-container"></div>
+      </div>
+      
+      <div class="demo-card">
+        <h3>📊 Live Statistics</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-value" id="entities-count">0</span>
+            <span class="stat-label">Entities</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="actions-count">0</span>
+            <span class="stat-label">Actions</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="mappings-count">0</span>
+            <span class="stat-label">Properties</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="configs-count">0</span>
+            <span class="stat-label">Configs</span>
+          </div>
+        </div>
+        
+        <h4 style="margin: var(--elb-spacing-lg) 0 var(--elb-spacing-sm) 0; color: var(--elb-primary); font-size: var(--elb-font-size-md);">📋 Live Output</h4>
+        <div class="output" id="output">
+🚀 Advanced Mapping System Ready
+
+✨ Features:
+• Visual mapping builder with property toggles
+• Infinite depth recursive structures
+• Function editor with JavaScript support
+• Real-time preview and validation
+• Modern, accessible design
+
+🎯 Getting Started:
+1. Use the visual builder to create mappings
+2. Toggle between Visual and Code modes
+3. Configure entity/action combinations
+4. Add property transformations
+5. Test with live preview
+
+The system handles the full complexity of walkerOS mappings!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../dist/explorer.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!window.WalkerExplorer || !WalkerExplorer.createMappingBox) {
+        console.error('WalkerExplorer not loaded or missing createMappingBox');
+        document.getElementById('output').textContent = '❌ Error: WalkerExplorer not loaded. Please run "npm run build" first.';
+        return;
+      }
+
+      const { createMappingBox } = WalkerExplorer;
+      const container = document.getElementById('mapping-container');
+      const output = document.getElementById('output');
+      
+      // Demo examples - 3 focused configurations
+      const demoExamples = {
+        ecommerce: {
+          name: 'E-commerce Tracking',
+          mapping: {
+            product: {
+              view: {
+                name: 'view_item',
+                data: {
+                  map: {
+                    item_id: 'data.id',
+                    item_name: 'data.name',
+                    currency: { value: 'USD' },
+                    value: 'data.price',
+                    item_category: 'data.category',
+                    item_brand: 'data.brand'
+                  }
+                }
+              },
+              add: {
+                name: 'add_to_cart',
+                data: {
+                  map: {
+                    item_id: 'data.id',
+                    quantity: { value: 1 },
+                    value: 'data.price',
+                    currency: { value: 'USD' }
+                  }
+                }
+              }
+            },
+            order: {
+              complete: {
+                name: 'purchase',
+                data: {
+                  map: {
+                    transaction_id: 'data.id',
+                    value: 'data.total',
+                    currency: { value: 'USD' },
+                    items: {
+                      loop: [
+                        'nested.product',
+                        {
+                          map: {
+                            item_id: 'data.id',
+                            item_name: 'data.name',
+                            quantity: 'data.quantity',
+                            price: 'data.price'
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        
+        content: {
+          name: 'Content Tracking',
+          mapping: {
+            page: {
+              view: {
+                name: 'page_view',
+                data: {
+                  map: {
+                    page_title: 'data.title',
+                    page_location: 'data.url',
+                    page_path: 'data.path',
+                    content_group1: 'data.category',
+                    content_group2: 'data.section'
+                  }
+                }
+              }
+            },
+            video: {
+              start: {
+                name: 'video_start',
+                data: {
+                  map: {
+                    video_title: 'data.title',
+                    video_duration: 'data.duration',
+                    video_provider: { value: 'youtube' }
+                  }
+                }
+              },
+              complete: {
+                name: 'video_complete',
+                data: {
+                  map: {
+                    video_title: 'data.title',
+                    video_duration: 'data.duration',
+                    video_percent: { value: 100 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        
+        user: {
+          name: 'User Tracking',
+          mapping: {
+            user: {
+              login: {
+                name: 'login',
+                data: {
+                  map: {
+                    user_id: 'user.id',
+                    method: 'data.method',
+                    timestamp: 'timestamp',
+                    email: {
+                      key: 'user.email',
+                      consent: { marketing: true }
+                    }
+                  }
+                }
+              },
+              signup: {
+                name: 'sign_up',
+                data: {
+                  map: {
+                    method: 'data.method',
+                    user_id: 'user.id'
+                  }
+                }
+              }
+            },
+            form: {
+              submit: {
+                name: 'form_submit',
+                data: {
+                  map: {
+                    form_id: 'data.id',
+                    form_name: 'data.name',
+                    form_fields: 'data.fields',
+                    success: 'data.success'
+                  }
+                }
+              }
+            }
+          }
+        }
+      };
+      
+      // Create mapping box - starts empty
+      const mappingBox = createMappingBox(container, {
+        label: 'Mapping Configuration Builder',
+        showControls: true,
+        showConfigurationManager: true,
+        mode: 'visual',
+        onChange: (mapping) => {
+          updateOutput(mapping);
+          updateStats(mapping);
+        },
+        onModeChange: (mode) => {
+          console.log('Mode changed to:', mode);
+        }
+      });
+      
+      // Demo examples available for reference but not exposed in UI
+      // Users can access via console: loadDemoExample('ecommerce')
+      window.loadDemoExample = function(exampleKey) {
+        const example = demoExamples[exampleKey];
+        if (example) {
+          mappingBox.setValue(example.mapping);
+          console.log(`✅ Loaded ${example.name} configuration`);
+        }
+      };
+      
+      // Show initial helpful message
+      updateOutput({});
+      updateStats({});
+      
+      function updateOutput(mapping) {
+        const timestamp = new Date().toLocaleTimeString();
+        const mappingStr = JSON.stringify(mapping, null, 2);
+        
+        if (Object.keys(mapping).length === 0) {
+          output.textContent = `🚀 Optimized Mapping System Ready!
+
+✨ Features:
+• Smart entity/action dropdowns with walkerOS patterns
+• Multi-configuration management system
+• Proper ID generation using @walkeros/core
+• Clean architecture - starts empty by default
+• Enhanced theme integration
+• Standalone component ready
+
+🛠️ Getting Started:
+1. Use smart dropdowns for entity/action selection  
+2. Build mappings with the visual interface
+3. Switch between configurations seamlessly
+4. Toggle Visual/Code modes as needed
+
+Ready to build your mapping configuration!`;
+        } else {
+          output.textContent = `[${timestamp}] Configuration Active! 🎉
+
+📊 Current State:
+${mappingStr}
+
+✅ Optimizations Working:
+• Smart dropdowns: Enhanced entity/action selection
+• Configuration management: ${Object.keys(mapping).length} entities loaded
+• Clean architecture: Proper component integration
+• ID generation: Using walkerOS core utilities
+• Theme consistency: Modern styling applied
+
+🔧 Technical Stats:
+• Total entities: ${Object.keys(mapping).length}
+• Component: Standalone ready
+• Architecture: Modular and maintainable
+• Performance: Optimized ID generation
+
+System operating at full capacity! 🚀`;
+        }
+      }
+      
+      function updateStats(mapping) {
+        let entities = 0;
+        let actions = 0;
+        let totalMappings = 0;
+        let configCount = 1; // At least one if we have mappings
+        
+        for (const [entity, entityData] of Object.entries(mapping)) {
+          entities++;
+          
+          for (const [action, actionData] of Object.entries(entityData)) {
+            actions++;
+            
+            if (actionData.data && actionData.data.map) {
+              const stats = countMappingsRecursively(actionData.data.map);
+              totalMappings += stats.total;
+            }
+          }
+        }
+        
+        if (entities === 0) configCount = 0;
+        
+        // Update displays with animation
+        animateValue('entities-count', entities);
+        animateValue('actions-count', actions);
+        animateValue('mappings-count', totalMappings);
+        animateValue('configs-count', configCount);
+      }
+      
+      function countMappingsRecursively(mappings) {
+        let total = 0;
+        let functions = 0;
+        
+        for (const [key, value] of Object.entries(mappings)) {
+          total++;
+          
+          if (typeof value === 'object' && value !== null) {
+            if ('fn' in value) {
+              functions++;
+            }
+            if ('map' in value) {
+              const nested = countMappingsRecursively(value.map);
+              total += nested.total;
+              functions += nested.functions;
+            }
+            if ('loop' in value && Array.isArray(value.loop) && value.loop.length === 2) {
+              const [source, mapping] = value.loop;
+              if (mapping && mapping.map) {
+                const nested = countMappingsRecursively(mapping.map);
+                total += nested.total;
+                functions += nested.functions;
+              }
+            }
+          }
+        }
+        
+        return { total };
+      }
+      
+      function animateValue(elementId, targetValue) {
+        const element = document.getElementById(elementId);
+        const currentValue = parseInt(element.textContent) || 0;
+        const increment = targetValue > currentValue ? 1 : -1;
+        const stepTime = Math.abs(Math.floor(200 / Math.abs(targetValue - currentValue)) || 20);
+        
+        let current = currentValue;
+        const timer = setInterval(() => {
+          current += increment;
+          element.textContent = current;
+          
+          if (current === targetValue) {
+            clearInterval(timer);
+          }
+        }, stepTime);
+      }
+      
+      // Initialize empty - let user build their own
+      updateOutput({});
+      updateStats({});
+      
+      console.log('🚀 Optimized Mapping System initialized!');
+      console.log('✨ New features: Smart dropdowns, configuration management, clean architecture');
+      console.log('🎯 Try the demo buttons to load example configurations');
+    });
+  </script>
+</body>
+</html>

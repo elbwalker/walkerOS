@@ -5,7 +5,6 @@
 
 // Main organism components (what users typically use)
 export { createLiveCode } from './organisms/liveCode';
-export { createPlayground } from './organisms/playground';
 
 // Graph system
 export { createGraph, Graph } from './graph/api';
@@ -22,9 +21,10 @@ export { DestinationNode } from './nodes/destination';
 export { ConsoleNode } from './nodes/console';
 
 // Molecule components (for advanced users)
-export { createCodeBox } from './molecules/codeBox';
+export { createCodeBox, createEventsBox } from './molecules/codeBox';
 export { createResultBox } from './molecules/resultBox';
 export { createControlPanel } from './molecules/controlPanel';
+export { createMappingBox } from './molecules/mappingBox';
 
 // Layout components
 export { createColumns } from './layouts/columns';
@@ -38,11 +38,14 @@ export { createLabel } from './atoms/label';
 export { createOverlay } from './atoms/overlay';
 
 // Utilities (for advanced usage)
-export { evaluate, formatValue, formatError } from './lib/evaluate';
+export { evaluate, formatValue, formatError, parseInput } from './lib/evaluate';
 export { highlight, escapeHTML } from './lib/syntax';
 export { debounce, throttle } from './lib/debounce';
 export { createShadow, createElement } from './lib/dom';
 export { getBaseStyles, applyTheme } from './styles/theme';
+
+// WalkerOS integration
+export { sourceBrowser } from '@walkeros/web-source-browser';
 
 // Types
 export type {
@@ -56,6 +59,9 @@ export type {
   ResultBoxOptions,
   ControlPanelAPI,
   ControlPanelOptions,
+  MappingBoxAPI,
+  MappingBoxOptions,
+  MappingMode,
   BoxAPI,
   BoxOptions,
   EditorAPI,

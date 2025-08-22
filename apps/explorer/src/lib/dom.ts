@@ -55,7 +55,21 @@ export function createElement<K extends keyof HTMLElementTagNameMap>(
   if (attrs) {
     Object.entries(attrs).forEach(([key, value]) => {
       if (value === undefined) return;
-      if (typeof value === 'boolean') {
+
+      // Properties that must be set directly, not as attributes
+      const propertyKeys = [
+        'value',
+        'checked',
+        'selected',
+        'disabled',
+        'readOnly',
+        'readonly',
+      ];
+
+      if (propertyKeys.includes(key)) {
+        const propKey = key === 'readonly' ? 'readOnly' : key;
+        (element as HTMLElement & Record<string, unknown>)[propKey] = value;
+      } else if (typeof value === 'boolean') {
         if (value) element.setAttribute(key, '');
       } else {
         element.setAttribute(key, String(value));

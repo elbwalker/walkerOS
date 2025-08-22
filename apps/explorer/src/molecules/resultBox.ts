@@ -6,9 +6,10 @@
 import type { ResultBoxOptions, ResultBoxAPI } from '../types';
 import { createBox } from '../atoms/box';
 import { createIconButton } from '../atoms/iconButton';
-import { createElement, clearChildren } from '../lib/dom';
+import { createElement, clearChildren, createShadow } from '../lib/dom';
 import { formatValue, formatError } from '../lib/evaluate';
 import { highlight } from '../lib/syntax';
+import { getCompleteStyles, getStandaloneStyles } from '../styles/theme';
 
 /**
  * Create a result box component
@@ -17,11 +18,29 @@ export function createResultBox(
   element: HTMLElement,
   options: ResultBoxOptions = {},
 ): ResultBoxAPI {
+  // Determine if this should be a standalone component (default: true)
+  const isStandalone = options.standalone !== false;
+
+  // Create Shadow DOM container if standalone
+  let containerElement = element;
+  let shadowRoot: ShadowRoot | undefined;
+
+  if (isStandalone) {
+    const { shadow, container } = createShadow(element);
+    shadowRoot = shadow;
+    containerElement = container;
+
+    // Inject standalone styles for standalone usage
+    const styles = document.createElement('style');
+    styles.textContent = getStandaloneStyles();
+    shadow.appendChild(styles);
+  }
+
   let currentType = options.type || 'value';
   let logs: string[] = [];
 
   // Create base box
-  const box = createBox(element, {
+  const box = createBox(containerElement, {
     label: options.label || 'Result',
     showHeader: true,
     showFooter: false,

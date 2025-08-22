@@ -16,9 +16,9 @@ import { createControlPanel } from '../molecules/controlPanel';
 import { createIconButton } from '../atoms/iconButton';
 import { createOverlay } from '../atoms/overlay';
 import { createShadow, createElement } from '../lib/dom';
-import { getBaseStyles } from '../styles/theme';
+import { getCompleteStyles } from '../styles/theme';
 import { injectGlobalThemeStyles } from '../styles/globalTheme';
-import { evaluate } from '../lib/evaluate';
+import { parseInput } from '../lib/evaluate';
 import { debounce } from '../lib/debounce';
 
 /**
@@ -33,9 +33,10 @@ export function createLiveCode(
 
   const { shadow, container } = createShadow(element);
 
-  // Inject base styles with text size option
+  // Inject complete styles with text size option (includes box styles)
   const styles = document.createElement('style');
-  styles.textContent = getBaseStyles(options.textSize) + getLiveCodeStyles();
+  styles.textContent =
+    getCompleteStyles(options.textSize) + getLiveCodeStyles();
   shadow.appendChild(styles);
 
   // Create layout
@@ -95,6 +96,7 @@ export function createLiveCode(
       options.lineNumbers !== undefined ? options.lineNumbers : false, // Default false
     showControls: true,
     onChange: debounce(() => executeCode(), options.debounceDelay || 300),
+    standalone: false, // Use parent's Shadow DOM
   });
 
   // Create output result box
@@ -102,6 +104,7 @@ export function createLiveCode(
     label: options.labelOutput || 'Output',
     value: options.output,
     showActions: true,
+    standalone: false, // Use parent's Shadow DOM
   });
 
   // Context for code execution
@@ -115,21 +118,12 @@ export function createLiveCode(
     outputBox.clear();
 
     try {
-      // Execute with context
-      const result = await evaluate(code, context);
+      // Execute with context using unified parseInput approach (return value mode)
+      const result = await parseInput(code, context, true);
 
-      if (result.error) {
-        outputBox.setError(result.error);
-      } else {
-        // Add any logs first
-        if (result.logs && result.logs.length > 0) {
-          result.logs.forEach((log) => outputBox.addLog(log));
-        }
-
-        // Then show the result
-        if (result.value !== undefined) {
-          outputBox.setValue(result.value);
-        }
+      // Show the result directly
+      if (result !== undefined) {
+        outputBox.setValue(result);
       }
     } catch (error) {
       outputBox.setError(

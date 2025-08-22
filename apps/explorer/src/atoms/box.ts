@@ -4,8 +4,7 @@
  */
 
 import type { BoxOptions, BoxAPI } from '../types';
-import { createShadow, createElement, clearChildren } from '../lib/dom';
-import { getCompleteStyles } from '../styles/theme';
+import { createElement, clearChildren } from '../lib/dom';
 
 /**
  * Create a box component
@@ -14,17 +13,7 @@ export function createBox(
   element: HTMLElement,
   options: BoxOptions = {},
 ): BoxAPI {
-  const { shadow, container } = createShadow(element);
-
-  // Inject styles - now includes all component styles
-  const styles = createElement(
-    'style',
-    {},
-    getCompleteStyles() + getBoxStyles(),
-  );
-  shadow.appendChild(styles);
-
-  // Create structure
+  // Create structure directly in the element (no Shadow DOM)
   const box = createElement('div', {
     class: `elb-box ${options.className || ''} ${options.noPadding ? 'elb-box--no-padding' : ''}`,
   });
@@ -96,7 +85,8 @@ export function createBox(
     box.appendChild(footer);
   }
 
-  container.appendChild(box);
+  // Append box directly to the element (no Shadow DOM container)
+  element.appendChild(box);
 
   // API
   return {
@@ -137,107 +127,8 @@ export function createBox(
     getContainer: () => box,
 
     destroy: () => {
-      clearChildren(container);
+      clearChildren(element);
       element.remove();
     },
   };
-}
-
-/**
- * Box-specific styles
- */
-function getBoxStyles(): string {
-  return `
-    .elb-box {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      border: 1px solid var(--elb-border);
-      border-radius: var(--elb-radius-md);
-      background: var(--elb-surface);
-      overflow: hidden;
-      box-shadow: var(--elb-shadow-sm);
-    }
-    
-    .elb-box-header {
-      display: flex;
-      align-items: center;
-      min-height: 40px;
-      padding: 0 var(--elb-spacing-sm);
-      border-bottom: 1px solid var(--elb-border);
-      background: transparent;
-      gap: var(--elb-spacing-sm);
-    }
-    
-    .elb-box-header-left {
-      display: flex;
-      align-items: center;
-      gap: var(--elb-spacing-sm);
-    }
-    
-    .elb-box-header-center {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex: 1;
-    }
-    
-    .elb-box-header-right {
-      display: flex;
-      align-items: center;
-      gap: var(--elb-spacing-xs);
-    }
-    
-    .elb-box-label {
-      font-size: var(--elb-font-size-sm);
-      font-weight: 500;
-      color: var(--elb-fg);
-      letter-spacing: -0.01em;
-      white-space: nowrap;
-    }
-    
-    .elb-box-content {
-      flex: 1;
-      overflow: auto;
-      padding: var(--elb-spacing-md);
-      background: transparent;
-    }
-    
-    .elb-box-content--no-padding {
-      padding: 0;
-    }
-    
-    .elb-box--no-padding .elb-box-content {
-      padding: 0;
-    }
-    
-    .elb-box-footer {
-      display: flex;
-      align-items: center;
-      gap: var(--elb-spacing-sm);
-      min-height: 40px;
-      padding: 0 var(--elb-spacing-md);
-      border-top: 1px solid var(--elb-border);
-      background: transparent;
-    }
-    
-    /* Scrollbar styling */
-    .elb-box-content::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    
-    .elb-box-content::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    .elb-box-content::-webkit-scrollbar-thumb {
-      background: var(--elb-border);
-      border-radius: var(--elb-radius-sm);
-    }
-    
-    .elb-box-content::-webkit-scrollbar-thumb:hover {
-      background: var(--elb-muted);
-    }
-  `;
 }

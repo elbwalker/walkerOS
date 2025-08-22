@@ -135,10 +135,24 @@
       </div>
       
       <div class="example-card">
+        <h3>Events Box Test <span class="badge badge-new">NEW</span></h3>
+        <p>Isolated testing of the createEventsBox component to debug event capture and display issues.</p>
+        <p><strong>Features:</strong> Direct event testing, setValue comparisons, debug logging, isolated environment</p>
+        <a href="event-box.html">Open Example →</a>
+      </div>
+      
+      <div class="example-card">
         <h3>PreviewNode Test <span class="badge badge-new">NEW</span></h3>
         <p>Tests the PreviewNode with real walkerOS browser source integration and shadow DOM rendering.</p>
         <p><strong>Features:</strong> Event capture, live HTML preview, walkerOS attribute testing</p>
         <a href="preview-test.html">Open Example →</a>
+      </div>
+      
+      <div class="example-card">
+        <h3>Advanced Mapping System <span class="badge badge-new">NEW</span></h3>
+        <p>Modern visual interface for complex event transformations with infinite depth recursive structures.</p>
+        <p><strong>Features:</strong> Tree-based builder, property toggles, function editor, live preview, modern design</p>
+        <a href="mapping.html">Open Example →</a>
       </div>
       
       <div class="example-card">
@@ -169,6 +183,16 @@ import { createLiveCode } from '@walkeros/explorer';
 const liveCode = createLiveCode(element, {
   input: 'return 1 + 1;',
   context: { /* your functions */ }
+});
+
+// Mapping component
+import { createMappingBox } from '@walkeros/explorer';
+
+const mappingBox = createMappingBox(element, {
+  label: 'Event Mapping Configuration',
+  value: { /* walkerOS mapping rules */ },
+  showControls: true,
+  onChange: (mapping) => console.log('Updated:', mapping)
 });
 
 // Playground component

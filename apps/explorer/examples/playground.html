@@ -1,580 +1,458 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WalkerOS Explorer - Event Flow Playground</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #f9fafb;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    header {
-      background: white;
-      border-bottom: 1px solid #e5e7eb;
-      padding: 16px 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    
-    header h1 {
-      font-size: 24px;
-      color: #1f2937;
-      margin-bottom: 4px;
-    }
-    
-    header p {
-      color: #6b7280;
-      font-size: 14px;
-    }
-    
-    main {
-      flex: 1;
-      padding: 24px;
-      overflow: hidden;
-    }
-    
-    #playground {
-      height: 100%;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-    
-    .controls {
-      padding: 16px 24px;
-      background: #f3f4f6;
-      border-bottom: 1px solid #e5e7eb;
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-    
-    button {
-      padding: 8px 16px;
-      background: #3b82f6;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: background 0.2s;
-    }
-    
-    button:hover {
-      background: #2563eb;
-    }
-    
-    button:active {
-      background: #1d4ed8;
-    }
-    
-    button.secondary {
-      background: #6b7280;
-    }
-    
-    button.secondary:hover {
-      background: #4b5563;
-    }
-    
-    .status {
-      margin-left: auto;
-      padding: 4px 12px;
-      background: #10b981;
-      color: white;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-    
-    .example-selector {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    
-    select {
-      padding: 6px 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      background: white;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    
-    .info {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      border-radius: 6px;
-      padding: 12px 16px;
-      margin: 16px 24px;
-      color: #1e40af;
-      font-size: 14px;
-    }
-    
-    .info strong {
-      color: #1e3a8a;
-    }
-  </style>
-  <script src="../dist/explorer.js"></script>
-</head>
-<body>
-  <header>
-    <h1>WalkerOS Event Flow Playground</h1>
-    <p>Visualize the complete event tracking pipeline: HTML → Preview → Collector → Mapping → Destination</p>
-  </header>
-  
-  <main>
-    <div class="controls">
-      <button id="executeBtn">Execute Pipeline</button>
-      <button id="clearBtn" class="secondary">Clear Events</button>
-      
-      <div class="example-selector">
-        <label for="exampleSelect">Load Example:</label>
-        <select id="exampleSelect">
-          <option value="ecommerce">E-commerce Product</option>
-          <option value="form">Contact Form</option>
-          <option value="navigation">Navigation Menu</option>
-          <option value="custom">Custom Events</option>
-        </select>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WalkerOS Explorer - Modular Playground</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #f9fafb;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 16px 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+
+      header h1 {
+        font-size: 24px;
+        color: #1f2937;
+        margin-bottom: 4px;
+      }
+
+      header p {
+        color: #6b7280;
+        font-size: 14px;
+      }
+
+      main {
+        flex: 1;
+        padding: 24px;
+        overflow: hidden;
+      }
+
+      .playground-container {
+        height: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .column {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      /* Responsive layout */
+      @media (max-width: 1024px) {
+        .playground-container {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Custom styles for highlight buttons */
+      .elb-highlight-buttons {
+        display: flex;
+        gap: 8px;
+        padding: 8px;
+      }
+
+      .elb-highlight-btn {
+        padding: 6px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+      }
+
+      .elb-highlight-btn:hover {
+        background: #f3f4f6;
+      }
+
+      .elb-highlight-btn.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+      }
+
+      .elb-highlight-btn--context.active {
+        background: #ffbd44;
+        border-color: #ffbd44;
+      }
+
+      .elb-highlight-btn--entity.active {
+        background: #00ca4e;
+        border-color: #00ca4e;
+      }
+
+      .elb-highlight-btn--property.active {
+        background: #ff605c;
+        border-color: #ff605c;
+      }
+
+      .elb-highlight-btn--action.active {
+        background: #9900ff;
+        border-color: #9900ff;
+      }
+    </style>
+    <script src="../dist/explorer.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>WalkerOS Modular Playground</h1>
+      <p>
+        A clean two-column layout demonstrating the enhanced CodeBox with
+        integrated preview
+      </p>
+    </header>
+
+    <main>
+      <div class="playground-container">
+        <div class="column" id="code-column"></div>
+        <div class="column" id="events-column"></div>
       </div>
-      
-      <div class="status">Ready</div>
+    </main>
+
+    <script>
+      // Wait for the explorer bundle to load
+      document.addEventListener('DOMContentLoaded', () => {
+        const { createCodeBox, createEventsBox, createShadow } = WalkerExplorer;
+
+        // Example content
+        const exampleHTML = `<div
+  data-elb="product"
+  data-elbaction="load:view"
+  data-elbcontext="stage:inspire"
+  class="event-flow card w-80 bg-base-100 shadow-xl mx-auto">
+  <figure class="relative">
+    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23f0f0f0'/%3E%3Cpath d='M50 40 L250 40 Q260 40 260 50 L260 150 Q260 160 250 160 L50 160 Q40 160 40 150 L40 50 Q40 40 50 40 Z' fill='white' stroke='%23333' stroke-width='2'/%3E%3Ctext x='150' y='70' text-anchor='middle' font-family='Arial, sans-serif' font-size='16' font-weight='bold' fill='%23333'%3EEVERYDAY%3C/text%3E%3Ctext x='150' y='90' text-anchor='middle' font-family='Arial, sans-serif' font-size='16' font-weight='bold' fill='%23333'%3ERUCK%3C/text%3E%3Ctext x='150' y='110' text-anchor='middle' font-family='Arial, sans-serif' font-size='16' font-weight='bold' fill='%23333'%3ESNACK%3C/text%3E%3Cellipse cx='150' cy='135' rx='20' ry='8' fill='none' stroke='%23333' stroke-width='1.5'/%3E%3Cellipse cx='145' cy='132' rx='2' ry='1' fill='%23333'/%3E%3Cellipse cx='155' cy='132' rx='2' ry='1' fill='%23333'/%3E%3Cellipse cx='150' cy='138' rx='2' ry='1' fill='%23333'/%3E%3C/svg%3E" alt="Product" />
+    <div class="absolute top-2 right-2">
+      <div data-elb-product="badge:delicious" class="badge badge-primary text-white">delicious</div>
     </div>
-    
-    <div class="info">
-      <strong>Try it out:</strong> Edit the HTML on the left, click elements in the preview, modify the mapping rules, and see the final destination calls on the right!
+  </figure>
+  <div class="card-body">
+    <h3 data-elb-product="name:#innerText" class="card-title text-lg">
+      Everyday Ruck Snack
+    </h3>
+    <div class="form-control">
+      <label class="label">Taste</label>
+      <select 
+        data-elb-product="taste:#value"
+        class="select select-bordered w-full"
+      >
+        <option value="sweet">Sweet</option>
+        <option value="spicy">Spicy</option>
+      </select>
     </div>
-    
-    <div id="playground"></div>
-  </main>
-  
-  <script>
-    // Wait for the explorer bundle to load
-    document.addEventListener('DOMContentLoaded', () => {
-      const { createPlayground } = WalkerExplorer;
-      
-      // Example configurations
-      const examples = {
-        ecommerce: {
-          html: `<div data-elb="product" data-elbcontext="stage:listing" class="product-card">
-  <img src="https://via.placeholder.com/200" alt="Product" class="product-image" />
-  <h3 data-elb-product="name:#innerText" class="product-title">Awesome Product</h3>
-  <p data-elb-product="category:electronics" class="product-category">Electronics</p>
-  <p data-elb-product="price:299.99" class="product-price">$299.99</p>
-  <div data-elb-product="rating:4.5" class="product-rating">
-    ⭐⭐⭐⭐⭐ 4.5/5
+    <p data-elb-product="price:2.50" class="text-xl font-bold">
+      € 2.50 <span data-elb-product="old_price:3.14" class="label text-base line-through">€ 3.14</span>
+    </p>
+    <div data-elbcontext="stage:hooked" class="card-actions justify-between">
+      <button
+        data-elbaction="click:save"
+        class="btn btn-secondary"
+      >
+        Add to Wishlist
+      </button>
+      <button
+        data-elbaction="click:add"
+        class="btn btn-primary"
+      >
+        Add to Cart
+      </button>
+    </div>
   </div>
-  <div class="product-actions">
-    <button 
-      data-elbaction="click:view"
-      data-elb-product="id:PROD-123"
-      class="btn btn-secondary"
-    >
-      View Details
-    </button>
-    <button 
-      data-elbaction="click:add"
-      data-elb-product="quantity:1"
-      class="btn btn-primary"
-    >
-      Add to Cart
-    </button>
-  </div>
-</div>`,
-          css: `.product-card {
-  max-width: 300px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+</div>`;
+
+        const exampleCSS = `/* Base styling */
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
   padding: 20px;
-  background: white;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: #0f172a;
+  color: white;
 }
 
-.product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+/* Card component */
+.card {
+  background: #1e293b;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
 }
 
-.product-image {
+.w-80 {
+  width: 20rem;
+}
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.shadow-xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* Figure and image */
+figure {
+  margin: 0;
+  position: relative;
+}
+
+figure img {
   width: 100%;
   height: 200px;
   object-fit: cover;
-  border-radius: 8px;
-  margin-bottom: 16px;
 }
 
-.product-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 8px 0;
+.relative {
+  position: relative;
 }
 
-.product-category {
-  color: #6b7280;
-  font-size: 0.875rem;
-  margin: 0 0 12px 0;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.absolute {
+  position: absolute;
 }
 
-.product-price {
+.top-2 {
+  top: 0.5rem;
+}
+
+.right-2 {
+  right: 0.5rem;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-primary {
+  background: #06b6d4;
+  color: white;
+}
+
+.text-white {
+  color: white;
+}
+
+/* Card body */
+.card-body {
+  padding: 1.5rem;
+}
+
+.card-title {
   font-size: 1.25rem;
-  font-weight: 700;
-  color: #059669;
-  margin: 0 0 8px 0;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: #06b6d4;
 }
 
-.product-rating {
-  color: #f59e0b;
+.text-lg {
+  font-size: 1.125rem;
+}
+
+/* Form control */
+.form-control {
+  margin: 1rem 0;
+}
+
+.label {
+  display: block;
   font-size: 0.875rem;
-  margin: 0 0 20px 0;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
 }
 
-.product-actions {
+.select {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #475569;
+  background: #0f172a;
+  color: white;
+  font-size: 0.875rem;
+}
+
+.select-bordered {
+  border: 1px solid #475569;
+}
+
+.w-full {
+  width: 100%;
+}
+
+/* Price */
+.text-xl {
+  font-size: 1.25rem;
+  color: white;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.text-base {
+  font-size: 1rem;
+  color: #64748b;
+}
+
+.line-through {
+  text-decoration: line-through;
+}
+
+/* Card actions */
+.card-actions {
   display: flex;
-  gap: 12px;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
 }
 
+.justify-between {
+  justify-content: space-between;
+}
+
+/* Buttons */
 .btn {
-  padding: 12px 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
   border: none;
-  border-radius: 6px;
+  border-radius: 0.5rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  flex: 1;
+  transition: all 200ms ease;
+  font-size: 0.875rem;
+  text-decoration: none;
 }
 
 .btn-primary {
-  background: #3b82f6;
+  background: #06b6d4;
   color: white;
 }
 
 .btn-primary:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
+  background: #0891b2;
 }
 
 .btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
+  background: #64748b;
+  color: white;
 }
 
 .btn-secondary:hover {
-  background: #e5e7eb;
-  transform: translateY(-1px);
-}`,
-          js: `// Enhanced product interactions
-console.log('🛍️ E-commerce demo loaded');
+  background: #475569;
+}`;
 
-// Add hover animations
-const productCard = document.querySelector('.product-card');
-if (productCard) {
-  productCard.addEventListener('mouseenter', () => {
-    console.log('👀 Customer viewing product');
-  });
-}
+        const exampleJS = `var foo = await sourceBrowser(collector, { settings: { scope: document } });
+        console.log(123, foo);`;
 
-// Track button interactions
-document.addEventListener('click', (e) => {
-  if (e.target.matches('[data-elbaction]')) {
-    const action = e.target.getAttribute('data-elbaction');
-    const [, actionType] = action.split(':');
-    
-    console.log(\`🎯 Action triggered: \${actionType}\`);
-    
-    // Add visual feedback
-    e.target.style.transform = 'scale(0.95)';
-    setTimeout(() => {
-      e.target.style.transform = '';
-    }, 150);
-    
-    // Simulate cart animation for add action
-    if (actionType === 'add') {
-      showCartAnimation();
-    }
-  }
-});
+        // Create shadow DOM containers for isolation
+        const codeColumn = document.getElementById('code-column');
+        const eventsColumn = document.getElementById('events-column');
 
-// Cart animation
-function showCartAnimation() {
-  const button = document.querySelector('[data-elbaction*="add"]');
-  if (button) {
-    const originalText = button.textContent;
-    button.textContent = '✅ Added!';
-    button.style.background = '#10b981';
-    
-    setTimeout(() => {
-      button.textContent = originalText;
-      button.style.background = '#3b82f6';
-    }, 2000);
-  }
-}
+        // Apply shadow DOM to isolate styles for code column
+        const { shadow: codeShadow, container: codeContainer } =
+          createShadow(codeColumn);
 
-// Simulate dynamic pricing
-setTimeout(() => {
-  const priceElement = document.querySelector('.product-price');
-  if (priceElement) {
-    priceElement.style.color = '#dc2626';
-    priceElement.innerHTML = '<s>$299.99</s> <span style="color: #059669;">$249.99 (Sale!)</span>';
-    console.log('💰 Price updated - special offer!');
-  }
-}, 3000);`,
-          mapping: {
-            product: {
-              view: {
-                name: 'view_item',
-                data: {
-                  map: {
-                    currency: { value: 'USD' },
-                    value: 'data.price',
-                    item_id: 'data.id',
-                    item_name: 'data.name',
-                    item_category: 'data.category',
-                  }
-                }
-              },
-              add: {
-                name: 'add_to_cart',
-                data: {
-                  map: {
-                    currency: { value: 'USD' },
-                    value: 'data.price',
-                    quantity: 'data.quantity',
-                    items: [{
-                      item_id: 'data.id',
-                      item_name: 'data.name',
-                      price: 'data.price',
-                      quantity: 'data.quantity'
-                    }]
-                  }
-                }
-              }
+        // Import explorer styles for code column
+        const codeStyles = document.createElement('style');
+        codeStyles.textContent = WalkerExplorer.getBaseStyles();
+        codeShadow.appendChild(codeStyles);
+
+        // Create events display box directly in the column (it will create its own shadow DOM)
+        const eventsBox = createEventsBox(eventsColumn, {
+          label: 'Captured Events'
+        });
+
+        // Create mockCollector with proper browser source support
+        const mockCollector = {
+          push: (event, data, options) => {
+            if (event == 'walker on' && data == 'run') {
+              options(mockCollector);
+              return;
             }
-          }
-        },
-        
-        form: {
-          html: `<form data-elb="form" data-elb-form="name:contact">
-  <h3>Contact Us</h3>
-  <div>
-    <label>Name:</label>
-    <input 
-      type="text" 
-      data-elb-form="field:name"
-      placeholder="Your name"
-    />
-  </div>
-  <div>
-    <label>Email:</label>
-    <input 
-      type="email" 
-      data-elb-form="field:email"
-      placeholder="your@email.com"
-    />
-  </div>
-  <div>
-    <label>Message:</label>
-    <textarea 
-      data-elb-form="field:message"
-      placeholder="Your message"
-    ></textarea>
-  </div>
-  <button 
-    type="button"
-    data-elbaction="click:submit"
-    data-elb-form="type:contact"
-  >
-    Send Message
-  </button>
-</form>`,
-          mapping: {
-            form: {
-              submit: {
-                name: 'form_submit',
-                data: {
-                  map: {
-                    form_name: 'data.name',
-                    form_type: 'data.type',
-                    form_destination: { value: 'support@example.com' }
-                  }
+            console.log('🚀 ~ event:', event, data);
+            // Pass event data to the events box - it will handle formatting and storage
+            eventsBox.setValue({ event, data });
+          },
+          on: {},
+          allowed: true,
+          config: {},
+          hooks: {},
+          destinations: {},
+          session: undefined,
+        };
+
+        // Create the enhanced CodeBox with preview
+        const codeBox = createCodeBox(codeContainer, {
+          label: 'Code Editor with Preview',
+          tabs: {
+            enabled: true,
+            items: ['preview', 'html', 'css', 'js'],
+            active: 'preview',
+          },
+          lineNumbers: true,
+          showControls: true,
+          showReset: true,
+          enableHighlights: true,
+          context: {
+            collector: mockCollector,
+            sourceBrowser: WalkerExplorer.sourceBrowser,
+            eventsBox: eventsBox,
+          },
+          onTabChange: (tab, content) => {
+            if (tab !== 'preview') {
+              // Update preview when code changes
+              setTimeout(() => {
+                if (codeBox.getActiveTab() === 'preview') {
+                  // Trigger re-render on next preview activation
                 }
-              }
+              }, 300);
             }
-          }
-        },
-        
-        navigation: {
-          html: `<nav data-elb="navigation">
-  <ul style="list-style: none; padding: 0;">
-    <li>
-      <a href="#" 
-         data-elbaction="click:navigate"
-         data-elb-navigation="page:home"
-         data-elb-navigation="section:main"
-      >Home</a>
-    </li>
-    <li>
-      <a href="#" 
-         data-elbaction="click:navigate"
-         data-elb-navigation="page:products"
-         data-elb-navigation="section:catalog"
-      >Products</a>
-    </li>
-    <li>
-      <a href="#" 
-         data-elbaction="click:navigate"
-         data-elb-navigation="page:about"
-         data-elb-navigation="section:info"
-      >About</a>
-    </li>
-    <li>
-      <a href="#" 
-         data-elbaction="click:navigate"
-         data-elb-navigation="page:contact"
-         data-elb-navigation="section:support"
-      >Contact</a>
-    </li>
-  </ul>
-</nav>`,
-          mapping: {
-            navigation: {
-              navigate: {
-                name: 'navigation_click',
-                data: {
-                  map: {
-                    page_location: 'data.page',
-                    link_text: 'data.page',
-                    link_section: 'data.section'
-                  }
-                }
-              }
-            }
-          }
-        },
-        
-        custom: {
-          html: `<div data-elb="custom">
-  <h3>Custom Event Examples</h3>
-  <button 
-    data-elbaction="click:action1"
-    data-elb-custom="value:100"
-    data-elb-custom="type:premium"
-  >
-    Custom Action 1
-  </button>
-  <button 
-    data-elbaction="click:action2"
-    data-elb-custom="value:200"
-    data-elb-custom="type:standard"
-  >
-    Custom Action 2
-  </button>
-  <div 
-    data-elbaction="load:impression"
-    data-elb-custom="position:hero"
-    data-elb-custom="variant:A"
-    style="padding: 20px; background: #fef3c7; margin-top: 10px;"
-  >
-    This element tracks impressions on load
-  </div>
-</div>`,
-          mapping: {
-            custom: {
-              '*': {
-                name: { 
-                  fn: (event) => `custom_${event.action}`
-                },
-                data: {
-                  map: {
-                    event_category: 'entity',
-                    event_action: 'action',
-                    event_value: 'data.value',
-                    custom_type: 'data.type'
-                  }
-                }
-              }
-            }
-          }
-        }
-      };
-      
-      // Create playground instance
-      const playground = createPlayground(
-        document.getElementById('playground'),
-        {
-          height: 'calc(100% - 120px)',
-          initialHTML: examples.ecommerce.html,
-          initialCSS: examples.ecommerce.css,
-          initialJS: examples.ecommerce.js,
-          initialMapping: examples.ecommerce.mapping
-        }
-      );
-      
-      // Execute button
-      document.getElementById('executeBtn').addEventListener('click', async () => {
-        const status = document.querySelector('.status');
-        status.textContent = 'Executing...';
-        status.style.background = '#f59e0b';
-        
-        try {
-          await playground.execute();
-          status.textContent = 'Complete';
-          status.style.background = '#10b981';
-        } catch (error) {
-          status.textContent = 'Error';
-          status.style.background = '#ef4444';
-          console.error('Execution error:', error);
-        }
+          },
+        });
+
+        // Set initial content
+        codeBox.setAllValues({
+          html: exampleHTML,
+          css: exampleCSS,
+          js: exampleJS,
+        });
+
+        // Test the events box with a static event after a short delay
+        console.log('Setting up test event timeout...');
+        setTimeout(() => {
+          console.log('Running test event timeout...');
+          console.log('eventsBox:', eventsBox);
+          console.log('About to call setValue with test event...');
+          eventsBox.setValue({ event: 'page view', data: { title: 'Test Page', url: '/' } });
+          console.log('Test event setValue called');
+        }, 1000);
       });
-      
-      // Clear button
-      document.getElementById('clearBtn').addEventListener('click', () => {
-        const graph = playground.getGraph();
-        const previewNode = graph.getNode('preview-1');
-        if (previewNode && previewNode.clearEvents) {
-          previewNode.clearEvents();
-          playground.execute();
-        }
-      });
-      
-      // Example selector
-      document.getElementById('exampleSelect').addEventListener('change', (e) => {
-        const example = examples[e.target.value];
-        if (example) {
-          // Set all code content
-          if (playground.setAllCode) {
-            playground.setAllCode({
-              html: example.html,
-              css: example.css || '',
-              js: example.js || ''
-            });
-          } else {
-            // Fallback for basic setHTML
-            playground.setHTML(example.html);
-          }
-          playground.setMapping(example.mapping);
-        }
-      });
-      
-      // Log for debugging
-      console.log('Playground initialized:', playground);
-      console.log('Graph API:', playground.getGraph());
-    });
-  </script>
-</body>
+    </script>
+  </body>
 </html>

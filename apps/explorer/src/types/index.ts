@@ -108,9 +108,9 @@ export interface LabelAPI extends ComponentAPI {
 // Molecule Components
 export interface CodeBoxTabsConfig {
   enabled: boolean;
-  items: ('html' | 'css' | 'js')[];
-  active: 'html' | 'css' | 'js';
-  disabled?: ('html' | 'css' | 'js')[];
+  items: ('preview' | 'html' | 'css' | 'js')[];
+  active: 'preview' | 'html' | 'css' | 'js';
+  disabled?: ('preview' | 'html' | 'css' | 'js')[];
 }
 
 export interface CodeBoxOptions {
@@ -125,12 +125,21 @@ export interface CodeBoxOptions {
   footerContent?: HTMLElement;
   onChange?: (value: string) => void;
   onTabChange?: (
-    tab: 'html' | 'css' | 'js',
+    tab: 'preview' | 'html' | 'css' | 'js',
     content: { html: string; css: string; js: string },
   ) => void;
   onFormat?: () => void;
   onCopy?: () => void;
   onReset?: () => void;
+  onPreviewRender?: (content: {
+    html: string;
+    css: string;
+    js: string;
+  }) => void;
+  enableHighlights?: boolean;
+  context?: Record<string, unknown>;
+  showFooter?: boolean; // Show footer (default: true)
+  standalone?: boolean; // Create Shadow DOM for standalone usage (default: true)
 }
 
 export interface CodeBoxAPI extends ComponentAPI {
@@ -138,8 +147,8 @@ export interface CodeBoxAPI extends ComponentAPI {
   setValue: (value: string) => void;
   getAllValues: () => { html: string; css: string; js: string };
   setAllValues: (values: { html: string; css: string; js: string }) => void;
-  getActiveTab: () => 'html' | 'css' | 'js';
-  setActiveTab: (tab: 'html' | 'css' | 'js') => void;
+  getActiveTab: () => 'preview' | 'html' | 'css' | 'js';
+  setActiveTab: (tab: 'preview' | 'html' | 'css' | 'js') => void;
   setLabel: (label: string) => void;
   setLanguage: (language: string) => void;
   format: () => void;
@@ -153,6 +162,7 @@ export interface ResultBoxOptions {
   showActions?: boolean;
   onClear?: () => void;
   onCopy?: () => void;
+  standalone?: boolean; // Create Shadow DOM for standalone usage (default: true)
 }
 
 export interface ResultBoxAPI extends ComponentAPI {
@@ -302,6 +312,13 @@ export interface ThemeOptions {
   fonts?: Record<string, string>;
   spacing?: Record<string, string>;
 }
+
+// MappingBox Component (re-export from molecules)
+export type {
+  MappingBoxOptions,
+  MappingBoxAPI,
+  MappingMode,
+} from '../molecules/mappingBox/types';
 
 // Re-export walker types we depend on
 export type { WalkerOS } from '@walkeros/core';
