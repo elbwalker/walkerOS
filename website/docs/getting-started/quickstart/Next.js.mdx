@@ -1,0 +1,101 @@
+---
+title: Next.js
+description: Get started with walkerOS Next.js applications
+sidebar_position: 2
+---
+
+# Next.js Quickstart
+
+Check [React quickstart guide](./react) for more details.
+
+## Next.js Differences
+
+For Next.js applications, use the Next.js router events:
+
+```tsx title="pages/_app.tsx"
+import { useRouter } from 'next/router';
+import { useEffect, useRef } from 'react';
+import { elb } from '@walkeros/web-core';
+import { initializeWalker } from '../walker';
+
+export default function App({ Component, pageProps }) {
+  const router = useRouter();
+  const hasInitialized = useRef(false);
+  const firstRun = useRef(true);
+
+  useEffect(() => {
+    // Prevent double execution
+    if (!hasInitialized.current) {
+      initializeWalker();
+      hasInitialized.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleRouteChange = () => {
+      if (firstRun.current) {
+        firstRun.current = false;
+        return;
+      }
+      elb('walker run');
+    };
+
+    // Next.js route events
+    router.events.on('routeChangeComplete', handleRouteChange);
+
+    // Call on initial load
+    handleRouteChange();
+
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router.events]);
+
+  return <Component {...pageProps} />;
+}
+```
+
+For Next.js 13+ with App Router:
+
+```tsx title="app/layout.tsx"
+'use client';
+
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { elb } from '@walkeros/web-core';
+import { initializeWalker } from './walker';
+
+export default function RootLayout({ children }) {
+  const pathname = usePathname();
+  const hasInitialized = useRef(false);
+  const firstRun = useRef(true);
+
+  useEffect(() => {
+    // Prevent double execution
+    if (!hasInitialized.current) {
+      initializeWalker();
+      hasInitialized.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+
+    elb('walker run');
+  }, [pathname]);
+
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+## Next Steps
+
+- Configure [destinations](/docs/destinations) for your analytics tools
+- Set up [consent management](/docs/guides/consent)

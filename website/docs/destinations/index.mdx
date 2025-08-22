@@ -1,7 +1,8 @@
 ---
 title: Destinations
-description: Send events to analytics tools, marketing platforms, and custom endpoints
-sidebar_position: 4
+description:
+  Send events to analytics tools, marketing platforms, and custom endpoints
+sidebar_position: 5
 tags: [destinations, analytics, marketing, integrations]
 ---
 
@@ -9,13 +10,16 @@ import Link from '@docusaurus/Link';
 
 # Destinations
 
-Destinations are the endpoints where walkerOS sends your processed events. They transform standardized walkerOS events into the specific formats required by analytics platforms, marketing tools, data warehouses, and custom APIs.
+Destinations are the endpoints where walkerOS sends your processed events. They
+transform standardized walkerOS events into the specific formats required by
+analytics platforms, marketing tools, data warehouses, and custom APIs.
 
 ## What They Do
 
 Destinations handle the final step in the data pipeline by:
 
-- **Format Transformation** - Convert walkerOS events to platform-specific formats
+- **Format Transformation** - Convert walkerOS events to platform-specific
+  formats
 - **API Integration** - Handle authentication and delivery to external services
 - **Error Handling** - Manage failed requests and retry logic
 - **Data Validation** - Ensure events meet destination requirements
@@ -23,20 +27,30 @@ Destinations handle the final step in the data pipeline by:
 ## Types of Destinations
 
 ### Web Destinations
+
 Client-side integrations that send events directly from the browser:
 
-- **<Link to="/docs/destinations/web/gtag/">Google Analytics & Ads</Link>** - GA4, Google Ads, and GTM integration
-- **<Link to="/docs/destinations/web/meta-pixel">Meta Pixel</Link>** - Facebook and Instagram advertising
-- **<Link to="/docs/destinations/web/plausible">Plausible Analytics</Link>** - Privacy-focused web analytics
-- **<Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>** - Enterprise analytics platform
-- **<Link to="/docs/destinations/web/api">Custom API</Link>** - Send events to your own endpoints
+- **<Link to="/docs/destinations/web/gtag/">Google Analytics & Ads</Link>** -
+  GA4, Google Ads, and GTM integration
+- **<Link to="/docs/destinations/web/meta-pixel">Meta Pixel</Link>** - Facebook
+  and Instagram advertising
+- **<Link to="/docs/destinations/web/plausible">Plausible Analytics</Link>** -
+  Privacy-focused web analytics
+- **<Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>** - Enterprise
+  analytics platform
+- **<Link to="/docs/destinations/web/api">Custom API</Link>** - Send events to
+  your own endpoints
 
 ### Server Destinations
+
 Server-side integrations for enhanced privacy and data control:
 
-- **<Link to="/docs/destinations/server/aws">AWS</Link>** - Amazon cloud services integration
-- **<Link to="/docs/destinations/server/gcp">Google Cloud Platform</Link>** - GCP services and BigQuery
-- **<Link to="/docs/destinations/server/meta-capi">Meta Conversions API</Link>** - Server-side Facebook/Instagram tracking
+- **<Link to="/docs/destinations/server/aws">AWS</Link>** - Amazon cloud
+  services integration
+- **<Link to="/docs/destinations/server/gcp">Google Cloud Platform</Link>** -
+  GCP services and BigQuery
+- **<Link to="/docs/destinations/server/meta-capi">Meta Conversions
+  API</Link>** - Server-side Facebook/Instagram tracking
 
 ## Key Benefits
 
@@ -54,15 +68,22 @@ Destinations receive events from the collector after processing:
 Sources → Collector → Destinations → External Platforms
 ```
 
-Each destination operates independently, so one failed destination won't affect others. This ensures reliable data delivery even when individual services have issues.
+Each destination operates independently, so one failed destination won't affect
+others. This ensures reliable data delivery even when individual services have
+issues.
 
 ## Getting Started
 
 Choose destinations based on your tracking needs:
 
-1. **Web Analytics** - Start with <Link to="/docs/destinations/web/gtag/ga4">Google Analytics 4</Link> or <Link to="/docs/destinations/web/plausible">Plausible</Link>
-2. **Advertising** - Add <Link to="/docs/destinations/web/meta-pixel">Meta Pixel</Link> or <Link to="/docs/destinations/web/gtag/ads">Google Ads</Link>
-3. **Custom Data** - Use <Link to="/docs/destinations/web/api">API destinations</Link> for your own systems
+1. **Web Analytics** - Start with
+   <Link to="/docs/destinations/web/gtag/ga4">Google Analytics 4</Link> or
+   <Link to="/docs/destinations/web/plausible">Plausible</Link>
+2. **Advertising** - Add <Link to="/docs/destinations/web/meta-pixel">Meta
+   Pixel</Link> or <Link to="/docs/destinations/web/gtag/ads">Google Ads</Link>
+3. **Custom Data** - Use <Link to="/docs/destinations/web/api">API
+   destinations</Link> for your own systems
 4. **Enhanced Privacy** - Implement server-side destinations for sensitive data
 
-Each destination includes setup instructions, configuration options, and examples to help you get started quickly.
+Each destination includes setup instructions, configuration options, and
+examples to help you get started quickly.

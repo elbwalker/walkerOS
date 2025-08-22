@@ -1,7 +1,7 @@
 ---
-title: Walker.js with Sources
+title: CDN usage
 description: CDN setup with automatic DOM tracking for non-npm users
-sidebar_position: 20
+sidebar_position: 3
 ---
 
 # Walker.js with Sources
@@ -16,6 +16,26 @@ script-based setup.
 - Configuring automatic DOM tracking
 - Setting up browser sources without build tools
 - Tracking events from HTML attributes
+
+### 📦 Walker.js Bundle
+
+**Best for**: Complete solution without configuration
+
+**Advantages**:
+
+- Everything included in one file
+- Automatic DOM tracking
+- DataLayer compatibility
+- No package management needed
+
+**Use when**:
+
+- Migrating from Google Tag Manager
+- Need comprehensive tracking quickly
+- Working with multiple websites
+- Want automatic event collection
+
+[→ See Walker.js Documentation](/docs/apps/walkerjs)
 
 ## Installation
 
@@ -168,3 +188,73 @@ Perfect for:
 
 The Walker.js bundle provides the same powerful tracking capabilities as the npm
 packages, but with the simplicity of a script tag.
+
+## Browser/CDN Installation
+
+### Individual Packages
+
+Load packages directly from CDN:
+
+```html
+<!-- Core collector -->
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.browser.js"></script>
+
+<!-- Browser source -->
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.browser.js"></script>
+
+<!-- Google Analytics destination -->
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.browser.js"></script>
+
+<script>
+  // Use the loaded packages
+  const { createCollector } = walkerOSCollector;
+  const { sourceBrowser } = walkerOSWebSourceBrowser;
+  const { destinationGtag } = walkerOSWebDestinationGtag;
+</script>
+```
+
+### ES6 Modules
+
+Use modern ES6 modules:
+
+```html
+<script type="module">
+  // Dynamic imports
+  const { createCollector } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
+  );
+  const { destinationGtag } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.mjs'
+  );
+  const { sourceBrowser } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
+  );
+
+  // Setup tracking
+  const { elb } = await createCollector({
+    sources: {
+      browser: { code: sourceBrowser },
+    },
+  });
+
+  // Add destination with configuration
+  elb('walker destination', destinationGtag, {
+    settings: {
+      ga4: { measurementId: 'G-XXXXXXXXXX' },
+    },
+  });
+
+  // Track events
+  await elb('page view', { title: document.title });
+</script>
+```
+
+### Legacy Browser Support
+
+For older browsers, use ES5 builds:
+
+```html
+<!-- ES5 compatible builds -->
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.es5.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.es5.js"></script>
+```

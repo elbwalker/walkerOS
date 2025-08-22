@@ -1,370 +1,131 @@
 ---
-title: Installation
-description: Complete guide to installing walkerOS packages and applications
+slug: /
+title: What is walkerOS
+description: walkerOS description and installation
 sidebar_position: 1
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Installation
+# Welcome to walkerOS
 
-Choose the installation method that best fits your project and technical
-requirements.
+walkerOS is an **event data collection as code** solution. It captures,
+structures, and routes events with built-in support for consent management — all
+directly in your code. No fragile UI configs. No black-box logic. Just
+vendor-agnostic **tracking you can version, test, and trust**.
 
-## Quick Start
+The project started as the web tracking library walker.js, and has evolved into
+a complete **first-party tracking system** for modern teams and the modern web.
 
-### 30-Second Setup
+## Why walkerOS?
+
+- **Independence**: Make your your data collection independent from single
+  vendor specifications to reduce complexity and extra code whenever you add or
+  remove a new service. Keep maintenance effort to a minimum.
+- **Scalability**: DOM-based, component-level frontend tagging makes tracking
+  user behavior declarative, reusable, and easy to maintain.
+- **Privacy-first approach**: Built-in consent handling and privacy controls
+  help you meet compliance from day one.
+- **Type-safe tracking**: Built with TypeScript to catch tracking errors at
+  compile time, not in production. Get IDE autocomplete for APIs and destination
+  configs, prevent data structure mistakes.
+
+## How it works
+
+![event flow](/diagrams/walkerosflowdark.png)
+
+## How to install
 
 <Tabs>
-  <TabItem value="npm" label="NPM" default>
+  <TabItem value="npm" label="npm" default>
 
-For projects using npm and build tools:
+Install the package from npm:
 
 ```bash
-npm install @walkeros/collector
+npm install @walkeros/collector @walkeros/web-source-browser
 ```
 
+Initialize walkerOS in your project. See the quickstart guides for more details.
+
 ```javascript
+import type { Collector, WalkerOS } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
+import { createSource } from '@walkeros/core';
+import { sourceBrowser } from '@walkeros/web-source-browser';
 
-const { collector, elb } = await createCollector({
-  destinations: {
-    console: { push: console.log },
-  },
-});
+declare global {
+  interface Window {
+    elb: WalkerOS.Elb;
+    walker: Collector.Instance;
+  }
+}
 
-await elb('page view', { title: 'Homepage' });
+// Initialize walkerOS
+export async function initializeWalker(): Promise<void> {
+  // Create and start collector
+  const { collector, elb } = await createCollector({
+    destinations: {
+      console: {
+        push: (event) => console.log('Event:', event),
+      },
+    },
+    sources: {
+      browser: createSource(sourceBrowser, {
+        settings: {
+          prefix: 'data-elb',
+          pageview: true,
+          session: true,
+        },
+      }),
+    },
+  });
+}
 ```
 
   </TabItem>
   <TabItem value="browser" label="Browser/CDN">
 
-For websites without build tools:
+For websites without build tools install from CDN:
 
 ```html
-<!-- Add to your HTML head -->
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/walker.js"></script>
-
 <script>
-  // Configure tracking
-  window.elbConfig = {
-    collector: {
-      destinations: {
-        console: { push: (event) => console.log('Event:', event) },
+  // Load the collector and source
+  const { createCollector } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
+  );
+  const { sourceBrowser } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
+  );
+
+  // Initialize walkerOS
+  const { collector, elb } = await createCollector({
+    destinations: {
+      console: {
+        push: (event) => console.log('Event:', event),
       },
     },
-  };
+    sources: {
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            prefix: 'data-elb',
+            pageview: true,
+            session: true,
+          },
+        },
+      },
+    },
+  });
 </script>
 ```
 
   </TabItem>
 </Tabs>
 
-## Choose Your Method
+:::note
 
-### 🔧 NPM Installation
+See the [quickstart guides](./getting-started/quickstart/) for more details.
 
-**Best for**: Developers using modern build tools (Webpack, Vite, etc.)
-
-**Advantages**:
-
-- Type safety with TypeScript
-- Tree shaking and optimization
-- Version control and dependency management
-- Hot module replacement during development
-
-**Use when**:
-
-- Building React, Vue, or Angular applications
-- Using bundlers like Webpack, Vite, or Rollup
-- Working in a team development environment
-
-[→ See NPM Installation Guide](#npm-installation)
-
-### 🌐 Browser/CDN Installation
-
-**Best for**: Marketing teams, agencies, legacy websites
-
-**Advantages**:
-
-- No build tools required
-- Copy-paste implementation
-- Works with any HTML page
-- Instant setup and testing
-
-**Use when**:
-
-- Adding tracking to existing websites
-- Working with content management systems
-- Quick prototyping or testing
-- Limited technical resources
-
-[→ See Browser Installation Guide](/docs/sources/web/browser/)
-
-### 📦 Walker.js Bundle
-
-**Best for**: Complete solution without configuration
-
-**Advantages**:
-
-- Everything included in one file
-- Automatic DOM tracking
-- DataLayer compatibility
-- No package management needed
-
-**Use when**:
-
-- Migrating from Google Tag Manager
-- Need comprehensive tracking quickly
-- Working with multiple websites
-- Want automatic event collection
-
-[→ See Walker.js Documentation](/docs/apps/walkerjs)
-
-## NPM Installation
-
-### Core Packages
-
-#### Basic Setup
-
-For event collection and processing:
-
-```bash
-npm install @walkeros/collector
-```
-
-#### Web Development
-
-For browser-based applications:
-
-```bash
-# Basic web tracking
-npm install @walkeros/collector @walkeros/web-source-browser
-
-# With Google Analytics
-npm install @walkeros/collector @walkeros/web-destination-gtag
-
-# Complete web setup
-npm install @walkeros/collector @walkeros/web-source-browser @walkeros/web-destination-gtag @walkeros/web-destination-meta
-```
-
-#### Server Development
-
-For Node.js and server environments:
-
-```bash
-# Basic server tracking
-npm install @walkeros/collector @walkeros/server-destination-aws
-
-# Complete server setup
-npm install @walkeros/collector @walkeros/server-destination-aws @walkeros/server-destination-gcp
-```
-
-### Package Categories
-
-#### Sources (Data Collection)
-
-```bash
-# Browser DOM tracking
-npm install @walkeros/web-source-browser
-
-# DataLayer integration
-npm install @walkeros/web-source-datalayer
-```
-
-#### Web Destinations (Analytics Platforms)
-
-```bash
-# Google Analytics 4 & Ads
-npm install @walkeros/web-destination-gtag
-
-# Meta Pixel (Facebook/Instagram)
-npm install @walkeros/web-destination-meta
-
-# PiwikPro Analytics
-npm install @walkeros/web-destination-piwikpro
-
-# Plausible Analytics
-npm install @walkeros/web-destination-plausible
-
-# Custom API endpoints
-npm install @walkeros/web-destination-api
-```
-
-#### Server Destinations (Data Streaming)
-
-```bash
-# AWS Kinesis Data Firehose
-npm install @walkeros/server-destination-aws
-
-# Google Cloud Pub/Sub
-npm install @walkeros/server-destination-gcp
-
-# Meta Conversions API
-npm install @walkeros/server-destination-meta
-```
-
-### TypeScript Support
-
-All packages include TypeScript definitions:
-
-```typescript
-import { createCollector } from '@walkeros/collector';
-import { destinationGtag } from '@walkeros/web-destination-gtag';
-import { sourceBrowser } from '@walkeros/web-source-browser';
-import type { WalkerOS, Collector } from '@walkeros/core';
-
-const { elb }: { elb: WalkerOS.Elb } = await createCollector({
-  sources: {
-    browser: { code: sourceBrowser },
-  },
-});
-
-// Add destination with configuration
-elb('walker destination', destinationGtag, {
-  settings: {
-    ga4: { measurementId: 'G-XXXXXXXXXX' },
-  },
-});
-```
-
-## Browser/CDN Installation
-
-### Individual Packages
-
-Load packages directly from CDN:
-
-```html
-<!-- Core collector -->
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.browser.js"></script>
-
-<!-- Browser source -->
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.browser.js"></script>
-
-<!-- Google Analytics destination -->
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.browser.js"></script>
-
-<script>
-  // Use the loaded packages
-  const { createCollector } = walkerOSCollector;
-  const { sourceBrowser } = walkerOSWebSourceBrowser;
-  const { destinationGtag } = walkerOSWebDestinationGtag;
-</script>
-```
-
-### ES6 Modules
-
-Use modern ES6 modules:
-
-```html
-<script type="module">
-  // Dynamic imports
-  const { createCollector } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
-  );
-  const { destinationGtag } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.mjs'
-  );
-  const { sourceBrowser } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
-  );
-
-  // Setup tracking
-  const { elb } = await createCollector({
-    sources: {
-      browser: { code: sourceBrowser },
-    },
-  });
-
-  // Add destination with configuration
-  elb('walker destination', destinationGtag, {
-    settings: {
-      ga4: { measurementId: 'G-XXXXXXXXXX' },
-    },
-  });
-
-  // Track events
-  await elb('page view', { title: document.title });
-</script>
-```
-
-### Legacy Browser Support
-
-For older browsers, use ES5 builds:
-
-```html
-<!-- ES5 compatible builds -->
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.es5.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.es5.js"></script>
-```
-
-## Advanced Options
-
-### Version Pinning
-
-Pin to specific versions for production:
-
-```html
-<!-- Pin to specific version -->
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@0.0.7/dist/walker.js"></script>
-```
-
-```bash
-# NPM version pinning
-npm install @walkeros/collector@0.0.7
-```
-
-### Self-Hosting
-
-Download and host files yourself:
-
-```bash
-# Download specific package
-npm pack @walkeros/walker.js
-tar -xzf walkerOS-walker.js-*.tgz
-cp package/dist/* ./public/js/
-```
-
-```html
-<!-- Use self-hosted files -->
-<script src="/js/walker.js"></script>
-```
-
-### Build Variants
-
-Different builds for different needs:
-
-| Build Type    | Use Case               | Example            |
-| ------------- | ---------------------- | ------------------ |
-| `.browser.js` | Modern browsers (IIFE) | `index.browser.js` |
-| `.es5.js`     | Legacy browsers (ES5)  | `index.es5.js`     |
-| `.mjs`        | ES6 modules            | `index.mjs`        |
-| `.js`         | CommonJS/Node.js       | `index.js`         |
-
-## Getting Started
-
-### Next Steps
-
-1. **Choose your installation method** above
-2. **Follow a quickstart guide**:
-   - [Basic Collector](/docs/getting-started/quickstart/#basic-collector)
-   - [Google Analytics Setup](/docs/getting-started/quickstart/#google-analytics-4)
-3. **Configure your destinations**:
-   - [Web Destinations](/docs/destinations/)
-   - [Server Destinations](/docs/destinations/)
-4. **Add event tracking**:
-   - [Browser Source](/docs/sources/web/browser)
-   - [Manual Events](/docs/collector/commands)
-
-### Need Help?
-
-- **Developers**: Start with [NPM installation](#npm-installation) and
-  [quickstart examples](/docs/getting-started/quickstart)
-- **Marketing Teams**: Use [Browser installation](/docs/sources/web/browser/)
-  and [Walker.js](/docs/apps/walkerjs)
-- **Migration**: See [migration guides](/docs/guides/migrations) for existing
-  setups
-
-All installation methods provide the same powerful tracking capabilities -
-choose what works best for your workflow.
+:::
