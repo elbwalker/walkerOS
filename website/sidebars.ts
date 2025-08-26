@@ -59,15 +59,6 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Apps',
-      link: {
-        type: 'doc',
-        id: 'apps/index',
-      },
-      items: ['apps/walkerjs'],
-    },
-    {
-      type: 'category',
       label: 'Destinations',
       link: {
         type: 'doc',
@@ -107,7 +98,16 @@ const sidebars: SidebarsConfig = {
         type: 'doc',
         id: 'core/index',
       },
-      items: ['core/server', 'core/web'],
+      items: ['core/web', 'core/server'],
+    },
+    {
+      type: 'category',
+      label: 'Apps',
+      link: {
+        type: 'doc',
+        id: 'apps/index',
+      },
+      items: ['apps/walkerjs'],
     },
     {
       type: 'category',

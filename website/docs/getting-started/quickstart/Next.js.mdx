@@ -6,9 +6,19 @@ sidebar_position: 2
 
 # Next.js Quickstart
 
-Check [React quickstart guide](./react) for more details.
+This guide shows you how to integrate walkerOS into your Next.js application.
+Most setup is identical to React - check the [React quickstart guide](./react)
+for more details.
 
-## Next.js Differences
+## Installation
+
+Same as React - install the required packages:
+
+```bash
+npm install @walkeros/collector @walkeros/web-source-browser @walkeros/web-core
+```
+
+## Setup
 
 For Next.js applications, use the Next.js router events:
 
@@ -95,7 +105,52 @@ export default function RootLayout({ children }) {
 }
 ```
 
-## Next Steps
+## Component usage
 
-- Configure [destinations](/docs/destinations) for your analytics tools
-- Set up [consent management](/docs/guides/consent)
+Component usage is identical to React. Use the tagger helper and manual events:
+
+```tsx
+import { tagger } from '../walker';
+import { elb } from '@walkeros/web-core';
+
+function ProductPage({ product }) {
+  // Manual event tracking
+  useEffect(() => {
+    elb('product view', {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+    });
+  }, [product]);
+
+  return (
+    <div
+      {...tagger('product')
+        .action('view')
+        .data('id', product.id)
+        .data('name', product.name)
+        .get()}
+    >
+      <h1>{product.name}</h1>
+      <button
+        {...tagger().action('add').get()}
+        onClick={() => elb('product add', { id: product.id })}
+      >
+        Add to Cart
+      </button>
+    </div>
+  );
+}
+```
+
+## Testing
+
+Same as React - check the browser console for tracked events:
+
+```
+  Event: product view
+  Entity: product
+  Action: view
+  Data: { id: 123, name: "Premium Chocolate", price: 12.99 }
+  Trigger: load
+```
