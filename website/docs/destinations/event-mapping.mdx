@@ -2,8 +2,7 @@
 title: Event Mapping
 description: Map walkerOS events to destination-specific formats
 path: /docs/guides/event-mapping
-sidebar_position: 1
-tags: [mapping, events, destinations]
+sidebar_position: 11
 ---
 
 import Link from '@docusaurus/Link';
@@ -18,16 +17,22 @@ export const logValue = async (input, config, log) => {
   log(await parseInput(input, { getMappingValue }));
 };
 
-Event mapping is a core feature of walkerOS that allows you to transform events before they reach destinations. The mapping system provides flexible configuration options to handle different destination requirements while maintaining a consistent event structure.
+Event mapping is a core feature of walkerOS that allows you to transform events
+before they reach destinations. The mapping system provides flexible
+configuration options to handle different destination requirements while
+maintaining a consistent event structure.
 
 ## Overview
 
 The mapping system consists of two main functions:
 
-- **`getMappingEvent`**: Returns the matching event mapping configuration for entity-action events
-- **`getMappingValue`**: Processes values from events using flexible mapping configurations
+- **`getMappingEvent`**: Returns the matching event mapping configuration for
+  entity-action events
+- **`getMappingValue`**: Processes values from events using flexible mapping
+  configurations
 
 Mapping configurations are defined per destination and allow you to:
+
 - Transform event names
 - Extract and reshape event data
 - Apply conditional logic
@@ -38,7 +43,8 @@ Mapping configurations are defined per destination and allow you to:
 
 `getMappingEvent(event: WalkerOS.PartialEvent, mapping?: Mapping.Rules): Promise<Mapping.Result>`
 
-This function finds the appropriate mapping configuration for an event based on its entity and action.
+This function finds the appropriate mapping configuration for an event based on
+its entity and action.
 
 ### Basic Event Mapping
 
@@ -322,7 +328,9 @@ Mapping configurations are typically defined in destination configs:
 ```typescript
 const destination = {
   type: 'gtag',
-  init: () => ({ /* init config */ }),
+  init: () => ({
+    /* init config */
+  }),
   push: (event, { data }) => {
     // Use mapped data
     gtag('event', event.event, data);
@@ -338,20 +346,20 @@ const destination = {
               item_id: 'data.id',
               item_name: 'data.name',
               value: 'data.price',
-              currency: { value: 'USD' }
-            }
-          }
-        }
-      }
+              currency: { value: 'USD' },
+            },
+          },
+        },
+      },
     },
     // Global data mapping
     data: {
       map: {
         page_title: 'context.title',
-        page_location: 'context.url'
-      }
-    }
-  }
+        page_location: 'context.url',
+      },
+    },
+  },
 };
 ```
 
@@ -364,4 +372,6 @@ const destination = {
 5. **Keep transformations simple** - complex logic should be in custom functions
 6. **Test mappings thoroughly** with different event scenarios
 
-For more detailed examples and use cases, see our <Link to="/docs/getting-started/quickstart/custom-mapping-functions">Custom Mapping Functions</Link> guide.
+For more detailed examples and use cases, see our
+<Link to="/docs/getting-started/quickstart/custom-mapping-functions">Custom
+Mapping Functions</Link> guide.

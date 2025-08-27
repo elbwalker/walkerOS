@@ -225,11 +225,9 @@ Individual functions are also available:
 - `getOSVersion(userAgent)` - Returns OS version
 - `getDeviceType(userAgent)` - Returns 'Desktop', 'Tablet', or 'Mobile'
 
-## Control Flow
+## Error Handling
 
-### Error Handling
-
-#### tryCatch
+### tryCatch
 
 `tryCatch(tryFn: Function, catchFn?: Function, finallyFn?: Function)` wraps
 functions with error handling.
@@ -240,7 +238,7 @@ safeParse('{"valid": "json"}'); // Parses successfully
 safeParse('invalid'); // Returns {} instead of throwing
 ```
 
-#### tryCatchAsync
+### tryCatchAsync
 
 `tryCatchAsync(tryFn: Function, catchFn?: Function, finallyFn?: Function)` for
 async operations.
@@ -252,9 +250,9 @@ const safeAsyncCall = tryCatchAsync(
 );
 ```
 
-### Performance Optimization
+## Performance Optimization
 
-#### debounce
+### debounce
 
 `debounce(fn: Function, wait?: number)` delays function execution until after
 the wait time.
@@ -264,7 +262,7 @@ const debouncedSearch = debounce(searchFunction, 300);
 // Only executes after 300ms of inactivity
 ```
 
-#### throttle
+### throttle
 
 `throttle(fn: Function, wait?: number)` limits function execution frequency.
 

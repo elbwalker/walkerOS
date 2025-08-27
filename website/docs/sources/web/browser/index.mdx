@@ -8,23 +8,17 @@ package: '@walkeros/web-source-browser'
 
 # Browser Source
 
-The Browser Source is walkerOS's primary web tracking solution that
-automatically captures user interactions, page events, and custom data directly
-from the browsers DOM. It provides zero-configuration event tracking only based
-on HTML data attributes.
+The Browser Source is walkerOS's primary web tracking solution that you can use
+to capture user interactions directly from the browsers DOM.
 
 ## What It Does
 
 The Browser Source transforms your website into a comprehensive tracking
 environment by:
 
-- **Automatic Event Capture**: Detects clicks, form submissions, page views, and
-  element visibility without manual instrumentation
-- **Data Attribute Reading**: Extracts custom tracking data from HTML `data-elb`
+- **Data attribute reading**: Extracts custom tracking data from HTML `data-elb`
   attributes
-- **Session Management**: Detects and handles user sessions and cross-page
-  tracking automatically
-- **DOM Integration**: Works seamlessly with your existing HTML structure
+- **Session management**: Detects and handles user sessions automatically
 
 ## Installation
 
@@ -32,11 +26,7 @@ environment by:
 npm install @walkeros/web-source-browser
 ```
 
-## Basic Setup
-
-There are two ways to set up the browser source:
-
-### Unified API (Recommended)
+## Setup
 
 ```typescript
 import { createCollector } from '@walkeros/collector';
@@ -66,31 +56,6 @@ const browserElb = collector.sources.browser.elb;
 // Examples:
 elb('page view', { title: 'Home' }); // Basic collector elb
 browserElb('walker init', element); // Enhanced browser elb
-```
-
-### Separate Source Creation (Direct elb Access)
-
-```typescript
-import { createCollector } from '@walkeros/collector';
-import { createSource } from '@walkeros/core';
-import { sourceBrowser } from '@walkeros/web-source-browser';
-
-// Create collector with destinations
-const { collector } = await createCollector({
-  destinations: {
-    log: { push: console.log },
-  },
-});
-
-// Add browser source separately to get direct access to enhanced elb function
-const { elb } = await createSource(collector, sourceBrowser, {
-  pageview: true,
-  session: true,
-});
-
-// The enhanced elb function supports both basic events and browser-specific commands
-elb('page view', { title: 'Home' }); // Basic event
-elb('walker init', element); // Browser-specific command
 ```
 
 :::tip Two Different elb Functions
