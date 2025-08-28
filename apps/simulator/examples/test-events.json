@@ -1,0 +1,97 @@
+[
+  {
+    "event": "page view",
+    "data": {
+      "title": "Homepage",
+      "url": "https://example.com/",
+      "path": "/"
+    },
+    "context": {
+      "stage": ["development", 1]
+    },
+    "globals": {
+      "language": "en",
+      "currency": "USD"
+    },
+    "user": {
+      "id": "user123",
+      "device": "device456"
+    },
+    "consent": {
+      "functional": true,
+      "marketing": true,
+      "analytics": true
+    },
+    "id": "1647261462000-01b5e2-1",
+    "timestamp": 1647261462000,
+    "entity": "page",
+    "action": "view"
+  },
+  {
+    "event": "product view",
+    "data": {
+      "id": "P123",
+      "name": "Gaming Laptop",
+      "price": 999.99,
+      "category": "Electronics"
+    },
+    "context": {
+      "stage": ["shopping", 1]
+    },
+    "globals": {
+      "language": "en",
+      "currency": "USD"
+    },
+    "user": {
+      "id": "user123",
+      "device": "device456"
+    },
+    "nested": [
+      {
+        "type": "category",
+        "data": {
+          "name": "Electronics",
+          "id": "CAT001"
+        }
+      }
+    ],
+    "consent": {
+      "functional": true,
+      "marketing": true,
+      "analytics": true
+    },
+    "id": "1647261462001-01b5e2-2",
+    "timestamp": 1647261462001,
+    "entity": "product",
+    "action": "view"
+  },
+  {
+    "event": "product add",
+    "data": {
+      "id": "P123",
+      "name": "Gaming Laptop",
+      "price": 999.99,
+      "quantity": 1
+    },
+    "context": {
+      "stage": ["shopping", 1]
+    },
+    "globals": {
+      "language": "en",
+      "currency": "USD"
+    },
+    "user": {
+      "id": "user123",
+      "device": "device456"
+    },
+    "consent": {
+      "functional": true,
+      "marketing": true,
+      "analytics": true
+    },
+    "id": "1647261462002-01b5e2-3",
+    "timestamp": 1647261462002,
+    "entity": "product",
+    "action": "add"
+  }
+]

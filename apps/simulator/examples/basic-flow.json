@@ -1,0 +1,55 @@
+{
+  "nodes": [
+    {
+      "id": "direct-source-1",
+      "type": "source",
+      "sourceType": "direct",
+      "config": {}
+    },
+    {
+      "id": "collector-1",
+      "type": "collector",
+      "config": {
+        "allowed": true,
+        "dryRun": false
+      }
+    },
+    {
+      "id": "api-dest-1",
+      "type": "destination",
+      "destinationType": "api",
+      "config": {
+        "settings": {
+          "endpoint": "https://api.example.com/track",
+          "method": "POST"
+        },
+        "mapping": {
+          "product": {
+            "view": {
+              "name": "track",
+              "data": {
+                "map": {
+                  "event_name": { "value": "product_viewed" },
+                  "product_id": "data.id",
+                  "product_name": "data.name",
+                  "value": "data.price",
+                  "currency": { "value": "USD" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "direct-source-1",
+      "target": "collector-1"
+    },
+    {
+      "source": "collector-1",
+      "target": "api-dest-1"
+    }
+  ]
+}

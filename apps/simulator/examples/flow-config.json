@@ -1,0 +1,111 @@
+{
+  "nodes": [
+    {
+      "id": "browser-source-1",
+      "type": "source",
+      "sourceType": "browser",
+      "config": {
+        "prefix": "data-elb",
+        "scope": "body",
+        "pageview": true,
+        "session": true
+      }
+    },
+    {
+      "id": "collector-1",
+      "type": "collector",
+      "config": {
+        "allowed": true,
+        "dryRun": false
+      }
+    },
+    {
+      "id": "gtag-dest-1",
+      "type": "destination",
+      "destinationType": "gtag",
+      "config": {
+        "settings": {
+          "ga4": {
+            "measurementId": "G-XXXXXXXXXX"
+          }
+        },
+        "mapping": {
+          "product": {
+            "view": {
+              "name": "view_item",
+              "data": {
+                "map": {
+                  "currency": { "value": "USD" },
+                  "value": "data.price",
+                  "item_id": "data.id",
+                  "item_name": "data.name"
+                }
+              }
+            },
+            "add": {
+              "name": "add_to_cart",
+              "data": {
+                "map": {
+                  "currency": { "value": "USD" },
+                  "value": "data.price",
+                  "item_id": "data.id",
+                  "item_name": "data.name"
+                }
+              }
+            }
+          },
+          "page": {
+            "view": {
+              "name": "page_view",
+              "data": {
+                "map": {
+                  "page_title": "data.title",
+                  "page_location": "data.url"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "api-dest-1",
+      "type": "destination",
+      "destinationType": "api",
+      "config": {
+        "settings": {
+          "endpoint": "https://api.example.com/events",
+          "apiKey": "test-key"
+        },
+        "mapping": {
+          "*": {
+            "*": {
+              "name": "track",
+              "data": {
+                "map": {
+                  "event": "event",
+                  "properties": "data",
+                  "timestamp": "timestamp"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "browser-source-1",
+      "target": "collector-1"
+    },
+    {
+      "source": "collector-1",
+      "target": "gtag-dest-1"
+    },
+    {
+      "source": "collector-1",
+      "target": "api-dest-1"
+    }
+  ]
+}
