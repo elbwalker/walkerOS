@@ -31,7 +31,7 @@ import { elb } from '@walkeros/collector';
 import { destinationBigQuery } from '@walkeros/server-destination-gcp';
 
 elb('walker destination', destinationBigQuery, {
-  custom: {
+  settings: {
     projectId: 'YOUR_PROJECT_ID',
     datasetId: 'YOUR_DATASET_ID',
     tableId: 'YOUR_TABLE_ID',

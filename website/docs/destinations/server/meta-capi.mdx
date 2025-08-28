@@ -32,7 +32,7 @@ import { elb } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/server-destination-meta';
 
 elb('walker destination', destinationMeta, {
-  custom: {
+  settings: {
     accessToken: 'YOUR_ACCESS_TOKEN',
     pixelId: 'YOUR_PIXEL_ID',
   },
