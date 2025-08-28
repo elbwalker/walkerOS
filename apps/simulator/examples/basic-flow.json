@@ -40,6 +40,35 @@
           }
         }
       }
+    },
+    {
+      "id": "gtag-dest-1",
+      "type": "destination",
+      "destinationType": "gtag",
+      "config": {
+        "settings": {
+          "ga4": {
+            "measurementId": "G-DEMO123456"
+          },
+          "loadScript": false
+        },
+        "mapping": {
+          "product": {
+            "view": {
+              "name": "view_item",
+              "data": {
+                "map": {
+                  "currency": { "value": "USD" },
+                  "value": "data.price",
+                  "item_id": "data.id",
+                  "item_name": "data.name",
+                  "item_category": { "value": "Electronics" }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "edges": [
@@ -50,6 +79,10 @@
     {
       "source": "collector-1",
       "target": "api-dest-1"
+    },
+    {
+      "source": "collector-1",
+      "target": "gtag-dest-1"
     }
   ]
 }

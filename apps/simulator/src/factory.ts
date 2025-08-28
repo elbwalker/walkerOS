@@ -1,6 +1,7 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import { createDestination } from '@walkeros/core';
 import destinationAPI from '@walkeros/web-destination-api';
+import destinationGtag from '@walkeros/web-destination-gtag';
 import type {
   FlowConfiguration,
   FlowNode,
@@ -8,6 +9,7 @@ import type {
   CaptureCallback,
 } from './types';
 import { createInterceptor } from './interceptor';
+import { setupBrowserEnvironment } from './environment';
 
 export interface SimulationFactory {
   createCollectorConfig(
@@ -45,6 +47,9 @@ export function createSimulationFactory(
       config: Record<string, unknown>;
     }>;
   }> {
+    // Set up browser environment mocks for web destinations
+    setupBrowserEnvironment();
+
     const collectorNode = flowConfig.nodes.find(
       (node) => node.type === 'collector',
     );
@@ -111,6 +116,13 @@ export function createSimulationFactory(
             method: settings.method,
             ...settings,
           },
+          mapping: nodeConfig.mapping,
+          wrapper: wrapperConfig,
+        });
+      } else if (destNode.destinationType === 'gtag') {
+        // Use real Gtag destination with flow config settings
+        destinationInstance = createDestination(destinationGtag, {
+          settings: nodeConfig.settings,
           mapping: nodeConfig.mapping,
           wrapper: wrapperConfig,
         });
