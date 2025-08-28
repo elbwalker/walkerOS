@@ -17,7 +17,9 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
   npm="@walkeros/web-destination-gtag"
 />
 
-Google Tag Manager (GTM) configuration within the unified gtag destination. This allows you to send events to your GTM container for advanced tag management and third-party integrations.
+Google Tag Manager (GTM) configuration within the unified gtag destination. This
+allows you to send events to your GTM container for advanced tag management and
+third-party integrations.
 
 ## Installation
 
@@ -25,7 +27,7 @@ Google Tag Manager (GTM) configuration within the unified gtag destination. This
 npm install @walkeros/web-destination-gtag
 ```
 
-## Quick Start
+## Setup
 
 ```typescript
 import { createCollector } from '@walkeros/collector';
@@ -43,7 +45,7 @@ elb('walker destination', destinationGtag, {
 });
 ```
 
-## Configuration
+## Configuration reference
 
 <SettingsTable
   properties={[
@@ -73,4 +75,6 @@ elb('walker destination', destinationGtag, {
 
 ### Event Mapping
 
-GTM specific event mapping (`mapping.entity.action.settings.gtm`) currently has no configurable properties. The GTMMapping interface is empty, so events are passed through to GTM without additional transformation options.
+GTM specific event mapping (`mapping.entity.action.settings.gtm`) currently has
+no configurable properties. The GTMMapping interface is empty, so events are
+passed through to GTM without additional transformation options.

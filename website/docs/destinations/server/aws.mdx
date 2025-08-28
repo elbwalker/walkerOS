@@ -4,7 +4,6 @@ description:
   Stream events to Amazon Kinesis Data Firehose for real-time analytics
 path: /docs/destinations/server/aws
 sidebar_position: 1
-tags: [server, aws, firehose, kinesis, streaming, analytics]
 package: '@walkeros/server-destination-aws'
 ---
 
@@ -19,7 +18,35 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
   npm="@walkeros/server-destination-aws"
 />
 
-## Configuration
+## Installation
+
+```bash
+npm install @walkeros/server-destination-aws
+```
+
+## Setup
+
+```typescript
+import { elb } from '@walkeros/collector';
+import { destinationFirehose } from '@walkeros/server-destination-aws';
+
+elb('walker destination', destinationFirehose, {
+  settings: {
+    firehose: {
+      streamName: 'your-firehose-stream-name',
+      region: 'eu-central-1',
+      config: {
+        credentials: {
+          accessKeyId: 'your-access-key-id',
+          secretAccessKey: 'your-secret-access-key',
+        },
+      },
+    },
+  },
+});
+```
+
+## Configuration reference
 
 <SettingsTable
   properties={[
