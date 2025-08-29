@@ -100,6 +100,7 @@ const sidebars: SidebarsConfig = {
       label: 'Apps',
       link: {
         type: 'doc',
+        id: 'apps/index',
       },
       items: ['apps/walkerjs'],
     },
