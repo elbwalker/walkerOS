@@ -1,0 +1,156 @@
+---
+title: Next.js
+description: Get started with walkerOS Next.js applications
+sidebar_position: 2
+---
+
+# Next.js Quickstart
+
+This guide shows you how to integrate walkerOS into your Next.js application.
+Most setup is identical to React - check the [React quickstart guide](./react)
+for more details.
+
+## Installation
+
+Same as React - install the required packages:
+
+```bash
+npm install @walkeros/collector @walkeros/web-source-browser @walkeros/web-core
+```
+
+## Setup
+
+For Next.js applications, use the Next.js router events:
+
+```tsx title="pages/_app.tsx"
+import { useRouter } from 'next/router';
+import { useEffect, useRef } from 'react';
+import { elb } from '@walkeros/web-core';
+import { initializeWalker } from '../walker';
+
+export default function App({ Component, pageProps }) {
+  const router = useRouter();
+  const hasInitialized = useRef(false);
+  const firstRun = useRef(true);
+
+  useEffect(() => {
+    // Prevent double execution
+    if (!hasInitialized.current) {
+      initializeWalker();
+      hasInitialized.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleRouteChange = () => {
+      if (firstRun.current) {
+        firstRun.current = false;
+        return;
+      }
+      elb('walker run');
+    };
+
+    // Next.js route events
+    router.events.on('routeChangeComplete', handleRouteChange);
+
+    // Call on initial load
+    handleRouteChange();
+
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router.events]);
+
+  return <Component {...pageProps} />;
+}
+```
+
+For Next.js 13+ with App Router:
+
+```tsx title="app/layout.tsx"
+'use client';
+
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { elb } from '@walkeros/web-core';
+import { initializeWalker } from './walker';
+
+export default function RootLayout({ children }) {
+  const pathname = usePathname();
+  const hasInitialized = useRef(false);
+  const firstRun = useRef(true);
+
+  useEffect(() => {
+    // Prevent double execution
+    if (!hasInitialized.current) {
+      initializeWalker();
+      hasInitialized.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+
+    elb('walker run');
+  }, [pathname]);
+
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+## Component usage
+
+Component usage is identical to React. Use the tagger helper and manual events:
+
+```tsx
+import { tagger } from '../walker';
+import { elb } from '@walkeros/web-core';
+
+function ProductPage({ product }) {
+  // Manual event tracking
+  useEffect(() => {
+    elb('product view', {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+    });
+  }, [product]);
+
+  return (
+    <div
+      {...tagger('product')
+        .action('view')
+        .data('id', product.id)
+        .data('name', product.name)
+        .get()}
+    >
+      <h1>{product.name}</h1>
+      <button
+        {...tagger().action('add').get()}
+        onClick={() => elb('product add', { id: product.id })}
+      >
+        Add to Cart
+      </button>
+    </div>
+  );
+}
+```
+
+## Testing
+
+Same as React - check the browser console for tracked events:
+
+```
+  Event: product view
+  Entity: product
+  Action: view
+  Data: { id: 123, name: "Premium Chocolate", price: 12.99 }
+  Trigger: load
+```

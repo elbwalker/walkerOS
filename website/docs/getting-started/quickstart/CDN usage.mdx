@@ -1,31 +1,48 @@
 ---
-title: Walker.js with Sources
-description: CDN setup with automatic DOM tracking for non-npm users
-sidebar_position: 20
+title: CDN usage
+description: CDN setup for non-npm users
+sidebar_position: 3
 ---
 
-# Walker.js with Sources
+# Browser/CDN Quickstart
 
-This example demonstrates how to use Walker.js via CDN with automatic DOM
-tracking. Perfect for users who can't use npm packages or want a simple
-script-based setup.
+No Build Required
 
-## What You'll Learn
+- **CDN Delivery**: Load directly from CDN without bundling
+- **Instant Setup**: Works immediately in any HTML page
+- **Zero Dependencies**: Self-contained script with all features
 
-- Loading Walker.js from CDN
-- Configuring automatic DOM tracking
-- Setting up browser sources without build tools
-- Tracking events from HTML attributes
+## Use Cases
+
+- **Static websites**: Sites without complex build processes
+- **Legacy applications**: Adding tracking to existing systems
+- **Quick prototypes**: Fast implementation for testing
+- **Third-party integrations**: When you can only add script tags
 
 ## Installation
 
-No npm installation required! Just add the CDN script:
+No npm installation required. Just add the CDN script:
 
-```html
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/index.browser.js"></script>
-```
+````html
+Load packages directly from CDN: ```html
+<!-- Core collector -->
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.browser.js"></script>
 
-## Complete Example
+<!-- Browser source -->
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.browser.js"></script>
+
+<!-- Google Analytics destination -->
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.browser.js"></script>
+
+<script>
+  // Use the loaded packages
+  const { createCollector } = walkerOSCollector;
+  const { sourceBrowser } = walkerOSWebSourceBrowser;
+  const { destinationGtag } = walkerOSWebDestinationGtag;
+</script>
+````
+
+## Setup
 
 ```typescript
 // Walker.js bundle includes browser source by default
@@ -85,7 +102,7 @@ export async function trackWithWalkerSources(elb: unknown): Promise<void> {
 }
 ```
 
-## HTML Setup
+## Tagging
 
 Add tracking attributes to your HTML elements:
 
@@ -127,44 +144,48 @@ Add tracking attributes to your HTML elements:
 </html>
 ```
 
-## Key Features
+## ES6 Modules
 
-### Automatic Event Collection
+Use modern ES6 modules:
 
-- **Click Tracking**: Automatically tracks clicks on elements with `data-elb`
-  attributes
-- **View Tracking**: Uses Intersection Observer to track when elements come into
-  view
-- **Form Tracking**: Captures form submissions and field interactions
+```html
+<script type="module">
+  // Dynamic imports
+  const { createCollector } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
+  );
+  const { destinationGtag } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.mjs'
+  );
+  const { sourceBrowser } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
+  );
 
-### No Build Required
+  // Setup tracking
+  const { elb } = await createCollector({
+    sources: {
+      browser: { code: sourceBrowser },
+    },
+  });
 
-- **CDN Delivery**: Load directly from CDN without bundling
-- **Instant Setup**: Works immediately in any HTML page
-- **Zero Dependencies**: Self-contained script with all features
+  // Add destination with configuration
+  elb('walker destination', destinationGtag, {
+    settings: {
+      ga4: { measurementId: 'G-XXXXXXXXXX' },
+    },
+  });
 
-### Browser Source Integration
+  // Track events
+  await elb('page view', { title: document.title });
+</script>
+```
 
-- **DOM Attributes**: Uses `data-elb*` attributes for configuration
-- **Event Mapping**: Automatically maps DOM events to walkerOS format
-- **Performance Optimized**: Efficient event listening and batching
+## Legacy Browser Support
 
-## Use Cases
+For older browsers, use ES5 builds:
 
-Perfect for:
-
-- **Static Websites**: Sites without complex build processes
-- **Legacy Applications**: Adding tracking to existing systems
-- **Quick Prototypes**: Fast implementation for testing
-- **Third-party Integrations**: When you can only add script tags
-
-## Try It Yourself
-
-1. Copy the HTML example above
-2. Save as an HTML file and open in browser
-3. Open browser console to see tracked events
-4. Click buttons and interact with elements
-5. Observe automatic event collection
-
-The Walker.js bundle provides the same powerful tracking capabilities as the npm
-packages, but with the simplicity of a script tag.
+```html
+<!-- ES5 compatible builds -->
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.es5.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.es5.js"></script>
+```

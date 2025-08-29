@@ -6,25 +6,10 @@ sidebar_position: 22
 
 # Consent Management
 
-This example demonstrates how to implement GDPR/CCPA compliant tracking with
-proper consent state management. Essential for any website that needs to respect
-user privacy preferences.
+This example demonstrates how to handle consent with proper state management
+using walkerOS for GDPR/CCPA compliant tracking.
 
-## What You'll Learn
-
-- Setting up consent-aware tracking
-- Managing consent states (accept/reject/customize)
-- Conditional event sending based on consent
-- GDPR and CCPA compliance patterns
-- Consent banner integration
-
-## Installation
-
-```bash
-npm install @walkeros/collector @walkeros/destination-web-gtag @walkeros/destination-web-meta
-```
-
-## Complete Example
+## Full integration example
 
 ```typescript
 import { createCollector } from '@walkeros/collector';
@@ -39,8 +24,8 @@ export async function setupConsentManagement(): Promise<{
 }> {
   const { collector, elb } = await createCollector({
     sources: {
-      browser: { code: sourceBrowser }
-    }
+      browser: { code: sourceBrowser },
+    },
   });
 
   // Add destination with consent mapping
@@ -193,11 +178,11 @@ export async function simulateConsentBanner(
 }
 ```
 
-## Consent States
+## Consent states
 
-### Required Consent Types
+### Required consent types
 
-#### Functional Consent
+#### Functional consent
 
 Always required for basic website functionality:
 
@@ -207,7 +192,7 @@ Always required for basic website functionality:
 }
 ```
 
-#### Analytics Consent
+#### Analytics consent
 
 For tracking user behavior and website performance:
 
@@ -218,7 +203,7 @@ For tracking user behavior and website performance:
 }
 ```
 
-#### Marketing Consent
+#### Marketing consent
 
 For advertising and personalization:
 
@@ -231,7 +216,7 @@ For advertising and personalization:
 }
 ```
 
-### GDPR Compliance
+### GDPR compliance
 
 The consent system follows GDPR requirements:
 
@@ -241,9 +226,9 @@ The consent system follows GDPR requirements:
 - **Unambiguous**: Explicit opt-in required
 - **Withdrawable**: Users can change consent later
 
-## Implementation Patterns
+## Implementation patterns
 
-### Consent Banner Integration
+### Consent banner integration
 
 ```typescript
 // Example consent banner implementation
@@ -278,7 +263,7 @@ async function customize() {
 }
 ```
 
-### Persistent Consent Storage
+### Persistent consent storage
 
 ```typescript
 // Save consent to localStorage
@@ -320,7 +305,7 @@ async function initializeWithConsent(collector: Collector.Instance) {
 }
 ```
 
-### Conditional Event Tracking
+### Conditional event tracking
 
 ```typescript
 // Helper function to check if tracking is allowed
@@ -358,7 +343,7 @@ async function trackWithConsent(
 }
 ```
 
-## Destination-Specific Consent
+## Destination-specific consent
 
 ### Google Analytics 4
 
@@ -385,7 +370,7 @@ if (consentState.marketing) {
 }
 ```
 
-### Custom Destinations
+### Custom destinations
 
 ```typescript
 // Pass consent to custom destinations
@@ -404,9 +389,9 @@ const customDestination = {
 };
 ```
 
-## Legal Compliance
+## Legal compliance
 
-### GDPR Requirements
+### GDPR requirements
 
 - ✅ Lawful basis for processing
 - ✅ Explicit consent for marketing
@@ -414,23 +399,9 @@ const customDestination = {
 - ✅ Data minimization
 - ✅ Consent records
 
-### CCPA Requirements
+### CCPA requirements
 
 - ✅ Right to opt-out of sale
 - ✅ Clear privacy notice
 - ✅ Non-discrimination
 - ✅ Verifiable consumer requests
-
-## Try It Yourself
-
-1. Copy the consent management code
-2. Integrate with your consent banner solution
-3. Test different consent scenarios:
-   - Accept all cookies
-   - Reject all cookies
-   - Customize preferences
-4. Verify events are only sent when consent allows
-5. Check that consent state persists across page loads
-
-This implementation ensures your walkerOS tracking respects user privacy choices
-and complies with international privacy regulations.

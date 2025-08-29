@@ -2,7 +2,7 @@
 title: Core
 description: Core libraries and utilities for walkerOS
 path: /docs/core
-sidebar_position: 5
+sidebar_position: 3
 tags: [core, utilities, typescript]
 package: '@walkeros/core'
 ---
@@ -62,7 +62,8 @@ getByPath({ arr: ['foo', 'bar'] }, 'arr.1'); // Returns "bar"
 #### setByPath
 
 `setByPath(object: WalkerOS.Event, path: string, value: unknown): WalkerOS.Event`
-sets nested values using dot notation, returning a new object with the updated value.
+sets nested values using dot notation, returning a new object with the updated
+value.
 
 ```js
 const updatedEvent = setByPath(event, 'data.id', 'new-value');
@@ -117,8 +118,9 @@ getId(10); // Returns 10-character string
 ### getMappingValue
 
 `getMappingValue(event: WalkerOS.Event, mapping: Mapping.Data, options?: Mapping.Options): Promise<WalkerOS.Property | undefined>`
-extracts values from events using <Link to="/docs/destinations/event-mapping">mapping
-configurations</Link>.
+extracts values from events using
+
+<Link to="/docs/destinations/event-mapping">mapping configurations</Link>.
 
 ```ts
 // Simple path mapping
@@ -223,11 +225,9 @@ Individual functions are also available:
 - `getOSVersion(userAgent)` - Returns OS version
 - `getDeviceType(userAgent)` - Returns 'Desktop', 'Tablet', or 'Mobile'
 
-## Control Flow
+## Error Handling
 
-### Error Handling
-
-#### tryCatch
+### tryCatch
 
 `tryCatch(tryFn: Function, catchFn?: Function, finallyFn?: Function)` wraps
 functions with error handling.
@@ -238,7 +238,7 @@ safeParse('{"valid": "json"}'); // Parses successfully
 safeParse('invalid'); // Returns {} instead of throwing
 ```
 
-#### tryCatchAsync
+### tryCatchAsync
 
 `tryCatchAsync(tryFn: Function, catchFn?: Function, finallyFn?: Function)` for
 async operations.
@@ -250,9 +250,9 @@ const safeAsyncCall = tryCatchAsync(
 );
 ```
 
-### Performance Optimization
+## Performance Optimization
 
-#### debounce
+### debounce
 
 `debounce(fn: Function, wait?: number)` delays function execution until after
 the wait time.
@@ -262,7 +262,7 @@ const debouncedSearch = debounce(searchFunction, 300);
 // Only executes after 300ms of inactivity
 ```
 
-#### throttle
+### throttle
 
 `throttle(fn: Function, wait?: number)` limits function execution frequency.
 

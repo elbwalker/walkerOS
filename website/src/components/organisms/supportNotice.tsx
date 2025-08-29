@@ -16,8 +16,8 @@ export default function SupportNotice(): JSX.Element {
         <strong>💡 Need Professional Support?</strong>
       </div>
       <div>
-        If you need professional support with your walkerOS implementation,
-        check out our{' '}
+        Need professional support with your walkerOS implementation? Check out
+        our{' '}
         <Link href="/services" target="_blank">
           services
         </Link>

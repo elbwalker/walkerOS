@@ -59,27 +59,14 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Apps',
-      link: {
-        type: 'doc',
-        id: 'apps/index',
-      },
-      items: ['apps/walkerjs'],
-    },
-    {
-      type: 'category',
       label: 'Destinations',
       link: {
         type: 'doc',
         id: 'destinations/index',
       },
       items: [
-        'destinations/event-mapping',
         // Web destinations - flattened
         'destinations/web/api',
-        'destinations/web/meta-pixel',
-        'destinations/web/piwikpro',
-        'destinations/web/plausible',
         {
           type: 'category',
           label: 'Google tag (gtag)',
@@ -93,11 +80,15 @@ const sidebars: SidebarsConfig = {
             'destinations/web/gtag/gtm',
           ],
         },
+        'destinations/web/meta-pixel',
+        'destinations/web/piwikpro',
+        'destinations/web/plausible',
         // Server destinations - flattened
         'destinations/server/aws',
         'destinations/server/gcp',
         'destinations/server/meta-capi',
         'destinations/create-your-own',
+        'destinations/event-mapping',
       ],
     },
     {
@@ -107,7 +98,16 @@ const sidebars: SidebarsConfig = {
         type: 'doc',
         id: 'core/index',
       },
-      items: ['core/server', 'core/web'],
+      items: ['core/web', 'core/server'],
+    },
+    {
+      type: 'category',
+      label: 'Apps',
+      link: {
+        type: 'doc',
+        id: 'apps/index',
+      },
+      items: ['apps/walkerjs'],
     },
     {
       type: 'category',

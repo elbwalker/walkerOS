@@ -2,60 +2,128 @@
 title: Collector
 description: Unified event collector for web and server environments
 path: /docs/collector
-sidebar_position: 2
-tags: [collector, core, web, server]
 package: '@walkeros/collector'
+sidebar_position: 2
 ---
 
 import Link from '@docusaurus/Link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
 
 # Collector
 
-The Collector is the central processing engine of walkerOS that receives events
-from sources, enriches them with additional data, applies consent rules, and
-routes them to destinations. It acts as the intelligent middleware between event
-capture and event delivery.
+The collector is the central **processing engine** of walkerOS that receives
+events from sources, **enriches** them with additional data, applies consent
+rules, and **routes** them to destinations. It acts as the **intelligent
+middleware** between event capture and event delivery.
 
-## What It Does
+#### What it does
 
 The Collector transforms raw events into enriched, compliant data streams by:
 
-- **Event Processing** - Validates, normalizes, and enriches incoming events
-- **Consent Management** - Applies privacy rules and user consent preferences
-- **Data Enrichment** - Adds session data, user context, and custom properties
-- **Destination Routing** - Sends processed events to configured analytics
+- **Event processing** - Validates, normalizes, and enriches incoming events
+- **Consent management** - Applies privacy rules and user consent preferences
+- **Data enrichment** - Adds session data, user context, and custom properties
+- **Destination routing** - Sends processed events to configured analytics
   platforms
 
-## Key Features
+#### Key features
 
-- **Universal Compatibility** - Works in both web browsers and server
-  environments
-- **Privacy-First** - Built-in consent management and data protection
-- **Event Validation** - Ensures data quality and consistency
-- **Flexible Routing** - Send events to multiple destinations simultaneously
+- **Compatibility** - Works in both web browsers and server environments
+- **Privacy-first** - Built-in consent management and data protection
+- **Event validation** - Ensures data quality and consistency
+- **Flexible routing** - Send events to multiple destinations simultaneously
 
-## Architecture Role
+#### Role in architecture
 
-In the walkerOS data flow, the Collector sits between sources and destinations:
+In the walkerOS data flow, the collector sits between sources and destinations:
 
 ```
 Sources → Collector → Destinations
 ```
 
-Sources capture events and send them to the Collector, which processes and
+Sources capture events and send them to the collector, which processes and
 routes them to your chosen destinations like Google Analytics, custom APIs, or
 data warehouses.
 
-## Getting Started
+## Installation
 
-Learn how to configure and use the Collector:
+```bash
+npm install @walkeros/collector
+```
 
-- **<Link to="/docs/collector/configuration">Configuration</Link>** - Set up
-  collector settings, consent, and global properties
-- **<Link to="/docs/collector/commands">Commands</Link>** - Control collector
-  behavior with runtime commands
-- **<Link to="/docs/collector/testing">Testing</Link>** - Validate your
-  collector setup and event flow
+## Basic setup
 
-The Collector provides the reliability and control you need to ensure your
-analytics data is accurate, compliant, and delivered to the right destinations.
+```typescript
+import { createCollector } from '@walkeros/collector';
+
+const config = {
+  run: true,
+  consent: { functional: true },
+  sources: [
+    // add your event sources
+  ]
+  },
+};
+
+const { collector, elb } = await createCollector(config);
+
+```
+
+## Configuration reference
+
+<SettingsTable
+  properties={[
+    {
+      name: 'run',
+      type: 'boolean',
+      description:
+        'Automatically start the collector pipeline on initialization',
+      required: false,
+      example: 'true',
+    },
+    {
+      name: 'sources',
+      type: 'array',
+      description:
+        'Configurations for sources providing events to the collector',
+      required: false,
+      example: '[{ source, config }]',
+    },
+    {
+      name: 'destinations',
+      type: 'array',
+      description: 'Configurations for destinations receiving processed events',
+      required: false,
+      example: '[{ destination, config }]',
+    },
+    {
+      name: 'consent',
+      type: 'object',
+      description: 'Initial consent state to control routing of events',
+      required: false,
+      example: '{ analytics: true, marketing: false }',
+    },
+    {
+      name: 'verbose',
+      type: 'boolean',
+      description: 'Enable verbose logging for debugging',
+      required: false,
+      example: 'false',
+    },
+    {
+      name: 'onError',
+      type: 'function',
+      description:
+        'Error handler triggered when the collector encounters failures',
+      required: false,
+      example: '(error) => console.error(error)',
+    },
+    {
+      name: 'onLog',
+      type: 'function',
+      description: 'Custom log handler for collector messages',
+      required: false,
+      example: '(message, level) => console.log(message)',
+    },
+  ]}
+/>

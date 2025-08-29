@@ -1,18 +1,17 @@
 ---
-title: React & Next.js
-description: Get started with walkerOS in React and Next.js applications
+title: React
+description: Get started with walkerOS in React applications
+sidebar_position: 1
 ---
 
-# React & Next.js Quickstart
+# React Quickstart
 
 This guide shows you how to integrate walkerOS into your React application with
 automatic pageview tracking and component-level event tracking.
 
 ## Key Concepts
 
-The React integration is **ultra-simple**:
-
-- **Single file setup**: One walker initialization file, direct usage in App.tsx
+- **Single file setup**: One initialization file, direct usage in App.tsx
 - **No providers needed**: Direct integration in your main App component
 - **StrictMode safe**: Handles React's double execution correctly
 - **Data attributes**: Use the tagger helper for clean component tracking
@@ -23,12 +22,12 @@ The React integration is **ultra-simple**:
 First, install the required walkerOS packages:
 
 ```bash
-npm install @walkeros/core @walkeros/collector @walkeros/web-core @walkeros/web-source-browser
+npm install @walkeros/core @walkeros/collector  @walkeros/web-source-browser @walkeros/web-core
 ```
 
-## Basic Setup
+## Setup
 
-### 1. Walker Initialization
+### 1. walker initialization
 
 ```tsx title="src/walker/index.ts"
 import type { Collector, WalkerOS } from '@walkeros/core';
@@ -66,7 +65,7 @@ export async function initializeWalker(): Promise<void> {
       // Your destinations - add console for testing
       console: {
         push(event, data) {
-          console.log('🎯 Event:', event, data);
+          console.log('Event:', event, data);
         },
       },
     },
@@ -86,7 +85,7 @@ export function tagger(entity?: string) {
 }
 ```
 
-### 2. App Integration
+### 2. App integration
 
 Integrate directly in your main App component:
 
@@ -133,7 +132,7 @@ function App() {
 export default App;
 ```
 
-## Component Tagging
+## Component tagging
 
 Use the tagger helper for clean component tracking:
 
@@ -177,7 +176,29 @@ function ProductDetail({ productId }: { productId: string }) {
 }
 ```
 
-## Manual Event Tracking
+```tsx
+// Without tagger helper (verbose)
+<div
+  data-elb="product"
+  data-elb-action="view"
+  data-elb-id={product.id}
+  data-elb-name={product.name}
+  data-elb-price={product.price}
+>
+
+  // With tagger helper (clean)
+<div
+  {...tagger('product')
+    .action('view')
+    .data('id', product.id)
+    .data('name', product.name)
+    .data('price', product.price)
+    .get()}
+>
+
+```
+
+## Manual event tracking
 
 Use the `elb` function for custom events:
 
@@ -196,134 +217,38 @@ function CheckoutForm() {
 }
 ```
 
-## Next.js Differences
-
-For Next.js applications, use the Next.js router events:
-
-```tsx title="pages/_app.tsx"
-import { useRouter } from 'next/router';
-import { useEffect, useRef } from 'react';
-import { elb } from '@walkeros/web-core';
-import { initializeWalker } from '../walker';
-
-export default function App({ Component, pageProps }) {
-  const router = useRouter();
-  const hasInitialized = useRef(false);
-  const firstRun = useRef(true);
-
-  useEffect(() => {
-    // Prevent double execution
-    if (!hasInitialized.current) {
-      initializeWalker();
-      hasInitialized.current = true;
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleRouteChange = () => {
-      if (firstRun.current) {
-        firstRun.current = false;
-        return;
-      }
-      elb('walker run');
-    };
-
-    // Next.js route events
-    router.events.on('routeChangeComplete', handleRouteChange);
-
-    // Call on initial load
-    handleRouteChange();
-
-    return () => {
-      router.events.off('routeChangeComplete', handleRouteChange);
-    };
-  }, [router.events]);
-
-  return <Component {...pageProps} />;
-}
-```
-
-For Next.js 13+ with App Router:
-
-```tsx title="app/layout.tsx"
-'use client';
-
-import { usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
-import { elb } from '@walkeros/web-core';
-import { initializeWalker } from './walker';
-
-export default function RootLayout({ children }) {
-  const pathname = usePathname();
-  const hasInitialized = useRef(false);
-  const firstRun = useRef(true);
-
-  useEffect(() => {
-    // Prevent double execution
-    if (!hasInitialized.current) {
-      initializeWalker();
-      hasInitialized.current = true;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (firstRun.current) {
-      firstRun.current = false;
-      return;
-    }
-
-    elb('walker run');
-  }, [pathname]);
-
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  );
-}
-```
-
 ## Testing Your Implementation
 
 walkerOS includes a console destination by default. Open your browser's
 developer console to see tracked events:
 
 ```
-🎯 Event: product view
+  Event: product view
   Entity: product
   Action: view
   Data: { id: 123, name: "Premium Chocolate", price: 12.99 }
   Trigger: load
 ```
 
-## Key Benefits
-
-1. **Ultra-Simple**: Minimal React code, maximum walkerOS power
-2. **Singleton Safety**: Only initialize once, no memory leaks
-3. **Global Access**: Use `elb` function anywhere with TypeScript support
-4. **Automatic Tracking**: Browser source handles clicks, visibility, forms
-   automatically
-5. **StrictMode Compatible**: Handles React's double execution correctly
-
 ## Best Practices
 
-1. **Use Tagger**: Clean component tagging with the tagger helper
-2. **Minimal React Code**: Keep React integration as simple as possible
+1. **Use tagger**: Clean component tagging with the tagger helper
+2. **Minimal React code**: Keep React integration as simple as possible
 3. **Trust walkerOS**: No need for custom error handling or state management
-4. **Direct Integration**: No providers needed, integrate directly in App
+4. **Direct integration**: No providers needed, integrate directly in App
    component
-5. **Test with Console**: Use console destination during development
+5. **Test with console**: Use console destination during development
 
 ## Troubleshooting
 
-### Events Not Firing
+### Events not firing
 
 1. Check that `window.walker` is set in the browser console
 2. Verify data attributes are correctly formatted (use `data-elb` prefix)
 3. Ensure walker initialization completed
 4. Check browser console for any error messages
 
-### Route Changes Not Tracked
+### Route changes not tracked
 
 1. Check that `walker run` is called on route changes in console
 2. Ensure firstRun logic is preventing double execution on initial load
@@ -338,4 +263,3 @@ initialization file.
 
 - Configure [destinations](/docs/destinations) for your analytics tools
 - Set up [consent management](/docs/guides/consent)
-- Explore [advanced tagging patterns](/docs/sources/web/browser/tagging)
