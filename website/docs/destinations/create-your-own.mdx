@@ -2,7 +2,6 @@
 title: Create Your Own Destination
 description: A guide to building custom destinations for walkerOS.
 sidebar_position: 99
-tags: [destinations, custom, development, guide]
 ---
 
 import Link from '@docusaurus/Link';
@@ -13,11 +12,13 @@ This guide provides the essentials for building a custom walkerOS destination.
 
 ## What is a Destination?
 
-A destination is a function that receives events from walkerOS and sends them to an external service, such as an analytics platform, an API, or a database.
+A destination is a function that receives events from walkerOS and sends them to
+an external service, such as an analytics platform, an API, or a database.
 
 ## The Destination Interface
 
-A destination is an object that implements the `Destination` interface. The most important property is the `push` function, which is called for every event.
+A destination is an object that implements the `Destination` interface. The most
+important property is the `push` function, which is called for every event.
 
 ```typescript
 interface Destination<Settings = unknown> {
@@ -30,7 +31,9 @@ interface Destination<Settings = unknown> {
 
 ## The `push` function
 
-The `push` function is where you'll implement the logic to send the event to your desired service. It receives the `event` and a `context` object containing the destination's configuration.
+The `push` function is where you'll implement the logic to send the event to
+your desired service. It receives the `event` and a `context` object containing
+the destination's configuration.
 
 ```typescript
 type PushFn<Settings> = (
@@ -39,7 +42,7 @@ type PushFn<Settings> = (
     config: {
       settings?: Settings;
     };
-  }
+  },
 ) => void;
 ```
 
@@ -59,26 +62,27 @@ interface WebhookSettings {
 export const destinationWebhook: Destination<WebhookSettings> = {
   type: 'webhook',
   config: {},
-  
+
   push(event, { config }) {
     const { settings } = config;
-    
+
     // 3. Access your settings
     if (!settings?.url) return;
-    
+
     // 4. Send the event
     fetch(settings.url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(event)
+      body: JSON.stringify(event),
     }).catch(console.error);
-  }
+  },
 };
 ```
 
 ## Using your destination
 
-To use your custom destination, add it to the `destinations` object in your collector configuration.
+To use your custom destination, add it to the `destinations` object in your
+collector configuration.
 
 ```typescript
 import { createCollector } from '@walkeros/collector';
@@ -91,16 +95,17 @@ const { elb } = await createCollector({
       config: {
         settings: {
           url: 'https://api.example.com/events',
-        }
-      }
-    }
-  }
+        },
+      },
+    },
+  },
 });
 ```
 
 ## TypeScript Integration
 
-To get full TypeScript support for your destination's configuration, you can extend the `WalkerOS.Destinations` interface.
+To get full TypeScript support for your destination's configuration, you can
+extend the `WalkerOS.Destinations` interface.
 
 ```typescript
 // types.ts
