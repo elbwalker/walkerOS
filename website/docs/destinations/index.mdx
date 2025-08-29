@@ -1,28 +1,62 @@
 ---
 title: Destinations
-description: How to send events to any third-party tool with walkerOS
+description:
+  Send events to analytics tools, marketing platforms, and custom endpoints
+sidebar_position: 5
 ---
 
-import PackageLink from '@site/src/components/docs/package-link';
 import Link from '@docusaurus/Link';
 
-import DocCardList from '@theme/DocCardList';
+# Destinations
 
-Destinations are built to send events to any third-party tool using walkerOS.
+Destinations are the endpoints where walkerOS sends your processed events. They
+transform standardized walkerOS events into the specific formats required by
+analytics platforms, marketing tools, data warehouses, and custom APIs.
 
-<DocCardList />
+Destinations handle the final step in the data pipeline by:
 
-:::info
+- **Format Transformation** - Convert walkerOS events to platform-specific
+  formats
+- **API Integration** - Handle authentication and delivery to external services
+- **Error Handling** - Manage failed requests and retry logic
+- **Data Validation** - Ensure events meet destination requirements
 
-If you can't find a destination, you
-can&nbsp;<Link to="https://github.com/elbwalker/walkerOS/issues/new?assignees=&labels=&template=feature_request.md&title=">request
-it</Link>.
+## Architecture
 
-:::
+Destinations receive events from the collector after processing:
 
-:::info
+```
+Sources → Collector → Destinations → External Platforms
+```
 
-If you need professional support with your walkerOS implementation, check out
-our&nbsp;<Link to="/services">services</Link>.
+Each destination operates independently, so one failed destination won't affect
+others. This ensures reliable data delivery even when individual services have
+issues.
 
-:::
+## Types of Destinations
+
+### Web Destinations
+
+Client-side integrations that send events directly from the browser:
+
+- **<Link to="/docs/destinations/web/api">API</Link>** - Send events to your own
+  endpoints
+- **<Link to="/docs/destinations/web/gtag/">Google Analytics & Ads</Link>** -
+  GA4, Google Ads, and GTM integration
+- **<Link to="/docs/destinations/web/meta-pixel">Meta Pixel</Link>** - Facebook
+  and Instagram advertising
+- **<Link to="/docs/destinations/web/plausible">Plausible Analytics</Link>** -
+  Privacy-focused web analytics
+- **<Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>** -
+  Privacy-focused analytics platform
+
+### Server Destinations
+
+Server-side integrations for enhanced privacy and data control:
+
+- **<Link to="/docs/destinations/server/aws">AWS Firehose</Link>** - Amazon
+  cloud services integration
+- **<Link to="/docs/destinations/server/gcp">BigQuery</Link>** - GCP services
+  and BigQuery
+- **<Link to="/docs/destinations/server/meta-capi">Meta Conversions
+  API</Link>** - Server-side Facebook/Instagram tracking

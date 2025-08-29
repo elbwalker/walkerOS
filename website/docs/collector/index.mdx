@@ -1,0 +1,153 @@
+---
+title: Collector
+description: Unified event collector for web and server environments
+path: /docs/collector
+package: '@walkeros/collector'
+sidebar_position: 2
+---
+
+import Link from '@docusaurus/Link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
+# Collector
+
+The collector is the central **processing engine** of walkerOS that receives
+events from sources, **enriches** them with additional data, applies consent
+rules, and **routes** them to destinations. It acts as the **intelligent
+middleware** between event capture and event delivery.
+
+#### What it does
+
+The Collector transforms raw events into enriched, compliant data streams by:
+
+- **Event processing** - Validates, normalizes, and enriches incoming events
+- **Consent management** - Applies privacy rules and user consent preferences
+- **Data enrichment** - Adds session data, user context, and custom properties
+- **Destination routing** - Sends processed events to configured analytics
+  platforms
+
+#### Key features
+
+- **Compatibility** - Works in both web browsers and server environments
+- **Privacy-first** - Built-in consent management and data protection
+- **Event validation** - Ensures data quality and consistency
+- **Flexible routing** - Send events to multiple destinations simultaneously
+
+#### Role in architecture
+
+In the walkerOS data flow, the collector sits between sources and destinations:
+
+```
+Sources → Collector → Destinations
+```
+
+Sources capture events and send them to the collector, which processes and
+routes them to your chosen destinations like Google Analytics, custom APIs, or
+data warehouses.
+
+## Installation
+
+```bash
+npm install @walkeros/collector
+```
+
+## Basic setup
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+
+const config = {
+  run: true,
+  consent: { functional: true },
+  sources: [
+    // add your event sources
+  ]
+  },
+};
+
+const { collector, elb } = await createCollector(config);
+
+```
+
+## Configuration reference
+
+<SettingsTable
+  properties={[
+    {
+      name: 'run',
+      type: 'boolean',
+      description:
+        'Automatically start the collector pipeline on initialization',
+      required: false,
+      example: 'true',
+    },
+    {
+      name: 'sources',
+      type: 'array',
+      description:
+        'Configurations for sources providing events to the collector',
+      required: false,
+      example: '[{ source, config }]',
+    },
+    {
+      name: 'destinations',
+      type: 'array',
+      description: 'Configurations for destinations receiving processed events',
+      required: false,
+      example: '[{ destination, config }]',
+    },
+    {
+      name: 'consent',
+      type: 'object',
+      description: 'Initial consent state to control routing of events',
+      required: false,
+      example: '{ analytics: true, marketing: false }',
+    },
+    {
+      name: 'verbose',
+      type: 'boolean',
+      description: 'Enable verbose logging for debugging',
+      required: false,
+      example: 'false',
+    },
+    {
+      name: 'onError',
+      type: 'function',
+      description:
+        'Error handler triggered when the collector encounters failures',
+      required: false,
+      example: '(error) => console.error(error)',
+    },
+    {
+      name: 'onLog',
+      type: 'function',
+      description: 'Custom log handler for collector messages',
+      required: false,
+      example: '(message, level) => console.log(message)',
+    },
+  ]}
+/>
+
+## Advanced setup
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+
+const { collector, elb } = await createCollector({
+  run: true,
+  consent: { functional: true },
+  sources: [
+    // add your event sources
+  ],
+  destinations: [
+    // add your event destinations
+  ],
+  verbose: true,
+  onError: (error: unknown) => {
+    console.error('Collector error:', error);
+  },
+  onLog: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => {
+    console.log(`[${level}] ${message}`);
+  },
+});
+```

@@ -1,10 +1,15 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
+  "concurrency": "80%",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "build/**"]
+    },
+    "build:website": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "build/**"]
     },
     "clean": {
       "cache": false

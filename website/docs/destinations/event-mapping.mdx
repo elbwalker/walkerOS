@@ -1,0 +1,375 @@
+---
+title: Event Mapping
+description: Map walkerOS events to destination-specific formats
+path: /docs/guides/event-mapping
+sidebar_position: 11
+---
+
+import Link from '@docusaurus/Link';
+import { LiveCode } from '@site/src/components/organisms/liveCode';
+import { getMappingEvent, getMappingValue } from '@walkeros/core';
+import { parseInput } from '@site/src/components/molecules/codeBox';
+
+export const logEvent = async (input, config, log) => {
+  log(await parseInput(input, { getMappingEvent }));
+};
+export const logValue = async (input, config, log) => {
+  log(await parseInput(input, { getMappingValue }));
+};
+
+Event mapping is a core feature of walkerOS that allows you to transform events
+before they reach destinations. The mapping system provides flexible
+configuration options to handle different destination requirements while
+maintaining a consistent event structure.
+
+## Overview
+
+The mapping system consists of two main functions:
+
+- **`getMappingEvent`**: Returns the matching event mapping configuration for
+  entity-action events
+- **`getMappingValue`**: Processes values from events using flexible mapping
+  configurations
+
+Mapping configurations are defined per destination and allow you to:
+
+- Transform event names
+- Extract and reshape event data
+- Apply conditional logic
+- Handle consent requirements
+- Validate data before sending
+
+## Event Mapping with getMappingEvent
+
+`getMappingEvent(event: WalkerOS.PartialEvent, mapping?: Mapping.Rules): Promise<Mapping.Result>`
+
+This function finds the appropriate mapping configuration for an event based on
+its entity and action.
+
+### Basic Event Mapping
+
+Map specific entity-action combinations to custom event names:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`await getMappingEvent(
+    { event: 'product view' },
+    {
+      product: {
+        view: { name: 'product_viewed' },
+      },
+    }
+  );`}
+  output={`{
+    eventMapping: {
+      name: "product_viewed"
+    },
+    mappingKey: "product view"
+  }`}
+  fn={logEvent}
+/>
+
+### Wildcard Mappings
+
+Use wildcards (`*`) to match multiple entities or actions:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`await getMappingEvent(
+    { event: 'product click' },
+    {
+      product: {
+        '*': { name: 'product_interaction' },
+      },
+      '*': {
+        click: { name: 'generic_click' },
+      },
+    }
+  );`}
+  output={`{
+    eventMapping: {
+      name: "product_interaction"
+    },
+    mappingKey: "product *"
+  }`}
+  fn={logEvent}
+/>
+
+### Conditional Mappings
+
+Use conditions to apply different mappings based on event properties:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`await getMappingEvent(
+    {
+      event: 'order complete',
+      data: { value: 100 },
+    },
+    {
+      order: {
+        complete: [
+          {
+            condition: (event) => event.data?.value > 50,
+            name: 'high_value_purchase',
+          },
+          { name: 'purchase' }, // Fallback
+        ],
+      },
+    }
+  );`}
+  output={`{
+    eventMapping: {
+      name: "high_value_purchase"
+    },
+    mappingKey: "order complete"
+  }`}
+  fn={logEvent}
+/>
+
+### Ignoring Events
+
+Skip processing certain events by setting `ignore: true`:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`await getMappingEvent(
+    { event: 'test event' },
+    {
+      test: {
+        event: { ignore: true },
+      },
+    }
+  );`}
+  output={`{
+    eventMapping: {
+      ignore: true
+    },
+    mappingKey: "test event"
+  }`}
+  fn={logEvent}
+/>
+
+## Value Mapping with getMappingValue
+
+`getMappingValue(value: unknown, mapping: Mapping.Data, options?: Mapping.Options): Promise<WalkerOS.Property | undefined>`
+
+This function transforms values using various mapping strategies.
+
+### String Key Mapping
+
+Use a string to extract a value by its property path:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`await getMappingValue(
+    { user: { id: '12345', name: 'John' } },
+    'user.id'
+  );`}
+  output={`"12345"`}
+  fn={logValue}
+/>
+
+### Array Access
+
+Access array elements using dot notation:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`await getMappingValue(
+    { products: ['laptop', 'mouse', 'keyboard'] },
+    'products.0'
+  );`}
+  output={`"laptop"`}
+  fn={logValue}
+/>
+
+### Static Values
+
+Return static values using the `value` property:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`await getMappingValue(
+    { event: 'page view' },
+    { value: 'pageview' }
+  );`}
+  output={`"pageview"`}
+  fn={logValue}
+/>
+
+### Custom Functions
+
+Transform values using custom functions:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`await getMappingValue(
+    { user: { email: 'john@example.com' } },
+    {
+      fn: (event) => event.user.email.split('@')[1]
+    }
+  );`}
+  output={`"example.com"`}
+  fn={logValue}
+/>
+
+### Object Mapping
+
+Create new objects by mapping properties:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`await getMappingValue(
+    {
+      product: { id: 'P123', name: 'Laptop', price: 999 },
+      user: { id: 'U456' }
+    },
+    {
+      map: {
+        item_id: 'product.id',
+        item_name: 'product.name',
+        value: 'product.price',
+        user_id: 'user.id',
+        currency: { value: 'USD' },
+      }
+    }
+  );`}
+  output={`{
+    item_id: "P123",
+    item_name: "Laptop",
+    value: 999,
+    user_id: "U456",
+    currency: "USD"
+  }`}
+  fn={logValue}
+/>
+
+### Array Processing with Loop
+
+Process arrays and transform each item:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`await getMappingValue(
+    {
+      products: [
+        { id: 'P1', name: 'Laptop' },
+        { id: 'P2', name: 'Mouse' }
+      ]
+    },
+    {
+      loop: [
+        'products',
+        { map: { item_id: 'id', item_name: 'name' } }
+      ]
+    }
+  );`}
+  output={`[
+    { item_id: "P1", item_name: "Laptop" },
+    { item_id: "P2", item_name: "Mouse" }
+  ]`}
+  fn={logValue}
+/>
+
+### Validation
+
+Validate values and return undefined if validation fails:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`await getMappingValue(
+    { email: 'john@example.com' },
+    {
+      key: 'email',
+      validate: (value) => typeof value === 'string' && value.includes('@')
+    }
+  );`}
+  output={`"john@example.com"`}
+  fn={logValue}
+/>
+
+### Consent-Based Mapping
+
+Only return values when required consent is granted:
+
+<LiveCode
+  showMiddle={false}
+  labelInput="Configuration"
+  input={`await getMappingValue(
+    {
+      email: 'john@example.com',
+      consent: { marketing: false, functional: true }
+    },
+    {
+      key: 'email',
+      consent: { marketing: true }
+    }
+  );`}
+  output={`undefined`}
+  fn={logValue}
+/>
+
+## Destination Integration
+
+Mapping configurations are typically defined in destination configs:
+
+```typescript
+const destination = {
+  type: 'gtag',
+  init: () => ({
+    /* init config */
+  }),
+  push: (event, { data }) => {
+    // Use mapped data
+    gtag('event', event.event, data);
+  },
+  config: {
+    mapping: {
+      // Event mappings
+      product: {
+        view: {
+          name: 'view_item',
+          data: {
+            map: {
+              item_id: 'data.id',
+              item_name: 'data.name',
+              value: 'data.price',
+              currency: { value: 'USD' },
+            },
+          },
+        },
+      },
+    },
+    // Global data mapping
+    data: {
+      map: {
+        page_title: 'context.title',
+        page_location: 'context.url',
+      },
+    },
+  },
+};
+```
+
+## Best Practices
+
+1. **Use specific mappings over wildcards** when possible for better performance
+2. **Leverage conditions** to handle different event scenarios
+3. **Validate critical data** before sending to destinations
+4. **Respect consent requirements** by using consent-based mappings
+5. **Keep transformations simple** - complex logic should be in custom functions
+6. **Test mappings thoroughly** with different event scenarios
+
+

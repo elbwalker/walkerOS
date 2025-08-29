@@ -1,0 +1,80 @@
+---
+title: Google Tag Manager (GTM)
+description:
+  Google Tag Manager configuration within the unified gtag destination
+sidebar_position: 4
+package: '@walkeros/web-destination-gtag'
+---
+
+import PackageLink from '@site/src/components/docs/package-link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
+# Google Tag Manager (GTM)
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/gtag"
+  npm="@walkeros/web-destination-gtag"
+/>
+
+Google Tag Manager (GTM) configuration within the unified gtag destination. This
+allows you to send events to your GTM container for advanced tag management and
+third-party integrations.
+
+## Installation
+
+```bash
+npm install @walkeros/web-destination-gtag
+```
+
+## Setup
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+
+const { elb } = await createCollector();
+
+elb('walker destination', destinationGtag, {
+  settings: {
+    gtm: {
+      containerId: 'GTM-XXXXXXX', // Required
+      dataLayer: 'dataLayer', // Optional custom dataLayer name
+    },
+  },
+});
+```
+
+## Configuration reference
+
+<SettingsTable
+  properties={[
+    {
+      name: 'containerId',
+      type: 'string',
+      description: 'GTM Container ID from Google Tag Manager',
+      required: true,
+      example: "'GTM-XXXXXXX'",
+    },
+    {
+      name: 'dataLayer',
+      type: 'string',
+      description: 'Custom dataLayer variable name',
+      required: false,
+      example: "'customDataLayer'",
+    },
+    {
+      name: 'domain',
+      type: 'string',
+      description: 'Domain for GTM script loading',
+      required: false,
+      example: "'googletagmanager.com'",
+    },
+  ]}
+/>
+
+### Event Mapping
+
+GTM specific event mapping (`mapping.entity.action.settings.gtm`) currently has
+no configurable properties. The GTMMapping interface is empty, so events are
+passed through to GTM without additional transformation options.

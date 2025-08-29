@@ -43,7 +43,7 @@ Dealing with timeouts or non-understandable entanglements is no longer
 
 necessary. Walker.js handles the race conditions and is able to also load
 external resources in the best possible way. Read more about
-[consent management](/docs/consent_management/overview) in the docs.
+[consent management](/docs/guides/consent/) in the docs.
 
 ### Support for single-page-applications and dynamic content
 
@@ -58,7 +58,7 @@ second parameter is handling this now.
 elb('walker init', document.getElementById('dynamic_content'));
 ```
 
-Find out more about new [commands](/docs/sources/walkerjs/commands) in the docs
+Find out more about new [commands](/docs/collector/commands) in the docs
 
 ### Reduced file size and tests for code quality
 
@@ -102,12 +102,12 @@ We also added useful storage functions. Use pre-build functions to save time
 developing them yourself while enjoying the same functionality. To persist data
 on a device there are three common ways to write, read and delete values:
 Cookies, localStorage, and sessionStorage. Following a privacy-by-design
-approach, our [storage utils](/docs/utils/storage/) have an in-build max-age
+approach, our storage utils have an in-build max-age
 functionality, to specify the maximum lifetime of a value. The default is set to
 30 minutes. While cookies get deleted automatically by the browser, this doesn't
 apply to localStorage and sessionStorage.
 
-Check out the [utils](/docs/utils/) in our docs
+Check out the utils in our docs
 
 ### Other bug-fixes and improvements
 

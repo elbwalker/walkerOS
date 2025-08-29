@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorer Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-element { 
+            border: 2px solid #ccc; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px;
+            position: relative;
+        }
+        .console { background: #f5f5f5; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Explorer Integration Test</h1>
+    
+    <div class="test-element" data-elb="test" data-elb-test="id:1">
+        <h2>Test Element 1</h2>
+        <p>This element has explorer capability. Hover to see the icon!</p>
+        <button data-elbaction="click:test">Test Button</button>
+    </div>
+
+    <div class="test-element" data-elb="product" data-elb-product="name:Sample Product">
+        <h2>Test Element 2</h2>
+        <p>Another explorable element with different attributes.</p>
+    </div>
+
+    <div class="console" id="console-output">
+        <strong>Console Output:</strong><br>
+        <span id="log">Explorer will log here...</span>
+    </div>
+
+    <!-- Include explorer -->
+    <script src="../../explorer/dist/explorer.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const log = document.getElementById('log');
+            
+            function updateLog(message) {
+                log.innerHTML += '<br>' + message;
+                console.log(message);
+            }
+            
+            if (typeof WalkerOSExplorer !== 'undefined' && WalkerOSExplorer.elbExplorer) {
+                updateLog('✅ WalkerOSExplorer.elbExplorer function found');
+                
+                try {
+                    const explorer = WalkerOSExplorer.elbExplorer();
+                    updateLog('✅ Explorer initialized successfully');
+                    updateLog('🔍 Hover over elements with borders to see exploration icons');
+                    
+                    // Test manual addition
+                    explorer.add(document.querySelector('.console'), {
+                        title: 'Console Element'
+                    });
+                    updateLog('✅ Manually added explorer to console element');
+                    
+                } catch (error) {
+                    updateLog('❌ Error initializing explorer: ' + error.message);
+                }
+            } else {
+                updateLog('❌ WalkerOSExplorer.elbExplorer function not found - check script loading');
+            }
+        });
+    </script>
+</body>
+</html>

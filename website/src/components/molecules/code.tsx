@@ -1,4 +1,4 @@
-import { assign } from '@elbwalker/utils';
+import { assign } from '@walkeros/core';
 import { ComponentProps } from 'react';
 import CodeBox from './codeBox';
 

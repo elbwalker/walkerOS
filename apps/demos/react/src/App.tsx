@@ -1,33 +1,46 @@
-import { useEffect } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
-import { elb } from '@elbwalker/walker.js';
-import { setupAnalytics } from './data';
-import Footer from './components/organisms/footer';
-import Navigation from './components/organisms/navigation';
-import Home from './components/pages/home';
-import LogIn from './components/pages/login';
-import Pricing from './components/pages/pricing';
-import './App.css';
-
-setupAnalytics();
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import Navigation from './components/Navigation';
+import ControlBar from './components/ControlBar';
+import Home from './pages/Home';
+import Category from './pages/Category';
+import Detail from './pages/Detail';
+import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
+import { initializeWalker } from './walker';
 
 function App() {
-  // https://v5.reactrouter.com/web/api/Hooks/uselocation
   const location = useLocation();
+  const hasInitialized = useRef(false);
+
   useEffect(() => {
-    elb('walker run');
+    // Prevent React StrictMode double execution
+    if (!hasInitialized.current) {
+      initializeWalker();
+      hasInitialized.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    window.elb('walker run');
   }, [location]);
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50">
       <Navigation />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/login" element={<LogIn />} />
-      </Routes>
-      <Footer />
-    </>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/category" element={<Category />} />
+          <Route path="/product/:id" element={<Detail />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/order/:id" element={<OrderConfirmation />} />
+        </Routes>
+      </main>
+
+      <ControlBar />
+    </div>
   );
 }
 

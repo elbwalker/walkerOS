@@ -1,0 +1,179 @@
+---
+title: Quickstart
+description: Ready-to-use code examples for walkerOS packages
+sidebar_position: 3
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Link from '@docusaurus/Link';
+
+# Quickstart
+
+Get started with walkerOS in minutes. These examples provide working code that
+you can copy, paste, and run immediately. All examples are maintained in our
+[quickstart app](https://github.com/elbwalker/walkerOS/tree/main/apps/quickstart)
+and tested with every release.
+
+## 1. Install packages
+
+Install the collector package from npm:
+
+```bash
+npm install @walkeros/collector @walkeros/web-source-browser
+```
+
+## 2. Create basic setup
+
+```javascript
+import type { Collector, WalkerOS } from '@walkeros/core';
+import { createCollector } from '@walkeros/collector';
+import { createSource } from '@walkeros/core';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+// Initialize walkerOS
+export async function initializeWalker(): Promise<void> {
+  const { collector } = await createCollector({
+    sources: {
+      browser: createSource(sourceBrowser, {
+        settings: {
+          pageview: true,
+          session: true,
+          elb: 'elb', // Browser source will set window.elb automatically
+        },
+      }),
+    },
+    destinations: {
+      console: {
+        push: (event) => console.log('Event:', event),
+      },
+    },
+  });
+
+  // Make collector available globally
+  window.walker = collector;
+}
+```
+
+## 3. Add destinations
+
+Install destination packages and add them to your setup:
+
+```javascript
+import { createCollector } from '@walkeros/collector';
+import { createSource } from '@walkeros/core';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+import { destinationAPI } from '@walkeros/web-destination-api';
+
+export async function initializeWalker(): Promise<void> {
+  const { collector } = await createCollector({
+    sources: {
+      browser: createSource(sourceBrowser, {
+        settings: {
+          pageview: true,
+          session: true,
+          elb: 'elb', // Browser source will set window.elb automatically
+        },
+      }),
+    },
+    destinations: {
+      // Send events to your API
+      api: {
+        ...destinationAPI,
+        config: {
+          settings: {
+            url: 'https://your-api.com/events',
+          },
+        },
+      },
+
+      // Send to Google Analytics 4
+      ga4: {
+        ...destinationGtag,
+        config: {
+          settings: {
+            ga4: { measurementId: 'G-XXXXXXXXXX' },
+          },
+        },
+      },
+    },
+  });
+
+  window.walker = collector;
+}
+```
+
+## 4. Add consent management
+
+Add consent requirements to your destinations:
+
+```javascript
+export async function initializeWalker(): Promise<void> {
+  const { collector } = await createCollector({
+    sources: {
+      browser: createSource(sourceBrowser, {
+        settings: {
+          pageview: true,
+          session: true,
+          elb: 'elb', // Browser source will set window.elb automatically
+        },
+      }),
+    },
+    destinations: {
+      // API destination - requires functional consent
+      api: {
+        ...destinationAPI,
+        config: {
+          settings: {
+            url: 'https://your-api.com/events',
+          },
+          consent: {
+            functional: true,
+          },
+        },
+      },
+
+      // GA4 - requires e.g. analytics consent
+      ga4: {
+        ...destinationGtag,
+        config: {
+          settings: {
+            ga4: { measurementId: 'G-XXXXXXXXXX' },
+          },
+          consent: {
+            analytics: true,
+          },
+        },
+      },
+    },
+  });
+
+  window.walker = collector;
+
+  // Set consent when user accepts/denies
+  // This would typically come from your consent banner
+  function handleConsentAccept() {
+    window.elb('walker consent', {
+      functional: true,
+      analytics: true,
+      marketing: true,
+    });
+  }
+
+  function handleConsentDeny() {
+    window.elb('walker consent', {
+      functional: true,
+      analytics: false,
+      marketing: false,
+    });
+  }
+}
+```
+
+## Next Steps
+
+- **[DOM-based tagging](https://elbwalker.com/docs/sources/web/browser/tagging)**:
+  Add data-elb attributes to HTML elements for automatic tracking
+- **[Event mapping](https://elbwalker.com/docs/destinations/event-mapping)**:
+  Transform events before sending to destinations

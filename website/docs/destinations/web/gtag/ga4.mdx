@@ -1,0 +1,117 @@
+---
+title: Google Analytics 4 (GA4)
+description:
+  Google Analytics 4 configuration within the unified gtag destination
+sidebar_position: 2
+package: '@walkeros/web-destination-gtag'
+---
+
+import PackageLink from '@site/src/components/docs/package-link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
+# Google Analytics 4 (GA4)
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/gtag"
+  npm="@walkeros/web-destination-gtag"
+/>
+
+Google Analytics 4 (GA4) configuration within the unified gtag destination. This
+allows you to send events to GA4 with enhanced measurement features and flexible
+event tracking.
+
+## Installation
+
+```bash
+npm install @walkeros/web-destination-gtag
+```
+
+## Setup
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+
+const { elb } = await createCollector();
+
+elb('walker destination', destinationGtag, {
+  settings: {
+    ga4: {
+      measurementId: 'G-XXXXXXXXXX',
+    },
+  },
+});
+```
+
+## Configuration reference
+
+<SettingsTable
+  properties={[
+    {
+      name: 'measurementId',
+      type: 'string',
+      description: 'GA4 Measurement ID from Google Analytics',
+      required: true,
+      example: "'G-XXXXXXXXXX'",
+    },
+    {
+      name: 'debug',
+      type: 'boolean',
+      description: 'Enable debug mode for GA4',
+      required: false,
+      example: 'true',
+    },
+    {
+      name: 'include',
+      type: 'Include[]',
+      description: 'Array of properties to include in events',
+      required: false,
+      example: "['data', 'context', 'user']",
+    },
+    {
+      name: 'pageview',
+      type: 'boolean',
+      description: 'Enable automatic pageview tracking',
+      required: false,
+      example: 'true',
+    },
+    {
+      name: 'server_container_url',
+      type: 'string',
+      description: 'Server-side GTM container URL',
+      required: false,
+      example: "'https://server-container.com'",
+    },
+    {
+      name: 'snakeCase',
+      type: 'boolean',
+      description: 'Convert parameter names to snake_case',
+      required: false,
+      example: 'true',
+    },
+    {
+      name: 'transport_url',
+      type: 'string',
+      description: 'Custom transport URL for GA4',
+      required: false,
+      example: "'https://analytics.example.com/mp/collect'",
+    },
+  ]}
+/>
+
+### Event Mapping
+
+For custom event mapping (`mapping.entity.action.settings.ga4`):
+
+<SettingsTable
+  properties={[
+    {
+      name: 'include',
+      type: 'Include[]',
+      description: 'Array of properties to include in this specific event',
+      required: false,
+      example: "['data', 'context']",
+    },
+  ]}
+/>

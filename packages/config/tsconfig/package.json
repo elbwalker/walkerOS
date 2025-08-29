@@ -1,8 +1,11 @@
 {
-  "name": "@elbwalker/tsconfig",
-  "version": "0.0.0",
+  "name": "@walkeros/tsconfig",
+  "version": "0.0.8",
   "private": true,
   "license": "MIT",
+  "files": [
+    "*.json"
+  ],
   "publishConfig": {
     "access": "public"
   }

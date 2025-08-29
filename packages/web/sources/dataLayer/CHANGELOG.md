@@ -1,0 +1,10 @@
+# @walkeros/web-source-datalayer
+
+## 0.0.8
+
+### Patch Changes
+
+- af0ea64: init fixes
+- Updated dependencies [af0ea64]
+  - @walkeros/collector@0.0.8
+  - @walkeros/core@0.0.8

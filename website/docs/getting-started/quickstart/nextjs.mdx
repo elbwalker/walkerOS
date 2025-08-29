@@ -1,0 +1,251 @@
+---
+title: Next.js
+description: Get started with walkerOS Next.js applications
+sidebar_position: 2
+---
+
+# Next.js Quickstart
+
+This guide shows you how to integrate walkerOS into your Next.js application.
+Most setup is identical to React - check the [React quickstart guide](./react)
+for more details.
+
+## Installation
+
+Same as React - install the required packages:
+
+```bash
+npm install @walkeros/core @walkeros/collector @walkeros/web-source-browser
+```
+
+## Setup
+
+### 1. Walker initialization
+
+Create the walker initialization file:
+
+```tsx title="walker/index.ts"
+import type { Collector, WalkerOS } from '@walkeros/core';
+import { createCollector } from '@walkeros/collector';
+import { createSource } from '@walkeros/core';
+import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
+
+// Global type declarations
+declare global {
+  interface Window {
+    elb: WalkerOS.Elb;
+    walker: Collector.Instance;
+  }
+}
+
+export async function initializeWalker(): Promise<void> {
+  // Skip initialization if already done
+  if (window.walker) return;
+
+  // Create collector with run: false for manual pageview control
+  const { collector } = await createCollector({
+    run: false,
+    consent: { functional: true },
+    sources: {
+      browser: createSource(sourceBrowser, {
+        settings: {
+          pageview: true,
+          session: true,
+          elb: 'elb',
+        },
+      }),
+    },
+    destinations: {
+      // Your destinations - add console for testing
+      console: {
+        push(event, data) {
+          console.log('Event:', event, data);
+        },
+      },
+    },
+  });
+
+  // Set global window object
+  window.walker = collector;
+}
+
+// Tagger helper for easy component tagging
+const taggerInstance = createTagger();
+
+export function tagger(entity?: string) {
+  return taggerInstance(entity);
+}
+```
+
+### 2. App integration
+
+For Next.js applications, use the Next.js router events:
+
+```tsx title="pages/_app.tsx"
+import { useRouter } from 'next/router';
+import { useEffect, useRef } from 'react';
+import { initializeWalker } from '../walker';
+
+export default function App({ Component, pageProps }) {
+  const router = useRouter();
+  const hasInitialized = useRef(false);
+  const firstRun = useRef(true);
+
+  useEffect(() => {
+    // Prevent double execution
+    if (!hasInitialized.current) {
+      initializeWalker();
+      hasInitialized.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleRouteChange = () => {
+      if (firstRun.current) {
+        firstRun.current = false;
+        return;
+      }
+      window.elb('walker run');
+    };
+
+    // Next.js route events
+    router.events.on('routeChangeComplete', handleRouteChange);
+
+    // Call on initial load
+    handleRouteChange();
+
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router.events]);
+
+  return <Component {...pageProps} />;
+}
+```
+
+For Next.js 13+ with App Router:
+
+```tsx title="app/layout.tsx"
+'use client';
+
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { initializeWalker } from './walker';
+
+export default function RootLayout({ children }) {
+  const pathname = usePathname();
+  const hasInitialized = useRef(false);
+  const firstRun = useRef(true);
+
+  useEffect(() => {
+    // Prevent double execution
+    if (!hasInitialized.current) {
+      initializeWalker();
+      hasInitialized.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+
+    window.elb('walker run');
+  }, [pathname]);
+
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+## Component usage
+
+Component usage is identical to React. Use the tagger helper and manual events:
+
+```tsx
+import { tagger } from '../walker';
+
+function ProductPage({ product }) {
+  // Manual event tracking
+  useEffect(() => {
+    window.elb('product view', {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+    });
+  }, [product]);
+
+  return (
+    <div
+      {...tagger('product')
+        .action('view')
+        .data('id', product.id)
+        .data('name', product.name)
+        .get()}
+    >
+      <h1>{product.name}</h1>
+      <button
+        {...tagger().action('add').get()}
+        onClick={() => window.elb('product add', { id: product.id })}
+      >
+        Add to Cart
+      </button>
+    </div>
+  );
+}
+```
+
+:::info
+
+When using the `tagger` helper, make sure to call .get() at the end of the
+chain.
+
+:::
+
+## Testing
+
+During #1-walker-initialization, we added a console destination. This will
+output events to the console. Open your browser's developer console to see
+tracked events:
+
+```
+  Event: "product view", { id: 123, name: "Premium Chocolate", price: 12.99 }
+```
+
+## Best Practices
+
+1. **Use tagger**: Clean component tagging with the tagger helper
+2. **Minimal Next.js code**: Keep Next.js integration as simple as possible
+3. **Trust walkerOS**: No need for custom error handling or state management
+4. **Direct integration**: No providers needed, integrate directly in \_app or
+   layout
+5. **Test with console**: Use console destination during development
+
+## Troubleshooting
+
+### Events not firing
+
+1. Check that `window.walker` is set in the browser console
+2. Verify data attributes are correctly formatted (use `data-elb` prefix)
+3. Ensure walker initialization completed (window.walker.allowed must be `true`)
+4. Check browser console for any error messages
+
+### Route changes not tracked
+
+1. Check that `walker run` is called on route changes in `window.elbLayer`
+2. Ensure firstRun logic is preventing double execution on initial load
+3. Verify router event listeners are working correctly
+
+### TypeScript Errors
+
+Make sure you've added the global type declarations in your walker
+initialization file.
+
+## Next Steps
+
+- Configure [destinations](/docs/destinations) for your analytics tools
+- Set up [consent management](/docs/guides/consent)

@@ -1,0 +1,95 @@
+---
+title: Meta Conversions API
+description:
+  Server-side Meta advertising events for enhanced privacy and tracking accuracy
+path: /docs/destinations/server/meta-capi
+sidebar_position: 3
+package: '@walkeros/server-destination-meta'
+---
+
+import PackageLink from '@site/src/components/docs/package-link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
+# Meta Conversions API
+
+<PackageLink
+  env="server"
+  github="packages/server/destinations/meta"
+  npm="@walkeros/server-destination-meta"
+/>
+
+## Installation
+
+```bash
+npm install @walkeros/server-destination-meta
+```
+
+## Setup
+
+```typescript
+import { elb } from '@walkeros/collector';
+import { destinationMeta } from '@walkeros/server-destination-meta';
+
+elb('walker destination', destinationMeta, {
+  settings: {
+    accessToken: 'YOUR_ACCESS_TOKEN',
+    pixelId: 'YOUR_PIXEL_ID',
+  },
+});
+```
+
+## Configuration reference
+
+<SettingsTable
+  properties={[
+    {
+      name: 'accessToken',
+      type: 'string',
+      description: 'Meta access token for Conversions API authentication',
+      required: true,
+      example: "'your_access_token'",
+    },
+    {
+      name: 'pixelId',
+      type: 'string',
+      description: 'Meta Pixel ID from your Facebook Business account',
+      required: true,
+      example: "'1234567890'",
+    },
+    {
+      name: 'action_source',
+      type: 'ActionSource',
+      description: 'Source of the event (website, app, phone_call, etc.)',
+      required: false,
+      example: "'website'",
+    },
+    {
+      name: 'doNotHash',
+      type: 'string[]',
+      description: 'Array of user_data fields that should not be hashed',
+      required: false,
+      example: "['client_ip_address', 'client_user_agent']",
+    },
+    {
+      name: 'test_event_code',
+      type: 'string',
+      description: 'Test event code for debugging Meta Conversions API events',
+      required: false,
+      example: "'TEST12345'",
+    },
+    {
+      name: 'url',
+      type: 'string',
+      description: 'Custom URL for Meta Conversions API endpoint',
+      required: false,
+      example: "'https://graph.facebook.com/v17.0'",
+    },
+    {
+      name: 'user_data',
+      type: 'WalkerOSMapping.Map',
+      description: 'Mapping configuration for user data fields',
+      required: false,
+      example: "{ email: 'user.email', phone: 'user.phone' }",
+    },
+  ]}
+/>

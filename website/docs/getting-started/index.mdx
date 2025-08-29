@@ -1,0 +1,131 @@
+---
+slug: /
+title: What is walkerOS
+description: walkerOS description and installation
+sidebar_position: 1
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Welcome to walkerOS
+
+walkerOS is an **event data collection as code** solution. It captures,
+structures, and routes events with built-in support for consent management — all
+directly in your code. No fragile UI configs. No black-box logic. Just
+vendor-agnostic **tracking you can version, test, and trust**.
+
+The project started as the web tracking library walker.js, and has evolved into
+a complete **first-party tracking system** for modern teams and the modern web.
+
+## Why walkerOS?
+
+- **Independence**: Make your your data collection independent from single
+  vendor specifications to reduce complexity and extra code whenever you add or
+  remove a new service. Keep maintenance effort to a minimum.
+- **Scalability**: DOM-based, component-level frontend tagging makes tracking
+  user behavior declarative, reusable, and easy to maintain.
+- **Privacy-first approach**: Built-in consent handling and privacy controls
+  help you meet compliance from day one.
+- **Type-safe tracking**: Built with TypeScript to catch tracking errors at
+  compile time, not in production. Get IDE autocomplete for APIs and destination
+  configs, prevent data structure mistakes.
+
+## How it works
+
+![event flow](/diagrams/walkerosflowdark.png)
+
+## How to install
+
+<Tabs>
+  <TabItem value="npm" label="npm" default>
+
+Install the package from npm:
+
+```bash
+npm install @walkeros/collector @walkeros/web-source-browser
+```
+
+Initialize walkerOS in your project. See the quickstart guides for more details.
+
+```javascript
+import type { Collector, WalkerOS } from '@walkeros/core';
+import { createCollector } from '@walkeros/collector';
+import { createSource } from '@walkeros/core';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+declare global {
+  interface Window {
+    elb: WalkerOS.Elb;
+    walker: Collector.Instance;
+  }
+}
+
+// Initialize walkerOS
+export async function initializeWalker(): Promise<void> {
+  // Create and start collector
+  const { collector } = await createCollector({
+    sources: {
+      browser: createSource(sourceBrowser, {
+        settings: {
+          pageview: true,
+          session: true,
+          elb: 'elb', // Browser source will set window.elb automatically
+        },
+      }),
+    },
+    destinations: {
+      console: {
+        push: (event) => console.log('Event:', event),
+      },
+    },
+  });
+}
+```
+
+  </TabItem>
+  <TabItem value="script" label="script">
+
+For websites without build tools install from CDN or host the files yourself:
+
+```html
+<script>
+  // Load the collector, core utilities, and source
+  const { createCollector } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
+  );
+  const { createSource } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs'
+  );
+  const { sourceBrowser } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
+  );
+
+  // Initialize walkerOS
+  const { collector, elb } = await createCollector({
+    destinations: {
+      console: {
+        push: (event) => console.log('Event:', event),
+      },
+    },
+    sources: {
+      browser: createSource(sourceBrowser, {
+        settings: {
+          prefix: 'data-elb',
+          pageview: true,
+          session: true,
+        },
+      }),
+    },
+  });
+</script>
+```
+
+  </TabItem>
+</Tabs>
+
+:::note
+
+See the [quickstart guides](./getting-started/quickstart/) for more details.
+
+:::

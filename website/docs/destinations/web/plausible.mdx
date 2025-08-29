@@ -1,0 +1,57 @@
+---
+title: Plausible Analytics
+description: Simple, privacy-friendly and lightweight analytics
+path: /docs/destinations/web/plausible
+sidebar_position: 4
+package: '@walkeros/web-destination-plausible'
+---
+
+import PackageLink from '@site/src/components/docs/package-link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
+# Plausible Analytics
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/plausible"
+  npm="@walkeros/web-destination-plausible"
+/>
+
+[Plausible Analytics](https://plausible.io/) is a simple, and privacy-friendly
+Google Analytics Alternative. The destination sends events to Plausible via the
+`plausible` function.
+
+## Installation
+
+```bash
+npm install @walkeros/web-destination-plausible
+```
+
+## Setup
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+import { destinationPlausible } from '@walkeros/web-destination-plausible';
+
+const { elb } = await createCollector();
+
+elb('walker destination', destinationPlausible, {
+  settings: {
+    domain: 'elbwalker.com', // Optional, domain of your site as registered
+  },
+});
+```
+
+## Configuration reference
+
+<SettingsTable
+  properties={[
+    {
+      name: 'domain',
+      type: 'string',
+      description: 'The domain of your site as registered in Plausible',
+      required: false,
+      example: "'elbwalker.com'",
+    },
+  ]}
+/>

@@ -1,0 +1,101 @@
+---
+title: Google Ads
+description: Google Ads conversion tracking within the unified gtag destination
+sidebar_position: 3
+package: '@walkeros/web-destination-gtag'
+---
+
+import PackageLink from '@site/src/components/docs/package-link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
+# Google Ads
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/gtag"
+  npm="@walkeros/web-destination-gtag"
+/>
+
+Google Ads conversion tracking within the unified gtag destination. This enables
+you to track conversions and measure the effectiveness of your Google Ads
+campaigns.
+
+## Installation
+
+```bash
+npm install @walkeros/web-destination-gtag
+```
+
+## Setup
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+
+const { elb } = await createCollector();
+
+elb('walker destination', destinationGtag, {
+  settings: {
+    ads: {
+      conversionId: 'AW-XXXXXXXXX', // Required
+      currency: 'EUR', // Default currency for conversions
+    },
+  },
+  mapping: {
+    order: {
+      complete: {
+        settings: {
+          ads: {
+            label: 'purchase_conversion', // Conversion label for order complete
+          },
+        },
+      },
+    },
+  },
+});
+
+// Track an order complete event
+elb('order complete', {
+  id: 'order-123',
+  value: 49.99,
+  currency: 'EUR',
+  items: 2,
+});
+```
+
+## Configuration reference
+
+<SettingsTable
+  properties={[
+    {
+      name: 'conversionId',
+      type: 'string',
+      description: 'Google Ads conversion ID from your Google Ads account',
+      required: true,
+      example: "'AW-XXXXXXXXX'",
+    },
+    {
+      name: 'currency',
+      type: 'string',
+      description: 'Default currency code for conversion values',
+      required: false,
+      example: "'EUR'",
+    },
+  ]}
+/>
+
+### Event Mapping
+
+For custom event mapping (`mapping.entity.action.settings.ads`):
+
+<SettingsTable
+  properties={[
+    {
+      name: 'label',
+      type: 'string',
+      description: 'Conversion label for this specific event',
+      required: false,
+      example: "'conversion_label'",
+    },
+  ]}
+/>

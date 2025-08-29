@@ -1,6 +1,6 @@
 {
-  "name": "@elbwalker/website",
-  "version": "0.0.0",
+  "name": "@walkeros/website",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
@@ -19,7 +19,7 @@
     "@docusaurus/preset-classic": "^3.7.0",
     "@docusaurus/theme-live-codeblock": "^3.7.0",
     "@docusaurus/theme-mermaid": "^3.7.0",
-    "@elbwalker/destination-node-meta": "^2.2.1",
+    "@walkeros/core": "*",
     "@elbwalker/destination-web-api": "^3.0.4",
     "@elbwalker/destination-web-google-ads": "^3.0.4",
     "@elbwalker/destination-web-google-ga4": "^3.1.6",
@@ -72,6 +72,6 @@
     ]
   },
   "engines": {
-    "node": ">=18.0"
+    "node": ">=20.0"
   }
 }

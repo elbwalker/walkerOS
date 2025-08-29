@@ -49,13 +49,13 @@ export default function Features(): JSX.Element {
     <section className="my-20">
       <div className="container">
         <div className="row">
-          <Feature title="Collect" link="/docs/sources/" icon={iconCollect}>
+          <Feature title="Collect" link="/docs/sources" icon={iconCollect}>
             Capture events easily and privacy-compliant from your app or site
-            with web and node sources.
+            with web and server sources.
           </Feature>
           <Feature
             title="Handle consent"
-            link="/docs/consent_management/commands"
+            link="/docs/guides/consent/"
             icon={iconProcess}
           >
             Implement and manage consent to ensure user privacy and comply with
@@ -63,7 +63,7 @@ export default function Features(): JSX.Element {
           </Feature>
           <Feature
             title="Distribute"
-            link="/docs/destinations/"
+            link="/docs/destinations"
             icon={iconActivate}
           >
             Feed you 3rd party analytics and marketing tools with reliable and

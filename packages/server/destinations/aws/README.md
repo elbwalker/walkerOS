@@ -1,0 +1,66 @@
+<p align="left">
+  <a href="https://elbwalker.com">
+    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
+  </a>
+</p>
+
+# AWS Destination for walkerOS
+
+This package provides an AWS destination for walkerOS. It allows you to send
+events to various AWS services. Currently, it supports AWS Firehose.
+
+[View documentation](https://www.elbwalker.com/docs/destinations/server/aws/)
+
+## Role in walkerOS Ecosystem
+
+walkerOS follows a **source → collector → destination** architecture:
+
+- **Sources**: Capture events from various environments (browser DOM, dataLayer,
+  server requests)
+- **Collector**: Processes, validates, and routes events with consent awareness
+- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
+  custom APIs)
+
+This AWS destination receives processed events from the walkerOS collector and
+streams them to AWS services like Firehose, enabling real-time data ingestion
+into AWS data lakes, warehouses, and analytics services for large-scale event
+processing and analysis.
+
+## Installation
+
+```sh
+npm install @walkeros/server-destination-aws
+```
+
+## Usage
+
+Here's a basic example of how to use the AWS destination:
+
+```typescript
+import { elb } from '@walkeros/collector';
+import { destinationFirehose } from '@walkeros/server-destination-aws';
+
+elb('walker destination', destinationFirehose, {
+  custom: {
+    firehose: {
+      streamName: 'your-firehose-stream-name',
+      region: 'eu-central-1',
+      credentials: {
+        accessKeyId: 'your-access-key-id',
+        secretAccessKey: 'your-secret-access-key',
+      },
+    },
+  },
+});
+```
+
+## Contribute
+
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
+
+## License
+
+This project is licensed under the MIT License.

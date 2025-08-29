@@ -1,6 +1,6 @@
-import type { WalkerOS } from '@elbwalker/types';
+import type { WalkerOS } from '@walkeros/core';
 import type { TypewriterOptions } from '@site/src/components/molecules/typewriterCode';
-import { debounce, tryCatch } from '@elbwalker/utils';
+import { debounce, tryCatch } from '@walkeros/core';
 import { useEffect, useRef, useState, useCallback, FC } from 'react';
 import { elb } from '@elbwalker/walker.js';
 import CodeBox from '@site/src/components/molecules/codeBox';

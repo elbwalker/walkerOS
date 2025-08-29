@@ -1,13 +1,11 @@
 {
-  "name": "@elbwalker/eslint",
-  "version": "0.0.0",
+  "name": "@walkeros/eslint",
+  "version": "0.0.8",
   "private": true,
   "license": "MIT",
-  "exports": {
-    ".": "./index.js",
-    "./node": "./node.js",
-    "./web": "./web.js"
-  },
+  "files": [
+    "*.mjs"
+  ],
   "devDependencies": {
     "@eslint/js": "^9.23.0",
     "@next/eslint-plugin-next": "^15.2.4",

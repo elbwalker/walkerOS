@@ -1,0 +1,65 @@
+---
+title: Meta Pixel
+description: Facebook and Instagram advertising pixel integration
+path: /docs/destinations/web/meta-pixel
+sidebar_position: 2
+package: '@walkeros/web-destination-meta'
+---
+
+import PackageLink from '@site/src/components/docs/package-link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
+# Meta Pixel
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/meta"
+  npm="@walkeros/web-destination-meta"
+/>
+
+Send events to Meta Pixel (formerly Facebook Pixel) to track visitor activity
+and conversions for Facebook and Instagram advertising campaigns.
+
+## Installation
+
+```bash
+npm install @walkeros/web-destination-meta
+```
+
+## Setup
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+import { destinationMeta } from '@walkeros/web-destination-meta';
+
+const { elb } = await createCollector();
+
+elb('walker destination', destinationMeta, {
+  settings: {
+    pixelId: '1234567890', // Your Meta Pixel ID
+  },
+  loadScript: true, // Load Meta Pixel script automatically
+});
+```
+
+## Configuration reference
+
+<SettingsTable
+  properties={[
+    {
+      name: 'pixelId',
+      type: 'string',
+      description: 'Your Meta Pixel ID from Facebook Business Manager',
+      required: true,
+      example: "'1234567890'",
+    },
+    {
+      name: 'loadScript',
+      type: 'boolean',
+      description:
+        'Whether to automatically load the Meta Pixel script (fbevents.js)',
+      required: false,
+      example: 'true',
+    },
+  ]}
+/>

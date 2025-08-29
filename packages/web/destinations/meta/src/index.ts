@@ -1,0 +1,59 @@
+import type { Settings, Destination } from './types';
+import { addScript, setup } from './setup';
+import { isObject } from '@walkeros/core';
+import { getEnvironment } from '@walkeros/web-core';
+
+// Types
+export * as DestinationMeta from './types';
+
+// Examples
+export * as destinationMetaExamples from './examples';
+
+export const destinationMeta: Destination = {
+  type: 'meta-pixel',
+
+  config: {},
+
+  init({ config, env }) {
+    const { settings = {} as Partial<Settings>, loadScript } = config;
+    const { pixelId } = settings;
+
+    // Load Meta Pixel script if required (fbevents.js)
+    if (loadScript) addScript(env);
+
+    // Required pixel id
+    if (!pixelId) return false;
+
+    // fbq function setup
+    setup(env);
+
+    const { window } = getEnvironment(env);
+    const fbq = window.fbq as facebook.Pixel.Event;
+    fbq('init', pixelId);
+
+    return config;
+  },
+
+  push(event, { config, mapping = {}, data, env }) {
+    const { track, trackCustom } = mapping.settings || {};
+    const { window } = getEnvironment(env);
+    const fbq = window.fbq as facebook.Pixel.Event;
+
+    // page view
+    if (event.event === 'page view' && !mapping.settings) {
+      // Define a custom mapping
+      event.event = 'PageView';
+    }
+
+    const eventName = track || trackCustom || event.event;
+
+    fbq(
+      trackCustom ? 'trackCustom' : 'track',
+      String(eventName),
+      isObject(data) ? data : {},
+      { eventID: event.id },
+    );
+  },
+};
+
+export default destinationMeta;

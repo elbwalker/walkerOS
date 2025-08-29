@@ -1,0 +1,114 @@
+{
+  "name": "@walkeros/storybook-addon",
+  "version": "0.0.2",
+  "description": "Integrate walkerOS tagging support for data collection",
+  "keywords": [
+    "tracking",
+    "data collection",
+    "tagging",
+    "storybook-addons"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elbwalker/walkerOS",
+    "directory": "apps/storybook-addon"
+  },
+  "type": "module",
+  "license": "MIT",
+  "author": "elbwalker GmbH <hello@elbwalker.com>",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./preview": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/preview.js",
+      "require": "./dist/preview.cjs"
+    },
+    "./preset": "./dist/preset.cjs",
+    "./manager": "./dist/manager.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "*.js",
+    "*.d.ts"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "npm run build -- --watch",
+    "test": "jest",
+    "lint": "eslint src --ext .ts,.tsx",
+    "clean": "rm -rf dist",
+    "start": "run-p build:watch \"storybook --quiet\"",
+    "prerelease": "zx scripts/prepublish-checks.js",
+    "release": "npm run build && auto shipit",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "@walkeros/core": "*",
+    "@walkeros/web-core": "*",
+    "@walkeros/web-source-browser": "*",
+    "@storybook/icons": "^1.4.0"
+  },
+  "devDependencies": {
+    "@walkeros/eslint": "*",
+    "@walkeros/jest": "*",
+    "@walkeros/tsconfig": "*",
+    "@walkeros/tsup": "*",
+    "@storybook/addon-docs": "^9.1.2",
+    "@storybook/react-vite": "^9.1.2",
+    "@types/node": "^22",
+    "@types/react": "^18.2.65",
+    "@types/react-dom": "^18.2.21",
+    "@vitejs/plugin-react": "^4.2.1",
+    "auto": "^11.1.1",
+    "boxen": "^7.1.1",
+    "npm-run-all2": "^6.2.3",
+    "prettier": "^3.3.3",
+    "prompts": "^2.4.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "storybook": "^9.1.2",
+    "ts-dedent": "^2.2.0",
+    "tsup": "^8.2.4",
+    "typescript": "^5.8.2",
+    "vite": "^5.3.5",
+    "zx": "^8.4.1"
+  },
+  "peerDependencies": {
+    "storybook": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bundler": {
+    "exportEntries": [
+      "src/index.ts"
+    ],
+    "managerEntries": [
+      "src/manager.tsx"
+    ],
+    "previewEntries": [
+      "src/preview.ts"
+    ],
+    "nodeEntries": [
+      "src/preset.ts"
+    ]
+  },
+  "storybook": {
+    "displayName": "walkerOS",
+    "supportedFrameworks": [
+      "react",
+      "html"
+    ],
+    "icon": "https://user-images.githubusercontent.com/321738/63501763-88dbf600-c4cc-11e9-96cd-94adadc2fd72.png"
+  }
+}

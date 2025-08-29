@@ -4,12 +4,8 @@ import CodeBox, { formatValue } from '@site/src/components/molecules/codeBox';
 import Preview from '@site/src/components/molecules/preview';
 import { parseInput } from '@site/src/components/molecules/codeBox';
 import '@site/src/css/highlighting.scss';
-import {
-  destinationPush,
-  debounce,
-  isString,
-  tryCatchAsync,
-} from '@elbwalker/utils';
+import { debounce, isString, tryCatchAsync } from '@walkeros/core';
+import { destinationPush } from '@walkeros/collector';
 import { taggingRegistry } from './tagging';
 
 export interface EventFlowProps {

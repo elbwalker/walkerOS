@@ -20,13 +20,15 @@
 # What is walkerOS
 
 walkerOS is a privacy-centric event data collection platform. It offers features
-like data
-capturing, [consent management](https://www.elbwalker.com/docs/consent_management/overview/), data
-integration, and [tag management](https://www.elbwalker.com/docs/destinations/event_mapping). Fully configurable as code. 
+like data capturing,
+[consent management](https://www.elbwalker.com/docs/consent_management/overview/),
+data integration, and
+[tag management](https://www.elbwalker.com/docs/destinations/event_mapping).
+Fully configurable as code.
 
-The project started as a web
-library called&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> and has
-evolved into a complete first-party tracking system.
+The project started as a web library
+called&nbsp;<Link to="/docs/sources/walkerjs/">walker.js</Link> and has evolved
+into a complete first-party tracking system.
 
 ## Packages Overview
 
@@ -40,16 +42,16 @@ evolved into a complete first-party tracking system.
 
 ## Why walkerOS?
 
-- **Sustainability**: Robust infrastructure for continuous data collection,
-  even amidst evolving data landscapes.
-- **Privacy focus**: Strict privacy-by-design
-  approach, in-build consent
+- **Sustainability**: Robust infrastructure for continuous data collection, even
+  amidst evolving data landscapes.
+- **Privacy focus**: Strict privacy-by-design approach, in-build consent
   management</Link> and various data protection features.
-- **Complete data ownership**: Full control of your first-party data,
-  no vendor lock-in, and control of data processing.
+- **Complete data ownership**: Full control of your first-party data, no vendor
+  lock-in, and control of data processing.
 - **Simplified data model**: Intuitive event model that streamlines data
   collection, making analytics straightforward and efficient.
-- **Flexible architecture**: Modular design adapting to your specific data needs and allows growing step-by-step.
+- **Flexible architecture**: Modular design adapting to your specific data needs
+  and allows growing step-by-step.
 
 ## How walkerOS operates
 
@@ -81,8 +83,9 @@ flowchart LR
 ## Installation
 
 Start collecting data with our
-[web](https://github.com/elbwalker/walkerOS/tree/main/packages/sources/walkerjs)
-or [node](https://github.com/elbwalker/walkerOS/tree/main/packages/sources/node)
+[web](https://github.com/elbwalker/walkerOS/tree/main/packages/web/collector/)
+or
+[server](https://github.com/elbwalker/walkerOS/tree/main/packages/server/collector/)
 source.
 
 ## Contributing

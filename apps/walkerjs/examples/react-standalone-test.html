@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>React Standalone Explorer Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .test-container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .test-element {
+        border: 2px solid #007bff;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        background: white;
+        position: relative;
+      }
+      .feature-list {
+        background: #e9f5ff;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+      }
+      .feature-list h3 {
+        margin-top: 0;
+        color: #0056b3;
+      }
+      .feature-list ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .feature-list li {
+        margin: 8px 0;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="test-container">
+      <h1>React Standalone Explorer Test</h1>
+      <p>
+        This tests the new unified React architecture in standalone mode (IIFE
+        build).
+      </p>
+
+      <div class="feature-list">
+        <h3>🚀 React Features Available:</h3>
+        <ul>
+          <li>
+            ✅ <strong>Live Code Editor</strong> - Edit HTML and see changes
+          </li>
+          <li>
+            ✅ <strong>Syntax Highlighting</strong> - Advanced ELB attribute
+            highlighting
+          </li>
+          <li>✅ <strong>Copy & Format</strong> - Code manipulation tools</li>
+          <li>
+            ✅ <strong>Full Screen Mode</strong> - Expanded editing experience
+          </li>
+          <li>✅ <strong>Shadow DOM Isolation</strong> - No CSS conflicts</li>
+          <li>
+            ✅ <strong>React Hook State</strong> - Proper state management
+          </li>
+        </ul>
+      </div>
+
+      <div
+        class="test-element"
+        data-elb="test"
+        data-elb-test="id:123;name:Test Product;category:demo"
+      >
+        <h2>Test Element 1</h2>
+        <p>
+          Hover to see explorer icon, click to open the full React-powered
+          modal!
+        </p>
+        <button data-elbaction="click:test" data-elb-product="color:red;size:L">
+          Test Button with Multiple Attributes
+        </button>
+      </div>
+
+      <div
+        class="test-element"
+        data-elb="product"
+        data-elb-product="id:456;name:Sample Product;price:29.99;currency:EUR"
+      >
+        <h2>Test Element 2</h2>
+        <p>Another inspectable element with complex ELB attributes.</p>
+        <div data-elbcontext="section:demo" data-elbinspector>
+          <span data-elbaction="hover(1000):interested"
+            >Nested Inspectable Content</span
+          >
+        </div>
+      </div>
+
+      <div
+        id="console-output"
+        style="
+          background: #f8f9fa;
+          padding: 15px;
+          margin: 20px 0;
+          border-radius: 4px;
+        "
+      >
+        <strong>Console Output:</strong><br />
+        <span id="log">Explorer will initialize here...</span>
+      </div>
+    </div>
+
+    <!-- Include React-powered standalone explorer -->
+    <script src="../../explorer/dist/explorer.js"></script>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        const log = document.getElementById('log');
+
+        function updateLog(message) {
+          log.innerHTML += '<br>' + message;
+          console.log(message);
+        }
+      });
+    </script>
+  </body>
+</html>

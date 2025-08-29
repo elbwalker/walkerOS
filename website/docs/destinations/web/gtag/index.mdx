@@ -1,0 +1,110 @@
+---
+title: Google Gtag
+description:
+  Unified Google destination supporting GA4, Google Ads, and GTM through a
+  single gtag implementation
+sidebar_position: 1
+package: '@walkeros/web-destination-gtag'
+---
+
+import PackageLink from '@site/src/components/docs/package-link';
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+
+# Google Gtag
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/gtag"
+  npm="@walkeros/web-destination-gtag"
+/>
+
+The Google Gtag destination provides a unified interface for sending events to
+Google Analytics 4 (GA4), Google Ads, and Google Tag Manager (GTM) through a
+single destination configuration.
+
+## Installation
+
+```bash
+npm install @walkeros/web-destination-gtag
+```
+
+## Setup
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+
+const { elb } = await createCollector();
+
+elb('walker destination', destinationGtag, {
+  settings: {
+    ga4: {
+      measurementId: 'G-XXXXXXXXXX', // Required for GA4
+    },
+    ads: {
+      conversionId: 'AW-XXXXXXXXX', // Required for Google Ads
+    },
+    gtm: {
+      containerId: 'GTM-XXXXXXX', // Required for GTM
+    },
+  },
+});
+```
+
+## Configuration reference
+
+<SettingsTable
+  properties={[
+    {
+      name: 'ga4',
+      type: 'GA4Settings',
+      description: 'GA4-specific configuration settings',
+      required: false,
+      example: "{ measurementId: 'G-XXXXXXXXXX' }",
+    },
+    {
+      name: 'ads',
+      type: 'AdsSettings',
+      description: 'Google Ads specific configuration settings',
+      required: false,
+      example: "{ conversionId: 'AW-XXXXXXXXX' }",
+    },
+    {
+      name: 'gtm',
+      type: 'GTMSettings',
+      description: 'Google Tag Manager specific configuration settings',
+      required: false,
+      example: "{ containerId: 'GTM-XXXXXXX' }",
+    },
+  ]}
+/>
+
+### Event Mapping
+
+For custom event mapping (`mapping.entity.action.settings`):
+
+<SettingsTable
+  properties={[
+    {
+      name: 'ga4',
+      type: 'GA4Mapping',
+      description: 'GA4-specific event mapping configuration',
+      required: false,
+      example: "{ include: ['data', 'context'] }",
+    },
+    {
+      name: 'ads',
+      type: 'AdsMapping',
+      description: 'Google Ads specific event mapping configuration',
+      required: false,
+      example: "{ label: 'conversion_label' }",
+    },
+    {
+      name: 'gtm',
+      type: 'GTMMapping',
+      description: 'GTM specific event mapping configuration',
+      required: false,
+      example: '{}',
+    },
+  ]}
+/>

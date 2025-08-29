@@ -1,0 +1,61 @@
+---
+title: DataLayer
+description: Integration with existing dataLayer implementations
+path: /docs/sources/web/dataLayer
+sidebar_position: 2
+package: '@walkeros/web-source-datalayer'
+---
+
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import PackageLink from '@site/src/components/docs/package-link';
+
+<PackageLink
+  github="packages/web/sources/datalayer"
+  npm="@walkeros/web-source-datalayer"
+/>
+# DataLayer Source
+
+## Installation
+
+```bash
+npm install @walkeros/web-source-datalayer
+```
+
+## Basic Setup
+
+```js
+import { elb } from '@walkeros/collector';
+import { sourceDataLayer } from '@walkeros/web-source-datalayer';
+
+sourceDataLayer({ elb });
+```
+
+## Configuration reference
+
+<SettingsTable
+  properties={[
+    {
+      name: 'name',
+      type: 'string',
+      description: 'DataLayer variable name (default: "dataLayer")',
+      required: false,
+      example: "'dataLayer'",
+    },
+    {
+      name: 'prefix',
+      type: 'string',
+      description:
+        'Event prefix for filtering dataLayer events (default: "gtag")',
+      required: false,
+      example: "'gtag'",
+    },
+    {
+      name: 'filter',
+      type: '(event: unknown) => WalkerOS.PromiseOrValue<boolean>',
+      description: 'Function to filter which dataLayer events to process',
+      required: false,
+      example: '(event) => event && typeof event === "object"',
+    },
+  ]}
+/>
+```

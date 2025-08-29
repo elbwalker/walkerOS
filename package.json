@@ -1,33 +1,55 @@
 {
-  "name": "@elbwalker/walkeros",
+  "name": "@walkeros/monorepo",
   "private": true,
   "workspaces": [
-    "packages/*",
     "packages/config/*",
-    "packages/destinations/core/*",
-    "packages/destinations/node/*",
-    "packages/destinations/web/*",
-    "packages/sources/*",
+    "packages/core",
+    "packages/collector",
+    "packages/server/core",
+    "packages/server/destinations/*",
+    "packages/web/core",
+    "packages/web/destinations/*",
+    "packages/web/sources/*",
+    "apps/walkerjs",
+    "apps/quickstart",
+    "apps/storybook-addon",
+    "apps/demos/react",
+    "apps/demos/storybook",
     "website"
   ],
   "scripts": {
-    "build": "turbo run build --filter=!@elbwalker/website",
-    "clean": "turbo run clean --filter=!@elbwalker/website",
-    "dev": "turbo run dev --filter=!@elbwalker/website",
-    "lint": "turbo run lint --filter=!@elbwalker/website",
+    "build": "turbo run build --filter=!@walkeros/website --output-logs=errors-only",
+    "build:website": "turbo run build --filter=@walkeros/website  --output-logs=errors-only",
+    "clean": "turbo run clean",
+    "dev": "turbo run dev --output-logs=errors-only",
+    "format": "prettier --write .",
+    "lint": "turbo run lint --output-logs=errors-only",
     "publish-packages": "npm run build lint test && changeset version && changeset publish",
-    "test": "turbo run test --filter=!@elbwalker/website"
+    "test": "turbo run test --output-logs=errors-only",
+    "prepare": "is-ci || husky"
   },
   "devDependencies": {
     "@changesets/cli": "^2.28.1",
-    "@elbwalker/eslint": "*",
-    "@elbwalker/jest": "*",
-    "@elbwalker/tsconfig": "*",
-    "@elbwalker/tsup": "*",
-    "turbo": "^2.4.4",
+    "@walkeros/eslint": "*",
+    "@walkeros/jest": "*",
+    "@walkeros/tsconfig": "*",
+    "@walkeros/tsup": "*",
+    "husky": "^9.1.7",
+    "is-ci": "^3.0.1",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.4",
     "typescript": "^5.8.2"
   },
+  "lint-staged": {
+    "*.{js,ts,tsx,json,css,md}": [
+      "prettier --write"
+    ]
+  },
   "packageManager": "npm@11.2.0",
+  "engines": {
+    "node": ">=20.0"
+  },
   "browserslist": [
     "> 0.2%",
     "not dead",

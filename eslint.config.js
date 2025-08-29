@@ -1,4 +1,4 @@
-import baseConfig from '@elbwalker/eslint';
+import baseConfig from '@walkeros/eslint/index.mjs';
 
 export default [
   ...baseConfig,
