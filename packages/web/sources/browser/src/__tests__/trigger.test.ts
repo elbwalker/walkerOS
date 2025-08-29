@@ -1,4 +1,5 @@
 import type { Collector } from '@walkeros/core';
+import type { Settings } from '../types';
 import {
   initGlobalTrigger,
   initScopeTrigger,
@@ -8,6 +9,16 @@ import {
   handleTrigger,
   resetScrollListener,
 } from '../trigger';
+
+// Helper function to create test settings
+const createTestSettings = (prefix = 'data-elb'): Settings => ({
+  prefix,
+  scope: document,
+  pageview: false,
+  session: false,
+  elb: '',
+  elbLayer: false,
+});
 
 // Mock the dependencies
 jest.mock('@walkeros/core', () => ({
@@ -84,7 +95,7 @@ describe('Trigger System', () => {
   test('initGlobalTrigger sets up click and submit listeners', () => {
     expect(mockAddEventListener).toHaveBeenCalledTimes(0);
 
-    initGlobalTrigger(mockCollector, document, 'data-elb');
+    initGlobalTrigger(mockCollector, createTestSettings('data-elb'));
 
     expect(mockAddEventListener).toHaveBeenCalledWith(
       'click',
@@ -98,7 +109,7 @@ describe('Trigger System', () => {
   });
 
   test('initGlobalTrigger always adds event listeners', () => {
-    initGlobalTrigger(mockCollector, document, 'data-elb');
+    initGlobalTrigger(mockCollector, createTestSettings('data-elb'));
 
     // Should always add both click and submit listeners
     expect(mockAddEventListener).toHaveBeenCalledTimes(2);
@@ -137,16 +148,17 @@ describe('Trigger System', () => {
 
     // Call initScopeTrigger - it should not throw
     expect(() => {
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
     }).not.toThrow();
   });
 
   test('ready function executes immediately when document is ready', async () => {
     const mockFn = jest.fn();
+    const settings = createTestSettings();
 
-    await ready(mockFn, mockCollector, { test: 'settings' });
+    await ready(mockFn, mockCollector, settings);
 
-    expect(mockFn).toHaveBeenCalledWith(mockCollector, { test: 'settings' });
+    expect(mockFn).toHaveBeenCalledWith(mockCollector, settings);
   });
 
   test('ready function waits for DOMContentLoaded when document is loading', () => {
@@ -161,7 +173,8 @@ describe('Trigger System', () => {
       // Mock implementation for DOMContentLoaded listener
     });
 
-    ready(mockFn, mockCollector, { test: 'settings' });
+    const settings = createTestSettings();
+    ready(mockFn, mockCollector, settings);
 
     // Should add event listener for DOMContentLoaded
     expect(document.addEventListener).toHaveBeenCalledWith(
@@ -172,10 +185,11 @@ describe('Trigger System', () => {
 
   test('ready function calls function with collector and settings', async () => {
     const mockFn = jest.fn();
+    const settings = createTestSettings();
 
-    await ready(mockFn, mockCollector, { test: 'settings' });
+    await ready(mockFn, mockCollector, settings);
 
-    expect(mockFn).toHaveBeenCalledWith(mockCollector, { test: 'settings' });
+    expect(mockFn).toHaveBeenCalledWith(mockCollector, settings);
   });
 
   test('handleTrigger processes events correctly', async () => {
@@ -184,7 +198,20 @@ describe('Trigger System', () => {
 
     const element = document.getElementById('test')!;
 
-    await handleTrigger(mockCollector, 'data-elb', element, Triggers.Click);
+    const testSettings = {
+      prefix: 'data-elb',
+      scope: document,
+      pageview: false,
+      session: false,
+      elb: '',
+      elbLayer: false,
+    } as Settings;
+
+    await handleTrigger(
+      { collector: mockCollector, settings: testSettings },
+      element,
+      Triggers.Click,
+    );
 
     expect(mockCollector.push).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -214,7 +241,7 @@ describe('Trigger System', () => {
     Object.defineProperty(element, 'offsetTop', { value: 200 });
     Object.defineProperty(element, 'clientHeight', { value: 300 });
 
-    initScopeTrigger(mockCollector, 'data-elb');
+    initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
     // Verify scroll listener was added
     expect(events.scroll).toBeDefined();
@@ -236,7 +263,7 @@ describe('Trigger System', () => {
         <div id="pulse-elem" data-elb="content" data-elbaction="pulse:action">Content</div>
       `;
 
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
       // Should set interval with default 15000ms
       expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 15000);
@@ -247,7 +274,7 @@ describe('Trigger System', () => {
         <div id="pulse-elem" data-elb="content" data-elbaction="pulse(5000):action">Content</div>
       `;
 
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
       // Should set interval with custom 5000ms
       expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 5000);
@@ -258,7 +285,7 @@ describe('Trigger System', () => {
         <div id="pulse-elem" data-elb="content" data-elbaction="pulse(invalid):action">Content</div>
       `;
 
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
       // Should fall back to default 15000ms
       expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 15000);
@@ -269,7 +296,7 @@ describe('Trigger System', () => {
         <div id="pulse-elem" data-elb="content" data-elbaction="pulse(1000):action">Content</div>
       `;
 
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
       // Get the interval callback
       const intervalCallback = (setInterval as jest.Mock).mock.calls[0][0];
@@ -298,7 +325,7 @@ describe('Trigger System', () => {
         <div id="wait-elem" data-elb="content" data-elbaction="wait:action">Content</div>
       `;
 
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
       // Should set timeout with default 15000ms
       expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 15000);
@@ -309,7 +336,7 @@ describe('Trigger System', () => {
         <div id="wait-elem" data-elb="content" data-elbaction="wait(3000):action">Content</div>
       `;
 
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
       // Should set timeout with custom 3000ms
       expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 3000);
@@ -320,7 +347,7 @@ describe('Trigger System', () => {
         <div id="wait-elem" data-elb="content" data-elbaction="wait(invalid):action">Content</div>
       `;
 
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
       // Should fall back to default 15000ms
       expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 15000);
@@ -331,7 +358,7 @@ describe('Trigger System', () => {
         <div id="wait-elem" data-elb="content" data-elbaction="wait(1000):action">Content</div>
       `;
 
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
       // Should not have triggered yet
       expect(mockCollector.push).not.toHaveBeenCalled();
@@ -348,7 +375,7 @@ describe('Trigger System', () => {
         <div id="scroll-elem" data-elb="content" data-elbaction="scroll:action">Content</div>
       `;
 
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
       // The scroll elements array should contain the element with default 50% depth
       // This is tested indirectly through the scroll function behavior
@@ -360,7 +387,7 @@ describe('Trigger System', () => {
         <div id="scroll-elem" data-elb="content" data-elbaction="scroll(25):action">Content</div>
       `;
 
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
       // The scroll elements array should contain the element with custom 25% depth
       expect(events.scroll).toBeDefined();
@@ -375,7 +402,7 @@ describe('Trigger System', () => {
 
       // Should not throw for invalid parameters
       expect(() => {
-        initScopeTrigger(mockCollector, 'data-elb');
+        initScopeTrigger(mockCollector, createTestSettings('data-elb'));
       }).not.toThrow();
     });
 
@@ -388,7 +415,7 @@ describe('Trigger System', () => {
       const mockAddEventListener = jest.fn();
       element.addEventListener = mockAddEventListener;
 
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
       expect(mockAddEventListener).toHaveBeenCalledWith(
         'mouseenter',
@@ -401,7 +428,7 @@ describe('Trigger System', () => {
         <div id="load-elem" data-elb="content" data-elbaction="load:action">Content</div>
       `;
 
-      initScopeTrigger(mockCollector, 'data-elb');
+      initScopeTrigger(mockCollector, createTestSettings('data-elb'));
 
       // Load trigger should execute immediately
       expect(mockCollector.push).toHaveBeenCalled();
@@ -416,7 +443,7 @@ describe('Trigger System', () => {
       `;
 
       // Initialize scope triggers with custom prefix
-      initScopeTrigger(mockCollector, 'data-custom');
+      initScopeTrigger(mockCollector, createTestSettings('data-custom'));
 
       // Should have called push with entity load event
       expect(mockCollector.push).toHaveBeenCalledWith(

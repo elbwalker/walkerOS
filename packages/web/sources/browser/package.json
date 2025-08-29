@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-browser",
   "description": "Browser DOM source for walkerOS",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -20,7 +20,7 @@
     "build": "tsup --silent",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc && eslint \"**/*.ts*\" --rule '@typescript-eslint/no-explicit-any: off'",
+    "lint": "tsc && eslint \"**/*.ts*\"",
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },

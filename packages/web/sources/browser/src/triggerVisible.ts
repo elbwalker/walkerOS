@@ -1,4 +1,5 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
+import type { Settings, Context } from './types';
 import { tryCatch } from '@walkeros/core';
 import { isVisible } from '@walkeros/web-core';
 import { handleTrigger, Triggers } from './trigger';
@@ -22,7 +23,7 @@ interface VisibilityState {
   duration: number;
   elementConfigs?: WeakMap<
     HTMLElement,
-    { multiple: boolean; blocked: boolean; prefix: string }
+    { multiple: boolean; blocked: boolean; context: Context }
   >;
 }
 
@@ -149,16 +150,15 @@ function handleIntersection(
         const timer = window.setTimeout(async () => {
           // Final visibility check before triggering (cached for performance)
           if (isElementVisible(target)) {
-            // Get element configuration to access prefix
+            // Get element configuration to access context
             const elementConfig = state.elementConfigs?.get(target);
-            const prefix = elementConfig?.prefix || 'data-elb';
-
-            await handleTrigger(
-              collector,
-              prefix,
-              target as Element,
-              Triggers.Visible,
-            );
+            if (elementConfig?.context) {
+              await handleTrigger(
+                elementConfig.context,
+                target as Element,
+                Triggers.Visible,
+              );
+            }
 
             // Get fresh element config reference for state update
             const currentConfig = state.elementConfigs?.get(target);
@@ -212,11 +212,11 @@ export function initVisibilityTracking(
  * Main trigger function for visible elements
  */
 export function triggerVisible(
-  collector: Collector.Instance,
+  context: Context,
   element: HTMLElement,
-  config: { multiple?: boolean; prefix?: string } = { multiple: false },
+  config: { multiple?: boolean } = { multiple: false },
 ): void {
-  const state = (collector as CollectorWithVisibility)._visibilityState;
+  const state = (context.collector as CollectorWithVisibility)._visibilityState;
   if (state?.observer && element) {
     // Store element config for later use in intersection handling
     if (!state.elementConfigs) {
@@ -225,7 +225,7 @@ export function triggerVisible(
     state.elementConfigs.set(element, {
       multiple: config.multiple ?? false,
       blocked: false,
-      prefix: config.prefix || 'data-elb',
+      context,
     });
     state.observer.observe(element);
   }

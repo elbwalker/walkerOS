@@ -1,10 +1,41 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
+import type { Context } from '../types';
 import {
   initVisibilityTracking,
   triggerVisible,
   destroyVisibilityTracking,
   unobserveElement,
 } from '../triggerVisible';
+
+// Type for collector with visibility state
+interface CollectorWithVisibility extends Collector.Instance {
+  _visibilityState?: {
+    observer?: IntersectionObserver;
+    timers: WeakMap<HTMLElement, number>;
+    duration: number;
+    elementConfigs?: WeakMap<
+      HTMLElement,
+      {
+        multiple: boolean;
+        blocked: boolean;
+        context: Context;
+      }
+    >;
+  };
+}
+
+// Helper function to create test context
+const createTestContext = (prefix = 'data-elb'): Context => ({
+  collector: {} as Collector.Instance,
+  settings: {
+    prefix,
+    scope: document,
+    pageview: false,
+    session: false,
+    elb: '',
+    elbLayer: false,
+  },
+});
 
 // Mock isVisible
 jest.mock('@walkeros/web-core', () => ({
@@ -79,38 +110,42 @@ describe('triggerVisible', () => {
       threshold: [0, 0.5],
     });
 
-    const state = (mockCollector as any)._visibilityState;
+    const state = (mockCollector as CollectorWithVisibility)._visibilityState;
     expect(state).toBeDefined();
-    expect(state.observer).toBe(mockObserver);
-    expect(state.duration).toBe(2000);
-    expect(state.timers).toBeDefined();
+    expect(state!.observer).toBe(mockObserver);
+    expect(state!.duration).toBe(2000);
+    expect(state!.timers).toBeDefined();
   });
 
   test('initVisibilityTracking does not reinitialize if already initialized', () => {
     initVisibilityTracking(mockCollector, 1000);
-    const firstState = (mockCollector as any)._visibilityState;
+    const firstState = (mockCollector as CollectorWithVisibility)
+      ._visibilityState;
 
     initVisibilityTracking(mockCollector, 2000);
-    const secondState = (mockCollector as any)._visibilityState;
+    const secondState = (mockCollector as CollectorWithVisibility)
+      ._visibilityState;
 
     expect(firstState).toBe(secondState);
-    expect(secondState.duration).toBe(1000); // Should keep original duration
+    expect(secondState!.duration).toBe(1000); // Should keep original duration
   });
 
   test('triggerVisible observes element with correct configuration', () => {
     initVisibilityTracking(mockCollector);
 
     const element = document.createElement('div');
-    triggerVisible(mockCollector, element, { multiple: true });
+    const context = createTestContext();
+    context.collector = mockCollector;
+    triggerVisible(context, element, { multiple: true });
 
     expect(mockObserver.observe).toHaveBeenCalledWith(element);
 
-    const state = (mockCollector as any)._visibilityState;
-    const elementConfig = state.elementConfigs.get(element);
+    const state = (mockCollector as CollectorWithVisibility)._visibilityState;
+    const elementConfig = state!.elementConfigs!.get(element);
     expect(elementConfig).toEqual({
       multiple: true,
       blocked: false,
-      prefix: 'data-elb',
+      context: expect.any(Object),
     });
   });
 
@@ -119,7 +154,9 @@ describe('triggerVisible', () => {
     const element = document.createElement('div');
 
     expect(() => {
-      triggerVisible(mockCollector, element);
+      const context = createTestContext();
+      context.collector = mockCollector;
+      triggerVisible(context, element);
     }).not.toThrow();
 
     expect(mockObserver.observe).not.toHaveBeenCalled();
@@ -132,7 +169,9 @@ describe('triggerVisible', () => {
     Object.defineProperty(element, 'offsetHeight', { value: 100 });
     Object.defineProperty(window, 'innerHeight', { value: 800 });
 
-    triggerVisible(mockCollector, element);
+    const context = createTestContext();
+    context.collector = mockCollector;
+    triggerVisible(context, element);
 
     // Mock intersection entry for visible element
     const entry: Partial<IntersectionObserverEntry> = {
@@ -151,8 +190,17 @@ describe('triggerVisible', () => {
     // Should call handleTrigger
     await Promise.resolve(); // Wait for async
     expect(handleTrigger).toHaveBeenCalledWith(
-      mockCollector,
-      'data-elb',
+      expect.objectContaining({
+        collector: mockCollector,
+        settings: expect.objectContaining({
+          prefix: 'data-elb',
+          scope: expect.any(Object),
+          pageview: false,
+          session: false,
+          elb: '',
+          elbLayer: false,
+        }),
+      }),
       element,
       'visible',
     );
@@ -165,7 +213,9 @@ describe('triggerVisible', () => {
     Object.defineProperty(element, 'offsetHeight', { value: 1000 }); // Large element
     Object.defineProperty(window, 'innerHeight', { value: 800 });
 
-    triggerVisible(mockCollector, element);
+    const context = createTestContext();
+    context.collector = mockCollector;
+    triggerVisible(context, element);
 
     // Mock intersection entry for large element with low ratio but visible
     const entry: Partial<IntersectionObserverEntry> = {
@@ -181,8 +231,17 @@ describe('triggerVisible', () => {
     await Promise.resolve();
 
     expect(handleTrigger).toHaveBeenCalledWith(
-      mockCollector,
-      'data-elb',
+      expect.objectContaining({
+        collector: mockCollector,
+        settings: expect.objectContaining({
+          prefix: 'data-elb',
+          scope: expect.any(Object),
+          pageview: false,
+          session: false,
+          elb: '',
+          elbLayer: false,
+        }),
+      }),
       element,
       'visible',
     );
@@ -194,7 +253,9 @@ describe('triggerVisible', () => {
     const element = document.createElement('div') as HTMLElement;
     const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
 
-    triggerVisible(mockCollector, element);
+    const context = createTestContext();
+    context.collector = mockCollector;
+    triggerVisible(context, element);
 
     // First make it visible
     const visibleEntry: Partial<IntersectionObserverEntry> = {
@@ -221,7 +282,9 @@ describe('triggerVisible', () => {
     const element = document.createElement('div') as HTMLElement;
     Object.defineProperty(element, 'offsetHeight', { value: 100 });
 
-    triggerVisible(mockCollector, element, { multiple: true });
+    const context = createTestContext();
+    context.collector = mockCollector;
+    triggerVisible(context, element, { multiple: true });
 
     const entry: Partial<IntersectionObserverEntry> = {
       target: element,
@@ -236,9 +299,9 @@ describe('triggerVisible', () => {
     expect(handleTrigger).toHaveBeenCalledTimes(1);
 
     // Element should now be blocked
-    const state = (mockCollector as any)._visibilityState;
-    const elementConfig = state.elementConfigs.get(element);
-    expect(elementConfig.blocked).toBe(true);
+    const state = (mockCollector as CollectorWithVisibility)._visibilityState;
+    const elementConfig = state!.elementConfigs!.get(element);
+    expect(elementConfig!.blocked).toBe(true);
 
     // Second visibility should not trigger
     observerCallback([entry as IntersectionObserverEntry]);
@@ -252,7 +315,9 @@ describe('triggerVisible', () => {
     initVisibilityTracking(mockCollector, 100);
 
     const element = document.createElement('div') as HTMLElement;
-    triggerVisible(mockCollector, element, { multiple: true });
+    const context = createTestContext();
+    context.collector = mockCollector;
+    triggerVisible(context, element, { multiple: true });
 
     const visibleEntry: Partial<IntersectionObserverEntry> = {
       target: element,
@@ -283,7 +348,9 @@ describe('triggerVisible', () => {
     initVisibilityTracking(mockCollector);
 
     const element = document.createElement('div') as HTMLElement;
-    triggerVisible(mockCollector, element);
+    const context = createTestContext();
+    context.collector = mockCollector;
+    triggerVisible(context, element);
 
     // Create a timer
     const entry: Partial<IntersectionObserverEntry> = {
@@ -303,24 +370,34 @@ describe('triggerVisible', () => {
   test('destroyVisibilityTracking disconnects observer and cleans up state', () => {
     initVisibilityTracking(mockCollector);
 
-    expect((mockCollector as any)._visibilityState).toBeDefined();
+    expect(
+      (mockCollector as CollectorWithVisibility)._visibilityState,
+    ).toBeDefined();
 
     destroyVisibilityTracking(mockCollector);
 
     expect(mockObserver.disconnect).toHaveBeenCalled();
-    expect((mockCollector as any)._visibilityState).toBeUndefined();
+    expect(
+      (mockCollector as CollectorWithVisibility)._visibilityState,
+    ).toBeUndefined();
   });
 
   test('handles missing IntersectionObserver gracefully', () => {
-    // Remove IntersectionObserver
-    (global as any).IntersectionObserver = undefined;
+    // Store original IntersectionObserver and remove it
+    const originalIntersectionObserver = global.IntersectionObserver;
+    (
+      global as unknown as { IntersectionObserver?: unknown }
+    ).IntersectionObserver = undefined;
 
     expect(() => {
       initVisibilityTracking(mockCollector);
     }).not.toThrow();
 
-    const state = (mockCollector as any)._visibilityState;
-    expect(state.observer).toBeUndefined();
+    const state = (mockCollector as CollectorWithVisibility)._visibilityState;
+    expect(state!.observer).toBeUndefined();
+
+    // Restore original IntersectionObserver
+    global.IntersectionObserver = originalIntersectionObserver;
   });
 
   test('caches element size calculations for performance', () => {
@@ -329,7 +406,9 @@ describe('triggerVisible', () => {
     const element = document.createElement('div') as HTMLElement;
     const offsetHeightSpy = jest.spyOn(element, 'offsetHeight', 'get');
 
-    triggerVisible(mockCollector, element);
+    const context = createTestContext();
+    context.collector = mockCollector;
+    triggerVisible(context, element);
 
     const entry: Partial<IntersectionObserverEntry> = {
       target: element,
