@@ -14,11 +14,12 @@
     "apps/quickstart",
     "apps/storybook-addon",
     "apps/demos/react",
-    "apps/demos/storybook"
+    "apps/demos/storybook",
+    "website"
   ],
   "scripts": {
     "build": "turbo run build --filter=!@walkeros/website --output-logs=errors-only",
-    "build:website": "turbo run build --filter=@walkeros/website --output-logs=errors-only",
+    "build:website": "turbo run build --filter=@walkeros/website  --output-logs=errors-only",
     "clean": "turbo run clean",
     "dev": "turbo run dev --output-logs=errors-only",
     "format": "prettier --write .",
