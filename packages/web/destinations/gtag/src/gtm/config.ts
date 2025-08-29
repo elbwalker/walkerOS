@@ -1,40 +1,45 @@
-import type { GTMSettings, WindowData } from '../types';
+import type { GTMSettings } from '../types';
+import type { DestinationWeb } from '@walkeros/web-core';
+import { getEnvironment } from '@walkeros/web-core';
 
 const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
 
 export function initGTM(
   settings: GTMSettings,
-  wrap: (name: string, fn: Function) => Function,
   loadScript?: boolean,
+  env?: DestinationWeb.Environment,
 ): void {
+  const { window, document } = getEnvironment(env);
   const { containerId, dataLayer, domain } = settings;
   const dataLayerName = dataLayer || defaultDataLayer;
 
-  const win = window as WindowData;
-
   // Initialize the dataLayer (default or custom name)
   if (dataLayerName === defaultDataLayer) {
-    win.dataLayer = win.dataLayer || [];
+    window.dataLayer = window.dataLayer || [];
   } else {
-    win[dataLayerName] = (win[dataLayerName] as unknown[]) || [];
+    window[dataLayerName] = (window[dataLayerName] as unknown[]) || [];
   }
 
   // Get the appropriate dataLayer array
-  const dataLayerArray = win[dataLayerName] as unknown[];
+  const dataLayerArray = window[dataLayerName] as unknown[];
 
-  const push = wrap('dataLayer.push', dataLayerArray.push.bind(dataLayerArray));
-  push({
+  dataLayerArray.push({
     'gtm.start': new Date().getTime(),
     event: 'gtm.js',
   });
 
   // Load the gtm script and container
   if (loadScript && containerId)
-    addScript(containerId, domain || defaultDomain, dataLayerName);
+    addScript(containerId, domain || defaultDomain, dataLayerName, document);
 }
 
-function addScript(containerId: string, src: string, dataLayerName: string) {
+function addScript(
+  containerId: string,
+  src: string,
+  dataLayerName: string,
+  document: Document = globalThis.document,
+) {
   const dl = dataLayerName != defaultDataLayer ? '&l=' + dataLayerName : '';
   const script = document.createElement('script');
   script.src = src + containerId + dl;

@@ -16,7 +16,7 @@ declare global {
     elbwalker: Collector;
     walkerjs: Collector;
     elbLayer: Layer;
-    dataLayer: WalkerOS.Events | unknown;
+    dataLayer: WalkerOS.Events | unknown | unknown[];
     elb: Elb.Fn<Promise<Elb.PushResult>>;
   }
 }

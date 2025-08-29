@@ -2,40 +2,44 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { DestinationAPI } from '.';
 import { createCollector } from '@walkeros/collector';
 import { createEvent } from '@walkeros/core';
-import { events, mapping } from './examples';
+import { mapping } from './examples';
 
 describe('Destination API', () => {
-  let elb: WalkerOS.Elb;
   const mockSendWeb = jest.fn(); //.mockImplementation(console.log);
-
-  jest.mock('@walkeros/web-core', () => ({
-    ...jest.requireActual('@walkeros/web-core'),
-    sendWeb: mockSendWeb,
-  }));
 
   let destination: DestinationAPI.Destination;
   let event: WalkerOS.Event;
   const url = 'https://api.example.com/';
+
+  const testEnv = {
+    sendWeb: mockSendWeb,
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
 
     destination = jest.requireActual('.').default;
     event = createEvent();
-    ({ elb } = await createCollector({
+    await createCollector({
       tagging: 2,
-    }));
+    });
   });
 
-  test('init', async () => {
-    destination.config = {};
-    elb('walker destination', destination);
-
-    await elb(event); // No url
+  test('init', () => {
+    // Test with no URL - should not call sendWeb
+    destination.push(event, {
+      collector: {} as Collector.Instance,
+      config: {},
+      env: testEnv,
+    });
     expect(mockSendWeb).not.toHaveBeenCalled();
 
-    destination.config.settings = { url };
-    await elb(event);
+    // Test with URL - should call sendWeb
+    destination.push(event, {
+      collector: {} as Collector.Instance,
+      config: { settings: { url } },
+      env: testEnv,
+    });
     expect(mockSendWeb).toHaveBeenCalledTimes(1);
 
     const [calledUrl, calledData, calledOptions] = mockSendWeb.mock.calls[0];
@@ -48,42 +52,37 @@ describe('Destination API', () => {
     );
   });
 
-  test('wrapper', () => {
-    const onCall = jest.fn();
-    const wrap = jest.fn(
-      <T extends (...args: unknown[]) => unknown>(name: string, fn: T): T => {
-        return ((...args: unknown[]) => {
-          onCall({ name, id: 'test-id', type: 'api' }, args);
-          return fn(...args);
-        }) as T;
-      },
-    );
+  test('environment customization', () => {
+    const customSendWeb = jest.fn();
+    const customEnv = { sendWeb: customSendWeb };
 
     destination.push(event, {
       collector: {} as Collector.Instance,
       config: {
         settings: { url },
       },
-      wrap,
+      env: customEnv,
     });
 
-    expect(wrap).toHaveBeenCalledWith('sendWeb', mockSendWeb);
-    expect(onCall).toHaveBeenCalledTimes(1);
-    expect(onCall).toHaveBeenCalledWith(
-      { name: 'sendWeb', id: 'test-id', type: 'api' },
-      [
-        url,
-        JSON.stringify(event),
-        expect.objectContaining({ transport: 'fetch' }),
-      ],
+    expect(customSendWeb).toHaveBeenCalledTimes(1);
+    expect(customSendWeb).toHaveBeenCalledWith(
+      url,
+      JSON.stringify(event),
+      expect.objectContaining({ transport: 'fetch' }),
     );
+
+    // Verify mockSendWeb was not called
+    expect(mockSendWeb).not.toHaveBeenCalled();
   });
 
-  test('transform', async () => {
-    elb('walker destination', destination, {
-      settings: { url, transform: () => 'transformed' },
+  test('transform', () => {
+    destination.push(event, {
+      collector: {} as Collector.Instance,
+      config: {
+        settings: { url, transform: () => 'transformed' },
+      },
+      env: testEnv,
     });
-    await elb(event);
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
       'transformed',
@@ -91,11 +90,14 @@ describe('Destination API', () => {
     );
   });
 
-  test('headers', async () => {
-    elb('walker destination', destination, {
-      settings: { url, headers: { foo: 'bar' } },
+  test('headers', () => {
+    destination.push(event, {
+      collector: {} as Collector.Instance,
+      config: {
+        settings: { url, headers: { foo: 'bar' } },
+      },
+      env: testEnv,
     });
-    await elb(event);
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
       expect.any(String),
@@ -105,11 +107,14 @@ describe('Destination API', () => {
     );
   });
 
-  test('method', async () => {
-    elb('walker destination', destination, {
-      settings: { url, method: 'POST' },
+  test('method', () => {
+    destination.push(event, {
+      collector: {} as Collector.Instance,
+      config: {
+        settings: { url, method: 'POST' },
+      },
+      env: testEnv,
     });
-    await elb(event);
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
       expect.any(String),
@@ -119,16 +124,19 @@ describe('Destination API', () => {
     );
   });
 
-  test('event entity action', async () => {
-    elb('walker destination', destination, {
-      settings: { url },
-      mapping: mapping.config,
+  test('event entity action', () => {
+    destination.push(event, {
+      collector: {} as Collector.Instance,
+      config: {
+        settings: { url },
+        mapping: mapping.config,
+      },
+      env: testEnv,
     });
-    await elb(event);
 
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
-      events.entity_action(),
+      JSON.stringify(event),
       expect.any(Object),
     );
   });

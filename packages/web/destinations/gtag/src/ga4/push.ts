@@ -1,17 +1,20 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { GA4Settings, GA4Mapping, Parameters } from '../types';
+import type { DestinationWeb } from '@walkeros/web-core';
 import { isObject } from '@walkeros/core';
 import { getParamsInclude } from '../shared/parameters';
 import { normalizeEventName } from '../shared/mapping';
-import { getGtag } from '../shared/gtag';
+import { getEnvironment } from '@walkeros/web-core';
 
 export function pushGA4Event(
   event: WalkerOS.Event,
   settings: GA4Settings,
   mapping: GA4Mapping = {},
   data: WalkerOS.AnyObject,
-  wrap: (name: string, fn: Function) => Function,
+  env?: DestinationWeb.Environment,
 ): void {
+  const { window } = getEnvironment(env);
+
   if (!settings.measurementId) return;
 
   const eventData = isObject(data) ? data : {};
@@ -40,6 +43,6 @@ export function pushGA4Event(
   // Debug mode
   if (settings.debug) eventParams.debug_mode = true;
 
-  const gtag = getGtag(wrap);
+  const gtag = window.gtag as Gtag.Gtag;
   gtag('event', eventName, eventParams);
 }

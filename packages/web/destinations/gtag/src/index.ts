@@ -15,23 +15,41 @@ export const destinationGtag: Destination = {
 
   config: { settings: {} },
 
-  init({ config, wrap }) {
+  env: {
+    window: {
+      gtag: function (...args: unknown[]): void {},
+      dataLayer: [] as unknown[],
+    },
+    document: {
+      createElement: (tagName: string) => ({
+        src: '',
+        async: false,
+        setAttribute: () => {},
+        removeAttribute: () => {},
+      }),
+      head: {
+        appendChild: () => {},
+      },
+    },
+  },
+
+  init({ config, env }) {
     const { settings = {} as Partial<Settings>, loadScript } = config;
     const { ga4, ads, gtm } = settings;
 
     // Initialize GA4 if configured
     if (ga4?.measurementId) {
-      initGA4(ga4, wrap, loadScript);
+      initGA4(ga4, loadScript, env);
     }
 
     // Initialize Google Ads if configured
     if (ads?.conversionId) {
-      initAds(ads, wrap, loadScript);
+      initAds(ads, loadScript, env);
     }
 
     // Initialize GTM if configured
     if (gtm?.containerId) {
-      initGTM(gtm, wrap, loadScript);
+      initGTM(gtm, loadScript, env);
     }
 
     // Fail if no tools are configured
@@ -42,7 +60,7 @@ export const destinationGtag: Destination = {
     return config;
   },
 
-  push(event, { config, mapping = {}, data, wrap }) {
+  push(event, { config, mapping = {}, data, env }) {
     const { settings = {} } = config;
     const { ga4, ads, gtm } = settings;
     const eventMapping = mapping.settings || {};
@@ -54,7 +72,7 @@ export const destinationGtag: Destination = {
         ga4,
         eventMapping.ga4,
         data as WalkerOS.AnyObject,
-        wrap,
+        env,
       );
     }
 
@@ -65,8 +83,8 @@ export const destinationGtag: Destination = {
         ads,
         eventMapping.ads,
         data as WalkerOS.AnyObject,
-        wrap,
         mapping.name,
+        env,
       );
     }
 
@@ -77,7 +95,7 @@ export const destinationGtag: Destination = {
         gtm,
         eventMapping.gtm,
         data as WalkerOS.AnyObject,
-        wrap,
+        env,
       );
     }
   },

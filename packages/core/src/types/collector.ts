@@ -11,8 +11,6 @@ import type {
  * Core collector configuration interface
  */
 export interface Config {
-  /** Run in dry mode without executing events */
-  dryRun: boolean;
   /** Whether to run collector automatically */
   run?: boolean;
   /** Initial consent state */

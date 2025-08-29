@@ -8,7 +8,6 @@ const { events, mapping } = destinationPiwikProExamples;
 
 describe('Destination PiwikPro', () => {
   let elb: WalkerOS.Elb;
-  const w = window;
   let destination: DestinationPiwikPro.Destination,
     settings: DestinationPiwikPro.Settings;
 
@@ -18,14 +17,31 @@ describe('Destination PiwikPro', () => {
   const appId = 'XXX-XXX-XXX-XXX-XXX';
   const url = 'https://your_account_name.piwik.pro/';
 
+  const testEnv = {
+    window: {
+      _paq: {
+        push: mockFn,
+      },
+    },
+    document: {
+      createElement: jest.fn(() => ({
+        src: '',
+        type: '',
+        async: false,
+        defer: false,
+        setAttribute: jest.fn(),
+        removeAttribute: jest.fn(),
+      })),
+      head: { appendChild: jest.fn() },
+    },
+  };
+
   beforeEach(async () => {
     settings = { appId, url };
 
     destination = jest.requireActual('.').default;
-    destination.config = { settings };
 
-    w._paq = [];
-    w._paq.push = mockFn;
+    jest.clearAllMocks();
 
     ({ elb } = await createCollector({
       tagging: 2,
@@ -35,28 +51,23 @@ describe('Destination PiwikPro', () => {
   afterEach(() => {});
 
   test('init', async () => {
-    elb('walker destination', destination);
+    elb('walker destination', {
+      ...destination,
+      env: testEnv,
+      config: { settings },
+    });
 
     expect(true).toBeTruthy(); // @TODO: Add tests
-  });
-
-  test('wrapper', async () => {
-    (w._paq as unknown) = undefined;
-    const onCall = jest.fn();
-    destination.config.wrapper = { onCall };
-    elb('walker destination', destination);
-    await elb(event);
-    expect(onCall).toHaveBeenCalled();
-    expect(onCall).toHaveBeenCalledWith(
-      { name: '_paq.push', type: 'piwikpro' },
-      expect.any(Array),
-    );
   });
 
   test('pageview', async () => {
     const page_view = getEvent('page view');
     const mockFnIgnorePageView = jest.fn();
-    elb('walker destination', destination);
+    elb('walker destination', {
+      ...destination,
+      env: testEnv,
+      config: { settings },
+    });
     elb('walker destination', {
       push: mockFnIgnorePageView,
       config: { mapping: { page: { view: { ignore: true } } } },
@@ -78,9 +89,13 @@ describe('Destination PiwikPro', () => {
 
   test('event ecommerceOrder', async () => {
     const event = getEvent('order complete');
-    elb('walker destination', destination, {
-      settings,
-      mapping: mapping.config,
+    elb('walker destination', {
+      ...destination,
+      env: testEnv,
+      config: {
+        settings,
+        mapping: mapping.config,
+      },
     });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceOrder());
@@ -88,9 +103,13 @@ describe('Destination PiwikPro', () => {
 
   test('event ecommerceAddToCart', async () => {
     const event = getEvent('product add');
-    elb('walker destination', destination, {
-      settings,
-      mapping: mapping.config,
+    elb('walker destination', {
+      ...destination,
+      env: testEnv,
+      config: {
+        settings,
+        mapping: mapping.config,
+      },
     });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceAddToCart());
@@ -98,9 +117,13 @@ describe('Destination PiwikPro', () => {
 
   test('event ecommerceProductDetailView', async () => {
     const event = getEvent('product view');
-    elb('walker destination', destination, {
-      settings,
-      mapping: mapping.config,
+    elb('walker destination', {
+      ...destination,
+      env: testEnv,
+      config: {
+        settings,
+        mapping: mapping.config,
+      },
     });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceProductDetailView());
@@ -108,9 +131,13 @@ describe('Destination PiwikPro', () => {
 
   test('event ecommerceCartUpdate', async () => {
     const event = getEvent('cart view');
-    elb('walker destination', destination, {
-      settings,
-      mapping: mapping.config,
+    elb('walker destination', {
+      ...destination,
+      env: testEnv,
+      config: {
+        settings,
+        mapping: mapping.config,
+      },
     });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceCartUpdate());

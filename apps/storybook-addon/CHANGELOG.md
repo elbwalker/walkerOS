@@ -1,5 +1,11 @@
 # @walkeros/storybook-addon
 
+## 0.0.2
+
+### Patch Changes
+
+- fixed import path and external dep versions
+
 ## 0.0.1
 
 ### Patch Changes

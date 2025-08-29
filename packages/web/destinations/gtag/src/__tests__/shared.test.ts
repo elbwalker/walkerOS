@@ -1,9 +1,4 @@
-import {
-  addScript,
-  initializeGtag,
-  getGtag,
-  resetLoadedScripts,
-} from '../shared/gtag';
+import { addScript, initializeGtag, resetLoadedScripts } from '../shared/gtag';
 import { getParamsInclude } from '../shared/parameters';
 import { normalizeEventName } from '../shared/mapping';
 
@@ -91,19 +86,6 @@ describe('Shared Utilities', () => {
       initializeGtag();
 
       expect((window as any).gtag).toBe(existingGtag);
-    });
-  });
-
-  describe('getGtag', () => {
-    it('should return wrapped gtag function', () => {
-      const mockGtag = jest.fn();
-      const mockWrap = jest.fn(() => mockGtag);
-      (window as any).gtag = jest.fn();
-
-      const result = getGtag(mockWrap);
-
-      expect(mockWrap).toHaveBeenCalledWith('gtag', (window as any).gtag);
-      expect(result).toBe(mockGtag);
     });
   });
 

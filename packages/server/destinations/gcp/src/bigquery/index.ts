@@ -16,8 +16,8 @@ export const destinationBigQuery: Destination = {
     return config;
   },
 
-  async push(event, { config, mapping, data, collector, wrap }) {
-    return await push(event, { config, mapping, data, collector, wrap });
+  async push(event, { config, mapping, data, collector, env }) {
+    return await push(event, { config, mapping, data, collector, env });
   },
 };
 

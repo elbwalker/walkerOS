@@ -15,14 +15,14 @@ describe('Firehose', () => {
   const streamName = 'demo';
 
   const mockCollector = {} as Collector.Instance;
-  const mockWrap = jest.fn((_name, fn) => fn);
+  const testEnv = {};
 
   async function getConfig(settings: Settings = {}) {
     const mockCollector = {} as Collector.Instance;
     return (await destination.init({
       config: { settings },
       collector: mockCollector,
-      wrap: mockWrap,
+      env: testEnv,
     })) as Config;
   }
 
@@ -58,7 +58,7 @@ describe('Firehose', () => {
     await destination.push(event, {
       config,
       collector: mockCollector,
-      wrap: mockWrap,
+      env: testEnv,
     });
     expect(spy).toHaveBeenCalledWith(expect.any(PutRecordBatchCommand));
   });

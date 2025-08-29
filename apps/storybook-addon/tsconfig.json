@@ -1,7 +1,7 @@
 {
   "extends": "@walkeros/tsconfig/web.json",
   "compilerOptions": {
-    "jsx": "react-jsx",
+    "jsx": "react",
     "rootDir": "src"
   },
   "include": ["src/**/*"],

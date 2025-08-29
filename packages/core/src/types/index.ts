@@ -10,7 +10,6 @@ export * as Request from './request';
 export * as Schema from './schema';
 export * as Source from './source';
 export * as WalkerOS from './walkeros';
-export * as Wrapper from './wrapper';
 
 // Export storage types directly
 export type { StorageType } from './storage';

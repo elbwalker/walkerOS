@@ -30,6 +30,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
+    "@walkeros/core": "0.0.8",
     "@walkeros/web-core": "0.0.8"
   },
   "devDependencies": {},

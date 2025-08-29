@@ -15,9 +15,6 @@ declare global {
   }
 }
 
-// Export helper type for internal use
-export type WindowData = WindowWithDataLayer;
-
 export type Destination = DestinationWeb.Destination<Settings, Mapping>;
 export type Config = DestinationWeb.Config<Settings, Mapping>;
 

@@ -19,8 +19,8 @@ export const destinationFirehose: Destination = {
     return config;
   },
 
-  async push(event, { config, collector, wrap }) {
-    return await push(event, { config, collector, wrap });
+  async push(event, { config, collector, env }) {
+    return await push(event, { config, collector, env });
   },
 };
 

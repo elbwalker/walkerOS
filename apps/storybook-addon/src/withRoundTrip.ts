@@ -1,4 +1,4 @@
-import type { WalkerOSAddon } from 'src/types';
+import type { WalkerOSAddon } from './types';
 import type { DecoratorFunction } from 'storybook/internal/types';
 import { addons } from 'storybook/preview-api';
 import { getAllEvents } from '@walkeros/web-source-browser';

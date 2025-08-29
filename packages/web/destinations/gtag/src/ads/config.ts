@@ -1,11 +1,14 @@
 import type { AdsSettings } from '../types';
-import { addScript, initializeGtag, getGtag } from '../shared/gtag';
+import type { DestinationWeb } from '@walkeros/web-core';
+import { addScript, initializeGtag } from '../shared/gtag';
+import { getEnvironment } from '@walkeros/web-core';
 
 export function initAds(
   settings: AdsSettings,
-  wrap: (name: string, fn: Function) => Function,
   loadScript?: boolean,
+  env?: DestinationWeb.Environment,
 ): void {
+  const { window, document } = getEnvironment(env);
   const { conversionId } = settings;
 
   if (!conversionId) return;
@@ -13,12 +16,12 @@ export function initAds(
   // Default currency value
   if (!settings.currency) settings.currency = 'EUR';
 
-  if (loadScript) addScript(conversionId);
+  if (loadScript) addScript(conversionId, undefined, document);
 
   // Initialize gtag infrastructure
-  initializeGtag();
+  initializeGtag(window);
 
-  const gtag = getGtag(wrap);
+  const gtag = window.gtag as Gtag.Gtag;
   gtag('js', new Date());
 
   // gtag init call

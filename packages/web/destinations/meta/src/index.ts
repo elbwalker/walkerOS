@@ -1,6 +1,7 @@
 import type { Settings, Destination } from './types';
 import { addScript, setup } from './setup';
 import { isObject } from '@walkeros/core';
+import { getEnvironment } from '@walkeros/web-core';
 
 // Types
 export * as DestinationMeta from './types';
@@ -13,26 +14,30 @@ export const destinationMeta: Destination = {
 
   config: {},
 
-  init({ config, wrap }) {
+  init({ config, env }) {
     const { settings = {} as Partial<Settings>, loadScript } = config;
     const { pixelId } = settings;
 
     // Load Meta Pixel script if required (fbevents.js)
-    if (loadScript) addScript();
+    if (loadScript) addScript(env);
 
     // Required pixel id
     if (!pixelId) return false;
 
     // fbq function setup
-    setup();
+    setup(env);
 
-    const fbq = wrap('fbq', window.fbq);
+    const { window } = getEnvironment(env);
+    const fbq = window.fbq as facebook.Pixel.Event;
     fbq('init', pixelId);
+
+    return config;
   },
 
-  push(event, { config, mapping = {}, data, wrap }) {
+  push(event, { config, mapping = {}, data, env }) {
     const { track, trackCustom } = mapping.settings || {};
-    const fbq = wrap('fbq', window.fbq);
+    const { window } = getEnvironment(env);
+    const fbq = window.fbq as facebook.Pixel.Event;
 
     // page view
     if (event.event === 'page view' && !mapping.settings) {
