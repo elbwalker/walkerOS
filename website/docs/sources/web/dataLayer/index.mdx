@@ -10,15 +10,27 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
 import PackageLink from '@site/src/components/docs/package-link';
 
 <PackageLink
-  env="web"
-  github="packages/sources/datalayer"
+  github="packages/web/sources/datalayer"
   npm="@walkeros/web-source-datalayer"
 />
 # DataLayer Source
 
 ## Installation
 
-## Setup
+```bash
+npm install @walkeros/web-source-datalayer
+```
+
+## Basic Setup
+
+```js
+import { elb } from '@walkeros/collector';
+import { sourceDataLayer } from '@walkeros/web-source-datalayer';
+
+sourceDataLayer({ elb });
+```
+
+## Configuration reference
 
 <SettingsTable
   properties={[
@@ -46,3 +58,4 @@ import PackageLink from '@site/src/components/docs/package-link';
     },
   ]}
 />
+```

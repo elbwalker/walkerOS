@@ -35,8 +35,7 @@ const sidebars: SidebarsConfig = {
             id: 'sources/web/browser/index',
           },
           items: [
-            'sources/web/browser/installation',
-            'sources/web/browser/configuration',
+            'sources/web/browser/commands',
             'sources/web/browser/tagging',
             'sources/web/browser/tagger',
           ],
@@ -51,11 +50,7 @@ const sidebars: SidebarsConfig = {
         type: 'doc',
         id: 'collector/index',
       },
-      items: [
-        'collector/commands',
-        'collector/configuration',
-        'collector/testing',
-      ],
+      items: ['collector/commands', 'collector/configuration'],
     },
     {
       type: 'category',
@@ -105,7 +100,6 @@ const sidebars: SidebarsConfig = {
       label: 'Apps',
       link: {
         type: 'doc',
-        id: 'apps/index',
       },
       items: ['apps/walkerjs'],
     },

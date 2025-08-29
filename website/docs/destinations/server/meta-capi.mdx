@@ -19,7 +19,27 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
   npm="@walkeros/server-destination-meta"
 />
 
-## Configuration
+## Installation
+
+```bash
+npm install @walkeros/server-destination-meta
+```
+
+## Setup
+
+```typescript
+import { elb } from '@walkeros/collector';
+import { destinationMeta } from '@walkeros/server-destination-meta';
+
+elb('walker destination', destinationMeta, {
+  settings: {
+    accessToken: 'YOUR_ACCESS_TOKEN',
+    pixelId: 'YOUR_PIXEL_ID',
+  },
+});
+```
+
+## Configuration reference
 
 <SettingsTable
   properties={[

@@ -2,9 +2,19 @@
 title: Browser Source
 description: DOM-based event tracking for web applications
 sidebar_position: 1
-tags: [web, browser, DOM, tracking]
 package: '@walkeros/web-source-browser'
 ---
+
+import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import Link from '@docusaurus/Link';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PackageLink from '@site/src/components/docs/package-link';
+
+<PackageLink
+  github="packages/web/sources/browser"
+  npm="@walkeros/web-source-browser"
+/>
 
 # Browser Source
 
@@ -22,41 +32,117 @@ environment by:
 
 ## Installation
 
+<Tabs>
+  <TabItem value="npm" label="npm" default>
+Install the source via npm
+
 ```bash
 npm install @walkeros/web-source-browser
 ```
 
-## Setup
+Setup in your project
 
-```typescript
+```js
 import { createCollector } from '@walkeros/collector';
-import { createSource } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
-// Create collector with browser source and destinations
 const { collector, elb } = await createCollector({
   sources: {
-    browser: createSource(sourceBrowser, {
-      type: 'browser',
-      settings: {
-        pageview: true,
-        session: true,
-      },
-    }),
-  },
-  destinations: {
-    log: { push: console.log },
+    browser: {
+        settings: {
+          prefix: 'data-elb',
+          pageview: true,
+          session: true,
+    },
   },
 });
-
-// The collector's elb function handles basic events
-// For browser-specific commands, access the enhanced elb function:
-const browserElb = collector.sources.browser.elb;
-
-// Examples:
-elb('page view', { title: 'Home' }); // Basic collector elb
-browserElb('walker init', element); // Enhanced browser elb
 ```
+
+</TabItem>
+<TabItem value="script" label="script">
+Load the source via dynamic import
+
+```html
+<script>
+  // Load the collector and source
+  const { createCollector } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
+  );
+  const { sourceBrowser } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
+  );
+
+  const { collector, elb } = await createCollector({
+    sources: {
+      browser: {
+          settings: {
+          prefix: 'data-elb',
+          pageview: true,
+          session: true,
+      }
+    }
+  });
+</script>
+```
+
+</TabItem>
+</Tabs>
+
+## Configuration reference
+
+<SettingsTable
+  properties={[
+    {
+      name: 'prefix',
+      type: 'string',
+      description: 'Prefix for data attributes used in DOM tracking',
+      required: false,
+      example: "'data-elb'",
+    },
+    {
+      name: 'scope',
+      type: 'Element | Document',
+      description: 'DOM scope for event tracking (default: document)',
+      required: false,
+      example: 'document.querySelector("#app")',
+    },
+    {
+      name: 'pageview',
+      type: 'boolean',
+      description: 'Enable automatic pageview tracking',
+      required: false,
+      example: 'true',
+    },
+    {
+      name: 'session',
+      type: 'boolean',
+      description: 'Enable session tracking and management',
+      required: false,
+      example: 'true',
+    },
+    {
+      name: 'elb',
+      type: 'string',
+      description: 'Custom name for the global elb function',
+      required: false,
+      example: "'elb'",
+    },
+    {
+      name: 'name',
+      type: 'string',
+      description: 'Custom name for the browser source instance',
+      required: false,
+      example: "'mySource'",
+    },
+    {
+      name: 'elbLayer',
+      type: 'boolean | string | Elb.Layer',
+      description: 'Enable elbLayer for async command queuing',
+      required: false,
+      example: 'true',
+    },
+  ]}
+/>
 
 :::tip Two Different elb Functions
 

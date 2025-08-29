@@ -1,569 +1,122 @@
 ---
 title: Create Your Own Destination
-description: Complete guide to building custom destinations for walkerOS
+description: A guide to building custom destinations for walkerOS.
 sidebar_position: 99
-tags: [destinations, custom, development, guide]
 ---
 
 import Link from '@docusaurus/Link';
 
 # Create Your Own Destination
 
-This guide provides everything you need to build custom destinations that integrate seamlessly with walkerOS. Based on analysis of existing destinations and core types, it covers the complete interface structure, implementation patterns, and best practices.
+This guide provides the essentials for building a custom walkerOS destination.
 
-## What Are Destinations?
+## What is a Destination?
 
-Destinations are the endpoints where walkerOS sends processed events. They transform standardized walkerOS events into the specific formats required by external services like analytics platforms, marketing tools, APIs, or data warehouses.
+A destination is a function that receives events from walkerOS and sends them to
+an external service, such as an analytics platform, an API, or a database.
 
-### When to Create Custom Destinations
+## The Destination Interface
 
-- **Unsupported Service**: You need to send data to a service not covered by existing destinations
-- **Custom Format**: Your API requires a specific data format or transformation
-- **Business Logic**: You need custom processing, filtering, or enrichment before sending data
-- **Internal Systems**: You want to send events to internal APIs, databases, or message queues
-
-## Destination Interface Overview
-
-All destinations implement the `Destination<Settings, Mapping>` interface:
+A destination is an object that implements the `Destination` interface. The most
+important property is the `push` function, which is called for every event.
 
 ```typescript
-interface Destination<Settings = unknown, Mapping = unknown> {
-  // Required properties
-  config: Config<Settings, Mapping>;
-  push: PushFn<Settings, Mapping>;
-  
-  // Optional properties
+interface Destination<Settings = unknown> {
+  config: {};
+  push: PushFn<Settings>;
   type?: string;
-  init?: InitFn<Settings, Mapping>;
-  pushBatch?: PushBatchFn<Settings, Mapping>;
-  queue?: WalkerOS.Events;
-  dlq?: Array<[WalkerOS.Event, unknown]>; // Dead Letter Queue
+  init?: InitFn<Settings>;
 }
 ```
 
-### Type Parameters
+## The `push` function
 
-- **`Settings`**: Your destination's configuration structure (API keys, URLs, options)
-- **`Mapping`**: Event-specific transformation rules (optional)
-
-## Core Configuration Structure
-
-The `Config<Settings, Mapping>` interface provides extensive configuration options:
-
-### Essential Properties
+The `push` function is where you'll implement the logic to send the event to
+your desired service. It receives the `event` and a `context` object containing
+the destination's configuration.
 
 ```typescript
-interface Config<Settings, Mapping> {
-  // Core settings
-  settings?: Settings;              // Your custom configuration
-  consent?: WalkerOS.Consent;       // Required consent states
-  
-  // Event processing
-  data?: WalkerOSMapping.Value;     // Data transformation rules
-  mapping?: WalkerOSMapping.Rules;  // Event-specific mappings
-  
-  // Control flags
-  dryRun?: boolean;                 // Testing mode
-  queue?: boolean;                  // Process queued events
-  verbose?: boolean;                // Detailed logging
-  
-  // Advanced features
-  onError?: Handler.Error;          // Custom error handling
-  onLog?: Handler.Log;              // Custom logging
-  wrapper?: Wrapper.Config;         // Function interception
-}
-```
-
-## Implementation Patterns
-
-### Pattern 1: Simple Synchronous Destination
-
-Perfect for HTTP APIs and simple integrations:
-
-```typescript
-import type { WalkerOS, Destination } from '@walkeros/core';
-
-// Define your settings interface
-interface WebhookSettings {
-  url: string;
-  headers?: Record<string, string>;
-  method?: 'POST' | 'PUT';
-}
-
-// Create the destination
-const webhookDestination: Destination<WebhookSettings> = {
-  type: 'webhook',
-  config: {},
-  
-  push(event, { config }) {
-    const { settings = {} as WebhookSettings } = config;
-    const { url, headers = {}, method = 'POST' } = settings;
-    
-    // Guard clause - required settings
-    if (!url) return;
-    
-    // Send the event
-    fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers
-      },
-      body: JSON.stringify(event)
-    }).catch(error => {
-      console.error('Webhook failed:', error);
-    });
-  }
-};
-```
-
-### Pattern 2: Async Destination with Initialization
-
-For services that require setup or validation:
-
-```typescript
-interface AnalyticsSettings {
-  apiKey: string;
-  endpoint: string;
-  timeout?: number;
-}
-
-interface AnalyticsMapping {
-  eventName?: string;
-  customParams?: Record<string, string>;
-}
-
-const analyticsDestination: Destination<AnalyticsSettings, AnalyticsMapping> = {
-  type: 'custom-analytics',
-  config: {},
-  
-  async init({ config }) {
-    const { settings = {} as AnalyticsSettings } = config;
-    
-    // Validate required settings
-    if (!settings.apiKey || !settings.endpoint) {
-      return false; // Prevents initialization
-    }
-    
-    // Test connection
-    try {
-      const response = await fetch(`${settings.endpoint}/health`, {
-        headers: { 'Authorization': `Bearer ${settings.apiKey}` }
-      });
-      
-      if (!response.ok) return false;
-      
-      console.log('Analytics destination initialized');
-      return config; // Successful initialization
-    } catch (error) {
-      console.error('Analytics initialization failed:', error);
-      return false;
-    }
-  },
-  
-  async push(event, { config, mapping, data }) {
-    const { settings = {} as AnalyticsSettings } = config;
-    const { apiKey, endpoint, timeout = 5000 } = settings;
-    
-    // Use processed data if available, otherwise use raw event
-    const eventData = data || event;
-    
-    // Apply mapping transformations
-    const payload = {
-      event_name: mapping?.eventName || event.event,
-      timestamp: event.timestamp,
-      data: eventData,
-      ...(mapping?.customParams && mapping.customParams)
-    };
-    
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
-      
-      await fetch(`${endpoint}/events`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-    } catch (error) {
-      console.error('Failed to send event:', error);
-      // Could implement retry logic or dead letter queue here
-    }
-  }
-};
-```
-
-### Pattern 3: Batch Processing Destination
-
-For efficient bulk operations (especially server-side):
-
-```typescript
-interface BatchSettings {
-  batchSize: number;
-  flushInterval: number;
-  apiKey: string;
-}
-
-const batchDestination: Destination<BatchSettings> = {
-  type: 'batch-processor',
-  config: {},
-  
-  async init({ config }) {
-    const { settings = {} as BatchSettings } = config;
-    
-    if (!settings.apiKey) return false;
-    
-    // Set default batch configuration
-    return {
-      ...config,
-      settings: {
-        batchSize: 100,
-        flushInterval: 5000,
-        ...settings
-      }
-    };
-  },
-  
-  // Individual events still go through push
-  push(event, { config }) {
-    const { settings } = config;
-    console.log(`Event queued for batch processing (batch size: ${settings?.batchSize})`);
-  },
-  
-  // Batch processing for efficiency
-  pushBatch(batch, { config }) {
-    const { settings = {} as BatchSettings } = config;
-    const { apiKey } = settings;
-    
-    const events = batch.map(({ event }) => event);
-    
-    // Send batch to external service
-    fetch('/api/batch-events', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({ events })
-    }).catch(error => {
-      console.error('Batch processing failed:', error);
-    });
-  }
-};
-```
-
-## Function Signatures & Context
-
-### Initialization Function
-
-```typescript
-type InitFn<Settings, Mapping> = (
-  context: {
-    collector: Collector.Instance;
-    config: Config<Settings, Mapping>;
-    wrap: Wrapper.Wrap;
-  }
-) => Promise<void | false | Config<Settings, Mapping>> | void | false | Config<Settings, Mapping>;
-```
-
-- **Return `false`**: Prevents destination initialization
-- **Return `void`**: Uses provided config as-is
-- **Return `Config`**: Uses returned config (for defaults/validation)
-
-### Push Function (Required)
-
-```typescript
-type PushFn<Settings, Mapping> = (
+type PushFn<Settings> = (
   event: WalkerOS.Event,
   context: {
-    collector: Collector.Instance;
-    config: Config<Settings, Mapping>;
-    mapping?: WalkerOSMapping.Rule<Mapping>;
-    data?: any;
-    wrap: Wrapper.Wrap;
-  }
-) => Promise<void> | void;
-```
-
-### Batch Push Function (Optional)
-
-```typescript
-type PushBatchFn<Settings, Mapping> = (
-  batch: Array<{ event: WalkerOS.Event; mapping?: WalkerOSMapping.Rule<Mapping> }>,
-  context: {
-    collector: Collector.Instance;
-    config: Config<Settings, Mapping>;
-    wrap: Wrapper.Wrap;
-  }
+    config: {
+      settings?: Settings;
+    };
+  },
 ) => void;
 ```
 
-## Event Structure & Data Access
+## Example: A Simple Webhook Destination
 
-WalkerOS events have a standardized structure:
-
-```typescript
-interface WalkerOS.Event {
-  // Core event data
-  event: string;                    // "entity action" format
-  data?: WalkerOS.Properties;       // Event-specific data
-  
-  // Context information
-  context?: WalkerOS.Properties;    // Page/session context
-  globals?: WalkerOS.Properties;    // Global properties
-  custom?: WalkerOS.Properties;     // Custom properties
-  user?: WalkerOS.User;            // User information
-  
-  // Metadata
-  id?: string;                     // Unique event ID
-  timestamp?: number;               // Unix timestamp
-  timing?: number;                 // Timing from page load
-  consent?: WalkerOS.Consent;      // Consent state
-  source?: WalkerOS.Source;        // Source information
-  
-  // Grouping
-  group?: string;                  // Event grouping
-  count?: number;                  // Event count
-  version?: string;                // Event version
-}
-```
-
-## Best Practices
-
-### Configuration Validation
-
-Always validate required settings and provide helpful error messages:
+Here is an example of a simple destination that sends events to a webhook URL.
 
 ```typescript
-async init({ config }) {
-  const { settings = {} } = config;
-  
-  // Validate required settings
-  const required = ['apiKey', 'endpoint'];
-  const missing = required.filter(key => !settings[key]);
-  
-  if (missing.length > 0) {
-    console.error(`Missing required settings: ${missing.join(', ')}`);
-    return false;
-  }
-  
-  // Validate setting formats
-  if (settings.endpoint && !settings.endpoint.startsWith('http')) {
-    console.error('Endpoint must be a valid URL');
-    return false;
-  }
-  
-  return config;
-}
-```
+import type { Destination } from '@walkeros/core';
 
-### Error Handling
-
-Implement robust error handling to prevent breaking the collection pipeline:
-
-```typescript
-push(event, { config }) {
-  try {
-    // Your event processing logic
-    processEvent(event, config);
-  } catch (error) {
-    // Log error but don't throw
-    console.error('Destination error:', error);
-    
-    // Optional: Add to dead letter queue
-    if (this.dlq) {
-      this.dlq.push([event, error]);
-    }
-  }
-}
-```
-
-### Function Wrapping
-
-Use the `wrap` function for testability and debugging:
-
-```typescript
-push(event, { config, wrap }) {
-  const { settings } = config;
-  
-  // Wrap external calls for testing/mocking
-  const sendToAPI = wrap('sendToAPI', (data) => {
-    return fetch(settings.endpoint, {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  });
-  
-  sendToAPI(event);
-}
-```
-
-### TypeScript Integration
-
-For proper TypeScript integration, extend the WalkerOS namespace:
-
-```typescript
-// types/index.ts
-declare global {
-  namespace WalkerOS {
-    interface Destinations {
-      'custom-analytics': Destination.Config<AnalyticsSettings, AnalyticsMapping>;
-    }
-  }
+// 1. Define your settings interface
+interface WebhookSettings {
+  url: string;
 }
 
-export interface AnalyticsSettings {
-  apiKey: string;
-  endpoint: string;
-  timeout?: number;
-}
-
-export interface AnalyticsMapping {
-  eventName?: string;
-  customParams?: Record<string, string>;
-}
-```
-
-## Testing Your Destination
-
-### Unit Testing Pattern
-
-```typescript
-import { createCollector } from '@walkeros/collector';
-
-describe('Custom Analytics Destination', () => {
-  test('processes events correctly', async () => {
-    const mockFetch = jest.fn().mockResolvedValue({ ok: true });
-    global.fetch = mockFetch;
-    
-    const { collector, elb } = await createCollector({
-      destinations: {
-        analytics: {
-          destination: analyticsDestination,
-          config: {
-            settings: {
-              apiKey: 'test-key',
-              endpoint: 'https://api.example.com'
-            }
-          }
-        }
-      }
-    });
-    
-    await elb('product view', { id: '123' });
-    
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.example.com/events',
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          'Authorization': 'Bearer test-key'
-        }),
-        body: expect.stringContaining('product view')
-      })
-    );
-  });
-});
-```
-
-## Integration Example
-
-Using your custom destination in a collector:
-
-```typescript
-import { createCollector } from '@walkeros/collector';
-import { analyticsDestination } from './destinations/analytics';
-
-const { collector } = await createCollector({
-  destinations: {
-    analytics: {
-      destination: analyticsDestination,
-      config: {
-        settings: {
-          apiKey: process.env.ANALYTICS_API_KEY,
-          endpoint: 'https://analytics.company.com/api',
-          timeout: 10000
-        },
-        consent: { analytics: true },
-        mapping: {
-          'product view': {
-            eventName: 'item_view',
-            customParams: { source: 'web' }
-          }
-        }
-      }
-    },
-    
-    debug: {
-      push: (event) => console.log('Event:', event)
-    }
-  }
-});
-
-// Events will now be sent to both destinations
-await elb('product view', { id: '123', name: 'T-Shirt' });
-```
-
-## Advanced Features
-
-### Consent Handling
-
-Destinations can specify consent requirements:
-
-```typescript
-// In collector configuration
-analytics: {
-  destination: analyticsDestination,
-  config: {
-    consent: { analytics: true, marketing: false },
-    // Destination only receives events when analytics consent is granted
-  }
-}
-```
-
-### Event Mapping
-
-Transform events before processing:
-
-```typescript
-// Event-specific mappings
-mapping: {
-  'product view': {
-    eventName: 'item_view',
-    include: ['data', 'user.id'],
-    custom: {
-      category: 'ecommerce',
-      source: 'web'
-    }
-  }
-}
-```
-
-### Dead Letter Queue
-
-Handle failed events:
-
-```typescript
-const destination: Destination = {
-  type: 'reliable-api',
+// 2. Create the destination object
+export const destinationWebhook: Destination<WebhookSettings> = {
+  type: 'webhook',
   config: {},
-  dlq: [], // Failed events stored here
-  
-  push(event, context) {
-    try {
-      sendEvent(event);
-    } catch (error) {
-      // Add to dead letter queue for retry
-      this.dlq?.push([event, error]);
-    }
-  }
+
+  push(event, { config }) {
+    const { settings } = config;
+
+    // 3. Access your settings
+    if (!settings?.url) return;
+
+    // 4. Send the event
+    fetch(settings.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    }).catch(console.error);
+  },
 };
 ```
 
-This guide provides the foundation for creating robust, production-ready destinations that integrate seamlessly with walkerOS. The patterns and examples are based on real implementations from the walkerOS ecosystem, ensuring compatibility and best practices.
+## Using your destination
+
+To use your custom destination, add it to the `destinations` object in your
+collector configuration.
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+import { destinationWebhook } from './destinationWebhook';
+
+const { elb } = await createCollector({
+  destinations: {
+    myWebhook: {
+      destination: destinationWebhook,
+      config: {
+        settings: {
+          url: 'https://api.example.com/events',
+        },
+      },
+    },
+  },
+});
+```
+
+## TypeScript Integration
+
+To get full TypeScript support for your destination's configuration, you can
+extend the `WalkerOS.Destinations` interface.
+
+```typescript
+// types.ts
+import type { Destination } from '@walkeros/core';
+import type { WebhookSettings } from './destinationWebhook';
+
+declare global {
+  namespace WalkerOS {
+    interface Destinations {
+      webhook: Destination.Config<WebhookSettings>;
+    }
+  }
+}
+```

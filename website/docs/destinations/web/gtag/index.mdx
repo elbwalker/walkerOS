@@ -18,7 +18,9 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
   npm="@walkeros/web-destination-gtag"
 />
 
-The Google Gtag destination provides a unified interface for sending events to Google Analytics 4 (GA4), Google Ads, and Google Tag Manager (GTM) through a single destination configuration.
+The Google Gtag destination provides a unified interface for sending events to
+Google Analytics 4 (GA4), Google Ads, and Google Tag Manager (GTM) through a
+single destination configuration.
 
 ## Installation
 
@@ -26,7 +28,7 @@ The Google Gtag destination provides a unified interface for sending events to G
 npm install @walkeros/web-destination-gtag
 ```
 
-## Quick Start
+## Setup
 
 ```typescript
 import { createCollector } from '@walkeros/collector';
@@ -49,7 +51,7 @@ elb('walker destination', destinationGtag, {
 });
 ```
 
-## Configuration
+## Configuration reference
 
 <SettingsTable
   properties={[
@@ -102,7 +104,7 @@ For custom event mapping (`mapping.entity.action.settings`):
       type: 'GTMMapping',
       description: 'GTM specific event mapping configuration',
       required: false,
-      example: "{}",
+      example: '{}',
     },
   ]}
 />

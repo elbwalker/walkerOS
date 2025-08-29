@@ -127,3 +127,29 @@ const { collector, elb } = await createCollector(config);
     },
   ]}
 />
+
+## Advanced setup
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+
+const config = {
+  run: true,
+  consent: { functional: true },
+  sources: [
+    // add your event sources
+  ],
+  destinations: [
+    // add your event destinations
+  ],
+  verbose: true,
+  onError: (error: unknown) => {
+    console.error('Collector error:', error);
+  },
+  onLog: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => {
+    console.log(`[${level}] ${message}`);
+  },
+};
+
+const { collector, elb } = await createCollector(config);
+```

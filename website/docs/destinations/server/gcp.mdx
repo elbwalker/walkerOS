@@ -4,7 +4,6 @@ description:
   Stream events to Google BigQuery for data analytics and machine learning
 path: /docs/destinations/server/gcp
 sidebar_position: 2
-tags: [server, gcp, bigquery, analytics, data-warehouse, streaming]
 package: '@walkeros/server-destination-gcp'
 ---
 
@@ -19,7 +18,28 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
   npm="@walkeros/server-destination-gcp"
 />
 
-## Configuration
+## Installation
+
+```bash
+npm install @walkeros/server-destination-gcp
+```
+
+## Setup
+
+```typescript
+import { elb } from '@walkeros/collector';
+import { destinationBigQuery } from '@walkeros/server-destination-gcp';
+
+elb('walker destination', destinationBigQuery, {
+  settings: {
+    projectId: 'YOUR_PROJECT_ID',
+    datasetId: 'YOUR_DATASET_ID',
+    tableId: 'YOUR_TABLE_ID',
+  },
+});
+```
+
+## Configuration reference
 
 <SettingsTable
   properties={[
