@@ -56,7 +56,7 @@ const { collector } = await createCollector({
 
 // Add a browser source
 const { elb } = await createSource(collector, sourceBrowser, {
-  prefix: 'data-elb',
+  session: true,
   pageview: true,
 });
 

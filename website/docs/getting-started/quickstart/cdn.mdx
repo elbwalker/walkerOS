@@ -9,12 +9,12 @@ sidebar_position: 3
 No Build Required
 
 - **CDN Delivery**: Load directly from CDN without bundling
-- **Instant Setup**: Works immediately in any HTML page
+- **Instant Setup**: Works immediately on any HTML page
 - **Zero Dependencies**: Self-contained script with all features
 
 ## Use Cases
 
-- **Static websites**: Sites without complex build processes
+- **Static websites**: Sites without build processes
 - **Legacy applications**: Adding tracking to existing systems
 - **Quick prototypes**: Fast implementation for testing
 - **Third-party integrations**: When you can only add script tags
@@ -23,84 +23,72 @@ No Build Required
 
 No npm installation required. Just add the CDN script:
 
-Load packages directly from CDN:
+Use ES6 modules for loading walkerOS packages:
 
 ```html
-<!-- Core collector -->
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.browser.js"></script>
+<script type="module">
+  import { createCollector } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
+  import { createSource } from 'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs';
+  import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
 
-<!-- Browser source -->
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.browser.js"></script>
-
-<!-- Google Analytics destination -->
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.browser.js"></script>
-
-<script>
-  // Use the loaded packages
-  const { createCollector } = walkerOSCollector;
-  const { sourceBrowser } = walkerOSWebSourceBrowser;
-  const { destinationGtag } = walkerOSWebDestinationGtag;
-</script>
-```
-
-## Setup
-
-```typescript
-// Walker.js bundle includes browser source by default
-export async function setupWalkerWithSources(): Promise<unknown> {
-  // Load walker.js bundle from CDN
-  await new Promise<void>((resolve) => {
-    const script = document.createElement('script');
-    script.src =
-      'https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/index.browser.js';
-    script.async = true;
-    script.onload = () => resolve();
-    document.head.appendChild(script);
-  });
-
-  // Walker.js automatically initializes with browser source
-  // which tracks DOM elements with data-elb attributes
-  return (window as Record<string, unknown>).elb;
-}
-
-export async function trackWithWalkerSources(elb: unknown): Promise<void> {
-  // Type the elb function safely
-  const elbFn = elb as (
-    command: string,
-    config: Record<string, unknown>,
-  ) => Promise<void>;
-
-  // Configure browser source to track specific attributes
-  await elbFn('walker config', {
-    source: {
-      browser: {
-        // Track elements with data-track attributes
-        dataLayer: true,
-        // Enable click tracking
-        click: true,
-        // Enable view tracking (intersection observer)
-        view: true,
+  const { collector } = await createCollector({
+    sources: {
+      browser: createSource(sourceBrowser, {
+        settings: {
+          pageview: true,
+          session: true,
+          elb: 'elb',
+        },
+      }),
+    },
+    destinations: {
+      console: {
+        push: (event) => console.log('Event:', event),
       },
     },
   });
 
-  // Add a destination to see the events
-  await elbFn('walker destination', {
-    push: (event: Record<string, unknown>) => {
-      console.log('Walker.js Event:', {
-        event: event.event,
-        data: event.data,
-        trigger: event.trigger,
-      });
-    },
-  });
+  window.walker = collector;
+</script>
+```
 
-  // Trigger a custom event
-  await elbFn('button click', {
-    label: 'Sign Up',
-    position: 'header',
-  });
-}
+## Usage Example
+
+Complete HTML page with walkerOS tracking:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="module">
+      import { createCollector } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
+      import { createSource } from 'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs';
+      import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
+
+      const { collector } = await createCollector({
+        sources: {
+          browser: createSource(sourceBrowser, {
+            settings: {
+              pageview: true,
+              session: true,
+              elb: 'elb',
+            },
+          }),
+        },
+        destinations: {
+          console: {
+            push: (event) => console.log('Event:', event),
+          },
+        },
+      });
+
+      window.walker = collector;
+    </script>
+  </head>
+  <body>
+    <!-- Your content with data-elb attributes -->
+  </body>
+</html>
 ```
 
 ## Tagging
@@ -111,7 +99,22 @@ Add tracking attributes to your HTML elements:
 <!DOCTYPE html>
 <html>
   <head>
-    <script src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/index.browser.js"></script>
+    <script type="module">
+      import { createCollector } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
+      import { createSource } from 'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs';
+      import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
+
+      await createCollector({
+        sources: {
+          browser: createSource(sourceBrowser, {
+            settings: { elb: 'elb' },
+          }),
+        },
+        destinations: {
+          console: { push: (event) => console.log('Event:', event) },
+        },
+      });
+    </script>
   </head>
   <body>
     <!-- Automatically tracked button -->
@@ -155,28 +158,76 @@ Use modern ES6 modules:
   const { createCollector } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
   );
-  const { destinationGtag } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.mjs'
+  const { createSource } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs'
   );
   const { sourceBrowser } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
   );
+  const destinationGtag = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.mjs'
+  );
 
-  // Setup tracking
-  const { elb } = await createCollector({
+  // Setup tracking with proper createSource pattern
+  const { collector } = await createCollector({
     sources: {
-      browser: { code: sourceBrowser },
+      browser: createSource(sourceBrowser, {
+        settings: {
+          pageview: true,
+          session: true,
+          elb: 'elb', // Browser source sets window.elb
+        },
+      }),
+    },
+    destinations: {
+      console: {
+        push: (event) => console.log('Event:', event),
+      },
+      ga4: {
+        ...destinationGtag.default,
+        config: {
+          settings: {
+            ga4: { measurementId: 'G-XXXXXXXXXX' },
+          },
+        },
+      },
     },
   });
 
-  // Add destination with configuration
-  elb('walker destination', destinationGtag, {
-    settings: {
-      ga4: { measurementId: 'G-XXXXXXXXXX' },
-    },
-  });
-
-  // Track events
-  await elb('page view', { title: document.title });
+  // window.elb is automatically set by browser source
+  // Track custom events
+  window.elb('page view', { title: document.title });
 </script>
 ```
+
+## Adding Destinations
+
+Add Google Analytics or other destinations:
+
+```html
+<script type="module">
+  import { createCollector } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
+  import { createSource } from 'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs';
+  import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
+  import destinationGtag from 'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.mjs';
+
+  await createCollector({
+    sources: {
+      browser: createSource(sourceBrowser, { settings: { elb: 'elb' } }),
+    },
+    destinations: {
+      console: { push: (event) => console.log('Event:', event) },
+      ga4: {
+        ...destinationGtag,
+        config: { settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } } },
+      },
+    },
+  });
+</script>
+```
+
+## Next Steps
+
+- Configure [destinations](/docs/destinations) for your analytics tools
+- Learn about [DOM-based tagging](/docs/sources/web/browser/tagging)
+- Set up [consent management](/docs/guides/consent)

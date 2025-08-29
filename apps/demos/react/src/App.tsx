@@ -7,13 +7,11 @@ import Category from './pages/Category';
 import Detail from './pages/Detail';
 import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
-import { initializeWalker } from './walker/index';
-import { elb } from '@walkeros/web-core';
+import { initializeWalker } from './walker';
 
 function App() {
   const location = useLocation();
   const hasInitialized = useRef(false);
-  const firstRun = useRef(true);
 
   useEffect(() => {
     // Prevent React StrictMode double execution
@@ -24,12 +22,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (firstRun.current) {
-      firstRun.current = false;
-      return;
-    }
-
-    elb('walker run');
+    window.elb('walker run');
   }, [location]);
 
   return (

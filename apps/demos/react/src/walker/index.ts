@@ -2,8 +2,8 @@ import type { Collector, WalkerOS } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
 import { createSource } from '@walkeros/core';
 import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
-import { destinationGtag } from '@walkeros/web-destination-gtag';
-import { destinationAPI } from '@walkeros/web-destination-api';
+import destinationGtag from '@walkeros/web-destination-gtag';
+import destinationAPI from '@walkeros/web-destination-api';
 import {
   destinationConsole,
   destinationConsoleBatch,
@@ -29,7 +29,6 @@ export async function initializeWalker(): Promise<void> {
     sources: {
       browser: createSource(sourceBrowser, {
         settings: {
-          prefix: 'data-elb',
           pageview: true,
           session: true,
           elb: 'elb',
@@ -97,21 +96,6 @@ export async function initializeWalker(): Promise<void> {
       analytics: false,
       marketing: false,
     });
-  }
-}
-
-// Helper function to update destination settings dynamically
-export function updateDestinationSettings(
-  destinationId: string,
-  settings: Record<string, unknown>,
-) {
-  if (window.walkerjs?.destinations?.[destinationId]) {
-    const destination = window.walkerjs.destinations[destinationId];
-    if (destination.config?.settings) {
-      Object.assign(destination.config.settings, settings);
-      // eslint-disable-next-line no-console
-      console.log(`✅ Updated ${destinationId} settings:`, settings);
-    }
   }
 }
 

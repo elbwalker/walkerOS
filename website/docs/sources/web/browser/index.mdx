@@ -47,13 +47,13 @@ import { createCollector } from '@walkeros/collector';
 import { createSource } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
-const { collector, elb } = await createCollector({
+const { collector } = await createCollector({
   sources: {
     browser: createSource(sourceBrowser, {
       settings: {
-        prefix: 'data-elb',
         pageview: true,
         session: true,
+        elb: 'elb', // Browser source will set window.elb automatically
       },
     }),
   },
@@ -150,7 +150,13 @@ Load the source via dynamic import
   ]}
 />
 
-:::tip Two Different elb Functions
+### elb
+
+:::tip
+
+Two Different elb Functions
+
+:::
 
 The collector provides **two different elb functions**:
 
@@ -161,14 +167,13 @@ The collector provides **two different elb functions**:
 
 **Browser Source elb adds:**
 
-- **DOM Commands**: `walker run`, `walker init` for DOM interaction
+- **DOM Commands**: `walker init` for asynchronous loading of DOM elements
 - **Flexible Arguments**: Support for multiple argument patterns
 - **elbLayer Integration**: Automatic processing of queued commands
+- **Element parameters**: Support for element parameters in DOM commands
 
 Use **separate source creation** for direct access to the enhanced elb function,
 or access it via `collector.sources.browser.elb` in the unified API.
 
 See [Commands](/docs/sources/web/browser/commands) for full browser source API
 documentation.
-
-:::

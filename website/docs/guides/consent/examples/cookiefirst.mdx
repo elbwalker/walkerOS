@@ -3,7 +3,55 @@ title: CookieFirst
 description:
   Complete guide for integrating walkerOS with CookieFirst consent management
 sidebar_position: 1
-tags: [consent, cookiefirst, cmp, privacy, gdpr]
 ---
 
-# CookieFirst Integration
+import Link from '@docusaurus/Link';
+
+To learn more about the integration, read more in the Cookiefirst
+[API documentation](https://support.cookiefirst.com/hc/en-us/articles/360011568738-Cookie-Banner-Public-API-documentation).
+
+## Event listener
+
+The following code works asynchronously with CookieFirst Banner API and listens
+for the `cf_init` and `cf_consent`, parses the consent state and eventually
+calls the `walker consent` command:
+
+```js
+(function () {
+  function handleConsent(consent) {
+    if (!consent) return; // Process only explicit consent
+
+    // Renaming of the categories
+    const mapping = {
+      necessary: 'functional',
+      functional: 'functional',
+      performance: 'analytics',
+      advertising: 'marketing',
+    };
+
+    const state = {};
+    Object.keys(consent).forEach(function (category) {
+      state[mapping[category] || category] = consent[category];
+    });
+
+    elb('walker consent', state);
+  }
+
+  if (window.CookieFirst) {
+    // Already loaded
+    handleConsent(CookieFirst.consent);
+  } else {
+    // On load
+    window.addEventListener('cf_init', function () {
+      handleConsent(CookieFirst.consent);
+    });
+  }
+
+  // On change
+  window.addEventListener('cf_consent', function (e) {
+    handleConsent(e.detail);
+  });
+})();
+```
+
+Ensure the [elb](/docs/collectors/web/commands#elb) function is available.

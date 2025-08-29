@@ -1,96 +1,138 @@
 ---
 title: Contributing
-description: How to contribute to walkerOS
-sidebar_position: 9
+description: Learn how to contribute to walkerOS
+position: 7
 ---
 
-# Contributing
+import Link from '@docusaurus/Link';
 
 walkerOS is an open-source project. There are multiple ways to contribute, and
 we appreciate them all. If you have any questions, feel free to reach out:
 
-open an issue send an email schedule a call write on LinkedIn
+- <Link to="https://github.com/elbwalker/walkerOS/issues">open an issue</Link>
+- <Link to="mailto:hello@elbwalker.com">send an email</Link>
+- <Link to="https://calendly.com/elb-alexander/30min">schedule a call</Link>
+- <Link to="https://www.linkedin.com/in/alexanderkirtzel/">
+    write on LinkedIn
+  </Link>
 
-Development workflow The main language is TypeScript, but others are welcome as
-well. We use a test-driven development approach and write tests using Jest.
-Since the docs are also part of the repository, they can directly be updated as
-well. Pushing code to the repository will trigger a test-pipeline that runs all
-tests and checks the code style.
+## Development workflow
 
-Visual Studio Code (vscode) When using Visual Studio Code, there is a
-devcontainer setup available. It will automatically install all tools,
-dependencies and extensions. To use it, make sure to install the Remote -
-Containers extension. Then, open the command palette and select
-Remote-Containers: Reopen in Container.
+The main language is TypeScript, but others are welcome as well. We use a
+test-driven development approach and write tests using
+[Jest](https://jestjs.io/). Since the docs are also part of the repository, they
+can directly be updated as well. Pushing code to the repository will trigger a
+test-pipeline that runs all tests and checks the code style.
 
-Packages walkerOS is separated into multiple packages and developed in a
-monorepo. The latest version is under the develop branch, while main contains
-the latest stable and released versions. The whole project can be tested and
-build using TurboRepo. Run all commands from the root directory.
+### Devcontainer
 
+Some IDEs, like [Visual Studio Code](https://code.visualstudio.com/), have a
+[`devcontainer`](https://code.visualstudio.com/docs/devcontainers/containers)
+setup available. It will automatically install all tools, dependencies and
+extensions. To use it, make sure to install the
+[Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+extension. Then, open the command palette and select
+`Remote-Containers: Reopen in Container`.
+
+## Packages
+
+walkerOS is separated into multiple packages and developed in a monorepo. The
+latest version is under the `develop` branch, while `main` contains the latest
+stable and released versions. The whole project can be tested and build using
+[TurboRepo](https://turbo.build/repo/). Run all commands from the root
+directory.
+
+```bash
 # Make sure to install all dependencies first
-
 npm i
 
 # To start a local development server
-
 turbo run dev
 
 # To run all tests
-
 turbo run test
 
 # To build the whole project
-
 turbo run build
 
 # To develop or build a specific package use --filter option
+turbo run dev --filter=*walker.js
+turbo run build --filter=*walker.js --filter=*utils
+```
 
-turbo run dev --filter=*walker.js turbo run build --filter=*walker.js
---filter=\*utils
+The `filter` option can be used to only run one or multiple packages. To filter
+use the `packages name` field in the `package.json` file.
 
-The filter option can be used to only run one or multiple packages. To filter
-use the packages name field in the package.json file.
+### Updates
 
-Updates To update all npm packages to the latest version, run:
+To update all npm packages to the latest version, run:
 
+```bash
 npx npm-check-updates -u && npm update && npm install
+```
 
-Documentation The documentation is also included in the repository under the
-website/docs folder. It is built using Docusaurus. To start a local server with
-live reload make sure to run npm i first, go to the website/ directory and call:
+## Documentation
 
+The documentation is also included in the repository under the `website/docs`
+folder. It is built using [Docusaurus](https://docusaurus.io/). To start a local
+server with live reload make sure to run `npm i` first, go to the `website/`
+directory and call:
+
+```bash
 npm run start
+```
 
-How to release How to update a package, create a changeset, and publish a
-(pre-)release.
+## How to release
 
-Making Changes and Creating a Changeset Implement Changes: Make the necessary
-updates or additions to your packages.
+How to update a package, create a changeset, and publish a (pre-)release.
 
-Create a Changeset: From the root of your monorepo, run:
+#### Making Changes and Creating a Changeset
 
+1. Implement Changes: Make the necessary updates or additions to your packages.
+
+2. Create a Changeset: From the root of your monorepo, run:
+
+```bash
 $ npx changeset
+```
 
 Select the packages that should be updated and describe the changes.
 
-Preparing for (Pre-)Release (Optional) Enter pre-release process: $ npx
-changeset pre enter next
+#### Preparing for (Pre-)Release
 
-Bump Version for (Pre-)Release: Now, run: $ npx changeset version
+1. (Optional) Enter pre-release process:
 
-Publishing the Pre-Release Login to npm: Ensure you're logged into npm with npm
-login or set the token with export NPM_TOKEN="insert_npm_token_here".
+```bash
+$ npx changeset pre enter next
+```
 
-To publish with the current tag (latest by default or next for a pre-release):
-From the root of the monorepo, run:
+2. Bump Version for (Pre-)Release: Now, run:
 
+```bash
+$ npx changeset version
+```
+
+#### Publishing the Pre-Release
+
+1. Login to npm: Ensure you're logged into npm with `npm login` or set the token
+   with `export NPM_TOKEN="insert_npm_token_here"`.
+
+2. To publish with the current tag (`latest` by default or `next` for a
+   pre-release): From the root of the monorepo, run:
+
+```bash
 $ npm run publish-packages
+```
 
-(Optional) Exiting Pre-Release Mode After a pre-release is done and it's ready
-to be released as a stable version:
+#### (Optional) Exiting Pre-Release Mode
 
-Exit Pre-Release Mode: Run: $ npx changeset pre exit
+After a pre-release is done and it's ready to be released as a stable version:
 
-Follow the release process again: Create a new changeset for the stable release,
-version, and then publish normally.
+1. Exit Pre-Release Mode: Run:
+
+```bash
+$ npx changeset pre exit
+```
+
+2. Follow the release process again: Create a new changeset for the stable
+   release, version, and then publish normally.

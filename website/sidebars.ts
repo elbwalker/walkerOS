@@ -50,7 +50,7 @@ const sidebars: SidebarsConfig = {
         type: 'doc',
         id: 'collector/index',
       },
-      items: ['collector/commands', 'collector/configuration'],
+      items: ['collector/commands'],
     },
     {
       type: 'category',
@@ -124,7 +124,7 @@ const sidebars: SidebarsConfig = {
           ],
         },
         'guides/user-stitching',
-        'guides/migrations',
+        'guides/migration',
       ],
     },
     {

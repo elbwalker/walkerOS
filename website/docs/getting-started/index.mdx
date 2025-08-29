@@ -64,20 +64,20 @@ declare global {
 // Initialize walkerOS
 export async function initializeWalker(): Promise<void> {
   // Create and start collector
-  const { collector, elb } = await createCollector({
+  const { collector } = await createCollector({
+    sources: {
+      browser: createSource(sourceBrowser, {
+        settings: {
+          pageview: true,
+          session: true,
+          elb: 'elb', // Browser source will set window.elb automatically
+        },
+      }),
+    },
     destinations: {
       console: {
         push: (event) => console.log('Event:', event),
       },
-    },
-    sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          prefix: 'data-elb',
-          pageview: true,
-          session: true,
-        },
-      }),
     },
   });
 }
@@ -86,7 +86,7 @@ export async function initializeWalker(): Promise<void> {
   </TabItem>
   <TabItem value="script" label="script">
 
-For websites without build tools install from CDN:
+For websites without build tools install from CDN or host the files yourself:
 
 ```html
 <script>

@@ -133,7 +133,7 @@ const { collector, elb } = await createCollector(config);
 ```typescript
 import { createCollector } from '@walkeros/collector';
 
-const config = {
+const { collector, elb } = await createCollector({
   run: true,
   consent: { functional: true },
   sources: [
@@ -149,7 +149,5 @@ const config = {
   onLog: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => {
     console.log(`[${level}] ${message}`);
   },
-};
-
-const { collector, elb } = await createCollector(config);
+});
 ```

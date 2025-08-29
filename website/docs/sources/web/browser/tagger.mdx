@@ -1,7 +1,6 @@
 ---
 title: Tagger
 description: HTML data attribute generator for walkerOS event tracking
-tags: [web, browser, tagger, html, data-attributes, elb-tagging]
 package: '@walkeros/web-source-browser'
 path: packages/web/sources/browser
 ---
@@ -11,7 +10,11 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
 
 # Tagger
 
-<PackageLink env="web" github="packages/web/sources/browser" npm="@walkeros/web-source-browser" />
+<PackageLink
+  env="web"
+  github="packages/web/sources/browser"
+  npm="@walkeros/web-source-browser"
+/>
 
 The tagger is a utility for generating HTML data attributes that the walkerOS
 browser source uses for event tracking. It provides a fluent interface to create
@@ -150,7 +153,7 @@ const attributes = tagger('product')
 // Starting with a naming scope
 const attributes = tagger('product')
   .data('id', 123)
-  .entity('user')  // Changes both entity attribute and naming scope
+  .entity('user') // Changes both entity attribute and naming scope
   .data('name', 'John')
   .get();
 
@@ -169,7 +172,7 @@ const attributes = tagger('product')
 const attributes = tagger('product')
   .data('id', 123)
   .data('price', 99.99)
-  .entity('cart')  // Changes scope for future data calls
+  .entity('cart') // Changes scope for future data calls
   .data('quantity', 2)
   .get();
 
@@ -198,7 +201,8 @@ const attributes = tagger()
 
 ##### `tagger(scope?: string)`
 
-Creates a new tagger instance. The optional scope parameter sets the naming scope for data attributes without creating an entity attribute.
+Creates a new tagger instance. The optional scope parameter sets the naming
+scope for data attributes without creating an entity attribute.
 
 ```typescript
 // Without scope - generic data attributes
@@ -212,7 +216,8 @@ tagger('product').data('id', '123');
 
 ##### `entity(name: string)`
 
-Sets the entity attribute and updates the naming scope for subsequent data calls.
+Sets the entity attribute and updates the naming scope for subsequent data
+calls.
 
 ```typescript
 tagger().entity('product').data('id', '123');
@@ -313,7 +318,7 @@ returns the final attributes object.
 // For product cards that don't need entity tracking
 function ProductCard({ product }) {
   return (
-    <div 
+    <div
       {...tagger('product')
         .data({
           id: product.id,
@@ -336,7 +341,7 @@ function ProductCard({ product }) {
 // For cart items that need both entity and data attributes
 function CartItem({ item }) {
   return (
-    <div 
+    <div
       {...tagger()
         .entity('cart')
         .data({

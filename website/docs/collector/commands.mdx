@@ -3,7 +3,6 @@ title: Commands
 description: Collector API methods and commands
 path: /docs/collector/commands
 sidebar_position: 3
-tags: [collector, api, commands]
 package: '@walkeros/collector'
 ---
 
@@ -11,29 +10,22 @@ import Link from '@docusaurus/Link';
 
 # Collector Commands
 
-The collector provides a core event processing engine that manages destinations, consent, user data, and custom properties. Commands are executed through the `elb` function, which communicates with the collector via the elbLayer.
-
-```mermaid
-flowchart
-elb["elb()"]
-elbLayer["elbLayer[]"]
-collector["Collector Core"]
-destinations["Destinations"]
-
-elb --> elbLayer
-elbLayer --> collector
-collector --> destinations
-```
+The collector provides a core event processing engine that manages destinations,
+consent, user data, and custom properties. Commands are executed through the
+`elb` function
 
 :::note
 
-For browser-specific commands like DOM initialization and elbLayer communication, see <Link to="/docs/sources/web/browser/commands">Browser Source Commands</Link>.
+For browser-specific commands like DOM initialization and elbLayer
+communication, see <Link to="/docs/sources/web/browser/commands">Browser Source
+Commands</Link>.
 
 :::
 
 ## destination
 
-Add destinations to the collector for event processing. Destinations handle the actual delivery of events to third-party services.
+Add destinations to the collector for event processing. Destinations handle the
+actual delivery of events to third-party services.
 
 ```js
 // Simple demo destination for console.log
@@ -49,30 +41,37 @@ elb('walker destination', destinationGtag, {
 
 :::tip
 
-Destinations are typically configured during collector initialization via `createCollector()`. See destination-specific documentation for configuration options.
+Destinations are typically configured during collector initialization via
+`createCollector()`. See destination-specific documentation for configuration
+options.
 
 :::
 
 ## consent
 
-Manage consent states for the collector. Names can be defined arbitrarily, but common groups are functional, analytics, and marketing. Values are booleans, and once a value is set to `true` it's treated as consent being granted.
+Manage consent states for the collector. Names can be defined arbitrarily, but
+common groups are functional, analytics, and marketing. Values are booleans, and
+once a value is set to `true` it's treated as consent being granted.
 
 ```js
 elb('walker consent', { marketing: true, analytics: true });
 ```
 
-Setting a consent state to `false` will immediately stop a destination from processing any events. Previously pushed events during the run are shared with existing destinations once consent is granted.
+Setting a consent state to `false` will immediately stop a destination from
+processing any events. Previously pushed events during the run are shared with
+existing destinations once consent is granted.
 
 :::info
 
-Learn more about&nbsp;<Link to="/docs/guides/consent/">consent
-management</Link> in detail.
+Learn more about&nbsp;<Link to="/docs/guides/consent/">consent management</Link>
+in detail.
 
 :::
 
 ## on
 
-Add event listeners to the collector. They get called when specific events occur like `run` or `consent` changes.
+Add event listeners to the collector. They get called when specific events occur
+like `run` or `consent` changes.
 
 ```js
 elb('walker on', type, options);
@@ -103,7 +102,8 @@ elb('walker run');
 
 ### consent
 
-Every time the `consent` changes, the rules-matching function(s) will be called with the parameters `instance` and `consent`.
+Every time the `consent` changes, the rules-matching function(s) will be called
+with the parameters `instance` and `consent`.
 
 ```js
 function onConsent(instance, consent) {
@@ -115,7 +115,8 @@ function onConsent(instance, consent) {
 elb('walker on', 'consent', { marketing: onConsent });
 ```
 
-The `onConsent` function will only be called when the `marketing` consent changes:
+The `onConsent` function will only be called when the `marketing` consent
+changes:
 
 ```js
 elb('walker consent', { functional: true }); // Won't trigger the onConsent function
@@ -124,7 +125,9 @@ elb('walker consent', { marketing: true }); // Will trigger the onConsent functi
 
 ## user
 
-Set user identification data for the collector. There are three levels: user (company's internal ID), device (longer-term identifier), and session (temporary identification).
+Set user identification data for the collector. There are three levels: user
+(company's internal ID), device (longer-term identifier), and session (temporary
+identification).
 
 ```js
 elb('walker user', { id: 'us3r', device: 'c00k13', session: 's3ss10n' });
@@ -153,8 +156,8 @@ persistent user IDs with your data protection officer.
 
 :::tip
 
-Learn more about identification and&nbsp;<Link to="/docs/guides/user-stitching">user
-stitching</Link>
+Learn more about identification
+and&nbsp;<Link to="/docs/guides/user-stitching">user stitching</Link>
 
 :::
 
@@ -176,7 +179,9 @@ elb('walker globals', { key: 'value' });
 
 ## hook
 
-Hooks customize the default behavior of the collector. Available hooks include `Push`, `DestinationInit`, and `DestinationPush`. Hooks allow for validation, manipulation, or cancellation of default behavior.
+Hooks customize the default behavior of the collector. Available hooks include
+`Push`, `DestinationInit`, and `DestinationPush`. Hooks allow for validation,
+manipulation, or cancellation of default behavior.
 
 Add hooks to the collector to customize or enhance default processing.
 

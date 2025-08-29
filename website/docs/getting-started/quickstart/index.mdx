@@ -1,5 +1,5 @@
 ---
-title: Quickstart guides
+title: Quickstart
 description: Ready-to-use code examples for walkerOS packages
 sidebar_position: 3
 ---
@@ -23,7 +23,7 @@ Install the collector package from npm:
 npm install @walkeros/collector @walkeros/web-source-browser
 ```
 
-## 2. Create basic walkerOS setup
+## 2. Create basic setup
 
 ```javascript
 import type { Collector, WalkerOS } from '@walkeros/core';
@@ -33,26 +33,25 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 
 // Initialize walkerOS
 export async function initializeWalker(): Promise<void> {
-  const { collector, elb } = await createCollector({
+  const { collector } = await createCollector({
+    sources: {
+      browser: createSource(sourceBrowser, {
+        settings: {
+          pageview: true,
+          session: true,
+          elb: 'elb', // Browser source will set window.elb automatically
+        },
+      }),
+    },
     destinations: {
       console: {
         push: (event) => console.log('Event:', event),
       },
     },
-    sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          prefix: 'data-elb',
-          pageview: true,
-          session: true,
-        },
-      }),
-    },
   });
 
-  // Make available globally (optional)
+  // Make collector available globally
   window.walker = collector;
-  window.elb = elb;
 }
 ```
 
@@ -68,7 +67,16 @@ import { destinationGtag } from '@walkeros/web-destination-gtag';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 export async function initializeWalker(): Promise<void> {
-  const { collector, elb } = await createCollector({
+  const { collector } = await createCollector({
+    sources: {
+      browser: createSource(sourceBrowser, {
+        settings: {
+          pageview: true,
+          session: true,
+          elb: 'elb', // Browser source will set window.elb automatically
+        },
+      }),
+    },
     destinations: {
       // Send events to your API
       api: {
@@ -90,19 +98,9 @@ export async function initializeWalker(): Promise<void> {
         },
       },
     },
-    sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          prefix: 'data-elb',
-          pageview: true,
-          session: true,
-        },
-      }),
-    },
   });
 
   window.walker = collector;
-  window.elb = elb;
 }
 ```
 
@@ -112,7 +110,16 @@ Add consent requirements to your destinations:
 
 ```javascript
 export async function initializeWalker(): Promise<void> {
-  const { collector, elb } = await createCollector({
+  const { collector } = await createCollector({
+    sources: {
+      browser: createSource(sourceBrowser, {
+        settings: {
+          pageview: true,
+          session: true,
+          elb: 'elb', // Browser source will set window.elb automatically
+        },
+      }),
+    },
     destinations: {
       // API destination - requires functional consent
       api: {
@@ -140,24 +147,14 @@ export async function initializeWalker(): Promise<void> {
         },
       },
     },
-    sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          prefix: 'data-elb',
-          pageview: true,
-          session: true,
-        },
-      }),
-    },
   });
 
   window.walker = collector;
-  window.elb = elb;
 
   // Set consent when user accepts/denies
   // This would typically come from your consent banner
   function handleConsentAccept() {
-    elb('walker consent', {
+    window.elb('walker consent', {
       functional: true,
       analytics: true,
       marketing: true,
@@ -165,86 +162,13 @@ export async function initializeWalker(): Promise<void> {
   }
 
   function handleConsentDeny() {
-    elb('walker consent', {
+    window.elb('walker consent', {
       functional: true,
       analytics: false,
       marketing: false,
     });
   }
 }
-```
-
-## TypeScript Support
-
-All packages include TypeScript definitions:
-
-```typescript
-import type { Collector, WalkerOS } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
-
-declare global {
-  interface Window {
-    elb: WalkerOS.Elb;
-    walker: Collector.Instance;
-  }
-}
-
-const {
-  collector,
-  elb,
-}: {
-  collector: Collector.Instance;
-  elb: WalkerOS.Elb;
-} = await createCollector({
-  // Configuration with full type safety
-});
-```
-
-## Advanced Options
-
-### Version Pinning
-
-Pin to specific versions for production stability:
-
-```bash
-# NPM version pinning
-npm install @walkeros/collector@0.0.7 @walkeros/web-source-browser@0.0.7
-
-```
-
-For CDN usage with dynamic imports:
-
-```javascript
-// Pin to specific versions const { createCollector } = await import(
-'https://cdn.jsdelivr.net/npm/@walkeros/collector@0.0.7/dist/index.mjs' ); const
-{ sourceBrowser } = await import(
-'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser@0.0.7/dist/index.mjs'
-);
-```
-
-### Self-Hosting
-
-Download and host the packages yourself:
-
-```bash
-# Download specific package
-# Download specific packages
-npm pack @walkeros/collector
-npm pack @walkeros/web-source-browser
-
-# Extract files
-tar -xzf walkeros-collector-*.tgz
-tar -xzf walkeros-web-source-browser-*.tgz
-
-# Copy to your public directory
-cp collector-package/dist/* ./public/js/collector/
-cp browser-package/dist/* ./public/js/browser/
-```
-
-```html
-// Use self-hosted files const { createCollector } = await
-import('/js/collector/index.mjs'); const { sourceBrowser } = await
-import('/js/browser/index.mjs');
 ```
 
 ## Next Steps

@@ -1,24 +1,18 @@
 ---
-title: React
-description: Get started with walkerOS in React applications
-sidebar_position: 1
+title: Next.js
+description: Get started with walkerOS Next.js applications
+sidebar_position: 2
 ---
 
-# React Quickstart
+# Next.js Quickstart
 
-This guide shows you how to integrate walkerOS into your React application with
-automatic pageview tracking and component-level event tracking.
-
-## Key Concepts
-
-- **Single file setup**: One initialization file, direct usage in App.tsx
-- **No providers needed**: Direct integration in your main App component
-- **StrictMode safe**: Handles React's double execution correctly
-- **Data attributes**: Use the tagger helper for clean component tracking
+This guide shows you how to integrate walkerOS into your Next.js application.
+Most setup is identical to React - check the [React quickstart guide](./react)
+for more details.
 
 ## Installation
 
-First, install the required walkerOS packages:
+Same as React - install the required packages:
 
 ```bash
 npm install @walkeros/core @walkeros/collector @walkeros/web-source-browser
@@ -26,9 +20,11 @@ npm install @walkeros/core @walkeros/collector @walkeros/web-source-browser
 
 ## Setup
 
-### 1. walker initialization
+### 1. Walker initialization
 
-```tsx title="apps/demos/react/src/walker/index.ts"
+Create the walker initialization file:
+
+```tsx title="walker/index.ts"
 import type { Collector, WalkerOS } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
 import { createSource } from '@walkeros/core';
@@ -83,20 +79,20 @@ export function tagger(entity?: string) {
 
 ### 2. App integration
 
-Integrate directly in your main App component:
+For Next.js applications, use the Next.js router events:
 
-```tsx title="apps/demos/react/src/App.tsx"
-import { Routes, Route, useLocation } from 'react-router-dom';
+```tsx title="pages/_app.tsx"
+import { useRouter } from 'next/router';
 import { useEffect, useRef } from 'react';
-import { initializeWalker } from './walker';
+import { initializeWalker } from '../walker';
 
-function App() {
-  const location = useLocation();
+export default function App({ Component, pageProps }) {
+  const router = useRouter();
   const hasInitialized = useRef(false);
   const firstRun = useRef(true);
 
   useEffect(() => {
-    // Prevent React StrictMode double execution
+    // Prevent double execution
     if (!hasInitialized.current) {
       initializeWalker();
       hasInitialized.current = true;
@@ -104,65 +100,97 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Skip first run to prevent double page views
+    const handleRouteChange = () => {
+      if (firstRun.current) {
+        firstRun.current = false;
+        return;
+      }
+      window.elb('walker run');
+    };
+
+    // Next.js route events
+    router.events.on('routeChangeComplete', handleRouteChange);
+
+    // Call on initial load
+    handleRouteChange();
+
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router.events]);
+
+  return <Component {...pageProps} />;
+}
+```
+
+For Next.js 13+ with App Router:
+
+```tsx title="app/layout.tsx"
+'use client';
+
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { initializeWalker } from './walker';
+
+export default function RootLayout({ children }) {
+  const pathname = usePathname();
+  const hasInitialized = useRef(false);
+  const firstRun = useRef(true);
+
+  useEffect(() => {
+    // Prevent double execution
+    if (!hasInitialized.current) {
+      initializeWalker();
+      hasInitialized.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
     if (firstRun.current) {
       firstRun.current = false;
       return;
     }
 
     window.elb('walker run');
-  }, [location]);
+  }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/category" element={<Category />} />
-        <Route path="/product/:id" element={<Detail />} />
-      </Routes>
-    </div>
+    <html lang="en">
+      <body>{children}</body>
+    </html>
   );
 }
-
-export default App;
 ```
 
-## Component tagging
+## Component usage
 
-Use the tagger helper for clean component tracking:
+Component usage is identical to React. Use the tagger helper and manual events:
 
-```tsx title="apps/demos/react/src/components/ProductDetail.tsx"
+```tsx
 import { tagger } from '../walker';
 
-function ProductDetail({ productId }: { productId: string }) {
-  const product = getProductById(parseInt(productId));
+function ProductPage({ product }) {
+  // Manual event tracking
+  useEffect(() => {
+    window.elb('product view', {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+    });
+  }, [product]);
 
   return (
     <div
-      {...tagger()
-        .entity('product')
-        .action('load', 'view')
-        .data('productId', productId)
+      {...tagger('product')
+        .action('view')
+        .data('id', product.id)
+        .data('name', product.name)
         .get()}
-      className="bg-white rounded-lg shadow p-8"
     >
-      <h1
-        {...tagger('product').data('name', product.name).get()}
-        className="text-3xl font-bold mb-2"
-      >
-        {product.name}
-      </h1>
-
-      <p
-        {...tagger('product').data('price', product.price).get()}
-        className="text-3xl font-bold text-blue-600"
-      >
-        €{product.price}
-      </p>
-
+      <h1>{product.name}</h1>
       <button
-        {...tagger().action('click', 'add').get()}
-        className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg"
+        {...tagger().action('add').get()}
+        onClick={() => window.elb('product add', { id: product.id })}
       >
         Add to Cart
       </button>
@@ -171,51 +199,12 @@ function ProductDetail({ productId }: { productId: string }) {
 }
 ```
 
-```tsx
-// Without tagger helper (verbose)
-<div
-  data-elb="product"
-  data-elb-action="view"
-  data-elb-id={product.id}
-  data-elb-name={product.name}
-  data-elb-price={product.price}
->
-
-  // With tagger helper (clean)
-<div
-  {...tagger('product')
-    .action('view')
-    .data('id', product.id)
-    .data('name', product.name)
-    .data('price', product.price)
-    .get()}
->
-
-```
-
 :::info
 
 When using the `tagger` helper, make sure to call .get() at the end of the
 chain.
 
 :::
-
-## Manual event tracking
-
-Use the `elb` function for custom events:
-
-```tsx
-function CheckoutForm() {
-  const handleSubmit = (formData: any) => {
-    window.elb('checkout complete', {
-      total: formData.total,
-      items: formData.items.length,
-    });
-  };
-
-  return <form onSubmit={handleSubmit}>{/* Form fields */}</form>;
-}
-```
 
 ## Testing
 
@@ -230,10 +219,10 @@ tracked events:
 ## Best Practices
 
 1. **Use tagger**: Clean component tagging with the tagger helper
-2. **Minimal React code**: Keep React integration as simple as possible
+2. **Minimal Next.js code**: Keep Next.js integration as simple as possible
 3. **Trust walkerOS**: No need for custom error handling or state management
-4. **Direct integration**: No providers needed, integrate directly in App
-   component
+4. **Direct integration**: No providers needed, integrate directly in \_app or
+   layout
 5. **Test with console**: Use console destination during development
 
 ## Troubleshooting
@@ -249,7 +238,12 @@ tracked events:
 
 1. Check that `walker run` is called on route changes in `window.elbLayer`
 2. Ensure firstRun logic is preventing double execution on initial load
-3. Verify location/pathname dependency is working correctly
+3. Verify router event listeners are working correctly
+
+### TypeScript Errors
+
+Make sure you've added the global type declarations in your walker
+initialization file.
 
 ## Next Steps
 

@@ -1,17 +1,19 @@
 ---
-title: Migrations
+title: Migration
 description: How to migrate to the latest walkerOS packages
-position: 1
 ---
 
 # Migration Guide: From @elbwalker to @walkerOS
 
-This guide helps you migrate from the old elbwalker packages to the new walkerOS packages.
+This guide helps you migrate from the old elbwalker packages to the new walkerOS
+packages.
 
 ## Quick Reference
 
 ### Core Package Changes
-- `@elbwalker/walker.js` → `@walkeros/collector` + `@walkeros/web-source-browser`
+
+- `@elbwalker/walker.js` → `@walkeros/collector` +
+  `@walkeros/web-source-browser`
 - `@elbwalker/types` + `@elbwalker/utils` → `@walkeros/core`
 - `@elbwalker/destination-web-*` → `@walkeros/web-destination-*`
 - `@elbwalker/destination-node-*` → `@walkeros/server-destination-*`
@@ -21,6 +23,7 @@ This guide helps you migrate from the old elbwalker packages to the new walkerOS
 ### 1. Update Dependencies
 
 **Before:**
+
 ```json
 {
   "dependencies": {
@@ -31,6 +34,7 @@ This guide helps you migrate from the old elbwalker packages to the new walkerOS
 ```
 
 **After:**
+
 ```json
 {
   "dependencies": {
@@ -44,6 +48,7 @@ This guide helps you migrate from the old elbwalker packages to the new walkerOS
 ### 2. Update Imports
 
 **Before:**
+
 ```typescript
 import { Walkerjs } from '@elbwalker/walker.js';
 import { destinationGoogleGA4 } from '@elbwalker/destination-web-google-ga4';
@@ -51,6 +56,7 @@ import type { WalkerOS } from '@elbwalker/types';
 ```
 
 **After:**
+
 ```typescript
 import { createCollector } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
@@ -61,6 +67,7 @@ import type { WalkerOS } from '@walkeros/core';
 ### 3. Update Function Calls
 
 **Before:**
+
 ```typescript
 const walker = Walkerjs({
   destinations: [destinationGoogleGA4],
@@ -68,6 +75,7 @@ const walker = Walkerjs({
 ```
 
 **After:**
+
 ```typescript
 import { createSource, createDestination } from '@walkeros/core';
 
@@ -75,49 +83,58 @@ import { createSource, createDestination } from '@walkeros/core';
 const { elb } = await createCollector({
   sources: {
     browser: createSource(sourceBrowser, {
-      settings: { scope: document.body }
-    })
-  }
+      settings: { scope: document.body },
+    }),
+  },
 });
 
 // Add destination with configuration
-elb('walker destination', createDestination(destinationGtag, {
-  settings: {
-    ga4: { measurementId: 'G-XXXXXXXXXX' }
-  }
-}));
+elb(
+  'walker destination',
+  createDestination(destinationGtag, {
+    settings: {
+      ga4: { measurementId: 'G-XXXXXXXXXX' },
+    },
+  }),
+);
 ```
 
 ## Breaking Changes
 
 ### 1. Unified Collector
+
 - Single `@walkeros/collector` package works across all platforms
 - Use `createCollector()` instead of `Walkerjs()` or `createSourceNode()`
 
-### 2. Modular Sources  
+### 2. Modular Sources
+
 - DOM tracking is now `@walkeros/web-source-browser`
 - Import and initialize sources separately
 
 ### 3. Core Package Merger
+
 - All types and utilities now come from `@walkeros/core`
 - Update all import statements accordingly
 
 ### 4. Google Destinations Unified
+
 - GA4, Google Ads, and GTM are now unified in `@walkeros/web-destination-gtag`
 - Configure all Google services through a single destination
 
 ## Destination Configuration Patterns
 
 ### Option 1: Traditional Configuration (Current)
+
 ```typescript
 elb('walker destination', destinationGtag, {
   settings: {
-    ga4: { measurementId: 'G-XXXXXXXXXX' }
-  }
+    ga4: { measurementId: 'G-XXXXXXXXXX' },
+  },
 });
 ```
 
 ### Option 2: Using createSource and createDestination (New)
+
 For a more elegant API and to avoid config side-effects in tests:
 
 ```typescript
@@ -127,21 +144,25 @@ import { createSource, createDestination } from '@walkeros/core';
 const trackingConfig = {
   sources: {
     browser: createSource(sourceBrowser, {
-      settings: { scope: document.body, session: true }
-    })
-  }
+      settings: { scope: document.body, session: true },
+    }),
+  },
 };
 
 const { elb } = await createCollector(trackingConfig);
 
-elb('walker destination', createDestination(destinationGtag, {
-  settings: {
-    ga4: { measurementId: 'G-XXXXXXXXXX' }
-  }
-}));
+elb(
+  'walker destination',
+  createDestination(destinationGtag, {
+    settings: {
+      ga4: { measurementId: 'G-XXXXXXXXXX' },
+    },
+  }),
+);
 ```
 
 **Benefits of createSource and createDestination:**
+
 - Creates fresh instances (no config side-effects)
 - Enables single-config-file setups describing entire tracking
 - Maintains full type safety with proper config linking
@@ -151,12 +172,14 @@ elb('walker destination', createDestination(destinationGtag, {
 ## Migration Checklist
 
 ### Package Dependencies
+
 - [ ] Remove old `@elbwalker/*` packages
-- [ ] Add `@walkeros/collector` 
+- [ ] Add `@walkeros/collector`
 - [ ] Add required sources and destinations
 - [ ] Add `@walkeros/core` for custom implementations
 
-### Code Updates  
+### Code Updates
+
 - [ ] Update all imports to new packages
 - [ ] Replace collector initialization with `createCollector()`
 - [ ] Update type imports to use `@walkeros/core`
