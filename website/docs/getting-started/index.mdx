@@ -90,9 +90,12 @@ For websites without build tools install from CDN:
 
 ```html
 <script>
-  // Load the collector and source
+  // Load the collector, core utilities, and source
   const { createCollector } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
+  );
+  const { createSource } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs'
   );
   const { sourceBrowser } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
@@ -106,16 +109,13 @@ For websites without build tools install from CDN:
       },
     },
     sources: {
-      browser: {
-        code: sourceBrowser,
-        config: {
-          settings: {
-            prefix: 'data-elb',
-            pageview: true,
-            session: true,
-          },
+      browser: createSource(sourceBrowser, {
+        settings: {
+          prefix: 'data-elb',
+          pageview: true,
+          session: true,
         },
-      },
+      }),
     },
   });
 </script>

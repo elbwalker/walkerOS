@@ -1,5 +1,5 @@
 ---
-title: CDN usage
+title: CDN
 description: CDN setup for non-npm users
 sidebar_position: 3
 ---
@@ -23,8 +23,9 @@ No Build Required
 
 No npm installation required. Just add the CDN script:
 
-````html
-Load packages directly from CDN: ```html
+Load packages directly from CDN:
+
+```html
 <!-- Core collector -->
 <script src="https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.browser.js"></script>
 
@@ -40,7 +41,7 @@ Load packages directly from CDN: ```html
   const { sourceBrowser } = walkerOSWebSourceBrowser;
   const { destinationGtag } = walkerOSWebDestinationGtag;
 </script>
-````
+```
 
 ## Setup
 
@@ -178,14 +179,4 @@ Use modern ES6 modules:
   // Track events
   await elb('page view', { title: document.title });
 </script>
-```
-
-## Legacy Browser Support
-
-For older browsers, use ES5 builds:
-
-```html
-<!-- ES5 compatible builds -->
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.es5.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.es5.js"></script>
 ```
