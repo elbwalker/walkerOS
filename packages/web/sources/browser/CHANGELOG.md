@@ -1,5 +1,11 @@
 # @walkeros/web-source-browser
 
+## 0.0.10
+
+### Patch Changes
+
+- page view fix
+
 ## 0.0.9
 
 ### Patch Changes

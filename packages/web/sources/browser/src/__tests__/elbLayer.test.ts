@@ -1,21 +1,38 @@
-/* eslint-disable jest/no-disabled-tests */
 import { createCollector } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
 import { initElbLayer } from '../elbLayer';
 import type { WalkerOS, Collector, On } from '@walkeros/core';
 
-describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
+// Helper to access window.elbLayer safely
+const getWindowElbLayer = (): unknown[] | undefined =>
+  (window as unknown as { elbLayer?: unknown[] }).elbLayer;
+
+const setWindowElbLayer = (value: unknown[]): void => {
+  (window as unknown as { elbLayer: unknown[] }).elbLayer = value;
+};
+
+const deleteWindowElbLayer = (): void => {
+  (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
+};
+
+const pushToElbLayer = (item: unknown): void => {
+  const w = window as unknown as { elbLayer?: unknown[] };
+  if (!w.elbLayer) w.elbLayer = [];
+  w.elbLayer.push(item);
+};
+
+describe('Elb Layer', () => {
   let collectedEvents: WalkerOS.Event[];
   let collector: Collector.Instance;
   let mockPush: jest.MockedFunction<Collector.Instance['push']>;
 
   beforeEach(async () => {
     // Clear any existing elbLayer
-    delete (window as any).elbLayer;
+    deleteWindowElbLayer();
     collectedEvents = [];
 
     // Create mock push function
-    mockPush = jest.fn((...args: any[]) => {
+    mockPush = jest.fn().mockImplementation((...args: unknown[]) => {
       collectedEvents.push(args[0] as WalkerOS.Event);
       return Promise.resolve({
         ok: true,
@@ -23,7 +40,7 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
         queued: [],
         failed: [],
       });
-    }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
+    }) as jest.MockedFunction<Collector.Instance['push']>;
 
     // Initialize collector
     ({ collector } = await createCollector());
@@ -34,89 +51,106 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
 
   afterEach(() => {
     // Clean up window properties
-    delete (window as any).elbLayer;
-    delete (window as any).customLayer;
+    deleteWindowElbLayer();
+    (window as Window & { customLayer?: unknown }).customLayer = undefined;
   });
 
-  describe('ELB Layer Initialization', () => {
+  describe('Elb Layer Initialization', () => {
     test('creates elbLayer array on window', () => {
-      expect(window.elbLayer).toBeUndefined();
+      expect(getWindowElbLayer()).toBeUndefined();
 
       initElbLayer(collector);
 
-      expect(window.elbLayer).toBeDefined();
-      expect(Array.isArray(window.elbLayer)).toBe(true);
-      expect(window.elbLayer).toHaveLength(0);
+      expect(getWindowElbLayer()).toBeDefined();
+      expect(Array.isArray(getWindowElbLayer())).toBe(true);
+      expect(getWindowElbLayer()).toHaveLength(0);
     });
 
     test('uses custom layer name', () => {
-      expect((window as any).customLayer).toBeUndefined();
+      expect(
+        (window as Window & { customLayer?: unknown }).customLayer,
+      ).toBeUndefined();
 
       initElbLayer(collector, { name: 'customLayer' });
 
-      expect((window as any).customLayer).toBeDefined();
-      expect(Array.isArray((window as any).customLayer)).toBe(true);
-      expect(window.elbLayer).toBeUndefined();
+      expect(
+        (window as Window & { customLayer?: unknown }).customLayer,
+      ).toBeDefined();
+      expect(
+        Array.isArray(
+          (window as Window & { customLayer?: unknown }).customLayer,
+        ),
+      ).toBe(true);
+      expect(getWindowElbLayer()).toBeUndefined();
     });
 
     test('preserves existing elbLayer if present', () => {
-      window.elbLayer = [['existing', 'commands'] as unknown[]];
+      setWindowElbLayer([['existing', 'commands'] as unknown[]]);
 
       initElbLayer(collector);
 
-      expect(window.elbLayer).toBeDefined();
-      expect(Array.isArray(window.elbLayer)).toBe(true);
+      expect(getWindowElbLayer()).toBeDefined();
+      expect(Array.isArray(getWindowElbLayer())).toBe(true);
       // Commands should be processed and cleared
-      expect(window.elbLayer).toHaveLength(0);
+      expect(getWindowElbLayer()).toHaveLength(0);
     });
   });
 
   describe('Command Processing', () => {
     test('processes existing commands on initialization', () => {
       // Pre-populate elbLayer with commands
-      window.elbLayer = [
-        ['page', 'view', 'load'],
-        ['product', 'click', 'click', { id: 'test' }],
-      ];
+      setWindowElbLayer([
+        ['page', 'view', 'load'] as unknown[],
+        ['product', 'click', 'click', { id: 'test' }] as unknown[],
+      ]);
 
       initElbLayer(collector);
 
       expect(mockPush).toHaveBeenCalledTimes(2);
-      expect(window.elbLayer).toHaveLength(0); // Commands cleared after processing
+      expect(getWindowElbLayer()).toHaveLength(0); // Commands cleared after processing
     });
 
     test('processes walker commands with priority', () => {
-      window.elbLayer = [
-        ['product', 'click', 'click'], // Regular event
-        ['walker run', { consent: { marketing: true } }], // Walker command
-        ['page', 'view', 'load'], // Regular event
-        ['walker user', { id: 'user123' }], // Walker command
-      ];
+      setWindowElbLayer([
+        ['product', 'click', 'click'] as unknown[], // Regular event
+        ['walker run', { consent: { marketing: true } }] as unknown[], // Walker command
+        ['page', 'view', 'load'] as unknown[], // Regular event
+        ['walker user', { id: 'user123' }] as unknown[], // Walker command
+      ]);
 
       initElbLayer(collector);
 
-      expect(mockPush).toHaveBeenCalledTimes(3);
+      // All commands should be processed, including walker run
+      expect(mockPush).toHaveBeenCalledTimes(4);
 
-      // Walker commands should be processed first (first walker run is skipped)
-      expect(mockPush).toHaveBeenNthCalledWith(1, 'walker user', {
+      // Walker commands should be processed first
+      expect(mockPush).toHaveBeenNthCalledWith(1, 'walker run', {
+        consent: { marketing: true },
+      });
+      expect(mockPush).toHaveBeenNthCalledWith(2, 'walker user', {
         id: 'user123',
       });
 
       // Then regular events
       expect(mockPush).toHaveBeenNthCalledWith(
-        2,
+        3,
         expect.objectContaining({ event: 'product' }),
       );
       expect(mockPush).toHaveBeenNthCalledWith(
-        3,
+        4,
         expect.objectContaining({ event: 'page' }),
       );
     });
 
     test('handles array-like commands', () => {
-      window.elbLayer = [
-        ['test_event', { key: 'value' }, 'load', { context: 'test' }],
-      ];
+      setWindowElbLayer([
+        [
+          'test_event',
+          { key: 'value' },
+          'load',
+          { context: 'test' },
+        ] as unknown[],
+      ]);
 
       initElbLayer(collector);
 
@@ -138,7 +172,7 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
         context: { page: ['home', 0] as [string, number] },
       };
 
-      window.elbLayer = [eventObject];
+      setWindowElbLayer([eventObject as unknown]);
 
       initElbLayer(collector);
 
@@ -147,63 +181,88 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
     });
 
     test('ignores malformed commands', () => {
-      window.elbLayer = [
-        [] as unknown[], // Empty array
-        [''] as unknown[], // Empty action array
-        {} as WalkerOS.DeepPartialEvent, // Empty object
-      ];
+      setWindowElbLayer([
+        [] as unknown, // Empty array
+        [''] as unknown, // Empty action array
+        {} as unknown, // Empty object
+      ]);
 
       initElbLayer(collector);
 
       // Should not throw and should not call push for invalid commands
       expect(mockPush).not.toHaveBeenCalled();
-      expect(window.elbLayer).toHaveLength(0);
+      expect(getWindowElbLayer()).toHaveLength(0);
     });
   });
 
   describe('Source Integration', () => {
     test('initializes elbLayer by default', async () => {
-      expect(window.elbLayer).toBeUndefined();
+      expect(getWindowElbLayer()).toBeUndefined();
 
       await createBrowserSource(collector);
 
-      expect(window.elbLayer).toBeDefined();
-      expect(Array.isArray(window.elbLayer)).toBe(true);
+      expect(getWindowElbLayer()).toBeDefined();
+      expect(Array.isArray(getWindowElbLayer())).toBe(true);
     });
 
     test('uses custom elbLayer name from settings', async () => {
       await createBrowserSource(collector, { elbLayer: 'myCustomLayer' });
 
-      expect((window as any).myCustomLayer).toBeDefined();
-      expect(Array.isArray((window as any).myCustomLayer)).toBe(true);
-      expect(window.elbLayer).toBeUndefined();
+      expect(
+        (window as Window & { myCustomLayer?: unknown }).myCustomLayer,
+      ).toBeDefined();
+      expect(
+        Array.isArray(
+          (window as Window & { myCustomLayer?: unknown }).myCustomLayer,
+        ),
+      ).toBe(true);
+      expect(getWindowElbLayer()).toBeUndefined();
     });
 
     test('can disable elbLayer initialization', async () => {
       await createBrowserSource(collector, { elbLayer: false });
 
-      expect(window.elbLayer).toBeUndefined();
+      expect(getWindowElbLayer()).toBeUndefined();
     });
 
     test('processes pre-initialization commands', async () => {
       // Commands pushed before source initialization
-      window.elbLayer = [
-        ['walker run', { consent: { marketing: true } }],
-        ['page', 'view', 'load'],
-      ];
+      setWindowElbLayer([
+        ['walker run', { consent: { marketing: true } }] as unknown[],
+        ['page', 'view', 'load'] as unknown[],
+      ]);
 
       await createBrowserSource(collector, { pageview: false });
 
-      expect(mockPush).toHaveBeenCalledTimes(1); // walker run is skipped on first initialization
-      expect(window.elbLayer).toHaveLength(0);
+      // Should process all commands plus register the run callback
+      expect(mockPush).toHaveBeenCalledTimes(3);
+      expect(mockPush).toHaveBeenNthCalledWith(1, 'walker run', {
+        consent: { marketing: true },
+      });
+      expect(mockPush).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ event: 'page' }),
+      );
+      expect(mockPush).toHaveBeenNthCalledWith(
+        3,
+        'walker on',
+        'run',
+        expect.any(Function),
+      );
+      expect(getWindowElbLayer()).toHaveLength(0);
     });
   });
 
   describe('Event Structure', () => {
     test('creates proper WalkerOS.Event structure for regular events', () => {
-      window.elbLayer = [
-        ['entity_name', { prop: 'value' }, 'trigger_type', { ctx: 'context' }],
-      ];
+      setWindowElbLayer([
+        [
+          'entity_name',
+          { prop: 'value' },
+          'trigger_type',
+          { ctx: 'context' },
+        ] as unknown[],
+      ]);
 
       initElbLayer(collector);
 
@@ -218,9 +277,14 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
     });
 
     test('passes walker commands directly', () => {
-      window.elbLayer = [
-        ['walker user', { id: 'user123' }, 'options', { context: 'test' }],
-      ];
+      setWindowElbLayer([
+        [
+          'walker user',
+          { id: 'user123' },
+          'options',
+          { context: 'test' },
+        ] as unknown[],
+      ]);
 
       initElbLayer(collector);
 
@@ -235,10 +299,10 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
         throw new Error('Push failed');
       });
 
-      window.elbLayer = [
-        ['test', 'data'],
-        ['another', 'command'],
-      ];
+      setWindowElbLayer([
+        ['test', 'data'] as unknown[],
+        ['another', 'command'] as unknown[],
+      ]);
 
       // Should not throw
       expect(() => {
@@ -246,14 +310,14 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
       }).not.toThrow();
 
       // Commands should still be cleared
-      expect(window.elbLayer).toHaveLength(0);
+      expect(getWindowElbLayer()).toHaveLength(0);
     });
 
     test('handles circular references in commands', () => {
-      const circular: any = { name: 'test' };
+      const circular: Record<string, unknown> = { name: 'test' };
       circular.self = circular;
 
-      window.elbLayer = [['test', circular]];
+      setWindowElbLayer([['test', circular] as unknown[]]);
 
       expect(() => {
         initElbLayer(collector);
@@ -264,7 +328,7 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
   describe('Arguments Object Support', () => {
     test('processes IArguments objects correctly', () => {
       function testElb(...args: unknown[]) {
-        (window.elbLayer = window.elbLayer || []).push(arguments);
+        pushToElbLayer(arguments);
       }
 
       testElb('test_event', { key: 'value' }, 'load');
@@ -284,7 +348,7 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
       initElbLayer(collector);
 
       function testElb(...args: unknown[]) {
-        window.elbLayer.push(arguments);
+        pushToElbLayer(arguments);
       }
 
       testElb('immediate_event', { test: true });
@@ -310,7 +374,7 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
         'div[data-elb="product"]',
       ) as Element;
 
-      window.elbLayer = [['product', element]];
+      setWindowElbLayer([['product', element] as unknown[]]);
 
       initElbLayer(collector);
 
@@ -331,7 +395,7 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
         writable: true,
       });
 
-      window.elbLayer = [['page', 'view']];
+      setWindowElbLayer([['page', 'view'] as unknown[]]);
 
       initElbLayer(collector);
 
@@ -363,8 +427,8 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
       );
 
       // Get the registered callback from the mock call
-      const walkerOnCall: any[] | undefined = mockPush.mock.calls.find(
-        (call: any) => call[0] === 'walker on' && call[1] === 'run',
+      const walkerOnCall: unknown[] | undefined = mockPush.mock.calls.find(
+        (call: unknown[]) => call[0] === 'walker on' && call[1] === 'run',
       );
       expect(walkerOnCall).toBeDefined();
 
@@ -392,12 +456,12 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
 
   describe('Performance', () => {
     test('handles large number of commands efficiently', () => {
-      const commands = [];
+      const commands: unknown[] = [];
       for (let i = 0; i < 1000; i++) {
-        commands.push([`event_${i}`, { index: i }]);
+        commands.push([`event_${i}`, { index: i }] as unknown[]);
       }
 
-      window.elbLayer = commands;
+      setWindowElbLayer(commands as unknown[]);
 
       const startTime = performance.now();
       initElbLayer(collector);
@@ -405,7 +469,7 @@ describe.skip('ELB Layer (NEEDS UPDATE for run-only behavior)', () => {
 
       expect(endTime - startTime).toBeLessThan(100); // Should process in under 100ms
       expect(mockPush).toHaveBeenCalledTimes(1000);
-      expect(window.elbLayer).toHaveLength(0);
+      expect(getWindowElbLayer()).toHaveLength(0);
     });
   });
 });

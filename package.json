@@ -12,7 +12,9 @@
     "packages/web/sources/*",
     "apps/walkerjs",
     "apps/quickstart",
-    "apps/explorer",
+    "apps/storybook-addon",
+    "apps/demos/react",
+    "apps/demos/storybook",
     "website"
   ],
   "scripts": {

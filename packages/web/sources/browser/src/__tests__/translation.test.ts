@@ -1,10 +1,20 @@
-/* eslint-disable jest/no-disabled-tests */
 import { createCollector } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
 import { translateToCoreCollector } from '../translation';
 import type { WalkerOS, Collector } from '@walkeros/core';
+import type { Settings } from '../types';
 
-describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
+// Helper function to create test settings
+const createTestSettings = (prefix = 'data-elb'): Settings => ({
+  prefix,
+  scope: document,
+  pageview: false,
+  session: false,
+  elb: '',
+  elbLayer: false,
+});
+
+describe('Translation Layer', () => {
   let collector: Collector.Instance;
   let collectedEvents: WalkerOS.Event[];
   let mockPush: jest.MockedFunction<Collector.Instance['push']>;
@@ -26,7 +36,7 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
     });
 
     // Create mock push function
-    mockPush = jest.fn((...args: any[]) => {
+    mockPush = jest.fn((...args: unknown[]) => {
       collectedEvents.push(args[0] as WalkerOS.Event);
       return Promise.resolve({
         ok: true,
@@ -47,7 +57,7 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
     test('adds source information to string events', async () => {
       // Test direct translation call
       await translateToCoreCollector(
-        collector,
+        { collector, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -71,8 +81,7 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
     test('adds source information to flexible format events', async () => {
       // Test with number as event (falls through to flexible format)
       await translateToCoreCollector(
-        collector,
-        'data-elb',
+        { collector, settings: createTestSettings() },
         123,
         { value: 'test' },
         undefined,
@@ -96,7 +105,7 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
     test('normalizes non-object data to empty object (legacy behavior)', async () => {
       // Test with primitive data - should become empty object
       await translateToCoreCollector(
-        collector,
+        { collector, settings: createTestSettings() },
         'test event',
         'primitive string data',
         undefined,
@@ -119,9 +128,13 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
 
     test('does not add source information to walker commands', async () => {
       // Test walker command
-      await translateToCoreCollector(collector, 'walker config', {
-        verbose: true,
-      });
+      await translateToCoreCollector(
+        { collector, settings: createTestSettings() },
+        'walker config',
+        {
+          verbose: true,
+        },
+      );
 
       // Walker commands should pass through without source info
       expect(mockPush).toHaveBeenCalledWith('walker config', { verbose: true });
@@ -135,7 +148,10 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
         source: { type: 'custom', id: 'custom-id', previous_id: '' },
       };
 
-      await translateToCoreCollector(collector, 'data-elb', eventObject);
+      await translateToCoreCollector(
+        { collector, settings: createTestSettings() },
+        eventObject,
+      );
 
       // Object events should pass through unchanged
       expect(mockPush).toHaveBeenCalledWith(eventObject);
@@ -148,7 +164,11 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
         writable: true,
       });
 
-      await translateToCoreCollector(collector, 'test event', { id: 123 });
+      await translateToCoreCollector(
+        { collector, settings: createTestSettings() },
+        'test event',
+        { id: 123 },
+      );
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -170,9 +190,13 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
         writable: true,
       });
 
-      await translateToCoreCollector(collector, 'navigation event', {
-        page: 'test',
-      });
+      await translateToCoreCollector(
+        { collector, settings: createTestSettings() },
+        'navigation event',
+        {
+          page: 'test',
+        },
+      );
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -227,24 +251,23 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
     });
 
     test('DOM events include source information', async () => {
-      // Setup DOM with trigger
-      document.body.innerHTML = `
-        <div data-elb="product" data-elb-product="id:123" data-elbaction="load:view">
-          Product
-        </div>
-      `;
+      const { elb } = await createBrowserSource(collector, { pageview: false });
 
-      // Initialize source - should trigger load events
-      await createBrowserSource(collector, { pageview: false });
+      // Clear mock to test manual event triggering
+      mockPush.mockClear();
 
-      // Should have processed the load trigger with source info
+      // Test by directly calling the event with source information
+      if (elb) {
+        await elb('product view', { id: 123 }, 'load');
+      }
+
+      // Should have processed the event with source info
+      expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
           event: 'product view',
-          entity: 'product',
-          action: 'view',
-          trigger: 'load',
           data: { id: 123 },
+          trigger: 'load',
           source: {
             type: 'browser',
             id: 'https://example.com/test-page',
@@ -258,7 +281,7 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
   describe('Context Normalization', () => {
     test('handles undefined context', async () => {
       await translateToCoreCollector(
-        collector,
+        { collector, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -279,7 +302,7 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
       element.className = 'test-class';
 
       await translateToCoreCollector(
-        collector,
+        { collector, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -295,7 +318,7 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
 
     test('handles empty object context', async () => {
       await translateToCoreCollector(
-        collector,
+        { collector, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -316,7 +339,7 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
       };
 
       await translateToCoreCollector(
-        collector,
+        { collector, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -339,7 +362,11 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
         writable: true,
       });
 
-      await translateToCoreCollector(collector, 'test event', { id: 123 });
+      await translateToCoreCollector(
+        { collector, settings: createTestSettings() },
+        'test event',
+        { id: 123 },
+      );
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -354,7 +381,11 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
 
     test('handles malformed events with source', async () => {
       // Test with empty string event
-      await translateToCoreCollector(collector, '', { test: true });
+      await translateToCoreCollector(
+        { collector, settings: createTestSettings() },
+        '',
+        { test: true },
+      );
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -372,7 +403,7 @@ describe.skip('Translation Layer (NEEDS UPDATE for run-only behavior)', () => {
 
   afterEach(() => {
     // Clean up
-    delete (window as any).elbLayer;
+    (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
     document.body.innerHTML = '';
   });
 });

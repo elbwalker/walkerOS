@@ -5,6 +5,7 @@ import type {
   BrowserPushOptions,
   BrowserPushContext,
 } from './types/elb';
+import type { Context } from './types';
 import { getEntities } from './walker';
 
 // Initialize timing for performance measurements
@@ -15,15 +16,15 @@ const startTime = performance.now();
  * to the strict core collector format
  */
 export function translateToCoreCollector(
-  collector: Collector.Instance,
-  prefix: string = 'data-elb',
+  context: Context,
   eventOrCommand: unknown,
   data?: BrowserPushData,
   options?: BrowserPushOptions,
-  context?: BrowserPushContext,
+  pushContext?: BrowserPushContext,
   nested?: WalkerOS.Entities,
   custom?: WalkerOS.Properties,
 ): Promise<Elb.PushResult> {
+  const { collector, settings } = context;
   // Handle walker commands - pass through directly to collector
   if (isString(eventOrCommand) && eventOrCommand.startsWith('walker ')) {
     const result = collector.push(eventOrCommand, data as WalkerOS.Properties);
@@ -55,18 +56,19 @@ export function translateToCoreCollector(
     dataIsElem = true;
   }
 
-  // Check if context parameter is an element
-  if (isElementOrDocument(context)) {
-    elemParameter = context as Element;
-  } else if (isObject(context) && Object.keys(context).length) {
-    eventContext = context as WalkerOS.OrderedProperties;
+  // Check if contextData parameter is an element
+  if (isElementOrDocument(pushContext)) {
+    elemParameter = pushContext as Element;
+  } else if (isObject(pushContext) && Object.keys(pushContext).length) {
+    eventContext = pushContext as WalkerOS.OrderedProperties;
   }
 
   // Extract data from element if provided
   if (elemParameter) {
-    const entityObj = getEntities(prefix, elemParameter).find(
-      (obj) => obj.type === entity,
-    );
+    const entityObj = getEntities(
+      settings.prefix || 'data-elb',
+      elemParameter,
+    ).find((obj) => obj.type === entity);
     if (entityObj) {
       if (dataIsElem) eventData = entityObj.data;
       eventContext = entityObj.context;

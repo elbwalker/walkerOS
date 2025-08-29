@@ -33,7 +33,7 @@ export const sourceBrowser: Source.Init<
 > = async (collector: Collector.Instance, config: BrowserSourceConfig) => {
   try {
     // Get full configuration with defaults
-    const fullConfig: BrowserSourceConfig & { settings: Required<Settings> } = {
+    const fullConfig: BrowserSourceConfig & { settings: Settings } = {
       ...config,
       settings: getConfig(config.settings),
     };
@@ -83,7 +83,7 @@ export const sourceBrowser: Source.Init<
           fullConfig.settings.scope as Scope,
         );
         translateToCoreCollector(
-          collectorInstance,
+          { collector: collectorInstance, settings: fullConfig.settings },
           'page view',
           data,
           Triggers.Load,
@@ -109,8 +109,7 @@ export const sourceBrowser: Source.Init<
       // Use the translation layer to convert flexible browser inputs to collector format
       const [event, data, options, context, nested, custom] = args;
       return translateToCoreCollector(
-        collector,
-        fullConfig.settings.prefix,
+        { collector, settings: fullConfig.settings },
         event,
         data as BrowserPushData,
         options as BrowserPushOptions,

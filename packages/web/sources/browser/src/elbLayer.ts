@@ -1,5 +1,5 @@
 import type { WalkerOS, Collector, Elb } from '@walkeros/core';
-import type { ELBLayer, ELBLayerConfig } from './types';
+import type { ELBLayer, ELBLayerConfig, Settings } from './types';
 import { tryCatch, isString, isObject } from '@walkeros/core';
 import { translateToCoreCollector } from './translation';
 
@@ -160,7 +160,21 @@ function pushCommand(
         }
 
         // Regular events go through translation
-        translateToCoreCollector(collector, prefix, action, ...rest);
+        translateToCoreCollector(
+          {
+            collector,
+            settings: {
+              prefix,
+              scope: document,
+              pageview: false,
+              session: false,
+              elb: '',
+              elbLayer: false,
+            },
+          },
+          action,
+          ...rest,
+        );
       } else if (item && typeof item === 'object') {
         // Skip empty objects
         if (Object.keys(item).length === 0) {
