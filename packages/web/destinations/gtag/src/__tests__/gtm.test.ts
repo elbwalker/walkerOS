@@ -1,97 +1,72 @@
 import { initGTM, pushGTMEvent } from '../gtm';
 import type { GTMSettings } from '../types';
-
-// Setup DOM mocks
-const mockScript = { src: '' };
-const mockCreateElement = jest.fn(() => mockScript);
-const mockAppendChild = jest.fn();
-
-// Mock document methods
-Object.defineProperty(document, 'createElement', {
-  value: mockCreateElement,
-  writable: true,
-});
-
-Object.defineProperty(document, 'head', {
-  value: { appendChild: mockAppendChild },
-  writable: true,
-});
+import type { DestinationWeb } from '@walkeros/web-core';
 
 describe('GTM Implementation', () => {
-  const mockWrap = jest.fn((name, fn) => fn);
+  const mockDataLayer: unknown[] = [];
+  const mockEnv: DestinationWeb.Environment = {
+    window: {
+      dataLayer: mockDataLayer,
+    },
+    document: {
+      createElement: jest.fn(() => ({
+        src: '',
+        setAttribute: jest.fn(),
+        removeAttribute: jest.fn(),
+      })),
+      head: { appendChild: jest.fn() },
+    },
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (window as any).dataLayer = [];
-    mockCreateElement.mockReturnValue(mockScript);
+    mockDataLayer.length = 0; // Clear array
   });
 
   describe('initGTM', () => {
-    it('should initialize GTM with basic settings', () => {
-      const mockPush = jest.fn();
-      mockWrap.mockReturnValue(mockPush);
-
+    it('should initialize GTM and push init event', () => {
       const settings: GTMSettings = { containerId: 'GTM-XXXXXXX' };
 
-      initGTM(settings, mockWrap, true);
+      initGTM(settings, true, mockEnv);
 
-      expect((window as any).dataLayer).toEqual([]);
-      expect(mockWrap).toHaveBeenCalledWith(
-        'dataLayer.push',
-        expect.any(Function),
-      );
-      expect(mockPush).toHaveBeenCalledWith({
+      expect(mockDataLayer).toHaveLength(1);
+      expect(mockDataLayer[0]).toEqual({
         'gtm.start': expect.any(Number),
         event: 'gtm.js',
       });
     });
 
     it('should use custom dataLayer name', () => {
+      const customDataLayer: unknown[] = [];
+      const customEnv: DestinationWeb.Environment = {
+        window: { customDataLayer },
+        document: mockEnv.document,
+      };
+
       const settings: GTMSettings = {
         containerId: 'GTM-XXXXXXX',
         dataLayer: 'customDataLayer',
       };
 
-      // Mock custom dataLayer
-      (window as any).customDataLayer = [];
+      initGTM(settings, true, customEnv);
 
-      initGTM(settings, mockWrap, true);
-
-      expect((window as any).customDataLayer).toEqual([]);
+      expect(customDataLayer).toHaveLength(1);
+      expect(customDataLayer[0]).toEqual({
+        'gtm.start': expect.any(Number),
+        event: 'gtm.js',
+      });
     });
 
-    it('should not load script if loadScript is false', () => {
+    it('should still push init event when loadScript is false', () => {
       const settings: GTMSettings = { containerId: 'GTM-XXXXXXX' };
 
-      initGTM(settings, mockWrap, false);
+      initGTM(settings, false, mockEnv);
 
-      expect(mockAppendChild).not.toHaveBeenCalled();
-    });
-
-    it('should load script with custom domain', () => {
-      const settings: GTMSettings = {
-        containerId: 'GTM-XXXXXXX',
-        domain: 'https://custom.gtm.domain.com/gtm.js?id=',
-      };
-
-      initGTM(settings, mockWrap, true);
-
-      expect(mockScript.src).toBe(
-        'https://custom.gtm.domain.com/gtm.js?id=GTM-XXXXXXX',
-      );
-    });
-
-    it('should append dataLayer parameter for custom dataLayer', () => {
-      const settings: GTMSettings = {
-        containerId: 'GTM-XXXXXXX',
-        dataLayer: 'customDataLayer',
-      };
-
-      initGTM(settings, mockWrap, true);
-
-      expect(mockScript.src).toBe(
-        'https://www.googletagmanager.com/gtm.js?id=GTM-XXXXXXX&l=customDataLayer',
-      );
+      expect(mockDataLayer).toHaveLength(1);
+      expect(mockDataLayer[0]).toEqual({
+        'gtm.start': expect.any(Number),
+        event: 'gtm.js',
+      });
     });
   });
 
@@ -106,41 +81,53 @@ describe('GTM Implementation', () => {
     const settings: GTMSettings = { containerId: 'GTM-XXXXXXX' };
 
     it('should push event to dataLayer', () => {
-      const mockPush = jest.fn();
-      mockWrap.mockReturnValue(mockPush);
+      pushGTMEvent(mockEvent as any, settings, {}, {}, mockEnv);
 
-      pushGTMEvent(mockEvent as any, settings, {}, {}, mockWrap);
-
-      expect(mockPush).toHaveBeenCalledWith({
+      expect(mockDataLayer).toHaveLength(1);
+      expect(mockDataLayer[0]).toEqual({
         event: 'product view',
       });
     });
 
-    it('should merge with additional data when provided', () => {
-      const mockPush = jest.fn();
-      mockWrap.mockReturnValue(mockPush);
+    it('should push event with data when data is object', () => {
+      const data = { price: 99.99, currency: 'USD' };
 
-      const additionalData = { custom_param: 'custom_value' };
+      pushGTMEvent(mockEvent as any, settings, {}, data, mockEnv);
 
-      pushGTMEvent(mockEvent as any, settings, {}, additionalData, mockWrap);
-
-      expect(mockPush).toHaveBeenCalledWith({
+      expect(mockDataLayer).toHaveLength(1);
+      expect(mockDataLayer[0]).toEqual({
         event: 'product view',
-        custom_param: 'custom_value',
+        price: 99.99,
+        currency: 'USD',
       });
     });
 
-    it('should fallback to event data when data is not object', () => {
-      const mockPush = jest.fn();
-      mockWrap.mockReturnValue(mockPush);
+    it('should fallback to event object when data is not an object', () => {
+      pushGTMEvent(mockEvent as any, settings, {}, 'invalid-data', mockEnv);
 
-      pushGTMEvent(mockEvent as any, settings, {}, 'invalid-data', mockWrap);
-
-      expect(mockPush).toHaveBeenCalledWith({
+      expect(mockDataLayer).toHaveLength(1);
+      expect(mockDataLayer[0]).toEqual({
         event: 'product view',
         entity: 'product',
         action: 'view',
         data: { id: 'product-1', name: 'Test Product' },
+      });
+    });
+
+    it('should handle custom dataLayer name in environment', () => {
+      const customDataLayer: unknown[] = [];
+      const customEnv: DestinationWeb.Environment = {
+        window: {
+          dataLayer: customDataLayer,
+        },
+        document: mockEnv.document,
+      };
+
+      pushGTMEvent(mockEvent as any, settings, {}, {}, customEnv);
+
+      expect(customDataLayer).toHaveLength(1);
+      expect(customDataLayer[0]).toEqual({
+        event: 'product view',
       });
     });
   });

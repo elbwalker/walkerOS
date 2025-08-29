@@ -4,7 +4,6 @@ import type {
   Mapping as WalkerOSMapping,
   On,
   WalkerOS,
-  Wrapper,
 } from '.';
 
 export interface Instance<Settings = unknown, Mapping = unknown> {
@@ -12,6 +11,7 @@ export interface Instance<Settings = unknown, Mapping = unknown> {
   queue?: WalkerOS.Events; // Non processed events yet and reset with each new run
   dlq?: DLQ; // Failed events
   type?: string; // The type of the destination
+  env?: Environment; // Environment requirements (browser APIs, globals, etc.)
   init?: InitFn<Settings, Mapping>;
   push: PushFn<Settings, Mapping>;
   pushBatch?: PushBatchFn<Settings, Mapping>;
@@ -21,7 +21,7 @@ export interface Config<Settings = unknown, Mapping = unknown> {
   consent?: WalkerOS.Consent; // Required consent states to init and push events
   settings?: Settings; // Destination-specific configuration settings
   data?: WalkerOSMapping.Value | WalkerOSMapping.Values; // Mapping of event data
-  dryRun?: boolean; // Enable dry run mode for this destination
+  env?: Environment; // Environment override for testing/simulation
   id?: string; // A unique key for the destination
   init?: boolean; // If the destination has been initialized by calling the init method
   loadScript?: boolean; // If an additional script to work should be loaded
@@ -30,7 +30,6 @@ export interface Config<Settings = unknown, Mapping = unknown> {
   policy?: Policy; // Rules for processing events
   queue?: boolean; // Disable processing of previously pushed events
   verbose?: boolean; // Enable verbose logging
-  wrapper?: Wrapper.Config; // Wrapper configuration for function interception
   onError?: Handler.Error; // Custom error handler
   onLog?: Handler.Log; // Custom log handler
 }
@@ -67,7 +66,7 @@ export interface Context<Settings = unknown, Mapping = unknown> {
   collector: Collector.Instance;
   config: Config<Settings, Mapping>;
   data?: Data;
-  wrap: Wrapper.Wrap;
+  env: Environment;
 }
 
 export interface PushContext<Settings = unknown, Mapping = unknown>
@@ -130,3 +129,18 @@ export type Result = {
   queued: Array<Ref>;
   failed: Array<Ref>;
 };
+
+/**
+ * Base environment requirements interface for walkerOS destinations
+ *
+ * This defines the core interface that destinations can use to declare
+ * their runtime environment requirements. Platform-specific extensions
+ * should extend this interface.
+ */
+export interface Environment {
+  /**
+   * Generic global properties that destinations may require
+   * Platform-specific implementations can extend this interface
+   */
+  [key: string]: unknown;
+}

@@ -1,5 +1,7 @@
 import type { Config, Destination } from './types';
+import type { DestinationWeb } from '@walkeros/web-core';
 import { isObject } from '@walkeros/core';
+import { getEnvironment } from '@walkeros/web-core';
 
 // Types
 export * as DestinationPlausible from './types';
@@ -12,35 +14,42 @@ export const destinationPlausible: Destination = {
 
   config: {},
 
-  init({ config, wrap }) {
-    const w = window;
+  init({ config, env }) {
+    const { window } = getEnvironment(env);
+    const w = window as Window;
     const settings = config.settings || {};
 
-    if (config.loadScript) addScript(settings.domain);
+    if (config.loadScript) addScript(settings.domain, env);
 
     w.plausible =
       w.plausible ||
       function () {
         (w.plausible!.q = w.plausible!.q || []).push(arguments);
       };
+
+    return config;
   },
 
-  push(event, { config, data, wrap }) {
+  push(event, { config, data, env }) {
     const params = isObject(data) ? data : {};
 
-    const plausible = wrap('plausible', window.plausible!);
+    const { window } = getEnvironment(env);
+    const plausible = (window as Window).plausible!;
     plausible(`${event.event}`, params);
   },
 };
 
 function addScript(
   domain?: string,
+  env?: DestinationWeb.Environment,
   src = 'https://plausible.io/js/script.manual.js',
 ) {
-  const script = document.createElement('script');
+  const { document } = getEnvironment(env);
+  const doc = document as Document;
+  const script = doc.createElement('script');
   script.src = src;
   if (domain) script.dataset.domain = domain;
-  document.head.appendChild(script);
+  doc.head.appendChild(script);
 }
 
 export default destinationPlausible;

@@ -24,4 +24,3 @@ export * from './tryCatch';
 export * from './useHooks';
 export * from './userAgent';
 export * from './validate';
-export * from './wrapper';

@@ -33,7 +33,6 @@ function collector(initConfig: Partial<CollectorConfig>): Collector.Instance {
   const { version } = require('../package.json');
 
   const defaultConfig: Collector.Config = {
-    dryRun: false,
     globalsStatic: {},
     sessionStatic: {},
     tagging: 0,

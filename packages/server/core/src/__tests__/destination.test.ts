@@ -458,14 +458,14 @@ describe('Destination', () => {
     });
   });
 
-  describe('wrapper integration', () => {
-    test('should pass wrapper to destination push functions', async () => {
-      const mockPushWithWrapper = jest.fn();
-      const onCall = jest.fn();
+  describe('environment integration', () => {
+    test('should pass environment to destination push functions', async () => {
+      const mockPushWithEnvironment = jest.fn();
 
       const destination: DestinationServer.Destination = {
-        config: { wrapper: { onCall } },
-        push: mockPushWithWrapper,
+        config: {},
+        env: { customFunction: () => 'test' },
+        push: mockPushWithEnvironment,
       };
 
       const { elb } = await getCollector({
@@ -474,23 +474,25 @@ describe('Destination', () => {
 
       await elb(mockEvent);
 
-      expect(mockPushWithWrapper).toHaveBeenCalledWith(
+      expect(mockPushWithEnvironment).toHaveBeenCalledWith(
         expect.objectContaining({
           event: mockEvent.event,
         }),
         expect.objectContaining({
-          wrap: expect.any(Function),
+          env: expect.objectContaining({
+            customFunction: expect.any(Function),
+          }),
         }),
       );
     });
 
-    test('should pass wrapper to destination init functions', async () => {
-      const mockInitWithWrapper = jest.fn();
-      const onCall = jest.fn();
+    test('should pass environment to destination init functions', async () => {
+      const mockInitWithEnvironment = jest.fn();
 
       const destination: DestinationServer.Destination = {
-        config: { wrapper: { onCall } },
-        init: mockInitWithWrapper,
+        config: {},
+        env: { customFunction: () => 'test' },
+        init: mockInitWithEnvironment,
         push: mockPush,
       };
 
@@ -500,9 +502,11 @@ describe('Destination', () => {
 
       await elb(mockEvent);
 
-      expect(mockInitWithWrapper).toHaveBeenCalledWith(
+      expect(mockInitWithEnvironment).toHaveBeenCalledWith(
         expect.objectContaining({
-          wrap: expect.any(Function),
+          env: expect.objectContaining({
+            customFunction: expect.any(Function),
+          }),
         }),
       );
     });

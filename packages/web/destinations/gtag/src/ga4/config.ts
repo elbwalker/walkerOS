@@ -1,22 +1,25 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { GA4Settings } from '../types';
-import { addScript, initializeGtag, getGtag } from '../shared/gtag';
+import type { DestinationWeb } from '@walkeros/web-core';
+import { addScript, initializeGtag } from '../shared/gtag';
+import { getEnvironment } from '@walkeros/web-core';
 
 export function initGA4(
   settings: GA4Settings,
-  wrap: (name: string, fn: Function) => Function,
   loadScript?: boolean,
+  env?: DestinationWeb.Environment,
 ): void {
+  const { window, document } = getEnvironment(env);
   const { measurementId, transport_url, server_container_url, pageview } =
     settings;
 
   if (!measurementId) return;
 
   // Load the gtag script
-  if (loadScript) addScript(measurementId);
+  if (loadScript) addScript(measurementId, undefined, document);
 
   // Initialize gtag infrastructure
-  initializeGtag();
+  initializeGtag(window);
 
   const gtagSettings: WalkerOS.AnyObject = {};
 
@@ -30,7 +33,7 @@ export function initGA4(
   // disable pageviews
   if (pageview === false) gtagSettings.send_page_view = false;
 
-  const gtag = getGtag(wrap);
+  const gtag = window.gtag as Gtag.Gtag;
   gtag('js', new Date());
 
   // gtag init call

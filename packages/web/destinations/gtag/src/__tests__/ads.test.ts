@@ -1,41 +1,42 @@
 import { initAds, pushAdsEvent } from '../ads';
 import type { AdsSettings, AdsMapping } from '../types';
-
-// Mock the shared utilities
-jest.mock('../shared/gtag', () => ({
-  addScript: jest.fn(),
-  initializeGtag: jest.fn(),
-  getGtag: jest.fn(() => jest.fn()),
-}));
-
-import { addScript, initializeGtag, getGtag } from '../shared/gtag';
+import type { DestinationWeb } from '@walkeros/web-core';
 
 describe('Google Ads Implementation', () => {
-  const mockWrap = jest.fn((name, fn) => fn);
   const mockGtag = jest.fn();
+  const mockEnv: DestinationWeb.Environment = {
+    window: {
+      gtag: mockGtag,
+      dataLayer: [],
+    },
+    document: {
+      createElement: jest.fn(() => ({
+        src: '',
+        setAttribute: jest.fn(),
+        removeAttribute: jest.fn(),
+      })),
+      head: { appendChild: jest.fn() },
+    },
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (getGtag as jest.Mock).mockReturnValue(mockGtag);
   });
 
   describe('initAds', () => {
     it('should return early if no conversionId', () => {
       const settings: AdsSettings = { conversionId: '' };
 
-      initAds(settings, mockWrap);
+      initAds(settings, undefined, mockEnv);
 
-      expect(addScript).not.toHaveBeenCalled();
-      expect(initializeGtag).not.toHaveBeenCalled();
+      expect(mockGtag).not.toHaveBeenCalled();
     });
 
     it('should initialize Ads with basic settings', () => {
       const settings: AdsSettings = { conversionId: 'AW-XXXXXXXXX' };
 
-      initAds(settings, mockWrap, true);
+      initAds(settings, true, mockEnv);
 
-      expect(addScript).toHaveBeenCalledWith('AW-XXXXXXXXX');
-      expect(initializeGtag).toHaveBeenCalled();
       expect(mockGtag).toHaveBeenCalledWith('js', expect.any(Date));
       expect(mockGtag).toHaveBeenCalledWith('config', 'AW-XXXXXXXXX');
     });
@@ -43,7 +44,7 @@ describe('Google Ads Implementation', () => {
     it('should set default currency to EUR', () => {
       const settings: AdsSettings = { conversionId: 'AW-XXXXXXXXX' };
 
-      initAds(settings, mockWrap, true);
+      initAds(settings, true, mockEnv);
 
       expect(settings.currency).toBe('EUR');
     });
@@ -54,18 +55,18 @@ describe('Google Ads Implementation', () => {
         currency: 'EUR',
       };
 
-      initAds(settings, mockWrap, true);
+      initAds(settings, true, mockEnv);
 
       expect(settings.currency).toBe('EUR');
     });
 
-    it('should not load script if loadScript is false', () => {
+    it('should still initialize gtag when loadScript is false', () => {
       const settings: AdsSettings = { conversionId: 'AW-XXXXXXXXX' };
 
-      initAds(settings, mockWrap, false);
+      initAds(settings, false, mockEnv);
 
-      expect(addScript).not.toHaveBeenCalled();
-      expect(initializeGtag).toHaveBeenCalled();
+      expect(mockGtag).toHaveBeenCalledWith('js', expect.any(Date));
+      expect(mockGtag).toHaveBeenCalledWith('config', 'AW-XXXXXXXXX');
     });
   });
 
@@ -83,7 +84,7 @@ describe('Google Ads Implementation', () => {
     };
 
     it('should return early if no mapping name', () => {
-      pushAdsEvent(mockEvent as any, settings, {}, {}, mockWrap);
+      pushAdsEvent(mockEvent as any, settings, {}, {}, undefined, mockEnv);
 
       expect(mockGtag).not.toHaveBeenCalled();
     });
@@ -91,7 +92,7 @@ describe('Google Ads Implementation', () => {
     it('should push conversion event with correct parameters', () => {
       const mappingName = 'PURCHASE_CONVERSION';
 
-      pushAdsEvent(mockEvent as any, settings, {}, {}, mockWrap, mappingName);
+      pushAdsEvent(mockEvent as any, settings, {}, {}, mappingName, mockEnv);
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
         send_to: 'AW-XXXXXXXXX/PURCHASE_CONVERSION',
@@ -111,8 +112,8 @@ describe('Google Ads Implementation', () => {
         settings,
         {},
         additionalData,
-        mockWrap,
         mappingName,
+        mockEnv,
       );
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
@@ -134,8 +135,8 @@ describe('Google Ads Implementation', () => {
         settingsWithoutCurrency,
         {},
         {},
-        mockWrap,
         mappingName,
+        mockEnv,
       );
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
@@ -152,8 +153,8 @@ describe('Google Ads Implementation', () => {
         settings,
         {},
         'invalid-data',
-        mockWrap,
         mappingName,
+        mockEnv,
       );
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
@@ -171,8 +172,8 @@ describe('Google Ads Implementation', () => {
         settings,
         mapping,
         {},
-        mockWrap,
         mappingName,
+        mockEnv,
       );
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
@@ -190,8 +191,8 @@ describe('Google Ads Implementation', () => {
         settings,
         mapping,
         {},
-        mockWrap,
         mappingName,
+        mockEnv,
       );
 
       expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
@@ -203,7 +204,7 @@ describe('Google Ads Implementation', () => {
     it('should return early when neither mapping.label nor mappingName is provided', () => {
       const mapping: AdsMapping = {};
 
-      pushAdsEvent(mockEvent as any, settings, mapping, {}, mockWrap);
+      pushAdsEvent(mockEvent as any, settings, mapping, {}, undefined, mockEnv);
 
       expect(mockGtag).not.toHaveBeenCalled();
     });

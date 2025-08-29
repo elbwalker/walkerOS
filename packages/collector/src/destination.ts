@@ -2,7 +2,6 @@ import type { Collector, WalkerOS, Elb, Destination } from '@walkeros/core';
 import {
   assign,
   clone,
-  createWrapper,
   debounce,
   getId,
   getGrantedConsent,
@@ -297,7 +296,7 @@ export async function destinationInit<Destination extends Destination.Instance>(
     const context: Destination.Context = {
       collector,
       config: destination.config,
-      wrap: getWrapper(destination, collector),
+      env: mergeEnvironments(destination.env, destination.config.env),
     };
 
     const configResult = await useHooks(
@@ -367,7 +366,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
     config,
     data,
     mapping: eventMapping,
-    wrap: getWrapper(destination, collector),
+    env: mergeEnvironments(destination.env, config.env),
   };
 
   if (eventMapping?.batch && destination.pushBatch) {
@@ -387,7 +386,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
           config,
           data,
           mapping: eventMapping,
-          wrap: getWrapper(destination, collector as Collector.Instance),
+          env: mergeEnvironments(destination.env, config.env),
         };
 
         useHooks(
@@ -456,15 +455,26 @@ export function initDestinations(
   );
 }
 
-function getWrapper(
-  destination: Destination.Instance,
-  collector?: Collector.Instance,
-) {
-  const wrapperConfig = destination.config.wrapper || {};
-  const dryRun = destination.config.dryRun ?? collector?.config.dryRun;
+/**
+ * Merges destination environment with config environment
+ * Config env takes precedence over destination env for overrides
+ */
+function mergeEnvironments(
+  destinationEnv?: Destination.Environment,
+  configEnv?: Destination.Environment,
+): Destination.Environment {
+  // If neither environment exists, return empty object
+  if (!destinationEnv && !configEnv) return {};
 
-  return createWrapper(destination.type || 'unknown', {
-    ...wrapperConfig,
-    ...(isDefined(dryRun) && { dryRun }),
-  });
+  // If only one exists, return it
+  if (!configEnv) return destinationEnv!;
+  if (!destinationEnv) return configEnv;
+
+  // Both exist - merge objects with configEnv taking precedence
+  if (isObject(destinationEnv) && isObject(configEnv)) {
+    return { ...destinationEnv, ...configEnv };
+  }
+
+  // If they're not both objects, config env overrides destination env
+  return configEnv;
 }

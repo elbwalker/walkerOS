@@ -10,6 +10,7 @@ export function resetLoadedScripts(): void {
 export function addScript(
   id: string,
   src = 'https://www.googletagmanager.com/gtag/js?id=',
+  document: Document = globalThis.document,
 ): void {
   // Prevent loading the same script multiple times
   if (loadedScripts.has(id)) return;
@@ -20,7 +21,7 @@ export function addScript(
   loadedScripts.add(id);
 }
 
-export function initializeGtag(): void {
+export function initializeGtag(window: Window = globalThis.window): void {
   const w = window;
 
   // Setup dataLayer if not exists
@@ -32,10 +33,4 @@ export function initializeGtag(): void {
       (w.dataLayer as unknown[]).push(arguments);
     };
   }
-}
-
-export function getGtag(
-  wrap: (name: string, fn: Function) => Function,
-): Gtag.Gtag {
-  return wrap('gtag', window.gtag) as Gtag.Gtag;
 }

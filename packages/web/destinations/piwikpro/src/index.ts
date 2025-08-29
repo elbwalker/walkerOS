@@ -1,5 +1,7 @@
 import type { Settings, Mapping, Destination } from './types';
+import type { DestinationWeb } from '@walkeros/web-core';
 import { getMappingValue, isArray } from '@walkeros/core';
+import { getEnvironment } from '@walkeros/web-core';
 
 // Types
 export * as DestinationPiwikPro from './types';
@@ -12,8 +14,9 @@ export const destinationPiwikPro: Destination = {
 
   config: {},
 
-  init({ config, wrap }) {
-    const w = window;
+  init({ config, env }) {
+    const { window } = getEnvironment(env);
+    const w = window as Window;
     const { settings = {} as Partial<Settings>, loadScript } = config;
     const { appId, url } = settings;
 
@@ -23,10 +26,10 @@ export const destinationPiwikPro: Destination = {
     // Set up the Piwik Pro interface _paq
     w._paq = w._paq || [];
 
-    const paq = wrap('_paq.push', w._paq.push);
+    const paq = w._paq.push;
     if (loadScript) {
       // Load the JavaScript Tracking Client
-      addScript(url);
+      addScript(url, env);
 
       // Register the tracker url only with script loading
       paq(['setTrackerUrl', url + 'ppms.php']);
@@ -37,10 +40,13 @@ export const destinationPiwikPro: Destination = {
 
     // Enable download and outlink tracking if not disabled
     if (settings.linkTracking !== false) paq(['enableLinkTracking']);
+
+    return config;
   },
 
-  async push(event, { config, mapping = {}, data, wrap }) {
-    const paq = wrap('_paq.push', window._paq!.push);
+  async push(event, { config, mapping = {}, data, env }) {
+    const { window } = getEnvironment(env);
+    const paq = (window as Window)._paq!.push;
 
     // Send pageviews if not disabled
     if (event.event === 'page view' && !mapping.settings) {
@@ -69,13 +75,15 @@ export const destinationPiwikPro: Destination = {
   },
 };
 
-function addScript(url: string) {
-  const script = document.createElement('script');
+function addScript(url: string, env?: DestinationWeb.Environment) {
+  const { document } = getEnvironment(env);
+  const doc = document as Document;
+  const script = doc.createElement('script');
   script.type = 'text/javascript';
   script.src = url + 'ppms.js';
   script.async = true;
   script.defer = true;
-  document.head.appendChild(script);
+  doc.head.appendChild(script);
 }
 
 export default destinationPiwikPro;

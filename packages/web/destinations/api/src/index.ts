@@ -1,4 +1,4 @@
-import type { Settings, Destination } from './types';
+import type { Settings, Destination, Environment } from './types';
 import { isDefined } from '@walkeros/core';
 import { sendWeb } from '@walkeros/web-core';
 
@@ -13,7 +13,11 @@ export const destinationAPI: Destination = {
 
   config: {},
 
-  push(event, { config, mapping, data, wrap }) {
+  env: {
+    sendWeb,
+  },
+
+  push(event, { config, mapping, data, env }) {
     const { settings = {} as Settings } = config;
     const { url, headers, method, transform, transport = 'fetch' } = settings;
 
@@ -24,8 +28,8 @@ export const destinationAPI: Destination = {
       ? transform(eventData, config, mapping) // Transform event data
       : JSON.stringify(eventData);
 
-    const send = wrap('sendWeb', sendWeb) as typeof sendWeb;
-    send(url, body, { headers, method, transport });
+    const { sendWeb } = env as unknown as Environment;
+    sendWeb(url, body, { headers, method, transport });
   },
 };
 

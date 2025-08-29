@@ -1,4 +1,3 @@
-import type { Mapping } from '@walkeros/core';
 import type { DestinationPiwikPro } from '..';
 import { isObject } from '@walkeros/core';
 

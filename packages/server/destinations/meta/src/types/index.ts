@@ -1,5 +1,5 @@
 import type { Mapping as WalkerOSMapping, Elb } from '@walkeros/core';
-import type { DestinationServer } from '@walkeros/server-core';
+import type { DestinationServer, sendServer } from '@walkeros/server-core';
 
 declare global {
   // Augment the global WalkerOS namespace with destination-specific types
@@ -35,6 +35,10 @@ export interface Settings {
 }
 
 export interface Mapping {}
+
+export interface Environment {
+  sendServer: typeof sendServer;
+}
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;

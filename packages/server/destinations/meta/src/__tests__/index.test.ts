@@ -14,14 +14,12 @@ describe('Server Destination Meta', () => {
   const pixelId = 'p1x3l1d';
   const mockSendServer = jest.fn();
 
-  jest.mock('@walkeros/server-core', () => ({
-    ...jest.requireActual('@walkeros/server-core'),
+  const testEnv = {
     sendServer: mockSendServer,
-  }));
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    jest.resetModules();
 
     // Reset mockSendServer to default successful response
     mockSendServer.mockResolvedValue({
@@ -34,36 +32,37 @@ describe('Server Destination Meta', () => {
     });
 
     destination = jest.requireActual('../').default;
-    destination.config = {};
+
+    ({ elb } = await createCollector({
+      tagging: 2,
+    }));
   });
 
   afterEach(() => {});
 
   async function getConfig(settings: Partial<Settings> = {}) {
     const mockCollector = {} as Collector.Instance;
-    const mockWrap = jest.fn((_name, fn) => fn);
     return (await destination.init({
       config: { settings: settings as Settings },
       collector: mockCollector,
-      wrap: mockWrap,
+      env: testEnv,
     })) as Config;
   }
 
   test('init', async () => {
     const mockCollector = {} as Collector.Instance;
-    const mockWrap = jest.fn((_name, fn) => fn);
     await expect(
       destination.init({
         config: {},
         collector: mockCollector,
-        wrap: mockWrap,
+        env: testEnv,
       }),
     ).rejects.toThrow('Config settings accessToken missing');
     await expect(
       destination.init({
         config: { settings: { accessToken, pixelId: '' } },
         collector: mockCollector,
-        wrap: mockWrap,
+        env: testEnv,
       }),
     ).rejects.toThrow('Config settings pixelId missing');
 
@@ -77,7 +76,6 @@ describe('Server Destination Meta', () => {
 
   test('testCode', async () => {
     const mockCollector = {} as Collector.Instance;
-    const mockWrap = jest.fn((_name, fn) => fn);
     const event = getEvent();
     const config: Config = {
       settings: { accessToken, pixelId, test_event_code: 'TEST' },
@@ -87,7 +85,7 @@ describe('Server Destination Meta', () => {
     await destination.push(event, {
       config,
       collector: mockCollector,
-      wrap: mockWrap,
+      env: testEnv,
     });
 
     expect(mockSendServer).toHaveBeenCalled();
@@ -95,21 +93,24 @@ describe('Server Destination Meta', () => {
     expect(requestBody.test_event_code).toEqual('TEST');
   });
 
-  test('wrapper', async () => {
-    const mockOnCall = jest.fn();
+  test('environment customization', async () => {
+    const customSendServer = jest.fn();
+    customSendServer.mockResolvedValue({ ok: true, data: {} });
+
+    const customEnv = { sendServer: customSendServer };
+    const event = getEvent();
     const config: Config = {
-      wrapper: { onCall: mockOnCall },
       settings: { accessToken, pixelId },
     };
 
-    const { elb } = await createCollector();
+    await destination.push(event, {
+      config,
+      collector: {} as Collector.Instance,
+      env: customEnv,
+    });
 
-    await elb('walker destination', destination, config);
-
-    const event = getEvent();
-    const result = await elb(event);
-
-    expect(mockOnCall).toHaveBeenCalled();
+    expect(customSendServer).toHaveBeenCalled();
+    expect(mockSendServer).not.toHaveBeenCalled();
   });
 
   test('error', async () => {
@@ -126,7 +127,6 @@ describe('Server Destination Meta', () => {
       error: '400 Bad Request',
     });
     const mockCollector = {} as Collector.Instance;
-    const mockWrap = jest.fn((_name, fn) => fn);
     const event = getEvent();
     const config: Config = {
       settings: { accessToken, pixelId, test_event_code: 'TEST' },
@@ -137,14 +137,13 @@ describe('Server Destination Meta', () => {
       destination.push(event, {
         config,
         collector: mockCollector,
-        wrap: mockWrap,
+        env: testEnv,
       }),
     ).rejects.toThrow();
   });
 
   test('fbclid', async () => {
     const mockCollector = {} as Collector.Instance;
-    const mockWrap = jest.fn((_name, fn) => fn);
     const event = getEvent();
     const config: Config = {
       settings: {
@@ -158,7 +157,7 @@ describe('Server Destination Meta', () => {
     await destination.push(event, {
       config,
       collector: mockCollector,
-      wrap: mockWrap,
+      env: testEnv,
     });
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
     expect(requestBody.data[0].user_data.fbc).toContain('.abc');
@@ -194,9 +193,13 @@ describe('Server Destination Meta', () => {
       },
     };
 
-    const { elb, collector } = await createCollector();
+    const { elb } = await createCollector();
 
-    await elb('walker destination', destination, config);
+    await elb('walker destination', {
+      ...destination,
+      env: testEnv,
+      config,
+    });
     const result = await elb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
@@ -239,7 +242,11 @@ describe('Server Destination Meta', () => {
     };
 
     const { elb } = await createCollector();
-    await elb('walker destination', destination, config);
+    await elb('walker destination', {
+      ...destination,
+      env: testEnv,
+      config,
+    });
     const result = await elb(event);
 
     expect(result.successful).toHaveLength(1);

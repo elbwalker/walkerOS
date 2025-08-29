@@ -16,7 +16,7 @@ describe('Server Destination BigQuery', () => {
   const credentials = { type: 'service_account', private_key: 'secret' };
 
   const mockCollector = {} as Collector.Instance;
-  const mockWrap = jest.fn((_name, fn) => fn);
+  const testEnv = {};
 
   function getMockFn(config: Partial<Config>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,7 +27,7 @@ describe('Server Destination BigQuery', () => {
     return (await destination.init({
       config: { settings: settings as Settings },
       collector: mockCollector,
-      wrap: mockWrap,
+      env: testEnv,
     })) as Config;
   }
 
@@ -47,7 +47,7 @@ describe('Server Destination BigQuery', () => {
       destination.init({
         config: { settings: { datasetId, tableId } as Settings },
         collector: mockCollector,
-        wrap: mockWrap,
+        env: testEnv,
       }),
     ).rejects.toThrow('Config settings projectId missing');
 
@@ -72,7 +72,7 @@ describe('Server Destination BigQuery', () => {
       mapping: undefined,
       data: undefined,
       collector: mockCollector,
-      wrap: mockWrap,
+      env: testEnv,
     });
     expect(mockFn).toHaveBeenCalledWith('insert', [
       {
@@ -111,7 +111,7 @@ describe('Server Destination BigQuery', () => {
       mapping: {},
       data,
       collector: mockCollector,
-      wrap: mockWrap,
+      env: testEnv,
     });
     expect(mockFn).toHaveBeenCalledWith('insert', [{ foo: 'bar' }]);
   });

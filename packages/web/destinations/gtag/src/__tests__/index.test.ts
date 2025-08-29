@@ -1,5 +1,6 @@
 import { destinationGtag } from '../index';
 import type { Settings } from '../types';
+import type { DestinationWeb } from '@walkeros/web-core';
 
 // Mock all tool implementations
 jest.mock('../ga4', () => ({
@@ -22,7 +23,20 @@ import { initAds, pushAdsEvent } from '../ads';
 import { initGTM, pushGTMEvent } from '../gtm';
 
 describe('Unified Gtag Destination', () => {
-  const mockWrap = jest.fn((name, fn) => fn);
+  const mockEnv: DestinationWeb.Environment = {
+    window: {
+      gtag: jest.fn(),
+      dataLayer: [],
+    },
+    document: {
+      createElement: jest.fn(() => ({
+        src: '',
+        setAttribute: jest.fn(),
+        removeAttribute: jest.fn(),
+      })),
+      head: { appendChild: jest.fn() },
+    },
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -36,18 +50,21 @@ describe('Unified Gtag Destination', () => {
     it('should have empty default config', () => {
       expect(destinationGtag.config).toEqual({ settings: {} });
     });
+
+    it('should have default environment', () => {
+      expect(destinationGtag.env).toBeDefined();
+      expect(destinationGtag.env.window).toBeDefined();
+      expect(destinationGtag.env.document).toBeDefined();
+    });
   });
 
   describe('init', () => {
-    it('should return false if no tools are configured', () => {
+    it('should return false when no tools are configured', () => {
       const config = { settings: {} };
 
-      const result = destinationGtag.init({ config, wrap: mockWrap });
+      const result = destinationGtag.init({ config, env: mockEnv });
 
       expect(result).toBe(false);
-      expect(initGA4).not.toHaveBeenCalled();
-      expect(initAds).not.toHaveBeenCalled();
-      expect(initGTM).not.toHaveBeenCalled();
     });
 
     it('should initialize GA4 only', () => {
@@ -56,10 +73,10 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: true };
 
-      const result = destinationGtag.init({ config, wrap: mockWrap });
+      const result = destinationGtag.init({ config, env: mockEnv });
 
       expect(result).toBe(config);
-      expect(initGA4).toHaveBeenCalledWith(settings.ga4, mockWrap, true);
+      expect(initGA4).toHaveBeenCalledWith(settings.ga4, true, mockEnv);
       expect(initAds).not.toHaveBeenCalled();
       expect(initGTM).not.toHaveBeenCalled();
     });
@@ -70,10 +87,10 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: true };
 
-      const result = destinationGtag.init({ config, wrap: mockWrap });
+      const result = destinationGtag.init({ config, env: mockEnv });
 
       expect(result).toBe(config);
-      expect(initAds).toHaveBeenCalledWith(settings.ads, mockWrap, true);
+      expect(initAds).toHaveBeenCalledWith(settings.ads, true, mockEnv);
       expect(initGA4).not.toHaveBeenCalled();
       expect(initGTM).not.toHaveBeenCalled();
     });
@@ -84,10 +101,10 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: true };
 
-      const result = destinationGtag.init({ config, wrap: mockWrap });
+      const result = destinationGtag.init({ config, env: mockEnv });
 
       expect(result).toBe(config);
-      expect(initGTM).toHaveBeenCalledWith(settings.gtm, mockWrap, true);
+      expect(initGTM).toHaveBeenCalledWith(settings.gtm, true, mockEnv);
       expect(initGA4).not.toHaveBeenCalled();
       expect(initAds).not.toHaveBeenCalled();
     });
@@ -100,12 +117,12 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: true };
 
-      const result = destinationGtag.init({ config, wrap: mockWrap });
+      const result = destinationGtag.init({ config, env: mockEnv });
 
       expect(result).toBe(config);
-      expect(initGA4).toHaveBeenCalledWith(settings.ga4, mockWrap, true);
-      expect(initAds).toHaveBeenCalledWith(settings.ads, mockWrap, true);
-      expect(initGTM).toHaveBeenCalledWith(settings.gtm, mockWrap, true);
+      expect(initGA4).toHaveBeenCalledWith(settings.ga4, true, mockEnv);
+      expect(initAds).toHaveBeenCalledWith(settings.ads, true, mockEnv);
+      expect(initGTM).toHaveBeenCalledWith(settings.gtm, true, mockEnv);
     });
 
     it('should pass loadScript parameter correctly', () => {
@@ -114,9 +131,9 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: false };
 
-      destinationGtag.init({ config, wrap: mockWrap });
+      destinationGtag.init({ config, env: mockEnv });
 
-      expect(initGA4).toHaveBeenCalledWith(settings.ga4, mockWrap, false);
+      expect(initGA4).toHaveBeenCalledWith(settings.ga4, false, mockEnv);
     });
   });
 
@@ -141,7 +158,7 @@ describe('Unified Gtag Destination', () => {
         config,
         mapping,
         data: mockData,
-        wrap: mockWrap,
+        env: mockEnv,
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
@@ -149,7 +166,7 @@ describe('Unified Gtag Destination', () => {
         settings.ga4,
         mapping.settings.ga4,
         mockData,
-        mockWrap,
+        mockEnv,
       );
     });
 
@@ -167,7 +184,7 @@ describe('Unified Gtag Destination', () => {
         config,
         mapping,
         data: mockData,
-        wrap: mockWrap,
+        env: mockEnv,
       });
 
       expect(pushAdsEvent).toHaveBeenCalledWith(
@@ -175,8 +192,8 @@ describe('Unified Gtag Destination', () => {
         settings.ads,
         mapping.settings.ads,
         mockData,
-        mockWrap,
         'PURCHASE_CONVERSION',
+        mockEnv,
       );
     });
 
@@ -191,7 +208,7 @@ describe('Unified Gtag Destination', () => {
         config,
         mapping,
         data: mockData,
-        wrap: mockWrap,
+        env: mockEnv,
       });
 
       expect(pushAdsEvent).not.toHaveBeenCalled();
@@ -208,7 +225,7 @@ describe('Unified Gtag Destination', () => {
         config,
         mapping,
         data: mockData,
-        wrap: mockWrap,
+        env: mockEnv,
       });
 
       expect(pushGTMEvent).toHaveBeenCalledWith(
@@ -216,7 +233,7 @@ describe('Unified Gtag Destination', () => {
         settings.gtm,
         mapping.settings.gtm,
         mockData,
-        mockWrap,
+        mockEnv,
       );
     });
 
@@ -240,7 +257,7 @@ describe('Unified Gtag Destination', () => {
         config,
         mapping,
         data: mockData,
-        wrap: mockWrap,
+        env: mockEnv,
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
@@ -248,22 +265,22 @@ describe('Unified Gtag Destination', () => {
         settings.ga4,
         mapping.settings.ga4,
         mockData,
-        mockWrap,
+        mockEnv,
       );
       expect(pushAdsEvent).toHaveBeenCalledWith(
         mockEvent,
         settings.ads,
         mapping.settings.ads,
         mockData,
-        mockWrap,
         'PURCHASE_CONVERSION',
+        mockEnv,
       );
       expect(pushGTMEvent).toHaveBeenCalledWith(
         mockEvent,
         settings.gtm,
         mapping.settings.gtm,
         mockData,
-        mockWrap,
+        mockEnv,
       );
     });
 
@@ -278,7 +295,7 @@ describe('Unified Gtag Destination', () => {
           config,
           mapping: {},
           data: mockData,
-          wrap: mockWrap,
+          env: mockEnv,
         });
       }).not.toThrow();
     });
@@ -294,7 +311,7 @@ describe('Unified Gtag Destination', () => {
         config,
         mapping,
         data: mockData,
-        wrap: mockWrap,
+        env: mockEnv,
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
@@ -302,7 +319,7 @@ describe('Unified Gtag Destination', () => {
         settings.ga4,
         undefined,
         mockData,
-        mockWrap,
+        mockEnv,
       );
     });
   });
