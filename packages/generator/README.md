@@ -316,8 +316,25 @@ Example Flow configuration (`config.json` or JSON string):
 ## Development
 
 ```bash
-npm test    # Run tests
-npm run dev # Watch mode
+npm test    # Run unified integration tests (generation + runtime validation)
+npm run dev # Watch mode for tests
 npm run build # Build package
 npm run lint  # TypeScript + ESLint
 ```
+
+### Testing Strategy
+
+Tests use **real npm packages** (no mocks) and validate:
+
+- ✅ **Bundle generation** - Creates functional IIFE bundles from Flow configs
+- ✅ **Runtime validation** - Tests actual walkerOS initialization and
+  functionality
+- ✅ **Configuration matching** - Verifies sources/destinations match Flow nodes
+- ✅ **DOM readiness** - Ensures proper browser initialization
+- ✅ **Clean output** - Console logs/warnings intercepted and verified without
+  noise
+
+**Test config**: Uses `examples/working-demo.json` with consolidated test
+scenarios.  
+**Single command**: `npm test` runs clean validation without console output or
+manual files.

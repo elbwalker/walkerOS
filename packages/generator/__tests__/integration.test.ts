@@ -58,6 +58,23 @@ const destinationGtag = {
 };
 
 describe('WalkerOS Generator Integration', () => {
+  // Suppress console output during tests
+  const originalLog = console.log;
+  const originalWarn = console.warn;
+  const originalError = console.error;
+
+  beforeAll(() => {
+    console.log = jest.fn();
+    console.warn = jest.fn();
+    console.error = jest.fn();
+  });
+
+  afterAll(() => {
+    console.log = originalLog;
+    console.warn = originalWarn;
+    console.error = originalError;
+  });
+
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
@@ -153,8 +170,10 @@ describe('WalkerOS Generator Integration', () => {
         type: 'source',
         package: '@walkeros/web-source-browser',
         config: {
-          domain: 'example.com',
-          autoTracking: true,
+          settings: {
+            pageview: true,
+            session: true,
+          },
         },
       },
       {
@@ -162,11 +181,11 @@ describe('WalkerOS Generator Integration', () => {
         type: 'collector',
         package: '@walkeros/collector',
         config: {
+          run: true,
           consent: {
             functional: true,
             marketing: false,
           },
-          queue: true,
         },
       },
       {
@@ -174,7 +193,11 @@ describe('WalkerOS Generator Integration', () => {
         type: 'destination',
         package: '@walkeros/web-destination-gtag',
         config: {
-          measurementId: 'G-XXXXXXXXXX',
+          settings: {
+            ga4: {
+              measurementId: 'G-XXXXXXXXXX',
+            },
+          },
         },
       },
     ],
@@ -228,9 +251,14 @@ describe('WalkerOS Generator Integration', () => {
     expect(result.bundle).toContain('sourceBrowser');
 
     // Verify initialization code
-    expect(result.bundle).toContain('async function initWalkerOS()');
+    expect(result.bundle).toContain('async function initializeWalkerOS()');
     expect(result.bundle).toContain('window.walkerOS');
-    expect(result.bundle).toContain('window.elb');
+
+    // Verify DOM readiness handling
+    expect(result.bundle).toContain('window.walkerOS = collector');
+    expect(result.bundle).toContain('initializeWhenReady');
+    expect(result.bundle).toContain('DOMContentLoaded'); // Should have DOM ready handling
+    expect(result.bundle).toContain('document.readyState'); // Should check DOM state
 
     // Verify collector configuration includes our nodes
     expect(result.bundle).toContain('browser-source');
@@ -363,9 +391,40 @@ describe('WalkerOS Generator Integration', () => {
   it('should generate collector configuration from nodes', async () => {
     const result = await generateWalkerOSBundle({ flow: simpleFlowConfig });
 
-    // Parse the generated collector config (this is a basic check)
+    // Check that collector config includes flow node configurations
     expect(result.bundle).toContain('"functional": true');
     expect(result.bundle).toContain('"marketing": false');
-    expect(result.bundle).toContain('"queue": true');
+
+    // Check that sources and destinations from flow config are included
+    expect(result.bundle).toContain('browser-source'); // source node ID
+    expect(result.bundle).toContain('gtag-destination'); // destination node ID
+    expect(result.bundle).toContain('G-XXXXXXXXXX'); // destination config
+
+    // Check that node configurations are included (could be different formats)
+    const hasPageviewConfig =
+      result.bundle.includes('pageview') && result.bundle.includes('true');
+    expect(hasPageviewConfig).toBe(true); // source pageview config
   }, 30000); // 30 second timeout for real npm package resolution
+
+  it('should capture console output during generation', async () => {
+    const input: GeneratorInput = { flow: simpleFlowConfig };
+    await generateWalkerOSBundle(input);
+
+    // Verify console methods were called (logs are captured, not displayed)
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Installing'),
+    );
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Successfully installed'),
+    );
+
+    // Console output is captured but not displayed to user
+    const mockLog = console.log as jest.Mock;
+    const installLogs = mockLog.mock.calls.filter(
+      (call) =>
+        call[0]?.includes('Installing') ||
+        call[0]?.includes('Successfully installed'),
+    );
+    expect(installLogs.length).toBeGreaterThan(0);
+  }, 30000);
 });

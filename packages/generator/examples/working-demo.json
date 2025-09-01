@@ -1,0 +1,137 @@
+{
+  "_comment": "Full working demo with browser source and gtag destination - use this for complete testing",
+  "packages": [
+    {
+      "name": "@walkeros/core",
+      "version": "0.0.8",
+      "type": "core"
+    },
+    {
+      "name": "@walkeros/collector",
+      "version": "0.0.8",
+      "type": "collector"
+    },
+    {
+      "name": "@walkeros/web-core",
+      "version": "0.0.8",
+      "type": "core"
+    },
+    {
+      "name": "@walkeros/web-source-browser",
+      "version": "0.0.9",
+      "type": "source"
+    },
+    {
+      "name": "@walkeros/web-destination-gtag",
+      "version": "0.0.8",
+      "type": "destination"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "collector",
+      "type": "collector",
+      "package": "@walkeros/collector",
+      "config": {
+        "run": true,
+        "consent": {
+          "functional": true,
+          "marketing": false
+        }
+      }
+    },
+    {
+      "id": "browser-source",
+      "type": "source",
+      "package": "@walkeros/web-source-browser",
+      "config": {
+        "settings": {
+          "pageview": true,
+          "session": true,
+          "elbLayer": "elbLayer",
+          "prefix": "data-elb",
+          "scope": "body"
+        }
+      }
+    },
+    {
+      "id": "gtag-destination",
+      "type": "destination",
+      "package": "@walkeros/web-destination-gtag",
+      "config": {
+        "settings": {
+          "ga4": {
+            "measurementId": "G-XXXXXXXXXX"
+          }
+        },
+        "mapping": {
+          "page": {
+            "view": {
+              "name": "page_view",
+              "settings": {
+                "ga4": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "browser-to-collector",
+      "source": "browser-source",
+      "target": "collector"
+    },
+    {
+      "id": "collector-to-gtag",
+      "source": "collector",
+      "target": "gtag-destination"
+    }
+  ],
+
+  "_examples": {
+    "_comment": "Alternative configurations for different testing scenarios - consolidated from basic.json and simple-demo.json",
+    "minimal": {
+      "packages": [
+        { "name": "@walkeros/core", "version": "0.0.8", "type": "core" },
+        {
+          "name": "@walkeros/collector",
+          "version": "0.0.8",
+          "type": "collector"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "collector",
+          "type": "collector",
+          "package": "@walkeros/collector",
+          "config": { "consent": { "functional": true } }
+        }
+      ],
+      "edges": []
+    },
+    "simple": {
+      "packages": [
+        { "name": "@walkeros/core", "version": "0.0.8", "type": "core" },
+        {
+          "name": "@walkeros/collector",
+          "version": "0.0.8",
+          "type": "collector"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "collector",
+          "type": "collector",
+          "package": "@walkeros/collector",
+          "config": {
+            "run": true,
+            "consent": { "functional": true }
+          }
+        }
+      ],
+      "edges": []
+    }
+  }
+}
