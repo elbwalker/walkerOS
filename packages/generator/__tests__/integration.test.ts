@@ -1,8 +1,137 @@
 import { generateWalkerOSBundle } from '../src/index';
 import type { GeneratorInput } from '../src/types';
 import type { Flow } from '@walkeros/core';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+// Mock the exec function and filesystem to simulate npm commands
+jest.mock('child_process', () => ({
+  exec: jest.fn(),
+}));
+jest.mock('util', () => ({
+  promisify: jest.fn((fn) => {
+    // Return a simplified promisified version that directly uses the mocked fn
+    return fn;
+  }),
+}));
+jest.mock('fs', () => ({
+  existsSync: jest.fn(),
+  readFileSync: jest.fn(),
+  mkdirSync: jest.fn(),
+  writeFileSync: jest.fn(),
+  rmSync: jest.fn(),
+  mkdtempSync: jest.fn(),
+}));
+
+const { exec: mockExec } = require('child_process');
+const fs = require('fs');
+
+// Mock package code samples (what would be extracted from real packages)
+const mockPackageCode = {
+  '@walkeros/core': `
+const assign = Object.assign;
+const isString = (value) => typeof value === 'string';
+const isObject = (value) => value && typeof value === 'object';
+const createSource = (source, config) => ({ source, config });
+`,
+  '@walkeros/collector': `
+const createCollector = async (config) => {
+  const collector = { sources: {}, destinations: {} };
+  const elb = (event, data) => console.log('Event:', event, data);
+  return { collector, elb };
+};
+`,
+  '@walkeros/web-source-browser': `
+const sourceBrowser = {
+  init: (config) => ({ elb: (event, data) => console.log('Browser:', event, data) })
+};
+`,
+  '@walkeros/web-destination-gtag': `
+const destinationGtag = {
+  push: (event, context) => {
+    if (typeof gtag !== 'undefined') {
+      gtag('event', event.event, event.data);
+    }
+  }
+};
+`,
+};
 
 describe('WalkerOS Generator Integration', () => {
+  beforeEach(() => {
+    // Reset all mocks
+    jest.clearAllMocks();
+
+    // Mock npm view command to return package metadata
+    mockExec.mockImplementation(async (command: string, options?: any) => {
+      if (command.includes('npm view')) {
+        // Better parsing of package name from command
+        const parts = command.split(' ');
+        const packageSpec = parts[2]; // e.g., "@walkeros/core@0.0.8"
+        const packageName = packageSpec.includes('@', 1)
+          ? packageSpec.substring(0, packageSpec.lastIndexOf('@'))
+          : packageSpec;
+
+        const mockMetadata = {
+          name: packageName,
+          version: '0.0.8',
+          dist: {
+            tarball: `https://registry.npmjs.org/${packageName}/-/${packageName}-0.0.8.tgz`,
+            shasum: 'mock-shasum',
+          },
+          main: 'dist/index.js',
+        };
+        return { stdout: JSON.stringify(mockMetadata), stderr: '' };
+      } else if (command.includes('npm install')) {
+        // Mock successful npm install
+        return { stdout: 'npm install completed', stderr: '' };
+      } else {
+        throw new Error(`Unmocked command: ${command}`);
+      }
+    });
+
+    // Mock filesystem operations
+    fs.existsSync = jest.fn().mockImplementation((path: string) => {
+      // Mock that package directories exist after installation
+      if (path.includes('node_modules')) return true;
+      if (path.includes('dist/index.js')) return true;
+      if (path.includes('package.json')) return true; // Allow temp package.json creation
+      return false;
+    });
+
+    fs.readFileSync = jest.fn().mockImplementation((path: string) => {
+      // Return appropriate mock code based on package path
+      for (const [packageName, code] of Object.entries(mockPackageCode)) {
+        if (
+          path.includes(
+            packageName.replace('/', path.includes('\\') ? '\\' : '/'),
+          )
+        ) {
+          return code;
+        }
+      }
+      // Special handling for the entry point matching
+      if (path.includes('dist/index.js')) {
+        // Determine which package this is from the path
+        if (path.includes('@walkeros')) {
+          const packageMatch = path.match(/@walkeros\/[^\/\\]+/);
+          if (packageMatch) {
+            const packageName = packageMatch[0];
+            if (mockPackageCode[packageName]) {
+              return mockPackageCode[packageName];
+            }
+          }
+        }
+      }
+      return 'mock file content';
+    });
+
+    fs.mkdirSync = jest.fn();
+    fs.writeFileSync = jest.fn();
+    fs.rmSync = jest.fn();
+    fs.mkdtempSync = jest.fn().mockReturnValue('/tmp/mock-temp-dir');
+  });
+
   const simpleFlowConfig: Flow.Config = {
     packages: [
       { name: '@walkeros/core', version: '0.0.8', type: 'core' },
@@ -89,8 +218,14 @@ describe('WalkerOS Generator Integration', () => {
       '// @walkeros/web-destination-gtag@0.0.8 (destination)',
     );
 
-    // Verify real package code is included (no TODO comments)
-    expect(result.bundle).not.toContain('TODO: Replace with real');
+    // Verify real package code is included (no fallback comments)
+    expect(result.bundle).not.toContain('FALLBACK:');
+    expect(result.bundle).not.toContain('Mock @walkeros');
+
+    // Verify actual package code is present
+    expect(result.bundle).toContain('assign');
+    expect(result.bundle).toContain('createCollector');
+    expect(result.bundle).toContain('sourceBrowser');
 
     // Verify initialization code
     expect(result.bundle).toContain('async function initWalkerOS()');
@@ -101,7 +236,77 @@ describe('WalkerOS Generator Integration', () => {
     expect(result.bundle).toContain('browser-source');
     expect(result.bundle).toContain('gtag-destination');
     expect(result.bundle).toContain('G-XXXXXXXXXX');
-  }, 30000); // 30 second timeout for real npm package resolution
+  });
+
+  it('should fail with helpful error when packages cannot be resolved', async () => {
+    // Override mock to simulate npm command failure
+    mockExec.mockImplementation(async (command: string, options?: any) => {
+      if (command.includes('npm view @walkeros/nonexistent')) {
+        throw new Error(
+          'npm ERR! 404 Not Found - GET https://registry.npmjs.org/@walkeros%2fnonexistent',
+        );
+      } else {
+        // Other packages succeed
+        const parts = command.split(' ');
+        const packageSpec = parts[2];
+        const packageName = packageSpec.includes('@', 1)
+          ? packageSpec.substring(0, packageSpec.lastIndexOf('@'))
+          : packageSpec;
+        const mockMetadata = {
+          name: packageName,
+          version: '0.0.8',
+          dist: {
+            tarball: `https://registry.npmjs.org/${packageName}/-/${packageName}-0.0.8.tgz`,
+            shasum: 'mock',
+          },
+          main: 'dist/index.js',
+        };
+        return { stdout: JSON.stringify(mockMetadata), stderr: '' };
+      }
+    });
+
+    const configWithBadPackage: Flow.Config = {
+      ...simpleFlowConfig,
+      packages: [
+        { name: '@walkeros/nonexistent', version: '1.0.0', type: 'core' },
+      ],
+    };
+
+    const input: GeneratorInput = { flow: configWithBadPackage };
+
+    await expect(generateWalkerOSBundle(input)).rejects.toThrow(
+      /Failed to resolve package @walkeros\/nonexistent@1.0.0/,
+    );
+    await expect(generateWalkerOSBundle(input)).rejects.toThrow(
+      /Troubleshooting suggestions/,
+    );
+  });
+
+  it('should fail when package has no valid entry point', async () => {
+    // Mock package that exists but has no valid entry point
+    fs.existsSync = jest.fn().mockImplementation((path: string) => {
+      if (path.includes('node_modules')) return true;
+      if (path.includes('package.json')) return true; // Allow temp package.json creation
+      // No valid entry points exist
+      return false;
+    });
+
+    // Mock successful npm install but failed file reading for entry points
+    fs.readFileSync = jest.fn().mockImplementation((path: string) => {
+      // Allow package.json reads for temp directory setup
+      if (path.includes('package.json')) {
+        return '{"name": "temp"}';
+      }
+      // Fail all entry point reads
+      throw new Error(`ENOENT: no such file or directory, open '${path}'`);
+    });
+
+    const input: GeneratorInput = { flow: simpleFlowConfig };
+
+    await expect(generateWalkerOSBundle(input)).rejects.toThrow(
+      /Failed to install\/extract/,
+    );
+  }, 30000);
 
   it('should validate Flow config structure', async () => {
     const invalidInput: GeneratorInput = {

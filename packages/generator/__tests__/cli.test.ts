@@ -1,6 +1,13 @@
 import { execSync } from 'child_process';
-import { writeFileSync, mkdtempSync, readFileSync, rmSync } from 'fs';
-import { join } from 'path';
+import {
+  writeFileSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  existsSync,
+  unlinkSync,
+} from 'fs';
+import { join, resolve } from 'path';
 import { tmpdir } from 'os';
 import type { Flow } from '@walkeros/core';
 
@@ -90,10 +97,13 @@ describe('CLI Integration Tests', () => {
   });
 
   it('should generate bundle to stdout', () => {
-    const result = execSync(`node ${CLI_PATH} --flow ${flowConfigPath}`, {
-      encoding: 'utf-8',
-      timeout: 30000,
-    });
+    const result = execSync(
+      `node ${CLI_PATH} --flow ${flowConfigPath} --stdout`,
+      {
+        encoding: 'utf-8',
+        timeout: 30000,
+      },
+    );
 
     // Verify it's a valid IIFE bundle
     expect(result).toContain('(function(window) {');
@@ -200,16 +210,48 @@ describe('CLI Integration Tests', () => {
   it('should generate bundle from JSON string input', () => {
     const jsonString = JSON.stringify(simpleFlowConfig);
 
-    const result = execSync(`node ${CLI_PATH} --flow '${jsonString}'`, {
-      encoding: 'utf-8',
-      timeout: 30000,
-    });
+    const result = execSync(
+      `node ${CLI_PATH} --flow '${jsonString}' --stdout`,
+      {
+        encoding: 'utf-8',
+        timeout: 30000,
+      },
+    );
 
     // Verify it's a valid IIFE bundle
     expect(result).toContain('(function(window) {');
     expect(result).toContain('WalkerOS Bundle');
     expect(result).toContain('async function initWalkerOS()');
     expect(result).toContain('window.walkerOS');
+  }, 30000);
+
+  it('should write bundle to default file location', () => {
+    const defaultOutputPath = resolve(__dirname, '../output/result.js');
+
+    // Clean up any existing file
+    try {
+      unlinkSync(defaultOutputPath);
+    } catch {
+      // File doesn't exist, that's fine
+    }
+
+    const result = execSync(`node ${CLI_PATH} --flow ${flowConfigPath}`, {
+      encoding: 'utf-8',
+      timeout: 30000,
+      cwd: resolve(__dirname, '..'), // Run from package root
+    });
+
+    // Should show where file was written
+    expect(result).toContain('Bundle written to: ./output/result.js');
+
+    // Verify file exists and contains bundle
+    expect(existsSync(defaultOutputPath)).toBe(true);
+    const bundleContent = readFileSync(defaultOutputPath, 'utf-8');
+    expect(bundleContent).toContain('(function(window) {');
+    expect(bundleContent).toContain('WalkerOS Bundle');
+
+    // Clean up
+    unlinkSync(defaultOutputPath);
   }, 30000);
 
   it('should generate bundle from JSON string to output file', () => {

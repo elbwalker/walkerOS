@@ -13,7 +13,8 @@ import type { Flow } from '@walkeros/core';
 export interface CacheOptions {
   cacheDir?: string;
   buildDir?: string;
-  noCleanup?: boolean;
+  noCache?: boolean;
+  clean?: boolean;
 }
 
 export interface PackageCacheEntry {
@@ -47,13 +48,54 @@ export function getCacheDir(cacheDir?: string): string {
  * Get the build directory path, creating if it doesn't exist
  */
 export function getBuildDir(buildDir?: string): string {
-  const dir = resolve(buildDir || join(process.cwd(), 'walkeros-build'));
+  const dir = resolve(buildDir || join(process.cwd(), 'tmp'));
 
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
 
   return dir;
+}
+
+/**
+ * Clean the build directory if it exists
+ */
+export function cleanBuildDir(buildDir: string): void {
+  if (existsSync(buildDir)) {
+    require('fs').rmSync(buildDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Check if package is already installed in build directory
+ */
+export function isPackageInstalled(
+  pkg: Flow.Package,
+  buildDir: string,
+): boolean {
+  const packagePath = join(buildDir, 'node_modules', pkg.name);
+  return existsSync(packagePath);
+}
+
+/**
+ * Check if extracted package exists in build directory
+ */
+export function isPackageExtracted(
+  pkg: Flow.Package,
+  buildDir: string,
+): boolean {
+  const key = getCacheKey(pkg);
+  const extractedPath = join(buildDir, 'extracted', `${key}.js`);
+  return existsSync(extractedPath);
+}
+
+/**
+ * Get extracted package code from build directory
+ */
+export function getExtractedCode(pkg: Flow.Package, buildDir: string): string {
+  const key = getCacheKey(pkg);
+  const extractedPath = join(buildDir, 'extracted', `${key}.js`);
+  return readFileSync(extractedPath, 'utf-8');
 }
 
 /**

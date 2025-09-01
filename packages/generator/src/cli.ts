@@ -7,6 +7,7 @@ import {
   validateFlowConfigPath,
   validateBundlePath,
   isJsonString,
+  ensureDirectoryExists,
 } from './core/file-io';
 import { parseFlowConfig } from './core/parser';
 
@@ -22,8 +23,9 @@ program
   .requiredOption('-f, --flow <path>', 'Path to Flow configuration JSON file')
   .option(
     '-o, --output <path>',
-    'Output path for generated bundle (if not specified, outputs to stdout)',
+    'Output path for generated bundle (default: ./output/result.js)',
   )
+  .option('--stdout', 'Output bundle to stdout instead of writing to file')
   .option('-v, --verbose', 'Enable verbose output')
   .option(
     '--cache-dir <path>',
@@ -31,29 +33,40 @@ program
   )
   .option(
     '--build-dir <path>',
-    'Directory to keep build artifacts for inspection',
+    'Directory to keep build artifacts and reuse npm installations',
   )
   .option(
-    '--no-cleanup',
-    'Skip cleanup of temporary directories (useful for debugging)',
+    '--no-cache',
+    'Skip package cache (still uses build directory for npm installations)',
+  )
+  .option(
+    '--clean',
+    'Clean build directory before starting (forces fresh download)',
   )
   .action(async (options) => {
     const {
       flow: flowPath,
       output: outputPath,
+      stdout: outputToStdout,
       verbose,
       cacheDir,
       buildDir,
-      noCleanup,
+      noCache,
+      clean,
     } = options;
 
     try {
+      // Set default output path
+      const finalOutputPath = outputToStdout
+        ? null
+        : outputPath || './output/result.js';
+
       // Validate input (only validate file extension for file paths, not JSON strings)
       if (!isJsonString(flowPath)) {
         validateFlowConfigPath(flowPath);
       }
-      if (outputPath) {
-        validateBundlePath(outputPath);
+      if (finalOutputPath) {
+        validateBundlePath(finalOutputPath);
       }
 
       if (verbose) {
@@ -67,6 +80,13 @@ program
             chalk.gray(`Reading Flow configuration from: ${flowPath}`),
           );
         }
+        if (finalOutputPath) {
+          console.log(
+            chalk.gray(`Bundle will be written to: ${finalOutputPath}`),
+          );
+        } else {
+          console.log(chalk.gray('Bundle will be output to stdout'));
+        }
         if (cacheDir) {
           console.log(chalk.gray(`Using package cache: ${cacheDir}`));
         }
@@ -75,9 +95,12 @@ program
             chalk.gray(`Build artifacts will be saved to: ${buildDir}`),
           );
         }
-        if (noCleanup) {
+        if (noCache) {
+          console.log(chalk.gray('Package cache disabled'));
+        }
+        if (clean) {
           console.log(
-            chalk.gray('Temporary directories will not be cleaned up'),
+            chalk.gray('Build directory will be cleaned before starting'),
           );
         }
       }
@@ -99,7 +122,8 @@ program
         cacheOptions: {
           cacheDir,
           buildDir,
-          noCleanup,
+          noCache,
+          clean,
         },
       });
       const duration = Date.now() - startTime;
@@ -111,15 +135,15 @@ program
       }
 
       // Output bundle
-      if (outputPath) {
-        writeBundleFile(outputPath, result.bundle);
+      if (finalOutputPath) {
+        writeBundleFile(finalOutputPath, result.bundle);
         if (verbose) {
-          console.log(chalk.green(`✓ Bundle written to: ${outputPath}`));
+          console.log(chalk.green(`✓ Bundle written to: ${finalOutputPath}`));
         } else {
-          console.log(chalk.green(`Bundle written to: ${outputPath}`));
+          console.log(chalk.green(`Bundle written to: ${finalOutputPath}`));
         }
       } else {
-        // Output to stdout
+        // Output to stdout only when --stdout flag is used
         console.log(result.bundle);
       }
     } catch (error) {

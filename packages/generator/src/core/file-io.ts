@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { resolve, dirname } from 'path';
 import type { Flow } from '@walkeros/core';
 import { ParseError } from '../types';
 
@@ -45,10 +45,31 @@ export function readFlowConfig(filePath: string): Flow.Config {
 }
 
 /**
+ * Ensure directory exists for the given file path
+ */
+export function ensureDirectoryExists(filePath: string): void {
+  try {
+    const absolutePath = resolve(filePath);
+    const directory = dirname(absolutePath);
+    mkdirSync(directory, { recursive: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+      throw new Error(`Permission denied creating directory for: ${filePath}`);
+    }
+    throw new Error(
+      `Failed to create directory for ${filePath}: ${(error as Error).message}`,
+    );
+  }
+}
+
+/**
  * Write bundle to output file
  */
 export function writeBundleFile(filePath: string, bundle: string): void {
   try {
+    // Ensure directory exists first
+    ensureDirectoryExists(filePath);
+
     const absolutePath = resolve(filePath);
     writeFileSync(absolutePath, bundle, 'utf-8');
   } catch (error) {

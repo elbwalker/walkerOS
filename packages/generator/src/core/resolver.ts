@@ -9,6 +9,11 @@ import {
   getCachedCode,
   cachePackageCode,
   cleanupCache,
+  cleanBuildDir,
+  isPackageInstalled,
+  isPackageExtracted,
+  getExtractedCode,
+  getCacheKey,
 } from './cache';
 import { promisify } from 'util';
 import { exec } from 'child_process';
@@ -51,11 +56,11 @@ export async function resolvePackages(
   try {
     const resolved: ResolvedPackage[] = [];
 
-    // Set up cache directory if provided
+    // Set up cache directory if provided (unless noCache is true)
     let cacheDir: string | undefined;
     let buildDir: string | undefined;
 
-    if (cacheOptions?.cacheDir) {
+    if (cacheOptions?.cacheDir && !cacheOptions.noCache) {
       cacheDir = getCacheDir(cacheOptions.cacheDir);
       // Clean up old cache entries periodically
       cleanupCache(cacheDir);
@@ -63,6 +68,14 @@ export async function resolvePackages(
 
     if (cacheOptions?.buildDir) {
       buildDir = getBuildDir(cacheOptions.buildDir);
+
+      // Clean build directory if requested
+      if (cacheOptions.clean) {
+        console.log('🧹 Cleaning build directory...');
+        cleanBuildDir(buildDir);
+        // Recreate the directory
+        buildDir = getBuildDir(cacheOptions.buildDir);
+      }
     }
 
     // Sort packages by type for proper loading order
@@ -73,7 +86,7 @@ export async function resolvePackages(
         pkg,
         cacheDir,
         buildDir,
-        cacheOptions?.noCleanup,
+        cacheOptions,
       );
       resolved.push({
         package: pkg,
@@ -121,47 +134,135 @@ async function resolvePackageCode(
   pkg: Flow.Package,
   cacheDir?: string,
   buildDir?: string,
-  noCleanup?: boolean,
+  options?: CacheOptions,
 ): Promise<string> {
   validateVersion(pkg.version);
 
-  // Check cache first
-  if (cacheDir && isCached(pkg, cacheDir)) {
-    console.log(`Using cached package: ${pkg.name}@${pkg.version}`);
+  // Priority 1: Check package cache first (unless noCache is true)
+  if (cacheDir && !options?.noCache && isCached(pkg, cacheDir)) {
+    console.log(`📦 Using cached package: ${pkg.name}@${pkg.version}`);
     return getCachedCode(pkg, cacheDir);
   }
 
+  // Priority 2: Check build directory for extracted package
+  if (buildDir && isPackageExtracted(pkg, buildDir)) {
+    console.log(`🔧 Using extracted package: ${pkg.name}@${pkg.version}`);
+    const extractedCode = getExtractedCode(pkg, buildDir);
+
+    // Also cache it if caching is enabled
+    if (cacheDir && !options?.noCache) {
+      const metadata = await fetchPackageMetadata(pkg.name, pkg.version);
+      cachePackageCode(pkg, extractedCode, cacheDir, metadata);
+    }
+
+    return extractedCode;
+  }
+
   try {
-    // 1. Query npm registry API for package metadata
+    // Fetch package metadata
     const metadata = await fetchPackageMetadata(pkg.name, pkg.version);
 
-    // 2. Create temporary directory and install package
-    const tempDir =
-      buildDir || mkdtempSync(join(tmpdir(), 'walkeros-generator-'));
     let packageCode: string;
+    let workingDir: string;
 
-    try {
-      packageCode = await installAndExtractPackage(metadata, tempDir, buildDir);
+    if (buildDir) {
+      // Use persistent build directory
+      workingDir = buildDir;
 
-      // Cache the resolved package code
-      if (cacheDir) {
-        cachePackageCode(pkg, packageCode, cacheDir, metadata);
+      // Check if package is already installed in build directory
+      if (isPackageInstalled(pkg, buildDir)) {
+        console.log(
+          `♻️  Reusing installed package: ${pkg.name}@${pkg.version}`,
+        );
+        // Package is already installed, just extract it
+        const packagePath = join(buildDir, 'node_modules', pkg.name);
+        const extractedCode = extractPackageCode(packagePath, metadata);
+        packageCode = transformESModuleToCommonJS(extractedCode);
+
+        // Save extracted code for future use
+        const key = getCacheKey(pkg);
+        const extractedPath = join(buildDir, 'extracted', `${key}.js`);
+        require('fs').mkdirSync(join(buildDir, 'extracted'), {
+          recursive: true,
+        });
+        require('fs').writeFileSync(extractedPath, packageCode);
+      } else {
+        console.log(`⬇️  Installing package: ${pkg.name}@${pkg.version}`);
+        packageCode = await installAndExtractPackage(
+          metadata,
+          workingDir,
+          buildDir,
+        );
       }
-    } finally {
-      // 3. Cleanup temporary directory (unless requested to keep or using build dir)
-      if (!noCleanup && !buildDir) {
-        rmSync(tempDir, { recursive: true, force: true });
+    } else {
+      // Use temporary directory (old behavior)
+      workingDir = mkdtempSync(join(tmpdir(), 'walkeros-generator-'));
+
+      try {
+        packageCode = await installAndExtractPackage(metadata, workingDir);
+      } finally {
+        // Clean up temp directory
+        rmSync(workingDir, { recursive: true, force: true });
       }
+    }
+
+    // Cache the resolved package code (unless noCache is true)
+    if (cacheDir && !options?.noCache) {
+      cachePackageCode(pkg, packageCode, cacheDir, metadata);
     }
 
     return packageCode;
   } catch (error) {
-    console.warn(
-      `Failed to resolve real package ${pkg.name}@${pkg.version}, falling back to mock:`,
-      error,
-    );
-    // Fallback to mock implementation
-    return getMockPackageCode(pkg.name, pkg.type);
+    // Create a comprehensive error message with troubleshooting info
+    let errorMessage = `Failed to resolve package ${pkg.name}@${pkg.version}`;
+    let suggestions: string[] = [];
+
+    if (error instanceof ResolveError) {
+      errorMessage += `: ${error.message}`;
+
+      // Add specific suggestions based on the error details
+      if (error.message.includes('Failed to fetch metadata')) {
+        suggestions.push('• Check if the package name and version are correct');
+        suggestions.push('• Verify network connectivity to npm registry');
+        suggestions.push('• Try running: npm view ${pkg.name}@${pkg.version}');
+      } else if (error.message.includes('Failed to install/extract')) {
+        suggestions.push('• Ensure npm is properly installed and configured');
+        suggestions.push(
+          '• Check if the package version exists on npm registry',
+        );
+        suggestions.push('• Try clearing npm cache: npm cache clean --force');
+      } else if (error.message.includes('No valid entry point found')) {
+        suggestions.push(
+          '• The package may not be compatible with this generator',
+        );
+        suggestions.push(
+          '• Check if the package has a valid main/module entry point',
+        );
+      }
+    } else {
+      errorMessage += `: ${error}`;
+      suggestions.push('• Check package name and version are correct');
+      suggestions.push('• Ensure network connectivity');
+      suggestions.push('• Verify npm is properly configured');
+    }
+
+    // Add general troubleshooting suggestions
+    suggestions.push('• Run with --verbose flag for more details');
+    if (buildDir) {
+      suggestions.push('• Try with --clean flag to force fresh download');
+    }
+
+    const fullMessage =
+      suggestions.length > 0
+        ? `${errorMessage}\n\nTroubleshooting suggestions:\n${suggestions.join('\n')}`
+        : errorMessage;
+
+    throw new ResolveError(fullMessage, {
+      originalError: error,
+      packageName: pkg.name,
+      packageVersion: pkg.version,
+      packageType: pkg.type,
+    });
   }
 }
 
@@ -207,9 +308,53 @@ async function installAndExtractPackage(
   buildDir?: string,
 ): Promise<string> {
   try {
+    // Create minimal package.json in temp directory for npm install to work
+    const packageJsonPath = join(tempDir, 'package.json');
+    const minimalPackageJson = {
+      name: 'walkeros-temp-install',
+      version: '1.0.0',
+      private: true,
+    };
+    require('fs').writeFileSync(
+      packageJsonPath,
+      JSON.stringify(minimalPackageJson, null, 2),
+    );
+
     // Install package in temporary directory
     const installCommand = `npm install ${metadata.name}@${metadata.version}`;
-    await execAsync(installCommand, { cwd: tempDir });
+    console.log(`📦 Installing ${metadata.name}@${metadata.version}...`);
+
+    try {
+      // Add debug logging for promise resolution tracking
+      const startTime = Date.now();
+      const execPromise = execAsync(installCommand, {
+        cwd: tempDir,
+        timeout: process.env.NODE_ENV === 'test' ? 5000 : 60000, // 5s for tests, 60s for production
+      });
+
+      const { stdout, stderr } = await execPromise;
+      const endTime = Date.now();
+      console.log(`⏱️  Command completed in ${endTime - startTime}ms`);
+
+      if (stderr && !stderr.includes('npm WARN')) {
+        console.warn(`npm install warnings for ${metadata.name}:`, stderr);
+      }
+
+      if (stdout) {
+        console.log(
+          `✅ Successfully installed ${metadata.name}@${metadata.version}`,
+        );
+      }
+    } catch (installError: any) {
+      const errorMessage = installError.message || installError.toString();
+      console.error(
+        `❌ npm install failed for ${metadata.name}@${metadata.version}:`,
+        errorMessage,
+      );
+
+      // Re-throw with more specific error information
+      throw new Error(`npm install failed: ${errorMessage}`);
+    }
 
     // Extract package code
     const packagePath = join(tempDir, 'node_modules', metadata.name);
@@ -302,83 +447,4 @@ function transformESModuleToCommonJS(code: string): string {
     .replace(/export \{[^}]+\}/g, '') // Remove export statements
     .replace(/import .*/g, '') // Remove import statements
     .trim();
-}
-
-/**
- * Mock package code generator
- * Used as fallback when real package resolution fails
- */
-function getMockPackageCode(
-  packageName: string,
-  packageType: Flow.PackageType,
-): string {
-  // Fallback mock implementations when real packages can't be resolved
-
-  const mockCode: Record<string, string> = {
-    '@walkeros/core': `
-// FALLBACK: Mock @walkeros/core package code (real resolution failed)
-const createSource = (source, config) => ({ source, config });
-const assign = Object.assign;
-const isString = (value) => typeof value === 'string';
-const isObject = (value) => value && typeof value === 'object';
-`,
-    '@walkeros/collector': `
-// FALLBACK: Mock @walkeros/collector package code (real resolution failed)
-const createCollector = async (config) => {
-  const collector = { sources: {}, destinations: {} };
-  const elb = (event, data) => console.log('Event:', event, data);
-  return { collector, elb };
-};
-`,
-    '@walkeros/web-source-browser': `
-// FALLBACK: Mock @walkeros/web-source-browser package code (real resolution failed)
-const sourceBrowser = {
-  init: (config) => ({ elb: (event, data) => console.log('Browser:', event, data) })
-};
-`,
-    '@walkeros/web-destination-gtag': `
-// FALLBACK: Mock @walkeros/web-destination-gtag package code (real resolution failed)
-const destinationGtag = {
-  push: (event, context) => {
-    if (typeof gtag !== 'undefined') {
-      gtag('event', event.event, event.data);
-    }
-  }
-};
-`,
-    '@walkeros/web-destination-meta': `
-// FALLBACK: Mock @walkeros/web-destination-meta package code (real resolution failed)
-const destinationMeta = {
-  push: (event, context) => {
-    if (typeof fbq !== 'undefined') {
-      fbq('track', event.event, event.data);
-    }
-  }
-};
-`,
-    '@walkeros/web-destination-api': `
-// FALLBACK: Mock @walkeros/web-destination-api package code (real resolution failed)
-const destinationApi = {
-  push: async (event, context) => {
-    const config = context.config || {};
-    if (config.endpoint) {
-      console.log('API call:', config.endpoint, event);
-    }
-  }
-};
-`,
-  };
-
-  const code = mockCode[packageName];
-  if (code) {
-    return code;
-  }
-
-  // Generic fallback for unknown packages
-  return `
-// FALLBACK: Generic mock for ${packageType} package: ${packageName} (real resolution failed)
-const mock${packageType.charAt(0).toUpperCase() + packageType.slice(1)} = {
-  init: () => console.log('Mock ${packageType}: ${packageName}')
-};
-`;
 }

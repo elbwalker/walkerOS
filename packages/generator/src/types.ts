@@ -5,7 +5,8 @@ export interface GeneratorInput {
   cacheOptions?: {
     cacheDir?: string;
     buildDir?: string;
-    noCleanup?: boolean;
+    noCache?: boolean;
+    clean?: boolean;
   };
 }
 

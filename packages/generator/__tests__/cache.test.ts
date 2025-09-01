@@ -13,6 +13,10 @@ import {
   cachePackageCode,
   cleanupCache,
   getCacheStats,
+  cleanBuildDir,
+  isPackageInstalled,
+  isPackageExtracted,
+  getExtractedCode,
 } from '../src/core/cache';
 
 describe('Cache System', () => {
@@ -310,6 +314,94 @@ describe('Cache System', () => {
 
       expect(stats.entries).toBe(1);
       expect(stats.size).toContain('KB');
+    });
+  });
+
+  describe('Build Directory Management', () => {
+    it('should clean build directory when it exists', () => {
+      getBuildDir(tempBuildDir); // Create directory
+
+      // Add some files to the directory
+      const testFile = join(tempBuildDir, 'test.txt');
+      writeFileSync(testFile, 'test content');
+
+      expect(existsSync(testFile)).toBe(true);
+
+      cleanBuildDir(tempBuildDir);
+
+      expect(existsSync(tempBuildDir)).toBe(false);
+    });
+
+    it('should handle cleaning non-existent build directory gracefully', () => {
+      // Should not throw error
+      expect(() => cleanBuildDir(tempBuildDir)).not.toThrow();
+    });
+
+    it('should check if package is installed in build directory', () => {
+      const mockPackage: Flow.Package = {
+        name: '@walkeros/test-pkg',
+        version: '1.0.0',
+        type: 'core',
+      };
+
+      // Package not installed initially
+      expect(isPackageInstalled(mockPackage, tempBuildDir)).toBe(false);
+
+      // Create mock node_modules structure
+      getBuildDir(tempBuildDir);
+      const nodeModulesDir = join(
+        tempBuildDir,
+        'node_modules',
+        mockPackage.name,
+      );
+      mkdirSync(nodeModulesDir, { recursive: true });
+
+      // Now package should be detected as installed
+      expect(isPackageInstalled(mockPackage, tempBuildDir)).toBe(true);
+    });
+
+    it('should check if package is extracted in build directory', () => {
+      const mockPackage: Flow.Package = {
+        name: '@walkeros/test-pkg',
+        version: '2.0.0',
+        type: 'source',
+      };
+
+      // Package not extracted initially
+      expect(isPackageExtracted(mockPackage, tempBuildDir)).toBe(false);
+
+      // Create extracted directory structure
+      getBuildDir(tempBuildDir);
+      const extractedDir = join(tempBuildDir, 'extracted');
+      mkdirSync(extractedDir, { recursive: true });
+
+      const key = getCacheKey(mockPackage);
+      const extractedFile = join(extractedDir, `${key}.js`);
+      writeFileSync(extractedFile, 'extracted package code');
+
+      // Now package should be detected as extracted
+      expect(isPackageExtracted(mockPackage, tempBuildDir)).toBe(true);
+    });
+
+    it('should get extracted package code from build directory', () => {
+      const mockPackage: Flow.Package = {
+        name: '@walkeros/extract-test',
+        version: '3.0.0',
+        type: 'destination',
+      };
+      const mockCode = 'const extractedCode = "test";';
+
+      // Create extracted directory structure
+      getBuildDir(tempBuildDir);
+      const extractedDir = join(tempBuildDir, 'extracted');
+      mkdirSync(extractedDir, { recursive: true });
+
+      const key = getCacheKey(mockPackage);
+      const extractedFile = join(extractedDir, `${key}.js`);
+      writeFileSync(extractedFile, mockCode);
+
+      const retrievedCode = getExtractedCode(mockPackage, tempBuildDir);
+      expect(retrievedCode).toBe(mockCode);
     });
   });
 });
