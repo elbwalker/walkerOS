@@ -60,6 +60,17 @@ function validatePackage(pkg: unknown, index: number): void {
 
   const packageObj = pkg as Record<string, unknown>;
 
+  if (!packageObj.id || typeof packageObj.id !== 'string') {
+    throw new ParseError(`${prefix} must have an id string`);
+  }
+
+  // Validate that id is a valid JavaScript variable name
+  if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(packageObj.id)) {
+    throw new ParseError(
+      `${prefix} id must be a valid JavaScript variable name`,
+    );
+  }
+
   if (!packageObj.name || typeof packageObj.name !== 'string') {
     throw new ParseError(`${prefix} must have a name string`);
   }

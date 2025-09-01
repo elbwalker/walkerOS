@@ -151,14 +151,26 @@ describe('WalkerOS Generator Integration', () => {
 
   const simpleFlowConfig: Flow.Config = {
     packages: [
-      { name: '@walkeros/core', version: '0.0.8', type: 'core' },
-      { name: '@walkeros/collector', version: '0.0.8', type: 'collector' },
       {
+        id: 'walkerOSCore',
+        name: '@walkeros/core',
+        version: '0.0.8',
+        type: 'core',
+      },
+      {
+        id: 'walkerOSCollector',
+        name: '@walkeros/collector',
+        version: '0.0.8',
+        type: 'collector',
+      },
+      {
+        id: 'walkerOSSourceBrowser',
         name: '@walkeros/web-source-browser',
         version: '0.0.9',
         type: 'source',
       },
       {
+        id: 'walkerOSDestinationGtag',
         name: '@walkeros/web-destination-gtag',
         version: '0.0.8',
         type: 'destination',
@@ -296,7 +308,12 @@ describe('WalkerOS Generator Integration', () => {
     const configWithBadPackage: Flow.Config = {
       ...simpleFlowConfig,
       packages: [
-        { name: '@walkeros/nonexistent', version: '1.0.0', type: 'core' },
+        {
+          id: 'badPackage',
+          name: '@walkeros/nonexistent',
+          version: '1.0.0',
+          type: 'core',
+        },
       ],
     };
 
@@ -347,7 +364,7 @@ describe('WalkerOS Generator Integration', () => {
   it('should validate package configurations', async () => {
     const invalidPackageConfig: Flow.Config = {
       ...simpleFlowConfig,
-      packages: [{ name: '', version: '1.0.0', type: 'core' }],
+      packages: [{ id: '', name: '', version: '1.0.0', type: 'core' }],
     };
 
     const input: GeneratorInput = {

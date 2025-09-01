@@ -2,26 +2,31 @@
   "_comment": "Full working demo with browser source and gtag destination - use this for complete testing",
   "packages": [
     {
+      "id": "walkerOSCore",
       "name": "@walkeros/core",
       "version": "0.0.8",
       "type": "core"
     },
     {
+      "id": "walkerOSCollector",
       "name": "@walkeros/collector",
       "version": "0.0.8",
       "type": "collector"
     },
     {
+      "id": "walkerOSWebCore",
       "name": "@walkeros/web-core",
       "version": "0.0.8",
       "type": "core"
     },
     {
+      "id": "walkerOSSourceBrowser",
       "name": "@walkeros/web-source-browser",
       "version": "0.0.9",
       "type": "source"
     },
     {
+      "id": "walkerOSDestinationGtag",
       "name": "@walkeros/web-destination-gtag",
       "version": "0.0.8",
       "type": "destination"
@@ -94,8 +99,14 @@
     "_comment": "Alternative configurations for different testing scenarios - consolidated from basic.json and simple-demo.json",
     "minimal": {
       "packages": [
-        { "name": "@walkeros/core", "version": "0.0.8", "type": "core" },
         {
+          "id": "walkerOSCore",
+          "name": "@walkeros/core",
+          "version": "0.0.8",
+          "type": "core"
+        },
+        {
+          "id": "walkerOSCollector",
           "name": "@walkeros/collector",
           "version": "0.0.8",
           "type": "collector"
@@ -113,8 +124,14 @@
     },
     "simple": {
       "packages": [
-        { "name": "@walkeros/core", "version": "0.0.8", "type": "core" },
         {
+          "id": "walkerOSCore",
+          "name": "@walkeros/core",
+          "version": "0.0.8",
+          "type": "core"
+        },
+        {
+          "id": "walkerOSCollector",
           "name": "@walkeros/collector",
           "version": "0.0.8",
           "type": "collector"

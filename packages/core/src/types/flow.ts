@@ -18,6 +18,7 @@ export interface Edge {
 }
 
 export interface Package {
+  id: string;
   name: string;
   version: string;
   type: PackageType;

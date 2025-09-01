@@ -19,14 +19,26 @@ describe('CLI Integration Tests', () => {
 
   const simpleFlowConfig: Flow.Config = {
     packages: [
-      { name: '@walkeros/core', version: '0.0.8', type: 'core' },
-      { name: '@walkeros/collector', version: '0.0.8', type: 'collector' },
       {
+        id: 'walkerOSCore',
+        name: '@walkeros/core',
+        version: '0.0.8',
+        type: 'core',
+      },
+      {
+        id: 'walkerOSCollector',
+        name: '@walkeros/collector',
+        version: '0.0.8',
+        type: 'collector',
+      },
+      {
+        id: 'walkerOSSourceBrowser',
         name: '@walkeros/web-source-browser',
         version: '0.0.9',
         type: 'source',
       },
       {
+        id: 'walkerOSDestinationGtag',
         name: '@walkeros/web-destination-gtag',
         version: '0.0.8',
         type: 'destination',

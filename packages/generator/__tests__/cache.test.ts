@@ -68,6 +68,7 @@ describe('Cache System', () => {
   describe('Cache Key Generation', () => {
     it('should generate consistent cache keys', () => {
       const pkg: Flow.Package = {
+        id: 'walkerOSCore',
         name: '@walkeros/core',
         version: '1.0.0',
         type: 'core',
@@ -82,6 +83,7 @@ describe('Cache System', () => {
 
     it('should sanitize special characters in package names', () => {
       const pkg: Flow.Package = {
+        id: 'scopePackageName',
         name: '@scope/package-name',
         version: '1.0.0',
         type: 'core',
@@ -140,6 +142,7 @@ describe('Cache System', () => {
 
   describe('Cache Validation', () => {
     const mockPackage: Flow.Package = {
+      id: 'walkerOSCore',
       name: '@walkeros/core',
       version: '1.0.0',
       type: 'core',
@@ -192,6 +195,7 @@ describe('Cache System', () => {
 
   describe('Cache Storage and Retrieval', () => {
     const mockPackage: Flow.Package = {
+      id: 'walkerOSTestPackage',
       name: '@walkeros/test-package',
       version: '2.1.0',
       type: 'source',
@@ -228,11 +232,13 @@ describe('Cache System', () => {
       getCacheDir(tempCacheDir);
 
       const recentPackage: Flow.Package = {
+        id: 'walkerOSRecent',
         name: '@walkeros/recent',
         version: '1.0.0',
         type: 'core',
       };
       const oldPackage: Flow.Package = {
+        id: 'walkerOSOld',
         name: '@walkeros/old',
         version: '1.0.0',
         type: 'core',
@@ -277,11 +283,13 @@ describe('Cache System', () => {
 
     it('should calculate cache statistics correctly', () => {
       const package1: Flow.Package = {
+        id: 'walkerOSPkg1',
         name: '@walkeros/pkg1',
         version: '1.0.0',
         type: 'core',
       };
       const package2: Flow.Package = {
+        id: 'walkerOSPkg2',
         name: '@walkeros/pkg2',
         version: '2.0.0',
         type: 'source',
@@ -303,6 +311,7 @@ describe('Cache System', () => {
 
     it('should format file sizes correctly', () => {
       const largePackage: Flow.Package = {
+        id: 'walkerOSLarge',
         name: '@walkeros/large',
         version: '1.0.0',
         type: 'destination',
@@ -339,6 +348,7 @@ describe('Cache System', () => {
 
     it('should check if package is installed in build directory', () => {
       const mockPackage: Flow.Package = {
+        id: 'walkerOSTestPkg',
         name: '@walkeros/test-pkg',
         version: '1.0.0',
         type: 'core',
@@ -362,6 +372,7 @@ describe('Cache System', () => {
 
     it('should check if package is extracted in build directory', () => {
       const mockPackage: Flow.Package = {
+        id: 'walkerOSTestPkg2',
         name: '@walkeros/test-pkg',
         version: '2.0.0',
         type: 'source',
@@ -385,6 +396,7 @@ describe('Cache System', () => {
 
     it('should get extracted package code from build directory', () => {
       const mockPackage: Flow.Package = {
+        id: 'walkerOSExtractTest',
         name: '@walkeros/extract-test',
         version: '3.0.0',
         type: 'destination',

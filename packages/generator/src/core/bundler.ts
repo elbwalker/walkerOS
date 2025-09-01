@@ -35,13 +35,20 @@ function transformPackageCode(resolvedPackages: ResolvedPackage[]): string {
   packageSections.push('// 1. PACKAGES CODE');
   packageSections.push('// Clean extracted package objects');
 
+  // Get all packages for the dynamic require function
+  const allPackages = resolvedPackages.map((r) => r.package);
+
   for (const resolved of resolvedPackages) {
     packageSections.push(
       `// ${resolved.package.name}@${resolved.package.version} (${resolved.package.type})`,
     );
 
     // Extract clean package objects from the minified code
-    const cleanCode = extractPackageObjects(resolved.code, resolved.package);
+    const cleanCode = extractPackageObjects(
+      resolved.code,
+      resolved.package,
+      allPackages,
+    );
     packageSections.push(cleanCode);
   }
 
@@ -49,15 +56,38 @@ function transformPackageCode(resolvedPackages: ResolvedPackage[]): string {
 }
 
 /**
+ * Build dynamic require function from package list
+ */
+function buildRequireFunction(allPackages: Flow.Package[]): string {
+  const requireCases = allPackages
+    .map(
+      (pkg) =>
+        `    if (packageName === '${pkg.name}') {
+      return ${pkg.id} || {};
+    }`,
+    )
+    .join('\n');
+
+  return `
+  // Mock require function for cross-package dependencies
+  var require = function(packageName) {
+${requireCases}
+    // Return empty object for unknown dependencies
+    return {};
+  };`;
+}
+
+/**
  * Extract real package exports from minified CommonJS code
  * Transforms the CommonJS module into browser-compatible variables
  */
-function extractPackageObjects(code: string, pkg: Flow.Package): string {
-  const packageVariable = getPackageVariableName(pkg.name);
-
-  if (!packageVariable) {
-    return '// Package not supported yet';
-  }
+function extractPackageObjects(
+  code: string,
+  pkg: Flow.Package,
+  allPackages: Flow.Package[],
+): string {
+  const packageVariable = pkg.id;
+  const requireFunction = buildRequireFunction(allPackages);
 
   // Transform the CommonJS module into an IIFE that exposes the exports
   // This avoids the "module is not defined" error in the browser
@@ -67,27 +97,7 @@ var ${packageVariable} = (function() {
   // Create CommonJS environment
   var module = { exports: {} };
   var exports = module.exports;
-  
-  // Mock require function for cross-package dependencies
-  var require = function(packageName) {
-    if (packageName === '@walkeros/core') {
-      return walkerOSCore || {};
-    }
-    if (packageName === '@walkeros/collector') {
-      return walkerOSCollector || {};
-    }
-    if (packageName === '@walkeros/web-source-browser') {
-      return walkerOSSourceBrowser || {};
-    }
-    if (packageName === '@walkeros/web-destination-gtag') {
-      return walkerOSDestinationGtag || {};
-    }
-    if (packageName === '@walkeros/web-core') {
-      return walkerOSWebCore || {};
-    }
-    // Return empty object for unknown dependencies
-    return {};
-  };
+  ${requireFunction}
   
   // Execute the original package code
   ${code}
@@ -100,29 +110,15 @@ var ${packageVariable} = (function() {
 }
 
 /**
- * Get expected package variable name from package name
- */
-function getPackageVariableName(packageName: string): string | null {
-  const packageMap: Record<string, string> = {
-    '@walkeros/core': 'walkerOSCore',
-    '@walkeros/collector': 'walkerOSCollector',
-    '@walkeros/web-core': 'walkerOSWebCore',
-    '@walkeros/web-source-browser': 'walkerOSSourceBrowser',
-    '@walkeros/web-destination-gtag': 'walkerOSDestinationGtag',
-    '@walkeros/web-destination-api': 'walkerOSDestinationApi',
-    '@walkeros/web-destination-meta': 'walkerOSDestinationMeta',
-    '@walkeros/web-destination-plausible': 'walkerOSDestinationPlausible',
-    '@walkeros/web-destination-piwikpro': 'walkerOSDestinationPiwikpro',
-  };
-
-  return packageMap[packageName] || null;
-}
-
-/**
  * Generate walkerOS initialization code from Flow configuration
  * Implements parts 2, 3, and 4 of the bundle structure
  */
 function generateInitCode(config: Flow.Config): string {
+  // Create a lookup map for package names to IDs
+  const packageLookup = new Map<string, string>();
+  config.packages.forEach((pkg) => {
+    packageLookup.set(pkg.name, pkg.id);
+  });
   const parts: string[] = [];
 
   // Part 2: Configuration Values
@@ -143,11 +139,16 @@ function generateInitCode(config: Flow.Config): string {
   parts.push('  flowConfig.nodes.forEach(node => {');
   parts.push('    if (node.type === "source") {');
   parts.push('      collectorConfig.sources = collectorConfig.sources || {};');
+  parts.push('      // Get package ID for this node dynamically');
   parts.push(
-    '      // Use real source package - extract sourceBrowser from browser source package',
+    '      var sourcePackageId = flowConfig.packages.find(p => p.name === node.package)?.id;',
   );
   parts.push(
-    '      var sourceFn = walkerOSSourceBrowser.sourceBrowser || walkerOSSourceBrowser.default;',
+    '      if (!sourcePackageId) throw new Error("Package not found: " + node.package);',
+  );
+  parts.push('      var sourcePackage = window[sourcePackageId];');
+  parts.push(
+    '      var sourceFn = sourcePackage.sourceBrowser || sourcePackage.default;',
   );
   parts.push('      // Add defensive scope handling for browser sources');
   parts.push('      var sourceConfig = {...node.config};');
@@ -159,16 +160,27 @@ function generateInitCode(config: Flow.Config): string {
     '        sourceConfig.settings.scope = document.body || document;',
   );
   parts.push('      }');
+
+  // Find the core package ID dynamically
+  const corePackageId = packageLookup.get('@walkeros/core') || 'walkerOSCore';
   parts.push(
-    '      collectorConfig.sources[node.id] = walkerOSCore.createSource(sourceFn, sourceConfig);',
+    `      collectorConfig.sources[node.id] = ${corePackageId}.createSource(sourceFn, sourceConfig);`,
   );
+
   parts.push('    } else if (node.type === "destination") {');
   parts.push(
     '      collectorConfig.destinations = collectorConfig.destinations || {};',
   );
-  parts.push('      // Use real destination package - extract destinationGtag');
+  parts.push('      // Get package ID for this node dynamically');
   parts.push(
-    '      var destObj = walkerOSDestinationGtag.destinationGtag || walkerOSDestinationGtag.default;',
+    '      var destPackageId = flowConfig.packages.find(p => p.name === node.package)?.id;',
+  );
+  parts.push(
+    '      if (!destPackageId) throw new Error("Package not found: " + node.package);',
+  );
+  parts.push('      var destPackage = window[destPackageId];');
+  parts.push(
+    '      var destObj = destPackage.destinationGtag || destPackage.default;',
   );
   parts.push(
     '      collectorConfig.destinations[node.id] = {...destObj, config: node.config};',
@@ -179,8 +191,11 @@ function generateInitCode(config: Flow.Config): string {
   parts.push('  });');
   parts.push('');
 
+  // Find the collector package ID dynamically
+  const collectorPackageId =
+    packageLookup.get('@walkeros/collector') || 'walkerOSCollector';
   parts.push(
-    '  const {collector, elb} = await walkerOSCollector.createCollector(collectorConfig);',
+    `  const {collector, elb} = await ${collectorPackageId}.createCollector(collectorConfig);`,
   );
   parts.push('  return collector;');
   parts.push('}');
