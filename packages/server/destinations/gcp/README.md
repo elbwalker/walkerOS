@@ -1,30 +1,19 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
+    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
-# Google Cloud Platform (GCP) Destination for walkerOS
+# GCP (BigQuery) Destination for walkerOS
 
-This package provides a Google Cloud Platform (GCP) destination for walkerOS. It
-allows you to send events to Google BigQuery.
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/server/destinations/gcp)
+&bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/server-destination-gcp)
 
-[View documentation](https://www.elbwalker.com/docs/destinations/server/gcp/)
-
-## Role in walkerOS Ecosystem
-
-walkerOS follows a **source → collector → destination** architecture:
-
-- **Sources**: Capture events from various environments (browser DOM, dataLayer,
-  server requests)
-- **Collector**: Processes, validates, and routes events with consent awareness
-- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
-  custom APIs)
-
-This GCP destination receives processed events from the walkerOS collector and
-streams them to Google BigQuery, enabling real-time data warehousing and
-analytics with Google Cloud's powerful data processing and machine learning
-capabilities.
+walkerOS follows a **source → collector → destination** architecture. This GCP
+destination receives processed events from the walkerOS collector and streams
+them to Google BigQuery, enabling real-time data warehousing and analytics with
+Google Cloud's powerful data processing and machine learning capabilities.
 
 ## Installation
 
@@ -34,20 +23,31 @@ npm install @walkeros/server-destination-gcp
 
 ## Usage
 
-Here's a basic example of how to use the GCP destination:
+Here's a basic example of how to use the GCP BigQuery destination:
 
 ```typescript
 import { elb } from '@walkeros/collector';
 import { destinationBigQuery } from '@walkeros/server-destination-gcp';
 
 elb('walker destination', destinationBigQuery, {
-  custom: {
+  settings: {
     projectId: 'YOUR_PROJECT_ID',
     datasetId: 'YOUR_DATASET_ID',
     tableId: 'YOUR_TABLE_ID',
   },
 });
 ```
+
+## Configuration
+
+| Name        | Type              | Description                                      | Required | Example                                    |
+| ----------- | ----------------- | ------------------------------------------------ | -------- | ------------------------------------------ |
+| `client`    | `BigQuery`        | Google Cloud BigQuery client instance            | Yes      | `new BigQuery({ projectId, keyFilename })` |
+| `projectId` | `string`          | Google Cloud Project ID                          | Yes      | `'my-gcp-project'`                         |
+| `datasetId` | `string`          | BigQuery dataset ID where events will be stored  | Yes      | `'walker_events'`                          |
+| `tableId`   | `string`          | BigQuery table ID for event storage              | Yes      | `'events'`                                 |
+| `location`  | `string`          | Geographic location for the BigQuery dataset     | No       | `'US'`                                     |
+| `bigquery`  | `BigQueryOptions` | Additional BigQuery client configuration options | No       | `{ keyFilename: "path/to/key.json" }`      |
 
 ## Contribute
 
