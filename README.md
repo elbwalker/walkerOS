@@ -4,22 +4,18 @@
   </a>
 </p>
 
-# walkerOS: Open-Source Event Data Collection
+# walkerOS: Open-Source tagging and event data collection
 
 <div align="left">
   <a href="https://github.com/elbwalker/walkerOS/blob/main/LICENSE"><img src="https://img.shields.io/github/license/elbwalker/walkerOS" /></a>
   <a href="https://www.elbwalker.com/docs/"><img src="https://img.shields.io/badge/docs-www.elbwalker.com/docs-yellow" alt="walkerOS Documentation"></a>
   <a href="https://github.com/elbwalker/walkerOS/tree/main/apps/demos/react"><img src="https://img.shields.io/badge/React_demo-blue" alt="React demo"></a>
-  <a href="https://discord.gg/yBw4uPp6V7"><img src="https://img.shields.io/discord/959129398208258048?label=discord" alt="Discord"></a>
 </div>
 
 walkerOS captures, structures, and routes events with built-in support for
 consent management — all directly in your code. No fragile UI configs. No
-black-box logic. Just vendor-agnostic **tracking you can version, test, and
-trust**.
-
-The project started as the web tracking library walker.js, and has evolved into
-a complete **first-party tracking system** for modern teams and the modern web.
+black-box logic. Just **tracking infrastructure** you can version, test, and
+trust.
 
 ## Why walkerOS?
 
@@ -40,7 +36,7 @@ a complete **first-party tracking system** for modern teams and the modern web.
 
 ## Quick Start
 
-### With a Bundler (npm)
+### npm
 
 Install the required packages from npm:
 
@@ -76,7 +72,7 @@ export async function initializeWalker() {
 }
 ```
 
-### With a Script Tag
+### script tag
 
 For websites without build tools, you can install from a CDN:
 
