@@ -1,74 +1,271 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
+    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
 # Server Core Utilities for walkerOS
 
-The walkerOS Server Core package provides server-specific utilities and
-functions that power server-side data collection. It extends the
-platform-agnostic Core package with Node.js-specific functionality for server
-environment detection, request handling, and server-side event processing.
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/server/core)
+&bull; [NPM Package](https://www.npmjs.com/package/@walkeros/server-core)
 
-## Role in walkerOS Ecosystem
-
-walkerOS follows a **source → collector → destination** architecture:
-
-- **Sources**: Capture events from various environments (browser DOM, dataLayer,
-  server requests)
-- **Collector**: Processes, validates, and routes events with consent awareness
-- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
-  custom APIs)
-
-The Server Core package serves as the foundation for all server-based sources
-and destinations, providing essential Node.js utilities, request handling, and
-server-specific event processing capabilities.
+Server core utilities are Node.js-specific functions designed for server-side
+walkerOS implementations. These utilities handle server communication,
+cryptographic hashing, and other backend operations.
 
 ## Installation
 
-```sh
-npm install @walkeros/server-core
+Import server utilities from the `@walkeros/server-core` package:
+
+```ts
+import { sendServer, getHashServer } from '@walkeros/server-core';
 ```
 
-## Usage
+## Server Communication
 
-The server core package provides Node.js-specific utilities:
+### sendServer
 
-```typescript
-import {
-  // Server utilities
-  getHashServer,
-  sendServer,
+`sendServer(url: string, data?: SendDataValue, options?: SendServerOptions): Promise<SendResponse>`
+sends HTTP requests using Node.js built-in modules (`http`/`https`).
 
-  // Type definitions
-  ServerDestination,
-} from '@walkeros/server-core';
+```js
+// Simple POST request
+const response = await sendServer('https://api.example.com/events', {
+  event: 'page view',
+  data: { url: '/home' },
+});
 
-// Example: Generate server-side hash
-const hash = await getHashServer('user-id', 'additional-data');
-console.log('Generated hash:', hash);
+// With custom options
+const response = await sendServer(url, data, {
+  method: 'PUT',
+  headers: {
+    Authorization: 'Bearer token',
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000, // 10 seconds
+});
 
-// Example: Send event from server
-await sendServer({
-  event: 'order complete',
-  data: { orderId: '12345', profit: 42 },
-  // ... other event properties
+if (response.ok) {
+  console.log('Data sent successfully:', response.data);
+} else {
+  console.error('Send failed:', response.error);
+}
+```
+
+#### SendServerOptions
+
+```ts
+interface SendServerOptions {
+  headers?: Record<string, string>; // Custom HTTP headers
+  method?: string; // HTTP method (default: 'POST')
+  timeout?: number; // Request timeout in milliseconds (default: 5000)
+}
+```
+
+#### SendResponse
+
+```ts
+interface SendResponse {
+  ok: boolean; // Indicates if the request was successful (2xx status)
+  data?: unknown; // Parsed response data (if available)
+  error?: string; // Error message (if request failed)
+}
+```
+
+## Cryptographic Operations
+
+### getHashServer
+
+`getHashServer(str: string, length?: number): Promise<string>` generates SHA-256
+hashes using Node.js crypto module.
+
+```js
+// Generate full SHA-256 hash
+const fullHash = await getHashServer('user123@example.com');
+// Returns full 64-character hash
+
+// Generate shortened hash for anonymization
+const userFingerprint = await getHashServer(
+  userAgent + language + ipAddress + date.getDate(),
+  16,
+);
+// Returns 16-character hash like '47e0bdd10f04ef13'
+
+// User identification while preserving privacy
+const anonymousId = await getHashServer(`${userEmail}${deviceId}${salt}`, 12);
+```
+
+This function is commonly used for:
+
+- **User Anonymization**: Creating privacy-safe user identifiers
+- **Fingerprinting**: Generating device/session fingerprints
+- **Data Deduplication**: Creating consistent identifiers
+- **Privacy Compliance**: Hashing PII for GDPR/CCPA compliance
+
+## Usage Examples
+
+### Event Processing Pipeline
+
+```js
+import { sendServer, getHashServer } from '@walkeros/server-core';
+
+async function processUserEvent(event, userInfo) {
+  // Anonymize user identification
+  const anonymousUserId = await getHashServer(
+    `${userInfo.email}${userInfo.deviceId}`,
+    16,
+  );
+
+  // Prepare event with anonymized data
+  const processedEvent = {
+    ...event,
+    user: {
+      ...event.user,
+      id: anonymousUserId,
+    },
+  };
+
+  // Send to analytics service
+  const result = await sendServer(
+    'https://analytics.example.com/collect',
+    processedEvent,
+    {
+      headers: {
+        'X-API-Key': process.env.ANALYTICS_API_KEY,
+      },
+      timeout: 8000,
+    },
+  );
+
+  return result;
+}
+```
+
+### Privacy-Safe Session Tracking
+
+```js
+async function createSessionId(request) {
+  const fingerprint = [
+    request.headers['user-agent'],
+    request.ip.replace(/\.\d+$/, '.0'), // Anonymize IP
+    new Date().toDateString(), // Daily rotation
+  ].join('|');
+
+  return await getHashServer(fingerprint, 20);
+}
+```
+
+## Error Handling
+
+Server utilities include comprehensive error handling:
+
+```js
+try {
+  const response = await sendServer(url, data, { timeout: 5000 });
+
+  if (response.ok) {
+    // Success - response.data contains the result
+    console.log('Success:', response.data);
+  } else {
+    // Request completed but with error status
+    console.warn('Request failed:', response.error);
+  }
+} catch (error) {
+  // Network error, timeout, or other exception
+  console.error('Network error:', error.message);
+}
+```
+
+## Performance Considerations
+
+### Timeout Configuration
+
+Configure appropriate timeouts based on your use case:
+
+```js
+// Fast analytics endpoint
+await sendServer(url, data, { timeout: 2000 });
+
+// Critical business data
+await sendServer(url, data, { timeout: 15000 });
+```
+
+### Batch Processing
+
+For high-volume scenarios, consider batching:
+
+```js
+const events = [
+  /* ... multiple events ... */
+];
+
+const response = await sendServer(
+  '/api/events/batch',
+  {
+    events,
+    timestamp: Date.now(),
+  },
+  {
+    timeout: 10000,
+  },
+);
+```
+
+### Connection Reuse
+
+The underlying Node.js HTTP agent automatically reuses connections for better
+performance with multiple requests to the same host.
+
+## Security Notes
+
+- **HTTPS Only**: Use HTTPS URLs in production for encrypted transmission
+- **API Keys**: Store sensitive credentials in environment variables
+- **Timeout Limits**: Set reasonable timeouts to prevent hanging requests
+- **Hash Salting**: Use application-specific salts when hashing sensitive data
+
+```js
+// Good security practices
+const apiKey = process.env.ANALYTICS_API_KEY;
+const saltedHash = await getHashServer(`${userData}${process.env.HASH_SALT}`);
+
+await sendServer('https://secure-api.example.com/events', data, {
+  headers: {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  },
+  timeout: 5000,
 });
 ```
 
-## Core Features
+## Integration with Core
 
-- **Server Environment Detection**: Identify Node.js version and server
-  capabilities
-- **Request Processing**: Handle incoming HTTP requests and extract event data
-- **Server-Side Hashing**: Generate consistent identifiers in server
-  environments
-- **Event Transmission**: Server-optimized event sending mechanisms
-- **Server Destinations**: Base classes and utilities for server-side
-  destinations
-- **Performance Optimization**: Memory-efficient processing for high-throughput
-  scenarios
+Server utilities work seamlessly with
+[Core Utilities](https://www.elbwalker.com/docs/core):
+
+```js
+import { getMappingValue, anonymizeIP } from '@walkeros/core';
+import { sendServer, getHashServer } from '@walkeros/server-core';
+
+async function processServerSideEvent(rawEvent, clientIP) {
+  // Use core utilities for data processing
+  const processedData = await getMappingValue(rawEvent, mappingConfig);
+  const safeIP = anonymizeIP(clientIP);
+
+  // Use server utilities for transmission
+  const sessionId = await getHashServer(`${safeIP}${userAgent}`, 16);
+
+  return await sendServer(endpoint, {
+    ...processedData,
+    sessionId,
+    ip: safeIP,
+  });
+}
+```
+
+---
+
+For platform-agnostic utilities, see
+[Core Utilities](https://www.elbwalker.com/docs/core).
 
 ## Contribute
 
