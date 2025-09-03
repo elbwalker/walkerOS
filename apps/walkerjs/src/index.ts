@@ -1,12 +1,13 @@
 import type { Config, Instance } from './types';
-import { createCollector, type CollectorConfig } from '@walkeros/collector';
-import { assign, isObject, createSource } from '@walkeros/core';
+import type { Collector, Elb, WalkerOS } from '@walkeros/core';
+import { createCollector } from '@walkeros/collector';
+import { assign, isObject } from '@walkeros/core';
 import {
   sourceBrowser,
   getAllEvents,
   getEvents,
   getGlobals,
-  type SourceBrowser,
+  SourceBrowser,
 } from '@walkeros/web-source-browser';
 import { sourceDataLayer } from '@walkeros/web-source-datalayer';
 import { dataLayerDestination } from './destination';
@@ -36,12 +37,19 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
   const fullConfig = assign(defaultConfig, config);
 
   // Build collector config with sources
-  const collectorConfig: Partial<CollectorConfig> = {
+  const collectorConfig: Partial<Collector.Config> = {
     ...fullConfig.collector,
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: fullConfig.browser,
-      }),
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: fullConfig.browser,
+        },
+        env: {
+          window: typeof window !== 'undefined' ? window : undefined,
+          document: typeof document !== 'undefined' ? document : undefined,
+        },
+      },
     },
   };
 
@@ -52,31 +60,35 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
       : {};
 
     if (collectorConfig.sources) {
-      collectorConfig.sources.dataLayer = createSource(
-        sourceDataLayer(dataLayerSettings),
-        {
+      collectorConfig.sources.dataLayer = {
+        code: sourceDataLayer,
+        config: {
           settings: dataLayerSettings,
         },
-      );
+      };
     }
   }
 
   const { collector } = await createCollector(collectorConfig);
 
-  // Get browser elb function
-  const browserSource = collector.sources.browser;
-  if (!browserSource?.elb) {
-    throw new Error('Failed to initialize browser source');
+  // Use browser source push method for browser-specific operations
+  // Browser source should always be available in walker.js
+  if (!collector.sources.browser) {
+    throw new Error('Browser source not initialized in walker.js');
   }
+  const browserPush = collector.sources.browser
+    .push as SourceBrowser.BrowserPush;
 
   const instance: Instance = {
     collector,
-    elb: browserSource.elb as SourceBrowser.BrowserPush,
+    elb: browserPush,
   };
 
-  // Set up global variables if configured
-  if (fullConfig.elb) window[fullConfig.elb] = browserSource.elb;
-  if (fullConfig.name) window[fullConfig.name] = collector;
+  // Set up global variables if configured (only in browser environments)
+  if (typeof window !== 'undefined') {
+    if (fullConfig.elb) window[fullConfig.elb] = browserPush;
+    if (fullConfig.name) window[fullConfig.name] = collector;
+  }
 
   return instance;
 }

@@ -9,7 +9,6 @@ declare global {
 
 // DataLayer source configuration extending core source config
 export interface DataLayerSourceConfig extends Source.Config {
-  type: 'dataLayer';
   settings: Settings;
 }
 

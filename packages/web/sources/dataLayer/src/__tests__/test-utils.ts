@@ -1,10 +1,11 @@
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { WalkerOS, Elb } from '@walkeros/core';
 
-// Test utility for creating properly typed mock push function
-export function createMockPush(
-  collectedEvents: WalkerOS.Event[],
-): Collector.Instance['push'] {
-  return jest.fn((event: unknown) => {
+// Test utility for creating properly typed mock elb function
+export function createMockPush(collectedEvents: WalkerOS.Event[]) {
+  const mockElb = jest.fn();
+
+  // Handle the different overloads of Elb.Fn
+  mockElb.mockImplementation((event: unknown, ...args: unknown[]) => {
     collectedEvents.push(event as WalkerOS.Event);
     return Promise.resolve({
       ok: true,
@@ -12,7 +13,9 @@ export function createMockPush(
       queued: [],
       failed: [],
     });
-  }) as Collector.Instance['push'];
+  });
+
+  return mockElb as jest.MockedFunction<Elb.Fn>;
 }
 
 // Type assertion for dataLayer

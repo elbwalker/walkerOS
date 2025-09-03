@@ -80,7 +80,7 @@ describe('WalkerOS Generator Integration', () => {
     jest.clearAllMocks();
 
     // Mock npm view command to return package metadata
-    mockExec.mockImplementation(async (command: string, options?: any) => {
+    mockExec.mockImplementation(async (command: string, options?: unknown) => {
       if (command.includes('npm view')) {
         // Better parsing of package name from command
         const parts = command.split(' ');
@@ -280,7 +280,7 @@ describe('WalkerOS Generator Integration', () => {
 
   it('should fail with helpful error when packages cannot be resolved', async () => {
     // Override mock to simulate npm command failure
-    mockExec.mockImplementation(async (command: string, options?: any) => {
+    mockExec.mockImplementation(async (command: string, options?: unknown) => {
       if (command.includes('npm view @walkeros/nonexistent')) {
         throw new Error(
           'npm ERR! 404 Not Found - GET https://registry.npmjs.org/@walkeros%2fnonexistent',
@@ -408,9 +408,9 @@ describe('WalkerOS Generator Integration', () => {
   it('should generate collector configuration from nodes', async () => {
     const result = await generateWalkerOSBundle({ flow: simpleFlowConfig });
 
-    // Check that collector config includes flow node configurations
-    expect(result.bundle).toContain('"functional": true');
-    expect(result.bundle).toContain('"marketing": false');
+    // Check that collector config includes flow node configurations (compact JSON format)
+    expect(result.bundle).toContain('"functional":true');
+    expect(result.bundle).toContain('"marketing":false');
 
     // Check that sources and destinations from flow config are included
     expect(result.bundle).toContain('browser-source'); // source node ID

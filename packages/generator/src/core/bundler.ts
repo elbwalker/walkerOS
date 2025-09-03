@@ -110,119 +110,124 @@ var ${packageVariable} = (function() {
 }
 
 /**
- * Generate walkerOS initialization code from Flow configuration
- * Implements parts 2, 3, and 4 of the bundle structure
+ * Build package lookup map
  */
-function generateInitCode(config: Flow.Config): string {
-  // Create a lookup map for package names to IDs
+function buildPackageLookup(config: Flow.Config): Map<string, string> {
   const packageLookup = new Map<string, string>();
   config.packages.forEach((pkg) => {
     packageLookup.set(pkg.name, pkg.id);
   });
-  const parts: string[] = [];
+  return packageLookup;
+}
 
-  // Part 2: Configuration Values
-  parts.push('// 2. CONFIGURATION VALUES');
-  parts.push('// Direct use of Flow config');
-  parts.push(`const flowConfig = ${JSON.stringify(config, null, 2)};`);
-  parts.push('');
+/**
+ * Generate source configurations at build time
+ */
+function generateSourceConfigs(
+  config: Flow.Config,
+  packageLookup: Map<string, string>,
+): string {
+  const sourceNodes = config.nodes.filter((node) => node.type === 'source');
 
-  // Part 3: Executing Code
-  parts.push('// 3. EXECUTING CODE');
-  parts.push('// Functions that combine packages with configuration');
-  parts.push('async function initializeWalkerOS() {');
-  parts.push('  const collectorConfig = {};');
-  parts.push('');
+  if (sourceNodes.length === 0) return '';
 
-  // Map Flow nodes to collector configuration
-  parts.push('  // Map Flow nodes to collector configuration');
-  parts.push('  flowConfig.nodes.forEach(node => {');
-  parts.push('    if (node.type === "source") {');
-  parts.push('      collectorConfig.sources = collectorConfig.sources || {};');
-  parts.push('      // Get package ID for this node dynamically');
-  parts.push(
-    '      var sourcePackageId = flowConfig.packages.find(p => p.name === node.package)?.id;',
-  );
-  parts.push(
-    '      if (!sourcePackageId) throw new Error("Package not found: " + node.package);',
-  );
-  parts.push('      var sourcePackage = window[sourcePackageId];');
-  parts.push(
-    '      var sourceFn = sourcePackage.sourceBrowser || sourcePackage.default;',
-  );
-  parts.push('      // Add defensive scope handling for browser sources');
-  parts.push('      var sourceConfig = {...node.config};');
-  parts.push(
-    '      if (sourceConfig.settings && sourceConfig.settings.scope === "body") {',
-  );
-  parts.push('        // Ensure document.body exists or fallback to document');
-  parts.push(
-    '        sourceConfig.settings.scope = document.body || document;',
-  );
-  parts.push('      }');
+  // Get core package ID for createSource function
+  const corePackageId = packageLookup.get('@walkeros/core');
+  if (!corePackageId) {
+    throw new Error(
+      'Core package not found - required for createSource function',
+    );
+  }
 
-  // Find the core package ID dynamically
-  const corePackageId = packageLookup.get('@walkeros/core') || 'walkerOSCore';
-  parts.push(
-    `      collectorConfig.sources[node.id] = ${corePackageId}.createSource(sourceFn, sourceConfig);`,
-  );
+  const sourceConfigs = sourceNodes
+    .map((node) => {
+      const pkgId = packageLookup.get(node.package);
+      if (!pkgId) {
+        throw new Error(
+          `Package not found for source node ${node.id}: ${node.package}`,
+        );
+      }
 
-  parts.push('    } else if (node.type === "destination") {');
-  parts.push(
-    '      collectorConfig.destinations = collectorConfig.destinations || {};',
-  );
-  parts.push('      // Get package ID for this node dynamically');
-  parts.push(
-    '      var destPackageId = flowConfig.packages.find(p => p.name === node.package)?.id;',
-  );
-  parts.push(
-    '      if (!destPackageId) throw new Error("Package not found: " + node.package);',
-  );
-  parts.push('      var destPackage = window[destPackageId];');
-  parts.push(
-    '      var destObj = destPackage.destinationGtag || destPackage.default;',
-  );
-  parts.push(
-    '      collectorConfig.destinations[node.id] = {...destObj, config: node.config};',
-  );
-  parts.push('    } else if (node.type === "collector") {');
-  parts.push('      Object.assign(collectorConfig, node.config);');
-  parts.push('    }');
-  parts.push('  });');
-  parts.push('');
+      return `    "${node.id}": ${corePackageId}.createSource(${pkgId}.sourceBrowser || ${pkgId}.default, ${JSON.stringify(node.config)})`;
+    })
+    .join(',\n');
 
-  // Find the collector package ID dynamically
-  const collectorPackageId =
-    packageLookup.get('@walkeros/collector') || 'walkerOSCollector';
-  parts.push(
-    `  const {collector, elb} = await ${collectorPackageId}.createCollector(collectorConfig);`,
-  );
-  parts.push('  return collector;');
-  parts.push('}');
-  parts.push('');
+  return `  collectorConfig.sources = {\n${sourceConfigs}\n  };`;
+}
 
-  // Part 4: Final Execution
-  parts.push('// 4. FINAL EXECUTION');
-  parts.push('// DOM-ready execution and direct assignment');
-  parts.push('function initializeWhenReady() {');
-  parts.push('  initializeWalkerOS().then(collector => {');
-  parts.push('    window.walkerOS = collector;  // Direct assignment');
-  parts.push('  }).catch(error => {');
-  parts.push('    console.error("WalkerOS initialization failed:", error);');
-  parts.push('  });');
-  parts.push('}');
-  parts.push('');
-  parts.push('// Ensure DOM is ready before initializing browser sources');
-  parts.push('if (document.readyState === "loading") {');
-  parts.push(
-    '  document.addEventListener("DOMContentLoaded", initializeWhenReady);',
-  );
-  parts.push('} else {');
-  parts.push('  // DOM is already ready');
-  parts.push('  initializeWhenReady();');
-  parts.push('}');
+/**
+ * Generate destination configurations at build time
+ */
+function generateDestinationConfigs(
+  config: Flow.Config,
+  packageLookup: Map<string, string>,
+): string {
+  const destNodes = config.nodes.filter((node) => node.type === 'destination');
 
-  return parts.join('\n');
+  if (destNodes.length === 0) return '';
+
+  const destConfigs = destNodes
+    .map((node) => {
+      const pkgId = packageLookup.get(node.package);
+      if (!pkgId) {
+        throw new Error(
+          `Package not found for destination node ${node.id}: ${node.package}`,
+        );
+      }
+
+      return `    "${node.id}": {...(${pkgId}.destinationGtag || ${pkgId}.default), config: ${JSON.stringify(node.config)}}`;
+    })
+    .join(',\n');
+
+  return `  collectorConfig.destinations = {\n${destConfigs}\n  };`;
+}
+
+/**
+ * Generate walkerOS initialization code using static code generation
+ * Pre-computes all configurations at build time for optimal runtime performance
+ */
+function generateInitCode(config: Flow.Config): string {
+  const packageLookup = buildPackageLookup(config);
+
+  // Pre-compute collector configuration
+  const collectorNode = config.nodes.find((node) => node.type === 'collector');
+  const baseCollectorConfig = collectorNode
+    ? JSON.stringify(collectorNode.config)
+    : '{}';
+
+  // Pre-compute source and destination configurations
+  const sourceConfigs = generateSourceConfigs(config, packageLookup);
+  const destConfigs = generateDestinationConfigs(config, packageLookup);
+
+  // Get collector package ID
+  const collectorPkgId = packageLookup.get('@walkeros/collector');
+  if (!collectorPkgId) {
+    throw new Error('Collector package not found in Flow configuration');
+  }
+
+  // Generate minimal, static runtime code
+  return `
+async function initializeWalkerOS() {
+  const collectorConfig = Object.assign({}, ${baseCollectorConfig});
+${sourceConfigs ? sourceConfigs : ''}
+${destConfigs ? destConfigs : ''}
+  const {collector, elb} = await ${collectorPkgId}.createCollector(collectorConfig);
+  return collector;
+}
+
+function initializeWhenReady() {
+  initializeWalkerOS().then(collector => {
+    window.walkerOS = collector;
+  }).catch(error => {
+    console.error("WalkerOS initialization failed:", error);
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeWhenReady);
+} else {
+  initializeWhenReady();
+}`.trim();
 }
 
 /**

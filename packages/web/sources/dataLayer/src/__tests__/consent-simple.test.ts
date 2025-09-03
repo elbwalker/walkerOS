@@ -1,37 +1,50 @@
-import { createCollector } from '@walkeros/collector';
 import { sourceDataLayer } from '../index';
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { WalkerOS, Elb } from '@walkeros/core';
 import { createMockPush, getDataLayer } from './test-utils';
 
-describe('DataLayer Source - Consent Mode (Simple)', () => {
+describe('DataLayer Source - Consent Handling', () => {
   let collectedEvents: WalkerOS.Event[];
-  let collector: Collector.Instance;
+  let mockElb: jest.MockedFunction<Elb.Fn>;
 
   beforeEach(async () => {
-    window.dataLayer = [];
+    delete window.dataLayer;
     collectedEvents = [];
-
-    const mockPush = createMockPush(collectedEvents);
-
-    ({ collector } = await createCollector({
-      tagging: 2,
-    }));
-
-    collector.push = mockPush;
+    mockElb = createMockPush(collectedEvents);
   });
 
-  test('basic gtag consent update', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('processes gtag consent default events', async () => {
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
 
-    // Simulate: gtag('consent', 'update', { ad_storage: 'denied', analytics_storage: 'granted' })
+    getDataLayer().push([
+      'consent',
+      'default',
+      {
+        ad_storage: 'denied',
+        analytics_storage: 'denied',
+        wait_for_update: 500,
+      },
+    ]);
+
+    expect(collectedEvents).toHaveLength(1);
+    expect(collectedEvents[0]).toMatchObject({
+      event: 'dataLayer consent default',
+      data: expect.objectContaining({
+        event: 'consent default',
+        ad_storage: 'denied',
+        analytics_storage: 'denied',
+        wait_for_update: 500,
+      }),
+    });
+  });
+
+  test('processes gtag consent update events', async () => {
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
+
     getDataLayer().push([
       'consent',
       'update',
       {
-        ad_storage: 'denied',
+        ad_storage: 'granted',
         analytics_storage: 'granted',
       },
     ]);
@@ -39,21 +52,18 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
       event: 'dataLayer consent update',
-      data: {
+      data: expect.objectContaining({
         event: 'consent update',
-        ad_storage: 'denied',
+        ad_storage: 'granted',
         analytics_storage: 'granted',
-      },
+      }),
     });
   });
 
-  test('consent default should be processed', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('handles sequential consent events', async () => {
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
 
-    // gtag('consent', 'default', { ad_storage: 'denied', analytics_storage: 'denied' })
+    // First set default consent
     getDataLayer().push([
       'consent',
       'default',
@@ -63,98 +73,149 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
       },
     ]);
 
-    expect(collectedEvents).toHaveLength(1);
+    // Then update consent
+    getDataLayer().push([
+      'consent',
+      'update',
+      {
+        analytics_storage: 'granted',
+      },
+    ]);
+
+    expect(collectedEvents).toHaveLength(2);
+
     expect(collectedEvents[0]).toMatchObject({
       event: 'dataLayer consent default',
-      data: {
-        event: 'consent default',
+      data: expect.objectContaining({
         ad_storage: 'denied',
         analytics_storage: 'denied',
-      },
+      }),
+    });
+
+    expect(collectedEvents[1]).toMatchObject({
+      event: 'dataLayer consent update',
+      data: expect.objectContaining({
+        analytics_storage: 'granted',
+      }),
     });
   });
 
-  test('processes existing consent events on initialization', () => {
-    // Pre-populate dataLayer with consent event
+  test('handles consent events with custom regions', async () => {
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
+
+    getDataLayer().push([
+      'consent',
+      'default',
+      {
+        ad_storage: 'denied',
+        analytics_storage: 'denied',
+        region: ['US-CA', 'US-NY'],
+      },
+    ]);
+
+    expect(collectedEvents).toHaveLength(1);
+    expect(collectedEvents[0]).toMatchObject({
+      event: 'dataLayer consent default',
+      data: expect.objectContaining({
+        ad_storage: 'denied',
+        analytics_storage: 'denied',
+        region: ['US-CA', 'US-NY'],
+      }),
+    });
+  });
+
+  test('ignores malformed consent events', async () => {
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
+
+    // Various malformed consent events
+    getDataLayer().push(['consent']); // Missing action
+    getDataLayer().push(['consent', 'update']); // Missing parameters
+    getDataLayer().push(['consent', 'invalid_action', {}]); // Invalid action
+    getDataLayer().push(['consent', 'update', null]); // Null parameters
+
+    // No events should be processed
+    expect(collectedEvents).toHaveLength(0);
+  });
+
+  test('processes consent events with additional custom properties', async () => {
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
+
     getDataLayer().push([
       'consent',
       'update',
       {
         ad_storage: 'granted',
-        analytics_storage: 'denied',
+        analytics_storage: 'granted',
+        personalization_storage: 'denied',
+        functionality_storage: 'granted',
+        security_storage: 'granted',
+        custom_consent_type: 'partial',
       },
     ]);
 
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
-
-    // Should have processed the existing event
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
       event: 'dataLayer consent update',
-      data: {
+      data: expect.objectContaining({
         event: 'consent update',
         ad_storage: 'granted',
-        analytics_storage: 'denied',
-      },
+        analytics_storage: 'granted',
+        personalization_storage: 'denied',
+        functionality_storage: 'granted',
+        security_storage: 'granted',
+        custom_consent_type: 'partial',
+      }),
     });
   });
 
-  test('handles malformed consent events gracefully', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('handles consent events mixed with other event types', async () => {
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
 
-    // These should be ignored
-    getDataLayer().push(['consent', 'update', null]);
-    getDataLayer().push(['consent', 'update']);
-    getDataLayer().push(['consent']);
+    // Mix consent events with regular events
+    getDataLayer().push({ event: 'page_view', page: 'home' });
+    getDataLayer().push(['consent', 'default', { ad_storage: 'denied' }]);
+    getDataLayer().push(['event', 'user_engagement']);
+    getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
 
-    expect(collectedEvents).toHaveLength(0);
+    expect(collectedEvents).toHaveLength(4);
+
+    expect(collectedEvents[0]).toMatchObject({
+      event: 'dataLayer page_view',
+    });
+    expect(collectedEvents[1]).toMatchObject({
+      event: 'dataLayer consent default',
+    });
+    expect(collectedEvents[2]).toMatchObject({
+      event: 'dataLayer user_engagement',
+    });
+    expect(collectedEvents[3]).toMatchObject({
+      event: 'dataLayer consent update',
+    });
   });
 
-  test('processes multiple consent events', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('processes existing consent events on initialization', async () => {
+    // Setup dataLayer with existing consent events
+    window.dataLayer = [
+      [
+        'consent',
+        'default',
+        { ad_storage: 'denied', analytics_storage: 'denied' },
+      ],
+      { event: 'page_view' },
+      ['consent', 'update', { analytics_storage: 'granted' }],
+    ];
 
-    // Multiple consent updates
-    getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
-    getDataLayer().push([
-      'consent',
-      'update',
-      { analytics_storage: 'granted' },
-    ]);
-    getDataLayer().push(['consent', 'update', { ad_storage: 'denied' }]);
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
 
     expect(collectedEvents).toHaveLength(3);
-    expect(collectedEvents[0].data).toMatchObject({
-      event: 'consent update',
-      ad_storage: 'granted',
+    expect(collectedEvents[0]).toMatchObject({
+      event: 'dataLayer consent default',
     });
-    expect(collectedEvents[1].data).toMatchObject({
-      event: 'consent update',
-      analytics_storage: 'granted',
+    expect(collectedEvents[1]).toMatchObject({
+      event: 'dataLayer page_view',
     });
-    expect(collectedEvents[2].data).toMatchObject({
-      event: 'consent update',
-      ad_storage: 'denied',
+    expect(collectedEvents[2]).toMatchObject({
+      event: 'dataLayer consent update',
     });
-  });
-
-  test('with gtag prefix for backward compatibility', () => {
-    const source = sourceDataLayer({ prefix: 'gtag' });
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
-
-    getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
-
-    expect(collectedEvents).toHaveLength(1);
-    expect(collectedEvents[0].event).toBe('gtag consent update');
   });
 });

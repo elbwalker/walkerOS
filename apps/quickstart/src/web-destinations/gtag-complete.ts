@@ -1,5 +1,5 @@
 import { createCollector } from '@walkeros/collector';
-import { createSource, createDestination } from '@walkeros/core';
+import { createDestination } from '@walkeros/core';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import type { WalkerOS, Collector, Source } from '@walkeros/core';
@@ -16,12 +16,15 @@ export async function setupGtagComplete(): Promise<{
       version: '1.0.0',
     },
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          scope: document.body,
-          session: true,
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            scope: document.body,
+            session: true,
+          },
         },
-      }),
+      },
     },
     destinations: {
       gtag: createDestination(destinationGtag, {

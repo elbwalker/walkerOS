@@ -1,6 +1,5 @@
 import type { Collector, WalkerOS } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
-import { createSource } from '@walkeros/core';
 import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import destinationAPI from '@walkeros/web-destination-api';
@@ -27,13 +26,16 @@ export async function initializeWalker(): Promise<void> {
     run: false,
     consent: { functional: true },
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          pageview: true,
-          session: true,
-          elb: 'elb',
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb',
+          },
         },
-      }),
+      },
     },
     destinations: {
       console: destinationConsole,

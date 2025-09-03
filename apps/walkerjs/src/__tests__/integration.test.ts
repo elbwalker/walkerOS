@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { Collector, WalkerOS } from '@walkeros/core';
 import { createWalkerjs, getAllEvents, getEvents, getGlobals } from '../index';
 
 describe('Walker.js Integration Tests', () => {
@@ -89,7 +89,7 @@ describe('Walker.js Integration Tests', () => {
         },
       });
 
-      // Override the collector's push method directly
+      // Mock collector.push to capture events from sources
       instance.collector.push = mockPush;
 
       // Simulate button click by calling elb directly (simpler than DOM events)
@@ -122,7 +122,7 @@ describe('Walker.js Integration Tests', () => {
         },
       });
 
-      // Override the collector's push method directly
+      // Mock collector.push to capture events from sources
       instance.collector.push = mockPush;
 
       // Track a manual event
@@ -197,10 +197,12 @@ describe('Walker.js Integration Tests', () => {
 
       expect(instance.collector.sources.browser).toMatchObject({
         type: 'browser',
-        settings: {
-          pageview: false,
-          run: false,
-          session: false,
+        config: {
+          settings: {
+            pageview: false,
+            run: false,
+            session: false,
+          },
         },
       });
     });
@@ -214,9 +216,12 @@ describe('Walker.js Integration Tests', () => {
       });
 
       expect(instance.collector.sources.dataLayer).toMatchObject({
-        settings: {
-          name: 'customDataLayer',
-          prefix: 'custom',
+        type: 'dataLayer',
+        config: {
+          settings: {
+            name: 'customDataLayer',
+            prefix: 'custom',
+          },
         },
       });
     });

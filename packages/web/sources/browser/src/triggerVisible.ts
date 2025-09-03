@@ -1,4 +1,4 @@
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { WalkerOS, Elb } from '@walkeros/core';
 import type { Settings, Context } from './types';
 import { tryCatch } from '@walkeros/core';
 import { isVisible } from '@walkeros/web-core';
@@ -16,7 +16,7 @@ const visibilityCache = new WeakMap<
   { isVisible: boolean; lastChecked: number }
 >();
 
-// Visibility state interface for collector
+// Module-level visibility state management
 interface VisibilityState {
   observer?: IntersectionObserver;
   timers: WeakMap<HTMLElement, number>;
@@ -27,10 +27,8 @@ interface VisibilityState {
   >;
 }
 
-// Extended collector interface with visibility state
-interface CollectorWithVisibility extends Collector.Instance {
-  _visibilityState?: VisibilityState;
-}
+// Global state for browser source visibility tracking
+let browserVisibilityState: VisibilityState | null = null;
 
 /**
  * Cached visibility check to reduce expensive isVisible() calls
@@ -54,11 +52,8 @@ function isElementVisible(element: HTMLElement): boolean {
 /**
  * Element cleanup (unobserve + timer + cache cleanup)
  */
-export function unobserveElement(
-  collector: Collector.Instance,
-  element: HTMLElement,
-): void {
-  const state = (collector as CollectorWithVisibility)._visibilityState;
+export function unobserveElement(element: HTMLElement): void {
+  const state = browserVisibilityState;
   if (!state) return;
 
   if (state.observer) {
@@ -78,11 +73,9 @@ export function unobserveElement(
 }
 
 /**
- * Creates an IntersectionObserver for the given collector
+ * Creates an IntersectionObserver for the browser source
  */
-function createObserver(
-  collector: Collector.Instance,
-): IntersectionObserver | undefined {
+function createObserver(): IntersectionObserver | undefined {
   if (!window.IntersectionObserver) return undefined;
 
   return tryCatch(
@@ -90,7 +83,7 @@ function createObserver(
       new window.IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
-            handleIntersection(collector, entry);
+            handleIntersection(entry);
           });
         },
         {
@@ -105,12 +98,9 @@ function createObserver(
 /**
  * Handles intersection changes for observed elements
  */
-function handleIntersection(
-  collector: Collector.Instance,
-  entry: IntersectionObserverEntry,
-): void {
+function handleIntersection(entry: IntersectionObserverEntry): void {
   const target = entry.target as HTMLElement;
-  const state = (collector as CollectorWithVisibility)._visibilityState;
+  const state = browserVisibilityState;
 
   if (!state) return;
 
@@ -168,7 +158,7 @@ function handleIntersection(
               currentConfig.blocked = true;
             } else {
               // Clean up and unobserve only if not a multiple trigger
-              unobserveElement(collector, target);
+              unobserveElement(target);
             }
           }
         }, state.duration);
@@ -193,19 +183,16 @@ function handleIntersection(
 }
 
 /**
- * Initializes visibility tracking for a collector
+ * Initializes visibility tracking for the browser source
  */
-export function initVisibilityTracking(
-  collector: Collector.Instance,
-  duration = 1000,
-): void {
-  if ((collector as CollectorWithVisibility)._visibilityState) return; // Already initialized
+export function initVisibilityTracking(duration = 1000): void {
+  if (browserVisibilityState) return; // Already initialized
 
-  (collector as CollectorWithVisibility)._visibilityState = {
-    observer: createObserver(collector),
+  browserVisibilityState = {
+    observer: createObserver(),
     timers: new WeakMap(),
     duration,
-  } as VisibilityState;
+  };
 }
 
 /**
@@ -216,7 +203,7 @@ export function triggerVisible(
   element: HTMLElement,
   config: { multiple?: boolean } = { multiple: false },
 ): void {
-  const state = (context.collector as CollectorWithVisibility)._visibilityState;
+  const state = browserVisibilityState;
   if (state?.observer && element) {
     // Store element config for later use in intersection handling
     if (!state.elementConfigs) {
@@ -232,15 +219,15 @@ export function triggerVisible(
 }
 
 /**
- * Destroys visibility tracking for a collector, cleaning up all resources
+ * Destroys visibility tracking for the browser source, cleaning up all resources
  */
-export function destroyVisibilityTracking(collector: Collector.Instance): void {
-  const state = (collector as CollectorWithVisibility)._visibilityState;
+export function destroyVisibilityTracking(): void {
+  const state = browserVisibilityState;
   if (!state) return;
 
   if (state.observer) {
     state.observer.disconnect();
   }
 
-  delete (collector as CollectorWithVisibility)._visibilityState;
+  browserVisibilityState = null;
 }

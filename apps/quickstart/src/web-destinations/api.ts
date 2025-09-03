@@ -1,5 +1,5 @@
 import { createCollector } from '@walkeros/collector';
-import { createSource, createDestination } from '@walkeros/core';
+import { createDestination } from '@walkeros/core';
 import { destinationAPI } from '@walkeros/web-destination-api';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import type { WalkerOS, Collector, Source } from '@walkeros/core';
@@ -16,12 +16,15 @@ export async function setupAPIDestination(): Promise<{
       api_version: 'v1',
     },
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          scope: document.body,
-          session: true,
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            scope: document.body,
+            session: true,
+          },
         },
-      }),
+      },
     },
     destinations: {
       api: createDestination(destinationAPI, {

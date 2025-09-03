@@ -22,7 +22,7 @@ export interface PackageCacheEntry {
   version: string;
   code: string;
   timestamp: number;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CacheMetadata {
@@ -179,7 +179,7 @@ export function cachePackageCode(
   pkg: Flow.Package,
   code: string,
   cacheDir: string,
-  metadata?: any,
+  metadata?: Record<string, unknown>,
 ): void {
   const key = getCacheKey(pkg);
 

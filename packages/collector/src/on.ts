@@ -58,6 +58,29 @@ export function onApply(
     });
   }
 
+  // Push to sources (similar to destination pattern)
+  // Calculate context data once for all sources
+  let contextData: unknown;
+  switch (type) {
+    case Const.Commands.Consent:
+      contextData = config || collector.consent;
+      break;
+    case Const.Commands.Session:
+      contextData = collector.session;
+      break;
+    case Const.Commands.Ready:
+    case Const.Commands.Run:
+    default:
+      contextData = undefined;
+      break;
+  }
+
+  Object.values(collector.sources).forEach((source) => {
+    if (source.on) {
+      tryCatch(source.on)(type, contextData);
+    }
+  });
+
   if (!onConfig.length) return; // No on-events registered, nothing to do
 
   switch (type) {

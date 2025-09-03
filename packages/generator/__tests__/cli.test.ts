@@ -120,7 +120,7 @@ describe('CLI Integration Tests', () => {
     // Verify it's a valid IIFE bundle
     expect(result).toContain('(function(window) {');
     expect(result).toContain('WalkerOS Bundle');
-    expect(result).toContain('async function initWalkerOS()');
+    expect(result).toContain('async function initializeWalkerOS()');
     expect(result).toContain('window.walkerOS');
   }, 30000);
 
@@ -142,7 +142,7 @@ describe('CLI Integration Tests', () => {
     const bundleContent = readFileSync(outputPath, 'utf-8');
     expect(bundleContent).toContain('(function(window) {');
     expect(bundleContent).toContain('WalkerOS Bundle');
-    expect(bundleContent).toContain('async function initWalkerOS()');
+    expect(bundleContent).toContain('async function initializeWalkerOS()');
   }, 30000);
 
   it('should show verbose output with --verbose flag', () => {
@@ -233,7 +233,7 @@ describe('CLI Integration Tests', () => {
     // Verify it's a valid IIFE bundle
     expect(result).toContain('(function(window) {');
     expect(result).toContain('WalkerOS Bundle');
-    expect(result).toContain('async function initWalkerOS()');
+    expect(result).toContain('async function initializeWalkerOS()');
     expect(result).toContain('window.walkerOS');
   }, 30000);
 
@@ -285,7 +285,7 @@ describe('CLI Integration Tests', () => {
     const bundleContent = readFileSync(outputPath, 'utf-8');
     expect(bundleContent).toContain('(function(window) {');
     expect(bundleContent).toContain('WalkerOS Bundle');
-    expect(bundleContent).toContain('async function initWalkerOS()');
+    expect(bundleContent).toContain('async function initializeWalkerOS()');
   }, 30000);
 
   it('should show verbose output with JSON string input', () => {

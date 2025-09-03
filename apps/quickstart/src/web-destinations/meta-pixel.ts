@@ -1,5 +1,5 @@
 import { createCollector } from '@walkeros/collector';
-import { createSource, createDestination } from '@walkeros/core';
+import { createDestination } from '@walkeros/core';
 import { destinationMeta } from '@walkeros/web-destination-meta';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import type { WalkerOS, Collector, Source } from '@walkeros/core';
@@ -16,12 +16,15 @@ export async function setupMetaPixel(): Promise<{
       currency: 'USD',
     },
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          scope: document.body,
-          session: true,
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            scope: document.body,
+            session: true,
+          },
         },
-      }),
+      },
     },
     destinations: {
       meta: createDestination(destinationMeta, {

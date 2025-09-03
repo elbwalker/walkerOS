@@ -1,5 +1,4 @@
-import type { InitSource } from '@walkeros/collector';
-import type { WalkerOS, Source, Collector } from '@walkeros/core';
+import type { WalkerOS, Source } from '@walkeros/core';
 import { isArray, isObject, isString, tryCatch } from '@walkeros/core';
 
 // Global flag to prevent infinite loops
@@ -9,8 +8,8 @@ let isProcessing = false;
  * DataLayer interceptor - handles dataLayer.push interception and event transformation
  */
 export function interceptDataLayer(
-  collector: Collector.Instance,
-  config: InitSource,
+  elb: Source.Environment['elb'],
+  config: Source.Config,
 ): void {
   const settings = config.settings as {
     name?: string;
@@ -41,7 +40,7 @@ export function interceptDataLayer(
     try {
       // Process each argument
       for (const arg of args) {
-        processEvent(collector, settings, arg);
+        processEvent(elb, settings, arg);
       }
     } finally {
       isProcessing = false;
@@ -56,7 +55,7 @@ export function interceptDataLayer(
  * Process existing events on initialization
  */
 export function processExistingEvents(
-  collector: Collector.Instance,
+  elb: Source.Environment['elb'],
   config: Source.Config,
 ): void {
   const settings = config.settings as {
@@ -76,7 +75,7 @@ export function processExistingEvents(
   try {
     // Process all existing events
     for (const event of dataLayer) {
-      processEvent(collector, settings, event);
+      processEvent(elb, settings, event);
     }
   } finally {
     isProcessing = false;
@@ -87,7 +86,7 @@ export function processExistingEvents(
  * Process a single event - handles filtering, transformation, and WalkerOS event creation
  */
 function processEvent(
-  collector: Collector.Instance,
+  elb: Source.Environment['elb'],
   settings: { prefix?: string; filter?: (event: unknown) => boolean } = {},
   rawEvent: unknown,
 ): void {
@@ -138,9 +137,9 @@ function processEvent(
     },
   };
 
-  // Push to collector
+  // Push to elb
   tryCatch(
-    () => collector.push(walkerEvent),
+    () => elb(walkerEvent),
     () => {}, // Silently handle push errors
   )();
 }
@@ -189,6 +188,8 @@ function transformGtagArgs(
     case 'consent':
       // Consent requires action and params
       if (!isString(action) || args.length < 3) return null;
+      // Only allow 'default' and 'update' actions for consent
+      if (action !== 'default' && action !== 'update') return null;
       // Params must be a valid object (not null)
       if (!isObject(params) || params === null) return null;
 

@@ -3,6 +3,9 @@ import 'jest';
 
 // Global test state for captured logs (when needed)
 declare global {
+  interface Window {
+    [key: string]: unknown;
+  }
   var capturedLogs: string[];
   var capturedErrors: string[];
 }
@@ -33,10 +36,9 @@ beforeEach(() => {
 
 afterEach(() => {
   // Clean up any global state
-  delete (window as any).walkerOS;
-  delete (window as any).elb;
-  delete (window as any).elbLayer;
-  delete (window as any).gtag;
+  delete window.walkerOS;
+  delete window.elb;
+  delete window.elbLayer;
 });
 
 // Add helpful matchers

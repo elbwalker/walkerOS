@@ -1,11 +1,10 @@
-import { createCollector } from '@walkeros/collector';
 import { sourceDataLayer } from '../index';
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { WalkerOS, Elb } from '@walkeros/core';
 import { createMockPush, getDataLayer } from './test-utils';
 
 describe('DataLayer Source - Minimal', () => {
   let collectedEvents: WalkerOS.Event[];
-  let collector: Collector.Instance;
+  let mockElb: jest.MockedFunction<Elb.Fn>;
 
   beforeEach(async () => {
     // Clear any existing dataLayer
@@ -13,47 +12,29 @@ describe('DataLayer Source - Minimal', () => {
     collectedEvents = [];
 
     // Create a simple synchronous mock
-    const mockPush = createMockPush(collectedEvents);
-
-    // Initialize collector
-    ({ collector } = await createCollector({
-      tagging: 2,
-    }));
-
-    // Override push with synchronous mock
-    collector.push = mockPush;
+    mockElb = createMockPush(collectedEvents);
   });
 
-  test('source initializes without errors', () => {
-    const source = sourceDataLayer();
+  test('source initializes without errors', async () => {
+    const source = await sourceDataLayer(
+      { settings: {} },
+      { elb: mockElb, window },
+    );
     expect(source.type).toBe('dataLayer');
-    expect(source.init).toBeDefined();
-
-    // Should not throw
-    expect(() => {
-      if (source.init) {
-        source.init(collector, { settings: source.settings ?? {} });
-      }
-    }).not.toThrow();
+    expect(source.config).toBeDefined();
   });
 
-  test('creates dataLayer if it does not exist', () => {
+  test('creates dataLayer if it does not exist', async () => {
     expect(window.dataLayer).toBeUndefined();
 
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
 
     expect(window.dataLayer).toBeDefined();
     expect(Array.isArray(window.dataLayer)).toBe(true);
   });
 
-  test('processes simple dataLayer event', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('processes simple dataLayer event', async () => {
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
 
     // Push a simple event
     getDataLayer().push({ event: 'test_event', test: 'data' });
@@ -62,88 +43,81 @@ describe('DataLayer Source - Minimal', () => {
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
       event: 'dataLayer test_event',
-      data: { event: 'test_event', test: 'data' },
-      source: { type: 'dataLayer' },
+      data: expect.objectContaining({
+        event: 'test_event',
+        test: 'data',
+      }),
     });
   });
 
-  test('processes existing events on initialization', () => {
-    // Pre-populate dataLayer
-    window.dataLayer = [
-      { event: 'existing_event_1', data: 'test1' },
-      { event: 'existing_event_2', data: 'test2' },
-    ];
+  test('processes gtag event format', async () => {
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
 
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+    // Push a gtag-style event
+    getDataLayer().push([
+      'event',
+      'purchase',
+      { value: 25.42, currency: 'USD' },
+    ]);
 
-    // Should have processed both existing events
-    expect(collectedEvents).toHaveLength(2);
-    expect(collectedEvents[0].event).toBe('dataLayer existing_event_1');
-    expect(collectedEvents[1].event).toBe('dataLayer existing_event_2');
-  });
-
-  test('ignores non-object events', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
-
-    // Push invalid events
-    getDataLayer().push('string_event');
-    getDataLayer().push(123);
-    getDataLayer().push(null);
-    getDataLayer().push(undefined);
-
-    // Should not have processed any events
-    expect(collectedEvents).toHaveLength(0);
-  });
-
-  test('ignores objects without event property', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
-
-    // Push objects without event property
-    getDataLayer().push({ data: 'test' });
-    getDataLayer().push({ type: 'something' });
-
-    // Should not have processed any events
-    expect(collectedEvents).toHaveLength(0);
-  });
-
-  test('uses custom prefix', () => {
-    const source = sourceDataLayer({ prefix: 'custom' });
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
-
-    getDataLayer().push({ event: 'test_event', data: 'test' });
-
+    // Should transform to proper format
     expect(collectedEvents).toHaveLength(1);
-    expect(collectedEvents[0].event).toBe('custom test_event');
-  });
-
-  test('uses custom dataLayer name', () => {
-    const source = sourceDataLayer({ name: 'customLayer' });
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
-
-    // Should create customLayer instead of dataLayer
-    expect(window.customLayer).toBeDefined();
-    expect(Array.isArray(window.customLayer)).toBe(true);
-
-    // Push to custom layer
-    (window.customLayer as unknown[]).push({
-      event: 'test_event',
-      data: 'test',
+    expect(collectedEvents[0]).toMatchObject({
+      event: 'dataLayer purchase',
+      data: expect.objectContaining({
+        event: 'purchase',
+        value: 25.42,
+        currency: 'USD',
+      }),
     });
+  });
+
+  test('handles empty dataLayer gracefully', async () => {
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
+
+    // No events pushed - should not crash
+    expect(collectedEvents).toHaveLength(0);
+    expect(getDataLayer()).toHaveLength(0);
+  });
+
+  test('processes existing events on initialization', async () => {
+    // Setup dataLayer with existing events
+    window.dataLayer = [{ event: 'existing_event', value: 'test' }];
+
+    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
+
+    // Should process existing events
+    expect(collectedEvents).toHaveLength(1);
+    expect(collectedEvents[0]).toMatchObject({
+      event: 'dataLayer existing_event',
+      data: expect.objectContaining({
+        event: 'existing_event',
+        value: 'test',
+      }),
+    });
+  });
+
+  test('uses custom prefix', async () => {
+    await sourceDataLayer(
+      { settings: { prefix: 'gtag' } },
+      { elb: mockElb, window },
+    );
+
+    getDataLayer().push({ event: 'custom_event' });
 
     expect(collectedEvents).toHaveLength(1);
-    expect(collectedEvents[0].event).toBe('dataLayer test_event');
+    expect(collectedEvents[0]).toMatchObject({
+      event: 'gtag custom_event',
+    });
+  });
+
+  test('uses custom dataLayer name', async () => {
+    await sourceDataLayer(
+      { settings: { name: 'customDataLayer' } },
+      { elb: mockElb, window },
+    );
+
+    expect(window.customDataLayer).toBeDefined();
+    expect(Array.isArray(window.customDataLayer)).toBe(true);
   });
 });

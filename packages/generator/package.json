@@ -29,6 +29,7 @@
     "walkeros-gen": "./dist/cli.js"
   },
   "dependencies": {
+    "@walkeros/core": "^0.0.8",
     "semver": "^7.6.3",
     "commander": "^11.1.0",
     "chalk": "^5.3.0"
@@ -36,9 +37,6 @@
   "devDependencies": {
     "@types/semver": "^7.5.8",
     "@types/node": "^20.0.0"
-  },
-  "peerDependencies": {
-    "@walkeros/core": "workspace:*"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

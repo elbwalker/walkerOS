@@ -438,21 +438,55 @@ export function createPushResult(
  * Initializes a map of destinations.
  *
  * @param destinations - The destinations to initialize.
+ * @param collector - The collector instance for destination init context.
  * @returns The initialized destinations.
  */
-export function initDestinations(
-  destinations: Destination.InitDestinations,
-): Collector.Destinations {
-  return Object.entries(destinations).reduce<Collector.Destinations>(
-    (acc, [name, destination]) => {
-      acc[name] = {
-        ...destination,
-        config: isObject(destination.config) ? destination.config : {},
+export async function initDestinations(
+  collector: Collector.Instance,
+  destinations: Destination.InitDestinations = {},
+): Promise<Collector.Destinations> {
+  const result: Collector.Destinations = {};
+
+  for (const [name, destination] of Object.entries(destinations)) {
+    result[name] = {
+      ...destination,
+      config: isObject(destination.config) ? destination.config : {},
+    };
+
+    // Actually call destination init functions if they exist
+    // @TODO We shouldn't call init here, it's done in the destination.ts file
+    if (destination.init && !destination.config?.init && collector) {
+      const context: Destination.Context = {
+        collector,
+        config: result[name].config,
+        env: mergeEnvironments(destination.env, destination.config?.env),
       };
-      return acc;
-    },
-    {},
-  );
+
+      try {
+        const configResult = await destination.init(context);
+        if (configResult === false) {
+          // If init returns false, don't include this destination
+          delete result[name];
+          continue;
+        }
+        if (configResult) {
+          result[name].config = {
+            ...result[name].config,
+            ...configResult,
+            init: true,
+          };
+        } else {
+          result[name].config = { ...result[name].config, init: true };
+        }
+      } catch (error) {
+        // If init fails, don't include this destination
+        delete result[name];
+        continue;
+      }
+    }
+  }
+
+  return result;
 }
 
 /**

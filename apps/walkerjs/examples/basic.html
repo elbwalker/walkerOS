@@ -84,7 +84,7 @@
                 class="product"
                 data-elb="product"
                 data-elb-product="id:123;name:Blue T-Shirt;price:29.99"
-                             >
+              >
                 <h3>Blue T-Shirt</h3>
                 <p>A comfortable blue t-shirt made from 100% cotton.</p>
                 <p>Price: $29.99</p>
@@ -94,7 +94,7 @@
                 <button
                   data-elbaction="click:view_details"
                   data-elb-product="color:blue;size:M"
-                                 >
+                >
                   View Details
                 </button>
               </div>
@@ -103,7 +103,7 @@
                 class="product"
                 data-elb="product"
                 data-elb-product="id:456;name:Red Hoodie;price:49.99"
-                             >
+              >
                 <h3>Red Hoodie</h3>
                 <p>A warm red hoodie perfect for cold weather.</p>
                 <p>Price: $49.99</p>
@@ -113,7 +113,7 @@
                 <button
                   data-elbaction="click:view_details"
                   data-elb-product="color:red;size:L"
-                                 >
+                >
                   View Details
                 </button>
               </div>
@@ -134,7 +134,7 @@
               data-elb="feature"
               data-elb-feature="id:hover_basic;name:Basic Hover"
               data-elbaction="hover:preview"
-                         >
+            >
               <h4>Basic Hover Tracking</h4>
               <p>Triggers immediately on hover</p>
               <span class="trigger-indicator"
@@ -147,7 +147,7 @@
               data-elb="feature"
               data-elb-feature="id:hover_duration;name:Duration Hover"
               data-elbaction="hover(1000):interested"
-                         >
+            >
               <h4>Duration Hover (1s)</h4>
               <p>Triggers after hovering for 1 second</p>
               <span class="trigger-indicator"
@@ -160,7 +160,7 @@
               data-elb="feature"
               data-elb-feature="id:hover_multi;name:Multi Trigger"
               data-elbaction="hover:quick_look;hover(2000):deep_interest;click:select"
-                         >
+            >
               <h4>Multi-Trigger Element</h4>
               <p>Immediate hover + 2s hover + click tracking</p>
               <span class="trigger-indicator">hover + hover(2000) + click</span>
@@ -171,7 +171,7 @@
               data-elb="navigation"
               data-elb-navigation="section:demo;item:hover_nav"
               data-elbaction="hover(500):navigation_preview"
-                         >
+            >
               <h4>Navigation Hover (500ms)</h4>
               <p>Simulates menu hover with 500ms delay</p>
               <span class="trigger-indicator"
@@ -194,7 +194,7 @@
             data-elb="article"
             data-elb-article="id:scroll_demo;title:Advanced Walker.js Features"
             data-elbaction="scroll(25):quarter_read;scroll(50):half_read;scroll(75):mostly_read;scroll(100):fully_read"
-                     >
+          >
             <h3>Understanding Walker.js Advanced Features</h3>
 
             <div class="scroll-marker" data-marker="start">
@@ -299,7 +299,7 @@
               data-elb="advertisement"
               data-elb-advertisement="id:banner_1;type:display;placement:demo"
               data-elbaction="visible:impression"
-                         >
+            >
               <h4>🎯 Ad Banner</h4>
               <p>Tracks impression immediately when visible</p>
               <span class="trigger-indicator"
@@ -313,7 +313,7 @@
               data-elb="content"
               data-elb-content="id:feature_highlight;section:demo"
               data-elbaction="visible(1000):engaged_view"
-                         >
+            >
               <h4>📖 Content Engagement</h4>
               <p>Tracks engagement after 1 second of visibility</p>
               <span class="trigger-indicator"
@@ -327,7 +327,7 @@
               data-elb="media"
               data-elb-media="id:demo_video;type:promotional"
               data-elbaction="visible:video_impression;visible(2000):video_engagement"
-                         >
+            >
               <h4>🎥 Video Content</h4>
               <p>Immediate impression + 2s engagement tracking</p>
               <span class="trigger-indicator">visible + visible(2000)</span>
@@ -339,7 +339,7 @@
               data-elb="testimonial"
               data-elb-testimonial="id:customer_review;rating:5"
               data-elbaction="visible(500):testimonial_viewed"
-                         >
+            >
               <h4>⭐ Customer Testimonial</h4>
               <p>Tracks testimonial views after 500ms</p>
               <span class="trigger-indicator"
@@ -353,7 +353,7 @@
               data-elb="cta"
               data-elb-cta="id:signup_prompt;priority:high"
               data-elbaction="visible:cta_impression;visible(3000):cta_consideration;click:cta_click"
-                         >
+            >
               <h4>🚀 Call to Action</h4>
               <p>Multi-stage tracking: impression → consideration → click</p>
               <span class="trigger-indicator"
@@ -368,7 +368,7 @@
               data-elb="form"
               data-elb-form="id:newsletter;type:email_capture"
               data-elbaction="visible(750):form_viewed"
-                         >
+            >
               <h4>📧 Newsletter Signup</h4>
               <p>Form impression tracking with 750ms delay</p>
               <span class="trigger-indicator"
@@ -422,7 +422,6 @@
         ) {
           // Initialize explorer with default selector [data-elb]
           const explorer = WalkerOSExplorer.elbExplorer();
-          console.log('🔍 Explorer initialized');
         }
       });
 

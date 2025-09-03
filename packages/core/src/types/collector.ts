@@ -1,4 +1,5 @@
 import type {
+  Source,
   Destination,
   Elb as ElbTypes,
   Handler,
@@ -25,6 +26,8 @@ export interface Config {
   globalsStatic: WalkerOS.Properties;
   /** Static session data even on a new run */
   sessionStatic: Partial<SessionData>;
+  /** Source configurations */
+  sources?: Source.InitSources;
   /** Destination configurations */
   destinations?: Destination.InitDestinations;
   /** Initial custom properties */
@@ -53,18 +56,11 @@ export interface SessionData extends WalkerOS.Properties {
 }
 
 export interface Sources {
-  [id: string]: CollectorSource;
+  [id: string]: Source.Instance;
 }
 
 export interface Destinations {
   [id: string]: Destination.Instance;
-}
-
-export interface CollectorSource {
-  type: string;
-  mapping?: unknown;
-  settings?: Record<string, unknown>;
-  elb?: WalkerOS.AnyFunction; // Add elb property
 }
 
 export type CommandType =

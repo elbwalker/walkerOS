@@ -1,8 +1,7 @@
 import type { DestinationServer, Elb } from '../types';
-import type { WalkerOS } from '@walkeros/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 import { createEvent } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
-import type { CollectorConfig } from '@walkeros/collector';
 
 describe('Server Collector', () => {
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
@@ -15,7 +14,7 @@ describe('Server Collector', () => {
   let mockEvent: WalkerOS.Event;
   let result: Elb.PushResult;
 
-  async function getCollector(config?: Partial<CollectorConfig>) {
+  async function getCollector(config?: Partial<Collector.Config>) {
     const finalConfig = config || {
       destinations: { mock: mockDestination },
     };

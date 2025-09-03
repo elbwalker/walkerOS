@@ -152,7 +152,12 @@ async function resolvePackageCode(
     // Also cache it if caching is enabled
     if (cacheDir && !options?.noCache) {
       const metadata = await fetchPackageMetadata(pkg.name, pkg.version);
-      cachePackageCode(pkg, extractedCode, cacheDir, metadata);
+      cachePackageCode(
+        pkg,
+        extractedCode,
+        cacheDir,
+        metadata as unknown as Record<string, unknown>,
+      );
     }
 
     return extractedCode;
@@ -208,7 +213,12 @@ async function resolvePackageCode(
 
     // Cache the resolved package code (unless noCache is true)
     if (cacheDir && !options?.noCache) {
-      cachePackageCode(pkg, packageCode, cacheDir, metadata);
+      cachePackageCode(
+        pkg,
+        packageCode,
+        cacheDir,
+        metadata as unknown as Record<string, unknown>,
+      );
     }
 
     return packageCode;
@@ -345,8 +355,11 @@ async function installAndExtractPackage(
           `✅ Successfully installed ${metadata.name}@${metadata.version}`,
         );
       }
-    } catch (installError: any) {
-      const errorMessage = installError.message || installError.toString();
+    } catch (installError: unknown) {
+      const errorMessage =
+        installError instanceof Error
+          ? installError.message
+          : String(installError);
       console.error(
         `❌ npm install failed for ${metadata.name}@${metadata.version}:`,
         errorMessage,

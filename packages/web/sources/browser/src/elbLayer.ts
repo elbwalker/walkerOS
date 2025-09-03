@@ -8,17 +8,23 @@ import { translateToCoreCollector } from './translation';
  * This creates window.elbLayer array and processes any existing commands
  */
 export function initElbLayer(
-  collector: Collector.Instance,
-  config: ELBLayerConfig & { prefix?: string } = {},
+  elb: Elb.Fn,
+  config: ELBLayerConfig & { prefix?: string; window?: Window } = {},
 ): void {
   const layerName = config.name || 'elbLayer';
+  const windowObj =
+    config.window || (typeof window !== 'undefined' ? window : undefined);
 
-  // Ensure elbLayer exists on window
-  if (!window[layerName]) {
-    window[layerName] = [];
+  if (!windowObj) {
+    return; // Skip if no window available
   }
 
-  const elbLayer = window[layerName] as ELBLayer;
+  // Ensure elbLayer exists on window
+  if (!windowObj[layerName]) {
+    windowObj[layerName] = [];
+  }
+
+  const elbLayer = windowObj[layerName] as ELBLayer;
 
   // Override the push method to process items immediately
   elbLayer.push = function (...args: Array<Elb.Layer | IArguments>) {
@@ -27,7 +33,7 @@ export function initElbLayer(
       const argsArray = [...Array.from(args[0])];
       const i = Array.prototype.push.apply(this, [argsArray]);
       // Process the arguments as a single command
-      pushCommand(collector, config.prefix, argsArray);
+      pushCommand(elb, config.prefix, argsArray);
       return i;
     }
 
@@ -35,7 +41,7 @@ export function initElbLayer(
 
     // Process each pushed item immediately
     args.forEach((item) => {
-      pushCommand(collector, config.prefix, item);
+      pushCommand(elb, config.prefix, item);
     });
 
     return i;
@@ -43,7 +49,7 @@ export function initElbLayer(
 
   // Process any existing commands that were pushed before initialization
   if (Array.isArray(elbLayer) && elbLayer.length > 0) {
-    processElbLayer(collector, config.prefix, elbLayer);
+    processElbLayer(elb, config.prefix, elbLayer);
   }
 }
 
@@ -52,13 +58,13 @@ export function initElbLayer(
  * Commands are processed in order with walker commands getting priority
  */
 function processElbLayer(
-  collector: Collector.Instance,
+  elb: Elb.Fn,
   prefix: string = 'data-elb',
   elbLayer: ELBLayer,
 ): void {
   // Process in two phases: walker commands first, then events
-  processPredefined(collector, prefix, elbLayer, true); // Commands only
-  processPredefined(collector, prefix, elbLayer, false); // Events only
+  processPredefined(elb, prefix, elbLayer, true); // Commands only
+  processPredefined(elb, prefix, elbLayer, false); // Events only
 
   // Clear the array after processing
   elbLayer.length = 0;
@@ -68,7 +74,7 @@ function processElbLayer(
  * Process predefined commands with execution order handling
  */
 function processPredefined(
-  collector: Collector.Instance,
+  elb: Elb.Fn,
   prefix: string,
   elbLayer: ELBLayer,
   commandsOnly: boolean,
@@ -131,15 +137,15 @@ function processPredefined(
 
   events.forEach((item) => {
     // Use the elb push function directly to match legacy behavior
-    pushCommand(collector, prefix, item);
+    pushCommand(elb, prefix, item);
   });
 }
 
 /**
- * Push command directly using collector or translation based on type
+ * Push command directly using elb or translation based on type
  */
 function pushCommand(
-  collector: Collector.Instance,
+  elb: Elb.Fn,
   prefix: string = 'data-elb',
   item: unknown,
 ): void {
@@ -155,14 +161,14 @@ function pushCommand(
 
         // Walker commands go directly to collector
         if (isString(action) && action.startsWith('walker ')) {
-          collector.push(action, rest[0]);
+          elb(action, rest[0]);
           return;
         }
 
         // Regular events go through translation
         translateToCoreCollector(
           {
-            collector,
+            elb,
             settings: {
               prefix,
               scope: document,
@@ -180,8 +186,8 @@ function pushCommand(
         if (Object.keys(item).length === 0) {
           return;
         }
-        // Object events go directly to collector
-        collector.push(item as WalkerOS.DeepPartialEvent);
+        // Object events go directly to elb
+        elb(item as WalkerOS.DeepPartialEvent);
       }
     },
     () => {

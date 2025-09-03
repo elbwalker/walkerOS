@@ -1,19 +1,16 @@
-import type { WalkerOS, Source, Collector } from '@walkeros/core';
-import { createSource } from '@walkeros/collector';
+import type { Source, Collector } from '@walkeros/core';
 import { sourceBrowser } from '../index';
 import type { Settings, BrowserSourceConfig } from '../types';
-import type { BrowserPush } from '../types/elb';
 
 /**
  * Test helper to create browser sources for testing
- * Returns a promise that resolves to the source creation result
+ * Returns the source instance with elb function for test compatibility
  */
 export async function createBrowserSource(
   collector: Collector.Instance,
   settings: Partial<Settings> = {},
-): Promise<Source.CreateSource<BrowserSourceConfig, BrowserPush>> {
-  const fullConfig: BrowserSourceConfig = {
-    type: 'browser',
+): Promise<Source.Instance<BrowserSourceConfig> & { elb: Function }> {
+  const config: Partial<BrowserSourceConfig> = {
     settings: {
       prefix: 'data-elb',
       scope: document,
@@ -25,5 +22,18 @@ export async function createBrowserSource(
     },
   };
 
-  return createSource(collector, sourceBrowser, fullConfig);
+  // Use Source.Environment with collector's elb function
+  const env: Source.Environment = {
+    elb: collector.push,
+  };
+
+  // Call sourceBrowser directly with new pattern
+  const source = await sourceBrowser(config, env);
+
+  // Get the elb function from window (set by the browser source)
+  const elbName = config.settings?.elb || 'elb';
+  const elb = (window[elbName] as Function) || collector.push;
+
+  // Return source with elb for test compatibility
+  return { ...source, elb };
 }

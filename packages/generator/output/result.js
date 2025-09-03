@@ -20,6 +20,9 @@
       if (packageName === '@walkeros/core') {
         return walkerOSCore || {};
       }
+      if (packageName === '@walkeros/web-core') {
+        return walkerOSWebCore || {};
+      }
       if (packageName === '@walkeros/collector') {
         return walkerOSCollector || {};
       }
@@ -28,9 +31,6 @@
       }
       if (packageName === '@walkeros/web-destination-gtag') {
         return walkerOSDestinationGtag || {};
-      }
-      if (packageName === '@walkeros/web-core') {
-        return walkerOSWebCore || {};
       }
       // Return empty object for unknown dependencies
       return {};
@@ -1066,6 +1066,9 @@
       if (packageName === '@walkeros/core') {
         return walkerOSCore || {};
       }
+      if (packageName === '@walkeros/web-core') {
+        return walkerOSWebCore || {};
+      }
       if (packageName === '@walkeros/collector') {
         return walkerOSCollector || {};
       }
@@ -1074,9 +1077,6 @@
       }
       if (packageName === '@walkeros/web-destination-gtag') {
         return walkerOSDestinationGtag || {};
-      }
-      if (packageName === '@walkeros/web-core') {
-        return walkerOSWebCore || {};
       }
       // Return empty object for unknown dependencies
       return {};
@@ -1500,6 +1500,9 @@
       if (packageName === '@walkeros/core') {
         return walkerOSCore || {};
       }
+      if (packageName === '@walkeros/web-core') {
+        return walkerOSWebCore || {};
+      }
       if (packageName === '@walkeros/collector') {
         return walkerOSCollector || {};
       }
@@ -1508,9 +1511,6 @@
       }
       if (packageName === '@walkeros/web-destination-gtag') {
         return walkerOSDestinationGtag || {};
-      }
-      if (packageName === '@walkeros/web-core') {
-        return walkerOSWebCore || {};
       }
       // Return empty object for unknown dependencies
       return {};
@@ -2136,6 +2136,9 @@
       if (packageName === '@walkeros/core') {
         return walkerOSCore || {};
       }
+      if (packageName === '@walkeros/web-core') {
+        return walkerOSWebCore || {};
+      }
       if (packageName === '@walkeros/collector') {
         return walkerOSCollector || {};
       }
@@ -2144,9 +2147,6 @@
       }
       if (packageName === '@walkeros/web-destination-gtag') {
         return walkerOSDestinationGtag || {};
-      }
-      if (packageName === '@walkeros/web-core') {
-        return walkerOSWebCore || {};
       }
       // Return empty object for unknown dependencies
       return {};
@@ -3094,6 +3094,9 @@
       if (packageName === '@walkeros/core') {
         return walkerOSCore || {};
       }
+      if (packageName === '@walkeros/web-core') {
+        return walkerOSWebCore || {};
+      }
       if (packageName === '@walkeros/collector') {
         return walkerOSCollector || {};
       }
@@ -3102,9 +3105,6 @@
       }
       if (packageName === '@walkeros/web-destination-gtag') {
         return walkerOSDestinationGtag || {};
-      }
-      if (packageName === '@walkeros/web-core') {
-        return walkerOSWebCore || {};
       }
       // Return empty object for unknown dependencies
       return {};
@@ -3779,56 +3779,15 @@
     return module.exports;
   })();
 
-  // 2. CONFIGURATION VALUES
-  // Direct use of Flow config
-  const flowConfig = {
-    _comment:
-      'Full working demo with browser source and gtag destination - use this for complete testing',
-    packages: [
-      {
-        name: '@walkeros/core',
-        version: '0.0.8',
-        type: 'core',
-      },
-      {
-        name: '@walkeros/collector',
-        version: '0.0.8',
-        type: 'collector',
-      },
-      {
-        name: '@walkeros/web-core',
-        version: '0.0.8',
-        type: 'core',
-      },
-      {
-        name: '@walkeros/web-source-browser',
-        version: '0.0.9',
-        type: 'source',
-      },
-      {
-        name: '@walkeros/web-destination-gtag',
-        version: '0.0.8',
-        type: 'destination',
-      },
-    ],
-    nodes: [
-      {
-        id: 'collector',
-        type: 'collector',
-        package: '@walkeros/collector',
-        config: {
-          run: true,
-          consent: {
-            functional: true,
-            marketing: false,
-          },
-        },
-      },
-      {
-        id: 'browser-source',
-        type: 'source',
-        package: '@walkeros/web-source-browser',
-        config: {
+  async function initializeWalkerOS() {
+    const collectorConfig = Object.assign(
+      {},
+      { run: true, consent: { functional: true, marketing: false } },
+    );
+    collectorConfig.sources = {
+      'browser-source': walkerOSCore.createSource(
+        walkerOSSourceBrowser.sourceBrowser || walkerOSSourceBrowser.default,
+        {
           settings: {
             pageview: true,
             session: true,
@@ -3837,162 +3796,38 @@
             scope: 'body',
           },
         },
-      },
-      {
-        id: 'gtag-destination',
-        type: 'destination',
-        package: '@walkeros/web-destination-gtag',
+      ),
+    };
+    collectorConfig.destinations = {
+      'gtag-destination': {
+        ...(walkerOSDestinationGtag.destinationGtag ||
+          walkerOSDestinationGtag.default),
         config: {
-          settings: {
-            ga4: {
-              measurementId: 'G-XXXXXXXXXX',
-            },
-          },
+          settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } },
           mapping: {
-            page: {
-              view: {
-                name: 'page_view',
-                settings: {
-                  ga4: {},
-                },
-              },
-            },
+            page: { view: { name: 'page_view', settings: { ga4: {} } } },
           },
         },
       },
-    ],
-    edges: [
-      {
-        id: 'browser-to-collector',
-        source: 'browser-source',
-        target: 'collector',
-      },
-      {
-        id: 'collector-to-gtag',
-        source: 'collector',
-        target: 'gtag-destination',
-      },
-    ],
-    _examples: {
-      _comment:
-        'Alternative configurations for different testing scenarios - consolidated from basic.json and simple-demo.json',
-      minimal: {
-        packages: [
-          {
-            name: '@walkeros/core',
-            version: '0.0.8',
-            type: 'core',
-          },
-          {
-            name: '@walkeros/collector',
-            version: '0.0.8',
-            type: 'collector',
-          },
-        ],
-        nodes: [
-          {
-            id: 'collector',
-            type: 'collector',
-            package: '@walkeros/collector',
-            config: {
-              consent: {
-                functional: true,
-              },
-            },
-          },
-        ],
-        edges: [],
-      },
-      simple: {
-        packages: [
-          {
-            name: '@walkeros/core',
-            version: '0.0.8',
-            type: 'core',
-          },
-          {
-            name: '@walkeros/collector',
-            version: '0.0.8',
-            type: 'collector',
-          },
-        ],
-        nodes: [
-          {
-            id: 'collector',
-            type: 'collector',
-            package: '@walkeros/collector',
-            config: {
-              run: true,
-              consent: {
-                functional: true,
-              },
-            },
-          },
-        ],
-        edges: [],
-      },
-    },
-  };
-
-  // 3. EXECUTING CODE
-  // Functions that combine packages with configuration
-  async function initializeWalkerOS() {
-    const collectorConfig = {};
-
-    // Map Flow nodes to collector configuration
-    flowConfig.nodes.forEach((node) => {
-      if (node.type === 'source') {
-        collectorConfig.sources = collectorConfig.sources || {};
-        // Use real source package - extract sourceBrowser from browser source package
-        var sourceFn =
-          walkerOSSourceBrowser.sourceBrowser || walkerOSSourceBrowser.default;
-        // Add defensive scope handling for browser sources
-        var sourceConfig = { ...node.config };
-        if (sourceConfig.settings && sourceConfig.settings.scope === 'body') {
-          // Ensure document.body exists or fallback to document
-          sourceConfig.settings.scope = document.body || document;
-        }
-        collectorConfig.sources[node.id] = walkerOSCore.createSource(
-          sourceFn,
-          sourceConfig,
-        );
-      } else if (node.type === 'destination') {
-        collectorConfig.destinations = collectorConfig.destinations || {};
-        // Use real destination package - extract destinationGtag
-        var destObj =
-          walkerOSDestinationGtag.destinationGtag ||
-          walkerOSDestinationGtag.default;
-        collectorConfig.destinations[node.id] = {
-          ...destObj,
-          config: node.config,
-        };
-      } else if (node.type === 'collector') {
-        Object.assign(collectorConfig, node.config);
-      }
-    });
-
+    };
     const { collector, elb } =
       await walkerOSCollector.createCollector(collectorConfig);
     return collector;
   }
 
-  // 4. FINAL EXECUTION
-  // DOM-ready execution and direct assignment
   function initializeWhenReady() {
     initializeWalkerOS()
       .then((collector) => {
-        window.walkerOS = collector; // Direct assignment
+        window.walkerOS = collector;
       })
       .catch((error) => {
         console.error('WalkerOS initialization failed:', error);
       });
   }
 
-  // Ensure DOM is ready before initializing browser sources
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeWhenReady);
   } else {
-    // DOM is already ready
     initializeWhenReady();
   }
 })(typeof window !== 'undefined' ? window : {});

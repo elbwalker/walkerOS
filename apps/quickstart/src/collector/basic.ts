@@ -1,5 +1,4 @@
 import { createCollector } from '@walkeros/collector';
-import { createSource } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import type { Collector, WalkerOS } from '@walkeros/core';
 
@@ -11,11 +10,15 @@ export async function setupCollector(): Promise<{
   const trackingConfig = {
     run: true,
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          scope: document.body,
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            scope: 'body',
+            pageview: true,
+          },
         },
-      }),
+      },
     },
   };
 
@@ -31,11 +34,16 @@ export async function setupCollectorWithConfig(): Promise<{
   const trackingConfig = {
     run: true,
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          scope: document.body,
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            scope: 'body',
+            pageview: true,
+            session: true,
+          },
         },
-      }),
+      },
     },
     destinations: {
       console: {

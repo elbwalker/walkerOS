@@ -24,10 +24,10 @@ export function translateToCoreCollector(
   nested?: WalkerOS.Entities,
   custom?: WalkerOS.Properties,
 ): Promise<Elb.PushResult> {
-  const { collector, settings } = context;
-  // Handle walker commands - pass through directly to collector
+  const { elb, settings } = context;
+  // Handle walker commands - pass through directly to elb
   if (isString(eventOrCommand) && eventOrCommand.startsWith('walker ')) {
-    const result = collector.push(eventOrCommand, data as WalkerOS.Properties);
+    const result = elb(eventOrCommand, data as WalkerOS.Properties);
     return result;
   }
 
@@ -35,7 +35,7 @@ export function translateToCoreCollector(
   if (isObject(eventOrCommand)) {
     const event = eventOrCommand;
     if (!event.source) event.source = getBrowserSource();
-    return collector.push(event);
+    return elb(event);
   }
 
   // Extract entity name from event string
@@ -92,7 +92,7 @@ export function translateToCoreCollector(
     source: getBrowserSource(),
   };
 
-  return collector.push(event);
+  return elb(event);
 }
 
 /**
