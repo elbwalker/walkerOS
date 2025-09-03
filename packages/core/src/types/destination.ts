@@ -15,6 +15,7 @@ export interface Instance<Settings = unknown, Mapping = unknown> {
   init?: InitFn<Settings, Mapping>;
   push: PushFn<Settings, Mapping>;
   pushBatch?: PushBatchFn<Settings, Mapping>;
+  on?(event: On.Types, context?: unknown): void | Promise<void>;
 }
 
 export interface Config<Settings = unknown, Mapping = unknown> {
@@ -26,7 +27,6 @@ export interface Config<Settings = unknown, Mapping = unknown> {
   init?: boolean; // If the destination has been initialized by calling the init method
   loadScript?: boolean; // If an additional script to work should be loaded
   mapping?: WalkerOSMapping.Rules<WalkerOSMapping.Rule<Mapping>>; // A map to handle events individually
-  on?: On.Config; // On events listener rules
   policy?: Policy; // Rules for processing events
   queue?: boolean; // Disable processing of previously pushed events
   verbose?: boolean; // Enable verbose logging

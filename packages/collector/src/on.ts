@@ -50,12 +50,6 @@ export function onApply(
   if (!options) {
     // Get the collector on events
     onConfig = collector.on[type] || [];
-
-    // Add all available on events from the destinations
-    Object.values(collector.destinations).forEach((destination) => {
-      const onTypeConfig = destination.config.on?.[type];
-      if (onTypeConfig) onConfig = onConfig.concat(onTypeConfig);
-    });
   }
 
   // Push to sources (similar to destination pattern)
@@ -78,6 +72,12 @@ export function onApply(
   Object.values(collector.sources).forEach((source) => {
     if (source.on) {
       tryCatch(source.on)(type, contextData);
+    }
+  });
+
+  Object.values(collector.destinations).forEach((destination) => {
+    if (destination.on) {
+      tryCatch(destination.on)(type, contextData);
     }
   });
 
