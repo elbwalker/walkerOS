@@ -34,6 +34,7 @@ export const CarouselItem = ({
       },
       dataElb,
     ),
+    'CarouselItem',
   );
 
   return (

@@ -26,12 +26,17 @@ export interface DataElb {
 /**
  * Utility function to convert DataElb object to walkerOS tracking properties using the modern tagger API
  * @param dataElb - The walkerOS configuration object
+ * @param componentName - Optional component name to add to context
  * @returns HTML attributes object ready to spread on elements
  */
-export function createTrackingProps(dataElb?: DataElb): Record<string, string> {
-  if (!dataElb) return {};
+export function createTrackingProps(
+  dataElb?: DataElb,
+  componentName?: string,
+): Record<string, string> {
+  if (!dataElb && !componentName) return {};
 
-  const { entity, trigger, action, data, context, globals, link } = dataElb;
+  const { entity, trigger, action, data, context, globals, link } =
+    dataElb || {};
 
   // Start with tagger instance, using entity as naming scope if provided
   const instance = entity ? tagger(entity) : tagger();
@@ -46,7 +51,7 @@ export function createTrackingProps(dataElb?: DataElb): Record<string, string> {
     if (trigger) {
       instance.action(trigger, action);
     } else {
-      instance.action('click', action);
+      instance.action(action);
     }
   }
 
@@ -55,8 +60,14 @@ export function createTrackingProps(dataElb?: DataElb): Record<string, string> {
     instance.data(data);
   }
 
-  if (context) {
-    instance.context(context);
+  // Merge component name into context
+  const mergedContext = { ...context };
+  if (componentName) {
+    mergedContext.component = [componentName];
+  }
+
+  if (Object.keys(mergedContext).length > 0) {
+    instance.context(mergedContext);
   }
 
   if (globals) {

@@ -23,7 +23,7 @@ export const Button = ({
     ? 'storybook-button--primary'
     : 'storybook-button--secondary';
 
-  const trackingProps = createTrackingProps(dataElb);
+  const trackingProps = createTrackingProps(dataElb, 'Button');
 
   return (
     <button
