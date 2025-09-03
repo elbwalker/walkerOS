@@ -26,6 +26,12 @@ const preview: ProjectAnnotations<Renderer> = {
       defaultValue: {
         autoRefresh: true,
         prefix: 'data-elb',
+        highlights: {
+          context: false,
+          entity: false,
+          property: false,
+          action: false,
+        },
       },
     },
   },
@@ -33,6 +39,12 @@ const preview: ProjectAnnotations<Renderer> = {
     [ADDON_ID]: {
       autoRefresh: true,
       prefix: 'data-elb',
+      highlights: {
+        context: false,
+        entity: false,
+        property: false,
+        action: false,
+      },
     },
   },
 };

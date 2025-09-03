@@ -1,0 +1,109 @@
+/* WalkerOS Visual Highlighting Styles */
+:root {
+  --walkeros-highlight-context: #ffbd44cc;
+  --walkeros-highlight-entity: #00ca4ecc;
+  --walkeros-highlight-property: #ff605ccc;
+  --walkeros-highlight-action: #9900ffcc;
+  --walkeros-highlight-background: #1f2937;
+  --walkeros-highlight-text: #9ca3af;
+  --walkeros-highlight-hover: rgba(255, 255, 255, 0.05);
+  --walkeros-highlight-separator: rgba(255, 255, 255, 0.05);
+}
+
+.walkeros-highlight {
+  .highlight-context [data-elbcontext] {
+    box-shadow: 0 0 0 2px var(--walkeros-highlight-context);
+  }
+
+  .highlight-entity [data-elb] {
+    box-shadow: 0 0 0 2px var(--walkeros-highlight-entity);
+  }
+
+  .highlight-property [data-elbproperty] {
+    box-shadow: 0 0 0 2px var(--walkeros-highlight-property);
+  }
+
+  .highlight-action [data-elbaction] {
+    box-shadow: 0 0 0 2px var(--walkeros-highlight-action);
+  }
+
+  /* Combined highlights with layered solid borders */
+  .highlight-entity.highlight-action [data-elb][data-elbaction] {
+    box-shadow:
+      0 0 0 2px var(--walkeros-highlight-action),
+      0 0 0 4px var(--walkeros-highlight-entity);
+  }
+
+  .highlight-entity.highlight-context [data-elb][data-elbcontext] {
+    box-shadow:
+      0 0 0 2px var(--walkeros-highlight-entity),
+      0 0 0 4px var(--walkeros-highlight-context);
+  }
+
+  .highlight-entity.highlight-property [data-elb][data-elbproperty] {
+    box-shadow:
+      0 0 0 2px var(--walkeros-highlight-entity),
+      0 0 0 4px var(--walkeros-highlight-property);
+  }
+
+  .highlight-action.highlight-context [data-elbaction][data-elbcontext] {
+    box-shadow:
+      0 0 0 2px var(--walkeros-highlight-action),
+      0 0 0 4px var(--walkeros-highlight-context);
+  }
+
+  .highlight-context.highlight-property [data-elbcontext][data-elbproperty] {
+    box-shadow:
+      0 0 0 2px var(--walkeros-highlight-context),
+      0 0 0 4px var(--walkeros-highlight-property);
+  }
+
+  .highlight-action.highlight-property [data-elbaction][data-elbproperty] {
+    box-shadow:
+      0 0 0 2px var(--walkeros-highlight-action),
+      0 0 0 4px var(--walkeros-highlight-property);
+  }
+
+  /* Triple combinations with distinct layers */
+  .highlight-entity.highlight-action.highlight-context
+    [data-elb][data-elbaction][data-elbcontext] {
+    box-shadow:
+      0 0 0 2px var(--walkeros-highlight-action),
+      0 0 0 4px var(--walkeros-highlight-entity),
+      0 0 0 6px var(--walkeros-highlight-context);
+  }
+
+  .highlight-entity.highlight-action.highlight-property
+    [data-elb][data-elbaction][data-elbproperty] {
+    box-shadow:
+      0 0 0 2px var(--walkeros-highlight-action),
+      0 0 0 4px var(--walkeros-highlight-entity),
+      0 0 0 6px var(--walkeros-highlight-property);
+  }
+
+  .highlight-entity.highlight-context.highlight-property
+    [data-elb][data-elbcontext][data-elbproperty] {
+    box-shadow:
+      0 0 0 2px var(--walkeros-highlight-context),
+      0 0 0 4px var(--walkeros-highlight-entity),
+      0 0 0 6px var(--walkeros-highlight-property);
+  }
+
+  .highlight-action.highlight-context.highlight-property
+    [data-elbaction][data-elbcontext][data-elbproperty] {
+    box-shadow:
+      0 0 0 2px var(--walkeros-highlight-action),
+      0 0 0 4px var(--walkeros-highlight-context),
+      0 0 0 6px var(--walkeros-highlight-property);
+  }
+
+  /* Quadruple combination */
+  .highlight-entity.highlight-action.highlight-context.highlight-property
+    [data-elb][data-elbaction][data-elbcontext][data-elbproperty] {
+    box-shadow:
+      0 0 0 2px var(--walkeros-highlight-action),
+      0 0 0 4px var(--walkeros-highlight-entity),
+      0 0 0 6px var(--walkeros-highlight-context),
+      0 0 0 8px var(--walkeros-highlight-property);
+  }
+}

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ShopTemplate } from './components/ecommerce/templates/ShopTemplate';
 import { MediathekTemplate } from './components/media/templates/MediathekTemplate';
 import { Button } from './components/ecommerce/atoms/Button';
 import { Typography } from './components/ecommerce/atoms/Typography';
+import { initializeWalker } from './walker';
 import './App.css';
 
 type TemplateType = 'landing' | 'shop' | 'publisher';
@@ -10,6 +11,11 @@ type TemplateType = 'landing' | 'shop' | 'publisher';
 function App() {
   const [currentTemplate, setCurrentTemplate] =
     useState<TemplateType>('landing');
+
+  // Initialize walkerOS on app mount
+  useEffect(() => {
+    initializeWalker();
+  }, []);
 
   if (currentTemplate === 'landing') {
     return (
