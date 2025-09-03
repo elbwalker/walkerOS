@@ -6,4 +6,5 @@ export const EVENTS = {
   RESULT: `${ADDON_ID}/result`,
   REQUEST: `${ADDON_ID}/request`,
   HIGHLIGHT: `${ADDON_ID}/highlight`,
+  LIVE_EVENT: `${ADDON_ID}/live-event`,
 };

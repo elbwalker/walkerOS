@@ -22,3 +22,15 @@ export interface DataElb {
   globals?: WalkerOS.Properties;
   link?: Record<string, string>;
 }
+
+// Storybook argTypes for DataElb interface
+export const dataElbArgTypes = {
+  dataElb: {
+    name: 'walkerOS Data',
+    description: 'walkerOS tracking configuration',
+    control: { type: 'object' },
+    table: {
+      category: 'walkerOS',
+    },
+  },
+};

@@ -4,6 +4,7 @@ import { addons } from 'storybook/preview-api';
 import { getAllEvents } from '@walkeros/web-source-browser';
 
 import { EVENTS } from './constants';
+import { initializeWalker } from './walker';
 
 // Set up the channel listener globally, not per story
 const channel = addons.getChannel();
@@ -260,11 +261,19 @@ export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
   // Update the current canvas element when a story renders
   currentCanvasElement = context.canvasElement as Element;
 
-  // Inject CSS on initial load with a slight delay to ensure iframe is ready
+  const result = storyFn();
+
+  // Initialize walker and inject CSS after story renders
   setTimeout(() => {
+    // Initialize walkerOS for live event capture
+    initializeWalker().catch((err) => {
+      console.error('Walker initialization failed:', err);
+    });
+
+    // Inject highlighting CSS and enhance properties
     injectHighlightingCSS();
     enhanceProperties();
-  }, 100);
+  }, 200);
 
-  return storyFn();
+  return result;
 };

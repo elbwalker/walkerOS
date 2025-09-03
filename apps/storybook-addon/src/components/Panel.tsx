@@ -1,5 +1,6 @@
 import type { WalkerOSAddon } from '../types';
 import type { Walker } from '@walkeros/web-core';
+import type { WalkerOS } from '@walkeros/core';
 import React, { Fragment, memo, useCallback, useEffect, useState } from 'react';
 import {
   AddonPanel,
@@ -52,6 +53,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
   } as WalkerOSAddon;
 
   const [events, setState] = useState<Walker.Events>([]);
+  const [liveEvents, setLiveEvents] = useState<WalkerOS.Event[]>([]);
 
   const updateConfig = (key: keyof WalkerOSAddon, value: unknown) => {
     const newConfig = { ...config, [key]: value };
@@ -74,6 +76,11 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
   const emit = useChannel({
     [EVENTS.RESULT]: (newEvents: Walker.Events) => {
       setState(newEvents);
+    },
+    [EVENTS.LIVE_EVENT]: (event: WalkerOS.Event) => {
+      setLiveEvents((prev) =>
+        [{ ...event, timestamp: Date.now() }].concat(prev).slice(0, 50),
+      );
     },
   });
 
@@ -111,10 +118,23 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
     return `${events.length} ${form}`;
   };
 
+  const getLiveEventTitle = () => {
+    const form = liveEvents.length == 1 ? 'Event' : 'Events';
+    return `${liveEvents.length} Live ${form}`;
+  };
+
+  const clearLiveEvents = () => {
+    setLiveEvents([]);
+  };
+
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString();
+  };
+
   return (
     <AddonPanel {...props}>
       <TabsState
-        initial="events"
+        initial="live"
         backgroundColor={theme.background.hoverable as string}
       >
         <div id="events" title={getEventTitle(events)}>
@@ -242,6 +262,72 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
               />
             ) : (
               <p>No events yet</p>
+            )}
+          </Placeholder>
+        </div>
+        <div id="live" title={getLiveEventTitle()}>
+          <Placeholder>
+            <Fragment>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '12px',
+                  padding: '8px',
+                  backgroundColor: theme.background.app,
+                  borderRadius: '4px',
+                  border: `1px solid ${theme.color.border}`,
+                }}
+              >
+                <div
+                  style={{ display: 'flex', gap: '8px', alignItems: 'center' }}
+                >
+                  <Button size="small" onClick={clearLiveEvents}>
+                    Clear Events
+                  </Button>
+                </div>
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: theme.color.mediumdark,
+                  }}
+                >
+                  🟢 Live Events
+                </span>
+              </div>
+            </Fragment>
+            {liveEvents.length > 0 ? (
+              <List
+                items={liveEvents.map((event, index) => ({
+                  title: `${formatTime(event.timestamp || Date.now())} - #${liveEvents.length - index} ${event.entity} ${event.action}`,
+                  content: (
+                    <SyntaxHighlighter
+                      language="json"
+                      copyable={true}
+                      bordered={true}
+                      padded={true}
+                    >
+                      {JSON.stringify(event, null, 2)}
+                    </SyntaxHighlighter>
+                  ),
+                }))}
+              />
+            ) : (
+              <p
+                style={{
+                  textAlign: 'center',
+                  color: theme.color.mediumdark,
+                  padding: '20px',
+                }}
+              >
+                Waiting for live events...
+                <br />
+                <small>
+                  Interact with components to see events appear here in
+                  real-time
+                </small>
+              </p>
             )}
           </Placeholder>
         </div>

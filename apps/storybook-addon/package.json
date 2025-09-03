@@ -51,6 +51,7 @@
   },
   "dependencies": {
     "@walkeros/core": "*",
+    "@walkeros/collector": "*",
     "@walkeros/web-core": "*",
     "@walkeros/web-source-browser": "*",
     "@storybook/icons": "^1.4.0"
