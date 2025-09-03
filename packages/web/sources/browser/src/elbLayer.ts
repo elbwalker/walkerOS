@@ -20,11 +20,13 @@ export function initElbLayer(
   }
 
   // Ensure elbLayer exists on window
-  if (!windowObj[layerName]) {
-    windowObj[layerName] = [];
+  const windowWithLayer = windowObj as typeof windowObj &
+    Record<string, unknown>;
+  if (!windowWithLayer[layerName]) {
+    windowWithLayer[layerName] = [];
   }
 
-  const elbLayer = windowObj[layerName] as ELBLayer;
+  const elbLayer = windowWithLayer[layerName] as ELBLayer;
 
   // Override the push method to process items immediately
   elbLayer.push = function (...args: Array<Elb.Layer | IArguments>) {

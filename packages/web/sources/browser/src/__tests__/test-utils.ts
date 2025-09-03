@@ -32,7 +32,8 @@ export async function createBrowserSource(
 
   // Get the elb function from window (set by the browser source)
   const elbName = config.settings?.elb || 'elb';
-  const elb = (window[elbName] as Function) || collector.push;
+  const windowObj = window as typeof window & Record<string, unknown>;
+  const elb = (windowObj[elbName] as Function) || collector.push;
 
   // Return source with elb for test compatibility
   return { ...source, elb };
