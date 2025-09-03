@@ -23,7 +23,7 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
   const defaultConfig: Config = {
     collector: {
       destinations: {
-        dataLayer: dataLayerDestination(),
+        dataLayer: { code: dataLayerDestination() },
       },
     },
     browser: {

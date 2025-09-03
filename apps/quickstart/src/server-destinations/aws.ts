@@ -1,5 +1,4 @@
 import { createCollector } from '@walkeros/collector';
-import { createDestination } from '@walkeros/core';
 import { destinationFirehose } from '@walkeros/server-destination-aws';
 import type { WalkerOS, Collector } from '@walkeros/core';
 
@@ -15,49 +14,52 @@ export async function setupAWSFirehose(): Promise<{
       service: 'api-server',
     },
     destinations: {
-      aws: createDestination(destinationFirehose, {
-        settings: {
-          firehose: {
-            streamName: 'your-firehose-stream',
-            region: 'us-east-1',
-            config: {
-              credentials: {
-                accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-              },
-            },
-          },
-        },
-        mapping: {
-          user: {
-            signup: {
-              name: 'user_registration',
-              data: {
-                map: {
-                  user_id: 'user.id',
-                  email: 'user.email',
-                  signup_source: 'data.source',
-                  plan_type: 'data.plan',
+      aws: {
+        code: destinationFirehose,
+        config: {
+          settings: {
+            firehose: {
+              streamName: 'your-firehose-stream',
+              region: 'us-east-1',
+              config: {
+                credentials: {
+                  accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+                  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
                 },
               },
             },
           },
-          subscription: {
-            purchase: {
-              name: 'subscription_created',
-              data: {
-                map: {
-                  user_id: 'user.id',
-                  plan: 'data.plan',
-                  amount: 'data.amount',
-                  currency: 'data.currency',
-                  billing_period: 'data.period',
+          mapping: {
+            user: {
+              signup: {
+                name: 'user_registration',
+                data: {
+                  map: {
+                    user_id: 'user.id',
+                    email: 'user.email',
+                    signup_source: 'data.source',
+                    plan_type: 'data.plan',
+                  },
+                },
+              },
+            },
+            subscription: {
+              purchase: {
+                name: 'subscription_created',
+                data: {
+                  map: {
+                    user_id: 'user.id',
+                    plan: 'data.plan',
+                    amount: 'data.amount',
+                    currency: 'data.currency',
+                    billing_period: 'data.period',
+                  },
                 },
               },
             },
           },
         },
-      }),
+      },
     },
   };
 

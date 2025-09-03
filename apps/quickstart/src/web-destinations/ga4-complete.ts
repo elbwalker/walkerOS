@@ -9,7 +9,7 @@ export async function setupGA4Complete(): Promise<{
   const { collector, elb } = await createCollector({
     destinations: {
       gtag: {
-        ...destinationGtag,
+        code: destinationGtag,
         config: {
           settings: {
             ga4: {

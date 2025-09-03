@@ -9,7 +9,7 @@ export async function setupPiwikPro(): Promise<{
   const { collector, elb } = await createCollector({
     destinations: {
       piwikpro: {
-        ...destinationPiwikPro,
+        code: destinationPiwikPro,
         config: {
           settings: {
             appId: 'XXX-XXX-XXX-XXX-XXX',

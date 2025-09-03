@@ -52,11 +52,11 @@ describe('Destination Meta Pixel', () => {
 
     expect((initEnv.window as Record<string, unknown>).fbq).not.toBeDefined();
 
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: initEnv,
-      config: { settings: { pixelId } },
-    });
+    };
+    elb('walker destination', destinationWithEnv, { settings: { pixelId } });
 
     await elb(event);
     // After setup() is called, fbq should be defined
@@ -64,11 +64,11 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('Init calls', async () => {
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: { settings: { pixelId } },
-    });
+    };
+    elb('walker destination', destinationWithEnv, { settings: { pixelId } });
 
     await elb(event);
 
@@ -76,13 +76,13 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('init with load script', async () => {
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        settings: { pixelId },
-        loadScript: true,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      settings: { pixelId },
+      loadScript: true,
     });
 
     await elb(event);
@@ -94,11 +94,11 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('push', async () => {
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: { settings: { pixelId } },
-    });
+    };
+    elb('walker destination', destinationWithEnv, { settings: { pixelId } });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(
       'track',
@@ -110,11 +110,11 @@ describe('Destination Meta Pixel', () => {
 
   test('pageview', async () => {
     const page_view = getEvent('page view');
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: { settings: { pixelId } },
-    });
+    };
+    elb('walker destination', destinationWithEnv, { settings: { pixelId } });
 
     await elb(page_view);
     expect(mockFn).toHaveBeenCalledWith(
@@ -126,14 +126,14 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('push standard event', async () => {
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        settings: { pixelId },
-        mapping: {
-          entity: { action: { settings: { trackCustom: 'foo' } } },
-        },
+    };
+    elb('walker destination', destinationWithEnv, {
+      settings: { pixelId },
+      mapping: {
+        entity: { action: { settings: { trackCustom: 'foo' } } },
       },
     });
     await elb(event);
@@ -148,13 +148,13 @@ describe('Destination Meta Pixel', () => {
   test('event Purchase', async () => {
     const event = getEvent('order complete');
 
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        settings: { pixelId },
-        mapping: mapping.config,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      settings: { pixelId },
+      mapping: mapping.config,
     });
 
     await elb(event);
@@ -164,13 +164,13 @@ describe('Destination Meta Pixel', () => {
   test('event AddToCart', async () => {
     const event = getEvent('product add');
 
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        settings: { pixelId },
-        mapping: mapping.config,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      settings: { pixelId },
+      mapping: mapping.config,
     });
 
     await elb(event);
@@ -180,13 +180,13 @@ describe('Destination Meta Pixel', () => {
   test('event InitiateCheckout', async () => {
     const event = getEvent('cart view');
 
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        settings: { pixelId },
-        mapping: mapping.config,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      settings: { pixelId },
+      mapping: mapping.config,
     });
 
     await elb(event);
@@ -196,13 +196,13 @@ describe('Destination Meta Pixel', () => {
   test('event ViewContent', async () => {
     const event = getEvent('product view');
 
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        settings: { pixelId },
-        mapping: mapping.config,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      settings: { pixelId },
+      mapping: mapping.config,
     });
 
     await elb(event);

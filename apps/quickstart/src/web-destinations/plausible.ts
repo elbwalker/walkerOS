@@ -9,7 +9,7 @@ export async function setupPlausible(): Promise<{
   const { collector, elb } = await createCollector({
     destinations: {
       plausible: {
-        ...destinationPlausible,
+        code: destinationPlausible,
         config: {
           settings: {
             domain: 'yourdomain.com',

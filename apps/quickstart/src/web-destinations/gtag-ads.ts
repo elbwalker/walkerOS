@@ -9,7 +9,7 @@ export async function setupGoogleAds(): Promise<{
   const { collector, elb } = await createCollector({
     destinations: {
       gtag: {
-        ...destinationGtag,
+        code: destinationGtag,
         config: {
           settings: {
             ads: {

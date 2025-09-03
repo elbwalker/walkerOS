@@ -52,11 +52,11 @@ describe('destination plausible', () => {
 
     expect(initEnv.window.plausible).not.toBeDefined();
 
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: initEnv,
-      config: {},
-    });
+    };
+    elb('walker destination', destinationWithEnv, {});
 
     await elb(event);
     // After init() is called, plausible should be defined
@@ -64,11 +64,11 @@ describe('destination plausible', () => {
   });
 
   test('init with script load', async () => {
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: { loadScript: true },
-    });
+    };
+    elb('walker destination', destinationWithEnv, { loadScript: true });
 
     await elb(event);
 
@@ -88,13 +88,13 @@ describe('destination plausible', () => {
     };
     testEnv.document.createElement.mockReturnValue(mockScript);
 
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        loadScript: true,
-        settings: { domain },
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      loadScript: true,
+      settings: { domain },
     });
 
     await elb(event);
@@ -103,12 +103,12 @@ describe('destination plausible', () => {
   });
 
   test('event entity action', async () => {
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        mapping: mapping.config,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      mapping: mapping.config,
     });
 
     await elb(event);
@@ -117,12 +117,12 @@ describe('destination plausible', () => {
 
   test('event purchase', async () => {
     const event = getEvent('order complete');
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        mapping: mapping.config,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      mapping: mapping.config,
     });
 
     await elb(event);

@@ -1,5 +1,4 @@
 import { createCollector } from '@walkeros/collector';
-import { createDestination } from '@walkeros/core';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import type { WalkerOS, Collector, Source } from '@walkeros/core';
@@ -27,68 +26,71 @@ export async function setupGtagComplete(): Promise<{
       },
     },
     destinations: {
-      gtag: createDestination(destinationGtag, {
-        settings: {
-          ga4: {
-            measurementId: 'G-XXXXXXXXXX',
+      gtag: {
+        code: destinationGtag,
+        config: {
+          settings: {
+            ga4: {
+              measurementId: 'G-XXXXXXXXXX',
+            },
+            ads: {
+              conversionId: 'AW-XXXXXXXXX',
+            },
+            gtm: {
+              containerId: 'GTM-XXXXXXX',
+            },
           },
-          ads: {
-            conversionId: 'AW-XXXXXXXXX',
-          },
-          gtm: {
-            containerId: 'GTM-XXXXXXX',
+          mapping: {
+            // GA4 Purchase mapping
+            order: {
+              complete: {
+                name: 'purchase',
+                settings: {
+                  ga4: { include: ['data'] },
+                },
+                data: {
+                  map: {
+                    transaction_id: 'data.id',
+                    value: 'data.total',
+                    currency: { value: 'USD', key: 'data.currency' },
+                  },
+                },
+              },
+            },
+            // Google Ads conversion mapping
+            form: {
+              submit: {
+                name: 'conversion',
+                settings: {
+                  ads: { label: 'LEAD' },
+                },
+                data: {
+                  map: {
+                    value: { value: 0, key: 'data.value' },
+                    currency: { value: 'USD' },
+                  },
+                },
+              },
+            },
+            // GTM custom event
+            product: {
+              view: {
+                name: 'product_view',
+                settings: {
+                  gtm: {},
+                },
+                data: {
+                  map: {
+                    product_id: 'data.id',
+                    product_name: 'data.name',
+                    value: 'data.price',
+                  },
+                },
+              },
+            },
           },
         },
-        mapping: {
-          // GA4 Purchase mapping
-          order: {
-            complete: {
-              name: 'purchase',
-              settings: {
-                ga4: { include: ['data'] },
-              },
-              data: {
-                map: {
-                  transaction_id: 'data.id',
-                  value: 'data.total',
-                  currency: { value: 'USD', key: 'data.currency' },
-                },
-              },
-            },
-          },
-          // Google Ads conversion mapping
-          form: {
-            submit: {
-              name: 'conversion',
-              settings: {
-                ads: { label: 'LEAD' },
-              },
-              data: {
-                map: {
-                  value: { value: 0, key: 'data.value' },
-                  currency: { value: 'USD' },
-                },
-              },
-            },
-          },
-          // GTM custom event
-          product: {
-            view: {
-              name: 'product_view',
-              settings: {
-                gtm: {},
-              },
-              data: {
-                map: {
-                  product_id: 'data.id',
-                  product_name: 'data.name',
-                  value: 'data.price',
-                },
-              },
-            },
-          },
-        },
-      }),
+      },
     },
   };
 

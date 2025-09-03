@@ -47,9 +47,11 @@ export async function setupCollectorWithConfig(): Promise<{
     },
     destinations: {
       console: {
-        type: 'console',
-        push: (event: WalkerOS.Event) => console.log('Event:', event),
-        config: {},
+        code: {
+          type: 'console',
+          push: (event: WalkerOS.Event) => console.log('Event:', event),
+          config: {},
+        },
       },
     },
   };

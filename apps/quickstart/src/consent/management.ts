@@ -10,7 +10,7 @@ export async function setupConsentManagement(): Promise<{
   const { collector, elb } = await createCollector({
     destinations: {
       gtag: {
-        ...destinationGtag,
+        code: destinationGtag,
         config: {
           settings: {
             ga4: { measurementId: 'G-XXXXXXXXXX' },
@@ -32,7 +32,7 @@ export async function setupConsentManagement(): Promise<{
         },
       },
       meta: {
-        ...destinationMeta,
+        code: destinationMeta,
         config: {
           settings: {
             pixelId: 'YOUR_PIXEL_ID',

@@ -51,7 +51,7 @@ export async function commonHandleCommand(
       if (isObject(data) && isFunction(data.push)) {
         result = await addDestination(
           collector,
-          data as Destination.Init,
+          { code: data as unknown as Destination.Instance },
           options as Destination.Config,
         );
       }

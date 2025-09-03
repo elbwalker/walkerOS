@@ -43,18 +43,15 @@ export interface Policy {
   [key: string]: WalkerOSMapping.Value;
 }
 
-export type Init = Partial<Omit<Instance, 'push'>> & Pick<Instance, 'push'>;
-
-export type InitDestination<Settings = unknown, Mapping = unknown> = Omit<
-  Instance<Settings, Mapping>,
-  'config'
-> & {
-  config?: Config<Settings, Mapping>;
+export type Init<Settings = unknown, Mapping = unknown> = {
+  code: Instance<Settings, Mapping>;
+  config?: Partial<Config<Settings, Mapping>>;
+  env?: Partial<Environment>;
 };
 
 export interface InitDestinations {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: InitDestination<any, any>;
+  [key: string]: Init<any, any>;
 }
 
 export interface Destinations {

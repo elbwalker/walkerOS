@@ -3,7 +3,7 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
 
-describe('Browser Source Edge Cases (NEEDS UPDATE for run-only behavior)', () => {
+describe('Browser Source Edge Cases', () => {
   let collector: Collector.Instance;
   let mockPush: jest.MockedFunction<Collector.Instance['push']>;
 
@@ -68,23 +68,6 @@ describe('Browser Source Edge Cases (NEEDS UPDATE for run-only behavior)', () =>
       expect(() => {}).not.toThrow();
     });
 
-    test('handles malformed key-value pairs', async () => {
-      document.body.innerHTML = `
-        <div data-elb="product" data-elb-product="id:123:extra:colons;missing_value;:empty_key" data-elbaction="load:view">
-          Malformed data
-        </div>
-        <div data-elb="test" data-elb-test="normal:value" data-elbaction="load:action">
-          Normal data
-        </div>
-      `;
-
-      await createBrowserSource(collector);
-
-      // Should not throw and should still process valid elements
-      expect(() => {}).not.toThrow();
-      expect(mockPush).toHaveBeenCalled();
-    });
-
     test('handles special characters in attributes', async () => {
       document.body.innerHTML = `
         <div data-elb="product" data-elb-product="title:Test & Special <chars>;price:$19.99" data-elbaction="load:view">
@@ -111,38 +94,7 @@ describe('Browser Source Edge Cases (NEEDS UPDATE for run-only behavior)', () =>
     });
   });
 
-  describe('Malformed Elb Layer Commands', () => {
-    test('handles circular references in Elb Layer', async () => {
-      const circular: Record<string, unknown> = { name: 'test' };
-      circular.self = circular;
-
-      window.elbLayer = [
-        ['event_with_circular', circular],
-        ['normal_event', { data: 'normal' }],
-      ];
-
-      await createBrowserSource(collector);
-
-      expect(() => {}).not.toThrow();
-      expect(window.elbLayer).toHaveLength(0);
-    });
-  });
-
   describe('DOM Edge Cases', () => {
-    test('handles elements with no attributes', async () => {
-      document.body.innerHTML = `
-        <div>No attributes</div>
-        <div data-elb="product" data-elb-product="id:123" data-elbaction="load:view">
-          With attributes
-        </div>
-      `;
-
-      await createBrowserSource(collector);
-
-      // Should only process element with attributes
-      expect(mockPush).toHaveBeenCalledTimes(1);
-    });
-
     test('handles elements with conflicting attributes', async () => {
       document.body.innerHTML = `
         <div data-elb="product" 

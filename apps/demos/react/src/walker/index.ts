@@ -38,9 +38,9 @@ export async function initializeWalker(): Promise<void> {
       },
     },
     destinations: {
-      console: destinationConsole,
+      console: { code: destinationConsole },
       consoleBatch: {
-        ...destinationConsoleBatch,
+        code: destinationConsoleBatch,
         config: {
           // Configure which events should be batched
           mapping: {
@@ -53,7 +53,7 @@ export async function initializeWalker(): Promise<void> {
         },
       },
       api: {
-        ...destinationAPI,
+        code: destinationAPI,
         config: {
           settings: {
             url: 'https://httpbin.org/post',
@@ -64,7 +64,7 @@ export async function initializeWalker(): Promise<void> {
         },
       },
       ga4: {
-        ...destinationGtag,
+        code: destinationGtag,
         config: {
           settings: {
             ga4: { measurementId: 'G-XXXXXXXXXX' },
@@ -75,7 +75,7 @@ export async function initializeWalker(): Promise<void> {
           },
         },
       },
-      dataLayer: destinationDataLayer,
+      dataLayer: { code: destinationDataLayer },
     },
   });
 

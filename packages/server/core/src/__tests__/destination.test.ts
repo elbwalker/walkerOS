@@ -23,7 +23,11 @@ describe('Destination', () => {
 
   async function getCollector(custom?: Partial<Collector.Config>) {
     const config = custom || {
-      destinations: { mock: mockDestination },
+      destinations: {
+        mock: {
+          code: mockDestination,
+        },
+      },
     };
 
     const { elb, collector } = await createCollector(config);
@@ -120,7 +124,7 @@ describe('Destination', () => {
     mockDestination.config.mapping = mapping;
 
     const { elb, collector } = await getCollector({
-      destinations: { mockDestination },
+      destinations: { mock: { code: mockDestination } },
       user: { id: 'us3r' },
       globalsStatic: { foo: 'irrelevant', bar: 'baz' },
       consent: { server: true },
@@ -219,7 +223,7 @@ describe('Destination', () => {
     mockDestination.config.mapping = { entity: { action: { ignore: true } } };
 
     const { elb } = await getCollector({
-      destinations: { mockDestination },
+      destinations: { mock: { code: mockDestination } },
     });
     result = await elb(mockEvent);
 
@@ -256,7 +260,10 @@ describe('Destination', () => {
     };
 
     const { elb } = await getCollector({
-      destinations: { fistDestination, secondDestination },
+      destinations: {
+        fistDestination: { code: fistDestination },
+        secondDestination: { code: secondDestination },
+      },
     });
     result = await elb(mockEvent);
 
@@ -323,7 +330,11 @@ describe('Destination', () => {
     };
 
     const { elb, collector } = await getCollector({
-      destinations: { mockDestination, initFail, pushFail },
+      destinations: {
+        mock: { code: mockDestination },
+        initFail: { code: initFail },
+        pushFail: { code: pushFail },
+      },
     });
 
     result = await elb('entity action');
@@ -333,13 +344,14 @@ describe('Destination', () => {
       ok: false,
       successful: [
         {
-          id: 'mockDestination',
+          id: 'mock',
           destination: expect.objectContaining({
             ...mockDestination,
             config: expect.objectContaining({
               ...mockDestination.config,
               init: true,
             }),
+            env: expect.any(Object),
           }),
         },
       ],
@@ -347,11 +359,17 @@ describe('Destination', () => {
       failed: [
         {
           id: 'initFail',
-          destination: initFail,
+          destination: expect.objectContaining({
+            ...initFail,
+            env: expect.any(Object),
+          }),
         },
         {
           id: 'pushFail',
-          destination: pushFail,
+          destination: expect.objectContaining({
+            ...pushFail,
+            env: expect.any(Object),
+          }),
         },
       ],
     });
@@ -377,14 +395,17 @@ describe('Destination', () => {
     };
 
     const { elb } = await getCollector({
-      destinations: { mockDestination, destinationConsent },
+      destinations: {
+        mock: { code: mockDestination },
+        destinationConsent: { code: destinationConsent },
+      },
     });
 
     result = await elb(mockEvent);
     expect(result).toStrictEqual(
       expect.objectContaining({
         ok: true,
-        successful: [expect.objectContaining({ id: 'mockDestination' })],
+        successful: [expect.objectContaining({ id: 'mock' })],
         queued: [expect.objectContaining({ id: 'destinationConsent' })],
       }),
     );
@@ -439,7 +460,7 @@ describe('Destination', () => {
     };
 
     const { elb } = await getCollector({
-      destinations: { destination },
+      destinations: { destination: { code: destination } },
     });
 
     await elb(event);
@@ -468,7 +489,7 @@ describe('Destination', () => {
       };
 
       const { elb } = await getCollector({
-        destinations: { destination },
+        destinations: { destination: { code: destination } },
       });
 
       await elb(mockEvent);
@@ -496,7 +517,7 @@ describe('Destination', () => {
       };
 
       const { elb } = await getCollector({
-        destinations: { destination },
+        destinations: { destination: { code: destination } },
       });
 
       await elb(mockEvent);

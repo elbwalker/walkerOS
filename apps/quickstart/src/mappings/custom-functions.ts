@@ -93,14 +93,14 @@ export async function setupCustomMappingFunctions(): Promise<{
     destinations: {
       // Advanced mapping destination
       advanced: {
-        ...advancedMappingDestination,
+        code: advancedMappingDestination,
         config: {
           settings: {},
         },
       },
       // GA4 with custom mapping
       gtag: {
-        ...destinationGtag,
+        code: destinationGtag,
         config: {
           settings: {
             ga4: { measurementId: 'G-XXXXXXXXXX' },

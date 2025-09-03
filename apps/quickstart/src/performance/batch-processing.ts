@@ -121,7 +121,7 @@ export async function setupBatchProcessing(): Promise<{
     destinations: {
       // High-performance batch destination
       batch: {
-        ...batchingDestination,
+        code: batchingDestination,
         config: {
           settings: {
             endpoint: 'https://api.example.com/events/batch',
@@ -137,7 +137,7 @@ export async function setupBatchProcessing(): Promise<{
       },
       // Regular API destination for comparison
       api_single: {
-        ...destinationAPI,
+        code: destinationAPI,
         config: {
           settings: {
             url: 'https://api.example.com/events/single',

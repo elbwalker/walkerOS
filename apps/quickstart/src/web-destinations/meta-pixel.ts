@@ -1,5 +1,4 @@
 import { createCollector } from '@walkeros/collector';
-import { createDestination } from '@walkeros/core';
 import { destinationMeta } from '@walkeros/web-destination-meta';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import type { WalkerOS, Collector, Source } from '@walkeros/core';
@@ -27,41 +26,44 @@ export async function setupMetaPixel(): Promise<{
       },
     },
     destinations: {
-      meta: createDestination(destinationMeta, {
-        settings: {
-          pixelId: 'YOUR_PIXEL_ID',
-        },
-        mapping: {
-          page: {
-            view: { name: 'PageView' },
+      meta: {
+        code: destinationMeta,
+        config: {
+          settings: {
+            pixelId: 'YOUR_PIXEL_ID',
           },
-          product: {
-            add: {
-              name: 'AddToCart',
-              data: {
-                map: {
-                  value: 'data.price',
-                  currency: 'data.currency',
-                  content_ids: ['data.id'],
-                  content_name: 'data.name',
+          mapping: {
+            page: {
+              view: { name: 'PageView' },
+            },
+            product: {
+              add: {
+                name: 'AddToCart',
+                data: {
+                  map: {
+                    value: 'data.price',
+                    currency: 'data.currency',
+                    content_ids: ['data.id'],
+                    content_name: 'data.name',
+                  },
+                },
+              },
+            },
+            order: {
+              complete: {
+                name: 'Purchase',
+                data: {
+                  map: {
+                    value: 'data.total',
+                    currency: 'data.currency',
+                    content_ids: ['data.id'],
+                  },
                 },
               },
             },
           },
-          order: {
-            complete: {
-              name: 'Purchase',
-              data: {
-                map: {
-                  value: 'data.total',
-                  currency: 'data.currency',
-                  content_ids: ['data.id'],
-                },
-              },
-            },
-          },
         },
-      }),
+      },
     },
   };
 

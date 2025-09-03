@@ -148,7 +148,7 @@ describe('Destination', () => {
       });
 
       const { collector, elb } = await createCollector({
-        destinations: { testDestination: destinationWithOn },
+        destinations: { testDestination: { code: destinationWithOn } },
       });
 
       // Trigger consent event
@@ -165,7 +165,7 @@ describe('Destination', () => {
       });
 
       const { collector, elb } = await createCollector({
-        destinations: { testDestination: destinationWithOn },
+        destinations: { testDestination: { code: destinationWithOn } },
       });
 
       // Set session data and trigger session event
@@ -188,7 +188,7 @@ describe('Destination', () => {
       });
 
       const { collector, elb } = await createCollector({
-        destinations: { testDestination: destinationWithOn },
+        destinations: { testDestination: { code: destinationWithOn } },
       });
 
       // Trigger ready event
@@ -205,7 +205,7 @@ describe('Destination', () => {
       });
 
       const { collector, elb } = await createCollector({
-        destinations: { testDestination: destinationWithOn },
+        destinations: { testDestination: { code: destinationWithOn } },
       });
 
       // Trigger run event
@@ -221,7 +221,7 @@ describe('Destination', () => {
       });
 
       const { collector, elb } = await createCollector({
-        destinations: { testDestination: destinationWithoutOn },
+        destinations: { testDestination: { code: destinationWithoutOn } },
       });
 
       // Should not throw when destination has no on method
@@ -241,7 +241,7 @@ describe('Destination', () => {
       });
 
       const { collector, elb } = await createCollector({
-        destinations: { testDestination: destinationWithAsyncOn },
+        destinations: { testDestination: { code: destinationWithAsyncOn } },
       });
 
       // Trigger consent event
@@ -269,8 +269,8 @@ describe('Destination', () => {
 
       const { collector, elb } = await createCollector({
         destinations: {
-          dest1: destination1,
-          dest2: destination2,
+          dest1: { code: destination1 },
+          dest2: { code: destination2 },
         },
       });
 
@@ -293,7 +293,7 @@ describe('Destination', () => {
       });
 
       const { collector, elb } = await createCollector({
-        destinations: { testDestination: destinationWithErrorOn },
+        destinations: { testDestination: { code: destinationWithErrorOn } },
       });
 
       // Should not throw even if on method throws an error

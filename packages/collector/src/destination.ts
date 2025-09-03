@@ -97,16 +97,16 @@ export async function addDestination(
   data: Destination.Init,
   options?: Destination.Config,
 ): Promise<Elb.PushResult> {
-  // Prefer explicit given config over default config
-  const config = options || data.config || { init: false };
-  // @TODO might not be the best solution to use options || data.config
+  const { code, config: dataConfig = {}, env = {} } = data;
+  const config = options || dataConfig || { init: false };
 
   const destination: Destination.Instance = {
-    ...data,
+    ...code,
     config,
+    env: mergeEnvironments(code.env, env),
   };
 
-  let id = config.id; // Use given id
+  let id = destination.config.id; // Use given id
   if (!id) {
     // Generate a new id if none was given
     do {
@@ -118,7 +118,8 @@ export async function addDestination(
   collector.destinations[id] = destination;
 
   // Process previous events if not disabled
-  if (config.queue !== false) destination.queue = [...collector.queue];
+  if (destination.config.queue !== false)
+    destination.queue = [...collector.queue];
 
   return pushToDestinations(collector, undefined, { [id]: destination });
 }
@@ -435,55 +436,37 @@ export function createPushResult(
 }
 
 /**
- * Initializes a map of destinations.
+ * Initializes a map of destinations using ONLY the unified code/config/env pattern.
+ * Does NOT call destination.init() - that happens later during push with proper consent checks.
  *
  * @param destinations - The destinations to initialize.
  * @param collector - The collector instance for destination init context.
  * @returns The initialized destinations.
  */
 export async function initDestinations(
-  collector: Collector.Instance,
+  _collector: Collector.Instance,
   destinations: Destination.InitDestinations = {},
 ): Promise<Collector.Destinations> {
   const result: Collector.Destinations = {};
 
-  for (const [name, destination] of Object.entries(destinations)) {
-    result[name] = {
-      ...destination,
-      config: isObject(destination.config) ? destination.config : {},
+  for (const [name, destinationDef] of Object.entries(destinations)) {
+    const { code, config = {}, env = {} } = destinationDef;
+
+    // Merge config: destination default + provided config
+    const mergedConfig = {
+      ...code.config,
+      ...config,
     };
 
-    // Actually call destination init functions if they exist
-    // @TODO We shouldn't call init here, it's done in the destination.ts file
-    if (destination.init && !destination.config?.init && collector) {
-      const context: Destination.Context = {
-        collector,
-        config: result[name].config,
-        env: mergeEnvironments(destination.env, destination.config?.env),
-      };
+    // Merge environment: destination default + provided env
+    const mergedEnv = mergeEnvironments(code.env, env);
 
-      try {
-        const configResult = await destination.init(context);
-        if (configResult === false) {
-          // If init returns false, don't include this destination
-          delete result[name];
-          continue;
-        }
-        if (configResult) {
-          result[name].config = {
-            ...result[name].config,
-            ...configResult,
-            init: true,
-          };
-        } else {
-          result[name].config = { ...result[name].config, init: true };
-        }
-      } catch (error) {
-        // If init fails, don't include this destination
-        delete result[name];
-        continue;
-      }
-    }
+    // Create destination instance by spreading code and overriding config/env
+    result[name] = {
+      ...code,
+      config: mergedConfig,
+      env: mergedEnv,
+    };
   }
 
   return result;

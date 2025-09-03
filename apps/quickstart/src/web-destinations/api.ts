@@ -1,5 +1,4 @@
 import { createCollector } from '@walkeros/collector';
-import { createDestination } from '@walkeros/core';
 import { destinationAPI } from '@walkeros/web-destination-api';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import type { WalkerOS, Collector, Source } from '@walkeros/core';
@@ -27,41 +26,44 @@ export async function setupAPIDestination(): Promise<{
       },
     },
     destinations: {
-      api: createDestination(destinationAPI, {
-        settings: {
-          url: 'https://api.example.com/events',
-          headers: {
-            'X-API-Key': 'your-api-key',
-            'Content-Type': 'application/json',
+      api: {
+        code: destinationAPI,
+        config: {
+          settings: {
+            url: 'https://api.example.com/events',
+            headers: {
+              'X-API-Key': 'your-api-key',
+              'Content-Type': 'application/json',
+            },
           },
-        },
-        mapping: {
-          page: {
-            view: {
-              name: 'pageview',
-              data: {
-                map: {
-                  url: 'data.url',
-                  title: 'data.title',
-                  timestamp: 'timestamp',
+          mapping: {
+            page: {
+              view: {
+                name: 'pageview',
+                data: {
+                  map: {
+                    url: 'data.url',
+                    title: 'data.title',
+                    timestamp: 'timestamp',
+                  },
+                },
+              },
+            },
+            order: {
+              complete: {
+                name: 'purchase',
+                data: {
+                  map: {
+                    order_id: 'data.id',
+                    revenue: 'data.total',
+                    currency: 'data.currency',
+                  },
                 },
               },
             },
           },
-          order: {
-            complete: {
-              name: 'purchase',
-              data: {
-                map: {
-                  order_id: 'data.id',
-                  revenue: 'data.total',
-                  currency: 'data.currency',
-                },
-              },
-            },
-          },
         },
-      }),
+      },
     },
   };
 

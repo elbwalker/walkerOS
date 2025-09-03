@@ -75,7 +75,7 @@ export async function setupCustomDestination(): Promise<{
   const { collector, elb } = await createCollector({
     destinations: {
       webhook: {
-        ...customWebhookDestination,
+        code: customWebhookDestination,
         config: {
           settings: {
             url: 'https://webhook.site/unique-id',

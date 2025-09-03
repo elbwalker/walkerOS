@@ -16,7 +16,11 @@ export async function setupBrowserWithConsole(): Promise<{
   const { collector, elb } = await createCollector({
     destinations: {
       console: {
-        push: (event) => console.log('Event:', event),
+        code: {
+          type: 'console',
+          push: (event) => console.log('Event:', event),
+          config: {},
+        },
       },
     },
   });

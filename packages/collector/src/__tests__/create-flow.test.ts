@@ -43,9 +43,12 @@ describe('Source Create Flow Integration', () => {
       },
       destinations: {
         test: {
-          type: 'test',
-          push: (event: WalkerOS.Event) => {
-            mockPushCalls.push(event);
+          code: {
+            type: 'test',
+            config: {},
+            push: (event: WalkerOS.Event) => {
+              mockPushCalls.push(event);
+            },
           },
         },
       },
