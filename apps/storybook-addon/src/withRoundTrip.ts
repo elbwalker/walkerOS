@@ -10,6 +10,7 @@ import { initializeWalker } from './walker';
 const channel = addons.getChannel();
 let currentCanvasElement: Element | null = null;
 let highlightingStyleElement: HTMLStyleElement | null = null;
+let currentStoryId: string | null = null;
 
 // Function to get the story document (either iframe or main document)
 const getStoryDocument = (): Document => {
@@ -261,6 +262,16 @@ export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
   // Update the current canvas element when a story renders
   currentCanvasElement = context.canvasElement as Element;
 
+  // Check if story changed and auto-run is enabled
+  const storyId = context.id;
+  const hasStoryChanged = currentStoryId !== storyId;
+  const globals = context.globals;
+  const autoRefresh = globals?.walkerOS?.autoRefresh;
+
+  if (hasStoryChanged) {
+    currentStoryId = storyId;
+  }
+
   const result = storyFn();
 
   // Initialize walker and inject CSS after story renders
@@ -273,6 +284,11 @@ export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
     // Inject highlighting CSS and enhance properties
     injectHighlightingCSS();
     enhanceProperties();
+
+    // Auto-run walker if story changed and auto-refresh is enabled
+    if (hasStoryChanged && autoRefresh && window.elb) {
+      window.elb('walker run');
+    }
   }, 200);
 
   return result;

@@ -59,6 +59,7 @@ export const MediathekTemplate = ({
       },
       dataElb,
     ),
+    'MediathekTemplate',
   );
 
   return (

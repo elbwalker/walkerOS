@@ -90,8 +90,8 @@ export async function initializeWalker(): Promise<void> {
         },
       },
       destinations: {
-        console: destinationConsole,
-        live: destinationLive,
+        console: { code: destinationConsole },
+        live: { code: destinationLive },
       },
     });
 
