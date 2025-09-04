@@ -1,12 +1,17 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
-import type { Flow } from '@walkeros/core';
 import { ParseError } from '../types';
+import type { PackageDefinition, GeneratorConfig } from '../types';
+
+export interface ConfigData {
+  config: GeneratorConfig;
+  packages: PackageDefinition[];
+}
 
 /**
- * Read and parse Flow configuration from JSON file
+ * Read and parse collector configuration from JSON file
  */
-export function readFlowConfig(filePath: string): Flow.Config {
+export function readCollectorConfig(filePath: string): ConfigData {
   try {
     const absolutePath = resolve(filePath);
     const content = readFileSync(absolutePath, 'utf-8');
@@ -20,25 +25,25 @@ export function readFlowConfig(filePath: string): Flow.Config {
 
     if (!parsed || typeof parsed !== 'object') {
       throw new ParseError(
-        `Flow configuration must be a JSON object in ${filePath}`,
+        `Configuration must be a JSON object in ${filePath}`,
       );
     }
 
-    return parsed as Flow.Config;
+    return parsed as ConfigData;
   } catch (error) {
     if (error instanceof ParseError) {
       throw error;
     }
 
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      throw new ParseError(`Flow configuration file not found: ${filePath}`);
+      throw new ParseError(`Configuration file not found: ${filePath}`);
     }
 
     if ((error as NodeJS.ErrnoException).code === 'EACCES') {
       throw new ParseError(`Permission denied reading file: ${filePath}`);
     }
 
-    throw new ParseError(`Failed to read Flow configuration from ${filePath}`, {
+    throw new ParseError(`Failed to read configuration from ${filePath}`, {
       error,
     });
   }
@@ -48,30 +53,17 @@ export function readFlowConfig(filePath: string): Flow.Config {
  * Ensure directory exists for the given file path
  */
 export function ensureDirectoryExists(filePath: string): void {
-  try {
-    const absolutePath = resolve(filePath);
-    const directory = dirname(absolutePath);
-    mkdirSync(directory, { recursive: true });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EACCES') {
-      throw new Error(`Permission denied creating directory for: ${filePath}`);
-    }
-    throw new Error(
-      `Failed to create directory for ${filePath}: ${(error as Error).message}`,
-    );
-  }
+  const dir = dirname(resolve(filePath));
+  mkdirSync(dir, { recursive: true });
 }
 
 /**
- * Write bundle to output file
+ * Write bundle to file
  */
-export function writeBundleFile(filePath: string, bundle: string): void {
+export function writeBundleFile(filePath: string, content: string): void {
   try {
-    // Ensure directory exists first
     ensureDirectoryExists(filePath);
-
-    const absolutePath = resolve(filePath);
-    writeFileSync(absolutePath, bundle, 'utf-8');
+    writeFileSync(resolve(filePath), content, 'utf-8');
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'EACCES') {
       throw new Error(`Permission denied writing to file: ${filePath}`);
@@ -88,11 +80,11 @@ export function writeBundleFile(filePath: string, bundle: string): void {
 }
 
 /**
- * Check if file path has proper extension
+ * Validate configuration file path and extension
  */
-export function validateFlowConfigPath(filePath: string): void {
+export function validateConfigPath(filePath: string): void {
   if (!filePath.endsWith('.json')) {
-    throw new ParseError('Flow configuration file must have .json extension');
+    throw new ParseError('Configuration file must have .json extension');
   }
 }
 
@@ -105,9 +97,9 @@ export function isJsonString(value: string): boolean {
 }
 
 /**
- * Parse Flow configuration from JSON string
+ * Parse collector configuration from JSON string
  */
-export function parseFlowConfigString(jsonString: string): Flow.Config {
+export function parseCollectorConfigString(jsonString: string): ConfigData {
   try {
     let parsed: unknown;
     try {
@@ -117,30 +109,29 @@ export function parseFlowConfigString(jsonString: string): Flow.Config {
     }
 
     if (!parsed || typeof parsed !== 'object') {
-      throw new ParseError(`Flow configuration must be a JSON object`);
+      throw new ParseError(`Configuration must be a JSON object`);
     }
 
-    return parsed as Flow.Config;
+    return parsed as ConfigData;
   } catch (error) {
     if (error instanceof ParseError) {
       throw error;
     }
 
-    throw new ParseError(
-      `Failed to parse Flow configuration from JSON string`,
-      { error },
-    );
+    throw new ParseError(`Failed to parse configuration from JSON string`, {
+      error,
+    });
   }
 }
 
 /**
- * Smart Flow config loader - detects JSON string vs file path
+ * Smart config loader - detects JSON string vs file path
  */
-export function loadFlowConfig(input: string): Flow.Config {
+export function loadCollectorConfig(input: string): ConfigData {
   if (isJsonString(input)) {
-    return parseFlowConfigString(input);
+    return parseCollectorConfigString(input);
   } else {
-    return readFlowConfig(input);
+    return readCollectorConfig(input);
   }
 }
 

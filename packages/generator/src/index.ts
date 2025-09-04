@@ -1,26 +1,29 @@
 import type { GeneratorInput, GeneratorOutput } from './types';
 import { GeneratorError } from './types';
-import { parseFlowConfig } from './core/parser';
+import { parseCollectorConfig, parsePackageDefinitions } from './core/parser';
 import { resolvePackages } from './core/resolver';
 import { generateBundle } from './core/bundler';
 
 /**
- * Generate walkerOS bundle from Flow configuration
+ * Generate walkerOS bundle from collector configuration
  */
 export async function generateWalkerOSBundle(
   input: GeneratorInput,
 ): Promise<GeneratorOutput> {
   try {
-    // 1. Parse and validate Flow configuration
-    const config = parseFlowConfig(input.flow);
+    // 1. Parse and validate collector configuration
+    const config = parseCollectorConfig(input.config);
 
-    // 2. Resolve packages
+    // 2. Parse and validate package definitions
+    const packages = parsePackageDefinitions(input.packages);
+
+    // 3. Resolve packages
     const resolvedPackages = await resolvePackages(
-      config.packages,
+      packages,
       input.cacheOptions,
     );
 
-    // 3. Generate bundle
+    // 4. Generate bundle
     const bundle = await generateBundle(config, resolvedPackages);
 
     return { bundle };
@@ -40,7 +43,7 @@ export async function generateWalkerOSBundle(
 export type * from './types';
 
 // Export utility functions
-export { parseFlowConfig } from './core/parser';
+export { parseCollectorConfig, parsePackageDefinitions } from './core/parser';
 export { resolvePackages } from './core/resolver';
 export { generateBundle } from './core/bundler';
 

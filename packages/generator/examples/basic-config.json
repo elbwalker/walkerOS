@@ -1,0 +1,36 @@
+{
+  "config": {
+    "sources": {
+      "browser": {
+        "code": "sourceBrowser",
+        "config": {
+          "settings": {
+            "pageview": true,
+            "click": true
+          }
+        }
+      }
+    },
+    "destinations": {
+      "console": {
+        "code": "destinationConsole",
+        "config": {
+          "settings": {
+            "prefix": "[WalkerOS]"
+          }
+        }
+      }
+    },
+    "run": true
+  },
+  "packages": [
+    {
+      "name": "@walkeros/collector",
+      "version": "^0.0.8"
+    },
+    {
+      "name": "@walkeros/web-source-browser",
+      "version": "^0.0.8"
+    }
+  ]
+}

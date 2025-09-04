@@ -8,7 +8,7 @@ export function createEventDataPreview(event: WalkerOS.Event): string {
   const sections: string[] = [];
 
   // Helper to format value
-  const formatValue = (value: any): string => {
+  const formatValue = (value: unknown): string => {
     if (value === null || value === undefined) {
       return 'null';
     }
@@ -28,12 +28,17 @@ export function createEventDataPreview(event: WalkerOS.Event): string {
   };
 
   // Helper to format a section (data or context)
-  const formatSection = (obj: any, sectionName: string): string | null => {
-    if (!obj || typeof obj !== 'object' || Object.keys(obj).length === 0) {
+  const formatSection = (obj: unknown, sectionName: string): string | null => {
+    if (
+      !obj ||
+      typeof obj !== 'object' ||
+      obj === null ||
+      Object.keys(obj as Record<string, unknown>).length === 0
+    ) {
       return null;
     }
 
-    const entries = Object.entries(obj)
+    const entries = Object.entries(obj as Record<string, unknown>)
       .map(([key, value]) => `${key}: ${formatValue(value)}`)
       .join(', ');
 

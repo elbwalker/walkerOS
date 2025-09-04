@@ -2,25 +2,28 @@ import { program } from 'commander';
 import chalk from 'chalk';
 import { generateWalkerOSBundle } from './index';
 import {
-  loadFlowConfig,
+  loadCollectorConfig,
   writeBundleFile,
-  validateFlowConfigPath,
+  validateConfigPath,
   validateBundlePath,
   isJsonString,
   ensureDirectoryExists,
 } from './core/file-io';
-import { parseFlowConfig } from './core/parser';
+import { parseCollectorConfig, parsePackageDefinitions } from './core/parser';
 
 // Get package version
 const packageVersion = '0.0.1'; // Could be imported from package.json if needed
 
 program
   .name('walkeros-gen')
-  .description('Generate walkerOS bundles from Flow configurations')
+  .description('Generate walkerOS bundles from collector configurations')
   .version(packageVersion);
 
 program
-  .requiredOption('-f, --flow <path>', 'Path to Flow configuration JSON file')
+  .requiredOption(
+    '-c, --config <path>',
+    'Path to collector configuration JSON file or JSON string',
+  )
   .option(
     '-o, --output <path>',
     'Output path for generated bundle (default: ./output/result.js)',
@@ -45,7 +48,7 @@ program
   )
   .action(async (options) => {
     const {
-      flow: flowPath,
+      config: configPath,
       output: outputPath,
       stdout: outputToStdout,
       verbose,
@@ -62,8 +65,8 @@ program
         : outputPath || './output/result.js';
 
       // Validate input (only validate file extension for file paths, not JSON strings)
-      if (!isJsonString(flowPath)) {
-        validateFlowConfigPath(flowPath);
+      if (!isJsonString(configPath)) {
+        validateConfigPath(configPath);
       }
       if (finalOutputPath) {
         validateBundlePath(finalOutputPath);
@@ -71,13 +74,13 @@ program
 
       if (verbose) {
         console.log(chalk.blue('🔧 WalkerOS Generator'));
-        if (isJsonString(flowPath)) {
+        if (isJsonString(configPath)) {
           console.log(
-            chalk.gray('Reading Flow configuration from JSON string'),
+            chalk.gray('Reading collector configuration from JSON string'),
           );
         } else {
           console.log(
-            chalk.gray(`Reading Flow configuration from: ${flowPath}`),
+            chalk.gray(`Reading collector configuration from: ${configPath}`),
           );
         }
         if (finalOutputPath) {
@@ -105,11 +108,11 @@ program
         }
       }
 
-      // Read and validate Flow configuration (smart detection)
-      const flowConfig = loadFlowConfig(flowPath);
+      // Read and validate collector configuration (smart detection)
+      const configData = loadCollectorConfig(configPath);
 
       if (verbose) {
-        console.log(chalk.gray('✓ Flow configuration loaded'));
+        console.log(chalk.gray('✓ Collector configuration loaded'));
         console.log(
           chalk.gray('📦 Resolving packages (this may take a few seconds)...'),
         );
@@ -118,7 +121,8 @@ program
       // Generate bundle
       const startTime = Date.now();
       const result = await generateWalkerOSBundle({
-        flow: flowConfig,
+        config: configData.config,
+        packages: configData.packages,
         cacheOptions: {
           cacheDir,
           buildDir,

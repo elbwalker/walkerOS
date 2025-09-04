@@ -1,20 +1,24 @@
-import type { Flow } from '@walkeros/core';
 import { BundleError } from '../types';
+import type {
+  GeneratorConfig,
+  GeneratorSourceInit,
+  GeneratorDestinationInit,
+} from '../types';
 import type { ResolvedPackage } from './resolver';
 
 /**
  * Generate IIFE bundle from flow configuration and resolved packages
  */
 export async function generateBundle(
-  config: Flow.Config,
+  config: GeneratorConfig,
   resolvedPackages: ResolvedPackage[],
 ): Promise<string> {
   try {
     // Transform package code for IIFE compatibility
     const packageCode = transformPackageCode(resolvedPackages);
 
-    // Generate initialization code from flow configuration
-    const initCode = generateInitCode(config);
+    // Generate initialization code from collector configuration
+    const initCode = generateInitCode(config, resolvedPackages);
 
     // Combine into IIFE bundle
     const bundle = createIIFEBundle(packageCode, initCode);
@@ -36,17 +40,17 @@ function transformPackageCode(resolvedPackages: ResolvedPackage[]): string {
   packageSections.push('// Clean extracted package objects');
 
   // Get all packages for the dynamic require function
-  const allPackages = resolvedPackages.map((r) => r.package);
+  const allPackages = resolvedPackages;
 
   for (const resolved of resolvedPackages) {
     packageSections.push(
-      `// ${resolved.package.name}@${resolved.package.version} (${resolved.package.type})`,
+      `// ${resolved.package.name}@${resolved.package.version}`,
     );
 
     // Extract clean package objects from the minified code
     const cleanCode = extractPackageObjects(
       resolved.code,
-      resolved.package,
+      resolved,
       allPackages,
     );
     packageSections.push(cleanCode);
@@ -56,16 +60,16 @@ function transformPackageCode(resolvedPackages: ResolvedPackage[]): string {
 }
 
 /**
- * Build dynamic require function from package list
+ * Build dynamic require function from resolved packages
  */
-function buildRequireFunction(allPackages: Flow.Package[]): string {
+function buildRequireFunction(allPackages: ResolvedPackage[]): string {
   const requireCases = allPackages
-    .map(
-      (pkg) =>
-        `    if (packageName === '${pkg.name}') {
-      return ${pkg.id} || {};
-    }`,
-    )
+    .map((resolved) => {
+      const varName = sanitizeVariableName(resolved.package.name);
+      return `    if (packageName === '${resolved.package.name}') {
+      return ${varName} || {};
+    }`;
+    })
     .join('\n');
 
   return `
@@ -83,16 +87,16 @@ ${requireCases}
  */
 function extractPackageObjects(
   code: string,
-  pkg: Flow.Package,
-  allPackages: Flow.Package[],
+  resolved: ResolvedPackage,
+  allPackages: ResolvedPackage[],
 ): string {
-  const packageVariable = pkg.id;
+  const packageVariable = sanitizeVariableName(resolved.package.name);
   const requireFunction = buildRequireFunction(allPackages);
 
   // Transform the CommonJS module into an IIFE that exposes the exports
   // This avoids the "module is not defined" error in the browser
   const extractedCode = `
-// ${pkg.name}@${pkg.version} (${pkg.type}) - REAL PACKAGE CODE
+// ${resolved.package.name}@${resolved.package.version} - REAL PACKAGE CODE
 var ${packageVariable} = (function() {
   // Create CommonJS environment
   var module = { exports: {} };
@@ -110,45 +114,75 @@ var ${packageVariable} = (function() {
 }
 
 /**
- * Build package lookup map
+ * Build package lookup map from resolved packages
  */
-function buildPackageLookup(config: Flow.Config): Map<string, string> {
+function buildPackageLookup(
+  resolvedPackages: ResolvedPackage[],
+): Map<string, string> {
   const packageLookup = new Map<string, string>();
-  config.packages.forEach((pkg) => {
-    packageLookup.set(pkg.name, pkg.id);
+  resolvedPackages.forEach((resolved) => {
+    // Use package name as variable name (sanitized)
+    const varName = sanitizeVariableName(resolved.package.name);
+    packageLookup.set(resolved.package.name, varName);
   });
   return packageLookup;
+}
+
+/**
+ * Sanitize package name to valid JavaScript variable name
+ */
+function sanitizeVariableName(name: string): string {
+  // Replace invalid characters with underscores and ensure it starts with letter/underscore
+  return name.replace(/[^a-zA-Z0-9_$]/g, '_').replace(/^[^a-zA-Z_$]/, '_$&');
 }
 
 /**
  * Generate source configurations at build time
  */
 function generateSourceConfigs(
-  config: Flow.Config,
+  config: GeneratorConfig,
   packageLookup: Map<string, string>,
 ): string {
-  const sourceNodes = config.nodes.filter((node) => node.type === 'source');
+  if (!config.sources) return '';
 
-  if (sourceNodes.length === 0) return '';
+  const sourceConfigs = Object.entries(config.sources)
+    .map(([id, source]) => {
+      const sourceObj = source as GeneratorSourceInit;
 
-  // Get core package ID for createSource function
-  const corePackageId = packageLookup.get('@walkeros/core');
-  if (!corePackageId) {
-    throw new Error(
-      'Core package not found - required for createSource function',
-    );
-  }
+      // For now, assume the code refers to a package by name
+      // In a real implementation, we'd need to resolve the actual source instance
+      // to its package name. For this simplified version, we'll extract from
+      // common source package names
+      let pkgId: string | undefined;
 
-  const sourceConfigs = sourceNodes
-    .map((node) => {
-      const pkgId = packageLookup.get(node.package);
-      if (!pkgId) {
-        throw new Error(
-          `Package not found for source node ${node.id}: ${node.package}`,
-        );
+      // Try to find matching package by common naming patterns
+      for (const [name, varName] of packageLookup) {
+        if (
+          name.includes('source') ||
+          name.includes('browser') ||
+          name.includes('datalayer')
+        ) {
+          pkgId = varName;
+          break;
+        }
       }
 
-      return `    "${node.id}": ${corePackageId}.createSource(${pkgId}.sourceBrowser || ${pkgId}.default, ${JSON.stringify(node.config)})`;
+      if (!pkgId) {
+        throw new Error(`Could not resolve source package for ${id}`);
+      }
+
+      let sourceConfig = `    "${id}": { code: ${pkgId}`;
+
+      if (sourceObj.config) {
+        sourceConfig += `, config: ${JSON.stringify(sourceObj.config)}`;
+      }
+
+      if (sourceObj.env) {
+        sourceConfig += `, env: ${JSON.stringify(sourceObj.env)}`;
+      }
+
+      sourceConfig += ' }';
+      return sourceConfig;
     })
     .join(',\n');
 
@@ -159,23 +193,49 @@ function generateSourceConfigs(
  * Generate destination configurations at build time
  */
 function generateDestinationConfigs(
-  config: Flow.Config,
+  config: GeneratorConfig,
   packageLookup: Map<string, string>,
 ): string {
-  const destNodes = config.nodes.filter((node) => node.type === 'destination');
+  if (!config.destinations) return '';
 
-  if (destNodes.length === 0) return '';
+  const destConfigs = Object.entries(config.destinations)
+    .map(([id, destination]) => {
+      const destObj = destination as GeneratorDestinationInit;
 
-  const destConfigs = destNodes
-    .map((node) => {
-      const pkgId = packageLookup.get(node.package);
-      if (!pkgId) {
-        throw new Error(
-          `Package not found for destination node ${node.id}: ${node.package}`,
-        );
+      // For now, assume the code refers to a package by name
+      // In a real implementation, we'd need to resolve the actual destination instance
+      // to its package name. For this simplified version, we'll extract from
+      // common destination package names
+      let pkgId: string | undefined;
+
+      // Try to find matching package by common naming patterns
+      for (const [name, varName] of packageLookup) {
+        if (
+          name.includes('destination') ||
+          name.includes('gtag') ||
+          name.includes('api')
+        ) {
+          pkgId = varName;
+          break;
+        }
       }
 
-      return `    "${node.id}": {...(${pkgId}.destinationGtag || ${pkgId}.default), config: ${JSON.stringify(node.config)}}`;
+      if (!pkgId) {
+        throw new Error(`Could not resolve destination package for ${id}`);
+      }
+
+      let destConfig = `    "${id}": { code: ${pkgId}`;
+
+      if (destObj.config) {
+        destConfig += `, config: ${JSON.stringify(destObj.config)}`;
+      }
+
+      if (destObj.env) {
+        destConfig += `, env: ${JSON.stringify(destObj.env)}`;
+      }
+
+      destConfig += ' }';
+      return destConfig;
     })
     .join(',\n');
 
@@ -183,17 +243,55 @@ function generateDestinationConfigs(
 }
 
 /**
+ * Find package variable name from code reference
+ */
+function findPackageVariable(
+  codeRef: string,
+  packageLookup: Map<string, string>,
+): string | undefined {
+  // codeRef could be the package name or a variable reference
+  // First try direct lookup
+  if (packageLookup.has(codeRef)) {
+    return packageLookup.get(codeRef);
+  }
+
+  // If it's already a variable reference, return as-is
+  if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(codeRef)) {
+    return codeRef;
+  }
+
+  return undefined;
+}
+
+/**
  * Generate walkerOS initialization code using static code generation
  * Pre-computes all configurations at build time for optimal runtime performance
  */
-function generateInitCode(config: Flow.Config): string {
-  const packageLookup = buildPackageLookup(config);
+function generateInitCode(
+  config: GeneratorConfig,
+  resolvedPackages: ResolvedPackage[],
+): string {
+  const packageLookup = buildPackageLookup(resolvedPackages);
 
-  // Pre-compute collector configuration
-  const collectorNode = config.nodes.find((node) => node.type === 'collector');
-  const baseCollectorConfig = collectorNode
-    ? JSON.stringify(collectorNode.config)
-    : '{}';
+  // Pre-compute base collector configuration
+  const baseConfig = {
+    run: config.run ?? true,
+    consent: config.consent,
+    user: config.user,
+    globals: config.globals,
+    custom: config.custom,
+    verbose: config.verbose ?? false,
+  };
+
+  // Remove undefined values
+  const cleanBaseConfig = Object.fromEntries(
+    Object.entries(baseConfig).filter(([, value]) => value !== undefined),
+  );
+
+  const baseCollectorConfig =
+    Object.keys(cleanBaseConfig).length > 0
+      ? JSON.stringify(cleanBaseConfig)
+      : '{}';
 
   // Pre-compute source and destination configurations
   const sourceConfigs = generateSourceConfigs(config, packageLookup);
@@ -202,7 +300,7 @@ function generateInitCode(config: Flow.Config): string {
   // Get collector package ID
   const collectorPkgId = packageLookup.get('@walkeros/collector');
   if (!collectorPkgId) {
-    throw new Error('Collector package not found in Flow configuration');
+    throw new Error('Collector package not found in resolved packages');
   }
 
   // Generate minimal, static runtime code
@@ -212,12 +310,13 @@ async function initializeWalkerOS() {
 ${sourceConfigs ? sourceConfigs : ''}
 ${destConfigs ? destConfigs : ''}
   const {collector, elb} = await ${collectorPkgId}.createCollector(collectorConfig);
-  return collector;
+  return {collector, elb};
 }
 
 function initializeWhenReady() {
-  initializeWalkerOS().then(collector => {
+  initializeWalkerOS().then(({collector, elb}) => {
     window.walkerOS = collector;
+    window.elb = elb;
   }).catch(error => {
     console.error("WalkerOS initialization failed:", error);
   });

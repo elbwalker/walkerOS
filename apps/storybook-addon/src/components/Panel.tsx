@@ -249,7 +249,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
               <List
                 items={events.map((item, index) => {
                   return {
-                    title: formatEventTitle(item, index, false),
+                    title: formatEventTitle(item, index),
                     content: (
                       <SyntaxHighlighter
                         language="json"
@@ -299,8 +299,6 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
                     title: formatEventTitle(
                       event,
                       liveEvents.length - index - 1,
-                      true,
-                      event.timestamp || Date.now(),
                     ),
                     content: (
                       <SyntaxHighlighter

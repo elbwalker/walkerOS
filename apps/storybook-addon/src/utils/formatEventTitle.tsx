@@ -8,21 +8,15 @@ import { createEventDataPreview } from './eventPreview';
 export function formatEventTitle(
   event: WalkerOS.Event,
   index: number,
-  includeTime: boolean = false,
-  timestamp?: number,
 ): React.ReactNode {
   const dataPreview = createEventDataPreview(event);
 
   // Build base title components
   const eventNumber = `#${index + 1}`;
-  const timeString =
-    includeTime && timestamp ? new Date(timestamp).toLocaleTimeString() : '';
   const eventName = `${event.entity} ${event.action}`;
 
   // Construct base title
-  const baseTitle = includeTime
-    ? `${eventNumber} ${timeString} ${eventName}`
-    : `${eventNumber} ${eventName}`;
+  const baseTitle = `${eventNumber} ${eventName}`;
 
   // Return styled JSX
   if (!dataPreview) {

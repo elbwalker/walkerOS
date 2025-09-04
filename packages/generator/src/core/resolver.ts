@@ -1,7 +1,7 @@
-import type { Flow } from '@walkeros/core';
 import { valid, satisfies, coerce } from 'semver';
 import { ResolveError } from '../types';
 import type { CacheOptions } from './cache';
+import type { PackageDefinition } from '../types';
 import {
   getCacheDir,
   getBuildDir,
@@ -30,7 +30,7 @@ import { tmpdir } from 'os';
 const execAsync = promisify(exec);
 
 export interface ResolvedPackage {
-  package: Flow.Package;
+  package: PackageDefinition;
   code: string;
 }
 
@@ -50,7 +50,7 @@ interface PackageMetadata {
  * Resolve packages from Flow configuration
  */
 export async function resolvePackages(
-  packages: Flow.Package[],
+  packages: PackageDefinition[],
   cacheOptions?: CacheOptions,
 ): Promise<ResolvedPackage[]> {
   try {
@@ -78,8 +78,8 @@ export async function resolvePackages(
       }
     }
 
-    // Sort packages by type for proper loading order
-    const sortedPackages = sortPackagesByType(packages);
+    // Sort packages alphabetically for consistent output
+    const sortedPackages = sortPackagesByName(packages);
 
     for (const pkg of sortedPackages) {
       const code = await resolvePackageCode(
@@ -104,34 +104,19 @@ export async function resolvePackages(
 }
 
 /**
- * Sort packages by initialization order (core -> collector -> sources -> destinations)
+ * Sort packages alphabetically by name
  */
-function sortPackagesByType(packages: Flow.Package[]): Flow.Package[] {
-  const typeOrder: Record<Flow.PackageType, number> = {
-    core: 0,
-    collector: 1,
-    source: 2,
-    destination: 3,
-  };
-
-  return [...packages].sort((a, b) => {
-    const orderA = typeOrder[a.type];
-    const orderB = typeOrder[b.type];
-
-    if (orderA !== orderB) {
-      return orderA - orderB;
-    }
-
-    // Within same type, sort alphabetically by name
-    return a.name.localeCompare(b.name);
-  });
+function sortPackagesByName(
+  packages: PackageDefinition[],
+): PackageDefinition[] {
+  return [...packages].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
  * Resolve package code from package specification
  */
 async function resolvePackageCode(
-  pkg: Flow.Package,
+  pkg: PackageDefinition,
   cacheDir?: string,
   buildDir?: string,
   options?: CacheOptions,
@@ -271,7 +256,6 @@ async function resolvePackageCode(
       originalError: error,
       packageName: pkg.name,
       packageVersion: pkg.version,
-      packageType: pkg.type,
     });
   }
 }

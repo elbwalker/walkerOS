@@ -8,7 +8,7 @@ import {
 } from 'fs';
 import { join, resolve } from 'path';
 import { homedir } from 'os';
-import type { Flow } from '@walkeros/core';
+import type { PackageDefinition } from '../types';
 
 export interface CacheOptions {
   cacheDir?: string;
@@ -70,7 +70,7 @@ export function cleanBuildDir(buildDir: string): void {
  * Check if package is already installed in build directory
  */
 export function isPackageInstalled(
-  pkg: Flow.Package,
+  pkg: PackageDefinition,
   buildDir: string,
 ): boolean {
   const packagePath = join(buildDir, 'node_modules', pkg.name);
@@ -81,7 +81,7 @@ export function isPackageInstalled(
  * Check if extracted package exists in build directory
  */
 export function isPackageExtracted(
-  pkg: Flow.Package,
+  pkg: PackageDefinition,
   buildDir: string,
 ): boolean {
   const key = getCacheKey(pkg);
@@ -92,7 +92,10 @@ export function isPackageExtracted(
 /**
  * Get extracted package code from build directory
  */
-export function getExtractedCode(pkg: Flow.Package, buildDir: string): string {
+export function getExtractedCode(
+  pkg: PackageDefinition,
+  buildDir: string,
+): string {
   const key = getCacheKey(pkg);
   const extractedPath = join(buildDir, 'extracted', `${key}.js`);
   return readFileSync(extractedPath, 'utf-8');
@@ -101,7 +104,7 @@ export function getExtractedCode(pkg: Flow.Package, buildDir: string): string {
 /**
  * Generate cache key for a package
  */
-export function getCacheKey(pkg: Flow.Package): string {
+export function getCacheKey(pkg: PackageDefinition): string {
   return `${pkg.name}@${pkg.version}`.replace(/[\/\\:]/g, '_');
 }
 
@@ -143,7 +146,7 @@ export function saveCacheMetadata(
 /**
  * Check if package is cached and still valid
  */
-export function isCached(pkg: Flow.Package, cacheDir: string): boolean {
+export function isCached(pkg: PackageDefinition, cacheDir: string): boolean {
   const metadata = loadCacheMetadata(cacheDir);
   const key = getCacheKey(pkg);
   const entry = metadata.entries[key];
@@ -166,7 +169,10 @@ export function isCached(pkg: Flow.Package, cacheDir: string): boolean {
 /**
  * Get cached package code
  */
-export function getCachedCode(pkg: Flow.Package, cacheDir: string): string {
+export function getCachedCode(
+  pkg: PackageDefinition,
+  cacheDir: string,
+): string {
   const key = getCacheKey(pkg);
   const codePath = join(cacheDir, 'packages', `${key}.js`);
   return readFileSync(codePath, 'utf-8');
@@ -176,7 +182,7 @@ export function getCachedCode(pkg: Flow.Package, cacheDir: string): string {
  * Cache package code
  */
 export function cachePackageCode(
-  pkg: Flow.Package,
+  pkg: PackageDefinition,
   code: string,
   cacheDir: string,
   metadata?: Record<string, unknown>,

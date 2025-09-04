@@ -1,340 +1,277 @@
-# @walkeros/generator
+# WalkerOS Generator
 
-Generate walkerOS bundles from Flow configurations.
-
-**Quick Start:** Use `npm run walkeros-gen -- [options]` to run the CLI (after
-building)
+Generate production-ready walkerOS bundles from collector configurations.
 
 ## Installation
 
+### NPX (Recommended)
+
 ```bash
-npm install @walkeros/generator
+# Generate bundle directly without installation
+npx @walkeros/generator --config my-config.json --output bundle.js
+```
+
+### Global Installation
+
+```bash
+# Install globally
+npm install -g @walkeros/generator
+
+# Use anywhere
+walkeros-gen --config my-config.json --output bundle.js
+```
+
+### Local Installation
+
+```bash
+# Install in project
+npm install --save-dev @walkeros/generator
+
+# Use via npm scripts or npx
+npx walkeros-gen --config my-config.json --output bundle.js
 ```
 
 ## Usage
 
-```typescript
-import { generateWalkerOSBundle } from '@walkeros/generator';
-import type { Flow } from '@walkeros/core';
-
-const flowConfig: Flow.Config = {
-  packages: [
-    { name: '@walkeros/core', version: '0.0.8', type: 'core' },
-    { name: '@walkeros/collector', version: '0.0.8', type: 'collector' },
-    { name: '@walkeros/web-source-browser', version: '0.0.9', type: 'source' },
-    {
-      name: '@walkeros/web-destination-gtag',
-      version: '0.0.8',
-      type: 'destination',
-    },
-  ],
-  nodes: [
-    {
-      id: 'browser-source',
-      type: 'source',
-      package: '@walkeros/web-source-browser',
-      config: { domain: 'example.com', autoTracking: true },
-    },
-    {
-      id: 'collector',
-      type: 'collector',
-      package: '@walkeros/collector',
-      config: { consent: { functional: true }, queue: true },
-    },
-    {
-      id: 'gtag-destination',
-      type: 'destination',
-      package: '@walkeros/web-destination-gtag',
-      config: { measurementId: 'G-XXXXXXXXXX' },
-    },
-  ],
-  edges: [
-    {
-      id: 'browser-to-collector',
-      source: 'browser-source',
-      target: 'collector',
-    },
-    {
-      id: 'collector-to-gtag',
-      source: 'collector',
-      target: 'gtag-destination',
-    },
-  ],
-};
-
-const result = await generateWalkerOSBundle({ flow: flowConfig });
-// result.bundle contains ready-to-use IIFE JavaScript
-```
-
-## Generated Bundle
-
-Creates a complete IIFE bundle file with:
-
-- Real walkerOS package code from npm
-- Auto-initialization on DOM ready
-- Global `window.walkerOS` and `window.elb` exposure
-- Collector configuration from Flow nodes
-- **Default output**: `./output/result.js` (always written to disk)
-
-## CLI Usage
-
-### Getting Started
+### Basic Command
 
 ```bash
-# Install dependencies and build
-npm install && npm run build
-
-# Test with the basic example (writes to ./output/result.js)
-npm run walkeros-gen -- --flow examples/basic.json --build-dir ./workspace --verbose
+npx @walkeros/generator --config config.json --output bundle.js
 ```
 
-### Output Behavior
-
-**By default, the CLI always writes the bundle to `./output/result.js`**:
-
-- ✅ **Default**: Bundle written to `./output/result.js`
-- ✅ **Custom file**: Use `--output custom.js` to write elsewhere
-- ✅ **Stdout only**: Use `--stdout` to output to console instead of file
-
-The generated file is the primary result and can be immediately used in web
-applications.
-
-### All Commands
+### CLI Options
 
 ```bash
-# Generate bundle from file (default: writes to ./output/result.js)
-npm run walkeros-gen -- --flow config.json
+npx @walkeros/generator [options]
 
-# Generate bundle from JSON string (default: writes to ./output/result.js)
-npm run walkeros-gen -- --flow '{"packages":[...],"nodes":[...],"edges":[...]}'
-
-# Generate bundle to custom file with verbose output
-npm run walkeros-gen -- --flow config.json --output bundle.js --verbose
-
-# Generate bundle to stdout instead of file
-npm run walkeros-gen -- --flow config.json --stdout
-
-# Use persistent build directory (recommended for development, default: ./tmp)
-npm run walkeros-gen -- --flow config.json --build-dir ./walkeros-workspace
-
-# Use package caching to speed up subsequent runs
-npm run walkeros-gen -- --flow config.json --cache-dir ~/.walkeros-cache --build-dir ./workspace
-
-# Force fresh download by cleaning build directory
-npm run walkeros-gen -- --flow config.json --build-dir ./workspace --clean
-
-# Skip cache but reuse build directory installations
-npm run walkeros-gen -- --flow config.json --build-dir ./workspace --no-cache
-
-# Optimal development workflow (cache + persistent workspace)
-npm run walkeros-gen -- --flow config.json --output bundle.js --cache-dir ~/.walkeros-cache --build-dir ./workspace --verbose
-
-# Help and version
-npm run walkeros-gen -- --help
-npm run walkeros-gen -- --version
+Options:
+  -c, --config <path>   Path to configuration JSON file or JSON string (required)
+  -o, --output <path>   Output path for bundle (default: ./output/result.js)
+  --stdout              Output bundle to stdout instead of file
+  -v, --verbose         Enable verbose logging
+  --cache-dir <path>    Cache directory for downloaded packages
+  --build-dir <path>    Build directory for npm installations
+  --no-cache           Skip package cache
+  --clean              Clean build directory before starting
+  -h, --help           Display help
 ```
 
-## Input Formats
+### Example Commands
 
-### File Input
+**Basic bundle generation:**
 
 ```bash
-npm run walkeros-gen -- --flow config.json
+npx @walkeros/generator --config examples/basic-config.json --output my-bundle.js
 ```
 
-### JSON String Input (NEW!)
+**Output to stdout:**
 
 ```bash
-npm run walkeros-gen -- --flow '{"packages":[...],"nodes":[...],"edges":[...]}'
+npx @walkeros/generator --config my-config.json --stdout > bundle.js
 ```
 
-The CLI automatically detects whether your `--flow` argument is a JSON string or
-file path.
-
-## Performance & Development Options
-
-### Persistent Build Directory (Recommended)
-
-Use `--build-dir` to create a persistent workspace that avoids wasteful
-re-downloads:
+**With caching for faster builds:**
 
 ```bash
-# First run: downloads and installs packages (~3-5 seconds)
-npm run walkeros-gen -- --flow config.json --build-dir ./workspace --verbose
-
-# Subsequent runs: reuses installations (~1 second)
-npm run walkeros-gen -- --flow config.json --build-dir ./workspace --verbose
+npx @walkeros/generator --config my-config.json --output bundle.js --cache-dir ~/.walkeros-cache --build-dir ./build
 ```
 
-**What gets saved:**
-
-- `node_modules/` - npm package installations (reused between runs)
-- `extracted/` - Processed package code files
-- All build artifacts for inspection
-
-### Package Caching
-
-Add `--cache-dir` for even faster subsequent runs across different projects:
+**JSON string input:**
 
 ```bash
-# Combines build directory + global package cache
-npm run walkeros-gen -- --flow config.json --build-dir ./workspace --cache-dir ~/.walkeros-cache
+npx @walkeros/generator --config '{"config":{"sources":{...},"destinations":{...}},"packages":[...]}' --stdout
 ```
 
-### Build Control Flags
+## Configuration Format
 
-```bash
-# Force fresh download (clean workspace)
-npm run walkeros-gen -- --flow config.json --build-dir ./workspace --clean
-
-# Skip global cache but reuse build directory
-npm run walkeros-gen -- --flow config.json --build-dir ./workspace --no-cache
-
-# Temporary directory mode (no persistence)
-npm run walkeros-gen -- --flow config.json  # No --build-dir specified
-```
-
-### Manual Testing Commands
-
-Create these example Flow configurations for testing:
-
-**Basic Flow (`examples/basic.json`):**
+The generator uses the standard walkerOS collector configuration format:
 
 ```json
 {
-  "packages": [
-    { "name": "@walkeros/core", "version": "0.0.8", "type": "core" },
-    { "name": "@walkeros/collector", "version": "0.0.8", "type": "collector" }
-  ],
-  "nodes": [
-    {
-      "id": "collector",
-      "type": "collector",
-      "package": "@walkeros/collector",
-      "config": { "consent": { "functional": true } }
-    }
-  ],
-  "edges": []
-}
-```
-
-**Test Commands:**
-
-```bash
-# Test basic functionality
-npm run walkeros-gen -- --flow examples/basic.json --build-dir ./test-basic --output basic.js --verbose
-
-# Test performance (first vs second run)
-time npm run walkeros-gen -- --flow examples/basic.json --build-dir ./perf --clean --verbose
-time npm run walkeros-gen -- --flow examples/basic.json --build-dir ./perf --verbose
-
-# Test different configs (check ./output/result.js for output)
-npm run walkeros-gen -- --flow examples/basic.json --build-dir ./test-1
-npm run walkeros-gen -- --flow examples/advanced.json --build-dir ./test-2
-
-# Inspect workspace contents (output goes to ./output/result.js)
-npm run walkeros-gen -- --flow examples/basic.json --build-dir ./inspect --verbose
-ls -la ./inspect/node_modules/@walkeros/
-ls -la ./inspect/extracted/
-ls -la ./output/result.js
-
-# Test cache vs no-cache performance
-time npm run walkeros-gen -- --flow examples/basic.json --build-dir ./cache-test --cache-dir ~/.test-cache --clean
-time npm run walkeros-gen -- --flow examples/basic.json --build-dir ./cache-test --cache-dir ~/.test-cache
-time npm run walkeros-gen -- --flow examples/basic.json --build-dir ./cache-test --no-cache
-```
-
-### API Usage
-
-```typescript
-import { generateWalkerOSBundle } from '@walkeros/generator';
-
-const result = await generateWalkerOSBundle({
-  flow: flowConfig,
-  cacheOptions: {
-    buildDir: './workspace', // Persistent workspace (recommended)
-    cacheDir: '~/.walkeros-cache', // Global package cache
-    clean: false, // Set true to force fresh download
-    noCache: false, // Set true to skip cache
+  "config": {
+    "sources": {
+      "browser": {
+        "code": "sourceBrowser",
+        "config": {
+          "settings": {
+            "pageview": true,
+            "click": true
+          }
+        }
+      }
+    },
+    "destinations": {
+      "gtag": {
+        "code": "destinationGtag",
+        "config": {
+          "settings": {
+            "ga4": {
+              "measurementId": "G-XXXXXXXXXX"
+            }
+          }
+        }
+      }
+    },
+    "run": true
   },
-});
-```
-
-Example Flow configuration (`config.json` or JSON string):
-
-```json
-{
   "packages": [
-    { "name": "@walkeros/core", "version": "0.0.8", "type": "core" },
-    { "name": "@walkeros/collector", "version": "0.0.8", "type": "collector" },
+    {
+      "name": "@walkeros/collector",
+      "version": "^0.0.8"
+    },
     {
       "name": "@walkeros/web-source-browser",
-      "version": "0.0.9",
-      "type": "source"
+      "version": "^0.0.8"
     },
     {
       "name": "@walkeros/web-destination-gtag",
-      "version": "0.0.8",
-      "type": "destination"
-    }
-  ],
-  "nodes": [
-    {
-      "id": "browser-source",
-      "type": "source",
-      "package": "@walkeros/web-source-browser",
-      "config": { "domain": "example.com", "autoTracking": true }
-    },
-    {
-      "id": "collector",
-      "type": "collector",
-      "package": "@walkeros/collector",
-      "config": { "consent": { "functional": true }, "queue": true }
-    },
-    {
-      "id": "gtag-destination",
-      "type": "destination",
-      "package": "@walkeros/web-destination-gtag",
-      "config": { "measurementId": "G-XXXXXXXXXX" }
-    }
-  ],
-  "edges": [
-    {
-      "id": "browser-to-collector",
-      "source": "browser-source",
-      "target": "collector"
-    },
-    {
-      "id": "collector-to-gtag",
-      "source": "collector",
-      "target": "gtag-destination"
+      "version": "^0.0.8"
     }
   ]
 }
 ```
 
-## Development
+## Configuration Structure
 
-```bash
-npm test    # Run unified integration tests (generation + runtime validation)
-npm run dev # Watch mode for tests
-npm run build # Build package
-npm run lint  # TypeScript + ESLint
+### `config` (Collector.InitConfig)
+
+Standard walkerOS collector configuration:
+
+- **`sources`**: Source configurations using `{code, config, env}` pattern
+- **`destinations`**: Destination configurations using `{code, config, env}`
+  pattern
+- **`run`**: Whether to auto-initialize (default: true)
+- **`consent`**: Initial consent state
+- **`globals`**: Global properties
+- **`user`**: User identification
+
+### `packages` (PackageDefinition[])
+
+Array of npm packages to include:
+
+```json
+[
+  {
+    "name": "@walkeros/collector",
+    "version": "^0.0.8"
+  }
+]
 ```
 
-### Testing Strategy
+## Examples
 
-Tests use **real npm packages** (no mocks) and validate:
+### Basic Setup
 
-- ✅ **Bundle generation** - Creates functional IIFE bundles from Flow configs
-- ✅ **Runtime validation** - Tests actual walkerOS initialization and
-  functionality
-- ✅ **Configuration matching** - Verifies sources/destinations match Flow nodes
-- ✅ **DOM readiness** - Ensures proper browser initialization
-- ✅ **Clean output** - Console logs/warnings intercepted and verified without
-  noise
+See `examples/basic-config.json`:
 
-**Test config**: Uses `examples/working-demo.json` with consolidated test
-scenarios.  
-**Single command**: `npm test` runs clean validation without console output or
-manual files.
+```bash
+npx @walkeros/generator --config examples/basic-config.json --output basic-bundle.js
+```
+
+### Advanced Setup
+
+See `examples/demo-config.json`:
+
+```bash
+npx @walkeros/generator --config examples/demo-config.json --output advanced-bundle.js
+```
+
+### Custom Destinations with Environment
+
+```json
+{
+  "config": {
+    "destinations": {
+      "api": {
+        "code": "destinationAPI",
+        "config": {
+          "settings": {
+            "url": "https://api.example.com/events"
+          }
+        },
+        "env": {
+          "sendWeb": "fetch"
+        }
+      }
+    }
+  }
+}
+```
+
+## Generated Bundle
+
+The generator produces a self-contained IIFE bundle:
+
+```javascript
+/*!
+ * WalkerOS Bundle
+ * Generated from collector configuration
+ */
+(function (window) {
+  'use strict';
+
+  // Package code...
+  // Initialization code...
+
+  // Exposes:
+  // window.walkerOS - Collector instance
+  // window.elb - Event function
+})(typeof window !== 'undefined' ? window : {});
+```
+
+## Programmatic API
+
+```typescript
+import { generateWalkerOSBundle } from '@walkeros/generator';
+
+const result = await generateWalkerOSBundle({
+  config: {
+    sources: {
+      /* ... */
+    },
+    destinations: {
+      /* ... */
+    },
+  },
+  packages: [{ name: '@walkeros/collector', version: '^0.0.8' }],
+  cacheOptions: {
+    cacheDir: '~/.walkeros-cache',
+    buildDir: './build',
+  },
+});
+
+console.log(result.bundle); // Generated JavaScript code
+```
+
+## Performance Tips
+
+1. **Use caching**: Specify `--cache-dir` and `--build-dir` for faster
+   subsequent builds
+2. **Persistent build directory**: Use `--build-dir` to reuse npm installations
+3. **Clean builds**: Use `--clean` when updating package versions
+4. **No cache**: Use `--no-cache` for development/testing
+
+## Troubleshooting
+
+### Package Resolution Errors
+
+- Verify package names and versions exist on npm
+- Check network connectivity
+- Try clearing npm cache: `npm cache clean --force`
+
+### Bundle Generation Errors
+
+- Verify configuration structure matches examples
+- Check that all required packages are listed
+- Use `--verbose` flag for detailed logging
+
+### Permission Errors
+
+- Ensure write permissions for output directory
+- Check cache/build directory permissions
+
+## Related
+
+- [@walkeros/core](../core) - Core types and utilities
+- [@walkeros/collector](../collector) - Event collection engine
+- [walkerOS Documentation](../../README.md) - Main project docs

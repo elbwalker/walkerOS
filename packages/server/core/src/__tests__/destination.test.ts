@@ -179,7 +179,7 @@ describe('Destination', () => {
     const eventMapping = { data: { value: 'bar' } };
     elb(
       'walker destination',
-      { push: mockPush },
+      { push: mockPush, config: {} },
       { mapping: { entity: { action: eventMapping } } },
     );
 
@@ -199,7 +199,7 @@ describe('Destination', () => {
     const eventMapping = { data: { map: { foo: { value: 'bar' } } } };
     elb(
       'walker destination',
-      { push: mockPush },
+      { push: mockPush, config: {} },
       {
         data: { map: { foo: { value: 'unknown' }, bar: { value: 'baz' } } },
         mapping: { entity: { action: eventMapping } },
