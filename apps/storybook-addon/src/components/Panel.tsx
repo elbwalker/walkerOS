@@ -21,6 +21,7 @@ import {
 
 import { ADDON_ID, EVENTS } from '../constants';
 import { List } from './List';
+import { formatEventTitle } from '../utils/formatEventTitle';
 
 interface PanelProps {
   active: boolean;
@@ -246,19 +247,21 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
             </Fragment>
             {events.length > 0 ? (
               <List
-                items={events.map((item, index) => ({
-                  title: `#${index + 1} ${item.entity} ${item.action}`,
-                  content: (
-                    <SyntaxHighlighter
-                      language="json"
-                      copyable={true}
-                      bordered={true}
-                      padded={true}
-                    >
-                      {JSON.stringify(item, null, 2)}
-                    </SyntaxHighlighter>
-                  ),
-                }))}
+                items={events.map((item, index) => {
+                  return {
+                    title: formatEventTitle(item, index, false),
+                    content: (
+                      <SyntaxHighlighter
+                        language="json"
+                        copyable={true}
+                        bordered={true}
+                        padded={true}
+                      >
+                        {JSON.stringify(item, null, 2)}
+                      </SyntaxHighlighter>
+                    ),
+                  };
+                })}
               />
             ) : (
               <p>No events yet</p>
@@ -287,31 +290,30 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
                     Clear Events
                   </Button>
                 </div>
-                <span
-                  style={{
-                    fontSize: '12px',
-                    color: theme.color.mediumdark,
-                  }}
-                >
-                  🟢 Live Events
-                </span>
               </div>
             </Fragment>
             {liveEvents.length > 0 ? (
               <List
-                items={liveEvents.map((event, index) => ({
-                  title: `${formatTime(event.timestamp || Date.now())} - #${liveEvents.length - index} ${event.entity} ${event.action}`,
-                  content: (
-                    <SyntaxHighlighter
-                      language="json"
-                      copyable={true}
-                      bordered={true}
-                      padded={true}
-                    >
-                      {JSON.stringify(event, null, 2)}
-                    </SyntaxHighlighter>
-                  ),
-                }))}
+                items={liveEvents.map((event, index) => {
+                  return {
+                    title: formatEventTitle(
+                      event,
+                      liveEvents.length - index - 1,
+                      true,
+                      event.timestamp || Date.now(),
+                    ),
+                    content: (
+                      <SyntaxHighlighter
+                        language="json"
+                        copyable={true}
+                        bordered={true}
+                        padded={true}
+                      >
+                        {JSON.stringify(event, null, 2)}
+                      </SyntaxHighlighter>
+                    ),
+                  };
+                })}
               />
             ) : (
               <p

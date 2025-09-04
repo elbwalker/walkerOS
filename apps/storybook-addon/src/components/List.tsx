@@ -1,9 +1,9 @@
 import { ArrowDownIcon } from '@storybook/icons';
-import React, { Fragment, useState } from 'react';
+import React, { Fragment, useState, memo } from 'react';
 import { styled } from 'storybook/theming';
 
 type Item = {
-  title: string;
+  title: string | React.ReactNode;
   content: string | React.ReactNode;
 };
 
@@ -43,18 +43,36 @@ const Icon = styled(ArrowDownIcon)(({ theme }) => ({
 }));
 
 const HeaderBar = styled.div(({ theme }) => ({
-  padding: theme.layoutMargin,
-  paddingLeft: theme.layoutMargin - 3,
+  padding: '6px 12px',
+  paddingLeft: 9,
   background: 'none',
   color: 'inherit',
   textAlign: 'left',
   cursor: 'pointer',
   borderLeft: '3px solid transparent',
   width: '100%',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
 
   '&:focus': {
     outline: '0 none',
     borderLeft: `3px solid ${theme.color.secondary}`,
+  },
+
+  '& .event-base': {
+    color: 'inherit',
+    fontWeight: '500',
+  },
+
+  '& .event-separator': {
+    color: theme.color.mediumdark,
+    fontWeight: '300',
+  },
+
+  '& .event-preview': {
+    color: theme.color.mediumdark,
+    fontWeight: '400',
   },
 }));
 
@@ -66,8 +84,8 @@ const Description = styled.div(({ theme }) => ({
   textAlign: 'left',
 }));
 
-export const ListItem: React.FC<ListItemProps> = ({ item }) => {
-  const [isOpen, onToggle] = useState(true);
+export const ListItem: React.FC<ListItemProps> = memo(({ item }) => {
+  const [isOpen, onToggle] = useState(false);
 
   return (
     <Fragment>
@@ -84,12 +102,12 @@ export const ListItem: React.FC<ListItemProps> = ({ item }) => {
       {isOpen ? <Description>{item.content}</Description> : null}
     </Fragment>
   );
-};
+});
 
-export const List: React.FC<ListProps> = ({ items }) => (
+export const List: React.FC<ListProps> = memo(({ items }) => (
   <ListWrapper>
     {items.map((item, idx) => (
-      <ListItem key={idx} item={item}></ListItem>
+      <ListItem key={`${item.title}-${idx}`} item={item}></ListItem>
     ))}
   </ListWrapper>
-);
+));
