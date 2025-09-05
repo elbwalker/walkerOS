@@ -125,16 +125,19 @@ An **action** can be added by setting one of the following attributes on the
 **same level** or **child elements** in combination with a **matching trigger**:
 
 - **`data-elbaction`** - applies action to the **nearest entity only**
-- **`data-elbactions`** - applies action to **all entities** in the DOM hierarchy
+- **`data-elbactions`** - applies action to **all entities** in the DOM
+  hierarchy
 
 Both attributes use the same syntax, e.g., `data-elbaction="visible:view"` or
 `data-elbactions="click:select"` to fire events when triggered.
 
 :::info Migration Note
 
-The behavior of `data-elbaction` changed in @walkeros to apply to nearest entity only.
-For the previous @elbwalker "all entities" behavior, use `data-elbactions`. 
-See the [Migration Guide](/docs/guides/migration#data-elbaction-vs-data-elbactions) for details.
+The behavior of `data-elbaction` changed in @walkeros to apply to nearest entity
+only. For the previous @elbwalker "all entities" behavior, use
+`data-elbactions`. See the
+[Migration Guide](/docs/guides/migration#data-elbaction-vs-data-elbactions) for
+details.
 
 :::
 
@@ -151,8 +154,8 @@ listener or mutation observer initialization.
 | ----------- | ------------------------------------------------------------------------------------ |
 | load        | after loading a page when DOM is ready                                               |
 | click       | when an element or a child is clicked                                                |
-| visible     | after an element has been in the viewport for at least 50% for one second            |
-| visibles    | each time an element re-enters the viewport after being out of view                  |
+| impression  | after an element has been in the viewport for at least 50% for one second            |
+| visible     | each time an element re-enters the viewport after being out of view                  |
 | hover       | each time the mouse enters the corresponding element                                 |
 | submit      | on valid form submission                                                             |
 | wait(ms)    | waits ms seconds (15 seconds by default) until triggering                            |
@@ -194,9 +197,9 @@ gets triggered. Use brackets behind the trigger to pass that information.
 
 At some point, you might want to nest one entity inside another. To prevent an
 action to trigger unwanted entities, you can restrict the action to a specific
-entity by adding the name, e.g. `data-elbaction="load:view(product)` or 
-`data-elbactions="load:view(product)"`. If the trigger event gets called, 
-the result will only include the property values from the specific entities.
+entity by adding the name, e.g. `data-elbaction="load:view(product)` or
+`data-elbactions="load:view(product)"`. If the trigger event gets called, the
+result will only include the property values from the specific entities.
 
 ```html
 <!-- setting a filter for an entity -->

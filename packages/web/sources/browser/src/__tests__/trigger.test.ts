@@ -86,6 +86,7 @@ describe('Trigger System', () => {
     expect(Triggers.Load).toBe('load');
     expect(Triggers.Hover).toBe('hover');
     expect(Triggers.Submit).toBe('submit');
+    expect(Triggers.Impression).toBe('impression');
     expect(Triggers.Visible).toBe('visible');
     expect(Triggers.Scroll).toBe('scroll');
     expect(Triggers.Pulse).toBe('pulse');

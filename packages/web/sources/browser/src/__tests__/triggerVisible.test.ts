@@ -19,6 +19,7 @@ interface CollectorWithVisibility extends Collector.Instance {
         multiple: boolean;
         blocked: boolean;
         context: Context;
+        trigger: string;
       }
     >;
   };
@@ -47,7 +48,7 @@ jest.mock('@walkeros/web-core', () => ({
 jest.mock('../trigger', () => ({
   ...jest.requireActual('../trigger'),
   handleTrigger: jest.fn(),
-  Triggers: { Visible: 'visible' },
+  Triggers: { Impression: 'impression', Visible: 'visible' },
 }));
 
 // Get references to mocked functions
@@ -146,6 +147,7 @@ describe('triggerVisible', () => {
       multiple: true,
       blocked: false,
       context: expect.any(Object),
+      trigger: 'visible',
     });
   });
 
@@ -202,7 +204,7 @@ describe('triggerVisible', () => {
         }),
       }),
       element,
-      'visible',
+      'impression',
     );
   });
 
@@ -243,7 +245,7 @@ describe('triggerVisible', () => {
         }),
       }),
       element,
-      'visible',
+      'impression',
     );
   });
 

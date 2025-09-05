@@ -23,7 +23,7 @@ interface VisibilityState {
   duration: number;
   elementConfigs?: WeakMap<
     HTMLElement,
-    { multiple: boolean; blocked: boolean; context: Context }
+    { multiple: boolean; blocked: boolean; context: Context; trigger: string }
   >;
 }
 
@@ -156,7 +156,7 @@ function handleIntersection(
               await handleTrigger(
                 elementConfig.context,
                 target as Element,
-                Triggers.Visible,
+                elementConfig.trigger,
               );
             }
 
@@ -226,6 +226,7 @@ export function triggerVisible(
       multiple: config.multiple ?? false,
       blocked: false,
       context,
+      trigger: config.multiple ? 'visible' : 'impression',
     });
     state.observer.observe(element);
   }

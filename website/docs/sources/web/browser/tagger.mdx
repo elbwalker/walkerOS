@@ -254,7 +254,7 @@ tagger().action('load', 'view');
 tagger().action('load:view');
 
 // Multiple actions
-tagger().action({ load: 'view', click: 'select', visible: 'impression' });
+tagger().action({ load: 'view', click: 'select', impression: 'view' });
 ```
 
 ##### `actions(trigger: string, action?: string)` | `actions(object: Record<string, string>)`
@@ -269,12 +269,10 @@ tagger().actions('load', 'view');
 tagger().actions('load:view');
 
 // Multiple actions
-tagger().actions({ load: 'view', click: 'select', visible: 'impression' });
+tagger().actions({ load: 'view', click: 'select', visible: 'visible' });
 
 // Can be combined with action() method
-tagger()
-  .action('click', 'select')
-  .actions('load', 'view');
+tagger().action('click', 'select').actions('load', 'view');
 ```
 
 ##### `context(key: string, value: Property)` | `context(object: Properties)`
@@ -415,4 +413,3 @@ function trackComponent(type, data, actions = {}) {
   Sign Up
 </button>
 ```
-
