@@ -181,6 +181,66 @@ describe('Tagger', () => {
     });
   });
 
+  describe('Actions Method', () => {
+    test('single trigger and action', () => {
+      const result = createTagger()().actions('load', 'view').get();
+      expect(result).toMatchObject({
+        'data-elbactions': 'load:view',
+      });
+    });
+
+    test('single combined trigger:action', () => {
+      const result = createTagger()().actions('load:view').get();
+      expect(result).toMatchObject({
+        'data-elbactions': 'load:view',
+      });
+    });
+
+    test('object with multiple actions', () => {
+      const result = createTagger()()
+        .actions({ load: 'view', click: 'select', visible: 'impression' })
+        .get();
+      expect(result).toMatchObject({
+        'data-elbactions': 'load:view;click:select;visible:impression',
+      });
+    });
+
+    test('accumulates multiple actions calls', () => {
+      const result = createTagger()()
+        .actions('load', 'view')
+        .actions({ click: 'select' })
+        .actions('visible:impression')
+        .get();
+      expect(result).toMatchObject({
+        'data-elbactions': 'load:view;click:select;visible:impression',
+      });
+    });
+
+    test('works with entity', () => {
+      const result = createTagger()()
+        .entity('product')
+        .data('id', 123)
+        .actions('load', 'view')
+        .get();
+      expect(result).toMatchObject({
+        'data-elb': 'product',
+        'data-elbactions': 'load:view',
+        'data-elb-product': 'id:123',
+      });
+    });
+
+    test('can be used alongside action method', () => {
+      const result = createTagger()()
+        .action('click', 'select')
+        .actions('load', 'view')
+        .get();
+      expect(result).toMatchObject({
+        'data-elbaction': 'click:select',
+        'data-elbactions': 'load:view',
+      });
+    });
+  });
+
   describe('Context Method', () => {
     test('single key-value', () => {
       const result = createTagger()().context('test', 'engagement').get();

@@ -15,7 +15,7 @@
     id="son"
     data-elb="son"
     data-elb-son="interested_in:pizza"
-    data-elbaction="load:speak"
+    data-elbactions="load:speak"
   ></div>
   <div
     id="daughter"
@@ -27,7 +27,7 @@
       id="baby"
       data-elb="baby"
       data-elb-baby="status:infant"
-      data-elbaction="load:play(baby, mother)"
+      data-elbactions="load:play(baby, mother)"
     ></div>
   </div>
 </div>
@@ -158,7 +158,7 @@
     data-elb-l="l2:2"
     data-elbcontext="child:link"
   >
-    <div id="link-child" data-elb-l="l3:3" data-elbaction="click"></div>
+    <div id="link-child" data-elb-l="l3:3" data-elbactions="click"></div>
     <div data-elb-n="k:v"></div>
   </div>
   <div data-elblink="bh"><div data-elb-l="no:pe"></div></div>
@@ -171,3 +171,13 @@
   <!-- Shadow DOM -->
 </div>
 <div id="shadow-host-closed" data-elb="e" data-elb-e="k:v"></div>
+
+<!-- Test cases for data-elbaction vs data-elbactions -->
+<div data-elb="parent" data-elb-parent="scope:outer">
+  <div id="test-nearest-only" data-elb="child" data-elb-child="scope:inner" data-elbaction="click:test">
+    <!-- data-elbaction should only apply to nearest entity (child) -->
+  </div>
+  <div id="test-all-entities" data-elb="child" data-elb-child="scope:inner" data-elbactions="click:test">
+    <!-- data-elbactions should apply to all entities (child and parent) -->
+  </div>
+</div>

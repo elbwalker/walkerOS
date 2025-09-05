@@ -103,11 +103,11 @@ export function getEvents(
 ): Walker.Events {
   const events: Walker.Events = [];
 
-  // Check for an action (data-elbaction) attribute and resolve it
-  const actions = resolveAttributes(prefix, target, trigger);
+  // Check for actions and get entity collection strategy
+  const { actions, nearestOnly } = resolveAttributes(prefix, target, trigger);
 
   // Stop if there's no valid action combo
-  if (!actions) return events;
+  if (!actions.length) return events;
 
   actions.forEach((triggerAction) => {
     const filter = splitAttribute(triggerAction.actionParams || '', ',').reduce(
@@ -118,8 +118,8 @@ export function getEvents(
       {} as Walker.Filter,
     );
 
-    // Get the entities with their properties
-    const entities = getEntities(prefix, target, filter);
+    // Get entities - using nearestOnly flag to determine collection strategy
+    const entities = getEntities(prefix, target, filter, nearestOnly);
 
     // Use page as default entity if no one was set
     if (!entities.length) {
@@ -143,7 +143,7 @@ export function getEvents(
       });
     }
 
-    // Return a list of all full events
+    // Return a list of full events
     entities.forEach((entity) => {
       events.push({
         entity: entity.type,
@@ -234,6 +234,7 @@ export function getEntities(
   prefix: string,
   target: Element,
   filter?: Walker.Filter,
+  nearestOnly = false,
 ): WalkerOS.Entities {
   const entities: WalkerOS.Entities = [];
   let element = target as Node['parentElement'];
@@ -243,7 +244,10 @@ export function getEntities(
 
   while (element) {
     const entity = getEntity(prefix, element, target, filter);
-    if (entity) entities.push(entity);
+    if (entity) {
+      entities.push(entity);
+      if (nearestOnly) break; // Stop after first entity for data-elbaction
+    }
 
     element = getParent(prefix, element);
   }
@@ -417,27 +421,41 @@ function resolveAttributes(
   prefix: string,
   target: Element,
   trigger: string,
-): Walker.TriggerActions {
+): { actions: Walker.TriggerActions; nearestOnly: boolean } {
   let element = target as Node['parentElement'];
 
   while (element) {
-    const attribute = getAttribute(
+    // Check for data-elbactions first (takes precedence)
+    const multiAttribute = getAttribute(
+      element,
+      getElbAttributeName(prefix, Const.Commands.Actions, false),
+    );
+
+    if (multiAttribute) {
+      const triggerActions = getTriggerActions(multiAttribute);
+      if (triggerActions[trigger]) {
+        return { actions: triggerActions[trigger], nearestOnly: false };
+      }
+    }
+
+    // Check for data-elbaction (nearest entity only)
+    const singleAttribute = getAttribute(
       element,
       getElbAttributeName(prefix, Const.Commands.Action, false),
     );
 
-    // Get action string related to trigger
-    const triggerActions = getTriggerActions(attribute);
-
-    // Action found on element or is not a click trigger
-    // @TODO aggregate all click triggers, too
-    if (triggerActions[trigger] || trigger !== 'click')
-      return triggerActions[trigger];
+    if (singleAttribute) {
+      const triggerActions = getTriggerActions(singleAttribute);
+      // Action found on element or is not a click trigger
+      if (triggerActions[trigger] || trigger !== 'click') {
+        return { actions: triggerActions[trigger] || [], nearestOnly: true };
+      }
+    }
 
     element = getParent(prefix, element);
   }
 
-  return [];
+  return { actions: [], nearestOnly: false };
 }
 
 function splitAttribute(str: string, separator = ';'): Walker.Attributes {

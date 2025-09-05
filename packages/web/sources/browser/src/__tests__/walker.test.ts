@@ -343,6 +343,38 @@ describe('Walker', () => {
       },
     ]);
   });
+
+  test('data-elbaction applies to nearest entity only', () => {
+    expect(
+      getEvents(getElem('test-nearest-only'), Triggers.Click),
+    ).toMatchObject([
+      {
+        entity: 'child',
+        action: 'test',
+        data: { scope: 'inner' },
+        trigger: 'click',
+      },
+    ]);
+  });
+
+  test('data-elbactions applies to all entities', () => {
+    expect(
+      getEvents(getElem('test-all-entities'), Triggers.Click),
+    ).toMatchObject([
+      {
+        entity: 'child',
+        action: 'test',
+        data: { scope: 'inner' },
+        trigger: 'click',
+      },
+      {
+        entity: 'parent',
+        action: 'test',
+        data: { scope: 'outer' },
+        trigger: 'click',
+      },
+    ]);
+  });
 });
 
 function getElem(selector: string) {
