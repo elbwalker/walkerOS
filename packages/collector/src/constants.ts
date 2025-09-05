@@ -3,6 +3,7 @@ import type { WalkerOS } from '@walkeros/core';
 
 export type CommandTypes =
   | 'Action'
+  | 'Actions'
   | 'Config'
   | 'Consent'
   | 'Context'
@@ -23,6 +24,7 @@ export type CommandTypes =
 
 export const Commands: Record<CommandTypes, Collector.CommandType> = {
   Action: 'action',
+  Actions: 'actions',
   Config: 'config',
   Consent: 'consent',
   Context: 'context',
