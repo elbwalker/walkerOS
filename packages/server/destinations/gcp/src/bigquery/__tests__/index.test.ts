@@ -88,7 +88,7 @@ describe('Server Destination BigQuery', () => {
         custom: '{"completely":"random"}',
         user: '{"id":"us3r","device":"c00k13","session":"s3ss10n"}',
         nested:
-          '[{"type":"child","data":{"is":"subordinated"},"nested":[],"context":{"element":["child",0]}}]',
+          '[{"entity":"child","data":{"is":"subordinated"},"nested":[],"context":{"element":["child",0]}}]',
         trigger: 'test',
         timing: 3.14,
         group: 'gr0up',
