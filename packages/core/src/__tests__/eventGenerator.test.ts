@@ -21,7 +21,7 @@ describe('createEvent', () => {
     user: { id: 'us3r', device: 'c00k13', session: 's3ss10n' },
     nested: [
       {
-        type: 'child',
+        entity: 'child',
         data: { is: 'subordinated' },
         nested: [],
         context: { element: ['child', 0] },

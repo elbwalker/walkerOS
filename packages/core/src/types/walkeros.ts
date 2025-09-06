@@ -97,7 +97,7 @@ export interface OrderedProperties {
 
 export type Entities = Array<Entity>;
 export interface Entity {
-  type: string;
+  entity: string;
   data: Properties;
   nested: Entities;
   context: OrderedProperties;

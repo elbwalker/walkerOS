@@ -33,7 +33,7 @@ export function createEvent(
     user: { id: 'us3r', device: 'c00k13', session: 's3ss10n' },
     nested: [
       {
-        type: 'child',
+        entity: 'child',
         data: { is: 'subordinated' },
         nested: [],
         context: { element: ['child', 0] },
@@ -122,7 +122,7 @@ export function getEvent(
       globals: { pagegroup: 'shop' },
       nested: [
         {
-          type: 'product',
+          entity: 'product',
           data: { ...product1.data, quantity },
           context: { shopping: ['cart', 0] },
           nested: [],
@@ -140,13 +140,13 @@ export function getEvent(
       globals: { pagegroup: 'shop' },
       nested: [
         {
-          type: 'product',
+          entity: 'product',
           ...product1,
           context: { shopping: ['checkout', 0] },
           nested: [],
         },
         {
-          type: 'product',
+          entity: 'product',
           ...product2,
           context: { shopping: ['checkout', 0] },
           nested: [],
@@ -166,19 +166,19 @@ export function getEvent(
       globals: { pagegroup: 'shop' },
       nested: [
         {
-          type: 'product',
+          entity: 'product',
           ...product1,
           context: { shopping: ['complete', 0] },
           nested: [],
         },
         {
-          type: 'product',
+          entity: 'product',
           ...product2,
           context: { shopping: ['complete', 0] },
           nested: [],
         },
         {
-          type: 'gift',
+          entity: 'gift',
           data: {
             name: 'Surprise',
           },

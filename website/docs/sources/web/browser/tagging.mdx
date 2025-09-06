@@ -537,13 +537,13 @@ This example will lead to the following event on load:
   "event": "mother view",
   "data": { "label": "caring" },
   "nested": [
-    { "type": "son", "data": { "age": 23 } },
+    { "entity": "son", "data": { "age": 23 } },
     {
-      "type": "daughter",
+      "entity": "daughter",
       "data": { "age": 32 },
-      "nested": [{ "type": "baby", "data": { "status": "infant" } }],
+      "nested": [{ "entity": "baby", "data": { "status": "infant" } }],
     },
-    { "type": "baby", "data": { "status": "infant" } },
+    { "entity": "baby", "data": { "status": "infant" } },
   ],
   // other properties omitted
 }

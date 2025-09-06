@@ -97,7 +97,7 @@ const destination = destinationGtag({
               loop: [
                 'nested',
                 {
-                  condition: (entity) => entity.type === 'product',
+                  condition: (entity) => entity.entity === 'product',
                   map: {
                     item_id: 'data.id',
                     item_name: 'data.name',

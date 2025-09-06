@@ -14,7 +14,7 @@ export function ga4Purchase(): unknown[] {
       shipping: event.data.shipping,
       currency: 'EUR',
       items: event.nested
-        .filter((item) => item.type === 'product')
+        .filter((item) => item.entity === 'product')
         .map((item) => ({
           item_id: item.data.id,
           item_name: item.data.name,

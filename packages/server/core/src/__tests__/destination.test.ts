@@ -424,7 +424,7 @@ describe('Destination', () => {
         value: 'new name',
       },
       'data.string': { value: 'bar' },
-      'nested.0.type': { value: 'kid' },
+      'nested.0.entity': { value: 'kid' },
       'data.number': {
         consent: { marketing: true },
       },
@@ -453,7 +453,7 @@ describe('Destination', () => {
         number: undefined, // Redacted due to missing consent
         new: 'value',
       }),
-      nested: [expect.objectContaining({ type: 'kid' })],
+      nested: [expect.objectContaining({ entity: 'kid' })],
       // timing: 0, // @TODO should be set to default type
     });
   });

@@ -146,7 +146,7 @@ describe('getMappingValue', () => {
 
     function getNested(data: WalkerOS.Properties) {
       return {
-        type: 'child',
+        entity: 'child',
         data,
         nested: [],
         context: { element: ['child', 0] },
@@ -236,7 +236,7 @@ describe('getMappingValue', () => {
           'nested',
           {
             condition: (entity) =>
-              isObject(entity) && entity.type === 'product',
+              isObject(entity) && entity.entity === 'product',
             key: 'data.name',
           },
         ],

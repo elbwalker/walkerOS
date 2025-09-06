@@ -39,13 +39,13 @@ describe('Walker', () => {
         data: { label: 'grandmother' },
         trigger: Triggers.Load,
         nested: [
-          { type: 'son', data: { interested_in: 'pizza' } },
+          { entity: 'son', data: { interested_in: 'pizza' } },
           {
-            type: 'daughter',
+            entity: 'daughter',
             data: { status: 'hungry' },
-            nested: [{ type: 'baby', data: { status: 'infant' } }],
+            nested: [{ entity: 'baby', data: { status: 'infant' } }],
           },
-          { type: 'baby', data: { status: 'infant' } },
+          { entity: 'baby', data: { status: 'infant' } },
         ],
       },
     ]);
@@ -291,7 +291,7 @@ describe('Walker', () => {
           parent: ['link', 1],
           entity: ['link', 2],
         },
-        nested: [{ type: 'n', data: { k: 'v' } }],
+        nested: [{ entity: 'n', data: { k: 'v' } }],
       },
     ]);
   });

@@ -20,7 +20,7 @@ export function ecommerceOrder(): unknown[] {
   return [
     [
       'ecommerceOrder',
-      event.nested.filter((item) => item.type === 'product').map(getProduct),
+      event.nested.filter((item) => item.entity === 'product').map(getProduct),
       {
         orderId: event.data.id,
         grandTotal: event.data.total,
@@ -58,7 +58,7 @@ export function ecommerceCartUpdate(): unknown[] {
   return [
     [
       'ecommerceCartUpdate',
-      event.nested.filter((item) => item.type === 'product').map(getProduct),
+      event.nested.filter((item) => item.entity === 'product').map(getProduct),
       event.data.value,
       { currencyCode: 'EUR' },
     ],

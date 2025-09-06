@@ -22,7 +22,7 @@ export const Purchase: DestinationMeta.Rule = {
           'nested',
           {
             condition: (entity) =>
-              isObject(entity) && entity.type === 'product',
+              isObject(entity) && entity.entity === 'product',
             map: {
               id: 'data.id',
               item_price: 'data.price',
@@ -34,7 +34,7 @@ export const Purchase: DestinationMeta.Rule = {
       num_items: {
         fn: (event) =>
           (event as WalkerOS.Event).nested.filter(
-            (item) => item.type === 'product',
+            (item) => item.entity === 'product',
           ).length,
       },
     },

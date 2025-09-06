@@ -23,7 +23,7 @@ export const ecommerceOrder: DestinationPiwikPro.Rule = {
           'nested',
           {
             condition: (entity) =>
-              isObject(entity) && entity.type === 'product',
+              isObject(entity) && entity.entity === 'product',
             map: productMap,
           },
         ],
@@ -94,7 +94,7 @@ export const ecommerceCartUpdate: DestinationPiwikPro.Rule = {
           'nested',
           {
             condition: (entity) =>
-              isObject(entity) && entity.type === 'product',
+              isObject(entity) && entity.entity === 'product',
             map: productMap,
           },
         ],
