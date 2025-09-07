@@ -31,7 +31,7 @@ sends HTTP requests using Node.js built-in modules (`http`/`https`).
 ```js
 // Simple POST request
 const response = await sendServer('https://api.example.com/events', {
-  event: 'page view',
+  name: 'page view',
   data: { url: '/home' },
 });
 

@@ -71,9 +71,8 @@ describe('DataLayer Source - Integration', () => {
 
     // Check all consent events were processed
     expect(collectedEvents[0]).toMatchObject({
-      event: 'gtag consent default',
+      name: 'gtag consent default',
       data: {
-        event: 'consent default',
         ad_storage: 'denied',
         analytics_storage: 'denied',
         ad_user_data: 'denied',
@@ -82,17 +81,14 @@ describe('DataLayer Source - Integration', () => {
     });
 
     expect(collectedEvents[1]).toMatchObject({
-      event: 'gtag consent update',
+      name: 'gtag consent update',
       data: {
-        event: 'consent update',
         analytics_storage: 'granted',
       },
     });
 
     expect(collectedEvents[2]).toMatchObject({
-      event: 'gtag consent update',
       data: {
-        event: 'consent update',
         ad_storage: 'granted',
         ad_user_data: 'granted',
       },
@@ -123,7 +119,7 @@ describe('DataLayer Source - Integration', () => {
 
     expect(collectedEvents).toHaveLength(5);
 
-    const eventNames = collectedEvents.map((e) => e.event);
+    const eventNames = collectedEvents.map((e) => e.name);
     expect(eventNames).toEqual([
       'dataLayer consent update',
       'dataLayer purchase',
@@ -150,10 +146,10 @@ describe('DataLayer Source - Integration', () => {
     expect(collectedEvents).toHaveLength(4);
 
     // Check order: existing events first, then new events
-    expect(collectedEvents[0].event).toBe('dataLayer consent default');
-    expect(collectedEvents[1].event).toBe('dataLayer existing_event');
-    expect(collectedEvents[2].event).toBe('dataLayer consent update');
-    expect(collectedEvents[3].event).toBe('dataLayer new_event');
+    expect(collectedEvents[0].name).toBe('dataLayer consent default');
+    expect(collectedEvents[1].name).toBe('dataLayer existing_event');
+    expect(collectedEvents[2].name).toBe('dataLayer consent update');
+    expect(collectedEvents[3].name).toBe('dataLayer new_event');
   });
 
   test('error handling and robustness', () => {
@@ -191,7 +187,7 @@ describe('DataLayer Source - Integration', () => {
     // Should have processed 3 good events (bad_filter is invalid gtag format)
     expect(collectedEvents).toHaveLength(3);
 
-    const eventNames = collectedEvents.map((e) => e.event);
+    const eventNames = collectedEvents.map((e) => e.name);
     expect(eventNames).toEqual([
       'dataLayer consent update',
       'dataLayer after_error',

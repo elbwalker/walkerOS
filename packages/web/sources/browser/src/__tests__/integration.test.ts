@@ -53,7 +53,7 @@ describe('Browser Source Integration Tests', () => {
       // Should have processed the event with source information
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'product view',
+          name: 'product view',
           data: expect.objectContaining({
             id: 123,
             name: 'Test Product',
@@ -101,7 +101,7 @@ describe('Browser Source Integration Tests', () => {
       // Should have processed the pageview event
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'page view',
+          name: 'page view',
           trigger: 'load',
           data: expect.objectContaining({
             id: '/test-page',
@@ -129,7 +129,7 @@ describe('Browser Source Integration Tests', () => {
       // Should have processed the click
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'cta press',
+          name: 'cta press',
           entity: 'cta',
           action: 'press',
           trigger: 'click',
@@ -161,7 +161,7 @@ describe('Browser Source Integration Tests', () => {
       expect(mockPush).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
-          event: 'page view',
+          name: 'page view',
           data: expect.objectContaining({ id: '/test-page', title: 'Home' }),
           context: { url: '/' },
           trigger: 'load',
@@ -170,7 +170,7 @@ describe('Browser Source Integration Tests', () => {
       expect(mockPush).toHaveBeenNthCalledWith(
         3,
         expect.objectContaining({
-          event: 'product click',
+          name: 'product click',
           data: { id: '123' },
           context: { position: 1 },
           trigger: 'click',

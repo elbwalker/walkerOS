@@ -10,7 +10,7 @@ export function Purchase(): unknown[] {
       value: event.data.total,
       currency: 'EUR',
       contents: event.nested
-        .filter((item) => item.type === 'product')
+        .filter((item) => item.entity === 'product')
         .map((item) => ({ id: item.data.id, quantity: 1 })),
       content_type: 'product',
       num_items: 2,
@@ -45,12 +45,13 @@ export function InitiateCheckout(): unknown[] {
       currency: 'EUR',
       value: event.data.value,
       contents: event.nested
-        .filter((entity) => entity.type === 'product')
+        .filter((entity) => entity.entity === 'product')
         .map((entity) => ({
           id: entity.data.id,
           quantity: entity.data.quantity,
         })),
-      num_items: event.nested.filter((item) => item.type === 'product').length,
+      num_items: event.nested.filter((item) => item.entity === 'product')
+        .length,
     },
     { eventID: event.id },
   ];

@@ -6,11 +6,11 @@ describe('validate', () => {
     // should return valid event with missing properties filled
     expect(
       validateEvent({
-        event: 'e a',
+        name: 'e a',
         data: { k: 'v' },
       }),
     ).toStrictEqual({
-      event: 'e a',
+      name: 'e a',
       data: { k: 'v' },
       context: {},
       custom: {},
@@ -33,7 +33,7 @@ describe('validate', () => {
     // should throw error for invalid event name
     expect(() =>
       validateEvent({
-        event: 'e',
+        name: 'e',
       }),
     ).toThrow('Invalid event name');
 
@@ -42,27 +42,27 @@ describe('validate', () => {
       validateEvent({
         data: { key: 'value' },
       }),
-    ).toThrow('Missing or invalid event, entity, or action');
+    ).toThrow('Missing or invalid name, entity, or action');
 
     // long event names
     expect(
       validateEvent({
-        event: 'e ' + 'a'.repeat(256),
-      }).event,
+        name: 'e ' + 'a'.repeat(256),
+      }).name,
     ).toHaveLength(255);
     expect(() =>
       validateEvent(
         {
-          event: 'e ' + 'a'.repeat(11),
+          name: 'e ' + 'a'.repeat(11),
         },
-        [{ e: { '*': { event: { maxLength: 10, strict: true } } } }],
+        [{ e: { '*': { name: { maxLength: 10, strict: true } } } }],
       ),
     ).toThrow('Value exceeds maxLength');
 
     // should throw error for invalid type
     expect(
       validateEvent({
-        event: 'some event',
+        name: 'some event',
         data: 'invalid type',
       }),
     ).toHaveProperty('data', {});
@@ -70,7 +70,7 @@ describe('validate', () => {
     // should throw error for extra properties
     expect(() =>
       validateEvent({
-        event: 'some event',
+        name: 'some event',
         extraProp: 'should not be here',
       }),
     ).not.toHaveProperty('extraProp');
@@ -87,7 +87,7 @@ describe('validate', () => {
     expect(
       validateEvent(
         {
-          event: 'e a',
+          name: 'e a',
           data: { k: 'v', remove: 'me' },
         },
         contract,
@@ -96,7 +96,7 @@ describe('validate', () => {
     expect(() =>
       validateEvent(
         {
-          event: 'e s',
+          name: 'e s',
           data: { k: 'v', remove: 'me' },
         },
         contract,
@@ -107,7 +107,7 @@ describe('validate', () => {
     expect(() =>
       validateEvent(
         {
-          event: 'p r',
+          name: 'p r',
           data: {},
         },
         requireContract,
@@ -116,7 +116,7 @@ describe('validate', () => {
     expect(
       validateEvent(
         {
-          event: 'a n',
+          name: 'a n',
         },
         requireContract,
       ),
@@ -125,7 +125,7 @@ describe('validate', () => {
     // should remove unknown properties
     expect(
       validateEvent({
-        event: 'some event',
+        name: 'some event',
         randomProp: 123, // doesn't belong here
       }),
     ).not.toHaveProperty('randomProp');
@@ -133,7 +133,7 @@ describe('validate', () => {
     // should throw error for invalid number range
     expect(
       validateEvent({
-        event: 'e a',
+        name: 'e a',
         count: -1, // should be >= 0
       }),
     ).toHaveProperty('count', 0);
@@ -143,7 +143,7 @@ describe('validate', () => {
       {
         entity: {
           throw: {
-            event: {
+            name: {
               validate: (
                 value: unknown,
                 key: string,
@@ -155,7 +155,7 @@ describe('validate', () => {
             },
           },
           name: {
-            event: {
+            name: {
               validate: () => {
                 // With great power comes great responsibility...
                 return 'invalideventname';
@@ -173,14 +173,14 @@ describe('validate', () => {
       },
     ];
     expect(() =>
-      validateEvent({ event: 'entity throw' }, customValidationContract),
+      validateEvent({ name: 'entity throw' }, customValidationContract),
     ).toThrow('Custom');
     expect(
-      validateEvent({ event: 'entity name' }, customValidationContract),
-    ).toHaveProperty('event', 'invalideventname'); // If one really wants
+      validateEvent({ name: 'entity name' }, customValidationContract),
+    ).toHaveProperty('name', 'invalideventname'); // If one really wants
     expect(
       validateEvent(
-        { event: 'entity type', data: {} },
+        { name: 'entity type', data: {} },
         customValidationContract,
       ),
     ).toHaveProperty('data', {}); // If one really wants
@@ -188,10 +188,10 @@ describe('validate', () => {
     // should validate wildcard rules
     expect(
       validateEvent({
-        event: 'product add',
+        name: 'product add',
         data: { id: '123', price: 9.99 },
       }),
-    ).toMatchObject({ event: 'product add', data: { id: '123', price: 9.99 } });
+    ).toMatchObject({ name: 'product add', data: { id: '123', price: 9.99 } });
 
     const typeContract = {
       e: {
@@ -208,7 +208,7 @@ describe('validate', () => {
     expect(() =>
       validateEvent(
         {
-          event: 'e a',
+          name: 'e a',
           globals: {
             n: 'no number',
           },
@@ -219,7 +219,7 @@ describe('validate', () => {
     expect(
       validateEvent(
         {
-          event: 'e a',
+          name: 'e a',
           globals: {
             n: 1,
             k: 'v',
@@ -227,6 +227,6 @@ describe('validate', () => {
         },
         [typeContract],
       ),
-    ).toMatchObject({ event: 'e a' });
+    ).toMatchObject({ name: 'e a' });
   });
 });

@@ -19,7 +19,7 @@ export function createEvent(
   const id = `${timestamp}-${group}-${count}`;
 
   const defaultEvent: WalkerOS.Event = {
-    event: 'entity action',
+    name: 'entity action',
     data: {
       string: 'foo',
       number: 1,
@@ -33,7 +33,7 @@ export function createEvent(
     user: { id: 'us3r', device: 'c00k13', session: 's3ss10n' },
     nested: [
       {
-        type: 'child',
+        entity: 'child',
         data: { is: 'subordinated' },
         nested: [],
         context: { element: ['child', 0] },
@@ -67,8 +67,8 @@ export function createEvent(
   // Update conditions
 
   // Entity and action from event
-  if (props.event) {
-    const [entity, action] = props.event.split(' ') ?? [];
+  if (props.name) {
+    const [entity, action] = props.name.split(' ') ?? [];
 
     if (entity && action) {
       event.entity = entity;
@@ -122,7 +122,7 @@ export function getEvent(
       globals: { pagegroup: 'shop' },
       nested: [
         {
-          type: 'product',
+          entity: 'product',
           data: { ...product1.data, quantity },
           context: { shopping: ['cart', 0] },
           nested: [],
@@ -140,13 +140,13 @@ export function getEvent(
       globals: { pagegroup: 'shop' },
       nested: [
         {
-          type: 'product',
+          entity: 'product',
           ...product1,
           context: { shopping: ['checkout', 0] },
           nested: [],
         },
         {
-          type: 'product',
+          entity: 'product',
           ...product2,
           context: { shopping: ['checkout', 0] },
           nested: [],
@@ -166,19 +166,19 @@ export function getEvent(
       globals: { pagegroup: 'shop' },
       nested: [
         {
-          type: 'product',
+          entity: 'product',
           ...product1,
           context: { shopping: ['complete', 0] },
           nested: [],
         },
         {
-          type: 'product',
+          entity: 'product',
           ...product2,
           context: { shopping: ['complete', 0] },
           nested: [],
         },
         {
-          type: 'gift',
+          entity: 'gift',
           data: {
             name: 'Surprise',
           },
@@ -270,5 +270,5 @@ export function getEvent(
     },
   };
 
-  return createEvent({ ...defaultEvents[name], ...props, event: name });
+  return createEvent({ ...defaultEvents[name], ...props, name: name });
 }

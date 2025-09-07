@@ -102,7 +102,7 @@ describe('Destination Meta Pixel', () => {
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(
       'track',
-      event.event,
+      event.name,
       {},
       { eventID: event.id },
     );

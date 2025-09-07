@@ -123,20 +123,20 @@ export function getEvents(
 
     // Use page as default entity if no one was set
     if (!entities.length) {
-      const type = 'page';
+      const entity = 'page';
       // Only use explicit page properties and ignore generic properties
-      const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
+      const entitySelector = `[${getElbAttributeName(prefix, entity)}]`;
 
       // Get matching properties from the element and its parents
       const [data, context] = getThisAndParentProperties(
         target,
         entitySelector,
         prefix,
-        type,
+        entity,
       );
 
       entities.push({
-        type, // page
+        entity, // page
         data, // Consider only upper data
         nested: [], // Skip nested in this faked page case
         context,
@@ -146,7 +146,7 @@ export function getEvents(
     // Return a list of full events
     entities.forEach((entity) => {
       events.push({
-        entity: entity.type,
+        entity: entity.entity,
         action: triggerAction.action,
         data: entity.data,
         trigger,
@@ -261,15 +261,15 @@ function getEntity(
   origin?: Element,
   filter?: Walker.Filter,
 ): WalkerOS.Entity | null {
-  const type = getAttribute(element, getElbAttributeName(prefix));
+  const entity = getAttribute(element, getElbAttributeName(prefix));
 
   // It's not a (valid) entity element or should be filtered
-  if (!type || (filter && !filter[type])) return null;
+  if (!entity || (filter && !filter[entity])) return null;
 
   const scopeElems = [element]; // All related elements
   const dataSelector = `[${getElbAttributeName(
     prefix,
-    type,
+    entity,
   )}],[${getElbAttributeName(prefix, '')}]`; // [data-elb-entity,data-elb-]
   const linkName = getElbAttributeName(prefix, Const.Commands.Link, false); // data-elblink
 
@@ -279,7 +279,7 @@ function getEntity(
     origin || element,
     dataSelector,
     prefix,
-    type,
+    entity,
   );
 
   // Add linked elements (data-elblink)
@@ -315,7 +315,7 @@ function getEntity(
   propertyElems.forEach((child) => {
     // Eventually override closer properties
     genericData = assign(genericData, getElbValues(prefix, child, ''));
-    data = assign(data, getElbValues(prefix, child, type));
+    data = assign(data, getElbValues(prefix, child, entity));
   });
 
   // Merge properties with the hierarchy generic > data > parent
@@ -333,7 +333,7 @@ function getEntity(
     );
   });
 
-  return { type, data, context, nested };
+  return { entity, data, context, nested };
 }
 
 function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {

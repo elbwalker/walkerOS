@@ -22,7 +22,7 @@ export function Purchase(): BodyParameters {
         currency: 'EUR',
         value: Number(event.data.total),
         contents: event.nested
-          .filter((item) => item.type === 'product')
+          .filter((item) => item.entity === 'product')
           .map((item) => ({
             id: String(item.data.id),
             quantity: Number(item.data.quantity) || 1,

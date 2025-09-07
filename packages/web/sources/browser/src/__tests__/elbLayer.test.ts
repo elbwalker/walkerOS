@@ -134,11 +134,11 @@ describe('Elb Layer', () => {
       // Then regular events
       expect(mockPush).toHaveBeenNthCalledWith(
         3,
-        expect.objectContaining({ event: 'product' }),
+        expect.objectContaining({ name: 'product' }),
       );
       expect(mockPush).toHaveBeenNthCalledWith(
         4,
-        expect.objectContaining({ event: 'page' }),
+        expect.objectContaining({ name: 'page' }),
       );
     });
 
@@ -157,7 +157,7 @@ describe('Elb Layer', () => {
       expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'test_event',
+          name: 'test_event',
           data: { key: 'value' },
           context: { context: 'test' },
           trigger: 'load',
@@ -167,7 +167,7 @@ describe('Elb Layer', () => {
 
     test('handles object commands', () => {
       const eventObject: WalkerOS.DeepPartialEvent = {
-        event: 'custom_event',
+        name: 'custom_event',
         data: { test: 'data' },
         context: { page: ['home', 0] as [string, number] },
       };
@@ -241,7 +241,7 @@ describe('Elb Layer', () => {
       });
       expect(mockPush).toHaveBeenNthCalledWith(
         2,
-        expect.objectContaining({ event: 'page' }),
+        expect.objectContaining({ name: 'page' }),
       );
       expect(mockPush).toHaveBeenNthCalledWith(
         3,
@@ -268,7 +268,7 @@ describe('Elb Layer', () => {
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'entity_name',
+          name: 'entity_name',
           data: { prop: 'value' },
           context: { ctx: 'context' },
           trigger: 'trigger_type',
@@ -337,7 +337,7 @@ describe('Elb Layer', () => {
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'test_event',
+          name: 'test_event',
           data: { key: 'value' },
           trigger: 'load',
         }),
@@ -355,7 +355,7 @@ describe('Elb Layer', () => {
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'immediate_event',
+          name: 'immediate_event',
           data: { test: true },
         }),
       );
@@ -380,7 +380,7 @@ describe('Elb Layer', () => {
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'product',
+          name: 'product',
           data: expect.objectContaining({
             id: 123, // Values are cast by castValue utility
             name: 'Test Product',
@@ -401,7 +401,7 @@ describe('Elb Layer', () => {
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'page',
+          name: 'page',
           data: expect.objectContaining({
             id: '/test-page',
           }),
@@ -444,7 +444,7 @@ describe('Elb Layer', () => {
       expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'page view',
+          name: 'page view',
           data: expect.objectContaining({
             id: '/walker-run-test',
           }),

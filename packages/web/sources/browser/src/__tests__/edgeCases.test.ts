@@ -1,4 +1,3 @@
-/* eslint-disable jest/no-disabled-tests */
 import type { WalkerOS, Collector } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';

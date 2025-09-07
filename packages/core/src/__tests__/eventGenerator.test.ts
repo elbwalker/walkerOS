@@ -7,7 +7,7 @@ describe('createEvent', () => {
   const id = `${timestamp}-${group}-${count}`;
 
   const defaultEvent = {
-    event: 'entity action',
+    name: 'entity action',
     data: {
       string: 'foo',
       number: 1,
@@ -21,7 +21,7 @@ describe('createEvent', () => {
     user: { id: 'us3r', device: 'c00k13', session: 's3ss10n' },
     nested: [
       {
-        type: 'child',
+        entity: 'child',
         data: { is: 'subordinated' },
         nested: [],
         context: { element: ['child', 0] },
@@ -54,7 +54,7 @@ describe('createEvent', () => {
   test('getEvent', () => {
     expect(getEvent('page view')).toStrictEqual(
       expect.objectContaining({
-        event: 'page view',
+        name: 'page view',
         data: {
           domain: 'www.example.com',
           title: 'walkerOS documentation',
@@ -71,7 +71,7 @@ describe('createEvent', () => {
 
     expect(getEvent('page view', { data: { id: '/custom' } })).toStrictEqual(
       expect.objectContaining({
-        event: 'page view',
+        name: 'page view',
         data: { id: '/custom' },
         trigger: 'load',
         entity: 'page',
@@ -81,7 +81,7 @@ describe('createEvent', () => {
 
     expect(getEvent('promotion visible')).toStrictEqual(
       expect.objectContaining({
-        event: 'promotion visible',
+        name: 'promotion visible',
         data: {
           name: 'Setting up tracking easily',
           position: 'hero',

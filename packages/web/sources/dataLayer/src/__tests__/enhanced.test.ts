@@ -42,9 +42,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
 
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer consent update',
+      name: 'dataLayer consent update',
       data: {
-        event: 'consent update',
         ad_storage: 'granted',
         analytics_storage: 'denied',
       },
@@ -69,9 +68,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
 
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer purchase',
+      name: 'dataLayer purchase',
       data: {
-        event: 'purchase',
         transaction_id: '123',
         value: 25.99,
       },
@@ -95,9 +93,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
 
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer config GA_MEASUREMENT_ID',
+      name: 'dataLayer config GA_MEASUREMENT_ID',
       data: {
-        event: 'config GA_MEASUREMENT_ID',
         send_page_view: false,
       },
     });
@@ -114,9 +111,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
 
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer set currency',
+      name: 'dataLayer set currency',
       data: {
-        event: 'set currency',
         value: 'EUR',
       },
     });
@@ -133,9 +129,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
 
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer set custom',
+      name: 'dataLayer set custom',
       data: {
-        event: 'set custom',
         currency: 'EUR',
         country: 'DE',
       },
@@ -153,9 +148,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
 
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer custom_event',
+      name: 'dataLayer custom_event',
       data: {
-        event: 'custom_event',
         user_id: 'user123',
       },
     });
@@ -205,9 +199,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
 
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer consent update',
+      name: 'dataLayer consent update',
       data: {
-        event: 'consent update',
         ad_storage: 'granted',
       },
     });

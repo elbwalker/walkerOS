@@ -8,6 +8,7 @@ export default [
     ignores: [
       '**/coverage/**',
       '**/dist/**',
+      '**/build/**',
       '**/node_modules/**',
       '**/__mocks__/**',
     ],

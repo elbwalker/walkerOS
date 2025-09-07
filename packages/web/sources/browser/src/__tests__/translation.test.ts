@@ -66,7 +66,7 @@ describe('Translation Layer', () => {
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'test event',
+          name: 'test event',
           data: { id: 123 },
           context: { page: ['test', 0] },
           source: {
@@ -90,7 +90,7 @@ describe('Translation Layer', () => {
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: '123',
+          name: '123',
           data: { value: 'test' },
           context: { context: ['info', 0] },
           source: {
@@ -114,7 +114,7 @@ describe('Translation Layer', () => {
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'test event',
+          name: 'test event',
           data: {}, // Should be empty object, not { value: 'primitive string data' }
           context: { page: ['test', 0] },
           source: {
@@ -143,7 +143,7 @@ describe('Translation Layer', () => {
     test('does not add source information to object events', async () => {
       // Test object event - should pass through as-is
       const eventObject = {
-        event: 'custom event',
+        name: 'custom event',
         data: { test: true },
         source: { type: 'custom', id: 'custom-id', previous_id: '' },
       };
@@ -224,7 +224,7 @@ describe('Translation Layer', () => {
       // Should have processed both events with source info
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'product',
+          name: 'product',
           data: { id: '123' },
           context: { position: 1 },
           trigger: 'click',
@@ -238,7 +238,7 @@ describe('Translation Layer', () => {
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'page',
+          name: 'page',
           data: { title: 'Test' },
           trigger: 'load',
           source: {
@@ -265,7 +265,7 @@ describe('Translation Layer', () => {
       expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'product view',
+          name: 'product view',
           data: { id: 123 },
           trigger: 'load',
           source: {
@@ -389,7 +389,7 @@ describe('Translation Layer', () => {
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: '',
+          name: '',
           data: { test: true },
           source: {
             type: 'browser',

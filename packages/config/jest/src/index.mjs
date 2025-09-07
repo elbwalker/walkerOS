@@ -78,6 +78,22 @@ const config = {
   moduleDirectories: ['node_modules', 'src'],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   moduleNameMapper: getModuleMapper(),
+  
+  // Performance settings - fixed values for consistent behavior
+  maxWorkers: 4,
+  testTimeout: 30000,
+  forceExit: true,
+  clearMocks: true,
+  restoreMocks: true,
+  detectOpenHandles: true,
+  
+  // Enhanced ignore patterns
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/build/',
+    '/coverage/'
+  ],
 };
 
 export default config;

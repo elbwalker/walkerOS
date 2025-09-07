@@ -61,8 +61,8 @@ describe('DataLayer Source - Minimal', () => {
     // Should have captured the event immediately (synchronous)
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer test_event',
-      data: { event: 'test_event', test: 'data' },
+      name: 'dataLayer test_event',
+      data: { test: 'data' },
       source: { type: 'dataLayer' },
     });
   });
@@ -81,8 +81,8 @@ describe('DataLayer Source - Minimal', () => {
 
     // Should have processed both existing events
     expect(collectedEvents).toHaveLength(2);
-    expect(collectedEvents[0].event).toBe('dataLayer existing_event_1');
-    expect(collectedEvents[1].event).toBe('dataLayer existing_event_2');
+    expect(collectedEvents[0].name).toBe('dataLayer existing_event_1');
+    expect(collectedEvents[1].name).toBe('dataLayer existing_event_2');
   });
 
   test('ignores non-object events', () => {
@@ -124,7 +124,7 @@ describe('DataLayer Source - Minimal', () => {
     getDataLayer().push({ event: 'test_event', data: 'test' });
 
     expect(collectedEvents).toHaveLength(1);
-    expect(collectedEvents[0].event).toBe('custom test_event');
+    expect(collectedEvents[0].name).toBe('custom test_event');
   });
 
   test('uses custom dataLayer name', () => {
@@ -144,6 +144,6 @@ describe('DataLayer Source - Minimal', () => {
     });
 
     expect(collectedEvents).toHaveLength(1);
-    expect(collectedEvents[0].event).toBe('dataLayer test_event');
+    expect(collectedEvents[0].name).toBe('dataLayer test_event');
   });
 });

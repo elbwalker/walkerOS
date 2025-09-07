@@ -54,7 +54,7 @@ Map specific entity-action combinations to custom event names:
   showMiddle={false}
   labelInput="Configuration"
   input={`await getMappingEvent(
-    { event: 'product view' },
+    { name: 'product view' },
     {
       product: {
         view: { name: 'product_viewed' },
@@ -78,7 +78,7 @@ Use wildcards (`*`) to match multiple entities or actions:
   showMiddle={false}
   labelInput="Configuration"
   input={`await getMappingEvent(
-    { event: 'product click' },
+    { name: 'product click' },
     {
       product: {
         '*': { name: 'product_interaction' },
@@ -106,7 +106,7 @@ Use conditions to apply different mappings based on event properties:
   labelInput="Configuration"
   input={`await getMappingEvent(
     {
-      event: 'order complete',
+      name: 'order complete',
       data: { value: 100 },
     },
     {
@@ -138,7 +138,7 @@ Skip processing certain events by setting `ignore: true`:
   showMiddle={false}
   labelInput="Configuration"
   input={`await getMappingEvent(
-    { event: 'test event' },
+    { name: 'test event' },
     {
       test: {
         event: { ignore: true },
@@ -198,7 +198,7 @@ Return static values using the `value` property:
   showMiddle={false}
   labelInput="Configuration"
   input={`await getMappingValue(
-    { event: 'page view' },
+    { name: 'page view' },
     { value: 'pageview' }
   );`}
   output={`"pageview"`}
@@ -333,7 +333,7 @@ const destination = {
   }),
   push: (event, { data }) => {
     // Use mapped data
-    gtag('event', event.event, data);
+    gtag('event', event.name, data);
   },
   config: {
     mapping: {

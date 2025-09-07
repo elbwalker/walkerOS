@@ -12,7 +12,7 @@ export function pushGTMEvent(
   env?: DestinationWeb.Environment,
 ): void {
   const { window } = getEnvironment(env);
-  const obj = { event: event.event }; // Use the name mapping by default
+  const obj = { event: event.name }; // Use the name mapping by default
 
   (window.dataLayer as unknown[]).push({
     ...obj,
