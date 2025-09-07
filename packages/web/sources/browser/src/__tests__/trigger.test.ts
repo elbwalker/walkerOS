@@ -132,7 +132,7 @@ describe('Trigger System', () => {
     // Should NOT trigger page view (pageview now only fires on walker run)
     expect(mockCollector.push).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'page view',
+        name: 'page view',
       }),
     );
 
@@ -216,7 +216,7 @@ describe('Trigger System', () => {
 
     expect(mockCollector.push).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'entity action',
+        name: 'entity action',
         entity: 'entity',
         action: 'action',
         trigger: Triggers.Click,
@@ -449,7 +449,7 @@ describe('Trigger System', () => {
       // Should have called push with entity load event
       expect(mockCollector.push).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'entity load',
+          name: 'entity load',
           trigger: 'load',
         }),
       );

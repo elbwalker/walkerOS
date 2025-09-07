@@ -19,7 +19,7 @@ export function createEvent(
   const id = `${timestamp}-${group}-${count}`;
 
   const defaultEvent: WalkerOS.Event = {
-    event: 'entity action',
+    name: 'entity action',
     data: {
       string: 'foo',
       number: 1,
@@ -67,8 +67,8 @@ export function createEvent(
   // Update conditions
 
   // Entity and action from event
-  if (props.event) {
-    const [entity, action] = props.event.split(' ') ?? [];
+  if (props.name) {
+    const [entity, action] = props.name.split(' ') ?? [];
 
     if (entity && action) {
       event.entity = entity;
@@ -270,5 +270,5 @@ export function getEvent(
     },
   };
 
-  return createEvent({ ...defaultEvents[name], ...props, event: name });
+  return createEvent({ ...defaultEvents[name], ...props, name: name });
 }

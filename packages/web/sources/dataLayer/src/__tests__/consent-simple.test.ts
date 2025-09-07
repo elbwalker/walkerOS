@@ -38,9 +38,8 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
 
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer consent update',
+      name: 'dataLayer consent update',
       data: {
-        event: 'consent update',
         ad_storage: 'denied',
         analytics_storage: 'granted',
       },
@@ -65,9 +64,8 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
 
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer consent default',
+      name: 'dataLayer consent default',
       data: {
-        event: 'consent default',
         ad_storage: 'denied',
         analytics_storage: 'denied',
       },
@@ -93,9 +91,8 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
     // Should have processed the existing event
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer consent update',
+      name: 'dataLayer consent update',
       data: {
-        event: 'consent update',
         ad_storage: 'granted',
         analytics_storage: 'denied',
       },
@@ -133,15 +130,12 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
 
     expect(collectedEvents).toHaveLength(3);
     expect(collectedEvents[0].data).toMatchObject({
-      event: 'consent update',
       ad_storage: 'granted',
     });
     expect(collectedEvents[1].data).toMatchObject({
-      event: 'consent update',
       analytics_storage: 'granted',
     });
     expect(collectedEvents[2].data).toMatchObject({
-      event: 'consent update',
       ad_storage: 'denied',
     });
   });
@@ -155,6 +149,6 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
     getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
 
     expect(collectedEvents).toHaveLength(1);
-    expect(collectedEvents[0].event).toBe('gtag consent update');
+    expect(collectedEvents[0].name).toBe('gtag consent update');
   });
 });

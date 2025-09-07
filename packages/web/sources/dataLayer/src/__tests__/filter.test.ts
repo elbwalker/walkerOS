@@ -44,8 +44,8 @@ describe('DataLayer Source - Filtering', () => {
 
     expect(mockFilter).toHaveBeenCalledTimes(3);
     expect(collectedEvents).toHaveLength(2);
-    expect(collectedEvents[0].event).toBe('dataLayer allowed_event');
-    expect(collectedEvents[1].event).toBe('dataLayer consent update');
+    expect(collectedEvents[0].name).toBe('dataLayer allowed_event');
+    expect(collectedEvents[1].name).toBe('dataLayer consent update');
   });
 
   test('filter with consent events only', () => {
@@ -72,8 +72,8 @@ describe('DataLayer Source - Filtering', () => {
     ]);
 
     expect(collectedEvents).toHaveLength(2);
-    expect(collectedEvents[0].event).toBe('dataLayer consent update');
-    expect(collectedEvents[1].event).toBe('dataLayer consent default');
+    expect(collectedEvents[0].name).toBe('dataLayer consent update');
+    expect(collectedEvents[1].name).toBe('dataLayer consent default');
   });
 
   test('filter processes existing events', () => {
@@ -102,8 +102,8 @@ describe('DataLayer Source - Filtering', () => {
 
     // Should have processed 2 events (filtered out 'existing_bad')
     expect(collectedEvents).toHaveLength(2);
-    expect(collectedEvents[0].event).toBe('dataLayer existing_good');
-    expect(collectedEvents[1].event).toBe('dataLayer consent update');
+    expect(collectedEvents[0].name).toBe('dataLayer existing_good');
+    expect(collectedEvents[1].name).toBe('dataLayer consent update');
   });
 
   test('handles filter errors gracefully', () => {
@@ -121,7 +121,7 @@ describe('DataLayer Source - Filtering', () => {
     getDataLayer().push({ event: 'test_event', data: 'test' });
 
     expect(collectedEvents).toHaveLength(1);
-    expect(collectedEvents[0].event).toBe('dataLayer test_event');
+    expect(collectedEvents[0].name).toBe('dataLayer test_event');
   });
 
   test('filter return value determines processing', () => {
@@ -145,6 +145,6 @@ describe('DataLayer Source - Filtering', () => {
     getDataLayer().push({ event: 'event2', data: 'test' });
 
     expect(collectedEvents).toHaveLength(1);
-    expect(collectedEvents[0].event).toBe('dataLayer event1');
+    expect(collectedEvents[0].name).toBe('dataLayer event1');
   });
 });

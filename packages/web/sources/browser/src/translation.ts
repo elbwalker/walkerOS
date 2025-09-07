@@ -40,7 +40,7 @@ export function translateToCoreCollector(
 
   // Extract entity name from event string
   const [entity] = String(
-    isObject(eventOrCommand) ? eventOrCommand.event : eventOrCommand,
+    isObject(eventOrCommand) ? eventOrCommand.name : eventOrCommand,
   ).split(' ');
 
   // Get data and context either from elements or parameters
@@ -82,7 +82,7 @@ export function translateToCoreCollector(
 
   // Build unified event from various elb usage patterns
   const event: WalkerOS.DeepPartialEvent = {
-    event: String(eventOrCommand || ''),
+    name: String(eventOrCommand || ''),
     data: eventData,
     context: eventContext,
     nested,

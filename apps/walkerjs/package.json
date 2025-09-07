@@ -37,7 +37,7 @@
     "@walkeros/core": "0.0.8",
     "@walkeros/collector": "0.0.8",
     "@walkeros/web-core": "0.0.8",
-    "@walkeros/web-source-browser": "0.0.9",
+    "@walkeros/web-source-browser": "0.0.10",
     "@walkeros/web-source-datalayer": "0.0.8"
   },
   "devDependencies": {

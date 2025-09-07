@@ -23,7 +23,7 @@ export function dataLayerDestination(): Destination.InitDestination {
     },
     pushBatch: (batch) => {
       dataLayerPush({
-        event: 'batch',
+        name: 'batch',
         batched_event: batch.key,
         events: batch.data.length ? batch.data : batch.events,
       });

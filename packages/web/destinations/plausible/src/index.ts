@@ -35,7 +35,7 @@ export const destinationPlausible: Destination = {
 
     const { window } = getEnvironment(env);
     const plausible = (window as Window).plausible!;
-    plausible(`${event.event}`, params);
+    plausible(`${event.name}`, params);
   },
 };
 

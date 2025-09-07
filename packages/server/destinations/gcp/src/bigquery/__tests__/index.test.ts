@@ -77,7 +77,7 @@ describe('Server Destination BigQuery', () => {
     expect(mockFn).toHaveBeenCalledWith('insert', [
       {
         timestamp: expect.any(Date),
-        event: 'entity action',
+        name: 'entity action',
         id: event.id,
         entity: 'entity',
         action: 'action',

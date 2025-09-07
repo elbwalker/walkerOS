@@ -83,7 +83,7 @@ describe('GA4 Implementation', () => {
 
   describe('pushGA4Event', () => {
     const mockEvent = {
-      event: 'page view',
+      name: 'page view',
       data: {},
       timestamp: 1234567890,
       id: 'test-id',

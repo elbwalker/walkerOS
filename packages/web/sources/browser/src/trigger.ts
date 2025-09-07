@@ -157,7 +157,7 @@ export async function handleTrigger(
   return Promise.all(
     events.map((event: Walker.Event) =>
       translateToCoreCollector(context, {
-        event: `${event.entity} ${event.action}`,
+        name: `${event.entity} ${event.action}`,
         ...event,
         trigger,
       }),

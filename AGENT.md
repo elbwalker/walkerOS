@@ -127,7 +127,7 @@ All events follow this consistent structure:
 
 ```typescript
 {
-  event: 'product view',        // ENTITY ACTION format
+  name: 'product view',        // ENTITY ACTION format
   data: {                       // Entity-specific properties
     id: 'P123',
     name: 'Laptop',
@@ -488,7 +488,7 @@ it('processes events correctly', async () => {
   });
   await collector.push('page view', {});
   expect(mockDestination.push).toHaveBeenCalledWith(
-    expect.objectContaining({ event: 'page view' }),
+    expect.objectContaining({ name: 'page view' }),
     expect.any(Object),
   );
 });

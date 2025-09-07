@@ -51,7 +51,7 @@ export const push: PushFn = async function (
     delete userData.fbclid;
   }
   const serverEvent: ServerEventParameters = {
-    event_name: event.event,
+    event_name: event.name,
     event_id: event.id,
     event_time: Math.round((event.timestamp || Date.now()) / 1000),
     action_source,

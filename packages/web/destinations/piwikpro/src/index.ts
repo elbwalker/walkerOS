@@ -49,7 +49,7 @@ export const destinationPiwikPro: Destination = {
     const paq = (window as Window)._paq!.push;
 
     // Send pageviews if not disabled
-    if (event.event === 'page view' && !mapping.settings) {
+    if (event.name === 'page view' && !mapping.settings) {
       paq(['trackPageView', await getMappingValue(event, 'data.title')]);
       return;
     }
@@ -58,7 +58,7 @@ export const destinationPiwikPro: Destination = {
 
     const parameters = isArray(data) ? data : [data];
 
-    paq([event.event, ...parameters]);
+    paq([event.name, ...parameters]);
 
     if (eventMapping.goalId) {
       const goalValue = eventMapping.goalValue

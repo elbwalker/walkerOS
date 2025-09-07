@@ -138,12 +138,12 @@ describe('Destination', () => {
     expect(eventCall).toHaveBeenCalledWith({ ...mockEvent, ...changes });
 
     jest.clearAllMocks();
-    await elb({ ...mockEvent, event: 'entity rename' });
+    await elb({ ...mockEvent, name: 'entity rename' });
     expect(mockDestination.push).toHaveBeenCalledWith(
       expect.objectContaining({
         ...mockEvent,
         ...changes,
-        event: 'NewEventName',
+        name: 'NewEventName',
       }),
       expect.objectContaining({
         mapping: eventMapping,
@@ -162,7 +162,7 @@ describe('Destination', () => {
     expect(mockDestination.push).toHaveBeenCalledTimes(1);
     expect(mockDestination.push).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'custom',
+        name: 'custom',
       }),
       expect.objectContaining({
         mapping: eventMapping,
@@ -182,7 +182,7 @@ describe('Destination', () => {
 
     result = await elb(mockEvent);
     expect(mockPush).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'entity action' }),
+      expect.objectContaining({ name: 'entity action' }),
       expect.objectContaining({
         mapping: eventMapping,
         data: 'bar',
@@ -265,7 +265,7 @@ describe('Destination', () => {
     expect(second).toHaveBeenCalledTimes(1);
     expect(first).toHaveBeenCalledWith({
       ...mockEvent,
-      event: 'new name',
+      name: 'new name',
       custom: { foo: 'bar' },
     });
     expect(second).toHaveBeenCalledWith({ ...mockEvent });
@@ -359,11 +359,11 @@ describe('Destination', () => {
 
     // DLQ
     expect(collector.destinations['initFail'].dlq).toContainEqual([
-      expect.objectContaining({ event: mockEvent.event }),
+      expect.objectContaining({ name: mockEvent.name }),
       new Error('init kaputt'),
     ]);
     expect(collector.destinations['pushFail'].dlq).toContainEqual([
-      expect.objectContaining({ event: mockEvent.event }),
+      expect.objectContaining({ name: mockEvent.name }),
       new Error('push kaputt'),
     ]);
   });
@@ -420,7 +420,7 @@ describe('Destination', () => {
     const event = createEvent();
 
     const policy = {
-      event: {
+      name: {
         value: 'new name',
       },
       'data.string': { value: 'bar' },
@@ -447,7 +447,7 @@ describe('Destination', () => {
 
     expect(mockPush).toHaveBeenCalledWith({
       ...event,
-      event: 'new name',
+      name: 'new name',
       data: expect.objectContaining({
         string: 'bar',
         number: undefined, // Redacted due to missing consent
@@ -476,7 +476,7 @@ describe('Destination', () => {
 
       expect(mockPushWithEnvironment).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: mockEvent.event,
+          name: mockEvent.name,
         }),
         expect.objectContaining({
           env: expect.objectContaining({
