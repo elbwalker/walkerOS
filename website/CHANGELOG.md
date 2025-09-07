@@ -1,5 +1,16 @@
 # @walkeros/website
 
+## 0.1.0
+
+### Minor Changes
+
+- fixes
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/core@0.1.0
+
 ## 0.0.1
 
 ### Patch Changes
