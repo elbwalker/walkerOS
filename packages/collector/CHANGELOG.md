@@ -1,5 +1,13 @@
 # @walkeros/collector
 
+## 0.1.1
+
+### Patch Changes
+
+- flow
+- Updated dependencies
+  - @walkeros/core@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

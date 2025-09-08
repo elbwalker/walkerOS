@@ -1,5 +1,13 @@
 # @walkeros/server-destination-aws
 
+## 0.1.1
+
+### Patch Changes
+
+- flow
+- Updated dependencies
+  - @walkeros/server-core@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

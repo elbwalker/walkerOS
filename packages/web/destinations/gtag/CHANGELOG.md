@@ -1,5 +1,13 @@
 # @walkeros/web-destination-gtag
 
+## 0.1.1
+
+### Patch Changes
+
+- flow
+- Updated dependencies
+  - @walkeros/web-core@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes
