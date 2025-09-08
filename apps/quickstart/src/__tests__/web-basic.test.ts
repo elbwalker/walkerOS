@@ -143,8 +143,30 @@ describe('walkerOS Web Basic Example', () => {
 
     // Verify all destinations were called immediately
     expect(consoleEvents).toContain('order complete');
-    expect(mockSendWeb).toHaveBeenCalled();
-    expect(mockGtag).toHaveBeenCalled();
     expect(typeof elb).toBe('function');
+
+    // Verify API destination call details
+    expect(mockSendWeb).toHaveBeenCalledWith(
+      'https://analytics.example.com/events',
+      expect.stringContaining('"name":"order complete"'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': 'your-api-key',
+        },
+      }),
+    );
+
+    // Verify gtag destination call details for purchase event
+    expect(mockGtag).toHaveBeenCalledWith(
+      'event',
+      'purchase',
+      expect.objectContaining({
+        transaction_id: 'ORDER-456',
+        value: 149.99,
+        currency: 'EUR', // Mapped from config
+      }),
+    );
   }, 10000); // 10 second timeout
 });
