@@ -11,6 +11,7 @@
     "packages/web/core",
     "packages/web/destinations/*",
     "packages/web/sources/*",
+    "apps/quickstart",
     "apps/walkerjs",
     "apps/storybook-addon",
     "apps/demos/react",
