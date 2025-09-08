@@ -32,13 +32,18 @@ npm install @walkeros/web-destination-meta
 import { createCollector } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/web-destination-meta';
 
-const { elb } = await createCollector();
-
-elb('walker destination', destinationMeta, {
-  settings: {
-    pixelId: '1234567890', // Your Meta Pixel ID
+const { collector, elb } = await createCollector({
+  destinations: {
+    meta: {
+      code: destinationMeta,
+      config: {
+        settings: {
+          pixelId: '1234567890', // Your Meta Pixel ID
+        },
+        loadScript: true, // Load Meta Pixel script automatically
+      },
+    },
   },
-  loadScript: true, // Load Meta Pixel script automatically
 });
 ```
 

@@ -32,11 +32,16 @@ npm install @walkeros/web-destination-api
 import { createCollector } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
-const { elb } = await createCollector();
-
-elb('walker destination', destinationAPI, {
-  settings: {
-    url: 'https://api.example.com/events',
+const { collector, elb } = await createCollector({
+  destinations: {
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://api.example.com/events',
+        },
+      },
+    },
   },
 });
 ```
@@ -92,15 +97,20 @@ elb('walker destination', destinationAPI, {
 import { createCollector } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
-const { elb } = await createCollector();
-
-elb('walker destination', destinationAPI, {
-  settings: {
-    url: 'https://api.example.com/events',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer your-token',
+const { collector, elb } = await createCollector({
+  destinations: {
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://api.example.com/events',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer your-token',
+          },
+        },
+      },
     },
   },
 });
@@ -112,20 +122,25 @@ elb('walker destination', destinationAPI, {
 import { createCollector } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
-const { elb } = await createCollector();
-
-elb('walker destination', destinationAPI, {
-  settings: {
-    url: 'https://api.example.com/events',
-    transport: 'fetch',
-    transform: (event, config, mapping) => {
-      // Custom transformation logic
-      return JSON.stringify({
-        timestamp: Date.now(),
-        event_name: `${event.entity}_${event.action}`,
-        properties: event.data,
-        context: event.context,
-      });
+const { collector, elb } = await createCollector({
+  destinations: {
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://api.example.com/events',
+          transport: 'fetch',
+          transform: (event, config, mapping) => {
+            // Custom transformation logic
+            return JSON.stringify({
+              timestamp: Date.now(),
+              event_name: `${event.entity}_${event.action}`,
+              properties: event.data,
+              context: event.context,
+            });
+          },
+        },
+      },
     },
   },
 });
@@ -139,25 +154,29 @@ elb('walker destination', destinationAPI, {
 import { createCollector } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
-const { elb } = await createCollector();
-
-// Configure for analytics API
-elb('walker destination', destinationAPI, {
-  settings: {
-    url: 'https://analytics.example.com/track',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': 'your-api-key',
-    },
-    transform: (event) => {
-      return JSON.stringify({
-        event_type: `${event.entity}_${event.action}`,
-        user_id: event.user?.id,
-        session_id: event.user?.session,
-        properties: event.data,
-        timestamp: event.timing,
-      });
+const { collector, elb } = await createCollector({
+  destinations: {
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://analytics.example.com/track',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': 'your-api-key',
+          },
+          transform: (event) => {
+            return JSON.stringify({
+              event_type: `${event.entity}_${event.action}`,
+              user_id: event.user?.id,
+              session_id: event.user?.session,
+              properties: event.data,
+              timestamp: event.timing,
+            });
+          },
+        },
+      },
     },
   },
 });
@@ -168,10 +187,18 @@ elb('walker destination', destinationAPI, {
 For critical events that need to be sent even when the page is unloading:
 
 ```typescript
-elb('walker destination', destinationAPI, {
-  settings: {
-    url: 'https://api.example.com/critical-events',
-    transport: 'beacon', // Reliable for page unload scenarios
+// Add to existing createCollector config
+const { collector, elb } = await createCollector({
+  destinations: {
+    criticalApi: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://api.example.com/critical-events',
+          transport: 'beacon', // Reliable for page unload scenarios
+        },
+      },
+    },
   },
 });
 ```
@@ -181,14 +208,22 @@ elb('walker destination', destinationAPI, {
 Use mapping rules to control which events are sent:
 
 ```typescript
-elb('walker destination', destinationAPI, {
-  settings: {
-    url: 'https://api.example.com/events',
-  },
-  mapping: {
-    entity: {
-      action: {
-        data: 'data',
+// Add to existing createCollector config
+const { collector, elb } = await createCollector({
+  destinations: {
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://api.example.com/events',
+        },
+        mapping: {
+          entity: {
+            action: {
+              data: 'data',
+            },
+          },
+        },
       },
     },
   },

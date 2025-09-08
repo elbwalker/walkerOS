@@ -34,18 +34,23 @@ npm install @walkeros/web-destination-gtag
 import { createCollector } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const { elb } = await createCollector();
-
-elb('walker destination', destinationGtag, {
-  settings: {
-    ga4: {
-      measurementId: 'G-XXXXXXXXXX', // Required for GA4
-    },
-    ads: {
-      conversionId: 'AW-XXXXXXXXX', // Required for Google Ads
-    },
-    gtm: {
-      containerId: 'GTM-XXXXXXX', // Required for GTM
+const { collector, elb } = await createCollector({
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        settings: {
+          ga4: {
+            measurementId: 'G-XXXXXXXXXX', // Required for GA4
+          },
+          ads: {
+            conversionId: 'AW-XXXXXXXXX', // Required for Google Ads
+          },
+          gtm: {
+            containerId: 'GTM-XXXXXXX', // Required for GTM
+          },
+        },
+      },
     },
   },
 });
