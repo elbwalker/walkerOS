@@ -8,6 +8,7 @@ import {
   debounce,
   isString,
   tryCatchAsync,
+  getMappingEvent,
   getMappingValue,
 } from '@walkeros/core';
 import { taggingRegistry } from './tagging';
@@ -86,60 +87,26 @@ const EventFlow: FC<EventFlowProps> = ({
             mappingStr,
           )) as Mapping.Config;
 
-          // Find the mapping rule for this event
-          let mappingRule: Mapping.Rule | undefined;
+          // Use the core utility to find and apply mapping
+          const { eventMapping } = await getMappingEvent(event, mappingConfig);
+
           let transformedData: unknown = event;
 
-          if (mappingConfig) {
-            // Check for entity-action specific mapping
-            const entityMappings = mappingConfig[event.entity];
-            if (entityMappings) {
-              mappingRule = entityMappings[event.action] || entityMappings['*'];
+          if (eventMapping) {
+            // Apply name transformation
+            if (eventMapping.name) {
+              event.name = eventMapping.name;
             }
 
-            // Check for wildcard entity mapping
-            if (!mappingRule && mappingConfig['*']) {
-              mappingRule =
-                mappingConfig['*'][event.action] || mappingConfig['*']['*'];
-            }
-
-            // Apply mapping transformation if found
-            if (mappingRule) {
-              // Handle array of rules (conditional mappings)
-              if (Array.isArray(mappingRule)) {
-                for (const rule of mappingRule) {
-                  if (!rule.condition || rule.condition(event)) {
-                    mappingRule = rule;
-                    break;
-                  }
-                }
-              }
-
-              // Apply data transformation
-              if (
-                mappingRule &&
-                !Array.isArray(mappingRule) &&
-                mappingRule.data
-              ) {
-                transformedData = await getMappingValue(
-                  event,
-                  mappingRule.data,
-                  {
-                    collector: { id: 'playground' } as any,
-                  },
-                );
-              } else {
-                transformedData = event;
-              }
-
-              // Apply name transformation
-              if (
-                mappingRule &&
-                !Array.isArray(mappingRule) &&
-                mappingRule.name
-              ) {
-                event.name = mappingRule.name;
-              }
+            // Apply data transformation
+            if (eventMapping.data) {
+              transformedData = await getMappingValue(
+                event,
+                eventMapping.data,
+                {
+                  collector: { id: 'playground' } as any,
+                },
+              );
             }
           }
 
