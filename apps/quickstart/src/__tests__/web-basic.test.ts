@@ -1,5 +1,6 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { SendWebOptions } from '@walkeros/web-core';
+import { getEvent } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationAPI } from '@walkeros/web-destination-api';
@@ -10,11 +11,11 @@ describe('walkerOS Web Basic Example', () => {
     // Mock functions for testing environment
     const mockSendWeb = jest.fn(
       (url: string, body: string, options: SendWebOptions) => {
-        console.log('📡 API Call:', { url, body: JSON.parse(body), options });
+        // console.log('📡 API Call:', { url, body: JSON.parse(body), options });
       },
     );
     const mockGtag = jest.fn((...args: unknown[]) => {
-      console.log('🎯 Gtag Call:', args);
+      // console.log('🎯 Gtag Call:', args);
     });
     const consoleEvents: string[] = [];
 
@@ -32,11 +33,6 @@ describe('walkerOS Web Basic Example', () => {
               prefix: 'data-elb',
             },
           },
-          env: {
-            window,
-            document,
-            // elb function is automatically injected by collector
-          },
         },
       },
 
@@ -49,12 +45,7 @@ describe('walkerOS Web Basic Example', () => {
             config: {},
             push(event: WalkerOS.Event) {
               consoleEvents.push(event.name);
-              console.log('📊 Event captured:', {
-                name: event.name,
-                entity: event.entity,
-                action: event.action,
-                data: event.data,
-              });
+              // console.log('📊 Event captured:', event.name);
             },
           },
         },
@@ -66,10 +57,7 @@ describe('walkerOS Web Basic Example', () => {
             settings: {
               url: 'https://analytics.example.com/events',
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-API-Key': 'your-api-key',
-              },
+              headers: { 'X-R4N': 'D0M' },
             },
           },
           env: {
@@ -128,45 +116,45 @@ describe('walkerOS Web Basic Example', () => {
       },
     });
 
-    // Test basic functionality
-    await elb('user login', { userId: 'test123', email: 'test@example.com' });
-
-    // Verify console destination
-    expect(consoleEvents).toContain('user login');
-
-    // Test order complete event with full mapping
-    await elb('order complete', {
-      id: 'ORDER-456',
-      total: 149.99,
-      currency: 'USD',
-    });
+    // Test order complete event with full mapping using typical event structure
+    const orderEvent = getEvent('order complete');
+    await elb(orderEvent);
 
     // Verify all destinations were called immediately
     expect(consoleEvents).toContain('order complete');
-    expect(typeof elb).toBe('function');
 
     // Verify API destination call details
     expect(mockSendWeb).toHaveBeenCalledWith(
       'https://analytics.example.com/events',
-      expect.stringContaining('"name":"order complete"'),
+      expect.stringContaining(JSON.stringify(orderEvent)),
       expect.objectContaining({
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': 'your-api-key',
-        },
+        headers: { 'X-R4N': 'D0M' },
       }),
     );
 
     // Verify gtag destination call details for purchase event
+    expect(mockGtag).toHaveBeenCalledWith('js', expect.any(Date));
+    expect(mockGtag).toHaveBeenCalledWith(
+      'config',
+      'G-XXXXXXXXXX',
+      expect.any(Object),
+    );
     expect(mockGtag).toHaveBeenCalledWith(
       'event',
       'purchase',
       expect.objectContaining({
-        transaction_id: 'ORDER-456',
-        value: 149.99,
-        currency: 'EUR', // Mapped from config
+        transaction_id: orderEvent.data.id,
+        value: orderEvent.data.total,
+        data_total: 555,
+        currency: 'EUR',
       }),
     );
-  }, 10000); // 10 second timeout
+    expect(mockGtag).toHaveBeenCalledWith('event', 'conversion', {
+      send_to: 'AW-XXXXXXXXX/purchase',
+      currency: 'EUR',
+      transaction_id: '0rd3r1d',
+      value: 555,
+    });
+  }); //, 10000); // 10 second timeout
 });
