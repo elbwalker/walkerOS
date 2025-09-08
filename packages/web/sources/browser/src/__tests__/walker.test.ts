@@ -39,13 +39,13 @@ describe('Walker', () => {
         data: { label: 'grandmother' },
         trigger: Triggers.Load,
         nested: [
-          { type: 'son', data: { interested_in: 'pizza' } },
+          { entity: 'son', data: { interested_in: 'pizza' } },
           {
-            type: 'daughter',
+            entity: 'daughter',
             data: { status: 'hungry' },
-            nested: [{ type: 'baby', data: { status: 'infant' } }],
+            nested: [{ entity: 'baby', data: { status: 'infant' } }],
           },
-          { type: 'baby', data: { status: 'infant' } },
+          { entity: 'baby', data: { status: 'infant' } },
         ],
       },
     ]);
@@ -291,7 +291,7 @@ describe('Walker', () => {
           parent: ['link', 1],
           entity: ['link', 2],
         },
-        nested: [{ type: 'n', data: { k: 'v' } }],
+        nested: [{ entity: 'n', data: { k: 'v' } }],
       },
     ]);
   });
@@ -340,6 +340,38 @@ describe('Walker', () => {
         entity: 'e',
         action: 'click',
         data: { k: 'v' },
+      },
+    ]);
+  });
+
+  test('data-elbaction applies to nearest entity only', () => {
+    expect(
+      getEvents(getElem('test-nearest-only'), Triggers.Click),
+    ).toMatchObject([
+      {
+        entity: 'child',
+        action: 'test',
+        data: { scope: 'inner' },
+        trigger: 'click',
+      },
+    ]);
+  });
+
+  test('data-elbactions applies to all entities', () => {
+    expect(
+      getEvents(getElem('test-all-entities'), Triggers.Click),
+    ).toMatchObject([
+      {
+        entity: 'child',
+        action: 'test',
+        data: { scope: 'inner' },
+        trigger: 'click',
+      },
+      {
+        entity: 'parent',
+        action: 'test',
+        data: { scope: 'outer' },
+        trigger: 'click',
       },
     ]);
   });

@@ -44,8 +44,8 @@ export const Triggers: { [key: string]: Walker.Trigger } = {
   Pulse: 'pulse',
   Scroll: 'scroll',
   Submit: 'submit',
+  Impression: 'impression',
   Visible: 'visible',
-  Visibles: 'visibles',
   Wait: 'wait',
 } as const;
 
@@ -105,10 +105,10 @@ export function initScopeTrigger(context: Context, settings: Settings) {
   scrollElements = [];
 
   // Clean up any existing visibility tracking to prevent observer accumulation
-  destroyVisibilityTracking();
-
-  // Initialize visibility tracking for the browser source
-  initVisibilityTracking(1000);
+  const scope = elem || document;
+  destroyVisibilityTracking(scope);
+  // Initialize visibility tracking for this scope
+  initVisibilityTracking(scope, 1000);
 
   // default data-elbaction
   const selectorAction = getElbAttributeName(
@@ -116,8 +116,6 @@ export function initScopeTrigger(context: Context, settings: Settings) {
     Const.Commands.Action,
     false,
   );
-
-  const scope = elem || document;
   if (scope !== document) {
     // Handle the elements action(s), too
     handleActionElem(context, scope as HTMLElement, selectorAction, settings);
@@ -143,7 +141,7 @@ export async function handleTrigger(
   return Promise.all(
     events.map((event: Walker.Event) =>
       translateToCoreCollector(context, {
-        event: `${event.entity} ${event.action}`,
+        name: `${event.entity} ${event.action}`,
         ...event,
         trigger,
       }),
@@ -179,10 +177,10 @@ function handleActionElem(
         case Triggers.Scroll:
           triggerScroll(elem, triggerAction.triggerParams);
           break;
-        case Triggers.Visible:
+        case Triggers.Impression:
           triggerVisible(context, elem);
           break;
-        case Triggers.Visibles:
+        case Triggers.Visible:
           triggerVisible(context, elem, { multiple: true });
           break;
         case Triggers.Wait:

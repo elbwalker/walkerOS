@@ -1,108 +1,313 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
+    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
 # Core Types & Utilities for walkerOS
 
-The walkerOS Core package provides the foundational TypeScript definitions and
-platform-agnostic utilities that power the entire walkerOS ecosystem. It serves
-as the bedrock for type safety and shared functionality across all sources,
-collectors, and destinations.
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/core)
+&bull; [NPM Package](https://www.npmjs.com/package/@walkeros/core)
 
-## Role in walkerOS Ecosystem
-
-walkerOS follows a **source → collector → destination** architecture:
-
-- **Sources**: Capture events from various environments (browser DOM, dataLayer,
-  server requests)
-- **Collector**: Processes, validates, and routes events with consent awareness
-- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
-  custom APIs)
-
-The Core package provides the essential building blocks that all other packages
-depend on, ensuring consistent data structures, type definitions, and utility
-functions across the entire platform.
+Core utilities are a collection of platform-agnostic functions that can be used
+across all walkerOS environments. They provide standardized building blocks for
+data manipulation, validation, mapping, and more.
 
 ## Installation
 
-```sh
-npm install @walkeros/core
+Import the core utilities directly from the `@walkeros/core` package:
+
+```ts
+import { assign, anonymizeIP, getMappingValue } from '@walkeros/core';
 ```
 
-## Usage
+## Core Utilities
 
-The core package exports essential types and utilities:
+### Data Manipulation
 
-```typescript
-import {
-  // Core event types
-  WalkerOS,
+#### assign
 
-  // Utility functions
-  assign,
-  clone,
-  validateEvent,
+`assign<T, U>(target: T, source: U, options?): T & U` merges two objects with
+advanced merging capabilities. It has special behavior for arrays: when merging,
+it concatenates arrays from both objects, removing duplicates.
 
-  // Consent management
-  Consent,
-
-  // Mapping utilities
-  byPath,
-  mapping,
-} from '@walkeros/core';
-
-// Example: Validate an event
-const event: WalkerOS.Event = {
-  event: 'order complete',
-  data: { value: 9001 },
-  // ... other properties
-};
-
-if (validateEvent(event)) {
-  console.log('Event is valid!');
+```ts
+interface AssignOptions {
+  merge?: boolean; // Merge array properties (default: true)
+  shallow?: boolean; // Create shallow copy (default: true)
+  extend?: boolean; // Extend with new properties (default: true)
 }
+
+const obj1 = { a: 1, b: [1, 2] };
+const obj2 = { b: [2, 3], c: 3 };
+
+assign(obj1, obj2); // Returns { a: 1, b: [1, 2, 3], c: 3 }
+assign(obj1, obj2, { merge: false }); // Returns { a: 1, b: [2, 3], c: 3 }
 ```
 
-## Event Naming Convention
+#### Path Operations
 
-walkerOS follows a strict **"entity action"** naming convention for events:
+##### getByPath
 
-✅ **Correct**: Use spaces to separate entity and action
+`getByPath(object: unknown, path: string, defaultValue?: unknown): unknown`
+accesses nested properties using dot notation. Supports wildcard `*` for array
+iteration.
 
-```typescript
-elb('order complete', { value: 99.99 });
-elb('product add', { id: 'abc123' });
-elb('page view', { path: '/home' });
-elb('user register', { email: 'user@example.com' });
+```js
+getByPath({ data: { id: 'wow' } }, 'data.id'); // Returns "wow"
+getByPath({ nested: [1, 2, { id: 'cool' }] }, 'nested.*.id'); // Returns ['', '', 'cool']
+getByPath({ arr: ['foo', 'bar'] }, 'arr.1'); // Returns "bar"
 ```
 
-❌ **Incorrect**: Do not use underscores or other separators
+##### setByPath
 
-```typescript
-// Don't do this
-elb('order_complete', data); // Wrong: underscores
-elb('orderComplete', data); // Wrong: camelCase
-elb('purchase', data); // Wrong: single word
+`setByPath(object: WalkerOS.Event, path: string, value: unknown): WalkerOS.Event`
+sets nested values using dot notation, returning a new object with the updated
+value.
+
+```js
+const updatedEvent = setByPath(event, 'data.id', 'new-value');
+// Returns a new event with data.id set to 'new-value'
 ```
 
-**Why spaces matter**: walkerOS destinations automatically transform your
-semantic event names into platform-specific formats. For example,
-`'order complete'` becomes `'purchase'` for Google Analytics 4, while preserving
-the original meaning in your data model.
+#### clone
 
-## Core Features
+`clone<T>(original: T): T` creates a deep copy of objects/arrays with circular
+reference handling.
 
-- **TypeScript Definitions**: Complete type system for walkerOS events and
-  configurations
-- **Platform-Agnostic Utilities**: Shared functions for data manipulation and
-  validation
-- **Consent Types**: Standardized consent management interfaces
-- **Event Validation**: Built-in validation for event structure and data
-  integrity
-- **Mapping Utilities**: Tools for transforming data between different formats
-- **Privacy Utilities**: Functions for data anonymization and privacy compliance
+```js
+const original = { foo: true, arr: ['a', 'b'] };
+const cloned = clone(original);
+original.foo = false; // cloned.foo remains true
+```
+
+#### castValue
+
+`castValue(value: unknown): WalkerOS.PropertyType` converts string values to
+appropriate types (number, boolean).
+
+```js
+castValue('123'); // Returns 123 (number)
+castValue('true'); // Returns true (boolean)
+castValue('hello'); // Returns 'hello' (unchanged)
+```
+
+### Privacy & Security
+
+#### anonymizeIP
+
+`anonymizeIP(ip: string): string` anonymizes IPv4 addresses by setting the last
+oclet to zero.
+
+```js
+anonymizeIP('192.168.1.100'); // Returns '192.168.1.0'
+```
+
+#### Hashing
+
+`getId(length?: number): string` generates random alphanumeric strings for
+unique identifiers.
+
+```js
+getId(); // Returns random 6-char string like 'a1b2c3'
+getId(10); // Returns 10-character string
+```
+
+### Event Processing
+
+#### getMappingValue
+
+`getMappingValue(event: WalkerOS.Event, mapping: Mapping.Data, options?: Mapping.Options): Promise<WalkerOS.Property | undefined>`
+extracts values from events using
+[mapping configurations](https://www.elbwalker.com/docs/destinations/event-mapping).
+
+```ts
+// Simple path mapping
+await getMappingValue(event, 'data.productId');
+
+// Complex mapping with conditions and loops
+const mapping = {
+  map: {
+    orderId: 'data.id',
+    products: {
+      loop: [
+        'nested',
+        {
+          condition: (entity) => entity.entity === 'product',
+          map: { id: 'data.id', name: 'data.name' },
+        },
+      ],
+    },
+  },
+};
+await getMappingValue(event, mapping);
+```
+
+#### getMappingEvent
+
+`getMappingEvent(event: WalkerOS.PartialEvent, mapping?: Mapping.Rules): Promise<Mapping.Result>`
+finds the appropriate mapping rule for an event.
+
+### Marketing & Analytics
+
+#### getMarketingParameters
+
+`getMarketingParameters(url: URL, custom?: MarketingParameters): WalkerOS.Properties`
+extracts UTM and click ID parameters from URLs.
+
+```js
+getMarketingParameters(
+  new URL('https://example.com/?utm_source=docs&gclid=123'),
+);
+// Returns { source: "docs", gclid: "123", clickId: "gclid" }
+
+// With custom parameters
+getMarketingParameters(url, { utm_custom: 'custom', partner: 'partnerId' });
+```
+
+### Type Validation
+
+#### Type Checkers
+
+A comprehensive set of type checking functions:
+
+- `isString(value)`, `isNumber(value)`, `isBoolean(value)`
+- `isArray(value)`, `isObject(value)`, `isFunction(value)`
+- `isDefined(value)`, `isSameType(a, b)`
+- `isPropertyType(value)` - Checks if value is valid walkerOS property
+
+#### Property Utilities
+
+- `castToProperty(value)` - Casts to valid property type
+- `filterValues(object)` - Filters object to valid properties only
+- `isPropertyType(value)` - Type guard for property validation
+
+### Request Handling
+
+#### requestToData
+
+`requestToData(parameter: unknown): WalkerOS.AnyObject | undefined` converts
+query strings to JavaScript objects with type casting.
+
+```js
+requestToData('a=1&b=true&c=hello&arr[0]=x&arr[1]=y');
+// Returns { a: 1, b: true, c: 'hello', arr: ['x', 'y'] }
+```
+
+#### requestToParameter
+
+`requestToParameter(data: WalkerOS.AnyObject): string` converts objects to
+URL-encoded query strings.
+
+```js
+requestToParameter({ a: 1, b: true, arr: ['x', 'y'] });
+// Returns 'a=1&b=true&arr[0]=x&arr[1]=y'
+```
+
+### User Agent Parsing
+
+#### parseUserAgent
+
+`parseUserAgent(userAgent?: string): WalkerOS.User` extracts browser, OS, and
+device information.
+
+```js
+parseUserAgent(navigator.userAgent);
+// Returns { browser: 'Chrome', browserVersion: '91.0', os: 'Windows', ... }
+```
+
+Individual functions are also available:
+
+- `getBrowser(userAgent)` - Returns browser name
+- `getBrowserVersion(userAgent)` - Returns browser version
+- `getOS(userAgent)` - Returns operating system
+- `getOSVersion(userAgent)` - Returns OS version
+- `getDeviceType(userAgent)` - Returns 'Desktop', 'Tablet', or 'Mobile'
+
+### Error Handling
+
+#### tryCatch
+
+`tryCatch(tryFn: Function, catchFn?: Function, finallyFn?: Function)` wraps
+functions with error handling.
+
+```js
+const safeParse = tryCatch(JSON.parse, () => ({}));
+safeParse('{"valid": "json"}'); // Parses successfully
+safeParse('invalid'); // Returns {} instead of throwing
+```
+
+#### tryCatchAsync
+
+`tryCatchAsync(tryFn: Function, catchFn?: Function, finallyFn?: Function)` for
+async operations.
+
+```js
+const safeAsyncCall = tryCatchAsync(
+  () => fetchUserData(),
+  (error) => ({ error: 'Failed to load user' }),
+);
+```
+
+### Performance Optimization
+
+#### debounce
+
+`debounce(fn: Function, wait?: number)` delays function execution until after
+the wait time.
+
+```js
+const debouncedSearch = debounce(searchFunction, 300);
+// Only executes after 300ms of inactivity
+```
+
+#### throttle
+
+`throttle(fn: Function, wait?: number)` limits function execution frequency.
+
+```js
+const throttledScroll = throttle(scrollHandler, 100);
+// Executes at most every 100ms
+```
+
+### Utilities
+
+#### trim
+
+`trim(str: string): string` removes whitespace from string ends.
+
+#### throwError
+
+`throwError(message: string)` throws descriptive errors.
+
+#### onLog
+
+`onLog(message: unknown, verbose?: boolean)` provides consistent logging.
+
+```js
+onLog('Debug info', true); // Logs message
+onLog('Silent message'); // No output
+```
+
+### Validation
+
+#### validateEvent
+
+`validateEvent(obj: unknown, customContracts?: Schema.Contracts): WalkerOS.Event | never`
+validates event structure and throws on invalid events.
+
+#### validateProperty
+
+Validates that values conform to walkerOS property types.
+
+---
+
+For platform-specific utilities, see:
+
+- [Web Core](https://www.elbwalker.com/docs/core/web) - Browser-specific
+  functions
+- [Server Core](https://www.elbwalker.com/docs/core/server) - Node.js server
+  functions
 
 ## Contribute
 

@@ -31,7 +31,7 @@ export function pushGA4Event(
   };
 
   // Event name (snake_case default)
-  let eventName = event.event; // Assume custom mapped name
+  let eventName = event.name; // Assume custom mapped name
   if (settings.snakeCase !== false) {
     // Use snake case if not disabled
     eventName = normalizeEventName(eventName);

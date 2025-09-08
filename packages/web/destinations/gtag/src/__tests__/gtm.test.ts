@@ -72,7 +72,7 @@ describe('GTM Implementation', () => {
 
   describe('pushGTMEvent', () => {
     const mockEvent = {
-      event: 'product view',
+      name: 'product view',
       entity: 'product',
       action: 'view',
       data: { id: 'product-1', name: 'Test Product' },
@@ -108,6 +108,7 @@ describe('GTM Implementation', () => {
       expect(mockDataLayer).toHaveLength(1);
       expect(mockDataLayer[0]).toEqual({
         event: 'product view',
+        name: 'product view',
         entity: 'product',
         action: 'view',
         data: { id: 'product-1', name: 'Test Product' },

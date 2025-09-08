@@ -1,30 +1,23 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
+    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
 # Meta Pixel Destination for walkerOS
 
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/meta)
+&bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-meta)
+
 This package provides a Meta Pixel (formerly Facebook Pixel) destination for
-walkerOS. It allows you to send events to Meta Pixel.
+walkerOS. It sends events to Meta Pixel to track visitor activity and
+conversions for Facebook and Instagram advertising campaigns.
 
-[View documentation](https://www.elbwalker.com/docs/destinations/web/meta/)
-
-## Role in walkerOS Ecosystem
-
-walkerOS follows a **source → collector → destination** architecture:
-
-- **Sources**: Capture events from various environments (browser DOM, dataLayer,
-  server requests)
-- **Collector**: Processes, validates, and routes events with consent awareness
-- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
-  custom APIs)
-
-This Meta Pixel destination receives processed events from the walkerOS
-collector and transforms them into Meta's Pixel API format, handling conversion
-events, custom events, and audience building data to optimize your Meta
-advertising campaigns.
+walkerOS follows a **source → collector → destination** architecture. This Meta
+Pixel destination receives processed events from the walkerOS collector and
+transforms them into Meta's Pixel API format, handling conversion events, custom
+events, and audience building data to optimize your Meta advertising campaigns.
 
 ## Installation
 
@@ -37,15 +30,25 @@ npm install @walkeros/web-destination-meta
 Here's a basic example of how to use the Meta Pixel destination:
 
 ```typescript
-import { elb } from '@walkeros/collector';
+import { createCollector } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/web-destination-meta';
 
+const { elb } = await createCollector();
+
 elb('walker destination', destinationMeta, {
-  custom: {
-    pixelId: '1234567890',
+  settings: {
+    pixelId: '1234567890', // Your Meta Pixel ID
   },
+  loadScript: true, // Load Meta Pixel script automatically
 });
 ```
+
+## Configuration
+
+| Name         | Type      | Description                                                       | Required | Example        |
+| ------------ | --------- | ----------------------------------------------------------------- | -------- | -------------- |
+| `pixelId`    | `string`  | Your Meta Pixel ID from Facebook Business Manager                 | Yes      | `'1234567890'` |
+| `loadScript` | `boolean` | Whether to automatically load the Meta Pixel script (fbevents.js) | No       | `true`         |
 
 ## Contribute
 

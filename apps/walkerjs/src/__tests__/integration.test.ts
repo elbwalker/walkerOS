@@ -104,7 +104,7 @@ describe('Walker.js Integration Tests', () => {
       const event = mockPush.mock.calls[0][0] as unknown as WalkerOS.Event;
 
       expect(event).toMatchObject({
-        event: 'product add',
+        name: 'product add',
         data: {
           id: 123,
           name: 'Test Product',
@@ -135,7 +135,7 @@ describe('Walker.js Integration Tests', () => {
       expect(mockPush).toHaveBeenCalled();
       const event = mockPush.mock.calls[0][0] as unknown as WalkerOS.Event;
 
-      expect(event.event).toBe('order complete');
+      expect(event.name).toBe('order complete');
       expect(event.data).toMatchObject({
         transaction_id: 'TRX123',
         value: 99.99,

@@ -123,13 +123,13 @@ export function createEventOrCommand(
     nameOrEvent,
     '' as string,
   )
-    ? { event: nameOrEvent, ...defaults }
+    ? { name: nameOrEvent, ...defaults }
     : { ...defaults, ...(nameOrEvent || {}) };
 
-  if (!partialEvent.event) throw new Error('Event name is required');
+  if (!partialEvent.name) throw new Error('Event name is required');
 
   // Check for valid entity and action event format
-  const [entityValue, actionValue] = partialEvent.event.split(' ');
+  const [entityValue, actionValue] = partialEvent.name.split(' ');
   if (!entityValue || !actionValue) throw new Error('Event name is invalid');
 
   // It's a walker command
@@ -149,7 +149,7 @@ export function createEventOrCommand(
 
   // Extract properties with default fallbacks
   const {
-    event = `${entityValue} ${actionValue}`,
+    name = `${entityValue} ${actionValue}`,
     data = {},
     context = {},
     globals = collector.globals,
@@ -170,7 +170,7 @@ export function createEventOrCommand(
   } = partialEvent;
 
   const fullEvent: WalkerOS.Event = {
-    event,
+    name,
     data,
     context,
     globals,

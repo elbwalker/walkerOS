@@ -1,4 +1,4 @@
-import type { WalkerOS, Elb } from '@walkeros/core';
+import type { WalkerOS } from '@walkeros/core';
 import type { Settings, Context } from './types';
 import { tryCatch } from '@walkeros/core';
 import { isVisible } from '@walkeros/web-core';
@@ -16,19 +16,19 @@ const visibilityCache = new WeakMap<
   { isVisible: boolean; lastChecked: number }
 >();
 
-// Module-level visibility state management
+// Module-level visibility state management (stateless source architecture)
 interface VisibilityState {
   observer?: IntersectionObserver;
   timers: WeakMap<HTMLElement, number>;
   duration: number;
   elementConfigs?: WeakMap<
     HTMLElement,
-    { multiple: boolean; blocked: boolean; context: Context }
+    { multiple: boolean; blocked: boolean; context: Context; trigger: string }
   >;
 }
 
-// Global state for browser source visibility tracking
-let browserVisibilityState: VisibilityState | null = null;
+// Module-level visibility state keyed by document/scope
+const visibilityStates = new WeakMap<Document | Element, VisibilityState>();
 
 /**
  * Cached visibility check to reduce expensive isVisible() calls
@@ -52,8 +52,11 @@ function isElementVisible(element: HTMLElement): boolean {
 /**
  * Element cleanup (unobserve + timer + cache cleanup)
  */
-export function unobserveElement(element: HTMLElement): void {
-  const state = browserVisibilityState;
+export function unobserveElement(
+  scope: Document | Element,
+  element: HTMLElement,
+): void {
+  const state = visibilityStates.get(scope);
   if (!state) return;
 
   if (state.observer) {
@@ -73,9 +76,11 @@ export function unobserveElement(element: HTMLElement): void {
 }
 
 /**
- * Creates an IntersectionObserver for the browser source
+ * Creates an IntersectionObserver for the given scope
  */
-function createObserver(): IntersectionObserver | undefined {
+function createObserver(
+  scope: Document | Element,
+): IntersectionObserver | undefined {
   if (!window.IntersectionObserver) return undefined;
 
   return tryCatch(
@@ -83,7 +88,7 @@ function createObserver(): IntersectionObserver | undefined {
       new window.IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
-            handleIntersection(entry);
+            handleIntersection(scope, entry);
           });
         },
         {
@@ -98,9 +103,12 @@ function createObserver(): IntersectionObserver | undefined {
 /**
  * Handles intersection changes for observed elements
  */
-function handleIntersection(entry: IntersectionObserverEntry): void {
+function handleIntersection(
+  scope: Document | Element,
+  entry: IntersectionObserverEntry,
+): void {
   const target = entry.target as HTMLElement;
-  const state = browserVisibilityState;
+  const state = visibilityStates.get(scope);
 
   if (!state) return;
 
@@ -146,7 +154,7 @@ function handleIntersection(entry: IntersectionObserverEntry): void {
               await handleTrigger(
                 elementConfig.context,
                 target as Element,
-                Triggers.Visible,
+                elementConfig.trigger,
               );
             }
 
@@ -158,7 +166,7 @@ function handleIntersection(entry: IntersectionObserverEntry): void {
               currentConfig.blocked = true;
             } else {
               // Clean up and unobserve only if not a multiple trigger
-              unobserveElement(target);
+              unobserveElement(scope, target);
             }
           }
         }, state.duration);
@@ -183,16 +191,19 @@ function handleIntersection(entry: IntersectionObserverEntry): void {
 }
 
 /**
- * Initializes visibility tracking for the browser source
+ * Initializes visibility tracking for a scope (document/element)
  */
-export function initVisibilityTracking(duration = 1000): void {
-  if (browserVisibilityState) return; // Already initialized
+export function initVisibilityTracking(
+  scope: Document | Element,
+  duration = 1000,
+): void {
+  if (visibilityStates.has(scope)) return; // Already initialized
 
-  browserVisibilityState = {
-    observer: createObserver(),
+  visibilityStates.set(scope, {
+    observer: createObserver(scope),
     timers: new WeakMap(),
     duration,
-  };
+  });
 }
 
 /**
@@ -203,7 +214,10 @@ export function triggerVisible(
   element: HTMLElement,
   config: { multiple?: boolean } = { multiple: false },
 ): void {
-  const state = browserVisibilityState;
+  // Use scope from settings, fallback to document
+  const scope = context.settings.scope || document;
+  const state = visibilityStates.get(scope);
+
   if (state?.observer && element) {
     // Store element config for later use in intersection handling
     if (!state.elementConfigs) {
@@ -213,21 +227,24 @@ export function triggerVisible(
       multiple: config.multiple ?? false,
       blocked: false,
       context,
+      trigger: config.multiple ? 'visible' : 'impression',
     });
     state.observer.observe(element);
   }
 }
 
 /**
- * Destroys visibility tracking for the browser source, cleaning up all resources
+ * Destroys visibility tracking for a scope, cleaning up all resources
  */
-export function destroyVisibilityTracking(): void {
-  const state = browserVisibilityState;
+export function destroyVisibilityTracking(scope?: Document | Element): void {
+  if (!scope) return; // No scope provided, nothing to clean up
+
+  const state = visibilityStates.get(scope);
   if (!state) return;
 
   if (state.observer) {
     state.observer.disconnect();
   }
 
-  browserVisibilityState = null;
+  visibilityStates.delete(scope);
 }

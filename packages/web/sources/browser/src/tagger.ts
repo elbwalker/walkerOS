@@ -11,6 +11,8 @@ export interface TaggerInstance {
     ((data: WalkerOS.Properties) => TaggerInstance);
   action: ((trigger: string, action?: string) => TaggerInstance) &
     ((actions: Record<string, string>) => TaggerInstance);
+  actions: ((trigger: string, action?: string) => TaggerInstance) &
+    ((actions: Record<string, string>) => TaggerInstance);
   context: ((key: string, value: WalkerOS.Property) => TaggerInstance) &
     ((context: WalkerOS.Properties) => TaggerInstance);
   globals: ((key: string, value: WalkerOS.Property) => TaggerInstance) &
@@ -37,6 +39,7 @@ export function createTagger(
     let namingEntity: string | undefined = entity; // Used for data attribute naming
     const dataProperties: Record<string, WalkerOS.Properties> = {};
     const actionProperties: Record<string, string> = {};
+    const actionsProperties: Record<string, string> = {};
     const contextProperties: WalkerOS.Properties = {};
     const globalProperties: WalkerOS.Properties = {};
     const linkProperties: Record<string, string> = {};
@@ -113,6 +116,30 @@ export function createTagger(
         return instance;
       },
 
+      actions(
+        triggerOrActions: string | Record<string, string>,
+        actionValue?: string,
+      ): TaggerInstance {
+        if (isString(triggerOrActions)) {
+          if (isDefined(actionValue)) {
+            // Two parameters: trigger and action
+            actionsProperties[triggerOrActions] = actionValue;
+          } else {
+            // Single parameter: could be "trigger:action" or just "trigger"
+            if (triggerOrActions.includes(':')) {
+              const [trigger, action] = triggerOrActions.split(':', 2);
+              actionsProperties[trigger] = action;
+            } else {
+              actionsProperties[triggerOrActions] = triggerOrActions;
+            }
+          }
+        } else {
+          Object.assign(actionsProperties, triggerOrActions);
+        }
+
+        return instance;
+      },
+
       context(
         keyOrContext: string | WalkerOS.Properties,
         value?: WalkerOS.Property,
@@ -173,6 +200,11 @@ export function createTagger(
         // Add action attributes
         if (Object.keys(actionProperties).length > 0) {
           attributes[`${prefix}action`] = serializeKeyValue(actionProperties);
+        }
+
+        // Add actions attributes (for all entities)
+        if (Object.keys(actionsProperties).length > 0) {
+          attributes[`${prefix}actions`] = serializeKeyValue(actionsProperties);
         }
 
         // Add context attributes

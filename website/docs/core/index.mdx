@@ -133,7 +133,7 @@ const mapping = {
       loop: [
         'nested',
         {
-          condition: (entity) => entity.type === 'product',
+          condition: (entity) => entity.entity === 'product',
           map: { id: 'data.id', name: 'data.name' },
         },
       ],

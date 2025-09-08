@@ -1,30 +1,23 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
+    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
 # DataLayer Source for walkerOS
 
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/sources/dataLayer)
+&bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/web-source-datalayer)
+
 This package provides a dataLayer source for walkerOS. It allows you to process
 events from a dataLayer and send them to the walkerOS collector.
 
-[View documentation](https://www.elbwalker.com/docs/sources/datalayer/)
-
-## Role in walkerOS Ecosystem
-
-walkerOS follows a **source → collector → destination** architecture:
-
-- **Sources**: Capture events from various environments (browser DOM, dataLayer,
-  server requests)
-- **Collector**: Processes, validates, and routes events with consent awareness
-- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
-  custom APIs)
-
-This dataLayer source monitors the browser's dataLayer (commonly used with
-Google Tag Manager) and transforms existing gtag() calls and dataLayer.push()
-events into standardized walkerOS events, enabling seamless migration from
-traditional dataLayer implementations.
+walkerOS follows a **source → collector → destination** architecture. This
+dataLayer source monitors the browser's dataLayer (commonly used with Google Tag
+Manager) and transforms existing gtag() calls and dataLayer.push() events into
+standardized walkerOS events, enabling seamless migration from traditional
+dataLayer implementations.
 
 ## Installation
 
@@ -42,6 +35,14 @@ import { sourceDataLayer } from '@walkeros/web-source-datalayer';
 
 sourceDataLayer({ elb });
 ```
+
+## Configuration
+
+| Name     | Type                                                   | Description                                                   | Required | Example                                         |
+| -------- | ------------------------------------------------------ | ------------------------------------------------------------- | -------- | ----------------------------------------------- |
+| `name`   | `string`                                               | DataLayer variable name (default: "dataLayer")                | No       | `'dataLayer'`                                   |
+| `prefix` | `string`                                               | Event prefix for filtering dataLayer events (default: "gtag") | No       | `'gtag'`                                        |
+| `filter` | `(event: unknown) => WalkerOS.PromiseOrValue<boolean>` | Function to filter which dataLayer events to process          | No       | `(event) => event && typeof event === "object"` |
 
 ## Contribute
 

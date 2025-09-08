@@ -1,27 +1,13 @@
+import type { Collector } from '.';
+
+/**
+ * Flow configuration interface for dynamic walkerOS setup
+ * Used by bundlers and other tools to configure walkerOS dynamically
+ */
 export interface Config {
-  nodes: Node[];
-  edges: Edge[];
-  packages: Package[];
-}
+  /** Collector configuration - uses existing Collector.Config from core */
+  collector: Collector.Config;
 
-export interface Node {
-  id: string;
-  type: PackageType;
-  package: string;
-  config: Record<string, unknown>;
+  /** NPM packages required for this configuration */
+  packages: Record<string, string>;
 }
-
-export interface Edge {
-  id: string;
-  source: string;
-  target: string;
-}
-
-export interface Package {
-  id: string;
-  name: string;
-  version: string;
-  type: PackageType;
-}
-
-export type PackageType = 'core' | 'collector' | 'source' | 'destination';

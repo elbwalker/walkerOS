@@ -16,7 +16,7 @@ export async function getMappingEvent(
   event: WalkerOS.PartialEvent,
   mapping?: Mapping.Rules,
 ): Promise<Mapping.Result> {
-  const [entity, action] = (event.event || '').split(' ');
+  const [entity, action] = (event.name || '').split(' ');
   if (!mapping || !entity || !action) return {};
 
   let eventMapping: Mapping.Rule | undefined;

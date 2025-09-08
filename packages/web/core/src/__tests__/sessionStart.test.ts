@@ -142,7 +142,7 @@ describe('sessionStart', () => {
       expect.any(Object),
     );
     expect(mockElb).toHaveBeenNthCalledWith(2, {
-      event: 'session start',
+      name: 'session start',
       data: expect.any(Object),
     });
   });
@@ -166,7 +166,7 @@ describe('sessionStart', () => {
   test('Callback default elb calls', () => {
     const session = sessionStart({ data: { isNew: true, isStart: true } });
     expect(mockElb).toHaveBeenCalledWith({
-      event: 'session start',
+      name: 'session start',
       data: session,
     });
   });

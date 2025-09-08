@@ -64,11 +64,11 @@ describe('Source Create Flow Integration', () => {
       },
     });
 
-    await elb({ event: 'manual event', data: { test: 'data' } });
+    await elb({ name: 'manual event', data: { test: 'data' } });
 
     expect(mockPushCalls).toHaveLength(1);
     expect(mockPushCalls[0]).toMatchObject({
-      event: 'manual event',
+      name: 'manual event',
       data: { test: 'data' },
     });
   });

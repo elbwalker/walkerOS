@@ -1,4 +1,4 @@
-import type { Source, Collector, Elb } from '@walkeros/core';
+import type { Source, Elb } from '@walkeros/core';
 import type { SessionConfig, SessionCallback } from '@walkeros/web-core';
 
 // Export browser-specific elb types

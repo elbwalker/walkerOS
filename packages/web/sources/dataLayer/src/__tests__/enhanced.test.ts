@@ -1,10 +1,14 @@
-import { sourceDataLayer } from '../index';
-import type { WalkerOS, Elb } from '@walkeros/core';
-import { createMockPush, getDataLayer } from './test-utils';
+import { createCollector } from '@walkeros/collector';
+import type { WalkerOS, Collector } from '@walkeros/core';
+import {
+  createMockPush,
+  getDataLayer,
+  createDataLayerSource,
+} from './test-utils';
 
 describe('DataLayer Source - Enhanced with gtag support', () => {
   let collectedEvents: WalkerOS.Event[];
-  let mockElb: jest.MockedFunction<Elb.Fn>;
+  let collector: Collector.Instance;
 
   beforeEach(async () => {
     // Clear any existing dataLayer
@@ -12,178 +16,169 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     collectedEvents = [];
 
     // Create a simple synchronous mock
-    mockElb = createMockPush(collectedEvents);
+    const mockPush = createMockPush(collectedEvents);
+
+    // Initialize collector
+    ({ collector } = await createCollector({
+      tagging: 2,
+    }));
+
+    // Override push with synchronous mock
+    collector.push = mockPush;
   });
 
   test('handles gtag consent events', async () => {
-    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
+    await createDataLayerSource(collector);
 
-    // Push a gtag consent event
+    // Simulate gtag('consent', 'update', { ad_storage: 'granted', analytics_storage: 'denied' })
     getDataLayer().push([
       'consent',
       'update',
       {
         ad_storage: 'granted',
-        analytics_storage: 'granted',
+        analytics_storage: 'denied',
       },
     ]);
 
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer consent update',
-      data: expect.objectContaining({
-        event: 'consent update',
+      name: 'dataLayer consent update',
+      data: {
         ad_storage: 'granted',
-        analytics_storage: 'granted',
-      }),
-    });
-  });
-
-  test('handles gtag config events', async () => {
-    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
-
-    // Push a gtag config event
-    getDataLayer().push([
-      'config',
-      'GA_MEASUREMENT_ID',
-      {
-        page_title: 'Custom Title',
-        custom_map: { dimension1: 'user_type' },
+        analytics_storage: 'denied',
       },
-    ]);
-
-    expect(collectedEvents).toHaveLength(1);
-    expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer config GA_MEASUREMENT_ID',
-      data: expect.objectContaining({
-        event: 'config GA_MEASUREMENT_ID',
-        page_title: 'Custom Title',
-        custom_map: { dimension1: 'user_type' },
-      }),
     });
   });
 
-  test('handles gtag set events', async () => {
-    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
+  test('handles gtag event calls', async () => {
+    await createDataLayerSource(collector);
 
-    // Push a gtag set event
-    getDataLayer().push([
-      'set',
-      {
-        user_id: '12345',
-        custom_parameter: 'value',
-      },
-    ]);
-
-    expect(collectedEvents).toHaveLength(1);
-    expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer set custom',
-      data: expect.objectContaining({
-        event: 'set custom',
-        user_id: '12345',
-        custom_parameter: 'value',
-      }),
-    });
-  });
-
-  test('handles gtag event with parameters', async () => {
-    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
-
-    // Push a gtag event with parameters
+    // Simulate gtag('event', 'purchase', { transaction_id: '123', value: 25.99 })
     getDataLayer().push([
       'event',
       'purchase',
       {
-        transaction_id: '12345',
-        value: 25.42,
-        currency: 'USD',
-        items: [
-          {
-            item_id: 'SKU_12345',
-            item_name: 'Test Product',
-            price: 25.42,
-            quantity: 1,
-          },
-        ],
+        transaction_id: '123',
+        value: 25.99,
       },
     ]);
 
     expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer purchase',
-      data: expect.objectContaining({
-        event: 'purchase',
-        transaction_id: '12345',
-        value: 25.42,
-        currency: 'USD',
-        items: expect.arrayContaining([
-          expect.objectContaining({
-            item_id: 'SKU_12345',
-            item_name: 'Test Product',
-          }),
-        ]),
-      }),
+      name: 'dataLayer purchase',
+      data: {
+        transaction_id: '123',
+        value: 25.99,
+      },
     });
   });
 
-  test('handles mixed event formats in sequence', async () => {
-    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
+  test('handles gtag config calls', async () => {
+    await createDataLayerSource(collector);
 
-    // Push multiple different event formats
-    getDataLayer().push({ event: 'custom_event', data: 'value1' });
+    // Simulate gtag('config', 'GA_MEASUREMENT_ID', { send_page_view: false })
     getDataLayer().push([
-      'event',
-      'page_view',
-      { page_location: 'https://example.com' },
-    ]);
-    getDataLayer().push([
-      'consent',
-      'update',
-      { analytics_storage: 'granted' },
+      'config',
+      'GA_MEASUREMENT_ID',
+      {
+        send_page_view: false,
+      },
     ]);
 
-    expect(collectedEvents).toHaveLength(3);
-
-    // Check first event (direct object)
+    expect(collectedEvents).toHaveLength(1);
     expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer custom_event',
-      data: expect.objectContaining({
-        event: 'custom_event',
-        data: 'value1',
-      }),
-    });
-
-    // Check second event (gtag event)
-    expect(collectedEvents[1]).toMatchObject({
-      event: 'dataLayer page_view',
-      data: expect.objectContaining({
-        event: 'page_view',
-        page_location: 'https://example.com',
-      }),
-    });
-
-    // Check third event (gtag consent)
-    expect(collectedEvents[2]).toMatchObject({
-      event: 'dataLayer consent update',
-      data: expect.objectContaining({
-        event: 'consent update',
-        analytics_storage: 'granted',
-      }),
+      name: 'dataLayer config GA_MEASUREMENT_ID',
+      data: {
+        send_page_view: false,
+      },
     });
   });
 
-  test('ignores invalid gtag formats', async () => {
-    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
+  test('handles gtag set calls with parameter', async () => {
+    await createDataLayerSource(collector);
 
-    // Push invalid formats that should be ignored
-    getDataLayer().push(['unknown_command', 'param']);
-    getDataLayer().push(['consent']); // Missing required parameters
-    getDataLayer().push(['event']); // Missing event name
-    getDataLayer().push('invalid_string');
-    getDataLayer().push(null);
-    getDataLayer().push(123);
+    // Simulate gtag('set', 'currency', { value: 'EUR' })
+    getDataLayer().push(['set', 'currency', { value: 'EUR' }]);
 
-    // No events should be collected
+    expect(collectedEvents).toHaveLength(1);
+    expect(collectedEvents[0]).toMatchObject({
+      name: 'dataLayer set currency',
+      data: {
+        value: 'EUR',
+      },
+    });
+  });
+
+  test('handles gtag set calls with object', async () => {
+    await createDataLayerSource(collector);
+
+    // Simulate gtag('set', { currency: 'EUR', country: 'DE' })
+    getDataLayer().push(['set', { currency: 'EUR', country: 'DE' }]);
+
+    expect(collectedEvents).toHaveLength(1);
+    expect(collectedEvents[0]).toMatchObject({
+      name: 'dataLayer set custom',
+      data: {
+        currency: 'EUR',
+        country: 'DE',
+      },
+    });
+  });
+
+  test('handles direct dataLayer objects', async () => {
+    await createDataLayerSource(collector);
+
+    // Direct object push
+    getDataLayer().push({ event: 'custom_event', user_id: 'user123' });
+
+    expect(collectedEvents).toHaveLength(1);
+    expect(collectedEvents[0]).toMatchObject({
+      name: 'dataLayer custom_event',
+      data: {
+        user_id: 'user123',
+      },
+    });
+  });
+
+  test('ignores invalid gtag commands', async () => {
+    await createDataLayerSource(collector);
+
+    // Invalid commands should be ignored
+    getDataLayer().push(['get', 'some_value']); // get command is not supported
+    getDataLayer().push(['unknown_command', 'value']);
+    getDataLayer().push(['event']); // missing required parameters
+
     expect(collectedEvents).toHaveLength(0);
+  });
+
+  test('handles malformed events gracefully', async () => {
+    await createDataLayerSource(collector);
+
+    // These should all be ignored
+    getDataLayer().push('string');
+    getDataLayer().push(123);
+    getDataLayer().push(null);
+    getDataLayer().push([]);
+    getDataLayer().push(['consent']); // missing action
+
+    expect(collectedEvents).toHaveLength(0);
+  });
+
+  test('processes gtag arguments object format', async () => {
+    await createDataLayerSource(collector);
+
+    // Simulate actual gtag function call arguments
+    const gtagArgs = (function (..._params) {
+      return arguments;
+    })('consent', 'update', { ad_storage: 'granted' });
+    getDataLayer().push(gtagArgs);
+
+    expect(collectedEvents).toHaveLength(1);
+    expect(collectedEvents[0]).toMatchObject({
+      name: 'dataLayer consent update',
+      data: {
+        ad_storage: 'granted',
+      },
+    });
   });
 });

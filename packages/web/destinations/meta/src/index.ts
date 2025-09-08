@@ -40,12 +40,12 @@ export const destinationMeta: Destination = {
     const fbq = window.fbq as facebook.Pixel.Event;
 
     // page view
-    if (event.event === 'page view' && !mapping.settings) {
+    if (event.name === 'page view' && !mapping.settings) {
       // Define a custom mapping
-      event.event = 'PageView';
+      event.name = 'PageView';
     }
 
-    const eventName = track || trackCustom || event.event;
+    const eventName = track || trackCustom || event.name;
 
     fbq(
       trackCustom ? 'trackCustom' : 'track',

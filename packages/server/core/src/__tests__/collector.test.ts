@@ -103,7 +103,7 @@ describe('Server Collector', () => {
       tagging: 42,
     });
     const event = {
-      event: 'e a',
+      name: 'e a',
       data: {},
       context: {},
       custom: {},

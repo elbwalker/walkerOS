@@ -195,3 +195,127 @@ Solution: `elb` is returned by `createCollector()` function
 
 **TypeScript cannot find types**  
 Solution: Import types from `@walkeros/core`
+
+## data-elbaction vs data-elbactions
+
+### Breaking Change in @walkeros packages
+
+The behavior of `data-elbaction` has changed to improve performance and provide more precise entity targeting:
+
+- **@elbwalker behavior**: `data-elbaction` applied to **all entities** in the DOM hierarchy
+- **@walkeros behavior**: `data-elbaction` applies to **nearest entity only**
+
+### Migration Strategy
+
+#### Option 1: Keep Current Behavior (Recommended for migration)
+
+Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
+
+```html
+<!-- Before (@elbwalker) -->
+<div data-elb="parent">
+  <div data-elb="child" data-elbaction="click:action">
+    <!-- Triggered both parent and child entities -->
+  </div>
+</div>
+
+<!-- After (@walkeros) - Same behavior -->
+<div data-elb="parent">
+  <div data-elb="child" data-elbactions="click:action">
+    <!-- Triggers both parent and child entities -->
+  </div>
+</div>
+```
+
+#### Option 2: Use New Behavior (Recommended for new projects)
+
+Use `data-elbaction` for more precise, performance-optimized tracking:
+
+```html
+<!-- @walkeros - New behavior -->
+<div data-elb="parent">
+  <div data-elb="child" data-elbaction="click:action">
+    <!-- Only triggers child entity -->
+  </div>
+</div>
+```
+
+### When to Use Each
+
+**Use `data-elbaction` (nearest entity) when:**
+- You want precise tracking of only the specific entity
+- Performance is critical (fewer events)
+- Implementing new features
+
+**Use `data-elbactions` (all entities) when:**
+- Migrating from @elbwalker and need same behavior
+- You need context from parent entities
+- Analytics requires full DOM hierarchy
+
+### Tagger API
+
+The tagger also provides both methods:
+
+```typescript
+// Nearest entity only (data-elbaction)
+tagger().action('click', 'select').get()
+
+// All entities (data-elbactions)  
+tagger().actions('click', 'select').get()
+```
+
+## visible vs impression Triggers
+
+### Breaking Change in @walkeros packages
+
+The visibility trigger names have been updated to better reflect their behavior:
+
+- **`visible` trigger**: Now fires **multiple times** when element re-enters viewport (was `visibles`)
+- **`impression` trigger**: Fires **once only** when element first becomes visible (was `visible`)
+
+### Migration Strategy
+
+#### Option 1: Update Trigger Names (Recommended)
+
+Update your HTML to use the new trigger names:
+
+```html
+<!-- Before (@elbwalker and early @walkeros) -->
+<div data-elbaction="visible:view">Single fire</div>
+<div data-elbaction="visibles:track">Multiple fires</div>
+
+<!-- After (@walkeros current) -->
+<div data-elbaction="impression:view">Single fire</div>
+<div data-elbaction="visible:track">Multiple fires</div>
+```
+
+#### Option 2: Understand the Behavior Change
+
+If you keep using the old names, understand the behavior has changed:
+
+- Old `visible` behavior (single-fire) → Now use `impression`
+- Old `visibles` behavior (multiple-fire) → Now use `visible`
+
+### When to Use Each
+
+**Use `impression` trigger when:**
+- You want to track when content is first seen
+- Measuring ad impressions or content views
+- One-time engagement metrics
+
+**Use `visible` trigger when:**  
+- You want to track repeated interactions
+- Measuring scroll behavior or re-engagement
+- Analytics requires multiple visibility events
+
+### Tagger API
+
+The tagger supports both trigger types:
+
+```typescript
+// Single impression (fires once)
+tagger().action('impression', 'view').get()
+
+// Multiple visibility (fires each time visible)
+tagger().action('visible', 'track').get()
+```

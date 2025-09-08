@@ -109,11 +109,11 @@ function processEvent(
   }
 
   const prefix = settings.prefix || 'dataLayer';
-  const eventName = `${prefix} ${transformedEvent.event}`;
+  const eventName = `${prefix} ${transformedEvent.name}`;
 
   // Create WalkerOS event structure
   const walkerEvent: WalkerOS.Event = {
-    event: eventName,
+    name: eventName,
     data: transformedEvent as WalkerOS.Properties,
     context: {},
     globals: {},
@@ -150,10 +150,11 @@ function processEvent(
  */
 function transformDataLayerEvent(
   rawEvent: unknown,
-): { event: string; [key: string]: unknown } | null {
+): { name: string; [key: string]: unknown } | null {
   // Handle direct object format: { event: 'test', data: 'value' }
   if (isObject(rawEvent) && isString(rawEvent.event)) {
-    return rawEvent as { event: string; [key: string]: unknown };
+    const { event, ...rest } = rawEvent;
+    return { name: event, ...rest };
   }
 
   // Handle gtag argument format: ['consent', 'update', { ad_storage: 'granted' }]
@@ -176,7 +177,7 @@ function transformDataLayerEvent(
  */
 function transformGtagArgs(
   args: unknown[],
-): { event: string; [key: string]: unknown } | null {
+): { name: string; [key: string]: unknown } | null {
   const [command, action, params] = args;
 
   if (!isString(command)) return null;
@@ -235,7 +236,7 @@ function transformGtagArgs(
   }
 
   return {
-    event: eventName,
+    name: eventName,
     ...eventData,
   };
 }

@@ -56,14 +56,14 @@ export function createPush<T extends Collector.Instance>(
             // Event format: event object or string
             const partialEvent =
               typeof eventOrCommand === 'string'
-                ? { event: eventOrCommand }
+                ? { name: eventOrCommand }
                 : (eventOrCommand as WalkerOS.DeepPartialEvent);
 
             const enrichedEvent = prepareEvent(partialEvent);
 
             const { event, command } = createEventOrCommand(
               collector,
-              enrichedEvent.event,
+              enrichedEvent.name,
               enrichedEvent,
             );
 
@@ -348,7 +348,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
     if (eventMapping.ignore) return false;
 
     // Check to use specific event names
-    if (eventMapping.name) event.event = eventMapping.name;
+    if (eventMapping.name) event.name = eventMapping.name;
 
     // Transform event to a custom data
     if (eventMapping.data) {

@@ -1,4 +1,4 @@
-import type { Collector, WalkerOS } from '@walkeros/core';
+import type { Collector, WalkerOS, Destination } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { addons } from 'storybook/preview-api';
@@ -14,7 +14,7 @@ declare global {
 // Simple console destination for Storybook
 const destinationConsole = {
   type: 'console',
-  push: (event: WalkerOS.Event) => {
+  push: (event: WalkerOS.Event, context: Destination.PushContext) => {
     console.log('Storybook Event:', event);
   },
   config: {},
@@ -23,7 +23,7 @@ const destinationConsole = {
 // Live destination for Storybook panel
 const destinationLive = {
   type: 'live',
-  push: (event: WalkerOS.Event) => {
+  push: (event: WalkerOS.Event, context: Destination.PushContext) => {
     // Send event to Storybook panel for live display
     const channel = addons.getChannel();
     if (channel) {

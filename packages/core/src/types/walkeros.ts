@@ -16,7 +16,7 @@ export type Events = Array<Event>;
 export type PartialEvent = Partial<Event>;
 export type DeepPartialEvent = DeepPartial<Event>;
 export interface Event {
-  event: string;
+  name: string;
   data: Properties;
   context: OrderedProperties;
   globals: Properties;
@@ -97,7 +97,7 @@ export interface OrderedProperties {
 
 export type Entities = Array<Entity>;
 export interface Entity {
-  type: string;
+  entity: string;
   data: Properties;
   nested: Entities;
   context: OrderedProperties;

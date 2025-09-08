@@ -149,10 +149,10 @@ describe('Tagger', () => {
 
     test('object with multiple actions', () => {
       const result = createTagger()()
-        .action({ load: 'view', click: 'select', visible: 'impression' })
+        .action({ load: 'view', click: 'select', impression: 'view' })
         .get();
       expect(result).toMatchObject({
-        'data-elbaction': 'load:view;click:select;visible:impression',
+        'data-elbaction': 'load:view;click:select;impression:view',
       });
     });
 
@@ -160,10 +160,10 @@ describe('Tagger', () => {
       const result = createTagger()()
         .action('load', 'view')
         .action('click', 'select')
-        .action({ visible: 'impression' })
+        .action({ impression: 'view' })
         .get();
       expect(result).toMatchObject({
-        'data-elbaction': 'load:view;click:select;visible:impression',
+        'data-elbaction': 'load:view;click:select;impression:view',
       });
     });
 
@@ -177,6 +177,66 @@ describe('Tagger', () => {
         'data-elb': 'product',
         'data-elbaction': 'load:view',
         'data-elb-product': 'id:123',
+      });
+    });
+  });
+
+  describe('Actions Method', () => {
+    test('single trigger and action', () => {
+      const result = createTagger()().actions('load', 'view').get();
+      expect(result).toMatchObject({
+        'data-elbactions': 'load:view',
+      });
+    });
+
+    test('single combined trigger:action', () => {
+      const result = createTagger()().actions('load:view').get();
+      expect(result).toMatchObject({
+        'data-elbactions': 'load:view',
+      });
+    });
+
+    test('object with multiple actions', () => {
+      const result = createTagger()()
+        .actions({ load: 'view', click: 'select', impression: 'view' })
+        .get();
+      expect(result).toMatchObject({
+        'data-elbactions': 'load:view;click:select;impression:view',
+      });
+    });
+
+    test('accumulates multiple actions calls', () => {
+      const result = createTagger()()
+        .actions('load', 'view')
+        .actions({ click: 'select' })
+        .actions('impression:view')
+        .get();
+      expect(result).toMatchObject({
+        'data-elbactions': 'load:view;click:select;impression:view',
+      });
+    });
+
+    test('works with entity', () => {
+      const result = createTagger()()
+        .entity('product')
+        .data('id', 123)
+        .actions('load', 'view')
+        .get();
+      expect(result).toMatchObject({
+        'data-elb': 'product',
+        'data-elbactions': 'load:view',
+        'data-elb-product': 'id:123',
+      });
+    });
+
+    test('can be used alongside action method', () => {
+      const result = createTagger()()
+        .action('click', 'select')
+        .actions('load', 'view')
+        .get();
+      expect(result).toMatchObject({
+        'data-elbaction': 'click:select',
+        'data-elbactions': 'load:view',
       });
     });
   });
@@ -335,14 +395,14 @@ describe('Tagger', () => {
     test('full chain without entity (generic)', () => {
       const result = createTagger()()
         .data({ category: 'electronics', brand: 'TechCorp' })
-        .action({ load: 'view', visible: 'impression' })
+        .action({ load: 'view', impression: 'view' })
         .context({ test: 'a/b', position: 'header' })
         .globals({ lang: 'en', plan: 'paid' })
         .get();
 
       expect(result).toMatchObject({
         'data-elb-': 'category:electronics;brand:TechCorp',
-        'data-elbaction': 'load:view;visible:impression',
+        'data-elbaction': 'load:view;impression:view',
         'data-elbcontext': 'test:a/b;position:header',
         'data-elbglobals': 'lang:en;plan:paid',
       });

@@ -1,56 +1,47 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
+    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
 # Collector for walkerOS
 
-The walkerOS Collector is the central event processing engine that unifies data
-collection across web and server environments. It acts as the orchestrator
-between sources (where events originate) and destinations (where events are
-sent), providing consistent event processing, consent management, and data
-validation across your entire data collection infrastructure.
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/collector)
+&bull; [NPM Package](https://www.npmjs.com/package/@walkeros/collector)
 
-## Role in walkerOS Ecosystem
+The collector is the central **processing engine** of walkerOS that receives
+events from sources, **enriches** them with additional data, applies consent
+rules, and **routes** them to destinations. It acts as the **intelligent
+middleware** between event capture and event delivery.
 
-walkerOS follows a **source → collector → destination** architecture:
+### What it does
 
-- **Sources**: Capture events from various environments (browser DOM, dataLayer,
-  server requests)
-- **Collector**: Processes, validates, and routes events with consent awareness
-- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
-  custom APIs)
+The Collector transforms raw events into enriched, compliant data streams by:
 
-The Collector serves as the foundation that both web and server sources depend
-on, ensuring consistent event handling regardless of the environment.
+- **Event processing** - Validates, normalizes, and enriches incoming events
+- **Consent management** - Applies privacy rules and user consent preferences
+- **Data enrichment** - Adds session data, user context, and custom properties
+- **Destination routing** - Sends processed events to configured analytics
+  platforms
 
-## Installation
+### Key features
 
-```sh
-npm install @walkeros/collector
+- **Compatibility** - Works in both web browsers and server environments
+- **Privacy-first** - Built-in consent management and data protection
+- **Event validation** - Ensures data quality and consistency
+- **Flexible routing** - Send events to multiple destinations simultaneously
+
+### Role in architecture
+
+In the walkerOS data flow, the collector sits between sources and destinations:
+
+```
+Sources → Collector → Destinations
 ```
 
-## Usage
-
-The collector provides a factory function for creating collector instances:
-
-```typescript
-import { createCollector } from '@walkeros/collector';
-
-// Basic setup
-const { collector, elb } = await createCollector({
-  consent: { functional: true },
-  destinations: [
-    // Add your destinations here
-  ],
-});
-
-// Process events - use elb as the standard API
-await elb('page view', {
-  page: '/home',
-});
-```
+Sources capture events and send them to the collector, which processes and
+routes them to your chosen destinations like Google Analytics, custom APIs, or
+data warehouses.
 
 ## Event Naming Convention
 
@@ -78,15 +69,66 @@ The collector will validate event names and destinations handle
 platform-specific transformations. If the event name isn't separated into entity
 action by space the collector won't process it.
 
-## Core Features
+## Installation
 
-- **Event Processing**: Validates and enriches events with context and metadata
-- **Consent Management**: Respects user consent preferences across all
-  destinations
-- **Destination Routing**: Translates and routes events to configured
-  destinations
-- **State Management**: Maintains consistent state across the collection
-  pipeline
+```bash
+npm install @walkeros/collector
+```
+
+## Setup
+
+### Basic setup
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+
+const config = {
+  run: true,
+  consent: { functional: true },
+  sources: [
+    // add your event sources
+  ]
+  },
+};
+
+const { collector, elb } = await createCollector(config);
+```
+
+### Advanced setup
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+
+const { collector, elb } = await createCollector({
+  run: true,
+  consent: { functional: true },
+  sources: [
+    // add your event sources
+  ],
+  destinations: [
+    // add your event destinations
+  ],
+  verbose: true,
+  onError: (error: unknown) => {
+    console.error('Collector error:', error);
+  },
+  onLog: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => {
+    console.log(`[${level}] ${message}`);
+  },
+});
+```
+
+## Configuration
+
+| Name           | Type       | Description                                                    | Required | Example                                    |
+| -------------- | ---------- | -------------------------------------------------------------- | -------- | ------------------------------------------ |
+| `run`          | `boolean`  | Automatically start the collector pipeline on initialization   | No       | `true`                                     |
+| `sources`      | `array`    | Configurations for sources providing events to the collector   | No       | `[{ source, config }]`                     |
+| `destinations` | `array`    | Configurations for destinations receiving processed events     | No       | `[{ destination, config }]`                |
+| `consent`      | `object`   | Initial consent state to control routing of events             | No       | `{ analytics: true, marketing: false }`    |
+| `verbose`      | `boolean`  | Enable verbose logging for debugging                           | No       | `false`                                    |
+| `onError`      | `function` | Error handler triggered when the collector encounters failures | No       | `(error) => console.error(error)`          |
+| `onLog`        | `function` | Custom log handler for collector messages                      | No       | `(message, level) => console.log(message)` |
 
 ## Contribute
 

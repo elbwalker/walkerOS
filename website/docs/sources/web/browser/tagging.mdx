@@ -40,7 +40,8 @@ Tag a page...
 <div
   data-elb="ENTITY"
   data-elb-ENTITY="KEY:VALUE"
-  data-elbaction="TRIGGER:ACTION"
+  data-elbaction="TRIGGER:ACTION"   <!-- nearest entity only -->
+  data-elbactions="TRIGGER:ACTION"  <!-- all entities -->
   data-elbcontext="KEY:VALUE"
   data-elbglobals="KEY:VALUE"
 />
@@ -62,7 +63,7 @@ Tag a page...
 
 ```js
 {
-  event: 'promotion view', // Name as a combination of entity and action
+  name: 'promotion view', // Name as a combination of entity and action
   data: {
     // Arbitrary properties related to the entity
     name: 'Setting up tracking easily',
@@ -120,10 +121,25 @@ You define the entity **scope** by setting the `data-elb` attribute with the
 name of an entity to an element, e.g. `data-elb="promotion"`. The default entity
 is `page` when no `data-elb` is set.
 
-An **action** can be added by setting the `data-elbaction` attribute on the
-**same level** or **child elements** in combination with a **matching trigger**,
-e.g., `data-elbaction="visible:view"` to fire a promotion view event when an
-element has been in the viewport for at least 50% for one second.
+An **action** can be added by setting one of the following attributes on the
+**same level** or **child elements** in combination with a **matching trigger**:
+
+- **`data-elbaction`** - applies action to the **nearest entity only**
+- **`data-elbactions`** - applies action to **all entities** in the DOM
+  hierarchy
+
+Both attributes use the same syntax, e.g., `data-elbaction="visible:view"` or
+`data-elbactions="click:select"` to fire events when triggered.
+
+:::info Migration Note
+
+The behavior of `data-elbaction` changed in @walkeros to apply to nearest entity
+only. For the previous @elbwalker "all entities" behavior, use
+`data-elbactions`. See the
+[Migration Guide](/docs/guides/migration#data-elbaction-vs-data-elbactions) for
+details.
+
+:::
 
 To define the entities' **properties**, set the **composited attribute**
 `data-elb-ENTITY` with the key and value, e.g.
@@ -138,8 +154,8 @@ listener or mutation observer initialization.
 | ----------- | ------------------------------------------------------------------------------------ |
 | load        | after loading a page when DOM is ready                                               |
 | click       | when an element or a child is clicked                                                |
-| visible     | after an element has been in the viewport for at least 50% for one second            |
-| visibles    | each time an element re-enters the viewport after being out of view                  |
+| impression  | after an element has been in the viewport for at least 50% for one second            |
+| visible     | each time an element re-enters the viewport after being out of view                  |
 | hover       | each time the mouse enters the corresponding element                                 |
 | submit      | on valid form submission                                                             |
 | wait(ms)    | waits ms seconds (15 seconds by default) until triggering                            |
@@ -180,10 +196,10 @@ gets triggered. Use brackets behind the trigger to pass that information.
 ### Action filter
 
 At some point, you might want to nest one entity inside another. To prevent an
-action to trigger both entities, you can restrict the action to a specific
-entity by adding the name, e.g. `data-elbaction="load:view(product)`. If the
-trigger event gets called, the result will only include the property values from
-the specific entities.
+action to trigger unwanted entities, you can restrict the action to a specific
+entity by adding the name, e.g. `data-elbaction="load:view(product)` or
+`data-elbactions="load:view(product)"`. If the trigger event gets called, the
+result will only include the property values from the specific entities.
 
 ```html
 <!-- setting a filter for an entity -->
@@ -521,13 +537,13 @@ This example will lead to the following event on load:
   "event": "mother view",
   "data": { "label": "caring" },
   "nested": [
-    { "type": "son", "data": { "age": 23 } },
+    { "entity": "son", "data": { "age": 23 } },
     {
-      "type": "daughter",
+      "entity": "daughter",
       "data": { "age": 32 },
-      "nested": [{ "type": "baby", "data": { "status": "infant" } }],
+      "nested": [{ "entity": "baby", "data": { "status": "infant" } }],
     },
-    { "type": "baby", "data": { "status": "infant" } },
+    { "entity": "baby", "data": { "status": "infant" } },
   ],
   // other properties omitted
 }

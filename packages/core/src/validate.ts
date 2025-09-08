@@ -20,9 +20,9 @@ export function validateEvent(
   let entity: string;
   let action: string;
 
-  // Check if event.event is available and it's a string
-  if (isSameType(obj.event, '')) {
-    event = obj.event;
+  // Check if event.name is available and it's a string
+  if (isSameType(obj.name, '')) {
+    event = obj.name;
     [entity, action] = event.split(' ');
     if (!entity || !action) throwError('Invalid event name');
   } else if (isSameType(obj.entity, '') && isSameType(obj.action, '')) {
@@ -30,13 +30,13 @@ export function validateEvent(
     action = obj.action;
     event = `${entity} ${action}`;
   } else {
-    throwError('Missing or invalid event, entity, or action');
+    throwError('Missing or invalid name, entity, or action');
   }
 
   const basicContract: Schema.Contract = {
     '*': {
       '*': {
-        event: { maxLength: 255 }, // @TODO as general rule?
+        name: { maxLength: 255 }, // @TODO as general rule?
         user: { allowedKeys: ['id', 'device', 'session'] },
         consent: { allowedValues: [true, false] },
         timestamp: { min: 0 },
@@ -49,7 +49,7 @@ export function validateEvent(
   };
 
   const basicEvent: WalkerOS.Event = {
-    event,
+    name: event,
     data: {},
     context: {},
     custom: {},

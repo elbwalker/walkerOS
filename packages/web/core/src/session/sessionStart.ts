@@ -105,7 +105,7 @@ const defaultCb: SessionCallback = (
   if (session.isStart) {
     // Convert session start to an event object
     elb({
-      event: 'session start',
+      name: 'session start',
       data: session,
     });
   }

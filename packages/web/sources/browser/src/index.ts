@@ -199,7 +199,7 @@ export const sourceBrowser: Source.Init<BrowserSourceConfig> = async (
       destroy: async () => {
         // Cleanup visibility tracking and other resources
         if (envDocument) {
-          destroyVisibilityTracking();
+          destroyVisibilityTracking(settings.scope || envDocument);
         }
       },
       on: handleEvent,

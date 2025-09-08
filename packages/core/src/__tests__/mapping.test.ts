@@ -14,7 +14,7 @@ describe('getMappingEvent', () => {
 
     expect(
       await getMappingEvent(
-        { event: 'page view' },
+        { name: 'page view' },
         { page: { view: pageViewConfig } },
       ),
     ).toStrictEqual({
@@ -27,7 +27,7 @@ describe('getMappingEvent', () => {
     const entityAsterisksConfig = { name: 'entity_*' };
     expect(
       await getMappingEvent(
-        { event: 'page random' },
+        { name: 'page random' },
         { page: { '*': entityAsterisksConfig } },
       ),
     ).toStrictEqual({
@@ -38,7 +38,7 @@ describe('getMappingEvent', () => {
     const asterisksActionConfig = { name: '*_view' };
     expect(
       await getMappingEvent(
-        { event: 'random view' },
+        { name: 'random view' },
         { '*': { view: asterisksActionConfig } },
       ),
     ).toStrictEqual({
@@ -56,28 +56,28 @@ describe('getMappingEvent', () => {
     };
 
     expect(
-      await getMappingEvent({ event: 'not existing' }, mapping),
+      await getMappingEvent({ name: 'not existing' }, mapping),
     ).toStrictEqual({
       eventMapping: { name: 'asterisk' },
       mappingKey: '* *',
     });
 
     expect(
-      await getMappingEvent({ event: 'asterisk action' }, mapping),
+      await getMappingEvent({ name: 'asterisk action' }, mapping),
     ).toStrictEqual({
       eventMapping: { name: 'action' },
       mappingKey: '* action',
     });
 
     expect(
-      await getMappingEvent({ event: 'foo something' }, mapping),
+      await getMappingEvent({ name: 'foo something' }, mapping),
     ).toStrictEqual({
       eventMapping: { name: 'foo_asterisk' },
       mappingKey: 'foo *',
     });
 
     expect(
-      await getMappingEvent({ event: 'bar something' }, mapping),
+      await getMappingEvent({ name: 'bar something' }, mapping),
     ).toStrictEqual({
       eventMapping: { name: 'asterisk' },
       mappingKey: '* *',
@@ -103,7 +103,7 @@ describe('getMappingEvent', () => {
     };
 
     expect(
-      await getMappingEvent({ event: 'order complete' }, mapping),
+      await getMappingEvent({ name: 'order complete' }, mapping),
     ).toStrictEqual({
       eventMapping: (mapping.order!.complete as Array<Mapping.Rule>)[1],
       mappingKey: 'order complete',
@@ -111,7 +111,7 @@ describe('getMappingEvent', () => {
 
     expect(
       await getMappingEvent(
-        { event: 'order complete', globals: { env: 'prod' } },
+        { name: 'order complete', globals: { env: 'prod' } },
         mapping,
       ),
     ).toStrictEqual({
@@ -146,7 +146,7 @@ describe('getMappingValue', () => {
 
     function getNested(data: WalkerOS.Properties) {
       return {
-        type: 'child',
+        entity: 'child',
         data,
         nested: [],
         context: { element: ['child', 0] },
@@ -204,11 +204,11 @@ describe('getMappingValue', () => {
   });
 
   test('fn', async () => {
-    const pageView = createEvent({ event: 'page view' });
-    const pageClick = createEvent({ event: 'page click' });
+    const pageView = createEvent({ name: 'page view' });
+    const pageClick = createEvent({ name: 'page click' });
 
     const mockFn = jest.fn((event) => {
-      if (event.event === 'page view') return 'foo';
+      if (event.name === 'page view') return 'foo';
       return 'bar';
     });
 
@@ -236,7 +236,7 @@ describe('getMappingValue', () => {
           'nested',
           {
             condition: (entity) =>
-              isObject(entity) && entity.type === 'product',
+              isObject(entity) && entity.entity === 'product',
             key: 'data.name',
           },
         ],
@@ -248,11 +248,11 @@ describe('getMappingValue', () => {
         loop: [
           'this',
           {
-            key: 'event',
+            key: 'name',
           },
         ],
       }),
-    ).toStrictEqual([event.event]);
+    ).toStrictEqual([event.name]);
   });
 
   test('set', async () => {
@@ -260,7 +260,7 @@ describe('getMappingValue', () => {
 
     expect(
       await getMappingValue(event, {
-        set: ['event', 'data', { value: 'static' }, { fn: () => 'fn' }],
+        set: ['name', 'data', { value: 'static' }, { fn: () => 'fn' }],
       }),
     ).toStrictEqual(['order complete', event.data, 'static', 'fn']);
   });
@@ -421,12 +421,12 @@ describe('getMappingValue', () => {
 
   test('condition', async () => {
     const mockCondition = jest.fn((event) => {
-      return event.event === 'page view';
+      return event.name === 'page view';
     });
 
     // Condition met
     expect(
-      await getMappingValue(createEvent({ event: 'page view' }), {
+      await getMappingValue(createEvent({ name: 'page view' }), {
         key: 'data.string',
         condition: mockCondition,
       }),

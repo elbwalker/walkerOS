@@ -1,7 +1,12 @@
-# @walkeros/web-destination-gtag
+# Google Gtag Destination for walkerOS
 
-Unified Google destination for walkerOS supporting Google Analytics 4 (GA4),
-Google Ads, and Google Tag Manager (GTM) through a single gtag implementation.
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/gtag)
+&bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-gtag)
+
+The Google Gtag destination provides a unified interface for sending events to
+Google Analytics 4 (GA4), Google Ads, and Google Tag Manager (GTM) through a
+single destination configuration.
 
 ## Features
 
@@ -20,163 +25,46 @@ Google Ads, and Google Tag Manager (GTM) through a single gtag implementation.
 npm install @walkeros/web-destination-gtag
 ```
 
-## Basic Usage
-
-### Single Tool (GA4 Only)
+## Usage
 
 ```typescript
+import { createCollector } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const destination = destinationGtag({
+const { elb } = await createCollector();
+
+elb('walker destination', destinationGtag, {
   settings: {
     ga4: {
-      measurementId: 'G-XXXXXXXXXX',
-    },
-  },
-});
-```
-
-### Multiple Tools
-
-```typescript
-import { destinationGtag } from '@walkeros/web-destination-gtag';
-
-const destination = destinationGtag({
-  settings: {
-    ga4: {
-      measurementId: 'G-XXXXXXXXXX',
-      debug: true,
-      pageview: false,
+      measurementId: 'G-XXXXXXXXXX', // Required for GA4
     },
     ads: {
-      conversionId: 'AW-XXXXXXXXX',
-      currency: 'EUR',
+      conversionId: 'AW-XXXXXXXXX', // Required for Google Ads
     },
     gtm: {
-      containerId: 'GTM-XXXXXXX',
+      containerId: 'GTM-XXXXXXX', // Required for GTM
     },
   },
-});
-```
-
-### With Collector
-
-```typescript
-import { collector } from '@walkeros/collector';
-import { destinationGtag } from '@walkeros/web-destination-gtag';
-
-const instance = collector({
-  destinations: [
-    destinationGtag({
-      settings: {
-        ga4: { measurementId: 'G-XXXXXXXXXX' },
-        ads: { conversionId: 'AW-XXXXXXXXX' },
-        gtm: { containerId: 'GTM-XXXXXXX' },
-      },
-    }),
-  ],
 });
 ```
 
 ## Configuration
 
-### GA4 Settings
+| Name  | Type          | Description                                        | Required | Example                             |
+| ----- | ------------- | -------------------------------------------------- | -------- | ----------------------------------- |
+| `ga4` | `GA4Settings` | GA4-specific configuration settings                | No       | `{ measurementId: 'G-XXXXXXXXXX' }` |
+| `ads` | `AdsSettings` | Google Ads specific configuration settings         | No       | `{ conversionId: 'AW-XXXXXXXXX' }`  |
+| `gtm` | `GTMSettings` | Google Tag Manager specific configuration settings | No       | `{ containerId: 'GTM-XXXXXXX' }`    |
 
-```typescript
-interface GA4Settings {
-  measurementId: string; // Required: GA4 Measurement ID
-  debug?: boolean; // Enable debug mode
-  include?: Include; // Data groups to include
-  pageview?: boolean; // Send automatic pageviews (default: true)
-  server_container_url?: string; // Server-side GTM URL
-  snakeCase?: boolean; // Convert event names to snake_case (default: true)
-  transport_url?: string; // Custom transport URL
-}
-```
+### Event Mapping
 
-### Google Ads Settings
+For custom event mapping (`mapping.entity.action.settings`):
 
-```typescript
-interface AdsSettings {
-  conversionId: string; // Required: Google Ads Conversion ID
-  currency?: string; // Default currency (default: 'EUR')
-}
-```
-
-### GTM Settings
-
-```typescript
-interface GTMSettings {
-  containerId: string; // Required: GTM Container ID
-  dataLayer?: string; // Custom dataLayer name (default: 'dataLayer')
-  domain?: string; // Custom GTM domain
-}
-```
-
-## Mapping
-
-Each tool supports individual mapping configurations:
-
-```typescript
-const mapping = {
-  order: {
-    complete: {
-      name: 'purchase',
-      settings: {
-        ga4: {
-          include: ['data', 'context'],
-        },
-        ads: {
-          conversionId: 'abcxyz',
-        },
-        gtm: {}, // Uses 'purchase' as event name
-      },
-      data: {
-        map: {
-          transaction_id: 'data.id',
-          value: 'data.total',
-          currency: 'data.currency',
-        },
-      },
-    },
-  },
-};
-```
-
-### GA4-Specific Mapping
-
-```typescript
-settings: {
-  ga4: {
-    include: ['data', 'context', 'user'], // Data groups to include
-  }
-}
-```
-
-### Google Ads Conversion Mapping
-
-For Google Ads, specify the conversion label in the `settings.ads.label` field:
-
-```typescript
-{
-  name: 'purchase', // GA4/GTM event name
-  settings: {
-    ads: {
-      label: 'CONVERSION_LABEL', // This becomes AW-XXXXXXXXX/CONVERSION_LABEL
-    },
-  }
-}
-```
-
-### GTM DataLayer Mapping
-
-GTM receives the full event data and pushes to the configured dataLayer:
-
-```typescript
-settings: {
-  gtm: {}, // Uses default dataLayer behavior
-}
-```
+| Name  | Type         | Description                                     | Required | Example                            |
+| ----- | ------------ | ----------------------------------------------- | -------- | ---------------------------------- |
+| `ga4` | `GA4Mapping` | GA4-specific event mapping configuration        | No       | `{ include: ['data', 'context'] }` |
+| `ads` | `AdsMapping` | Google Ads specific event mapping configuration | No       | `{ label: 'conversion_label' }`    |
+| `gtm` | `GTMMapping` | GTM specific event mapping configuration        | No       | `{}`                               |
 
 ## Examples
 
@@ -209,7 +97,7 @@ const destination = destinationGtag({
               loop: [
                 'nested',
                 {
-                  condition: (entity) => entity.type === 'product',
+                  condition: (entity) => entity.entity === 'product',
                   map: {
                     item_id: 'data.id',
                     item_name: 'data.name',
@@ -324,6 +212,13 @@ const rules: DestinationGtag.Rules = {
 - Verify the container ID is correct
 - Check the dataLayer name matches your GTM configuration
 - Use GTM Preview mode to debug event flow
+
+## Contribute
+
+Feel free to contribute by submitting an
+[issue](https://github.com/elbwalker/walkerOS/issues), starting a
+[discussion](https://github.com/elbwalker/walkerOS/discussions), or getting in
+[contact](https://calendly.com/elb-alexander/30min).
 
 ## License
 

@@ -22,19 +22,16 @@ export async function createBrowserSource(
     },
   };
 
-  // Use Source.Environment with collector's elb function
+  // Use Source.Environment with collector's elb function and browser globals
   const env: Source.Environment = {
     elb: collector.push,
+    window,
+    document,
   };
 
   // Call sourceBrowser directly with new pattern
   const source = await sourceBrowser(config, env);
 
-  // Get the elb function from window (set by the browser source)
-  const elbName = config.settings?.elb || 'elb';
-  const windowObj = window as typeof window & Record<string, unknown>;
-  const elb = (windowObj[elbName] as Function) || collector.push;
-
-  // Return source with elb for test compatibility
-  return { ...source, elb };
+  // Use the source's own push method which includes proper translation
+  return { ...source, elb: source.push };
 }

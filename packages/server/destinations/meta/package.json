@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-meta",
   "description": "Meta server destination for walkerOS",
-  "version": "0.0.8",
+  "version": "0.1.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -30,8 +30,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "0.0.8",
-    "@walkeros/server-core": "0.0.8"
+    "@walkeros/core": "0.1.0",
+    "@walkeros/server-core": "0.1.0"
   },
   "devDependencies": {},
   "repository": {

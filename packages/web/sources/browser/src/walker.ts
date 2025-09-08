@@ -110,11 +110,11 @@ export function getEvents(
 ): Walker.Events {
   const events: Walker.Events = [];
 
-  // Check for an action (data-elbaction) attribute and resolve it
-  const actions = resolveAttributes(prefix, target, trigger);
+  // Check for actions and get entity collection strategy
+  const { actions, nearestOnly } = resolveAttributes(prefix, target, trigger);
 
   // Stop if there's no valid action combo
-  if (!actions) return events;
+  if (!actions.length) return events;
 
   actions.forEach((triggerAction) => {
     const filter = splitAttribute(triggerAction.actionParams || '', ',').reduce(
@@ -125,35 +125,35 @@ export function getEvents(
       {} as Walker.Filter,
     );
 
-    // Get the entities with their properties
-    const entities = getEntities(prefix, target, filter);
+    // Get entities - using nearestOnly flag to determine collection strategy
+    const entities = getEntities(prefix, target, filter, nearestOnly);
 
     // Use page as default entity if no one was set
     if (!entities.length) {
-      const type = 'page';
+      const entity = 'page';
       // Only use explicit page properties and ignore generic properties
-      const entitySelector = `[${getElbAttributeName(prefix, type)}]`;
+      const entitySelector = `[${getElbAttributeName(prefix, entity)}]`;
 
       // Get matching properties from the element and its parents
       const [data, context] = getThisAndParentProperties(
         target,
         entitySelector,
         prefix,
-        type,
+        entity,
       );
 
       entities.push({
-        type, // page
+        entity, // page
         data, // Consider only upper data
         nested: [], // Skip nested in this faked page case
         context,
       });
     }
 
-    // Return a list of all full events
+    // Return a list of full events
     entities.forEach((entity) => {
       events.push({
-        entity: entity.type,
+        entity: entity.entity,
         action: triggerAction.action,
         data: entity.data,
         trigger,
@@ -241,6 +241,7 @@ export function getEntities(
   prefix: string,
   target: Element,
   filter?: Walker.Filter,
+  nearestOnly = false,
 ): WalkerOS.Entities {
   const entities: WalkerOS.Entities = [];
   let element = target as Node['parentElement'];
@@ -250,7 +251,10 @@ export function getEntities(
 
   while (element) {
     const entity = getEntity(prefix, element, target, filter);
-    if (entity) entities.push(entity);
+    if (entity) {
+      entities.push(entity);
+      if (nearestOnly) break; // Stop after first entity for data-elbaction
+    }
 
     element = getParent(prefix, element);
   }
@@ -264,15 +268,15 @@ function getEntity(
   origin?: Element,
   filter?: Walker.Filter,
 ): WalkerOS.Entity | null {
-  const type = getAttribute(element, getElbAttributeName(prefix));
+  const entity = getAttribute(element, getElbAttributeName(prefix));
 
   // It's not a (valid) entity element or should be filtered
-  if (!type || (filter && !filter[type])) return null;
+  if (!entity || (filter && !filter[entity])) return null;
 
   const scopeElems = [element]; // All related elements
   const dataSelector = `[${getElbAttributeName(
     prefix,
-    type,
+    entity,
   )}],[${getElbAttributeName(prefix, '')}]`; // [data-elb-entity,data-elb-]
   const linkName = getElbAttributeName(prefix, Const.Commands.Link, false); // data-elblink
 
@@ -282,7 +286,7 @@ function getEntity(
     origin || element,
     dataSelector,
     prefix,
-    type,
+    entity,
   );
 
   // Add linked elements (data-elblink)
@@ -318,7 +322,7 @@ function getEntity(
   propertyElems.forEach((child) => {
     // Eventually override closer properties
     genericData = assign(genericData, getElbValues(prefix, child, ''));
-    data = assign(data, getElbValues(prefix, child, type));
+    data = assign(data, getElbValues(prefix, child, entity));
   });
 
   // Merge properties with the hierarchy generic > data > parent
@@ -336,7 +340,7 @@ function getEntity(
     );
   });
 
-  return { type, data, context, nested };
+  return { entity, data, context, nested };
 }
 
 function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
@@ -424,27 +428,41 @@ function resolveAttributes(
   prefix: string,
   target: Element,
   trigger: string,
-): Walker.TriggerActions {
+): { actions: Walker.TriggerActions; nearestOnly: boolean } {
   let element = target as Node['parentElement'];
 
   while (element) {
-    const attribute = getAttribute(
+    // Check for data-elbactions first (takes precedence)
+    const multiAttribute = getAttribute(
+      element,
+      getElbAttributeName(prefix, Const.Commands.Actions, false),
+    );
+
+    if (multiAttribute) {
+      const triggerActions = getTriggerActions(multiAttribute);
+      if (triggerActions[trigger]) {
+        return { actions: triggerActions[trigger], nearestOnly: false };
+      }
+    }
+
+    // Check for data-elbaction (nearest entity only)
+    const singleAttribute = getAttribute(
       element,
       getElbAttributeName(prefix, Const.Commands.Action, false),
     );
 
-    // Get action string related to trigger
-    const triggerActions = getTriggerActions(attribute);
-
-    // Action found on element or is not a click trigger
-    // @TODO aggregate all click triggers, too
-    if (triggerActions[trigger] || trigger !== 'click')
-      return triggerActions[trigger];
+    if (singleAttribute) {
+      const triggerActions = getTriggerActions(singleAttribute);
+      // Action found on element or is not a click trigger
+      if (triggerActions[trigger] || trigger !== 'click') {
+        return { actions: triggerActions[trigger] || [], nearestOnly: true };
+      }
+    }
 
     element = getParent(prefix, element);
   }
 
-  return [];
+  return { actions: [], nearestOnly: false };
 }
 
 function splitAttribute(str: string, separator = ';'): Walker.Attributes {

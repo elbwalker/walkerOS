@@ -22,7 +22,7 @@ export const ga4Purchase: DestinationGtag.Rule = {
           'nested',
           {
             condition: (entity) =>
-              isObject(entity) && entity.type === 'product',
+              isObject(entity) && entity.entity === 'product',
             map: {
               item_id: 'data.id',
               item_name: 'data.name',
@@ -115,7 +115,7 @@ export const combinedPurchase: DestinationGtag.Rule = {
           'nested',
           {
             condition: (entity) =>
-              isObject(entity) && entity.type === 'product',
+              isObject(entity) && entity.entity === 'product',
             map: {
               item_id: 'data.id',
               item_name: 'data.name',

@@ -244,7 +244,7 @@ tagger('product').data({ id: 123, name: 'Widget', price: 99.99 });
 
 ##### `action(trigger: string, action?: string)` | `action(object: Record<string, string>)`
 
-Adds action mappings for event triggers.
+Adds action mappings for event triggers. Creates a `data-elbaction` attribute.
 
 ```typescript
 // Single action
@@ -254,7 +254,25 @@ tagger().action('load', 'view');
 tagger().action('load:view');
 
 // Multiple actions
-tagger().action({ load: 'view', click: 'select', visible: 'impression' });
+tagger().action({ load: 'view', click: 'select', impression: 'view' });
+```
+
+##### `actions(trigger: string, action?: string)` | `actions(object: Record<string, string>)`
+
+Adds action mappings for event triggers. Creates a `data-elbactions` attribute.
+
+```typescript
+// Single action
+tagger().actions('load', 'view');
+
+// Combined trigger:action
+tagger().actions('load:view');
+
+// Multiple actions
+tagger().actions({ load: 'view', click: 'select', visible: 'visible' });
+
+// Can be combined with action() method
+tagger().action('click', 'select').actions('load', 'view');
 ```
 
 ##### `context(key: string, value: Property)` | `context(object: Properties)`
@@ -315,7 +333,7 @@ returns the final attributes object.
 ### Product Listing Page
 
 ```typescript
-// For product cards that don't need entity tracking
+// For product cards with nearest entity tracking only
 function ProductCard({ product }) {
   return (
     <div
@@ -326,10 +344,31 @@ function ProductCard({ product }) {
           price: product.price,
           category: product.category
         })
-        .action('click', 'select')
+        .action('click', 'select') // Only tracks the product entity
         .get()}
     >
       {product.name}
+    </div>
+  );
+}
+
+// For product cards that also need page context tracking
+function ProductCardWithContext({ product }) {
+  return (
+    <div className="page-section" data-elb="page" data-elb-page="section:products">
+      <div
+        {...tagger('product')
+          .data({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            category: product.category
+          })
+          .actions('click', 'select') // Uses data-elbactions
+          .get()}
+      >
+        {product.name}
+      </div>
     </div>
   );
 }

@@ -1,29 +1,23 @@
 <p align="left">
   <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
+    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
 # Piwik PRO Destination for walkerOS
 
-This package provides a Piwik PRO destination for walkerOS. It allows you to
-send events to Piwik PRO.
+[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/piwikpro)
+&bull;
+[NPM Package](https://www.npmjs.com/package/@walkeros/web-destination-piwikpro)
 
-[View documentation](https://www.elbwalker.com/docs/destinations/web/piwikpro/)
+This package provides a [Piwik PRO](https://piwik.pro/) destination for
+walkerOS. Piwik PRO is a European, privacy-focused web analytics and marketing
+platform that helps businesses track website traffic and user behavior.
 
-## Role in walkerOS Ecosystem
-
-walkerOS follows a **source → collector → destination** architecture:
-
-- **Sources**: Capture events from various environments (browser DOM, dataLayer,
-  server requests)
-- **Collector**: Processes, validates, and routes events with consent awareness
-- **Destinations**: Send processed events to analytics platforms (GA4, Meta,
-  custom APIs)
-
-This Piwik PRO destination receives processed events from the walkerOS collector
-and transforms them into Piwik PRO's analytics format, providing
-privacy-compliant analytics with GDPR compliance and data ownership control.
+walkerOS follows a **source → collector → destination** architecture. This Piwik
+PRO destination receives processed events from the walkerOS collector and
+transforms them into Piwik PRO's analytics format, providing privacy-compliant
+analytics with GDPR compliance and data ownership control.
 
 ## Installation
 
@@ -36,16 +30,35 @@ npm install @walkeros/web-destination-piwikpro
 Here's a basic example of how to use the Piwik PRO destination:
 
 ```typescript
-import { elb } from '@walkeros/collector';
+import { createCollector } from '@walkeros/collector';
 import { destinationPiwikPro } from '@walkeros/web-destination-piwikpro';
 
+const { elb } = await createCollector();
+
 elb('walker destination', destinationPiwikPro, {
-  custom: {
-    appId: 'YOUR_APP_ID',
-    url: 'https://your-account.piwik.pro/',
+  settings: {
+    appId: 'XXX-XXX-XXX-XXX-XXX', // Required
+    url: 'https://your_account_name.piwik.pro/', // Required
   },
 });
 ```
+
+## Configuration
+
+| Name           | Type      | Description                                    | Required | Example                                  |
+| -------------- | --------- | ---------------------------------------------- | -------- | ---------------------------------------- |
+| `appId`        | `string`  | ID of the Piwik PRO site                       | Yes      | `'XXX-XXX-XXX-XXX-XXX'`                  |
+| `url`          | `string`  | URL of your Piwik PRO account                  | Yes      | `'https://your_account_name.piwik.pro/'` |
+| `linkTracking` | `boolean` | Enables/Disables download and outlink tracking | No       | `false`                                  |
+
+### Event Mapping
+
+For custom event mapping (`mapping.entity.action.settings`):
+
+| Name        | Type     | Description                           | Required | Example        |
+| ----------- | -------- | ------------------------------------- | -------- | -------------- |
+| `goalId`    | `string` | ID to count the event as a goal       | No       | `'1'`          |
+| `goalValue` | `string` | Property to be used as the goal value | No       | `'data.value'` |
 
 ## Contribute
 

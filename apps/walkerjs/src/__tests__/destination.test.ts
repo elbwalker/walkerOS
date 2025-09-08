@@ -20,7 +20,7 @@ describe('Destination Tests', () => {
     test('should push event to dataLayer', () => {
       const destination = dataLayerDestination();
       const event = {
-        event: 'foo bar',
+        name: 'foo bar',
       } as unknown as WalkerOS.Event;
       destination.push(event, {} as unknown as Destination.PushContext);
       expect(mockDataLayer).toHaveBeenCalledWith(event);
@@ -29,7 +29,7 @@ describe('Destination Tests', () => {
     test('should not push events from dataLayer source', () => {
       const destination = dataLayerDestination();
       const event = {
-        event: 'foo bar',
+        name: 'foo bar',
         source: {
           type: 'dataLayer',
         },
@@ -41,7 +41,7 @@ describe('Destination Tests', () => {
     test('should push context data when available', () => {
       const destination = dataLayerDestination();
       const event = {
-        event: 'foo bar',
+        name: 'foo bar',
       } as unknown as WalkerOS.Event;
       const contextData = { custom: 'data' };
       destination.push(event, {
@@ -56,16 +56,16 @@ describe('Destination Tests', () => {
       const destination = dataLayerDestination();
       const batch = {
         key: 'test-batch',
-        data: [{ event: 'event1' }, { event: 'event2' }],
+        data: [{ name: 'event1' }, { name: 'event2' }],
         events: [],
       } as unknown as Destination.Batch<unknown>;
 
       destination.pushBatch?.(batch, {} as unknown as Destination.PushContext);
 
       expect(mockDataLayer).toHaveBeenCalledWith({
-        event: 'batch',
+        name: 'batch',
         batched_event: 'test-batch',
-        events: [{ event: 'event1' }, { event: 'event2' }],
+        events: [{ name: 'event1' }, { name: 'event2' }],
       });
     });
 
@@ -74,15 +74,15 @@ describe('Destination Tests', () => {
       const batch = {
         key: 'test-batch',
         data: [],
-        events: [{ event: 'fallback1' }, { event: 'fallback2' }],
+        events: [{ name: 'fallback1' }, { name: 'fallback2' }],
       } as unknown as Destination.Batch<unknown>;
 
       destination.pushBatch?.(batch, {} as unknown as Destination.PushContext);
 
       expect(mockDataLayer).toHaveBeenCalledWith({
-        event: 'batch',
+        name: 'batch',
         batched_event: 'test-batch',
-        events: [{ event: 'fallback1' }, { event: 'fallback2' }],
+        events: [{ name: 'fallback1' }, { name: 'fallback2' }],
       });
     });
   });
@@ -98,7 +98,7 @@ describe('Destination Tests', () => {
     test('should handle events with non-object source', () => {
       const destination = dataLayerDestination();
       const event = {
-        event: 'foo bar',
+        name: 'foo bar',
         source: 'string source',
       } as unknown as WalkerOS.Event;
       destination.push(event, {} as unknown as Destination.PushContext);
@@ -108,7 +108,7 @@ describe('Destination Tests', () => {
     test('should handle events with dataLayer-like source type', () => {
       const destination = dataLayerDestination();
       const event = {
-        event: 'foo bar',
+        name: 'foo bar',
         source: {
           type: 'custom-dataLayer-source',
         },

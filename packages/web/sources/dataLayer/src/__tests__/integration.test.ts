@@ -1,223 +1,189 @@
-import { sourceDataLayer } from '../index';
-import type { WalkerOS, Elb } from '@walkeros/core';
-import { createMockPush, getDataLayer } from './test-utils';
+import { createCollector } from '@walkeros/collector';
+import type { WalkerOS, Collector } from '@walkeros/core';
+import {
+  createMockPush,
+  getDataLayer,
+  createDataLayerSource,
+} from './test-utils';
 
-describe('DataLayer Source - Integration Tests', () => {
+describe('DataLayer Source - Integration', () => {
   let collectedEvents: WalkerOS.Event[];
-  let mockElb: jest.MockedFunction<Elb.Fn>;
+  let collector: Collector.Instance;
 
   beforeEach(async () => {
-    delete window.dataLayer;
-    delete window.customDataLayer;
+    window.dataLayer = [];
     collectedEvents = [];
-    mockElb = createMockPush(collectedEvents);
+
+    const mockPush = createMockPush(collectedEvents);
+
+    ({ collector } = await createCollector({
+      tagging: 2,
+    }));
+
+    collector.push = mockPush;
   });
 
-  test('full integration with custom settings', async () => {
-    await sourceDataLayer(
-      {
-        settings: {
-          name: 'customDataLayer',
-          prefix: 'custom',
-          filter: (event) => {
-            // For direct object events
-            if (typeof event === 'object' && event && 'event' in event) {
-              return !(event as { event: string }).event.startsWith('valid'); // return true to skip, false to allow
-            }
-            // For gtag array events ['event', 'event_name', params]
-            if (
-              Array.isArray(event) &&
-              event.length >= 2 &&
-              event[0] === 'event'
-            ) {
-              return !event[1].startsWith('valid'); // return true to skip, false to allow
-            }
-            return true; // Skip other formats
-          },
+  test('complete gtag consent workflow', async () => {
+    await createDataLayerSource(collector, {
+      settings: {
+        prefix: 'gtag',
+        filter: (event: unknown) => {
+          // Only allow consent events
+          if (Array.isArray(event) && event[0] === 'consent') return false;
+          return true;
         },
       },
-      { elb: mockElb, window },
-    );
-
-    // Test custom dataLayer name
-    expect(window.customDataLayer).toBeDefined();
-    expect(Array.isArray(window.customDataLayer)).toBe(true);
-
-    // Push events to custom dataLayer
-    (window.customDataLayer as unknown[]).push({
-      event: 'valid_event',
-      data: 'test',
     });
-    (window.customDataLayer as unknown[]).push({
-      event: 'invalid_event',
-      data: 'blocked',
-    });
-    (window.customDataLayer as unknown[]).push([
-      'event',
-      'valid_purchase',
-      { value: 100 },
+
+    // Simulate a complete consent workflow
+    getDataLayer().push([
+      'consent',
+      'default',
+      {
+        ad_storage: 'denied',
+        analytics_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+      },
     ]);
 
-    // Should only collect 'valid' events with custom prefix
-    expect(collectedEvents).toHaveLength(2);
+    getDataLayer().push([
+      'consent',
+      'update',
+      {
+        analytics_storage: 'granted',
+      },
+    ]);
+
+    getDataLayer().push([
+      'consent',
+      'update',
+      {
+        ad_storage: 'granted',
+        ad_user_data: 'granted',
+      },
+    ]);
+
+    // Non-consent events should be filtered out
+    getDataLayer().push(['event', 'purchase', { value: 100 }]);
+    getDataLayer().push({ event: 'custom_event', data: 'test' });
+
+    expect(collectedEvents).toHaveLength(3);
+
+    // Check all consent events were processed
     expect(collectedEvents[0]).toMatchObject({
-      event: 'custom valid_event',
-      data: expect.objectContaining({
-        event: 'valid_event',
-        data: 'test',
-      }),
+      name: 'gtag consent default',
+      data: {
+        ad_storage: 'denied',
+        analytics_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+      },
     });
+
     expect(collectedEvents[1]).toMatchObject({
-      event: 'custom valid_purchase',
-      data: expect.objectContaining({
-        event: 'valid_purchase',
-        value: 100,
-      }),
+      name: 'gtag consent update',
+      data: {
+        analytics_storage: 'granted',
+      },
+    });
+
+    expect(collectedEvents[2]).toMatchObject({
+      data: {
+        ad_storage: 'granted',
+        ad_user_data: 'granted',
+      },
     });
   });
 
-  test('handles multiple dataLayer instances', async () => {
-    // Initialize first dataLayer
-    await sourceDataLayer(
-      { settings: { name: 'dataLayer1', prefix: 'dl1' } },
-      { elb: mockElb, window },
-    );
+  test('mixed event types with dataLayer prefix', async () => {
+    await createDataLayerSource(collector); // Default prefix
 
-    // Initialize second dataLayer
-    await sourceDataLayer(
-      { settings: { name: 'dataLayer2', prefix: 'dl2' } },
-      { elb: mockElb, window },
-    );
+    // Mix of different event types
+    getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
+    getDataLayer().push([
+      'event',
+      'purchase',
+      { transaction_id: '123', value: 25.99 },
+    ]);
+    getDataLayer().push([
+      'config',
+      'GA_MEASUREMENT_ID',
+      { send_page_view: false },
+    ]);
+    getDataLayer().push({ event: 'custom_event', user_id: 'user123' });
+    getDataLayer().push(['set', { currency: 'EUR', country: 'DE' }]);
 
-    expect(window.dataLayer1).toBeDefined();
-    expect(window.dataLayer2).toBeDefined();
+    expect(collectedEvents).toHaveLength(5);
 
-    // Push to both dataLayers
-    (window.dataLayer1 as unknown[]).push({ event: 'event_from_dl1' });
-    (window.dataLayer2 as unknown[]).push({ event: 'event_from_dl2' });
-
-    expect(collectedEvents).toHaveLength(2);
-    expect(collectedEvents[0]).toMatchObject({
-      event: 'dl1 event_from_dl1',
-    });
-    expect(collectedEvents[1]).toMatchObject({
-      event: 'dl2 event_from_dl2',
-    });
+    const eventNames = collectedEvents.map((e) => e.name);
+    expect(eventNames).toEqual([
+      'dataLayer consent update',
+      'dataLayer purchase',
+      'dataLayer config GA_MEASUREMENT_ID',
+      'dataLayer custom_event',
+      'dataLayer set custom',
+    ]);
   });
 
-  test('processes existing events from multiple sources', async () => {
-    // Setup existing events in different formats
-    window.dataLayer = [
-      { event: 'existing_direct', value: 1 },
-      ['event', 'existing_gtag', { value: 2 }],
-      ['consent', 'update', { ad_storage: 'granted' }],
-      { event: 'another_direct', value: 3 },
-    ];
+  test('processes existing events and new events together', async () => {
+    // Pre-populate dataLayer
+    getDataLayer().push(['consent', 'default', { ad_storage: 'denied' }]);
+    getDataLayer().push({ event: 'existing_event', data: 'test' });
 
-    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
+    await createDataLayerSource(collector);
 
-    // Should process all existing events
+    // Add new events after initialization
+    getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
+    getDataLayer().push({ event: 'new_event', data: 'test2' });
+
     expect(collectedEvents).toHaveLength(4);
 
-    // Check event types and data
-    expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer existing_direct',
-      data: expect.objectContaining({ value: 1 }),
-    });
-    expect(collectedEvents[1]).toMatchObject({
-      event: 'dataLayer existing_gtag',
-      data: expect.objectContaining({ value: 2 }),
-    });
-    expect(collectedEvents[2]).toMatchObject({
-      event: 'dataLayer consent update',
-      data: expect.objectContaining({ ad_storage: 'granted' }),
-    });
-    expect(collectedEvents[3]).toMatchObject({
-      event: 'dataLayer another_direct',
-      data: expect.objectContaining({ value: 3 }),
-    });
+    // Check order: existing events first, then new events
+    expect(collectedEvents[0].name).toBe('dataLayer consent default');
+    expect(collectedEvents[1].name).toBe('dataLayer existing_event');
+    expect(collectedEvents[2].name).toBe('dataLayer consent update');
+    expect(collectedEvents[3].name).toBe('dataLayer new_event');
   });
 
-  test('maintains event order with rapid pushes', async () => {
-    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
-
-    // Rapidly push multiple events
-    for (let i = 0; i < 10; i++) {
-      getDataLayer().push({ event: `rapid_event_${i}`, order: i });
-    }
-
-    expect(collectedEvents).toHaveLength(10);
-
-    // Verify order is maintained
-    for (let i = 0; i < 10; i++) {
-      expect(collectedEvents[i]).toMatchObject({
-        event: `dataLayer rapid_event_${i}`,
-        data: expect.objectContaining({ order: i }),
-      });
-    }
-  });
-
-  test('handles complex nested data structures', async () => {
-    await sourceDataLayer({ settings: {} }, { elb: mockElb, window });
-
-    const complexEvent = {
-      event: 'complex_event',
-      user: {
-        id: '12345',
-        properties: {
-          name: 'Test User',
-          preferences: ['pref1', 'pref2'],
+  test('error handling and robustness', async () => {
+    await createDataLayerSource(collector, {
+      settings: {
+        filter: (event: unknown) => {
+          // Filter errors should not break processing
+          if (Array.isArray(event) && event[0] === 'bad_filter') {
+            throw new Error('Filter error');
+          }
+          return false; // Allow all others
         },
       },
-      items: [
-        {
-          id: 'item1',
-          metadata: {
-            category: 'electronics',
-            tags: ['new', 'popular'],
-          },
-        },
-        {
-          id: 'item2',
-          metadata: {
-            category: 'books',
-            tags: ['bestseller'],
-          },
-        },
-      ],
-    };
-
-    getDataLayer().push(complexEvent);
-
-    expect(collectedEvents).toHaveLength(1);
-    expect(collectedEvents[0]).toMatchObject({
-      event: 'dataLayer complex_event',
-      data: expect.objectContaining({
-        event: 'complex_event',
-        user: expect.objectContaining({
-          id: '12345',
-          properties: expect.objectContaining({
-            name: 'Test User',
-            preferences: ['pref1', 'pref2'],
-          }),
-        }),
-        items: expect.arrayContaining([
-          expect.objectContaining({
-            id: 'item1',
-            metadata: expect.objectContaining({
-              category: 'electronics',
-              tags: ['new', 'popular'],
-            }),
-          }),
-          expect.objectContaining({
-            id: 'item2',
-            metadata: expect.objectContaining({
-              category: 'books',
-              tags: ['bestseller'],
-            }),
-          }),
-        ]),
-      }),
     });
+
+    // Good events
+    getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
+
+    // Event that causes filter error
+    getDataLayer().push(['bad_filter', 'test']);
+
+    // More good events after error
+    getDataLayer().push({ event: 'after_error', data: 'test' });
+
+    // Invalid events that should be ignored
+    getDataLayer().push('string');
+    getDataLayer().push(null);
+    getDataLayer().push([]);
+
+    // Final good event
+    getDataLayer().push(['event', 'final', { data: 'last' }]);
+
+    // Should have processed 3 good events (bad_filter is invalid gtag format)
+    expect(collectedEvents).toHaveLength(3);
+
+    const eventNames = collectedEvents.map((e) => e.name);
+    expect(eventNames).toEqual([
+      'dataLayer consent update',
+      'dataLayer after_error',
+      'dataLayer final',
+    ]);
   });
 });
