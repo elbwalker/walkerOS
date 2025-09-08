@@ -108,13 +108,8 @@ export async function setupWebBasic(): Promise<{
                       loop: [
                         'nested',
                         {
-                          condition: (entity): boolean =>
-                            Boolean(
-                              entity &&
-                                typeof entity === 'object' &&
-                                'entity' in entity &&
-                                (entity as any).entity === 'product',
-                            ),
+                          condition: (entity) =>
+                            (entity as WalkerOS.Entity).entity === 'product',
                           map: {
                             item_id: 'data.id',
                             item_name: 'data.name',

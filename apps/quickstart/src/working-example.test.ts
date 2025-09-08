@@ -1,4 +1,5 @@
 import type { WalkerOS } from '@walkeros/core';
+import type { SendWebOptions } from '@walkeros/web-core';
 import { createCollector } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationAPI } from '@walkeros/web-destination-api';
@@ -7,9 +8,11 @@ import { destinationGtag } from '@walkeros/web-destination-gtag';
 describe('walkerOS Web Basic Example', () => {
   test('complete working setup with all destinations', async () => {
     // Mock functions for testing environment
-    const mockSendWeb = jest.fn((url: string, body: string, options: any) => {
-      console.log('📡 API Call:', { url, body: JSON.parse(body), options });
-    });
+    const mockSendWeb = jest.fn(
+      (url: string, body: string, options: SendWebOptions) => {
+        console.log('📡 API Call:', { url, body: JSON.parse(body), options });
+      },
+    );
     const mockGtag = jest.fn((...args: unknown[]) => {
       console.log('🎯 Gtag Call:', args);
     });
