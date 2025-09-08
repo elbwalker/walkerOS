@@ -2,7 +2,6 @@ import type { WalkerOS } from '@walkeros/core';
 import type { TypewriterOptions } from '@site/src/components/molecules/typewriterCode';
 import { debounce, tryCatch } from '@walkeros/core';
 import { useEffect, useRef, useState, useCallback, FC } from 'react';
-import { elb } from '@elbwalker/walker.js';
 import CodeBox from '@site/src/components/molecules/codeBox';
 import FullScreenMode from '@site/src/components/organisms/fullScreenMode';
 import { resetTypewriter } from '@site/src/components/molecules/typewriterCode';
@@ -65,7 +64,10 @@ const Tagging: FC<PreviewProps> = ({
   const initPreview = useCallback(
     debounce(
       (elem: HTMLElement) => {
-        elb('walker init', elem);
+        // Use global elb function if available
+        if (window.elb) {
+          window.elb('walker init', { scope: elem });
+        }
       },
       1000,
       true,
