@@ -1,5 +1,11 @@
 # @walkeros/storybook-addon
 
+## 0.1.1
+
+### Patch Changes
+
+- live
+
 ## 0.1.0
 
 ### Minor Changes
