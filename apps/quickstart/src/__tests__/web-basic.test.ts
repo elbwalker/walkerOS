@@ -1,10 +1,10 @@
-import type { WalkerOS } from '@walkeros/core';
 import type { SendWebOptions } from '@walkeros/web-core';
+import type { WalkerOS, Mapping } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
-import { sourceBrowser } from '@walkeros/web-source-browser';
-import { destinationAPI } from '@walkeros/web-destination-api';
-import { destinationGtag } from '@walkeros/web-destination-gtag';
+import sourceBrowser from '@walkeros/web-source-browser';
+import destinationAPI from '@walkeros/web-destination-api';
+import destinationGtag from '@walkeros/web-destination-gtag';
 
 describe('walkerOS Web Basic Example', () => {
   test('complete working setup with all destinations', async () => {
@@ -43,7 +43,7 @@ describe('walkerOS Web Basic Example', () => {
           code: {
             type: 'console',
             config: {},
-            push(event: WalkerOS.Event) {
+            push(event) {
               consoleEvents.push(event.name);
               // console.log('📊 Event captured:', event.name);
             },
@@ -156,5 +156,5 @@ describe('walkerOS Web Basic Example', () => {
       transaction_id: '0rd3r1d',
       value: 555,
     });
-  }); //, 10000); // 10 second timeout
+  });
 });
