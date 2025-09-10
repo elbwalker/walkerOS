@@ -7,6 +7,12 @@ package: '@walkeros/web-destination-gtag'
 
 import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { createEvent } from '@walkeros/core';
+import {
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationGtag from '@walkeros/web-destination-gtag';
 
 # Google Ads
 
@@ -98,4 +104,50 @@ For custom event mapping (`mapping.entity.action.settings.ads`):
       example: "'conversion_label'",
     },
   ]}
+/>
+
+## Live Demo
+
+Try the Google Ads destination with real events:
+
+### Initialize Google Ads
+
+<DestinationInit
+  destination={destinationGtag}
+  custom={{
+    ads: {
+      conversionId: 'AW-123456789',
+      currency: 'EUR',
+    },
+  }}
+/>
+
+### Track a Conversion Event
+
+<DestinationPush
+  destination={destinationGtag}
+  settings={{
+    ads: {
+      conversionId: 'AW-123456789',
+      currency: 'EUR',
+    },
+  }}
+  event={createEvent({
+    name: 'order complete',
+    data: {
+      id: 'order-123',
+      value: 49.99,
+      currency: 'EUR',
+    },
+  })}
+  mapping={{
+    name: 'purchase_conversion',
+    settings: {
+      ads: {
+        label: 'purchase_conversion',
+      },
+    },
+  }}
+  smallText={true}
+  height="300px"
 />

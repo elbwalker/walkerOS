@@ -1,165 +1,236 @@
-import type { WalkerOS, Mapping, Destination } from '@walkeros/core';
+import type {
+  WalkerOS,
+  Mapping,
+  Destination,
+  Collector,
+  Elb,
+} from '@walkeros/core';
 import type { LiveCodeProps } from './liveCode';
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from 'react';
+import React, { useCallback } from 'react';
 import { createEvent, tryCatchAsync } from '@walkeros/core';
 import { LiveCode } from './liveCode';
 import { formatValue, parseInput } from '../molecules/codeBox';
 
-interface DestinationContextValue {
-  customConfig: WalkerOS.AnyObject;
-  setConfig: (config: WalkerOS.AnyObject) => void;
-  destination: Destination.Instance;
-  fnName: string;
+interface DestinationPushProps<Settings = unknown, MappingType = unknown>
+  extends Omit<LiveCodeProps, 'input' | 'config' | 'fn'> {
+  destination: Destination.Instance<Settings, MappingType>;
+  event: WalkerOS.PartialEvent;
+  mapping?: Mapping.Rule<MappingType> | string;
+  settings?: Settings;
 }
 
-const DestinationContext = createContext<DestinationContextValue | undefined>(
-  undefined,
-);
+const createMockCollector = (): Collector.Instance => {
+  const mockPushResult: Elb.PushResult = {
+    successful: [],
+    queued: [],
+    failed: [],
+    event: undefined,
+    ok: true,
+  };
 
-interface DestinationContextProviderProps {
-  children: React.ReactNode;
-  destination: Destination.Instance;
-  initialConfig?: WalkerOS.AnyObject;
-  fnName?: string;
-}
-
-export const DestinationContextProvider: React.FC<
-  DestinationContextProviderProps
-> = ({ children, destination, initialConfig = {}, fnName }) => {
-  const [customConfig, setConfig] = useState<WalkerOS.AnyObject>(initialConfig);
-
-  const value = useMemo(() => {
-    return { customConfig, setConfig, destination, fnName };
-  }, [customConfig, destination, fnName]);
-
-  return (
-    <DestinationContext.Provider value={value}>
-      {children}
-    </DestinationContext.Provider>
-  );
+  return {
+    push: () => Promise.resolve(mockPushResult),
+    allowed: true,
+    config: {
+      tagging: 0,
+      globalsStatic: {},
+      sessionStatic: {},
+      verbose: false,
+    },
+    consent: {},
+    count: 0,
+    custom: {},
+    sources: {},
+    destinations: {},
+    globals: {},
+    group: 'demo',
+    hooks: {},
+    on: {},
+    queue: [],
+    round: 1,
+    session: undefined,
+    timing: Date.now(),
+    user: {},
+    version: '1.0.0',
+  };
 };
 
-export function useDestinationContext(): DestinationContextValue {
-  const context = useContext(DestinationContext);
-  if (!context)
-    throw new Error(
-      'useDestinationContext must be used within a DestinationContextProvider',
-    );
+const createGenericInterceptor = (baseEnv: Destination.Environment = {}) => {
+  const capturedCalls: string[] = [];
 
-  return context;
-}
+  const formatArgs = (args: unknown[]): string => {
+    return args.map((arg) => formatValue(arg, { quotes: true })).join(', ');
+  };
 
-interface DestinationInitProps {
+  const createProxy = (target: unknown, path = ''): unknown => {
+    if (typeof target !== 'object' || target === null) {
+      return target;
+    }
+
+    return new Proxy(target as Record<string, unknown>, {
+      get(obj: Record<string, unknown>, prop: string) {
+        const value = obj[prop];
+
+        if (typeof value === 'function') {
+          // Intercept function calls - use just the function name, not full path
+          return (...args: unknown[]) => {
+            capturedCalls.push(`${prop}(${formatArgs(args)});`);
+
+            // Call the original function if it exists
+            // if (typeof value === 'function') {
+            //   return (value as (...args: unknown[]) => unknown)(...args);
+            // }
+          };
+        }
+
+        if (typeof value === 'object' && value !== null) {
+          // Recursively proxy nested objects but keep tracking the function names
+          return createProxy(value, path ? `${path}.${prop}` : prop);
+        }
+
+        return value;
+      },
+    });
+  };
+
+  const interceptedEnv = createProxy(baseEnv) as Destination.Environment;
+
+  return {
+    env: interceptedEnv,
+    getCapturedCalls: () => [...capturedCalls],
+  };
+};
+
+const createDestinationContext = <Settings, MappingType>(
+  settings: Settings,
+  env: Destination.Environment,
+): Destination.Context<Settings, MappingType> => ({
+  collector: createMockCollector(),
+  config: {
+    settings,
+    loadScript: false,
+  },
+  env,
+});
+
+const createPushContext = <Settings, MappingType>(
+  settings: Settings,
+  mapping: Mapping.Rule<MappingType>,
+  env: Destination.Environment,
+): Destination.PushContext<Settings, MappingType> => ({
+  ...createDestinationContext<Settings, MappingType>(settings, env),
+  mapping,
+});
+
+interface DestinationInitProps<Settings = unknown, MappingType = unknown> {
+  destination: Destination.Instance<Settings, MappingType>;
   custom?: unknown;
 }
 
-export const DestinationInit: React.FC<DestinationInitProps> = ({
+export const DestinationInit = <Settings = unknown, MappingType = unknown>({
+  destination,
   custom = {},
-}) => {
-  const { destination, setConfig, fnName } = useDestinationContext();
+}: DestinationInitProps<Settings, MappingType>) => {
   const input = formatValue(custom);
 
   const mappingFn = async (
-    input: never,
-    middle: never,
-    log: (...args: unknown[]) => void,
+    input: unknown,
+    _config: unknown,
+    log: (result: string) => void,
   ) => {
-    tryCatchAsync(
+    await tryCatchAsync(
       async () => {
         const inputValue = await parseInput(input);
-        setConfig(inputValue as WalkerOS.AnyObject);
 
-        // The new API has a different init signature
-        if (destination.init) {
-          destination.init({
-            collector: {} as any,
-            config: {
-              custom: inputValue,
-              fn: log,
-            } as any,
-            env: {},
-            data: undefined,
-          });
+        // Create interceptor based on destination's env
+        const { env, getCapturedCalls } = createGenericInterceptor(
+          destination.env,
+        );
+
+        if (!destination.init) {
+          log('No init method found');
+          return;
+        }
+
+        const context = createDestinationContext<Settings, MappingType>(
+          inputValue as Settings,
+          env,
+        );
+
+        await destination.init(context);
+
+        const calls = getCapturedCalls();
+        if (calls.length > 0) {
+          log(calls.join('\n'));
+        } else {
+          log('Destination initialized successfully');
         }
       },
-      (error) => {
-        log(`Error mappingFn: ${error}`);
-      },
+      (error) => log(`Error: ${error}`),
     )();
   };
 
   return (
     <LiveCode
-      fnName={fnName}
       input={input}
       fn={mappingFn}
-      labelInput="Custom Config"
-      labelOutput="Result"
+      labelInput="Settings"
+      labelOutput="Function Calls"
+      showQuotes={false}
     />
   );
 };
 
-interface DestinationPushProps
-  extends Omit<LiveCodeProps, 'input' | 'config' | 'fn' | 'options'> {
-  event: WalkerOS.PartialEvent;
-  mapping?: Mapping.Rule | string;
-  eventConfig?: boolean;
-}
-
-export const DestinationPush: React.FC<DestinationPushProps> = ({
+export const DestinationPush = <Settings = unknown, MappingType = unknown>({
+  destination,
   event,
   mapping = {},
-  eventConfig = true,
+  settings,
   ...liveCodeProps
-}) => {
-  const { customConfig, destination, fnName } = useDestinationContext();
-  const inputValue = formatValue(event);
-  const mappingValue = formatValue(mapping);
-
+}: DestinationPushProps<Settings, MappingType>) => {
   const mappingFn = useCallback(
-    async (
-      input: unknown,
-      config: unknown,
-      log: (...args: unknown[]) => void,
-      options: WalkerOS.AnyObject,
-    ) => {
+    async (input: unknown, config: unknown, log: (result: string) => void) => {
       try {
         const inputValue = await parseInput(input);
         const configValue = await parseInput(config);
         const event = createEvent(inputValue);
-        const [entity, action] = event.name.split(' ');
-        const finalMapping = eventConfig
-          ? { [entity]: { [action]: configValue } }
-          : configValue;
 
-        // Simplified push for demo purposes
-        // The new API doesn't expose destinationPush directly
-        // Instead, destinations are called through the collector
-        log('Destination push simulation:', {
-          event,
-          mapping: finalMapping as Mapping.Config,
-          custom: options,
-        });
+        // Create interceptor based on destination's env
+        const { env, getCapturedCalls } = createGenericInterceptor(
+          destination.env,
+        );
+
+        // Push the event
+        const pushContext = createPushContext<Settings, MappingType>(
+          settings,
+          configValue,
+          env,
+        );
+
+        await destination.push(event, pushContext);
+
+        const calls = getCapturedCalls();
+        if (calls.length > 0) {
+          log(calls.join('\n'));
+        } else {
+          log('No function calls captured');
+        }
       } catch (error) {
-        log(`Error mappingFn: ${error}`);
+        log(`Error: ${error}`);
       }
     },
-    [],
+    [destination],
   );
 
   return (
     <LiveCode
-      fnName={fnName}
-      input={inputValue}
-      config={mappingValue}
+      input={event}
+      config={mapping}
       fn={mappingFn}
-      options={customConfig}
+      labelInput="Event"
+      labelConfig="Mapping"
+      labelOutput="Function Calls"
+      showQuotes={false}
       {...liveCodeProps}
     />
   );
