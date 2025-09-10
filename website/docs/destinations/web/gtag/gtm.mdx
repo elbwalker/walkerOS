@@ -8,6 +8,13 @@ package: '@walkeros/web-destination-gtag'
 
 import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { getEvent } from '@walkeros/core';
+import {
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationGtag from '@walkeros/web-destination-gtag';
+import { mapping } from '@walkeros/web-destination-gtag/examples';
 
 # Google Tag Manager (GTM)
 

@@ -6,8 +6,16 @@ sidebar_position: 2
 package: '@walkeros/web-destination-gtag'
 ---
 
+import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { getEvent } from '@walkeros/core';
+import {
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationGtag from '@walkeros/web-destination-gtag';
+import { mapping } from '@walkeros/web-destination-gtag/examples';
 
 # Google Analytics 4 (GA4)
 
@@ -100,6 +108,20 @@ elb('walker destination', destinationGtag, {
   ]}
 />
 
+#### Example
+
+<DestinationInit
+  custom={`{
+    measurementId: 'G-XXXXXXXXXX', // Required
+    debug: false,
+    include: ['globals'],
+    pageview: false,
+    server_container_url: 'https://server.example.com',
+    snakeCase: true,
+    transport_url: 'https://www.google-analytics.com/g/collect',
+  }`}
+/>
+
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings.ga4`):
@@ -114,4 +136,53 @@ For custom event mapping (`mapping.entity.action.settings.ga4`):
       example: "['data', 'context']",
     },
   ]}
+/>
+
+You are able to map your walkerOS events to match the respective requirements of
+each vendor. The `mapping` examples are using a
+live&nbsp;<Link to="#configuration">configuration</Link>.
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+### add_to_cart
+
+Map your walkerOS event to get
+an&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/ga4/reference/events?sjid=10736118709897970414-EU&client_type=gtag#add_to_cart">add_to_cart</Link>
+gtag.js event.
+
+<DestinationPush
+  destination={destinationGtag}
+  settings={{
+    ga4: {
+      measurementId: 'G-XXXXXXXXXX',
+    },
+  }}
+  event={getEvent('product add')}
+  mapping={mapping.ga4AddToCart}
+  smallText={true}
+  height={'512px'}
+/>
+
+### purchase
+
+Map your walkerOS event to get
+a&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/ga4/reference/events?sjid=10736118709897970414-EU&client_type=gtag#purchase">purchase</Link>
+gtag.js event.
+
+<DestinationPush
+  destination={destinationGtag}
+  settings={{
+    ga4: {
+      measurementId: 'G-XXXXXXXXXX',
+    },
+  }}
+  event={getEvent('order complete')}
+  mapping={mapping.ga4Purchase}
+  smallText={true}
+  height={'512px'}
 />

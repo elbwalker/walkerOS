@@ -8,6 +8,13 @@ sidebar_position: 1
 
 import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { getEvent } from '@walkeros/core';
+import {
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationWebAPI from '@walkeros/web-destination-api';
+import { mapping } from '@walkeros/web-destination-api/examples';
 
 # API Destination
 
@@ -236,3 +243,15 @@ const { collector, elb } = await createCollector({
 - **xhr**: Traditional XMLHttpRequest for older browser compatibility
 - **beacon**: Uses Navigator.sendBeacon() for reliable data transmission during
   page unload
+
+## Mapping
+
+By default the&nbsp;<Link to="/docs/core/web#sendweb">`sendWeb`</Link> function
+is used to send the events to an API.
+
+<DestinationPush
+  smallText={true}
+  height={'128px'}
+  event={getEvent()}
+  mapping={mapping.entity_action}
+/>

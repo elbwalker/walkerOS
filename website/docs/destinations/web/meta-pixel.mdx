@@ -8,6 +8,13 @@ package: '@walkeros/web-destination-meta'
 
 import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { getEvent } from '@walkeros/core';
+import {
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationMetaPixel from '@walkeros/web-destination-meta';
+import { mapping } from '@walkeros/web-destination-meta/examples';
 
 # Meta Pixel
 
@@ -67,4 +74,67 @@ const { collector, elb } = await createCollector({
       example: 'true',
     },
   ]}
+/>
+
+#### Example
+
+<DestinationInit
+  destination={destinationMetaPixel}
+  custom={{
+    pixelId: '1234567890',
+  }}
+/>
+
+## Mapping
+
+### ViewContent
+
+<DestinationPush
+  destination={destinationMetaPixel}
+  settings={{
+    pixelId: '1234567890',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product view')}
+  mapping={mapping.ViewContent}
+/>
+
+### AddToCart
+
+<DestinationPush
+  destination={destinationMetaPixel}
+  settings={{
+    pixelId: '1234567890',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product add')}
+  mapping={mapping.AddToCart}
+/>
+
+### InitiateCheckout
+
+<DestinationPush
+  destination={destinationMetaPixel}
+  settings={{
+    pixelId: '1234567890',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('cart view')}
+  mapping={mapping.InitiateCheckout}
+/>
+
+### Purchase
+
+<DestinationPush
+  destination={destinationMetaPixel}
+  settings={{
+    pixelId: '1234567890',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('order complete')}
+  mapping={mapping.Purchase}
 />
