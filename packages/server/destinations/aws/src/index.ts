@@ -3,4 +3,4 @@ export { destinationFirehose } from './firehose';
 export * as DestinationFirehose from './firehose/types';
 
 // Examples
-export * as destinationFirehoseExamples from './firehose/examples';
+export * as examples from './examples';

@@ -1,3 +1,1 @@
-import * as firehoseExamples from '../firehose/examples';
-
-export const destinationFirehoseExamples = firehoseExamples;
+export * as firehose from '../firehose/examples';

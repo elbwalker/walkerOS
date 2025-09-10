@@ -2,10 +2,10 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
 import { getEvent } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
-import { destinationMetaExamples } from '../examples';
+import { examples } from '../';
 import { hashEvent } from '../hash';
 
-const { events, mapping } = destinationMetaExamples;
+const { events, mapping } = examples;
 
 describe('Server Destination Meta', () => {
   let destination: Destination;

@@ -2,9 +2,9 @@ import type { WalkerOS } from '@walkeros/core';
 import type { DestinationMeta } from '.';
 import { createCollector } from '@walkeros/collector';
 import { getEvent } from '@walkeros/core';
-import { destinationMetaExamples } from './examples';
+import { examples } from '.';
 
-const { events, mapping } = destinationMetaExamples;
+const { events, mapping } = examples;
 
 describe('Destination Meta Pixel', () => {
   let elb: WalkerOS.Elb;

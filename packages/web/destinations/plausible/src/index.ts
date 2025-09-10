@@ -7,7 +7,7 @@ import { getEnvironment } from '@walkeros/web-core';
 export * as DestinationPlausible from './types';
 
 // Examples
-export * as destinationPlausibleExamples from './examples';
+export * as examples from './examples';
 
 export const destinationPlausible: Destination = {
   type: 'plausible',

@@ -2,9 +2,9 @@ import type { WalkerOS } from '@walkeros/core';
 import type { DestinationPlausible } from '.';
 import { createCollector } from '@walkeros/collector';
 import { getEvent } from '@walkeros/core';
-import { destinationPlausibleExamples } from './examples';
+import { examples } from '.';
 
-const { events, mapping } = destinationPlausibleExamples;
+const { events, mapping } = examples;
 
 describe('destination plausible', () => {
   let elb: WalkerOS.Elb;

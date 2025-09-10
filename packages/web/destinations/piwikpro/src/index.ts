@@ -7,7 +7,7 @@ import { getEnvironment } from '@walkeros/web-core';
 export * as DestinationPiwikPro from './types';
 
 // Examples
-export * as destinationPiwikProExamples from './examples';
+export * as examples from './examples';
 
 export const destinationPiwikPro: Destination = {
   type: 'piwikpro',

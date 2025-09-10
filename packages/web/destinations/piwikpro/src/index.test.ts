@@ -2,9 +2,9 @@ import type { WalkerOS } from '@walkeros/core';
 import type { DestinationPiwikPro } from '.';
 import { createCollector } from '@walkeros/collector';
 import { getEvent } from '@walkeros/core';
-import { destinationPiwikProExamples } from './examples';
+import { examples } from '.';
 
-const { events, mapping } = destinationPiwikProExamples;
+const { events, mapping } = examples;
 
 describe('Destination PiwikPro', () => {
   let elb: WalkerOS.Elb;
