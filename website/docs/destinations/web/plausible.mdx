@@ -6,6 +6,7 @@ sidebar_position: 4
 package: '@walkeros/web-destination-plausible'
 ---
 
+import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
 import { getEvent } from '@walkeros/core';
@@ -14,7 +15,16 @@ import {
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 import destinationPlausible from '@walkeros/web-destination-plausible';
-import { mapping } from '@walkeros/web-destination-plausible/examples';
+import { examples } from '@walkeros/web-destination-plausible';
+
+export const documentationPlausible = {
+  ...destinationPlausible,
+  env: {
+    window: {
+      plausible: () => {},
+    },
+  },
+};
 
 # Plausible Analytics
 
@@ -64,7 +74,7 @@ elb('walker destination', destinationPlausible, {
 />
 
 <DestinationInit
-  destination={destinationPlausible}
+  destination={documentationPlausible}
   custom={`{
     domain: 'elbwalker.com', // Optional, domain of your site as registered
   }`}
@@ -78,29 +88,29 @@ events</Link> manually using the JavaScript function
 ### CustomEvent
 
 <DestinationPush
-  destination={destinationPlausible}
+  destination={documentationPlausible}
   settings={{
     domain: 'elbwalker.com',
   }}
+  event={getEvent()}
+  mapping={examples.mapping.config}
   smallText={true}
   height={'256px'}
-  event={getEvent()}
-  mapping={mapping.customEvent}
 />
 
 ### Purchase
 
 Follow
-the&nbsp;<Link to="https://plausible.io/docs/ecommerce-revenue-tracking">Ecommerce
+the&nbsp;<Link to="https://plausible.io/docs/ecommerce-revenue-tracking">E-commerce
 revenue tracking</Link> guide to setup the `purchase` event.
 
 <DestinationPush
-  destination={destinationPlausible}
+  destination={documentationPlausible}
   settings={{
     domain: 'elbwalker.com',
   }}
   smallText={true}
   height={'512px'}
   event={getEvent('order complete')}
-  mapping={mapping.purchase}
+  mapping={examples.mapping.config}
 />

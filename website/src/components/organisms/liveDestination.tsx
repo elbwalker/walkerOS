@@ -8,6 +8,7 @@ import type {
 import type { LiveCodeProps } from './liveCode';
 import React, { useCallback } from 'react';
 import { createEvent, tryCatchAsync } from '@walkeros/core';
+import { destinationPush } from '@walkeros/collector';
 import { LiveCode } from './liveCode';
 import { formatValue, parseInput } from '../molecules/codeBox';
 
@@ -192,14 +193,21 @@ export const DestinationPush = <Settings = unknown, MappingType = unknown>({
             destination.env,
           );
 
-          // Push the event
-          const pushContext = createContext<Settings, MappingType>(
-            settings || ({} as Settings),
+          // Configure destination with mapping and use collector's destinationPush
+          const configuredDestination = {
+            ...destination,
+            config: {
+              settings: settings || ({} as Settings),
+              mapping: configValue,
+            },
             env,
-            configValue,
-          );
+          };
 
-          await destination.push(event, pushContext);
+          // Create mock collector for the mapping
+          const mockCollector = createMockCollector();
+
+          // Use collector's destinationPush to apply mapping transformations
+          await destinationPush(mockCollector, configuredDestination, event);
 
           const calls = getCapturedCalls();
           if (calls.length > 0) {
