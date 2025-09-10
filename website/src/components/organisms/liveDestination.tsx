@@ -52,7 +52,7 @@ const createMockCollector = (): Collector.Instance => {
     timing: Date.now(),
     user: {},
     version: '1.0.0',
-  };
+  } satisfies Collector.Instance;
 };
 
 const createGenericInterceptor = (baseEnv: Destination.Environment = {}) => {
@@ -62,7 +62,14 @@ const createGenericInterceptor = (baseEnv: Destination.Environment = {}) => {
     return args.map((arg) => formatValue(arg, { quotes: true })).join(', ');
   };
 
-  const createProxy = (target: unknown, path = ''): unknown => {
+  const interceptFunction = (name: string, originalFn?: Function) => {
+    return (...args: unknown[]) => {
+      capturedCalls.push(`${name}(${formatArgs(args)});`);
+      return originalFn?.(...args);
+    };
+  };
+
+  const createProxy = (target: unknown): unknown => {
     if (typeof target !== 'object' || target === null) {
       return target;
     }
@@ -72,20 +79,11 @@ const createGenericInterceptor = (baseEnv: Destination.Environment = {}) => {
         const value = obj[prop];
 
         if (typeof value === 'function') {
-          // Intercept function calls - use just the function name, not full path
-          return (...args: unknown[]) => {
-            capturedCalls.push(`${prop}(${formatArgs(args)});`);
-
-            // Call the original function if it exists
-            // if (typeof value === 'function') {
-            //   return (value as (...args: unknown[]) => unknown)(...args);
-            // }
-          };
+          return interceptFunction(prop, value);
         }
 
         if (typeof value === 'object' && value !== null) {
-          // Recursively proxy nested objects but keep tracking the function names
-          return createProxy(value, path ? `${path}.${prop}` : prop);
+          return createProxy(value);
         }
 
         return value;
@@ -97,29 +95,22 @@ const createGenericInterceptor = (baseEnv: Destination.Environment = {}) => {
 
   return {
     env: interceptedEnv,
-    getCapturedCalls: () => [...capturedCalls],
+    getCapturedCalls: () => capturedCalls,
   };
 };
 
-const createDestinationContext = <Settings, MappingType>(
+const createContext = <Settings, MappingType>(
   settings: Settings,
   env: Destination.Environment,
-): Destination.Context<Settings, MappingType> => ({
+  mapping?: Mapping.Rule<MappingType>,
+): Destination.PushContext<Settings, MappingType> => ({
   collector: createMockCollector(),
   config: {
     settings,
     loadScript: false,
   },
   env,
-});
-
-const createPushContext = <Settings, MappingType>(
-  settings: Settings,
-  mapping: Mapping.Rule<MappingType>,
-  env: Destination.Environment,
-): Destination.PushContext<Settings, MappingType> => ({
-  ...createDestinationContext<Settings, MappingType>(settings, env),
-  mapping,
+  ...(mapping && { mapping }),
 });
 
 interface DestinationInitProps<Settings = unknown, MappingType = unknown> {
@@ -140,6 +131,11 @@ export const DestinationInit = <Settings = unknown, MappingType = unknown>({
   ) => {
     await tryCatchAsync(
       async () => {
+        if (!destination.init) {
+          log('No init method found');
+          return;
+        }
+
         const inputValue = await parseInput(input);
 
         // Create interceptor based on destination's env
@@ -147,12 +143,7 @@ export const DestinationInit = <Settings = unknown, MappingType = unknown>({
           destination.env,
         );
 
-        if (!destination.init) {
-          log('No init method found');
-          return;
-        }
-
-        const context = createDestinationContext<Settings, MappingType>(
+        const context = createContext<Settings, MappingType>(
           inputValue as Settings,
           env,
         );
@@ -190,36 +181,37 @@ export const DestinationPush = <Settings = unknown, MappingType = unknown>({
 }: DestinationPushProps<Settings, MappingType>) => {
   const mappingFn = useCallback(
     async (input: unknown, config: unknown, log: (result: string) => void) => {
-      try {
-        const inputValue = await parseInput(input);
-        const configValue = await parseInput(config);
-        const event = createEvent(inputValue);
+      await tryCatchAsync(
+        async () => {
+          const inputValue = await parseInput(input);
+          const configValue = await parseInput(config);
+          const event = createEvent(inputValue);
 
-        // Create interceptor based on destination's env
-        const { env, getCapturedCalls } = createGenericInterceptor(
-          destination.env,
-        );
+          // Create interceptor based on destination's env
+          const { env, getCapturedCalls } = createGenericInterceptor(
+            destination.env,
+          );
 
-        // Push the event
-        const pushContext = createPushContext<Settings, MappingType>(
-          settings,
-          configValue,
-          env,
-        );
+          // Push the event
+          const pushContext = createContext<Settings, MappingType>(
+            settings || ({} as Settings),
+            env,
+            configValue,
+          );
 
-        await destination.push(event, pushContext);
+          await destination.push(event, pushContext);
 
-        const calls = getCapturedCalls();
-        if (calls.length > 0) {
-          log(calls.join('\n'));
-        } else {
-          log('No function calls captured');
-        }
-      } catch (error) {
-        log(`Error: ${error}`);
-      }
+          const calls = getCapturedCalls();
+          if (calls.length > 0) {
+            log(calls.join('\n'));
+          } else {
+            log('No function calls captured');
+          }
+        },
+        (error) => log(`Error: ${error}`),
+      )();
     },
-    [destination],
+    [destination, settings],
   );
 
   return (

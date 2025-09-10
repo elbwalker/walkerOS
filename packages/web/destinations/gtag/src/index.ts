@@ -76,7 +76,8 @@ export const destinationGtag: Destination = {
       );
     }
 
-    // Push to Google Ads if configured and has mapping name
+    // @TODO: Fix condition - should check for mapping.settings?.ads?.label || mapping.name
+    // Currently requires mapping.name even when label is provided via settings.ads.label
     if (ads?.conversionId && mapping.name) {
       pushAdsEvent(
         event,
