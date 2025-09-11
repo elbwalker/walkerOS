@@ -16,6 +16,15 @@ import {
 import destinationMetaPixel from '@walkeros/web-destination-meta';
 import { examples } from '@walkeros/web-destination-meta';
 
+export const documentationMetaPixel = {
+  ...destinationMetaPixel,
+  env: {
+    window: {
+      fbq: () => {},
+    },
+  },
+};
+
 # Meta Pixel
 
 <PackageLink
@@ -90,7 +99,7 @@ const { collector, elb } = await createCollector({
 ### ViewContent
 
 <DestinationPush
-  destination={destinationMetaPixel}
+  destination={documentationMetaPixel}
   settings={{
     pixelId: '1234567890',
   }}
@@ -104,7 +113,7 @@ const { collector, elb } = await createCollector({
 ### AddToCart
 
 <DestinationPush
-  destination={destinationMetaPixel}
+  destination={documentationMetaPixel}
   settings={{
     pixelId: '1234567890',
   }}
@@ -118,7 +127,7 @@ const { collector, elb } = await createCollector({
 ### InitiateCheckout
 
 <DestinationPush
-  destination={destinationMetaPixel}
+  destination={documentationMetaPixel}
   settings={{
     pixelId: '1234567890',
   }}
@@ -132,7 +141,7 @@ const { collector, elb } = await createCollector({
 ### Purchase
 
 <DestinationPush
-  destination={destinationMetaPixel}
+  destination={documentationMetaPixel}
   settings={{
     pixelId: '1234567890',
   }}

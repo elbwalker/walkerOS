@@ -17,6 +17,17 @@ import {
 import destinationPiwikPro from '@walkeros/web-destination-piwikpro';
 import { examples } from '@walkeros/web-destination-piwikpro';
 
+export const documentationPiwikPro = {
+  ...destinationPiwikPro,
+  env: {
+    window: {
+      _paq: {
+        push: () => {},
+      },
+    },
+  },
+};
+
 # Piwik PRO
 
 <PackageLink
@@ -131,7 +142,7 @@ an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceproductdetailview#e
 event.
 
 <DestinationPush
-  destination={destinationPiwikPro}
+  destination={documentationPiwikPro}
   settings={{
     appId: 'XXX-XXX-XXX-XXX-XXX',
     url: 'https://your_account_name.piwik.pro/',
@@ -140,6 +151,7 @@ event.
   height={'512px'}
   event={getEvent('product view')}
   mapping={examples.mapping.ecommerceProductDetailView}
+  generic={true}
 />
 
 ### AddToCart
@@ -149,7 +161,7 @@ an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceaddtocart#examples"
 event.
 
 <DestinationPush
-  destination={destinationPiwikPro}
+  destination={documentationPiwikPro}
   settings={{
     appId: 'XXX-XXX-XXX-XXX-XXX',
     url: 'https://your_account_name.piwik.pro/',
@@ -158,6 +170,7 @@ event.
   height={'512px'}
   event={getEvent('product add')}
   mapping={examples.mapping.ecommerceAddToCart}
+  generic={true}
 />
 
 ### CartUpdate
@@ -167,7 +180,7 @@ an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommercecartupdate#examples
 event.
 
 <DestinationPush
-  destination={destinationPiwikPro}
+  destination={documentationPiwikPro}
   settings={{
     appId: 'XXX-XXX-XXX-XXX-XXX',
     url: 'https://your_account_name.piwik.pro/',
@@ -176,6 +189,7 @@ event.
   height={'512px'}
   event={getEvent('cart view')}
   mapping={examples.mapping.ecommerceCartUpdate}
+  generic={true}
 />
 
 ### Order
@@ -185,7 +199,7 @@ an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceorder#examples">eco
 event.
 
 <DestinationPush
-  destination={destinationPiwikPro}
+  destination={documentationPiwikPro}
   settings={{
     appId: 'XXX-XXX-XXX-XXX-XXX',
     url: 'https://your_account_name.piwik.pro/',
@@ -194,4 +208,5 @@ event.
   height={'512px'}
   event={getEvent('order complete')}
   mapping={examples.mapping.ecommerceOrder}
+  generic={true}
 />
