@@ -93,7 +93,8 @@ events</Link> manually using the JavaScript function
     domain: 'elbwalker.com',
   }}
   event={getEvent()}
-  mapping={examples.mapping.config}
+  mapping={examples.mapping.customEvent}
+  generic={true}
   smallText={true}
   height={'256px'}
 />
@@ -112,5 +113,6 @@ revenue tracking</Link> guide to setup the `purchase` event.
   smallText={true}
   height={'512px'}
   event={getEvent('order complete')}
-  mapping={examples.mapping.config}
+  mapping={examples.mapping.purchase}
+  generic={true}
 />

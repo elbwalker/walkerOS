@@ -18,6 +18,7 @@ interface DestinationPushProps<Settings = unknown, MappingType = unknown>
   event: WalkerOS.PartialEvent;
   mapping?: Mapping.Rule<MappingType> | string;
   settings?: Settings;
+  generic?: boolean; // When true, wraps mapping in '*': { '*': mapping }
 }
 
 const createMockCollector = (): Collector.Instance => {
@@ -178,6 +179,7 @@ export const DestinationPush = <Settings = unknown, MappingType = unknown>({
   event,
   mapping = {},
   settings,
+  generic = false,
   ...liveCodeProps
 }: DestinationPushProps<Settings, MappingType>) => {
   const mappingFn = useCallback(
@@ -187,6 +189,12 @@ export const DestinationPush = <Settings = unknown, MappingType = unknown>({
           const inputValue = await parseInput(input);
           const configValue = await parseInput(config);
           const event = createEvent(inputValue);
+
+          // Wrap mapping in generic structure if requested
+          const wrappedMapping =
+            generic && configValue
+              ? { '*': { '*': configValue } }
+              : configValue;
 
           // Create interceptor based on destination's env
           const { env, getCapturedCalls } = createGenericInterceptor(
@@ -198,7 +206,7 @@ export const DestinationPush = <Settings = unknown, MappingType = unknown>({
             ...destination,
             config: {
               settings: settings || ({} as Settings),
-              mapping: configValue,
+              mapping: wrappedMapping,
             },
             env,
           };
@@ -219,7 +227,7 @@ export const DestinationPush = <Settings = unknown, MappingType = unknown>({
         (error) => log(`Error: ${error}`),
       )();
     },
-    [destination, settings],
+    [destination, settings, generic],
   );
 
   return (

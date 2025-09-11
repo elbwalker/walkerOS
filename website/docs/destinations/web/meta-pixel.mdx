@@ -98,6 +98,7 @@ const { collector, elb } = await createCollector({
   height={'512px'}
   event={getEvent('product view')}
   mapping={examples.mapping.ViewContent}
+  generic={true}
 />
 
 ### AddToCart
@@ -111,6 +112,7 @@ const { collector, elb } = await createCollector({
   height={'512px'}
   event={getEvent('product add')}
   mapping={examples.mapping.AddToCart}
+  generic={true}
 />
 
 ### InitiateCheckout
@@ -124,6 +126,7 @@ const { collector, elb } = await createCollector({
   height={'512px'}
   event={getEvent('cart view')}
   mapping={examples.mapping.InitiateCheckout}
+  generic={true}
 />
 
 ### Purchase
@@ -137,4 +140,5 @@ const { collector, elb } = await createCollector({
   height={'512px'}
   event={getEvent('order complete')}
   mapping={examples.mapping.Purchase}
+  generic={true}
 />
