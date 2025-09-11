@@ -14,7 +14,7 @@ import {
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 import destinationMetaPixel from '@walkeros/web-destination-meta';
-import { mapping } from '@walkeros/web-destination-meta/examples';
+import { examples } from '@walkeros/web-destination-meta';
 
 # Meta Pixel
 
@@ -97,7 +97,7 @@ const { collector, elb } = await createCollector({
   smallText={true}
   height={'512px'}
   event={getEvent('product view')}
-  mapping={mapping.ViewContent}
+  mapping={examples.mapping.ViewContent}
 />
 
 ### AddToCart
@@ -110,7 +110,7 @@ const { collector, elb } = await createCollector({
   smallText={true}
   height={'512px'}
   event={getEvent('product add')}
-  mapping={mapping.AddToCart}
+  mapping={examples.mapping.AddToCart}
 />
 
 ### InitiateCheckout
@@ -123,7 +123,7 @@ const { collector, elb } = await createCollector({
   smallText={true}
   height={'512px'}
   event={getEvent('cart view')}
-  mapping={mapping.InitiateCheckout}
+  mapping={examples.mapping.InitiateCheckout}
 />
 
 ### Purchase
@@ -136,5 +136,5 @@ const { collector, elb } = await createCollector({
   smallText={true}
   height={'512px'}
   event={getEvent('order complete')}
-  mapping={mapping.Purchase}
+  mapping={examples.mapping.Purchase}
 />

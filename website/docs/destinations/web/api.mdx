@@ -14,7 +14,7 @@ import {
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 import destinationWebAPI from '@walkeros/web-destination-api';
-import { mapping } from '@walkeros/web-destination-api/examples';
+import { examples } from '@walkeros/web-destination-api';
 
 # API Destination
 
@@ -253,5 +253,5 @@ is used to send the events to an API.
   smallText={true}
   height={'128px'}
   event={getEvent()}
-  mapping={mapping.entity_action}
+  mapping={examples.mapping.entity_action}
 />

@@ -6,6 +6,7 @@ sidebar_position: 3
 package: '@walkeros/web-destination-piwikpro'
 ---
 
+import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
 import { getEvent } from '@walkeros/core';
@@ -14,7 +15,7 @@ import {
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 import destinationPiwikPro from '@walkeros/web-destination-piwikpro';
-import { mapping } from '@walkeros/web-destination-piwikpro/examples';
+import { examples } from '@walkeros/web-destination-piwikpro';
 
 # Piwik PRO
 
@@ -138,7 +139,7 @@ event.
   smallText={true}
   height={'512px'}
   event={getEvent('product view')}
-  mapping={mapping.ecommerceProductDetailView}
+  mapping={examples.mapping.ecommerceProductDetailView}
 />
 
 ### AddToCart
@@ -156,7 +157,7 @@ event.
   smallText={true}
   height={'512px'}
   event={getEvent('product add')}
-  mapping={mapping.ecommerceAddToCart}
+  mapping={examples.mapping.ecommerceAddToCart}
 />
 
 ### CartUpdate
@@ -174,7 +175,7 @@ event.
   smallText={true}
   height={'512px'}
   event={getEvent('cart view')}
-  mapping={mapping.ecommerceCartUpdate}
+  mapping={examples.mapping.ecommerceCartUpdate}
 />
 
 ### Order
@@ -192,5 +193,5 @@ event.
   smallText={true}
   height={'512px'}
   event={getEvent('order complete')}
-  mapping={mapping.ecommerceOrder}
+  mapping={examples.mapping.ecommerceOrder}
 />

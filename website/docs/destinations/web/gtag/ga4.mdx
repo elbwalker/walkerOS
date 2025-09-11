@@ -15,7 +15,7 @@ import {
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 import destinationGtag from '@walkeros/web-destination-gtag';
-import { mapping } from '@walkeros/web-destination-gtag/examples';
+import { examples } from '@walkeros/web-destination-gtag';
 
 # Google Analytics 4 (GA4)
 
@@ -111,6 +111,7 @@ elb('walker destination', destinationGtag, {
 #### Example
 
 <DestinationInit
+  destination={destinationGtag}
   custom={`{
     measurementId: 'G-XXXXXXXXXX', // Required
     debug: false,
@@ -163,7 +164,7 @@ gtag.js event.
     },
   }}
   event={getEvent('product add')}
-  mapping={mapping.ga4AddToCart}
+  mapping={examples.mapping.ga4AddToCart}
   smallText={true}
   height={'512px'}
 />
@@ -182,7 +183,7 @@ gtag.js event.
     },
   }}
   event={getEvent('order complete')}
-  mapping={mapping.ga4Purchase}
+  mapping={examples.mapping.ga4Purchase}
   smallText={true}
   height={'512px'}
 />
