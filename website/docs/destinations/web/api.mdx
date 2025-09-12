@@ -17,6 +17,13 @@ import {
 import destinationWebAPI from '@walkeros/web-destination-api';
 import { examples } from '@walkeros/web-destination-api';
 
+export const documentationAPI = {
+  ...destinationWebAPI,
+  env: {
+    sendWeb: () => ({ ok: true }),
+  },
+};
+
 # API Destination
 
 <PackageLink
@@ -251,6 +258,10 @@ By default the&nbsp;<Link to="/docs/core/web#sendweb">`sendWeb`</Link> function
 is used to send the events to an API.
 
 <DestinationPush
+  destination={documentationAPI}
+  settings={{
+    url: 'https://api.example.com/events',
+  }}
   smallText={true}
   height={'128px'}
   event={getEvent()}
