@@ -3,7 +3,7 @@ import type { DecoratorFunction } from 'storybook/internal/types';
 import { addons } from 'storybook/preview-api';
 import { getAllEvents } from '@walkeros/web-source-browser';
 
-import { EVENTS } from './constants';
+import { ADDON_ID, EVENTS } from './constants';
 import { initializeWalker } from './walker';
 
 // Set up the channel listener globally, not per story
@@ -48,7 +48,7 @@ const getStoryRootElement = (): Element | null => {
 };
 
 // Function to inject highlighting CSS into story document
-const injectHighlightingCSS = () => {
+const injectHighlightingCSS = (prefix: string = 'data-elb') => {
   const storyDoc = getStoryDocument();
 
   // Remove existing styles
@@ -59,7 +59,16 @@ const injectHighlightingCSS = () => {
 
   highlightingStyleElement = storyDoc.createElement('style');
   highlightingStyleElement.id = 'walkeros-highlighting';
-  highlightingStyleElement.textContent = `
+  const css = generateHighlightCSS(prefix);
+  highlightingStyleElement.textContent = css;
+
+  storyDoc.head.appendChild(highlightingStyleElement);
+};
+
+// Generate dynamic CSS based on prefix
+const generateHighlightCSS = (prefix: string) => {
+  // Template CSS with placeholder selectors that we'll replace
+  const cssTemplate = `
     /* Highlight colors - original from website */
     :root {
       --highlight-globals: #4fc3f7cc;
@@ -73,19 +82,19 @@ const injectHighlightingCSS = () => {
       --highlight-separator: rgba(255, 255, 255, 0.05);
     }
 
-    .highlight-globals [data-elbglobals] {
+    .highlight-globals [${globalsSelector}] {
       box-shadow: 0 0 0 2px var(--highlight-globals) !important;
     }
 
-    .highlight-context [data-elbcontext] {
+    .highlight-context [${contextSelector}] {
       box-shadow: 0 0 0 2px var(--highlight-context) !important;
     }
 
-    .highlight-entity [data-elb] {
+    .highlight-entity [${baseSelector}] {
       box-shadow: 0 0 0 2px var(--highlight-entity) !important;
     }
 
-    .highlight-property [data-elbproperty] {
+    .highlight-property [${propertySelector}] {
       box-shadow: 0 0 0 2px var(--highlight-property) !important;
     }
 
@@ -175,7 +184,13 @@ const injectHighlightingCSS = () => {
     }
   `;
 
-  storyDoc.head.appendChild(highlightingStyleElement);
+  // Replace hardcoded selectors with dynamic ones
+  let dynamicCSS = cssTemplate;
+  if (prefix !== 'data-elb') {
+    dynamicCSS = dynamicCSS.replace(/data-elb/g, prefix);
+  }
+
+  return dynamicCSS;
 };
 
 // Function to enhance DOM with property attributes
@@ -252,7 +267,7 @@ channel.addListener(EVENTS.REQUEST, (config: WalkerOSAddon) => {
 // Global listener for highlighting events
 channel.addListener(EVENTS.HIGHLIGHT, (config: WalkerOSAddon) => {
   // Always inject CSS first
-  injectHighlightingCSS();
+  injectHighlightingCSS(config.prefix);
 
   // Then apply highlighting
   applyHighlighting(config.highlights);
@@ -266,7 +281,7 @@ export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
   const storyId = context.id;
   const hasStoryChanged = currentStoryId !== storyId;
   const globals = context.globals;
-  const autoRefresh = globals?.walkerOS?.autoRefresh;
+  const autoRefresh = globals?.[ADDON_ID]?.autoRefresh;
 
   if (hasStoryChanged) {
     currentStoryId = storyId;
@@ -277,17 +292,19 @@ export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
   // Initialize walker and inject CSS after story renders
   setTimeout(() => {
     // Initialize walkerOS for live event capture
-    initializeWalker().catch((err) => {
+    const prefix = globals?.[ADDON_ID]?.prefix || 'data-elb';
+    const autoRefresh = globals?.[ADDON_ID]?.autoRefresh;
+    initializeWalker({ prefix, autoRefresh }).catch((err) => {
       console.error('Walker initialization failed:', err);
     });
 
     // Inject highlighting CSS and enhance properties
-    injectHighlightingCSS();
-    enhanceProperties();
+    injectHighlightingCSS(prefix);
+    enhanceProperties(prefix);
 
     // Auto-run walker if story changed and auto-refresh is enabled
-    if (hasStoryChanged && autoRefresh && window.elb) {
-      window.elb('walker run');
+    if (hasStoryChanged && autoRefresh && window.__storybookElb) {
+      window.__storybookElb('walker run');
     }
   }, 200);
 

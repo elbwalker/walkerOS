@@ -6,8 +6,8 @@ import { EVENTS } from './constants';
 
 declare global {
   interface Window {
-    elb: WalkerOS.Elb;
-    walker: Collector.Instance;
+    __storybookElb: WalkerOS.Elb;
+    __storybookWalker: Collector.Instance;
   }
 }
 
@@ -54,9 +54,12 @@ function getIframeContext() {
   return { document, window };
 }
 
-export async function initializeWalker(): Promise<void> {
+export async function initializeWalker(config?: {
+  prefix?: string;
+  autoRefresh?: boolean;
+}): Promise<void> {
   // Skip initialization if already done
-  if (window.walker) return;
+  if (window.__storybookWalker) return;
 
   try {
     // Get iframe context for proper event capture
@@ -78,8 +81,8 @@ export async function initializeWalker(): Promise<void> {
             settings: {
               pageview: true,
               session: false, // Disable session for Storybook
-              elb: 'elb',
-              prefix: 'data-elb',
+              elb: '__storybookElb',
+              prefix: config?.prefix || 'data-elb',
               scope: iframeDoc.body || iframeDoc, // Set scope to iframe document
             },
           },
@@ -103,8 +106,8 @@ export async function initializeWalker(): Promise<void> {
     }
 
     // Set global window objects
-    window.walker = collector;
-    window.elb = elb;
+    window.__storybookWalker = collector;
+    window.__storybookElb = elb;
   } catch (error) {
     console.error('Failed to initialize walkerOS:', error);
   }

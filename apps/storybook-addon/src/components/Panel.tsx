@@ -32,46 +32,38 @@ interface PanelProps {
 export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
   const theme = useTheme();
   const api = useStorybookApi();
+  const { parameters } = api.getCurrentStoryData() || {};
 
-  const [globals, updateGlobals] = useGlobals();
-
-  const defaultConfig: WalkerOSAddon = {
+  const defaultConfig = {
     autoRefresh: true,
     prefix: 'data-elb',
-    highlights: {
-      context: false,
-      entity: false,
-      property: false,
-      action: false,
-    },
   };
+
   const config = {
     ...defaultConfig,
-    ...globals[ADDON_ID],
-    highlights: {
-      ...defaultConfig.highlights,
-      ...(globals[ADDON_ID]?.highlights || {}),
-    },
-  } as WalkerOSAddon;
+    ...parameters?.[ADDON_ID],
+  };
+
+  // Highlights are now local state, not persistent config
+  const [highlights, setHighlights] = useState({
+    context: false,
+    entity: false,
+    property: false,
+    action: false,
+  });
 
   const [events, setState] = useState<Walker.Events>([]);
   const [liveEvents, setLiveEvents] = useState<WalkerOS.Event[]>([]);
 
-  const updateConfig = (key: keyof WalkerOSAddon, value: unknown) => {
-    const newConfig = { ...config, [key]: value };
-    updateGlobals({ [ADDON_ID]: newConfig });
-  };
-
-  const toggleHighlight = (type: keyof WalkerOSAddon['highlights']) => {
+  const toggleHighlight = (type: keyof typeof highlights) => {
     const newHighlights = {
-      ...config.highlights,
-      [type]: !config.highlights?.[type],
+      ...highlights,
+      [type]: !highlights[type],
     };
-    const newConfig = { ...config, highlights: newHighlights };
-    updateGlobals({ [ADDON_ID]: newConfig });
+    setHighlights(newHighlights);
 
-    // Send highlighting update to preview
-    emit(EVENTS.HIGHLIGHT, newConfig);
+    // Send highlighting update to preview with current config + highlights
+    emit(EVENTS.HIGHLIGHT, { ...config, highlights: newHighlights });
   };
 
   // https://storybook.js.org/docs/react/addons/addons-api#usechannel
@@ -87,8 +79,8 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
   });
 
   const updateEvents = useCallback(() => {
-    emit(EVENTS.REQUEST, config);
-  }, [config, emit]);
+    emit(EVENTS.REQUEST, { ...config, highlights });
+  }, [config, highlights, emit]);
 
   // Initial auto-refresh on page load
   useEffect(() => {
@@ -156,7 +148,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
               >
                 <Button onClick={updateEvents}>Update events</Button>
                 <HighlightButtons
-                  config={config}
+                  highlights={highlights}
                   toggleHighlight={toggleHighlight}
                 />
               </div>
@@ -207,7 +199,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
                   </Button>
                 </div>
                 <HighlightButtons
-                  config={config}
+                  highlights={highlights}
                   toggleHighlight={toggleHighlight}
                 />
               </div>
@@ -254,27 +246,20 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
         <div id="config" title="Config">
           <Placeholder>
             <Fragment>
-              <Form.Field label="Auto-refresh">
-                <input
-                  type="checkbox"
-                  id="autoRefresh"
-                  checked={config.autoRefresh}
-                  onChange={(e) =>
-                    updateConfig('autoRefresh', e.target.checked)
-                  }
-                />
-              </Form.Field>
-              <Form.Field label="Prefix">
-                <Form.Input
-                  name="Prefix"
-                  value={config.prefix}
-                  placeholder={config.prefix}
-                  onChange={(e) =>
-                    updateConfig('prefix', (e.target as HTMLInputElement).value)
-                  }
-                  size="flex"
-                />
-              </Form.Field>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: theme.color.mediumdark,
+                  marginBottom: '8px',
+                }}
+              >
+                <strong>Configuration:</strong> AutoRefresh:{' '}
+                {config.autoRefresh ? 'ON' : 'OFF'}, Prefix: {config.prefix}
+                <br />
+                <em>
+                  (Configure via parameters in your .storybook/preview.tsx)
+                </em>
+              </div>
             </Fragment>
           </Placeholder>
         </div>
