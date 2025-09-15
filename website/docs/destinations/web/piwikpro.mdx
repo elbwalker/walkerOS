@@ -38,7 +38,10 @@ export const documentationPiwikPro = {
 
 [Piwik PRO](https://piwik.pro/) is a European, privacy-focused web analytics and
 marketing platform that helps businesses track website traffic and user
-behavior.
+behavior. The destination automatically sends events to Piwik Pro via `push`
+function. All you need to do is install the destination, and optionally map
+events to Piwik Pro's format. walkerOS takes care of loading the script and the
+function calls.
 
 ## Installation
 
@@ -122,11 +125,7 @@ For custom event mapping (`mapping.entity.action.settings`):
   ]}
 />
 
-## Mapping
-
-You are able to map your walkerOS events to match the respective requirements of
-each vendor. The `mapping` examples are using a
-live&nbsp;<Link to="#configuration">configuration</Link>.
+## Mapping examples
 
 :::tip
 

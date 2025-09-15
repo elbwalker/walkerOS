@@ -35,8 +35,10 @@ export const documentationPlausible = {
 />
 
 [Plausible Analytics](https://plausible.io/) is a simple, and privacy-friendly
-Google Analytics Alternative. The destination sends events to Plausible via the
-`plausible` function.
+Google Analytics Alternative. The destination automatically sends events to
+Plausible via the `plausible` function. All you need to do is install the
+destination, and optionally map events to Plausible's format. walkerOS takes
+care of loading the script and the function calls.
 
 ## Installation
 
@@ -80,7 +82,14 @@ elb('walker destination', destinationPlausible, {
   }`}
 />
 
-## Mapping
+## Mapping examples
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
 
 Send&nbsp;<Link to="https://plausible.io/docs/custom-event-goals#trigger-custom-events-manually-with-a-javascript-function">custom
 events</Link> manually using the JavaScript function
@@ -101,9 +110,9 @@ events</Link> manually using the JavaScript function
 
 ### Purchase
 
-Follow
-the&nbsp;<Link to="https://plausible.io/docs/ecommerce-revenue-tracking">E-commerce
-revenue tracking</Link> guide to setup the `purchase` event.
+Checkout&nbsp;<Link to="https://plausible.io/docs/ecommerce-revenue-tracking">Plausible's
+E-commerce revenue tracking</Link> guide to learn more about the setup within
+Plausible.
 
 <DestinationPush
   destination={documentationPlausible}
