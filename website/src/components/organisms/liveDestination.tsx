@@ -168,7 +168,7 @@ export const DestinationInit = <Settings = unknown, MappingType = unknown>({
       input={input}
       fn={mappingFn}
       labelInput="Settings"
-      labelOutput="Function Calls"
+      labelOutput="Result"
       showQuotes={false}
     />
   );
@@ -237,7 +237,7 @@ export const DestinationPush = <Settings = unknown, MappingType = unknown>({
       fn={mappingFn}
       labelInput="Event"
       labelConfig="Mapping"
-      labelOutput="Function Calls"
+      labelOutput="Result"
       showQuotes={false}
       {...liveCodeProps}
     />

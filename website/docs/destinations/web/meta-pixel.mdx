@@ -33,8 +33,12 @@ export const documentationMetaPixel = {
   npm="@walkeros/web-destination-meta"
 />
 
-Send events to Meta Pixel (formerly Facebook Pixel) to track visitor activity
-and conversions for Facebook and Instagram advertising campaigns.
+[Meta Pixel (formerly Facebook Pixel)](https://developers.facebook.com/docs/meta-pixel/)
+tracks visitor activity and conversions for Facebook and Instagram advertising
+campaigns. The destination automatically sends events to Meta Pixel via `fbq`
+function. All you need to do is install the destination, and optionally map
+events to Meta's format. walkerOS takes care of loading the script and the
+function calls.
 
 ## Installation
 
@@ -94,7 +98,17 @@ const { collector, elb } = await createCollector({
   }}
 />
 
-## Mapping
+## Mapping examples
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+Learn more aboot
+[Meta Pixel's Standard-Events.](https://developers.facebook.com/docs/meta-pixel/reference#standard-events)
 
 ### ViewContent
 
