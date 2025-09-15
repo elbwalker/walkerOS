@@ -243,26 +243,6 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
             )}
           </Placeholder>
         </div>
-        <div id="config" title="Config">
-          <Placeholder>
-            <Fragment>
-              <div
-                style={{
-                  fontSize: '12px',
-                  color: theme.color.mediumdark,
-                  marginBottom: '8px',
-                }}
-              >
-                <strong>Configuration:</strong> AutoRefresh:{' '}
-                {config.autoRefresh ? 'ON' : 'OFF'}, Prefix: {config.prefix}
-                <br />
-                <em>
-                  (Configure via parameters in your .storybook/preview.tsx)
-                </em>
-              </div>
-            </Fragment>
-          </Placeholder>
-        </div>
       </TabsState>
     </AddonPanel>
   );
