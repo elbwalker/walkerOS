@@ -283,8 +283,8 @@ export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
   // Check if story changed and auto-run is enabled
   const storyId = context.id;
   const hasStoryChanged = currentStoryId !== storyId;
-  const globals = context.globals;
-  const autoRefresh = globals?.[ADDON_ID]?.autoRefresh;
+  const { parameters } = context;
+  const autoRefresh = parameters?.[ADDON_ID]?.autoRefresh;
 
   if (hasStoryChanged) {
     currentStoryId = storyId;
@@ -295,8 +295,8 @@ export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
   // Initialize walker and inject CSS after story renders
   setTimeout(() => {
     // Initialize walkerOS for live event capture
-    const prefix = globals?.[ADDON_ID]?.prefix || 'data-elb';
-    const autoRefresh = globals?.[ADDON_ID]?.autoRefresh;
+    const prefix = parameters?.[ADDON_ID]?.prefix || 'data-elb';
+    const autoRefresh = parameters?.[ADDON_ID]?.autoRefresh;
     initializeWalker({ prefix, autoRefresh }).catch((err) => {
       console.error('Walker initialization failed:', err);
     });
