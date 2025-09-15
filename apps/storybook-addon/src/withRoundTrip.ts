@@ -219,7 +219,7 @@ const enhanceProperties = (prefix: string = 'data-elb') => {
 
     // Mark elements with property attributes
     if (hasProperties) {
-      el.setAttribute('data-elbproperty', '');
+      el.setAttribute(`${prefix}property`, '');
     }
   });
 };
