@@ -67,7 +67,13 @@ const injectHighlightingCSS = (prefix: string = 'data-elb') => {
 
 // Generate dynamic CSS based on prefix
 const generateHighlightCSS = (prefix: string) => {
-  // Template CSS with placeholder selectors that we'll replace
+  // Define selectors based on prefix
+  const globalsSelector = `${prefix}globals`;
+  const contextSelector = `${prefix}context`;
+  const baseSelector = prefix;
+  const propertySelector = `${prefix}property`;
+
+  // Template CSS with actual selectors
   const cssTemplate = `
     /* Highlight colors - original from website */
     :root {
@@ -98,42 +104,42 @@ const generateHighlightCSS = (prefix: string) => {
       box-shadow: 0 0 0 2px var(--highlight-property) !important;
     }
 
-    .highlight-action [data-elbaction] {
+    .highlight-action [${prefix}action] {
       box-shadow: 0 0 0 2px var(--highlight-action) !important;
     }
 
     /* Combined highlights with layered solid borders */
-    .highlight-entity.highlight-action [data-elb][data-elbaction] {
+    .highlight-entity.highlight-action [${baseSelector}][${prefix}action] {
       box-shadow:
         0 0 0 2px var(--highlight-action),
         0 0 0 4px var(--highlight-entity) !important;
     }
 
-    .highlight-entity.highlight-context [data-elb][data-elbcontext] {
+    .highlight-entity.highlight-context [${baseSelector}][${contextSelector}] {
       box-shadow:
         0 0 0 2px var(--highlight-entity),
         0 0 0 4px var(--highlight-context) !important;
     }
 
-    .highlight-entity.highlight-property [data-elb][data-elbproperty] {
+    .highlight-entity.highlight-property [${baseSelector}][${propertySelector}] {
       box-shadow:
         0 0 0 2px var(--highlight-entity),
         0 0 0 4px var(--highlight-property) !important;
     }
 
-    .highlight-action.highlight-context [data-elbaction][data-elbcontext] {
+    .highlight-action.highlight-context [${prefix}action][${contextSelector}] {
       box-shadow:
         0 0 0 2px var(--highlight-action),
         0 0 0 4px var(--highlight-context) !important;
     }
 
-    .highlight-context.highlight-property [data-elbcontext][data-elbproperty] {
+    .highlight-context.highlight-property [${contextSelector}][${propertySelector}] {
       box-shadow:
         0 0 0 2px var(--highlight-context),
         0 0 0 4px var(--highlight-property) !important;
     }
 
-    .highlight-action.highlight-property [data-elbaction][data-elbproperty] {
+    .highlight-action.highlight-property [${prefix}action][${propertySelector}] {
       box-shadow:
         0 0 0 2px var(--highlight-action),
         0 0 0 4px var(--highlight-property) !important;
@@ -141,7 +147,7 @@ const generateHighlightCSS = (prefix: string) => {
 
     /* Triple combinations with distinct layers */
     .highlight-entity.highlight-action.highlight-context
-      [data-elb][data-elbaction][data-elbcontext] {
+      [${baseSelector}][${prefix}action][${contextSelector}] {
       box-shadow:
         0 0 0 2px var(--highlight-action),
         0 0 0 4px var(--highlight-entity),
@@ -150,7 +156,7 @@ const generateHighlightCSS = (prefix: string) => {
 
     /* Triple combinations with property */
     .highlight-entity.highlight-action.highlight-property
-      [data-elb][data-elbaction][data-elbproperty] {
+      [${baseSelector}][${prefix}action][${propertySelector}] {
       box-shadow:
         0 0 0 2px var(--highlight-action),
         0 0 0 4px var(--highlight-entity),
@@ -158,7 +164,7 @@ const generateHighlightCSS = (prefix: string) => {
     }
 
     .highlight-entity.highlight-context.highlight-property
-      [data-elb][data-elbcontext][data-elbproperty] {
+      [${baseSelector}][${contextSelector}][${propertySelector}] {
       box-shadow:
         0 0 0 2px var(--highlight-context),
         0 0 0 4px var(--highlight-entity),
@@ -166,7 +172,7 @@ const generateHighlightCSS = (prefix: string) => {
     }
 
     .highlight-action.highlight-context.highlight-property
-      [data-elbaction][data-elbcontext][data-elbproperty] {
+      [${prefix}action][${contextSelector}][${propertySelector}] {
       box-shadow:
         0 0 0 2px var(--highlight-action),
         0 0 0 4px var(--highlight-context),
@@ -175,7 +181,7 @@ const generateHighlightCSS = (prefix: string) => {
 
     /* Quadruple combination */
     .highlight-entity.highlight-action.highlight-context.highlight-property
-      [data-elb][data-elbaction][data-elbcontext][data-elbproperty] {
+      [${baseSelector}][${prefix}action][${contextSelector}][${propertySelector}] {
       box-shadow:
         0 0 0 2px var(--highlight-action),
         0 0 0 4px var(--highlight-entity),
@@ -184,13 +190,7 @@ const generateHighlightCSS = (prefix: string) => {
     }
   `;
 
-  // Replace hardcoded selectors with dynamic ones
-  let dynamicCSS = cssTemplate;
-  if (prefix !== 'data-elb') {
-    dynamicCSS = dynamicCSS.replace(/data-elb/g, prefix);
-  }
-
-  return dynamicCSS;
+  return cssTemplate;
 };
 
 // Function to enhance DOM with property attributes
@@ -225,7 +225,10 @@ const enhanceProperties = (prefix: string = 'data-elb') => {
 };
 
 // Function to apply highlighting to story root
-const applyHighlighting = (highlights: WalkerOSAddon['highlights']) => {
+const applyHighlighting = (
+  highlights: WalkerOSAddon['highlights'],
+  prefix: string = 'data-elb',
+) => {
   const storyRoot = getStoryRootElement();
   if (!storyRoot) return;
 
@@ -238,7 +241,7 @@ const applyHighlighting = (highlights: WalkerOSAddon['highlights']) => {
   if (!highlights) return;
 
   // Re-enhance properties FIRST to ensure they're marked
-  enhanceProperties();
+  enhanceProperties(prefix);
 
   // Then add specific highlighting classes
   if (highlights.context) storyRoot.classList.add('highlight-context');
@@ -270,7 +273,7 @@ channel.addListener(EVENTS.HIGHLIGHT, (config: WalkerOSAddon) => {
   injectHighlightingCSS(config.prefix);
 
   // Then apply highlighting
-  applyHighlighting(config.highlights);
+  applyHighlighting(config.highlights, config.prefix);
 });
 
 export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
