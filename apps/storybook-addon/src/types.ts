@@ -12,6 +12,20 @@ export interface WalkerOSAddon {
   };
 }
 
+export interface AttributeNode {
+  element: string;
+  path: string;
+  htmlMarkup?: string; // Store the HTML string instead of DOM reference
+  attributes: {
+    entity?: string;
+    action?: string;
+    context?: WalkerOS.Properties;
+    globals?: WalkerOS.Properties;
+    properties?: WalkerOS.Properties;
+  };
+  children: AttributeNode[];
+}
+
 // walkerOS tracking interface for clean component APIs
 export interface DataElb {
   entity?: string;

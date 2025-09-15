@@ -23,7 +23,13 @@ import { getConfig } from './config';
 export * as SourceBrowser from './types';
 
 // Export walker utility functions
-export { getAllEvents, getEvents, getGlobals } from './walker';
+export {
+  getAllEvents,
+  getEvents,
+  getGlobals,
+  getElbAttributeName,
+  getElbValues,
+} from './walker';
 
 // Export tagger functionality
 export { createTagger } from './tagger';

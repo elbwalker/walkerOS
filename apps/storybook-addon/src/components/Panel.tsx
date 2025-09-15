@@ -1,4 +1,4 @@
-import type { WalkerOSAddon } from '../types';
+import type { WalkerOSAddon, AttributeNode } from '../types';
 import type { Walker } from '@walkeros/web-core';
 import type { WalkerOS } from '@walkeros/core';
 import React, { Fragment, memo, useCallback, useEffect, useState } from 'react';
@@ -22,6 +22,7 @@ import {
 import { ADDON_ID, EVENTS } from '../constants';
 import { List } from './List';
 import { HighlightButtons } from './HighlightButtons';
+import { AttributeTreeView } from './AttributeTreeView';
 import { formatEventTitle } from '../utils/formatEventTitle';
 
 interface PanelProps {
@@ -54,6 +55,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
 
   const [events, setState] = useState<Walker.Events>([]);
   const [liveEvents, setLiveEvents] = useState<WalkerOS.Event[]>([]);
+  const [attributeTree, setAttributeTree] = useState<AttributeNode[]>([]);
 
   const toggleHighlight = (type: keyof typeof highlights) => {
     const newHighlights = {
@@ -76,16 +78,24 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
         [{ ...event, timestamp: Date.now() }].concat(prev).slice(0, 50),
       );
     },
+    [EVENTS.ATTRIBUTES_RESULT]: (tree: AttributeNode[]) => {
+      setAttributeTree(tree);
+    },
   });
 
   const updateEvents = useCallback(() => {
     emit(EVENTS.REQUEST, { ...config, highlights });
   }, [config, highlights, emit]);
 
+  const updateAttributes = useCallback(() => {
+    emit(EVENTS.ATTRIBUTES_REQUEST, { ...config, highlights });
+  }, [config, highlights, emit]);
+
   // Initial auto-refresh on page load
   useEffect(() => {
     if (config.autoRefresh) {
       updateEvents();
+      updateAttributes();
     }
   }, []); // Only run once on mount
 
@@ -101,11 +111,17 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
       STORY_ARGS_UPDATED,
     ];
 
+    // Combined update function for events and attributes
+    const updateAll = () => {
+      updateEvents();
+      updateAttributes();
+    };
+
     // Listen for story navigation and control changes
-    storyEvents.forEach((event) => api.on(event, updateEvents));
+    storyEvents.forEach((event) => api.on(event, updateAll));
     // Cleanup listeners on unmount
-    return () => storyEvents.forEach((event) => api.off(event, updateEvents));
-  }, [api, updateEvents, config.autoRefresh]);
+    return () => storyEvents.forEach((event) => api.off(event, updateAll));
+  }, [api, updateEvents, updateAttributes, config.autoRefresh]);
 
   const getEventTitle = (events: Walker.Events) => {
     const form = events.length == 1 ? 'Event' : 'Events';
@@ -123,6 +139,56 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
 
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString();
+  };
+
+  const getAttributeTitle = () => {
+    // Count all walker attributes (badges) across all nodes
+    const countAttributes = (nodes: AttributeNode[]): number => {
+      return nodes.reduce((total, node) => {
+        let nodeAttributeCount = 0;
+
+        // Count entity, action, context, globals
+        if (node.attributes.entity) nodeAttributeCount++;
+        if (node.attributes.action) nodeAttributeCount++;
+        if (
+          node.attributes.context &&
+          Object.keys(node.attributes.context).length > 0
+        ) {
+          nodeAttributeCount++; // Count context as 1 attribute
+        }
+        if (
+          node.attributes.globals &&
+          Object.keys(node.attributes.globals).length > 0
+        ) {
+          nodeAttributeCount++; // Count globals as 1 attribute
+        }
+
+        // Count data properties (ignore custom properties like data-customproperty)
+        if (node.attributes.properties) {
+          const validProperties = Object.entries(
+            node.attributes.properties,
+          ).filter(([key, value]) => {
+            // Skip empty objects and null/undefined values
+            if (
+              typeof value === 'object' &&
+              value !== null &&
+              Object.keys(value).length === 0
+            )
+              return false;
+            return value !== null && value !== undefined && value !== '';
+          });
+          nodeAttributeCount += validProperties.length;
+        }
+
+        return (
+          total + nodeAttributeCount + countAttributes(node.children || [])
+        );
+      }, 0);
+    };
+
+    const attributeCount = countAttributes(attributeTree);
+    const form = attributeCount === 1 ? 'Attribute' : 'Attributes';
+    return `${attributeCount} ${form}`;
   };
 
   return (
@@ -241,6 +307,31 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
                 </small>
               </p>
             )}
+          </Placeholder>
+        </div>
+        <div id="attributes" title={getAttributeTitle()}>
+          <Placeholder>
+            <Fragment>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '12px',
+                  padding: '8px',
+                  backgroundColor: theme.background.app,
+                  borderRadius: '4px',
+                  border: `1px solid ${theme.color.border}`,
+                }}
+              >
+                <Button onClick={updateAttributes}>Update attributes</Button>
+                <HighlightButtons
+                  highlights={highlights}
+                  toggleHighlight={toggleHighlight}
+                />
+              </div>
+            </Fragment>
+            <AttributeTreeView tree={attributeTree} />
           </Placeholder>
         </div>
       </TabsState>
