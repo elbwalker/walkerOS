@@ -1,5 +1,8 @@
-import type { WalkerOSAddon, AttributeNode } from '../types';
-import type { Walker } from '@walkeros/web-core';
+import type {
+  WalkerOSAddon,
+  AttributeNode,
+  WalkerEventWithGlobals,
+} from '../types';
 import type { WalkerOS } from '@walkeros/core';
 import React, { Fragment, memo, useCallback, useEffect, useState } from 'react';
 import {
@@ -37,7 +40,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
 
   const defaultConfig = {
     autoRefresh: true,
-    prefix: 'data-elb',
+    prefix: 'data-custom',
   };
 
   const config = {
@@ -51,9 +54,10 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
     entity: false,
     property: false,
     action: false,
+    globals: false,
   });
 
-  const [events, setState] = useState<Walker.Events>([]);
+  const [events, setState] = useState<WalkerEventWithGlobals[]>([]);
   const [liveEvents, setLiveEvents] = useState<WalkerOS.Event[]>([]);
   const [attributeTree, setAttributeTree] = useState<AttributeNode[]>([]);
 
@@ -70,7 +74,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
 
   // https://storybook.js.org/docs/react/addons/addons-api#usechannel
   const emit = useChannel({
-    [EVENTS.RESULT]: (newEvents: Walker.Events) => {
+    [EVENTS.RESULT]: (newEvents: WalkerEventWithGlobals[]) => {
       setState(newEvents);
     },
     [EVENTS.LIVE_EVENT]: (event: WalkerOS.Event) => {
@@ -123,7 +127,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
     return () => storyEvents.forEach((event) => api.off(event, updateAll));
   }, [api, updateEvents, updateAttributes, config.autoRefresh]);
 
-  const getEventTitle = (events: Walker.Events) => {
+  const getEventTitle = (events: WalkerEventWithGlobals[]) => {
     const form = events.length == 1 ? 'Event' : 'Events';
     return `${events.length} ${form}`;
   };

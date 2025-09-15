@@ -9,6 +9,7 @@ interface HighlightButtonsProps {
     entity: boolean;
     property: boolean;
     action: boolean;
+    globals: boolean;
   };
   toggleHighlight: (type: keyof HighlightButtonsProps['highlights']) => void;
 }
@@ -36,6 +37,20 @@ export const HighlightButtons: React.FC<HighlightButtonsProps> = ({
       >
         Highlight:
       </span>
+      <Button
+        size="small"
+        variant={highlights.globals ? 'solid' : 'outline'}
+        onClick={() => toggleHighlight('globals')}
+        style={{
+          fontSize: '11px',
+          padding: '4px 8px',
+          backgroundColor: highlights.globals ? '#4fc3f7cc' : 'transparent',
+          color: highlights.globals ? '#fff' : theme.color.mediumdark,
+          border: `1px solid ${highlights.globals ? '#4fc3f7' : theme.color.border}`,
+        }}
+      >
+        Globals
+      </Button>
       <Button
         size="small"
         variant={highlights.context ? 'solid' : 'outline'}

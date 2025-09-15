@@ -1,10 +1,13 @@
 import type { WalkerOS } from '@walkeros/core';
+import type { Walker } from '@walkeros/web-core';
 
 /**
  * Creates a formatted data preview from a walkerOS event
  * Shows data and context properties in JSON-like syntax
  */
-export function createEventDataPreview(event: WalkerOS.Event): string {
+export function createEventDataPreview(
+  event: WalkerOS.Event | Walker.Event,
+): string {
   const sections: string[] = [];
 
   // Helper to format value

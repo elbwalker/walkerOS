@@ -1,5 +1,6 @@
 // Import WalkerOS Property types
 import type { WalkerOS } from '@walkeros/core';
+import type { Walker } from '@walkeros/web-core';
 
 export interface WalkerOSAddon {
   autoRefresh: boolean;
@@ -9,6 +10,7 @@ export interface WalkerOSAddon {
     entity: boolean;
     property: boolean;
     action: boolean;
+    globals: boolean;
   };
 }
 
@@ -24,6 +26,11 @@ export interface AttributeNode {
     properties?: WalkerOS.Properties;
   };
   children: AttributeNode[];
+}
+
+// Extended Walker.Event with globals support for event display
+export interface WalkerEventWithGlobals extends Walker.Event {
+  globals?: WalkerOS.Properties;
 }
 
 // walkerOS tracking interface for clean component APIs

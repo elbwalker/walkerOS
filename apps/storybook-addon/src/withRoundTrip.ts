@@ -1,7 +1,7 @@
 import type { WalkerOSAddon } from './types';
 import type { DecoratorFunction } from 'storybook/internal/types';
 import { addons } from 'storybook/preview-api';
-import { getAllEvents } from '@walkeros/web-source-browser';
+import { getAllEvents, getGlobals } from '@walkeros/web-source-browser';
 
 import { ADDON_ID, EVENTS } from './constants';
 import { initializeWalker } from './walker';
@@ -11,7 +11,6 @@ import { setupHighlighting } from './utils/highlightingUtils';
 
 // Set up the channel listener globally, not per story
 const channel = addons.getChannel();
-let currentCanvasElement: Element | null = null;
 let currentStoryId: string | null = null;
 
 // Global listener for the request events
@@ -23,12 +22,26 @@ channel.addListener(EVENTS.REQUEST, (config: WalkerOSAddon) => {
   }
 
   // Enhance DOM with property attributes
-  enhanceProperties(storyRoot, config.prefix || 'data-elb');
+  enhanceProperties(storyRoot, config.prefix || 'data-custom');
 
   const events = getAllEvents(storyRoot as Element, config.prefix);
 
+  // Collect globals from data-customglobals attributes
+  const globals = getGlobals(
+    config.prefix || 'data-custom',
+    storyRoot as Element,
+  );
+
+  // Add globals to each event if any globals exist
+  const eventsWithGlobals = events.map((event) => {
+    if (Object.keys(globals).length > 0) {
+      return { ...event, globals };
+    }
+    return event;
+  });
+
   // Send the result back to the manager
-  channel.emit(EVENTS.RESULT, events);
+  channel.emit(EVENTS.RESULT, eventsWithGlobals);
 });
 
 // Global listener for highlighting events
@@ -47,7 +60,7 @@ channel.addListener(EVENTS.ATTRIBUTES_REQUEST, (config: WalkerOSAddon) => {
   // Build the attribute tree
   const attributeTree = buildAttributeTree(
     storyRoot as Element,
-    config.prefix || 'data-elb',
+    config.prefix || 'data-custom',
   );
 
   // Send the result back to the manager
@@ -55,9 +68,6 @@ channel.addListener(EVENTS.ATTRIBUTES_REQUEST, (config: WalkerOSAddon) => {
 });
 
 export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
-  // Update the current canvas element when a story renders
-  currentCanvasElement = context.canvasElement as Element;
-
   // Check if story changed and auto-run is enabled
   const storyId = context.id;
   const hasStoryChanged = currentStoryId !== storyId;
@@ -66,6 +76,7 @@ export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
 
   if (hasStoryChanged) {
     currentStoryId = storyId;
+    console.log('next page');
   }
 
   const result = storyFn();
@@ -73,8 +84,7 @@ export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
   // Initialize walker and inject CSS after story renders
   setTimeout(() => {
     // Initialize walkerOS for live event capture
-    const prefix = parameters?.[ADDON_ID]?.prefix || 'data-elb';
-    const autoRefresh = parameters?.[ADDON_ID]?.autoRefresh;
+    const prefix = parameters?.[ADDON_ID]?.prefix || 'data-custom';
     initializeWalker({ prefix, autoRefresh }).catch((err) => {
       console.error('Walker initialization failed:', err);
     });

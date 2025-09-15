@@ -6,7 +6,7 @@ import type {
   BrowserPushContext,
 } from './types/elb';
 import type { Context } from './types';
-import { getEntities } from './walker';
+import { getEntities, getGlobals } from './walker';
 
 // Initialize timing for performance measurements
 const startTime = performance.now();
@@ -31,10 +31,19 @@ export function translateToCoreCollector(
     return result;
   }
 
-  // Handle event objects - add source if missing
+  // Handle event objects - add source and globals if missing
   if (isObject(eventOrCommand)) {
     const event = eventOrCommand;
     if (!event.source) event.source = getBrowserSource();
+
+    // Add globals if not already present
+    if (!event.globals) {
+      event.globals = getGlobals(
+        settings.prefix || 'data-custom',
+        settings.scope || document,
+      );
+    }
+
     return elb(event);
   }
 
@@ -80,11 +89,18 @@ export function translateToCoreCollector(
     eventData.id = eventData.id || window.location.pathname;
   }
 
+  // Collect globals from the DOM scope
+  const eventGlobals = getGlobals(
+    settings.prefix || 'data-custom',
+    settings.scope || document,
+  );
+
   // Build unified event from various elb usage patterns
   const event: WalkerOS.DeepPartialEvent = {
     name: String(eventOrCommand || ''),
     data: eventData,
     context: eventContext,
+    globals: eventGlobals,
     nested,
     custom,
     trigger: isString(options) ? options : '',

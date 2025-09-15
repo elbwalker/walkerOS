@@ -82,7 +82,7 @@ export async function initializeWalker(config?: {
               pageview: true,
               session: false, // Disable session for Storybook
               elb: '__storybookElb',
-              prefix: config?.prefix || 'data-elb',
+              prefix: config?.prefix || 'data-custom',
               scope: iframeDoc.body || iframeDoc, // Set scope to iframe document
             },
           },

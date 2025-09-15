@@ -11,7 +11,7 @@ import { injectHighlightingCSS } from './cssUtils';
 // Function to apply highlighting to story root
 export const applyHighlighting = (
   highlights: WalkerOSAddon['highlights'],
-  prefix: string = 'data-elb',
+  prefix: string = 'data-custom',
 ): void => {
   const storyRoot = getStoryRootElement();
   if (!storyRoot) return;
@@ -21,6 +21,7 @@ export const applyHighlighting = (
   storyRoot.classList.remove('highlight-entity');
   storyRoot.classList.remove('highlight-property');
   storyRoot.classList.remove('highlight-action');
+  storyRoot.classList.remove('highlight-globals');
 
   if (!highlights) return;
 
@@ -32,12 +33,13 @@ export const applyHighlighting = (
   if (highlights.entity) storyRoot.classList.add('highlight-entity');
   if (highlights.property) storyRoot.classList.add('highlight-property');
   if (highlights.action) storyRoot.classList.add('highlight-action');
+  if (highlights.globals) storyRoot.classList.add('highlight-globals');
 };
 
 // Combined function to inject CSS and apply highlighting
 export const setupHighlighting = (
   highlights: WalkerOSAddon['highlights'],
-  prefix: string = 'data-elb',
+  prefix: string = 'data-custom',
 ): void => {
   const storyDoc = getStoryDocument();
 

@@ -38,7 +38,7 @@ const generateElementHTML = (element: Element): string => {
 // Build attribute tree structure
 export const buildAttributeTree = (
   scope: Element,
-  prefix: string = 'data-elb',
+  prefix: string = 'data-custom',
 ): AttributeNode[] => {
   const tree: AttributeNode[] = [];
   const nodeMap = new Map<Element, AttributeNode>();

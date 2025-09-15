@@ -80,6 +80,80 @@ export const generateHighlightCSS = (prefix: string): string => {
         0 0 0 4px var(--highlight-property) !important;
     }
 
+    /* Globals combinations */
+    .highlight-globals.highlight-entity [${globalsSelector}][${baseSelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-entity) !important;
+    }
+
+    .highlight-globals.highlight-action [${globalsSelector}][${prefix}action] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-action) !important;
+    }
+
+    .highlight-globals.highlight-context [${globalsSelector}][${contextSelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-context) !important;
+    }
+
+    .highlight-globals.highlight-property [${globalsSelector}][${propertySelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-property) !important;
+    }
+
+    /* Triple combinations with globals */
+    .highlight-globals.highlight-entity.highlight-action
+      [${globalsSelector}][${baseSelector}][${prefix}action] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-entity),
+        0 0 0 6px var(--highlight-action) !important;
+    }
+
+    .highlight-globals.highlight-entity.highlight-context
+      [${globalsSelector}][${baseSelector}][${contextSelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-entity),
+        0 0 0 6px var(--highlight-context) !important;
+    }
+
+    .highlight-globals.highlight-entity.highlight-property
+      [${globalsSelector}][${baseSelector}][${propertySelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-entity),
+        0 0 0 6px var(--highlight-property) !important;
+    }
+
+    .highlight-globals.highlight-action.highlight-context
+      [${globalsSelector}][${prefix}action][${contextSelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-action),
+        0 0 0 6px var(--highlight-context) !important;
+    }
+
+    .highlight-globals.highlight-action.highlight-property
+      [${globalsSelector}][${prefix}action][${propertySelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-action),
+        0 0 0 6px var(--highlight-property) !important;
+    }
+
+    .highlight-globals.highlight-context.highlight-property
+      [${globalsSelector}][${contextSelector}][${propertySelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-context),
+        0 0 0 6px var(--highlight-property) !important;
+    }
+
     /* Triple combinations with distinct layers */
     .highlight-entity.highlight-action.highlight-context
       [${baseSelector}][${prefix}action][${contextSelector}] {
@@ -114,6 +188,43 @@ export const generateHighlightCSS = (prefix: string): string => {
         0 0 0 6px var(--highlight-property) !important;
     }
 
+    /* Quadruple combinations with globals */
+    .highlight-globals.highlight-entity.highlight-action.highlight-context
+      [${globalsSelector}][${baseSelector}][${prefix}action][${contextSelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-entity),
+        0 0 0 6px var(--highlight-action),
+        0 0 0 8px var(--highlight-context) !important;
+    }
+
+    .highlight-globals.highlight-entity.highlight-action.highlight-property
+      [${globalsSelector}][${baseSelector}][${prefix}action][${propertySelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-entity),
+        0 0 0 6px var(--highlight-action),
+        0 0 0 8px var(--highlight-property) !important;
+    }
+
+    .highlight-globals.highlight-entity.highlight-context.highlight-property
+      [${globalsSelector}][${baseSelector}][${contextSelector}][${propertySelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-entity),
+        0 0 0 6px var(--highlight-context),
+        0 0 0 8px var(--highlight-property) !important;
+    }
+
+    .highlight-globals.highlight-action.highlight-context.highlight-property
+      [${globalsSelector}][${prefix}action][${contextSelector}][${propertySelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-action),
+        0 0 0 6px var(--highlight-context),
+        0 0 0 8px var(--highlight-property) !important;
+    }
+
     /* Quadruple combination */
     .highlight-entity.highlight-action.highlight-context.highlight-property
       [${baseSelector}][${prefix}action][${contextSelector}][${propertySelector}] {
@@ -123,6 +234,17 @@ export const generateHighlightCSS = (prefix: string): string => {
         0 0 0 6px var(--highlight-context),
         0 0 0 8px var(--highlight-property) !important;
     }
+
+    /* Quintuple combination with all attributes */
+    .highlight-globals.highlight-entity.highlight-action.highlight-context.highlight-property
+      [${globalsSelector}][${baseSelector}][${prefix}action][${contextSelector}][${propertySelector}] {
+      box-shadow:
+        0 0 0 2px var(--highlight-globals),
+        0 0 0 4px var(--highlight-entity),
+        0 0 0 6px var(--highlight-action),
+        0 0 0 8px var(--highlight-context),
+        0 0 0 10px var(--highlight-property) !important;
+    }
   `;
 
   return cssTemplate;
@@ -131,7 +253,7 @@ export const generateHighlightCSS = (prefix: string): string => {
 // Function to inject highlighting CSS into story document
 export const injectHighlightingCSS = (
   storyDoc: Document,
-  prefix: string = 'data-elb',
+  prefix: string = 'data-custom',
 ): void => {
   // Remove existing styles
   const existingStyle = storyDoc.querySelector('#walkeros-highlighting');
