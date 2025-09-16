@@ -1,0 +1,18 @@
+{
+  "packages": [
+    {
+      "name": "dayjs",
+      "version": "1.11.10"
+    }
+  ],
+  "customCode": "export function getCurrentTime() { return dayjs.default().format('YYYY-MM-DD HH:mm:ss'); }",
+  "build": {
+    "platform": "node",
+    "format": "cjs",
+    "target": "node18"
+  },
+  "output": {
+    "filename": "node-utils.js",
+    "dir": "./dist"
+  }
+}

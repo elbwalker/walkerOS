@@ -1,0 +1,24 @@
+{
+  "packages": [
+    {
+      "name": "lodash-es",
+      "version": "4.17.21"
+    },
+    {
+      "name": "dayjs",
+      "version": "1.11.10"
+    }
+  ],
+  "customCode": "export function processData(data) { return lodash_es.map(data, item => ({ ...item, timestamp: dayjs.default().format('YYYY-MM-DD'), processed: true })); }",
+  "build": {
+    "platform": "browser",
+    "format": "esm",
+    "target": "es2020",
+    "minify": true,
+    "sourcemap": true
+  },
+  "output": {
+    "filename": "advanced-bundle.js",
+    "dir": "./dist"
+  }
+}

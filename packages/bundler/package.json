@@ -24,7 +24,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsup",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "jest --colors",
@@ -40,8 +40,9 @@
     "chalk": "^5.3.0"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0",
+    "@walkeros/jest": "*",
+    "@walkeros/tsconfig": "*",
+    "@walkeros/tsup": "*",
     "@types/fs-extra": "^11.0.0",
     "@types/pacote": "^11.1.5",
     "tsx": "^4.0.0"

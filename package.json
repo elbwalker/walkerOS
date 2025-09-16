@@ -6,6 +6,7 @@
     "packages/core",
     "packages/collector",
     "packages/generator",
+    "packages/bundler",
     "packages/server/core",
     "packages/server/destinations/*",
     "packages/web/core",
