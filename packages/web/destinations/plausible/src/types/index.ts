@@ -1,12 +1,7 @@
-import type { Mapping as WalkerOSMapping, WalkerOS, Elb } from '@walkeros/core';
+import type { Mapping as WalkerOSMapping, WalkerOS } from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
 
 declare global {
-  // Augment the global WalkerOS namespace with destination-specific types
-  namespace WalkerOS {
-    interface Elb extends Elb.RegisterDestination<Destination, Config> {}
-  }
-
   interface Window {
     plausible?: Plausible & { q?: IArguments[] };
   }

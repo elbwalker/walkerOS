@@ -63,12 +63,3 @@ export interface PushResult extends Destination.Result {
 
 // Simplified Layer type for core collector
 export type Layer = Array<IArguments | WalkerOS.DeepPartialEvent | unknown[]>;
-
-// Helper type for destinations to register themselves
-export interface RegisterDestination<Destination, Config> {
-  (
-    event: 'walker destination',
-    destination: Destination,
-    config?: Config,
-  ): Promise<PushResult>;
-}

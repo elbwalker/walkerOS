@@ -38,10 +38,7 @@ export function translateToCoreCollector(
 
     // Add globals if not already present
     if (!event.globals) {
-      event.globals = getGlobals(
-        settings.prefix || 'data-custom',
-        settings.scope || document,
-      );
+      event.globals = getGlobals(settings.prefix, settings.scope || document);
     }
 
     return elb(event);
@@ -90,10 +87,7 @@ export function translateToCoreCollector(
   }
 
   // Collect globals from the DOM scope
-  const eventGlobals = getGlobals(
-    settings.prefix || 'data-custom',
-    settings.scope || document,
-  );
+  const eventGlobals = getGlobals(settings.prefix, settings.scope);
 
   // Build unified event from various elb usage patterns
   const event: WalkerOS.DeepPartialEvent = {

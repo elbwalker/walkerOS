@@ -1,16 +1,9 @@
 import type { DestinationServer } from '@walkeros/server-core';
-import type { Mapping as WalkerOSMapping, Elb } from '@walkeros/core';
+import type { Mapping as WalkerOSMapping } from '@walkeros/core';
 import type {
   FirehoseClient,
   FirehoseClientConfig,
 } from '@aws-sdk/client-firehose';
-
-declare global {
-  // Augment the global WalkerOS namespace with destination-specific types
-  namespace WalkerOS {
-    interface Elb extends Elb.RegisterDestination<Destination, Config> {}
-  }
-}
 
 export interface Destination
   extends DestinationServer.Destination<Settings, Mapping> {
