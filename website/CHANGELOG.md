@@ -1,5 +1,20 @@
 # @walkeros/website
 
+## 0.1.2
+
+### Patch Changes
+
+- a0ced16: env
+- Updated dependencies [a0ced16]
+  - @walkeros/web-destination-plausible@0.1.2
+  - @walkeros/web-destination-piwikpro@0.1.2
+  - @walkeros/web-destination-gtag@0.1.2
+  - @walkeros/web-destination-meta@0.1.2
+  - @walkeros/web-destination-api@0.1.2
+  - @walkeros/web-source-browser@0.1.2
+  - @walkeros/collector@0.1.2
+  - @walkeros/core@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

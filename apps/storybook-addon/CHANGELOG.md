@@ -1,5 +1,16 @@
 # @walkeros/storybook-addon
 
+## 0.1.3
+
+### Patch Changes
+
+- a0ced16: env
+- Updated dependencies [a0ced16]
+  - @walkeros/web-source-browser@0.1.2
+  - @walkeros/collector@0.1.2
+  - @walkeros/web-core@0.1.2
+  - @walkeros/core@0.1.2
+
 ## 0.1.2
 
 ### Patch Changes

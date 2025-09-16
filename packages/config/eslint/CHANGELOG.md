@@ -1,5 +1,11 @@
 # @walkeros/eslint
 
+## 0.0.10
+
+### Patch Changes
+
+- a0ced16: env
+
 ## 0.0.9
 
 ### Patch Changes
