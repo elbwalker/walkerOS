@@ -1,0 +1,12 @@
+{
+  "packages": [
+    {
+      "name": "lodash-es",
+      "version": "4.17.21"
+    }
+  ],
+  "customCode": "export const double = (n) => n * 2;",
+  "output": {
+    "filename": "minimal.js"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "packages": [
+    {
+      "name": "lodash-es",
+      "version": "4.17.21"
+    },
+    {
+      "name": "dayjs",
+      "version": "1.11.10"
+    }
+  ],
+  "customCode": "export function formatDate(date) { return dayjs.default(date).format('YYYY-MM-DD'); }",
+  "output": {
+    "filename": "tracker.js",
+    "dir": "./dist"
+  }
+}
