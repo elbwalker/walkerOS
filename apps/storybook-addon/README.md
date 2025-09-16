@@ -75,7 +75,7 @@ Configure a custom prefix in your Storybook preview:
 const preview: Preview = {
   parameters: {
     walkerOS: {
-      prefix: 'data-custom',
+      prefix: 'data-elb',
       autoRefresh: true,
     },
   },
@@ -87,7 +87,7 @@ Update your tagger configuration to match:
 ```ts
 // utils/tagger.ts
 const taggerInstance = createTagger({
-  prefix: 'data-custom',
+  prefix: 'data-elb',
 });
 ```
 

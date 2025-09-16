@@ -22,15 +22,12 @@ channel.addListener(EVENTS.REQUEST, (config: WalkerOSAddon) => {
   }
 
   // Enhance DOM with property attributes
-  enhanceProperties(storyRoot, config.prefix || 'data-custom');
+  enhanceProperties(storyRoot, config.prefix || 'data-elb');
 
   const events = getAllEvents(storyRoot as Element, config.prefix);
 
-  // Collect globals from data-customglobals attributes
-  const globals = getGlobals(
-    config.prefix || 'data-custom',
-    storyRoot as Element,
-  );
+  // Collect globals from data-elbglobals attributes
+  const globals = getGlobals(config.prefix || 'data-elb', storyRoot as Element);
 
   // Add globals to each event if any globals exist
   const eventsWithGlobals = events.map((event) => {
@@ -60,7 +57,7 @@ channel.addListener(EVENTS.ATTRIBUTES_REQUEST, (config: WalkerOSAddon) => {
   // Build the attribute tree
   const attributeTree = buildAttributeTree(
     storyRoot as Element,
-    config.prefix || 'data-custom',
+    config.prefix || 'data-elb',
   );
 
   // Send the result back to the manager
@@ -76,7 +73,6 @@ export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
 
   if (hasStoryChanged) {
     currentStoryId = storyId;
-    console.log('next page');
   }
 
   const result = storyFn();
@@ -84,7 +80,7 @@ export const withRoundTrip: DecoratorFunction = (storyFn, context) => {
   // Initialize walker and inject CSS after story renders
   setTimeout(() => {
     // Initialize walkerOS for live event capture
-    const prefix = parameters?.[ADDON_ID]?.prefix || 'data-custom';
+    const prefix = parameters?.[ADDON_ID]?.prefix || 'data-elb';
     initializeWalker({ prefix, autoRefresh }).catch((err) => {
       console.error('Walker initialization failed:', err);
     });

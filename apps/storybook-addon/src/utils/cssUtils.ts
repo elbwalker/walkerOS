@@ -253,7 +253,7 @@ export const generateHighlightCSS = (prefix: string): string => {
 // Function to inject highlighting CSS into story document
 export const injectHighlightingCSS = (
   storyDoc: Document,
-  prefix: string = 'data-custom',
+  prefix: string = 'data-elb',
 ): void => {
   // Remove existing styles
   const existingStyle = storyDoc.querySelector('#walkeros-highlighting');

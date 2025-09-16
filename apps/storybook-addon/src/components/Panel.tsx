@@ -1,8 +1,4 @@
-import type {
-  WalkerOSAddon,
-  AttributeNode,
-  WalkerEventWithGlobals,
-} from '../types';
+import type { WalkerOSAddon, AttributeNode } from '../types';
 import type { WalkerOS } from '@walkeros/core';
 import React, { Fragment, memo, useCallback, useEffect, useState } from 'react';
 import {
@@ -11,9 +7,8 @@ import {
   TabsState,
   SyntaxHighlighter,
   Button,
-  Form,
 } from 'storybook/internal/components';
-import { useChannel, useGlobals, useStorybookApi } from 'storybook/manager-api';
+import { useChannel, useStorybookApi } from 'storybook/manager-api';
 import { useTheme } from 'storybook/theming';
 import {
   STORY_ARGS_UPDATED,
@@ -40,7 +35,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
 
   const defaultConfig = {
     autoRefresh: true,
-    prefix: 'data-custom',
+    prefix: 'data-elb',
   };
 
   const config = {
@@ -57,7 +52,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
     globals: false,
   });
 
-  const [events, setState] = useState<WalkerEventWithGlobals[]>([]);
+  const [events, setState] = useState<WalkerOS.Event[]>([]);
   const [liveEvents, setLiveEvents] = useState<WalkerOS.Event[]>([]);
   const [attributeTree, setAttributeTree] = useState<AttributeNode[]>([]);
 
@@ -74,7 +69,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
 
   // https://storybook.js.org/docs/react/addons/addons-api#usechannel
   const emit = useChannel({
-    [EVENTS.RESULT]: (newEvents: WalkerEventWithGlobals[]) => {
+    [EVENTS.RESULT]: (newEvents: WalkerOS.Event[]) => {
       setState(newEvents);
     },
     [EVENTS.LIVE_EVENT]: (event: WalkerOS.Event) => {
@@ -127,7 +122,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
     return () => storyEvents.forEach((event) => api.off(event, updateAll));
   }, [api, updateEvents, updateAttributes, config.autoRefresh]);
 
-  const getEventTitle = (events: WalkerEventWithGlobals[]) => {
+  const getEventTitle = (events: WalkerOS.Event[]) => {
     const form = events.length == 1 ? 'Event' : 'Events';
     return `${events.length} ${form}`;
   };
@@ -167,7 +162,7 @@ export const Panel: React.FC<PanelProps> = memo(function MyPanel(props) {
           nodeAttributeCount++; // Count globals as 1 attribute
         }
 
-        // Count data properties (ignore custom properties like data-customproperty)
+        // Count data properties (ignore custom properties like data-elbproperty)
         if (node.attributes.properties) {
           const validProperties = Object.entries(
             node.attributes.properties,

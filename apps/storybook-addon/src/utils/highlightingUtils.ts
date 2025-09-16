@@ -11,7 +11,7 @@ import { injectHighlightingCSS } from './cssUtils';
 // Function to apply highlighting to story root
 export const applyHighlighting = (
   highlights: WalkerOSAddon['highlights'],
-  prefix: string = 'data-custom',
+  prefix: string = 'data-elb',
 ): void => {
   const storyRoot = getStoryRootElement();
   if (!storyRoot) return;
@@ -39,7 +39,7 @@ export const applyHighlighting = (
 // Combined function to inject CSS and apply highlighting
 export const setupHighlighting = (
   highlights: WalkerOSAddon['highlights'],
-  prefix: string = 'data-custom',
+  prefix: string = 'data-elb',
 ): void => {
   const storyDoc = getStoryDocument();
 

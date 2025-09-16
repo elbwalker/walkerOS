@@ -58,7 +58,7 @@ export const getElementPath = (el: Element): string => {
 // Function to enhance DOM with property attributes
 export const enhanceProperties = (
   storyRoot: Element,
-  prefix: string = 'data-custom',
+  prefix: string = 'data-elb',
 ): void => {
   // Find all elements with any attributes starting with prefix-
   const allElements = Array.from(storyRoot.querySelectorAll('*'));
