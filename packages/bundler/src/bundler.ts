@@ -7,27 +7,51 @@ import chalk from 'chalk';
 
 const TEMP_DIR = path.join(process.cwd(), '.temp');
 
-export async function bundle(config: Config): Promise<void> {
+export interface BundleStats {
+  totalSize: number;
+  packages: { name: string; size: number }[];
+  buildTime: number;
+  treeshakingEffective: boolean;
+}
+
+function createLogger(silent: boolean) {
+  return (...args: Parameters<typeof console.log>) => {
+    if (!silent) {
+      // eslint-disable-next-line no-console
+      console.log(...args);
+    }
+  };
+}
+
+export async function bundle(
+  config: Config,
+  showStats = false,
+  silent = false,
+): Promise<BundleStats | void> {
+  const bundleStartTime = Date.now();
+  const log = createLogger(silent);
+
   try {
     // Step 1: Prepare temporary directory
     await fs.emptyDir(TEMP_DIR);
-    console.log(chalk.gray('  Cleaned temporary directory'));
+    log(chalk.gray('  Cleaned temporary directory'));
 
     // Step 2: Download packages
-    console.log(chalk.blue('📥 Downloading packages...'));
+    log(chalk.blue('📥 Downloading packages...'));
     const packagePaths = await downloadPackages(
       config.packages,
       path.join(TEMP_DIR, 'node_modules'),
+      silent,
     );
 
     // Step 3: Create entry point
-    console.log(chalk.blue('📝 Creating entry point...'));
+    log(chalk.blue('📝 Creating entry point...'));
     const entryContent = createEntryPoint(config, packagePaths);
     const entryPath = path.join(TEMP_DIR, 'entry.js');
     await fs.writeFile(entryPath, entryContent);
 
     // Step 4: Bundle with esbuild
-    console.log(chalk.blue('⚡ Bundling with esbuild...'));
+    log(chalk.blue('⚡ Bundling with esbuild...'));
     const outputPath = path.join(config.output.dir, config.output.filename);
 
     const buildOptions = createEsbuildOptions(
@@ -35,18 +59,80 @@ export async function bundle(config: Config): Promise<void> {
       entryPath,
       outputPath,
     );
-    await esbuild.build(buildOptions);
 
-    console.log(chalk.gray(`  Output: ${outputPath}`));
+    try {
+      const result = await esbuild.build(buildOptions);
+    } catch (buildError) {
+      // Enhanced error handling for build failures
+      throw createBuildError(buildError as EsbuildError, config.customCode);
+    }
 
-    // Step 5: Cleanup
+    log(chalk.gray(`  Output: ${outputPath}`));
+
+    // Step 5: Collect stats if requested
+    let stats: BundleStats | undefined;
+    if (showStats) {
+      stats = await collectBundleStats(
+        outputPath,
+        config.packages,
+        bundleStartTime,
+        entryContent,
+      );
+    }
+
+    // Step 6: Cleanup
     await fs.remove(TEMP_DIR);
-    console.log(chalk.gray('  Cleaned up temporary files'));
+    log(chalk.gray('  Cleaned up temporary files'));
+
+    return stats;
   } catch (error) {
     // Cleanup on error
     await fs.remove(TEMP_DIR).catch(() => {});
     throw error;
   }
+}
+
+async function collectBundleStats(
+  outputPath: string,
+  packages: Config['packages'],
+  startTime: number,
+  entryContent: string,
+): Promise<BundleStats> {
+  const stats = await fs.stat(outputPath);
+  const totalSize = stats.size;
+  const buildTime = Date.now() - startTime;
+
+  // Estimate package sizes by analyzing imports in entry content
+  const packageStats = packages.map((pkg) => {
+    const importPattern = new RegExp(`from\\s+['"]${pkg.name}['"]`, 'g');
+    const namedImportPattern = new RegExp(
+      `import\\s+\\{[^}]*\\}\\s+from\\s+['"]${pkg.name}['"]`,
+      'g',
+    );
+    const hasImports =
+      importPattern.test(entryContent) || namedImportPattern.test(entryContent);
+
+    // Rough estimation: if package is imported, assign proportional size
+    const estimatedSize = hasImports
+      ? Math.floor(totalSize / packages.length)
+      : 0;
+
+    return {
+      name: `${pkg.name}@${pkg.version}`,
+      size: estimatedSize,
+    };
+  });
+
+  // Tree-shaking is effective if we use named imports (not wildcard imports)
+  const hasWildcardImports = /import\s+\*\s+as\s+\w+\s+from/.test(entryContent);
+  const treeshakingEffective = !hasWildcardImports;
+
+  return {
+    totalSize,
+    packages: packageStats,
+    buildTime,
+    treeshakingEffective,
+  };
 }
 
 function createEsbuildOptions(
@@ -114,4 +200,48 @@ function createEntryPoint(
   // Just return the custom code - let it handle all imports
   // Packages are available via esbuild's nodePaths configuration
   return config.customCode;
+}
+
+interface EsbuildError {
+  errors?: Array<{
+    text: string;
+    location?: {
+      file: string;
+      line: number;
+      column: number;
+    };
+  }>;
+  message?: string;
+}
+
+function createBuildError(buildError: EsbuildError, customCode: string): Error {
+  if (!buildError.errors || buildError.errors.length === 0) {
+    return new Error(`Build failed: ${buildError.message || buildError}`);
+  }
+
+  const firstError = buildError.errors[0];
+  const location = firstError.location;
+
+  if (location && location.file && location.file.includes('entry.js')) {
+    // Error is in our generated entry point (custom code)
+    const line = location.line;
+    const column = location.column;
+    const codeLines = customCode.split('\n');
+    const errorLine = codeLines[line - 1] || '';
+
+    return new Error(
+      `Custom code syntax error at line ${line}, column ${column}:\n` +
+        `  ${errorLine}\n` +
+        `  ${' '.repeat(column - 1)}^\n` +
+        `${firstError.text}`,
+    );
+  }
+
+  // Error is in package code or other build issue
+  return new Error(
+    `Build error: ${firstError.text}\n` +
+      (location
+        ? `  at ${location.file}:${location.line}:${location.column}`
+        : ''),
+  );
 }

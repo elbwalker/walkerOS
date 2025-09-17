@@ -8,11 +8,22 @@ export interface Package {
   version: string;
 }
 
+function createLogger(silent: boolean) {
+  return (...args: Parameters<typeof console.log>) => {
+    if (!silent) {
+      // eslint-disable-next-line no-console
+      console.log(...args);
+    }
+  };
+}
+
 export async function downloadPackages(
   packages: Package[],
   targetDir: string,
+  silent = false,
 ): Promise<Map<string, string>> {
   const packagePaths = new Map<string, string>();
+  const log = createLogger(silent);
 
   // Ensure target directory exists
   await fs.ensureDir(targetDir);
@@ -21,7 +32,7 @@ export async function downloadPackages(
     const packageSpec = `${pkg.name}@${pkg.version}`;
     const packageDir = path.join(targetDir, pkg.name.replace('/', '-'));
 
-    console.log(chalk.gray(`  Downloading ${packageSpec}...`));
+    log(chalk.gray(`  Downloading ${packageSpec}...`));
 
     try {
       // Extract package to target directory
