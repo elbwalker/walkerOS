@@ -18,20 +18,6 @@ jest.mock('esbuild', () => ({
   build: jest.fn().mockResolvedValue({}),
 }));
 
-// Mock fs-extra for reading package.json files
-jest.mock('fs-extra', () => ({
-  ...jest.requireActual('fs-extra'),
-  readJsonSync: jest.fn((path: string) => {
-    if (path.includes('lodash-es')) {
-      return { main: 'index.js', module: 'es/index.js' };
-    }
-    if (path.includes('dayjs')) {
-      return { main: 'index.js' };
-    }
-    return jest.requireActual('fs-extra').readJsonSync(path);
-  }),
-}));
-
 describe('Bundler', () => {
   const testOutputDir = 'test-output';
 

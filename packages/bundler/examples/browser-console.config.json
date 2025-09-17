@@ -1,0 +1,20 @@
+{
+  "packages": [
+    {
+      "name": "lodash-es",
+      "version": "4.17.21"
+    }
+  ],
+  "customCode": "import { map, chunk, cloneDeep } from 'lodash-es';\n\n// Make functions available globally for console testing\nwindow.processArray = (arr) => chunk(map(arr, x => x * 2), 3);\nwindow.deepClone = (obj) => cloneDeep(obj);\nwindow.lodashUtils = { map, chunk, cloneDeep };\n\nconsole.log('✅ Tree-shaken bundle loaded! Only 3 lodash functions included.');\nconsole.log('Try: processArray([1,2,3,4,5,6])');\nconsole.log('Try: deepClone({a: {b: 1}})');\nconsole.log('Try: lodashUtils.map([1,2,3], x => x * 2)');",
+  "build": {
+    "platform": "browser",
+    "format": "iife",
+    "target": "es2018",
+    "minify": true,
+    "sourcemap": false
+  },
+  "output": {
+    "filename": "browser-console.js",
+    "dir": "./dist"
+  }
+}

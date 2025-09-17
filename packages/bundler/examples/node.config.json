@@ -5,7 +5,7 @@
       "version": "1.11.10"
     }
   ],
-  "customCode": "export function getCurrentTime() { return dayjs.default().format('YYYY-MM-DD HH:mm:ss'); }",
+  "customCode": "import dayjs from 'dayjs';\n\nexport function getCurrentTime() {\n  return dayjs().format('YYYY-MM-DD HH:mm:ss');\n}\n\nexport function formatDate(date) {\n  return dayjs(date).format('YYYY-MM-DD');\n}\n\n// Only dayjs core is bundled - tree-shaken!",
   "build": {
     "platform": "node",
     "format": "cjs",

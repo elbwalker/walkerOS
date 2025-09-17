@@ -111,60 +111,7 @@ function createEntryPoint(
   config: Config,
   packagePaths: Map<string, string>,
 ): string {
-  const imports: string[] = [];
-  const exports: string[] = [];
-
-  // Generate imports for each package
-  config.packages.forEach((pkg, index) => {
-    const varName = `pkg${index}`;
-    const packagePath = packagePaths.get(pkg.name);
-
-    if (packagePath) {
-      const mainFile = selectEntryPoint(packagePath, config.build.platform);
-
-      imports.push(
-        `import * as ${varName} from '${path.join(packagePath, mainFile)}';`,
-      );
-      // Sanitize package name for JavaScript variable
-      const sanitizedName = pkg.name.replace(/[@/-]/g, '_');
-      exports.push(`export const ${sanitizedName} = ${varName};`);
-    }
-  });
-
-  // Combine imports, custom code, and exports
-  return `
-${imports.join('\n')}
-
-// Custom code
-${config.customCode}
-
-// Package exports
-${exports.join('\n')}
-  `.trim();
-}
-
-function selectEntryPoint(packagePath: string, platform: string): string {
-  const packageJson = fs.readJsonSync(path.join(packagePath, 'package.json'));
-
-  if (platform === 'node') {
-    // For Node.js, prefer main field
-    return packageJson.main || 'index.js';
-  } else {
-    // For browser bundling, prefer browser field, then module, then main
-    let mainFile = packageJson.main || 'index.js';
-
-    // Check for browser-specific exports
-    if (packageJson.browser) {
-      if (typeof packageJson.browser === 'string') {
-        mainFile = packageJson.browser;
-      } else if (packageJson.browser['.']) {
-        mainFile = packageJson.browser['.'];
-      }
-    } else if (packageJson.module) {
-      // Use ES module version if available and no browser field
-      mainFile = packageJson.module;
-    }
-
-    return mainFile;
-  }
+  // Just return the custom code - let it handle all imports
+  // Packages are available via esbuild's nodePaths configuration
+  return config.customCode;
 }

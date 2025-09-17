@@ -9,7 +9,7 @@
       "version": "1.11.10"
     }
   ],
-  "customCode": "export function processData(data) { return lodash_es.map(data, item => ({ ...item, timestamp: dayjs.default().format('YYYY-MM-DD'), processed: true })); }",
+  "customCode": "import { map, filter, cloneDeep } from 'lodash-es';\nimport dayjs from 'dayjs';\n\nexport function processData(data) {\n  return map(data, item => ({\n    ...item,\n    timestamp: dayjs().format('YYYY-MM-DD'),\n    processed: true\n  }));\n}\n\nexport function filterValidData(data) {\n  return filter(data, item => item && typeof item === 'object');\n}\n\nexport function deepCloneData(data) {\n  return cloneDeep(data);\n}\n\n// Re-export specific functions for external use\nexport { map, filter, cloneDeep, dayjs };",
   "build": {
     "platform": "browser",
     "format": "esm",
