@@ -48,8 +48,9 @@ describe('CLI JSON Output', () => {
   it('should output JSON format for successful bundle', async () => {
     // Create a test config
     const testConfig = {
-      packages: [{ name: 'lodash-es', version: '4.17.21' }],
-      customCode: 'import { map } from "lodash-es";\nexport const test = map;',
+      packages: [{ name: '@walkeros/core', version: 'latest' }],
+      customCode:
+        'import { getId } from "@walkeros/core";\nexport const test = getId;',
       output: { dir: testOutputDir, filename: 'test.js' },
     };
 
@@ -72,15 +73,15 @@ describe('CLI JSON Output', () => {
     });
 
     expect(output.stats.packages).toHaveLength(1);
-    expect(output.stats.packages[0].name).toBe('lodash-es@4.17.21');
+    expect(output.stats.packages[0].name).toBe('@walkeros/core@latest');
   });
 
   it('should output JSON format for failed bundle', async () => {
     // Create a test config with syntax error
     const testConfig = {
-      packages: [{ name: 'lodash-es', version: '4.17.21' }],
+      packages: [{ name: '@walkeros/core', version: 'latest' }],
       customCode:
-        'import { map } from "lodash-es";\nexport const badCode = () => {\n  return map([1,2,3] x => x * 2);\n};',
+        'import { getId } from "@walkeros/core";\nexport const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
       output: { dir: testOutputDir, filename: 'error-test.js' },
     };
 
@@ -97,7 +98,7 @@ describe('CLI JSON Output', () => {
       duration: expect.any(Number),
     });
 
-    expect(output.error).toContain('line 3, column 21');
+    expect(output.error).toContain('line 3, column 23');
   });
 
   it('should output JSON format when config file not found', async () => {
@@ -115,8 +116,9 @@ describe('CLI JSON Output', () => {
 
   it('should collect stats when --json flag is used (implies --stats)', async () => {
     const testConfig = {
-      packages: [{ name: 'lodash-es', version: '4.17.21' }],
-      customCode: 'import * as _ from "lodash-es";\nexport const test = _.map;',
+      packages: [{ name: '@walkeros/core', version: 'latest' }],
+      customCode:
+        'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
       output: { dir: testOutputDir, filename: 'wildcard-test.js' },
     };
 
@@ -133,7 +135,7 @@ describe('CLI JSON Output', () => {
 
   it('should suppress decorative output in JSON mode', async () => {
     const testConfig = {
-      packages: [{ name: 'lodash-es', version: '4.17.21' }],
+      packages: [{ name: '@walkeros/core', version: 'latest' }],
       customCode: 'export const test = "hello";',
       output: { dir: testOutputDir, filename: 'minimal-test.js' },
     };

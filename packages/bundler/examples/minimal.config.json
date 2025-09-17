@@ -1,11 +1,11 @@
 {
   "packages": [
     {
-      "name": "lodash-es",
-      "version": "4.17.21"
+      "name": "@walkeros/core",
+      "version": "latest"
     }
   ],
-  "customCode": "import { map, chunk } from 'lodash-es';\n\nexport const double = (n) => n * 2;\nexport const processArray = (arr) => chunk(map(arr, double), 3);\n\n// Only map and chunk from lodash are bundled - tree-shaken!",
+  "customCode": "import { getId, trim } from '@walkeros/core';\n\n// Generate unique identifiers\nexport const generateId = (length = 8) => getId(length);\n\n// Clean and trim strings\nexport const cleanString = (str) => trim(str);\n\n// Only getId and trim from @walkeros/core are bundled - tree-shaken!",
   "build": {
     "platform": "browser",
     "format": "esm",

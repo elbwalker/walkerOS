@@ -1,15 +1,11 @@
 {
   "packages": [
     {
-      "name": "lodash-es",
-      "version": "4.17.21"
-    },
-    {
-      "name": "dayjs",
-      "version": "1.11.10"
+      "name": "@walkeros/core",
+      "version": "latest"
     }
   ],
-  "customCode": "import { map, filter, cloneDeep } from 'lodash-es';\nimport dayjs from 'dayjs';\n\nexport function processData(data) {\n  return map(data, item => ({\n    ...item,\n    timestamp: dayjs().format('YYYY-MM-DD'),\n    processed: true\n  }));\n}\n\nexport function filterValidData(data) {\n  return filter(data, item => item && typeof item === 'object');\n}\n\nexport function deepCloneData(data) {\n  return cloneDeep(data);\n}\n\n// Re-export specific functions for external use\nexport { map, filter, cloneDeep, dayjs };",
+  "customCode": "import { getId, getByPath, clone, trim, isObject } from '@walkeros/core';\n\nexport function processData(data) {\n  return data.map(item => ({\n    ...item,\n    id: getId(8),\n    timestamp: new Date().toISOString().split('T')[0],\n    processed: true\n  }));\n}\n\nexport function extractNestedValues(data, path) {\n  return data.map(item => getByPath(item, path, null)).filter(val => val !== null);\n}\n\nexport function deepCloneData(data) {\n  return clone(data);\n}\n\nexport function cleanStringData(data) {\n  return data.map(item => ({\n    ...item,\n    name: typeof item.name === 'string' ? trim(item.name) : item.name\n  }));\n}\n\n// Re-export walkerOS utilities\nexport { getId, getByPath, clone, trim, isObject };",
   "build": {
     "platform": "browser",
     "format": "esm",

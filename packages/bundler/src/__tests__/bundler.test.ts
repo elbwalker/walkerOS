@@ -5,12 +5,11 @@ import { parseConfig } from '../config';
 
 // Mock the package manager to avoid external dependencies in tests
 jest.mock('../package-manager', () => ({
-  downloadPackages: jest.fn().mockResolvedValue(
-    new Map([
-      ['lodash-es', '/mocked/node_modules/lodash-es'],
-      ['dayjs', '/mocked/node_modules/dayjs'],
-    ]),
-  ),
+  downloadPackages: jest
+    .fn()
+    .mockResolvedValue(
+      new Map([['@walkeros/core', '/mocked/node_modules/@walkeros/core']]),
+    ),
 }));
 
 // Mock esbuild to avoid actual bundling in tests
@@ -104,14 +103,14 @@ describe('Bundler', () => {
       expect(stats!.buildTime).toBeGreaterThan(0);
       expect(stats!.treeshakingEffective).toBe(true);
       expect(stats!.packages).toHaveLength(1);
-      expect(stats!.packages[0].name).toBe('lodash-es@4.17.21');
+      expect(stats!.packages[0].name).toBe('@walkeros/core@latest');
     });
 
     it('should detect ineffective tree-shaking with wildcard imports', async () => {
       const config = parseConfig({
-        packages: [{ name: 'lodash-es', version: '4.17.21' }],
+        packages: [{ name: '@walkeros/core', version: 'latest' }],
         customCode:
-          'import * as _ from "lodash-es";\nexport const test = _.map;',
+          'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
         output: { dir: testOutputDir, filename: 'test.js' },
       });
 
@@ -135,9 +134,9 @@ describe('Bundler', () => {
   describe('Template System', () => {
     it('should apply inline template correctly', async () => {
       const config = parseConfig({
-        packages: [{ name: 'dayjs', version: '1.11.10' }],
+        packages: [{ name: '@walkeros/core', version: 'latest' }],
         customCode:
-          'import dayjs from "dayjs";\nexport const now = () => dayjs().format();',
+          'import { getId } from "@walkeros/core";\nexport const generateId = () => getId(8);',
         template: {
           content:
             '// {{NAME}} v{{VERSION}}\n{{BUNDLE}}\nexport default { name: "{{NAME}}" };',
@@ -151,8 +150,9 @@ describe('Bundler', () => {
 
     it('should handle missing template variables gracefully', async () => {
       const config = parseConfig({
-        packages: [{ name: 'dayjs', version: '1.11.10' }],
-        customCode: 'export const test = "hello";',
+        packages: [{ name: '@walkeros/core', version: 'latest' }],
+        customCode:
+          'import { trim } from "@walkeros/core"; export const test = trim("hello");',
         template: {
           content: '{{BUNDLE}}\n// {{MISSING_VAR}} should remain as-is',
           variables: { OTHER_VAR: 'exists' },
@@ -165,8 +165,9 @@ describe('Bundler', () => {
 
     it('should append bundle code when placeholder not found', async () => {
       const config = parseConfig({
-        packages: [{ name: 'dayjs', version: '1.11.10' }],
-        customCode: 'export const test = "hello";',
+        packages: [{ name: '@walkeros/core', version: 'latest' }],
+        customCode:
+          'import { getId } from "@walkeros/core"; export const test = getId(6);',
         template: {
           content: '// Header only template',
         },
@@ -194,9 +195,9 @@ describe('Bundler', () => {
       mockEsbuildBuild.mockRejectedValueOnce(mockError);
 
       const config = parseConfig({
-        packages: [{ name: 'lodash-es', version: '4.17.21' }],
+        packages: [{ name: '@walkeros/core', version: 'latest' }],
         customCode:
-          'import { map } from "lodash-es";\n\nexport const badCode = () => {\n  return map([1,2,3] x => x * 2);\n};',
+          'import { getId } from "@walkeros/core";\n\nexport const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
         output: { dir: testOutputDir, filename: 'error-test.js' },
       });
 
@@ -221,9 +222,9 @@ describe('Bundler', () => {
       mockEsbuildBuild.mockRejectedValueOnce(mockError);
 
       const config = parseConfig({
-        packages: [{ name: 'lodash-es', version: '4.17.21' }],
+        packages: [{ name: '@walkeros/core', version: 'latest' }],
         customCode:
-          'import { map } from "lodash-es";\nexport const test = map;',
+          'import { getId } from "@walkeros/core";\nexport const test = getId;',
         output: { dir: testOutputDir, filename: 'error-test.js' },
       });
 
@@ -237,7 +238,7 @@ describe('Bundler', () => {
       mockEsbuildBuild.mockRejectedValueOnce(mockError);
 
       const config = parseConfig({
-        packages: [{ name: 'lodash-es', version: '4.17.21' }],
+        packages: [{ name: '@walkeros/core', version: 'latest' }],
         customCode: 'export const test = "hello";',
         output: { dir: testOutputDir, filename: 'error-test.js' },
       });

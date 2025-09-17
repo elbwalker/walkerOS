@@ -30,15 +30,11 @@ Create a `bundle.config.json` file with the following structure:
 {
   "packages": [
     {
-      "name": "lodash-es",
-      "version": "4.17.21"
-    },
-    {
-      "name": "dayjs",
-      "version": "1.11.10"
+      "name": "@walkeros/core",
+      "version": "latest"
     }
   ],
-  "customCode": "export function formatDate(date) { return dayjs.default(date).format('YYYY-MM-DD'); }",
+  "customCode": "import { getId, getByPath } from '@walkeros/core'; export function generateSessionId() { return `session_${getId(8)}`; } export function extractUserName(data) { return getByPath(data, 'user.name', 'Anonymous'); }",
   "output": {
     "filename": "bundle.js",
     "dir": "./dist"
@@ -69,8 +65,8 @@ Create a `bundle.config.json` file with the following structure:
 
 ```json
 {
-  "packages": [{ "name": "lodash-es", "version": "4.17.21" }],
-  "customCode": "export const double = (n) => n * 2;",
+  "packages": [{ "name": "@walkeros/core", "version": "latest" }],
+  "customCode": "import { getId } from '@walkeros/core'; export const generateId = () => getId(8);",
   "output": {
     "filename": "minimal.js"
   }
@@ -81,8 +77,8 @@ Create a `bundle.config.json` file with the following structure:
 
 ```json
 {
-  "packages": [{ "name": "dayjs", "version": "1.11.10" }],
-  "customCode": "export function getCurrentTime() { return dayjs.default().format('YYYY-MM-DD HH:mm:ss'); }",
+  "packages": [{ "name": "@walkeros/core", "version": "latest" }],
+  "customCode": "import { getId, getByPath } from '@walkeros/core'; export function generateSessionId() { return `session_${getId(12)}`; } export function extractConfigValue(config, path) { return getByPath(config, path, 'default'); }",
   "build": {
     "platform": "node",
     "format": "cjs",
@@ -99,11 +95,8 @@ Create a `bundle.config.json` file with the following structure:
 
 ```json
 {
-  "packages": [
-    { "name": "lodash-es", "version": "4.17.21" },
-    { "name": "dayjs", "version": "1.11.10" }
-  ],
-  "customCode": "export function processData(data) { return lodash_es.map(data, item => ({ ...item, timestamp: dayjs.default().format('YYYY-MM-DD'), processed: true })); }",
+  "packages": [{ "name": "@walkeros/core", "version": "latest" }],
+  "customCode": "import { getId, getByPath, clone, trim } from '@walkeros/core'; export function processData(data) { return data.map(item => ({ ...item, id: getId(8), timestamp: new Date().toISOString().split('T')[0], processed: true })); } export function extractNestedValues(data, path) { return data.map(item => getByPath(item, path, null)).filter(val => val !== null); } export function deepCloneData(data) { return clone(data); }",
   "build": {
     "platform": "browser",
     "format": "esm",
@@ -133,8 +126,8 @@ Create a `bundle.config.json` file with the following structure:
 
 Package names are automatically sanitized to valid JavaScript variable names:
 
-- `lodash-es` → `lodash_es`
 - `@walkeros/core` → `_walkeros_core`
+- `dayjs` → `dayjs`
 - Special characters are replaced with underscores
 
 ## Platform Support
