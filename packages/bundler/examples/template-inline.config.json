@@ -1,0 +1,25 @@
+{
+  "packages": [
+    {
+      "name": "lodash-es",
+      "version": "4.17.21"
+    }
+  ],
+  "customCode": "import { map, filter } from 'lodash-es';\nexport const utils = { map, filter };",
+  "template": {
+    "content": "// My Utils Library v{{VERSION}}\n{{BUNDLE}}\n\n// Expose globally\nif (typeof window !== 'undefined') {\n  window.MyUtils = exports;\n}",
+    "variables": {
+      "VERSION": "1.0.0"
+    }
+  },
+  "build": {
+    "platform": "browser",
+    "format": "iife",
+    "minify": false,
+    "sourcemap": false
+  },
+  "output": {
+    "filename": "template-inline.js",
+    "dir": "./dist"
+  }
+}

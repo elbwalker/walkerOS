@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { Config, BuildConfig } from './config.js';
 import { downloadPackages } from './package-manager.js';
+import { TemplateEngine } from './template-engine.js';
 import chalk from 'chalk';
 
 const TEMP_DIR = path.join(process.cwd(), '.temp');
@@ -46,7 +47,7 @@ export async function bundle(
 
     // Step 3: Create entry point
     log(chalk.blue('📝 Creating entry point...'));
-    const entryContent = createEntryPoint(config, packagePaths);
+    const entryContent = await createEntryPoint(config, packagePaths);
     const entryPath = path.join(TEMP_DIR, 'entry.js');
     await fs.writeFile(entryPath, entryContent);
 
@@ -193,13 +194,20 @@ function createEsbuildOptions(
   return baseOptions;
 }
 
-function createEntryPoint(
+async function createEntryPoint(
   config: Config,
   packagePaths: Map<string, string>,
-): string {
-  // Just return the custom code - let it handle all imports
+): Promise<string> {
+  let code = config.customCode;
+
+  // Apply template if configured
+  if (config.template) {
+    const templateEngine = new TemplateEngine();
+    code = await templateEngine.process(config.template, code);
+  }
+
   // Packages are available via esbuild's nodePaths configuration
-  return config.customCode;
+  return code;
 }
 
 interface EsbuildError {

@@ -132,6 +132,51 @@ describe('Bundler', () => {
     });
   });
 
+  describe('Template System', () => {
+    it('should apply inline template correctly', async () => {
+      const config = parseConfig({
+        packages: [{ name: 'dayjs', version: '1.11.10' }],
+        customCode:
+          'import dayjs from "dayjs";\nexport const now = () => dayjs().format();',
+        template: {
+          content:
+            '// {{NAME}} v{{VERSION}}\n{{BUNDLE}}\nexport default { name: "{{NAME}}" };',
+          variables: { NAME: 'TestLib', VERSION: '1.0.0' },
+        },
+        output: { dir: testOutputDir, filename: 'template-test.js' },
+      });
+
+      await expect(bundle(config)).resolves.not.toThrow();
+    });
+
+    it('should handle missing template variables gracefully', async () => {
+      const config = parseConfig({
+        packages: [{ name: 'dayjs', version: '1.11.10' }],
+        customCode: 'export const test = "hello";',
+        template: {
+          content: '{{BUNDLE}}\n// {{MISSING_VAR}} should remain as-is',
+          variables: { OTHER_VAR: 'exists' },
+        },
+        output: { dir: testOutputDir, filename: 'missing-vars.js' },
+      });
+
+      await expect(bundle(config)).resolves.not.toThrow();
+    });
+
+    it('should append bundle code when placeholder not found', async () => {
+      const config = parseConfig({
+        packages: [{ name: 'dayjs', version: '1.11.10' }],
+        customCode: 'export const test = "hello";',
+        template: {
+          content: '// Header only template',
+        },
+        output: { dir: testOutputDir, filename: 'append-test.js' },
+      });
+
+      await expect(bundle(config)).resolves.not.toThrow();
+    });
+  });
+
   describe('Error Handling', () => {
     it('should handle esbuild errors with location information', async () => {
       const mockError = {

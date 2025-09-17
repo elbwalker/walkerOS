@@ -1,0 +1,27 @@
+{
+  "packages": [
+    {
+      "name": "dayjs",
+      "version": "1.11.10"
+    }
+  ],
+  "customCode": "import dayjs from 'dayjs';\nexport const now = () => dayjs().format();\nexport const formatDate = (date) => dayjs(date).format('YYYY-MM-DD');",
+  "template": {
+    "file": "./examples/library.template.js",
+    "variables": {
+      "NAME": "DateUtils",
+      "VERSION": "2.1.0",
+      "BUILD_DATE": "2024-01-01"
+    }
+  },
+  "build": {
+    "platform": "browser",
+    "format": "esm",
+    "minify": false,
+    "sourcemap": false
+  },
+  "output": {
+    "filename": "template-file.js",
+    "dir": "./dist"
+  }
+}
