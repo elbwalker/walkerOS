@@ -5,9 +5,9 @@
       "version": "latest"
     }
   ],
-  "customCode": "export { getId, trim } from '@walkeros/core';",
+  "content": "export { getId, trim } from '@walkeros/core';",
   "template": {
-    "content": "// Auto-generated WalkerOS Bundle\n// Imports:\n{{#imports}}import { {{name}} } from '{{package}}';\n{{/imports}}\n// Configuration:\n{{#configs}}const {{name}} = {\n  enabled: {{settings.enabled}},\n  version: '{{version}}'\n};\n{{/configs}}\n\n{{BUNDLE}}\n\n// Export configurations\nexport const bundleConfig = {\n{{#configs}}  {{name}}: {{name}},\n{{/configs}}};\n\n// Available utilities: {{#utils}}{{.}}, {{/utils}}",
+    "content": "// Auto-generated WalkerOS Bundle\n// Imports:\n{{#imports}}import { {{name}} } from '{{package}}';\n{{/imports}}\n// Configuration:\n{{#configs}}const {{name}} = {\n  enabled: {{settings.enabled}},\n  version: '{{version}}'\n};\n{{/configs}}\n\n{{CONTENT}}\n\n// Export configurations\nexport const bundleConfig = {\n{{#configs}}  {{name}}: {{name}},\n{{/configs}}};\n\n// Available utilities: {{#utils}}{{@current}}, {{/utils}}",
     "variables": {
       "imports": [
         { "name": "getId", "package": "@walkeros/core" },

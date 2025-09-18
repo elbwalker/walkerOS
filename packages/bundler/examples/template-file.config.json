@@ -5,7 +5,7 @@
       "version": "latest"
     }
   ],
-  "customCode": "import { getId, getByPath } from '@walkeros/core';\nexport const generateId = () => getId(8);\nexport const extractValue = (obj, path) => getByPath(obj, path, null);",
+  "content": "import { getId, getByPath } from '@walkeros/core';\nexport const generateId = () => getId(8);\nexport const extractValue = (obj, path) => getByPath(obj, path, null);",
   "template": {
     "file": "./examples/library.template.js",
     "variables": {

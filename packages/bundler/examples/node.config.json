@@ -5,7 +5,7 @@
       "version": "latest"
     }
   ],
-  "customCode": "import { getId, getByPath } from '@walkeros/core';\n\nexport function generateSessionId() {\n  return `session_${getId(12)}`;\n}\n\nexport function extractConfigValue(config, path) {\n  return getByPath(config, path, 'default');\n}\n\nexport function createLogEntry(data) {\n  return {\n    id: getId(6),\n    timestamp: new Date().toISOString(),\n    message: getByPath(data, 'message', 'No message'),\n    level: getByPath(data, 'level', 'info')\n  };\n}\n\n// Only walkerOS core utilities are bundled - tree-shaken!",
+  "content": "import { getId, getByPath } from '@walkeros/core';\n\nexport function generateSessionId() {\n  return `session_${getId(12)}`;\n}\n\nexport function extractConfigValue(config, path) {\n  return getByPath(config, path, 'default');\n}\n\nexport function createLogEntry(data) {\n  return {\n    id: getId(6),\n    timestamp: new Date().toISOString(),\n    message: getByPath(data, 'message', 'No message'),\n    level: getByPath(data, 'level', 'info')\n  };\n}\n\n// Only walkerOS core utilities are bundled - tree-shaken!",
   "build": {
     "platform": "node",
     "format": "cjs",

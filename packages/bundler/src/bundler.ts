@@ -65,7 +65,7 @@ export async function bundle(
       const result = await esbuild.build(buildOptions);
     } catch (buildError) {
       // Enhanced error handling for build failures
-      throw createBuildError(buildError as EsbuildError, config.customCode);
+      throw createBuildError(buildError as EsbuildError, config.content);
     }
 
     log(chalk.gray(`  Output: ${outputPath}`));
@@ -198,7 +198,7 @@ async function createEntryPoint(
   config: Config,
   packagePaths: Map<string, string>,
 ): Promise<string> {
-  let code = config.customCode;
+  let code = config.content;
 
   // Apply template if configured
   if (config.template) {
@@ -222,7 +222,7 @@ interface EsbuildError {
   message?: string;
 }
 
-function createBuildError(buildError: EsbuildError, customCode: string): Error {
+function createBuildError(buildError: EsbuildError, content: string): Error {
   if (!buildError.errors || buildError.errors.length === 0) {
     return new Error(`Build failed: ${buildError.message || buildError}`);
   }
@@ -231,14 +231,14 @@ function createBuildError(buildError: EsbuildError, customCode: string): Error {
   const location = firstError.location;
 
   if (location && location.file && location.file.includes('entry.js')) {
-    // Error is in our generated entry point (custom code)
+    // Error is in our generated entry point (content code)
     const line = location.line;
     const column = location.column;
-    const codeLines = customCode.split('\n');
+    const codeLines = content.split('\n');
     const errorLine = codeLines[line - 1] || '';
 
     return new Error(
-      `Custom code syntax error at line ${line}, column ${column}:\n` +
+      `Content syntax error at line ${line}, column ${column}:\n` +
         `  ${errorLine}\n` +
         `  ${' '.repeat(column - 1)}^\n` +
         `${firstError.text}`,

@@ -109,7 +109,7 @@ describe('Bundler', () => {
     it('should detect ineffective tree-shaking with wildcard imports', async () => {
       const config = parseConfig({
         packages: [{ name: '@walkeros/core', version: 'latest' }],
-        customCode:
+        content:
           'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
         output: { dir: testOutputDir, filename: 'test.js' },
       });
@@ -135,11 +135,11 @@ describe('Bundler', () => {
     it('should apply inline template correctly', async () => {
       const config = parseConfig({
         packages: [{ name: '@walkeros/core', version: 'latest' }],
-        customCode:
+        content:
           'import { getId } from "@walkeros/core";\nexport const generateId = () => getId(8);',
         template: {
           content:
-            '// {{NAME}} v{{VERSION}}\n{{BUNDLE}}\nexport default { name: "{{NAME}}" };',
+            '// {{NAME}} v{{VERSION}}\n{{CONTENT}}\nexport default { name: "{{NAME}}" };',
           variables: { NAME: 'TestLib', VERSION: '1.0.0' },
         },
         output: { dir: testOutputDir, filename: 'template-test.js' },
@@ -151,10 +151,10 @@ describe('Bundler', () => {
     it('should handle missing template variables gracefully', async () => {
       const config = parseConfig({
         packages: [{ name: '@walkeros/core', version: 'latest' }],
-        customCode:
+        content:
           'import { trim } from "@walkeros/core"; export const test = trim("hello");',
         template: {
-          content: '{{BUNDLE}}\n// {{MISSING_VAR}} should remain as-is',
+          content: '{{CONTENT}}\n// {{MISSING_VAR}} should remain as-is',
           variables: { OTHER_VAR: 'exists' },
         },
         output: { dir: testOutputDir, filename: 'missing-vars.js' },
@@ -166,7 +166,7 @@ describe('Bundler', () => {
     it('should append bundle code when placeholder not found', async () => {
       const config = parseConfig({
         packages: [{ name: '@walkeros/core', version: 'latest' }],
-        customCode:
+        content:
           'import { getId } from "@walkeros/core"; export const test = getId(6);',
         template: {
           content: '// Header only template',
@@ -196,13 +196,13 @@ describe('Bundler', () => {
 
       const config = parseConfig({
         packages: [{ name: '@walkeros/core', version: 'latest' }],
-        customCode:
+        content:
           'import { getId } from "@walkeros/core";\n\nexport const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
         output: { dir: testOutputDir, filename: 'error-test.js' },
       });
 
       await expect(bundle(config)).rejects.toThrow(
-        'Custom code syntax error at line 4, column 21:',
+        'Content syntax error at line 4, column 21:',
       );
     });
 
@@ -223,7 +223,7 @@ describe('Bundler', () => {
 
       const config = parseConfig({
         packages: [{ name: '@walkeros/core', version: 'latest' }],
-        customCode:
+        content:
           'import { getId } from "@walkeros/core";\nexport const test = getId;',
         output: { dir: testOutputDir, filename: 'error-test.js' },
       });
@@ -239,7 +239,7 @@ describe('Bundler', () => {
 
       const config = parseConfig({
         packages: [{ name: '@walkeros/core', version: 'latest' }],
-        customCode: 'export const test = "hello";',
+        content: 'export const test = "hello";',
         output: { dir: testOutputDir, filename: 'error-test.js' },
       });
 

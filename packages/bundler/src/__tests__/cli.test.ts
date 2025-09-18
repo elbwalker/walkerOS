@@ -49,7 +49,7 @@ describe('CLI JSON Output', () => {
     // Create a test config
     const testConfig = {
       packages: [{ name: '@walkeros/core', version: 'latest' }],
-      customCode:
+      content:
         'import { getId } from "@walkeros/core";\nexport const test = getId;',
       output: { dir: testOutputDir, filename: 'test.js' },
     };
@@ -80,7 +80,7 @@ describe('CLI JSON Output', () => {
     // Create a test config with syntax error
     const testConfig = {
       packages: [{ name: '@walkeros/core', version: 'latest' }],
-      customCode:
+      content:
         'import { getId } from "@walkeros/core";\nexport const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
       output: { dir: testOutputDir, filename: 'error-test.js' },
     };
@@ -94,7 +94,7 @@ describe('CLI JSON Output', () => {
     const output = JSON.parse(result.stdout);
     expect(output).toMatchObject({
       success: false,
-      error: expect.stringContaining('Custom code syntax error'),
+      error: expect.stringContaining('Content syntax error'),
       duration: expect.any(Number),
     });
 
@@ -117,7 +117,7 @@ describe('CLI JSON Output', () => {
   it('should collect stats when --json flag is used (implies --stats)', async () => {
     const testConfig = {
       packages: [{ name: '@walkeros/core', version: 'latest' }],
-      customCode:
+      content:
         'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
       output: { dir: testOutputDir, filename: 'wildcard-test.js' },
     };
@@ -136,7 +136,7 @@ describe('CLI JSON Output', () => {
   it('should suppress decorative output in JSON mode', async () => {
     const testConfig = {
       packages: [{ name: '@walkeros/core', version: 'latest' }],
-      customCode: 'export const test = "hello";',
+      content: 'export const test = "hello";',
       output: { dir: testOutputDir, filename: 'minimal-test.js' },
     };
 

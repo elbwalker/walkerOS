@@ -80,8 +80,8 @@ export class TemplateEngine {
   ): string {
     let result = content;
 
-    // Replace {{.}} with current item (for primitive arrays)
-    const currentItemPlaceholder = `${prefix}.${suffix}`;
+    // Replace {{@current}} with current item (for primitive arrays)
+    const currentItemPlaceholder = `${prefix}@current${suffix}`;
     result = result.replace(
       new RegExp(this.escapeRegex(currentItemPlaceholder), 'g'),
       String(item),
@@ -156,12 +156,12 @@ export class TemplateEngine {
     // First, process loop blocks
     result = this.processLoops(result, config);
 
-    // Replace bundle placeholder (or append if not found)
-    const bundlePlaceholder = config.bundlePlaceholder || '{{BUNDLE}}';
-    if (result.includes(bundlePlaceholder)) {
-      result = result.replace(bundlePlaceholder, bundleCode);
+    // Replace content placeholder (or append if not found)
+    const contentPlaceholder = config.contentPlaceholder || '{{CONTENT}}';
+    if (result.includes(contentPlaceholder)) {
+      result = result.replace(contentPlaceholder, bundleCode);
     } else {
-      // No bundle placeholder? Just append the code
+      // No content placeholder? Just append the code
       result = result + '\n' + bundleCode;
     }
 

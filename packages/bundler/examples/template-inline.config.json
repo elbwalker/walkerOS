@@ -5,9 +5,9 @@
       "version": "latest"
     }
   ],
-  "customCode": "import { getId, trim } from '@walkeros/core';\nexport const utils = { getId, trim };",
+  "content": "import { getId, trim } from '@walkeros/core';\nexport const utils = { getId, trim };",
   "template": {
-    "content": "// WalkerOS Utils Library v{{VERSION}}\n{{BUNDLE}}\n\n// Expose globally\nif (typeof window !== 'undefined') {\n  window.WalkerUtils = exports;\n}",
+    "content": "// WalkerOS Utils Library v{{VERSION}}\n{{CONTENT}}\n\n// Expose globally\nif (typeof window !== 'undefined') {\n  window.WalkerUtils = exports;\n}",
     "variables": {
       "VERSION": "1.0.0"
     }

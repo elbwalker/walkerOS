@@ -29,7 +29,7 @@ describe('TemplateEngine', () => {
 
     it('should replace bundle placeholder', async () => {
       const config = TemplateConfigSchema.parse({
-        content: 'Start\n{{BUNDLE}}\nEnd',
+        content: 'Start\n{{CONTENT}}\nEnd',
       });
       const result = await engine.process(config, 'const x = 42;');
 
@@ -38,7 +38,7 @@ describe('TemplateEngine', () => {
 
     it('should leave missing variables unchanged', async () => {
       const config = TemplateConfigSchema.parse({
-        content: '{{BUNDLE}} - {{MISSING}}',
+        content: '{{CONTENT}} - {{MISSING}}',
         variables: { EXISTS: 'yes' },
       });
       const result = await engine.process(config, 'code');
@@ -50,7 +50,7 @@ describe('TemplateEngine', () => {
   describe('File Templates', () => {
     it('should load and process file template', async () => {
       const templatePath = path.join(testDir, 'test.template');
-      await fs.writeFile(templatePath, '{{NAME}}: {{BUNDLE}}');
+      await fs.writeFile(templatePath, '{{NAME}}: {{CONTENT}}');
 
       const config = TemplateConfigSchema.parse({
         file: templatePath,
@@ -61,10 +61,10 @@ describe('TemplateEngine', () => {
       expect(result).toBe('Library: export const test = 1;');
     });
 
-    it('should handle custom bundle placeholder', async () => {
+    it('should handle custom content placeholder', async () => {
       const config = TemplateConfigSchema.parse({
         content: 'Start [CODE] End',
-        bundlePlaceholder: '[CODE]',
+        contentPlaceholder: '[CODE]',
       });
       const result = await engine.process(config, 'const x = 1;');
 
@@ -105,7 +105,7 @@ describe('TemplateEngine', () => {
 
     it('should process primitive array loop with current item access', async () => {
       const config = TemplateConfigSchema.parse({
-        content: '{{#tags}}Tag: {{.}}\\n{{/tags}}',
+        content: '{{#tags}}Tag: {{@current}}\\n{{/tags}}',
         variables: {
           tags: ['react', 'typescript', 'bundler'],
         },
@@ -170,7 +170,7 @@ describe('TemplateEngine', () => {
     it('should combine loops with regular variables', async () => {
       const config = TemplateConfigSchema.parse({
         content:
-          '// {{title}}\\n{{#imports}}import {{name}};\\n{{/imports}}{{BUNDLE}}',
+          '// {{title}}\\n{{#imports}}import {{name}};\\n{{/imports}}{{CONTENT}}',
         variables: {
           title: 'My Bundle',
           imports: [{ name: 'utils' }],
@@ -208,7 +208,7 @@ describe('TemplateEngine', () => {
     });
 
     it('should handle minimal template content', async () => {
-      const config = TemplateConfigSchema.parse({ content: '{{BUNDLE}}' });
+      const config = TemplateConfigSchema.parse({ content: '{{CONTENT}}' });
       const result = await engine.process(config, 'just code');
 
       expect(result).toBe('just code');
@@ -216,7 +216,7 @@ describe('TemplateEngine', () => {
 
     it('should handle empty bundle code', async () => {
       const config = TemplateConfigSchema.parse({
-        content: 'Template: {{BUNDLE}}',
+        content: 'Template: {{CONTENT}}',
       });
       const result = await engine.process(config, '');
 

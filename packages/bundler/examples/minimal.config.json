@@ -5,7 +5,7 @@
       "version": "latest"
     }
   ],
-  "customCode": "import { getId, trim } from '@walkeros/core';\n\n// Generate unique identifiers\nexport const generateId = (length = 8) => getId(length);\n\n// Clean and trim strings\nexport const cleanString = (str) => trim(str);\n\n// Only getId and trim from @walkeros/core are bundled - tree-shaken!",
+  "content": "import { getId, trim } from '@walkeros/core';\n\n// Generate unique identifiers\nexport const generateId = (length = 8) => getId(length);\n\n// Clean and trim strings\nexport const cleanString = (str) => trim(str);\n\n// Only getId and trim from @walkeros/core are bundled - tree-shaken!",
   "build": {
     "platform": "browser",
     "format": "esm",

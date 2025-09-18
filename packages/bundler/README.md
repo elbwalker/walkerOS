@@ -34,7 +34,7 @@ Create a `bundle.config.json` file with the following structure:
       "version": "latest"
     }
   ],
-  "customCode": "import { getId, getByPath } from '@walkeros/core'; export function generateSessionId() { return `session_${getId(8)}`; } export function extractUserName(data) { return getByPath(data, 'user.name', 'Anonymous'); }",
+  "content": "import { getId, getByPath } from '@walkeros/core'; export function generateSessionId() { return `session_${getId(8)}`; } export function extractUserName(data) { return getByPath(data, 'user.name', 'Anonymous'); }",
   "output": {
     "filename": "bundle.js",
     "dir": "./dist"
@@ -47,7 +47,7 @@ Create a `bundle.config.json` file with the following structure:
 - **packages**: Array of NPM packages to bundle
   - `name`: NPM package name
   - `version`: Package version (supports semver ranges)
-- **customCode**: Custom JavaScript code to include in the bundle
+- **content**: JavaScript code to include in the bundle
 - **build**: Build configuration (optional)
   - `platform`: Target platform - "browser", "node", or "neutral" (default:
     "browser")
@@ -60,7 +60,7 @@ Create a `bundle.config.json` file with the following structure:
   - `file`: Path to external template file
   - `variables`: Template variables (supports strings, numbers, booleans, and
     arrays)
-  - `bundlePlaceholder`: Bundle insertion point (default: "{{BUNDLE}}")
+  - `contentPlaceholder`: Content insertion point (default: "{{CONTENT}}")
   - `variablePattern`: Custom variable delimiters (default: "{{" and "}}")
 - **output**: Output configuration
   - `filename`: Output filename (default: "bundle.js")
@@ -73,7 +73,7 @@ Create a `bundle.config.json` file with the following structure:
 ```json
 {
   "packages": [{ "name": "@walkeros/core", "version": "latest" }],
-  "customCode": "import { getId } from '@walkeros/core'; export const generateId = () => getId(8);",
+  "content": "import { getId } from '@walkeros/core'; export const generateId = () => getId(8);",
   "output": {
     "filename": "minimal.js"
   }
@@ -85,7 +85,7 @@ Create a `bundle.config.json` file with the following structure:
 ```json
 {
   "packages": [{ "name": "@walkeros/core", "version": "latest" }],
-  "customCode": "import { getId, getByPath } from '@walkeros/core'; export function generateSessionId() { return `session_${getId(12)}`; } export function extractConfigValue(config, path) { return getByPath(config, path, 'default'); }",
+  "content": "import { getId, getByPath } from '@walkeros/core'; export function generateSessionId() { return `session_${getId(12)}`; } export function extractConfigValue(config, path) { return getByPath(config, path, 'default'); }",
   "build": {
     "platform": "node",
     "format": "cjs",
@@ -103,7 +103,7 @@ Create a `bundle.config.json` file with the following structure:
 ```json
 {
   "packages": [{ "name": "@walkeros/core", "version": "latest" }],
-  "customCode": "import { getId, getByPath, clone, trim } from '@walkeros/core'; export function processData(data) { return data.map(item => ({ ...item, id: getId(8), timestamp: new Date().toISOString().split('T')[0], processed: true })); } export function extractNestedValues(data, path) { return data.map(item => getByPath(item, path, null)).filter(val => val !== null); } export function deepCloneData(data) { return clone(data); }",
+  "content": "import { getId, getByPath, clone, trim } from '@walkeros/core'; export function processData(data) { return data.map(item => ({ ...item, id: getId(8), timestamp: new Date().toISOString().split('T')[0], processed: true })); } export function extractNestedValues(data, path) { return data.map(item => getByPath(item, path, null)).filter(val => val !== null); } export function deepCloneData(data) { return clone(data); }",
   "build": {
     "platform": "browser",
     "format": "esm",
@@ -123,9 +123,9 @@ Create a `bundle.config.json` file with the following structure:
 ```json
 {
   "packages": [{ "name": "@walkeros/core", "version": "latest" }],
-  "customCode": "export { getId, trim } from '@walkeros/core';",
+  "content": "export { getId, trim } from '@walkeros/core';",
   "template": {
-    "content": "// Auto-generated bundle\n{{#imports}}import { {{name}} } from '{{package}}';\n{{/imports}}\n\n{{BUNDLE}}\n\n// Available utilities: {{#utilities}}{{.}}, {{/utilities}}",
+    "content": "// Auto-generated bundle\n{{#imports}}import { {{name}} } from '{{package}}';\n{{/imports}}\n\n{{CONTENT}}\n\n// Available utilities: {{#utilities}}{{@current}}, {{/utilities}}",
     "variables": {
       "imports": [
         { "name": "getId", "package": "@walkeros/core" },
@@ -150,7 +150,7 @@ array loops:
 - **Simple variables**: `{{variableName}}`
 - **Array loops**: `{{#arrayName}}...{{/arrayName}}`
 - **Object properties**: `{{name}}`, `{{nested.property}}`
-- **Current item**: `{{.}}` (for primitive arrays)
+- **Current item**: `{{@current}}` (for primitive arrays)
 - **Array index**: `{{@index}}`
 
 ### Loop Examples
@@ -163,7 +163,7 @@ import { {{name}} } from '{{package}}';
 
 // Primitive array
 {{#tags}}
-Tag: {{.}}
+Tag: {{@current}}
 {{/tags}}
 
 // With index

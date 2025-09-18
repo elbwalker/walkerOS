@@ -22,7 +22,7 @@ export const TemplateConfigSchema = z
         ]),
       )
       .optional(),
-    bundlePlaceholder: z.string().optional().default('{{BUNDLE}}'),
+    contentPlaceholder: z.string().optional().default('{{CONTENT}}'),
     variablePattern: z
       .object({
         prefix: z.string().default('{{'),
@@ -52,7 +52,7 @@ export const ConfigSchema = z.object({
       version: z.string(),
     }),
   ),
-  customCode: z.string(),
+  content: z.string(),
   template: TemplateConfigSchema.optional(),
   build: BuildConfigSchema.default({}),
   output: z
