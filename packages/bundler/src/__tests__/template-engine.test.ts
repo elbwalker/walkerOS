@@ -2,13 +2,10 @@ import fs from 'fs-extra';
 import path from 'path';
 import { TemplateEngine } from '../template-engine';
 import { TemplateConfigSchema } from '../config';
+import { getId } from '@walkeros/core';
 
 describe('TemplateEngine', () => {
-  const randomId = Math.random().toString(36).substring(2, 11);
-  const testOutputDir = path.join(
-    '.tmp',
-    `test-output-${Date.now()}-${randomId}`,
-  );
+  const testOutputDir = path.join('.tmp', `template-${Date.now()}-${getId()}`);
   const engine = new TemplateEngine();
 
   beforeEach(async () => {

@@ -33,6 +33,7 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage && rm -rf .temp"
   },
   "dependencies": {
+    "@walkeros/core": "^0.1.2",
     "chalk": "^5.3.0",
     "commander": "^11.0.0",
     "esbuild": "^0.19.0",

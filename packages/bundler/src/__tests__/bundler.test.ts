@@ -2,13 +2,10 @@ import fs from 'fs-extra';
 import path from 'path';
 import { bundle } from '../bundler';
 import { parseConfig } from '../config';
+import { getId } from '@walkeros/core';
 
 describe('Bundler', () => {
-  const randomId = Math.random().toString(36).substring(2, 11);
-  const testOutputDir = path.join(
-    '.tmp',
-    `test-output-${Date.now()}-${randomId}`,
-  );
+  const testOutputDir = path.join('.tmp', `bundler-${Date.now()}-${getId()}`);
 
   beforeEach(async () => {
     // Ensure test output directory exists
