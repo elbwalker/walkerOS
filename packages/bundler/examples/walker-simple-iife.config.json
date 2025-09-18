@@ -22,7 +22,7 @@
         {
           "name": "browser",
           "code": "sourceBrowser",
-          "config": "{\n        settings: {\n          pageview: true,\n          session: true,\n          elb: 'elb',\n          prefix: 'data-elb'\n        }\n      }"
+          "config": "{\"settings\":{\"pageview\":true,\"session\":true,\"elb\":\"elb\",\"prefix\":\"data-elb\"}}"
         }
       ],
       "destinations": [

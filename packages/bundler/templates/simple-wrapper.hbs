@@ -1,9 +1,0 @@
-// Simple wrapper template
-{{CONTENT}}
-
-// Export as UMD module
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = typeof exports !== 'undefined' ? exports : {};
-} else if (typeof window !== 'undefined') {
-  window.SimpleWrapper = typeof exports !== 'undefined' ? exports : {};
-}
