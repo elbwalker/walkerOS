@@ -55,6 +55,13 @@ Create a `bundle.config.json` file with the following structure:
   - `target`: ECMAScript target (e.g., "es2018", "node18")
   - `minify`: Enable minification (default: false)
   - `sourcemap`: Generate source maps (default: false)
+- **template**: Template configuration (optional)
+  - `content`: Inline template string
+  - `file`: Path to external template file
+  - `variables`: Template variables (supports strings, numbers, booleans, and
+    arrays)
+  - `bundlePlaceholder`: Bundle insertion point (default: "{{BUNDLE}}")
+  - `variablePattern`: Custom variable delimiters (default: "{{" and "}}")
 - **output**: Output configuration
   - `filename`: Output filename (default: "bundle.js")
   - `dir`: Output directory (default: "./dist")
@@ -111,6 +118,60 @@ Create a `bundle.config.json` file with the following structure:
 }
 ```
 
+### Template with Array Loops
+
+```json
+{
+  "packages": [{ "name": "@walkeros/core", "version": "latest" }],
+  "customCode": "export { getId, trim } from '@walkeros/core';",
+  "template": {
+    "content": "// Auto-generated bundle\n{{#imports}}import { {{name}} } from '{{package}}';\n{{/imports}}\n\n{{BUNDLE}}\n\n// Available utilities: {{#utilities}}{{.}}, {{/utilities}}",
+    "variables": {
+      "imports": [
+        { "name": "getId", "package": "@walkeros/core" },
+        { "name": "trim", "package": "@walkeros/utils" }
+      ],
+      "utilities": ["getId", "trim", "createEvent"]
+    }
+  },
+  "output": {
+    "filename": "templated-bundle.js"
+  }
+}
+```
+
+## Template System
+
+The bundler supports a powerful templating system with variable substitution and
+array loops:
+
+### Variables
+
+- **Simple variables**: `{{variableName}}`
+- **Array loops**: `{{#arrayName}}...{{/arrayName}}`
+- **Object properties**: `{{name}}`, `{{nested.property}}`
+- **Current item**: `{{.}}` (for primitive arrays)
+- **Array index**: `{{@index}}`
+
+### Loop Examples
+
+```javascript
+// Object array
+{{#imports}}
+import { {{name}} } from '{{package}}';
+{{/imports}}
+
+// Primitive array
+{{#tags}}
+Tag: {{.}}
+{{/tags}}
+
+// With index
+{{#items}}
+Item {{@index}}: {{name}}
+{{/items}}
+```
+
 ## Features
 
 - ✅ Downloads real NPM packages from registry
@@ -121,6 +182,7 @@ Create a `bundle.config.json` file with the following structure:
 - ✅ Minification and source maps
 - ✅ Automatic temporary file cleanup
 - ✅ Package caching for faster subsequent builds
+- ✅ Template system with variable substitution and array loops
 
 ## Package Variable Names
 

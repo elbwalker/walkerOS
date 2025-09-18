@@ -83,6 +83,122 @@ describe('TemplateEngine', () => {
     });
   });
 
+  describe('Array Loop Processing', () => {
+    it('should process simple array loop with object properties', async () => {
+      const config = TemplateConfigSchema.parse({
+        content:
+          '{{#imports}}import { {{name}} } from "{{path}}";\\n{{/imports}}',
+        variables: {
+          imports: [
+            { name: 'getId', path: '@walkeros/core' },
+            { name: 'trim', path: '@walkeros/utils' },
+          ],
+        },
+      });
+
+      const result = await engine.process(config, 'const bundle = true;');
+
+      expect(result).toBe(
+        'import { getId } from "@walkeros/core";\\nimport { trim } from "@walkeros/utils";\\n\nconst bundle = true;',
+      );
+    });
+
+    it('should process primitive array loop with current item access', async () => {
+      const config = TemplateConfigSchema.parse({
+        content: '{{#tags}}Tag: {{.}}\\n{{/tags}}',
+        variables: {
+          tags: ['react', 'typescript', 'bundler'],
+        },
+      });
+
+      const result = await engine.process(config, 'code');
+
+      expect(result).toBe(
+        'Tag: react\\nTag: typescript\\nTag: bundler\\n\ncode',
+      );
+    });
+
+    it('should support index access in loops', async () => {
+      const config = TemplateConfigSchema.parse({
+        content: '{{#items}}Item {{@index}}: {{name}}\\n{{/items}}',
+        variables: {
+          items: [{ name: 'first' }, { name: 'second' }],
+        },
+      });
+
+      const result = await engine.process(config, 'bundle');
+
+      expect(result).toBe('Item 0: first\\nItem 1: second\\n\nbundle');
+    });
+
+    it('should handle empty arrays', async () => {
+      const config = TemplateConfigSchema.parse({
+        content: 'Before\\n{{#empty}}Should not appear{{/empty}}\\nAfter',
+        variables: { empty: [] },
+      });
+
+      const result = await engine.process(config, 'code');
+
+      expect(result).toBe('Before\\n\\nAfter\ncode');
+    });
+
+    it('should handle non-array variables in loop syntax', async () => {
+      const config = TemplateConfigSchema.parse({
+        content: '{{#notArray}}Should not appear{{/notArray}}',
+        variables: { notArray: 'string' },
+      });
+
+      const result = await engine.process(config, 'code');
+
+      expect(result).toBe('\ncode');
+    });
+
+    it('should work with custom variable patterns', async () => {
+      const config = TemplateConfigSchema.parse({
+        content: '<#items><name>: <value>\\n</items>',
+        variables: {
+          items: [{ name: 'test', value: '123' }],
+        },
+        variablePattern: { prefix: '<', suffix: '>' },
+      });
+
+      const result = await engine.process(config, 'bundle');
+
+      expect(result).toBe('test: 123\\n\nbundle');
+    });
+
+    it('should combine loops with regular variables', async () => {
+      const config = TemplateConfigSchema.parse({
+        content:
+          '// {{title}}\\n{{#imports}}import {{name}};\\n{{/imports}}{{BUNDLE}}',
+        variables: {
+          title: 'My Bundle',
+          imports: [{ name: 'utils' }],
+        },
+      });
+
+      const result = await engine.process(config, 'const code = 1;');
+
+      expect(result).toBe('// My Bundle\\nimport utils;\\nconst code = 1;');
+    });
+
+    it('should handle nested object properties', async () => {
+      const config = TemplateConfigSchema.parse({
+        content: '{{#configs}}{{name}}: {{settings.enabled}}\\n{{/configs}}',
+        variables: {
+          configs: [
+            { name: 'dev', settings: { enabled: true } },
+            { name: 'prod', settings: { enabled: false } },
+          ],
+        },
+      });
+
+      const result = await engine.process(config, 'bundle');
+
+      expect(result).toBe('dev: true\\nprod: false\\n\nbundle');
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should append code when no bundle placeholder found', async () => {
       const config = TemplateConfigSchema.parse({ content: 'Header only' });

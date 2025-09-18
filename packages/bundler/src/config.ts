@@ -6,7 +6,21 @@ export const TemplateConfigSchema = z
     content: z.string().optional(), // Inline template string
     file: z.string().optional(), // Path to template file
     variables: z
-      .record(z.union([z.string(), z.number(), z.boolean()]))
+      .record(
+        z.union([
+          z.string(),
+          z.number(),
+          z.boolean(),
+          z.array(
+            z.union([
+              z.string(),
+              z.number(),
+              z.boolean(),
+              z.record(z.unknown()),
+            ]),
+          ),
+        ]),
+      )
       .optional(),
     bundlePlaceholder: z.string().optional().default('{{BUNDLE}}'),
     variablePattern: z

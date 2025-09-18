@@ -1,0 +1,40 @@
+{
+  "packages": [
+    {
+      "name": "@walkeros/core",
+      "version": "latest"
+    }
+  ],
+  "customCode": "export { getId, trim } from '@walkeros/core';",
+  "template": {
+    "content": "// Auto-generated WalkerOS Bundle\n// Imports:\n{{#imports}}import { {{name}} } from '{{package}}';\n{{/imports}}\n// Configuration:\n{{#configs}}const {{name}} = {\n  enabled: {{settings.enabled}},\n  version: '{{version}}'\n};\n{{/configs}}\n\n{{BUNDLE}}\n\n// Export configurations\nexport const bundleConfig = {\n{{#configs}}  {{name}}: {{name}},\n{{/configs}}};\n\n// Available utilities: {{#utils}}{{.}}, {{/utils}}",
+    "variables": {
+      "imports": [
+        { "name": "getId", "package": "@walkeros/core" },
+        { "name": "trim", "package": "@walkeros/utils" }
+      ],
+      "configs": [
+        {
+          "name": "development",
+          "settings": { "enabled": true },
+          "version": "1.0.0"
+        },
+        {
+          "name": "production",
+          "settings": { "enabled": false },
+          "version": "1.0.0"
+        }
+      ],
+      "utils": ["getId", "trim", "createEvent"]
+    }
+  },
+  "build": {
+    "platform": "browser",
+    "format": "esm",
+    "minify": false
+  },
+  "output": {
+    "filename": "array-loop-example.js",
+    "dir": "./dist"
+  }
+}
