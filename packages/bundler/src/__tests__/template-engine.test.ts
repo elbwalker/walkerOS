@@ -36,14 +36,14 @@ describe('TemplateEngine', () => {
       expect(result).toBe('Start\nconst x = 42;\nEnd');
     });
 
-    it('should leave missing variables unchanged', async () => {
+    it('should remove missing variables (Handlebars behavior)', async () => {
       const config = TemplateConfigSchema.parse({
         content: '{{CONTENT}} - {{MISSING}}',
         variables: { EXISTS: 'yes' },
       });
       const result = await engine.process(config, 'code');
 
-      expect(result).toBe('code - {{MISSING}}');
+      expect(result).toBe('code - ');
     });
   });
 
@@ -105,7 +105,7 @@ describe('TemplateEngine', () => {
 
     it('should process primitive array loop with current item access', async () => {
       const config = TemplateConfigSchema.parse({
-        content: '{{#tags}}Tag: {{@current}}\\n{{/tags}}',
+        content: '{{#tags}}Tag: {{this}}\\n{{/tags}}',
         variables: {
           tags: ['react', 'typescript', 'bundler'],
         },

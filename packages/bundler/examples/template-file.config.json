@@ -7,7 +7,7 @@
   ],
   "content": "import { getId, getByPath } from '@walkeros/core';\nexport const generateId = () => getId(8);\nexport const extractValue = (obj, path) => getByPath(obj, path, null);",
   "template": {
-    "file": "./examples/library.template.js",
+    "file": "templates/library.hbs",
     "variables": {
       "NAME": "WalkerUtils",
       "VERSION": "2.1.0",

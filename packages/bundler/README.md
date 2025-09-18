@@ -125,7 +125,7 @@ Create a `bundle.config.json` file with the following structure:
   "packages": [{ "name": "@walkeros/core", "version": "latest" }],
   "content": "export { getId, trim } from '@walkeros/core';",
   "template": {
-    "content": "// Auto-generated bundle\n{{#imports}}import { {{name}} } from '{{package}}';\n{{/imports}}\n\n{{CONTENT}}\n\n// Available utilities: {{#utilities}}{{@current}}, {{/utilities}}",
+    "content": "// Auto-generated bundle\n{{#imports}}import { {{name}} } from '{{package}}';\n{{/imports}}\n\n{{CONTENT}}\n\n// Available utilities: {{#utilities}}{{this}}, {{/utilities}}",
     "variables": {
       "imports": [
         { "name": "getId", "package": "@walkeros/core" },
@@ -150,7 +150,7 @@ array loops:
 - **Simple variables**: `{{variableName}}`
 - **Array loops**: `{{#arrayName}}...{{/arrayName}}`
 - **Object properties**: `{{name}}`, `{{nested.property}}`
-- **Current item**: `{{@current}}` (for primitive arrays)
+- **Current item**: `{{this}}` (for primitive arrays)
 - **Array index**: `{{@index}}`
 
 ### Loop Examples
@@ -163,7 +163,7 @@ import { {{name}} } from '{{package}}';
 
 // Primitive array
 {{#tags}}
-Tag: {{@current}}
+Tag: {{this}}
 {{/tags}}
 
 // With index

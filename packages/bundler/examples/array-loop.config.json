@@ -5,13 +5,13 @@
       "version": "latest"
     }
   ],
-  "content": "export { getId, trim } from '@walkeros/core';",
+  "content": "export { getId, getByPath } from '@walkeros/core';",
   "template": {
-    "content": "// Auto-generated WalkerOS Bundle\n// Imports:\n{{#imports}}import { {{name}} } from '{{package}}';\n{{/imports}}\n// Configuration:\n{{#configs}}const {{name}} = {\n  enabled: {{settings.enabled}},\n  version: '{{version}}'\n};\n{{/configs}}\n\n{{CONTENT}}\n\n// Export configurations\nexport const bundleConfig = {\n{{#configs}}  {{name}}: {{name}},\n{{/configs}}};\n\n// Available utilities: {{#utils}}{{@current}}, {{/utils}}",
+    "file": "templates/array-loop.hbs",
     "variables": {
       "imports": [
         { "name": "getId", "package": "@walkeros/core" },
-        { "name": "trim", "package": "@walkeros/utils" }
+        { "name": "getByPath", "package": "@walkeros/core" }
       ],
       "configs": [
         {
@@ -25,7 +25,7 @@
           "version": "1.0.0"
         }
       ],
-      "utils": ["getId", "trim", "createEvent"]
+      "utils": ["getId", "getByPath", "createEvent"]
     }
   },
   "build": {

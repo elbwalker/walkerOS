@@ -1,8 +1,16 @@
 import fs from 'fs-extra';
 import path from 'path';
+import Handlebars from 'handlebars';
 import { TemplateConfig } from './config.js';
 
 export class TemplateEngine {
+  private handlebars: typeof Handlebars;
+
+  constructor() {
+    // Create a new Handlebars instance
+    this.handlebars = Handlebars.create();
+  }
+
   /**
    * Load template content from configuration
    */
@@ -25,125 +33,6 @@ export class TemplateEngine {
   }
 
   /**
-   * Process loop blocks in template
-   */
-  private processLoops(template: string, config: TemplateConfig): string {
-    if (!config.variables) return template;
-
-    const prefix = config.variablePattern?.prefix || '{{';
-    const suffix = config.variablePattern?.suffix || '}}';
-
-    let result = template;
-
-    // Find all loop blocks {{#arrayName}}...{{/arrayName}}
-    const loopRegex = new RegExp(
-      `${this.escapeRegex(prefix)}#(\\w+)${this.escapeRegex(suffix)}([\\s\\S]*?)${this.escapeRegex(prefix)}\\/(\\1)${this.escapeRegex(suffix)}`,
-      'g',
-    );
-
-    result = result.replace(
-      loopRegex,
-      (match, arrayName, loopContent, closingName) => {
-        const arrayValue = config.variables?.[arrayName];
-
-        if (!Array.isArray(arrayValue)) {
-          // If not an array, return empty string or original content
-          return '';
-        }
-
-        return arrayValue
-          .map((item, index) => {
-            return this.processLoopItem(
-              loopContent,
-              item,
-              index,
-              prefix,
-              suffix,
-            );
-          })
-          .join('');
-      },
-    );
-
-    return result;
-  }
-
-  /**
-   * Process a single loop item
-   */
-  private processLoopItem(
-    content: string,
-    item: unknown,
-    index: number,
-    prefix: string,
-    suffix: string,
-  ): string {
-    let result = content;
-
-    // Replace {{@current}} with current item (for primitive arrays)
-    const currentItemPlaceholder = `${prefix}@current${suffix}`;
-    result = result.replace(
-      new RegExp(this.escapeRegex(currentItemPlaceholder), 'g'),
-      String(item),
-    );
-
-    // Replace {{@index}} with current index
-    const indexPlaceholder = `${prefix}@index${suffix}`;
-    result = result.replace(
-      new RegExp(this.escapeRegex(indexPlaceholder), 'g'),
-      String(index),
-    );
-
-    // Replace object properties like {{name}}, {{path}}, etc.
-    if (typeof item === 'object' && item !== null) {
-      // Handle simple properties first
-      for (const [key, value] of Object.entries(item)) {
-        const placeholder = `${prefix}${key}${suffix}`;
-        result = result.replace(
-          new RegExp(this.escapeRegex(placeholder), 'g'),
-          String(value),
-        );
-      }
-
-      // Handle nested dot notation like {{settings.enabled}}
-      const nestedRegex = new RegExp(
-        `${this.escapeRegex(prefix)}([\\w.]+)${this.escapeRegex(suffix)}`,
-        'g',
-      );
-      result = result.replace(nestedRegex, (match, path) => {
-        if (path.includes('.')) {
-          const value = this.getNestedValue(item, path);
-          return value !== undefined ? String(value) : match;
-        }
-        return match; // Let simple properties be handled above
-      });
-    }
-
-    return result;
-  }
-
-  /**
-   * Get nested object value using dot notation
-   */
-  private getNestedValue(obj: unknown, path: string): unknown {
-    return path.split('.').reduce((current: unknown, key: string) => {
-      return current &&
-        typeof current === 'object' &&
-        current !== null &&
-        key in current
-        ? (current as Record<string, unknown>)[key]
-        : undefined;
-    }, obj);
-  }
-
-  /**
-   * Escape special regex characters
-   */
-  private escapeRegex(str: string): string {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
-
-  /**
    * Apply template with bundle code and variable substitution
    */
   applyTemplate(
@@ -151,37 +40,56 @@ export class TemplateEngine {
     bundleCode: string,
     config: TemplateConfig,
   ): string {
-    let result = template;
+    let processedTemplate = template;
 
-    // First, process loop blocks
-    result = this.processLoops(result, config);
-
-    // Replace content placeholder (or append if not found)
-    const contentPlaceholder = config.contentPlaceholder || '{{CONTENT}}';
-    if (result.includes(contentPlaceholder)) {
-      result = result.replace(contentPlaceholder, bundleCode);
-    } else {
-      // No content placeholder? Just append the code
-      result = result + '\n' + bundleCode;
-    }
-
-    // Replace simple variables if provided
-    if (config.variables) {
-      const prefix = config.variablePattern?.prefix || '{{';
-      const suffix = config.variablePattern?.suffix || '}}';
-
-      for (const [key, value] of Object.entries(config.variables)) {
-        // Skip arrays as they are handled by loop processing
-        if (Array.isArray(value)) continue;
-
-        const placeholder = `${prefix}${key}${suffix}`;
-        const regex = new RegExp(this.escapeRegex(placeholder), 'g');
-        result = result.replace(regex, String(value));
+    // Handle custom variable patterns by converting them to standard Handlebars syntax
+    if (config.variablePattern) {
+      const { prefix, suffix } = config.variablePattern;
+      if (prefix !== '{{' || suffix !== '}}') {
+        // Convert custom patterns to Handlebars syntax
+        const customRegex = new RegExp(
+          `${this.escapeRegex(prefix)}([\\w.#/@]+)${this.escapeRegex(suffix)}`,
+          'g',
+        );
+        processedTemplate = processedTemplate.replace(customRegex, '{{$1}}');
       }
     }
 
-    // Any remaining placeholders are left as-is (no failure)
-    return result;
+    // Replace content placeholder with bundle code first
+    const contentPlaceholder = config.contentPlaceholder || '{{CONTENT}}';
+    const templateWithContent = processedTemplate.includes(contentPlaceholder)
+      ? processedTemplate.replace(contentPlaceholder, bundleCode)
+      : processedTemplate + '\n' + bundleCode;
+
+    // Prepare template data for Handlebars
+    const templateData: Record<string, unknown> = {
+      CONTENT: bundleCode,
+      ...config.variables,
+    };
+
+    // Clean up the data - convert non-arrays used in loop syntax to empty arrays
+    // This makes Handlebars behave like our old custom engine
+    if (config.variables) {
+      for (const [key, value] of Object.entries(config.variables)) {
+        // Check if this variable is used in loop syntax in the template
+        const loopRegex = new RegExp(`{{#${key}}}`, 'g');
+        if (loopRegex.test(templateWithContent) && !Array.isArray(value)) {
+          // Convert non-array to empty array for loops
+          templateData[key] = [];
+        }
+      }
+    }
+
+    // Compile and execute the template
+    const compiledTemplate = this.handlebars.compile(templateWithContent);
+    return compiledTemplate(templateData);
+  }
+
+  /**
+   * Escape special regex characters
+   */
+  private escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   /**

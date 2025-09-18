@@ -1,0 +1,69 @@
+{
+  "packages": [
+    {
+      "name": "@walkeros/core",
+      "version": "latest"
+    },
+    {
+      "name": "@walkeros/collector",
+      "version": "latest"
+    },
+    {
+      "name": "@walkeros/web-source-browser",
+      "version": "latest"
+    },
+    {
+      "name": "@walkeros/web-destination-api",
+      "version": "latest"
+    },
+    {
+      "name": "@walkeros/web-destination-gtag",
+      "version": "latest"
+    }
+  ],
+  "content": "import { createCollector } from '@walkeros/collector';\nimport { sourceBrowser } from '@walkeros/web-source-browser';\nimport { destinationAPI } from '@walkeros/web-destination-api';\nimport { destinationGtag } from '@walkeros/web-destination-gtag';",
+  "template": {
+    "file": "templates/walker-iife.hbs",
+    "variables": {
+      "collectorName": "walker",
+      "sources": [
+        {
+          "name": "browser",
+          "code": "sourceBrowser",
+          "config": "{\n          settings: {\n            pageview: true,\n            session: true,\n            elb: 'elb',\n            prefix: 'data-elb'\n          }\n        }"
+        }
+      ],
+      "destinations": [
+        {
+          "name": "console",
+          "code": "{\n          type: 'console',\n          config: {},\n          push(event) {\n            console.log('📊 Event captured:', {\n              name: event.name,\n              data: event.data,\n              timing: event.timing\n            });\n          }\n        }",
+          "config": "{}",
+          "env": "{}"
+        },
+        {
+          "name": "api",
+          "code": "destinationAPI",
+          "config": "{\n          settings: {\n            url: 'https://analytics.example.com/events',\n            method: 'POST',\n            headers: {\n              'Content-Type': 'application/json',\n              'X-API-Key': 'your-api-key'\n            }\n          }\n        }",
+          "env": "{\n          sendWeb: (url, body, options) => {\n            console.log('📡 API Call:', { url, body, options });\n          }\n        }"
+        },
+        {
+          "name": "gtag",
+          "code": "destinationGtag",
+          "config": "{\n          settings: {\n            ga4: {\n              measurementId: 'G-XXXXXXXXXX'\n            },\n            ads: {\n              conversionId: 'AW-XXXXXXXXX'\n            }\n          },\n          mapping: {\n            order: {\n              complete: {\n                name: 'purchase',\n                settings: {\n                  ga4: {\n                    include: ['data', 'context']\n                  },\n                  ads: {}\n                },\n                data: {\n                  map: {\n                    transaction_id: 'data.id',\n                    value: 'data.total',\n                    currency: { key: 'data.currency', value: 'EUR' },\n                    tax: 'data.tax',\n                    shipping: 'data.shipping'\n                  }\n                }\n              }\n            }\n          }\n        }",
+          "env": "{\n          window: {\n            gtag: (...args) => {\n              console.log('🎯 Gtag Call:', args);\n            }\n          }\n        }"
+        }
+      ]
+    }
+  },
+  "build": {
+    "platform": "browser",
+    "format": "iife",
+    "minify": false,
+    "sourcemap": false,
+    "target": "es2020"
+  },
+  "output": {
+    "filename": "walker-collector.js",
+    "dir": "./dist"
+  }
+}

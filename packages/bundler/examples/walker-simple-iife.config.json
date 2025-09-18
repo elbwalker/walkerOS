@@ -1,0 +1,48 @@
+{
+  "packages": [
+    {
+      "name": "@walkeros/core",
+      "version": "latest"
+    },
+    {
+      "name": "@walkeros/collector",
+      "version": "latest"
+    },
+    {
+      "name": "@walkeros/web-source-browser",
+      "version": "latest"
+    }
+  ],
+  "content": "import { createCollector } from '@walkeros/collector';\nimport { sourceBrowser } from '@walkeros/web-source-browser';\n\n// Console destination for debugging\nconst consoleDestination = {\n  type: 'console',\n  config: {},\n  push(event) {\n    console.log('📊 Event captured:', {\n      name: event.name,\n      data: event.data,\n      timing: event.timing\n    });\n  }\n};",
+  "template": {
+    "file": "templates/walker-simple.hbs",
+    "variables": {
+      "collectorName": "walker",
+      "sources": [
+        {
+          "name": "browser",
+          "code": "sourceBrowser",
+          "config": "{\n        settings: {\n          pageview: true,\n          session: true,\n          elb: 'elb',\n          prefix: 'data-elb'\n        }\n      }"
+        }
+      ],
+      "destinations": [
+        {
+          "name": "console",
+          "code": "consoleDestination",
+          "config": "{}"
+        }
+      ]
+    }
+  },
+  "build": {
+    "platform": "browser",
+    "format": "iife",
+    "minify": false,
+    "sourcemap": false,
+    "target": "es2020"
+  },
+  "output": {
+    "filename": "walker-simple.js",
+    "dir": "./dist"
+  }
+}

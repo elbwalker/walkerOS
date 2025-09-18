@@ -1,0 +1,42 @@
+{{CONTENT}}
+
+(async function() {
+  'use strict';
+  
+  try {
+    // Create collector configuration
+    const config = {
+      // Sources configuration
+      sources: {
+{{#sources}}
+        {{name}}: {
+          code: {{{code}}},
+          config: {{{config}}}
+        },
+{{/sources}}
+      },
+      
+      // Destinations configuration  
+      destinations: {
+{{#destinations}}
+        {{name}}: {
+          code: {{{code}}},
+          config: {{{config}}},
+          env: {{{env}}}
+        },
+{{/destinations}}
+      }
+    };
+
+    // Create the collector
+    const { collector, elb } = await createCollector(config);
+    
+    // Make collector globally available
+    window['{{collectorName}}'] = collector;
+    
+    console.log('✅ WalkerOS collector "{{collectorName}}" initialized successfully');
+    
+  } catch (error) {
+    console.error('❌ Failed to initialize WalkerOS collector:', error);
+  }
+})();
