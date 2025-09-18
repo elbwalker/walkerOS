@@ -6,7 +6,10 @@ import { downloadPackages } from './package-manager.js';
 import { TemplateEngine } from './template-engine.js';
 import chalk from 'chalk';
 
-const TEMP_DIR = path.join(process.cwd(), '.temp');
+function getTempDir(tempDir = '.tmp'): string {
+  const randomId = Math.random().toString(36).substring(2, 11);
+  return path.join(process.cwd(), tempDir, `bundler-${Date.now()}-${randomId}`);
+}
 
 export interface BundleStats {
   totalSize: number;
@@ -31,6 +34,7 @@ export async function bundle(
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
   const log = createLogger(silent);
+  const TEMP_DIR = getTempDir(config.tempDir);
 
   try {
     // Step 1: Prepare temporary directory
@@ -53,16 +57,22 @@ export async function bundle(
 
     // Step 4: Bundle with esbuild
     log(chalk.blue('⚡ Bundling with esbuild...'));
-    const outputPath = path.join(config.output.dir, config.output.filename);
+    const outputPath = path.resolve(config.output.dir, config.output.filename);
+
+    // Ensure output directory exists
+    await fs.ensureDir(path.dirname(outputPath));
 
     const buildOptions = createEsbuildOptions(
       config.build,
       entryPath,
       outputPath,
+      TEMP_DIR,
+      packagePaths,
+      silent,
     );
 
     try {
-      const result = await esbuild.build(buildOptions);
+      await esbuild.build(buildOptions);
     } catch (buildError) {
       // Enhanced error handling for build failures
       throw createBuildError(buildError as EsbuildError, config.content);
@@ -140,16 +150,25 @@ function createEsbuildOptions(
   buildConfig: BuildConfig,
   entryPath: string,
   outputPath: string,
+  tempDir: string,
+  packagePaths: Map<string, string>,
+  silent = false,
 ): esbuild.BuildOptions {
+  // Create aliases to force esbuild to use downloaded packages
+  const alias: Record<string, string> = {};
+  for (const [packageName, packagePath] of packagePaths.entries()) {
+    alias[packageName] = packagePath;
+  }
+
   const baseOptions: esbuild.BuildOptions = {
     entryPoints: [entryPath],
     bundle: true,
     format: buildConfig.format as esbuild.Format,
     platform: buildConfig.platform as esbuild.Platform,
     outfile: outputPath,
+    alias,
     treeShaking: true,
-    nodePaths: [path.join(TEMP_DIR, 'node_modules')],
-    logLevel: 'error',
+    logLevel: silent ? 'silent' : 'error',
     minify: buildConfig.minify,
     sourcemap: buildConfig.sourcemap,
     resolveExtensions: ['.js', '.ts', '.mjs', '.json'],

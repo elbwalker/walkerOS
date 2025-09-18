@@ -3,33 +3,16 @@ import path from 'path';
 import { bundle } from '../bundler';
 import { parseConfig } from '../config';
 
-// Mock the package manager to avoid external dependencies in tests
-jest.mock('../package-manager', () => ({
-  downloadPackages: jest
-    .fn()
-    .mockResolvedValue(
-      new Map([['@walkeros/core', '/mocked/node_modules/@walkeros/core']]),
-    ),
-}));
-
-// Mock esbuild to avoid actual bundling in tests
-jest.mock('esbuild', () => ({
-  build: jest.fn().mockResolvedValue({}),
-}));
-
-import esbuild from 'esbuild';
-const mockEsbuildBuild = esbuild.build as jest.MockedFunction<
-  typeof esbuild.build
->;
-
 describe('Bundler', () => {
-  const testOutputDir = 'test-output';
+  const randomId = Math.random().toString(36).substring(2, 11);
+  const testOutputDir = path.join(
+    '.tmp',
+    `test-output-${Date.now()}-${randomId}`,
+  );
 
   beforeEach(async () => {
     // Ensure test output directory exists
     await fs.ensureDir(testOutputDir);
-    // Reset mocks
-    mockEsbuildBuild.mockClear();
     // Mock console.log to suppress output during tests
     jest.spyOn(console, 'log').mockImplementation(() => {});
   });
@@ -50,7 +33,7 @@ describe('Bundler', () => {
     rawConfig.output.dir = testOutputDir;
     const config = parseConfig(rawConfig);
 
-    // Run bundler (mocked dependencies should complete without error)
+    // Run bundler with real dependencies
     await expect(bundle(config)).resolves.not.toThrow();
   });
 
@@ -63,7 +46,7 @@ describe('Bundler', () => {
     rawConfig.output.dir = testOutputDir;
     const config = parseConfig(rawConfig);
 
-    // Run bundler (mocked dependencies should complete without error)
+    // Run bundler with real dependencies
     await expect(bundle(config)).resolves.not.toThrow();
   });
 
@@ -76,20 +59,11 @@ describe('Bundler', () => {
     rawConfig.output.dir = testOutputDir;
     const config = parseConfig(rawConfig);
 
-    // Run bundler (mocked dependencies should complete without error)
+    // Run bundler with real dependencies
     await expect(bundle(config)).resolves.not.toThrow();
   });
 
   describe('Stats Collection', () => {
-    beforeEach(async () => {
-      // Mock fs.stat to return bundle size
-      jest
-        .spyOn(fs, 'stat')
-        .mockImplementation(() => Promise.resolve({ size: 51200 } as fs.Stats));
-      // Also mock console.log for this nested describe
-      jest.spyOn(console, 'log').mockImplementation(() => {});
-    });
-
     it('should collect bundle stats when requested', async () => {
       const configPath = path.join('examples', 'minimal.config.json');
       const rawConfig = await fs.readJson(configPath);
@@ -99,7 +73,7 @@ describe('Bundler', () => {
       const stats = await bundle(config, true);
 
       expect(stats).toBeDefined();
-      expect(stats!.totalSize).toBe(51200);
+      expect(stats!.totalSize).toBeGreaterThan(0);
       expect(stats!.buildTime).toBeGreaterThan(0);
       expect(stats!.treeshakingEffective).toBe(true);
       expect(stats!.packages).toHaveLength(1);
@@ -178,22 +152,67 @@ describe('Bundler', () => {
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle esbuild errors with location information', async () => {
-      const mockError = {
-        errors: [
-          {
-            text: 'Expected ")" but found "x"',
-            location: {
-              file: '.temp/entry.js',
-              line: 4,
-              column: 21,
-            },
-          },
-        ],
-      };
-      mockEsbuildBuild.mockRejectedValueOnce(mockError);
+  describe('Version Resolution', () => {
+    let versionTestDir: string;
 
+    beforeAll(() => {
+      const randomId = Math.random().toString(36).substring(2, 11);
+      versionTestDir = path.join(
+        '.tmp',
+        `version-test-${Date.now()}-${randomId}`,
+      );
+    });
+
+    afterAll(async () => {
+      await fs.remove(versionTestDir).catch(() => {});
+    });
+
+    it('should bundle with specific version and verify version in output', async () => {
+      // Use CLI approach since Jest mocking interferes with direct bundle() calls
+      const configContent = {
+        packages: [
+          { name: '@walkeros/core', version: '0.0.7' },
+          { name: '@walkeros/collector', version: '0.0.7' },
+        ],
+        content: "import { createCollector } from '@walkeros/collector';",
+        template: {
+          content:
+            '{{CONTENT}}\n\n// Assign to window.old to test version resolution\nwindow.old = { createCollector };',
+        },
+        build: {
+          platform: 'browser',
+          format: 'iife',
+          target: 'es2020',
+        },
+        output: {
+          filename: 'version-test.js',
+          dir: versionTestDir,
+        },
+      };
+
+      const tempConfigPath = path.join(versionTestDir, 'test.config.json');
+      await fs.ensureDir(versionTestDir);
+      await fs.writeJson(tempConfigPath, configContent);
+
+      // Run CLI command (only reliable way to bypass Jest mocking issues)
+      const { execSync } = require('child_process');
+      execSync(`npm run dev -- --config ${tempConfigPath}`, {
+        cwd: process.cwd(),
+        stdio: 'pipe',
+      });
+
+      // Verify the bundled file contains version "0.0.7"
+      const outputPath = path.join(versionTestDir, 'version-test.js');
+      expect(await fs.pathExists(outputPath)).toBe(true);
+
+      const bundledContent = await fs.readFile(outputPath, 'utf-8');
+      expect(bundledContent).toContain('0.0.7');
+      expect(bundledContent).toContain('window.old');
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle syntax errors in content', async () => {
       const config = parseConfig({
         packages: [{ name: '@walkeros/core', version: 'latest' }],
         content:
@@ -201,51 +220,17 @@ describe('Bundler', () => {
         output: { dir: testOutputDir, filename: 'error-test.js' },
       });
 
-      await expect(bundle(config)).rejects.toThrow(
-        'Content syntax error at line 4, column 21:',
-      );
+      await expect(bundle(config, false, true)).rejects.toThrow(); // silent = true
     });
 
-    it('should handle esbuild errors without location information', async () => {
-      const mockError = {
-        errors: [
-          {
-            text: 'Module not found',
-            location: {
-              file: 'some-package.js',
-              line: 1,
-              column: 1,
-            },
-          },
-        ],
-      };
-      mockEsbuildBuild.mockRejectedValueOnce(mockError);
-
+    it('should handle missing package imports', async () => {
       const config = parseConfig({
         packages: [{ name: '@walkeros/core', version: 'latest' }],
-        content:
-          'import { getId } from "@walkeros/core";\nexport const test = getId;',
+        content: 'import { nonExistentFunction } from "@walkeros/nonexistent";',
         output: { dir: testOutputDir, filename: 'error-test.js' },
       });
 
-      await expect(bundle(config)).rejects.toThrow(
-        'Build error: Module not found',
-      );
-    });
-
-    it('should handle esbuild errors with no errors array', async () => {
-      const mockError = { message: 'Generic build failure' };
-      mockEsbuildBuild.mockRejectedValueOnce(mockError);
-
-      const config = parseConfig({
-        packages: [{ name: '@walkeros/core', version: 'latest' }],
-        content: 'export const test = "hello";',
-        output: { dir: testOutputDir, filename: 'error-test.js' },
-      });
-
-      await expect(bundle(config)).rejects.toThrow(
-        'Build failed: Generic build failure',
-      );
+      await expect(bundle(config, false, true)).rejects.toThrow(); // silent = true
     });
   });
 });

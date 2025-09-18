@@ -4,15 +4,19 @@ import { TemplateEngine } from '../template-engine';
 import { TemplateConfigSchema } from '../config';
 
 describe('TemplateEngine', () => {
-  const testDir = 'test-templates';
+  const randomId = Math.random().toString(36).substring(2, 11);
+  const testOutputDir = path.join(
+    '.tmp',
+    `test-output-${Date.now()}-${randomId}`,
+  );
   const engine = new TemplateEngine();
 
   beforeEach(async () => {
-    await fs.ensureDir(testDir);
+    await fs.ensureDir(testOutputDir);
   });
 
   afterEach(async () => {
-    await fs.remove(testDir);
+    await fs.remove(testOutputDir);
   });
 
   describe('Inline Templates', () => {
@@ -49,7 +53,7 @@ describe('TemplateEngine', () => {
 
   describe('File Templates', () => {
     it('should load and process file template', async () => {
-      const templatePath = path.join(testDir, 'test.template');
+      const templatePath = path.join(testOutputDir, 'test.template');
       await fs.writeFile(templatePath, '{{NAME}}: {{CONTENT}}');
 
       const config = TemplateConfigSchema.parse({

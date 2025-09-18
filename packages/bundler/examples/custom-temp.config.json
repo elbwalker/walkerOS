@@ -1,0 +1,14 @@
+{
+  "packages": [
+    {
+      "name": "@walkeros/core",
+      "version": "latest"
+    }
+  ],
+  "content": "import { getId } from '@walkeros/core'; export const test = getId();",
+  "tempDir": "/tmp/my-custom-bundler-temp",
+  "output": {
+    "filename": "custom-temp-example.js",
+    "dir": "./dist"
+  }
+}

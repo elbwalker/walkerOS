@@ -75,6 +75,10 @@ export const ConfigSchema = z.object({
       filename: 'bundle.js',
       dir: './dist',
     }),
+  tempDir: z
+    .string()
+    .default('.tmp')
+    .describe('Directory for temporary files during bundling'),
 });
 
 export type TemplateConfig = z.infer<typeof TemplateConfigSchema>;

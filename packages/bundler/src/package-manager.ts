@@ -17,6 +17,35 @@ function createLogger(silent: boolean) {
   };
 }
 
+function validateNoDuplicatePackages(packages: Package[]): void {
+  const packageMap = new Map<string, string[]>();
+
+  // Group packages by name and collect their versions
+  for (const pkg of packages) {
+    if (!packageMap.has(pkg.name)) {
+      packageMap.set(pkg.name, []);
+    }
+    packageMap.get(pkg.name)!.push(pkg.version);
+  }
+
+  // Check for duplicate packages with different versions
+  const conflicts: string[] = [];
+  for (const [name, versions] of packageMap.entries()) {
+    const uniqueVersions = [...new Set(versions)];
+    if (uniqueVersions.length > 1) {
+      conflicts.push(`${name}: [${uniqueVersions.join(', ')}]`);
+    }
+  }
+
+  if (conflicts.length > 0) {
+    throw new Error(
+      `Version conflicts detected:\n${conflicts.map((c) => `  - ${c}`).join('\n')}\n\n` +
+        'Each package must use the same version across all declarations. ' +
+        'Please update your configuration to use consistent versions.',
+    );
+  }
+}
+
 export async function downloadPackages(
   packages: Package[],
   targetDir: string,
@@ -24,6 +53,9 @@ export async function downloadPackages(
 ): Promise<Map<string, string>> {
   const packagePaths = new Map<string, string>();
   const log = createLogger(silent);
+
+  // Validate no duplicate packages with different versions
+  validateNoDuplicatePackages(packages);
 
   // Ensure target directory exists
   await fs.ensureDir(targetDir);

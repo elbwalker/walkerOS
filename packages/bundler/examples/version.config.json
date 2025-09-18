@@ -1,0 +1,25 @@
+{
+  "packages": [
+    {
+      "name": "@walkeros/core",
+      "version": "0.0.7"
+    },
+    {
+      "name": "@walkeros/collector",
+      "version": "0.0.7"
+    }
+  ],
+  "content": "import { createCollector } from '@walkeros/collector';",
+  "template": {
+    "content": "{{CONTENT}}\n\n// Assign to window.old to test version resolution\nwindow.old = { createCollector };"
+  },
+  "build": {
+    "platform": "browser",
+    "format": "iife",
+    "target": "es2020"
+  },
+  "output": {
+    "filename": "version-test.js",
+    "dir": "./dist"
+  }
+}

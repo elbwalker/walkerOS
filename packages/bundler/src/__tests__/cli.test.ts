@@ -3,7 +3,11 @@ import fs from 'fs-extra';
 import path from 'path';
 
 describe('CLI JSON Output', () => {
-  const testOutputDir = 'test-output';
+  const randomId = Math.random().toString(36).substring(2, 11);
+  const testOutputDir = path.join(
+    '.tmp',
+    `test-output-${Date.now()}-${randomId}`,
+  );
   const testConfigPath = path.join(testOutputDir, 'test.config.json');
 
   beforeEach(async () => {

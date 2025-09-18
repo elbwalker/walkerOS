@@ -33,20 +33,20 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage && rm -rf .temp"
   },
   "dependencies": {
-    "esbuild": "^0.19.0",
-    "commander": "^11.0.0",
-    "zod": "^3.22.0",
-    "pacote": "^17.0.0",
-    "fs-extra": "^11.0.0",
     "chalk": "^5.3.0",
-    "handlebars": "^4.7.8"
+    "commander": "^11.0.0",
+    "esbuild": "^0.19.0",
+    "fs-extra": "^11.0.0",
+    "handlebars": "^4.7.8",
+    "pacote": "^17.0.0",
+    "zod": "^3.22.0"
   },
   "devDependencies": {
+    "@types/fs-extra": "^11.0.0",
+    "@types/pacote": "^11.1.5",
     "@walkeros/jest": "*",
     "@walkeros/tsconfig": "*",
     "@walkeros/tsup": "*",
-    "@types/fs-extra": "^11.0.0",
-    "@types/pacote": "^11.1.5",
     "tsx": "^4.0.0"
   },
   "repository": {
