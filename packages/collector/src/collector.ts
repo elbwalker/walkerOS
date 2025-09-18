@@ -24,10 +24,12 @@ export async function createCollector<
   };
 }
 
+declare const __VERSION__: string;
+
 async function collector(
   initConfig: Partial<Collector.Config>,
 ): Promise<Collector.Instance> {
-  const { version } = require('../package.json');
+  const version = __VERSION__;
 
   const defaultConfig: Collector.Config = {
     globalsStatic: {},
