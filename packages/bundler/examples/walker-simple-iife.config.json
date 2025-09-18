@@ -37,7 +37,7 @@
   "build": {
     "platform": "browser",
     "format": "iife",
-    "minify": false,
+    "minify": true,
     "sourcemap": false,
     "target": "es2020"
   },

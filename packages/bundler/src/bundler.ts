@@ -153,6 +153,16 @@ function createEsbuildOptions(
     minify: buildConfig.minify,
     sourcemap: buildConfig.sourcemap,
     resolveExtensions: ['.js', '.ts', '.mjs', '.json'],
+
+    // Enhanced minification options when minify is enabled
+    ...(buildConfig.minify && {
+      minifyWhitespace: buildConfig.minifyOptions?.whitespace ?? true,
+      minifyIdentifiers: buildConfig.minifyOptions?.identifiers ?? true,
+      minifySyntax: buildConfig.minifyOptions?.syntax ?? true,
+      legalComments: buildConfig.minifyOptions?.legalComments ?? 'none',
+      keepNames: buildConfig.minifyOptions?.keepNames ?? false,
+      charset: 'utf8',
+    }),
   };
 
   // Platform-specific configurations

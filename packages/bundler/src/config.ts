@@ -41,6 +41,17 @@ export const BuildConfigSchema = z.object({
   format: z.enum(['esm', 'cjs', 'umd', 'iife']).default('esm'),
   target: z.string().optional(),
   minify: z.boolean().default(false),
+  minifyOptions: z
+    .object({
+      whitespace: z.boolean().default(true),
+      identifiers: z.boolean().default(true),
+      syntax: z.boolean().default(true),
+      legalComments: z
+        .enum(['none', 'inline', 'eof', 'linked', 'external'])
+        .default('none'),
+      keepNames: z.boolean().default(false),
+    })
+    .optional(),
   sourcemap: z.boolean().default(false),
 });
 
