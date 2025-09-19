@@ -7,6 +7,7 @@
     "packages/collector",
     "packages/generator",
     "packages/bundler",
+    "packages/deployer",
     "packages/server/core",
     "packages/server/destinations/*",
     "packages/web/core",
