@@ -1,0 +1,37 @@
+{{CONTENT}}
+
+const config = {
+  sources: {
+  {{#sources}}
+    {{name}}: {
+      code: {{{code}}},
+      config: {{{config}}},
+      env: {{{env}}}
+    },
+  {{/sources}}
+  },
+  
+  destinations: {
+  {{#destinations}}
+    {{name}}: {
+      code: {{{code}}},
+      config: {{{config}}},
+      env: {{{env}}}
+    },
+  {{/destinations}}
+  }
+};
+
+let collector, elb;
+
+(async () => {
+  try {
+    const result = await createCollector(config);
+    collector = result.collector;
+    elb = result.elb;
+  } catch (error) {
+    console.error('❌ walkerOS initialization failed:', error);
+  }
+})();
+
+export { collector, elb };

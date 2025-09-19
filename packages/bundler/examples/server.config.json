@@ -1,0 +1,55 @@
+{
+  "packages": [
+    {
+      "name": "@walkeros/core",
+      "version": "latest"
+    },
+    {
+      "name": "@walkeros/collector",
+      "version": "latest"
+    },
+    {
+      "name": "@walkeros/server-destination-aws",
+      "version": "latest"
+    }
+  ],
+  "content": "import { createCollector } from '@walkeros/collector';\nimport { destinationFirehose } from '@walkeros/server-destination-aws';\n\n// Server-side console destination\nconst consoleDestination = {\n  type: 'console',\n  config: {},\n  push(event) {\n    console.log('[SERVER] Event:', {\n      name: event.name,\n      data: event.data,\n      timestamp: event.timestamp,\n      user: event.user\n    });\n  }\n};",
+  "template": {
+    "file": "templates/server.hbs",
+    "variables": {
+      "sources": [
+        {
+          "name": "api",
+          "code": "{ type: 'api', config: {}, push: (event) => event }",
+          "config": "{}",
+          "env": "{}"
+        }
+      ],
+      "destinations": [
+        {
+          "name": "console",
+          "code": "consoleDestination",
+          "config": "{}",
+          "env": "{}"
+        },
+        {
+          "name": "firehose",
+          "code": "destinationFirehose",
+          "config": "{\"settings\":{\"deliveryStreamName\":\"walker-events\",\"region\":\"us-east-1\"}}",
+          "env": "{aws: {region: 'us-east-1'}}"
+        }
+      ]
+    }
+  },
+  "build": {
+    "platform": "node",
+    "format": "esm",
+    "target": "node18",
+    "minify": false,
+    "sourcemap": true
+  },
+  "output": {
+    "filename": "server-collector.mjs",
+    "dir": "./dist"
+  }
+}

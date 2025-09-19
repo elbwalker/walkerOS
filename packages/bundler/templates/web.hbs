@@ -8,24 +8,24 @@
     const config = {
       // Sources configuration
       sources: {
-{{#sources}}
+      {{#sources}}
         {{name}}: {
           code: {{{code}}},
           config: {{{config}}},
           env: {{{env}}}
         },
-{{/sources}}
+      {{/sources}}
       },
       
       // Destinations configuration  
       destinations: {
-{{#destinations}}
+      {{#destinations}}
         {{name}}: {
           code: {{{code}}},
           config: {{{config}}},
           env: {{{env}}}
         },
-{{/destinations}}
+      {{/destinations}}
       }
     };
 
@@ -34,10 +34,7 @@
     
     // Make collector globally available
     window['{{collectorName}}'] = collector;
-    
-    console.log('✅ WalkerOS collector "{{collectorName}}" initialized successfully');
-    
   } catch (error) {
-    console.error('❌ Failed to initialize WalkerOS collector:', error);
+    console.error('❌ WalkerOS initialization failed:', error);
   }
 })();

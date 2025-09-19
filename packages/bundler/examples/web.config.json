@@ -21,7 +21,7 @@
       "version": "latest"
     }
   ],
-  "content": "import { createCollector } from '@walkeros/collector';\nimport { sourceBrowser } from '@walkeros/web-source-browser';\nimport { destinationAPI } from '@walkeros/web-destination-api';\nimport { destinationGtag } from '@walkeros/web-destination-gtag';",
+  "content": "import { createCollector } from '@walkeros/collector';\nimport { sourceBrowser } from '@walkeros/web-source-browser';\nimport { destinationAPI } from '@walkeros/web-destination-api';\nimport { destinationGtag } from '@walkeros/web-destination-gtag';\n\n// Console destination for debugging\nconst consoleDestination = {\n  type: 'console',\n  config: {},\n  push(event) {\n    console.log('📊 Event captured:', {\n      name: event.name,\n      data: event.data,\n      timing: event.timing\n    });\n  }\n};",
   "template": {
     "file": "templates/web.hbs",
     "variables": {
@@ -37,7 +37,7 @@
       "destinations": [
         {
           "name": "console",
-          "code": "{type:'console',config:{},push(event){console.log('📊 Event captured:',{name:event.name,data:event.data,timing:event.timing});}}",
+          "code": "consoleDestination",
           "config": "{}",
           "env": "{}"
         },
@@ -64,7 +64,7 @@
     "target": "es2020"
   },
   "output": {
-    "filename": "walker-collector.js",
+    "filename": "web-collector.js",
     "dir": "./dist"
   }
 }

@@ -1,274 +1,206 @@
 # @walkeros/bundler
 
-A command-line tool that dynamically bundles NPM packages with custom code into
-optimized JavaScript files.
+Bundle NPM packages with custom code into production-ready JavaScript files.
+Perfect for creating ready-to-deploy walkerOS collectors for browsers, Node.js,
+and serverless environments.
 
-## Installation
+## 🎯 Purpose
+
+The bundler solves a critical need: creating single-file, self-contained
+JavaScript bundles that combine walkerOS packages with custom configuration.
+These bundles are:
+
+- **Deploy-ready**: Drop into Lambda, Docker, or edge functions
+- **Self-contained**: All dependencies bundled
+- **Optimized**: Tree-shaken and minified
+- **Flexible**: Support browser, Node.js, and serverless targets
+
+## ⚡ Features
+
+- ✅ **Template-based generation** - Handlebars templates for collector
+  initialization
+- ✅ **Multi-platform** - Browser (IIFE), Node.js (ESM/CJS), serverless
+- ✅ **Tree-shaking** - Only bundle what's used
+- ✅ **Production-ready** - Minification, sourcemaps, optimizations
+- ✅ **NPM packages** - Download and bundle any NPM package
+- ✅ **Custom code** - Mix packages with your business logic
+
+## 📦 Installation
 
 ```bash
 npm install @walkeros/bundler
 ```
 
-## Usage
-
-### Basic Command
+## 🚀 Usage
 
 ```bash
-walkeros-bundle --config bundle.config.json
+# Generate browser collector
+walkeros-bundle -c examples/web.config.json
+
+# Generate Node.js/serverless collector
+walkeros-bundle -c examples/server.config.json
+
+# Bundle utilities
+walkeros-bundle -c examples/node.config.json
 ```
 
-### CLI Options
+## 🔧 Configuration
 
-- `-c, --config <path>` - Path to configuration file (default:
-  "bundle.config.json")
-
-## Configuration
-
-Create a `bundle.config.json` file with the following structure:
+### Browser Bundle (web.config.json)
 
 ```json
 {
   "packages": [
-    {
-      "name": "@walkeros/core",
-      "version": "latest"
-    }
+    { "name": "@walkeros/collector", "version": "latest" },
+    { "name": "@walkeros/web-source-browser", "version": "latest" }
   ],
-  "content": "import { getId, getByPath } from '@walkeros/core'; export function generateSessionId() { return `session_${getId(8)}`; } export function extractUserName(data) { return getByPath(data, 'user.name', 'Anonymous'); }",
+  "content": "import { createCollector } from '@walkeros/collector';",
+  "template": {
+    "file": "templates/web.hbs"
+  },
+  "build": {
+    "platform": "browser",
+    "format": "iife",
+    "target": "es2020",
+    "minify": true
+  },
   "output": {
-    "filename": "bundle.js",
+    "filename": "walker.js",
     "dir": "./dist"
   }
 }
 ```
 
-### Configuration Schema
-
-- **packages**: Array of NPM packages to bundle
-  - `name`: NPM package name
-  - `version`: Package version (supports semver ranges)
-- **content**: JavaScript code to include in the bundle
-- **build**: Build configuration (optional)
-  - `platform`: Target platform - "browser", "node", or "neutral" (default:
-    "browser")
-  - `format`: Output format - "esm", "cjs", "umd", or "iife" (default: "esm")
-  - `target`: ECMAScript target (e.g., "es2018", "node18")
-  - `minify`: Enable minification (default: false)
-  - `sourcemap`: Generate source maps (default: false)
-- **template**: Template configuration (optional)
-  - `content`: Inline template string
-  - `file`: Path to external template file
-  - `variables`: Template variables (supports strings, numbers, booleans, and
-    arrays)
-  - `contentPlaceholder`: Content insertion point (default: "{{CONTENT}}")
-  - `variablePattern`: Custom variable delimiters (default: "{{" and "}}")
-- **output**: Output configuration
-  - `filename`: Output filename (default: "bundle.js")
-  - `dir`: Output directory (default: "./dist")
-
-## Examples
-
-### Minimal Bundle
+### Server Bundle (server.config.json)
 
 ```json
 {
-  "packages": [{ "name": "@walkeros/core", "version": "latest" }],
-  "content": "import { getId } from '@walkeros/core'; export const generateId = () => getId(8);",
-  "output": {
-    "filename": "minimal.js"
-  }
-}
-```
-
-### Node.js Bundle
-
-```json
-{
-  "packages": [{ "name": "@walkeros/core", "version": "latest" }],
-  "content": "import { getId, getByPath } from '@walkeros/core'; export function generateSessionId() { return `session_${getId(12)}`; } export function extractConfigValue(config, path) { return getByPath(config, path, 'default'); }",
+  "packages": [
+    { "name": "@walkeros/collector", "version": "latest" },
+    { "name": "@walkeros/server-destination-aws", "version": "latest" }
+  ],
+  "content": "import { createCollector } from '@walkeros/collector';",
+  "template": {
+    "file": "templates/server.hbs"
+  },
   "build": {
     "platform": "node",
-    "format": "cjs",
+    "format": "esm",
     "target": "node18"
   },
   "output": {
-    "filename": "node-utils.js",
+    "filename": "server-collector.mjs",
     "dir": "./dist"
   }
 }
 ```
 
-### Advanced Configuration
+## 📁 Project Structure
 
-```json
-{
-  "packages": [{ "name": "@walkeros/core", "version": "latest" }],
-  "content": "import { getId, getByPath, clone, trim } from '@walkeros/core'; export function processData(data) { return data.map(item => ({ ...item, id: getId(8), timestamp: new Date().toISOString().split('T')[0], processed: true })); } export function extractNestedValues(data, path) { return data.map(item => getByPath(item, path, null)).filter(val => val !== null); } export function deepCloneData(data) { return clone(data); }",
-  "build": {
-    "platform": "browser",
-    "format": "esm",
-    "target": "es2020",
-    "minify": true,
-    "sourcemap": true
-  },
-  "output": {
-    "filename": "advanced-bundle.js",
-    "dir": "./dist"
-  }
-}
+```
+packages/bundler/
+├── src/
+│   ├── bundler.ts         # Core bundling logic with esbuild
+│   ├── config.ts          # Configuration schema (Zod)
+│   ├── package-manager.ts # NPM package downloading (pacote)
+│   └── template-engine.ts # Handlebars template processing
+├── templates/
+│   ├── web.hbs           # Browser collector template
+│   └── server.hbs        # Node.js/serverless template
+├── examples/
+│   ├── web.config.json   # Browser configuration
+│   ├── server.config.json # Server configuration
+│   └── node.config.json  # Utility bundle configuration
+└── dist/                 # Generated bundles
 ```
 
-### Template with Array Loops
+## 🎯 How It Works
 
-```json
-{
-  "packages": [{ "name": "@walkeros/core", "version": "latest" }],
-  "content": "export { getId, trim } from '@walkeros/core';",
-  "template": {
-    "content": "// Auto-generated bundle\n{{#imports}}import { {{name}} } from '{{package}}';\n{{/imports}}\n\n{{CONTENT}}\n\n// Available utilities: {{#utilities}}{{this}}, {{/utilities}}",
-    "variables": {
-      "imports": [
-        { "name": "getId", "package": "@walkeros/core" },
-        { "name": "trim", "package": "@walkeros/utils" }
-      ],
-      "utilities": ["getId", "trim", "createEvent"]
-    }
+1. **Download packages** - Fetch NPM packages to temp directory
+2. **Apply template** - Process Handlebars template with variables
+3. **Bundle with esbuild** - Create optimized single-file bundle
+4. **Output** - Write production-ready file
+
+### Templates
+
+Templates use Handlebars syntax to generate initialization code:
+
+```handlebars
+{{CONTENT}}
+
+const config = { sources: {
+{{#sources}}
+  {{name}}: { code:
+  {{{code}}}, config:
+  {{{config}}}
   },
-  "output": {
-    "filename": "templated-bundle.js"
+{{/sources}}
+}, destinations: {
+{{#destinations}}
+  {{name}}: { code:
+  {{{code}}}, config:
+  {{{config}}}
   }
-}
+{{/destinations}}
+} }; // Initialize and export let collector, elb; (async () => { const result =
+await createCollector(config); collector = result.collector; elb = result.elb;
+})(); export { collector, elb };
 ```
 
-## Template System
+## 🚢 Deployment Examples
 
-The bundler supports a powerful templating system with variable substitution and
-array loops:
-
-### Variables
-
-- **Simple variables**: `{{variableName}}`
-- **Array loops**: `{{#arrayName}}...{{/arrayName}}`
-- **Object properties**: `{{name}}`, `{{nested.property}}`
-- **Current item**: `{{this}}` (for primitive arrays)
-- **Array index**: `{{@index}}`
-
-### Loop Examples
+### AWS Lambda
 
 ```javascript
-// Object array
-{{#imports}}
-import { {{name}} } from '{{package}}';
-{{/imports}}
+import { elb } from './server-collector.mjs';
 
-// Primitive array
-{{#tags}}
-Tag: {{this}}
-{{/tags}}
-
-// With index
-{{#items}}
-Item {{@index}}: {{name}}
-{{/items}}
+export const handler = async (event) => {
+  await elb('lambda invoke', { source: event.source });
+  return { statusCode: 200 };
+};
 ```
 
-## Features
+### Docker
 
-- ✅ Downloads real NPM packages from registry
-- ✅ Bundles packages with custom JavaScript code
-- ✅ Multiple output formats (ESM, CJS, UMD, IIFE)
-- ✅ Platform-specific builds (browser, Node.js, neutral)
-- ✅ Tree-shaking optimization
-- ✅ Minification and source maps
-- ✅ Automatic temporary file cleanup
-- ✅ Package caching for faster subsequent builds
-- ✅ Template system with variable substitution and array loops
+```dockerfile
+FROM node:18-alpine
+COPY dist/server-collector.mjs /app/
+CMD ["node", "/app/server-collector.mjs"]
+```
 
-## Package Variable Names
+### Edge Function
 
-Package names are automatically sanitized to valid JavaScript variable names:
+```javascript
+import { elb } from './server-collector.mjs';
 
-- `@walkeros/core` → `_walkeros_core`
-- `dayjs` → `dayjs`
-- Special characters are replaced with underscores
+export default async function (request) {
+  await elb('edge request', { url: request.url });
+  return new Response('OK');
+}
+```
 
-## Platform Support
+## 📝 TODOs
 
-### Browser Platform (`"platform": "browser"`)
-
-Creates browser-compatible bundles with:
-
-- Preference for browser field over module/main in package.json
-- Compatible with all modern browsers
-- Note: Packages requiring Node.js built-ins (crypto, fs, etc.) will need
-  separate polyfills
-
-### Node.js Platform (`"platform": "node"`)
-
-Creates Node.js-specific bundles with:
-
-- Node.js built-ins marked as external (not bundled)
-- Optimized for server-side usage
-- Direct access to crypto, fs, path, and other Node modules
-- Default CommonJS format for Node compatibility
-
-### Neutral Platform (`"platform": "neutral"`)
-
-Creates platform-agnostic bundles:
-
-- No platform-specific optimizations
-- Works in both browser and Node.js environments
-- Best for utility libraries without platform dependencies
+- [ ] TypeScript support in custom content
+- [ ] Watch mode for development
+- [ ] Bundle size analysis
+- [ ] Multiple entry points
+- [ ] Custom esbuild plugins
+- [ ] Framework-specific templates (Next.js, Remix, etc.)
+- [ ] Edge runtime optimizations
 
 ## Development
 
-### Build
-
 ```bash
+# Build
 npm run build
+
+# Test
+npm run test
+
+# Clean
+npm run clean
 ```
-
-### Development Mode
-
-```bash
-npm run dev -- --config examples/bundle.config.json
-```
-
-### Test
-
-```bash
-npm test
-```
-
-## Architecture
-
-The bundler follows this workflow:
-
-1. **Configuration Loading**: Parse and validate JSON configuration
-2. **Package Resolution**: Download packages from NPM registry using pacote
-3. **Entry Point Generation**: Create virtual entry point with imports and
-   custom code
-4. **Bundling**: Use esbuild to create optimized bundle
-5. **Output**: Write bundle to specified location
-6. **Cleanup**: Remove temporary files
-
-## Future Enhancements
-
-Planned features for future versions:
-
-- TypeScript support for custom code
-- Watch mode for development
-- Advanced caching with TTL
-- Custom esbuild plugins
-- Bundle analysis and size reporting
-- Code splitting for large bundles
-- Tree-shaking customization
-
-## Related Packages
-
-- **@walkeros/generator**: WalkerOS-specific bundle generator for collector
-  configurations
-- **@walkeros/core**: Core types and utilities for walkerOS
 
 ## License
 

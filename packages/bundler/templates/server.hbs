@@ -1,0 +1,46 @@
+{{CONTENT}}
+
+// Create collector configuration
+const config = {
+  // Sources configuration
+  sources: {
+{{#sources}}
+    {{name}}: {
+      code: {{{code}}},
+      config: {{{config}}},
+      env: {{{env}}}
+    },
+{{/sources}}
+  },
+  
+  // Destinations configuration  
+  destinations: {
+{{#destinations}}
+    {{name}}: {
+      code: {{{code}}},
+      config: {{{config}}},
+      env: {{{env}}}
+    },
+{{/destinations}}
+  }
+};
+
+// Initialize collector
+let collector, elb;
+let initializationError = null;
+
+// Initialize immediately
+(async () => {
+  try {
+    const result = await createCollector(config);
+    collector = result.collector;
+    elb = result.elb;
+    console.log('✅ WalkerOS collector initialized');
+  } catch (error) {
+    initializationError = error;
+    console.error('❌ WalkerOS initialization failed:', error);
+  }
+})();
+
+// Export collector and elb directly
+export { collector, elb };

@@ -48,12 +48,29 @@ describe('Bundler', () => {
   });
 
   it('should bundle advanced config with minification', async () => {
-    // Read the advanced config example
-    const configPath = path.join('examples', 'advanced.config.json');
-    const rawConfig = await fs.readJson(configPath);
+    // Inline advanced configuration (was advanced.config.json)
+    const rawConfig = {
+      packages: [
+        {
+          name: '@walkeros/core',
+          version: 'latest',
+        },
+      ],
+      content:
+        "import { getId, getByPath, clone, trim, isObject } from '@walkeros/core';\n\nexport function processData(data) {\n  return data.map(item => ({\n    ...item,\n    id: getId(8),\n    timestamp: new Date().toISOString().split('T')[0],\n    processed: true\n  }));\n}\n\nexport function extractNestedValues(data, path) {\n  return data.map(item => getByPath(item, path, null)).filter(val => val !== null);\n}\n\nexport function deepCloneData(data) {\n  return clone(data);\n}\n\nexport function cleanStringData(data) {\n  return data.map(item => ({\n    ...item,\n    name: typeof item.name === 'string' ? trim(item.name) : item.name\n  }));\n}\n\n// Re-export walkerOS utilities\nexport { getId, getByPath, clone, trim, isObject };",
+      build: {
+        platform: 'browser',
+        format: 'esm',
+        target: 'es2020',
+        minify: true,
+        sourcemap: true,
+      },
+      output: {
+        filename: 'advanced-bundle.js',
+        dir: testOutputDir,
+      },
+    };
 
-    // Modify output directory for test
-    rawConfig.output.dir = testOutputDir;
     const config = parseConfig(rawConfig);
 
     // Run bundler with real dependencies
@@ -205,6 +222,50 @@ describe('Bundler', () => {
       const bundledContent = await fs.readFile(outputPath, 'utf-8');
       expect(bundledContent).toContain('0.0.7');
       expect(bundledContent).toContain('window.old');
+    });
+  });
+
+  describe('Configuration Scenarios', () => {
+    it('should handle custom temp directory configuration', async () => {
+      // Inline custom-temp configuration (was custom-temp.config.json)
+      const config = parseConfig({
+        packages: [{ name: '@walkeros/core', version: 'latest' }],
+        content:
+          'import { getId } from "@walkeros/core"; export const test = getId();',
+        tempDir: '/tmp/my-custom-bundler-temp',
+        output: {
+          filename: 'custom-temp-example.js',
+          dir: testOutputDir,
+        },
+      });
+
+      await expect(bundle(config)).resolves.not.toThrow();
+    });
+
+    it('should handle version pinning correctly', async () => {
+      // Inline version configuration (was version.config.json)
+      const config = parseConfig({
+        packages: [
+          { name: '@walkeros/core', version: '0.0.7' },
+          { name: '@walkeros/collector', version: '0.0.7' },
+        ],
+        content: 'import { createCollector } from "@walkeros/collector";',
+        template: {
+          content:
+            '{{CONTENT}}\n\n// Assign to window.old to test version resolution\nwindow.old = { createCollector };',
+        },
+        build: {
+          platform: 'browser',
+          format: 'iife',
+          target: 'es2020',
+        },
+        output: {
+          filename: 'version-test.js',
+          dir: testOutputDir,
+        },
+      });
+
+      await expect(bundle(config)).resolves.not.toThrow();
     });
   });
 
