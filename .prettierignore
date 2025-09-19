@@ -26,3 +26,6 @@ logs/
 # Other
 *.tgz
 *.tar
+
+# Handlebars templates (JavaScript generation)
+**/*.hbs
