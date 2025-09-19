@@ -23,14 +23,15 @@
   ],
   "content": "import { createCollector } from '@walkeros/collector';\nimport { sourceBrowser } from '@walkeros/web-source-browser';\nimport { destinationAPI } from '@walkeros/web-destination-api';\nimport { destinationGtag } from '@walkeros/web-destination-gtag';",
   "template": {
-    "file": "templates/walker-iife.hbs",
+    "file": "templates/web.hbs",
     "variables": {
       "collectorName": "walker",
       "sources": [
         {
           "name": "browser",
           "code": "sourceBrowser",
-          "config": "{\"settings\":{\"pageview\":true,\"session\":true,\"elb\":\"elb\",\"prefix\":\"data-elb\"}}"
+          "config": "{\"settings\":{\"pageview\":true,\"session\":true,\"elb\":\"elb\",\"prefix\":\"data-elb\"}}",
+          "env": "{}"
         }
       ],
       "destinations": [

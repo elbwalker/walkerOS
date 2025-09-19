@@ -15,21 +15,23 @@
   ],
   "content": "import { createCollector } from '@walkeros/collector';\nimport { sourceBrowser } from '@walkeros/web-source-browser';\n\n// Console destination for debugging\nconst consoleDestination = {\n  type: 'console',\n  config: {},\n  push(event) {\n    console.log('📊 Event captured:', {\n      name: event.name,\n      data: event.data,\n      timing: event.timing\n    });\n  }\n};",
   "template": {
-    "file": "templates/walker-simple.hbs",
+    "file": "templates/web.hbs",
     "variables": {
       "collectorName": "walker",
       "sources": [
         {
           "name": "browser",
           "code": "sourceBrowser",
-          "config": "{\"settings\":{\"pageview\":true,\"session\":true,\"elb\":\"elb\",\"prefix\":\"data-elb\"}}"
+          "config": "{\"settings\":{\"pageview\":true,\"session\":true,\"elb\":\"elb\",\"prefix\":\"data-elb\"}}",
+          "env": "{}"
         }
       ],
       "destinations": [
         {
           "name": "console",
           "code": "consoleDestination",
-          "config": "{}"
+          "config": "{}",
+          "env": "{}"
         }
       ]
     }
