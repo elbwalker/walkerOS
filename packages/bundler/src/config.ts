@@ -61,6 +61,7 @@ export const ConfigSchema = z.object({
     z.object({
       name: z.string(),
       version: z.string(),
+      imports: z.array(z.string()),
     }),
   ),
   content: z.string(),

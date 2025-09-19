@@ -227,16 +227,32 @@ async function createEntryPoint(
   config: Config,
   packagePaths: Map<string, string>,
 ): Promise<string> {
-  let code = config.content;
+  // Generate import statements from packages
+  const importStatements: string[] = [];
 
-  // Apply template if configured
-  if (config.template) {
-    const templateEngine = new TemplateEngine();
-    code = await templateEngine.process(config.template, code);
+  for (const pkg of config.packages) {
+    if (pkg.imports && pkg.imports.length > 0) {
+      // Remove duplicates within the same package
+      const uniqueImports = [...new Set(pkg.imports)];
+      const importList = uniqueImports.join(', ');
+      importStatements.push(`import { ${importList} } from '${pkg.name}';`);
+    }
   }
 
-  // Packages are available via esbuild's nodePaths configuration
-  return code;
+  // Combine imports with content
+  const importsCode = importStatements.join('\n');
+  const fullCode = importsCode
+    ? `${importsCode}\n\n${config.content}`
+    : config.content;
+
+  // Apply template if configured
+  let finalCode = fullCode;
+  if (config.template) {
+    const templateEngine = new TemplateEngine();
+    finalCode = await templateEngine.process(config.template, fullCode);
+  }
+
+  return finalCode;
 }
 
 interface EsbuildError {

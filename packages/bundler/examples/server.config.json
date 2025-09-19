@@ -2,18 +2,21 @@
   "packages": [
     {
       "name": "@walkeros/core",
-      "version": "latest"
+      "version": "latest",
+      "imports": []
     },
     {
       "name": "@walkeros/collector",
-      "version": "latest"
+      "version": "latest",
+      "imports": []
     },
     {
       "name": "@walkeros/server-destination-aws",
-      "version": "latest"
+      "version": "latest",
+      "imports": ["destinationFirehose"]
     }
   ],
-  "content": "import { createCollector } from '@walkeros/collector';\nimport { destinationFirehose } from '@walkeros/server-destination-aws';\n\n// Server-side console destination\nconst consoleDestination = {\n  type: 'console',\n  config: {},\n  push(event) {\n    console.log('[SERVER] Event:', {\n      name: event.name,\n      data: event.data,\n      timestamp: event.timestamp,\n      user: event.user\n    });\n  }\n};",
+  "content": "// Server-side console destination\nconst consoleDestination = {\n  type: 'console',\n  config: {},\n  push(event) {\n    console.log('[SERVER] Event:', {\n      name: event.name,\n      data: event.data,\n      timestamp: event.timestamp,\n      user: event.user\n    });\n  }\n};",
   "template": {
     "file": "templates/server.hbs",
     "variables": {

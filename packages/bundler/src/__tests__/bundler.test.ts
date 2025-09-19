@@ -54,10 +54,11 @@ describe('Bundler', () => {
         {
           name: '@walkeros/core',
           version: 'latest',
+          imports: ['getId', 'getByPath', 'clone', 'trim', 'isObject'],
         },
       ],
       content:
-        "import { getId, getByPath, clone, trim, isObject } from '@walkeros/core';\n\nexport function processData(data) {\n  return data.map(item => ({\n    ...item,\n    id: getId(8),\n    timestamp: new Date().toISOString().split('T')[0],\n    processed: true\n  }));\n}\n\nexport function extractNestedValues(data, path) {\n  return data.map(item => getByPath(item, path, null)).filter(val => val !== null);\n}\n\nexport function deepCloneData(data) {\n  return clone(data);\n}\n\nexport function cleanStringData(data) {\n  return data.map(item => ({\n    ...item,\n    name: typeof item.name === 'string' ? trim(item.name) : item.name\n  }));\n}\n\n// Re-export walkerOS utilities\nexport { getId, getByPath, clone, trim, isObject };",
+        "export function processData(data) {\n  return data.map(item => ({\n    ...item,\n    id: getId(8),\n    timestamp: new Date().toISOString().split('T')[0],\n    processed: true\n  }));\n}\n\nexport function extractNestedValues(data, path) {\n  return data.map(item => getByPath(item, path, null)).filter(val => val !== null);\n}\n\nexport function deepCloneData(data) {\n  return clone(data);\n}\n\nexport function cleanStringData(data) {\n  return data.map(item => ({\n    ...item,\n    name: typeof item.name === 'string' ? trim(item.name) : item.name\n  }));\n}\n\n// Re-export walkerOS utilities\nexport { getId, getByPath, clone, trim, isObject };",
       build: {
         platform: 'browser',
         format: 'esm',
@@ -96,7 +97,7 @@ describe('Bundler', () => {
 
     it('should detect ineffective tree-shaking with wildcard imports', async () => {
       const config = parseConfig({
-        packages: [{ name: '@walkeros/core', version: 'latest' }],
+        packages: [{ name: '@walkeros/core', version: 'latest', imports: [] }],
         content:
           'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
         output: { dir: testOutputDir, filename: 'test.js' },
@@ -122,9 +123,10 @@ describe('Bundler', () => {
   describe('Template System', () => {
     it('should apply inline template correctly', async () => {
       const config = parseConfig({
-        packages: [{ name: '@walkeros/core', version: 'latest' }],
-        content:
-          'import { getId } from "@walkeros/core";\nexport const generateId = () => getId(8);',
+        packages: [
+          { name: '@walkeros/core', version: 'latest', imports: ['getId'] },
+        ],
+        content: 'export const generateId = () => getId(8);',
         template: {
           content:
             '// {{NAME}} v{{VERSION}}\n{{CONTENT}}\nexport default { name: "{{NAME}}" };',
@@ -138,9 +140,10 @@ describe('Bundler', () => {
 
     it('should handle missing template variables gracefully', async () => {
       const config = parseConfig({
-        packages: [{ name: '@walkeros/core', version: 'latest' }],
-        content:
-          'import { trim } from "@walkeros/core"; export const test = trim("hello");',
+        packages: [
+          { name: '@walkeros/core', version: 'latest', imports: ['trim'] },
+        ],
+        content: 'export const test = trim("hello");',
         template: {
           content: '{{CONTENT}}\n// {{MISSING_VAR}} should remain as-is',
           variables: { OTHER_VAR: 'exists' },
@@ -153,9 +156,10 @@ describe('Bundler', () => {
 
     it('should append bundle code when placeholder not found', async () => {
       const config = parseConfig({
-        packages: [{ name: '@walkeros/core', version: 'latest' }],
-        content:
-          'import { getId } from "@walkeros/core"; export const test = getId(6);',
+        packages: [
+          { name: '@walkeros/core', version: 'latest', imports: ['getId'] },
+        ],
+        content: 'export const test = getId(6);',
         template: {
           content: '// Header only template',
         },
@@ -185,10 +189,14 @@ describe('Bundler', () => {
       // Use CLI approach since Jest mocking interferes with direct bundle() calls
       const configContent = {
         packages: [
-          { name: '@walkeros/core', version: '0.0.7' },
-          { name: '@walkeros/collector', version: '0.0.7' },
+          { name: '@walkeros/core', version: '0.0.7', imports: [] },
+          {
+            name: '@walkeros/collector',
+            version: '0.0.7',
+            imports: ['createCollector'],
+          },
         ],
-        content: "import { createCollector } from '@walkeros/collector';",
+        content: '// Version test content',
         template: {
           content:
             '{{CONTENT}}\n\n// Assign to window.old to test version resolution\nwindow.old = { createCollector };',
@@ -229,9 +237,10 @@ describe('Bundler', () => {
     it('should handle custom temp directory configuration', async () => {
       // Inline custom-temp configuration (was custom-temp.config.json)
       const config = parseConfig({
-        packages: [{ name: '@walkeros/core', version: 'latest' }],
-        content:
-          'import { getId } from "@walkeros/core"; export const test = getId();',
+        packages: [
+          { name: '@walkeros/core', version: 'latest', imports: ['getId'] },
+        ],
+        content: 'export const test = getId();',
         tempDir: '/tmp/my-custom-bundler-temp',
         output: {
           filename: 'custom-temp-example.js',
@@ -246,10 +255,14 @@ describe('Bundler', () => {
       // Inline version configuration (was version.config.json)
       const config = parseConfig({
         packages: [
-          { name: '@walkeros/core', version: '0.0.7' },
-          { name: '@walkeros/collector', version: '0.0.7' },
+          { name: '@walkeros/core', version: '0.0.7', imports: [] },
+          {
+            name: '@walkeros/collector',
+            version: '0.0.7',
+            imports: ['createCollector'],
+          },
         ],
-        content: 'import { createCollector } from "@walkeros/collector";',
+        content: '// Test version pinning',
         template: {
           content:
             '{{CONTENT}}\n\n// Assign to window.old to test version resolution\nwindow.old = { createCollector };',
@@ -272,9 +285,11 @@ describe('Bundler', () => {
   describe('Error Handling', () => {
     it('should handle syntax errors in content', async () => {
       const config = parseConfig({
-        packages: [{ name: '@walkeros/core', version: 'latest' }],
+        packages: [
+          { name: '@walkeros/core', version: 'latest', imports: ['getId'] },
+        ],
         content:
-          'import { getId } from "@walkeros/core";\n\nexport const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
+          'export const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
         output: { dir: testOutputDir, filename: 'error-test.js' },
       });
 
@@ -283,7 +298,7 @@ describe('Bundler', () => {
 
     it('should handle missing package imports', async () => {
       const config = parseConfig({
-        packages: [{ name: '@walkeros/core', version: 'latest' }],
+        packages: [{ name: '@walkeros/core', version: 'latest', imports: [] }],
         content: 'import { nonExistentFunction } from "@walkeros/nonexistent";',
         output: { dir: testOutputDir, filename: 'error-test.js' },
       });

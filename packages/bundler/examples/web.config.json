@@ -2,26 +2,31 @@
   "packages": [
     {
       "name": "@walkeros/core",
-      "version": "latest"
+      "version": "latest",
+      "imports": []
     },
     {
       "name": "@walkeros/collector",
-      "version": "latest"
+      "version": "latest",
+      "imports": []
     },
     {
       "name": "@walkeros/web-source-browser",
-      "version": "latest"
+      "version": "latest",
+      "imports": ["sourceBrowser"]
     },
     {
       "name": "@walkeros/web-destination-api",
-      "version": "latest"
+      "version": "latest",
+      "imports": ["destinationAPI"]
     },
     {
       "name": "@walkeros/web-destination-gtag",
-      "version": "latest"
+      "version": "latest",
+      "imports": ["destinationGtag"]
     }
   ],
-  "content": "import { createCollector } from '@walkeros/collector';\nimport { sourceBrowser } from '@walkeros/web-source-browser';\nimport { destinationAPI } from '@walkeros/web-destination-api';\nimport { destinationGtag } from '@walkeros/web-destination-gtag';\n\n// Console destination for debugging\nconst consoleDestination = {\n  type: 'console',\n  config: {},\n  push(event) {\n    console.log('📊 Event captured:', {\n      name: event.name,\n      data: event.data,\n      timing: event.timing\n    });\n  }\n};",
+  "content": "// Console destination for debugging\nconst consoleDestination = {\n  type: 'console',\n  config: {},\n  push(event) {\n    console.log('📊 Event captured:', {\n      name: event.name,\n      data: event.data,\n      timing: event.timing\n    });\n  }\n};",
   "template": {
     "file": "templates/web.hbs",
     "variables": {
