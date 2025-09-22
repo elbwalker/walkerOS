@@ -30,3 +30,14 @@ export type PushEvent<Mapping = unknown> =
 
 export type PushEvents<Mapping = unknown> =
   WalkerOSDestination.PushEvents<Mapping>;
+
+/**
+ * Server-specific environment requirements interface
+ *
+ * Extends the core Environment interface for server-side destinations.
+ * Used for dependency injection of SDK classes and external APIs.
+ */
+export interface Environment extends WalkerOSDestination.Environment {
+  // Server environments can include SDK constructors, API clients, etc.
+  // Each destination extends this further with specific requirements
+}

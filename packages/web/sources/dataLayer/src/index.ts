@@ -1,5 +1,5 @@
 import type { Source, Elb } from '@walkeros/core';
-import type { Settings, DataLayerSourceConfig } from './types';
+import type { Settings } from './types';
 import { interceptDataLayer, processExistingEvents } from './interceptor';
 
 // Export types for external usage
@@ -21,8 +21,8 @@ interface DataLayerEnvironment extends Source.Environment {
  * This source intercepts dataLayer.push calls and transforms them to WalkerOS events.
  * It works by replacing the dataLayer.push method with a custom handler.
  */
-export const sourceDataLayer: Source.Init<DataLayerSourceConfig> = async (
-  config: Partial<DataLayerSourceConfig>,
+export const sourceDataLayer: Source.Init<Settings> = async (
+  config: Partial<Source.Config<Settings>>,
   env?: Source.Environment,
 ) => {
   try {
@@ -42,7 +42,7 @@ export const sourceDataLayer: Source.Init<DataLayerSourceConfig> = async (
     };
 
     // Full configuration with defaults
-    const fullConfig: DataLayerSourceConfig = {
+    const fullConfig: Source.Config<Settings> = {
       settings,
     };
 

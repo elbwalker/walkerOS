@@ -7,11 +7,6 @@ declare global {
   }
 }
 
-// DataLayer source configuration extending core source config
-export interface DataLayerSourceConfig extends Source.Config {
-  settings: Settings;
-}
-
 export type DataLayer = Array<unknown>;
 
 export interface Settings extends Record<string, unknown> {

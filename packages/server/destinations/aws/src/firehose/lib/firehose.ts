@@ -1,13 +1,20 @@
 import type { Destination } from '@walkeros/core';
-import type { FirehoseConfig } from '../types';
+import type { FirehoseConfig, Environment } from '../types';
 import { throwError } from '@walkeros/core';
-import {
-  FirehoseClient,
-  PutRecordBatchCommand,
-} from '@aws-sdk/client-firehose';
+
+// Type guard to check if environment has AWS SDK
+function isAWSEnvironment(env: unknown): env is Environment {
+  return Boolean(
+    env &&
+      typeof env === 'object' &&
+      'AWS' in env &&
+      (env as Environment).AWS?.FirehoseClient,
+  );
+}
 
 export function getConfigFirehose(
   firehoseConfig: Partial<FirehoseConfig>,
+  env?: unknown,
 ): FirehoseConfig {
   const { streamName, region = 'eu-central-1', config = {} } = firehoseConfig;
 
@@ -15,7 +22,11 @@ export function getConfigFirehose(
 
   if (!config.region) config.region = region;
 
-  const client = firehoseConfig.client || new FirehoseClient(config);
+  // Use environment-injected SDK or fall back to provided client
+  let client = firehoseConfig.client;
+  if (!client && isAWSEnvironment(env)) {
+    client = new env.AWS.FirehoseClient(config);
+  }
 
   return {
     streamName,
@@ -27,6 +38,7 @@ export function getConfigFirehose(
 export async function pushFirehose(
   pushEvents: Destination.PushEvents,
   config: FirehoseConfig,
+  env?: unknown,
 ) {
   const { client, streamName } = config;
 
@@ -37,10 +49,22 @@ export async function pushFirehose(
     Data: Buffer.from(JSON.stringify(event)),
   }));
 
-  await client.send(
-    new PutRecordBatchCommand({
-      DeliveryStreamName: streamName,
-      Records: records,
-    }),
-  );
+  // Use environment-injected SDK command or fall back to direct import
+  if (isAWSEnvironment(env)) {
+    await client.send(
+      new env.AWS.PutRecordBatchCommand({
+        DeliveryStreamName: streamName,
+        Records: records,
+      }),
+    );
+  } else {
+    // Fall back to direct import for backward compatibility
+    const { PutRecordBatchCommand } = await import('@aws-sdk/client-firehose');
+    await client.send(
+      new PutRecordBatchCommand({
+        DeliveryStreamName: streamName,
+        Records: records,
+      }),
+    );
+  }
 }

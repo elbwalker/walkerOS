@@ -1,10 +1,5 @@
 import type { Source, WalkerOS, On } from '@walkeros/core';
-import type {
-  BrowserSourceConfig,
-  Scope,
-  Settings,
-  Environment,
-} from './types';
+import type { Scope, Settings, Environment } from './types';
 import type {
   BrowserPushData,
   BrowserPushOptions,
@@ -41,8 +36,8 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
  * This source captures DOM events, manages sessions, handles pageviews,
  * and processes the elbLayer for browser environments.
  */
-export const sourceBrowser: Source.Init<BrowserSourceConfig> = async (
-  config: Partial<BrowserSourceConfig>,
+export const sourceBrowser: Source.Init<Settings> = async (
+  config: Partial<Source.Config<Settings>>,
   env?: Source.Environment,
 ) => {
   try {
@@ -59,7 +54,7 @@ export const sourceBrowser: Source.Init<BrowserSourceConfig> = async (
     const settings: Settings = getConfig(userSettings, envDocument);
 
     // Full configuration with defaults
-    const fullConfig: BrowserSourceConfig & { settings: Settings } = {
+    const fullConfig: Source.Config<Settings> = {
       settings,
     };
 

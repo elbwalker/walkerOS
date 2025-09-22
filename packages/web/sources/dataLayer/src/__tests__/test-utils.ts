@@ -1,6 +1,6 @@
 import type { WalkerOS, Elb, Collector, Source } from '@walkeros/core';
 import { sourceDataLayer } from '../index';
-import type { DataLayerSourceConfig } from '../types';
+import type { Settings } from '../types';
 
 // Test utility for creating properly typed mock elb function
 export function createMockPush(collectedEvents: WalkerOS.Event[]) {
@@ -28,8 +28,8 @@ export function getDataLayer(name = 'dataLayer'): unknown[] {
 // Helper function to create and initialize a dataLayer source with proper environment
 export async function createDataLayerSource(
   collector: Collector.Instance,
-  config?: Partial<DataLayerSourceConfig>,
-): Promise<Source.Instance<DataLayerSourceConfig>> {
+  config?: Partial<Source.Config<Settings>>,
+): Promise<Source.Instance<Settings>> {
   return await sourceDataLayer(config || {}, {
     elb: collector.push.bind(collector),
     window,

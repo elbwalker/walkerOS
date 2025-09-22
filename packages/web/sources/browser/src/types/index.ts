@@ -4,11 +4,6 @@ import type { SessionConfig, SessionCallback } from '@walkeros/web-core';
 // Export browser-specific elb types
 export * from './elb';
 
-// Browser source configuration extending core source config
-export interface BrowserSourceConfig extends Source.Config {
-  settings: InitSettings;
-}
-
 // InitSettings: what users provide (all optional)
 export interface InitSettings extends Record<string, unknown> {
   prefix?: string;

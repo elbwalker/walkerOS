@@ -3,11 +3,11 @@ import { createCollector } from '../collector';
 import { initSources } from '../source';
 
 // Mock source implementation using new pattern
-const mockSource: Source.Init<Source.Config> = async (
+const mockSource: Source.Init = async (
   config: Partial<Source.Config>,
-  env?: Source.Environment,
+  env: Source.Environment,
 ) => {
-  const { elb } = env!;
+  const { elb } = env;
 
   if (!elb) {
     throw new Error('Mock source requires elb function');
@@ -32,9 +32,9 @@ const mockSource: Source.Init<Source.Config> = async (
 };
 
 // Mock source that throws an error
-const errorSource: Source.Init<Source.Config> = async (
+const errorSource: Source.Init = async (
   config: Partial<Source.Config>,
-  env?: Source.Environment,
+  env: Source.Environment,
 ) => {
   throw new Error('Source initialization failed');
 };
@@ -89,9 +89,9 @@ describe('Source', () => {
     });
 
     it('should inject elb function into source environment', async () => {
-      const captureEnv: Source.Init<Source.Config> = async (
+      const captureEnv: Source.Init = async (
         config: Partial<Source.Config>,
-        env?: Source.Environment,
+        env: Source.Environment,
       ) => {
         expect(env!.elb).toBeDefined();
         expect(typeof env!.elb).toBe('function');
@@ -124,9 +124,9 @@ describe('Source', () => {
     });
 
     it('should merge environment with custom properties', async () => {
-      const captureEnv: Source.Init<Source.Config> = async (
+      const captureEnv: Source.Init = async (
         config: Partial<Source.Config>,
-        env?: Source.Environment,
+        env: Source.Environment,
       ) => {
         expect(env!.elb).toBeDefined();
         expect(env!.customProp).toBe('customValue');
@@ -229,9 +229,9 @@ describe('Source', () => {
       const onMock = jest.fn();
 
       // Mock source with on method
-      const sourceWithOn: Source.Init<Source.Config> = async (
+      const sourceWithOn: Source.Init = async (
         config: Partial<Source.Config>,
-        env?: Source.Environment,
+        env: Source.Environment,
       ) => {
         return {
           type: 'reactive',
@@ -267,9 +267,9 @@ describe('Source', () => {
     it('should push session events to sources', async () => {
       const onMock = jest.fn();
 
-      const sourceWithOn: Source.Init<Source.Config> = async (
+      const sourceWithOn: Source.Init = async (
         config: Partial<Source.Config>,
-        env?: Source.Environment,
+        env: Source.Environment,
       ) => {
         return {
           type: 'reactive',
@@ -304,9 +304,9 @@ describe('Source', () => {
     });
 
     it('should not fail if source does not have on method', async () => {
-      const sourceWithoutOn: Source.Init<Source.Config> = async (
+      const sourceWithoutOn: Source.Init = async (
         config: Partial<Source.Config>,
-        env?: Source.Environment,
+        env: Source.Environment,
       ) => {
         return {
           type: 'passive',
@@ -336,9 +336,9 @@ describe('Source', () => {
     it('should push different event types correctly', async () => {
       const onMock = jest.fn();
 
-      const sourceWithOn: Source.Init<Source.Config> = async (
+      const sourceWithOn: Source.Init = async (
         config: Partial<Source.Config>,
-        env?: Source.Environment,
+        env: Source.Environment,
       ) => {
         return {
           type: 'reactive',

@@ -6,13 +6,16 @@ import { push } from './push';
 // Types
 export * as DestinationFirehose from './types';
 
+// Examples
+export * as examples from './examples';
+
 export const destinationFirehose: Destination = {
   type: 'aws-firehose',
 
   config: {},
 
-  async init({ config: partialConfig }) {
-    const config = getConfig(partialConfig);
+  async init({ config: partialConfig, env }) {
+    const config = getConfig(partialConfig, env);
 
     if (!isSameType(config.settings, {} as Settings)) return false;
 

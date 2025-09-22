@@ -3,7 +3,7 @@ import type { Collector, WalkerOS, Source as CoreSource } from '@walkeros/core';
 export interface Source<
   Settings extends Record<string, unknown> = Record<string, unknown>,
   Mapping = unknown,
-> extends CoreSource.Instance {
+> extends CoreSource.Instance<Settings, Mapping> {
   settings?: Settings;
   mapping?: Mapping;
 }
@@ -13,7 +13,7 @@ export type Init = Partial<Omit<Source, 'init'>> & Pick<Source, 'type'>;
 export type Config<
   Settings extends Record<string, unknown> = Record<string, unknown>,
   Mapping = unknown,
-> = CoreSource.Instance & {
+> = CoreSource.Instance<Settings, Mapping> & {
   settings: Settings;
   mapping?: Mapping;
 };

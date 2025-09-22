@@ -3,6 +3,7 @@ import type { Mapping as WalkerOSMapping } from '@walkeros/core';
 import type {
   FirehoseClient,
   FirehoseClientConfig,
+  PutRecordBatchCommand,
 } from '@aws-sdk/client-firehose';
 
 export interface Destination
@@ -37,4 +38,12 @@ export interface FirehoseConfig {
   client?: FirehoseClient;
   region?: string;
   config?: FirehoseClientConfig;
+}
+
+// Environment interface for type-safe AWS SDK injection
+export interface Environment extends DestinationServer.Environment {
+  AWS: {
+    FirehoseClient: typeof FirehoseClient;
+    PutRecordBatchCommand: typeof PutRecordBatchCommand;
+  };
 }

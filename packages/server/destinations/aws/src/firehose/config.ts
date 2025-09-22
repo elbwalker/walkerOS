@@ -1,11 +1,14 @@
-import type { Config, Settings, PartialConfig } from './types';
+import type { Config, Settings, PartialConfig, Environment } from './types';
 import { getConfigFirehose } from './lib/firehose';
 
-export function getConfig(partialConfig: PartialConfig = {}): Config {
+export function getConfig(
+  partialConfig: PartialConfig = {},
+  env?: unknown,
+): Config {
   const settings = partialConfig.settings || ({} as Settings);
 
   if (settings.firehose)
-    settings.firehose = getConfigFirehose(settings.firehose);
+    settings.firehose = getConfigFirehose(settings.firehose, env);
 
   return { settings };
 }

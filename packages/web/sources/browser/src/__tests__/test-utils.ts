@@ -1,6 +1,6 @@
 import type { Source, Collector } from '@walkeros/core';
 import { sourceBrowser } from '../index';
-import type { Settings, BrowserSourceConfig } from '../types';
+import type { Settings } from '../types';
 
 /**
  * Test helper to create browser sources for testing
@@ -9,8 +9,8 @@ import type { Settings, BrowserSourceConfig } from '../types';
 export async function createBrowserSource(
   collector: Collector.Instance,
   settings: Partial<Settings> = {},
-): Promise<Source.Instance<BrowserSourceConfig> & { elb: Function }> {
-  const config: Partial<BrowserSourceConfig> = {
+): Promise<Source.Instance<Settings> & { elb: Function }> {
+  const config: Partial<Source.Config<Settings>> = {
     settings: {
       prefix: 'data-elb',
       scope: document,
