@@ -31,11 +31,6 @@ export async function setupWebBasic(): Promise<{
             prefix: 'data-elb',
           },
         },
-        env: {
-          window,
-          document,
-          // elb function is automatically injected by collector
-        },
       },
     },
 
@@ -49,10 +44,8 @@ export async function setupWebBasic(): Promise<{
           push(event: WalkerOS.Event) {
             console.log('📊 Event captured:', {
               name: event.name,
-              entity: event.entity,
-              action: event.action,
               data: event.data,
-              timestamp: event.timestamp,
+              timing: event.timing,
             });
           },
         },
@@ -71,7 +64,12 @@ export async function setupWebBasic(): Promise<{
             },
           },
         },
-        // env.sendWeb is injected automatically (or mocked in tests)
+        env: {
+          // Mock sendWeb function
+          sendWeb: (url: unknown, body: unknown, options: unknown) => {
+            console.log('📡 API Call:', { url, body, options });
+          },
+        },
       },
 
       // 3. Google gtag destination for GA4 and Google Ads
@@ -125,7 +123,13 @@ export async function setupWebBasic(): Promise<{
             },
           },
         },
-        // env.window.gtag is injected automatically (or mocked in tests)
+        env: {
+          window: {
+            gtag: (...args: unknown[]) => {
+              console.log('🎯 Gtag Call:', args);
+            },
+          },
+        },
       },
     },
   });
