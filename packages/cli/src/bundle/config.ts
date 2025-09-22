@@ -56,7 +56,7 @@ export const BuildConfigSchema = z.object({
 });
 
 // Configuration schema
-export const ConfigSchema = z.object({
+export const BundleConfigSchema = z.object({
   packages: z.array(
     z.object({
       name: z.string(),
@@ -84,9 +84,9 @@ export const ConfigSchema = z.object({
 
 export type TemplateConfig = z.infer<typeof TemplateConfigSchema>;
 export type BuildConfig = z.infer<typeof BuildConfigSchema>;
-export type Config = z.infer<typeof ConfigSchema>;
+export type BundleConfig = z.infer<typeof BundleConfigSchema>;
 
 // Validate and parse configuration
-export function parseConfig(data: unknown): Config {
-  return ConfigSchema.parse(data);
+export function parseBundleConfig(data: unknown): BundleConfig {
+  return BundleConfigSchema.parse(data);
 }

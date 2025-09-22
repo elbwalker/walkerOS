@@ -10,7 +10,7 @@ export default defineConfig([
     entry: ['src/index.ts'],
     format: ['cjs'],
     outExtension() {
-      return { js: '.js' };
+      return { js: '.cjs' };
     },
     banner: {
       js: '#!/usr/bin/env node',

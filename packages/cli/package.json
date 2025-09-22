@@ -1,14 +1,14 @@
 {
-  "name": "@walkeros/bundler",
+  "name": "@walkeros/cli",
   "version": "0.1.0",
-  "description": "Bundle NPM packages with custom code into optimized JavaScript files",
+  "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "bin": {
-    "walkeros-bundle": "./dist/index.js"
+    "walkeros": "./dist/index.cjs"
   },
   "exports": {
     ".": {
@@ -40,7 +40,7 @@
     "fs-extra": "^11.0.0",
     "handlebars": "^4.7.8",
     "pacote": "^17.0.0",
-    "zod": "^3.22.0"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.0",
@@ -52,7 +52,7 @@
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
-    "directory": "packages/bundler"
+    "directory": "packages/cli"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme"

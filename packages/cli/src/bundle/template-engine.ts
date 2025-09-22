@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import Handlebars from 'handlebars';
-import { TemplateConfig } from './config.js';
+import { TemplateConfig } from './config';
 
 export class TemplateEngine {
   private handlebars: typeof Handlebars;

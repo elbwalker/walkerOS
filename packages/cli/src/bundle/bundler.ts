@@ -1,15 +1,10 @@
 import esbuild from 'esbuild';
 import path from 'path';
 import fs from 'fs-extra';
-import { Config, BuildConfig } from './config.js';
-import { downloadPackages } from './package-manager.js';
-import { TemplateEngine } from './template-engine.js';
-import chalk from 'chalk';
-
-function getTempDir(tempDir = '.tmp'): string {
-  const randomId = Math.random().toString(36).substring(2, 11);
-  return path.join(process.cwd(), tempDir, `bundler-${Date.now()}-${randomId}`);
-}
+import { BundleConfig, BuildConfig } from './config';
+import { downloadPackages } from './package-manager';
+import { TemplateEngine } from './template-engine';
+import { Logger, getTempDir } from '../core';
 
 export interface BundleStats {
   totalSize: number;
@@ -18,45 +13,35 @@ export interface BundleStats {
   treeshakingEffective: boolean;
 }
 
-function createLogger(silent: boolean) {
-  return (...args: Parameters<typeof console.log>) => {
-    if (!silent) {
-      // eslint-disable-next-line no-console
-      console.log(...args);
-    }
-  };
-}
-
 export async function bundle(
-  config: Config,
+  config: BundleConfig,
+  logger: Logger,
   showStats = false,
-  silent = false,
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
-  const log = createLogger(silent);
   const TEMP_DIR = getTempDir(config.tempDir);
 
   try {
     // Step 1: Prepare temporary directory
     await fs.emptyDir(TEMP_DIR);
-    log(chalk.gray('  Cleaned temporary directory'));
+    logger.debug('Cleaned temporary directory');
 
     // Step 2: Download packages
-    log(chalk.blue('📥 Downloading packages...'));
+    logger.info('📥 Downloading packages...');
     const packagePaths = await downloadPackages(
       config.packages,
       path.join(TEMP_DIR, 'node_modules'),
-      silent,
+      logger,
     );
 
     // Step 3: Create entry point
-    log(chalk.blue('📝 Creating entry point...'));
+    logger.info('📝 Creating entry point...');
     const entryContent = await createEntryPoint(config, packagePaths);
     const entryPath = path.join(TEMP_DIR, 'entry.js');
     await fs.writeFile(entryPath, entryContent);
 
     // Step 4: Bundle with esbuild
-    log(chalk.blue('⚡ Bundling with esbuild...'));
+    logger.info('⚡ Bundling with esbuild...');
     const outputPath = path.resolve(config.output.dir, config.output.filename);
 
     // Ensure output directory exists
@@ -68,7 +53,7 @@ export async function bundle(
       outputPath,
       TEMP_DIR,
       packagePaths,
-      silent,
+      logger,
     );
 
     try {
@@ -78,7 +63,7 @@ export async function bundle(
       throw createBuildError(buildError as EsbuildError, config.content);
     }
 
-    log(chalk.gray(`  Output: ${outputPath}`));
+    logger.gray(`Output: ${outputPath}`);
 
     // Step 5: Collect stats if requested
     let stats: BundleStats | undefined;
@@ -93,7 +78,7 @@ export async function bundle(
 
     // Step 6: Cleanup
     await fs.remove(TEMP_DIR);
-    log(chalk.gray('  Cleaned up temporary files'));
+    logger.debug('Cleaned up temporary files');
 
     return stats;
   } catch (error) {
@@ -105,7 +90,7 @@ export async function bundle(
 
 async function collectBundleStats(
   outputPath: string,
-  packages: Config['packages'],
+  packages: BundleConfig['packages'],
   startTime: number,
   entryContent: string,
 ): Promise<BundleStats> {
@@ -152,7 +137,7 @@ function createEsbuildOptions(
   outputPath: string,
   tempDir: string,
   packagePaths: Map<string, string>,
-  silent = false,
+  logger: Logger,
 ): esbuild.BuildOptions {
   // Create aliases to force esbuild to use downloaded packages
   const alias: Record<string, string> = {};
@@ -168,7 +153,7 @@ function createEsbuildOptions(
     outfile: outputPath,
     alias,
     treeShaking: true,
-    logLevel: silent ? 'silent' : 'error',
+    logLevel: 'error',
     minify: buildConfig.minify,
     sourcemap: buildConfig.sourcemap,
     resolveExtensions: ['.js', '.ts', '.mjs', '.json'],
@@ -224,7 +209,7 @@ function createEsbuildOptions(
 }
 
 async function createEntryPoint(
-  config: Config,
+  config: BundleConfig,
   packagePaths: Map<string, string>,
 ): Promise<string> {
   // Generate import statements from packages

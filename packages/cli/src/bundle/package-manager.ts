@@ -1,20 +1,11 @@
 import pacote from 'pacote';
 import path from 'path';
 import fs from 'fs-extra';
-import chalk from 'chalk';
+import { Logger } from '../core';
 
 export interface Package {
   name: string;
   version: string;
-}
-
-function createLogger(silent: boolean) {
-  return (...args: Parameters<typeof console.log>) => {
-    if (!silent) {
-      // eslint-disable-next-line no-console
-      console.log(...args);
-    }
-  };
 }
 
 function validateNoDuplicatePackages(packages: Package[]): void {
@@ -49,10 +40,9 @@ function validateNoDuplicatePackages(packages: Package[]): void {
 export async function downloadPackages(
   packages: Package[],
   targetDir: string,
-  silent = false,
+  logger: Logger,
 ): Promise<Map<string, string>> {
   const packagePaths = new Map<string, string>();
-  const log = createLogger(silent);
 
   // Validate no duplicate packages with different versions
   validateNoDuplicatePackages(packages);
@@ -64,7 +54,7 @@ export async function downloadPackages(
     const packageSpec = `${pkg.name}@${pkg.version}`;
     const packageDir = path.join(targetDir, pkg.name.replace('/', '-'));
 
-    log(chalk.gray(`  Downloading ${packageSpec}...`));
+    logger.debug(`Downloading ${packageSpec}...`);
 
     try {
       // Extract package to target directory
