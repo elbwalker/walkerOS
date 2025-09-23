@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import Handlebars from 'handlebars';
 import { TemplateConfig } from './config';
+import { processTemplateVariables } from './serializer';
 
 export class TemplateEngine {
   private handlebars: typeof Handlebars;
@@ -61,16 +62,21 @@ export class TemplateEngine {
       ? processedTemplate.replace(contentPlaceholder, bundleCode)
       : processedTemplate + '\n' + bundleCode;
 
+    // Process template variables to serialize config objects
+    const processedVariables = config.variables
+      ? processTemplateVariables(config.variables)
+      : {};
+
     // Prepare template data for Handlebars
     const templateData: Record<string, unknown> = {
       CONTENT: bundleCode,
-      ...config.variables,
+      ...processedVariables,
     };
 
     // Clean up the data - convert non-arrays used in loop syntax to empty arrays
     // This makes Handlebars behave like our old custom engine
-    if (config.variables) {
-      for (const [key, value] of Object.entries(config.variables)) {
+    if (processedVariables) {
+      for (const [key, value] of Object.entries(processedVariables)) {
         // Check if this variable is used in loop syntax in the template
         const loopRegex = new RegExp(`{{#${key}}}`, 'g');
         if (loopRegex.test(templateWithContent) && !Array.isArray(value)) {

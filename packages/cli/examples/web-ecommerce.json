@@ -1,0 +1,177 @@
+{
+  "packages": [
+    {
+      "name": "@walkeros/collector",
+      "version": "latest",
+      "imports": ["createCollector"]
+    },
+    {
+      "name": "@walkeros/web-source-browser",
+      "version": "latest",
+      "imports": ["sourceBrowser"]
+    },
+    {
+      "name": "@walkeros/web-source-datalayer",
+      "version": "latest",
+      "imports": ["sourceDataLayer"]
+    },
+    {
+      "name": "@walkeros/web-destination-gtag",
+      "version": "latest",
+      "imports": ["destinationGtag"]
+    },
+    {
+      "name": "@walkeros/web-destination-api",
+      "version": "latest",
+      "imports": ["destinationAPI"]
+    }
+  ],
+  "content": "console.log('🛒 Demo e-commerce tracking...');",
+  "build": {
+    "platform": "browser",
+    "format": "iife",
+    "target": "es2020",
+    "minify": false,
+    "sourcemap": true
+  },
+  "output": {
+    "filename": "ecommerce-tracker.js",
+    "dir": "./dist"
+  },
+  "template": {
+    "file": "templates/web.hbs",
+    "variables": {
+      "collectorName": "walkerEcommerce",
+      "sources": [
+        {
+          "name": "browser",
+          "code": "sourceBrowser",
+          "config": {}
+        },
+        {
+          "name": "dataLayer",
+          "code": "sourceDataLayer",
+          "config": {}
+        }
+      ],
+      "destinations": [
+        {
+          "name": "gtag",
+          "code": "destinationGtag",
+          "config": {
+            "settings": {
+              "ga4": {
+                "measurementId": "G-XXXXXXXXXX"
+              }
+            },
+            "mapping": {
+              "order": {
+                "complete": {
+                  "name": "purchase",
+                  "settings": {
+                    "ga4": {
+                      "include": ["data"]
+                    }
+                  },
+                  "data": {
+                    "map": {
+                      "transaction_id": "data.id",
+                      "value": "data.total",
+                      "tax": "data.tax",
+                      "shipping": "data.shipping",
+                      "currency": { "key": "data.currency", "value": "USD" },
+                      "items": {
+                        "loop": [
+                          "nested",
+                          {
+                            "condition": "(entity) => entity.entity === 'product'",
+                            "map": {
+                              "item_id": "data.id",
+                              "item_name": "data.name",
+                              "item_category": "data.category",
+                              "quantity": {
+                                "key": "data.quantity",
+                                "value": 1
+                              },
+                              "price": "data.price"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                "add": {
+                  "name": "add_to_cart",
+                  "settings": {
+                    "ga4": {
+                      "include": ["data"]
+                    }
+                  },
+                  "data": {
+                    "map": {
+                      "currency": { "key": "data.currency", "value": "USD" },
+                      "value": "data.total",
+                      "items": {
+                        "loop": [
+                          "nested",
+                          {
+                            "condition": "(entity) => entity.entity === 'product'",
+                            "map": {
+                              "item_id": "data.id",
+                              "item_name": "data.name",
+                              "quantity": {
+                                "key": "data.quantity",
+                                "value": 1
+                              },
+                              "price": "data.price"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "product": {
+                "view": {
+                  "name": "view_item",
+                  "settings": {
+                    "ga4": {
+                      "include": ["data"]
+                    }
+                  },
+                  "data": {
+                    "map": {
+                      "currency": { "key": "data.currency", "value": "USD" },
+                      "value": "data.price",
+                      "items": [
+                        {
+                          "item_id": "data.id",
+                          "item_name": "data.name",
+                          "item_category": "data.category",
+                          "price": "data.price"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "consent": { "marketing": true }
+          }
+        },
+        {
+          "name": "api",
+          "code": "destinationAPI",
+          "config": {
+            "settings": {
+              "endpoint": "https://api.example.com/events"
+            },
+            "consent": { "marketing": true }
+          }
+        }
+      ]
+    }
+  }
+}

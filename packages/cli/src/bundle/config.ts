@@ -17,8 +17,15 @@ export const TemplateConfigSchema = z
               z.number(),
               z.boolean(),
               z.record(z.unknown()),
+              z.object({
+                name: z.string(),
+                code: z.string(),
+                config: z.record(z.unknown()),
+                env: z.unknown().optional(),
+              }),
             ]),
           ),
+          z.record(z.unknown()),
         ]),
       )
       .optional(),
