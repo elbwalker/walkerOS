@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { DestinationMeta } from '.';
 import { createCollector } from '@walkeros/collector';
-import { getEvent } from '@walkeros/core';
+import { getEvent, clone } from '@walkeros/core';
 import { examples } from '.';
 
 const { events, mapping } = examples;
@@ -15,21 +15,10 @@ describe('Destination Meta Pixel', () => {
   const event = getEvent();
   const pixelId = '1234567890';
 
-  const testEnv = {
-    window: {
-      fbq: mockFn,
-      _fbq: mockFn,
-    },
-    document: {
-      createElement: jest.fn(() => ({
-        src: '',
-        async: false,
-        setAttribute: jest.fn(),
-        removeAttribute: jest.fn(),
-      })),
-      head: { appendChild: jest.fn() },
-    },
-  };
+  // Create test environment using clone and modify fbq function
+  const testEnv = clone(examples.env.standard);
+  testEnv.window.fbq = mockFn;
+  testEnv.window._fbq = mockFn;
 
   beforeEach(async () => {
     destination = jest.requireActual('.').default;
@@ -44,13 +33,9 @@ describe('Destination Meta Pixel', () => {
   afterEach(() => {});
 
   test('init', async () => {
-    // Environment without fbq initially - setup() will populate it
-    const initEnv = {
-      window: {} as Record<string, unknown>,
-      document: testEnv.document,
-    };
-
-    expect((initEnv.window as Record<string, unknown>).fbq).not.toBeDefined();
+    // Use clone of init environment where fbq is undefined
+    const initEnv = clone(examples.env.init);
+    expect(initEnv?.window.fbq).not.toBeDefined();
 
     const destinationWithEnv = {
       ...destination,
@@ -60,7 +45,7 @@ describe('Destination Meta Pixel', () => {
 
     await elb(event);
     // After setup() is called, fbq should be defined
-    expect((initEnv.window as Record<string, unknown>).fbq).toBeDefined();
+    expect(initEnv?.window.fbq).toBeDefined();
   });
 
   test('Init calls', async () => {
@@ -76,9 +61,25 @@ describe('Destination Meta Pixel', () => {
   });
 
   test('init with load script', async () => {
+    // Use Jest spies on the cloned environment
+    const scriptEnv = clone(examples.env.standard);
+    const createElementSpy = jest.fn(
+      () =>
+        ({
+          src: '',
+          async: false,
+          setAttribute: jest.fn(),
+          removeAttribute: jest.fn(),
+        }) as unknown as Element,
+    );
+    const appendChildSpy = jest.fn();
+
+    scriptEnv.document.createElement = createElementSpy;
+    scriptEnv.document.head.appendChild = appendChildSpy;
+
     const destinationWithEnv = {
       ...destination,
-      env: testEnv,
+      env: scriptEnv,
     };
     elb('walker destination', destinationWithEnv, {
       settings: { pixelId },
@@ -88,9 +89,9 @@ describe('Destination Meta Pixel', () => {
     await elb(event);
 
     // Verify script createElement was called
-    expect(testEnv.document.createElement).toHaveBeenCalledWith('script');
+    expect(createElementSpy).toHaveBeenCalledWith('script');
     // Verify appendChild was called
-    expect(testEnv.document.head.appendChild).toHaveBeenCalled();
+    expect(appendChildSpy).toHaveBeenCalled();
   });
 
   test('push', async () => {

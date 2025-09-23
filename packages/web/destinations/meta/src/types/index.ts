@@ -8,13 +8,16 @@ declare global {
   }
 }
 
-// Meta-specific environment that includes fbq
-export interface MetaEnvironment {
+// Meta-specific environment interface
+export interface Environment extends DestinationWeb.Environment {
   window: {
     fbq: facebook.Pixel.Event;
     _fbq?: facebook.Pixel.Event;
   };
-  document: Document;
+  document: {
+    createElement: (tagName: string) => Element;
+    head: { appendChild: (node: unknown) => void };
+  };
 }
 
 export type Destination = DestinationWeb.Destination<Settings, Mapping>;
