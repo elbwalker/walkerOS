@@ -15,24 +15,6 @@ export const destinationGtag: Destination = {
 
   config: { settings: {} },
 
-  env: {
-    window: {
-      gtag: function (...args: unknown[]): void {},
-      dataLayer: [] as unknown[],
-    },
-    document: {
-      createElement: (tagName: string) => ({
-        src: '',
-        async: false,
-        setAttribute: () => {},
-        removeAttribute: () => {},
-      }),
-      head: {
-        appendChild: () => {},
-      },
-    },
-  },
-
   init({ config, env }) {
     const { settings = {} as Partial<Settings>, loadScript } = config;
     const { ga4, ads, gtm } = settings;

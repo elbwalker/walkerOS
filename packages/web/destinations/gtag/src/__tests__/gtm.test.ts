@@ -1,22 +1,12 @@
 import { initGTM, pushGTMEvent } from '../gtm';
+import { examples } from '../index';
+import { clone } from '@walkeros/core';
 import type { GTMSettings } from '../types';
-import type { DestinationWeb } from '@walkeros/web-core';
 
 describe('GTM Implementation', () => {
   const mockDataLayer: unknown[] = [];
-  const mockEnv: DestinationWeb.Environment = {
-    window: {
-      dataLayer: mockDataLayer,
-    },
-    document: {
-      createElement: jest.fn(() => ({
-        src: '',
-        setAttribute: jest.fn(),
-        removeAttribute: jest.fn(),
-      })),
-      head: { appendChild: jest.fn() },
-    },
-  };
+  const mockEnv = clone(examples.env.standard);
+  mockEnv.window.dataLayer = mockDataLayer;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -38,10 +28,8 @@ describe('GTM Implementation', () => {
 
     it('should use custom dataLayer name', () => {
       const customDataLayer: unknown[] = [];
-      const customEnv: DestinationWeb.Environment = {
-        window: { customDataLayer },
-        document: mockEnv.document,
-      };
+      const customEnv = clone(examples.env.standard);
+      customEnv.window = { customDataLayer };
 
       const settings: GTMSettings = {
         containerId: 'GTM-XXXXXXX',

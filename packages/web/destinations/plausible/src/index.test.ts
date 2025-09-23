@@ -5,7 +5,7 @@ import { createCollector } from '@walkeros/collector';
 import { getEvent, mockEnv } from '@walkeros/core';
 import { examples } from '.';
 
-const { env, events, mapping } = examples;
+const { events, mapping } = examples;
 
 describe('destination plausible', () => {
   let elb: WalkerOS.Elb;
@@ -35,7 +35,7 @@ describe('destination plausible', () => {
     appendChildMock = jest.fn();
 
     // Create test environment using example env with call interceptor
-    testEnv = mockEnv(env.env.push, (path, args) => {
+    testEnv = mockEnv(examples.env.standard, (path, args) => {
       calls.push({ path, args });
     });
 
@@ -56,8 +56,7 @@ describe('destination plausible', () => {
 
   test('init', async () => {
     // Use init environment where plausible is undefined
-    const initEnv = env.env.init;
-
+    const initEnv = examples.env.init;
     expect(initEnv?.window.plausible).not.toBeDefined();
 
     const destinationWithEnv = {

@@ -1,7 +1,7 @@
 import type { Environment } from '../types';
 
 /**
- * Example environment configurations for Plausible destination
+ * Example environment configurations for Gtag destination
  *
  * These environments provide standardized mock structures for testing
  * and development without requiring external dependencies.
@@ -12,38 +12,32 @@ const noop = () => {};
 
 export const init: Environment | undefined = {
   window: {
-    plausible: undefined as unknown as Environment['window']['plausible'],
+    gtag: undefined as unknown as Environment['window']['gtag'],
+    dataLayer: [],
   },
   document: {
     createElement: () => ({
       src: '',
-      dataset: {},
       setAttribute: () => {},
       removeAttribute: () => {},
     }),
     head: { appendChild: () => {} },
-    querySelector: () => null,
   },
 };
 
 export const standard: Environment = {
   window: {
-    plausible: Object.assign(noop, {
-      // Add queue property for analytics loading pattern
-      q: [] as IArguments[],
-    }) as unknown as Environment['window']['plausible'],
+    gtag: Object.assign(noop, {
+      // Add any gtag-specific properties if needed
+    }) as unknown as Environment['window']['gtag'],
+    dataLayer: [] as unknown[],
   },
   document: {
     createElement: () => ({
       src: '',
-      dataset: {},
       setAttribute: () => {},
       removeAttribute: () => {},
     }),
     head: { appendChild: () => {} },
-    querySelector: () => null,
   },
 };
-
-// Future: error scenarios (v2)
-// export const error: Environment = { ... };

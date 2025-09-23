@@ -1,6 +1,5 @@
-import { destinationGtag } from '../index';
+import { destinationGtag, examples } from '../index';
 import type { Settings } from '../types';
-import type { DestinationWeb } from '@walkeros/web-core';
 
 // Mock all tool implementations
 jest.mock('../ga4', () => ({
@@ -23,20 +22,7 @@ import { initAds, pushAdsEvent } from '../ads';
 import { initGTM, pushGTMEvent } from '../gtm';
 
 describe('Unified Gtag Destination', () => {
-  const mockEnv: DestinationWeb.Environment = {
-    window: {
-      gtag: jest.fn(),
-      dataLayer: [],
-    },
-    document: {
-      createElement: jest.fn(() => ({
-        src: '',
-        setAttribute: jest.fn(),
-        removeAttribute: jest.fn(),
-      })),
-      head: { appendChild: jest.fn() },
-    },
-  };
+  const mockEnv = examples.env.standard;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -51,10 +37,8 @@ describe('Unified Gtag Destination', () => {
       expect(destinationGtag.config).toEqual({ settings: {} });
     });
 
-    it('should have default environment', () => {
-      expect(destinationGtag.env).toBeDefined();
-      expect(destinationGtag.env.window).toBeDefined();
-      expect(destinationGtag.env.document).toBeDefined();
+    it('should not have default environment', () => {
+      expect(destinationGtag.env).toBeUndefined();
     });
   });
 

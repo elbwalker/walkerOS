@@ -15,6 +15,25 @@ declare global {
   }
 }
 
+// Gtag-specific environment interface
+export interface Environment extends DestinationWeb.Environment {
+  window: {
+    gtag: Gtag.Gtag;
+    dataLayer: unknown[];
+  };
+  document: {
+    createElement: (tagName: string) => {
+      src: string;
+      async?: boolean;
+      setAttribute: (name: string, value: string) => void;
+      removeAttribute: (name: string) => void;
+    };
+    head: {
+      appendChild: (node: unknown) => void;
+    };
+  };
+}
+
 export type Destination = DestinationWeb.Destination<Settings, Mapping>;
 export type Config = DestinationWeb.Config<Settings, Mapping>;
 

@@ -1,23 +1,12 @@
 import { initAds, pushAdsEvent } from '../ads';
+import { examples } from '../index';
+import { clone } from '@walkeros/core';
 import type { AdsSettings, AdsMapping } from '../types';
-import type { DestinationWeb } from '@walkeros/web-core';
 
 describe('Google Ads Implementation', () => {
   const mockGtag = jest.fn();
-  const mockEnv: DestinationWeb.Environment = {
-    window: {
-      gtag: mockGtag,
-      dataLayer: [],
-    },
-    document: {
-      createElement: jest.fn(() => ({
-        src: '',
-        setAttribute: jest.fn(),
-        removeAttribute: jest.fn(),
-      })),
-      head: { appendChild: jest.fn() },
-    },
-  };
+  const mockEnv = clone(examples.env.standard);
+  mockEnv.window.gtag = mockGtag;
 
   beforeEach(() => {
     jest.clearAllMocks();
