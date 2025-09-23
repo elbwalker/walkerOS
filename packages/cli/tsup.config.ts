@@ -12,9 +12,6 @@ export default defineConfig([
     outExtension() {
       return { js: '.cjs' };
     },
-    banner: {
-      js: '#!/usr/bin/env node',
-    },
     clean: false, // Don't clean since we have multiple builds
     dts: false, // No types needed for CLI
     sourcemap: false,
