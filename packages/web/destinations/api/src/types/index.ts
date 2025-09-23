@@ -6,8 +6,8 @@ import type {
 import type { DestinationWeb, sendWeb } from '@walkeros/web-core';
 import type { SendWebTransport } from '@walkeros/web-core';
 
-export interface Environment {
-  sendWeb: typeof sendWeb;
+export interface Environment extends DestinationWeb.Environment {
+  sendWeb?: typeof sendWeb;
 }
 
 export type Destination = DestinationWeb.Destination<Settings, Mapping>;

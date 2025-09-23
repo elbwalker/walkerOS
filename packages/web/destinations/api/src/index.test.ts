@@ -1,8 +1,8 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { DestinationAPI } from '.';
 import { createCollector } from '@walkeros/collector';
-import { createEvent } from '@walkeros/core';
-import { mapping } from './examples';
+import { createEvent, clone } from '@walkeros/core';
+import { examples } from '.';
 
 describe('Destination API', () => {
   const mockSendWeb = jest.fn(); //.mockImplementation(console.log);
@@ -11,9 +11,9 @@ describe('Destination API', () => {
   let event: WalkerOS.Event;
   const url = 'https://api.example.com/';
 
-  const testEnv = {
-    sendWeb: mockSendWeb,
-  };
+  // Create test environment using clone and modify sendWeb function
+  const testEnv = clone(examples.env.standard);
+  testEnv.sendWeb = mockSendWeb;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -129,7 +129,7 @@ describe('Destination API', () => {
       collector: {} as Collector.Instance,
       config: {
         settings: { url },
-        mapping: mapping.config,
+        mapping: examples.mapping.config,
       },
       env: testEnv,
     });
