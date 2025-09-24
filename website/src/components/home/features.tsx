@@ -49,25 +49,27 @@ export default function Features(): JSX.Element {
     <section className="my-20">
       <div className="container">
         <div className="row">
-          <Feature title="Collect" link="/docs/sources" icon={iconCollect}>
-            Capture events easily and privacy-compliant from your app or site
-            with web and server sources.
+          <Feature
+            title="Deterministic approach"
+            link="/docs/sources"
+            icon={iconCollect}
+          >
+            Every rule is code you can read, test, and deploy.
           </Feature>
           <Feature
-            title="Handle consent"
+            title="Dev-first workflow"
             link="/docs/guides/consent/"
             icon={iconProcess}
           >
-            Implement and manage consent to ensure user privacy and comply with
-            legislation.
+            Version control, CI/CD, and code reviews built-in.
           </Feature>
           <Feature
-            title="Distribute"
+            title="Full data ownership"
             link="/docs/destinations"
             icon={iconActivate}
           >
-            Feed you 3rd party analytics and marketing tools with reliable and
-            rich event data.
+            Data collection and logic fully stays within your codebase and
+            infrastructure.
           </Feature>
         </div>
       </div>

@@ -5,8 +5,8 @@ export default function HomeHero() {
   return (
     <Hero
       title={<div className="block text-elbwalker block">walkerOS</div>}
-      subtitle="Open-source event data collection"
-      text="Collect event data for digital analytics in a unified and privacy-centric way."
+      subtitle="Open-source tag management for developers"
+      text="Debug with confidence, collaborate without friction, and stay fully in control of your data."
       primaryButton={{
         link: '/docs/',
         children: 'Getting started',
@@ -18,11 +18,7 @@ export default function HomeHero() {
         elbAction: 'services',
       }}
       elbTitle="home"
-      badges={[
-        'runs in your own infrastructure',
-        'integrates with all analytics & marketing tools',
-        'in-built consent mode',
-      ]}
+      badges={['client- & server-side', 'Git-native', 'MIT-licenced']}
     />
   );
 }
