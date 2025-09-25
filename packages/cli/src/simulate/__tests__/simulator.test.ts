@@ -1,6 +1,5 @@
 import path from 'path';
 import { simulate } from '../simulator';
-import type { SimulationResult } from '../types';
 import { Collector } from '@walkeros/core';
 
 describe('Simulate', () => {
@@ -11,14 +10,13 @@ describe('Simulate', () => {
     );
     const event = { name: 'product view', data: { id: 'P123' } };
 
-    console.log('Starting simulation...');
-
     const result = await simulate(configPath, event, {
       json: true,
       verbose: true,
     });
 
-    console.log('Simulation result:', JSON.stringify(result, null, 2));
+    console.log('elb push result:', result.elbResult);
+    console.log('captured logs:', result.logs);
 
     expect(result.success).toBe(true);
     expect(result.error).toBeUndefined();
@@ -27,5 +25,10 @@ describe('Simulate', () => {
     const collector = result.collector as Collector.Instance;
     expect(collector.queue[0]).toMatchObject(event);
     expect(collector.destinations.gtag).toBeDefined();
+
+    // Verify console.log calls were captured
+    expect(result.logs).toBeDefined();
+    expect(Array.isArray(result.logs)).toBe(true);
+    expect(result.logs).toContainEqual(['simulation start']);
   }, 30000);
 });

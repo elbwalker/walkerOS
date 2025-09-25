@@ -12,4 +12,5 @@ export interface SimulationResult {
   error?: string;
   collector?: unknown;
   elbResult?: Elb.PushResult;
+  logs?: unknown[];
 }

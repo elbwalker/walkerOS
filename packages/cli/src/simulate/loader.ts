@@ -39,7 +39,7 @@ export async function executeInVM(
           
           return {
             success: true,
-            ...vmResult
+            ...vmResult,
           };
         } catch (error) {
           return {
@@ -135,6 +135,15 @@ export async function executeSimulation(
       // Set up module context
       const module = { exports: {} };
       const exports = module.exports;
+      const vmLogs = [];
+      
+      // Override console.log to capture logs
+      console.log = (...args) => {
+        vmLogs.push(args);
+      };
+      
+      // Test console.log capture
+      console.log("simulation start");
       
       // Execute the CJS bundle (sets module.exports)
       ${bundleCode}
@@ -153,6 +162,7 @@ export async function executeSimulation(
         globalThis.vmResult = {
           collector: flow.collector,
           elbResult,
+          logs: vmLogs
         };
       } else {
         throw new Error('Bundle did not return valid collector with elb function');
