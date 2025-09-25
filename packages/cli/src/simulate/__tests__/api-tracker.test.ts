@@ -123,4 +123,55 @@ describe('API Tracker', () => {
     tracker.other = 'test';
     expect(calls).toHaveLength(5);
   });
+
+  it('should support wildcard type filtering', () => {
+    const calls: ApiCall[] = [];
+    const logCall = (call: ApiCall) => calls.push(call);
+    const mock = {} as any;
+    const tracker = createApiTracker(mock, logCall, ['call:*', 'set:config']);
+
+    // These should be logged - all function calls
+    tracker.foo();
+    tracker.bar();
+    tracker.baz();
+
+    // This should be logged - specific set on config
+    tracker.config = { key: 'value' };
+
+    // These should NOT be logged
+    tracker.foo; // get:foo - doesn't match call:*
+    tracker.bar = 'test'; // set:bar - doesn't match set:config
+    tracker.other; // get:other - no match
+
+    // Verify only matching operations were logged
+    expect(calls).toHaveLength(4); // 3 call:* + 1 set:config
+
+    // Check all function calls were logged
+    expect(calls).toContainEqual({
+      type: 'call',
+      path: 'foo',
+      args: [],
+      timestamp: expect.any(Number),
+    });
+    expect(calls).toContainEqual({
+      type: 'call',
+      path: 'bar',
+      args: [],
+      timestamp: expect.any(Number),
+    });
+    expect(calls).toContainEqual({
+      type: 'call',
+      path: 'baz',
+      args: [],
+      timestamp: expect.any(Number),
+    });
+
+    // Check config set was logged
+    expect(calls).toContainEqual({
+      type: 'set',
+      path: 'config',
+      value: { key: 'value' },
+      timestamp: expect.any(Number),
+    });
+  });
 });

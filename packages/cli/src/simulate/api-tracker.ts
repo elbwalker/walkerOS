@@ -21,6 +21,9 @@ export function createApiTracker<T extends Record<string, unknown>>(
       const matches = paths.some((pattern) => {
         if (pattern.includes(':')) {
           const [opType, opPath] = pattern.split(':');
+          if (opPath === '*') {
+            return type === opType;
+          }
           return type === opType && path.startsWith(opPath);
         }
         return path.startsWith(pattern);
