@@ -40,10 +40,7 @@ export async function simulate(
       logger.error(`❌ Simulation failed: ${result.error}`);
     }
 
-    return {
-      success: result.success,
-      error: result.error,
-    };
+    return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`💥 Simulation error: ${errorMessage}`);

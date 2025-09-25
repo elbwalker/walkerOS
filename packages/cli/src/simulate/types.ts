@@ -1,3 +1,5 @@
+import type { Elb } from '@walkeros/core';
+
 export interface SimulateCommandOptions {
   config: string;
   event?: string;
@@ -8,4 +10,6 @@ export interface SimulateCommandOptions {
 export interface SimulationResult {
   success: boolean;
   error?: string;
+  collector?: unknown;
+  elbResult?: Elb.PushResult;
 }

@@ -6,22 +6,14 @@ import type { WalkerOS } from '@walkeros/core';
 import { loadJsonConfig, createLogger, getTempDir } from '../core';
 import { parseBundleConfig, type BundleConfig } from '../bundle/config';
 import { bundle } from '../bundle/bundler';
-
-export interface VMExecutionResult {
-  success: boolean;
-  data?: any;
-  error?: string;
-  duration: number;
-}
+import type { SimulationResult } from './types';
 
 /**
  * Executes JavaScript code in a JSDOM VM context using async IIFE pattern
  */
 export async function executeInVM(
   bundleCode: string,
-): Promise<VMExecutionResult> {
-  const startTime = Date.now();
-
+): Promise<SimulationResult> {
   try {
     // Setup JSDOM window context
     const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
@@ -47,7 +39,7 @@ export async function executeInVM(
           
           return {
             success: true,
-            data: vmResult
+            ...vmResult
           };
         } catch (error) {
           return {
@@ -62,21 +54,11 @@ export async function executeInVM(
     const script = new vm.Script(wrappedCode, { filename: 'bundle.js' });
     const result = await script.runInContext(context);
 
-    const duration = Date.now() - startTime;
-
-    return {
-      success: result.success,
-      data: result.data,
-      error: result.error,
-      duration,
-    };
+    return result;
   } catch (error) {
-    const duration = Date.now() - startTime;
-
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
-      duration,
     };
   }
 }
@@ -135,7 +117,7 @@ async function generateBundleCode(config: BundleConfig): Promise<string> {
  */
 export async function executeSimulation(
   event: unknown,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<SimulationResult> {
   try {
     // Generate real bundle from config
     const configPath = path.resolve(
@@ -158,21 +140,19 @@ export async function executeSimulation(
       ${bundleCode}
       
       // Get the collector from module.exports
-      const collectorResult = await module.exports;
+      const flow = await module.exports;
       
       // Test event execution with generated collector
       const testEvent = ${JSON.stringify(event)};
       
       // The bundle should return { collector, elb } from createCollector
-      if (collectorResult && typeof collectorResult.elb === 'function') {
-        const elbResult = await collectorResult.elb(testEvent.name || 'page view', testEvent.data || {});
+      if (flow && typeof flow.elb === 'function') {
+        const elbResult = await flow.elb(testEvent);
         
         // Store results for VM extraction
         globalThis.vmResult = {
-          elb: collectorResult.elb,
-          collector: collectorResult.collector,
+          collector: flow.collector,
           elbResult,
-          event: testEvent
         };
       } else {
         throw new Error('Bundle did not return valid collector with elb function');
@@ -181,10 +161,7 @@ export async function executeSimulation(
 
     const vmResult = await executeInVM(wrappedBundleCode);
 
-    return {
-      success: vmResult.success,
-      error: vmResult.error,
-    };
+    return vmResult;
   } catch (error) {
     return {
       success: false,

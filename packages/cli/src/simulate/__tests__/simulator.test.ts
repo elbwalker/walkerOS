@@ -1,5 +1,7 @@
 import path from 'path';
 import { simulate } from '../simulator';
+import type { SimulationResult } from '../types';
+import { Collector } from '@walkeros/core';
 
 describe('Simulate', () => {
   it('should run', async () => {
@@ -11,26 +13,19 @@ describe('Simulate', () => {
 
     console.log('Starting simulation...');
 
-    // Add race condition to see where it hangs
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        console.error(
-          '❌ Timeout: Simulation is taking too long - likely hanging in package download',
-        );
-        reject(new Error('Test timeout - simulation hanging'));
-      }, 25000);
-    });
-
-    const simulationPromise = simulate(configPath, event, {
+    const result = await simulate(configPath, event, {
       json: true,
       verbose: true,
     });
-
-    const result = await Promise.race([simulationPromise, timeoutPromise]);
 
     console.log('Simulation result:', JSON.stringify(result, null, 2));
 
     expect(result.success).toBe(true);
     expect(result.error).toBeUndefined();
+
+    // Verify collector state
+    const collector = result.collector as Collector.Instance;
+    expect(collector.queue[0]).toMatchObject(event);
+    expect(collector.destinations.gtag).toBeDefined();
   }, 30000);
 });
