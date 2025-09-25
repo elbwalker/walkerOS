@@ -12,13 +12,8 @@ describe('API Tracker', () => {
 
     // Simulate typical gtag initialization and usage
 
-    // 1. Check if gtag exists
+    // 1. Check if gtag exists (no logging for get operations)
     window.gtag;
-    expect(calls).toContainEqual({
-      type: 'get',
-      path: 'gtag',
-      timestamp: expect.any(Number),
-    });
 
     // 2. Set gtag function
     window.gtag = () => {};
@@ -29,13 +24,8 @@ describe('API Tracker', () => {
       timestamp: expect.any(Number),
     });
 
-    // 3. Check dataLayer
+    // 3. Check dataLayer (no logging for get operations)
     window.dataLayer;
-    expect(calls).toContainEqual({
-      type: 'get',
-      path: 'dataLayer',
-      timestamp: expect.any(Number),
-    });
 
     // 4. Set dataLayer array (create empty array first)
     const emptyArray: unknown[] = [];
@@ -55,6 +45,9 @@ describe('API Tracker', () => {
       args: ['event', 'purchase', { transaction_id: '12345', value: 99.99 }],
       timestamp: expect.any(Number),
     });
+
+    // Only 3 operations should be logged: 2 sets + 1 call
+    expect(calls).toHaveLength(3);
   });
 
   it('should filter operations based on path patterns', () => {
@@ -63,7 +56,7 @@ describe('API Tracker', () => {
     const mock = {} as any;
     const tracker = createApiTracker(mock, logCall, [
       'call:foo',
-      'get:bar',
+      'set:bar',
       'baz',
     ]);
 
@@ -78,21 +71,17 @@ describe('API Tracker', () => {
       timestamp: expect.any(Number),
     });
 
-    // get:bar - matches
-    tracker.bar;
+    // set:bar - matches
+    tracker.bar = 'test';
     expect(calls).toContainEqual({
-      type: 'get',
+      type: 'set',
       path: 'bar',
+      value: 'test',
       timestamp: expect.any(Number),
     });
 
-    // call:baz - matches (this will also log get:baz first)
+    // call:baz - matches (baz pattern matches all ops)
     tracker.baz();
-    expect(calls).toContainEqual({
-      type: 'get',
-      path: 'baz',
-      timestamp: expect.any(Number),
-    });
     expect(calls).toContainEqual({
       type: 'call',
       path: 'baz',
@@ -109,19 +98,18 @@ describe('API Tracker', () => {
       timestamp: expect.any(Number),
     });
 
-    expect(calls).toHaveLength(5);
+    expect(calls).toHaveLength(4);
 
     // These should NOT be logged
 
-    // get:foo - doesn't match call:foo
+    // get operations are never logged now
     tracker.foo;
-    // set:bar - doesn't match get:bar
-    tracker.bar = 'test';
+    tracker.bar;
     // call:other - no pattern matches
     tracker.other();
     // set:other - no pattern matches
     tracker.other = 'test';
-    expect(calls).toHaveLength(5);
+    expect(calls).toHaveLength(4);
   });
 
   it('should support wildcard type filtering', () => {
@@ -139,9 +127,9 @@ describe('API Tracker', () => {
     tracker.config = { key: 'value' };
 
     // These should NOT be logged
-    tracker.foo; // get:foo - doesn't match call:*
+    tracker.foo; // get operations are never logged
     tracker.bar = 'test'; // set:bar - doesn't match set:config
-    tracker.other; // get:other - no match
+    tracker.other; // get operations are never logged
 
     // Verify only matching operations were logged
     expect(calls).toHaveLength(4); // 3 call:* + 1 set:config
@@ -171,6 +159,37 @@ describe('API Tracker', () => {
       type: 'set',
       path: 'config',
       value: { key: 'value' },
+      timestamp: expect.any(Number),
+    });
+  });
+
+  it('should only log final operations in property chains', () => {
+    const calls: ApiCall[] = [];
+    const logCall = (call: ApiCall) => calls.push(call);
+    const mock = {} as any;
+    const tracker = createApiTracker(mock, logCall);
+
+    // Deep property chain with function call - should only log the final call
+    tracker.foo.bar.baz();
+
+    // Deep property chain with assignment - should only log the final set
+    tracker.foo.bar.config = 'value';
+
+    // Simple property access - should not log anything
+    void tracker.foo.bar.something;
+
+    // Verify only final operations were logged
+    expect(calls).toHaveLength(2);
+    expect(calls).toContainEqual({
+      type: 'call',
+      path: 'foo.bar.baz',
+      args: [],
+      timestamp: expect.any(Number),
+    });
+    expect(calls).toContainEqual({
+      type: 'set',
+      path: 'foo.bar.config',
+      value: 'value',
       timestamp: expect.any(Number),
     });
   });

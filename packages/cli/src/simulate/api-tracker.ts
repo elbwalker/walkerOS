@@ -16,6 +16,9 @@ export function createApiTracker<T extends Record<string, unknown>>(
   paths?: string[],
 ): T {
   const log = (type: ApiCall['type'], path: string, ...rest: unknown[]) => {
+    // Skip logging get operations
+    if (type === 'get') return;
+
     // If paths filter provided, check if this operation should be logged
     if (paths && paths.length > 0) {
       const matches = paths.some((pattern) => {
