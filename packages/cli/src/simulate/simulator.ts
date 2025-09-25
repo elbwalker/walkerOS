@@ -1,4 +1,5 @@
 import path from 'path';
+import { isObject } from '@walkeros/core';
 import { loadJsonConfig, createLogger } from '../core';
 import { parseBundleConfig } from '../bundle/config';
 import { executeSimulation } from './loader';
@@ -10,7 +11,7 @@ import type { WalkerOS } from '@walkeros/core';
  */
 export async function simulate(
   configPath: string,
-  event: WalkerOS.Event,
+  event: unknown,
   options: Pick<SimulateCommandOptions, 'json' | 'verbose'> = {},
 ): Promise<SimulationResult> {
   const logger = createLogger({
@@ -29,7 +30,7 @@ export async function simulate(
     parseBundleConfig(rawConfig); // Validate config format
 
     // Step 2: Execute simulation
-    logger.info(`🚀 Executing simulation with event: ${event.name}`);
+    logger.info(`🚀 Executing simulation with event: ${event}`);
     const result = await executeSimulation(event);
 
     // Step 3: Report results
@@ -57,15 +58,10 @@ export async function simulate(
 /**
  * Simple event parsing - just parse JSON
  */
-export function parseEventInput(eventString?: string): WalkerOS.Event {
-  if (!eventString) {
-    return {
-      name: 'page view',
-      data: {},
-    } as WalkerOS.Event;
-  }
+export function parseEventInput(eventString: string = ''): unknown {
+  const event = JSON.parse(eventString);
 
-  return JSON.parse(eventString) as WalkerOS.Event;
+  return isObject(event) ? event : {};
 }
 
 /**
