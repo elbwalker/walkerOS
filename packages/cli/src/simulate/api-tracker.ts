@@ -13,8 +13,21 @@ export interface ApiCall {
 export function createApiTracker<T extends Record<string, unknown>>(
   entry: T,
   logger: (call: ApiCall) => void,
+  paths?: string[],
 ): T {
   const log = (type: ApiCall['type'], path: string, ...rest: unknown[]) => {
+    // If paths filter provided, check if this operation should be logged
+    if (paths && paths.length > 0) {
+      const matches = paths.some((pattern) => {
+        if (pattern.includes(':')) {
+          const [opType, opPath] = pattern.split(':');
+          return type === opType && path.startsWith(opPath);
+        }
+        return path.startsWith(pattern);
+      });
+      if (!matches) return; // Don't log if no match
+    }
+
     const call: ApiCall = { type, path, timestamp: Date.now() };
 
     if (type === 'call' && rest.length > 0) {
