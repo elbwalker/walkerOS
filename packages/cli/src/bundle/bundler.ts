@@ -32,6 +32,7 @@ export async function bundle(
       config.packages,
       path.join(TEMP_DIR, 'node_modules'),
       logger,
+      config.cache,
     );
 
     // Step 3: Create entry point

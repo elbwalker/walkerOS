@@ -2,6 +2,7 @@
 import { Command } from 'commander';
 import { bundleCommand } from './bundle';
 import { deployCommand } from './deploy';
+import { simulateCommand } from './simulate';
 
 const program = new Command();
 
@@ -21,12 +22,14 @@ program
   )
   .option('-s, --stats', 'show bundle statistics')
   .option('--json', 'output statistics in JSON format (implies --stats)')
+  .option('--no-cache', 'disable package caching and download fresh packages')
   .option('-v, --verbose', 'verbose output')
   .action(async (options) => {
     await bundleCommand({
       config: options.config,
       stats: options.stats,
       json: options.json,
+      cache: options.cache,
       verbose: options.verbose,
     });
   });
@@ -43,6 +46,27 @@ program
     await deployCommand({
       config: options.config,
       dryRun: options.dryRun,
+      json: options.json,
+      verbose: options.verbose,
+    });
+  });
+
+// Simulate command
+program
+  .command('simulate')
+  .description('Simulate event processing and capture API calls')
+  .option(
+    '-c, --config <path>',
+    'Bundle configuration file',
+    'bundle.config.json',
+  )
+  .option('-e, --event <json>', 'Event to simulate (JSON string)')
+  .option('--json', 'Output results as JSON')
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (options) => {
+    await simulateCommand({
+      config: options.config,
+      event: options.event,
       json: options.json,
       verbose: options.verbose,
     });

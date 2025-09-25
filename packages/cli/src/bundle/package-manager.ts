@@ -8,6 +8,20 @@ export interface Package {
   version: string;
 }
 
+function getCachedPackagePath(pkg: Package, tempDir: string): string {
+  const cacheDir = path.join('.tmp', 'cache', 'packages');
+  const packageName = pkg.name.replace('/', '-');
+  return path.join(cacheDir, `${packageName}@${pkg.version}`);
+}
+
+async function isPackageCached(
+  pkg: Package,
+  tempDir: string,
+): Promise<boolean> {
+  const cachedPath = getCachedPackagePath(pkg, tempDir);
+  return fs.pathExists(cachedPath);
+}
+
 function validateNoDuplicatePackages(packages: Package[]): void {
   const packageMap = new Map<string, string[]>();
 
@@ -41,6 +55,7 @@ export async function downloadPackages(
   packages: Package[],
   targetDir: string,
   logger: Logger,
+  useCache = true,
 ): Promise<Map<string, string>> {
   const packagePaths = new Map<string, string>();
 
@@ -53,6 +68,20 @@ export async function downloadPackages(
   for (const pkg of packages) {
     const packageSpec = `${pkg.name}@${pkg.version}`;
     const packageDir = path.join(targetDir, pkg.name.replace('/', '-'));
+    const cachedPath = getCachedPackagePath(pkg, targetDir);
+
+    if (useCache && (await isPackageCached(pkg, targetDir))) {
+      logger.debug(`Using cached ${packageSpec}...`);
+      try {
+        await fs.copy(cachedPath, packageDir);
+        packagePaths.set(pkg.name, packageDir);
+        continue;
+      } catch (error) {
+        logger.debug(
+          `Failed to use cache for ${packageSpec}, downloading fresh: ${error}`,
+        );
+      }
+    }
 
     logger.debug(`Downloading ${packageSpec}...`);
 
@@ -61,6 +90,17 @@ export async function downloadPackages(
       await pacote.extract(packageSpec, packageDir, {
         cache: path.join(process.cwd(), '.npm-cache'),
       });
+
+      // Cache the downloaded package for future use
+      if (useCache) {
+        try {
+          await fs.ensureDir(path.dirname(cachedPath));
+          await fs.copy(packageDir, cachedPath);
+          logger.debug(`Cached ${packageSpec} for future use`);
+        } catch (cacheError) {
+          logger.debug(`Failed to cache ${packageSpec}: ${cacheError}`);
+        }
+      }
 
       packagePaths.set(pkg.name, packageDir);
     } catch (error) {

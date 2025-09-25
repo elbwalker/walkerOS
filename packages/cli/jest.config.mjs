@@ -15,4 +15,6 @@ export default {
   ],
   // Increase timeout for CLI tests that spawn processes
   testTimeout: 30000,
+  // Handle JSON modules
+  moduleFileExtensions: [...(nodeConfig.moduleFileExtensions || ['js', 'ts', 'tsx', 'mjs']), 'json'],
 };

@@ -7,13 +7,13 @@ export interface LoggerOptions {
 }
 
 export interface Logger {
-  log: (color: string, message: string) => void;
-  info: (message: string) => void;
-  success: (message: string) => void;
-  warning: (message: string) => void;
-  error: (message: string) => void;
-  debug: (message: string) => void;
-  gray: (message: string) => void;
+  log: (color: string, ...args: unknown[]) => void;
+  info: (...args: unknown[]) => void;
+  success: (...args: unknown[]) => void;
+  warning: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+  debug: (...args: unknown[]) => void;
+  gray: (...args: unknown[]) => void;
 }
 
 export function createLogger(options: LoggerOptions = {}): Logger {
@@ -23,44 +23,51 @@ export function createLogger(options: LoggerOptions = {}): Logger {
   const shouldDebug = verbose && !silent && !json;
 
   return {
-    log: (color: string, message: string) => {
+    log: (color: string, ...args: unknown[]) => {
       if (shouldLog) {
+        const message = args.map((arg) => String(arg)).join(' ');
         console.log(chalk[color as keyof typeof chalk]?.(message) || message);
       }
     },
 
-    info: (message: string) => {
+    info: (...args: unknown[]) => {
       if (shouldLog) {
+        const message = args.map((arg) => String(arg)).join(' ');
         console.log(chalk.blue(message));
       }
     },
 
-    success: (message: string) => {
+    success: (...args: unknown[]) => {
       if (shouldLog) {
+        const message = args.map((arg) => String(arg)).join(' ');
         console.log(chalk.green(message));
       }
     },
 
-    warning: (message: string) => {
+    warning: (...args: unknown[]) => {
       if (shouldLog) {
+        const message = args.map((arg) => String(arg)).join(' ');
         console.log(chalk.yellow(message));
       }
     },
 
-    error: (message: string) => {
+    error: (...args: unknown[]) => {
       if (!json) {
+        const message = args.map((arg) => String(arg)).join(' ');
         console.error(chalk.red(message));
       }
     },
 
-    debug: (message: string) => {
+    debug: (...args: unknown[]) => {
       if (shouldDebug) {
+        const message = args.map((arg) => String(arg)).join(' ');
         console.log(chalk.gray(message));
       }
     },
 
-    gray: (message: string) => {
+    gray: (...args: unknown[]) => {
       if (shouldLog) {
+        const message = args.map((arg) => String(arg)).join(' ');
         console.log(chalk.gray(message));
       }
     },

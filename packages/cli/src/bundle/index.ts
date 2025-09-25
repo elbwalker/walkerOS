@@ -14,6 +14,7 @@ export interface BundleCommandOptions {
   config: string;
   stats?: boolean;
   json?: boolean;
+  cache?: boolean;
   verbose?: boolean;
 }
 
@@ -34,6 +35,11 @@ export async function bundleCommand(
     const rawConfig = await loadJsonConfig(configPath);
     const config = parseBundleConfig(rawConfig);
 
+    // Override cache setting from CLI if provided
+    if (options.cache !== undefined) {
+      config.cache = options.cache;
+    }
+
     // Step 2: Run bundler
     const shouldCollectStats = options.stats || options.json;
     logger.info('🔧 Starting bundle process...');
@@ -46,7 +52,7 @@ export async function bundleCommand(
         true,
         { stats },
         undefined,
-        formatDuration(startTime),
+        (Date.now() - startTime) / 1000,
       );
       console.log(JSON.stringify(output, null, 2));
     } else {
@@ -65,7 +71,7 @@ export async function bundleCommand(
         false,
         undefined,
         error instanceof Error ? error.message : String(error),
-        formatDuration(startTime),
+        (Date.now() - startTime) / 1000,
       );
       console.log(JSON.stringify(output, null, 2));
     } else {

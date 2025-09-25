@@ -87,6 +87,10 @@ export const BundleConfigSchema = z.object({
     .string()
     .default('.tmp')
     .describe('Directory for temporary files during bundling'),
+  cache: z
+    .boolean()
+    .default(true)
+    .describe('Enable package caching to speed up subsequent builds'),
 });
 
 export type TemplateConfig = z.infer<typeof TemplateConfigSchema>;
