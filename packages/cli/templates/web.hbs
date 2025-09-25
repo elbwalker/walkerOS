@@ -1,40 +1,26 @@
 {{CONTENT}}
 
 (async function() {
-  'use strict';
-  
-  try {
-    // Create collector configuration
-    const config = {
-      // Sources configuration
-      sources: {
-      {{#sources}}
-        {{name}}: {
-          code: {{{code}}},
-          config: {{{config}}},
-          env: {{{env}}}
-        },
-      {{/sources}}
+  const config = {
+    sources: {
+    {{#sources}}
+      {{name}}: {
+        code: {{{code}}},
+        config: {{{config}}},
+        env: {{{env}}}
       },
-      
-      // Destinations configuration  
-      destinations: {
-      {{#destinations}}
-        {{name}}: {
-          code: {{{code}}},
-          config: {{{config}}},
-          env: {{{env}}}
-        },
-      {{/destinations}}
-      }
-    };
+    {{/sources}}
+    },
+    destinations: {
+    {{#destinations}}
+      {{name}}: {
+        code: {{{code}}},
+        config: {{{config}}},
+        env: {{{env}}}
+      },
+    {{/destinations}}
+    }
+  };
 
-    // Create the collector
-    const { collector, elb } = await createCollector(config);
-    
-    // Make collector globally available
-    window['{{collectorName}}'] = collector;
-  } catch (error) {
-    console.error('❌ WalkerOS initialization failed:', error);
-  }
+  return await createCollector(config);
 })();

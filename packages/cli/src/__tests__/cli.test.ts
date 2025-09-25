@@ -76,7 +76,7 @@ describe('CLI Bundle Command', () => {
         buildTime: expect.any(Number),
         treeshakingEffective: expect.any(Boolean),
       },
-      duration: expect.any(String),
+      duration: expect.any(Number),
     });
 
     expect(output.stats.packages).toHaveLength(1);
@@ -109,7 +109,7 @@ describe('CLI Bundle Command', () => {
     expect(output).toMatchObject({
       success: false,
       error: expect.stringContaining('Content syntax error'),
-      duration: expect.any(String),
+      duration: expect.any(Number),
     });
 
     expect(output.error).toContain('line 4, column 23');
@@ -129,7 +129,7 @@ describe('CLI Bundle Command', () => {
     expect(output).toMatchObject({
       success: false,
       error: expect.stringContaining('Configuration file not found'),
-      duration: expect.any(String),
+      duration: expect.any(Number),
     });
   });
 
@@ -280,7 +280,7 @@ describe('CLI Deploy Command', () => {
         successful: 2,
         failed: 0,
       },
-      duration: expect.any(String),
+      duration: expect.any(Number),
     });
   });
 
@@ -298,7 +298,7 @@ describe('CLI Deploy Command', () => {
     expect(output).toMatchObject({
       success: false,
       error: expect.stringContaining('Configuration file not found'),
-      duration: expect.any(String),
+      duration: expect.any(Number),
     });
   });
 });

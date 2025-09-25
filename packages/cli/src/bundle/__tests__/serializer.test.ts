@@ -122,7 +122,6 @@ describe('Serializer', () => {
   describe('processTemplateVariables', () => {
     it('should process sources and destinations config objects', () => {
       const variables = {
-        collectorName: 'test',
         sources: [
           {
             name: 'browser',
@@ -144,8 +143,6 @@ describe('Serializer', () => {
       };
 
       const result = processTemplateVariables(variables);
-
-      expect(result.collectorName).toBe('test');
       expect(result.sources[0].config).toBe('{\n  debug: true\n}');
       expect(result.destinations[0].config).toContain("measurementId: 'G-123'");
     });
