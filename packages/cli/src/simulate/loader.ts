@@ -77,13 +77,11 @@ export async function executeInVM(
 }
 
 /**
- * Legacy interface for compatibility - will be replaced
+ * Execute simulation with mocked walkerOS implementation
  */
 export async function executeSimulation(
-  config: any,
   event: WalkerOS.Event,
-  logger: any,
-): Promise<any> {
+): Promise<{ success: boolean; error?: string }> {
   // Mock bundle code for testing
   const mockBundle = `
     // Mock walkerOS createCollector
@@ -126,14 +124,7 @@ export async function executeSimulation(
   const vmResult = await executeInVM(mockBundle);
 
   return {
-    event,
-    calls: [],
     success: vmResult.success,
-    duration: vmResult.duration,
-    setupData: {
-      hasElb: !!vmResult.data?.elb,
-      status: vmResult.success ? 'ready' : 'error',
-      error: vmResult.error,
-    },
+    error: vmResult.error,
   };
 }

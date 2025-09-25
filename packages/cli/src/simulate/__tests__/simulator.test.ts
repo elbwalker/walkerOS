@@ -31,5 +31,6 @@ describe('Simulate', () => {
     console.log('Simulation result:', JSON.stringify(result, null, 2));
 
     expect(result.success).toBe(true);
+    expect(result.error).toBeUndefined();
   }, 30000);
 });
