@@ -2,6 +2,7 @@ import { initGTM, pushGTMEvent } from '../gtm';
 import { examples } from '../index';
 import { clone } from '@walkeros/core';
 import type { GTMSettings } from '../types';
+import { DestinationWeb } from '@walkeros/web-core';
 
 describe('GTM Implementation', () => {
   const mockDataLayer: unknown[] = [];
@@ -91,7 +92,13 @@ describe('GTM Implementation', () => {
     });
 
     it('should fallback to event object when data is not an object', () => {
-      pushGTMEvent(mockEvent as any, settings, {}, 'invalid-data', mockEnv);
+      pushGTMEvent(
+        mockEvent as any,
+        settings,
+        {},
+        'invalid-data' as any,
+        mockEnv,
+      );
 
       expect(mockDataLayer).toHaveLength(1);
       expect(mockDataLayer[0]).toEqual({

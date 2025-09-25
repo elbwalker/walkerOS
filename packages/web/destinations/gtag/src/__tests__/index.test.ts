@@ -1,5 +1,6 @@
 import { destinationGtag, examples } from '../index';
-import type { Settings } from '../types';
+import type { Settings, Rule, Include } from '../types';
+import { type WalkerOS, type Collector, createEvent } from '@walkeros/core';
 
 // Mock all tool implementations
 jest.mock('../ga4', () => ({
@@ -23,6 +24,7 @@ import { initGTM, pushGTMEvent } from '../gtm';
 
 describe('Unified Gtag Destination', () => {
   const mockEnv = examples.env.standard;
+  const mockCollector = {} as Collector.Instance;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -46,7 +48,11 @@ describe('Unified Gtag Destination', () => {
     it('should return false when no tools are configured', () => {
       const config = { settings: {} };
 
-      const result = destinationGtag.init({ config, env: mockEnv });
+      const result = destinationGtag.init!({
+        config,
+        env: mockEnv,
+        collector: mockCollector,
+      });
 
       expect(result).toBe(false);
     });
@@ -57,7 +63,11 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: true };
 
-      const result = destinationGtag.init({ config, env: mockEnv });
+      const result = destinationGtag.init!({
+        config,
+        env: mockEnv,
+        collector: mockCollector,
+      });
 
       expect(result).toBe(config);
       expect(initGA4).toHaveBeenCalledWith(settings.ga4, true, mockEnv);
@@ -71,7 +81,11 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: true };
 
-      const result = destinationGtag.init({ config, env: mockEnv });
+      const result = destinationGtag.init!({
+        config,
+        env: mockEnv,
+        collector: mockCollector,
+      });
 
       expect(result).toBe(config);
       expect(initAds).toHaveBeenCalledWith(settings.ads, true, mockEnv);
@@ -85,7 +99,11 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: true };
 
-      const result = destinationGtag.init({ config, env: mockEnv });
+      const result = destinationGtag.init!({
+        config,
+        env: mockEnv,
+        collector: mockCollector,
+      });
 
       expect(result).toBe(config);
       expect(initGTM).toHaveBeenCalledWith(settings.gtm, true, mockEnv);
@@ -101,7 +119,11 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: true };
 
-      const result = destinationGtag.init({ config, env: mockEnv });
+      const result = destinationGtag.init!({
+        config,
+        env: mockEnv,
+        collector: mockCollector,
+      });
 
       expect(result).toBe(config);
       expect(initGA4).toHaveBeenCalledWith(settings.ga4, true, mockEnv);
@@ -115,46 +137,45 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: false };
 
-      destinationGtag.init({ config, env: mockEnv });
+      destinationGtag.init!({ config, env: mockEnv, collector: mockCollector });
 
       expect(initGA4).toHaveBeenCalledWith(settings.ga4, false, mockEnv);
     });
   });
 
   describe('push', () => {
-    const mockEvent = {
-      event: 'product view',
-      entity: 'product',
-      action: 'view',
+    const mockEvent = createEvent({
+      name: 'product view',
       data: { id: 'product-1', name: 'Test Product' },
-    };
+    });
 
     const mockData = { custom_param: 'custom_value' };
 
-    it('should push to GA4 when configured', () => {
+    it('should push to GA4 when configured', async () => {
       const settings: Settings = {
         ga4: { measurementId: 'G-XXXXXXXXXX' },
       };
       const config = { settings };
-      const mapping = { settings: { ga4: { include: ['data'] as const } } };
+      const mapping: Rule = { settings: { ga4: { include: ['data'] } } };
 
-      destinationGtag.push(mockEvent as any, {
+      await destinationGtag.push(mockEvent, {
         config,
         mapping,
         data: mockData,
         env: mockEnv,
+        collector: mockCollector,
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
         mockEvent,
         settings.ga4,
-        mapping.settings.ga4,
+        mapping.settings?.ga4,
         mockData,
         mockEnv,
       );
     });
 
-    it('should push to Google Ads when configured with mapping name', () => {
+    it('should push to Google Ads when configured with mapping name', async () => {
       const settings: Settings = {
         ads: { conversionId: 'AW-XXXXXXXXX' },
       };
@@ -164,11 +185,12 @@ describe('Unified Gtag Destination', () => {
         settings: { ads: {} },
       };
 
-      destinationGtag.push(mockEvent as any, {
+      await destinationGtag.push(mockEvent, {
         config,
         mapping,
         data: mockData,
         env: mockEnv,
+        collector: mockCollector,
       });
 
       expect(pushAdsEvent).toHaveBeenCalledWith(
@@ -181,35 +203,37 @@ describe('Unified Gtag Destination', () => {
       );
     });
 
-    it('should not push to Google Ads without mapping name', () => {
+    it('should not push to Google Ads without mapping name', async () => {
       const settings: Settings = {
         ads: { conversionId: 'AW-XXXXXXXXX' },
       };
       const config = { settings };
       const mapping = { settings: { ads: {} } };
 
-      destinationGtag.push(mockEvent as any, {
+      await destinationGtag.push(mockEvent, {
         config,
         mapping,
         data: mockData,
         env: mockEnv,
+        collector: mockCollector,
       });
 
       expect(pushAdsEvent).not.toHaveBeenCalled();
     });
 
-    it('should push to GTM when configured', () => {
+    it('should push to GTM when configured', async () => {
       const settings: Settings = {
         gtm: { containerId: 'GTM-XXXXXXX' },
       };
       const config = { settings };
       const mapping = { settings: { gtm: {} } };
 
-      destinationGtag.push(mockEvent as any, {
+      await destinationGtag.push(mockEvent, {
         config,
         mapping,
         data: mockData,
         env: mockEnv,
+        collector: mockCollector,
       });
 
       expect(pushGTMEvent).toHaveBeenCalledWith(
@@ -221,7 +245,7 @@ describe('Unified Gtag Destination', () => {
       );
     });
 
-    it('should push to all tools when configured', () => {
+    it('should push to all tools when configured', async () => {
       const settings: Settings = {
         ga4: { measurementId: 'G-XXXXXXXXXX' },
         ads: { conversionId: 'AW-XXXXXXXXX' },
@@ -231,23 +255,24 @@ describe('Unified Gtag Destination', () => {
       const mapping = {
         name: 'PURCHASE_CONVERSION',
         settings: {
-          ga4: { include: ['data'] as const },
+          ga4: { include: ['data'] as Include },
           ads: {},
           gtm: {},
         },
       };
 
-      destinationGtag.push(mockEvent as any, {
+      await destinationGtag.push(mockEvent, {
         config,
         mapping,
         data: mockData,
         env: mockEnv,
+        collector: mockCollector,
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
         mockEvent,
         settings.ga4,
-        mapping.settings.ga4,
+        mapping.settings?.ga4,
         mockData,
         mockEnv,
       );
@@ -268,34 +293,36 @@ describe('Unified Gtag Destination', () => {
       );
     });
 
-    it('should handle empty mapping gracefully', () => {
+    it('should handle empty mapping gracefully', async () => {
       const settings: Settings = {
         ga4: { measurementId: 'G-XXXXXXXXXX' },
       };
       const config = { settings };
 
-      expect(() => {
-        destinationGtag.push(mockEvent as any, {
+      await expect(
+        destinationGtag.push(mockEvent, {
           config,
           mapping: {},
           data: mockData,
           env: mockEnv,
-        });
-      }).not.toThrow();
+          collector: mockCollector,
+        }),
+      ).resolves.not.toThrow();
     });
 
-    it('should handle undefined mapping settings', () => {
+    it('should handle undefined mapping settings', async () => {
       const settings: Settings = {
         ga4: { measurementId: 'G-XXXXXXXXXX' },
       };
       const config = { settings };
       const mapping = {};
 
-      destinationGtag.push(mockEvent as any, {
+      await destinationGtag.push(mockEvent, {
         config,
         mapping,
         data: mockData,
         env: mockEnv,
+        collector: mockCollector,
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
