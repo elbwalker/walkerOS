@@ -26,7 +26,22 @@ export function createLogger(options: LoggerOptions = {}): Logger {
     log: (color: string, ...args: unknown[]) => {
       if (shouldLog) {
         const message = args.map((arg) => String(arg)).join(' ');
-        console.log(chalk[color as keyof typeof chalk]?.(message) || message);
+        // Map color names to chalk functions
+        const colorMap: Record<string, (text: string) => string> = {
+          red: chalk.red,
+          green: chalk.green,
+          blue: chalk.blue,
+          yellow: chalk.yellow,
+          gray: chalk.gray,
+          grey: chalk.gray,
+          cyan: chalk.cyan,
+          magenta: chalk.magenta,
+          white: chalk.white,
+          black: chalk.black,
+        };
+        const colorFn = colorMap[color];
+        const coloredMessage = colorFn ? colorFn(message) : message;
+        console.log(coloredMessage);
       }
     },
 

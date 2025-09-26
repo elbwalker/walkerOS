@@ -1,6 +1,10 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { loadJsonConfig, substituteEnvVariables, getTempDir } from '../config';
+import {
+  loadJsonConfig,
+  substituteEnvVariables,
+  getTempDir,
+} from '../../core/config';
 import { getId } from '@walkeros/core';
 
 describe('Config utilities', () => {

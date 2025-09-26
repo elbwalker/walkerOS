@@ -1,12 +1,12 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { bundle } from '../bundler';
-import { parseBundleConfig } from '../config';
-import { createLogger } from '../../core';
+import { bundle } from '../../bundle/bundler';
+import { parseBundleConfig } from '../../bundle/config';
+import { createLogger, type Logger } from '../../core';
 import { getId } from '@walkeros/core';
 
 // Mock package-manager to avoid pacote dependency issues in tests
-jest.mock('../package-manager', () => ({
+jest.mock('../../bundle/package-manager', () => ({
   downloadPackages: jest
     .fn()
     .mockResolvedValue(
@@ -24,7 +24,7 @@ jest.mock('esbuild', () => ({
 
 describe('Bundler', () => {
   const testOutputDir = path.join('.tmp', `bundler-${Date.now()}-${getId()}`);
-  let logger: any;
+  let logger: Logger;
 
   beforeEach(async () => {
     // Ensure test output directory exists
@@ -35,7 +35,14 @@ describe('Bundler', () => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
 
     // Mock fs.stat for bundle stats
-    jest.spyOn(fs, 'stat').mockResolvedValue({ size: 1024 } as any);
+    const mockStat = {
+      size: 1024,
+      isFile: () => true,
+      isDirectory: () => false,
+    } satisfies Partial<fs.Stats>;
+    jest
+      .spyOn(fs, 'stat')
+      .mockImplementation(() => Promise.resolve(mockStat as fs.Stats));
   });
 
   afterEach(async () => {

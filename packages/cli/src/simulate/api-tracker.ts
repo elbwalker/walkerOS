@@ -162,3 +162,15 @@ export function createApiTracker<T extends Record<string, unknown>>(
 
   return createNestedProxy('', entry as Record<string, unknown>) as T;
 }
+
+/**
+ * Logs API usage calls to the vmUsage record
+ */
+export function logApiUsage(
+  vmUsage: Record<string, ApiCall[]>,
+  name: string,
+  call: ApiCall,
+): void {
+  if (!vmUsage[name]) vmUsage[name] = [];
+  vmUsage[name].push(call);
+}

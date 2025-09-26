@@ -1,5 +1,5 @@
 import path from 'path';
-import { simulate } from '../simulator';
+import { simulate } from '../../simulate/simulator';
 import { Collector } from '@walkeros/core';
 
 describe('Simulate', () => {

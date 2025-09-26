@@ -2,7 +2,7 @@ import {
   serializeToJS,
   serializeConfig,
   processTemplateVariables,
-} from '../serializer';
+} from '../../bundle/serializer';
 
 describe('Serializer', () => {
   describe('serializeToJS', () => {
@@ -143,8 +143,10 @@ describe('Serializer', () => {
       };
 
       const result = processTemplateVariables(variables);
-      expect(result.sources[0].config).toBe('{\n  debug: true\n}');
-      expect(result.destinations[0].config).toContain("measurementId: 'G-123'");
+      expect(result.sources?.[0]?.config).toBe('{\n  debug: true\n}');
+      expect(result.destinations?.[0]?.config).toContain(
+        "measurementId: 'G-123'",
+      );
     });
 
     it('should handle string configs (pass through)', () => {
@@ -159,7 +161,7 @@ describe('Serializer', () => {
       };
 
       const result = processTemplateVariables(variables);
-      expect(result.sources[0].config).toBe('{ debug: true }');
+      expect(result.sources?.[0]?.config).toBe('{ debug: true }');
     });
 
     it('should handle undefined env values', () => {
@@ -175,7 +177,7 @@ describe('Serializer', () => {
       };
 
       const result = processTemplateVariables(variables);
-      expect(result.sources[0].env).toBe('undefined');
+      expect(result.sources?.[0]?.env).toBe('undefined');
     });
 
     it('should preserve non-array variables', () => {

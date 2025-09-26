@@ -9,6 +9,25 @@ export interface SerializerOptions {
   singleQuotes?: boolean;
 }
 
+interface TemplateSource {
+  name: string;
+  config?: unknown;
+  env?: unknown;
+  [key: string]: unknown;
+}
+
+interface TemplateDestination {
+  name: string;
+  config?: unknown;
+  [key: string]: unknown;
+}
+
+interface ProcessedTemplateVariables {
+  sources?: TemplateSource[];
+  destinations?: TemplateDestination[];
+  [key: string]: unknown;
+}
+
 /**
  * Serialize a value to JavaScript code
  */
@@ -108,29 +127,39 @@ export function serializeConfig(config: Record<string, unknown>): string {
  */
 export function processTemplateVariables(
   variables: Record<string, unknown>,
-): Record<string, unknown> {
+): ProcessedTemplateVariables {
   const processed = { ...variables };
 
   // Process sources array
   if (Array.isArray(processed.sources)) {
-    processed.sources = processed.sources.map((source: any) => ({
-      ...source,
-      config: isObject(source.config)
-        ? serializeConfig(source.config)
-        : source.config,
-      env: source.env === undefined ? 'undefined' : source.env,
-    }));
+    processed.sources = processed.sources.map(
+      (source: unknown): TemplateSource => {
+        const typedSource = source as TemplateSource;
+        return {
+          ...typedSource,
+          config: isObject(typedSource.config) // @TODO legacy support for string configs??????
+            ? serializeConfig(typedSource.config)
+            : typedSource.config,
+          env: typedSource.env === undefined ? 'undefined' : typedSource.env,
+        };
+      },
+    );
   }
 
   // Process destinations array
   if (Array.isArray(processed.destinations)) {
-    processed.destinations = processed.destinations.map((dest: any) => ({
-      ...dest,
-      config: isObject(dest.config)
-        ? serializeConfig(dest.config)
-        : dest.config,
-      env: dest.env === undefined ? 'undefined' : dest.env,
-    }));
+    processed.destinations = processed.destinations.map(
+      (dest: unknown): TemplateDestination => {
+        const typedDest = dest as TemplateDestination;
+        return {
+          ...typedDest,
+          config: isObject(typedDest.config)
+            ? serializeConfig(typedDest.config)
+            : typedDest.config,
+          env: typedDest.env === undefined ? 'undefined' : typedDest.env,
+        };
+      },
+    );
   }
 
   return processed;

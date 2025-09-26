@@ -1,4 +1,4 @@
-import { createApiTracker, type ApiCall } from '../api-tracker';
+import { createApiTracker, type ApiCall } from '../../simulate/api-tracker';
 
 describe('API Tracker', () => {
   it('should track typical gtag usage patterns', () => {
@@ -53,7 +53,7 @@ describe('API Tracker', () => {
   it('should filter operations based on path patterns', () => {
     const calls: ApiCall[] = [];
     const logCall = (call: ApiCall) => calls.push(call);
-    const mock = {} as any;
+    const mock: Record<string, unknown> = {};
     const tracker = createApiTracker(mock, logCall, [
       'call:foo',
       'set:bar',
@@ -115,13 +115,13 @@ describe('API Tracker', () => {
   it('should support wildcard type filtering', () => {
     const calls: ApiCall[] = [];
     const logCall = (call: ApiCall) => calls.push(call);
-    const mock = {} as any;
+    const mock: Record<string, unknown> = {};
     const tracker = createApiTracker(mock, logCall, ['call:*', 'set:config']);
 
     // These should be logged - all function calls
-    tracker.foo();
-    tracker.bar();
-    tracker.baz();
+    (tracker as Record<string, () => void>).foo();
+    (tracker as Record<string, () => void>).bar();
+    (tracker as Record<string, () => void>).baz();
 
     // This should be logged - specific set on config
     tracker.config = { key: 'value' };
@@ -166,7 +166,7 @@ describe('API Tracker', () => {
   it('should only log final operations in property chains', () => {
     const calls: ApiCall[] = [];
     const logCall = (call: ApiCall) => calls.push(call);
-    const mock = {} as any;
+    const mock: Record<string, unknown> = {};
     const tracker = createApiTracker(mock, logCall);
 
     // Deep property chain with function call - should only log the final call
@@ -196,7 +196,7 @@ describe('API Tracker', () => {
 
   it('should track calls to dynamically assigned functions', () => {
     const calls: ApiCall[] = [];
-    const tracker = createApiTracker({} as any, (call) => calls.push(call));
+    const tracker = createApiTracker({}, (call) => calls.push(call));
 
     tracker.foo = () => {};
     tracker.foo();

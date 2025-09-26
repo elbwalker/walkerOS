@@ -2,13 +2,13 @@ import path from 'path';
 import {
   loadJsonConfig,
   createLogger,
-  formatDuration,
-  formatBytes,
-  createJsonOutput,
-  Logger,
+  createTimer,
+  createSuccessOutput,
+  createErrorOutput,
 } from '../core';
 import { parseBundleConfig } from './config';
 import { bundle, type BundleStats } from './bundler';
+import { displayStats, createStatsSummary } from './stats';
 
 export interface BundleCommandOptions {
   config: string;
@@ -21,7 +21,9 @@ export interface BundleCommandOptions {
 export async function bundleCommand(
   options: BundleCommandOptions,
 ): Promise<void> {
-  const startTime = Date.now();
+  const timer = createTimer();
+  timer.start();
+
   const logger = createLogger({
     verbose: options.verbose,
     silent: false,
@@ -46,14 +48,12 @@ export async function bundleCommand(
     const stats = await bundle(config, logger, shouldCollectStats);
 
     // Step 3: Show stats if requested
+    const duration = timer.end() / 1000;
+
     if (options.json && stats) {
       // JSON output for CI/CD
-      const output = createJsonOutput(
-        true,
-        { stats },
-        undefined,
-        (Date.now() - startTime) / 1000,
-      );
+      const statsSummary = createStatsSummary(stats);
+      const output = createSuccessOutput({ stats: statsSummary }, duration);
       console.log(JSON.stringify(output, null, 2));
     } else {
       if (options.stats && stats) {
@@ -61,55 +61,20 @@ export async function bundleCommand(
       }
 
       // Step 4: Success message
-      const duration = formatDuration(startTime);
-      logger.success(`✅ Bundle created successfully in ${duration}s`);
+      logger.success(`✅ Bundle created successfully in ${timer.format()}`);
     }
   } catch (error) {
+    const duration = timer.getElapsed() / 1000;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
     if (options.json) {
       // JSON error output for CI/CD
-      const output = createJsonOutput(
-        false,
-        undefined,
-        error instanceof Error ? error.message : String(error),
-        (Date.now() - startTime) / 1000,
-      );
+      const output = createErrorOutput(errorMessage, duration);
       console.log(JSON.stringify(output, null, 2));
     } else {
       logger.error('❌ Bundle failed:');
-      logger.error(error instanceof Error ? error.message : String(error));
+      logger.error(errorMessage);
     }
     process.exit(1);
   }
-}
-
-function displayStats(stats: BundleStats, logger: Logger): void {
-  console.log('\n📊 Bundle Statistics');
-  console.log('─'.repeat(50));
-
-  // Total size
-  const sizeKB = formatBytes(stats.totalSize);
-  console.log(`Total Size: ${sizeKB} KB`);
-
-  // Build time
-  const timeSeconds = (stats.buildTime / 1000).toFixed(2);
-  console.log(`Build Time: ${timeSeconds}s`);
-
-  // Tree-shaking effectiveness
-  const treeshakingStatus = stats.treeshakingEffective
-    ? '✅ Effective'
-    : '⚠️  Not optimal (consider using named imports)';
-  console.log(`Tree-shaking: ${treeshakingStatus}`);
-
-  // Package breakdown
-  if (stats.packages.length > 0) {
-    console.log(`\nPackage Breakdown:`);
-    stats.packages.forEach((pkg) => {
-      if (pkg.size > 0) {
-        const pkgSizeKB = formatBytes(pkg.size);
-        console.log(`  • ${pkg.name}: ${pkgSizeKB} KB`);
-      }
-    });
-  }
-
-  console.log('─'.repeat(50));
 }

@@ -1,8 +1,8 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { bundle } from '../bundler';
-import { parseBundleConfig } from '../config';
-import { createLogger } from '../../core';
+import { bundle } from '../../bundle/bundler';
+import { parseBundleConfig } from '../../bundle/config';
+import { createLogger, type Logger } from '../../core';
 import { getId } from '@walkeros/core';
 
 describe('Bundler Integration', () => {
@@ -10,7 +10,7 @@ describe('Bundler Integration', () => {
     '.tmp',
     `bundler-integration-${Date.now()}-${getId()}`,
   );
-  let logger: any;
+  let logger: Logger;
 
   beforeEach(async () => {
     // Ensure test output directory exists
