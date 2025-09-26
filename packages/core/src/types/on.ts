@@ -11,6 +11,12 @@ export type Config = {
 // On types
 export type Types = keyof Config;
 
+// Context for destination on methods
+export interface Context {
+  consent?: WalkerOS.Consent;
+  session?: unknown;
+}
+
 // Parameters for the onAction function calls
 export type Options = ConsentConfig | ReadyConfig | RunConfig | SessionConfig;
 
@@ -50,3 +56,9 @@ export interface OnConfig {
     | SessionConfig[]
     | undefined;
 }
+
+// Destination on function type
+export type OnFn = (
+  event: Types,
+  context?: Context,
+) => WalkerOS.PromiseOrValue<void>;

@@ -16,10 +16,10 @@ export function initAds(
   // Default currency value
   if (!settings.currency) settings.currency = 'EUR';
 
-  if (loadScript) addScript(conversionId, undefined, document);
+  if (loadScript) addScript(conversionId, undefined, document as Document);
 
   // Initialize gtag infrastructure
-  initializeGtag(window);
+  initializeGtag(window as Window);
 
   const gtag = window.gtag as Gtag.Gtag;
   gtag('js', new Date());

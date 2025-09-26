@@ -59,7 +59,7 @@ describe('Shared Utilities', () => {
     it('should initialize dataLayer if not exists', () => {
       delete (window as any).dataLayer;
 
-      initializeGtag();
+      initializeGtag(window);
 
       expect((window as any).dataLayer).toEqual([]);
     });
@@ -68,13 +68,13 @@ describe('Shared Utilities', () => {
       const existingData = [{ test: 'data' }];
       (window as any).dataLayer = existingData;
 
-      initializeGtag();
+      initializeGtag(window);
 
       expect((window as any).dataLayer).toBe(existingData);
     });
 
     it('should create gtag function if not exists', () => {
-      initializeGtag();
+      initializeGtag(window);
 
       expect(typeof (window as any).gtag).toBe('function');
     });
@@ -83,7 +83,7 @@ describe('Shared Utilities', () => {
       const existingGtag = jest.fn();
       (window as any).gtag = existingGtag;
 
-      initializeGtag();
+      initializeGtag(window);
 
       expect((window as any).gtag).toBe(existingGtag);
     });

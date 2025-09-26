@@ -16,10 +16,10 @@ export function initGA4(
   if (!measurementId) return;
 
   // Load the gtag script
-  if (loadScript) addScript(measurementId, undefined, document);
+  if (loadScript) addScript(measurementId, undefined, document as Document);
 
   // Initialize gtag infrastructure
-  initializeGtag(window);
+  initializeGtag(window as Window);
 
   const gtagSettings: WalkerOS.AnyObject = {};
 

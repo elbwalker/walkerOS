@@ -31,7 +31,12 @@ export function initGTM(
 
   // Load the gtm script and container
   if (loadScript && containerId)
-    addScript(containerId, domain || defaultDomain, dataLayerName, document);
+    addScript(
+      containerId,
+      domain || defaultDomain,
+      dataLayerName,
+      document as Document,
+    );
 }
 
 function addScript(

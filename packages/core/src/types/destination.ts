@@ -15,7 +15,7 @@ export interface Instance<Settings = unknown, Mapping = unknown> {
   init?: InitFn<Settings, Mapping>;
   push: PushFn<Settings, Mapping>;
   pushBatch?: PushBatchFn<Settings, Mapping>;
-  on?(event: On.Types, context?: unknown): void | Promise<void>;
+  on?: On.OnFn;
 }
 
 export interface Config<Settings = unknown, Mapping = unknown> {

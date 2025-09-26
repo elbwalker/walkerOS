@@ -34,6 +34,16 @@ export interface Environment extends DestinationWeb.Environment {
   };
 }
 
+// Consent mode configuration
+export type ConsentMode =
+  | false // Disable consent mode
+  | true // Use default mapping
+  | ConsentMapping; // Custom mapping
+
+export interface ConsentMapping {
+  [walkerOSConsentGroup: string]: string | string[];
+}
+
 export type Destination = DestinationWeb.Destination<Settings, Mapping>;
 export type Config = DestinationWeb.Config<Settings, Mapping>;
 
@@ -44,6 +54,8 @@ export interface BaseSettings {
 
 // Unified settings for all Google tools
 export interface Settings {
+  // Consent mode configuration
+  como?: ConsentMode;
   // GA4 settings
   ga4?: GA4Settings;
   // Google Ads settings

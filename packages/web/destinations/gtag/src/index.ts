@@ -1,15 +1,31 @@
-import type { WalkerOS } from '@walkeros/core';
-import type { Settings, Destination } from './types';
+import type { WalkerOS, On } from '@walkeros/core';
+import type { Settings, Destination, ConsentMapping } from './types';
 import { initGA4, pushGA4Event } from './ga4';
 import { initAds, pushAdsEvent } from './ads';
 import { initGTM, pushGTMEvent } from './gtm';
 import { getData } from './shared/mapping';
+import { initializeGtag } from './shared/gtag';
+import { getEnvironment } from '@walkeros/web-core';
 
 // Types
 export * as DestinationGtag from './types';
 
 // Examples
 export * as examples from './examples';
+
+// Track whether default consent has been set
+let defaultConsentSet = false;
+
+// For testing: allow resetting consent state
+export function resetConsentState(): void {
+  defaultConsentSet = false;
+}
+
+// Default consent mapping: walkerOS consent groups → gtag consent parameters
+const DEFAULT_CONSENT_MAPPING: ConsentMapping = {
+  marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'],
+  functional: ['analytics_storage'],
+};
 
 export const destinationGtag: Destination = {
   type: 'google-gtag',
@@ -86,6 +102,75 @@ export const destinationGtag: Destination = {
     if (gtm?.containerId) {
       pushGTMEvent(event, gtm, eventMapping.gtm, gtmData, env);
     }
+  },
+
+  on(
+    type: On.Types,
+    context?: { consent?: WalkerOS.Consent; session?: unknown },
+  ) {
+    // Only handle consent events
+    if (type !== 'consent' || !context?.consent) return;
+
+    // Access config directly from this destination instance
+    const settings = this.config?.settings || {};
+    const { como = true } = settings;
+
+    // Skip if consent mode is disabled
+    if (!como) return;
+
+    // Ensure gtag is available
+    const { window } = getEnvironment(this.env);
+    const gtag = initializeGtag(window as Window);
+    if (!gtag) return;
+
+    // Determine consent mapping to use
+    const consentMapping: ConsentMapping =
+      como === true ? DEFAULT_CONSENT_MAPPING : como;
+
+    // If this is the first consent call, set default to denied for all parameters
+    if (!defaultConsentSet) {
+      // Get all possible gtag parameters from the mapping
+      const allGtagParams = new Set<string>();
+      Object.values(consentMapping).forEach((params) => {
+        const paramArray = Array.isArray(params) ? params : [params];
+        paramArray.forEach((param) => allGtagParams.add(param));
+      });
+
+      // Only call default if we have parameters to set
+      if (allGtagParams.size > 0) {
+        const defaultConsent: Record<string, 'denied'> = {};
+        allGtagParams.forEach((param) => {
+          defaultConsent[param] = 'denied';
+        });
+
+        // Call default with all denied
+        gtag('consent', 'default', defaultConsent);
+      }
+
+      defaultConsentSet = true;
+    }
+
+    // Build gtag consent object for update
+    const gtagConsent: Record<string, 'granted' | 'denied'> = {};
+
+    // Map walkerOS consent to gtag consent parameters for update
+    Object.entries(context.consent).forEach(([walkerOSGroup, granted]) => {
+      const gtagParams = consentMapping[walkerOSGroup];
+      if (!gtagParams) return;
+
+      const params = Array.isArray(gtagParams) ? gtagParams : [gtagParams];
+      const consentValue = granted ? 'granted' : 'denied';
+
+      params.forEach((param) => {
+        gtagConsent[param] = consentValue;
+      });
+    });
+
+    // Only proceed if we have consent parameters to update
+    if (Object.keys(gtagConsent).length === 0) return;
+
+    // Always use update after the initial default
+    gtag('consent', 'update', gtagConsent);
   },
 };
 
