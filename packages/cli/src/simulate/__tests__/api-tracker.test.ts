@@ -193,4 +193,31 @@ describe('API Tracker', () => {
       timestamp: expect.any(Number),
     });
   });
+
+  it('should track calls to dynamically assigned functions', () => {
+    const calls: ApiCall[] = [];
+    const tracker = createApiTracker({} as any, (call) => calls.push(call));
+
+    tracker.foo = () => {};
+    tracker.foo();
+
+    expect(calls).toHaveLength(2); // set + call
+  });
+
+  it('should track calls to methods on nested objects', () => {
+    const calls: ApiCall[] = [];
+    const mockBar = { baz: (s: string) => {} };
+    const tracker = createApiTracker({ foo: mockBar }, (call) =>
+      calls.push(call),
+    );
+
+    tracker.foo.baz('test');
+
+    expect(calls).toContainEqual({
+      type: 'call',
+      path: 'foo.baz',
+      args: ['test'],
+      timestamp: expect.any(Number),
+    });
+  });
 });

@@ -171,29 +171,11 @@ export async function executeSimulation(
           
           // Start with minimal window/document objects
           let baseEnv = {
-            window: {},
-            document: {}
+            window,
+            document
           };
           
           let trackingPaths = ['call:*']; // Default fallback
-          
-          if (examples?.env?.standard) {
-            // Deep merge example env into our base
-            if (examples.env.standard.window) {
-              baseEnv.window = { ...examples.env.standard.window };
-            }
-            if (examples.env.standard.document) {
-              baseEnv.document = { ...examples.env.standard.document };
-            }
-            // Copy any other env properties (like sendWeb for API destination)
-            Object.keys(examples.env.standard).forEach(key => {
-              if (key !== 'window' && key !== 'document') {
-                baseEnv[key] = examples.env.standard[key];
-              }
-            });
-            
-            trackingPaths = examples.env.simulation || ['call:*'];
-          }
           
           // Apply tracking to the entire env
           const trackedEnv = createApiTracker(

@@ -87,6 +87,14 @@ export function createApiTracker<T extends Record<string, unknown>>(
             });
           }
 
+          // If it's an object (but not array or null), wrap it recursively
+          if (typeof value === 'object' && value !== null) {
+            return createNestedProxy(
+              fullPath,
+              value as Record<string, unknown>,
+            );
+          }
+
           // If it's a function, wrap it to track calls
           if (typeof value === 'function') {
             return new Proxy(value, {
