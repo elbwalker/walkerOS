@@ -41,3 +41,7 @@ export const standard: Environment = {
     head: { appendChild: () => {} },
   },
 };
+
+export const simulation = [
+  'call:window.gtag', // Track gtag function calls
+];

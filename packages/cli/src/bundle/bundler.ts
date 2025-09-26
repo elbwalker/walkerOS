@@ -215,20 +215,48 @@ async function createEntryPoint(
 ): Promise<string> {
   // Generate import statements from packages
   const importStatements: string[] = [];
+  const examplesMappings: string[] = [];
 
   for (const pkg of config.packages) {
     if (pkg.imports && pkg.imports.length > 0) {
       // Remove duplicates within the same package
       const uniqueImports = [...new Set(pkg.imports)];
       const importList = uniqueImports.join(', ');
-      importStatements.push(`import { ${importList} } from '${pkg.name}';`);
+      const importStatement = `import { ${importList} } from '${pkg.name}';`;
+      importStatements.push(importStatement);
+
+      // Check if this package imports examples and create mappings
+      const examplesImport = uniqueImports.find((imp) =>
+        imp.includes('examples as '),
+      );
+      if (examplesImport) {
+        // Extract destination name and examples variable name
+        // Format: "examples as gtagExamples" -> gtagExamples
+        const examplesVarName = examplesImport.split(' as ')[1];
+        // Get destination name from package (assumes @walkeros/web-destination-xxx format)
+        const destinationMatch = pkg.name.match(
+          /@walkeros\/web-destination-(.+)$/,
+        );
+        if (destinationMatch) {
+          const destinationName = destinationMatch[1];
+          examplesMappings.push(
+            `  ${destinationName}: typeof ${examplesVarName} !== 'undefined' ? ${examplesVarName} : undefined`,
+          );
+        }
+      }
     }
   }
 
-  // Combine imports with content
+  // Create examples object if we have any mappings
+  const examplesObject =
+    examplesMappings.length > 0
+      ? `const examples = {\n${examplesMappings.join(',\n')}\n};\n\n`
+      : '';
+
+  // Combine imports with examples object and content
   const importsCode = importStatements.join('\n');
   const fullCode = importsCode
-    ? `${importsCode}\n\n${config.content}`
+    ? `${importsCode}\n\n${examplesObject}${config.content}`
     : config.content;
 
   // Apply template if configured

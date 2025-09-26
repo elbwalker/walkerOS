@@ -7,6 +7,7 @@ import { loadJsonConfig, createLogger, getTempDir } from '../core';
 import { parseBundleConfig, type BundleConfig } from '../bundle/config';
 import { bundle } from '../bundle/bundler';
 import type { SimulationResult } from './types';
+import { createApiTracker } from './api-tracker';
 
 /**
  * Executes JavaScript code in a JSDOM VM context using async IIFE pattern
@@ -142,15 +143,72 @@ export async function executeSimulation(
         vmLogs.push(args);
       };
       
+      // Make createApiTracker available in VM context
+      const createApiTracker = ${createApiTracker.toString()};
+      
       // Test console.log capture
       console.log("simulation start");
-      
+
       // Execute the CJS bundle (sets module.exports)
       ${bundleCode}
       
       // Get the collector from module.exports
       const flow = await module.exports;
+
+      // Enable error logging @TODO should be part of the flow config
+      flow.collector.config.onError = console.log
       
+      // Set up dynamic API tracking for each destination
+      if (flow && flow.collector && flow.collector.destinations) {
+        Object.entries(flow.collector.destinations).forEach(([name, destination]) => {
+          // Try to get examples from multiple sources
+          let examples = destination.examples || destination.code?.examples;
+          
+          // Try to get examples from the dynamically generated examples object
+          if (!examples && typeof globalThis.examples !== 'undefined') {
+            examples = globalThis.examples[name];
+          }
+          
+          // Start with minimal window/document objects
+          let baseEnv = {
+            window: {},
+            document: {}
+          };
+          
+          let trackingPaths = ['call:*']; // Default fallback
+          
+          if (examples?.env?.standard) {
+            // Deep merge example env into our base
+            if (examples.env.standard.window) {
+              baseEnv.window = { ...examples.env.standard.window };
+            }
+            if (examples.env.standard.document) {
+              baseEnv.document = { ...examples.env.standard.document };
+            }
+            // Copy any other env properties (like sendWeb for API destination)
+            Object.keys(examples.env.standard).forEach(key => {
+              if (key !== 'window' && key !== 'document') {
+                baseEnv[key] = examples.env.standard[key];
+              }
+            });
+            
+            trackingPaths = examples.env.simulation || ['call:*'];
+          }
+          
+          // Apply tracking to the entire env
+          const trackedEnv = createApiTracker(
+            baseEnv,
+            (call) => console.log({
+              destination: name,
+              api: call
+            }),
+            trackingPaths
+          );
+          
+          destination.env = trackedEnv;
+        });
+      }
+
       // Test event execution with generated collector
       const testEvent = ${JSON.stringify(event)};
       
