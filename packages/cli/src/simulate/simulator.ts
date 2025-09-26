@@ -173,8 +173,10 @@ export async function executeSimulation(
       // Get the collector from module.exports
       const flow = await module.exports;
 
-      // Enable error logging @TODO should be part of the flow config
-      flow.collector.config.onError = console.log
+      // Enable error logging for simulation debugging
+      flow.collector.config.onError = function(error) {
+        vmLogs.push(['ERROR:', error]);
+      };
       
       // Set up dynamic API tracking for each destination
       if (flow && flow.collector && flow.collector.destinations) {

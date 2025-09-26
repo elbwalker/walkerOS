@@ -7,7 +7,7 @@ import {
   createErrorOutput,
 } from '../core';
 import { parseBundleConfig } from './config';
-import { bundle, type BundleStats } from './bundler';
+import { bundle } from './bundler';
 import { displayStats, createStatsSummary } from './stats';
 
 export interface BundleCommandOptions {
@@ -51,10 +51,11 @@ export async function bundleCommand(
     const duration = timer.end() / 1000;
 
     if (options.json && stats) {
-      // JSON output for CI/CD
+      // JSON output for CI/CD - create output logger that always logs
+      const outputLogger = createLogger({ silent: false, json: false });
       const statsSummary = createStatsSummary(stats);
       const output = createSuccessOutput({ stats: statsSummary }, duration);
-      console.log(JSON.stringify(output, null, 2));
+      outputLogger.log('white', JSON.stringify(output, null, 2));
     } else {
       if (options.stats && stats) {
         displayStats(stats, logger);
@@ -68,9 +69,10 @@ export async function bundleCommand(
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     if (options.json) {
-      // JSON error output for CI/CD
+      // JSON error output for CI/CD - create output logger that always logs
+      const outputLogger = createLogger({ silent: false, json: false });
       const output = createErrorOutput(errorMessage, duration);
-      console.log(JSON.stringify(output, null, 2));
+      outputLogger.log('white', JSON.stringify(output, null, 2));
     } else {
       logger.error('❌ Bundle failed:');
       logger.error(errorMessage);

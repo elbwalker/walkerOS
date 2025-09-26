@@ -137,9 +137,9 @@ export function processTemplateVariables(
         const typedSource = source as TemplateSource;
         return {
           ...typedSource,
-          config: isObject(typedSource.config) // @TODO legacy support for string configs??????
+          config: isObject(typedSource.config)
             ? serializeConfig(typedSource.config)
-            : typedSource.config,
+            : typedSource.config, // Pass through string configs unchanged
           env: typedSource.env === undefined ? 'undefined' : typedSource.env,
         };
       },

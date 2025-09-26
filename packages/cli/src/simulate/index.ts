@@ -1,4 +1,5 @@
 import { simulate, parseEventInput, formatSimulationResult } from './simulator';
+import { createLogger } from '../core';
 import type { SimulateCommandOptions } from './types';
 
 /**
@@ -25,11 +26,12 @@ export async function simulateCommand(
       duration: (Date.now() - startTime) / 1000,
     };
 
-    // Output results
+    // Output results - create output logger that always logs
+    const outputLogger = createLogger({ silent: false, json: false });
     const output = formatSimulationResult(resultWithDuration, {
       json: options.json,
     });
-    console.log(output);
+    outputLogger.log('white', output);
 
     // Exit with error code if simulation failed
     if (!result.success) {
@@ -39,19 +41,22 @@ export async function simulateCommand(
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     if (options.json) {
-      console.log(
-        JSON.stringify(
-          {
-            success: false,
-            error: errorMessage,
-            duration: (Date.now() - startTime) / 1000,
-          },
-          null,
-          2,
-        ),
+      // JSON error output - create output logger that always logs
+      const outputLogger = createLogger({ silent: false, json: false });
+      const errorOutput = JSON.stringify(
+        {
+          success: false,
+          error: errorMessage,
+          duration: (Date.now() - startTime) / 1000,
+        },
+        null,
+        2,
       );
+      outputLogger.log('white', errorOutput);
     } else {
-      console.error(`❌ Simulate command failed: ${errorMessage}`);
+      // Error output - create error logger that always logs
+      const errorLogger = createLogger({ silent: false, json: false });
+      errorLogger.error(`❌ Simulate command failed: ${errorMessage}`);
     }
 
     process.exit(1);

@@ -9,35 +9,35 @@ import type { Logger } from '../core';
  * Display detailed bundle statistics to console
  */
 export function displayStats(stats: BundleStats, logger: Logger): void {
-  console.log('\n📊 Bundle Statistics');
-  console.log('─'.repeat(50));
+  logger.info('\n📊 Bundle Statistics');
+  logger.info('─'.repeat(50));
 
   // Total size
   const sizeKB = formatBytes(stats.totalSize);
-  console.log(`Total Size: ${sizeKB} KB`);
+  logger.info(`Total Size: ${sizeKB} KB`);
 
   // Build time
   const timeSeconds = (stats.buildTime / 1000).toFixed(2);
-  console.log(`Build Time: ${timeSeconds}s`);
+  logger.info(`Build Time: ${timeSeconds}s`);
 
   // Tree-shaking effectiveness
   const treeshakingStatus = stats.treeshakingEffective
     ? '✅ Effective'
     : '⚠️  Not optimal (consider using named imports)';
-  console.log(`Tree-shaking: ${treeshakingStatus}`);
+  logger.info(`Tree-shaking: ${treeshakingStatus}`);
 
   // Package breakdown
   if (stats.packages.length > 0) {
-    console.log(`\nPackage Breakdown:`);
+    logger.info(`\nPackage Breakdown:`);
     stats.packages.forEach((pkg) => {
       if (pkg.size > 0) {
         const pkgSizeKB = formatBytes(pkg.size);
-        console.log(`  • ${pkg.name}: ${pkgSizeKB} KB`);
+        logger.info(`  • ${pkg.name}: ${pkgSizeKB} KB`);
       }
     });
   }
 
-  console.log('─'.repeat(50));
+  logger.info('─'.repeat(50));
 }
 
 /**

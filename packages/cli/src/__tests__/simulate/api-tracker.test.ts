@@ -63,7 +63,7 @@ describe('API Tracker', () => {
     // These should be logged
 
     // call:foo - matches
-    tracker.foo();
+    (tracker as any).foo();
     expect(calls).toContainEqual({
       type: 'call',
       path: 'foo',
@@ -72,7 +72,7 @@ describe('API Tracker', () => {
     });
 
     // set:bar - matches
-    tracker.bar = 'test';
+    (tracker as any).bar = 'test';
     expect(calls).toContainEqual({
       type: 'set',
       path: 'bar',
@@ -81,7 +81,7 @@ describe('API Tracker', () => {
     });
 
     // call:baz - matches (baz pattern matches all ops)
-    tracker.baz();
+    (tracker as any).baz();
     expect(calls).toContainEqual({
       type: 'call',
       path: 'baz',
@@ -90,7 +90,7 @@ describe('API Tracker', () => {
     });
 
     // set:baz - matches (baz pattern matches all ops)
-    tracker.baz = 'test';
+    (tracker as any).baz = 'test';
     expect(calls).toContainEqual({
       type: 'set',
       path: 'baz',
@@ -103,12 +103,12 @@ describe('API Tracker', () => {
     // These should NOT be logged
 
     // get operations are never logged now
-    tracker.foo;
-    tracker.bar;
+    (tracker as any).foo;
+    (tracker as any).bar;
     // call:other - no pattern matches
-    tracker.other();
+    (tracker as any).other();
     // set:other - no pattern matches
-    tracker.other = 'test';
+    (tracker as any).other = 'test';
     expect(calls).toHaveLength(4);
   });
 
@@ -124,12 +124,12 @@ describe('API Tracker', () => {
     (tracker as Record<string, () => void>).baz();
 
     // This should be logged - specific set on config
-    tracker.config = { key: 'value' };
+    (tracker as any).config = { key: 'value' };
 
     // These should NOT be logged
-    tracker.foo; // get operations are never logged
-    tracker.bar = 'test'; // set:bar - doesn't match set:config
-    tracker.other; // get operations are never logged
+    (tracker as any).foo; // get operations are never logged
+    (tracker as any).bar = 'test'; // set:bar - doesn't match set:config
+    (tracker as any).other; // get operations are never logged
 
     // Verify only matching operations were logged
     expect(calls).toHaveLength(4); // 3 call:* + 1 set:config
@@ -170,13 +170,13 @@ describe('API Tracker', () => {
     const tracker = createApiTracker(mock, logCall);
 
     // Deep property chain with function call - should only log the final call
-    tracker.foo.bar.baz();
+    (tracker as any).foo.bar.baz();
 
     // Deep property chain with assignment - should only log the final set
-    tracker.foo.bar.config = 'value';
+    (tracker as any).foo.bar.config = 'value';
 
     // Simple property access - should not log anything
-    void tracker.foo.bar.something;
+    void (tracker as any).foo.bar.something;
 
     // Verify only final operations were logged
     expect(calls).toHaveLength(2);
@@ -198,8 +198,8 @@ describe('API Tracker', () => {
     const calls: ApiCall[] = [];
     const tracker = createApiTracker({}, (call) => calls.push(call));
 
-    tracker.foo = () => {};
-    tracker.foo();
+    (tracker as any).foo = () => {};
+    (tracker as any).foo();
 
     expect(calls).toHaveLength(2); // set + call
   });
@@ -211,7 +211,7 @@ describe('API Tracker', () => {
       calls.push(call),
     );
 
-    tracker.foo.baz('test');
+    (tracker as any).foo.baz('test');
 
     expect(calls).toContainEqual({
       type: 'call',
