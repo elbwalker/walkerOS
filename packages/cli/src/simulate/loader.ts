@@ -7,7 +7,19 @@ import { loadJsonConfig, createLogger, getTempDir } from '../core';
 import { parseBundleConfig, type BundleConfig } from '../bundle/config';
 import { bundle } from '../bundle/bundler';
 import type { SimulationResult } from './types';
-import { createApiTracker } from './api-tracker';
+import { createApiTracker, type ApiCall } from './api-tracker';
+
+/**
+ * Logs API usage calls to the vmUsage record
+ */
+function logApiUsage(
+  vmUsage: Record<string, ApiCall[]>,
+  name: string,
+  call: ApiCall,
+): void {
+  if (!vmUsage[name]) vmUsage[name] = [];
+  vmUsage[name].push(call);
+}
 
 /**
  * Executes JavaScript code in a JSDOM VM context using async IIFE pattern
@@ -27,6 +39,10 @@ export async function executeInVM(
     const { window } = dom;
     (window as any).global = window;
     const context = vm.createContext(window);
+
+    // Inject functions into VM context
+    context.createApiTracker = createApiTracker;
+    context.logApiUsage = logApiUsage;
 
     // Wrap bundle in async IIFE that returns result
     const wrappedCode = `
@@ -137,14 +153,12 @@ export async function executeSimulation(
       const module = { exports: {} };
       const exports = module.exports;
       const vmLogs = [];
+      const vmUsage = {};
       
       // Override console.log to capture logs
       console.log = (...args) => {
         vmLogs.push(args);
       };
-      
-      // Make createApiTracker available in VM context
-      const createApiTracker = ${createApiTracker.toString()};
       
       // Test console.log capture
       console.log("simulation start");
@@ -180,10 +194,7 @@ export async function executeSimulation(
           // Apply tracking to the entire env
           const trackedEnv = createApiTracker(
             baseEnv,
-            (call) => console.log({
-              destination: name,
-              api: call
-            }),
+            (call) => logApiUsage(vmUsage, name, call),
             trackingPaths
           );
           
@@ -202,7 +213,8 @@ export async function executeSimulation(
         globalThis.vmResult = {
           collector: flow.collector,
           elbResult,
-          logs: vmLogs
+          logs: vmLogs,
+          usage: vmUsage
         };
       } else {
         throw new Error('Bundle did not return valid collector with elb function');

@@ -17,6 +17,7 @@ describe('Simulate', () => {
 
     console.log('elb push result:', result.elbResult);
     console.log('captured logs:', result.logs);
+    console.log('captured usage:', result.usage);
 
     expect(result.success).toBe(true);
     expect(result.error).toBeUndefined();
@@ -30,5 +31,15 @@ describe('Simulate', () => {
     expect(result.logs).toBeDefined();
     expect(Array.isArray(result.logs)).toBe(true);
     expect(result.logs).toContainEqual(['simulation start']);
+
+    // Verify API usage was captured
+    expect(result.usage).toBeDefined();
+    expect(typeof result.usage).toBe('object');
+
+    // Should have API calls for both destinations
+    expect(result.usage?.api).toBeDefined();
+    expect(Array.isArray(result.usage?.api)).toBe(true);
+    expect(result.usage?.gtag).toBeDefined();
+    expect(Array.isArray(result.usage?.gtag)).toBe(true);
   }, 30000);
 });
