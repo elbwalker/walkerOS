@@ -15,4 +15,5 @@ export interface SimulationResult {
   elbResult?: Elb.PushResult;
   logs?: unknown[];
   usage?: Record<string, ApiCall[]>;
+  duration?: number;
 }

@@ -134,13 +134,10 @@ async function generateBundleCode(config: BundleConfig): Promise<string> {
  */
 export async function executeSimulation(
   event: unknown,
+  configPath: string,
 ): Promise<SimulationResult> {
   try {
     // Generate real bundle from config
-    const configPath = path.resolve(
-      __dirname,
-      '../../examples/web-ecommerce.json',
-    );
     const rawConfig = await loadJsonConfig(configPath);
     const config = parseBundleConfig(rawConfig);
 

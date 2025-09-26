@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { bundleCommand } from './bundle';
-import { deployCommand } from './deploy';
 import { simulateCommand } from './simulate';
 
 const program = new Command();
@@ -30,23 +29,6 @@ program
       stats: options.stats,
       json: options.json,
       cache: options.cache,
-      verbose: options.verbose,
-    });
-  });
-
-// Deploy command
-program
-  .command('deploy')
-  .description('Deploy using configured drivers (simulated)')
-  .option('-c, --config <path>', 'Path to config file', 'deployer.json')
-  .option('--dry-run', 'Preview deployment without making changes')
-  .option('--json', 'output results in JSON format')
-  .option('-v, --verbose', 'verbose output')
-  .action(async (options) => {
-    await deployCommand({
-      config: options.config,
-      dryRun: options.dryRun,
-      json: options.json,
       verbose: options.verbose,
     });
   });

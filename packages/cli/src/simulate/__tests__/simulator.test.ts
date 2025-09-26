@@ -15,10 +15,6 @@ describe('Simulate', () => {
       verbose: true,
     });
 
-    console.log('elb push result:', result.elbResult);
-    console.log('captured logs:', result.logs);
-    console.log('captured usage:', result.usage);
-
     expect(result.success).toBe(true);
     expect(result.error).toBeUndefined();
 

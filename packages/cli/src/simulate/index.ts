@@ -7,6 +7,8 @@ import type { SimulateCommandOptions } from './types';
 export async function simulateCommand(
   options: SimulateCommandOptions,
 ): Promise<void> {
+  const startTime = Date.now();
+
   try {
     // Parse event input
     const event = parseEventInput(options.event);
@@ -17,8 +19,16 @@ export async function simulateCommand(
       verbose: options.verbose,
     });
 
+    // Add duration to result
+    const resultWithDuration = {
+      ...result,
+      duration: (Date.now() - startTime) / 1000,
+    };
+
     // Output results
-    const output = formatSimulationResult(result, { json: options.json });
+    const output = formatSimulationResult(resultWithDuration, {
+      json: options.json,
+    });
     console.log(output);
 
     // Exit with error code if simulation failed
@@ -29,11 +39,12 @@ export async function simulateCommand(
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     if (options.json) {
-      console.error(
+      console.log(
         JSON.stringify(
           {
             success: false,
             error: errorMessage,
+            duration: (Date.now() - startTime) / 1000,
           },
           null,
           2,

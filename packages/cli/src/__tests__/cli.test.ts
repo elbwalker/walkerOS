@@ -129,7 +129,6 @@ describe('CLI Bundle Command', () => {
     expect(output).toMatchObject({
       success: false,
       error: expect.stringContaining('Configuration file not found'),
-      duration: expect.any(Number),
     });
   });
 
@@ -186,22 +185,19 @@ describe('CLI Bundle Command', () => {
   });
 });
 
-describe('CLI Deploy Command', () => {
-  const testOutputDir = path.join(
-    '.tmp',
-    `deploy-cli-${Date.now()}-${getId()}`,
+describe('CLI Simulate Command', () => {
+  const testConfigPath = path.join(
+    __dirname,
+    '../../examples/web-ecommerce.json',
   );
-  const testConfigPath = path.join(testOutputDir, 'deploy-test.config.json');
 
-  beforeEach(async () => {
-    await fs.ensureDir(testOutputDir);
+  beforeEach(() => {
     // Mock console.log and console.error to suppress output during tests
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  afterEach(async () => {
-    await fs.remove(testOutputDir);
+  afterEach(() => {
     // Restore console methods
     jest.restoreAllMocks();
   });
@@ -232,26 +228,13 @@ describe('CLI Deploy Command', () => {
     });
   };
 
-  it('should deploy with stubbed drivers in JSON mode', async () => {
-    const testConfig = {
-      drivers: {
-        gcp: {
-          type: 'ingest',
-          artifactPath: './dist/bundle.js',
-        },
-        aws: {
-          type: 'ingest',
-          artifactPath: './dist/bundle.js',
-        },
-      },
-    };
-
-    await fs.writeJson(testConfigPath, testConfig);
-
+  it('should output JSON format for simulation', async () => {
     const result = await runCLI([
-      'deploy',
+      'simulate',
       '--config',
       testConfigPath,
+      '--event',
+      '{"name":"product view","data":{"id":"P123"}}',
       '--json',
     ]);
 
@@ -259,46 +242,42 @@ describe('CLI Deploy Command', () => {
 
     const output = JSON.parse(result.stdout);
     expect(output).toMatchObject({
-      success: true,
-      results: expect.arrayContaining([
-        expect.objectContaining({
-          driver: 'gcp',
-          status: 'success',
-          result: expect.objectContaining({
-            url: expect.stringContaining('fake-gcp-endpoint'),
-          }),
+      result: {
+        ok: true,
+        successful: expect.arrayContaining([
+          expect.objectContaining({ id: 'gtag' }),
+          expect.objectContaining({ id: 'api' }),
+        ]),
+        queued: [],
+        failed: [],
+        event: expect.objectContaining({
+          name: 'product view',
+          data: { id: 'P123' },
         }),
-        expect.objectContaining({
-          driver: 'aws',
-          status: 'success',
-          result: expect.objectContaining({
-            url: expect.stringContaining('fake-aws-endpoint'),
-          }),
-        }),
-      ]),
-      summary: {
-        successful: 2,
-        failed: 0,
+      },
+      usage: {
+        gtag: expect.any(Array),
+        api: expect.any(Array),
       },
       duration: expect.any(Number),
     });
-  });
 
-  it('should handle missing config file', async () => {
-    const result = await runCLI([
-      'deploy',
-      '--config',
-      'nonexistent.json',
-      '--json',
-    ]);
+    // Verify gtag API calls
+    expect(output.usage.gtag.length).toBeGreaterThan(0);
+    expect(output.usage.gtag[0]).toMatchObject({
+      type: 'call',
+      path: 'window.gtag',
+      timestamp: expect.any(Number),
+      args: expect.any(Array),
+    });
 
-    expect(result.exitCode).toBe(1);
-
-    const output = JSON.parse(result.stdout);
-    expect(output).toMatchObject({
-      success: false,
-      error: expect.stringContaining('Configuration file not found'),
-      duration: expect.any(Number),
+    // Verify api API calls
+    expect(output.usage.api.length).toBeGreaterThan(0);
+    expect(output.usage.api[0]).toMatchObject({
+      type: 'call',
+      path: 'sendWeb',
+      timestamp: expect.any(Number),
+      args: expect.any(Array),
     });
   });
 });

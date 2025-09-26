@@ -31,7 +31,7 @@ export async function simulate(
 
     // Step 2: Execute simulation
     logger.info(`🚀 Executing simulation with event: ${event}`);
-    const result = await executeSimulation(event);
+    const result = await executeSimulation(event, fullConfigPath);
 
     // Step 3: Report results
     if (result.success) {
@@ -69,7 +69,12 @@ export function formatSimulationResult(
   options: Pick<SimulateCommandOptions, 'json'> = {},
 ): string {
   if (options.json) {
-    return JSON.stringify(result, null, 2);
+    const output = {
+      result: result.elbResult,
+      usage: result.usage,
+      duration: result.duration,
+    };
+    return JSON.stringify(output, null, 2);
   }
 
   if (result.success) {
