@@ -1,48 +1,61 @@
 import { z } from 'zod';
 
-// Template configuration schema
-export const TemplateConfigSchema = z
-  .object({
-    content: z.string().optional(), // Inline template string
-    file: z.string().optional(), // Path to template file
-    variables: z
-      .record(
-        z.union([
-          z.string(),
-          z.number(),
-          z.boolean(),
-          z.array(
-            z.union([
-              z.string(),
-              z.number(),
-              z.boolean(),
-              z.record(z.unknown()),
-              z.object({
-                name: z.string(),
-                code: z.string(),
-                config: z.record(z.unknown()),
-                env: z.unknown().optional(),
-              }),
-            ]),
-          ),
-          z.record(z.unknown()),
-        ]),
-      )
-      .optional(),
-    contentPlaceholder: z.string().optional().default('{{CONTENT}}'),
-    variablePattern: z
-      .object({
-        prefix: z.string().default('{{'),
-        suffix: z.string().default('}}'),
-      })
-      .optional(),
-  })
-  .refine((data) => data.content || data.file, {
-    message:
-      "Either 'content' or 'file' must be provided for template configuration",
-  });
+// Package configuration schema
+const PackageConfigSchema = z.object({
+  version: z.string().default('latest'),
+  imports: z.array(z.string()).optional(),
+});
 
-// Build configuration schema
+// Source/Destination item schema
+const SourceDestinationItemSchema = z.object({
+  code: z.string(),
+  config: z.record(z.unknown()).optional(),
+  env: z.unknown().optional(),
+});
+
+// Build configuration schema with platform-specific defaults
+function createBuildConfigSchema(platform: 'web' | 'node') {
+  if (platform === 'web') {
+    return z.object({
+      platform: z.enum(['browser', 'node', 'neutral']).default('browser'),
+      format: z.enum(['esm', 'cjs', 'umd', 'iife']).default('iife'),
+      target: z.string().default('es2020'),
+      minify: z.boolean().default(false),
+      minifyOptions: z
+        .object({
+          whitespace: z.boolean().default(true),
+          identifiers: z.boolean().default(true),
+          syntax: z.boolean().default(true),
+          legalComments: z
+            .enum(['none', 'inline', 'eof', 'linked', 'external'])
+            .default('none'),
+          keepNames: z.boolean().default(false),
+        })
+        .optional(),
+      sourcemap: z.boolean().default(true),
+    });
+  } else {
+    return z.object({
+      platform: z.enum(['browser', 'node', 'neutral']).default('node'),
+      format: z.enum(['esm', 'cjs', 'umd', 'iife']).default('cjs'),
+      target: z.string().default('node18'),
+      minify: z.boolean().default(false),
+      minifyOptions: z
+        .object({
+          whitespace: z.boolean().default(true),
+          identifiers: z.boolean().default(true),
+          syntax: z.boolean().default(true),
+          legalComments: z
+            .enum(['none', 'inline', 'eof', 'linked', 'external'])
+            .default('none'),
+          keepNames: z.boolean().default(false),
+        })
+        .optional(),
+      sourcemap: z.boolean().default(false),
+    });
+  }
+}
+
 export const BuildConfigSchema = z.object({
   platform: z.enum(['browser', 'node', 'neutral']).default('browser'),
   format: z.enum(['esm', 'cjs', 'umd', 'iife']).default('esm'),
@@ -64,25 +77,15 @@ export const BuildConfigSchema = z.object({
 
 // Configuration schema
 export const BundleConfigSchema = z.object({
-  packages: z.array(
-    z.object({
-      name: z.string(),
-      version: z.string(),
-      imports: z.array(z.string()),
-    }),
-  ),
-  content: z.string(),
-  template: TemplateConfigSchema.optional(),
+  platform: z.enum(['web', 'node']).default('web'),
+  packages: z.record(z.string(), PackageConfigSchema.default({})),
+  code: z.string(),
+  template: z.string().optional(),
   build: BuildConfigSchema.default({}),
-  output: z
-    .object({
-      filename: z.string().default('bundle.js'),
-      dir: z.string().default('./dist'),
-    })
-    .default({
-      filename: 'bundle.js',
-      dir: './dist',
-    }),
+  output: z.string().default('./dist/bundle.js'),
+  sources: z.record(z.string(), SourceDestinationItemSchema).optional(),
+  destinations: z.record(z.string(), SourceDestinationItemSchema).optional(),
+  collector: z.record(z.unknown()).optional(),
   tempDir: z
     .string()
     .default('.tmp')
@@ -93,11 +96,25 @@ export const BundleConfigSchema = z.object({
     .describe('Enable package caching to speed up subsequent builds'),
 });
 
-export type TemplateConfig = z.infer<typeof TemplateConfigSchema>;
 export type BuildConfig = z.infer<typeof BuildConfigSchema>;
 export type BundleConfig = z.infer<typeof BundleConfigSchema>;
+export type PackageConfig = z.infer<typeof PackageConfigSchema>;
+export type SourceDestinationItem = z.infer<typeof SourceDestinationItemSchema>;
 
-// Validate and parse configuration
+// Validate and parse configuration with platform-specific build defaults
 export function parseBundleConfig(data: unknown): BundleConfig {
-  return BundleConfigSchema.parse(data);
+  const parsed = BundleConfigSchema.parse(data);
+
+  // Apply platform-specific build defaults
+  const platformBuildDefaults = createBuildConfigSchema(parsed.platform).parse(
+    {},
+  );
+
+  return {
+    ...parsed,
+    build: {
+      ...platformBuildDefaults,
+      ...parsed.build,
+    },
+  };
 }

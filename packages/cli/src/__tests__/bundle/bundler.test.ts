@@ -55,22 +55,18 @@ describe('Bundler', () => {
   it('should bundle minimal config successfully', async () => {
     // Inline minimal configuration to avoid path dependencies
     const rawConfig = {
-      packages: [
-        {
-          name: '@walkeros/core',
-          version: 'latest',
+      platform: 'web',
+      packages: {
+        '@walkeros/core': {
           imports: ['getId'],
         },
-      ],
-      content: 'export const test = getId(8);',
+      },
+      code: 'export const test = getId(8);',
       build: {
         platform: 'browser',
         format: 'esm',
       },
-      output: {
-        filename: 'minimal.js',
-        dir: testOutputDir,
-      },
+      output: path.join(testOutputDir, 'minimal.js'),
     };
 
     const config = parseBundleConfig(rawConfig);
@@ -82,22 +78,18 @@ describe('Bundler', () => {
   it('should bundle node config with CJS format', async () => {
     // Inline node configuration
     const rawConfig = {
-      packages: [
-        {
-          name: '@walkeros/core',
-          version: 'latest',
+      platform: 'node',
+      packages: {
+        '@walkeros/core': {
           imports: ['trim', 'isString'],
         },
-      ],
-      content: 'module.exports = { processText: (text) => trim(text) };',
+      },
+      code: 'module.exports = { processText: (text) => trim(text) };',
       build: {
         platform: 'node',
         format: 'cjs',
       },
-      output: {
-        filename: 'node-bundle.js',
-        dir: testOutputDir,
-      },
+      output: path.join(testOutputDir, 'node-bundle.js'),
     };
 
     const config = parseBundleConfig(rawConfig);
@@ -109,15 +101,13 @@ describe('Bundler', () => {
   it('should bundle advanced config with minification', async () => {
     // Inline advanced configuration
     const rawConfig = {
-      packages: [
-        {
-          name: '@walkeros/core',
-          version: 'latest',
+      platform: 'web',
+      packages: {
+        '@walkeros/core': {
           imports: ['getId', 'getByPath', 'clone', 'trim', 'isObject'],
         },
-      ],
-      content:
-        "export function processData(data) {\n  return data.map(item => ({\n    ...item,\n    id: getId(8),\n    timestamp: new Date().toISOString().split('T')[0],\n    processed: true\n  }));\n}\n\nexport function extractNestedValues(data, path) {\n  return data.map(item => getByPath(item, path, null)).filter(val => val !== null);\n}\n\nexport function deepCloneData(data) {\n  return clone(data);\n}\n\nexport function cleanStringData(data) {\n  return data.map(item => ({\n    ...item,\n    name: typeof item.name === 'string' ? trim(item.name) : item.name\n  }));\n}\n\n// Re-export walkerOS utilities\nexport { getId, getByPath, clone, trim, isObject };",
+      },
+      code: "export function processData(data) {\n  return data.map(item => ({\n    ...item,\n    id: getId(8),\n    timestamp: new Date().toISOString().split('T')[0],\n    processed: true\n  }));\n}\n\nexport function extractNestedValues(data, path) {\n  return data.map(item => getByPath(item, path, null)).filter(val => val !== null);\n}\n\nexport function deepCloneData(data) {\n  return clone(data);\n}\n\nexport function cleanStringData(data) {\n  return data.map(item => ({\n    ...item,\n    name: typeof item.name === 'string' ? trim(item.name) : item.name\n  }));\n}\n\n// Re-export walkerOS utilities\nexport { getId, getByPath, clone, trim, isObject };",
       build: {
         platform: 'browser',
         format: 'esm',
@@ -125,10 +115,7 @@ describe('Bundler', () => {
         minify: true,
         sourcemap: true,
       },
-      output: {
-        filename: 'advanced-bundle.js',
-        dir: testOutputDir,
-      },
+      output: path.join(testOutputDir, 'advanced-bundle.js'),
     };
 
     const config = parseBundleConfig(rawConfig);
@@ -140,18 +127,14 @@ describe('Bundler', () => {
   describe('Stats Collection', () => {
     it('should collect bundle stats when requested', async () => {
       const rawConfig = {
-        packages: [
-          {
-            name: '@walkeros/core',
-            version: 'latest',
+        platform: 'web',
+        packages: {
+          '@walkeros/core': {
             imports: ['getId'],
           },
-        ],
-        content: 'export const test = getId(8);',
-        output: {
-          filename: 'stats-test.js',
-          dir: testOutputDir,
         },
+        code: 'export const test = getId(8);',
+        output: path.join(testOutputDir, 'stats-test.js'),
       };
 
       const config = parseBundleConfig(rawConfig);
@@ -168,10 +151,10 @@ describe('Bundler', () => {
 
     it('should detect ineffective tree-shaking with wildcard imports', async () => {
       const config = parseBundleConfig({
-        packages: [{ name: '@walkeros/core', version: 'latest', imports: [] }],
-        content:
-          'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
-        output: { dir: testOutputDir, filename: 'test.js' },
+        platform: 'web',
+        packages: { '@walkeros/core': {} },
+        code: 'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
+        output: path.join(testOutputDir, 'test.js'),
       });
 
       const stats = await bundle(config, logger, true);
@@ -181,18 +164,14 @@ describe('Bundler', () => {
 
     it('should return undefined when stats not requested', async () => {
       const rawConfig = {
-        packages: [
-          {
-            name: '@walkeros/core',
-            version: 'latest',
+        platform: 'web',
+        packages: {
+          '@walkeros/core': {
             imports: ['getId'],
           },
-        ],
-        content: 'export const test = getId(8);',
-        output: {
-          filename: 'no-stats.js',
-          dir: testOutputDir,
         },
+        code: 'export const test = getId(8);',
+        output: path.join(testOutputDir, 'no-stats.js'),
       };
 
       const config = parseBundleConfig(rawConfig);
@@ -204,18 +183,19 @@ describe('Bundler', () => {
   });
 
   describe('Template System', () => {
-    it('should apply inline template correctly', async () => {
+    it('should handle template configuration', async () => {
+      // Create a test template file
+      const templatePath = path.join(testOutputDir, 'test.hbs');
+      await fs.writeFile(templatePath, '{{CONTENT}}\\n// Template footer');
+
       const config = parseBundleConfig({
-        packages: [
-          { name: '@walkeros/core', version: 'latest', imports: ['getId'] },
-        ],
-        content: 'export const generateId = () => getId(8);',
-        template: {
-          content:
-            '// {{NAME}} v{{VERSION}}\n{{CONTENT}}\nexport default { name: "{{NAME}}" };',
-          variables: { NAME: 'TestLib', VERSION: '1.0.0' },
+        platform: 'web',
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
         },
-        output: { dir: testOutputDir, filename: 'template-test.js' },
+        code: 'export const generateId = () => getId(8);',
+        template: templatePath,
+        output: path.join(testOutputDir, 'template-test.js'),
       });
 
       await expect(bundle(config, logger)).resolves.not.toThrow();
@@ -223,15 +203,12 @@ describe('Bundler', () => {
 
     it('should handle missing template variables gracefully', async () => {
       const config = parseBundleConfig({
-        packages: [
-          { name: '@walkeros/core', version: 'latest', imports: ['trim'] },
-        ],
-        content: 'export const test = trim("hello");',
-        template: {
-          content: '{{CONTENT}}\n// {{MISSING_VAR}} should remain as-is',
-          variables: { OTHER_VAR: 'exists' },
+        platform: 'web',
+        packages: {
+          '@walkeros/core': { imports: ['trim'] },
         },
-        output: { dir: testOutputDir, filename: 'missing-vars.js' },
+        code: 'export const test = trim("hello");',
+        output: path.join(testOutputDir, 'missing-vars.js'),
       });
 
       await expect(bundle(config, logger)).resolves.not.toThrow();
@@ -239,14 +216,12 @@ describe('Bundler', () => {
 
     it('should append bundle code when placeholder not found', async () => {
       const config = parseBundleConfig({
-        packages: [
-          { name: '@walkeros/core', version: 'latest', imports: ['getId'] },
-        ],
-        content: 'export const test = getId(6);',
-        template: {
-          content: '// Header only template',
+        platform: 'web',
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
         },
-        output: { dir: testOutputDir, filename: 'append-test.js' },
+        code: 'export const test = getId(6);',
+        output: path.join(testOutputDir, 'append-test.js'),
       });
 
       await expect(bundle(config, logger)).resolves.not.toThrow();
@@ -256,15 +231,13 @@ describe('Bundler', () => {
   describe('Configuration Scenarios', () => {
     it('should handle custom temp directory configuration', async () => {
       const config = parseBundleConfig({
-        packages: [
-          { name: '@walkeros/core', version: 'latest', imports: ['getId'] },
-        ],
-        content: 'export const test = getId();',
-        tempDir: '/tmp/my-custom-bundler-temp',
-        output: {
-          filename: 'custom-temp-example.js',
-          dir: testOutputDir,
+        platform: 'web',
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
         },
+        code: 'export const test = getId();',
+        tempDir: '/tmp/my-custom-bundler-temp',
+        output: path.join(testOutputDir, 'custom-temp-example.js'),
       });
 
       await expect(bundle(config, logger)).resolves.not.toThrow();
@@ -272,19 +245,17 @@ describe('Bundler', () => {
 
     it('should handle version pinning correctly', async () => {
       const config = parseBundleConfig({
-        packages: [
-          { name: '@walkeros/core', version: '0.0.7', imports: ['getId'] },
-        ],
-        content: '// Test version pinning\nexport const test = getId();',
+        platform: 'web',
+        packages: {
+          '@walkeros/core': { version: '0.0.7', imports: ['getId'] },
+        },
+        code: '// Test version pinning\nexport const test = getId();',
         build: {
           platform: 'browser',
           format: 'esm',
           target: 'es2020',
         },
-        output: {
-          filename: 'version-test.js',
-          dir: testOutputDir,
-        },
+        output: path.join(testOutputDir, 'version-test.js'),
       });
 
       await expect(bundle(config, logger)).resolves.not.toThrow();
@@ -296,9 +267,9 @@ describe('Bundler', () => {
       // Test configuration validation instead of runtime errors
       expect(() => {
         parseBundleConfig({
-          packages: 'invalid', // should be array
-          content: 'test',
-          output: { dir: testOutputDir, filename: 'test.js' },
+          packages: 'invalid', // should be object
+          code: 'test',
+          output: path.join(testOutputDir, 'test.js'),
         });
       }).toThrow();
     });
@@ -306,9 +277,9 @@ describe('Bundler', () => {
     it('should require content field', async () => {
       expect(() => {
         parseBundleConfig({
-          packages: [],
-          // missing content field
-          output: { dir: testOutputDir, filename: 'test.js' },
+          packages: {},
+          // missing code field
+          output: path.join(testOutputDir, 'test.js'),
         });
       }).toThrow();
     });

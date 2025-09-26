@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { TemplateEngine } from '../../bundle/template-engine';
-import { TemplateConfigSchema } from '../../bundle/config';
+import { SourceDestinationItem } from '../../bundle/config';
 import { getId } from '@walkeros/core';
 
 describe('TemplateEngine', () => {
@@ -16,210 +16,178 @@ describe('TemplateEngine', () => {
     await fs.remove(testOutputDir);
   });
 
-  describe('Inline Templates', () => {
-    it('should process inline template with variables', async () => {
-      const config = TemplateConfigSchema.parse({
-        content: 'Hello {{NAME}}, version {{VERSION}}!',
-        variables: { NAME: 'World', VERSION: '1.0.0' },
-      });
+  describe('Templates', () => {
+    it('should process template with sources and destinations', async () => {
+      const templatePath = path.join(testOutputDir, 'test.hbs');
+      await fs.writeFile(
+        templatePath,
+        '{{CONTENT}}\nSources: {{#each sources}}{{@key}} {{/each}}\nDestinations: {{#each destinations}}{{@key}} {{/each}}',
+      );
 
-      const result = await engine.process(config, 'console.log("test");');
+      const sources = {
+        browser: { code: 'sourceBrowser', config: {} } as SourceDestinationItem,
+      };
+      const destinations = {
+        gtag: { code: 'destinationGtag', config: {} } as SourceDestinationItem,
+      };
+      const collector = {};
 
-      expect(result).toBe('Hello World, version 1.0.0!\nconsole.log("test");');
+      const result = await engine.process(
+        templatePath,
+        'console.log("test");',
+        sources,
+        destinations,
+        collector,
+      );
+
+      expect(result).toContain('console.log("test");');
+      expect(result).toContain('Sources: browser');
+      expect(result).toContain('Destinations: gtag');
     });
 
     it('should replace bundle placeholder', async () => {
-      const config = TemplateConfigSchema.parse({
-        content: 'Start\n{{CONTENT}}\nEnd',
-      });
-      const result = await engine.process(config, 'const x = 42;');
+      const templatePath = path.join(testOutputDir, 'test.hbs');
+      await fs.writeFile(templatePath, 'Start\n{{CONTENT}}\nEnd');
+
+      const result = await engine.process(
+        templatePath,
+        'const x = 42;',
+        {},
+        {},
+        {},
+      );
 
       expect(result).toBe('Start\nconst x = 42;\nEnd');
     });
 
-    it('should remove missing variables (Handlebars behavior)', async () => {
-      const config = TemplateConfigSchema.parse({
-        content: '{{CONTENT}} - {{MISSING}}',
-        variables: { EXISTS: 'yes' },
-      });
-      const result = await engine.process(config, 'code');
+    it('should handle missing variables gracefully', async () => {
+      const templatePath = path.join(testOutputDir, 'test.hbs');
+      await fs.writeFile(templatePath, '{{CONTENT}} - {{MISSING}}');
+
+      const result = await engine.process(templatePath, 'code', {}, {}, {});
 
       expect(result).toBe('code - ');
     });
-  });
 
-  describe('File Templates', () => {
-    it('should load and process file template', async () => {
-      const templatePath = path.join(testOutputDir, 'test.template');
-      await fs.writeFile(templatePath, '{{NAME}}: {{CONTENT}}');
+    it('should handle config serialization', async () => {
+      const templatePath = path.join(testOutputDir, 'test.hbs');
+      await fs.writeFile(
+        templatePath,
+        '{{CONTENT}}\n{{#each sources}}Code: {{{code}}}, Config: {{{config}}}\n{{/each}}',
+      );
 
-      const config = TemplateConfigSchema.parse({
-        file: templatePath,
-        variables: { NAME: 'Library' },
-      });
-      const result = await engine.process(config, 'export const test = 1;');
+      const sources = {
+        browser: {
+          code: 'sourceBrowser',
+          config: { settings: { prefix: 'data-elb' } },
+        } as SourceDestinationItem,
+      };
 
-      expect(result).toBe('Library: export const test = 1;');
-    });
+      const result = await engine.process(
+        templatePath,
+        'const test = true;',
+        sources,
+        {},
+        {},
+      );
 
-    it('should handle custom content placeholder', async () => {
-      const config = TemplateConfigSchema.parse({
-        content: 'Start [CODE] End',
-        contentPlaceholder: '[CODE]',
-      });
-      const result = await engine.process(config, 'const x = 1;');
-
-      expect(result).toBe('Start const x = 1; End');
-    });
-
-    it('should handle custom variable patterns', async () => {
-      const config = TemplateConfigSchema.parse({
-        content: 'Hello <NAME>!',
-        variables: { NAME: 'Test' },
-        variablePattern: { prefix: '<', suffix: '>' },
-      });
-      const result = await engine.process(config, 'code');
-
-      expect(result).toBe('Hello Test!\ncode');
+      expect(result).toContain('Code: sourceBrowser');
+      expect(result).toContain('Config: {');
+      expect(result).toContain('prefix');
     });
   });
 
-  describe('Array Loop Processing', () => {
-    it('should process simple array loop with object properties', async () => {
-      const config = TemplateConfigSchema.parse({
-        content:
-          '{{#imports}}import { {{name}} } from "{{path}}";\\n{{/imports}}',
-        variables: {
-          imports: [
-            { name: 'getId', path: '@walkeros/core' },
-            { name: 'trim', path: '@walkeros/utils' },
-          ],
-        },
-      });
-
-      const result = await engine.process(config, 'const bundle = true;');
-
-      expect(result).toBe(
-        'import { getId } from "@walkeros/core";\\nimport { trim } from "@walkeros/utils";\\n\nconst bundle = true;',
+  describe('Object Iteration', () => {
+    it('should iterate over sources and destinations objects', async () => {
+      const templatePath = path.join(testOutputDir, 'test.hbs');
+      await fs.writeFile(
+        templatePath,
+        '{{#each sources}}Source {{@key}}: {{code}}\n{{/each}}{{#each destinations}}Destination {{@key}}: {{code}}\n{{/each}}{{CONTENT}}',
       );
-    });
 
-    it('should process primitive array loop with current item access', async () => {
-      const config = TemplateConfigSchema.parse({
-        content: '{{#tags}}Tag: {{this}}\\n{{/tags}}',
-        variables: {
-          tags: ['react', 'typescript', 'bundler'],
-        },
-      });
+      const sources = {
+        browser: { code: 'sourceBrowser' } as SourceDestinationItem,
+        dataLayer: { code: 'sourceDataLayer' } as SourceDestinationItem,
+      };
+      const destinations = {
+        gtag: { code: 'destinationGtag' } as SourceDestinationItem,
+        api: { code: 'destinationAPI' } as SourceDestinationItem,
+      };
 
-      const result = await engine.process(config, 'code');
-
-      expect(result).toBe(
-        'Tag: react\\nTag: typescript\\nTag: bundler\\n\ncode',
+      const result = await engine.process(
+        templatePath,
+        'const bundle = true;',
+        sources,
+        destinations,
+        {},
       );
+
+      expect(result).toContain('Source browser: sourceBrowser');
+      expect(result).toContain('Source dataLayer: sourceDataLayer');
+      expect(result).toContain('Destination gtag: destinationGtag');
+      expect(result).toContain('Destination api: destinationAPI');
+      expect(result).toContain('const bundle = true;');
     });
 
-    it('should support index access in loops', async () => {
-      const config = TemplateConfigSchema.parse({
-        content: '{{#items}}Item {{@index}}: {{name}}\\n{{/items}}',
-        variables: {
-          items: [{ name: 'first' }, { name: 'second' }],
-        },
-      });
+    it('should handle collector configuration', async () => {
+      const templatePath = path.join(testOutputDir, 'test.hbs');
+      await fs.writeFile(
+        templatePath,
+        '{{CONTENT}}{{#if collector}}\nCollector: {{{collector}}}{{/if}}',
+      );
 
-      const result = await engine.process(config, 'bundle');
+      const collector = { settings: { debug: true } };
 
-      expect(result).toBe('Item 0: first\\nItem 1: second\\n\nbundle');
-    });
+      const result = await engine.process(
+        templatePath,
+        'const code = 1;',
+        {},
+        {},
+        collector,
+      );
 
-    it('should handle empty arrays', async () => {
-      const config = TemplateConfigSchema.parse({
-        content: 'Before\\n{{#empty}}Should not appear{{/empty}}\\nAfter',
-        variables: { empty: [] },
-      });
-
-      const result = await engine.process(config, 'code');
-
-      expect(result).toBe('Before\\n\\nAfter\ncode');
-    });
-
-    it('should handle non-array variables in loop syntax', async () => {
-      const config = TemplateConfigSchema.parse({
-        content: '{{#notArray}}Should not appear{{/notArray}}',
-        variables: { notArray: 'string' },
-      });
-
-      const result = await engine.process(config, 'code');
-
-      expect(result).toBe('\ncode');
-    });
-
-    it('should work with custom variable patterns', async () => {
-      const config = TemplateConfigSchema.parse({
-        content: '<#items><name>: <value>\\n</items>',
-        variables: {
-          items: [{ name: 'test', value: '123' }],
-        },
-        variablePattern: { prefix: '<', suffix: '>' },
-      });
-
-      const result = await engine.process(config, 'bundle');
-
-      expect(result).toBe('test: 123\\n\nbundle');
-    });
-
-    it('should combine loops with regular variables', async () => {
-      const config = TemplateConfigSchema.parse({
-        content:
-          '// {{title}}\\n{{#imports}}import {{name}};\\n{{/imports}}{{CONTENT}}',
-        variables: {
-          title: 'My Bundle',
-          imports: [{ name: 'utils' }],
-        },
-      });
-
-      const result = await engine.process(config, 'const code = 1;');
-
-      expect(result).toBe('// My Bundle\\nimport utils;\\nconst code = 1;');
-    });
-
-    it('should handle nested object properties', async () => {
-      const config = TemplateConfigSchema.parse({
-        content: '{{#configs}}{{name}}: {{settings.enabled}}\\n{{/configs}}',
-        variables: {
-          configs: [
-            { name: 'dev', settings: { enabled: true } },
-            { name: 'prod', settings: { enabled: false } },
-          ],
-        },
-      });
-
-      const result = await engine.process(config, 'bundle');
-
-      expect(result).toBe('dev: true\\nprod: false\\n\nbundle');
+      expect(result).toContain('const code = 1;');
+      expect(result).toContain('Collector: {');
+      expect(result).toContain('debug');
     });
   });
 
   describe('Edge Cases', () => {
     it('should append code when no bundle placeholder found', async () => {
-      const config = TemplateConfigSchema.parse({ content: 'Header only' });
-      const result = await engine.process(config, 'const code = true;');
+      const templatePath = path.join(testOutputDir, 'test.hbs');
+      await fs.writeFile(templatePath, 'Header only');
+
+      const result = await engine.process(
+        templatePath,
+        'const code = true;',
+        {},
+        {},
+        {},
+      );
 
       expect(result).toBe('Header only\nconst code = true;');
     });
 
     it('should handle minimal template content', async () => {
-      const config = TemplateConfigSchema.parse({ content: '{{CONTENT}}' });
-      const result = await engine.process(config, 'just code');
+      const templatePath = path.join(testOutputDir, 'test.hbs');
+      await fs.writeFile(templatePath, '{{CONTENT}}');
+
+      const result = await engine.process(
+        templatePath,
+        'just code',
+        {},
+        {},
+        {},
+      );
 
       expect(result).toBe('just code');
     });
 
     it('should handle empty bundle code', async () => {
-      const config = TemplateConfigSchema.parse({
-        content: 'Template: {{CONTENT}}',
-      });
-      const result = await engine.process(config, '');
+      const templatePath = path.join(testOutputDir, 'test.hbs');
+      await fs.writeFile(templatePath, 'Template: {{CONTENT}}');
+
+      const result = await engine.process(templatePath, '', {}, {}, {});
 
       expect(result).toBe('Template: ');
     });

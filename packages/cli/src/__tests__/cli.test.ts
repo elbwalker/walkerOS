@@ -49,11 +49,12 @@ describe('CLI Bundle Command', () => {
   it('should output JSON format for successful bundle', async () => {
     // Create a test config
     const testConfig = {
-      packages: [
-        { name: '@walkeros/core', version: 'latest', imports: ['getId'] },
-      ],
-      content: 'export const test = getId();',
-      output: { dir: testOutputDir, filename: 'test.js' },
+      platform: 'web',
+      packages: {
+        '@walkeros/core': { imports: ['getId'] },
+      },
+      code: 'export const test = getId();',
+      output: path.join(testOutputDir, 'test.js'),
     };
 
     await fs.writeJson(testConfigPath, testConfig);
@@ -70,28 +71,30 @@ describe('CLI Bundle Command', () => {
     const output = JSON.parse(result.stdout);
     expect(output).toMatchObject({
       success: true,
-      stats: {
-        totalSize: expect.any(Number),
-        packages: expect.any(Array),
-        buildTime: expect.any(Number),
-        treeshakingEffective: expect.any(Boolean),
+      data: {
+        stats: {
+          totalSize: expect.any(Number),
+          packages: expect.any(Array),
+          buildTime: expect.any(Number),
+          treeshakingEffective: expect.any(Boolean),
+        },
       },
       duration: expect.any(Number),
     });
 
-    expect(output.stats.packages).toHaveLength(1);
-    expect(output.stats.packages[0].name).toBe('@walkeros/core@latest');
+    expect(output.data.stats.packages).toHaveLength(1);
+    expect(output.data.stats.packages[0].name).toBe('@walkeros/core@latest');
   });
 
   it('should output JSON format for failed bundle', async () => {
     // Create a test config with syntax error
     const testConfig = {
-      packages: [
-        { name: '@walkeros/core', version: 'latest', imports: ['getId'] },
-      ],
-      content:
-        'export const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
-      output: { dir: testOutputDir, filename: 'error-test.js' },
+      platform: 'web',
+      packages: {
+        '@walkeros/core': { imports: ['getId'] },
+      },
+      code: 'export const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
+      output: path.join(testOutputDir, 'error-test.js'),
     };
 
     await fs.writeJson(testConfigPath, testConfig);
@@ -108,7 +111,7 @@ describe('CLI Bundle Command', () => {
     const output = JSON.parse(result.stdout);
     expect(output).toMatchObject({
       success: false,
-      error: expect.stringContaining('Content syntax error'),
+      error: expect.stringContaining('Code syntax error'),
       duration: expect.any(Number),
     });
 
@@ -134,10 +137,10 @@ describe('CLI Bundle Command', () => {
 
   it('should collect stats when --json flag is used (implies --stats)', async () => {
     const testConfig = {
-      packages: [{ name: '@walkeros/core', version: 'latest', imports: [] }],
-      content:
-        'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
-      output: { dir: testOutputDir, filename: 'wildcard-test.js' },
+      platform: 'web',
+      packages: { '@walkeros/core': { imports: ['getId'] } },
+      code: 'export const test = getId;',
+      output: path.join(testOutputDir, 'wildcard-test.js'),
     };
 
     await fs.writeJson(testConfigPath, testConfig);
@@ -153,14 +156,15 @@ describe('CLI Bundle Command', () => {
 
     const output = JSON.parse(result.stdout);
     expect(output.success).toBe(true);
-    expect(output.stats.treeshakingEffective).toBe(false); // Should detect wildcard import
+    expect(output.data.stats.treeshakingEffective).toBe(true); // Should be effective with named imports
   });
 
   it('should suppress decorative output in JSON mode', async () => {
     const testConfig = {
-      packages: [{ name: '@walkeros/core', version: 'latest', imports: [] }],
-      content: 'export const test = "hello";',
-      output: { dir: testOutputDir, filename: 'minimal-test.js' },
+      platform: 'web',
+      packages: { '@walkeros/core': { imports: ['getId'] } },
+      code: 'export const test = getId();',
+      output: path.join(testOutputDir, 'minimal-test.js'),
     };
 
     await fs.writeJson(testConfigPath, testConfig);

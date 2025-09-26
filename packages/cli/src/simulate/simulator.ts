@@ -96,11 +96,7 @@ async function generateBundleCode(config: BundleConfig): Promise<string> {
 
   // Create temporary bundle and return the generated code
   const tempDir = getTempDir();
-  const tempOutput = {
-    ...config.output,
-    dir: tempDir,
-    filename: 'simulation-bundle.js',
-  };
+  const tempOutput = path.join(tempDir, 'simulation-bundle.js');
 
   const tempConfig = {
     ...config,
@@ -116,8 +112,7 @@ async function generateBundleCode(config: BundleConfig): Promise<string> {
     await bundle(tempConfig, logger, false);
 
     // Read the generated file
-    const bundlePath = path.join(tempDir, tempOutput.filename);
-    const bundleCode = await fs.readFile(bundlePath, 'utf-8');
+    const bundleCode = await fs.readFile(tempOutput, 'utf-8');
 
     // Transform the IIFE to assign to module.exports for simulation
     const modifiedCode = bundleCode.replace(

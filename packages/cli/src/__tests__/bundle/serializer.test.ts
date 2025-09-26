@@ -122,16 +122,14 @@ describe('Serializer', () => {
   describe('processTemplateVariables', () => {
     it('should process sources and destinations config objects', () => {
       const variables = {
-        sources: [
-          {
-            name: 'browser',
+        sources: {
+          browser: {
             code: 'sourceBrowser',
             config: { debug: true },
           },
-        ],
-        destinations: [
-          {
-            name: 'gtag',
+        },
+        destinations: {
+          gtag: {
             code: 'destinationGtag',
             config: {
               settings: {
@@ -139,48 +137,59 @@ describe('Serializer', () => {
               },
             },
           },
-        ],
+        },
       };
 
       const result = processTemplateVariables(variables);
-      expect(result.sources?.[0]?.config).toBe('{\n  debug: true\n}');
-      expect(result.destinations?.[0]?.config).toContain(
+      expect(result.sources?.browser?.config).toBe('{\n  debug: true\n}');
+      expect(result.destinations?.gtag?.config).toContain(
         "measurementId: 'G-123'",
       );
     });
 
     it('should handle string configs (pass through)', () => {
       const variables = {
-        sources: [
-          {
-            name: 'test',
+        sources: {
+          test: {
             code: 'source',
             config: '{ debug: true }',
           },
-        ],
+        },
       };
 
       const result = processTemplateVariables(variables);
-      expect(result.sources?.[0]?.config).toBe('{ debug: true }');
+      expect(result.sources?.test?.config).toBe('{ debug: true }');
     });
 
     it('should handle undefined env values', () => {
       const variables = {
-        sources: [
-          {
-            name: 'test',
+        sources: {
+          test: {
             code: 'source',
             config: {},
             env: undefined,
           },
-        ],
+        },
       };
 
       const result = processTemplateVariables(variables);
-      expect(result.sources?.[0]?.env).toBe('undefined');
+      expect(result.sources?.test?.env).toBe('undefined');
     });
 
-    it('should preserve non-array variables', () => {
+    it('should handle collector configuration', () => {
+      const variables = {
+        collector: {
+          settings: {
+            debug: true,
+          },
+        },
+      };
+
+      const result = processTemplateVariables(variables);
+      expect(result.collector).toContain('debug: true');
+    });
+
+    it('should preserve other variables', () => {
       const variables = {
         title: 'My App',
         version: '1.0.0',

@@ -28,8 +28,15 @@ export async function bundle(
 
     // Step 2: Download packages
     logger.info('📥 Downloading packages...');
+    // Convert packages object to array format expected by downloadPackages
+    const packagesArray = Object.entries(config.packages).map(
+      ([name, packageConfig]) => ({
+        name,
+        version: packageConfig.version || 'latest',
+      }),
+    );
     const packagePaths = await downloadPackages(
-      config.packages,
+      packagesArray,
       path.join(TEMP_DIR, 'node_modules'),
       logger,
       config.cache,
@@ -43,7 +50,7 @@ export async function bundle(
 
     // Step 4: Bundle with esbuild
     logger.info('⚡ Bundling with esbuild...');
-    const outputPath = path.resolve(config.output.dir, config.output.filename);
+    const outputPath = path.resolve(config.output);
 
     // Ensure output directory exists
     await fs.ensureDir(path.dirname(outputPath));
@@ -61,7 +68,7 @@ export async function bundle(
       await esbuild.build(buildOptions);
     } catch (buildError) {
       // Enhanced error handling for build failures
-      throw createBuildError(buildError as EsbuildError, config.content);
+      throw createBuildError(buildError as EsbuildError, config.code);
     }
 
     logger.gray(`Output: ${outputPath}`);
@@ -71,7 +78,7 @@ export async function bundle(
     if (showStats) {
       stats = await collectBundleStats(
         outputPath,
-        config.packages,
+        packagesArray,
         bundleStartTime,
         entryContent,
       );
@@ -209,6 +216,18 @@ function createEsbuildOptions(
   return baseOptions;
 }
 
+// Helper function to convert package name to JS variable name
+function packageNameToVariable(packageName: string): string {
+  return packageName
+    .replace('@', '_')
+    .replace(/[/-]/g, '_')
+    .split('_')
+    .map((part, i) =>
+      i === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1),
+    )
+    .join('');
+}
+
 async function createEntryPoint(
   config: BundleConfig,
   packagePaths: Map<string, string>,
@@ -217,13 +236,38 @@ async function createEntryPoint(
   const importStatements: string[] = [];
   const examplesMappings: string[] = [];
 
-  for (const pkg of config.packages) {
-    if (pkg.imports && pkg.imports.length > 0) {
+  for (const [packageName, packageConfig] of Object.entries(config.packages)) {
+    if (packageConfig.imports && packageConfig.imports.length > 0) {
       // Remove duplicates within the same package
-      const uniqueImports = [...new Set(pkg.imports)];
-      const importList = uniqueImports.join(', ');
-      const importStatement = `import { ${importList} } from '${pkg.name}';`;
-      importStatements.push(importStatement);
+      const uniqueImports = [...new Set(packageConfig.imports)];
+
+      // Handle special "default as X" syntax
+      const defaultImports: string[] = [];
+      const namedImports: string[] = [];
+
+      for (const imp of uniqueImports) {
+        if (imp.startsWith('default as ')) {
+          defaultImports.push(imp.replace('default as ', ''));
+        } else {
+          namedImports.push(imp);
+        }
+      }
+
+      // Generate import statements
+      if (defaultImports.length > 0) {
+        for (const defaultImport of defaultImports) {
+          importStatements.push(
+            `import ${defaultImport} from '${packageName}';`,
+          );
+        }
+      }
+
+      if (namedImports.length > 0) {
+        const importList = namedImports.join(', ');
+        importStatements.push(
+          `import { ${importList} } from '${packageName}';`,
+        );
+      }
 
       // Check if this package imports examples and create mappings
       const examplesImport = uniqueImports.find((imp) =>
@@ -234,7 +278,7 @@ async function createEntryPoint(
         // Format: "examples as gtagExamples" -> gtagExamples
         const examplesVarName = examplesImport.split(' as ')[1];
         // Get destination name from package (assumes @walkeros/web-destination-xxx format)
-        const destinationMatch = pkg.name.match(
+        const destinationMatch = packageName.match(
           /@walkeros\/web-destination-(.+)$/,
         );
         if (destinationMatch) {
@@ -244,6 +288,13 @@ async function createEntryPoint(
           );
         }
       }
+    } else {
+      // No imports specified - import as namespace with a warning comment
+      // User should specify explicit imports for better tree-shaking
+      const varName = packageNameToVariable(packageName);
+      importStatements.push(
+        `import * as ${varName} from '${packageName}'; // Consider specifying explicit imports`,
+      );
     }
   }
 
@@ -253,17 +304,23 @@ async function createEntryPoint(
       ? `const examples = {\n${examplesMappings.join(',\n')}\n};\n\n`
       : '';
 
-  // Combine imports with examples object and content
+  // Combine imports with examples object and code
   const importsCode = importStatements.join('\n');
   const fullCode = importsCode
-    ? `${importsCode}\n\n${examplesObject}${config.content}`
-    : config.content;
+    ? `${importsCode}\n\n${examplesObject}${config.code}`
+    : config.code;
 
   // Apply template if configured
   let finalCode = fullCode;
   if (config.template) {
     const templateEngine = new TemplateEngine();
-    finalCode = await templateEngine.process(config.template, fullCode);
+    finalCode = await templateEngine.process(
+      config.template,
+      fullCode,
+      config.sources || {},
+      config.destinations || {},
+      config.collector || {},
+    );
   }
 
   return finalCode;
@@ -281,7 +338,7 @@ interface EsbuildError {
   message?: string;
 }
 
-function createBuildError(buildError: EsbuildError, content: string): Error {
+function createBuildError(buildError: EsbuildError, code: string): Error {
   if (!buildError.errors || buildError.errors.length === 0) {
     return new Error(`Build failed: ${buildError.message || buildError}`);
   }
@@ -290,14 +347,14 @@ function createBuildError(buildError: EsbuildError, content: string): Error {
   const location = firstError.location;
 
   if (location && location.file && location.file.includes('entry.js')) {
-    // Error is in our generated entry point (content code)
+    // Error is in our generated entry point (code)
     const line = location.line;
     const column = location.column;
-    const codeLines = content.split('\n');
+    const codeLines = code.split('\n');
     const errorLine = codeLines[line - 1] || '';
 
     return new Error(
-      `Content syntax error at line ${line}, column ${column}:\n` +
+      `Code syntax error at line ${line}, column ${column}:\n` +
         `  ${errorLine}\n` +
         `  ${' '.repeat(column - 1)}^\n` +
         `${firstError.text}`,

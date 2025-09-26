@@ -30,62 +30,53 @@ describe('Bundler Integration', () => {
 
   it('should handle configuration parsing correctly', async () => {
     const rawConfig = {
-      packages: [
-        {
-          name: '@walkeros/core',
-          version: 'latest',
+      platform: 'web',
+      packages: {
+        '@walkeros/core': {
           imports: ['getId'],
         },
-      ],
-      content: 'export const test = getId(8);',
+      },
+      code: 'export const test = getId(8);',
       build: {
         platform: 'browser',
         format: 'esm',
       },
-      output: {
-        filename: 'test-config.js',
-        dir: testOutputDir,
-      },
+      output: path.join(testOutputDir, 'test-config.js'),
     };
 
     const config = parseBundleConfig(rawConfig);
 
-    expect(config.packages).toHaveLength(1);
-    expect(config.packages[0].name).toBe('@walkeros/core');
-    expect(config.content).toContain('getId');
+    expect(Object.keys(config.packages)).toHaveLength(1);
+    expect('@walkeros/core' in config.packages).toBe(true);
+    expect(config.code).toContain('getId');
     expect(config.build.platform).toBe('browser');
-    expect(config.output.filename).toBe('test-config.js');
+    expect(config.output).toBe(path.join(testOutputDir, 'test-config.js'));
   });
 
   it('should handle template configuration', async () => {
     const rawConfig = {
-      packages: [
-        {
-          name: '@walkeros/core',
-          version: 'latest',
+      platform: 'web',
+      packages: {
+        '@walkeros/core': {
           imports: ['getId'],
         },
-      ],
-      content: 'export const test = getId(8);',
-      template: {
-        content: '// Generated bundle\n{{CONTENT}}\n// End bundle',
       },
-      output: {
-        filename: 'template-test.js',
-        dir: testOutputDir,
-      },
+      code: 'export const test = getId(8);',
+      template: 'templates/web.hbs',
+      output: path.join(testOutputDir, 'template-test.js'),
     };
 
     const config = parseBundleConfig(rawConfig);
 
     expect(config.template).toBeDefined();
-    expect(config.template?.content).toContain('{{CONTENT}}');
+    expect(config.template).toBe('templates/web.hbs');
   });
 
   it('should validate custom build configuration', async () => {
     const rawConfig = {
-      packages: [],
-      content: 'export const test = "hello";',
+      platform: 'node',
+      packages: {},
+      code: 'export const test = "hello";',
       build: {
         platform: 'node',
         format: 'cjs',
@@ -93,10 +84,7 @@ describe('Bundler Integration', () => {
         sourcemap: true,
         target: 'node18',
       },
-      output: {
-        filename: 'build-test.js',
-        dir: testOutputDir,
-      },
+      output: path.join(testOutputDir, 'build-test.js'),
     };
 
     const config = parseBundleConfig(rawConfig);
@@ -111,12 +99,13 @@ describe('Bundler Integration', () => {
   it('should handle error conditions gracefully', async () => {
     // Test with invalid syntax in content
     const config = parseBundleConfig({
-      packages: [],
-      content: 'export const badCode = () => { return [1,2,3] x => x * 2; };',
-      output: { dir: testOutputDir, filename: 'error-test.js' },
+      platform: 'web',
+      packages: {},
+      code: 'export const badCode = () => { return [1,2,3] x => x * 2; };',
+      output: path.join(testOutputDir, 'error-test.js'),
     });
 
     // Should not throw during configuration parsing
-    expect(config.content).toContain('badCode');
+    expect(config.code).toContain('badCode');
   });
 });

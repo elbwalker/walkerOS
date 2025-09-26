@@ -10,21 +10,23 @@ export interface SerializerOptions {
 }
 
 interface TemplateSource {
-  name: string;
+  code: string;
   config?: unknown;
   env?: unknown;
   [key: string]: unknown;
 }
 
 interface TemplateDestination {
-  name: string;
+  code: string;
   config?: unknown;
+  env?: unknown;
   [key: string]: unknown;
 }
 
 interface ProcessedTemplateVariables {
-  sources?: TemplateSource[];
-  destinations?: TemplateDestination[];
+  sources?: Record<string, TemplateSource>;
+  destinations?: Record<string, TemplateDestination>;
+  collector?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -130,35 +132,48 @@ export function processTemplateVariables(
 ): ProcessedTemplateVariables {
   const processed = { ...variables };
 
-  // Process sources array
-  if (Array.isArray(processed.sources)) {
-    processed.sources = processed.sources.map(
-      (source: unknown): TemplateSource => {
-        const typedSource = source as TemplateSource;
-        return {
-          ...typedSource,
-          config: isObject(typedSource.config)
-            ? serializeConfig(typedSource.config)
-            : typedSource.config, // Pass through string configs unchanged
-          env: typedSource.env === undefined ? 'undefined' : typedSource.env,
-        };
-      },
-    );
+  // Process sources object
+  if (isObject(processed.sources)) {
+    const sourcesObj = processed.sources as Record<string, unknown>;
+    const processedSources: Record<string, TemplateSource> = {};
+
+    for (const [name, source] of Object.entries(sourcesObj)) {
+      const typedSource = source as TemplateSource;
+      processedSources[name] = {
+        ...typedSource,
+        config: isObject(typedSource.config)
+          ? serializeConfig(typedSource.config)
+          : typedSource.config, // Pass through string configs unchanged
+        env: typedSource.env === undefined ? 'undefined' : typedSource.env,
+      };
+    }
+
+    processed.sources = processedSources;
   }
 
-  // Process destinations array
-  if (Array.isArray(processed.destinations)) {
-    processed.destinations = processed.destinations.map(
-      (dest: unknown): TemplateDestination => {
-        const typedDest = dest as TemplateDestination;
-        return {
-          ...typedDest,
-          config: isObject(typedDest.config)
-            ? serializeConfig(typedDest.config)
-            : typedDest.config,
-          env: typedDest.env === undefined ? 'undefined' : typedDest.env,
-        };
-      },
+  // Process destinations object
+  if (isObject(processed.destinations)) {
+    const destinationsObj = processed.destinations as Record<string, unknown>;
+    const processedDestinations: Record<string, TemplateDestination> = {};
+
+    for (const [name, dest] of Object.entries(destinationsObj)) {
+      const typedDest = dest as TemplateDestination;
+      processedDestinations[name] = {
+        ...typedDest,
+        config: isObject(typedDest.config)
+          ? serializeConfig(typedDest.config)
+          : typedDest.config,
+        env: typedDest.env === undefined ? 'undefined' : typedDest.env,
+      };
+    }
+
+    processed.destinations = processedDestinations;
+  }
+
+  // Process collector object (if present)
+  if (isObject(processed.collector)) {
+    processed.collector = serializeConfig(
+      processed.collector as Record<string, unknown>,
     );
   }
 

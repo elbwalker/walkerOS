@@ -3,23 +3,24 @@
 (async function() {
   const config = {
     sources: {
-    {{#sources}}
-      {{name}}: {
+    {{#each sources}}
+      {{@key}}: {
         code: {{{code}}},
         config: {{{config}}},
         env: {{{env}}}
       },
-    {{/sources}}
+    {{/each}}
     },
     destinations: {
-    {{#destinations}}
-      {{name}}: {
+    {{#each destinations}}
+      {{@key}}: {
         code: {{{code}}},
         config: {{{config}}},
         env: {{{env}}}
       },
-    {{/destinations}}
-    }
+    {{/each}}
+    }{{#if collector}},
+    collector: {{{collector}}}{{/if}}
   };
 
   return await createCollector(config);
