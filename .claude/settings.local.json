@@ -22,7 +22,9 @@
       "Bash(do sed -i 's/Walkerjs/webCollector/g' \"$file\")",
       "Bash(done)",
       "Bash(npm start)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "WebSearch",
+      "Bash(npm test:*)"
     ],
     "deny": []
   }
