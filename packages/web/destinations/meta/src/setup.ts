@@ -6,10 +6,10 @@ export function addScript(
   src = 'https://connect.facebook.net/en_US/fbevents.js',
 ) {
   const { document } = getEnvironment(env);
-  const script = document.createElement('script');
+  const script = (document as Document).createElement('script');
   script.src = src;
   script.async = true;
-  document.head.appendChild(script);
+  (document as Document).head.appendChild(script);
 }
 
 interface FBQFunction {
