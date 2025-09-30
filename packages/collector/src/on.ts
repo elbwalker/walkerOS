@@ -52,9 +52,9 @@ export function onApply(
     onConfig = collector.on[type] || [];
   }
 
-  // Push to sources (similar to destination pattern)
-  // Calculate context data once for all sources
+  // Calculate context data once for all sources and destinations
   let contextData: unknown;
+
   switch (type) {
     case Const.Commands.Consent:
       contextData = config || collector.consent;
@@ -77,7 +77,9 @@ export function onApply(
 
   Object.values(collector.destinations).forEach((destination) => {
     if (destination.on) {
-      tryCatch(destination.on)(type, contextData);
+      // Cast to runtime-compatible version for type safety
+      const onFn = destination.on as On.OnFnRuntime;
+      tryCatch(onFn)(type, contextData as On.AnyEventContext);
     }
   });
 

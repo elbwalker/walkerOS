@@ -11,7 +11,21 @@ export type Config = {
 // On types
 export type Types = keyof Config;
 
-// Context for destination on methods
+// Map each event type to its expected context type
+export interface EventContextMap {
+  consent: WalkerOS.Consent;
+  session: Collector.SessionData;
+  ready: undefined;
+  run: undefined;
+}
+
+// Extract the context type for a specific event
+export type EventContext<T extends Types> = EventContextMap[T];
+
+// Union of all possible context types
+export type AnyEventContext = EventContextMap[keyof EventContextMap];
+
+// Legacy context interface (can be removed in future)
 export interface Context {
   consent?: WalkerOS.Consent;
   session?: unknown;
@@ -57,8 +71,14 @@ export interface OnConfig {
     | undefined;
 }
 
-// Destination on function type
-export type OnFn = (
+// Destination on function type with automatic type inference
+export type OnFn = <T extends Types>(
+  event: T,
+  context: EventContextMap[T],
+) => WalkerOS.PromiseOrValue<void>;
+
+// Runtime-compatible version for internal usage
+export type OnFnRuntime = (
   event: Types,
-  context?: Context,
+  context: AnyEventContext,
 ) => WalkerOS.PromiseOrValue<void>;

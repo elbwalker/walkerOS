@@ -1,4 +1,4 @@
-import type { WalkerOS, On } from '@walkeros/core';
+import type { WalkerOS, On, Collector } from '@walkeros/core';
 import type { Settings, Destination, ConsentMapping } from './types';
 import { initGA4, pushGA4Event } from './ga4';
 import { initAds, pushAdsEvent } from './ads';
@@ -104,12 +104,11 @@ export const destinationGtag: Destination = {
     }
   },
 
-  on(
-    type: On.Types,
-    context?: { consent?: WalkerOS.Consent; session?: unknown },
-  ) {
+  on(type, context) {
     // Only handle consent events
-    if (type !== 'consent' || !context?.consent) return;
+    if (type !== 'consent' || !context) return;
+
+    const consent = context;
 
     // Access config directly from this destination instance
     const settings = this.config?.settings || {};
@@ -154,17 +153,19 @@ export const destinationGtag: Destination = {
     const gtagConsent: Record<string, 'granted' | 'denied'> = {};
 
     // Map walkerOS consent to gtag consent parameters for update
-    Object.entries(context.consent).forEach(([walkerOSGroup, granted]) => {
-      const gtagParams = consentMapping[walkerOSGroup];
-      if (!gtagParams) return;
+    Object.entries(consent as WalkerOS.Consent).forEach(
+      ([walkerOSGroup, granted]) => {
+        const gtagParams = consentMapping[walkerOSGroup];
+        if (!gtagParams) return;
 
-      const params = Array.isArray(gtagParams) ? gtagParams : [gtagParams];
-      const consentValue = granted ? 'granted' : 'denied';
+        const params = Array.isArray(gtagParams) ? gtagParams : [gtagParams];
+        const consentValue = granted ? 'granted' : 'denied';
 
-      params.forEach((param) => {
-        gtagConsent[param] = consentValue;
-      });
-    });
+        params.forEach((param) => {
+          gtagConsent[param] = consentValue;
+        });
+      },
+    );
 
     // Only proceed if we have consent parameters to update
     if (Object.keys(gtagConsent).length === 0) return;
