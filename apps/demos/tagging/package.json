@@ -1,11 +1,12 @@
 {
   "name": "tagging-demo",
-  "version": "0.0.7",
+  "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "start": "http-server -c-1",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "echo 'No test specified'",
+    "build": "echo 'No build needed'",
     "update": "npx npm-check-updates -u && npm update"
   },
   "author": "",
