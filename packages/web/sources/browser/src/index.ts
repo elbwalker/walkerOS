@@ -7,6 +7,7 @@ import type {
   BrowserPush,
 } from './types/elb';
 import { isString } from '@walkeros/core';
+import { getEnvironment } from '@walkeros/web-core';
 import { initTriggers, processLoadTriggers, ready } from './trigger';
 import { destroyVisibilityTracking } from './triggerVisible';
 import { initElbLayer } from './elbLayer';
@@ -43,7 +44,7 @@ export const sourceBrowser: Source.Init<Settings> = async (
   try {
     // Extract and validate environment dependencies
     const browserEnv = (env || {}) as Environment;
-    const { elb, window: envWindow, document: envDocument } = browserEnv;
+    const { elb } = browserEnv;
 
     if (!elb) {
       throw new Error('Browser source requires elb function in environment');
@@ -51,7 +52,11 @@ export const sourceBrowser: Source.Init<Settings> = async (
 
     // Get configuration from config parameter, merged with defaults
     const userSettings = config?.settings || {};
-    const settings: Settings = getConfig(userSettings, envDocument);
+    const { window, document } = getEnvironment(env);
+    const settings: Settings = getConfig(
+      userSettings,
+      document as Document | undefined,
+    );
 
     // Full configuration with defaults
     const fullConfig: Source.Config<Settings> = {
@@ -66,13 +71,14 @@ export const sourceBrowser: Source.Init<Settings> = async (
 
     // Initialize features if environment is available
     // Skip all DOM-related functionality when not in browser environment
-    if (envDocument && envWindow) {
+
+    if (window && document) {
       // Initialize ELB Layer for async command handling
       if (settings.elbLayer !== false) {
         initElbLayer(elb, {
           name: isString(settings.elbLayer) ? settings.elbLayer : 'elbLayer',
           prefix: settings.prefix,
-          window: envWindow,
+          window: window as Window,
         });
       }
 
@@ -111,7 +117,7 @@ export const sourceBrowser: Source.Init<Settings> = async (
 
       // Set up automatic window.elb assignment if configured
       if (isString(settings.elb) && settings.elb) {
-        (envWindow as unknown as Record<string, unknown>)[settings.elb] = (
+        (window as unknown as Record<string, unknown>)[settings.elb] = (
           ...args: unknown[]
         ) => {
           const [event, data, options, context, nested, custom] = args;
@@ -153,7 +159,7 @@ export const sourceBrowser: Source.Init<Settings> = async (
 
         case 'run':
           // React to collector run events - re-process load triggers
-          if (envDocument && envWindow) {
+          if (document && window) {
             processLoadTriggers(translationContext, settings);
 
             // Send pageview if enabled
@@ -199,8 +205,8 @@ export const sourceBrowser: Source.Init<Settings> = async (
       push,
       destroy: async () => {
         // Cleanup visibility tracking and other resources
-        if (envDocument) {
-          destroyVisibilityTracking(settings.scope || envDocument);
+        if (document) {
+          destroyVisibilityTracking(settings.scope || (document as Document));
         }
       },
       on: handleEvent,
