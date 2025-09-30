@@ -20,10 +20,10 @@
   "code": "console.log('web-ecommerce.json example');",
   "build": {
     "minify": false,
-    "sourcemap": true
+    "globalName": "walkerOS"
   },
   "output": "./dist/web-ecommerce.js",
-  "template": "templates/web.hbs",
+  "template": "templates/base.hbs",
   "sources": {
     "browser": {
       "code": "sourceBrowser",
@@ -206,9 +206,16 @@
       "code": "destinationAPI",
       "config": {
         "settings": {
-          "url": "https://api.example.com/events"
+          "url": "https://api.example.com/events",
+          "transport": "beacon"
         }
       }
+    }
+  },
+  "collector": {
+    "run": true,
+    "globals": {
+      "language": "en"
     }
   }
 }

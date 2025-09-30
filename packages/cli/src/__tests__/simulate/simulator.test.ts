@@ -20,7 +20,9 @@ describe('Simulate', () => {
 
     // Verify collector state
     const collector = result.collector as Collector.Instance;
-    expect(collector.queue[0]).toMatchObject(event);
+
+    // Our simulated product view event should be second
+    expect(collector.queue[1]).toMatchObject(event);
     expect(collector.destinations.gtag).toBeDefined();
 
     // Verify console.log calls were captured

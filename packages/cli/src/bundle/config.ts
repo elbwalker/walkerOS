@@ -33,6 +33,7 @@ function createBuildConfigSchema(platform: 'web' | 'node') {
         })
         .optional(),
       sourcemap: z.boolean().default(true),
+      globalName: z.string().optional(),
     });
   } else {
     return z.object({
@@ -52,6 +53,7 @@ function createBuildConfigSchema(platform: 'web' | 'node') {
         })
         .optional(),
       sourcemap: z.boolean().default(false),
+      globalName: z.string().optional(),
     });
   }
 }
@@ -73,7 +75,29 @@ export const BuildConfigSchema = z.object({
     })
     .optional(),
   sourcemap: z.boolean().default(false),
+  globalName: z.string().optional(),
 });
+
+// Collector configuration schema - matches walkerOS Collector.Config interface
+const CollectorConfigSchema = z
+  .object({
+    run: z.boolean().optional(),
+    consent: z.record(z.boolean()).optional(),
+    user: z
+      .object({
+        id: z.string().optional(),
+        device: z.string().optional(),
+        session: z.string().optional(),
+      })
+      .optional(),
+    globals: z.record(z.unknown()).optional(),
+    globalsStatic: z.record(z.unknown()).optional(),
+    sessionStatic: z.record(z.unknown()).optional(),
+    custom: z.record(z.unknown()).optional(),
+    verbose: z.boolean().optional(),
+    tagging: z.number().optional(),
+  })
+  .optional();
 
 // Configuration schema
 export const BundleConfigSchema = z.object({
@@ -85,7 +109,7 @@ export const BundleConfigSchema = z.object({
   output: z.string().default('./dist/bundle.js'),
   sources: z.record(z.string(), SourceDestinationItemSchema).optional(),
   destinations: z.record(z.string(), SourceDestinationItemSchema).optional(),
-  collector: z.record(z.unknown()).optional(),
+  collector: CollectorConfigSchema,
   tempDir: z
     .string()
     .default('.tmp')

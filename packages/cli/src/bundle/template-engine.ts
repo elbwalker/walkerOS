@@ -26,21 +26,16 @@ export class TemplateEngine {
   }
 
   /**
-   * Apply template with bundle code and variable substitution
+   * Apply template with user code and variable substitution
    */
   applyTemplate(
     template: string,
-    bundleCode: string,
+    userCode: string,
     sources: Record<string, SourceDestinationItem>,
     destinations: Record<string, SourceDestinationItem>,
     collector: Record<string, unknown>,
+    build?: Record<string, unknown>,
   ): string {
-    // Replace content placeholder with bundle code first
-    const contentPlaceholder = '{{CONTENT}}';
-    const templateWithContent = template.includes(contentPlaceholder)
-      ? template.replace(contentPlaceholder, bundleCode)
-      : template + '\n' + bundleCode;
-
     // Process template variables to serialize config objects
     const processedVariables = processTemplateVariables({
       sources,
@@ -50,32 +45,35 @@ export class TemplateEngine {
 
     // Prepare template data for Handlebars
     const templateData: Record<string, unknown> = {
-      CONTENT: bundleCode,
+      CODE: userCode,
+      build: build || {},
       ...processedVariables,
     };
 
     // Compile and execute the template
-    const compiledTemplate = this.handlebars.compile(templateWithContent);
+    const compiledTemplate = this.handlebars.compile(template);
     return compiledTemplate(templateData);
   }
 
   /**
-   * Process template with bundle code
+   * Process template with user code
    */
   async process(
     templatePath: string,
-    bundleCode: string,
+    userCode: string,
     sources: Record<string, SourceDestinationItem>,
     destinations: Record<string, SourceDestinationItem>,
     collector: Record<string, unknown>,
+    build?: Record<string, unknown>,
   ): Promise<string> {
     const template = await this.loadTemplate(templatePath);
     return this.applyTemplate(
       template,
-      bundleCode,
+      userCode,
       sources,
       destinations,
       collector,
+      build,
     );
   }
 }

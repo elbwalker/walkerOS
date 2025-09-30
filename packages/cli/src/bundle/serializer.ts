@@ -2,7 +2,8 @@
  * JSON to JavaScript serializer for config objects
  * Converts JSON objects to valid JavaScript code for use in templates
  */
-import { isObject } from '@walkeros/core';
+
+import { isObject } from '../core/config';
 
 export interface SerializerOptions {
   indent?: number;
@@ -139,12 +140,13 @@ export function processTemplateVariables(
 
     for (const [name, source] of Object.entries(sourcesObj)) {
       const typedSource = source as TemplateSource;
+      const { env: _, ...sourceWithoutEnv } = typedSource;
       processedSources[name] = {
-        ...typedSource,
+        ...sourceWithoutEnv,
         config: isObject(typedSource.config)
           ? serializeConfig(typedSource.config)
           : typedSource.config, // Pass through string configs unchanged
-        env: typedSource.env === undefined ? 'undefined' : typedSource.env,
+        ...(typedSource.env !== undefined && { env: typedSource.env }),
       };
     }
 
@@ -158,12 +160,13 @@ export function processTemplateVariables(
 
     for (const [name, dest] of Object.entries(destinationsObj)) {
       const typedDest = dest as TemplateDestination;
+      const { env: _, ...destWithoutEnv } = typedDest;
       processedDestinations[name] = {
-        ...typedDest,
+        ...destWithoutEnv,
         config: isObject(typedDest.config)
           ? serializeConfig(typedDest.config)
           : typedDest.config,
-        env: typedDest.env === undefined ? 'undefined' : typedDest.env,
+        ...(typedDest.env !== undefined && { env: typedDest.env }),
       };
     }
 

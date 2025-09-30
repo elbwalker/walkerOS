@@ -1,7 +1,6 @@
 import path from 'path';
 import fs from 'fs-extra';
-import { isObject } from '@walkeros/core';
-import { loadJsonConfig, createLogger, getTempDir } from '../core';
+import { loadJsonConfig, createLogger, getTempDir, isObject } from '../core';
 import { parseBundleConfig, type BundleConfig } from '../bundle/config';
 import { bundle } from '../bundle/bundler';
 import { executeInVM } from './loader';
@@ -56,12 +55,21 @@ export async function simulate(
 }
 
 /**
- * Simple event parsing - just parse JSON
+ * Parse event input - handles both strings and JSON objects
  */
 export function parseEventInput(eventString: string = ''): unknown {
-  const event = JSON.parse(eventString);
+  if (!eventString) {
+    return {};
+  }
 
-  return isObject(event) ? event : {};
+  // Try to parse as JSON first
+  try {
+    const parsed = JSON.parse(eventString);
+    return isObject(parsed) ? parsed : {};
+  } catch {
+    // If JSON parsing fails, treat as event name string
+    return { name: eventString };
+  }
 }
 
 /**
@@ -90,18 +98,27 @@ export function formatSimulationResult(
 /**
  * Generate bundle code from config (similar to bundle command)
  */
-async function generateBundleCode(config: BundleConfig): Promise<string> {
-  // Create a silent logger for bundle generation
-  const logger = createLogger({ silent: true });
+async function generateBundleCode(
+  config: BundleConfig,
+  silent = false,
+): Promise<string> {
+  // Create a logger for bundle generation - silent in JSON mode
+  const logger = createLogger({ silent });
 
   // Create temporary bundle and return the generated code
   const tempDir = getTempDir();
   const tempOutput = path.join(tempDir, 'simulation-bundle.js');
 
+  // For simulation, we need a template to create proper module structure
+  const packageRoot = process.cwd();
+  const simulationTemplate = path.join(packageRoot, 'templates/base.hbs');
+
   const tempConfig = {
     ...config,
+    template: config.template || simulationTemplate, // Force template for simulation
     build: {
       ...config.build,
+      platform: 'node' as const, // Override platform for Node.js simulation
       format: 'cjs' as const, // Override with CommonJS for simulation
     },
     output: tempOutput,
@@ -114,16 +131,14 @@ async function generateBundleCode(config: BundleConfig): Promise<string> {
     // Read the generated file
     const bundleCode = await fs.readFile(tempOutput, 'utf-8');
 
-    // Transform the IIFE to assign to module.exports for simulation
-    const modifiedCode = bundleCode.replace(
-      /(\(async function\(\) \{[\s\S]+?\}\)\(\));?$/m,
-      'module.exports = $1;',
-    );
+    // The base template with platform=node and format=cjs should already generate
+    // module.exports = (async function() { ... })();
+    // So we can use it directly
 
     // Cleanup temp files
     await fs.remove(tempDir);
 
-    return modifiedCode;
+    return bundleCode;
   } catch (error) {
     // Cleanup on error
     await fs.remove(tempDir).catch(() => {});
@@ -144,7 +159,7 @@ export async function executeSimulation(
     const config = parseBundleConfig(rawConfig);
 
     // Create bundle using the bundle system
-    const bundleCode = await generateBundleCode(config);
+    const bundleCode = await generateBundleCode(config, true); // Always silent for simulation
 
     // The CJS bundle now assigns to module.exports, so we can access it
     const wrappedBundleCode = `

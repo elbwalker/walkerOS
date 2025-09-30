@@ -78,7 +78,7 @@ export async function bundle(
     if (showStats) {
       stats = await collectBundleStats(
         outputPath,
-        packagesArray,
+        config.packages,
         bundleStartTime,
         entryContent,
       );
@@ -107,22 +107,23 @@ async function collectBundleStats(
   const buildTime = Date.now() - startTime;
 
   // Estimate package sizes by analyzing imports in entry content
-  const packageStats = packages.map((pkg) => {
-    const importPattern = new RegExp(`from\\s+['"]${pkg.name}['"]`, 'g');
+  const packageStats = Object.entries(packages).map(([name, pkg]) => {
+    const importPattern = new RegExp(`from\\s+['"]${name}['"]`, 'g');
     const namedImportPattern = new RegExp(
-      `import\\s+\\{[^}]*\\}\\s+from\\s+['"]${pkg.name}['"]`,
+      `import\\s+\\{[^}]*\\}\\s+from\\s+['"]${name}['"]`,
       'g',
     );
     const hasImports =
       importPattern.test(entryContent) || namedImportPattern.test(entryContent);
 
     // Rough estimation: if package is imported, assign proportional size
+    const packagesCount = Object.keys(packages).length;
     const estimatedSize = hasImports
-      ? Math.floor(totalSize / packages.length)
+      ? Math.floor(totalSize / packagesCount)
       : 0;
 
     return {
-      name: `${pkg.name}@${pkg.version}`,
+      name: `${name}@${pkg.version || 'latest'}`,
       size: estimatedSize,
     };
   });
@@ -211,6 +212,11 @@ function createEsbuildOptions(
     baseOptions.target = 'node18';
   } else {
     baseOptions.target = 'es2018';
+  }
+
+  // Set global name for IIFE format
+  if (buildConfig.globalName && buildConfig.format === 'iife') {
+    baseOptions.globalName = buildConfig.globalName;
   }
 
   return baseOptions;
@@ -304,24 +310,40 @@ async function createEntryPoint(
       ? `const examples = {\n${examplesMappings.join(',\n')}\n};\n\n`
       : '';
 
-  // Combine imports with examples object and code
+  // Separate imports from template processing
   const importsCode = importStatements.join('\n');
-  const fullCode = importsCode
-    ? `${importsCode}\n\n${examplesObject}${config.code}`
-    : config.code;
 
-  // Apply template if configured
-  let finalCode = fullCode;
+  // Apply template if configured, otherwise just use code directly
+  let templatedCode: string;
   if (config.template) {
     const templateEngine = new TemplateEngine();
-    finalCode = await templateEngine.process(
+    templatedCode = await templateEngine.process(
       config.template,
-      fullCode,
+      config.code, // Pass user code as parameter
       config.sources || {},
       config.destinations || {},
       config.collector || {},
+      config.build, // Pass build config to template
     );
+  } else {
+    // No template - just use the code directly
+    templatedCode = config.code;
   }
+
+  // Apply module format wrapping if needed
+  let wrappedCode = templatedCode;
+  if (config.build.format === 'cjs') {
+    // Wrap in module.exports for CommonJS
+    wrappedCode = `module.exports = ${templatedCode}`;
+  } else if (config.build.platform === 'browser' && config.build.globalName) {
+    // Assign to window for browser builds with globalName
+    wrappedCode = `window['${config.build.globalName}'] = ${templatedCode}`;
+  }
+
+  // Combine imports with wrapped code
+  const finalCode = importsCode
+    ? `${importsCode}\n\n${wrappedCode}`
+    : wrappedCode;
 
   return finalCode;
 }

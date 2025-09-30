@@ -173,7 +173,8 @@ describe('Serializer', () => {
       };
 
       const result = processTemplateVariables(variables);
-      expect(result.sources?.test?.env).toBe('undefined');
+      expect(result.sources?.test?.env).toBeUndefined();
+      expect('env' in result.sources!.test).toBe(false);
     });
 
     it('should handle collector configuration', () => {

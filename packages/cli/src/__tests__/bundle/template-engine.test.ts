@@ -21,7 +21,7 @@ describe('TemplateEngine', () => {
       const templatePath = path.join(testOutputDir, 'test.hbs');
       await fs.writeFile(
         templatePath,
-        '{{CONTENT}}\nSources: {{#each sources}}{{@key}} {{/each}}\nDestinations: {{#each destinations}}{{@key}} {{/each}}',
+        '{{{CODE}}}\nSources: {{#each sources}}{{@key}} {{/each}}\nDestinations: {{#each destinations}}{{@key}} {{/each}}',
       );
 
       const sources = {
@@ -38,6 +38,7 @@ describe('TemplateEngine', () => {
         sources,
         destinations,
         collector,
+        {}, // build config
       );
 
       expect(result).toContain('console.log("test");');
@@ -47,7 +48,7 @@ describe('TemplateEngine', () => {
 
     it('should replace bundle placeholder', async () => {
       const templatePath = path.join(testOutputDir, 'test.hbs');
-      await fs.writeFile(templatePath, 'Start\n{{CONTENT}}\nEnd');
+      await fs.writeFile(templatePath, 'Start\n{{{CODE}}}\nEnd');
 
       const result = await engine.process(
         templatePath,
@@ -55,6 +56,7 @@ describe('TemplateEngine', () => {
         {},
         {},
         {},
+        {}, // build config
       );
 
       expect(result).toBe('Start\nconst x = 42;\nEnd');
@@ -62,9 +64,9 @@ describe('TemplateEngine', () => {
 
     it('should handle missing variables gracefully', async () => {
       const templatePath = path.join(testOutputDir, 'test.hbs');
-      await fs.writeFile(templatePath, '{{CONTENT}} - {{MISSING}}');
+      await fs.writeFile(templatePath, '{{{CODE}}} - {{MISSING}}');
 
-      const result = await engine.process(templatePath, 'code', {}, {}, {});
+      const result = await engine.process(templatePath, 'code', {}, {}, {}, {});
 
       expect(result).toBe('code - ');
     });
@@ -73,7 +75,7 @@ describe('TemplateEngine', () => {
       const templatePath = path.join(testOutputDir, 'test.hbs');
       await fs.writeFile(
         templatePath,
-        '{{CONTENT}}\n{{#each sources}}Code: {{{code}}}, Config: {{{config}}}\n{{/each}}',
+        '{{{CODE}}}\n{{#each sources}}Code: {{{code}}}, Config: {{{config}}}\n{{/each}}',
       );
 
       const sources = {
@@ -89,6 +91,7 @@ describe('TemplateEngine', () => {
         sources,
         {},
         {},
+        {}, // build config
       );
 
       expect(result).toContain('Code: sourceBrowser');
@@ -102,7 +105,7 @@ describe('TemplateEngine', () => {
       const templatePath = path.join(testOutputDir, 'test.hbs');
       await fs.writeFile(
         templatePath,
-        '{{#each sources}}Source {{@key}}: {{code}}\n{{/each}}{{#each destinations}}Destination {{@key}}: {{code}}\n{{/each}}{{CONTENT}}',
+        '{{#each sources}}Source {{@key}}: {{code}}\n{{/each}}{{#each destinations}}Destination {{@key}}: {{code}}\n{{/each}}{{{CODE}}}',
       );
 
       const sources = {
@@ -133,7 +136,7 @@ describe('TemplateEngine', () => {
       const templatePath = path.join(testOutputDir, 'test.hbs');
       await fs.writeFile(
         templatePath,
-        '{{CONTENT}}{{#if collector}}\nCollector: {{{collector}}}{{/if}}',
+        '{{{CODE}}}{{#if collector}}\nCollector: {{{collector}}}{{/if}}',
       );
 
       const collector = { settings: { debug: true } };
@@ -144,6 +147,7 @@ describe('TemplateEngine', () => {
         {},
         {},
         collector,
+        {}, // build config
       );
 
       expect(result).toContain('const code = 1;');
@@ -153,7 +157,7 @@ describe('TemplateEngine', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should append code when no bundle placeholder found', async () => {
+    it('should handle template without CODE placeholder', async () => {
       const templatePath = path.join(testOutputDir, 'test.hbs');
       await fs.writeFile(templatePath, 'Header only');
 
@@ -163,14 +167,15 @@ describe('TemplateEngine', () => {
         {},
         {},
         {},
+        {}, // build config
       );
 
-      expect(result).toBe('Header only\nconst code = true;');
+      expect(result).toBe('Header only');
     });
 
     it('should handle minimal template content', async () => {
       const templatePath = path.join(testOutputDir, 'test.hbs');
-      await fs.writeFile(templatePath, '{{CONTENT}}');
+      await fs.writeFile(templatePath, '{{{CODE}}}');
 
       const result = await engine.process(
         templatePath,
@@ -178,6 +183,7 @@ describe('TemplateEngine', () => {
         {},
         {},
         {},
+        {}, // build config
       );
 
       expect(result).toBe('just code');
@@ -185,9 +191,9 @@ describe('TemplateEngine', () => {
 
     it('should handle empty bundle code', async () => {
       const templatePath = path.join(testOutputDir, 'test.hbs');
-      await fs.writeFile(templatePath, 'Template: {{CONTENT}}');
+      await fs.writeFile(templatePath, 'Template: {{{CODE}}}');
 
-      const result = await engine.process(templatePath, '', {}, {}, {});
+      const result = await engine.process(templatePath, '', {}, {}, {}, {});
 
       expect(result).toBe('Template: ');
     });

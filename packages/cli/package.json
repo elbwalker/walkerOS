@@ -4,19 +4,8 @@
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "bin": {
-    "walkeros": "./dist/index.cjs"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "default": "./dist/index.js"
-    }
+    "walkeros": "./dist/index.mjs"
   },
   "files": [
     "dist/**",

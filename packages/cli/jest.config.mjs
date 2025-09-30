@@ -17,4 +17,6 @@ export default {
   testTimeout: 30000,
   // Handle JSON modules
   moduleFileExtensions: [...(nodeConfig.moduleFileExtensions || ['js', 'ts', 'tsx', 'mjs']), 'json'],
+  // Transform chalk ESM module
+  transformIgnorePatterns: ['/node_modules/(?!(@walkerOS|chalk)/)'],
 };

@@ -22,6 +22,32 @@ export async function executeInVM(
     (window as typeof window & { global: typeof window }).global = window;
     const context = vm.createContext(window);
 
+    // Mock Performance API for browser code compatibility
+    const performanceStartTime = Date.now();
+    Object.defineProperty(context, 'performance', {
+      value: {
+        now: () => Date.now() - performanceStartTime,
+        getEntriesByType: (type: string) => {
+          if (type === 'navigation') {
+            return [
+              {
+                type: 'navigate', // Default to 'navigate' type for new sessions
+                redirectCount: 0,
+                duration: 100,
+              },
+            ];
+          }
+          return [];
+        },
+        mark: () => {},
+        measure: () => {},
+        clearMarks: () => {},
+        clearMeasures: () => {},
+      },
+      writable: false,
+      configurable: true,
+    });
+
     // Inject functions into VM context
     context.createApiTracker = createApiTracker;
     context.logApiUsage = logApiUsage;

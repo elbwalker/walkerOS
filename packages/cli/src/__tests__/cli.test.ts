@@ -24,7 +24,7 @@ describe('CLI Bundle Command', () => {
     args: string[],
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
     return new Promise((resolve) => {
-      const child = spawn('node', ['dist/index.cjs', ...args], {
+      const child = spawn('node', ['dist/index.mjs', ...args], {
         stdio: 'pipe',
         shell: false,
       });
@@ -210,7 +210,7 @@ describe('CLI Simulate Command', () => {
     args: string[],
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
     return new Promise((resolve) => {
-      const child = spawn('node', ['dist/index.cjs', ...args], {
+      const child = spawn('node', ['dist/index.mjs', ...args], {
         stdio: 'pipe',
         shell: false,
       });
