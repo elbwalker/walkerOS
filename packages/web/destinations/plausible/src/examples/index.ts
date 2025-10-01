@@ -1,7 +1,3 @@
-import * as events from './events';
-import * as mapping from './mapping';
-
-export const destinationPlausibleExamples = {
-  events,
-  mapping
-};
+export * as env from './env';
+export * as events from './events';
+export * as mapping from './mapping';

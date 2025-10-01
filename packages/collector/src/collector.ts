@@ -1,25 +1,20 @@
 import type { Collector, WalkerOS, Elb } from '@walkeros/core';
-import type { CreateCollector, CollectorConfig } from './types';
+import type { CreateCollector } from './types';
 import { assign, onLog } from '@walkeros/core';
 import { commonHandleCommand } from './handle';
 import { initDestinations, createPush } from './destination';
 import { initSources } from './source';
 
 export async function createCollector<
-  TConfig extends Partial<CollectorConfig> = Partial<CollectorConfig>,
+  TConfig extends Partial<Collector.Config> = Partial<Collector.Config>,
 >(initConfig: TConfig = {} as TConfig): Promise<CreateCollector> {
-  const instance = collector(initConfig);
-  const { consent, user, globals, custom, sources } = initConfig;
+  const instance = await collector(initConfig);
+  const { consent, user, globals, custom } = initConfig;
 
   if (consent) await instance.push('walker consent', consent);
   if (user) await instance.push('walker user', user);
   if (globals) Object.assign(instance.globals, globals);
   if (custom) Object.assign(instance.custom, custom);
-
-  // Initialize sources if provided
-  if (sources) {
-    await initSources(instance, sources);
-  }
 
   if (instance.config.run) await instance.push('walker run');
 
@@ -29,8 +24,12 @@ export async function createCollector<
   };
 }
 
-function collector(initConfig: Partial<CollectorConfig>): Collector.Instance {
-  const { version } = require('../package.json');
+declare const __VERSION__: string;
+
+async function collector(
+  initConfig: Partial<Collector.Config>,
+): Promise<Collector.Instance> {
+  const version = __VERSION__;
 
   const defaultConfig: Collector.Config = {
     globalsStatic: {},
@@ -39,6 +38,7 @@ function collector(initConfig: Partial<CollectorConfig>): Collector.Instance {
     verbose: false,
     onLog: log,
     run: true,
+    sources: {},
     destinations: {},
     consent: {},
     user: {},
@@ -65,7 +65,7 @@ function collector(initConfig: Partial<CollectorConfig>): Collector.Instance {
     consent: config.consent || {},
     count: 0,
     custom: config.custom || {},
-    destinations: initDestinations(config.destinations || {}),
+    destinations: {},
     globals: finalGlobals,
     group: '',
     hooks: {},
@@ -90,6 +90,13 @@ function collector(initConfig: Partial<CollectorConfig>): Collector.Instance {
         source: { type: 'collector', id: '', previous_id: '' },
         ...event,
       }) as WalkerOS.PartialEvent,
+  );
+
+  // Initialize sources and destinations after collector is fully created
+  collector.sources = await initSources(collector, config.sources);
+  collector.destinations = await initDestinations(
+    collector,
+    config.destinations,
   );
 
   return collector;

@@ -22,6 +22,10 @@ const preview: Preview = {
         },
       },
     },
+    walkerOS: {
+      prefix: 'data-elb',
+      autoRefresh: true,
+    },
   },
   globalTypes: {
     theme: {

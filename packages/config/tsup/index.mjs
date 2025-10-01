@@ -1,4 +1,6 @@
 import { defineConfig } from 'tsup';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 const baseConfig = {
   entry: ['src/index.ts'],
@@ -7,19 +9,35 @@ const baseConfig = {
 };
 
 // Modules
-const buildModules = (customConfig = {}) => ({
-  ...baseConfig,
-  clean: true,
-  format: ['cjs', 'esm'],
-  outExtension({ format }) {
-    return { js: format === 'esm' ? '.mjs' : '.js' };
-  },
-  dts: true,
-  sourcemap: true,
-  declaration: true,
-  declarationMap: true,
-  ...customConfig,
-});
+const buildModules = (customConfig = {}) => {
+  // Auto-inject package version
+  let version = '0.0.0';
+  try {
+    const packagePath = resolve(process.cwd(), 'package.json');
+    const pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
+    version = pkg.version || '0.0.0';
+  } catch (error) {
+    console.warn('Could not read package.json for version injection:', error.message);
+  }
+
+  return {
+    ...baseConfig,
+    clean: true,
+    format: ['cjs', 'esm'],
+    outExtension({ format }) {
+      return { js: format === 'esm' ? '.mjs' : '.js' };
+    },
+    dts: true,
+    sourcemap: true,
+    declaration: true,
+    declarationMap: true,
+    define: {
+      __VERSION__: JSON.stringify(version),
+      ...customConfig.define,
+    },
+    ...customConfig,
+  };
+};
 
 // Examples
 const buildExamples = (customConfig = {}) => ({

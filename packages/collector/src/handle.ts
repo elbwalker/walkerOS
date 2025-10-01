@@ -51,7 +51,7 @@ export async function commonHandleCommand(
       if (isObject(data) && isFunction(data.push)) {
         result = await addDestination(
           collector,
-          data as Destination.Init,
+          { code: data as unknown as Destination.Instance },
           options as Destination.Config,
         );
       }
@@ -76,8 +76,16 @@ export async function commonHandleCommand(
       }
       break;
 
+    case Const.Commands.Ready:
+      onApply(collector, 'ready');
+      break;
+
     case Const.Commands.Run:
       result = await runCollector(collector, data as RunState);
+      break;
+
+    case Const.Commands.Session:
+      onApply(collector, 'session');
       break;
 
     case Const.Commands.User:

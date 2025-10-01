@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/jest",
-  "version": "0.0.8",
+  "version": "0.0.10",
   "private": true,
   "license": "MIT",
   "main": "./src/index.mjs",

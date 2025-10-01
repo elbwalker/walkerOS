@@ -15,6 +15,7 @@ export interface Instance<Settings = unknown, Mapping = unknown> {
   init?: InitFn<Settings, Mapping>;
   push: PushFn<Settings, Mapping>;
   pushBatch?: PushBatchFn<Settings, Mapping>;
+  on?: On.OnFn;
 }
 
 export interface Config<Settings = unknown, Mapping = unknown> {
@@ -26,7 +27,6 @@ export interface Config<Settings = unknown, Mapping = unknown> {
   init?: boolean; // If the destination has been initialized by calling the init method
   loadScript?: boolean; // If an additional script to work should be loaded
   mapping?: WalkerOSMapping.Rules<WalkerOSMapping.Rule<Mapping>>; // A map to handle events individually
-  on?: On.Config; // On events listener rules
   policy?: Policy; // Rules for processing events
   queue?: boolean; // Disable processing of previously pushed events
   verbose?: boolean; // Enable verbose logging
@@ -43,18 +43,15 @@ export interface Policy {
   [key: string]: WalkerOSMapping.Value;
 }
 
-export type Init = Partial<Omit<Instance, 'push'>> & Pick<Instance, 'push'>;
-
-export type InitDestination<Settings = unknown, Mapping = unknown> = Omit<
-  Instance<Settings, Mapping>,
-  'config'
-> & {
-  config?: Config<Settings, Mapping>;
+export type Init<Settings = unknown, Mapping = unknown> = {
+  code: Instance<Settings, Mapping>;
+  config?: Partial<Config<Settings, Mapping>>;
+  env?: Partial<Environment>;
 };
 
 export interface InitDestinations {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: InitDestination<any, any>;
+  [key: string]: Init<any, any>;
 }
 
 export interface Destinations {

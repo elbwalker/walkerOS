@@ -2,9 +2,9 @@ import type { WalkerOS } from '@walkeros/core';
 import type { DestinationPiwikPro } from '.';
 import { createCollector } from '@walkeros/collector';
 import { getEvent } from '@walkeros/core';
-import { destinationPiwikProExamples } from './examples';
+import { examples } from '.';
 
-const { events, mapping } = destinationPiwikProExamples;
+const { events, mapping } = examples;
 
 describe('Destination PiwikPro', () => {
   let elb: WalkerOS.Elb;
@@ -51,11 +51,12 @@ describe('Destination PiwikPro', () => {
   afterEach(() => {});
 
   test('init', async () => {
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: { settings },
-    });
+    };
+
+    elb('walker destination', destinationWithEnv, { settings });
 
     expect(true).toBeTruthy(); // @TODO: Add tests
   });
@@ -63,14 +64,18 @@ describe('Destination PiwikPro', () => {
   test('pageview', async () => {
     const page_view = getEvent('page view');
     const mockFnIgnorePageView = jest.fn();
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: { settings },
-    });
-    elb('walker destination', {
+    };
+    const ignoreDestination = {
       push: mockFnIgnorePageView,
-      config: { mapping: { page: { view: { ignore: true } } } },
+      config: {},
+    };
+
+    elb('walker destination', destinationWithEnv, { settings });
+    elb('walker destination', ignoreDestination, {
+      mapping: { page: { view: { ignore: true } } },
     });
 
     await elb(page_view);
@@ -89,13 +94,13 @@ describe('Destination PiwikPro', () => {
 
   test('event ecommerceOrder', async () => {
     const event = getEvent('order complete');
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        settings,
-        mapping: mapping.config,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      settings,
+      mapping: mapping.config,
     });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceOrder());
@@ -103,13 +108,13 @@ describe('Destination PiwikPro', () => {
 
   test('event ecommerceAddToCart', async () => {
     const event = getEvent('product add');
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        settings,
-        mapping: mapping.config,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      settings,
+      mapping: mapping.config,
     });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceAddToCart());
@@ -117,13 +122,13 @@ describe('Destination PiwikPro', () => {
 
   test('event ecommerceProductDetailView', async () => {
     const event = getEvent('product view');
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        settings,
-        mapping: mapping.config,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      settings,
+      mapping: mapping.config,
     });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceProductDetailView());
@@ -131,13 +136,13 @@ describe('Destination PiwikPro', () => {
 
   test('event ecommerceCartUpdate', async () => {
     const event = getEvent('cart view');
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        settings,
-        mapping: mapping.config,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      settings,
+      mapping: mapping.config,
     });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(...events.ecommerceCartUpdate());

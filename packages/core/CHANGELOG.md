@@ -1,5 +1,17 @@
 # @walkeros/core
 
+## 0.1.2
+
+### Patch Changes
+
+- a0ced16: env
+
+## 0.1.1
+
+### Patch Changes
+
+- flow
+
 ## 0.1.0
 
 ### Minor Changes

@@ -1,6 +1,6 @@
 import { addScript, initializeGtag, resetLoadedScripts } from '../shared/gtag';
 import { getParamsInclude } from '../shared/parameters';
-import { normalizeEventName } from '../shared/mapping';
+import { normalizeEventName, getData } from '../shared/mapping';
 
 // Setup DOM mocks
 const mockScript = { src: '' };
@@ -59,7 +59,7 @@ describe('Shared Utilities', () => {
     it('should initialize dataLayer if not exists', () => {
       delete (window as any).dataLayer;
 
-      initializeGtag();
+      initializeGtag(window);
 
       expect((window as any).dataLayer).toEqual([]);
     });
@@ -68,13 +68,13 @@ describe('Shared Utilities', () => {
       const existingData = [{ test: 'data' }];
       (window as any).dataLayer = existingData;
 
-      initializeGtag();
+      initializeGtag(window);
 
       expect((window as any).dataLayer).toBe(existingData);
     });
 
     it('should create gtag function if not exists', () => {
-      initializeGtag();
+      initializeGtag(window);
 
       expect(typeof (window as any).gtag).toBe('function');
     });
@@ -83,7 +83,7 @@ describe('Shared Utilities', () => {
       const existingGtag = jest.fn();
       (window as any).gtag = existingGtag;
 
-      initializeGtag();
+      initializeGtag(window);
 
       expect((window as any).gtag).toBe(existingGtag);
     });
@@ -156,6 +156,25 @@ describe('Shared Utilities', () => {
     it('should handle single words', () => {
       expect(normalizeEventName('purchase')).toBe('purchase');
       expect(normalizeEventName('PURCHASE')).toBe('purchase');
+    });
+  });
+
+  describe('getData', () => {
+    it('should merge data with proper priority', async () => {
+      const mockEvent = { name: 'test', data: {} } as WalkerOS.Event;
+      const baseData = { id: 'product-1' };
+      const config = {};
+      const toolSettings = undefined;
+      const mockCollector = {} as Collector.Instance;
+
+      const result = await getData(
+        mockEvent,
+        baseData,
+        config,
+        toolSettings,
+        mockCollector,
+      );
+      expect(result.id).toBe('product-1');
     });
   });
 });

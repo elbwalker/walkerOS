@@ -2,10 +2,10 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
 import { getEvent } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
-import { destinationMetaExamples } from '../examples';
+import { examples } from '../';
 import { hashEvent } from '../hash';
 
-const { events, mapping } = destinationMetaExamples;
+const { events, mapping } = examples;
 
 describe('Server Destination Meta', () => {
   let destination: Destination;
@@ -195,11 +195,11 @@ describe('Server Destination Meta', () => {
 
     const { elb } = await createCollector();
 
-    await elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config,
-    });
+    };
+    await elb('walker destination', destinationWithEnv, config);
     const result = await elb(event);
 
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
@@ -242,11 +242,11 @@ describe('Server Destination Meta', () => {
     };
 
     const { elb } = await createCollector();
-    await elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config,
-    });
+    };
+    await elb('walker destination', destinationWithEnv, config);
     const result = await elb(event);
 
     expect(result.successful).toHaveLength(1);

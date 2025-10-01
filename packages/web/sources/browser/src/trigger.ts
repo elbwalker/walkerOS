@@ -50,20 +50,12 @@ export const Triggers: { [key: string]: Walker.Trigger } = {
 } as const;
 
 export async function ready(
-  fn: (collector: Collector.Instance, settings: Settings) => void,
-  collector: Collector.Instance,
+  fn: (context: Context, settings: Settings) => void,
+  context: Context,
   settings: Settings,
 ): Promise<void> {
   const readyFn = () => {
-    fn(collector, settings);
-    // Only call onApply if collector has the on property
-    if (collector?.on) {
-      try {
-        onApply(collector, 'ready');
-      } catch (error) {
-        // Don't throw - this is not critical for functionality
-      }
-    }
+    fn(context, settings);
   };
 
   if (document.readyState !== 'loading') {
@@ -74,27 +66,24 @@ export async function ready(
 }
 
 // Called once during source initialization to setup global listeners
-export function initTriggers(
-  collector: Collector.Instance,
-  settings: Required<Settings>,
-) {
-  initGlobalTrigger(collector, settings);
+export function initTriggers(context: Context, settings: Settings) {
+  if (!settings.scope) return; // Skip if no scope available
+  const requiredSettings = settings as Required<Settings>;
+  initGlobalTrigger(context, requiredSettings);
 }
 
 // Called on each walker run to process load triggers
-export function processLoadTriggers(
-  collector: Collector.Instance,
-  settings: Required<Settings>,
-) {
-  initScopeTrigger(collector, settings);
+export function processLoadTriggers(context: Context, settings: Settings) {
+  if (!settings.scope) return; // Skip if no scope available
+  const requiredSettings = settings as Required<Settings>;
+  initScopeTrigger(context, requiredSettings);
 }
 
-export function initGlobalTrigger(
-  collector: Collector.Instance,
-  settings: Settings,
-): void {
+export function initGlobalTrigger(context: Context, settings: Settings): void {
   const scope = settings.scope;
-  const context: Context = { collector, settings };
+
+  if (!scope) return;
+
   scope.addEventListener(
     'click',
     tryCatch(function (this: Scope, ev: unknown) {
@@ -109,20 +98,17 @@ export function initGlobalTrigger(
   );
 }
 
-export function initScopeTrigger(
-  collector: Collector.Instance,
-  settings: Settings,
-) {
+export function initScopeTrigger(context: Context, settings: Settings) {
   const elem = settings.scope;
 
   // Reset all scroll events @TODO check if it's right here
   scrollElements = [];
 
   // Clean up any existing visibility tracking to prevent observer accumulation
-  destroyVisibilityTracking(collector);
-
-  // Initialize visibility tracking for this collector
-  initVisibilityTracking(collector, 1000);
+  const scope = elem || document;
+  destroyVisibilityTracking(scope);
+  // Initialize visibility tracking for this scope
+  initVisibilityTracking(scope, 1000);
 
   // default data-elbaction
   const selectorAction = getElbAttributeName(
@@ -130,21 +116,19 @@ export function initScopeTrigger(
     Const.Commands.Action,
     false,
   );
-
-  const scope = elem || document;
   if (scope !== document) {
     // Handle the elements action(s), too
-    handleActionElem(collector, scope as HTMLElement, selectorAction, settings);
+    handleActionElem(context, scope as HTMLElement, selectorAction, settings);
   }
 
   // Handle all children action(s)
   const elements = scope.querySelectorAll<HTMLElement>(`[${selectorAction}]`);
 
   elements.forEach((elem) => {
-    handleActionElem(collector, elem, selectorAction, settings);
+    handleActionElem(context, elem, selectorAction, settings);
   });
 
-  if (scrollElements.length) scroll(collector, scope, settings);
+  if (scrollElements.length) scroll(context, scope, settings);
 }
 
 export async function handleTrigger(
@@ -166,7 +150,7 @@ export async function handleTrigger(
 }
 
 function handleActionElem(
-  collector: Collector.Instance,
+  context: Context,
   elem: HTMLElement,
   selectorAction: string,
   settings: Settings,
@@ -174,8 +158,6 @@ function handleActionElem(
   const actionAttr = getAttribute(elem, selectorAction);
 
   if (!actionAttr) return;
-
-  const context: Context = { collector, settings };
 
   // TriggersActionGroups ([trigger: string]: TriggerActions)
   Object.values(getTriggerActions(actionAttr)).forEach((triggerActions) =>
@@ -268,13 +250,7 @@ function triggerWait(
   );
 }
 
-function scroll(
-  collector: Collector.Instance,
-  scope: Scope,
-  settings: Settings,
-) {
-  const context: Context = { collector, settings };
-
+function scroll(context: Context, scope: Scope, settings: Settings) {
   const scrolling = (
     scrollElements: Walker.ScrollElements,
     context: Context,

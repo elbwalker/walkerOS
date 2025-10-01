@@ -1,8 +1,7 @@
 import type { DestinationServer, Elb } from '../types';
-import type { WalkerOS } from '@walkeros/core';
+import type { WalkerOS, Collector } from '@walkeros/core';
 import { createEvent } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
-import type { CollectorConfig } from '@walkeros/collector';
 
 describe('Server Collector', () => {
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
@@ -15,9 +14,13 @@ describe('Server Collector', () => {
   let mockEvent: WalkerOS.Event;
   let result: Elb.PushResult;
 
-  async function getCollector(config?: Partial<CollectorConfig>) {
+  async function getCollector(config?: Partial<Collector.Config>) {
     const finalConfig = config || {
-      destinations: { mock: mockDestination },
+      destinations: {
+        mock: {
+          code: mockDestination,
+        },
+      },
     };
 
     const { elb, collector } = await createCollector(finalConfig);
@@ -56,6 +59,7 @@ describe('Server Collector', () => {
         queue: [],
         dlq: [],
         push: mockDestinationPush,
+        env: {},
       },
     });
   });
@@ -73,7 +77,18 @@ describe('Server Collector', () => {
     expect(result).toEqual({
       ok: true,
       event: mockEvent,
-      successful: [{ id: 'mock', destination: mockDestination }],
+      successful: [
+        {
+          id: 'mock',
+          destination: expect.objectContaining({
+            config: mockDestination.config,
+            push: mockDestination.push,
+            queue: mockDestination.queue,
+            dlq: mockDestination.dlq,
+            env: expect.any(Object),
+          }),
+        },
+      ],
       queued: [],
       failed: [],
     });
@@ -81,7 +96,7 @@ describe('Server Collector', () => {
 
   test('push event', async () => {
     const { elb } = await getCollector({
-      destinations: { mock: mockDestination },
+      destinations: { mock: { code: mockDestination } },
       globalsStatic: { glow: 'balls' },
       user: { id: 'us3r1d' },
       consent: { test: true },

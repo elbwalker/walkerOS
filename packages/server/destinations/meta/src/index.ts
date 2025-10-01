@@ -7,7 +7,7 @@ import { sendServer } from '@walkeros/server-core';
 export * as DestinationMeta from './types';
 
 // Examples
-export * as destinationMetaExamples from './examples';
+export * as examples from './examples';
 
 export const destinationMeta: Destination = {
   type: 'meta',

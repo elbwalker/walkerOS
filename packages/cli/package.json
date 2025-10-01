@@ -1,0 +1,50 @@
+{
+  "name": "@walkeros/cli",
+  "version": "0.1.0",
+  "description": "walkerOS CLI - Bundle and deploy walkerOS components",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "walkeros": "./dist/index.mjs"
+  },
+  "files": [
+    "dist/**",
+    "templates/**",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "test": "jest --colors",
+    "lint": "tsc && eslint \"**/*.ts*\"",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage && rm -rf .temp"
+  },
+  "dependencies": {
+    "@walkeros/core": "^0.1.2",
+    "chalk": "^5.3.0",
+    "commander": "^11.0.0",
+    "esbuild": "^0.19.0",
+    "fs-extra": "^11.0.0",
+    "handlebars": "^4.7.8",
+    "jsdom": "^22.1.0",
+    "pacote": "^17.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.0",
+    "@types/jsdom": "^21.1.0",
+    "@types/pacote": "^11.1.5",
+    "@walkeros/tsconfig": "*",
+    "@walkeros/tsup": "*",
+    "@walkeros/jest": "*",
+    "tsx": "^4.0.0"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/cli"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme"
+}

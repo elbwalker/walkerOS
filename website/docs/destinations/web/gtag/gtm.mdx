@@ -8,6 +8,13 @@ package: '@walkeros/web-destination-gtag'
 
 import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { getEvent } from '@walkeros/core';
+import {
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationGtag from '@walkeros/web-destination-gtag';
+import { examples } from '@walkeros/web-destination-gtag';
 
 # Google Tag Manager (GTM)
 
@@ -17,9 +24,8 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
   npm="@walkeros/web-destination-gtag"
 />
 
-Google Tag Manager (GTM) configuration within the unified gtag destination. This
-allows you to send events to your GTM container for advanced tag management and
-third-party integrations.
+[Google Tag Manager (GTM)](https://tagmanager.google.com/) is a tool to manage
+and add third-party integrations to your website.
 
 ## Installation
 

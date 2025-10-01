@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from '@docusaurus/Link';
 
-export default function SupportNotice(): JSX.Element {
+export default function SupportNotice(): React.JSX.Element {
   return (
     <div
       className="alert alert--info"

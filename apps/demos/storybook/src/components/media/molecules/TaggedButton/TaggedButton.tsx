@@ -20,6 +20,7 @@ export const TaggedButton = ({
       },
       dataElb,
     ),
+    'TaggedButton',
   );
 
   return (

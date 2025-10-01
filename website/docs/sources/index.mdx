@@ -92,6 +92,41 @@ Every source follows the same pattern:
 2. **Add sources** using `createSource` with the source type and configuration
 3. **Use the returned `elb` function** to trigger events manually when needed
 
+## Advanced Source Configuration
+
+### Reactive Event Handling
+
+Sources can implement an optional `on` method to react to collector events. This enables responsive behavior to consent changes, session updates, and collector state without polling.
+
+```typescript
+const mySource: Source.Init = async (config, env) => {
+  return {
+    type: 'custom',
+    config,
+    on: async (event, context) => {
+      switch (event) {
+        case 'consent':
+          // React to consent changes
+          handleConsentUpdate(context);
+          break;
+        case 'session':
+          // React to session events  
+          updateSessionBehavior(context);
+          break;
+      }
+    },
+  };
+};
+```
+
+**Available Events:**
+- `consent` - Consent state changes (context: consent object)
+- `session` - Session lifecycle events (context: session data)
+- `ready` - Collector ready state  
+- `run` - Collector run events
+
+This keeps sources stateless and reactive to collector changes.
+
 ## Next Steps
 
 Choose the source that matches your environment for more details:

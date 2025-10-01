@@ -8,6 +8,22 @@ package: '@walkeros/web-destination-meta'
 
 import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { getEvent } from '@walkeros/core';
+import {
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationMetaPixel from '@walkeros/web-destination-meta';
+import { examples } from '@walkeros/web-destination-meta';
+
+export const documentationMetaPixel = {
+  ...destinationMetaPixel,
+  env: {
+    window: {
+      fbq: () => {},
+    },
+  },
+};
 
 # Meta Pixel
 
@@ -17,8 +33,12 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
   npm="@walkeros/web-destination-meta"
 />
 
-Send events to Meta Pixel (formerly Facebook Pixel) to track visitor activity
-and conversions for Facebook and Instagram advertising campaigns.
+[Meta Pixel (formerly Facebook Pixel)](https://developers.facebook.com/docs/meta-pixel/)
+tracks visitor activity and conversions for Facebook and Instagram advertising
+campaigns. The destination automatically sends events to Meta Pixel via `fbq`
+function. All you need to do is install the destination, and optionally map
+events to Meta's format. walkerOS takes care of loading the script and the
+function calls.
 
 ## Installation
 
@@ -32,13 +52,18 @@ npm install @walkeros/web-destination-meta
 import { createCollector } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/web-destination-meta';
 
-const { elb } = await createCollector();
-
-elb('walker destination', destinationMeta, {
-  settings: {
-    pixelId: '1234567890', // Your Meta Pixel ID
+const { collector, elb } = await createCollector({
+  destinations: {
+    meta: {
+      code: destinationMeta,
+      config: {
+        settings: {
+          pixelId: '1234567890', // Your Meta Pixel ID
+        },
+        loadScript: true, // Load Meta Pixel script automatically
+      },
+    },
   },
-  loadScript: true, // Load Meta Pixel script automatically
 });
 ```
 
@@ -62,4 +87,81 @@ elb('walker destination', destinationMeta, {
       example: 'true',
     },
   ]}
+/>
+
+#### Example
+
+<DestinationInit
+  destination={destinationMetaPixel}
+  custom={{
+    pixelId: '1234567890',
+  }}
+/>
+
+## Mapping examples
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+Learn more aboot
+[Meta Pixel's Standard-Events.](https://developers.facebook.com/docs/meta-pixel/reference#standard-events)
+
+### ViewContent
+
+<DestinationPush
+  destination={documentationMetaPixel}
+  settings={{
+    pixelId: '1234567890',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product view')}
+  mapping={examples.mapping.ViewContent}
+  generic={true}
+/>
+
+### AddToCart
+
+<DestinationPush
+  destination={documentationMetaPixel}
+  settings={{
+    pixelId: '1234567890',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product add')}
+  mapping={examples.mapping.AddToCart}
+  generic={true}
+/>
+
+### InitiateCheckout
+
+<DestinationPush
+  destination={documentationMetaPixel}
+  settings={{
+    pixelId: '1234567890',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('cart view')}
+  mapping={examples.mapping.InitiateCheckout}
+  generic={true}
+/>
+
+### Purchase
+
+<DestinationPush
+  destination={documentationMetaPixel}
+  settings={{
+    pixelId: '1234567890',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('order complete')}
+  mapping={examples.mapping.Purchase}
+  generic={true}
 />

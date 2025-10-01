@@ -31,7 +31,12 @@ export const Preview: FC<PreviewProps> = ({
 
   const initPreview = useCallback(
     debounce(
-      (elem: HTMLElement) => window.elb('walker init', elem),
+      (elem: HTMLElement) => {
+        // The new API uses 'walker init' with a scope property
+        if (window.elb) {
+          window.elb('walker init', { scope: elem });
+        }
+      },
       1000,
       true,
     ),

@@ -26,6 +26,10 @@ interface Destination<Settings = unknown> {
   push: PushFn<Settings>;
   type?: string;
   init?: InitFn<Settings>;
+  on?(
+    event: 'consent' | 'session' | 'ready' | 'run',
+    context?: unknown,
+  ): void | Promise<void>;
 }
 ```
 
@@ -79,6 +83,40 @@ export const destinationWebhook: Destination<WebhookSettings> = {
 };
 ```
 
+## The `on` method (Optional)
+
+The optional `on` method allows your destination to respond to collector
+lifecycle events. This is useful for handling consent changes, session
+management, or cleanup tasks.
+
+### Available Events
+
+- **`consent`** - Called when user consent changes, with consent state as
+  context
+- **`session`** - Called when a new session starts, with session data as context
+- **`ready`** - Called when the collector is ready to process events
+- **`run`** - Called when the collector starts or resumes processing
+
+### Example: Consent-Aware Destination
+
+```typescript
+export const destinationWithConsent: Destination<WebhookSettings> = {
+  type: 'webhook-consent',
+  config: {},
+
+  on(event, context) {
+    if (event === 'consent') {
+      console.log('Consent updated:', context);
+      // React to consent changes - maybe clear cookies if consent withdrawn
+    }
+  },
+
+  push(event, { config }) {
+    console.log('Event:', event);
+  },
+};
+```
+
 ## Using your destination
 
 To use your custom destination, add it to the `destinations` object in your
@@ -100,6 +138,58 @@ const { elb } = await createCollector({
     },
   },
 });
+```
+
+## Advanced Example: Session Management
+
+Here's a more advanced example that demonstrates session handling and cleanup:
+
+```typescript
+export const destinationWithSession: Destination<WebhookSettings> = {
+  type: 'webhook-session',
+  config: {},
+
+  on(event, context) {
+    switch (event) {
+      case 'session':
+        // New session started
+        console.log('New session:', context);
+        // Could initialize session-specific tracking
+        break;
+
+      case 'consent':
+        // Handle consent changes
+        const consent = context as { marketing?: boolean; analytics?: boolean };
+        if (!consent?.marketing) {
+          // Clear marketing-related data if consent withdrawn
+          console.log('Marketing consent withdrawn, clearing data');
+        }
+        break;
+
+      case 'ready':
+        // Collector is ready
+        console.log('Starting destination services');
+        break;
+
+      case 'run':
+        // Collector resumed processing
+        console.log('Collector resumed, processing queued events');
+        break;
+    }
+  },
+
+  push(event, { config }) {
+    // Regular event processing
+    const { settings } = config;
+    if (!settings?.url) return;
+
+    fetch(settings.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    }).catch(console.error);
+  },
+};
 ```
 
 ## TypeScript Integration

@@ -55,18 +55,31 @@ npm install @walkeros/collector
 
 ```typescript
 import { createCollector } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
 
-const config = {
+const { collector, elb } = await createCollector({
   run: true,
   consent: { functional: true },
-  sources: [
-    // add your event sources
-  ]
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          pageview: true,
+          session: true,
+        },
+      },
+    },
   },
-};
-
-const { collector, elb } = await createCollector(config);
-
+  destinations: {
+    console: {
+      code: {
+        type: 'console',
+        push: (event) => console.log('Event:', event),
+      },
+    },
+  },
+});
 ```
 
 ## Configuration reference
@@ -83,18 +96,18 @@ const { collector, elb } = await createCollector(config);
     },
     {
       name: 'sources',
-      type: 'array',
+      type: 'object',
       description:
         'Configurations for sources providing events to the collector',
       required: false,
-      example: '[{ source, config }]',
+      example: '{ browser: { code: sourceBrowser, config: {...} } }',
     },
     {
       name: 'destinations',
-      type: 'array',
+      type: 'object',
       description: 'Configurations for destinations receiving processed events',
       required: false,
-      example: '[{ destination, config }]',
+      example: '{ gtag: { code: destinationGtag, config: {...} } }',
     },
     {
       name: 'consent',
@@ -132,16 +145,33 @@ const { collector, elb } = await createCollector(config);
 
 ```typescript
 import { createCollector } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await createCollector({
   run: true,
   consent: { functional: true },
-  sources: [
-    // add your event sources
-  ],
-  destinations: [
-    // add your event destinations
-  ],
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          pageview: true,
+          session: true,
+        },
+      },
+    },
+  },
+  destinations: {
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://analytics.example.com/events',
+        },
+      },
+    },
+  },
   verbose: true,
   onError: (error: unknown) => {
     console.error('Collector error:', error);

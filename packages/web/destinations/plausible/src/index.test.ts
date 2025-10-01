@@ -1,40 +1,51 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { DestinationPlausible } from '.';
+import type { DestinationWeb } from '@walkeros/web-core';
 import { createCollector } from '@walkeros/collector';
-import { getEvent } from '@walkeros/core';
-import { destinationPlausibleExamples } from './examples';
+import { getEvent, mockEnv } from '@walkeros/core';
+import { examples } from '.';
 
-const { events, mapping } = destinationPlausibleExamples;
+const { events, mapping } = examples;
 
 describe('destination plausible', () => {
   let elb: WalkerOS.Elb;
   let destination: DestinationPlausible.Destination;
 
-  const mockFn = jest.fn(); //.mockImplementation(console.log);
+  let calls: Array<{ path: string[]; args: unknown[] }>;
+  let testEnv: DestinationWeb.Environment;
+  let createElementMock: jest.Mock;
+  let appendChildMock: jest.Mock;
 
   const event = getEvent();
   const script = 'https://plausible.io/js/script.manual.js';
-
-  const testEnv = {
-    window: {
-      plausible: mockFn,
-    },
-    document: {
-      createElement: jest.fn(() => ({
-        src: '',
-        dataset: {},
-        setAttribute: jest.fn(),
-        removeAttribute: jest.fn(),
-      })),
-      head: { appendChild: jest.fn() },
-      querySelector: jest.fn(),
-    },
-  };
 
   beforeEach(async () => {
     destination = jest.requireActual('.').default;
 
     jest.clearAllMocks();
+    calls = [];
+
+    // Set up Jest mocks
+    createElementMock = jest.fn(() => ({
+      src: '',
+      dataset: {},
+      setAttribute: jest.fn(),
+      removeAttribute: jest.fn(),
+    }));
+    appendChildMock = jest.fn();
+
+    // Create test environment using example env with call interceptor
+    testEnv = mockEnv(examples.env.standard, (path, args) => {
+      calls.push({ path, args });
+    });
+
+    // Replace document methods with Jest mocks after proxy creation
+    if (testEnv.document) {
+      testEnv.document.createElement = createElementMock;
+      (testEnv.document.head as { appendChild: jest.Mock }).appendChild =
+        appendChildMock;
+      testEnv.document.querySelector = jest.fn();
+    }
 
     ({ elb } = await createCollector({
       tagging: 2,
@@ -44,38 +55,45 @@ describe('destination plausible', () => {
   afterEach(() => {});
 
   test('init', async () => {
-    // Environment without plausible initially
-    const initEnv = {
-      ...testEnv,
-      window: { plausible: undefined },
-    };
+    // Use init environment where plausible is undefined
+    const initEnv = examples.env.init;
+    expect(initEnv?.window.plausible).not.toBeDefined();
 
-    expect(initEnv.window.plausible).not.toBeDefined();
-
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: initEnv,
-      config: {},
-    });
+    };
+    elb('walker destination', destinationWithEnv, {});
 
     await elb(event);
     // After init() is called, plausible should be defined
-    expect(initEnv.window.plausible).toBeDefined();
+    expect(initEnv?.window.plausible).toBeDefined();
   });
 
   test('init with script load', async () => {
-    elb('walker destination', {
+    // For now, skip complex document mocking and focus on core functionality
+    // TODO: Fix document mocking with environment injection
+    const simpleEnv = {
+      ...testEnv,
+      document: {
+        createElement: createElementMock,
+        head: { appendChild: appendChildMock },
+        querySelector: jest.fn(),
+      },
+    };
+
+    const destinationWithEnv = {
       ...destination,
-      env: testEnv,
-      config: { loadScript: true },
-    });
+      env: simpleEnv,
+    };
+    elb('walker destination', destinationWithEnv, { loadScript: true });
 
     await elb(event);
 
     // Verify script createElement was called
-    expect(testEnv.document.createElement).toHaveBeenCalledWith('script');
+    expect(createElementMock).toHaveBeenCalledWith('script');
     // Verify appendChild was called
-    expect(testEnv.document.head.appendChild).toHaveBeenCalled();
+    expect(appendChildMock).toHaveBeenCalled();
   });
 
   test('init with domain', async () => {
@@ -86,15 +104,24 @@ describe('destination plausible', () => {
       setAttribute: jest.fn(),
       removeAttribute: jest.fn(),
     };
-    testEnv.document.createElement.mockReturnValue(mockScript);
+    createElementMock.mockReturnValue(mockScript);
 
-    elb('walker destination', {
-      ...destination,
-      env: testEnv,
-      config: {
-        loadScript: true,
-        settings: { domain },
+    const simpleEnv = {
+      ...testEnv,
+      document: {
+        createElement: createElementMock,
+        head: { appendChild: appendChildMock },
+        querySelector: jest.fn(),
       },
+    };
+
+    const destinationWithEnv = {
+      ...destination,
+      env: simpleEnv,
+    };
+    elb('walker destination', destinationWithEnv, {
+      loadScript: true,
+      settings: { domain },
     });
 
     await elb(event);
@@ -103,29 +130,39 @@ describe('destination plausible', () => {
   });
 
   test('event entity action', async () => {
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        mapping: mapping.config,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      mapping: mapping.config,
     });
 
     await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(...events.customEvent());
+
+    // Check that plausible was called with the expected arguments
+    expect(calls).toContainEqual({
+      path: ['window', 'plausible'],
+      args: events.customEvent(),
+    });
   });
 
   test('event purchase', async () => {
     const event = getEvent('order complete');
-    elb('walker destination', {
+    const destinationWithEnv = {
       ...destination,
       env: testEnv,
-      config: {
-        mapping: mapping.config,
-      },
+    };
+    elb('walker destination', destinationWithEnv, {
+      mapping: mapping.config,
     });
 
     await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(...events.purchase());
+
+    // Check that plausible was called with the expected arguments
+    expect(calls).toContainEqual({
+      path: ['window', 'plausible'],
+      args: events.purchase(),
+    });
   });
 });

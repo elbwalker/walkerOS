@@ -1,6 +1,5 @@
 import type { Collector, WalkerOS } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
-import { createSource } from '@walkeros/core';
 import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import destinationAPI from '@walkeros/web-destination-api';
@@ -27,18 +26,21 @@ export async function initializeWalker(): Promise<void> {
     run: false,
     consent: { functional: true },
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          pageview: true,
-          session: true,
-          elb: 'elb',
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb',
+          },
         },
-      }),
+      },
     },
     destinations: {
-      console: destinationConsole,
+      console: { code: destinationConsole },
       consoleBatch: {
-        ...destinationConsoleBatch,
+        code: destinationConsoleBatch,
         config: {
           // Configure which events should be batched
           mapping: {
@@ -51,7 +53,7 @@ export async function initializeWalker(): Promise<void> {
         },
       },
       api: {
-        ...destinationAPI,
+        code: destinationAPI,
         config: {
           settings: {
             url: 'https://httpbin.org/post',
@@ -62,7 +64,7 @@ export async function initializeWalker(): Promise<void> {
         },
       },
       ga4: {
-        ...destinationGtag,
+        code: destinationGtag,
         config: {
           settings: {
             ga4: { measurementId: 'G-XXXXXXXXXX' },
@@ -73,7 +75,7 @@ export async function initializeWalker(): Promise<void> {
           },
         },
       },
-      dataLayer: destinationDataLayer,
+      dataLayer: { code: destinationDataLayer },
     },
   });
 

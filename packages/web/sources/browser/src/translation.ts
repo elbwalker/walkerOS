@@ -6,7 +6,7 @@ import type {
   BrowserPushContext,
 } from './types/elb';
 import type { Context } from './types';
-import { getEntities } from './walker';
+import { getEntities, getGlobals } from './walker';
 
 // Initialize timing for performance measurements
 const startTime = performance.now();
@@ -24,18 +24,24 @@ export function translateToCoreCollector(
   nested?: WalkerOS.Entities,
   custom?: WalkerOS.Properties,
 ): Promise<Elb.PushResult> {
-  const { collector, settings } = context;
-  // Handle walker commands - pass through directly to collector
+  const { elb, settings } = context;
+  // Handle walker commands - pass through directly to elb
   if (isString(eventOrCommand) && eventOrCommand.startsWith('walker ')) {
-    const result = collector.push(eventOrCommand, data as WalkerOS.Properties);
+    const result = elb(eventOrCommand, data as WalkerOS.Properties);
     return result;
   }
 
-  // Handle event objects - add source if missing
+  // Handle event objects - add source and globals if missing
   if (isObject(eventOrCommand)) {
     const event = eventOrCommand;
     if (!event.source) event.source = getBrowserSource();
-    return collector.push(event);
+
+    // Add globals if not already present
+    if (!event.globals) {
+      event.globals = getGlobals(settings.prefix, settings.scope || document);
+    }
+
+    return elb(event);
   }
 
   // Extract entity name from event string
@@ -80,11 +86,15 @@ export function translateToCoreCollector(
     eventData.id = eventData.id || window.location.pathname;
   }
 
+  // Collect globals from the DOM scope
+  const eventGlobals = getGlobals(settings.prefix, settings.scope);
+
   // Build unified event from various elb usage patterns
   const event: WalkerOS.DeepPartialEvent = {
     name: String(eventOrCommand || ''),
     data: eventData,
     context: eventContext,
+    globals: eventGlobals,
     nested,
     custom,
     trigger: isString(options) ? options : '',
@@ -92,7 +102,7 @@ export function translateToCoreCollector(
     source: getBrowserSource(),
   };
 
-  return collector.push(event);
+  return elb(event);
 }
 
 /**

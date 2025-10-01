@@ -1,19 +1,16 @@
-import type { WalkerOS, Source, Collector } from '@walkeros/core';
-import { createSource } from '@walkeros/collector';
+import type { Source, Collector } from '@walkeros/core';
 import { sourceBrowser } from '../index';
-import type { Settings, BrowserSourceConfig } from '../types';
-import type { BrowserPush } from '../types/elb';
+import type { Settings } from '../types';
 
 /**
  * Test helper to create browser sources for testing
- * Returns a promise that resolves to the source creation result
+ * Returns the source instance with elb function for test compatibility
  */
 export async function createBrowserSource(
   collector: Collector.Instance,
   settings: Partial<Settings> = {},
-): Promise<Source.CreateSource<BrowserSourceConfig, BrowserPush>> {
-  const fullConfig: BrowserSourceConfig = {
-    type: 'browser',
+): Promise<Source.Instance<Settings> & { elb: Function }> {
+  const config: Partial<Source.Config<Settings>> = {
     settings: {
       prefix: 'data-elb',
       scope: document,
@@ -25,5 +22,16 @@ export async function createBrowserSource(
     },
   };
 
-  return createSource(collector, sourceBrowser, fullConfig);
+  // Use Source.Environment with collector's elb function and browser globals
+  const env: Source.Environment = {
+    elb: collector.push,
+    window,
+    document,
+  };
+
+  // Call sourceBrowser directly with new pattern
+  const source = await sourceBrowser(config, env);
+
+  // Use the source's own push method which includes proper translation
+  return { ...source, elb: source.push };
 }

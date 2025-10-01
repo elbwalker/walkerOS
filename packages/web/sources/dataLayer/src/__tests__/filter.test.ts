@@ -2,7 +2,11 @@ import { createCollector } from '@walkeros/collector';
 import { sourceDataLayer } from '../index';
 import type { WalkerOS, Collector } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
-import { createMockPush, getDataLayer } from './test-utils';
+import {
+  createMockPush,
+  getDataLayer,
+  createDataLayerSource,
+} from './test-utils';
 
 describe('DataLayer Source - Filtering', () => {
   let collectedEvents: WalkerOS.Event[];
@@ -21,19 +25,17 @@ describe('DataLayer Source - Filtering', () => {
     collector.push = mockPush;
   });
 
-  test('basic filter functionality', () => {
+  test('basic filter functionality', async () => {
     const mockFilter = jest.fn();
 
-    const source = sourceDataLayer({
-      filter: (event) => {
-        mockFilter(event);
-        return isObject(event) && event.event === 'filtered_out';
+    await createDataLayerSource(collector, {
+      settings: {
+        filter: (event: unknown) => {
+          mockFilter(event);
+          return isObject(event) && event.event === 'filtered_out';
+        },
       },
     });
-
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
 
     // These should be processed
     getDataLayer().push({ event: 'allowed_event', data: 'test' });
@@ -48,18 +50,16 @@ describe('DataLayer Source - Filtering', () => {
     expect(collectedEvents[1].name).toBe('dataLayer consent update');
   });
 
-  test('filter with consent events only', () => {
-    const source = sourceDataLayer({
-      filter: (event) => {
-        // Only allow consent events (filter out everything else)
-        if (Array.isArray(event) && event[0] === 'consent') return false;
-        return true; // Filter out non-consent events
+  test('filter with consent events only', async () => {
+    await createDataLayerSource(collector, {
+      settings: {
+        filter: (event: unknown) => {
+          // Only allow consent events (filter out everything else)
+          if (Array.isArray(event) && event[0] === 'consent') return false;
+          return true; // Filter out non-consent events
+        },
       },
     });
-
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
 
     // Only consent events should pass
     getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
@@ -76,29 +76,27 @@ describe('DataLayer Source - Filtering', () => {
     expect(collectedEvents[1].name).toBe('dataLayer consent default');
   });
 
-  test('filter processes existing events', () => {
+  test('filter processes existing events', async () => {
     // Pre-populate with mixed events
     getDataLayer().push({ event: 'existing_good', data: 'test' });
     getDataLayer().push({ event: 'existing_bad', data: 'test' });
     getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
 
-    const source = sourceDataLayer({
-      filter: (event) => {
-        // Filter out events with 'bad' in the name
-        if (
-          isObject(event) &&
-          typeof event.event === 'string' &&
-          event.event.includes('bad')
-        ) {
-          return true;
-        }
-        return false;
+    await createDataLayerSource(collector, {
+      settings: {
+        filter: (event: unknown) => {
+          // Filter out events with 'bad' in the name
+          if (
+            isObject(event) &&
+            typeof event.event === 'string' &&
+            event.event.includes('bad')
+          ) {
+            return true;
+          }
+          return false;
+        },
       },
     });
-
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
 
     // Should have processed 2 events (filtered out 'existing_bad')
     expect(collectedEvents).toHaveLength(2);
@@ -106,16 +104,14 @@ describe('DataLayer Source - Filtering', () => {
     expect(collectedEvents[1].name).toBe('dataLayer consent update');
   });
 
-  test('handles filter errors gracefully', () => {
-    const source = sourceDataLayer({
-      filter: () => {
-        throw new Error('Filter error');
+  test('handles filter errors gracefully', async () => {
+    await createDataLayerSource(collector, {
+      settings: {
+        filter: (event: unknown) => {
+          throw new Error('Filter error');
+        },
       },
     });
-
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
 
     // Should still process events despite filter error
     getDataLayer().push({ event: 'test_event', data: 'test' });
@@ -124,16 +120,14 @@ describe('DataLayer Source - Filtering', () => {
     expect(collectedEvents[0].name).toBe('dataLayer test_event');
   });
 
-  test('filter return value determines processing', () => {
+  test('filter return value determines processing', async () => {
     let shouldFilter = false;
 
-    const source = sourceDataLayer({
-      filter: () => shouldFilter,
+    await createDataLayerSource(collector, {
+      settings: {
+        filter: (event: unknown) => shouldFilter,
+      },
     });
-
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
 
     // First event should be processed (filter returns false)
     getDataLayer().push({ event: 'event1', data: 'test' });

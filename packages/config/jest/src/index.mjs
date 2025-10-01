@@ -1,5 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
 
 const isWatchMode = process.argv.includes('--watchAll');
 const packagesDir = path.join(
@@ -53,6 +54,22 @@ function getModuleMapper() {
   };
 }
 
+function getGlobals() {
+  // Auto-inject package version for tests
+  let version = '0.0.0';
+  try {
+    const packagePath = path.join(process.cwd(), 'package.json');
+    const pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
+    version = pkg.version || '0.0.0';
+  } catch (error) {
+    console.warn('Could not read package.json for version injection in tests:', error.message);
+  }
+
+  return {
+    __VERSION__: version,
+  };
+}
+
 const config = {
   transform: {
     '^.+\\.(t|j)sx?$': [
@@ -78,6 +95,7 @@ const config = {
   moduleDirectories: ['node_modules', 'src'],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   moduleNameMapper: getModuleMapper(),
+  globals: getGlobals(),
   
   // Performance settings - fixed values for consistent behavior
   maxWorkers: 4,

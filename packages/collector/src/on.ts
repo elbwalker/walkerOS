@@ -50,13 +50,38 @@ export function onApply(
   if (!options) {
     // Get the collector on events
     onConfig = collector.on[type] || [];
-
-    // Add all available on events from the destinations
-    Object.values(collector.destinations).forEach((destination) => {
-      const onTypeConfig = destination.config.on?.[type];
-      if (onTypeConfig) onConfig = onConfig.concat(onTypeConfig);
-    });
   }
+
+  // Calculate context data once for all sources and destinations
+  let contextData: unknown;
+
+  switch (type) {
+    case Const.Commands.Consent:
+      contextData = config || collector.consent;
+      break;
+    case Const.Commands.Session:
+      contextData = collector.session;
+      break;
+    case Const.Commands.Ready:
+    case Const.Commands.Run:
+    default:
+      contextData = undefined;
+      break;
+  }
+
+  Object.values(collector.sources).forEach((source) => {
+    if (source.on) {
+      tryCatch(source.on)(type, contextData);
+    }
+  });
+
+  Object.values(collector.destinations).forEach((destination) => {
+    if (destination.on) {
+      // Cast to runtime-compatible version for type safety
+      const onFn = destination.on as On.OnFnRuntime;
+      tryCatch(onFn)(type, contextData as On.AnyEventContext);
+    }
+  });
 
   if (!onConfig.length) return; // No on-events registered, nothing to do
 

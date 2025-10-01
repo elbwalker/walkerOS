@@ -28,6 +28,7 @@ export const PromotionBanner = ({
       },
       dataElb,
     ),
+    'PromotionBanner',
   );
 
   return (

@@ -1,0 +1,50 @@
+{
+  "name": "@walkeros/server-source-gcp",
+  "description": "Google Cloud Platform server sources for walkerOS (Cloud Functions)",
+  "version": "0.1.0",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "lint": "tsc && eslint \"**/*.ts*\"",
+    "test": "jest",
+    "update": "npx npm-check-updates -u && npm update"
+  },
+  "dependencies": {
+    "@walkeros/core": "0.1.2"
+  },
+  "peerDependencies": {
+    "@google-cloud/functions-framework": "^3.0.0"
+  },
+  "devDependencies": {},
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/server/sources/gcp"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "keywords": [
+    "walker",
+    "walkerOS",
+    "source",
+    "server",
+    "gcp",
+    "cloud functions"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

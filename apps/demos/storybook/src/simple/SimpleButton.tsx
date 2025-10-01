@@ -1,19 +1,27 @@
 import React from 'react';
-import { createTrackingProps, type DataElb } from '../utils/tagger';
+import { tagger } from '../utils/tagger';
+import type { WalkerOS } from '@walkeros/core';
 
 interface SimpleButtonProps {
   label: string;
   onClick?: () => void;
-  dataElb?: DataElb;
+  entity?: string;
+  action?: string;
+  data?: WalkerOS.Properties;
 }
 
 export const SimpleButton: React.FC<SimpleButtonProps> = ({
   label,
   onClick,
-  dataElb,
+  entity = 'button',
+  action = 'click',
+  data,
 }) => {
-  // Generate walkerOS tracking properties from dataElb configuration
-  const trackingProps = createTrackingProps(dataElb);
+  // Generate walkerOS tracking properties using tagger
+  const trackingProps = tagger(entity)
+    .data({ label, ...data })
+    .action('click', action)
+    .get();
 
   return (
     <button

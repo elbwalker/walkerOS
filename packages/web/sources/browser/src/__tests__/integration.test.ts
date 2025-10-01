@@ -73,32 +73,29 @@ describe('Browser Source Integration Tests', () => {
         writable: true,
       });
 
-      // Initialize source with pageview enabled
-      await createBrowserSource(collector, { pageview: true });
+      // Initialize source with pageview enabled - should automatically send pageview
+      const source = await createBrowserSource(collector, { pageview: true });
 
-      // Check that walker on command was called to register the callback
+      // Should have sent initial pageview during source initialization
       expect(mockPush).toHaveBeenCalledWith(
-        'walker on',
-        'run',
-        expect.any(Function),
+        expect.objectContaining({
+          name: 'page view',
+          trigger: 'load',
+          data: expect.objectContaining({
+            id: '/test-page',
+          }),
+        }),
       );
 
-      // Get the registered callback from the mock call
-      const walkerOnCall = mockPush.mock.calls.find(
-        (call: unknown[]) => call[0] === 'walker on' && call[1] === 'run',
-      );
-      expect(walkerOnCall).toBeDefined();
-      const runCallback = (walkerOnCall as unknown[])[2] as (
-        collector: Collector.Instance,
-      ) => void;
-
-      // Clear mock to test callback behavior
+      // Clear mock to test on('run') behavior
       mockPush.mockClear();
 
-      // Test the callback directly
-      runCallback(collector);
+      // Test the source's on('run') method directly (new interface)
+      if (source.on) {
+        await source.on('run', collector);
+      }
 
-      // Should have processed the pageview event
+      // Should have processed another pageview event
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'page view',
@@ -151,10 +148,10 @@ describe('Browser Source Integration Tests', () => {
       // Initialize source - should process existing commands
       await createBrowserSource(collector, { pageview: false });
 
-      // Should process commands plus register run callback
-      expect(mockPush).toHaveBeenCalledTimes(4);
+      // Should process the 3 commands (no walker on registration anymore)
+      expect(mockPush).toHaveBeenCalledTimes(3);
 
-      // Walker commands are processed first, then events, then run callback registration
+      // Walker commands are processed first, then events
       expect(mockPush).toHaveBeenNthCalledWith(1, 'walker run', {
         consent: { marketing: true },
       });
@@ -162,8 +159,7 @@ describe('Browser Source Integration Tests', () => {
         2,
         expect.objectContaining({
           name: 'page view',
-          data: expect.objectContaining({ id: '/test-page', title: 'Home' }),
-          context: { url: '/' },
+          data: expect.objectContaining({ title: 'Home' }),
           trigger: 'load',
         }),
       );
@@ -171,16 +167,9 @@ describe('Browser Source Integration Tests', () => {
         3,
         expect.objectContaining({
           name: 'product click',
-          data: { id: '123' },
-          context: { position: 1 },
+          data: expect.objectContaining({ id: '123' }),
           trigger: 'click',
         }),
-      );
-      expect(mockPush).toHaveBeenNthCalledWith(
-        4,
-        'walker on',
-        'run',
-        expect.any(Function),
       );
     });
   });

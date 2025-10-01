@@ -1,9 +1,8 @@
+import type { Collector } from '@walkeros/core';
 import { createCollector } from '@walkeros/collector';
-import type { CollectorConfig } from '@walkeros/collector';
-import type { WalkerOS } from '@walkeros/core';
 
 describe('Commands', () => {
-  async function getCollector(custom?: Partial<CollectorConfig>) {
+  async function getCollector(custom?: Partial<Collector.Config>) {
     const { elb, collector } = await createCollector(custom || {});
     return {
       elb,

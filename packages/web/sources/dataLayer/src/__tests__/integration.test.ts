@@ -1,7 +1,10 @@
 import { createCollector } from '@walkeros/collector';
-import { sourceDataLayer } from '../index';
 import type { WalkerOS, Collector } from '@walkeros/core';
-import { createMockPush, getDataLayer } from './test-utils';
+import {
+  createMockPush,
+  getDataLayer,
+  createDataLayerSource,
+} from './test-utils';
 
 describe('DataLayer Source - Integration', () => {
   let collectedEvents: WalkerOS.Event[];
@@ -20,19 +23,17 @@ describe('DataLayer Source - Integration', () => {
     collector.push = mockPush;
   });
 
-  test('complete gtag consent workflow', () => {
-    const source = sourceDataLayer({
-      prefix: 'gtag',
-      filter: (event) => {
-        // Only allow consent events
-        if (Array.isArray(event) && event[0] === 'consent') return false;
-        return true;
+  test('complete gtag consent workflow', async () => {
+    await createDataLayerSource(collector, {
+      settings: {
+        prefix: 'gtag',
+        filter: (event: unknown) => {
+          // Only allow consent events
+          if (Array.isArray(event) && event[0] === 'consent') return false;
+          return true;
+        },
       },
     });
-
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
 
     // Simulate a complete consent workflow
     getDataLayer().push([
@@ -95,12 +96,8 @@ describe('DataLayer Source - Integration', () => {
     });
   });
 
-  test('mixed event types with dataLayer prefix', () => {
-    const source = sourceDataLayer(); // Default prefix
-
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('mixed event types with dataLayer prefix', async () => {
+    await createDataLayerSource(collector); // Default prefix
 
     // Mix of different event types
     getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
@@ -129,15 +126,12 @@ describe('DataLayer Source - Integration', () => {
     ]);
   });
 
-  test('processes existing events and new events together', () => {
+  test('processes existing events and new events together', async () => {
     // Pre-populate dataLayer
     getDataLayer().push(['consent', 'default', { ad_storage: 'denied' }]);
     getDataLayer().push({ event: 'existing_event', data: 'test' });
 
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+    await createDataLayerSource(collector);
 
     // Add new events after initialization
     getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
@@ -152,20 +146,18 @@ describe('DataLayer Source - Integration', () => {
     expect(collectedEvents[3].name).toBe('dataLayer new_event');
   });
 
-  test('error handling and robustness', () => {
-    const source = sourceDataLayer({
-      filter: (event) => {
-        // Filter errors should not break processing
-        if (Array.isArray(event) && event[0] === 'bad_filter') {
-          throw new Error('Filter error');
-        }
-        return false; // Allow all others
+  test('error handling and robustness', async () => {
+    await createDataLayerSource(collector, {
+      settings: {
+        filter: (event: unknown) => {
+          // Filter errors should not break processing
+          if (Array.isArray(event) && event[0] === 'bad_filter') {
+            throw new Error('Filter error');
+          }
+          return false; // Allow all others
+        },
       },
     });
-
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
 
     // Good events
     getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);

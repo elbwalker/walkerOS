@@ -24,8 +24,17 @@ export const WatchNow: Story = {
   args: {
     label: 'Watch Now',
     dataElb: {
-      entity: 'page',
+      entity: 'button',
       action: 'watch',
+      data: {
+        content_type: 'video',
+        content_id: 'episode_123',
+        position: 'hero_banner',
+      },
+      context: {
+        section: 'media_player',
+        screen: 'homepage',
+      },
     },
     primary: true,
   },
@@ -35,8 +44,17 @@ export const LearnMore: Story = {
   args: {
     label: 'Learn More',
     dataElb: {
-      entity: 'page',
+      entity: 'button',
       action: 'learn',
+      data: {
+        content_type: 'article',
+        category: 'education',
+        position: 'sidebar',
+      },
+      context: {
+        section: 'content_discovery',
+        screen: 'article_page',
+      },
     },
   },
 };

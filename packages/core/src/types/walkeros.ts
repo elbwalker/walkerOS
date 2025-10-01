@@ -1,16 +1,9 @@
 import type { Elb as ElbTypes } from '.';
 
 export type AnyObject<T = unknown> = Record<string, T>;
-export type Elb = globalThis.WalkerOS.Elb;
+export type Elb = ElbTypes.Fn;
 export type AnyFunction = (...args: unknown[]) => unknown;
 export type SingleOrArray<T> = T | Array<T>;
-
-// Global namespace for type augmentation by destinations
-declare global {
-  namespace WalkerOS {
-    interface Elb extends ElbTypes.Fn {}
-  }
-}
 
 export type Events = Array<Event>;
 export type PartialEvent = Partial<Event>;

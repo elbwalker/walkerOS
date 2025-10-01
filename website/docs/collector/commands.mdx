@@ -28,7 +28,7 @@ Add destinations to the collector for event processing. Destinations handle the
 actual delivery of events to third-party services.
 
 ```js
-// Simple demo destination for console.log
+// Add destination dynamically at runtime
 const destinationLog = { push: console.log };
 elb('walker destination', destinationLog);
 
@@ -41,9 +41,20 @@ elb('walker destination', destinationGtag, {
 
 :::tip
 
-Destinations are typically configured during collector initialization via
-`createCollector()`. See destination-specific documentation for configuration
-options.
+Destinations are typically configured during collector initialization:
+
+```typescript
+const { collector, elb } = await createCollector({
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: { /* custom config */ },
+    },
+  },
+});
+```
+
+See destination-specific documentation for configuration options.
 
 :::
 

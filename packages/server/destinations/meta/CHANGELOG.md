@@ -1,5 +1,23 @@
 # @walkeros/server-destination-meta
 
+## 0.1.2
+
+### Patch Changes
+
+- a0ced16: env
+- Updated dependencies [a0ced16]
+  - @walkeros/server-core@0.1.2
+  - @walkeros/core@0.1.2
+
+## 0.1.1
+
+### Patch Changes
+
+- flow
+- Updated dependencies
+  - @walkeros/server-core@0.1.1
+  - @walkeros/core@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

@@ -15,11 +15,47 @@ declare global {
   }
 }
 
+// Gtag-specific environment interface
+export interface Environment extends DestinationWeb.Environment {
+  window: {
+    gtag: Gtag.Gtag;
+    dataLayer: unknown[];
+  };
+  document: {
+    createElement: (tagName: string) => {
+      src: string;
+      async?: boolean;
+      setAttribute: (name: string, value: string) => void;
+      removeAttribute: (name: string) => void;
+    };
+    head: {
+      appendChild: (node: unknown) => void;
+    };
+  };
+}
+
+// Consent mode configuration
+export type ConsentMode =
+  | false // Disable consent mode
+  | true // Use default mapping
+  | ConsentMapping; // Custom mapping
+
+export interface ConsentMapping {
+  [walkerOSConsentGroup: string]: string | string[];
+}
+
 export type Destination = DestinationWeb.Destination<Settings, Mapping>;
 export type Config = DestinationWeb.Config<Settings, Mapping>;
 
+// Base settings interface with data field
+export interface BaseSettings {
+  data?: WalkerOSMapping.Value | WalkerOSMapping.Values;
+}
+
 // Unified settings for all Google tools
 export interface Settings {
+  // Consent mode configuration
+  como?: ConsentMode;
   // GA4 settings
   ga4?: GA4Settings;
   // Google Ads settings
@@ -29,7 +65,7 @@ export interface Settings {
 }
 
 // GA4-specific settings
-export interface GA4Settings {
+export interface GA4Settings extends BaseSettings {
   measurementId: string;
   debug?: boolean;
   include?: Include;
@@ -40,7 +76,7 @@ export interface GA4Settings {
 }
 
 // Google Ads specific settings
-export interface AdsSettings {
+export interface AdsSettings extends BaseSettings {
   conversionId: string;
   currency?: string;
 }
@@ -51,7 +87,7 @@ export interface AdsMapping {
 }
 
 // GTM specific settings
-export interface GTMSettings {
+export interface GTMSettings extends BaseSettings {
   containerId: string;
   dataLayer?: string;
   domain?: string;

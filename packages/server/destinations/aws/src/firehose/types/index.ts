@@ -1,16 +1,10 @@
 import type { DestinationServer } from '@walkeros/server-core';
-import type { Mapping as WalkerOSMapping, Elb } from '@walkeros/core';
+import type { Mapping as WalkerOSMapping } from '@walkeros/core';
 import type {
   FirehoseClient,
   FirehoseClientConfig,
+  PutRecordBatchCommand,
 } from '@aws-sdk/client-firehose';
-
-declare global {
-  // Augment the global WalkerOS namespace with destination-specific types
-  namespace WalkerOS {
-    interface Elb extends Elb.RegisterDestination<Destination, Config> {}
-  }
-}
 
 export interface Destination
   extends DestinationServer.Destination<Settings, Mapping> {
@@ -44,4 +38,12 @@ export interface FirehoseConfig {
   client?: FirehoseClient;
   region?: string;
   config?: FirehoseClientConfig;
+}
+
+// Environment interface for type-safe AWS SDK injection
+export interface Environment extends DestinationServer.Environment {
+  AWS: {
+    FirehoseClient: typeof FirehoseClient;
+    PutRecordBatchCommand: typeof PutRecordBatchCommand;
+  };
 }

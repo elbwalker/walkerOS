@@ -1,7 +1,6 @@
-import type { Collector, WalkerOS, Source } from '@walkeros/core';
-import type { Settings, DataLayerSourceConfig } from './types';
+import type { Source, Elb } from '@walkeros/core';
+import type { Settings } from './types';
 import { interceptDataLayer, processExistingEvents } from './interceptor';
-import { getId } from '@walkeros/core';
 
 // Export types for external usage
 export * as SourceDataLayer from './types';
@@ -10,106 +9,77 @@ export * as SourceDataLayer from './types';
 export * from './examples';
 
 /**
- * DataLayer source initialization function
- * Sets up dataLayer interception and processes existing events
+ * DataLayer-specific environment interface
  */
-const initDataLayerSource: Source.Init<DataLayerSourceConfig> = (
-  collector: Collector.Instance,
-  config: DataLayerSourceConfig,
-) => {
-  const { settings } = config;
-
-  // Create the source instance
-  const source: Source.Instance<DataLayerSourceConfig> = {
-    type: 'dataLayer',
-    config,
-    collector,
-    destroy() {
-      // Cleanup: restore original dataLayer.push if possible
-      const dataLayerName = settings.name || 'dataLayer';
-      if (window[dataLayerName] && Array.isArray(window[dataLayerName])) {
-        // Note: Complete restoration would require storing original push method
-        // For now, we'll just document this limitation
-      }
-    },
-  };
-
-  // Process existing events in dataLayer
-  processExistingEvents(collector, config);
-
-  // Set up interception for new events
-  interceptDataLayer(collector, config);
-
-  // Create dataLayer-specific elb function
-  const elb: WalkerOS.AnyFunction = (...args: unknown[]) => {
-    // DataLayer source doesn't typically expose its own elb function
-    // Users push directly to dataLayer, not to the source
-    // But we can provide a convenience function for direct push
-    const dataLayerName = settings.name || 'dataLayer';
-    const dataLayer = window[dataLayerName] as unknown[];
-
-    if (Array.isArray(dataLayer)) {
-      return Promise.resolve(dataLayer.push(...args));
-    }
-
-    return Promise.resolve(0);
-  };
-
-  return { source, elb };
-};
+interface DataLayerEnvironment extends Source.Environment {
+  window?: typeof window;
+}
 
 /**
- * DataLayer source factory function
- * Intercepts dataLayer.push calls and transforms them to WalkerOS events
+ * DataLayer source implementation using environment injection.
+ *
+ * This source intercepts dataLayer.push calls and transforms them to WalkerOS events.
+ * It works by replacing the dataLayer.push method with a custom handler.
  */
-export function sourceDataLayer(
-  init: Partial<Settings> = {},
-): Source.Init<DataLayerSourceConfig> & {
-  init?: (
-    collector: Collector.Instance,
-    config: { settings: Settings },
-  ) => void;
-  settings?: Settings;
-  type?: string;
-} {
-  const sourceInit = (
-    collector: Collector.Instance,
-    config: DataLayerSourceConfig,
-  ) => {
-    // Merge provided settings with defaults
-    const fullConfig: DataLayerSourceConfig = {
-      ...config,
-      settings: {
-        name: 'dataLayer',
-        prefix: 'dataLayer',
-        ...init,
-        ...config.settings,
-      },
+export const sourceDataLayer: Source.Init<Settings> = async (
+  config: Partial<Source.Config<Settings>>,
+  env?: Source.Environment,
+) => {
+  try {
+    // Extract and validate environment dependencies
+    const dataLayerEnv = (env || {}) as DataLayerEnvironment;
+    const { elb, window: envWindow } = dataLayerEnv;
+
+    if (!elb) {
+      throw new Error('DataLayer source requires elb function in environment');
+    }
+
+    // Default configuration, merged with provided config
+    const settings: Settings = {
+      name: 'dataLayer',
+      prefix: 'dataLayer',
+      ...config?.settings,
     };
 
-    return initDataLayerSource(collector, fullConfig);
-  };
+    // Full configuration with defaults
+    const fullConfig: Source.Config<Settings> = {
+      settings,
+    };
 
-  // Add backward compatibility properties for tests
-  sourceInit.init = (
-    collector: Collector.Instance,
-    config: { settings: Settings },
-  ) => {
-    return initDataLayerSource(collector, {
+    // Initialize dataLayer interception if window is available
+    if (envWindow) {
+      // Process existing events in dataLayer
+      processExistingEvents(elb, fullConfig);
+
+      // Set up interception for new events
+      interceptDataLayer(elb, fullConfig);
+    }
+
+    // DataLayer sources typically intercept existing dataLayer.push calls
+    // The push method here forwards to the core collector elb function
+    const push: Elb.Fn = elb;
+
+    // Return stateless source instance
+    return {
       type: 'dataLayer',
-      settings: config.settings,
-    } as DataLayerSourceConfig);
-  };
-
-  sourceInit.settings = {
-    name: 'dataLayer',
-    prefix: 'dataLayer',
-    ...init,
-  };
-
-  sourceInit.type = 'dataLayer';
-
-  return sourceInit;
-}
+      config: fullConfig,
+      push,
+      destroy: async () => {
+        // Cleanup: restore original dataLayer.push if possible
+        const dataLayerName = settings.name || 'dataLayer';
+        if (
+          envWindow &&
+          envWindow[dataLayerName] &&
+          Array.isArray(envWindow[dataLayerName])
+        ) {
+          // Note: Complete restoration would require storing original push method
+          // For now, we'll just document this limitation
+        }
+      },
+    };
+  } catch (error) {
+    throw error;
+  }
+};
 
 export default sourceDataLayer;

@@ -6,8 +6,16 @@ sidebar_position: 2
 package: '@walkeros/web-destination-gtag'
 ---
 
+import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { getEvent } from '@walkeros/core';
+import {
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationGtag from '@walkeros/web-destination-gtag';
+import { examples } from '@walkeros/web-destination-gtag';
 
 # Google Analytics 4 (GA4)
 
@@ -17,9 +25,12 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
   npm="@walkeros/web-destination-gtag"
 />
 
-Google Analytics 4 (GA4) configuration within the unified gtag destination. This
-allows you to send events to GA4 with enhanced measurement features and flexible
-event tracking.
+[Google Analytics 4 (GA4)](https://support.google.com/analytics/answer/10089681?hl=en&ref_topic=14089939&sjid=11701302784514925217-EU)
+is a web analytics and marketing platform that helps businesses measure traffic
+across websites and apps. The destination automatically sends events to GA4 via
+`gtag` function. All you need to do is install the destination, and optionally
+map events to GA4's format. walkerOS takes care of loading the script and the
+function calls.
 
 ## Installation
 
@@ -100,6 +111,21 @@ elb('walker destination', destinationGtag, {
   ]}
 />
 
+#### Example
+
+<DestinationInit
+  destination={destinationGtag}
+  custom={`{
+    measurementId: 'G-XXXXXXXXXX', // Required
+    debug: false,
+    include: ['globals'],
+    pageview: false,
+    server_container_url: 'https://server.example.com',
+    snakeCase: true,
+    transport_url: 'https://www.google-analytics.com/g/collect',
+  }`}
+/>
+
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings.ga4`):
@@ -114,4 +140,61 @@ For custom event mapping (`mapping.entity.action.settings.ga4`):
       example: "['data', 'context']",
     },
   ]}
+/>
+
+You are able to map your walkerOS events to match the respective requirements of
+each vendor. The `mapping` examples are using a
+live&nbsp;<Link to="#configuration">configuration</Link>.
+
+## Mapping examples
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+Find all of
+[GA4's recommended events](https://developers.google.com/analytics/devguides/collection/ga4/reference/events?hl=en&client_type=gtag)
+in this overview.
+
+### add_to_cart
+
+Map your walkerOS event to get
+an&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/ga4/reference/events?sjid=10736118709897970414-EU&client_type=gtag#add_to_cart">add_to_cart</Link>
+gtag.js event.
+
+<DestinationPush
+  destination={destinationGtag}
+  settings={{
+    ga4: {
+      measurementId: 'G-XXXXXXXXXX',
+    },
+  }}
+  event={getEvent('product add')}
+  mapping={examples.mapping.ga4AddToCart}
+  generic={true}
+  smallText={true}
+  height={'512px'}
+/>
+
+### purchase
+
+Map your walkerOS event to get
+a&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/ga4/reference/events?sjid=10736118709897970414-EU&client_type=gtag#purchase">purchase</Link>
+gtag.js event.
+
+<DestinationPush
+  destination={destinationGtag}
+  settings={{
+    ga4: {
+      measurementId: 'G-XXXXXXXXXX',
+    },
+  }}
+  event={getEvent('order complete')}
+  mapping={examples.mapping.ga4Purchase}
+  generic={true}
+  smallText={true}
+  height={'512px'}
 />

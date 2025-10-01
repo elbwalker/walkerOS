@@ -2,20 +2,12 @@ import type {
   Mapping as WalkerOSMapping,
   SendDataValue,
   SendHeaders,
-  Elb,
 } from '@walkeros/core';
 import type { DestinationWeb, sendWeb } from '@walkeros/web-core';
 import type { SendWebTransport } from '@walkeros/web-core';
 
-declare global {
-  // Augment the global WalkerOS namespace with destination-specific types
-  namespace WalkerOS {
-    interface Elb extends Elb.RegisterDestination<Destination, Config> {}
-  }
-}
-
-export interface Environment {
-  sendWeb: typeof sendWeb;
+export interface Environment extends DestinationWeb.Environment {
+  sendWeb?: typeof sendWeb;
 }
 
 export type Destination = DestinationWeb.Destination<Settings, Mapping>;

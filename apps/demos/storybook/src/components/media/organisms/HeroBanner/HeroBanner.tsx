@@ -31,6 +31,7 @@ export const HeroBanner = ({
       },
       dataElb,
     ),
+    'HeroBanner',
   );
 
   return (

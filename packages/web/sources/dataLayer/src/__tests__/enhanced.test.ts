@@ -1,7 +1,10 @@
 import { createCollector } from '@walkeros/collector';
-import { sourceDataLayer } from '../index';
 import type { WalkerOS, Collector } from '@walkeros/core';
-import { createMockPush, getDataLayer } from './test-utils';
+import {
+  createMockPush,
+  getDataLayer,
+  createDataLayerSource,
+} from './test-utils';
 
 describe('DataLayer Source - Enhanced with gtag support', () => {
   let collectedEvents: WalkerOS.Event[];
@@ -24,11 +27,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     collector.push = mockPush;
   });
 
-  test('handles gtag consent events', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('handles gtag consent events', async () => {
+    await createDataLayerSource(collector);
 
     // Simulate gtag('consent', 'update', { ad_storage: 'granted', analytics_storage: 'denied' })
     getDataLayer().push([
@@ -50,11 +50,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     });
   });
 
-  test('handles gtag event calls', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('handles gtag event calls', async () => {
+    await createDataLayerSource(collector);
 
     // Simulate gtag('event', 'purchase', { transaction_id: '123', value: 25.99 })
     getDataLayer().push([
@@ -76,11 +73,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     });
   });
 
-  test('handles gtag config calls', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('handles gtag config calls', async () => {
+    await createDataLayerSource(collector);
 
     // Simulate gtag('config', 'GA_MEASUREMENT_ID', { send_page_view: false })
     getDataLayer().push([
@@ -100,11 +94,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     });
   });
 
-  test('handles gtag set calls with parameter', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('handles gtag set calls with parameter', async () => {
+    await createDataLayerSource(collector);
 
     // Simulate gtag('set', 'currency', { value: 'EUR' })
     getDataLayer().push(['set', 'currency', { value: 'EUR' }]);
@@ -118,11 +109,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     });
   });
 
-  test('handles gtag set calls with object', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('handles gtag set calls with object', async () => {
+    await createDataLayerSource(collector);
 
     // Simulate gtag('set', { currency: 'EUR', country: 'DE' })
     getDataLayer().push(['set', { currency: 'EUR', country: 'DE' }]);
@@ -137,11 +125,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     });
   });
 
-  test('handles direct dataLayer objects', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('handles direct dataLayer objects', async () => {
+    await createDataLayerSource(collector);
 
     // Direct object push
     getDataLayer().push({ event: 'custom_event', user_id: 'user123' });
@@ -155,11 +140,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     });
   });
 
-  test('ignores invalid gtag commands', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('ignores invalid gtag commands', async () => {
+    await createDataLayerSource(collector);
 
     // Invalid commands should be ignored
     getDataLayer().push(['get', 'some_value']); // get command is not supported
@@ -169,11 +151,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     expect(collectedEvents).toHaveLength(0);
   });
 
-  test('handles malformed events gracefully', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('handles malformed events gracefully', async () => {
+    await createDataLayerSource(collector);
 
     // These should all be ignored
     getDataLayer().push('string');
@@ -185,11 +164,8 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     expect(collectedEvents).toHaveLength(0);
   });
 
-  test('processes gtag arguments object format', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('processes gtag arguments object format', async () => {
+    await createDataLayerSource(collector);
 
     // Simulate actual gtag function call arguments
     const gtagArgs = (function (..._params) {

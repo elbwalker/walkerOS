@@ -54,7 +54,7 @@ const mappingCode = `{
       name: 'view_item',
       data: {
         map: {
-          event: 'event',
+          event: 'name',
           price: 'data.price',
           stage: "context.stage.0"
         },

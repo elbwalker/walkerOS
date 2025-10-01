@@ -26,6 +26,7 @@ export interface LiveCodeProps {
   height?: number;
   smallText?: boolean;
   className?: string;
+  showQuotes?: boolean;
 }
 
 export const LiveCode: React.FC<LiveCodeProps> = memo(
@@ -45,6 +46,7 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
     height,
     smallText,
     className,
+    showQuotes = true,
   }) => {
     const [input, setInput] = useState(
       isString(initInput) ? initInput : formatValue(initInput),
@@ -59,7 +61,7 @@ export const LiveCode: React.FC<LiveCodeProps> = memo(
 
     const log = useRef((...args: unknown[]) => {
       const params = args
-        .map((arg) => formatValue(arg, { quotes: true }))
+        .map((arg) => formatValue(arg, { quotes: showQuotes }))
         .join(', ');
 
       setOutput([fnName ? `${fnName}(${params})` : params]);

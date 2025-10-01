@@ -21,7 +21,7 @@ export function addScript(
   loadedScripts.add(id);
 }
 
-export function initializeGtag(window: Window = globalThis.window): void {
+export function initializeGtag(window: Window): Gtag.Gtag | undefined {
   const w = window;
 
   // Setup dataLayer if not exists
@@ -33,4 +33,6 @@ export function initializeGtag(window: Window = globalThis.window): void {
       (w.dataLayer as unknown[]).push(arguments);
     };
   }
+
+  return w.gtag;
 }

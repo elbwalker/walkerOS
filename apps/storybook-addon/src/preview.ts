@@ -20,16 +20,7 @@ import { withRoundTrip } from './withRoundTrip';
 
 const preview: ProjectAnnotations<Renderer> = {
   decorators: [withRoundTrip],
-  globalTypes: {
-    [ADDON_ID]: {
-      description: 'walkerOS addon configuration',
-      defaultValue: {
-        autoRefresh: true,
-        prefix: 'data-elb',
-      },
-    },
-  },
-  initialGlobals: {
+  parameters: {
     [ADDON_ID]: {
       autoRefresh: true,
       prefix: 'data-elb',

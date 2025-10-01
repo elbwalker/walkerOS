@@ -7,6 +7,12 @@ package: '@walkeros/web-destination-gtag'
 
 import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { createEvent } from '@walkeros/core';
+import {
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationGtag from '@walkeros/web-destination-gtag';
 
 # Google Ads
 
@@ -16,9 +22,12 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
   npm="@walkeros/web-destination-gtag"
 />
 
-Google Ads conversion tracking within the unified gtag destination. This enables
-you to track conversions and measure the effectiveness of your Google Ads
-campaigns.
+[Google Ads conversion tracking](https://support.google.com/google-ads/answer/1722022?hl=en)
+enables you to track conversions and measure the effectiveness of your Google
+Ads campaigns. The destination automatically sends events to Google Ads via
+`gtag` function. All you need to do is install the destination, and optionally
+map events to GA4's format. walkerOS takes care of loading the script and the
+function calls.
 
 ## Installation
 
@@ -98,4 +107,49 @@ For custom event mapping (`mapping.entity.action.settings.ads`):
       example: "'conversion_label'",
     },
   ]}
+/>
+
+## Live Demo
+
+Try the Google Ads destination with real events:
+
+### Initialize Google Ads
+
+<DestinationInit
+  destination={destinationGtag}
+  custom={{
+    ads: {
+      conversionId: 'AW-123456789',
+      currency: 'EUR',
+    },
+  }}
+/>
+
+### Track a Conversion Event
+
+<DestinationPush
+  destination={destinationGtag}
+  settings={{
+    ads: {
+      conversionId: 'AW-123456789',
+      currency: 'EUR',
+    },
+  }}
+  event={createEvent({
+    name: 'order complete',
+    data: {
+      id: 'order-123',
+      value: 49.99,
+      currency: 'EUR',
+    },
+  })}
+  mapping={{
+    name: 'purchase_conversion',
+    settings: {
+      ads: {},
+    },
+  }}
+  generic={true}
+  smallText={true}
+  height="300px"
 />

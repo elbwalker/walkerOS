@@ -32,4 +32,12 @@ export default [
       '@typescript-eslint/no-explicit-any': 'error',
     },
   },
+  {
+    // Relaxed rules for test files
+    files: ['**/*.test.{js,ts,tsx}', '**/__tests__/**/*.{js,ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      'no-console': 'off',
+    },
+  },
 ];

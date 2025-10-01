@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-core",
   "description": "Server-specific utilities for walkerOS",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -25,7 +25,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "0.1.0"
+    "@walkeros/core": "0.1.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

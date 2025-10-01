@@ -99,6 +99,7 @@ export const Image = ({
       },
       dataElb,
     ),
+    'Image',
   );
 
   return (

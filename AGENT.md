@@ -98,6 +98,7 @@ packages/
 │   └── destinations/ # Web destinations (gtag, meta, api, piwikpro, plausible)
 └── server/
     ├── core/       # Server-specific utilities
+    ├── sources/    # Server sources (gcp)
     └── destinations/ # Server destinations (aws, gcp, meta)
 ```
 
@@ -121,7 +122,26 @@ space separation:
 
 The event name is parsed as: `const [entity, action] = event.split(' ')`
 
-### 2. Event Structure
+### 2. Universal Push Interface Standard
+
+**CRITICAL**: All walkerOS components communicate via `push` functions:
+
+- **Sources**: `source.push()` - Interface to external world (HTTP, DOM events,
+  etc.)
+- **Collector**: `collector.push()` - Central event processing
+- **Destinations**: `destination.push()` - Receive processed events
+- **ELB**: `elb()` - Alias for collector.push, used for component wiring
+
+**Source Push Signatures by Type**:
+
+- Cloud Functions: `push(req, res) => Promise<void>` (HTTP handler)
+- Browser: `push(event, data) => Promise<void>` (Walker events)
+- DataLayer: `push(event, data) => Promise<void>` (Walker events)
+
+**Key Principle**: Source `push` IS the handler - no wrappers needed. Example:
+`http('handler', source.push)` for direct deployment.
+
+### 3. Event Structure
 
 All events follow this consistent structure:
 

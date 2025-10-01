@@ -71,9 +71,13 @@ export function getElbValues(
 }
 
 export function getAllEvents(
-  scope: Scope = document.body,
+  scope?: Scope,
   prefix: string = Const.Commands.Prefix,
 ): Walker.Events {
+  // Handle default scope inside the function to avoid Node.js issues
+  const actualScope =
+    scope || (typeof document !== 'undefined' ? document.body : undefined);
+  if (!actualScope) return [];
   let events: Walker.Events = [];
   const action = Const.Commands.Action;
   const actionSelector = `[${getElbAttributeName(prefix, action, false)}]`;
@@ -87,11 +91,14 @@ export function getAllEvents(
   };
 
   // Check if the scope element itself has action attributes
-  if (scope !== document && (scope as Element).matches(actionSelector)) {
-    processElementEvents(scope as Element);
+  if (
+    actualScope !== (typeof document !== 'undefined' ? document : null) &&
+    (actualScope as Element).matches?.(actionSelector)
+  ) {
+    processElementEvents(actualScope as Element);
   }
 
-  queryAll(scope, actionSelector, processElementEvents);
+  queryAll(actualScope, actionSelector, processElementEvents);
 
   return events;
 }

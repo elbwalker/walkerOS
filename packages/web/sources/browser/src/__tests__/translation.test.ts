@@ -57,7 +57,7 @@ describe('Translation Layer', () => {
     test('adds source information to string events', async () => {
       // Test direct translation call
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -81,7 +81,7 @@ describe('Translation Layer', () => {
     test('adds source information to flexible format events', async () => {
       // Test with number as event (falls through to flexible format)
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         123,
         { value: 'test' },
         undefined,
@@ -105,7 +105,7 @@ describe('Translation Layer', () => {
     test('normalizes non-object data to empty object (legacy behavior)', async () => {
       // Test with primitive data - should become empty object
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         'test event',
         'primitive string data',
         undefined,
@@ -129,7 +129,7 @@ describe('Translation Layer', () => {
     test('does not add source information to walker commands', async () => {
       // Test walker command
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         'walker config',
         {
           verbose: true,
@@ -149,7 +149,7 @@ describe('Translation Layer', () => {
       };
 
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         eventObject,
       );
 
@@ -165,7 +165,7 @@ describe('Translation Layer', () => {
       });
 
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         'test event',
         { id: 123 },
       );
@@ -191,7 +191,7 @@ describe('Translation Layer', () => {
       });
 
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         'navigation event',
         {
           page: 'test',
@@ -281,7 +281,7 @@ describe('Translation Layer', () => {
   describe('Context Normalization', () => {
     test('handles undefined context', async () => {
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -302,7 +302,7 @@ describe('Translation Layer', () => {
       element.className = 'test-class';
 
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -318,7 +318,7 @@ describe('Translation Layer', () => {
 
     test('handles empty object context', async () => {
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -339,7 +339,7 @@ describe('Translation Layer', () => {
       };
 
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -363,7 +363,7 @@ describe('Translation Layer', () => {
       });
 
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         'test event',
         { id: 123 },
       );
@@ -382,7 +382,7 @@ describe('Translation Layer', () => {
     test('handles malformed events with source', async () => {
       // Test with empty string event
       await translateToCoreCollector(
-        { collector, settings: createTestSettings() },
+        { elb: collector.push, settings: createTestSettings() },
         '',
         { test: true },
       );

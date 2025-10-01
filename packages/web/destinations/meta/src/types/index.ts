@@ -1,25 +1,23 @@
-import type { Mapping as WalkerOSMapping, Elb } from '@walkeros/core';
+import type { Mapping as WalkerOSMapping } from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
 
 declare global {
-  // Augment the global WalkerOS namespace with destination-specific types
-  namespace WalkerOS {
-    interface Elb extends Elb.RegisterDestination<Destination, Config> {}
-  }
-
   interface Window {
     _fbq?: facebook.Pixel.Event;
     fbq?: facebook.Pixel.Event;
   }
 }
 
-// Meta-specific environment that includes fbq
-export interface MetaEnvironment {
+// Meta-specific environment interface
+export interface Environment extends DestinationWeb.Environment {
   window: {
     fbq: facebook.Pixel.Event;
     _fbq?: facebook.Pixel.Event;
   };
-  document: Document;
+  document: {
+    createElement: (tagName: string) => Element;
+    head: { appendChild: (node: unknown) => void };
+  };
 }
 
 export type Destination = DestinationWeb.Destination<Settings, Mapping>;

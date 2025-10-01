@@ -1,7 +1,10 @@
 import { createCollector } from '@walkeros/collector';
-import { sourceDataLayer } from '../index';
 import type { WalkerOS, Collector } from '@walkeros/core';
-import { createMockPush, getDataLayer } from './test-utils';
+import {
+  createMockPush,
+  getDataLayer,
+  createDataLayerSource,
+} from './test-utils';
 
 describe('DataLayer Source - Minimal', () => {
   let collectedEvents: WalkerOS.Event[];
@@ -24,36 +27,24 @@ describe('DataLayer Source - Minimal', () => {
     collector.push = mockPush;
   });
 
-  test('source initializes without errors', () => {
-    const source = sourceDataLayer();
-    expect(source.type).toBe('dataLayer');
-    expect(source.init).toBeDefined();
-
+  test('source initializes without errors', async () => {
     // Should not throw
-    expect(() => {
-      if (source.init) {
-        source.init(collector, { settings: source.settings ?? {} });
-      }
+    expect(async () => {
+      await createDataLayerSource(collector);
     }).not.toThrow();
   });
 
-  test('creates dataLayer if it does not exist', () => {
+  test('creates dataLayer if it does not exist', async () => {
     expect(window.dataLayer).toBeUndefined();
 
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+    await createDataLayerSource(collector);
 
     expect(window.dataLayer).toBeDefined();
     expect(Array.isArray(window.dataLayer)).toBe(true);
   });
 
-  test('processes simple dataLayer event', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('processes simple dataLayer event', async () => {
+    await createDataLayerSource(collector);
 
     // Push a simple event
     getDataLayer().push({ event: 'test_event', test: 'data' });
@@ -67,17 +58,14 @@ describe('DataLayer Source - Minimal', () => {
     });
   });
 
-  test('processes existing events on initialization', () => {
+  test('processes existing events on initialization', async () => {
     // Pre-populate dataLayer
     window.dataLayer = [
       { event: 'existing_event_1', data: 'test1' },
       { event: 'existing_event_2', data: 'test2' },
     ];
 
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+    await createDataLayerSource(collector);
 
     // Should have processed both existing events
     expect(collectedEvents).toHaveLength(2);
@@ -85,11 +73,8 @@ describe('DataLayer Source - Minimal', () => {
     expect(collectedEvents[1].name).toBe('dataLayer existing_event_2');
   });
 
-  test('ignores non-object events', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('ignores non-object events', async () => {
+    await createDataLayerSource(collector);
 
     // Push invalid events
     getDataLayer().push('string_event');
@@ -101,11 +86,8 @@ describe('DataLayer Source - Minimal', () => {
     expect(collectedEvents).toHaveLength(0);
   });
 
-  test('ignores objects without event property', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('ignores objects without event property', async () => {
+    await createDataLayerSource(collector);
 
     // Push objects without event property
     getDataLayer().push({ data: 'test' });
@@ -115,11 +97,8 @@ describe('DataLayer Source - Minimal', () => {
     expect(collectedEvents).toHaveLength(0);
   });
 
-  test('uses custom prefix', () => {
-    const source = sourceDataLayer({ prefix: 'custom' });
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('uses custom prefix', async () => {
+    await createDataLayerSource(collector, { settings: { prefix: 'custom' } });
 
     getDataLayer().push({ event: 'test_event', data: 'test' });
 
@@ -127,11 +106,10 @@ describe('DataLayer Source - Minimal', () => {
     expect(collectedEvents[0].name).toBe('custom test_event');
   });
 
-  test('uses custom dataLayer name', () => {
-    const source = sourceDataLayer({ name: 'customLayer' });
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('uses custom dataLayer name', async () => {
+    await createDataLayerSource(collector, {
+      settings: { name: 'customLayer' },
+    });
 
     // Should create customLayer instead of dataLayer
     expect(window.customLayer).toBeDefined();

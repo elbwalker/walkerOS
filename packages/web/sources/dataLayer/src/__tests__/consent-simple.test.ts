@@ -1,7 +1,10 @@
 import { createCollector } from '@walkeros/collector';
-import { sourceDataLayer } from '../index';
 import type { WalkerOS, Collector } from '@walkeros/core';
-import { createMockPush, getDataLayer } from './test-utils';
+import {
+  createMockPush,
+  getDataLayer,
+  createDataLayerSource,
+} from './test-utils';
 
 describe('DataLayer Source - Consent Mode (Simple)', () => {
   let collectedEvents: WalkerOS.Event[];
@@ -20,11 +23,8 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
     collector.push = mockPush;
   });
 
-  test('basic gtag consent update', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('basic gtag consent update', async () => {
+    await createDataLayerSource(collector);
 
     // Simulate: gtag('consent', 'update', { ad_storage: 'denied', analytics_storage: 'granted' })
     getDataLayer().push([
@@ -46,11 +46,8 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
     });
   });
 
-  test('consent default should be processed', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('consent default should be processed', async () => {
+    await createDataLayerSource(collector);
 
     // gtag('consent', 'default', { ad_storage: 'denied', analytics_storage: 'denied' })
     getDataLayer().push([
@@ -72,7 +69,7 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
     });
   });
 
-  test('processes existing consent events on initialization', () => {
+  test('processes existing consent events on initialization', async () => {
     // Pre-populate dataLayer with consent event
     getDataLayer().push([
       'consent',
@@ -83,10 +80,7 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
       },
     ]);
 
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+    await createDataLayerSource(collector);
 
     // Should have processed the existing event
     expect(collectedEvents).toHaveLength(1);
@@ -99,11 +93,8 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
     });
   });
 
-  test('handles malformed consent events gracefully', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('handles malformed consent events gracefully', async () => {
+    await createDataLayerSource(collector);
 
     // These should be ignored
     getDataLayer().push(['consent', 'update', null]);
@@ -113,11 +104,8 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
     expect(collectedEvents).toHaveLength(0);
   });
 
-  test('processes multiple consent events', () => {
-    const source = sourceDataLayer();
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('processes multiple consent events', async () => {
+    await createDataLayerSource(collector);
 
     // Multiple consent updates
     getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
@@ -140,11 +128,8 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
     });
   });
 
-  test('with gtag prefix for backward compatibility', () => {
-    const source = sourceDataLayer({ prefix: 'gtag' });
-    if (source.init) {
-      source.init(collector, { settings: source.settings ?? {} });
-    }
+  test('with gtag prefix for backward compatibility', async () => {
+    await createDataLayerSource(collector, { settings: { prefix: 'gtag' } });
 
     getDataLayer().push(['consent', 'update', { ad_storage: 'granted' }]);
 

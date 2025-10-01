@@ -6,8 +6,27 @@ sidebar_position: 3
 package: '@walkeros/web-destination-piwikpro'
 ---
 
+import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
 import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { getEvent } from '@walkeros/core';
+import {
+  DestinationInit,
+  DestinationPush,
+} from '@site/src/components/organisms/liveDestination';
+import destinationPiwikPro from '@walkeros/web-destination-piwikpro';
+import { examples } from '@walkeros/web-destination-piwikpro';
+
+export const documentationPiwikPro = {
+  ...destinationPiwikPro,
+  env: {
+    window: {
+      _paq: {
+        push: () => {},
+      },
+    },
+  },
+};
 
 # Piwik PRO
 
@@ -19,7 +38,10 @@ import SettingsTable from '@site/src/components/molecules/SettingsTable';
 
 [Piwik PRO](https://piwik.pro/) is a European, privacy-focused web analytics and
 marketing platform that helps businesses track website traffic and user
-behavior.
+behavior. The destination automatically sends events to Piwik Pro via `push`
+function. All you need to do is install the destination, and optionally map
+events to Piwik Pro's format. walkerOS takes care of loading the script and the
+function calls.
 
 ## Installation
 
@@ -71,6 +93,15 @@ elb('walker destination', destinationPiwikPro, {
   ]}
 />
 
+<DestinationInit
+  destination={destinationPiwikPro}
+  custom={`{
+    appId: 'XXX-XXX-XXX-XXX-XXX', // Id of the site
+    // linkTracking: false, // Disable download and outlink tracking
+    url: 'https://your_account_name.piwik.pro/', // Same address as the login
+  }`}
+/>
+
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings`):
@@ -92,4 +123,89 @@ For custom event mapping (`mapping.entity.action.settings`):
       example: "'data.value'",
     },
   ]}
+/>
+
+## Mapping examples
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+### ProductDetailView
+
+Map your walkerOS event to get
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceproductdetailview#examples">ecommerceProductDetailView</Link>
+event.
+
+<DestinationPush
+  destination={documentationPiwikPro}
+  settings={{
+    appId: 'XXX-XXX-XXX-XXX-XXX',
+    url: 'https://your_account_name.piwik.pro/',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product view')}
+  mapping={examples.mapping.ecommerceProductDetailView}
+  generic={true}
+/>
+
+### AddToCart
+
+Map your walkerOS event to get
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceaddtocart#examples">ecommerceAddToCart</Link>
+event.
+
+<DestinationPush
+  destination={documentationPiwikPro}
+  settings={{
+    appId: 'XXX-XXX-XXX-XXX-XXX',
+    url: 'https://your_account_name.piwik.pro/',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product add')}
+  mapping={examples.mapping.ecommerceAddToCart}
+  generic={true}
+/>
+
+### CartUpdate
+
+Map your walkerOS event to get
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommercecartupdate#examples">ecommerceCartUpdate</Link>
+event.
+
+<DestinationPush
+  destination={documentationPiwikPro}
+  settings={{
+    appId: 'XXX-XXX-XXX-XXX-XXX',
+    url: 'https://your_account_name.piwik.pro/',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('cart view')}
+  mapping={examples.mapping.ecommerceCartUpdate}
+  generic={true}
+/>
+
+### Order
+
+Map your walkerOS event to get
+an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceorder#examples">ecommerceOrder</Link>
+event.
+
+<DestinationPush
+  destination={documentationPiwikPro}
+  settings={{
+    appId: 'XXX-XXX-XXX-XXX-XXX',
+    url: 'https://your_account_name.piwik.pro/',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('order complete')}
+  mapping={examples.mapping.ecommerceOrder}
+  generic={true}
 />

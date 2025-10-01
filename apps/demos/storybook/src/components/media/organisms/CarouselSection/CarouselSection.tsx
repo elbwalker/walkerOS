@@ -29,6 +29,7 @@ export const CarouselSection = ({
       },
       dataElb,
     ),
+    'CarouselSection',
   );
 
   return (

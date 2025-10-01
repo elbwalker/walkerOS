@@ -2,7 +2,7 @@ import type { Destination } from '@walkeros/core';
 import type { DataLayer } from './types';
 import { isObject } from '@walkeros/core';
 
-export function dataLayerDestination(): Destination.InitDestination {
+export function dataLayerDestination(): Destination.Instance {
   window.dataLayer = window.dataLayer || [];
   const dataLayerPush = (event: unknown) => {
     // Do not process events from dataLayer source

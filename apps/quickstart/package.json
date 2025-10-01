@@ -1,32 +1,24 @@
 {
   "name": "@walkeros/quickstart",
-  "version": "0.0.4",
+  "version": "0.1.2",
   "private": true,
   "description": "Verified code examples for walkerOS documentation",
   "license": "MIT",
   "scripts": {
-    "build": "tsup",
-    "test": "jest --colors",
+    "build": "tsup --silent",
+    "test": "jest",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc && eslint \"**/*.ts*\" --rule '@typescript-eslint/no-explicit-any: off'",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage"
+    "lint": "tsc && eslint \"**/*.ts*\"",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "0.0.8",
-    "@walkeros/collector": "0.0.8",
-    "@walkeros/web-core": "0.0.8",
-    "@walkeros/web-source-browser": "0.0.9",
-    "@walkeros/web-source-datalayer": "0.0.8",
-    "@walkeros/web-destination-gtag": "0.0.8",
-    "@walkeros/web-destination-meta": "0.0.8",
-    "@walkeros/web-destination-api": "0.0.8",
-    "@walkeros/web-destination-piwikpro": "0.0.8",
-    "@walkeros/web-destination-plausible": "0.0.8",
-    "@walkeros/server-core": "0.0.8",
-    "@walkeros/server-destination-aws": "0.0.8",
-    "@walkeros/server-destination-gcp": "0.0.8",
-    "@walkeros/server-destination-meta": "0.0.8",
-    "@walkeros/walker.js": "0.0.10"
+    "@walkeros/core": "0.1.2",
+    "@walkeros/collector": "0.1.2",
+    "@walkeros/web-core": "0.1.2",
+    "@walkeros/web-source-browser": "0.1.2",
+    "@walkeros/web-destination-gtag": "0.1.2",
+    "@walkeros/web-destination-api": "0.1.2"
   },
   "devDependencies": {
     "@swc/jest": "^0.2.36",
