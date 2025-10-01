@@ -5,26 +5,34 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**"]
+      "outputs": ["dist/**", "build/**"],
+      "outputLogs": "errors-only"
     },
     "build:website": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**"]
+      "outputs": ["dist/**", "build/**"],
+      "outputLogs": "errors-only"
     },
     "clean": {
-      "cache": false
+      "cache": false,
+      "outputLogs": "errors-only"
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "outputLogs": "errors-only"
     },
     "lint": {
-      "outputs": []
+      "outputs": [],
+      "outputLogs": "errors-only"
     },
     "test": {
       "dependsOn": ["build"],
-      "outputs": []
+      "outputs": [],
+      "outputLogs": "errors-only"
     },
-    "update": {}
+    "update": {
+      "outputLogs": "errors-only"
+    }
   }
 }
