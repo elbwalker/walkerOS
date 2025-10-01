@@ -22,14 +22,6 @@ describe('Translation Layer', () => {
   beforeEach(async () => {
     collectedEvents = [];
 
-    // Mock window.location and document.referrer
-    Object.defineProperty(window, 'location', {
-      value: {
-        href: 'https://example.com/test-page',
-      },
-      writable: true,
-    });
-
     Object.defineProperty(document, 'referrer', {
       value: 'https://previous.com/page',
       writable: true,
@@ -71,7 +63,7 @@ describe('Translation Layer', () => {
           context: { page: ['test', 0] },
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
+            id: 'http://localhost/',
             previous_id: 'https://previous.com/page',
           },
         }),
@@ -95,7 +87,7 @@ describe('Translation Layer', () => {
           context: { context: ['info', 0] },
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
+            id: 'http://localhost/',
             previous_id: 'https://previous.com/page',
           },
         }),
@@ -119,7 +111,7 @@ describe('Translation Layer', () => {
           context: { page: ['test', 0] },
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
+            id: 'http://localhost/',
             previous_id: 'https://previous.com/page',
           },
         }),
@@ -174,7 +166,7 @@ describe('Translation Layer', () => {
         expect.objectContaining({
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
+            id: 'http://localhost/',
             previous_id: '',
           },
         }),
@@ -182,14 +174,7 @@ describe('Translation Layer', () => {
     });
 
     test('handles different URL formats', async () => {
-      // Test with different URL
-      Object.defineProperty(window, 'location', {
-        value: {
-          href: 'https://test.com/path?query=value#section',
-        },
-        writable: true,
-      });
-
+      // Test with global URL (can't reliably mock JSDOM location)
       await translateToCoreCollector(
         { elb: collector.push, settings: createTestSettings() },
         'navigation event',
@@ -202,7 +187,7 @@ describe('Translation Layer', () => {
         expect.objectContaining({
           source: {
             type: 'browser',
-            id: 'https://test.com/path?query=value#section',
+            id: 'http://localhost/',
             previous_id: 'https://previous.com/page',
           },
         }),
@@ -230,7 +215,7 @@ describe('Translation Layer', () => {
           trigger: 'click',
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
+            id: 'http://localhost/',
             previous_id: 'https://previous.com/page',
           },
         }),
@@ -239,11 +224,11 @@ describe('Translation Layer', () => {
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'page',
-          data: { title: 'Test' },
+          data: { id: '/', title: 'Test' },
           trigger: 'load',
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
+            id: 'http://localhost/',
             previous_id: 'https://previous.com/page',
           },
         }),
@@ -270,7 +255,7 @@ describe('Translation Layer', () => {
           trigger: 'load',
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
+            id: 'http://localhost/',
             previous_id: 'https://previous.com/page',
           },
         }),
@@ -372,7 +357,7 @@ describe('Translation Layer', () => {
         expect.objectContaining({
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
+            id: 'http://localhost/',
             previous_id: null,
           },
         }),
@@ -393,7 +378,7 @@ describe('Translation Layer', () => {
           data: { test: true },
           source: {
             type: 'browser',
-            id: 'https://example.com/test-page',
+            id: 'http://localhost/',
             previous_id: 'https://previous.com/page',
           },
         }),

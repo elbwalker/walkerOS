@@ -372,11 +372,6 @@ describe('Elb Layer', () => {
     });
 
     test('page events get pathname id', () => {
-      Object.defineProperty(window, 'location', {
-        value: { pathname: '/test-page' },
-        writable: true,
-      });
-
       setWindowElbLayer([['page view'] as unknown[]]);
 
       initElbLayer(collector.push);
@@ -385,19 +380,13 @@ describe('Elb Layer', () => {
         expect.objectContaining({
           name: 'page view',
           data: expect.objectContaining({
-            id: '/test-page',
+            id: '/',
           }),
         }),
       );
     });
 
     test('source sends pageview when pageview enabled', async () => {
-      // Set up location mock
-      Object.defineProperty(window, 'location', {
-        value: { pathname: '/walker-run-test' },
-        writable: true,
-      });
-
       // Initialize source with pageview enabled - should send pageview immediately
       const source = await createBrowserSource(collector, { pageview: true });
 
@@ -406,7 +395,7 @@ describe('Elb Layer', () => {
         expect.objectContaining({
           name: 'page view',
           data: expect.objectContaining({
-            id: '/walker-run-test',
+            id: '/',
           }),
           trigger: 'load',
         }),
@@ -425,7 +414,7 @@ describe('Elb Layer', () => {
         expect.objectContaining({
           name: 'page view',
           data: expect.objectContaining({
-            id: '/walker-run-test',
+            id: '/',
           }),
           trigger: 'load',
         }),

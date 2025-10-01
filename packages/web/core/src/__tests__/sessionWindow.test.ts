@@ -84,9 +84,7 @@ describe('SessionStart', () => {
     Object.defineProperty(document, 'referrer', {
       value: referrer,
     });
-    Object.defineProperty(window, 'location', {
-      value: new URL(url),
-    });
+    (window as any).location = new URL(url);
     expect(sessionWindow()).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );

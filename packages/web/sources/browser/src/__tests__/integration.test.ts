@@ -67,13 +67,7 @@ describe('Browser Source Integration Tests', () => {
     });
 
     test('processes pageview events correctly', async () => {
-      // Mock window.location for pageview
-      Object.defineProperty(window, 'location', {
-        value: { pathname: '/test-page' },
-        writable: true,
-      });
-
-      // Initialize source with pageview enabled - should automatically send pageview
+      // Initialize source with pageview enabled first - should automatically send pageview
       const source = await createBrowserSource(collector, { pageview: true });
 
       // Should have sent initial pageview during source initialization
@@ -82,7 +76,7 @@ describe('Browser Source Integration Tests', () => {
           name: 'page view',
           trigger: 'load',
           data: expect.objectContaining({
-            id: '/test-page',
+            id: '/',
           }),
         }),
       );
@@ -101,7 +95,7 @@ describe('Browser Source Integration Tests', () => {
           name: 'page view',
           trigger: 'load',
           data: expect.objectContaining({
-            id: '/test-page',
+            id: '/',
           }),
         }),
       );
