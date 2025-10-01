@@ -10,7 +10,7 @@ export interface Package {
 
 function getCachedPackagePath(pkg: Package, tempDir: string): string {
   const cacheDir = path.join('.tmp', 'cache', 'packages');
-  const packageName = pkg.name.replace('/', '-');
+  const packageName = pkg.name;
   return path.join(cacheDir, `${packageName}@${pkg.version}`);
 }
 
@@ -67,7 +67,7 @@ export async function downloadPackages(
 
   for (const pkg of packages) {
     const packageSpec = `${pkg.name}@${pkg.version}`;
-    const packageDir = path.join(targetDir, pkg.name.replace('/', '-'));
+    const packageDir = path.join(targetDir, pkg.name);
     const cachedPath = getCachedPackagePath(pkg, targetDir);
 
     if (useCache && (await isPackageCached(pkg, targetDir))) {

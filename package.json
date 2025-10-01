@@ -36,42 +36,29 @@
     "husky": "^9.1.7"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.28.1",
+    "@changesets/cli": "^2.29.7",
     "@walkeros/eslint": "*",
     "@walkeros/jest": "*",
     "@walkeros/tsconfig": "*",
     "@walkeros/tsup": "*",
-    "lint-staged": "^16.1.2",
+    "lint-staged": "^16.2.3",
     "prettier": "^3.6.2",
-    "turbo": "^2.5.4",
-    "typescript": "^5.8.2"
+    "turbo": "^2.5.8",
+    "typescript": "^5.9.3"
   },
   "lint-staged": {
     "*.{js,ts,tsx,json,css,md}": [
       "prettier --write"
     ]
   },
-  "packageManager": "npm@11.2.0",
+  "packageManager": "npm@11.6.1",
   "engines": {
-    "node": ">=20.0"
+    "node": ">=22.0.0"
   },
   "browserslist": [
     "> 0.2%",
     "not dead",
     "not ie < 11",
     "not op_mini all"
-  ],
-  "overrides": {
-    "ajv": {
-      "uri-js": "^4.4.1"
-    },
-    "jsdom": {
-      "whatwg-url": "^14.2.0"
-    },
-    "tsup": {
-      "source-map": {
-        "whatwg-url": "^14.2.0"
-      }
-    }
-  }
+  ]
 }

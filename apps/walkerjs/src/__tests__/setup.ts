@@ -47,20 +47,18 @@ global.beforeEach(() => {
   }));
 
   // Other browser APIs that might be needed
-  Object.defineProperty(window, 'location', {
-    value: {
-      hostname: 'localhost',
-      pathname: '/',
-      search: '',
-      hash: '',
-      href: 'http://localhost:3000/',
-      origin: 'http://localhost:3000',
-      protocol: 'http:',
-      host: 'localhost:3000',
-      port: '3000',
-    },
-    writable: true,
-  });
+  delete (window as any).location;
+  (window as any).location = {
+    hostname: 'localhost',
+    pathname: '/',
+    search: '',
+    hash: '',
+    href: 'http://localhost:3000/',
+    origin: 'http://localhost:3000',
+    protocol: 'http:',
+    host: 'localhost:3000',
+    port: '3000',
+  };
 
   // Mock document.currentScript for auto-init tests
   Object.defineProperty(document, 'currentScript', {

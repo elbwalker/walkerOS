@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@theme {
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-foreground);
+  --color-muted: var(--color-muted);
+  --color-accent: var(--color-accent);
+}
+
 @layer base {
   :root {
     --color-background: #ffffff;

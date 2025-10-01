@@ -9,7 +9,7 @@ const PackageConfigSchema = z.object({
 // Source/Destination item schema
 const SourceDestinationItemSchema = z.object({
   code: z.string(),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
   env: z.unknown().optional(),
 });
 
@@ -82,7 +82,7 @@ export const BuildConfigSchema = z.object({
 const CollectorConfigSchema = z
   .object({
     run: z.boolean().optional(),
-    consent: z.record(z.boolean()).optional(),
+    consent: z.record(z.string(), z.boolean()).optional(),
     user: z
       .object({
         id: z.string().optional(),
@@ -90,10 +90,10 @@ const CollectorConfigSchema = z
         session: z.string().optional(),
       })
       .optional(),
-    globals: z.record(z.unknown()).optional(),
-    globalsStatic: z.record(z.unknown()).optional(),
-    sessionStatic: z.record(z.unknown()).optional(),
-    custom: z.record(z.unknown()).optional(),
+    globals: z.record(z.string(), z.unknown()).optional(),
+    globalsStatic: z.record(z.string(), z.unknown()).optional(),
+    sessionStatic: z.record(z.string(), z.unknown()).optional(),
+    custom: z.record(z.string(), z.unknown()).optional(),
     verbose: z.boolean().optional(),
     tagging: z.number().optional(),
   })
@@ -102,10 +102,18 @@ const CollectorConfigSchema = z
 // Configuration schema
 export const BundleConfigSchema = z.object({
   platform: z.enum(['web', 'node']).default('web'),
-  packages: z.record(z.string(), PackageConfigSchema.default({})),
+  packages: z.record(
+    z.string(),
+    PackageConfigSchema.default(() => ({ version: 'latest' })),
+  ),
   code: z.string(),
   template: z.string().optional(),
-  build: BuildConfigSchema.default({}),
+  build: BuildConfigSchema.default(() => ({
+    platform: 'browser' as const,
+    format: 'esm' as const,
+    minify: false,
+    sourcemap: false,
+  })),
   output: z.string().default('./dist/bundle.js'),
   sources: z.record(z.string(), SourceDestinationItemSchema).optional(),
   destinations: z.record(z.string(), SourceDestinationItemSchema).optional(),

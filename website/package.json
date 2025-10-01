@@ -15,10 +15,10 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@docusaurus/core": "^3.7.0",
-    "@docusaurus/preset-classic": "^3.7.0",
-    "@docusaurus/theme-live-codeblock": "^3.7.0",
-    "@docusaurus/theme-mermaid": "^3.7.0",
+    "@docusaurus/core": "^3.9.1",
+    "@docusaurus/preset-classic": "^3.9.1",
+    "@docusaurus/theme-live-codeblock": "^3.9.1",
+    "@docusaurus/theme-mermaid": "^3.9.1",
     "@walkeros/core": "*",
     "@walkeros/collector": "*",
     "@walkeros/web-source-browser": "*",
@@ -27,33 +27,33 @@
     "@walkeros/web-destination-meta": "*",
     "@walkeros/web-destination-piwikpro": "*",
     "@walkeros/web-destination-plausible": "*",
-    "@iconify/react": "^5.2.1",
-    "@mdx-js/react": "^3.1.0",
+    "@iconify/react": "^6.0.2",
+    "@mdx-js/react": "^3.1.1",
     "css-loader": "^7.1.2",
     "prism-react-renderer": "^2.4.1",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "react-simple-code-editor": "^0.14.1",
-    "sass": "^1.86.3",
+    "sass": "^1.93.2",
     "sass-loader": "^16.0.5",
     "style-loader": "^4.0.0"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "^3.7.0",
-    "@docusaurus/tsconfig": "^3.7.0",
-    "@docusaurus/types": "^3.7.0",
+    "@docusaurus/module-type-aliases": "^3.9.1",
+    "@docusaurus/tsconfig": "^3.9.1",
+    "@docusaurus/types": "^3.9.1",
     "@heroicons/react": "^2.2.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/forms": "^0.5.10",
-    "@tailwindcss/postcss": "^4.1.6",
-    "@tailwindcss/typography": "^0.5.16",
+    "@tailwindcss/postcss": "^4.1.13",
+    "@tailwindcss/typography": "^0.5.19",
     "autoprefixer": "^10.4.21",
     "clsx": "^2.1.1",
-    "daisyui": "^5.0.35",
-    "postcss": "^8.5.3",
-    "prettier": "^3.5.3",
-    "tailwindcss": "^4.1.6",
-    "typescript": "~5.8.3"
+    "daisyui": "^5.1.26",
+    "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
+    "tailwindcss": "^4.1.13",
+    "typescript": "~5.9.3"
   },
   "browserslist": {
     "production": [
@@ -68,6 +68,6 @@
     ]
   },
   "engines": {
-    "node": ">=20.0"
+    "node": ">=22.0.0"
   }
 }
