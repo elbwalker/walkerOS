@@ -21,6 +21,7 @@ export interface Config<Settings = unknown, Mapping = unknown> {
   onError?: Handler.Error; // Custom error handler
   // onLog?: Handler.Log; // Custom log handler
   disabled?: boolean; // Disable the source
+  primary?: boolean; // Internal flag set by collector when source is marked as primary
 }
 
 export type PartialConfig<Settings = unknown, Mapping = unknown> = Config<
@@ -80,6 +81,7 @@ export type InitSource<Settings = unknown, Mapping = unknown> = {
   code: Init<Settings, Mapping>;
   config?: Partial<Config<Settings, Mapping>>;
   env?: Partial<Environment>;
+  primary?: boolean; // Mark this source as the primary elb entry point
 };
 
 /**

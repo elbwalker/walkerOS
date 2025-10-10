@@ -15,8 +15,20 @@ export async function startFlow<
 
   if (instance.config.run) await instance.push('walker run');
 
+  // Determine the primary elb: use primary source if marked, otherwise collector.push
+  let primaryElb: Elb.Fn = instance.push;
+
+  for (const source of Object.values(instance.sources)) {
+    // Check if this source is marked as primary
+    const isPrimary = (source.config as { primary?: boolean }).primary;
+    if (isPrimary) {
+      primaryElb = source.push;
+      break; // Use the first primary source found
+    }
+  }
+
   return {
     collector: instance,
-    elb: instance.push,
+    elb: primaryElb,
   };
 }

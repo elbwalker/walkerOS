@@ -1,7 +1,104 @@
 import { startFlow } from '../flow';
-import type { Source, WalkerOS } from '@walkeros/core';
+import type { Source, WalkerOS, Elb } from '@walkeros/core';
 
 describe('Source Start Flow Integration', () => {
+  it('should return collector.push as elb by default', async () => {
+    const mockSource: Source.Init = async (config, env) => ({
+      type: 'mock',
+      config: { settings: config.settings || {} },
+      push: env!.elb,
+    });
+
+    const { collector, elb } = await startFlow({
+      sources: {
+        mockSource: {
+          code: mockSource,
+        },
+      },
+      run: false,
+    });
+
+    // elb should be collector.push by default
+    expect(elb).toBe(collector.push);
+  });
+
+  it('should return primary source push as elb when marked', async () => {
+    const customPush: Elb.Fn = async () => ({
+      ok: true,
+      successful: [],
+      queued: [],
+      failed: [],
+    });
+
+    const mockSource: Source.Init = async () => ({
+      type: 'mock',
+      config: {},
+      push: customPush,
+    });
+
+    const { collector, elb } = await startFlow({
+      sources: {
+        mockSource: {
+          code: mockSource,
+          primary: true, // Mark as primary
+        },
+      },
+      run: false,
+    });
+
+    // elb should be the source's push method
+    expect(elb).toBe(customPush);
+    expect(elb).not.toBe(collector.push);
+
+    // Verify primary flag is stored in source config
+    expect(collector.sources.mockSource.config.primary).toBe(true);
+  });
+
+  it('should use first primary source when multiple are marked', async () => {
+    const firstPush: Elb.Fn = async () => ({
+      ok: true,
+      successful: [],
+      queued: [],
+      failed: [],
+    });
+
+    const secondPush: Elb.Fn = async () => ({
+      ok: true,
+      successful: [],
+      queued: [],
+      failed: [],
+    });
+
+    const mockSource1: Source.Init = async () => ({
+      type: 'mock1',
+      config: {},
+      push: firstPush,
+    });
+
+    const mockSource2: Source.Init = async () => ({
+      type: 'mock2',
+      config: {},
+      push: secondPush,
+    });
+
+    const { elb } = await startFlow({
+      sources: {
+        first: {
+          code: mockSource1,
+          primary: true,
+        },
+        second: {
+          code: mockSource2,
+          primary: true,
+        },
+      },
+      run: false,
+    });
+
+    // Should use the first primary source
+    expect(elb).toBe(firstPush);
+  });
+
   it('should initialize complete setup from flow config', async () => {
     const mockPushCalls: WalkerOS.Event[] = [];
 

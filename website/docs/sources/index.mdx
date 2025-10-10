@@ -94,6 +94,26 @@ Every source follows the same pattern:
 
 ## Advanced Source Configuration
 
+### Primary Source
+
+By default, `startFlow` returns `collector.push` as the `elb` function. However, you can mark a source as **primary** to use its push method instead:
+
+```typescript
+const { collector, elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: { /* source settings */ },
+      primary: true, // Use browser.push as elb
+    },
+  },
+});
+
+// elb is now browser.push, which provides browser-specific functionality
+```
+
+This is useful when a source provides an enhanced interface with additional commands or capabilities beyond the standard collector push.
+
 ### Reactive Event Handling
 
 Sources can implement an optional `on` method to react to collector events. This

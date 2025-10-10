@@ -49,6 +49,7 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
           window: typeof window !== 'undefined' ? window : undefined,
           document: typeof document !== 'undefined' ? document : undefined,
         },
+        primary: true, // Mark browser as primary source for elb
       },
     },
   };
@@ -69,15 +70,10 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
     }
   }
 
-  const { collector } = await startFlow(collectorConfig);
+  const { collector, elb } = await startFlow(collectorConfig);
 
-  // Use browser source push method for browser-specific operations
-  // Browser source should always be available in walker.js
-  if (!collector.sources.browser) {
-    throw new Error('Browser source not initialized in walker.js');
-  }
-  const browserPush = collector.sources.browser
-    .push as SourceBrowser.BrowserPush;
+  // elb is now automatically the browser source push method
+  const browserPush = elb as SourceBrowser.BrowserPush;
 
   const instance: Instance = {
     collector,
