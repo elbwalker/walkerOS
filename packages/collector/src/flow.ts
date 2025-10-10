@@ -2,10 +2,10 @@ import type { Collector, WalkerOS, Elb } from '@walkeros/core';
 import type { StartFlow } from './types';
 import { collector } from './collector';
 
-export async function startFlow<
-  TConfig extends Collector.InitConfig = Collector.InitConfig,
-  ElbPush extends Elb.Fn = Elb.Fn,
->(initConfig: TConfig = {} as TConfig): Promise<StartFlow<ElbPush>> {
+export async function startFlow<ElbPush extends Elb.Fn = Elb.Fn>(
+  initConfig?: Collector.InitConfig,
+): Promise<StartFlow<ElbPush>> {
+  initConfig = initConfig || {};
   const instance = await collector(initConfig);
   const { consent, user, globals, custom } = initConfig;
 

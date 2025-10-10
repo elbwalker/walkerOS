@@ -5,7 +5,6 @@
     "packages/config/*",
     "packages/core",
     "packages/collector",
-    "packages/cli",
     "packages/server/core",
     "packages/server/destinations/*",
     "packages/server/sources/*",

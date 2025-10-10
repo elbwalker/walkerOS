@@ -69,9 +69,7 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
     }
   }
 
-  const flow = await startFlow<Collector.InitConfig, SourceBrowser.BrowserPush>(
-    collectorConfig,
-  );
+  const flow = await startFlow<SourceBrowser.BrowserPush>(collectorConfig);
 
   // Set up global variables if configured (only in browser environments)
   if (typeof window !== 'undefined') {
