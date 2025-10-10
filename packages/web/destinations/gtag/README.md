@@ -66,6 +66,60 @@ For custom event mapping (`mapping.entity.action.settings`):
 | `ads` | `AdsMapping` | Google Ads specific event mapping configuration | No       | `{ label: 'conversion_label' }`    |
 | `gtm` | `GTMMapping` | GTM specific event mapping configuration        | No       | `{}`                               |
 
+## Consent Mode
+
+The gtag destination automatically handles Google Consent Mode v2 with a "deny
+by default" approach. Configure consent mode using the `como` setting:
+
+```typescript
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+
+const destination = destinationGtag({
+  settings: {
+    como: true, // Enable with default mapping
+    ga4: { measurementId: 'G-XXXXXXXXXX' },
+  },
+});
+```
+
+### Configuration Options
+
+| Value    | Description          | Default Mapping                                                                                        |
+| -------- | -------------------- | ------------------------------------------------------------------------------------------------------ |
+| `false`  | Disable consent mode | -                                                                                                      |
+| `true`   | Use default mapping  | `marketing` → `ad_storage`, `ad_user_data`, `ad_personalization`<br>`functional` → `analytics_storage` |
+| `object` | Custom mapping       | `{ [walkerOSGroup]: gtagParameter \| gtagParameter[] }`                                                |
+
+### Custom Mapping
+
+```typescript
+const destination = destinationGtag({
+  settings: {
+    como: {
+      marketing: ['ad_storage', 'ad_personalization'],
+      analytics: 'analytics_storage',
+    },
+    ga4: { measurementId: 'G-XXXXXXXXXX' },
+  },
+});
+```
+
+### Usage
+
+Consent mode automatically activates when you send consent events through
+walkerOS:
+
+```typescript
+// Grant consent
+elb('walker consent', { marketing: true, functional: true });
+
+// Deny consent
+elb('walker consent', { marketing: false, functional: false });
+```
+
+The destination handles all gtag consent calls automatically, ensuring
+compliance with privacy regulations.
+
 ## Examples
 
 ### E-commerce Purchase
