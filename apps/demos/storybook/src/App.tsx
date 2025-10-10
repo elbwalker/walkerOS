@@ -126,12 +126,6 @@ function App() {
         />
         <Typography variant="caption">Demo:</Typography>
         <Button
-          label="Shop"
-          primary={currentTemplate === 'shop'}
-          size="small"
-          onClick={() => setCurrentTemplate('shop')}
-        />
-        <Button
           label="Mediathek"
           primary={currentTemplate === 'publisher'}
           size="small"

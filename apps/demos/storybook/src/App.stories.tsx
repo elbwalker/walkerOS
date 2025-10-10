@@ -13,7 +13,6 @@ const meta: Meta<typeof App> = {
 # Full Application Demo
 
 This story showcases the complete application with the ability to toggle between:
-- **E-commerce Demo**: A shopping interface with product grid, search, and cart functionality
 - **Mediathek Demo**: A media streaming interface with video content, carousels, and recommendations
 
 ## Features
@@ -48,27 +47,6 @@ export const Default: Story = {
           'The complete application with landing page and template toggle functionality.',
       },
     },
-  },
-};
-
-export const EcommerceFocused: Story = {
-  name: 'E-commerce Template Preview',
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Shows the application starting directly in e-commerce mode. Use the navigation toggle to explore other sections.',
-      },
-    },
-  },
-  play: async ({ canvasElement }) => {
-    // Auto-navigate to shop template for this story
-    const shopButton = canvasElement.querySelector(
-      '[data-testid="shop-button"] button',
-    ) as HTMLButtonElement;
-    if (shopButton) {
-      shopButton.click();
-    }
   },
 };
 
