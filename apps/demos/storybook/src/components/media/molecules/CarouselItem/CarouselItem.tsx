@@ -26,7 +26,10 @@ export const CarouselItem = ({
     assign(
       {
         entity: 'content',
-        action: 'visible',
+        action: {
+          visible: 'visible',
+          click: 'click',
+        },
         data: {
           title: title,
           ...(position && { position: position }),

@@ -87,7 +87,7 @@ export const Primary = {
     label: 'Click me',
     dataElb: {
       entity: 'cta_button',
-      action: 'engage',
+      action: 'click',
       data: { campaign: 'hero' },
     },
   },
