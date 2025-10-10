@@ -7,7 +7,7 @@ import { initSources } from './source';
 declare const __VERSION__: string;
 
 export async function collector(
-  initConfig: Partial<Collector.Config>,
+  initConfig: Collector.InitConfig,
 ): Promise<Collector.Instance> {
   const version = __VERSION__;
 
@@ -18,12 +18,6 @@ export async function collector(
     verbose: false,
     onLog: log,
     run: true,
-    sources: {},
-    destinations: {},
-    consent: {},
-    user: {},
-    globals: {},
-    custom: {},
   };
 
   const config: Collector.Config = assign(defaultConfig, initConfig, {
@@ -37,14 +31,14 @@ export async function collector(
   config.onLog = log;
 
   // Enhanced globals with static globals from config
-  const finalGlobals = { ...config.globalsStatic, ...config.globals };
+  const finalGlobals = { ...config.globalsStatic, ...initConfig.globals };
 
   const collector: Collector.Instance = {
     allowed: false,
     config,
-    consent: config.consent || {},
+    consent: initConfig.consent || {},
     count: 0,
-    custom: config.custom || {},
+    custom: initConfig.custom || {},
     destinations: {},
     globals: finalGlobals,
     group: '',
@@ -54,7 +48,7 @@ export async function collector(
     round: 0,
     session: undefined,
     timing: Date.now(),
-    user: config.user || {},
+    user: initConfig.user || {},
     version,
     sources: {},
     push: undefined as unknown as Elb.Fn, // Placeholder, will be set below
@@ -73,10 +67,10 @@ export async function collector(
   );
 
   // Initialize sources and destinations after collector is fully created
-  collector.sources = await initSources(collector, config.sources);
+  collector.sources = await initSources(collector, initConfig.sources || {});
   collector.destinations = await initDestinations(
     collector,
-    config.destinations,
+    initConfig.destinations || {},
   );
 
   return collector;

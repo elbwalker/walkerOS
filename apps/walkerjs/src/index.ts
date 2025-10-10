@@ -37,7 +37,7 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
   const fullConfig = assign(defaultConfig, config);
 
   // Build collector config with sources
-  const collectorConfig: Partial<Collector.Config> = {
+  const collectorConfig: Collector.InitConfig = {
     ...fullConfig.collector,
     sources: {
       browser: {

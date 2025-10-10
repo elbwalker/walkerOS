@@ -3,7 +3,7 @@ import type { StartFlow } from './types';
 import { collector } from './collector';
 
 export async function startFlow<
-  TConfig extends Partial<Collector.Config> = Partial<Collector.Config>,
+  TConfig extends Collector.InitConfig = Collector.InitConfig,
 >(initConfig: TConfig = {} as TConfig): Promise<StartFlow> {
   const instance = await collector(initConfig);
   const { consent, user, globals, custom } = initConfig;
