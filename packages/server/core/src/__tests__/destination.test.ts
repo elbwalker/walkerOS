@@ -21,7 +21,7 @@ describe('Destination', () => {
   };
   let result: Elb.PushResult;
 
-  async function getCollector(custom?: Partial<Collector.Config>) {
+  async function getCollector(custom?: Partial<Collector.InitConfig>) {
     const config = custom || {
       destinations: {
         mock: {

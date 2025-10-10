@@ -4,7 +4,8 @@ import { collector } from './collector';
 
 export async function startFlow<
   TConfig extends Collector.InitConfig = Collector.InitConfig,
->(initConfig: TConfig = {} as TConfig): Promise<StartFlow> {
+  ElbPush extends Elb.Fn = Elb.Fn,
+>(initConfig: TConfig = {} as TConfig): Promise<StartFlow<ElbPush>> {
   const instance = await collector(initConfig);
   const { consent, user, globals, custom } = initConfig;
 
@@ -15,20 +16,28 @@ export async function startFlow<
 
   if (instance.config.run) await instance.push('walker run');
 
-  // Determine the primary elb: use primary source if marked, otherwise collector.push
+  // Determine the primary elb:
+  // 1. Use explicitly marked primary source
+  // 2. Use first source if any exist
+  // 3. Fallback to collector.push
   let primaryElb: Elb.Fn = instance.push;
 
-  for (const source of Object.values(instance.sources)) {
-    // Check if this source is marked as primary
-    const isPrimary = (source.config as { primary?: boolean }).primary;
-    if (isPrimary) {
-      primaryElb = source.push;
-      break; // Use the first primary source found
-    }
+  const sources = Object.values(instance.sources);
+
+  // First, check for explicitly marked primary source
+  const markedPrimary = sources.find(
+    (source) => (source.config as { primary?: boolean }).primary,
+  );
+
+  if (markedPrimary) {
+    primaryElb = markedPrimary.push;
+  } else if (sources.length > 0) {
+    // Use first source as default
+    primaryElb = sources[0].push;
   }
 
   return {
     collector: instance,
-    elb: primaryElb,
+    elb: primaryElb as ElbPush,
   };
 }

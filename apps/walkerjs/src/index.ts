@@ -49,7 +49,6 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
           window: typeof window !== 'undefined' ? window : undefined,
           document: typeof document !== 'undefined' ? document : undefined,
         },
-        primary: true, // Mark browser as primary source for elb
       },
     },
   };
@@ -70,23 +69,17 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
     }
   }
 
-  const { collector, elb } = await startFlow(collectorConfig);
-
-  // elb is now automatically the browser source push method
-  const browserPush = elb as SourceBrowser.BrowserPush;
-
-  const instance: Instance = {
-    collector,
-    elb: browserPush,
-  };
+  const flow = await startFlow<Collector.InitConfig, SourceBrowser.BrowserPush>(
+    collectorConfig,
+  );
 
   // Set up global variables if configured (only in browser environments)
   if (typeof window !== 'undefined') {
-    if (fullConfig.elb) window[fullConfig.elb] = browserPush;
-    if (fullConfig.name) window[fullConfig.name] = collector;
+    if (fullConfig.elb) window[fullConfig.elb] = flow.elb;
+    if (fullConfig.name) window[fullConfig.name] = flow.collector;
   }
 
-  return instance;
+  return flow;
 }
 
 // Export factory function as default

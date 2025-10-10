@@ -1,4 +1,4 @@
-import type { WalkerOS, Source } from '@walkeros/core';
+import type { WalkerOS, Source, Elb } from '@walkeros/core';
 
 declare global {
   interface Window {
@@ -8,6 +8,9 @@ declare global {
 }
 
 export type DataLayer = Array<unknown>;
+
+// DataLayer uses standard Elb.Fn (no custom push type)
+export type Push = Elb.Fn;
 
 export interface Settings extends Record<string, unknown> {
   name?: string; // dataLayer variable name (default: 'dataLayer')

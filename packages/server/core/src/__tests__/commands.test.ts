@@ -2,7 +2,7 @@ import type { Collector } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 
 describe('Commands', () => {
-  async function getCollector(custom?: Partial<Collector.Config>) {
+  async function getCollector(custom?: Partial<Collector.InitConfig>) {
     const { elb, collector } = await startFlow(custom || {});
     return {
       elb,

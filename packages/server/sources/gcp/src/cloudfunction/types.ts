@@ -28,9 +28,12 @@ export interface CorsOptions {
   maxAge?: number;
 }
 
+// CloudFunction-specific push type
+export type Push = (req: Request, res: Response) => Promise<void>;
+
 export interface CloudFunctionSource
   extends Omit<Source.Instance<Settings, Mapping>, 'push'> {
-  push: (req: Request, res: Response) => Promise<void>;
+  push: Push;
 }
 
 // Removed custom Config type - using Source.Config<Settings, Mapping> directly

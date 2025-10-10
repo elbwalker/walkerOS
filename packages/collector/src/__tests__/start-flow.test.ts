@@ -2,11 +2,27 @@ import { startFlow } from '../flow';
 import type { Source, WalkerOS, Elb } from '@walkeros/core';
 
 describe('Source Start Flow Integration', () => {
-  it('should return collector.push as elb by default', async () => {
-    const mockSource: Source.Init = async (config, env) => ({
+  it('should return collector.push as elb when no sources', async () => {
+    const { collector, elb } = await startFlow({
+      run: false,
+    });
+
+    // elb should be collector.push when no sources exist
+    expect(elb).toBe(collector.push);
+  });
+
+  it('should return first source push as elb by default', async () => {
+    const customPush: Elb.Fn = async () => ({
+      ok: true,
+      successful: [],
+      queued: [],
+      failed: [],
+    });
+
+    const mockSource: Source.Init = async () => ({
       type: 'mock',
-      config: { settings: config.settings || {} },
-      push: env!.elb,
+      config: {},
+      push: customPush,
     });
 
     const { collector, elb } = await startFlow({
@@ -18,8 +34,9 @@ describe('Source Start Flow Integration', () => {
       run: false,
     });
 
-    // elb should be collector.push by default
-    expect(elb).toBe(collector.push);
+    // elb should be first source's push by default
+    expect(elb).toBe(customPush);
+    expect(elb).not.toBe(collector.push);
   });
 
   it('should return primary source push as elb when marked', async () => {
@@ -54,7 +71,7 @@ describe('Source Start Flow Integration', () => {
     expect(collector.sources.mockSource.config.primary).toBe(true);
   });
 
-  it('should use first primary source when multiple are marked', async () => {
+  it('should override first source with primary flag', async () => {
     const firstPush: Elb.Fn = async () => ({
       ok: true,
       successful: [],
@@ -85,18 +102,18 @@ describe('Source Start Flow Integration', () => {
       sources: {
         first: {
           code: mockSource1,
-          primary: true,
         },
         second: {
           code: mockSource2,
-          primary: true,
+          primary: true, // Explicitly mark second as primary
         },
       },
       run: false,
     });
 
-    // Should use the first primary source
-    expect(elb).toBe(firstPush);
+    // Should use explicitly marked primary, not first source
+    expect(elb).toBe(secondPush);
+    expect(elb).not.toBe(firstPush);
   });
 
   it('should initialize complete setup from flow config', async () => {

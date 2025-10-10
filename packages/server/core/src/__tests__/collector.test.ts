@@ -14,7 +14,7 @@ describe('Server Collector', () => {
   let mockEvent: WalkerOS.Event;
   let result: Elb.PushResult;
 
-  async function getCollector(config?: Partial<Collector.Config>) {
+  async function getCollector(config?: Partial<Collector.InitConfig>) {
     const finalConfig = config || {
       destinations: {
         mock: {

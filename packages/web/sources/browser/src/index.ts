@@ -5,6 +5,7 @@ import type {
   BrowserPushOptions,
   BrowserPushContext,
   BrowserPush,
+  Push,
 } from './types/elb';
 import { isString } from '@walkeros/core';
 import { getEnvironment } from '@walkeros/web-core';
@@ -37,7 +38,7 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
  * This source captures DOM events, manages sessions, handles pageviews,
  * and processes the elbLayer for browser environments.
  */
-export const sourceBrowser: Source.Init<Settings> = async (
+export const sourceBrowser: Source.Init<Settings, never, Push> = async (
   config: Partial<Source.Config<Settings>>,
   env?: Source.Environment,
 ) => {

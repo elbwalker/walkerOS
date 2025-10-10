@@ -96,7 +96,7 @@ Every source follows the same pattern:
 
 ### Primary Source
 
-By default, `startFlow` returns `collector.push` as the `elb` function. However, you can mark a source as **primary** to use its push method instead:
+By default, `startFlow` uses the **first source's push method** as the returned `elb` function. This provides a cleaner API since sources typically offer enhanced functionality:
 
 ```typescript
 const { collector, elb } = await startFlow({
@@ -104,15 +104,28 @@ const { collector, elb } = await startFlow({
     browser: {
       code: sourceBrowser,
       config: { /* source settings */ },
-      primary: true, // Use browser.push as elb
     },
   },
 });
 
-// elb is now browser.push, which provides browser-specific functionality
+// elb is automatically browser.push (first source)
+// collector.push is still available via collector.push
 ```
 
-This is useful when a source provides an enhanced interface with additional commands or capabilities beyond the standard collector push.
+For multiple sources, you can explicitly mark which one is primary:
+
+```typescript
+const { elb } = await startFlow({
+  sources: {
+    browser: { code: sourceBrowser },
+    dataLayer: { code: sourceDataLayer, primary: true }, // Override default
+  },
+});
+
+// elb is now dataLayer.push instead of browser.push
+```
+
+Without any sources, `elb` defaults to `collector.push`.
 
 ### Reactive Event Handling
 

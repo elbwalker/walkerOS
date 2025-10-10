@@ -97,3 +97,6 @@ export type CommandRun<R = Promise<Elb.PushResult>> = (
 // Re-export core types
 export type PushResult = Elb.PushResult;
 export type Layer = Elb.Layer | IArguments;
+
+// Clean Push type for generic usage
+export type Push = BrowserPush;

@@ -50,10 +50,14 @@ export interface Environment {
  * Sources are stateless and contain no collector references.
  * All communication with collector happens via env.elb function.
  */
-export interface Instance<Settings = unknown, Mapping = unknown> {
+export interface Instance<
+  Settings = unknown,
+  Mapping = unknown,
+  Push extends Elb.Fn = Elb.Fn,
+> {
   type: string;
   config: Config<Settings, Mapping>;
-  push: Elb.Fn; // Required - each source must provide its own push method
+  push: Push; // Required - each source must provide its own push method
   destroy?(): void | Promise<void>;
   on?(event: On.Types, context?: unknown): void | Promise<void>;
 }
@@ -68,17 +72,27 @@ export interface Instance<Settings = unknown, Mapping = unknown> {
  * @param env - Environment with elb function and platform APIs
  * @returns Source instance or promise of instance
  */
-export type Init<Settings = unknown, Mapping = unknown> = (
+export type Init<
+  Settings = unknown,
+  Mapping = unknown,
+  Push extends Elb.Fn = Elb.Fn,
+> = (
   config: Partial<Config<Settings, Mapping>>,
   env: Environment,
-) => Instance<Settings, Mapping> | Promise<Instance<Settings, Mapping>>;
+) =>
+  | Instance<Settings, Mapping, Push>
+  | Promise<Instance<Settings, Mapping, Push>>;
 
 /**
  * Source configuration interface for collector initialization.
  * Similar to destinations, this defines the structure for source definitions.
  */
-export type InitSource<Settings = unknown, Mapping = unknown> = {
-  code: Init<Settings, Mapping>;
+export type InitSource<
+  Settings = unknown,
+  Mapping = unknown,
+  Push extends Elb.Fn = Elb.Fn,
+> = {
+  code: Init<Settings, Mapping, Push>;
   config?: Partial<Config<Settings, Mapping>>;
   env?: Partial<Environment>;
   primary?: boolean; // Mark this source as the primary elb entry point
@@ -90,5 +104,5 @@ export type InitSource<Settings = unknown, Mapping = unknown> = {
  */
 export interface InitSources {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [sourceId: string]: InitSource<any, any>;
+  [sourceId: string]: InitSource<any, any, Elb.Fn>;
 }

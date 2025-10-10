@@ -13,7 +13,7 @@ export interface CreateCollector {
   elb: WalkerOS.Elb;
 }
 
-export interface StartFlow {
+export interface StartFlow<ElbPush extends WalkerOS.Elb = WalkerOS.Elb> {
   collector: Collector.Instance;
-  elb: WalkerOS.Elb;
+  elb: ElbPush;
 }
