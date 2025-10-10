@@ -106,7 +106,7 @@ function App() {
           padding: '12px',
           borderRadius: '8px',
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          display: 'flex',
+          display: 'none',
           gap: '8px',
           alignItems: 'center',
         }}

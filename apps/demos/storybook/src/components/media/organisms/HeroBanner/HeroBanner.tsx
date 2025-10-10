@@ -56,7 +56,7 @@ export const HeroBanner = ({
             primary={true}
             onClick={onButtonClick}
             dataElb={{
-              action: 'engage',
+              action: 'click:explore',
               data: { type: 'primary' },
             }}
           />

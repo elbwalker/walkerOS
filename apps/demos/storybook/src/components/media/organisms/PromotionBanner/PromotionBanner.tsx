@@ -23,6 +23,7 @@ export const PromotionBanner = ({
   const trackingProps = createTrackingProps(
     assign(
       {
+        entity: 'promotion',
         trigger: 'visible',
         data: { type: 'promo' },
       },
@@ -47,7 +48,7 @@ export const PromotionBanner = ({
             primary={true}
             onClick={onButtonClick}
             dataElb={{
-              action: 'engage',
+              action: 'click',
               data: { type: 'button' },
             }}
           />
