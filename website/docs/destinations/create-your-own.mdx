@@ -123,10 +123,10 @@ To use your custom destination, add it to the `destinations` object in your
 collector configuration.
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationWebhook } from './destinationWebhook';
 
-const { elb } = await createCollector({
+const { elb } = await startFlow({
   destinations: {
     myWebhook: {
       destination: destinationWebhook,

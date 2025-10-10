@@ -1,7 +1,7 @@
 import type { DestinationServer, Elb } from '../types';
 import type { WalkerOS, Collector } from '@walkeros/core';
 import { createEvent } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 
 describe('Server Collector', () => {
   const mockDestinationPush = jest.fn(); //.mockImplementation(console.log);
@@ -23,7 +23,7 @@ describe('Server Collector', () => {
       },
     };
 
-    const { elb, collector } = await createCollector(finalConfig);
+    const { elb, collector } = await startFlow(finalConfig);
     return {
       elb,
       collector,

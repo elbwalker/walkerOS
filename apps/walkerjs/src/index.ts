@@ -1,6 +1,6 @@
 import type { Config, Instance } from './types';
 import type { Collector, Elb, WalkerOS } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { assign, isObject } from '@walkeros/core';
 import {
   sourceBrowser,
@@ -69,7 +69,7 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
     }
   }
 
-  const { collector } = await createCollector(collectorConfig);
+  const { collector } = await startFlow(collectorConfig);
 
   // Use browser source push method for browser-specific operations
   // Browser source should always be available in walker.js

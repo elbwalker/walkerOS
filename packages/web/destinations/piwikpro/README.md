@@ -30,10 +30,10 @@ npm install @walkeros/web-destination-piwikpro
 Here's a basic example of how to use the Piwik PRO destination:
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationPiwikPro } from '@walkeros/web-destination-piwikpro';
 
-const { elb } = await createCollector();
+const { elb } = await startFlow();
 
 elb('walker destination', destinationPiwikPro, {
   settings: {

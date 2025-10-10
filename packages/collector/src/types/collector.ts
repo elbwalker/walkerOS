@@ -12,3 +12,8 @@ export interface CreateCollector {
   collector: Collector.Instance;
   elb: WalkerOS.Elb;
 }
+
+export interface StartFlow {
+  collector: Collector.Instance;
+  elb: WalkerOS.Elb;
+}

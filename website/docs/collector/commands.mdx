@@ -44,11 +44,13 @@ elb('walker destination', destinationGtag, {
 Destinations are typically configured during collector initialization:
 
 ```typescript
-const { collector, elb } = await createCollector({
+const { collector, elb } = await startFlow({
   destinations: {
     gtag: {
       code: destinationGtag,
-      config: { /* custom config */ },
+      config: {
+        /* custom config */
+      },
     },
   },
 });
@@ -105,7 +107,7 @@ Every time the `run` command is called, the function will be executed:
 
 ```js
 // Setup collector with browser source
-const { collector } = await createCollector({ run: true });
+const { collector } = await startFlow({ run: true });
 // Output: run with { instance: { ... } }
 elb('walker run');
 // Output: run with { instance: { ... } }
@@ -268,7 +270,7 @@ Add hooks during collector initialization or via the `hook` command:
 
 ```js
 // Add hooks during initialization
-const { collector } = await createCollector({
+const { collector } = await startFlow({
   hooks: {
     prePush: (params, ...args) => {
       window.elbTimer = Date.now();

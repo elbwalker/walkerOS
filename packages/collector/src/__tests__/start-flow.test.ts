@@ -1,7 +1,7 @@
 import { startFlow } from '../flow';
 import type { Source, WalkerOS } from '@walkeros/core';
 
-describe('Source Create Flow Integration', () => {
+describe('Source Start Flow Integration', () => {
   it('should initialize complete setup from flow config', async () => {
     const mockPushCalls: WalkerOS.Event[] = [];
 

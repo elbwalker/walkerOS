@@ -1,6 +1,6 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { DestinationAPI } from '.';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createEvent, clone } from '@walkeros/core';
 import { examples } from '.';
 
@@ -20,7 +20,7 @@ describe('Destination API', () => {
 
     destination = jest.requireActual('.').default;
     event = createEvent();
-    await createCollector({
+    await startFlow({
       tagging: 2,
     });
   });

@@ -221,7 +221,7 @@ export async function executeSimulation(
       // Test event execution with generated collector
       const testEvent = ${JSON.stringify(event)};
       
-      // The bundle should return { collector, elb } from createCollector
+      // The bundle should return { collector, elb } from startFlow
       if (flow && typeof flow.elb === 'function') {
         const elbResult = await flow.elb(testEvent);
         

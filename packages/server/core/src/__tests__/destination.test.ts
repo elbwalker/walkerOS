@@ -1,6 +1,6 @@
 import type { DestinationServer, Elb } from '../types';
 import type { WalkerOS, Collector } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createEvent } from '@walkeros/core';
 
 describe('Destination', () => {
@@ -30,7 +30,7 @@ describe('Destination', () => {
       },
     };
 
-    const { elb, collector } = await createCollector(config);
+    const { elb, collector } = await startFlow(config);
     return {
       elb,
       collector,

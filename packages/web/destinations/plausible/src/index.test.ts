@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { DestinationPlausible } from '.';
 import type { DestinationWeb } from '@walkeros/web-core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { getEvent, mockEnv } from '@walkeros/core';
 import { examples } from '.';
 
@@ -47,7 +47,7 @@ describe('destination plausible', () => {
       testEnv.document.querySelector = jest.fn();
     }
 
-    ({ elb } = await createCollector({
+    ({ elb } = await startFlow({
       tagging: 2,
     }));
   });

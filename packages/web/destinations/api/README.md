@@ -40,10 +40,10 @@ npm install @walkeros/web-destination-api
 ### Basic Usage
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
-const { elb } = await createCollector();
+const { elb } = await startFlow();
 
 elb('walker destination', destinationAPI, {
   settings: {
@@ -60,10 +60,10 @@ elb('walker destination', destinationAPI, {
 ### Advanced Usage with Transform
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
-const { elb } = await createCollector();
+const { elb } = await startFlow();
 
 elb('walker destination', destinationAPI, {
   settings: {
@@ -87,10 +87,10 @@ elb('walker destination', destinationAPI, {
 ### Sending to Analytics API
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
-const { elb } = await createCollector();
+const { elb } = await startFlow();
 
 // Configure for analytics API
 elb('walker destination', destinationAPI, {

@@ -1,4 +1,4 @@
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
 import { translateToCoreCollector } from '../translation';
 import type { WalkerOS, Collector } from '@walkeros/core';
@@ -47,7 +47,7 @@ describe('Translation Layer', () => {
     }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
 
     // Initialize collector
-    ({ collector } = await createCollector());
+    ({ collector } = await startFlow());
 
     // Override push with mock
     collector.push = mockPush;

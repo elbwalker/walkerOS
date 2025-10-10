@@ -1,7 +1,7 @@
 import type { Collector } from '@walkeros/core';
 import type { Destination, WalkerOS } from '@walkeros/core';
 import { clone, createEvent } from '@walkeros/core';
-import { pushToDestinations, createCollector } from '..';
+import { pushToDestinations, startFlow } from '..';
 
 describe('Destination', () => {
   let event: WalkerOS.Event;
@@ -147,7 +147,7 @@ describe('Destination', () => {
         config: { init: true },
       });
 
-      const { collector, elb } = await createCollector({
+      const { collector, elb } = await startFlow({
         destinations: { testDestination: { code: destinationWithOn } },
       });
 
@@ -164,7 +164,7 @@ describe('Destination', () => {
         config: { init: true },
       });
 
-      const { collector, elb } = await createCollector({
+      const { collector, elb } = await startFlow({
         destinations: { testDestination: { code: destinationWithOn } },
       });
 
@@ -187,7 +187,7 @@ describe('Destination', () => {
         config: { init: true },
       });
 
-      const { collector, elb } = await createCollector({
+      const { collector, elb } = await startFlow({
         destinations: { testDestination: { code: destinationWithOn } },
       });
 
@@ -204,7 +204,7 @@ describe('Destination', () => {
         config: { init: true },
       });
 
-      const { collector, elb } = await createCollector({
+      const { collector, elb } = await startFlow({
         destinations: { testDestination: { code: destinationWithOn } },
       });
 
@@ -220,7 +220,7 @@ describe('Destination', () => {
         config: { init: true },
       });
 
-      const { collector, elb } = await createCollector({
+      const { collector, elb } = await startFlow({
         destinations: { testDestination: { code: destinationWithoutOn } },
       });
 
@@ -240,7 +240,7 @@ describe('Destination', () => {
         config: { init: true },
       });
 
-      const { collector, elb } = await createCollector({
+      const { collector, elb } = await startFlow({
         destinations: { testDestination: { code: destinationWithAsyncOn } },
       });
 
@@ -267,7 +267,7 @@ describe('Destination', () => {
         config: { init: true },
       });
 
-      const { collector, elb } = await createCollector({
+      const { collector, elb } = await startFlow({
         destinations: {
           dest1: { code: destination1 },
           dest2: { code: destination2 },
@@ -292,7 +292,7 @@ describe('Destination', () => {
         config: { init: true },
       });
 
-      const { collector, elb } = await createCollector({
+      const { collector, elb } = await startFlow({
         destinations: { testDestination: { code: destinationWithErrorOn } },
       });
 

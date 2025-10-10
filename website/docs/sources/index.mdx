@@ -44,11 +44,11 @@ walkerOS is primarily build to capture events directly from the browser.
 ### Setup within walkerOS
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createSource, sourceBrowser } from '@walkeros/core';
 
 // Create a collector
-const { collector } = await createCollector({
+const { collector } = await startFlow({
   destinations: {
     /* your destinations */
   },
@@ -96,7 +96,9 @@ Every source follows the same pattern:
 
 ### Reactive Event Handling
 
-Sources can implement an optional `on` method to react to collector events. This enables responsive behavior to consent changes, session updates, and collector state without polling.
+Sources can implement an optional `on` method to react to collector events. This
+enables responsive behavior to consent changes, session updates, and collector
+state without polling.
 
 ```typescript
 const mySource: Source.Init = async (config, env) => {
@@ -110,7 +112,7 @@ const mySource: Source.Init = async (config, env) => {
           handleConsentUpdate(context);
           break;
         case 'session':
-          // React to session events  
+          // React to session events
           updateSessionBehavior(context);
           break;
       }
@@ -120,9 +122,10 @@ const mySource: Source.Init = async (config, env) => {
 ```
 
 **Available Events:**
+
 - `consent` - Consent state changes (context: consent object)
 - `session` - Session lifecycle events (context: session data)
-- `ready` - Collector ready state  
+- `ready` - Collector ready state
 - `run` - Collector run events
 
 This keeps sources stateless and reactive to collector changes.

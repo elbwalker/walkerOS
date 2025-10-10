@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { DestinationMeta } from '.';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { getEvent, clone } from '@walkeros/core';
 import { examples } from '.';
 
@@ -25,7 +25,7 @@ describe('Destination Meta Pixel', () => {
 
     jest.clearAllMocks();
 
-    ({ elb } = await createCollector({
+    ({ elb } = await startFlow({
       tagging: 2,
     }));
   });

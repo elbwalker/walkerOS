@@ -34,11 +34,11 @@ npm install @walkeros/web-source-browser
 Setup in your project:
 
 ```javascript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createSource } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
-const { collector } = await createCollector({
+const { collector } = await startFlow({
   sources: {
     browser: createSource(sourceBrowser, {
       settings: {
@@ -58,7 +58,7 @@ Load the source via dynamic import:
 ```html
 <script>
   // Load the collector, core utilities, and source
-  const { createCollector } = await import(
+  const { startFlow } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
   );
   const { createSource } = await import(
@@ -68,7 +68,7 @@ Load the source via dynamic import:
     'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
   );
 
-  const { collector, elb } = await createCollector({
+  const { collector, elb } = await startFlow({
     sources: {
       browser: createSource(sourceBrowser, {
         settings: {
@@ -100,8 +100,8 @@ Load the source via dynamic import:
 >
 > The collector provides **two different elb functions**:
 >
-> 1.  **Collector elb** (`elb` from `createCollector`): Basic event tracking
->     that works with all sources and destinations
+> 1.  **Collector elb** (`elb` from `startFlow`): Basic event tracking that
+>     works with all sources and destinations
 > 2.  **Browser Source elb** (`collector.sources.browser.elb` or direct from
 >     `createSource`): Enhanced function with browser-specific features
 >

@@ -1,4 +1,4 @@
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import type { WalkerOS, Collector } from '@walkeros/core';
 import {
   createMockPush,
@@ -19,7 +19,7 @@ describe('DataLayer Source - Enhanced with gtag support', () => {
     const mockPush = createMockPush(collectedEvents);
 
     // Initialize collector
-    ({ collector } = await createCollector({
+    ({ collector } = await startFlow({
       tagging: 2,
     }));
 

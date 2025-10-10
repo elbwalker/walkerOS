@@ -1,5 +1,5 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
 
 describe('Browser Source Edge Cases', () => {
@@ -19,7 +19,7 @@ describe('Browser Source Edge Cases', () => {
       });
     }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
 
-    ({ collector } = await createCollector());
+    ({ collector } = await startFlow());
 
     collector.push = mockPush;
   });

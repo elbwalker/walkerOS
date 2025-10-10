@@ -1,5 +1,5 @@
 import type { Collector, Source, On, WalkerOS } from '@walkeros/core';
-import { createCollector } from '../collector';
+import { startFlow } from '../flow';
 import { initSources } from '../source';
 
 // Mock source implementation using new pattern
@@ -43,7 +43,7 @@ describe('Source', () => {
   let collector: Collector.Instance;
 
   beforeEach(async () => {
-    const result = await createCollector();
+    const result = await startFlow();
     collector = result.collector;
   });
 
@@ -193,9 +193,9 @@ describe('Source', () => {
     });
   });
 
-  describe('createCollector with sources', () => {
+  describe('startFlow with sources', () => {
     it('should initialize sources during collector creation', async () => {
-      const { collector: testCollector } = await createCollector({
+      const { collector: testCollector } = await startFlow({
         sources: {
           testSource: {
             code: mockSource,
@@ -215,7 +215,7 @@ describe('Source', () => {
     });
 
     it('should work with empty sources configuration', async () => {
-      const { collector: testCollector } = await createCollector({
+      const { collector: testCollector } = await startFlow({
         sources: {},
       });
 

@@ -1,5 +1,5 @@
 import type { Collector, WalkerOS } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import destinationAPI from '@walkeros/web-destination-api';
@@ -22,7 +22,7 @@ export async function initializeWalker(): Promise<void> {
   if (window.walker) return;
 
   // Create collector with destinations and source (run: false for manual pageview control)
-  const { collector } = await createCollector({
+  const { collector } = await startFlow({
     run: false,
     consent: { functional: true },
     sources: {

@@ -31,10 +31,10 @@ npm install @walkeros/web-destination-gtag
 ## Setup
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const { collector, elb } = await createCollector({
+const { collector, elb } = await startFlow({
   destinations: {
     gtag: {
       code: destinationGtag,

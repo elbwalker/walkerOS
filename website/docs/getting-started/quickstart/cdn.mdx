@@ -27,11 +27,11 @@ Use ES6 modules for loading walkerOS packages:
 
 ```html
 <script type="module">
-  import { createCollector } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
+  import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
   import { createSource } from 'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs';
   import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
 
-  const { collector } = await createCollector({
+  const { collector } = await startFlow({
     sources: {
       browser: createSource(sourceBrowser, {
         settings: {
@@ -61,11 +61,11 @@ Complete HTML page with walkerOS tracking:
 <html>
   <head>
     <script type="module">
-      import { createCollector } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
+      import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
       import { createSource } from 'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs';
       import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
 
-      const { collector } = await createCollector({
+      const { collector } = await startFlow({
         sources: {
           browser: createSource(sourceBrowser, {
             settings: {
@@ -100,11 +100,11 @@ Add tracking attributes to your HTML elements:
 <html>
   <head>
     <script type="module">
-      import { createCollector } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
+      import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
       import { createSource } from 'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs';
       import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
 
-      await createCollector({
+      await startFlow({
         sources: {
           browser: createSource(sourceBrowser, {
             settings: { elb: 'elb' },
@@ -155,7 +155,7 @@ Use modern ES6 modules:
 ```html
 <script type="module">
   // Dynamic imports
-  const { createCollector } = await import(
+  const { startFlow } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
   );
   const { createSource } = await import(
@@ -169,7 +169,7 @@ Use modern ES6 modules:
   );
 
   // Setup tracking with proper createSource pattern
-  const { collector } = await createCollector({
+  const { collector } = await startFlow({
     sources: {
       browser: createSource(sourceBrowser, {
         settings: {
@@ -206,12 +206,12 @@ Add Google Analytics or other destinations:
 
 ```html
 <script type="module">
-  import { createCollector } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
+  import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
   import { createSource } from 'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs';
   import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
   import destinationGtag from 'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.mjs';
 
-  await createCollector({
+  await startFlow({
     sources: {
       browser: createSource(sourceBrowser, { settings: { elb: 'elb' } }),
     },

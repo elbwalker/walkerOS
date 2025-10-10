@@ -1,4 +1,4 @@
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import type { WalkerOS, Collector } from '@walkeros/core';
 import {
   createMockPush,
@@ -16,7 +16,7 @@ describe('DataLayer Source - Consent Mode (Simple)', () => {
 
     const mockPush = createMockPush(collectedEvents);
 
-    ({ collector } = await createCollector({
+    ({ collector } = await startFlow({
       tagging: 2,
     }));
 

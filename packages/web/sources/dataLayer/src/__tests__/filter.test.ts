@@ -1,4 +1,4 @@
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { sourceDataLayer } from '../index';
 import type { WalkerOS, Collector } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
@@ -18,7 +18,7 @@ describe('DataLayer Source - Filtering', () => {
 
     const mockPush = createMockPush(collectedEvents);
 
-    ({ collector } = await createCollector({
+    ({ collector } = await startFlow({
       tagging: 2,
     }));
 
