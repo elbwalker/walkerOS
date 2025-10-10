@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { ShopTemplate } from './components/ecommerce/templates/ShopTemplate';
 import { MediathekTemplate } from './components/media/templates/MediathekTemplate';
-import { Button } from './components/ecommerce/atoms/Button';
-import { Typography } from './components/ecommerce/atoms/Typography';
+import { Button } from './stories/Button';
+import { Typography } from './components/media/atoms/Typography/Typography';
 import './App.css';
 
-type TemplateType = 'landing' | 'shop' | 'publisher';
+type TemplateType = 'landing' | 'publisher';
 
 function App() {
   const [currentTemplate, setCurrentTemplate] =
@@ -37,7 +36,7 @@ function App() {
             variant="body1"
             style={{ marginBottom: '32px', color: 'rgba(255,255,255,0.9)' }}
           >
-            Explore two complete application domains built with Atomic Design
+            Explore complete application domains built with Atomic Design
             principles
           </Typography>
 
@@ -50,13 +49,6 @@ function App() {
               marginBottom: '32px',
             }}
           >
-            <div data-testid="shop-button">
-              <Button
-                label="🛍️ E-commerce Demo"
-                primary
-                onClick={() => setCurrentTemplate('shop')}
-              />
-            </div>
             <div data-testid="mediathek-button">
               <Button
                 label="📺 Mediathek Demo"
@@ -133,7 +125,7 @@ function App() {
         />
       </div>
 
-      {currentTemplate === 'shop' ? <ShopTemplate /> : <MediathekTemplate />}
+      {currentTemplate === 'publisher' && <MediathekTemplate />}
     </div>
   );
 }
