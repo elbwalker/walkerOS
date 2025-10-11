@@ -6,7 +6,7 @@ import { DestinationWeb } from '@walkeros/web-core';
 
 describe('GTM Implementation', () => {
   const mockDataLayer: unknown[] = [];
-  const mockEnv = clone(examples.env.standard);
+  const mockEnv = clone(examples.env.push);
   mockEnv.window.dataLayer = mockDataLayer;
 
   beforeEach(() => {
@@ -29,7 +29,7 @@ describe('GTM Implementation', () => {
 
     it('should use custom dataLayer name', () => {
       const customDataLayer: unknown[] = [];
-      const customEnv = clone(examples.env.standard);
+      const customEnv = clone(examples.env.push);
       customEnv.window = { customDataLayer };
 
       const settings: GTMSettings = {

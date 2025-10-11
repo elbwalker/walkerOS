@@ -22,7 +22,7 @@ export const init: Env | undefined = {
   },
 };
 
-export const standard: Env = {
+export const push: Env = {
   window: {
     _paq: [] as unknown[],
   },

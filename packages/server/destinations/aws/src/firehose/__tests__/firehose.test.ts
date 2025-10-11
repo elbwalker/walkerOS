@@ -34,7 +34,7 @@ describe('Firehose', () => {
     calls = [];
 
     // Use the example environment directly (no proxy for constructor functions)
-    testEnv = env.env.push;
+    testEnv = env.push;
 
     // Store the original constructor and replace with a version that uses mocked send
     const OriginalFirehoseClient = testEnv.AWS.FirehoseClient;

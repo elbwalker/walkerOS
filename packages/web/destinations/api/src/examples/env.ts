@@ -15,7 +15,7 @@ export const init: Env | undefined = {
   sendWeb: undefined,
 };
 
-export const standard: Env = {
+export const push: Env = {
   // Standard mock environment for testing
   sendWeb: Object.assign(noop, {
     // Add any specific properties if needed for sendWeb

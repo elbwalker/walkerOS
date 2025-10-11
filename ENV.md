@@ -41,7 +41,7 @@ await destination.push(event, { config, mapping, data, env: testEnv });
 ✅ **Zero Runtime Overhead** - Pure TypeScript types, no framework code  
 ✅ **Type Safety** - Full IntelliSense and compile-time checking  
 ✅ **Testing Simplification** - Reusable environments from examples folder  
-✅ **Clean API** - Intuitive `examples.env.standard` pattern  
+✅ **Clean API** - Intuitive `examples.env.push` pattern  
 ✅ **Performance** - Uses core's optimized `clone()` utility
 
 ## Proven Patterns
@@ -74,7 +74,7 @@ export const init: Env = {
   // ...
 };
 
-export const standard: Env = {
+export const push: Env = {
   // Standard mock environment
   window: { gtag: mockFn, dataLayer: [] },
   // ...
@@ -89,10 +89,10 @@ import { examples } from '../index';
 import { clone } from '@walkeros/core';
 
 // Simple usage
-const testEnv = examples.env.standard;
+const testEnv = examples.env.push;
 
 // With modifications
-const mockEnv = clone(examples.env.standard);
+const mockEnv = clone(examples.env.push);
 mockEnv.window.gtag = jest.fn();
 ```
 
@@ -171,7 +171,7 @@ export const init: Env | undefined = {
   },
 };
 
-export const standard: Env = {
+export const push: Env = {
   // Standard mock environment for testing
   window: {
     gtag: Object.assign(noop, {
@@ -210,11 +210,11 @@ describe('Destination Tests', () => {
   const mockGtag = jest.fn();
 
   // ✅ Clean usage pattern
-  const mockEnv = clone(examples.env.standard);
+  const mockEnv = clone(examples.env.push);
   mockEnv.window.gtag = mockGtag;
 
   // Or for call interception
-  const testEnv = mockEnv(examples.env.standard, (path, args) => {
+  const testEnv = mockEnv(examples.env.push, (path, args) => {
     calls.push({ path, args });
   });
 });
@@ -254,7 +254,7 @@ For each destination migration:
 - [ ] No default `env` property in destination export
 - [ ] Named exports in `examples/env.ts`
 - [ ] Examples index exports `env` module
-- [ ] Tests use `examples.env.standard` pattern
+- [ ] Tests use `examples.env.push` pattern
 - [ ] Tests use `clone()` for modifications
 - [ ] All tests pass
 - [ ] Lint passes (no `any` types)
@@ -280,7 +280,7 @@ export interface Env extends DestinationWeb.Env {
 **Environment Examples:**
 
 ```typescript
-export const standard: Env = {
+export const push: Env = {
   window: {
     gtag: Object.assign(noop, {}) as unknown as Environment['window']['gtag'],
     dataLayer: [] as unknown[],
@@ -302,7 +302,7 @@ export const standard: Env = {
 import { examples } from '../index';
 import { clone } from '@walkeros/core';
 
-const mockEnv = clone(examples.env.standard);
+const mockEnv = clone(examples.env.push);
 mockEnv.window.gtag = jest.fn();
 ```
 
@@ -373,7 +373,7 @@ export interface Env extends DestinationServer.Env {
 }
 
 // Example with constructor function mocking
-export const standard: Env = {
+export const push: Env = {
   AWS: {
     FirehoseClient: MockFirehoseClient as unknown as typeof FirehoseClient,
     PutRecordBatchCommand:
@@ -751,7 +751,7 @@ The walkerOS Environment Standardization has been successfully implemented with
 ✅ **Zero Breaking Changes** - Backward compatible, destinations work normally
 without env  
 ✅ **Type Safety** - Full TypeScript compliance with proper IntelliSense  
-✅ **Clean API** - Intuitive `examples.env.standard` pattern  
+✅ **Clean API** - Intuitive `examples.env.push` pattern  
 ✅ **Performance** - Zero runtime overhead, optimized deep cloning  
 ✅ **Testing Excellence** - Consistent, reusable mock environments  
 ✅ **Battle-Tested** - Validated with both simple and complex destinations  

@@ -28,7 +28,7 @@ export const init: Env | undefined = {
   },
 };
 
-export const standard: Env = {
+export const push: Env = {
   // Standard mock environment for testing
   window: {
     fbq: Object.assign(noop, {

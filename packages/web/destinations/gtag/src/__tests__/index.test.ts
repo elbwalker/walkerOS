@@ -24,7 +24,7 @@ import { initAds, pushAdsEvent } from '../ads';
 import { initGTM, pushGTMEvent } from '../gtm';
 
 describe('Unified Gtag Destination', () => {
-  const mockEnv = examples.env.standard;
+  const mockEnv = examples.env.push;
   const mockCollector = {} as Collector.Instance;
 
   beforeEach(() => {
@@ -344,7 +344,7 @@ describe('Unified Gtag Destination', () => {
     beforeEach(() => {
       jest.clearAllMocks();
       resetConsentState();
-      mockEnvWithGtag = clone(examples.env.standard);
+      mockEnvWithGtag = clone(examples.env.push);
       mockEnvWithGtag.window.gtag = mockGtag;
     });
 

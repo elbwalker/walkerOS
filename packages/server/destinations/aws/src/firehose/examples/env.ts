@@ -35,16 +35,12 @@ class MockPutRecordBatchCommand {
   }
 }
 
-export const env: {
-  push: Env;
-} = {
-  // Standard environment for push operations
-  push: {
-    AWS: {
-      FirehoseClient:
-        MockFirehoseClient as unknown as Env['AWS']['FirehoseClient'],
-      PutRecordBatchCommand:
-        MockPutRecordBatchCommand as unknown as Env['AWS']['PutRecordBatchCommand'],
-    },
+export const push: Env = {
+  // Environment for push operations
+  AWS: {
+    FirehoseClient:
+      MockFirehoseClient as unknown as Env['AWS']['FirehoseClient'],
+    PutRecordBatchCommand:
+      MockPutRecordBatchCommand as unknown as Env['AWS']['PutRecordBatchCommand'],
   },
 };

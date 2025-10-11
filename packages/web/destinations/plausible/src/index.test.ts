@@ -35,7 +35,7 @@ describe('destination plausible', () => {
     appendChildMock = jest.fn();
 
     // Create test environment using example env with call interceptor
-    testEnv = mockEnv(examples.env.standard, (path, args) => {
+    testEnv = mockEnv(examples.env.push, (path, args) => {
       calls.push({ path, args });
     });
 

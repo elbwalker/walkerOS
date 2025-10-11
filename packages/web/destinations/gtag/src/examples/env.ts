@@ -25,7 +25,7 @@ export const init: Env | undefined = {
   },
 };
 
-export const standard: Env = {
+export const push: Env = {
   window: {
     gtag: Object.assign(noop, {
       // Add any gtag-specific properties if needed

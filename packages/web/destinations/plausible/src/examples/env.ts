@@ -26,7 +26,7 @@ export const init: Env | undefined = {
   },
 };
 
-export const standard: Env = {
+export const push: Env = {
   window: {
     plausible: Object.assign(noop, {
       // Add queue property for analytics loading pattern
