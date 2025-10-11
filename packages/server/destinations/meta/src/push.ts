@@ -69,8 +69,8 @@ export const push: PushFn = async function (
   // Test event code
   if (test_event_code) body.test_event_code = test_event_code;
 
-  const { sendServer } = env as unknown as Env;
-  const result = await sendServer(
+  const sendServerFn = (env as unknown as Env)?.sendServer || sendServer;
+  const result = await sendServerFn(
     `${url}${pixelId}/events?access_token=${accessToken}`,
     JSON.stringify(body),
   );

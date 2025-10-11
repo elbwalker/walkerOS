@@ -1,7 +1,6 @@
 import type { Destination } from './types';
 import { getConfig } from './config';
 import { push } from './push';
-import { sendServer } from '@walkeros/server-core';
 
 // Types
 export * as DestinationMeta from './types';
@@ -13,11 +12,6 @@ export const destinationMeta: Destination = {
   type: 'meta',
 
   config: {},
-
-  // Default environment with sendServer function
-  env: {
-    sendServer,
-  },
 
   async init({ config: partialConfig }) {
     const config = getConfig(partialConfig);
