@@ -1,11 +1,11 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
-import { getEvent } from '@walkeros/core';
+import { clone, getEvent } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../';
 import { hashEvent } from '../hash';
 
-const { events, mapping } = examples;
+const { env, events, mapping } = examples;
 
 describe('Server Destination Meta', () => {
   let destination: Destination;
@@ -14,9 +14,8 @@ describe('Server Destination Meta', () => {
   const pixelId = 'p1x3l1d';
   const mockSendServer = jest.fn();
 
-  const testEnv = {
-    sendServer: mockSendServer,
-  };
+  const testEnv = clone(env.push);
+  testEnv.sendServer = mockSendServer;
 
   beforeEach(async () => {
     jest.clearAllMocks();
