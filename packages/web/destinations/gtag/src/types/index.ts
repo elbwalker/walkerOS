@@ -44,8 +44,8 @@ export interface ConsentMapping {
   [walkerOSConsentGroup: string]: string | string[];
 }
 
-export type Destination = DestinationWeb.Destination<Settings, Mapping>;
-export type Config = DestinationWeb.Config<Settings, Mapping>;
+export type Destination = DestinationWeb.Destination<Settings, Mapping, Env>;
+export type Config = DestinationWeb.Config<Settings, Mapping, Env>;
 
 // Base settings interface with data field
 export interface BaseSettings {

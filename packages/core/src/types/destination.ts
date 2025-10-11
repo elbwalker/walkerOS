@@ -6,23 +6,31 @@ import type {
   WalkerOS,
 } from '.';
 
-export interface Instance<Settings = unknown, Mapping = unknown> {
-  config: Config<Settings, Mapping>; // Configuration settings for the destination
+export interface Instance<
+  Settings = unknown,
+  Mapping = unknown,
+  Environment = Env,
+> {
+  config: Config<Settings, Mapping, Environment>; // Configuration settings for the destination
   queue?: WalkerOS.Events; // Non processed events yet and reset with each new run
   dlq?: DLQ; // Failed events
   type?: string; // The type of the destination
-  env?: Env; // Environment requirements (browser APIs, globals, etc.)
-  init?: InitFn<Settings, Mapping>;
-  push: PushFn<Settings, Mapping>;
-  pushBatch?: PushBatchFn<Settings, Mapping>;
+  env?: Environment; // Environment requirements (browser APIs, globals, etc.)
+  init?: InitFn<Settings, Mapping, Environment>;
+  push: PushFn<Settings, Mapping, Environment>;
+  pushBatch?: PushBatchFn<Settings, Mapping, Environment>;
   on?: On.OnFn;
 }
 
-export interface Config<Settings = unknown, Mapping = unknown> {
+export interface Config<
+  Settings = unknown,
+  Mapping = unknown,
+  Environment = Env,
+> {
   consent?: WalkerOS.Consent; // Required consent states to init and push events
   settings?: Settings; // Destination-specific configuration settings
   data?: WalkerOSMapping.Value | WalkerOSMapping.Values; // Mapping of event data
-  env?: Env; // Environment override for testing/simulation
+  env?: Environment; // Environment override for testing/simulation
   id?: string; // A unique key for the destination
   init?: boolean; // If the destination has been initialized by calling the init method
   loadScript?: boolean; // If an additional script to work should be loaded
@@ -34,24 +42,29 @@ export interface Config<Settings = unknown, Mapping = unknown> {
   onLog?: Handler.Log; // Custom log handler
 }
 
-export type PartialConfig<Settings = unknown, Mapping = unknown> = Config<
+export type PartialConfig<
+  Settings = unknown,
+  Mapping = unknown,
+  Environment = Env,
+> = Config<
   Partial<Settings> | Settings,
-  Partial<Mapping> | Mapping
+  Partial<Mapping> | Mapping,
+  Environment
 >;
 
 export interface Policy {
   [key: string]: WalkerOSMapping.Value;
 }
 
-export type Init<Settings = unknown, Mapping = unknown> = {
-  code: Instance<Settings, Mapping>;
-  config?: Partial<Config<Settings, Mapping>>;
-  env?: Partial<Env>;
+export type Init<Settings = unknown, Mapping = unknown, Environment = Env> = {
+  code: Instance<Settings, Mapping, Environment>;
+  config?: Partial<Config<Settings, Mapping, Environment>>;
+  env?: Partial<Environment>;
 };
 
 export interface InitDestinations {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: Init<any, any>;
+  [key: string]: Init<any, any, any>;
 }
 
 export interface Destinations {
@@ -59,36 +72,48 @@ export interface Destinations {
 }
 
 // Context interfaces for destination functions
-export interface Context<Settings = unknown, Mapping = unknown> {
+export interface Context<
+  Settings = unknown,
+  Mapping = unknown,
+  Environment = Env,
+> {
   collector: Collector.Instance;
-  config: Config<Settings, Mapping>;
+  config: Config<Settings, Mapping, Environment>;
   data?: Data;
-  env: Env;
+  env: Environment;
 }
 
-export interface PushContext<Settings = unknown, Mapping = unknown>
-  extends Context<Settings, Mapping> {
+export interface PushContext<
+  Settings = unknown,
+  Mapping = unknown,
+  Environment = Env,
+> extends Context<Settings, Mapping, Environment> {
   mapping?: WalkerOSMapping.Rule<Mapping>;
 }
 
-export interface PushBatchContext<Settings = unknown, Mapping = unknown>
-  extends Context<Settings, Mapping> {
+export interface PushBatchContext<
+  Settings = unknown,
+  Mapping = unknown,
+  Environment = Env,
+> extends Context<Settings, Mapping, Environment> {
   mapping?: WalkerOSMapping.Rule<Mapping>;
 }
 
 // Updated function signatures with context-based parameters
-export type InitFn<Settings, Mapping> = (
-  context: Context<Settings, Mapping>,
-) => WalkerOS.PromiseOrValue<void | false | Config<Settings, Mapping>>;
+export type InitFn<Settings, Mapping, Environment = Env> = (
+  context: Context<Settings, Mapping, Environment>,
+) => WalkerOS.PromiseOrValue<
+  void | false | Config<Settings, Mapping, Environment>
+>;
 
-export type PushFn<Settings, Mapping> = (
+export type PushFn<Settings, Mapping, Environment = Env> = (
   event: WalkerOS.Event,
-  context: PushContext<Settings, Mapping>,
+  context: PushContext<Settings, Mapping, Environment>,
 ) => WalkerOS.PromiseOrValue<void>;
 
-export type PushBatchFn<Settings, Mapping> = (
+export type PushBatchFn<Settings, Mapping, Environment = Env> = (
   batch: Batch<Mapping>,
-  context: PushBatchContext<Settings, Mapping>,
+  context: PushBatchContext<Settings, Mapping, Environment>,
 ) => void;
 
 export type PushEvent<Mapping = unknown> = {

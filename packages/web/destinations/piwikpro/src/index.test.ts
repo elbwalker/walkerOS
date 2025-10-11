@@ -17,11 +17,12 @@ describe('Destination PiwikPro', () => {
   const appId = 'XXX-XXX-XXX-XXX-XXX';
   const url = 'https://your_account_name.piwik.pro/';
 
+  const mockPaq: Array<unknown> = [];
+  mockPaq.push = mockFn;
+
   const testEnv = {
     window: {
-      _paq: {
-        push: mockFn,
-      },
+      _paq: mockPaq,
     },
     document: {
       createElement: jest.fn(() => ({

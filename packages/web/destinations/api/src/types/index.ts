@@ -10,8 +10,8 @@ export interface Env extends DestinationWeb.Env {
   sendWeb?: typeof sendWeb;
 }
 
-export type Destination = DestinationWeb.Destination<Settings, Mapping>;
-export type Config = DestinationWeb.Config<Settings, Mapping>;
+export type Destination = DestinationWeb.Destination<Settings, Mapping, Env>;
+export type Config = DestinationWeb.Config<Settings, Mapping, Env>;
 
 // Destination-specific settings (internal usage)
 export interface Settings {

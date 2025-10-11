@@ -2,18 +2,22 @@ import type { Mapping as WalkerOSMapping } from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
 
 export interface Destination
-  extends DestinationServer.Destination<Settings, Mapping> {
-  init: DestinationServer.InitFn<Settings, Mapping>;
+  extends DestinationServer.Destination<Settings, Mapping, Env> {
+  init: DestinationServer.InitFn<Settings, Mapping, Env>;
 }
 
 export type Config = {
   settings: Settings;
-} & DestinationServer.Config<Settings, Mapping>;
+} & DestinationServer.Config<Settings, Mapping, Env>;
 
-export type InitFn = DestinationServer.InitFn<Settings, Mapping>;
-export type PushFn = DestinationServer.PushFn<Settings, Mapping>;
+export type InitFn = DestinationServer.InitFn<Settings, Mapping, Env>;
+export type PushFn = DestinationServer.PushFn<Settings, Mapping, Env>;
 
-export type PartialConfig = DestinationServer.PartialConfig<Settings, Mapping>;
+export type PartialConfig = DestinationServer.PartialConfig<
+  Settings,
+  Mapping,
+  Env
+>;
 
 export type PushEvents = DestinationServer.PushEvents<Mapping>;
 
@@ -29,8 +33,8 @@ export interface Settings {
 
 export interface Mapping {}
 
-export interface Env {
-  sendServer: typeof sendServer;
+export interface Env extends DestinationServer.Env {
+  sendServer?: typeof sendServer;
 }
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;

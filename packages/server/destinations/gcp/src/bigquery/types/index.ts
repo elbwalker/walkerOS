@@ -2,14 +2,16 @@ import type { DestinationServer } from '@walkeros/server-core';
 import type { Mapping as WalkerOSMapping } from '@walkeros/core';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
+export interface Env extends DestinationServer.Env {}
+
 export interface Destination
-  extends DestinationServer.Destination<Settings, Mapping> {
-  init: DestinationServer.InitFn<Settings, Mapping>;
+  extends DestinationServer.Destination<Settings, Mapping, Env> {
+  init: DestinationServer.InitFn<Settings, Mapping, Env>;
 }
 
 export type Config = {
   settings: Settings;
-} & DestinationServer.Config<Settings, Mapping>;
+} & DestinationServer.Config<Settings, Mapping, Env>;
 
 export interface Settings {
   client: BigQuery;
@@ -24,10 +26,14 @@ export interface Mapping {
   // Custom destination event mapping properties
 }
 
-export type InitFn = DestinationServer.InitFn<Settings, Mapping>;
-export type PushFn = DestinationServer.PushFn<Settings, Mapping>;
+export type InitFn = DestinationServer.InitFn<Settings, Mapping, Env>;
+export type PushFn = DestinationServer.PushFn<Settings, Mapping, Env>;
 
-export type PartialConfig = DestinationServer.PartialConfig<Settings, Mapping>;
+export type PartialConfig = DestinationServer.PartialConfig<
+  Settings,
+  Mapping,
+  Env
+>;
 
 export type PushEvents = DestinationServer.PushEvents<Mapping>;
 

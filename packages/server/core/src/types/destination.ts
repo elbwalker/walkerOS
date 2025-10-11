@@ -1,29 +1,36 @@
 import type { Destination as WalkerOSDestination } from '@walkeros/core';
 
-export interface Destination<Settings = unknown, Mapping = unknown>
-  extends WalkerOSDestination.Instance<Settings, Mapping> {}
+export interface Destination<
+  Settings = unknown,
+  Mapping = unknown,
+  Environment = Env,
+> extends WalkerOSDestination.Instance<Settings, Mapping, Environment> {}
 
 export type Init = WalkerOSDestination.Init;
 
 export type Config<
   Settings = unknown,
   Mapping = unknown,
-> = WalkerOSDestination.Config<Settings, Mapping>;
+  Environment = Env,
+> = WalkerOSDestination.Config<Settings, Mapping, Environment>;
 
 export type PartialConfig<
   Settings = unknown,
   Mapping = unknown,
-> = WalkerOSDestination.PartialConfig<Settings, Mapping>;
+  Environment = Env,
+> = WalkerOSDestination.PartialConfig<Settings, Mapping, Environment>;
 
 export type InitFn<
   Settings = unknown,
   Mapping = unknown,
-> = WalkerOSDestination.InitFn<Settings, Mapping>;
+  Environment = Env,
+> = WalkerOSDestination.InitFn<Settings, Mapping, Environment>;
 
 export type PushFn<
   Settings = unknown,
   Mapping = unknown,
-> = WalkerOSDestination.PushFn<Settings, Mapping>;
+  Environment = Env,
+> = WalkerOSDestination.PushFn<Settings, Mapping, Environment>;
 
 export type PushEvent<Mapping = unknown> =
   WalkerOSDestination.PushEvent<Mapping>;

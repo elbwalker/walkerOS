@@ -7,13 +7,13 @@ import type {
 } from '@aws-sdk/client-firehose';
 
 export interface Destination
-  extends DestinationServer.Destination<Settings, Mapping> {
-  init: DestinationServer.InitFn<Settings, Mapping>;
+  extends DestinationServer.Destination<Settings, Mapping, Env> {
+  init: DestinationServer.InitFn<Settings, Mapping, Env>;
 }
 
 export type Config = {
   settings: Settings;
-} & DestinationServer.Config<Settings, Mapping>;
+} & DestinationServer.Config<Settings, Mapping, Env>;
 
 export interface Settings {
   firehose?: FirehoseConfig;
@@ -23,10 +23,14 @@ export interface Mapping {
   // Custom destination event mapping properties
 }
 
-export type InitFn = DestinationServer.InitFn<Settings, Mapping>;
-export type PushFn = DestinationServer.PushFn<Settings, Mapping>;
+export type InitFn = DestinationServer.InitFn<Settings, Mapping, Env>;
+export type PushFn = DestinationServer.PushFn<Settings, Mapping, Env>;
 
-export type PartialConfig = DestinationServer.PartialConfig<Settings, Mapping>;
+export type PartialConfig = DestinationServer.PartialConfig<
+  Settings,
+  Mapping,
+  Env
+>;
 
 export type PushEvents = DestinationServer.PushEvents<Mapping>;
 

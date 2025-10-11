@@ -73,8 +73,12 @@ describe('destination plausible', () => {
   test('init with script load', async () => {
     // For now, skip complex document mocking and focus on core functionality
     // TODO: Fix document mocking with environment injection
+    const mockPlausible = jest.fn();
     const simpleEnv = {
       ...testEnv,
+      window: {
+        plausible: mockPlausible,
+      },
       document: {
         createElement: createElementMock,
         head: { appendChild: appendChildMock },
@@ -106,8 +110,12 @@ describe('destination plausible', () => {
     };
     createElementMock.mockReturnValue(mockScript);
 
+    const mockPlausible = jest.fn();
     const simpleEnv = {
       ...testEnv,
+      window: {
+        plausible: mockPlausible,
+      },
       document: {
         createElement: createElementMock,
         head: { appendChild: appendChildMock },
@@ -132,7 +140,7 @@ describe('destination plausible', () => {
   test('event entity action', async () => {
     const destinationWithEnv = {
       ...destination,
-      env: testEnv,
+      env: testEnv as DestinationPlausible.Env,
     };
     elb('walker destination', destinationWithEnv, {
       mapping: mapping.config,
@@ -151,7 +159,7 @@ describe('destination plausible', () => {
     const event = getEvent('order complete');
     const destinationWithEnv = {
       ...destination,
-      env: testEnv,
+      env: testEnv as DestinationPlausible.Env,
     };
     elb('walker destination', destinationWithEnv, {
       mapping: mapping.config,

@@ -19,8 +19,8 @@ export interface Env extends DestinationWeb.Env {
   };
 }
 
-export type Destination = DestinationWeb.Destination<Settings, Mapping>;
-export type Config = DestinationWeb.Config<Settings, Mapping>;
+export type Destination = DestinationWeb.Destination<Settings, Mapping, Env>;
+export type Config = DestinationWeb.Config<Settings, Mapping, Env>;
 
 // Plausible-specific destination type with environment support
 export interface PlausibleDestination extends Destination {
