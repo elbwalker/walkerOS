@@ -7,6 +7,23 @@ declare global {
   }
 }
 
+export interface Env extends DestinationWeb.Env {
+  window: {
+    _paq: Array<unknown>;
+  };
+  document: {
+    createElement: (tagName: string) => {
+      type: string;
+      src: string;
+      async?: boolean;
+      defer?: boolean;
+    };
+    head: {
+      appendChild: (node: unknown) => void;
+    };
+  };
+}
+
 export type Destination = DestinationWeb.Destination<Settings, Mapping>;
 export type Config = DestinationWeb.Config<Settings, Mapping>;
 
