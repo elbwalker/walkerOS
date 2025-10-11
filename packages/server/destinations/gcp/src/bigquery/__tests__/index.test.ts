@@ -1,11 +1,11 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
-import { createEvent } from '@walkeros/core';
+import { clone, createEvent } from '@walkeros/core';
+import { examples } from '../';
+
+const { env } = examples;
 
 describe('Server Destination BigQuery', () => {
-  // Mock the bigquery package with __mocks__ implementation
-  jest.mock('@google-cloud/bigquery');
-
   const event = createEvent();
 
   let destination: Destination;
@@ -16,7 +16,7 @@ describe('Server Destination BigQuery', () => {
   const credentials = { type: 'service_account', private_key: 'secret' };
 
   const mockCollector = {} as Collector.Instance;
-  const testEnv = {};
+  const testEnv = clone(env.push);
 
   function getMockFn(config: Partial<Config>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

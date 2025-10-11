@@ -1,9 +1,12 @@
-import type { Config, PartialConfig, Settings } from './types';
+import type { Config, Env, PartialConfig, Settings } from './types';
 import type { BigQueryOptions } from '@google-cloud/bigquery';
 import { throwError } from '@walkeros/core';
 import { BigQuery } from '@google-cloud/bigquery';
 
-export function getConfig(partialConfig: PartialConfig = {}): Config {
+export function getConfig(
+  partialConfig: PartialConfig = {},
+  env?: Env,
+): Config {
   const settings = partialConfig.settings || ({} as Settings);
   const { projectId, bigquery } = settings;
   let { client, location, datasetId, tableId } = settings;
@@ -17,7 +20,9 @@ export function getConfig(partialConfig: PartialConfig = {}): Config {
   const options: BigQueryOptions = bigquery || {};
   options.projectId = projectId;
 
-  client = client || new BigQuery(options);
+  // Use BigQuery from env if available, otherwise use real BigQuery
+  const BigQueryClass = env?.BigQuery || BigQuery;
+  client = client || new BigQueryClass(options);
 
   const settingsConfig: Settings = {
     ...settings,

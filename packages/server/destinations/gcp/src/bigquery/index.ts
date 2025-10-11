@@ -5,13 +5,16 @@ import { push } from './push';
 // Types
 export * as DestinationBigQuery from './types';
 
+// Examples
+export * as examples from './examples';
+
 export const destinationBigQuery: Destination = {
   type: 'gcp-bigquery',
 
   config: {},
 
-  async init({ config: partialConfig }) {
-    const config = getConfig(partialConfig);
+  async init({ config: partialConfig, env }) {
+    const config = getConfig(partialConfig, env);
 
     return config;
   },

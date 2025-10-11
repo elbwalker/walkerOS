@@ -2,7 +2,9 @@ import type { DestinationServer } from '@walkeros/server-core';
 import type { Mapping as WalkerOSMapping } from '@walkeros/core';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
 
-export interface Env extends DestinationServer.Env {}
+export interface Env extends DestinationServer.Env {
+  BigQuery?: typeof BigQuery;
+}
 
 export interface Destination
   extends DestinationServer.Destination<Settings, Mapping, Env> {
