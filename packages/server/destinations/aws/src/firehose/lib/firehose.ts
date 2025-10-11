@@ -1,14 +1,14 @@
 import type { Destination } from '@walkeros/core';
-import type { FirehoseConfig, Environment } from '../types';
+import type { FirehoseConfig, Env } from '../types';
 import { throwError } from '@walkeros/core';
 
 // Type guard to check if environment has AWS SDK
-function isAWSEnvironment(env: unknown): env is Environment {
+function isAWSEnvironment(env: unknown): env is Env {
   return Boolean(
     env &&
       typeof env === 'object' &&
       'AWS' in env &&
-      (env as Environment).AWS?.FirehoseClient,
+      (env as Env).AWS?.FirehoseClient,
   );
 }
 

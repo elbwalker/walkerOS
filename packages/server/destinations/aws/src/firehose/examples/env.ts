@@ -1,4 +1,4 @@
-import type { Environment } from '../types';
+import type { Env } from '../types';
 
 /**
  * Example environment configurations for AWS Firehose destination
@@ -36,15 +36,15 @@ class MockPutRecordBatchCommand {
 }
 
 export const env: {
-  push: Environment;
+  push: Env;
 } = {
   // Standard environment for push operations
   push: {
     AWS: {
       FirehoseClient:
-        MockFirehoseClient as unknown as Environment['AWS']['FirehoseClient'],
+        MockFirehoseClient as unknown as Env['AWS']['FirehoseClient'],
       PutRecordBatchCommand:
-        MockPutRecordBatchCommand as unknown as Environment['AWS']['PutRecordBatchCommand'],
+        MockPutRecordBatchCommand as unknown as Env['AWS']['PutRecordBatchCommand'],
     },
   },
 };

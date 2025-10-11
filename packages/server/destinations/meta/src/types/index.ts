@@ -29,7 +29,7 @@ export interface Settings {
 
 export interface Mapping {}
 
-export interface Environment {
+export interface Env {
   sendServer: typeof sendServer;
 }
 

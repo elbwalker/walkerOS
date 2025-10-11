@@ -11,7 +11,7 @@ export * from './examples';
 /**
  * DataLayer-specific environment interface
  */
-interface DataLayerEnvironment extends Source.Environment {
+interface DataLayerEnvironment extends Source.Env {
   window?: typeof window;
 }
 
@@ -23,7 +23,7 @@ interface DataLayerEnvironment extends Source.Environment {
  */
 export const sourceDataLayer: Source.Init<Settings, never, Push> = async (
   config: Partial<Source.Config<Settings>>,
-  env?: Source.Environment,
+  env?: Source.Env,
 ) => {
   try {
     // Extract and validate environment dependencies

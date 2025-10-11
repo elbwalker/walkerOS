@@ -1,5 +1,5 @@
 import type { Source, WalkerOS, On } from '@walkeros/core';
-import type { Scope, Settings, Environment } from './types';
+import type { Scope, Settings, Env } from './types';
 import type {
   BrowserPushData,
   BrowserPushOptions,
@@ -8,7 +8,7 @@ import type {
   Push,
 } from './types/elb';
 import { isString } from '@walkeros/core';
-import { getEnvironment } from '@walkeros/web-core';
+import { getEnv } from '@walkeros/web-core';
 import { initTriggers, processLoadTriggers, ready } from './trigger';
 import { destroyVisibilityTracking } from './triggerVisible';
 import { initElbLayer } from './elbLayer';
@@ -40,11 +40,11 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
  */
 export const sourceBrowser: Source.Init<Settings, never, Push> = async (
   config: Partial<Source.Config<Settings>>,
-  env?: Source.Environment,
+  env?: Source.Env,
 ) => {
   try {
     // Extract and validate environment dependencies
-    const browserEnv = (env || {}) as Environment;
+    const browserEnv = (env || {}) as Env;
     const { elb } = browserEnv;
 
     if (!elb) {
@@ -53,7 +53,7 @@ export const sourceBrowser: Source.Init<Settings, never, Push> = async (
 
     // Get configuration from config parameter, merged with defaults
     const userSettings = config?.settings || {};
-    const { window, document } = getEnvironment(env);
+    const { window, document } = getEnv(env);
     const settings: Settings = getConfig(
       userSettings,
       document as Document | undefined,

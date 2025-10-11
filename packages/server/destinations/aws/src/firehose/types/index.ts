@@ -41,7 +41,7 @@ export interface FirehoseConfig {
 }
 
 // Environment interface for type-safe AWS SDK injection
-export interface Environment extends DestinationServer.Environment {
+export interface Env extends DestinationServer.Env {
   AWS: {
     FirehoseClient: typeof FirehoseClient;
     PutRecordBatchCommand: typeof PutRecordBatchCommand;

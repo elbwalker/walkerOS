@@ -1,4 +1,4 @@
-import type { Config, Settings, PartialConfig, Environment } from './types';
+import type { Config, Settings, PartialConfig, Env } from './types';
 import { getConfigFirehose } from './lib/firehose';
 
 export function getConfig(

@@ -2,7 +2,7 @@ import type { WalkerOS } from '@walkeros/core';
 import type { AdsSettings, AdsMapping } from '../types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { isObject } from '@walkeros/core';
-import { getEnvironment } from '@walkeros/web-core';
+import { getEnv } from '@walkeros/web-core';
 
 export function pushAdsEvent(
   event: WalkerOS.Event,
@@ -10,7 +10,7 @@ export function pushAdsEvent(
   mapping: AdsMapping = {},
   data: WalkerOS.AnyObject,
   mappingName?: string,
-  env?: DestinationWeb.Environment,
+  env?: DestinationWeb.Env,
 ): void {
   const { conversionId, currency } = settings;
   const eventData = isObject(data) ? data : {};
@@ -25,7 +25,7 @@ export function pushAdsEvent(
     ...eventData,
   };
 
-  const { window } = getEnvironment(env);
+  const { window } = getEnv(env);
   const gtag = window.gtag as Gtag.Gtag;
   gtag('event', 'conversion', params);
 }

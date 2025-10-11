@@ -26,10 +26,10 @@ export type InitSource<
 /**
  * Server-specific environment requirements interface
  *
- * Extends the core Environment interface for server-side sources.
+ * Extends the core Env interface for server-side sources.
  * Used for dependency injection of SDK classes and external APIs.
  */
-export interface Environment extends WalkerOSSource.Environment {
+export interface Env extends WalkerOSSource.Env {
   // Server environments can include SDK constructors, API clients, etc.
   // Each source extends this further with specific requirements
 }

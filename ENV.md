@@ -52,7 +52,7 @@ Based on successful implementation in gtag and plausible destinations:
 
 ```typescript
 // Each destination defines its specific environment
-export interface Environment extends DestinationWeb.Environment {
+export interface Env extends DestinationWeb.Env {
   window: {
     gtag: Gtag.Gtag;
     dataLayer: unknown[];
@@ -68,13 +68,13 @@ export interface Environment extends DestinationWeb.Environment {
 
 ```typescript
 // examples/env.ts - Direct named exports
-export const init: Environment = {
+export const init: Env = {
   // Pre-initialization state
   window: { gtag: undefined, dataLayer: [] },
   // ...
 };
 
-export const standard: Environment = {
+export const standard: Env = {
   // Standard mock environment
   window: { gtag: mockFn, dataLayer: [] },
   // ...
@@ -105,7 +105,7 @@ export const destinationGtag: Destination = {
   config: { settings: {} },
   // NO env property - uses real browser APIs by default
   init({ config, env }) {
-    const { window } = getEnvironment(env); // Falls back to real window
+    const { window } = getEnv(env); // Falls back to real window
   }
 };
 ``` ## Implementation Guide
@@ -116,7 +116,7 @@ export const destinationGtag: Destination = {
 // packages/web/destinations/{destination}/src/types/index.ts
 import type { DestinationWeb } from '@walkeros/web-core';
 
-export interface Environment extends DestinationWeb.Environment {
+export interface Env extends DestinationWeb.Env {
   window: {
     // Define exact APIs your destination uses
     gtag: Gtag.Gtag;
@@ -140,8 +140,8 @@ export const destinationExample: Destination = {
   // ❌ REMOVE any default env property
 
   init({ config, env }) {
-    // ✅ Use getEnvironment() - falls back to real browser APIs
-    const { window, document } = getEnvironment(env);
+    // ✅ Use getEnv() - falls back to real browser APIs
+    const { window, document } = getEnv(env);
     // ...
   },
 };
@@ -155,7 +155,7 @@ import type { Environment } from '../types';
 
 const noop = () => {};
 
-export const init: Environment | undefined = {
+export const init: Env | undefined = {
   // Pre-initialization state (APIs not loaded yet)
   window: {
     gtag: undefined as unknown as Environment['window']['gtag'],
@@ -171,7 +171,7 @@ export const init: Environment | undefined = {
   },
 };
 
-export const standard: Environment = {
+export const standard: Env = {
   // Standard mock environment for testing
   window: {
     gtag: Object.assign(noop, {
@@ -265,7 +265,7 @@ For each destination migration:
 
 **Types:**
 ```typescript
-export interface Environment extends DestinationWeb.Environment {
+export interface Env extends DestinationWeb.Env {
   window: {
     gtag: Gtag.Gtag;
     dataLayer: unknown[];
@@ -280,7 +280,7 @@ export interface Environment extends DestinationWeb.Environment {
 **Environment Examples:**
 
 ```typescript
-export const standard: Environment = {
+export const standard: Env = {
   window: {
     gtag: Object.assign(noop, {}) as unknown as Environment['window']['gtag'],
     dataLayer: [] as unknown[],
@@ -311,7 +311,7 @@ mockEnv.window.gtag = jest.fn();
 **Types:**
 
 ```typescript
-export interface Environment extends DestinationWeb.Environment {
+export interface Env extends DestinationWeb.Env {
   window: {
     plausible: PlausibleAPI;
   };
@@ -331,15 +331,15 @@ The current implementation supports `init` and `standard` scenarios. Future
 expansion can add:
 
 ```typescript
-export const error: Environment = {
+export const error: Env = {
   // Mock APIs that throw errors for testing error handling
 };
 
-export const offline: Environment = {
+export const offline: Env = {
   // Mock APIs that simulate offline conditions
 };
 
-export const slow: Environment = {
+export const slow: Env = {
   // Mock APIs with artificial delays for performance testing
 };
 ```
@@ -365,7 +365,7 @@ Future server destinations will follow similar patterns:
 
 ```typescript
 // Server destination environment
-export interface Environment extends DestinationServer.Environment {
+export interface Env extends DestinationServer.Env {
   AWS: {
     FirehoseClient: typeof FirehoseClient;
     PutRecordBatchCommand: typeof PutRecordBatchCommand;
@@ -373,7 +373,7 @@ export interface Environment extends DestinationServer.Environment {
 }
 
 // Example with constructor function mocking
-export const standard: Environment = {
+export const standard: Env = {
   AWS: {
     FirehoseClient: MockFirehoseClient as unknown as typeof FirehoseClient,
     PutRecordBatchCommand:

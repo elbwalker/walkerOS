@@ -10,7 +10,7 @@ export interface Config<Settings = unknown, Mapping = unknown> {
   // consent?: WalkerOS.Consent; // Required consent states to init and push events
   settings?: Settings; // Source-specific configuration settings
   // data?: WalkerOSMapping.Value | WalkerOSMapping.Values; // Mapping of event data
-  env?: Environment; // Environment override for testing/simulation
+  env?: Env; // Env override for testing/simulation
   id?: string; // A unique key for the source
   // init?: boolean; // If the source has been initialized by calling the init method
   // loadScript?: boolean; // If an additional script to work should be loaded
@@ -34,12 +34,12 @@ export interface Policy {
 }
 
 /**
- * Environment interface for dependency injection into sources.
+ * Env interface for dependency injection into sources.
  *
  * Sources receive all their dependencies through this environment object,
  * making them platform-agnostic and easily testable.
  */
-export interface Environment {
+export interface Env {
   elb: Elb.Fn; // Collector ingest function - sources push events via this
   [key: string]: unknown; // Platform-specific APIs (window, document, etc.)
 }
@@ -69,7 +69,7 @@ export interface Instance<
  * and return a stateless instance.
  *
  * @param config - Source configuration (settings, type, etc.)
- * @param env - Environment with elb function and platform APIs
+ * @param env - Env with elb function and platform APIs
  * @returns Source instance or promise of instance
  */
 export type Init<
@@ -78,7 +78,7 @@ export type Init<
   Push extends Elb.Fn = Elb.Fn,
 > = (
   config: Partial<Config<Settings, Mapping>>,
-  env: Environment,
+  env: Env,
 ) =>
   | Instance<Settings, Mapping, Push>
   | Promise<Instance<Settings, Mapping, Push>>;
@@ -94,7 +94,7 @@ export type InitSource<
 > = {
   code: Init<Settings, Mapping, Push>;
   config?: Partial<Config<Settings, Mapping>>;
-  env?: Partial<Environment>;
+  env?: Partial<Env>;
   primary?: boolean; // Mark this source as the primary elb entry point
 };
 

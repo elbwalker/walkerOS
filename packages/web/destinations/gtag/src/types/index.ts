@@ -16,7 +16,7 @@ declare global {
 }
 
 // Gtag-specific environment interface
-export interface Environment extends DestinationWeb.Environment {
+export interface Env extends DestinationWeb.Env {
   window: {
     gtag: Gtag.Gtag;
     dataLayer: unknown[];

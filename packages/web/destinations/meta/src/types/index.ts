@@ -9,7 +9,7 @@ declare global {
 }
 
 // Meta-specific environment interface
-export interface Environment extends DestinationWeb.Environment {
+export interface Env extends DestinationWeb.Env {
   window: {
     fbq: facebook.Pixel.Event;
     _fbq?: facebook.Pixel.Event;

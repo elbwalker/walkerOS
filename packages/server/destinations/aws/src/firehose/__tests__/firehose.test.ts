@@ -1,4 +1,4 @@
-import type { Config, Settings, Destination, Environment } from '../types';
+import type { Config, Settings, Destination, Env } from '../types';
 import type { WalkerOS, Collector } from '@walkeros/core';
 import { createEvent, mockEnv } from '@walkeros/core';
 import { examples } from '../';
@@ -11,7 +11,7 @@ describe('Firehose', () => {
   let destination: Destination;
   let settingsConfig: Settings;
   let calls: Array<{ path: string[]; args: unknown[] }>;
-  let testEnv: Environment;
+  let testEnv: Env;
 
   const streamName = 'demo';
 

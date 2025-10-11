@@ -25,7 +25,7 @@ export interface Settings extends Record<string, unknown> {
 }
 
 // Browser-specific environment interface
-export interface Environment extends Source.Environment {
+export interface Env extends Source.Env {
   window?: typeof window;
   document?: typeof document;
 }

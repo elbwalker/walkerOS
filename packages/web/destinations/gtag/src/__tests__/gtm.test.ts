@@ -112,7 +112,7 @@ describe('GTM Implementation', () => {
 
     it('should handle custom dataLayer name in environment', () => {
       const customDataLayer: unknown[] = [];
-      const customEnv: DestinationWeb.Environment = {
+      const customEnv: DestinationWeb.Env = {
         window: {
           dataLayer: customDataLayer,
         },

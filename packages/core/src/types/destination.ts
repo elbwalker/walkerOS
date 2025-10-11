@@ -11,7 +11,7 @@ export interface Instance<Settings = unknown, Mapping = unknown> {
   queue?: WalkerOS.Events; // Non processed events yet and reset with each new run
   dlq?: DLQ; // Failed events
   type?: string; // The type of the destination
-  env?: Environment; // Environment requirements (browser APIs, globals, etc.)
+  env?: Env; // Environment requirements (browser APIs, globals, etc.)
   init?: InitFn<Settings, Mapping>;
   push: PushFn<Settings, Mapping>;
   pushBatch?: PushBatchFn<Settings, Mapping>;
@@ -22,7 +22,7 @@ export interface Config<Settings = unknown, Mapping = unknown> {
   consent?: WalkerOS.Consent; // Required consent states to init and push events
   settings?: Settings; // Destination-specific configuration settings
   data?: WalkerOSMapping.Value | WalkerOSMapping.Values; // Mapping of event data
-  env?: Environment; // Environment override for testing/simulation
+  env?: Env; // Environment override for testing/simulation
   id?: string; // A unique key for the destination
   init?: boolean; // If the destination has been initialized by calling the init method
   loadScript?: boolean; // If an additional script to work should be loaded
@@ -46,7 +46,7 @@ export interface Policy {
 export type Init<Settings = unknown, Mapping = unknown> = {
   code: Instance<Settings, Mapping>;
   config?: Partial<Config<Settings, Mapping>>;
-  env?: Partial<Environment>;
+  env?: Partial<Env>;
 };
 
 export interface InitDestinations {
@@ -63,7 +63,7 @@ export interface Context<Settings = unknown, Mapping = unknown> {
   collector: Collector.Instance;
   config: Config<Settings, Mapping>;
   data?: Data;
-  env: Environment;
+  env: Env;
 }
 
 export interface PushContext<Settings = unknown, Mapping = unknown>
@@ -134,7 +134,7 @@ export type Result = {
  * their runtime environment requirements. Platform-specific extensions
  * should extend this interface.
  */
-export interface Environment {
+export interface Env {
   /**
    * Generic global properties that destinations may require
    * Platform-specific implementations can extend this interface

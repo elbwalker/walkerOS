@@ -45,7 +45,7 @@ export interface Mapping {
 
 // Cloud function source doesn't follow standard Source.Init pattern due to HTTP handler interface
 
-export interface Environment extends Source.Environment {
+export interface Env extends Source.Env {
   req?: Request;
   res?: Response;
 }

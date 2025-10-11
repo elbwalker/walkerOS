@@ -1,6 +1,6 @@
 import type { GTMSettings } from '../types';
 import type { DestinationWeb } from '@walkeros/web-core';
-import { getEnvironment } from '@walkeros/web-core';
+import { getEnv } from '@walkeros/web-core';
 
 const defaultDataLayer = 'dataLayer';
 const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
@@ -8,9 +8,9 @@ const defaultDomain = 'https://www.googletagmanager.com/gtm.js?id=';
 export function initGTM(
   settings: GTMSettings,
   loadScript?: boolean,
-  env?: DestinationWeb.Environment,
+  env?: DestinationWeb.Env,
 ): void {
-  const { window, document } = getEnvironment(env);
+  const { window, document } = getEnv(env);
   const { containerId, dataLayer, domain } = settings;
   const dataLayerName = dataLayer || defaultDataLayer;
 

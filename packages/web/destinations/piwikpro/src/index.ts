@@ -1,7 +1,7 @@
 import type { Settings, Mapping, Destination } from './types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { getMappingValue, isArray } from '@walkeros/core';
-import { getEnvironment } from '@walkeros/web-core';
+import { getEnv } from '@walkeros/web-core';
 
 // Types
 export * as DestinationPiwikPro from './types';
@@ -15,7 +15,7 @@ export const destinationPiwikPro: Destination = {
   config: {},
 
   init({ config, env }) {
-    const { window } = getEnvironment(env);
+    const { window } = getEnv(env);
     const w = window as Window;
     const { settings = {} as Partial<Settings>, loadScript } = config;
     const { appId, url } = settings;
@@ -45,7 +45,7 @@ export const destinationPiwikPro: Destination = {
   },
 
   async push(event, { config, mapping = {}, data, env }) {
-    const { window } = getEnvironment(env);
+    const { window } = getEnv(env);
     const paq = (window as Window)._paq!.push;
 
     // Send pageviews if not disabled
@@ -75,8 +75,8 @@ export const destinationPiwikPro: Destination = {
   },
 };
 
-function addScript(url: string, env?: DestinationWeb.Environment) {
-  const { document } = getEnvironment(env);
+function addScript(url: string, env?: DestinationWeb.Env) {
+  const { document } = getEnv(env);
   const doc = document as Document;
   const script = doc.createElement('script');
   script.type = 'text/javascript';

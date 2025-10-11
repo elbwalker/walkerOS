@@ -13,7 +13,7 @@ export type Plausible = (
 ) => void;
 
 // Environment interface for type-safe external dependency injection
-export interface Environment extends DestinationWeb.Environment {
+export interface Env extends DestinationWeb.Env {
   window: {
     plausible: Plausible & { q?: IArguments[] };
   };
@@ -24,7 +24,7 @@ export type Config = DestinationWeb.Config<Settings, Mapping>;
 
 // Plausible-specific destination type with environment support
 export interface PlausibleDestination extends Destination {
-  env?: Environment;
+  env?: Env;
 }
 
 // Destination-specific settings (internal usage)

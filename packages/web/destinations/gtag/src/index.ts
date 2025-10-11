@@ -5,7 +5,7 @@ import { initAds, pushAdsEvent } from './ads';
 import { initGTM, pushGTMEvent } from './gtm';
 import { getData } from './shared/mapping';
 import { initializeGtag } from './shared/gtag';
-import { getEnvironment } from '@walkeros/web-core';
+import { getEnv } from '@walkeros/web-core';
 
 // Types
 export * as DestinationGtag from './types';
@@ -118,7 +118,7 @@ export const destinationGtag: Destination = {
     if (!como) return;
 
     // Ensure gtag is available
-    const { window } = getEnvironment(this.env);
+    const { window } = getEnv(this.env);
     const gtag = initializeGtag(window as Window);
     if (!gtag) return;
 

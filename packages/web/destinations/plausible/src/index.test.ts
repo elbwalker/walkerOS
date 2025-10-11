@@ -12,7 +12,7 @@ describe('destination plausible', () => {
   let destination: DestinationPlausible.Destination;
 
   let calls: Array<{ path: string[]; args: unknown[] }>;
-  let testEnv: DestinationWeb.Environment;
+  let testEnv: DestinationWeb.Env;
   let createElementMock: jest.Mock;
   let appendChildMock: jest.Mock;
 

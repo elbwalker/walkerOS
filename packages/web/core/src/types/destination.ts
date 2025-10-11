@@ -34,10 +34,10 @@ export type PushEvents<Mapping = unknown> =
 /**
  * Web-specific environment requirements interface
  *
- * Extends the core Environment interface with web-specific
+ * Extends the core Env interface with web-specific
  * globals like window and document for browser destinations.
  */
-export interface Environment extends WalkerOSDestination.Environment {
+export interface Env extends WalkerOSDestination.Env {
   /**
    * Properties to be added to the global `window` object
    *

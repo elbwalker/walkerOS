@@ -5,7 +5,7 @@ import { initSources } from '../source';
 // Mock source implementation using new pattern
 const mockSource: Source.Init = async (
   config: Partial<Source.Config>,
-  env: Source.Environment,
+  env: Source.Env,
 ) => {
   const { elb } = env;
 
@@ -34,7 +34,7 @@ const mockSource: Source.Init = async (
 // Mock source that throws an error
 const errorSource: Source.Init = async (
   config: Partial<Source.Config>,
-  env: Source.Environment,
+  env: Source.Env,
 ) => {
   throw new Error('Source initialization failed');
 };
@@ -91,7 +91,7 @@ describe('Source', () => {
     it('should inject elb function into source environment', async () => {
       const captureEnv: Source.Init = async (
         config: Partial<Source.Config>,
-        env: Source.Environment,
+        env: Source.Env,
       ) => {
         expect(env!.elb).toBeDefined();
         expect(typeof env!.elb).toBe('function');
@@ -126,7 +126,7 @@ describe('Source', () => {
     it('should merge environment with custom properties', async () => {
       const captureEnv: Source.Init = async (
         config: Partial<Source.Config>,
-        env: Source.Environment,
+        env: Source.Env,
       ) => {
         expect(env!.elb).toBeDefined();
         expect(env!.customProp).toBe('customValue');
@@ -231,7 +231,7 @@ describe('Source', () => {
       // Mock source with on method
       const sourceWithOn: Source.Init = async (
         config: Partial<Source.Config>,
-        env: Source.Environment,
+        env: Source.Env,
       ) => {
         return {
           type: 'reactive',
@@ -269,7 +269,7 @@ describe('Source', () => {
 
       const sourceWithOn: Source.Init = async (
         config: Partial<Source.Config>,
-        env: Source.Environment,
+        env: Source.Env,
       ) => {
         return {
           type: 'reactive',
@@ -306,7 +306,7 @@ describe('Source', () => {
     it('should not fail if source does not have on method', async () => {
       const sourceWithoutOn: Source.Init = async (
         config: Partial<Source.Config>,
-        env: Source.Environment,
+        env: Source.Env,
       ) => {
         return {
           type: 'passive',
@@ -338,7 +338,7 @@ describe('Source', () => {
 
       const sourceWithOn: Source.Init = async (
         config: Partial<Source.Config>,
-        env: Source.Environment,
+        env: Source.Env,
       ) => {
         return {
           type: 'reactive',

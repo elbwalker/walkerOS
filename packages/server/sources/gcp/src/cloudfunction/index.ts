@@ -1,5 +1,5 @@
 import type {
-  Environment,
+  Env,
   CloudFunctionSource,
   Settings,
   EventResponse,
@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS: Settings = {
 
 export const sourceCloudFunction = async (
   config: Partial<Source.Config<Settings, Mapping>> = {},
-  env: Environment,
+  env: Env,
 ): Promise<CloudFunctionSource> => {
   const { elb } = env;
 

@@ -16,7 +16,7 @@ export async function initSources(
   for (const [sourceId, sourceDefinition] of Object.entries(sources)) {
     const { code, config = {}, env = {}, primary } = sourceDefinition;
 
-    const cleanEnv: Source.Environment = {
+    const cleanEnv: Source.Env = {
       elb: ((...args: Parameters<typeof collector.push>) =>
         collector.push(...args)) as typeof collector.push, // Dynamic reference to collector.push
       ...env,
