@@ -14,6 +14,9 @@ import { processEvent } from './push';
 
 export * as SourceCloudFunction from './types';
 
+// Export examples
+export * as examples from './examples';
+
 const DEFAULT_SETTINGS: Settings = {
   cors: true,
   timeout: 30000,

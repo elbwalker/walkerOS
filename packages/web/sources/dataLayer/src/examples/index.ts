@@ -1,3 +1,6 @@
+// Export environment configurations
+export * as env from './env';
+
 // Export example events with namespace
 export * as Events from './events';
 
